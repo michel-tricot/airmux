@@ -24,4 +24,5 @@ jobs:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
       - run: uv sync --all-packages --frozen
-      - run: uv run pytest tests/acceptance
+      - run: uv run pytest tests/acceptance/scenarios
+      - run: uv run pytest tests/acceptance/benchmarks
