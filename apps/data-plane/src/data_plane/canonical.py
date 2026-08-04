@@ -24,8 +24,10 @@ class CanonicalRequest(BaseModel):
 
 
 class Usage(BaseModel):
-    input_tokens: int = 0
+    input_tokens: int = 0  # total prompt tokens, cache traffic included
     output_tokens: int = 0
+    cache_read_tokens: int = 0  # billed at 0.1x, part of input_tokens
+    cache_write_tokens: int = 0  # billed at 1.25x, part of input_tokens
     estimated: bool = False
 
 

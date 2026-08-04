@@ -24,6 +24,19 @@ DEFAULT_MAX_TOKENS = 4096
 STOP_REASONS = {"end_turn": "stop", "stop_sequence": "stop", "max_tokens": "length", "tool_use": "tool_calls"}
 
 
+def _usage(reported: dict[str, Any]) -> Usage:
+    """Anthropic splits prompt tokens across fresh/cache-read/cache-write; keep the split for cost."""
+    read = reported.get("cache_read_input_tokens", 0)
+    write = reported.get("cache_creation_input_tokens", 0)
+    return Usage(
+        input_tokens=reported.get("input_tokens", 0) + read + write,
+        output_tokens=reported.get("output_tokens", 0),
+        cache_read_tokens=read,
+        cache_write_tokens=write,
+        estimated=not reported,
+    )
+
+
 @dataclass
 class _Block:
     type: str
@@ -42,6 +55,8 @@ class AnthropicStreamState(StreamState):
     stop_reason: str | None = None
     input_tokens: int = 0
     output_tokens: int = 0
+    cache_read_tokens: int = 0
+    cache_write_tokens: int = 0
     saw_usage: bool = False
 
     @property
@@ -63,7 +78,28 @@ def _finalize_blocks(blocks: dict[int, _Block]) -> list[dict[str, Any]]:
 
 def _to_anthropic_tool(tool: dict[str, Any]) -> dict[str, Any]:
     fn = tool.get("function") or tool
-    return {"name": fn.get("name"), "description": fn.get("description", ""), "input_schema": fn.get("parameters") or fn.get("input_schema") or {}}
+    out = {"name": fn.get("name"), "description": fn.get("description", ""), "input_schema": fn.get("parameters") or fn.get("input_schema") or {}}
+    if tool.get("cache_control"):
+        out["cache_control"] = tool["cache_control"]
+    return out
+
+
+def _system_field(messages: list[dict[str, Any]]) -> object:
+    """Hoist system messages to Anthropic's top-level system, keeping cache_control blocks intact."""
+    blocks: list[dict[str, Any]] = []
+    structured = False
+    for msg in messages:
+        content = msg.get("content")
+        if isinstance(content, list):
+            structured = True
+            blocks.extend(content)
+        elif content:
+            blocks.append({"type": "text", "text": str(content)})
+    if not blocks:
+        return None
+    if structured:
+        return blocks
+    return "\n".join(b["text"] for b in blocks)
 
 
 def _start_block(state: AnthropicStreamState, data: dict[str, Any]) -> list[CanonicalChunk]:
@@ -103,7 +139,7 @@ class AnthropicAdapter(ProviderAdapter):
         resolve(p.credential_ref)
 
     def transform_request(self, req: CanonicalRequest, m: ModelEntry) -> UpstreamRequest:
-        system = "\n".join(str(msg.get("content", "")) for msg in req.messages if msg.get("role") == "system")
+        system = _system_field([msg for msg in req.messages if msg.get("role") == "system"])
         body: dict[str, Any] = {
             "model": m.upstream_model,
             "messages": [msg for msg in req.messages if msg.get("role") != "system"],
@@ -140,7 +176,7 @@ class AnthropicAdapter(ProviderAdapter):
             model=ctx.model.model_id,
             content=content_blocks(reasoning, text, tool_calls),
             finish_reason=STOP_REASONS.get(data.get("stop_reason"), data.get("stop_reason")),
-            usage=Usage(input_tokens=usage.get("input_tokens", 0), output_tokens=usage.get("output_tokens", 0), estimated=not usage),
+            usage=_usage(usage),
         )
 
     def new_stream_state(self, ctx: Ctx) -> AnthropicStreamState:
@@ -168,7 +204,9 @@ class AnthropicAdapter(ProviderAdapter):
             message = data.get("message") or {}
             state.response_id = message.get("id")
             usage = message.get("usage") or {}
-            state.input_tokens = usage.get("input_tokens", 0)
+            state.cache_read_tokens = usage.get("cache_read_input_tokens", 0)
+            state.cache_write_tokens = usage.get("cache_creation_input_tokens", 0)
+            state.input_tokens = usage.get("input_tokens", 0) + state.cache_read_tokens + state.cache_write_tokens
             state.output_tokens = usage.get("output_tokens", 0)
             state.saw_usage = state.saw_usage or bool(usage)
             return []
@@ -199,7 +237,13 @@ class AnthropicAdapter(ProviderAdapter):
             model=state.ctx.model.model_id,
             content=_finalize_blocks(state.blocks),
             finish_reason=state.stop_reason,
-            usage=Usage(input_tokens=state.input_tokens, output_tokens=state.output_tokens, estimated=not state.saw_usage),
+            usage=Usage(
+                input_tokens=state.input_tokens,
+                output_tokens=state.output_tokens,
+                cache_read_tokens=state.cache_read_tokens,
+                cache_write_tokens=state.cache_write_tokens,
+                estimated=not state.saw_usage,
+            ),
         )
 
     def map_error(self, e: Exception) -> CanonicalError:

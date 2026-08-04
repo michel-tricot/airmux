@@ -8,6 +8,7 @@ from conformance import make_ctx
 from conftest import MODEL
 from starlette.testclient import TestClient
 
+from data_plane.adapters import REGISTRY
 from data_plane.app import _normalize_request, app
 from data_plane.canonical import CanonicalChunk, CanonicalRequest, CanonicalResponse, Usage
 from data_plane.ingress import ANTHROPIC
@@ -52,7 +53,7 @@ def test_render_response_is_anthropic_shaped():
     assert body["role"] == "assistant"
     assert body["stop_reason"] == "tool_use"
     assert body["content"] == [{"type": "text", "text": "hi"}, {"type": "tool_use", "id": "t1", "name": "f", "input": {"a": 1}}]
-    assert body["usage"] == {"input_tokens": 5, "output_tokens": 7}
+    assert body["usage"] == {"input_tokens": 5, "cache_read_input_tokens": 0, "cache_creation_input_tokens": 0, "output_tokens": 7}
 
 
 def test_egress_stream_is_a_valid_anthropic_sequence():
@@ -92,7 +93,7 @@ def test_messages_endpoint_end_to_end_over_openai_provider(token):
     assert body["type"] == "message"
     assert body["content"] == [{"type": "text", "text": "hello there"}]
     assert body["stop_reason"] == "end_turn"
-    assert body["usage"] == {"input_tokens": 5, "output_tokens": 2}
+    assert body["usage"] == {"input_tokens": 5, "cache_read_input_tokens": 0, "cache_creation_input_tokens": 0, "output_tokens": 2}
 
 
 @respx.mock
@@ -135,3 +136,54 @@ def test_max_tokens_clamped_to_model_output_limit():
     assert _normalize_request(over, MODEL).max_tokens == 32000
     # no max_tokens set -> unchanged (None)
     assert _normalize_request(CanonicalRequest(model="m", messages=[]), capped).max_tokens is None
+
+
+def test_cache_control_survives_ingress_to_anthropic_upstream(monkeypatch):
+    """Claude Code's cache markers on system and tools must reach the Anthropic upstream request."""
+    monkeypatch.setenv("K", "sk-ant")
+    body = json.dumps(
+        {
+            "model": "claude",
+            "max_tokens": 100,
+            "system": [{"type": "text", "text": "big prompt", "cache_control": {"type": "ephemeral"}}],
+            "messages": [{"role": "user", "content": "hi"}],
+            "tools": [{"name": "f", "input_schema": {"type": "object"}, "cache_control": {"type": "ephemeral"}}],
+        }
+    ).encode()
+    req = ANTHROPIC.parse(body)
+    adapter = REGISTRY["anthropic"](make_ctx("anthropic").provider)
+    up = json.loads(adapter.transform_request(req, make_ctx("anthropic").model).body)
+    assert up["system"] == [{"type": "text", "text": "big prompt", "cache_control": {"type": "ephemeral"}}]
+    assert up["tools"][0]["cache_control"] == {"type": "ephemeral"}
+
+
+def test_cache_control_stripped_for_openai_upstream(monkeypatch):
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-oai")
+    body = json.dumps(
+        {
+            "model": "gpt",
+            "max_tokens": 100,
+            "system": [{"type": "text", "text": "prompt", "cache_control": {"type": "ephemeral"}}],
+            "messages": [{"role": "user", "content": "hi"}],
+            "tools": [{"name": "f", "input_schema": {"type": "object"}, "cache_control": {"type": "ephemeral"}}],
+        }
+    ).encode()
+    req = ANTHROPIC.parse(body)
+    adapter = REGISTRY["openai_compatible"](make_ctx("openai_compatible").provider)
+    up = json.loads(adapter.transform_request(req, make_ctx("openai_compatible").model).body)
+    assert "cache_control" not in json.dumps(up)
+
+
+def test_anthropic_usage_counts_cache_tokens():
+    adapter = REGISTRY["anthropic"](make_ctx("anthropic").provider)
+    reply = json.dumps(
+        {
+            "id": "msg",
+            "model": "claude",
+            "content": [{"type": "text", "text": "hi"}],
+            "stop_reason": "end_turn",
+            "usage": {"input_tokens": 4, "cache_read_input_tokens": 30000, "cache_creation_input_tokens": 0, "output_tokens": 6},
+        }
+    ).encode()
+    resp = adapter.transform_response(reply, make_ctx("anthropic"))
+    assert resp.usage.input_tokens == 30004  # cache-read tokens are still prompt tokens

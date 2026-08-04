@@ -40,7 +40,7 @@ def test_streaming_end_to_end(token):
     events = [json.loads(line[6:]) for line in text_body.splitlines() if line.startswith("data: ") and line != "data: [DONE]"]
     text = "".join(e["delta"]["text"] for e in events if e.get("delta", {}).get("type") == "text")
     assert text == "héllo \U0001f30d world"
-    assert events[-1]["usage"] == {"input_tokens": 5, "output_tokens": 7, "estimated": False}
+    assert events[-1]["usage"] == {"input_tokens": 5, "output_tokens": 7, "cache_read_tokens": 0, "cache_write_tokens": 0, "estimated": False}
     assert text_body.rstrip().endswith("data: [DONE]")
 
 

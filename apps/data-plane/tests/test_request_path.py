@@ -28,7 +28,7 @@ def test_chat_completion_end_to_end(token):
     assert r.status_code == 200
     body = r.json()
     assert body["content"] == [{"type": "text", "text": "hello there"}]
-    assert body["usage"] == {"input_tokens": 5, "output_tokens": 2, "estimated": False}
+    assert body["usage"] == {"input_tokens": 5, "output_tokens": 2, "cache_read_tokens": 0, "cache_write_tokens": 0, "estimated": False}
     sent = json.loads(route.calls.last.request.content)
     assert sent["model"] == "gpt-real"
     assert route.calls.last.request.headers["authorization"] == "Bearer sk-test-not-real"

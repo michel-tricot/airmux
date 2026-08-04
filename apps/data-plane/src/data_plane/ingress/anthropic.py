@@ -19,31 +19,42 @@ def _event(name: str, payload: dict) -> bytes:
     return b"event: " + name.encode() + b"\ndata: " + json.dumps(payload, ensure_ascii=False).encode() + b"\n\n"
 
 
-def _system_text(system: object) -> str:
+def _has_cache_control(blocks: object) -> bool:
+    return isinstance(blocks, list) and any(isinstance(b, dict) and "cache_control" in b for b in blocks)
+
+
+def _system_message(system: object) -> dict[str, Any] | None:
+    """Preserve block structure when it carries cache_control (for prompt caching), else collapse to a string."""
     if isinstance(system, str):
-        return system
+        return {"role": "system", "content": system} if system else None
     if isinstance(system, list):
-        return "".join(str(b.get("text", "")) for b in system if isinstance(b, dict))
-    return ""
+        if _has_cache_control(system):
+            return {"role": "system", "content": system}
+        text = "".join(str(b.get("text", "")) for b in system if isinstance(b, dict))
+        return {"role": "system", "content": text} if text else None
+    return None
 
 
 def _normalize_message(message: dict[str, Any]) -> dict[str, Any]:
-    """String content passes through; a pure text-block list collapses to a string so any provider accepts it.
+    """A pure text-block list collapses to a string so any provider accepts it; cache_control markers are kept.
 
-    Non-text blocks (tool_use, tool_result, images) pass through untouched, which round-trips
+    Blocks carrying cache_control (and non-text blocks) pass through untouched, which round-trips
     faithfully only when the model routes to an Anthropic upstream.
     """
     content = message.get("content")
-    if isinstance(content, list) and all(isinstance(b, dict) and b.get("type") == "text" for b in content):
+    if isinstance(content, list) and not _has_cache_control(content) and all(isinstance(b, dict) and b.get("type") == "text" for b in content):
         return {**message, "content": "".join(b.get("text", "") for b in content)}
     return message
 
 
 def _from_anthropic_tool(tool: dict[str, Any]) -> dict[str, Any]:
-    return {
+    canonical = {
         "type": "function",
         "function": {"name": tool.get("name"), "description": tool.get("description", ""), "parameters": tool.get("input_schema") or {}},
     }
+    if tool.get("cache_control"):
+        canonical["cache_control"] = tool["cache_control"]
+    return canonical
 
 
 def _tool_input(arguments: str) -> dict[str, Any]:
@@ -180,9 +191,9 @@ class AnthropicIngress(Ingress):
     def parse(self, body: bytes) -> CanonicalRequest:
         data = json.loads(body)
         messages: list[dict[str, Any]] = []
-        system = _system_text(data.get("system"))
+        system = _system_message(data.get("system"))
         if system:
-            messages.append({"role": "system", "content": system})
+            messages.append(system)
         messages.extend(_normalize_message(m) for m in data.get("messages", []))
         return CanonicalRequest(
             model=data["model"],
@@ -202,7 +213,12 @@ class AnthropicIngress(Ingress):
             "content": _to_anthropic_content(final.content),
             "stop_reason": REVERSE_STOP.get(final.finish_reason or "", "end_turn"),
             "stop_sequence": None,
-            "usage": {"input_tokens": final.usage.input_tokens, "output_tokens": final.usage.output_tokens},
+            "usage": {
+                "input_tokens": final.usage.input_tokens - final.usage.cache_read_tokens - final.usage.cache_write_tokens,
+                "cache_read_input_tokens": final.usage.cache_read_tokens,
+                "cache_creation_input_tokens": final.usage.cache_write_tokens,
+                "output_tokens": final.usage.output_tokens,
+            },
         }
         return Response(json.dumps(message), media_type="application/json")
 

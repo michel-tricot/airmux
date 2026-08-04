@@ -33,6 +33,15 @@ class OpenAIStreamState(StreamState):
         return self.response_id or self.ctx.request_id
 
 
+def _strip_cache_control(obj: object) -> object:
+    """OpenAI rejects Anthropic cache markers; it caches automatically, so drop them recursively."""
+    if isinstance(obj, dict):
+        return {k: _strip_cache_control(v) for k, v in obj.items() if k != "cache_control"}
+    if isinstance(obj, list):
+        return [_strip_cache_control(v) for v in obj]
+    return obj
+
+
 def _usage(reported: dict[str, Any] | None) -> Usage:
     reported = reported or {}
     return Usage(
@@ -80,11 +89,12 @@ class OpenAICompatibleAdapter(ProviderAdapter):
         resolve(p.credential_ref)
 
     def transform_request(self, req: CanonicalRequest, m: ModelEntry) -> UpstreamRequest:
-        optional = {"max_tokens": req.max_tokens, "temperature": req.temperature, "tools": req.tools}
+        tools = [_strip_cache_control(t) for t in req.tools] if req.tools else None
+        optional = {"max_tokens": req.max_tokens, "temperature": req.temperature, "tools": tools}
         stream_fields: dict[str, Any] = {"stream": True, "stream_options": {"include_usage": True}} if req.stream else {}
         body = {
             "model": m.upstream_model,
-            "messages": req.messages,
+            "messages": [_strip_cache_control(msg) for msg in req.messages],
             **{k: v for k, v in optional.items() if v is not None},
             **stream_fields,
         }
