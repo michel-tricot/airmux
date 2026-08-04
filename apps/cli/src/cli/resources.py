@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-from cli.api_models import OrgIn
 from cli.client import admin_client, admin_get, post_expecting
 from cli.common import bundles_app, console, keys_app, models_app, orgs_app, providers_app
 from cli.forms import register_create
 from cli.output import Col, FormatOption, OutputFormat, fmt_when, print_rows
-from cli.specs import KeyCreate, ModelCreate, ProviderCreate
+from cli.specs import KeyCreate, ModelCreate, OrgCreate, ProviderCreate
 
 ORG_COLS = [
     Col("id", "ID", style="dim", no_wrap=True),
@@ -101,7 +100,7 @@ def _key_created(resp: dict) -> None:
 
 register_create(
     orgs_app,
-    OrgIn,
+    OrgCreate,
     "/admin/orgs",
     "Create an org; keys, providers and models hang off it.",
     lambda resp: console.print(f"org [bold]{resp['id']}[/bold] created"),

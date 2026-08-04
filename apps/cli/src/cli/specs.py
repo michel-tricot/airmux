@@ -2,7 +2,11 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
-from cli.api_models import KeyIn, ModelIn, ProviderIn
+from cli.api_models import KeyIn, ModelIn, OrgIn, ProviderIn
+
+
+class OrgCreate(OrgIn):
+    """Every resource gets a CLI spec subclassing its generated *In model; CLI-side defaults go here, like org_id on the others."""
 
 
 class KeyCreate(KeyIn):

@@ -8,10 +8,9 @@ from typing import TYPE_CHECKING
 import typer
 from dotenv import dotenv_values, set_key, unset_key
 
-from cli.api_models import OrgIn
 from cli.client import admin_client, post_expecting
 from cli.common import SETUP, app, console
-from cli.specs import BootstrapSpec
+from cli.specs import BootstrapSpec, OrgCreate
 
 if TYPE_CHECKING:
     from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
@@ -98,7 +97,7 @@ def bootstrap(file: str = "bootstrap.yml", control_plane_url: str = "") -> None:
         raise typer.Exit(1)
     spec = BootstrapSpec.model_validate(yaml.safe_load(path.read_text(encoding="utf-8")))
     with admin_client(control_plane_url) as c:
-        post_expecting(c, "/admin/orgs", OrgIn(id=spec.org).model_dump(mode="json"), ok=(200, 409))
+        post_expecting(c, "/admin/orgs", OrgCreate(id=spec.org).model_dump(mode="json"), ok=(200, 409))
         for provider in spec.providers:
             post_expecting(c, "/admin/providers", {**provider.model_dump(mode="json"), "org_id": spec.org}, ok=(200, 409))
         for model in spec.models:
