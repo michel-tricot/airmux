@@ -19,7 +19,7 @@ providers:
     base_url: https://api.openai.com/v1
     credential_ref: env:OPENAI_API_KEY
   - provider_id: anthropic
-    kind: openai_compatible # compat layer; native adapter lands in M4
+    kind: anthropic
     base_url: https://api.anthropic.com/v1
     credential_ref: env:ANTHROPIC_API_KEY
   - provider_id: gemini

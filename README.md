@@ -51,6 +51,8 @@ uv run python examples/chat_stream_tools.py  # tool-call fragments assembling
 uv run python examples/chat_multi_turn.py    # conversation history + reasoning steps
 uv run python examples/chat_stream_cancel.py # abandon mid-stream, see cancelled accounting
 uv run python examples/chat_errors.py        # every failure mode and its status code
+uv run python examples/anthropic_chat.py         # Claude via the native Anthropic adapter
+uv run python examples/anthropic_chat_stream.py  # Claude streaming
 ```
 
 `bootstrap.yml` ships with a catalog of OpenAI-compatible hosted providers
