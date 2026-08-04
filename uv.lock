@@ -5,10 +5,10 @@ requires-python = ">=3.13"
 [manifest]
 members = [
     "airllm",
+    "cli",
+    "contract",
     "control-plane",
     "data-plane",
-    "gw-cli",
-    "gw-contract",
 ]
 
 [[package]]
@@ -258,6 +258,21 @@ wheels = [
 ]
 
 [[package]]
+name = "cli"
+version = "0.1.0"
+source = { editable = "apps/cli" }
+dependencies = [
+    { name = "contract" },
+    { name = "httpx" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "contract", editable = "packages/contract" },
+    { name = "httpx" },
+]
+
+[[package]]
 name = "click"
 version = "8.4.2"
 source = { registry = "https://pypi.org/simple" }
@@ -279,14 +294,29 @@ wheels = [
 ]
 
 [[package]]
+name = "contract"
+version = "0.1.0"
+source = { editable = "packages/contract" }
+dependencies = [
+    { name = "cryptography" },
+    { name = "pydantic" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "cryptography" },
+    { name = "pydantic", specifier = ">=2" },
+]
+
+[[package]]
 name = "control-plane"
 version = "0.1.0"
 source = { editable = "apps/control-plane" }
 dependencies = [
     { name = "alembic" },
     { name = "asyncpg" },
+    { name = "contract" },
     { name = "fastapi" },
-    { name = "gw-contract" },
     { name = "sqlalchemy", extra = ["asyncio"] },
     { name = "sqlmodel" },
     { name = "uvicorn", extra = ["standard"] },
@@ -296,8 +326,8 @@ dependencies = [
 requires-dist = [
     { name = "alembic" },
     { name = "asyncpg" },
+    { name = "contract", editable = "packages/contract" },
     { name = "fastapi" },
-    { name = "gw-contract", editable = "packages/contract" },
     { name = "sqlalchemy", extras = ["asyncio"], specifier = ">=2" },
     { name = "sqlmodel" },
     { name = "uvicorn", extras = ["standard"] },
@@ -358,8 +388,8 @@ name = "data-plane"
 version = "0.1.0"
 source = { editable = "apps/data-plane" }
 dependencies = [
+    { name = "contract" },
     { name = "cryptography" },
-    { name = "gw-contract" },
     { name = "httpx", extra = ["http2"] },
     { name = "pydantic" },
     { name = "starlette" },
@@ -369,8 +399,8 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "contract", editable = "packages/contract" },
     { name = "cryptography" },
-    { name = "gw-contract", editable = "packages/contract" },
     { name = "httpx", extras = ["http2"] },
     { name = "pydantic", specifier = ">=2" },
     { name = "starlette" },
@@ -517,36 +547,6 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/00/ac/05d859a62ed9282f43a0f0962da230c46a2eb3d3ecb5b39117b3b4888405/grimp-3.15-cp315-cp315-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:fcc2e5065d35047729e41a55c9c3eb99810cf322fe3b3e89fa126f306ce6b3b5", size = 2273647, upload-time = "2026-07-03T12:08:36.139Z" },
     { url = "https://files.pythonhosted.org/packages/6d/dd/f726316f54e29da4f24d545d6299e1ea0accfbbf52729077fd4a619de055/grimp-3.15-cp315-cp315t-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:b38327673df49203cff0ebcbbf078999a80f0b11bb654760059f6f00f56f64d6", size = 2344080, upload-time = "2026-07-03T12:08:25.044Z" },
     { url = "https://files.pythonhosted.org/packages/c1/56/523a8f969f0a0b0a8ce43fbe8bc7a04e90f52724efc85f3305f1e07ae626/grimp-3.15-cp315-cp315t-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:965b37dad2f73164a103381c9fd1255bb3b2f6021ca2f38ffe70dd00fdc0fc55", size = 2275041, upload-time = "2026-07-03T12:08:37.582Z" },
-]
-
-[[package]]
-name = "gw-cli"
-version = "0.1.0"
-source = { editable = "apps/cli" }
-dependencies = [
-    { name = "gw-contract" },
-    { name = "httpx" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "gw-contract", editable = "packages/contract" },
-    { name = "httpx" },
-]
-
-[[package]]
-name = "gw-contract"
-version = "0.1.0"
-source = { editable = "packages/contract" }
-dependencies = [
-    { name = "cryptography" },
-    { name = "pydantic" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "cryptography" },
-    { name = "pydantic", specifier = ">=2" },
 ]
 
 [[package]]

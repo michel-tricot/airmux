@@ -2,7 +2,7 @@
 
 ## Boundary rules, non-negotiable
 - data_plane may never import sqlalchemy, sqlmodel, asyncpg, alembic, fastapi, or control_plane.
-- The only shared import between planes is gw_contract.
+- The only shared import between planes is contract.
 - If a feature seems to need a DB read on the request path, add a field to the bundle instead. Say so before doing it.
 - evaluate() must stay pure: no async, no network, no I/O, no datetime.now(). Under 100 lines.
 

@@ -3,8 +3,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from contract import ModelEntry
     from data_plane.canonical import Usage
-    from gw_contract import ModelEntry
 
 
 def cost_usd(usage: Usage, model: ModelEntry) -> float:

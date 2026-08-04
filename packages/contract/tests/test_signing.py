@@ -7,7 +7,7 @@ import pytest
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
-from gw_contract import BundleV1, Catalog, sign_bundle, verify_bundle
+from contract import BundleV1, Catalog, sign_bundle, verify_bundle
 
 
 def make_bundle() -> BundleV1:

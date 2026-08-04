@@ -7,6 +7,7 @@ from data_plane.adapters.base import ProviderAdapter
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
+    from contract import ModelEntry, ProviderEntry
     from data_plane.canonical import (
         CanonicalChunk,
         CanonicalError,
@@ -17,7 +18,6 @@ if TYPE_CHECKING:
         StreamState,
         UpstreamRequest,
     )
-    from gw_contract import ModelEntry, ProviderEntry
 
 
 class OpenAICompatibleAdapter(ProviderAdapter):

@@ -1,6 +1,6 @@
 [importlinter]
 root_packages =
-    gw_contract
+    contract
     control_plane
     data_plane
 include_external_packages = True

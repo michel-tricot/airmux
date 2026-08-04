@@ -4,7 +4,7 @@ import hashlib
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from gw_contract import BundleV1, KeyEntry
+    from contract import BundleV1, KeyEntry
 
 
 def index_keys(bundle: BundleV1) -> dict[str, KeyEntry]:

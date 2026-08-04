@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
 
-    from gw_contract import BundleV1
+    from contract import BundleV1
 
 
 async def compile_bundle(session: AsyncSession, org_id: str) -> BundleV1:

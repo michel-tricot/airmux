@@ -5,8 +5,8 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from pathlib import Path
 
+    from contract import UsageEventV1
     from data_plane.config import Config
-    from gw_contract import UsageEventV1
 
 
 def buffer_event(cache_dir: Path, event: UsageEventV1) -> None:

@@ -3,7 +3,7 @@ name = "data-plane"
 version = "0.1.0"
 requires-python = ">=3.13"
 dependencies = [
-  "gw-contract",
+  "contract",
   "starlette",
   "uvicorn[standard]",
   "httpx[http2]",
@@ -29,4 +29,4 @@ extend = "../../pyproject.toml"
 "psycopg".msg       = "data plane must never touch a database, add a field to the bundle"
 "alembic".msg       = "control plane only"
 "fastapi".msg       = "data plane runs on bare Starlette, see spec 0"
-"control_plane".msg = "planes communicate only through gw_contract"
+"control_plane".msg = "planes communicate only through contract"

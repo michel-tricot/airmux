@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, Any
 from pydantic import BaseModel, ConfigDict
 
 if TYPE_CHECKING:
-    from gw_contract import ModelEntry, ProviderEntry
+    from contract import ModelEntry, ProviderEntry
 
 
 class CanonicalRequest(BaseModel):

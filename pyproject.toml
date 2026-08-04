@@ -7,7 +7,7 @@ requires-python = ">=3.13"
 members = ["packages/*", "apps/*"]
 
 [tool.uv.sources]
-gw-contract = { workspace = true }
+contract = { workspace = true }
 
 [dependency-groups]
 dev = [
@@ -82,7 +82,7 @@ ignore = [
 "apps/cli/**"                  = ["T201"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["gw_contract", "control_plane", "data_plane"]
+known-first-party = ["contract", "control_plane", "data_plane"]
 required-imports = ["from __future__ import annotations"]
 
 [tool.ruff.lint.flake8-annotations]

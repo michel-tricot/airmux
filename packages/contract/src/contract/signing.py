@@ -4,7 +4,7 @@ import base64
 import json
 from typing import TYPE_CHECKING
 
-from gw_contract.bundle import BundleV1, SignedBundle
+from contract.bundle import BundleV1, SignedBundle
 
 if TYPE_CHECKING:
     from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey, Ed25519PublicKey

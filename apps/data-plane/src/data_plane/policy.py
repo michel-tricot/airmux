@@ -6,8 +6,8 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from datetime import datetime
 
+    from contract import BundleV1, KeyEntry, ModelEntry, ProviderEntry
     from data_plane.canonical import CanonicalRequest
-    from gw_contract import BundleV1, KeyEntry, ModelEntry, ProviderEntry
 
 
 @dataclass(frozen=True)

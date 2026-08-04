@@ -20,7 +20,7 @@ def cmd_loadgen(args: argparse.Namespace) -> int:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(prog="gw")
+    parser = argparse.ArgumentParser(prog="airllm")
     subparsers = parser.add_subparsers(dest="command", required=True)
     subparsers.add_parser("seed").set_defaults(func=cmd_seed)
     subparsers.add_parser("compile").set_defaults(func=cmd_compile)
