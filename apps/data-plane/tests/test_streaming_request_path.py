@@ -12,6 +12,7 @@ import pytest
 import respx
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+from starlette.responses import StreamingResponse
 from starlette.testclient import TestClient
 from test_streaming_fold import CTX, PROVIDER, TEXT_LOG, make_adapter
 
@@ -105,6 +106,7 @@ async def test_cancellation_records_partial_usage(caplog):
     caplog.set_level(logging.INFO, logger="data_plane")
     respx.post("https://api.openai.com/v1/chat/completions").mock(return_value=httpx.Response(200, content=TEXT_LOG))
     response = await _stream(make_adapter(), CTX, UPSTREAM)
+    assert isinstance(response, StreamingResponse)
     iterator = response.body_iterator
     first = await anext(iterator)
     assert first.startswith(b"data: ")
@@ -122,6 +124,7 @@ async def test_mid_stream_error_event_becomes_sse_error(caplog):
     log += b'data: {"error": {"code": "overloaded", "message": "try later"}}\n\n'
     respx.post("https://api.openai.com/v1/chat/completions").mock(return_value=httpx.Response(200, content=log))
     response = await _stream(make_adapter(), CTX, UPSTREAM)
+    assert isinstance(response, StreamingResponse)
     chunks = [chunk async for chunk in response.body_iterator]
     assert any(b'"code": "overloaded"' in c for c in chunks)
     assert any("status=upstream_error" in r.message for r in caplog.records)
