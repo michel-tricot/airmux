@@ -13,6 +13,10 @@ from contract import UsageEventV1
 from data_plane.outbox import DevNullOutbox, SqliteOutbox, build_outbox
 
 
+def make_outbox(tmp_path, url="http://cp.test", flush_interval_s=5.0) -> SqliteOutbox:
+    return SqliteOutbox(cache_dir=tmp_path, control_plane_url=url, control_plane_token="dp-token", flush_interval_s=flush_interval_s)  # noqa: S106 test token
+
+
 def make_event(request_id: str) -> UsageEventV1:
     return UsageEventV1(
         event_id=uuid4(),
@@ -33,30 +37,30 @@ def make_event(request_id: str) -> UsageEventV1:
 
 
 def test_record_roundtrips_in_order(tmp_path):
-    outbox = SqliteOutbox(make_config(tmp_path))
+    outbox = make_outbox(tmp_path)
     events = [make_event("r1"), make_event("r2")]
     for e in events:
         outbox.record(e)
-    assert outbox.read_batch(10) == events
-    assert outbox.pending() == 2
+    assert outbox._read_batch(10) == events
+    assert outbox._pending() == 2
 
 
 def test_record_is_idempotent_on_event_id(tmp_path):
-    outbox = SqliteOutbox(make_config(tmp_path))
+    outbox = make_outbox(tmp_path)
     event = make_event("r1")
     outbox.record(event)
     outbox.record(event)
-    assert outbox.pending() == 1
+    assert outbox._pending() == 1
 
 
 @respx.mock
 async def test_flush_sends_batch_and_deletes(tmp_path):
     route = respx.post("http://cp.test/v1/events").mock(return_value=httpx.Response(200, json={"received": 2, "ingested": 2}))
-    outbox = SqliteOutbox(make_config(tmp_path))
+    outbox = make_outbox(tmp_path)
     outbox.record(make_event("r1"))
     outbox.record(make_event("r2"))
-    assert await outbox.flush() == 2
-    assert outbox.pending() == 0
+    assert await outbox._flush() == 2
+    assert outbox._pending() == 0
     sent = json.loads(route.calls.last.request.content)
     assert [e["request_id"] for e in sent] == ["r1", "r2"]
     assert route.calls.last.request.headers["authorization"] == "Bearer dp-token"
@@ -65,25 +69,25 @@ async def test_flush_sends_batch_and_deletes(tmp_path):
 @respx.mock
 async def test_failed_flush_keeps_the_events(tmp_path):
     respx.post("http://cp.test/v1/events").mock(return_value=httpx.Response(503))
-    outbox = SqliteOutbox(make_config(tmp_path))
+    outbox = make_outbox(tmp_path)
     outbox.record(make_event("r1"))
     with pytest.raises(httpx.HTTPStatusError):
-        await outbox.flush()
-    assert outbox.pending() == 1
+        await outbox._flush()
+    assert outbox._pending() == 1
 
 
 def test_only_one_holder_wins_the_flush_lease(tmp_path):
-    a = SqliteOutbox(make_config(tmp_path))
-    b = SqliteOutbox(make_config(tmp_path))
+    a = make_outbox(tmp_path)
+    b = make_outbox(tmp_path)
     a._owner = "worker-a"  # stand in for two processes on one shared cache dir
     b._owner = "worker-b"
-    assert a.claim_flush(ttl=30, now=1000.0) is True
-    assert b.claim_flush(ttl=30, now=1000.0) is False  # a still holds a live lease
-    assert b.claim_flush(ttl=30, now=1040.0) is True  # a's lease expired, b takes over
-    assert a.claim_flush(ttl=30, now=1041.0) is False
+    assert a._claim_flush(ttl=30, now=1000.0) is True
+    assert b._claim_flush(ttl=30, now=1000.0) is False  # a still holds a live lease
+    assert b._claim_flush(ttl=30, now=1040.0) is True  # a's lease expired, b takes over
+    assert a._claim_flush(ttl=30, now=1041.0) is False
 
 
-async def test_devnull_discards_and_runs_without_work(tmp_path):
+async def test_devnull_discards_and_runs_without_work():
     outbox = DevNullOutbox()
     outbox.record(make_event("r1"))
     await outbox.run()  # returns at once, no background work
