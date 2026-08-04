@@ -172,10 +172,17 @@ class AnthropicEgressStream(EgressStream):
     def finish(self, final: CanonicalResponse) -> list[bytes]:
         out = self._close_open()
         stop = REVERSE_STOP.get(final.finish_reason or "", "end_turn")
+        # Usage is only known at stream end (chunks carry none), so the full breakdown lands here rather than in
+        # message_start; a client that reads input/cache solely from message_start cannot see it on a cross-provider stream.
         message_delta = {
             "type": "message_delta",
             "delta": {"stop_reason": stop, "stop_sequence": None},
-            "usage": {"input_tokens": final.usage.input_tokens, "output_tokens": final.usage.output_tokens},
+            "usage": {
+                "input_tokens": final.usage.input_tokens - final.usage.cache_read_tokens - final.usage.cache_write_tokens,
+                "cache_read_input_tokens": final.usage.cache_read_tokens,
+                "cache_creation_input_tokens": final.usage.cache_write_tokens,
+                "output_tokens": final.usage.output_tokens,
+            },
         }
         out.append(_event("message_delta", message_delta))
         out.append(_event("message_stop", {"type": "message_stop"}))
