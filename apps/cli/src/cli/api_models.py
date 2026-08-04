@@ -172,6 +172,48 @@ class ProviderOut(BaseModel):
     provider_id: str = Field(..., title="Provider Id")
 
 
+class UsageEvent(BaseModel):
+    event_id: UUID = Field(..., title="Event Id")
+    request_id: str = Field(..., title="Request Id")
+    occurred_at: AwareDatetime = Field(..., title="Occurred At")
+    org_id: str = Field(..., title="Org Id")
+    key_id: str = Field(..., title="Key Id")
+    model_id: str = Field(..., title="Model Id")
+    provider_id: str = Field(..., title="Provider Id")
+    bundle_id: UUID = Field(..., title="Bundle Id")
+    input_tokens: int = Field(..., title="Input Tokens")
+    output_tokens: int = Field(..., title="Output Tokens")
+    cost_usd: float = Field(..., title="Cost Usd")
+    latency_ms: int = Field(..., title="Latency Ms")
+    status: str = Field(..., title="Status")
+    stream: bool = Field(..., title="Stream")
+
+
+class UsageEventV1(BaseModel):
+    """
+    One metered request, emitted by the data plane and ingested by the control plane.
+
+    Delivery is at-least-once from a local disk buffer; the control plane upserts on
+    event_id, so replays after an outage land exactly once.
+    """
+
+    schema_version: Literal[1] = Field(1, title="Schema Version")
+    event_id: UUID = Field(..., title="Event Id")
+    request_id: str = Field(..., title="Request Id")
+    occurred_at: AwareDatetime = Field(..., title="Occurred At")
+    org_id: str = Field(..., title="Org Id")
+    key_id: str = Field(..., title="Key Id")
+    model_id: str = Field(..., title="Model Id")
+    provider_id: str = Field(..., title="Provider Id")
+    bundle_id: UUID = Field(..., title="Bundle Id")
+    input_tokens: int = Field(..., title="Input Tokens")
+    output_tokens: int = Field(..., title="Output Tokens")
+    cost_usd: float = Field(..., title="Cost Usd")
+    latency_ms: int = Field(..., title="Latency Ms")
+    status: Literal["ok", "upstream_error", "denied", "timeout", "cancelled"] = Field(..., title="Status")
+    stream: bool = Field(..., title="Stream")
+
+
 class ValidationError(BaseModel):
     loc: list[str | int] = Field(..., title="Location")
     msg: str = Field(..., title="Message")
