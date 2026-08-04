@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-from cli.client import admin_client, admin_get, resolve_control_plane_url
+from cli.api_models import OrgIn
+from cli.client import admin_client, admin_get, post_expecting
 from cli.common import bundles_app, console, keys_app, models_app, orgs_app, providers_app
 from cli.forms import register_create
 from cli.output import Col, FormatOption, OutputFormat, fmt_when, print_rows
-from cli.specs import KeyCreate, ModelCreate, OrgCreate, ProviderCreate
+from cli.specs import KeyCreate, ModelCreate, ProviderCreate
 
 ORG_COLS = [
     Col("id", "ID", style="dim", no_wrap=True),
@@ -60,7 +61,7 @@ def keys_list(org: str | None = None, control_plane_url: str = "", fmt: FormatOp
 @keys_app.command("revoke")
 def keys_revoke(key_id: str, control_plane_url: str = "") -> None:
     """Disable a key; lands in revocations at the next compile."""
-    with admin_client(resolve_control_plane_url(control_plane_url)) as c:
+    with admin_client(control_plane_url) as c:
         resp = c.delete(f"/admin/keys/{key_id}")
         resp.raise_for_status()
     console.print(f"key [bold]{key_id}[/bold] revoked, run `airllm bundles compile` to propagate")
@@ -87,10 +88,8 @@ def bundles_list(org: str | None = None, control_plane_url: str = "", fmt: Forma
 @bundles_app.command("compile")
 def bundles_compile(org: str = "org-dev", control_plane_url: str = "") -> None:
     """Recompile and sign the bundle for an org."""
-    with admin_client(resolve_control_plane_url(control_plane_url)) as c:
-        resp = c.post("/admin/bundles/compile", json={"org_id": org})
-        resp.raise_for_status()
-        compiled = resp.json()
+    with admin_client(control_plane_url) as c:
+        compiled = post_expecting(c, "/admin/bundles/compile", {"org_id": org}, ok=(200,)).json()
     console.print(f"bundle [bold]{compiled['bundle_id']}[/bold] v{compiled['version']} compiled")
 
 
@@ -102,7 +101,7 @@ def _key_created(resp: dict) -> None:
 
 register_create(
     orgs_app,
-    OrgCreate,
+    OrgIn,
     "/admin/orgs",
     "Create an org; keys, providers and models hang off it.",
     lambda resp: console.print(f"org [bold]{resp['id']}[/bold] created"),

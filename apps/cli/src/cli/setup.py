@@ -3,17 +3,18 @@ from __future__ import annotations
 import os
 import secrets
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import typer
-import yaml
-from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from dotenv import dotenv_values, set_key, unset_key
 
-from cli.client import admin_client, post_expecting, resolve_control_plane_url
+from cli.api_models import OrgIn
+from cli.client import admin_client, post_expecting
 from cli.common import SETUP, app, console
 from cli.specs import BootstrapSpec
-from contract import private_key_to_b64, public_key_to_b64
+
+if TYPE_CHECKING:
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 DEFAULT_CONFIG_YML = """control_plane:
   database:
@@ -43,37 +44,24 @@ data_plane:
 """
 
 
-def _load_or_create_key(key_path: Path) -> Ed25519PrivateKey:
-    if key_path.exists():
-        loaded = serialization.load_pem_private_key(key_path.read_bytes(), password=None)
-        if not isinstance(loaded, Ed25519PrivateKey):
-            console.print(f"[red]{key_path} is not an Ed25519 key[/red]")
-            raise typer.Exit(1)
-        return loaded
-    key = Ed25519PrivateKey.generate()
-    key_path.write_bytes(
-        key.private_bytes(
-            encoding=serialization.Encoding.PEM,
-            format=serialization.PrivateFormat.PKCS8,
-            encryption_algorithm=serialization.NoEncryption(),
-        )
-    )
-    return key
-
-
 @app.command(rich_help_panel=SETUP)
 def init(control_plane_url: str = "http://127.0.0.1:8000", cache_dir: str = ".airllm") -> None:
     """Write secrets to .env and the shared airllm.yml config, reusing existing values."""
-    cache = Path(cache_dir)
-    cache.mkdir(parents=True, exist_ok=True)
-    legacy = cache / "signing.key"
-    if legacy.exists() and not (cache / "bundle-signing.key").exists():
-        legacy.rename(cache / "bundle-signing.key")
-    bundle_key = _load_or_create_key(cache / "bundle-signing.key")
-    token_key = _load_or_create_key(cache / "token-signing.key")
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey  # noqa: PLC0415 lazy import keeps CLI startup fast
+
+    from contract import private_key_from_b64, private_key_to_b64, public_key_to_b64  # noqa: PLC0415 lazy import keeps CLI startup fast
+
+    Path(cache_dir).mkdir(parents=True, exist_ok=True)
     env_path = Path(".env")
     env_path.touch(exist_ok=True)
     existing = dotenv_values(env_path)
+
+    def signing_key(env_name: str) -> Ed25519PrivateKey:
+        stored = existing.get(env_name)
+        return private_key_from_b64(stored) if stored else Ed25519PrivateKey.generate()
+
+    bundle_key = signing_key("GW_BUNDLE_SIGNING_KEY")
+    token_key = signing_key("GW_TOKEN_SIGNING_KEY")
     values = {
         "GW_BUNDLE_SIGNING_KEY": private_key_to_b64(bundle_key),
         "GW_BUNDLE_PUBLIC_KEY": public_key_to_b64(bundle_key.public_key()),
@@ -92,7 +80,7 @@ def init(control_plane_url: str = "http://127.0.0.1:8000", cache_dir: str = ".ai
     if config_path.exists():
         console.print(f"kept existing {config_path}")
     else:
-        config_path.write_text(DEFAULT_CONFIG_YML.format(control_plane_url=control_plane_url, cache_dir=cache), encoding="utf-8")
+        config_path.write_text(DEFAULT_CONFIG_YML.format(control_plane_url=control_plane_url, cache_dir=cache_dir), encoding="utf-8")
         console.print(f"wrote {config_path}")
     console.print("next:   [bold]uv run control-plane serve --dev[/bold]")
     console.print("        [bold]uv run airllm bootstrap[/bold]")
@@ -102,19 +90,20 @@ def init(control_plane_url: str = "http://127.0.0.1:8000", cache_dir: str = ".ai
 @app.command(rich_help_panel=SETUP)
 def bootstrap(file: str = "bootstrap.yml", control_plane_url: str = "") -> None:
     """Apply a YAML spec (org, providers, models, keys) through the admin API and compile a bundle."""
+    import yaml  # noqa: PLC0415 lazy import keeps CLI startup fast
+
     path = Path(file)
     if not path.exists():
         console.print(f"[red]{file} not found[/red]")
         raise typer.Exit(1)
     spec = BootstrapSpec.model_validate(yaml.safe_load(path.read_text(encoding="utf-8")))
-    cp_url = resolve_control_plane_url(control_plane_url)
-    with admin_client(cp_url) as c:
-        post_expecting(c, "/admin/orgs", {"id": spec.org}, ok=(200, 409))
+    with admin_client(control_plane_url) as c:
+        post_expecting(c, "/admin/orgs", OrgIn(id=spec.org).model_dump(mode="json"), ok=(200, 409))
         for provider in spec.providers:
             post_expecting(c, "/admin/providers", {**provider.model_dump(mode="json"), "org_id": spec.org}, ok=(200, 409))
         for model in spec.models:
             post_expecting(c, "/admin/models", {**model.model_dump(mode="json"), "org_id": spec.org}, ok=(200, 409))
-        minted = [post_expecting(c, "/admin/keys", {"org_id": spec.org, "allowed_models": key.allowed_models}, ok=(200,)).json() for key in spec.keys]
+        minted = [post_expecting(c, "/admin/keys", {**key.model_dump(mode="json"), "org_id": spec.org}, ok=(200,)).json() for key in spec.keys]
         compiled = post_expecting(c, "/admin/bundles/compile", {"org_id": spec.org}, ok=(200,)).json()
     for key in minted:
         console.print(f"key [bold]{key['key_id']}[/bold] minted")

@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Union, get_args, get_origin
 import typer
 from pydantic import BaseModel, ValidationError
 
-from cli.client import admin_client, post_expecting, resolve_control_plane_url
+from cli.client import admin_client, post_expecting
 from cli.common import console
 
 if TYPE_CHECKING:
@@ -66,7 +66,7 @@ def register_create(sub_app: typer.Typer, spec_cls: type[BaseModel], path: str, 
     def run(**kwargs: object) -> None:
         control_plane_url = str(kwargs.pop("control_plane_url", "") or "")
         spec = fill_spec(spec_cls, kwargs)
-        with admin_client(resolve_control_plane_url(control_plane_url)) as c:
+        with admin_client(control_plane_url) as c:
             resp = post_expecting(c, path, spec.model_dump(mode="json"), ok=(200,))
         done(resp.json())
 

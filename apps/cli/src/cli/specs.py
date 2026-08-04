@@ -2,11 +2,7 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
-from cli.api_models import KeyIn, ModelIn, OrgIn, ProviderIn
-
-
-class OrgCreate(OrgIn):
-    pass
+from cli.api_models import KeyIn, ModelIn, ProviderIn
 
 
 class KeyCreate(KeyIn):
