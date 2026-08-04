@@ -1,0 +1,16 @@
+org: org-dev
+
+providers:
+  - provider_id: openai
+    kind: openai_compatible
+    base_url: https://api.openai.com/v1
+    credential_ref: env:OPENAI_API_KEY
+
+models:
+  - model_id: gpt-4o-mini
+    provider_id: openai
+    # upstream_model defaults to model_id; prices, context_window and
+    # capabilities have sensible defaults, see ModelSpec in the cli
+
+keys:
+  - allowed_models: ["*"]

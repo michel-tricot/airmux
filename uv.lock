@@ -242,6 +242,7 @@ dependencies = [
     { name = "contract" },
     { name = "httpx" },
     { name = "python-dotenv" },
+    { name = "pyyaml" },
     { name = "typer" },
 ]
 
@@ -250,6 +251,7 @@ requires-dist = [
     { name = "contract", editable = "packages/contract" },
     { name = "httpx" },
     { name = "python-dotenv" },
+    { name = "pyyaml" },
     { name = "typer" },
 ]
 

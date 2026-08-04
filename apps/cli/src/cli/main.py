@@ -5,13 +5,16 @@ import os
 import secrets
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from typing import Literal
 from uuid import uuid4
 
 import httpx
 import typer
+import yaml
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from dotenv import dotenv_values, find_dotenv, load_dotenv, set_key
+from pydantic import BaseModel, Field
 
 from contract import (
     BundleV1,
@@ -63,47 +66,69 @@ def init(control_plane_url: str = "http://127.0.0.1:8000", cache_dir: str = ".ai
     typer.echo("        uv run data-plane --dev")
 
 
+class ProviderSpec(BaseModel):
+    provider_id: str
+    kind: Literal["openai_compatible", "anthropic"] = "openai_compatible"
+    base_url: str
+    credential_ref: str
+
+
+class ModelSpec(BaseModel):
+    model_id: str
+    provider_id: str
+    upstream_model: str = ""
+    input_price_per_mtok: float = 0.0
+    output_price_per_mtok: float = 0.0
+    context_window: int = 128000
+    capabilities: list[str] = Field(default_factory=lambda: ["streaming", "tools"])
+
+
+class KeySpec(BaseModel):
+    allowed_models: list[str] = Field(default_factory=lambda: ["*"])
+
+
+class BootstrapSpec(BaseModel):
+    org: str
+    providers: list[ProviderSpec] = Field(default_factory=list)
+    models: list[ModelSpec] = Field(default_factory=list)
+    keys: list[KeySpec] = Field(default_factory=lambda: [KeySpec()])
+
+
+def _post_expecting(client: httpx.Client, path: str, body: dict, ok: tuple[int, ...]) -> httpx.Response:
+    resp = client.post(path, json=body)
+    if resp.status_code not in ok:
+        typer.echo(f"POST {path} failed: {resp.status_code} {resp.text}", err=True)
+        raise typer.Exit(1)
+    return resp
+
+
 @app.command()
-def bootstrap(  # noqa: PLR0913, PLR0917 CLI options are a flat namespace by design
-    org: str = "org-dev",
-    model: str = "gpt-4o-mini",
-    base_url: str = "https://api.openai.com/v1",
-    upstream_model: str = "",
-    credential_ref: str = "env:OPENAI_API_KEY",
-    control_plane_url: str = "",
-) -> None:
-    """Create org, key, provider and model through the admin API, compile, and save the token to .env."""
+def bootstrap(file: str = "bootstrap.yml", control_plane_url: str = "") -> None:
+    """Apply a YAML spec (org, providers, models, keys) through the admin API and compile a bundle."""
+    path = Path(file)
+    if not path.exists():
+        typer.echo(f"{file} not found", err=True)
+        raise typer.Exit(1)
+    spec = BootstrapSpec.model_validate(yaml.safe_load(path.read_text(encoding="utf-8")))
     load_dotenv(find_dotenv(usecwd=True))
     cp_url = control_plane_url or os.environ.get("GW_CONTROL_PLANE_URL", "http://127.0.0.1:8000")
     with _admin_client(cp_url) as c:
-        org_resp = c.post("/admin/orgs", json={"id": org})
-        if org_resp.status_code not in (200, 409):
-            typer.echo(f"create org failed: {org_resp.status_code} {org_resp.text}", err=True)
-            raise typer.Exit(1)
-        key_resp = c.post("/admin/keys", json={"org_id": org})
-        key_resp.raise_for_status()
-        key = key_resp.json()
-        provider_resp = c.post(
-            "/admin/providers",
-            json={"org_id": org, "provider_id": "openai", "kind": "openai_compatible", "base_url": base_url, "credential_ref": credential_ref},
-        )
-        if provider_resp.status_code not in (200, 409):
-            typer.echo(f"create provider failed: {provider_resp.status_code} {provider_resp.text}", err=True)
-            raise typer.Exit(1)
-        model_resp = c.post(
-            "/admin/models",
-            json={"org_id": org, "model_id": model, "provider_id": "openai", "upstream_model": upstream_model or model},
-        )
-        if model_resp.status_code not in (200, 409):
-            typer.echo(f"create model failed: {model_resp.status_code} {model_resp.text}", err=True)
-            raise typer.Exit(1)
-        compile_resp = c.post("/admin/bundles/compile", json={"org_id": org})
-        compile_resp.raise_for_status()
-        compiled = compile_resp.json()
-    env_path = Path(".env")
-    env_path.touch(exist_ok=True)
-    set_key(env_path, "AIRLLM_TOKEN", key["token"])
-    typer.echo(f"key {key['key_id']} created, token saved to .env as AIRLLM_TOKEN")
+        _post_expecting(c, "/admin/orgs", {"id": spec.org}, ok=(200, 409))
+        for provider in spec.providers:
+            _post_expecting(c, "/admin/providers", {"org_id": spec.org, **provider.model_dump()}, ok=(200, 409))
+        for model in spec.models:
+            _post_expecting(c, "/admin/models", {"org_id": spec.org, **model.model_dump()}, ok=(200, 409))
+        minted = [
+            _post_expecting(c, "/admin/keys", {"org_id": spec.org, "allowed_models": key.allowed_models}, ok=(200,)).json() for key in spec.keys
+        ]
+        compiled = _post_expecting(c, "/admin/bundles/compile", {"org_id": spec.org}, ok=(200,)).json()
+    for key in minted:
+        typer.echo(f"key {key['key_id']} minted")
+    if minted:
+        env_path = Path(".env")
+        env_path.touch(exist_ok=True)
+        set_key(env_path, "AIRLLM_TOKEN", minted[0]["token"])
+        typer.echo("first token saved to .env as AIRLLM_TOKEN")
     typer.echo(f"bundle {compiled['bundle_id']} v{compiled['version']} compiled, data plane picks it up within one poll interval")
 
 
