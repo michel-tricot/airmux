@@ -41,6 +41,13 @@ curl -s localhost:8080/v1/chat/completions \
   -d '{"model": "gpt-4o-mini", "messages": [{"role": "user", "content": "say hi"}]}'
 ```
 
+Or use the ready-made examples (streaming prints tokens as they arrive):
+
+```bash
+uv run python examples/chat.py
+uv run python examples/chat_stream.py "tell me a short story"
+```
+
 `bootstrap.yml` ships with a catalog of OpenAI-compatible hosted providers
 (openai, anthropic, gemini, xai, deepseek, mistral, groq). A model becomes
 callable as soon as its provider's key (for example `GROQ_API_KEY`) is in `.env`.

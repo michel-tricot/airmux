@@ -81,6 +81,7 @@ ignore = [
 "**/migrations/versions/*.py"  = ["ALL"]
 "**/migrations/env.py"         = ["INP001"]
 "apps/cli/**"                  = ["T201"]
+"examples/**"                  = ["T201", "INP001"]
 "apps/cli/src/cli/api_models.py" = ["ALL"]
 
 [tool.ruff.lint.isort]
