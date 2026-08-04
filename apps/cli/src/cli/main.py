@@ -1,34 +1,25 @@
 from __future__ import annotations
 
-import argparse
+import typer
+
+app = typer.Typer(name="airllm", no_args_is_help=True)
 
 
-def cmd_seed(args: argparse.Namespace) -> int:
+@app.command()
+def seed() -> None:
     raise NotImplementedError
 
 
-def cmd_compile(args: argparse.Namespace) -> int:
+@app.command("compile")
+def compile_bundle() -> None:
     raise NotImplementedError
 
 
-def cmd_verify(args: argparse.Namespace) -> int:
+@app.command()
+def verify() -> None:
     raise NotImplementedError
 
 
-def cmd_loadgen(args: argparse.Namespace) -> int:
+@app.command()
+def loadgen() -> None:
     raise NotImplementedError
-
-
-def main() -> int:
-    parser = argparse.ArgumentParser(prog="airllm")
-    subparsers = parser.add_subparsers(dest="command", required=True)
-    subparsers.add_parser("seed").set_defaults(func=cmd_seed)
-    subparsers.add_parser("compile").set_defaults(func=cmd_compile)
-    subparsers.add_parser("verify").set_defaults(func=cmd_verify)
-    subparsers.add_parser("loadgen").set_defaults(func=cmd_loadgen)
-    args = parser.parse_args()
-    return args.func(args)
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())
