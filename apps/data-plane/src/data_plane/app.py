@@ -75,11 +75,13 @@ async def chat_completions(request: Request) -> Response:
 async def _authorize(request: Request) -> tuple[CanonicalRequest, KeyEntry, BundleSnapshot]:
     """Authentication and body validation; raises RequestRejectedError on every no."""
     snap = holder.snapshot
-    if snap is None or state.token_public_key is None:
+    if snap is None:
         raise RequestRejectedError(503, "bundle_unavailable")
     auth_header = request.headers.get("authorization", "")
     if not auth_header.startswith("Bearer "):
         raise RequestRejectedError(401, "missing_bearer_token")
+    if state.token_public_key is None:
+        raise RequestRejectedError(503, "token_verifier_unavailable")
     key = authenticate(auth_header.removeprefix("Bearer "), state.token_public_key, snap.key_index, snap.revocations)
     if key is None:
         raise RequestRejectedError(401, "invalid_token")
