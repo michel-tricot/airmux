@@ -108,6 +108,7 @@ async def _handle(request: Request, ingress: Ingress) -> Response:
     req, key, snap = await _authorize(request, ingress)
     decision = evaluate(req, key, snap.bundle, datetime.now(tz=UTC))
     if isinstance(decision, Deny):
+        _record_denied(key, snap, req)
         raise RequestRejectedError(decision.status, decision.reason)
 
     adapter = REGISTRY[decision.provider.kind](decision.provider)
@@ -135,9 +136,14 @@ async def _handle(request: Request, ingress: Ingress) -> Response:
     return ingress.render_response(final)
 
 
+def _status_for_error(e: Exception) -> UsageStatus:
+    """Distinguish an upstream timeout from other upstream failures in the usage log."""
+    return "timeout" if isinstance(e, httpx.TimeoutException) else "upstream_error"
+
+
 def _upstream_exception(adapter: ProviderAdapter, ctx: Ctx, e: Exception, req: CanonicalRequest | None, ingress: Ingress) -> Response:
     err = adapter.map_error(e)
-    _record_usage(ctx, _empty_response(ctx), status="upstream_error", req=req)
+    _record_usage(ctx, _empty_response(ctx), status=_status_for_error(e), req=req)
     return ingress.render_error(err)
 
 
@@ -159,6 +165,33 @@ def _prompt_text(req: CanonicalRequest) -> str:
         elif isinstance(content, list):
             parts.extend(str(p.get("text", "")) for p in content if isinstance(p, dict))
     return "\n".join(parts)
+
+
+def _record_denied(key: KeyEntry, snap: BundleSnapshot, req: CanonicalRequest) -> None:
+    """A policy denial is still metered: attribute it to the caller's key and requested model, with zero usage.
+
+    Only authenticated-but-unauthorized requests are recorded here; raw auth failures have no key to bill.
+    """
+    if state.outbox is None:
+        return
+    state.outbox.record(
+        UsageEventV1(
+            event_id=uuid4(),
+            request_id=uuid4().hex,
+            occurred_at=datetime.now(tz=UTC),
+            org_id=key.org_id,
+            key_id=key.key_id,
+            model_id=req.model,
+            provider_id="",
+            bundle_id=snap.bundle.bundle_id,
+            input_tokens=0,
+            output_tokens=0,
+            cost_usd=0.0,
+            latency_ms=0,
+            status="denied",
+            stream=req.stream,
+        )
+    )
 
 
 def _record_usage(ctx: Ctx, final: CanonicalResponse, status: UsageStatus, req: CanonicalRequest | None = None) -> None:
@@ -263,7 +296,7 @@ async def _events(  # noqa: PLR0913, PLR0917 the streaming lifecycle genuinely s
         except (UpstreamStreamError, httpx.HTTPError) as e:
             for b in egress.error(adapter.map_error(e)):
                 yield b
-            _record_usage(ctx, adapter.finalize(stream_state), status="upstream_error", req=req)
+            _record_usage(ctx, adapter.finalize(stream_state), status=_status_for_error(e), req=req)
         except (asyncio.CancelledError, anyio.get_cancelled_exc_class()):
             _record_usage(ctx, adapter.finalize(stream_state), status="cancelled", req=req)
             raise
