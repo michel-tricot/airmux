@@ -7,7 +7,7 @@ dependencies = [
   "fastapi",
   "sqlmodel",
   "sqlalchemy[asyncio]>=2",
-  "asyncpg",
+  "aiosqlite",
   "alembic",
   "uvicorn[standard]",
 ]

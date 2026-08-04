@@ -17,7 +17,7 @@ class Settings:
 
 def load_settings() -> Settings:
     return Settings(
-        database_url=os.environ["GW_DATABASE_URL"],
+        database_url=os.environ.get("GW_DATABASE_URL", "sqlite+aiosqlite:///airllm.db"),
         admin_token=os.environ["GW_ADMIN_TOKEN"],
         dp_token=os.environ["GW_DP_TOKEN"],
         signing_key_b64=os.environ["GW_SIGNING_KEY"],
