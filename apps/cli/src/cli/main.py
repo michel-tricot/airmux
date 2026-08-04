@@ -251,7 +251,7 @@ class ProviderSpec(BaseModel):
 class ModelSpec(BaseModel):
     model_id: str = Field(description="Caller-facing model id")
     provider_id: str = Field(description="Provider id the model routes to")
-    upstream_model: str = Field("", description="What the provider is sent, defaults to the model id")
+    upstream_model: str = Field("", description="Model name sent to the provider, lets model_id be an alias; defaults to model_id")
     input_price_per_mtok: float = Field(0.0, description="USD per million input tokens")
     output_price_per_mtok: float = Field(0.0, description="USD per million output tokens")
     context_window: int = Field(128000, description="Context window in tokens")
