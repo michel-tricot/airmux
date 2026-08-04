@@ -86,6 +86,6 @@ class SignedBundle(BaseModel):
 
     model_config = ConfigDict(frozen=True)
 
-    payload: str  # canonical JSON of BundleV1: sorted keys, no whitespace, UTF-8
-    signature: str  # Ed25519 over payload, base64
+    payload: BundleV1
+    signature: str  # Ed25519 over canonical_json(payload), base64
     signing_key_id: str  # selects the public key the data plane verifies with

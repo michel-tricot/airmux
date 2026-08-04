@@ -110,7 +110,11 @@ async def readyz(_request: Request) -> JSONResponse:
 
 
 def _load_cached_bundle(config: Config, public_key: Ed25519PublicKey) -> None:
-    signed = read_cached_bundle(config.cache_dir)
+    try:
+        signed = read_cached_bundle(config.cache_dir)
+    except ValidationError:
+        logger.exception("cached bundle in %s does not parse, ignoring it", config.cache_dir)
+        return
     if signed is None:
         logger.warning("no cached bundle in %s, serving 503 until one arrives", config.cache_dir)
         return

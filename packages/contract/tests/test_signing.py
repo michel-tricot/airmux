@@ -33,6 +33,13 @@ def test_sign_and_verify_roundtrip():
 def test_tampered_payload_rejected():
     private_key = Ed25519PrivateKey.generate()
     signed = sign_bundle(make_bundle(), private_key, "k1")
-    tampered = signed.model_copy(update={"payload": signed.payload.replace("org-test", "org-evil")})
+    tampered = signed.model_copy(update={"payload": signed.payload.model_copy(update={"org_id": "org-evil"})})
     with pytest.raises(InvalidSignature):
         verify_bundle(tampered, private_key.public_key())
+
+
+def test_signature_survives_disk_roundtrip():
+    private_key = Ed25519PrivateKey.generate()
+    signed = sign_bundle(make_bundle(), private_key, "k1")
+    reloaded = type(signed).model_validate_json(signed.model_dump_json(indent=2))
+    assert verify_bundle(reloaded, private_key.public_key()) == signed.payload

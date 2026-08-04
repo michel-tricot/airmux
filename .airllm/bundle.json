@@ -1,5 +1,46 @@
 {
-  "payload": "{\"bundle_id\":\"f2f68b2b-5d6a-4f22-8e25-2becbb1339f4\",\"catalog\":{\"models\":[{\"capabilities\":[\"streaming\",\"tools\"],\"context_window\":128000,\"input_price_per_mtok\":0.0,\"model_id\":\"gpt-4o-mini\",\"output_price_per_mtok\":0.0,\"provider_id\":\"openai\",\"upstream_model\":\"gpt-4o-mini\"}],\"providers\":[{\"base_url\":\"https://api.openai.com/v1\",\"credential_ref\":\"env:OPENAI_API_KEY\",\"kind\":\"openai_compatible\",\"provider_id\":\"openai\"}]},\"expires_at\":\"2026-08-05T01:16:00.486574Z\",\"issued_at\":\"2026-08-04T01:16:00.486574Z\",\"keys\":[{\"allowed_models\":[\"*\"],\"disabled\":false,\"key_id\":\"k-dev\",\"org_id\":\"org-dev\"}],\"org_id\":\"org-dev\",\"revocations\":[],\"schema_version\":1}",
-  "signature": "VaEZx5kNiA+sh8CKdUOiIf2ThyiiZrKT0KWxdsH0TlGbm228nU4nBu9s+HuEi8QxLqwKkWTJ9UqQ3FCPsY2kDA==",
+  "payload": {
+    "schema_version": 1,
+    "bundle_id": "6b023b33-9037-4c75-b58a-8b10b555c97b",
+    "org_id": "org-dev",
+    "issued_at": "2026-08-04T01:18:02.164780Z",
+    "expires_at": "2026-08-05T01:18:02.164780Z",
+    "keys": [
+      {
+        "key_id": "k-dev",
+        "org_id": "org-dev",
+        "allowed_models": [
+          "*"
+        ],
+        "disabled": false
+      }
+    ],
+    "revocations": [],
+    "catalog": {
+      "providers": [
+        {
+          "provider_id": "openai",
+          "kind": "openai_compatible",
+          "base_url": "https://api.openai.com/v1",
+          "credential_ref": "env:OPENAI_API_KEY"
+        }
+      ],
+      "models": [
+        {
+          "model_id": "gpt-4o-mini",
+          "provider_id": "openai",
+          "upstream_model": "gpt-4o-mini",
+          "input_price_per_mtok": 0.0,
+          "output_price_per_mtok": 0.0,
+          "context_window": 128000,
+          "capabilities": [
+            "streaming",
+            "tools"
+          ]
+        }
+      ]
+    }
+  },
+  "signature": "FFq41qGmMxCnOzwXJYJSBTXH7KZFr1Gz5byJ8Z70SSm6vTRHF3moBESLdFKiT/VPDWFrkee2yEbm+1ztcfB4Bw==",
   "signing_key_id": "k1"
 }

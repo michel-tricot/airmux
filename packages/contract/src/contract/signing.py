@@ -11,15 +11,21 @@ if TYPE_CHECKING:
 
 
 def canonical_json(bundle: BundleV1) -> str:
+    """The exact bytes signatures are computed over: sorted keys, no whitespace, UTF-8.
+
+    The payload travels as a plain JSON object, so verification re-canonicalizes
+    it with this same function. That only works while serialization is
+    deterministic for every field type in the bundle; both planes must run the
+    same contract version.
+    """
     return json.dumps(bundle.model_dump(mode="json"), sort_keys=True, separators=(",", ":"), ensure_ascii=False)
 
 
 def sign_bundle(bundle: BundleV1, private_key: Ed25519PrivateKey, signing_key_id: str) -> SignedBundle:
-    payload = canonical_json(bundle)
-    signature = base64.b64encode(private_key.sign(payload.encode("utf-8"))).decode("ascii")
-    return SignedBundle(payload=payload, signature=signature, signing_key_id=signing_key_id)
+    signature = base64.b64encode(private_key.sign(canonical_json(bundle).encode("utf-8"))).decode("ascii")
+    return SignedBundle(payload=bundle, signature=signature, signing_key_id=signing_key_id)
 
 
 def verify_bundle(signed: SignedBundle, public_key: Ed25519PublicKey) -> BundleV1:
-    public_key.verify(base64.b64decode(signed.signature), signed.payload.encode("utf-8"))
-    return BundleV1.model_validate_json(signed.payload)
+    public_key.verify(base64.b64decode(signed.signature), canonical_json(signed.payload).encode("utf-8"))
+    return signed.payload
