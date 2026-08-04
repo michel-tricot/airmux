@@ -5,10 +5,11 @@ import json
 import httpx
 import respx
 from conformance import make_ctx
+from conftest import MODEL
 from starlette.testclient import TestClient
 
-from data_plane.app import app
-from data_plane.canonical import CanonicalChunk, CanonicalResponse, Usage
+from data_plane.app import _normalize_request, app
+from data_plane.canonical import CanonicalChunk, CanonicalRequest, CanonicalResponse, Usage
 from data_plane.ingress import ANTHROPIC
 
 # --- upstream fixtures (what the provider returns) ---
@@ -122,3 +123,15 @@ def test_messages_endpoint_streaming_over_openai_provider(token):
         json.loads(line[len("data: ") :])["delta"]["text"] for line in body.splitlines() if line.startswith("data: ") and '"text_delta"' in line
     )
     assert text == "Hi"
+
+
+def test_max_tokens_clamped_to_model_output_limit():
+    capped = MODEL.model_copy(update={"max_output_tokens": 16384})
+    over = CanonicalRequest(model="m", messages=[], max_tokens=32000)
+    assert _normalize_request(over, capped).max_tokens == 16384
+    # under the cap is untouched
+    assert _normalize_request(CanonicalRequest(model="m", messages=[], max_tokens=100), capped).max_tokens == 100
+    # no cap known -> no clamp
+    assert _normalize_request(over, MODEL).max_tokens == 32000
+    # no max_tokens set -> unchanged (None)
+    assert _normalize_request(CanonicalRequest(model="m", messages=[]), capped).max_tokens is None

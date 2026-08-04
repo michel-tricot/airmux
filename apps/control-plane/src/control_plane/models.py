@@ -37,6 +37,7 @@ class Model(SQLModel, table=True):
     input_price_per_mtok: float
     output_price_per_mtok: float
     context_window: int
+    max_output_tokens: int | None = None
     capabilities: list[str] = Field(default_factory=list, sa_type=JSON)
 
 

@@ -45,192 +45,224 @@ models:
     input_price_per_mtok: 5
     output_price_per_mtok: 15
     context_window: 128000
+    max_output_tokens: 4096
     capabilities: [streaming, tools, vision]
   - model_id: gpt-3.5-turbo
     provider_id: openai
     input_price_per_mtok: 0.5
     output_price_per_mtok: 1.5
     context_window: 16385
+    max_output_tokens: 4096
     capabilities: [streaming, tools]
   - model_id: gpt-3.5-turbo-16k
     provider_id: openai
     input_price_per_mtok: 3
     output_price_per_mtok: 4
     context_window: 16385
+    max_output_tokens: 4096
     capabilities: [streaming]
   - model_id: gpt-4
     provider_id: openai
     input_price_per_mtok: 30
     output_price_per_mtok: 60
     context_window: 8192
+    max_output_tokens: 4096
     capabilities: [streaming, tools]
   - model_id: gpt-4-turbo
     provider_id: openai
     input_price_per_mtok: 10
     output_price_per_mtok: 30
     context_window: 128000
+    max_output_tokens: 4096
     capabilities: [streaming, tools, vision]
   - model_id: gpt-4-turbo-preview
     provider_id: openai
     input_price_per_mtok: 10
     output_price_per_mtok: 30
     context_window: 128000
+    max_output_tokens: 4096
     capabilities: [streaming, tools]
   - model_id: gpt-4.1
     provider_id: openai
     input_price_per_mtok: 2
     output_price_per_mtok: 8
     context_window: 1047576
+    max_output_tokens: 32768
     capabilities: [streaming, tools, vision]
   - model_id: gpt-4.1-mini
     provider_id: openai
     input_price_per_mtok: 0.4
     output_price_per_mtok: 1.6
     context_window: 1047576
+    max_output_tokens: 32768
     capabilities: [streaming, tools, vision]
   - model_id: gpt-4.1-nano
     provider_id: openai
     input_price_per_mtok: 0.1
     output_price_per_mtok: 0.4
     context_window: 1047576
+    max_output_tokens: 32768
     capabilities: [streaming, tools, vision]
   - model_id: gpt-4o
     provider_id: openai
     input_price_per_mtok: 2.5
     output_price_per_mtok: 10
     context_window: 128000
+    max_output_tokens: 16384
     capabilities: [streaming, tools, vision]
   - model_id: gpt-4o-mini
     provider_id: openai
     input_price_per_mtok: 0.15
     output_price_per_mtok: 0.6
     context_window: 128000
+    max_output_tokens: 16384
     capabilities: [streaming, tools, vision]
   - model_id: gpt-5
     provider_id: openai
     input_price_per_mtok: 1.25
     output_price_per_mtok: 10
     context_window: 272000
+    max_output_tokens: 128000
     capabilities: [streaming, tools, vision]
   - model_id: gpt-5-chat
     provider_id: openai
     input_price_per_mtok: 1.25
     output_price_per_mtok: 10
     context_window: 128000
+    max_output_tokens: 16384
     capabilities: [streaming, vision]
   - model_id: gpt-5-mini
     provider_id: openai
     input_price_per_mtok: 0.25
     output_price_per_mtok: 2
     context_window: 272000
+    max_output_tokens: 128000
     capabilities: [streaming, tools, vision]
   - model_id: gpt-5-nano
     provider_id: openai
     input_price_per_mtok: 0.05
     output_price_per_mtok: 0.4
     context_window: 272000
+    max_output_tokens: 128000
     capabilities: [streaming, tools, vision]
   - model_id: gpt-5.1
     provider_id: openai
     input_price_per_mtok: 1.25
     output_price_per_mtok: 10
     context_window: 272000
+    max_output_tokens: 128000
     capabilities: [streaming, tools, vision]
   - model_id: gpt-5.1-chat-latest
     provider_id: openai
     input_price_per_mtok: 1.25
     output_price_per_mtok: 10
     context_window: 128000
+    max_output_tokens: 16384
     capabilities: [streaming, vision]
   - model_id: gpt-5.2
     provider_id: openai
     input_price_per_mtok: 1.75
     output_price_per_mtok: 14
     context_window: 272000
+    max_output_tokens: 128000
     capabilities: [streaming, tools, vision]
   - model_id: gpt-5.2-chat-latest
     provider_id: openai
     input_price_per_mtok: 1.75
     output_price_per_mtok: 14
     context_window: 128000
+    max_output_tokens: 16384
     capabilities: [streaming, tools, vision]
   - model_id: gpt-5.3-chat-latest
     provider_id: openai
     input_price_per_mtok: 1.75
     output_price_per_mtok: 14
     context_window: 128000
+    max_output_tokens: 16384
     capabilities: [streaming, tools, vision]
   - model_id: gpt-5.4
     provider_id: openai
     input_price_per_mtok: 2.5
     output_price_per_mtok: 15
     context_window: 1050000
+    max_output_tokens: 128000
     capabilities: [streaming, tools, vision]
   - model_id: gpt-5.4-mini
     provider_id: openai
     input_price_per_mtok: 0.75
     output_price_per_mtok: 4.5
     context_window: 272000
+    max_output_tokens: 128000
     capabilities: [streaming, tools, vision]
   - model_id: gpt-5.4-nano
     provider_id: openai
     input_price_per_mtok: 0.2
     output_price_per_mtok: 1.25
     context_window: 272000
+    max_output_tokens: 128000
     capabilities: [streaming, tools, vision]
   - model_id: gpt-5.5
     provider_id: openai
     input_price_per_mtok: 5
     output_price_per_mtok: 30
     context_window: 1050000
+    max_output_tokens: 128000
     capabilities: [streaming, tools, vision]
   - model_id: gpt-5.6
     provider_id: openai
     input_price_per_mtok: 5
     output_price_per_mtok: 30
     context_window: 1050000
+    max_output_tokens: 128000
     capabilities: [streaming, tools, vision]
   - model_id: gpt-5.6-luna
     provider_id: openai
     input_price_per_mtok: 0.2
     output_price_per_mtok: 1.2
     context_window: 1050000
+    max_output_tokens: 128000
     capabilities: [streaming, tools, vision]
   - model_id: gpt-5.6-sol
     provider_id: openai
     input_price_per_mtok: 5
     output_price_per_mtok: 30
     context_window: 1050000
+    max_output_tokens: 128000
     capabilities: [streaming, tools, vision]
   - model_id: gpt-5.6-terra
     provider_id: openai
     input_price_per_mtok: 2
     output_price_per_mtok: 12
     context_window: 1050000
+    max_output_tokens: 128000
     capabilities: [streaming, tools, vision]
   - model_id: o1
     provider_id: openai
     input_price_per_mtok: 15
     output_price_per_mtok: 60
     context_window: 200000
+    max_output_tokens: 100000
     capabilities: [streaming, tools, vision]
   - model_id: o3
     provider_id: openai
     input_price_per_mtok: 2
     output_price_per_mtok: 8
     context_window: 200000
+    max_output_tokens: 100000
     capabilities: [streaming, tools, vision]
   - model_id: o3-mini
     provider_id: openai
     input_price_per_mtok: 1.1
     output_price_per_mtok: 4.4
     context_window: 200000
+    max_output_tokens: 100000
     capabilities: [streaming, tools]
   - model_id: o4-mini
     provider_id: openai
     input_price_per_mtok: 1.1
     output_price_per_mtok: 4.4
     context_window: 200000
+    max_output_tokens: 100000
     capabilities: [streaming, tools, vision]
   # anthropic
   - model_id: claude-fable-5
@@ -238,66 +270,77 @@ models:
     input_price_per_mtok: 10
     output_price_per_mtok: 50
     context_window: 1000000
+    max_output_tokens: 128000
     capabilities: [streaming, tools, vision]
   - model_id: claude-haiku-4-5
     provider_id: anthropic
     input_price_per_mtok: 1
     output_price_per_mtok: 5
     context_window: 200000
+    max_output_tokens: 64000
     capabilities: [streaming, tools, vision]
   - model_id: claude-opus-4-1
     provider_id: anthropic
     input_price_per_mtok: 15
     output_price_per_mtok: 75
     context_window: 200000
+    max_output_tokens: 32000
     capabilities: [streaming, tools, vision]
   - model_id: claude-opus-4-5
     provider_id: anthropic
     input_price_per_mtok: 5
     output_price_per_mtok: 25
     context_window: 200000
+    max_output_tokens: 64000
     capabilities: [streaming, tools, vision]
   - model_id: claude-opus-4-6
     provider_id: anthropic
     input_price_per_mtok: 5
     output_price_per_mtok: 25
     context_window: 1000000
+    max_output_tokens: 128000
     capabilities: [streaming, tools, vision]
   - model_id: claude-opus-4-7
     provider_id: anthropic
     input_price_per_mtok: 5
     output_price_per_mtok: 25
     context_window: 1000000
+    max_output_tokens: 128000
     capabilities: [streaming, tools, vision]
   - model_id: claude-opus-4-8
     provider_id: anthropic
     input_price_per_mtok: 5
     output_price_per_mtok: 25
     context_window: 1000000
+    max_output_tokens: 128000
     capabilities: [streaming, tools, vision]
   - model_id: claude-opus-5
     provider_id: anthropic
     input_price_per_mtok: 5
     output_price_per_mtok: 25
     context_window: 1000000
+    max_output_tokens: 128000
     capabilities: [streaming, tools, vision]
   - model_id: claude-sonnet-4-5
     provider_id: anthropic
     input_price_per_mtok: 3
     output_price_per_mtok: 15
     context_window: 200000
+    max_output_tokens: 64000
     capabilities: [streaming, tools, vision]
   - model_id: claude-sonnet-4-6
     provider_id: anthropic
     input_price_per_mtok: 3
     output_price_per_mtok: 15
     context_window: 1000000
+    max_output_tokens: 64000
     capabilities: [streaming, tools, vision]
   - model_id: claude-sonnet-5
     provider_id: anthropic
     input_price_per_mtok: 2
     output_price_per_mtok: 10
     context_window: 1000000
+    max_output_tokens: 128000
     capabilities: [streaming, tools, vision]
   # gemini
   - model_id: gemini-2.0-flash
@@ -305,108 +348,126 @@ models:
     input_price_per_mtok: 0.1
     output_price_per_mtok: 0.4
     context_window: 1048576
+    max_output_tokens: 8192
     capabilities: [streaming, tools, vision]
   - model_id: gemini-2.0-flash-lite
     provider_id: gemini
     input_price_per_mtok: 0.075
     output_price_per_mtok: 0.3
     context_window: 1048576
+    max_output_tokens: 8192
     capabilities: [streaming, tools, vision]
   - model_id: gemini-2.5-flash
     provider_id: gemini
     input_price_per_mtok: 0.3
     output_price_per_mtok: 2.5
     context_window: 1048576
+    max_output_tokens: 65535
     capabilities: [streaming, tools, vision]
   - model_id: gemini-2.5-flash-lite
     provider_id: gemini
     input_price_per_mtok: 0.1
     output_price_per_mtok: 0.4
     context_window: 1048576
+    max_output_tokens: 65535
     capabilities: [streaming, tools, vision]
   - model_id: gemini-2.5-flash-lite-preview-06-17
     provider_id: gemini
     input_price_per_mtok: 0.1
     output_price_per_mtok: 0.4
     context_window: 1048576
+    max_output_tokens: 65535
     capabilities: [streaming, tools, vision]
   - model_id: gemini-2.5-pro
     provider_id: gemini
     input_price_per_mtok: 1.25
     output_price_per_mtok: 10
     context_window: 1048576
+    max_output_tokens: 65535
     capabilities: [streaming, tools, vision]
   - model_id: gemini-3-flash-preview
     provider_id: gemini
     input_price_per_mtok: 0.5
     output_price_per_mtok: 3
     context_window: 1048576
+    max_output_tokens: 65535
     capabilities: [streaming, tools, vision]
   - model_id: gemini-3-pro-preview
     provider_id: gemini
     input_price_per_mtok: 2
     output_price_per_mtok: 12
     context_window: 1048576
+    max_output_tokens: 65535
     capabilities: [streaming, tools, vision]
   - model_id: gemini-3.1-flash-lite
     provider_id: gemini
     input_price_per_mtok: 0.25
     output_price_per_mtok: 1.5
     context_window: 1048576
+    max_output_tokens: 65536
     capabilities: [streaming, tools, vision]
   - model_id: gemini-3.1-flash-lite-preview
     provider_id: gemini
     input_price_per_mtok: 0.25
     output_price_per_mtok: 1.5
     context_window: 1048576
+    max_output_tokens: 65536
     capabilities: [streaming, tools, vision]
   - model_id: gemini-3.1-pro-preview
     provider_id: gemini
     input_price_per_mtok: 2
     output_price_per_mtok: 12
     context_window: 1048576
+    max_output_tokens: 65536
     capabilities: [streaming, tools, vision]
   - model_id: gemini-3.5-flash
     provider_id: gemini
     input_price_per_mtok: 1.5
     output_price_per_mtok: 9
     context_window: 1048576
+    max_output_tokens: 65535
     capabilities: [streaming, tools, vision]
   - model_id: gemini-3.5-flash-lite
     provider_id: gemini
     input_price_per_mtok: 0.3
     output_price_per_mtok: 2.5
     context_window: 1048576
+    max_output_tokens: 65536
     capabilities: [streaming, tools, vision]
   - model_id: gemini-3.6-flash
     provider_id: gemini
     input_price_per_mtok: 1.5
     output_price_per_mtok: 7.5
     context_window: 1048576
+    max_output_tokens: 65536
     capabilities: [streaming, tools, vision]
   - model_id: gemini-flash-latest
     provider_id: gemini
     input_price_per_mtok: 0.3
     output_price_per_mtok: 2.5
     context_window: 1048576
+    max_output_tokens: 65535
     capabilities: [streaming, tools, vision]
   - model_id: gemini-flash-lite-latest
     provider_id: gemini
     input_price_per_mtok: 0.1
     output_price_per_mtok: 0.4
     context_window: 1048576
+    max_output_tokens: 65535
     capabilities: [streaming, tools, vision]
   - model_id: gemini-pro-latest
     provider_id: gemini
     input_price_per_mtok: 1.25
     output_price_per_mtok: 10
     context_window: 1048576
+    max_output_tokens: 65535
     capabilities: [streaming, tools, vision]
   - model_id: gemma-3-27b-it
     provider_id: gemini
     input_price_per_mtok: 0
     output_price_per_mtok: 0
     context_window: 131072
+    max_output_tokens: 8192
     capabilities: [streaming, tools, vision]
   # xai
   - model_id: grok-2
@@ -414,48 +475,56 @@ models:
     input_price_per_mtok: 2
     output_price_per_mtok: 10
     context_window: 131072
+    max_output_tokens: 131072
     capabilities: [streaming, tools]
   - model_id: grok-2-vision
     provider_id: xai
     input_price_per_mtok: 2
     output_price_per_mtok: 10
     context_window: 32768
+    max_output_tokens: 32768
     capabilities: [streaming, tools, vision]
   - model_id: grok-3
     provider_id: xai
     input_price_per_mtok: 3
     output_price_per_mtok: 15
     context_window: 131072
+    max_output_tokens: 131072
     capabilities: [streaming, tools]
   - model_id: grok-3-fast-beta
     provider_id: xai
     input_price_per_mtok: 5
     output_price_per_mtok: 25
     context_window: 131072
+    max_output_tokens: 131072
     capabilities: [streaming, tools]
   - model_id: grok-3-fast-latest
     provider_id: xai
     input_price_per_mtok: 5
     output_price_per_mtok: 25
     context_window: 131072
+    max_output_tokens: 131072
     capabilities: [streaming, tools]
   - model_id: grok-3-mini
     provider_id: xai
     input_price_per_mtok: 0.3
     output_price_per_mtok: 0.5
     context_window: 131072
+    max_output_tokens: 131072
     capabilities: [streaming, tools]
   - model_id: grok-3-mini-fast
     provider_id: xai
     input_price_per_mtok: 0.6
     output_price_per_mtok: 4
     context_window: 131072
+    max_output_tokens: 131072
     capabilities: [streaming, tools]
   - model_id: grok-4
     provider_id: xai
     input_price_per_mtok: 3
     output_price_per_mtok: 15
     context_window: 256000
+    max_output_tokens: 256000
     capabilities: [streaming, tools]
   - model_id: grok-4-1-fast
     provider_id: xai
@@ -468,48 +537,56 @@ models:
     input_price_per_mtok: 0.2
     output_price_per_mtok: 0.5
     context_window: 2000000.0
+    max_output_tokens: 131072
     capabilities: [streaming, tools, vision]
   - model_id: grok-4-1-fast-reasoning
     provider_id: xai
     input_price_per_mtok: 0.2
     output_price_per_mtok: 0.5
     context_window: 2000000.0
+    max_output_tokens: 131072
     capabilities: [streaming, tools, vision]
   - model_id: grok-4-fast-non-reasoning
     provider_id: xai
     input_price_per_mtok: 0.2
     output_price_per_mtok: 0.5
     context_window: 2000000.0
+    max_output_tokens: 131072
     capabilities: [streaming, tools]
   - model_id: grok-4-fast-reasoning
     provider_id: xai
     input_price_per_mtok: 0.2
     output_price_per_mtok: 0.5
     context_window: 2000000.0
+    max_output_tokens: 131072
     capabilities: [streaming, tools]
   - model_id: grok-4.3
     provider_id: xai
     input_price_per_mtok: 1.25
     output_price_per_mtok: 2.5
     context_window: 1000000
+    max_output_tokens: 1000000
     capabilities: [streaming, tools, vision]
   - model_id: grok-4.5
     provider_id: xai
     input_price_per_mtok: 2
     output_price_per_mtok: 6
     context_window: 500000
+    max_output_tokens: 500000
     capabilities: [streaming, tools, vision]
   - model_id: grok-code-fast
     provider_id: xai
     input_price_per_mtok: 0.2
     output_price_per_mtok: 1.5
     context_window: 256000
+    max_output_tokens: 256000
     capabilities: [streaming, tools]
   - model_id: grok-code-fast-1
     provider_id: xai
     input_price_per_mtok: 0.2
     output_price_per_mtok: 1.5
     context_window: 256000
+    max_output_tokens: 256000
     capabilities: [streaming, tools]
   # deepseek
   - model_id: deepseek-chat
@@ -517,48 +594,56 @@ models:
     input_price_per_mtok: 0.28
     output_price_per_mtok: 0.42
     context_window: 131072
+    max_output_tokens: 8192
     capabilities: [streaming, tools]
   - model_id: deepseek-coder
     provider_id: deepseek
     input_price_per_mtok: 0.14
     output_price_per_mtok: 0.28
     context_window: 128000
+    max_output_tokens: 4096
     capabilities: [streaming, tools]
   - model_id: deepseek-r1
     provider_id: deepseek
     input_price_per_mtok: 0.55
     output_price_per_mtok: 2.19
     context_window: 65536
+    max_output_tokens: 16384
     capabilities: [streaming, tools]
   - model_id: deepseek-reasoner
     provider_id: deepseek
     input_price_per_mtok: 0.28
     output_price_per_mtok: 0.42
     context_window: 131072
+    max_output_tokens: 65536
     capabilities: [streaming]
   - model_id: deepseek-v3
     provider_id: deepseek
     input_price_per_mtok: 0.27
     output_price_per_mtok: 1.1
     context_window: 65536
+    max_output_tokens: 8192
     capabilities: [streaming, tools]
   - model_id: deepseek-v3.2
     provider_id: deepseek
     input_price_per_mtok: 0.28
     output_price_per_mtok: 0.4
     context_window: 163840
+    max_output_tokens: 163840
     capabilities: [streaming, tools]
   - model_id: deepseek-v4-flash
     provider_id: deepseek
     input_price_per_mtok: 0.14
     output_price_per_mtok: 0.28
     context_window: 1000000
+    max_output_tokens: 8192
     capabilities: [streaming, tools]
   - model_id: deepseek-v4-pro
     provider_id: deepseek
     input_price_per_mtok: 0.435
     output_price_per_mtok: 0.87
     context_window: 1000000
+    max_output_tokens: 8192
     capabilities: [streaming, tools]
   # mistral
   - model_id: codestral-latest
@@ -566,120 +651,140 @@ models:
     input_price_per_mtok: 1
     output_price_per_mtok: 3
     context_window: 32000
+    max_output_tokens: 8191
     capabilities: [streaming]
   - model_id: codestral-mamba-latest
     provider_id: mistral
     input_price_per_mtok: 0.25
     output_price_per_mtok: 0.25
     context_window: 256000
+    max_output_tokens: 256000
     capabilities: [streaming]
   - model_id: devstral-latest
     provider_id: mistral
     input_price_per_mtok: 0.4
     output_price_per_mtok: 2
     context_window: 256000
+    max_output_tokens: 256000
     capabilities: [streaming, tools]
   - model_id: devstral-medium-latest
     provider_id: mistral
     input_price_per_mtok: 0.4
     output_price_per_mtok: 2
     context_window: 256000
+    max_output_tokens: 256000
     capabilities: [streaming, tools]
   - model_id: devstral-small-latest
     provider_id: mistral
     input_price_per_mtok: 0.1
     output_price_per_mtok: 0.3
     context_window: 256000
+    max_output_tokens: 256000
     capabilities: [streaming, tools]
   - model_id: magistral-medium-latest
     provider_id: mistral
     input_price_per_mtok: 2
     output_price_per_mtok: 5
     context_window: 40000
+    max_output_tokens: 40000
     capabilities: [streaming, tools]
   - model_id: magistral-small-latest
     provider_id: mistral
     input_price_per_mtok: 0.5
     output_price_per_mtok: 1.5
     context_window: 40000
+    max_output_tokens: 40000
     capabilities: [streaming, tools]
   - model_id: ministral-8b-latest
     provider_id: mistral
     input_price_per_mtok: 0.15
     output_price_per_mtok: 0.15
     context_window: 262144
+    max_output_tokens: 262144
     capabilities: [streaming, tools, vision]
   - model_id: mistral-large-3
     provider_id: mistral
     input_price_per_mtok: 0.5
     output_price_per_mtok: 1.5
     context_window: 262144
+    max_output_tokens: 262144
     capabilities: [streaming, tools, vision]
   - model_id: mistral-large-latest
     provider_id: mistral
     input_price_per_mtok: 0.5
     output_price_per_mtok: 1.5
     context_window: 262144
+    max_output_tokens: 262144
     capabilities: [streaming, tools, vision]
   - model_id: mistral-medium
     provider_id: mistral
     input_price_per_mtok: 2.7
     output_price_per_mtok: 8.1
     context_window: 32000
+    max_output_tokens: 8191
     capabilities: [streaming]
   - model_id: mistral-medium-3-5
     provider_id: mistral
     input_price_per_mtok: 1.5
     output_price_per_mtok: 7.5
     context_window: 262144
+    max_output_tokens: 262144
     capabilities: [streaming, tools, vision]
   - model_id: mistral-small
     provider_id: mistral
     input_price_per_mtok: 0.1
     output_price_per_mtok: 0.3
     context_window: 32000
+    max_output_tokens: 8191
     capabilities: [streaming, tools]
   - model_id: mistral-tiny
     provider_id: mistral
     input_price_per_mtok: 0.25
     output_price_per_mtok: 0.25
     context_window: 32000
+    max_output_tokens: 8191
     capabilities: [streaming]
   - model_id: open-codestral-mamba
     provider_id: mistral
     input_price_per_mtok: 0.25
     output_price_per_mtok: 0.25
     context_window: 256000
+    max_output_tokens: 256000
     capabilities: [streaming]
   - model_id: open-mistral-7b
     provider_id: mistral
     input_price_per_mtok: 0.25
     output_price_per_mtok: 0.25
     context_window: 32000
+    max_output_tokens: 8191
     capabilities: [streaming]
   - model_id: open-mistral-nemo
     provider_id: mistral
     input_price_per_mtok: 0.3
     output_price_per_mtok: 0.3
     context_window: 128000
+    max_output_tokens: 128000
     capabilities: [streaming]
   - model_id: open-mixtral-8x22b
     provider_id: mistral
     input_price_per_mtok: 2
     output_price_per_mtok: 6
     context_window: 65336
+    max_output_tokens: 8191
     capabilities: [streaming, tools]
   - model_id: open-mixtral-8x7b
     provider_id: mistral
     input_price_per_mtok: 0.7
     output_price_per_mtok: 0.7
     context_window: 32000
+    max_output_tokens: 8191
     capabilities: [streaming, tools]
   - model_id: pixtral-large-latest
     provider_id: mistral
     input_price_per_mtok: 2
     output_price_per_mtok: 6
     context_window: 128000
+    max_output_tokens: 128000
     capabilities: [streaming, tools, vision]
   # groq
   - model_id: gemma-7b-it
@@ -687,48 +792,56 @@ models:
     input_price_per_mtok: 0.05
     output_price_per_mtok: 0.08
     context_window: 8192
+    max_output_tokens: 8192
     capabilities: [streaming, tools]
   - model_id: llama-3.1-8b-instant
     provider_id: groq
     input_price_per_mtok: 0.05
     output_price_per_mtok: 0.08
     context_window: 128000
+    max_output_tokens: 8192
     capabilities: [streaming, tools]
   - model_id: llama-3.3-70b-versatile
     provider_id: groq
     input_price_per_mtok: 0.59
     output_price_per_mtok: 0.79
     context_window: 128000
+    max_output_tokens: 32768
     capabilities: [streaming, tools]
   - model_id: "meta-llama/llama-4-maverick-17b-128e-instruct"
     provider_id: groq
     input_price_per_mtok: 0.2
     output_price_per_mtok: 0.6
     context_window: 131072
+    max_output_tokens: 8192
     capabilities: [streaming, tools, vision]
   - model_id: "meta-llama/llama-4-scout-17b-16e-instruct"
     provider_id: groq
     input_price_per_mtok: 0.11
     output_price_per_mtok: 0.34
     context_window: 131072
+    max_output_tokens: 131072
     capabilities: [streaming, tools, vision]
   - model_id: "openai/gpt-oss-120b"
     provider_id: groq
     input_price_per_mtok: 0.15
     output_price_per_mtok: 0.6
     context_window: 131072
+    max_output_tokens: 131072
     capabilities: [streaming, tools]
   - model_id: "openai/gpt-oss-20b"
     provider_id: groq
     input_price_per_mtok: 0.075
     output_price_per_mtok: 0.3
     context_window: 131072
+    max_output_tokens: 131072
     capabilities: [streaming, tools]
   - model_id: "qwen/qwen3-32b"
     provider_id: groq
     input_price_per_mtok: 0.29
     output_price_per_mtok: 0.59
     context_window: 131000
+    max_output_tokens: 131000
     capabilities: [streaming, tools]
 
 keys:

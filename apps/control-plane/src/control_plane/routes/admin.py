@@ -54,6 +54,7 @@ class ModelIn(BaseModel):
     input_price_per_mtok: float = Field(0.0, description="USD per million input tokens")
     output_price_per_mtok: float = Field(0.0, description="USD per million output tokens")
     context_window: int = Field(128000, description="Context window in tokens")
+    max_output_tokens: int | None = Field(None, description="Max completion tokens; requests are clamped to it")
     capabilities: list[str] = Field(default=["streaming", "tools"], description="Capabilities, comma separated")
 
 
@@ -153,6 +154,7 @@ async def create_model(body: ModelIn, session: SessionDep) -> ModelOut:
             input_price_per_mtok=body.input_price_per_mtok,
             output_price_per_mtok=body.output_price_per_mtok,
             context_window=body.context_window,
+            max_output_tokens=body.max_output_tokens,
             capabilities=body.capabilities,
         )
     else:
@@ -161,6 +163,7 @@ async def create_model(body: ModelIn, session: SessionDep) -> ModelOut:
         model.input_price_per_mtok = body.input_price_per_mtok
         model.output_price_per_mtok = body.output_price_per_mtok
         model.context_window = body.context_window
+        model.max_output_tokens = body.max_output_tokens
         model.capabilities = body.capabilities
     session.add(model)
     await session.commit()

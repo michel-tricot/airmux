@@ -17,7 +17,7 @@ from starlette.applications import Starlette
 from starlette.responses import JSONResponse, Response, StreamingResponse
 from starlette.routing import Route
 
-from contract import UsageEventV1, UsageStatus, public_key_from_b64, verify_bundle
+from contract import ModelEntry, UsageEventV1, UsageStatus, public_key_from_b64, verify_bundle
 from data_plane.adapters import REGISTRY, ProviderAdapter
 from data_plane.auth import authenticate
 from data_plane.cache import acquire_cache_lock, read_cached_bundle, release_cache_lock
@@ -115,6 +115,7 @@ async def _handle(request: Request, ingress: Ingress) -> Response:
         key_id=key.key_id,
         bundle_id=snap.bundle.bundle_id,
     )
+    req = _normalize_request(req, decision.model)
     upstream = adapter.transform_request(req, decision.model)
     if req.stream:
         return await _stream(adapter, ctx, upstream, req, ingress)
@@ -138,6 +139,13 @@ def _upstream_exception(adapter: ProviderAdapter, ctx: Ctx, e: Exception, req: C
 def _upstream_error_body(ctx: Ctx, body: bytes, status_code: int, req: CanonicalRequest | None, ingress: Ingress) -> Response:
     _record_usage(ctx, _empty_response(ctx), status="upstream_error", req=req)
     return ingress.render_upstream_error(status_code, body)
+
+
+def _normalize_request(req: CanonicalRequest, model: ModelEntry) -> CanonicalRequest:
+    """Reconcile client-set params with the target model's real limits; a client aimed at one provider cannot know another's caps."""
+    if req.max_tokens and model.max_output_tokens and req.max_tokens > model.max_output_tokens:
+        return req.model_copy(update={"max_tokens": model.max_output_tokens})
+    return req
 
 
 def _empty_response(ctx: Ctx) -> CanonicalResponse:

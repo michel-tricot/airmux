@@ -78,6 +78,7 @@ class Model(BaseModel):
     input_price_per_mtok: float = Field(..., title="Input Price Per Mtok")
     output_price_per_mtok: float = Field(..., title="Output Price Per Mtok")
     context_window: int = Field(..., title="Context Window")
+    max_output_tokens: int | None = Field(None, title="Max Output Tokens")
     capabilities: list[str] | None = Field(None, title="Capabilities")
 
 
@@ -92,6 +93,7 @@ class ModelEntry(BaseModel):
     input_price_per_mtok: float = Field(..., title="Input Price Per Mtok")
     output_price_per_mtok: float = Field(..., title="Output Price Per Mtok")
     context_window: int = Field(..., title="Context Window")
+    max_output_tokens: int | None = Field(None, title="Max Output Tokens")
     capabilities: list[str] = Field(..., title="Capabilities")
 
 
@@ -107,6 +109,11 @@ class ModelIn(BaseModel):
     input_price_per_mtok: float | None = Field(0.0, description="USD per million input tokens", title="Input Price Per Mtok")
     output_price_per_mtok: float | None = Field(0.0, description="USD per million output tokens", title="Output Price Per Mtok")
     context_window: int | None = Field(128000, description="Context window in tokens", title="Context Window")
+    max_output_tokens: int | None = Field(
+        None,
+        description="Max completion tokens; requests are clamped to it",
+        title="Max Output Tokens",
+    )
     capabilities: list[str] | None = Field(
         ["streaming", "tools"],
         description="Capabilities, comma separated",

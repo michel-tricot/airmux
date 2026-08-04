@@ -46,6 +46,7 @@ class ModelEntry(BaseModel):
     input_price_per_mtok: float  # USD per million input tokens
     output_price_per_mtok: float  # USD per million output tokens
     context_window: int
+    max_output_tokens: int | None = None  # completion cap; requests are clamped to it, distinct from context_window
     capabilities: list[str]  # "streaming", "tools", "vision"
 
 

@@ -38,6 +38,7 @@ MODEL_COLS = [
     Col("input_price_per_mtok", "$/Mtok in"),
     Col("output_price_per_mtok", "$/Mtok out"),
     Col("context_window", "Context"),
+    Col("max_output_tokens", "Max out"),
     Col("capabilities", "Capabilities", style="cyan", max_width=30),
 ]
 

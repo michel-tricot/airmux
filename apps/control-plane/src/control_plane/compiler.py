@@ -50,6 +50,7 @@ async def compile_bundle(session: AsyncSession, org_id: str, bundle_id: UUID, no
                     input_price_per_mtok=r.input_price_per_mtok,
                     output_price_per_mtok=r.output_price_per_mtok,
                     context_window=r.context_window,
+                    max_output_tokens=r.max_output_tokens,
                     capabilities=r.capabilities,
                 )
                 for r in model_rows
