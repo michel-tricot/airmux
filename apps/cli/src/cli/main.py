@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import os
 import secrets
+from datetime import datetime
 from pathlib import Path
-from typing import Literal
+from typing import TYPE_CHECKING, Literal, NamedTuple
 
 import httpx
 import typer
@@ -12,10 +13,14 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from dotenv import dotenv_values, find_dotenv, load_dotenv, set_key, unset_key
 from pydantic import BaseModel, Field
+from rich import box
 from rich.console import Console
 from rich.table import Table
 
 from contract import private_key_to_b64, public_key_to_b64
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 app = typer.Typer(name="airllm", no_args_is_help=True)
 console = Console()
@@ -91,17 +96,70 @@ def _cell(value: object) -> str:
     return str(value)
 
 
-def _print_table(title: str, rows: list[dict]) -> None:
+def _fmt_when(value: object) -> str:
+    if not value:
+        return ""
+    return datetime.fromisoformat(str(value)).strftime("%Y-%m-%d %H:%M")
+
+
+class Col(NamedTuple):
+    key: str
+    header: str
+    style: str | None = None
+    no_wrap: bool = False
+    max_width: int | None = None
+    fmt: Callable[[object], str] = _cell
+
+
+def _print_table(name: str, rows: list[dict], cols: list[Col]) -> None:
     if not rows:
-        console.print(f"[dim]no {title}[/dim]")
+        console.print(f"No {name} found.")
         return
-    table = Table(title=title, title_justify="left", header_style="bold cyan")
-    cols = list(dict.fromkeys(k for r in rows for k in r))
+    table = Table(box=box.ROUNDED, header_style="bold")
     for c in cols:
-        table.add_column(c)
+        table.add_column(c.header, style=c.style, no_wrap=c.no_wrap, max_width=c.max_width)
     for r in rows:
-        table.add_row(*(_cell(r.get(c)) for c in cols))
+        table.add_row(*(c.fmt(r.get(c.key)) for c in cols))
     console.print(table)
+
+
+ORG_COLS = [
+    Col("id", "ID", style="dim", no_wrap=True),
+    Col("name", "Name", max_width=40),
+    Col("created_at", "Created", no_wrap=True, fmt=_fmt_when),
+]
+KEY_COLS = [
+    Col("id", "ID", style="dim", no_wrap=True),
+    Col("org_id", "Org"),
+    Col("allowed_models", "Allowed models", style="cyan", max_width=40),
+    Col("disabled", "Status", style="yellow", fmt=lambda v: "revoked" if v else "active"),
+    Col("created_at", "Created", no_wrap=True, fmt=_fmt_when),
+]
+PROVIDER_COLS = [
+    Col("id", "ID", style="dim", no_wrap=True),
+    Col("org_id", "Org"),
+    Col("kind", "Kind"),
+    Col("base_url", "Base URL", max_width=45),
+    Col("credential_ref", "Credential", style="cyan", max_width=30),
+]
+MODEL_COLS = [
+    Col("id", "ID", style="dim", no_wrap=True),
+    Col("org_id", "Org"),
+    Col("provider_id", "Provider"),
+    Col("upstream_model", "Upstream model"),
+    Col("input_price_per_mtok", "$/Mtok in"),
+    Col("output_price_per_mtok", "$/Mtok out"),
+    Col("context_window", "Context"),
+    Col("capabilities", "Capabilities", style="cyan", max_width=30),
+]
+BUNDLE_COLS = [
+    Col("id", "ID", style="dim", no_wrap=True, fmt=lambda v: str(v)[:8]),
+    Col("org_id", "Org"),
+    Col("version", "Version"),
+    Col("issued_at", "Issued", no_wrap=True, fmt=_fmt_when),
+    Col("expires_at", "Expires", no_wrap=True, fmt=_fmt_when),
+    Col("signing_key_id", "Key", style="dim"),
+]
 
 
 def _load_or_create_key(key_path: Path) -> Ed25519PrivateKey:
@@ -237,12 +295,12 @@ for name, sub in (("orgs", orgs_app), ("keys", keys_app), ("providers", provider
 
 @orgs_app.command("list")
 def orgs_list(control_plane_url: str = "") -> None:
-    _print_table("orgs", _admin_get("/admin/orgs", control_plane_url))
+    _print_table("orgs", _admin_get("/admin/orgs", control_plane_url), ORG_COLS)
 
 
 @keys_app.command("list")
 def keys_list(org: str | None = None, control_plane_url: str = "") -> None:
-    _print_table("keys", _admin_get("/admin/keys", control_plane_url, org))
+    _print_table("keys", _admin_get("/admin/keys", control_plane_url, org), KEY_COLS)
 
 
 @keys_app.command("create")
@@ -266,17 +324,17 @@ def keys_revoke(key_id: str, control_plane_url: str = "") -> None:
 
 @providers_app.command("list")
 def providers_list(org: str | None = None, control_plane_url: str = "") -> None:
-    _print_table("providers", _admin_get("/admin/providers", control_plane_url, org))
+    _print_table("providers", _admin_get("/admin/providers", control_plane_url, org), PROVIDER_COLS)
 
 
 @models_app.command("list")
 def models_list(org: str | None = None, control_plane_url: str = "") -> None:
-    _print_table("models", _admin_get("/admin/models", control_plane_url, org))
+    _print_table("models", _admin_get("/admin/models", control_plane_url, org), MODEL_COLS)
 
 
 @bundles_app.command("list")
 def bundles_list(org: str | None = None, control_plane_url: str = "") -> None:
-    _print_table("bundles", _admin_get("/admin/bundles", control_plane_url, org))
+    _print_table("bundles", _admin_get("/admin/bundles", control_plane_url, org), BUNDLE_COLS)
 
 
 @bundles_app.command("compile")
