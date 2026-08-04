@@ -292,12 +292,11 @@ async def lifespan(_app: Starlette) -> AsyncIterator[None]:
     state.config = config
     acquire_cache_lock(config.bundle.cache_dir)
     try:
-        bundle_key = public_key_from_b64(config.bundle.public_key)
-        state.bundle_public_key = bundle_key
+        state.bundle_public_key = public_key_from_b64(config.bundle.public_key)
         state.token_public_key = public_key_from_b64(config.auth.token_public_key)
-        _load_cached_bundle(config, bundle_key)
+        _load_cached_bundle(config, state.bundle_public_key)
         tasks = (
-            [asyncio.create_task(run_poller(config, holder, bundle_key)), asyncio.create_task(run_flusher(config))]
+            [asyncio.create_task(run_poller(config, holder, state.bundle_public_key)), asyncio.create_task(run_flusher(config))]
             if config.control_plane.url
             else []
         )
