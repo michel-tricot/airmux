@@ -12,7 +12,7 @@
 # is milestone M4. Azure OpenAI, Bedrock and Vertex need auth schemes the
 # adapter does not speak yet.
 
-org: org-dev
+org: my org
 
 providers:
   - provider_id: openai

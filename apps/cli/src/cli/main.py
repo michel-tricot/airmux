@@ -357,10 +357,54 @@ def providers_list(org: str | None = None, control_plane_url: str = "", fmt: For
     _print_rows("providers", _admin_get("/admin/providers", control_plane_url, org), PROVIDER_COLS, fmt)
 
 
+@providers_app.command("create")
+def providers_create(  # noqa: PLR0913, PLR0917 CLI options are a flat namespace by design
+    provider_id: str,
+    base_url: Annotated[str, typer.Option(help="OpenAI-compatible endpoint, e.g. https://api.groq.com/openai/v1")],
+    credential_ref: Annotated[str, typer.Option(help="env: or file: reference resolved by the data plane, never a raw secret")],
+    org: str = "org-dev",
+    kind: str = "openai_compatible",
+    control_plane_url: str = "",
+) -> None:
+    """Register an upstream provider."""
+    body = {"org_id": org, "provider_id": provider_id, "kind": kind, "base_url": base_url, "credential_ref": credential_ref}
+    with _admin_client(_control_plane_url(control_plane_url)) as c:
+        _post_expecting(c, "/admin/providers", body, ok=(200,))
+    console.print(f"provider [bold]{provider_id}[/bold] created, add models then `airllm bundles compile`")
+
+
 @models_app.command("list")
 def models_list(org: str | None = None, control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
     """List routable models with pricing and capabilities."""
     _print_rows("models", _admin_get("/admin/models", control_plane_url, org), MODEL_COLS, fmt)
+
+
+@models_app.command("create")
+def models_create(  # noqa: PLR0913, PLR0917 CLI options are a flat namespace by design
+    model_id: str,
+    provider: Annotated[str, typer.Option(help="provider_id the model routes to")],
+    org: str = "org-dev",
+    upstream_model: str = "",
+    input_price_per_mtok: float = 0.0,
+    output_price_per_mtok: float = 0.0,
+    context_window: int = 128000,
+    capability: list[str] | None = None,
+    control_plane_url: str = "",
+) -> None:
+    """Add a routable model; upstream_model defaults to the model id."""
+    body = {
+        "org_id": org,
+        "model_id": model_id,
+        "provider_id": provider,
+        "upstream_model": upstream_model or model_id,
+        "input_price_per_mtok": input_price_per_mtok,
+        "output_price_per_mtok": output_price_per_mtok,
+        "context_window": context_window,
+        "capabilities": capability or ["streaming", "tools"],
+    }
+    with _admin_client(_control_plane_url(control_plane_url)) as c:
+        _post_expecting(c, "/admin/models", body, ok=(200,))
+    console.print(f"model [bold]{model_id}[/bold] created, run `airllm bundles compile` to serve it")
 
 
 @bundles_app.command("list")
