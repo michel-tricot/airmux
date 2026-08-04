@@ -5,6 +5,7 @@ import base64
 import json
 import logging
 from datetime import UTC, datetime, timedelta
+from typing import TYPE_CHECKING, cast
 from uuid import uuid4
 
 import httpx
@@ -15,6 +16,9 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from starlette.responses import StreamingResponse
 from starlette.testclient import TestClient
 from test_streaming_fold import CTX, PROVIDER, TEXT_LOG, make_adapter
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncGenerator
 
 from contract import BundleV1, Catalog, KeyEntry, ModelEntry, mint_api_token, sign_bundle
 from data_plane.app import _stream, app
@@ -101,13 +105,16 @@ def test_streaming_upstream_error_status_passes_through(token):
     assert r.status_code == 429
 
 
+def _body_gen(response: object) -> AsyncGenerator[bytes]:
+    assert isinstance(response, StreamingResponse)
+    return cast("AsyncGenerator[bytes]", response.body_iterator)
+
+
 @respx.mock
 async def test_cancellation_records_partial_usage(caplog):
     caplog.set_level(logging.INFO, logger="data_plane")
     respx.post("https://api.openai.com/v1/chat/completions").mock(return_value=httpx.Response(200, content=TEXT_LOG))
-    response = await _stream(make_adapter(), CTX, UPSTREAM)
-    assert isinstance(response, StreamingResponse)
-    iterator = response.body_iterator
+    iterator = _body_gen(await _stream(make_adapter(), CTX, UPSTREAM))
     first = await anext(iterator)
     assert first.startswith(b"data: ")
     with pytest.raises(asyncio.CancelledError):
@@ -123,8 +130,6 @@ async def test_mid_stream_error_event_becomes_sse_error(caplog):
     log = TEXT_LOG.split(b"data: [DONE]")[0][: TEXT_LOG.index(b'data: {"id": "chatcmpl-9", "model": "gpt-real", "choices": []')]
     log += b'data: {"error": {"code": "overloaded", "message": "try later"}}\n\n'
     respx.post("https://api.openai.com/v1/chat/completions").mock(return_value=httpx.Response(200, content=log))
-    response = await _stream(make_adapter(), CTX, UPSTREAM)
-    assert isinstance(response, StreamingResponse)
-    chunks = [chunk async for chunk in response.body_iterator]
+    chunks = [chunk async for chunk in _body_gen(await _stream(make_adapter(), CTX, UPSTREAM))]
     assert any(b'"code": "overloaded"' in c for c in chunks)
     assert any("status=upstream_error" in r.message for r in caplog.records)
