@@ -46,6 +46,10 @@ class Bench:
                 times.append(elapsed)
         self._series[name] = times
 
+    @staticmethod
+    def percentile(xs: list[float], q: float) -> float:
+        return _pct(xs, q)
+
     def pct(self, name: str, q: float) -> float:
         return _pct(self._series[name], q)
 
@@ -70,6 +74,17 @@ class Bench:
             table.add_row("overhead", "", *deltas, style="bold magenta")
         with self._capsys.disabled():
             Console().print(table)
+
+    def table(self, *, title: str, columns: list[str], rows: list[tuple[object, ...]], caption: str = "") -> None:
+        """Render arbitrary tabular results (e.g. a throughput sweep) with the same styling."""
+        out = Table(title=title, box=box.ROUNDED, header_style="bold", title_style="bold", caption=caption)
+        out.add_column(columns[0], style="cyan", no_wrap=True)
+        for name in columns[1:]:
+            out.add_column(name, justify="right")
+        for row in rows:
+            out.add_row(*(str(cell) for cell in row))
+        with self._capsys.disabled():
+            Console().print(out)
 
 
 @pytest.fixture
