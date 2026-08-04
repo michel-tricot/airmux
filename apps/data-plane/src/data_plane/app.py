@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
-import json
 import logging
 import time
 from dataclasses import dataclass
@@ -26,6 +25,7 @@ from data_plane.canonical import CanonicalRequest, CanonicalResponse, Ctx, Strea
 from data_plane.config import Config, load_config
 from data_plane.events import buffer_event, run_flusher
 from data_plane.holder import BundleHolder, BundleSnapshot
+from data_plane.ingress import ANTHROPIC, CANONICAL, EgressStream, Ingress
 from data_plane.metering import cost_breakdown, estimate_tokens
 from data_plane.policy import Deny, evaluate
 from data_plane.poller import run_poller
@@ -67,12 +67,19 @@ def _error(status: int, code: str) -> JSONResponse:
 
 async def chat_completions(request: Request) -> Response:
     try:
-        return await _handle(request)
+        return await _handle(request, CANONICAL)
     except RequestRejectedError as e:
         return _error(e.status, e.code)
 
 
-async def _authorize(request: Request) -> tuple[CanonicalRequest, KeyEntry, BundleSnapshot]:
+async def messages(request: Request) -> Response:
+    try:
+        return await _handle(request, ANTHROPIC)
+    except RequestRejectedError as e:
+        return _error(e.status, e.code)
+
+
+async def _authorize(request: Request, ingress: Ingress) -> tuple[CanonicalRequest, KeyEntry, BundleSnapshot]:
     """Authentication and body validation; raises RequestRejectedError on every no."""
     snap = holder.snapshot
     if snap is None:
@@ -86,14 +93,14 @@ async def _authorize(request: Request) -> tuple[CanonicalRequest, KeyEntry, Bund
     if key is None:
         raise RequestRejectedError(401, "invalid_token")
     try:
-        req = CanonicalRequest.model_validate_json(await request.body())
-    except ValidationError as e:
+        req = ingress.parse(await request.body())
+    except (ValidationError, ValueError, KeyError) as e:
         raise RequestRejectedError(400, "invalid_request") from e
     return req, key, snap
 
 
-async def _handle(request: Request) -> Response:
-    req, key, snap = await _authorize(request)
+async def _handle(request: Request, ingress: Ingress) -> Response:
+    req, key, snap = await _authorize(request, ingress)
     decision = evaluate(req, key, snap.bundle, datetime.now(tz=UTC))
     if isinstance(decision, Deny):
         raise RequestRejectedError(decision.status, decision.reason)
@@ -110,27 +117,27 @@ async def _handle(request: Request) -> Response:
     )
     upstream = adapter.transform_request(req, decision.model)
     if req.stream:
-        return await _stream(adapter, ctx, upstream, req)
+        return await _stream(adapter, ctx, upstream, req, ingress)
     try:
         resp = await client.request(upstream.method, upstream.url, headers=upstream.headers, content=upstream.body)
     except httpx.HTTPError as e:
-        return _upstream_exception(adapter, ctx, e, req)
+        return _upstream_exception(adapter, ctx, e, req, ingress)
     if resp.is_error:
-        return _upstream_error_body(ctx, resp.content, resp.status_code, req)
+        return _upstream_error_body(ctx, resp.content, resp.status_code, req, ingress)
     final = adapter.transform_response(resp.content, ctx)
     _record_usage(ctx, final, status="ok", req=req)
-    return Response(final.model_dump_json(), media_type="application/json")
+    return ingress.render_response(final)
 
 
-def _upstream_exception(adapter: ProviderAdapter, ctx: Ctx, e: Exception, req: CanonicalRequest | None) -> JSONResponse:
+def _upstream_exception(adapter: ProviderAdapter, ctx: Ctx, e: Exception, req: CanonicalRequest | None, ingress: Ingress) -> Response:
     err = adapter.map_error(e)
     _record_usage(ctx, _empty_response(ctx), status="upstream_error", req=req)
-    return JSONResponse({"error": {"code": err.code, "message": err.message}}, status_code=err.status)
+    return ingress.render_error(err)
 
 
-def _upstream_error_body(ctx: Ctx, body: bytes, status_code: int, req: CanonicalRequest | None) -> Response:
+def _upstream_error_body(ctx: Ctx, body: bytes, status_code: int, req: CanonicalRequest | None, ingress: Ingress) -> Response:
     _record_usage(ctx, _empty_response(ctx), status="upstream_error", req=req)
-    return Response(body, status_code=status_code, media_type="application/json")
+    return ingress.render_upstream_error(status_code, body)
 
 
 def _empty_response(ctx: Ctx) -> CanonicalResponse:
@@ -197,52 +204,55 @@ def _record_usage(ctx: Ctx, final: CanonicalResponse, status: UsageStatus, req: 
     )
 
 
-def _sse(payload: dict) -> bytes:
-    return b"data: " + json.dumps(payload, ensure_ascii=False).encode() + b"\n\n"
-
-
-async def _stream(adapter: ProviderAdapter, ctx: Ctx, upstream: UpstreamRequest, req: CanonicalRequest | None = None) -> Response:
+async def _stream(
+    adapter: ProviderAdapter, ctx: Ctx, upstream: UpstreamRequest, req: CanonicalRequest | None = None, ingress: Ingress | None = None
+) -> Response:
     """Open the upstream and peek at the status, then hand the socket to the response generator.
 
     The stack owns the upstream connection: every early return or exception in
     this function closes it, and pop_all transfers that obligation to the
     generator once we commit to streaming.
     """
+    ingress = ingress if ingress is not None else CANONICAL
     async with contextlib.AsyncExitStack() as stack:
         try:
             resp = await stack.enter_async_context(client.stream(upstream.method, upstream.url, headers=upstream.headers, content=upstream.body))
             if resp.is_error:
                 body = await resp.aread()
-                return _upstream_error_body(ctx, body, resp.status_code, req)
+                return _upstream_error_body(ctx, body, resp.status_code, req, ingress)
         except httpx.HTTPError as e:
-            return _upstream_exception(adapter, ctx, e, req)
+            return _upstream_exception(adapter, ctx, e, req, ingress)
         stream_state = adapter.new_stream_state(ctx)
         handoff = stack.pop_all()
 
-    return StreamingResponse(_events(adapter, ctx, resp, handoff, stream_state, req), media_type="text/event-stream")
+    return StreamingResponse(_events(adapter, ctx, resp, handoff, stream_state, req, ingress.new_egress()), media_type="text/event-stream")
 
 
-async def _events(  # noqa: PLR0913, PLR0917 the streaming lifecycle genuinely spans these six
+async def _events(  # noqa: PLR0913, PLR0917 the streaming lifecycle genuinely spans these seven
     adapter: ProviderAdapter,
     ctx: Ctx,
     resp: httpx.Response,
     handoff: contextlib.AsyncExitStack,
     stream_state: StreamState,
     req: CanonicalRequest | None,
+    egress: EgressStream,
 ) -> AsyncIterator[bytes]:
     async with handoff:
         try:
+            for b in egress.start(ctx):
+                yield b
             async for chunk in resp.aiter_bytes():
                 for ev in adapter.frame(chunk, stream_state):
                     for c in adapter.transform_stream_event(ev, stream_state):
-                        yield b"data: " + c.model_dump_json().encode() + b"\n\n"
+                        for b in egress.chunk(c):
+                            yield b
             final = adapter.finalize(stream_state)
-            yield _sse({"usage": final.usage.model_dump(), "finish_reason": final.finish_reason})
-            yield b"data: [DONE]\n\n"
+            for b in egress.finish(final):
+                yield b
             _record_usage(ctx, final, status="ok", req=req)
         except (UpstreamStreamError, httpx.HTTPError) as e:
-            err = adapter.map_error(e)
-            yield _sse({"error": {"code": err.code, "message": err.message}})
+            for b in egress.error(adapter.map_error(e)):
+                yield b
             _record_usage(ctx, adapter.finalize(stream_state), status="upstream_error", req=req)
         except (asyncio.CancelledError, anyio.get_cancelled_exc_class()):
             _record_usage(ctx, adapter.finalize(stream_state), status="cancelled", req=req)
@@ -314,6 +324,7 @@ async def lifespan(_app: Starlette) -> AsyncIterator[None]:
 app = Starlette(
     routes=[
         Route("/v1/chat/completions", chat_completions, methods=["POST"]),
+        Route("/v1/messages", messages, methods=["POST"]),
         Route("/healthz", healthz),
         Route("/readyz", readyz),
     ],

@@ -1,0 +1,45 @@
+"""The official Anthropic SDK pointed at the gateway's /v1/messages surface.
+
+    uv run --with anthropic python examples/anthropic_sdk.py
+
+Proves the gateway speaks Anthropic's Messages API well enough for the
+real SDK, including its streaming helper. The model can be any provider
+in the catalog: set AIRLLM_MODEL=gpt-4o-mini to route an Anthropic-SDK
+call to OpenAI. Needs AIRLLM_TOKEN in .env and a running data plane.
+"""
+
+from __future__ import annotations
+
+import os
+
+from anthropic import Anthropic
+from dotenv import find_dotenv, load_dotenv
+
+
+def main() -> int:
+    load_dotenv(find_dotenv(usecwd=True))
+    token = os.environ.get("AIRLLM_TOKEN")
+    if not token:
+        print("AIRLLM_TOKEN is not set, run `uv run airllm bootstrap` first")
+        return 1
+    gateway = os.environ.get("AIRLLM_URL", "http://127.0.0.1:8080")
+    model = os.environ.get("AIRLLM_MODEL", "claude-sonnet-4-6")
+
+    # api_key is required by the SDK but unused; the gateway reads auth_token as the bearer.
+    client = Anthropic(base_url=gateway, api_key="unused", auth_token=token)
+
+    print(f"non-streaming ({model}):")
+    msg = client.messages.create(model=model, max_tokens=128, messages=[{"role": "user", "content": "In one sentence, what is an LLM gateway?"}])
+    print(" ", msg.content[0].text)
+    print(f"  [usage: {msg.usage.input_tokens} in / {msg.usage.output_tokens} out | stop: {msg.stop_reason}]\n")
+
+    print(f"streaming ({model}):")
+    with client.messages.stream(model=model, max_tokens=128, messages=[{"role": "user", "content": "Count from 1 to 5, one per line."}]) as stream:
+        for text in stream.text_stream:
+            print(text, end="", flush=True)
+    print()
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

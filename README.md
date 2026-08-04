@@ -4,7 +4,8 @@ An LLM gateway prototype with a strict control plane / data plane split.
 
 The **control plane** (FastAPI + SQLite) holds orgs, API keys, providers and models,
 and compiles them into signed, self-contained policy bundles. The **data plane**
-(bare Starlette) serves `POST /v1/chat/completions` using only a bundle it polled
+(bare Starlette) serves `POST /v1/chat/completions` (and `POST /v1/messages`, the Anthropic
+Messages API) using only a bundle it polled
 and cached on disk: auth, policy and routing happen with zero I/O on the request
 path, and the data plane keeps serving even if the control plane is down.
 Caller credentials are Ed25519-signed JWTs; revocation propagates through bundle
@@ -53,7 +54,12 @@ uv run python examples/chat_stream_cancel.py # abandon mid-stream, see cancelled
 uv run python examples/chat_errors.py        # every failure mode and its status code
 uv run python examples/anthropic_chat.py         # Claude via the native Anthropic adapter
 uv run python examples/anthropic_chat_stream.py  # Claude streaming
+uv run --with anthropic python examples/anthropic_sdk.py  # the real Anthropic SDK via POST /v1/messages
 ```
+
+The gateway also exposes Anthropic's Messages API at `POST /v1/messages`, so
+Anthropic-SDK clients can point at it; the request is routed to whatever provider
+the model maps to (an Anthropic-SDK call can even run on an OpenAI model).
 
 `bootstrap.yml` ships with a catalog of OpenAI-compatible hosted providers
 (openai, anthropic, gemini, xai, deepseek, mistral, groq). A model becomes
