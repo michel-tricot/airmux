@@ -15,6 +15,7 @@ class Config:
     bundle_public_key_b64: str
     cache_dir: Path
     staleness_policy: Literal["serve_and_warn", "refuse"]
+    dev: bool = False  # set by the --dev flag on the entry point, gate dev-only behavior on this
     poll_interval_s: float = 30.0
     flush_interval_s: float = 5.0
 
@@ -27,4 +28,5 @@ def load_config() -> Config:
         bundle_public_key_b64=os.environ["GW_BUNDLE_PUBLIC_KEY"],
         cache_dir=Path(os.environ.get("GW_CACHE_DIR", "/var/cache/gateway")),
         staleness_policy="serve_and_warn" if os.environ.get("GW_STALENESS_POLICY", "serve_and_warn") == "serve_and_warn" else "refuse",
+        dev=os.environ.get("GW_DEV") == "1",
     )

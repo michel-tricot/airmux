@@ -15,6 +15,7 @@ class Settings:
     signing_key_b64: str
     signing_key_id: str
     staleness_bound: timedelta
+    dev: bool = False  # set by the --dev flag on the entry point, gate dev-only behavior on this
 
 
 def load_settings() -> Settings:
@@ -26,4 +27,5 @@ def load_settings() -> Settings:
         signing_key_b64=os.environ["GW_SIGNING_KEY"],
         signing_key_id=os.environ.get("GW_SIGNING_KEY_ID", "k1"),
         staleness_bound=timedelta(hours=float(os.environ.get("GW_STALENESS_BOUND_HOURS", "24"))),
+        dev=os.environ.get("GW_DEV") == "1",
     )
