@@ -1,19 +1,30 @@
 from __future__ import annotations
 
 import json
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 import httpx
 
 from data_plane.adapters.base import ProviderAdapter
-from data_plane.canonical import CanonicalError, CanonicalResponse, UpstreamRequest, Usage
+from data_plane.canonical import CanonicalChunk, CanonicalError, CanonicalResponse, RawEvent, StreamState, UpstreamRequest, UpstreamStreamError, Usage
 from data_plane.secrets import resolve
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
     from contract import ModelEntry, ProviderEntry
-    from data_plane.canonical import CanonicalChunk, CanonicalRequest, Ctx, RawEvent, StreamState
+    from data_plane.canonical import CanonicalRequest, Ctx
+
+
+@dataclass
+class OpenAIStreamState(StreamState):
+    ctx: Ctx | None = None
+    response_id: str | None = None
+    text: list[str] = field(default_factory=list)
+    tool_calls: dict[int, dict[str, Any]] = field(default_factory=dict)
+    finish_reason: str | None = None
+    usage: dict[str, Any] | None = None
 
 
 class OpenAICompatibleAdapter(ProviderAdapter):
@@ -57,19 +68,83 @@ class OpenAICompatibleAdapter(ProviderAdapter):
             ),
         )
 
-    def new_stream_state(self, ctx: Ctx) -> StreamState:
-        raise NotImplementedError
+    def new_stream_state(self, ctx: Ctx) -> OpenAIStreamState:
+        return OpenAIStreamState(ctx=ctx)
 
     def frame(self, chunk: bytes, state: StreamState) -> Iterator[RawEvent]:
-        raise NotImplementedError
+        state.buffer += chunk
+        *lines, state.buffer = state.buffer.split(b"\n")
+        for raw_line in lines:
+            line = raw_line.rstrip(b"\r")
+            if not line.startswith(b"data:"):
+                continue
+            data = line[len(b"data:") :].strip()
+            if data == b"[DONE]":
+                continue
+            yield RawEvent(data=data)
 
     def transform_stream_event(self, ev: RawEvent, state: StreamState) -> list[CanonicalChunk]:
-        raise NotImplementedError
+        assert isinstance(state, OpenAIStreamState)  # noqa: S101 state comes from new_stream_state
+        data = json.loads(ev.data)
+        if "error" in data:
+            error = data["error"] or {}
+            raise UpstreamStreamError(code=str(error.get("code") or "upstream_error"), message=str(error.get("message") or ""))
+        if data.get("id"):
+            state.response_id = data["id"]
+        if data.get("usage"):
+            state.usage = data["usage"]
+        chunk_id = state.response_id or (state.ctx.request_id if state.ctx else "")
+        chunks: list[CanonicalChunk] = []
+        for choice in data.get("choices") or []:
+            delta = choice.get("delta") or {}
+            finish = choice.get("finish_reason")
+            if finish:
+                state.finish_reason = finish
+            content = delta.get("content")
+            if content:
+                state.text.append(content)
+                chunks.append(CanonicalChunk(id=chunk_id, delta={"type": "text", "text": content}, finish_reason=finish))
+            for tc in delta.get("tool_calls") or []:
+                index = tc.get("index", 0)
+                slot = state.tool_calls.setdefault(index, {"id": None, "type": "function", "function": {"name": "", "arguments": ""}})
+                if tc.get("id"):
+                    slot["id"] = tc["id"]
+                fn = tc.get("function") or {}
+                if fn.get("name"):
+                    slot["function"]["name"] = fn["name"]
+                if fn.get("arguments"):
+                    slot["function"]["arguments"] += fn["arguments"]
+                chunks.append(CanonicalChunk(id=chunk_id, delta={"type": "tool_call", "index": index, **tc}, finish_reason=finish))
+            if finish and not content and not delta.get("tool_calls"):
+                chunks.append(CanonicalChunk(id=chunk_id, delta={}, finish_reason=finish))
+        return chunks
 
     def finalize(self, state: StreamState) -> CanonicalResponse:
-        raise NotImplementedError
+        """Return a valid CanonicalResponse at ANY point in the stream.
+
+        Called after the last event for a normal completion, and from the
+        cancellation handler for partial accounting after a client disconnect.
+        """
+        assert isinstance(state, OpenAIStreamState)  # noqa: S101 state comes from new_stream_state
+        text = "".join(state.text)
+        text_content = [{"type": "text", "text": text}] if text else []
+        tool_content = [{"type": "tool_call", **state.tool_calls[index]} for index in sorted(state.tool_calls)]
+        usage = state.usage or {}
+        return CanonicalResponse(
+            id=state.response_id or (state.ctx.request_id if state.ctx else ""),
+            model=state.ctx.model.model_id if state.ctx else "",
+            content=[*text_content, *tool_content],
+            finish_reason=state.finish_reason,
+            usage=Usage(
+                input_tokens=usage.get("prompt_tokens", 0),
+                output_tokens=usage.get("completion_tokens", 0),
+                estimated=not usage,
+            ),
+        )
 
     def map_error(self, e: Exception) -> CanonicalError:
+        if isinstance(e, UpstreamStreamError):
+            return CanonicalError(status=502, code=e.code, message=e.message)
         if isinstance(e, httpx.TimeoutException):
             return CanonicalError(status=504, code="upstream_timeout", message=str(e))
         if isinstance(e, httpx.ConnectError):

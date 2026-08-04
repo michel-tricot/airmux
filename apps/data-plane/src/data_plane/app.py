@@ -2,24 +2,26 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import json
 import logging
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 from uuid import uuid4
 
+import anyio
 import httpx
 from cryptography.exceptions import InvalidSignature
 from pydantic import ValidationError
 from starlette.applications import Starlette
-from starlette.responses import JSONResponse, Response
+from starlette.responses import JSONResponse, Response, StreamingResponse
 from starlette.routing import Route
 
 from contract import public_key_from_b64, verify_bundle
-from data_plane.adapters import REGISTRY
+from data_plane.adapters import REGISTRY, ProviderAdapter
 from data_plane.auth import authenticate, index_keys
 from data_plane.cache import read_cached_bundle
-from data_plane.canonical import CanonicalRequest, Ctx
+from data_plane.canonical import CanonicalRequest, CanonicalResponse, Ctx, UpstreamRequest, UpstreamStreamError
 from data_plane.config import Config, load_config
 from data_plane.holder import BundleHolder
 from data_plane.policy import Deny, evaluate
@@ -81,16 +83,16 @@ async def _handle(request: Request) -> Response:
         req = CanonicalRequest.model_validate(await request.json())
     except (ValueError, ValidationError) as e:
         raise RequestRejectedError(400, "invalid_request") from e
-    if req.stream:
-        raise RequestRejectedError(501, "streaming_not_implemented")
 
     decision = evaluate(req, key, bundle, datetime.now(tz=UTC))
     if isinstance(decision, Deny):
         raise RequestRejectedError(decision.status, decision.reason)
 
     adapter = REGISTRY[decision.provider.kind](decision.provider)
-    ctx = Ctx(request_id=uuid4().hex, model=decision.model, provider=decision.provider)
+    ctx = Ctx(request_id=uuid4().hex, model=decision.model, provider=decision.provider, stream=req.stream)
     upstream = adapter.transform_request(req, decision.model)
+    if req.stream:
+        return await _stream(adapter, ctx, upstream)
     try:
         resp = await client.request(upstream.method, upstream.url, headers=upstream.headers, content=upstream.body)
     except httpx.HTTPError as e:
@@ -98,7 +100,64 @@ async def _handle(request: Request) -> Response:
         return JSONResponse({"error": {"code": err.code, "message": err.message}}, status_code=err.status)
     if resp.is_error:
         return Response(resp.content, status_code=resp.status_code, media_type="application/json")
-    return JSONResponse(adapter.transform_response(resp.content, ctx).model_dump())
+    final = adapter.transform_response(resp.content, ctx)
+    _record_usage(ctx, final, status="ok")
+    return JSONResponse(final.model_dump())
+
+
+def _record_usage(ctx: Ctx, final: CanonicalResponse, status: str) -> None:
+    """The single metering point; M5 turns this log line into a buffered UsageEventV1."""
+    logger.info(
+        "usage request_id=%s model=%s provider=%s status=%s stream=%s input_tokens=%d output_tokens=%d estimated=%s",
+        ctx.request_id,
+        ctx.model.model_id,
+        ctx.provider.provider_id,
+        status,
+        ctx.stream,
+        final.usage.input_tokens,
+        final.usage.output_tokens,
+        final.usage.estimated,
+    )
+
+
+def _sse(payload: dict) -> bytes:
+    return b"data: " + json.dumps(payload, ensure_ascii=False).encode() + b"\n\n"
+
+
+async def _stream(adapter: ProviderAdapter, ctx: Ctx, upstream: UpstreamRequest) -> Response:
+    stream_cm = client.stream(upstream.method, upstream.url, headers=upstream.headers, content=upstream.body)
+    try:
+        resp = await stream_cm.__aenter__()
+    except httpx.HTTPError as e:
+        err = adapter.map_error(e)
+        return JSONResponse({"error": {"code": err.code, "message": err.message}}, status_code=err.status)
+    if resp.is_error:
+        body = await resp.aread()
+        await stream_cm.__aexit__(None, None, None)
+        return Response(body, status_code=resp.status_code, media_type="application/json")
+    stream_state = adapter.new_stream_state(ctx)
+
+    async def events() -> AsyncIterator[bytes]:
+        try:
+            async for chunk in resp.aiter_bytes():
+                for ev in adapter.frame(chunk, stream_state):
+                    for c in adapter.transform_stream_event(ev, stream_state):
+                        yield _sse(c.model_dump())
+            final = adapter.finalize(stream_state)
+            yield _sse({"usage": final.usage.model_dump(), "finish_reason": final.finish_reason})
+            yield b"data: [DONE]\n\n"
+            _record_usage(ctx, final, status="ok")
+        except (UpstreamStreamError, httpx.HTTPError) as e:
+            err = adapter.map_error(e)
+            yield _sse({"error": {"code": err.code, "message": err.message}})
+            _record_usage(ctx, adapter.finalize(stream_state), status="upstream_error")
+        except (asyncio.CancelledError, anyio.get_cancelled_exc_class()):
+            _record_usage(ctx, adapter.finalize(stream_state), status="cancelled")
+            raise
+        finally:
+            await stream_cm.__aexit__(None, None, None)
+
+    return StreamingResponse(events(), media_type="text/event-stream")
 
 
 async def healthz(_request: Request) -> JSONResponse:
@@ -138,6 +197,8 @@ def _load_cached_bundle(config: Config, public_key: Ed25519PublicKey) -> None:
 @contextlib.asynccontextmanager
 async def lifespan(_app: Starlette) -> AsyncIterator[None]:
     config = load_config()
+    if config.dev:
+        logging.basicConfig(level=logging.INFO, format="%(levelname)s:     %(message)s")
     state.config = config
     state.bundle_public_key = public_key_from_b64(config.bundle.public_key)
     state.token_public_key = public_key_from_b64(config.auth.token_public_key)

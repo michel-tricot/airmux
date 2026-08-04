@@ -1,0 +1,143 @@
+from __future__ import annotations
+
+import json
+
+import pytest
+
+from contract import ModelEntry, ProviderEntry
+from data_plane.adapters import REGISTRY
+from data_plane.canonical import Ctx, UpstreamStreamError
+
+PROVIDER = ProviderEntry(provider_id="p1", kind="openai_compatible", base_url="https://api.openai.com/v1", credential_ref="env:OPENAI_API_KEY")
+MODEL = ModelEntry(
+    model_id="gpt-test",
+    provider_id="p1",
+    upstream_model="gpt-real",
+    input_price_per_mtok=1.0,
+    output_price_per_mtok=2.0,
+    context_window=128000,
+    capabilities=["streaming"],
+)
+CTX = Ctx(request_id="req-1", model=MODEL, provider=PROVIDER, stream=True)
+
+USAGE = {"prompt_tokens": 5, "completion_tokens": 7, "total_tokens": 12}
+
+
+def sse(payload: dict) -> bytes:
+    return b"data: " + json.dumps(payload, ensure_ascii=False).encode() + b"\n\n"
+
+
+def delta_event(delta: dict, finish: str | None = None) -> dict:
+    return {"id": "chatcmpl-9", "model": "gpt-real", "choices": [{"index": 0, "delta": delta, "finish_reason": finish}]}
+
+
+TEXT_EVENTS = [
+    delta_event({"role": "assistant"}),
+    delta_event({"content": "héllo "}),
+    delta_event({"content": "\U0001f30d wor"}),
+    delta_event({"content": "ld"}),
+    delta_event({}, finish="stop"),
+    {"id": "chatcmpl-9", "model": "gpt-real", "choices": [], "usage": USAGE},
+]
+TEXT_LOG = b"".join(sse(e) for e in TEXT_EVENTS) + b"data: [DONE]\n\n"
+
+TEXT_NONSTREAM = {
+    "id": "chatcmpl-9",
+    "model": "gpt-real",
+    "choices": [{"index": 0, "message": {"role": "assistant", "content": "héllo \U0001f30d world"}, "finish_reason": "stop"}],
+    "usage": USAGE,
+}
+
+TOOL_EVENTS = [
+    delta_event({"role": "assistant"}),
+    delta_event({"tool_calls": [{"index": 0, "id": "call_1", "type": "function", "function": {"name": "get_weather", "arguments": ""}}]}),
+    delta_event({"tool_calls": [{"index": 0, "function": {"arguments": '{"cit'}}]}),
+    delta_event({"tool_calls": [{"index": 0, "function": {"arguments": 'y": "Paris"}'}}]}),
+    delta_event({}, finish="tool_calls"),
+    {"id": "chatcmpl-9", "model": "gpt-real", "choices": [], "usage": USAGE},
+]
+TOOL_LOG = b"".join(sse(e) for e in TOOL_EVENTS) + b"data: [DONE]\n\n"
+
+TOOL_NONSTREAM = {
+    "id": "chatcmpl-9",
+    "model": "gpt-real",
+    "choices": [
+        {
+            "index": 0,
+            "message": {
+                "role": "assistant",
+                "content": None,
+                "tool_calls": [{"id": "call_1", "type": "function", "function": {"name": "get_weather", "arguments": '{"city": "Paris"}'}}],
+            },
+            "finish_reason": "tool_calls",
+        }
+    ],
+    "usage": USAGE,
+}
+
+
+def make_adapter():
+    return REGISTRY["openai_compatible"](PROVIDER)
+
+
+def fold(raw: bytes, chunk_size: int):
+    adapter = make_adapter()
+    state = adapter.new_stream_state(CTX)
+    chunks = []
+    for start in range(0, len(raw), chunk_size):
+        for ev in adapter.frame(raw[start : start + chunk_size], state):
+            chunks.extend(adapter.transform_stream_event(ev, state))
+    return chunks, adapter.finalize(state)
+
+
+@pytest.mark.parametrize("chunk_size", [1, 2, 3, 7, 64, len(TEXT_LOG)])
+def test_fold_is_invariant_under_adversarial_splits(chunk_size):
+    chunks, response = fold(TEXT_LOG, chunk_size)
+    assert "".join(c.delta["text"] for c in chunks if c.delta.get("type") == "text") == "héllo \U0001f30d world"
+    assert response == fold(TEXT_LOG, len(TEXT_LOG))[1]
+
+
+@pytest.mark.parametrize(("log", "nonstream"), [(TEXT_LOG, TEXT_NONSTREAM), (TOOL_LOG, TOOL_NONSTREAM)])
+def test_stream_and_nonstream_agree(log, nonstream):
+    _, streamed = fold(log, 7)
+    direct = make_adapter().transform_response(json.dumps(nonstream).encode(), CTX)
+    assert streamed == direct
+
+
+def test_finalize_is_valid_at_every_prefix():
+    adapter = make_adapter()
+    for cut in range(len(TEXT_EVENTS) + 1):
+        state = adapter.new_stream_state(CTX)
+        log = b"".join(sse(e) for e in TEXT_EVENTS[:cut])
+        for ev in adapter.frame(log, state):
+            adapter.transform_stream_event(ev, state)
+        response = adapter.finalize(state)
+        assert response.model == "gpt-test"
+        assert response.usage.estimated == (cut < len(TEXT_EVENTS))
+        if cut < len(TEXT_EVENTS):
+            assert response.usage.input_tokens == 0
+    full = adapter.finalize(state)
+    assert full.usage.input_tokens == 5
+    assert full.usage.output_tokens == 7
+
+
+def test_mid_stream_error_raises_and_maps():
+    adapter = make_adapter()
+    state = adapter.new_stream_state(CTX)
+    log = sse(TEXT_EVENTS[1]) + sse({"error": {"code": "overloaded", "message": "try later"}})
+    events = list(adapter.frame(log, state))
+    adapter.transform_stream_event(events[0], state)
+    with pytest.raises(UpstreamStreamError) as excinfo:
+        adapter.transform_stream_event(events[1], state)
+    err = adapter.map_error(excinfo.value)
+    assert err.status == 502
+    assert err.code == "overloaded"
+    partial = adapter.finalize(state)
+    assert partial.content == [{"type": "text", "text": "héllo "}]
+
+
+def test_tool_call_fragments_concatenate():
+    _, response = fold(TOOL_LOG, 3)
+    (tool,) = response.content
+    assert tool["function"]["name"] == "get_weather"
+    assert json.loads(tool["function"]["arguments"]) == {"city": "Paris"}

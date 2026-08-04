@@ -72,3 +72,12 @@ class Ctx:
 class StreamState:
     buffer: bytes = b""
     extra: dict[str, Any] = field(default_factory=dict)
+
+
+class UpstreamStreamError(Exception):
+    """A provider error delivered as a stream event after a 200, outside the HTTP status path."""
+
+    def __init__(self, code: str, message: str) -> None:
+        self.code = code
+        self.message = message
+        super().__init__(message)
