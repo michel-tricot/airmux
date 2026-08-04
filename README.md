@@ -44,8 +44,12 @@ curl -s localhost:8080/v1/chat/completions \
 Or use the ready-made examples (streaming prints tokens as they arrive):
 
 ```bash
-uv run python examples/chat.py
-uv run python examples/chat_stream.py "tell me a short story"
+uv run python examples/chat.py                # non-streaming
+uv run python examples/chat_stream.py        # tokens as they arrive
+uv run python examples/chat_stream_raw.py    # the raw SSE wire format
+uv run python examples/chat_stream_tools.py  # tool-call fragments assembling
+uv run python examples/chat_stream_cancel.py # abandon mid-stream, see cancelled accounting
+uv run python examples/chat_errors.py        # every failure mode and its status code
 ```
 
 `bootstrap.yml` ships with a catalog of OpenAI-compatible hosted providers

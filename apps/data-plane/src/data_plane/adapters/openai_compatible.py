@@ -54,7 +54,7 @@ class OpenAICompatibleAdapter(ProviderAdapter):
         choice = data["choices"][0]
         message = choice["message"]
         text_content = [{"type": "text", "text": message["content"]}] if message.get("content") is not None else []
-        tool_content = [{"type": "tool_call", **tc} for tc in message.get("tool_calls") or []]
+        tool_content = [{"type": "tool_call", "id": tc.get("id"), "function": tc.get("function") or {}} for tc in message.get("tool_calls") or []]
         usage = data.get("usage") or {}
         return CanonicalResponse(
             id=data.get("id", ctx.request_id),
@@ -106,7 +106,7 @@ class OpenAICompatibleAdapter(ProviderAdapter):
                 chunks.append(CanonicalChunk(id=chunk_id, delta={"type": "text", "text": content}, finish_reason=finish))
             for tc in delta.get("tool_calls") or []:
                 index = tc.get("index", 0)
-                slot = state.tool_calls.setdefault(index, {"id": None, "type": "function", "function": {"name": "", "arguments": ""}})
+                slot = state.tool_calls.setdefault(index, {"id": None, "function": {"name": "", "arguments": ""}})
                 if tc.get("id"):
                     slot["id"] = tc["id"]
                 fn = tc.get("function") or {}
@@ -114,7 +114,9 @@ class OpenAICompatibleAdapter(ProviderAdapter):
                     slot["function"]["name"] = fn["name"]
                 if fn.get("arguments"):
                     slot["function"]["arguments"] += fn["arguments"]
-                chunks.append(CanonicalChunk(id=chunk_id, delta={"type": "tool_call", "index": index, **tc}, finish_reason=finish))
+                chunks.append(
+                    CanonicalChunk(id=chunk_id, delta={"type": "tool_call", "index": index, "id": tc.get("id"), "function": fn}, finish_reason=finish)
+                )
             if finish and not content and not delta.get("tool_calls"):
                 chunks.append(CanonicalChunk(id=chunk_id, delta={}, finish_reason=finish))
         return chunks
