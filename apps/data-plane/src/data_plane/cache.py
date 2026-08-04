@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import time
 from typing import TYPE_CHECKING
 from uuid import uuid4
 
@@ -10,62 +11,33 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-class CacheDirLockedError(Exception):
-    def __init__(self, cache_dir: Path, pid: int) -> None:
-        super().__init__(f"cache dir {cache_dir} is already served by live process {pid}; run one data plane per cache dir")
-
-
-def _alive(pid: int) -> bool:
-    try:
-        os.kill(pid, 0)
-    except ProcessLookupError:
-        return False
-    except PermissionError:
-        return True
-    return True
-
-
-def acquire_cache_lock(cache_dir: Path) -> None:
-    """The buffer and cache formats assume a single writer; refuse to share the dir with a live process."""
-    cache_dir.mkdir(parents=True, exist_ok=True)
-    lock = cache_dir / "dp.lock"
-    for _ in range(2):
-        try:
-            with lock.open("x", encoding="utf-8") as f:
-                f.write(str(os.getpid()))
-        except FileExistsError:
-            raw = lock.read_text(encoding="utf-8").strip()
-            pid = int(raw) if raw.isdigit() else 0
-            if pid == os.getpid():
-                return
-            if pid and _alive(pid):
-                raise CacheDirLockedError(cache_dir, pid) from None
-            lock.unlink(missing_ok=True)
-        else:
-            return
-    raise CacheDirLockedError(cache_dir, 0)
-
-
-def release_cache_lock(cache_dir: Path) -> None:
-    lock = cache_dir / "dp.lock"
-    if lock.exists() and lock.read_text(encoding="utf-8").strip() == str(os.getpid()):
-        lock.unlink()
-
-
 def atomic_write_text(path: Path, text: str) -> None:
-    tmp = path.with_name(path.name + ".tmp")
+    # A per-writer temp name so concurrent processes sharing this dir never rename each other's file away.
+    tmp = path.with_name(f"{path.name}.{os.getpid()}.{uuid4().hex}.tmp")
     tmp.write_text(text, encoding="utf-8")
     tmp.replace(path)
 
 
 def instance_id(cache_dir: Path) -> str:
-    """A stable id per data plane, persisted beside the lock so a restart keeps its identity."""
+    """A stable id for the deployment sharing this cache dir, created once and read by every process.
+
+    Exclusive create means exactly one writer mints the id; other processes (uvicorn workers or
+    separate instances on the same dir) read it back, so they all report as one logical instance.
+    """
+    cache_dir.mkdir(parents=True, exist_ok=True)
     path = cache_dir / "instance_id"
-    if path.exists():
-        return path.read_text(encoding="utf-8").strip()
-    new_id = uuid4().hex
-    path.write_text(new_id, encoding="utf-8")
-    return new_id
+    try:
+        with path.open("x", encoding="utf-8") as f:
+            f.write(uuid4().hex)
+    except FileExistsError:
+        pass
+    for _ in range(100):  # cover the sub-millisecond window between another process creating and writing the file
+        existing = path.read_text(encoding="utf-8").strip()
+        if existing:
+            return existing
+        time.sleep(0.005)
+    msg = f"instance_id in {cache_dir} never became readable"
+    raise RuntimeError(msg)
 
 
 def read_cached_bundle(cache_dir: Path) -> SignedBundle | None:

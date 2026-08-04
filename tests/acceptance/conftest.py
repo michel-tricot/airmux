@@ -158,8 +158,9 @@ class Stack:
         self._spawn("cp", [_bin("control-plane"), "serve", "--host", "127.0.0.1", "--port", str(self.cp_port), "--config", str(self.config_path)])
         assert _poll(lambda: self._up(f"{self.cp_url}/openapi.json"), READY_TIMEOUT), "control plane did not come up"
 
-    def start_dp(self) -> None:
-        self._spawn("dp", [_bin("data-plane"), "--host", "127.0.0.1", "--port", str(self.dp_port), "--config", str(self.config_path)])
+    def start_dp(self, workers: int = 1) -> None:
+        cmd = [_bin("data-plane"), "--host", "127.0.0.1", "--port", str(self.dp_port), "--config", str(self.config_path), "--workers", str(workers)]
+        self._spawn("dp", cmd)
         assert _poll(lambda: self._responds(f"{self.dp_url}/readyz"), READY_TIMEOUT), "data plane process did not start"
 
     def stop(self, name: str, sig: int = signal.SIGTERM) -> None:
@@ -174,7 +175,7 @@ class Stack:
 
     def teardown(self) -> None:
         for name in list(self._procs):
-            self.stop(name, signal.SIGKILL)
+            self.stop(name)  # SIGTERM so a multi-worker uvicorn reaps its workers; escalates to kill if it hangs
         self._stub.shutdown()
         self._stub.server_close()
 

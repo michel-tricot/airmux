@@ -10,7 +10,8 @@ import respx
 from conftest import make_config
 
 from contract import UsageEventV1
-from data_plane.events import buffer_event, flush_once, read_buffered_events
+from data_plane.events import flush_once
+from data_plane.outbox import Outbox
 
 
 def make_event(request_id: str) -> UsageEventV1:
@@ -32,55 +33,54 @@ def make_event(request_id: str) -> UsageEventV1:
     )
 
 
-def test_buffer_survives_and_roundtrips(tmp_path):
+def test_record_roundtrips_in_order(tmp_path):
+    outbox = Outbox(tmp_path)
     events = [make_event("r1"), make_event("r2")]
     for e in events:
-        buffer_event(tmp_path, e)
-    assert read_buffered_events(tmp_path) == events
+        outbox.record(e)
+    assert outbox.read_batch(10) == events
+    assert outbox.pending() == 2
+
+
+def test_record_is_idempotent_on_event_id(tmp_path):
+    outbox = Outbox(tmp_path)
+    event = make_event("r1")
+    outbox.record(event)
+    outbox.record(event)
+    assert outbox.pending() == 1
 
 
 @respx.mock
-async def test_flush_sends_batch_and_truncates(tmp_path):
+async def test_flush_sends_batch_and_deletes(tmp_path):
     route = respx.post("http://cp.test/v1/events").mock(return_value=httpx.Response(200, json={"received": 2, "ingested": 2}))
     config = make_config(tmp_path)
-    buffer_event(tmp_path, make_event("r1"))
-    buffer_event(tmp_path, make_event("r2"))
-    assert await flush_once(config) == 2
-    assert read_buffered_events(tmp_path) == []
+    outbox = Outbox(tmp_path)
+    outbox.record(make_event("r1"))
+    outbox.record(make_event("r2"))
+    assert await flush_once(config, outbox) == 2
+    assert outbox.pending() == 0
     sent = json.loads(route.calls.last.request.content)
     assert [e["request_id"] for e in sent] == ["r1", "r2"]
     assert route.calls.last.request.headers["authorization"] == "Bearer dp-token"
 
 
 @respx.mock
-async def test_failed_flush_keeps_the_buffer(tmp_path):
+async def test_failed_flush_keeps_the_events(tmp_path):
     respx.post("http://cp.test/v1/events").mock(return_value=httpx.Response(503))
     config = make_config(tmp_path)
-    buffer_event(tmp_path, make_event("r1"))
+    outbox = Outbox(tmp_path)
+    outbox.record(make_event("r1"))
     with pytest.raises(httpx.HTTPStatusError):
-        await flush_once(config)
-    assert len(read_buffered_events(tmp_path)) == 1
+        await flush_once(config, outbox)
+    assert outbox.pending() == 1
 
 
-@respx.mock
-async def test_torn_final_line_is_dropped_and_flush_proceeds(tmp_path):
-    respx.post("http://cp.test/v1/events").mock(return_value=httpx.Response(200, json={}))
-    config = make_config(tmp_path)
-    buffer_event(tmp_path, make_event("r1"))
-    with (tmp_path / "events.jsonl").open("a", encoding="utf-8") as f:
-        f.write('{"event_id": "torn-mid-wr')
-    assert await flush_once(config) == 1
-    assert read_buffered_events(tmp_path) == []
-
-
-@respx.mock
-async def test_corrupt_middle_line_quarantines_buffer(tmp_path):
-    respx.post("http://cp.test/v1/events").mock(return_value=httpx.Response(200, json={}))
-    config = make_config(tmp_path)
-    buffer_event(tmp_path, make_event("r1"))
-    with (tmp_path / "events.jsonl").open("a", encoding="utf-8") as f:
-        f.write("garbage\n")
-    buffer_event(tmp_path, make_event("r2"))
-    assert await flush_once(config) == 0
-    assert (tmp_path / "events.jsonl.corrupt").exists()
-    assert not (tmp_path / "events.jsonl").exists()
+def test_only_one_holder_wins_the_flush_lease(tmp_path):
+    a = Outbox(tmp_path)
+    b = Outbox(tmp_path)
+    a._owner = "worker-a"
+    b._owner = "worker-b"
+    assert a.claim_flush(ttl=30, now=1000.0) is True
+    assert b.claim_flush(ttl=30, now=1000.0) is False  # a still holds a live lease
+    assert b.claim_flush(ttl=30, now=1040.0) is True  # a's lease expired, b takes over
+    assert a.claim_flush(ttl=30, now=1041.0) is False

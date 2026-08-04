@@ -20,16 +20,17 @@ from starlette.routing import Route
 from contract import UsageEventV1, UsageStatus, public_key_from_b64, verify_bundle
 from data_plane.adapters import REGISTRY, ProviderAdapter
 from data_plane.auth import authenticate
-from data_plane.cache import acquire_cache_lock, read_cached_bundle, release_cache_lock
 from data_plane.cache import instance_id as cache_instance_id
+from data_plane.cache import read_cached_bundle
 from data_plane.canonical import CanonicalRequest, CanonicalResponse, Ctx, StreamState, UpstreamRequest, UpstreamStreamError, Usage
 from data_plane.config import Config, load_config
-from data_plane.events import buffer_event, run_flusher
+from data_plane.events import run_flusher
 from data_plane.heartbeat import run_heartbeat
 from data_plane.holder import BundleHolder, BundleSnapshot
 from data_plane.ingress import ANTHROPIC, CANONICAL, EgressStream, Ingress
 from data_plane.metering import cost_breakdown, estimate_tokens
 from data_plane.normalize import normalize_request
+from data_plane.outbox import Outbox
 from data_plane.policy import Deny, evaluate
 from data_plane.poller import run_poller
 from data_plane.transport import client
@@ -52,6 +53,7 @@ class AppState:
     config: Config | None = None
     bundle_public_key: Ed25519PublicKey | None = None
     token_public_key: Ed25519PublicKey | None = None
+    outbox: Outbox | None = None
 
 
 state = AppState()
@@ -171,9 +173,8 @@ def _record_usage(ctx: Ctx, final: CanonicalResponse, status: UsageStatus, req: 
         )
     cost_in, cost_out = cost_breakdown(usage, ctx.model, ctx.provider)
     latency_ms = int((time.monotonic() - ctx.started_at) * 1000)
-    if ctx.bundle_id is not None and state.config is not None:
-        buffer_event(
-            state.config.bundle.cache_dir,
+    if ctx.bundle_id is not None and state.outbox is not None:
+        state.outbox.record(
             UsageEventV1(
                 event_id=uuid4(),
                 request_id=ctx.request_id,
@@ -309,7 +310,7 @@ async def lifespan(_app: Starlette) -> AsyncIterator[None]:
     if config.dev:
         _configure_dev_logging()
     state.config = config
-    acquire_cache_lock(config.bundle.cache_dir)
+    state.outbox = Outbox(config.bundle.cache_dir)
     try:
         state.bundle_public_key = public_key_from_b64(config.bundle.public_key)
         state.token_public_key = public_key_from_b64(config.auth.token_public_key)
@@ -318,7 +319,7 @@ async def lifespan(_app: Starlette) -> AsyncIterator[None]:
         tasks = (
             [
                 asyncio.create_task(run_poller(config, holder, state.bundle_public_key)),
-                asyncio.create_task(run_flusher(config)),
+                asyncio.create_task(run_flusher(config, state.outbox)),
                 asyncio.create_task(run_heartbeat(config, holder, instance_id)),
             ]
             if config.control_plane.url
@@ -332,7 +333,7 @@ async def lifespan(_app: Starlette) -> AsyncIterator[None]:
                 with contextlib.suppress(asyncio.CancelledError):
                     await task
     finally:
-        release_cache_lock(config.bundle.cache_dir)
+        state.outbox.close()
 
 
 app = Starlette(

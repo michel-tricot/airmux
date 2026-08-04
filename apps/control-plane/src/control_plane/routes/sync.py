@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Request
+from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlmodel import col, select
 
 from contract import BundleV1, HeartbeatV1, SignedBundle, UsageEventV1
@@ -37,17 +38,19 @@ async def ingest_events(events: list[UsageEventV1], session: SessionDep) -> dict
 
 @router.post("/heartbeat")
 async def heartbeat(body: HeartbeatV1, session: SessionDep, request: Request) -> dict[str, str]:
-    """Upsert the instance record; the row persists as history, last_seen drives liveness."""
+    """Upsert the instance record; the row persists as history, last_seen drives liveness.
+
+    Every worker of a multi-worker data plane heartbeats with the same instance_id, so the first
+    insert can race; do it as one atomic upsert instead of read-then-write.
+    """
     now = datetime.now(tz=UTC)
     address = request.client.host if request.client else None
-    instance = await session.get(DataPlaneInstance, body.instance_id)
-    if instance is None:
-        instance = DataPlaneInstance(instance_id=body.instance_id, version=body.version, first_seen=now, last_seen=now)
-    instance.org_id = body.org_id
-    instance.version = body.version
-    instance.bundle_id = body.bundle_id
-    instance.address = address
-    instance.last_seen = now
-    session.add(instance)
+    fields = {"org_id": body.org_id, "version": body.version, "bundle_id": body.bundle_id, "address": address, "last_seen": now}
+    stmt = (
+        sqlite_insert(DataPlaneInstance)
+        .values(instance_id=body.instance_id, first_seen=now, **fields)
+        .on_conflict_do_update(index_elements=[DataPlaneInstance.instance_id], set_=fields)
+    )
+    await session.execute(stmt)
     await session.commit()
     return {"instance_id": body.instance_id}
