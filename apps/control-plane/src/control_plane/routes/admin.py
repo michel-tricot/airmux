@@ -21,21 +21,21 @@ SIGNING_KEY_ID = "k1"
 
 
 class OrgIn(BaseModel):
-    id: str
-    name: str = ""
+    id: str = Field(description="Org id, e.g. org-dev")
+    name: str = Field("", description="Display name, defaults to the id")
 
 
 class KeyIn(BaseModel):
-    org_id: str
-    allowed_models: list[str] = Field(default_factory=lambda: ["*"])
+    org_id: str = Field(description="Org the key belongs to")
+    allowed_models: list[str] = Field(default=["*"], description="Model ids this key may call, * for all")
 
 
 class ProviderIn(BaseModel):
-    org_id: str
-    provider_id: str
-    kind: Literal["openai_compatible", "anthropic"]
-    base_url: str
-    credential_ref: str
+    org_id: str = Field(description="Org the provider belongs to")
+    provider_id: str = Field(description="Provider id, e.g. openai")
+    kind: Literal["openai_compatible", "anthropic"] = Field("openai_compatible", description="Adapter kind")
+    base_url: str = Field(description="OpenAI-compatible endpoint, e.g. https://api.groq.com/openai/v1")
+    credential_ref: str = Field(description="env: or file: reference resolved by the data plane, never a raw secret")
 
     @field_validator("credential_ref")
     @classmethod
@@ -47,31 +47,58 @@ class ProviderIn(BaseModel):
 
 
 class ModelIn(BaseModel):
-    org_id: str
-    model_id: str
-    provider_id: str
-    upstream_model: str = ""
-    input_price_per_mtok: float = 0.0
-    output_price_per_mtok: float = 0.0
-    context_window: int = 128000
-    capabilities: list[str] = Field(default_factory=lambda: ["streaming", "tools"])
+    org_id: str = Field(description="Org the model belongs to")
+    model_id: str = Field(description="Caller-facing model id")
+    provider_id: str = Field(description="Provider id the model routes to")
+    upstream_model: str = Field("", description="Model name sent to the provider, lets model_id be an alias; defaults to model_id")
+    input_price_per_mtok: float = Field(0.0, description="USD per million input tokens")
+    output_price_per_mtok: float = Field(0.0, description="USD per million output tokens")
+    context_window: int = Field(128000, description="Context window in tokens")
+    capabilities: list[str] = Field(default=["streaming", "tools"], description="Capabilities, comma separated")
 
 
 class CompileIn(BaseModel):
-    org_id: str
+    org_id: str = Field(description="Org to compile the bundle for")
+
+
+class OrgOut(BaseModel):
+    id: str
+
+
+class KeyOut(BaseModel):
+    key_id: str
+    token: str
+
+
+class KeyRevokedOut(BaseModel):
+    key_id: str
+    status: Literal["revoked"]
+
+
+class ProviderOut(BaseModel):
+    provider_id: str
+
+
+class ModelOut(BaseModel):
+    model_id: str
+
+
+class CompileOut(BaseModel):
+    bundle_id: str
+    version: int
 
 
 @router.post("/orgs")
-async def create_org(body: OrgIn, session: SessionDep) -> dict[str, str]:
+async def create_org(body: OrgIn, session: SessionDep) -> OrgOut:
     if await session.get(Org, body.id) is not None:
         raise HTTPException(status_code=409)
     session.add(Org(id=body.id, name=body.name or body.id, created_at=datetime.now(tz=UTC)))
     await session.commit()
-    return {"id": body.id}
+    return OrgOut(id=body.id)
 
 
 @router.post("/keys")
-async def create_key(body: KeyIn, session: SessionDep, request: Request) -> dict[str, str]:
+async def create_key(body: KeyIn, session: SessionDep, request: Request) -> KeyOut:
     if await session.get(Org, body.org_id) is None:
         raise HTTPException(status_code=404)
     now = datetime.now(tz=UTC)
@@ -80,33 +107,33 @@ async def create_key(body: KeyIn, session: SessionDep, request: Request) -> dict
     await session.commit()
     settings = request.app.state.settings
     token = mint_api_token(key_id, body.org_id, private_key_from_b64(settings.auth.token_signing_key), now)
-    return {"key_id": key_id, "token": token}
+    return KeyOut(key_id=key_id, token=token)
 
 
 @router.delete("/keys/{key_id}")
-async def revoke_key(key_id: str, session: SessionDep) -> dict[str, str]:
+async def revoke_key(key_id: str, session: SessionDep) -> KeyRevokedOut:
     key = await session.get(ApiKey, key_id)
     if key is None:
         raise HTTPException(status_code=404)
     key.disabled = True
     session.add(key)
     await session.commit()
-    return {"key_id": key_id, "status": "revoked"}
+    return KeyRevokedOut(key_id=key_id, status="revoked")
 
 
 @router.post("/providers")
-async def create_provider(body: ProviderIn, session: SessionDep) -> dict[str, str]:
+async def create_provider(body: ProviderIn, session: SessionDep) -> ProviderOut:
     if await session.get(Org, body.org_id) is None:
         raise HTTPException(status_code=404)
     if await session.get(Provider, body.provider_id) is not None:
         raise HTTPException(status_code=409)
     session.add(Provider(id=body.provider_id, org_id=body.org_id, kind=body.kind, base_url=body.base_url, credential_ref=body.credential_ref))
     await session.commit()
-    return {"provider_id": body.provider_id}
+    return ProviderOut(provider_id=body.provider_id)
 
 
 @router.post("/models")
-async def create_model(body: ModelIn, session: SessionDep) -> dict[str, str]:
+async def create_model(body: ModelIn, session: SessionDep) -> ModelOut:
     if await session.get(Provider, body.provider_id) is None:
         raise HTTPException(status_code=404)
     if await session.get(Model, body.model_id) is not None:
@@ -124,11 +151,11 @@ async def create_model(body: ModelIn, session: SessionDep) -> dict[str, str]:
         )
     )
     await session.commit()
-    return {"model_id": body.model_id}
+    return ModelOut(model_id=body.model_id)
 
 
 @router.post("/bundles/compile")
-async def compile_endpoint(body: CompileIn, session: SessionDep, request: Request) -> dict[str, str | int]:
+async def compile_endpoint(body: CompileIn, session: SessionDep, request: Request) -> CompileOut:
     settings = request.app.state.settings
     now = datetime.now(tz=UTC)
     bundle_id = uuid4()
@@ -151,7 +178,7 @@ async def compile_endpoint(body: CompileIn, session: SessionDep, request: Reques
         )
     )
     await session.commit()
-    return {"bundle_id": str(bundle_id), "version": version + 1}
+    return CompileOut(bundle_id=str(bundle_id), version=version + 1)
 
 
 class BundleOut(BaseModel):

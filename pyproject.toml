@@ -16,6 +16,7 @@ dev = [
   "pytest", "pytest-asyncio", "respx", "anyio",
   "import-linter",
   "pre-commit",
+  "datamodel-code-generator",
 ]
 
 [tool.pytest.ini_options]
@@ -80,6 +81,7 @@ ignore = [
 "**/migrations/versions/*.py"  = ["ALL"]
 "**/migrations/env.py"         = ["INP001"]
 "apps/cli/**"                  = ["T201"]
+"apps/cli/src/cli/api_models.py" = ["ALL"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["contract", "control_plane", "data_plane"]

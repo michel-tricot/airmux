@@ -8,7 +8,8 @@ import sys
 from datetime import datetime
 from enum import StrEnum
 from pathlib import Path
-from typing import TYPE_CHECKING, Annotated, Literal, NamedTuple, get_origin
+from types import UnionType
+from typing import TYPE_CHECKING, Annotated, NamedTuple, Union, get_args, get_origin
 
 import httpx
 import typer
@@ -21,6 +22,7 @@ from rich import box
 from rich.console import Console
 from rich.table import Table
 
+from cli.api_models import KeyIn, ModelIn, OrgIn, ProviderIn
 from contract import private_key_to_b64, public_key_to_b64
 
 if TYPE_CHECKING:
@@ -241,32 +243,27 @@ def init(control_plane_url: str = "http://127.0.0.1:8000", cache_dir: str = ".ai
     console.print("        [bold]uv run data-plane --dev[/bold]")
 
 
-class ProviderSpec(BaseModel):
-    provider_id: str = Field(description="Provider id, e.g. openai")
-    kind: Literal["openai_compatible", "anthropic"] = Field("openai_compatible", description="Adapter kind")
-    base_url: str = Field(description="OpenAI-compatible endpoint, e.g. https://api.groq.com/openai/v1")
-    credential_ref: str = Field(description="env: or file: reference resolved by the data plane, never a raw secret")
+class OrgCreate(OrgIn):
+    pass
 
 
-class ModelSpec(BaseModel):
-    model_id: str = Field(description="Caller-facing model id")
-    provider_id: str = Field(description="Provider id the model routes to")
-    upstream_model: str = Field("", description="Model name sent to the provider, lets model_id be an alias; defaults to model_id")
-    input_price_per_mtok: float = Field(0.0, description="USD per million input tokens")
-    output_price_per_mtok: float = Field(0.0, description="USD per million output tokens")
-    context_window: int = Field(128000, description="Context window in tokens")
-    capabilities: list[str] = Field(default_factory=lambda: ["streaming", "tools"], description="Capabilities, comma separated")
+class KeyCreate(KeyIn):
+    org_id: str = Field("org-dev", description="Org the key belongs to")
 
 
-class KeySpec(BaseModel):
-    allowed_models: list[str] = Field(default_factory=lambda: ["*"])
+class ProviderCreate(ProviderIn):
+    org_id: str = Field("org-dev", description="Org the provider belongs to")
+
+
+class ModelCreate(ModelIn):
+    org_id: str = Field("org-dev", description="Org the model belongs to")
 
 
 class BootstrapSpec(BaseModel):
     org: str
-    providers: list[ProviderSpec] = Field(default_factory=list)
-    models: list[ModelSpec] = Field(default_factory=list)
-    keys: list[KeySpec] = Field(default_factory=lambda: [KeySpec()])
+    providers: list[ProviderCreate] = Field(default_factory=list)
+    models: list[ModelCreate] = Field(default_factory=list)
+    keys: list[KeyCreate] = Field(default_factory=lambda: [KeyCreate()])
 
 
 def _post_expecting(client: httpx.Client, path: str, body: dict, ok: tuple[int, ...]) -> httpx.Response:
@@ -290,9 +287,9 @@ def bootstrap(file: str = "bootstrap.yml", control_plane_url: str = "") -> None:
     with _admin_client(cp_url) as c:
         _post_expecting(c, "/admin/orgs", {"id": spec.org}, ok=(200, 409))
         for provider in spec.providers:
-            _post_expecting(c, "/admin/providers", {"org_id": spec.org, **provider.model_dump()}, ok=(200, 409))
+            _post_expecting(c, "/admin/providers", {**provider.model_dump(mode="json"), "org_id": spec.org}, ok=(200, 409))
         for model in spec.models:
-            _post_expecting(c, "/admin/models", {"org_id": spec.org, **model.model_dump()}, ok=(200, 409))
+            _post_expecting(c, "/admin/models", {**model.model_dump(mode="json"), "org_id": spec.org}, ok=(200, 409))
         minted = [
             _post_expecting(c, "/admin/keys", {"org_id": spec.org, "allowed_models": key.allowed_models}, ok=(200,)).json() for key in spec.keys
         ]
@@ -366,33 +363,23 @@ def bundles_compile(org: str = "org-dev", control_plane_url: str = "") -> None:
     console.print(f"bundle [bold]{compiled['bundle_id']}[/bold] v{compiled['version']} compiled")
 
 
-class OrgCreate(BaseModel):
-    id: str = Field(description="Org id, e.g. org-dev")
-    name: str = Field("", description="Display name, defaults to the id")
-
-
-class KeyCreate(BaseModel):
-    org_id: str = Field("org-dev", description="Org the key belongs to")
-    allowed_models: list[str] = Field(default_factory=lambda: ["*"], description="Model ids this key may call, * for all")
-
-
-class ProviderCreate(ProviderSpec):
-    org_id: str = Field("org-dev", description="Org the provider belongs to")
-
-
-class ModelCreate(ModelSpec):
-    org_id: str = Field("org-dev", description="Org the model belongs to")
+def _base_annotation(ann: object) -> object:
+    if get_origin(ann) in (UnionType, Union):
+        args = [a for a in get_args(ann) if a is not type(None)]
+        if len(args) == 1:
+            return args[0]
+    return ann
 
 
 def _is_list_field(field: FieldInfo) -> bool:
-    return get_origin(field.annotation) is list
+    return get_origin(_base_annotation(field.annotation)) is list
 
 
 def _flag_annotation(field: FieldInfo) -> object:
-    if _is_list_field(field):
+    base = _base_annotation(field.annotation)
+    if get_origin(base) is list:
         return list[str] | None
-    ann = field.annotation
-    return (ann | None) if ann in (str, float, int) else (str | None)
+    return (base | None) if base in (str, float, int) else (str | None)
 
 
 def _fill_spec(spec_cls: type[BaseModel], provided: dict) -> BaseModel:
@@ -426,7 +413,7 @@ def _register_create(sub_app: typer.Typer, spec_cls: type[BaseModel], path: str,
         control_plane_url = str(kwargs.pop("control_plane_url", "") or "")
         spec = _fill_spec(spec_cls, kwargs)
         with _admin_client(_control_plane_url(control_plane_url)) as c:
-            resp = _post_expecting(c, path, spec.model_dump(), ok=(200,))
+            resp = _post_expecting(c, path, spec.model_dump(mode="json"), ok=(200,))
         done(resp.json())
 
     params = [

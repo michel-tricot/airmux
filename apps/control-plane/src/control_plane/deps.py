@@ -3,25 +3,30 @@ from __future__ import annotations
 import hmac
 from typing import TYPE_CHECKING, Annotated
 
-from fastapi import Depends, Header, HTTPException, Request
+from fastapi import Depends, HTTPException, Request
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
     from sqlalchemy.ext.asyncio import AsyncSession
 
+_bearer = HTTPBearer(auto_error=False)
 
-def _bearer_matches(authorization: str, expected: str) -> bool:
-    return authorization.startswith("Bearer ") and hmac.compare_digest(authorization.removeprefix("Bearer "), expected)
+BearerDep = Annotated["HTTPAuthorizationCredentials | None", Depends(_bearer)]
 
 
-async def require_admin(request: Request, authorization: Annotated[str, Header()] = "") -> None:
-    if not _bearer_matches(authorization, request.app.state.settings.auth.admin_token):
+def _matches(credentials: HTTPAuthorizationCredentials | None, expected: str) -> bool:
+    return credentials is not None and hmac.compare_digest(credentials.credentials, expected)
+
+
+async def require_admin(request: Request, credentials: BearerDep) -> None:
+    if not _matches(credentials, request.app.state.settings.auth.admin_token):
         raise HTTPException(status_code=401)
 
 
-async def require_dp(request: Request, authorization: Annotated[str, Header()] = "") -> None:
-    if not _bearer_matches(authorization, request.app.state.settings.auth.dp_token):
+async def require_dp(request: Request, credentials: BearerDep) -> None:
+    if not _matches(credentials, request.app.state.settings.auth.dp_token):
         raise HTTPException(status_code=401)
 
 
