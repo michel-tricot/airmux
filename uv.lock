@@ -298,6 +298,7 @@ dependencies = [
     { name = "fastapi" },
     { name = "sqlalchemy", extra = ["asyncio"] },
     { name = "sqlmodel" },
+    { name = "typer" },
     { name = "uvicorn", extra = ["standard"] },
 ]
 
@@ -309,6 +310,7 @@ requires-dist = [
     { name = "fastapi" },
     { name = "sqlalchemy", extras = ["asyncio"], specifier = ">=2" },
     { name = "sqlmodel" },
+    { name = "typer" },
     { name = "uvicorn", extras = ["standard"] },
 ]
 
@@ -373,6 +375,7 @@ dependencies = [
     { name = "pydantic" },
     { name = "starlette" },
     { name = "tiktoken" },
+    { name = "typer" },
     { name = "uvicorn", extra = ["standard"] },
 ]
 
@@ -384,6 +387,7 @@ requires-dist = [
     { name = "pydantic", specifier = ">=2" },
     { name = "starlette" },
     { name = "tiktoken" },
+    { name = "typer" },
     { name = "uvicorn", extras = ["standard"] },
 ]
 

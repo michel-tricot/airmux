@@ -10,7 +10,11 @@ dependencies = [
   "aiosqlite",
   "alembic",
   "uvicorn[standard]",
+  "typer",
 ]
+
+[project.scripts]
+control-plane = "control_plane.main:app"
 
 [build-system]
 requires = ["hatchling"]

@@ -32,6 +32,9 @@ Line length is 150. Do not reformat unrelated lines to fit; run `ruff format` an
 - Adapter tests are parameterized over all registered adapters. Do not write per-adapter suites.
 - Proof of fix is a real request against a running data plane, not pytest output.
 
+## CLI
+Anything started from the command line uses typer. Servers expose a typer entry point that wraps uvicorn.
+
 ## Style
 No comments unless asked. No emojis. No em dashes. No trailing periods in bullets.
 Do not add Claude attribution to commits or PRs.

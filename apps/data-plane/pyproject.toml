@@ -10,7 +10,11 @@ dependencies = [
   "pydantic>=2",
   "cryptography",
   "tiktoken",
+  "typer",
 ]
+
+[project.scripts]
+data-plane = "data_plane.main:app"
 
 [build-system]
 requires = ["hatchling"]
