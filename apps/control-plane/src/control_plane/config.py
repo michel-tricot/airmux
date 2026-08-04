@@ -4,6 +4,8 @@ import os
 from dataclasses import dataclass
 from datetime import timedelta
 
+from dotenv import find_dotenv, load_dotenv
+
 
 @dataclass(frozen=True)
 class Settings:
@@ -16,6 +18,7 @@ class Settings:
 
 
 def load_settings() -> Settings:
+    load_dotenv(find_dotenv(usecwd=True))
     return Settings(
         database_url=os.environ.get("GW_DATABASE_URL", "sqlite+aiosqlite:///airllm.db"),
         admin_token=os.environ["GW_ADMIN_TOKEN"],

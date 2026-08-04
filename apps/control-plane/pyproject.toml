@@ -11,6 +11,7 @@ dependencies = [
   "alembic",
   "uvicorn[standard]",
   "typer",
+  "python-dotenv",
 ]
 
 [project.scripts]

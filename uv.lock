@@ -241,6 +241,7 @@ source = { editable = "apps/cli" }
 dependencies = [
     { name = "contract" },
     { name = "httpx" },
+    { name = "python-dotenv" },
     { name = "typer" },
 ]
 
@@ -248,6 +249,7 @@ dependencies = [
 requires-dist = [
     { name = "contract", editable = "packages/contract" },
     { name = "httpx" },
+    { name = "python-dotenv" },
     { name = "typer" },
 ]
 
@@ -298,6 +300,7 @@ dependencies = [
     { name = "alembic" },
     { name = "contract" },
     { name = "fastapi" },
+    { name = "python-dotenv" },
     { name = "sqlalchemy", extra = ["asyncio"] },
     { name = "sqlmodel" },
     { name = "typer" },
@@ -310,6 +313,7 @@ requires-dist = [
     { name = "alembic" },
     { name = "contract", editable = "packages/contract" },
     { name = "fastapi" },
+    { name = "python-dotenv" },
     { name = "sqlalchemy", extras = ["asyncio"], specifier = ">=2" },
     { name = "sqlmodel" },
     { name = "typer" },
@@ -375,6 +379,7 @@ dependencies = [
     { name = "cryptography" },
     { name = "httpx", extra = ["http2"] },
     { name = "pydantic" },
+    { name = "python-dotenv" },
     { name = "starlette" },
     { name = "tiktoken" },
     { name = "typer" },
@@ -387,6 +392,7 @@ requires-dist = [
     { name = "cryptography" },
     { name = "httpx", extras = ["http2"] },
     { name = "pydantic", specifier = ">=2" },
+    { name = "python-dotenv" },
     { name = "starlette" },
     { name = "tiktoken" },
     { name = "typer" },

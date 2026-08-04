@@ -8,6 +8,7 @@ from uuid import uuid4
 import typer
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+from dotenv import set_key
 
 from contract import BundleV1, Catalog, KeyEntry, ModelEntry, ProviderEntry, mint_api_token, sign_bundle
 
@@ -33,12 +34,13 @@ def _load_or_create_key(key_path: Path) -> Ed25519PrivateKey:
 
 
 @app.command()
-def seed(
+def seed(  # noqa: PLR0913, PLR0917 CLI options are a flat namespace by design
     cache_dir: str = ".airllm",
     base_url: str = "https://api.openai.com/v1",
     model: str = "gpt-4o-mini",
     upstream_model: str = "",
     credential_ref: str = "env:OPENAI_API_KEY",
+    write_env: bool = True,
 ) -> None:
     """Write a signed dev bundle to the data plane cache dir and print a caller token."""
     cache = Path(cache_dir).resolve()
@@ -76,12 +78,21 @@ def seed(
         )
     ).decode("ascii")
     token = mint_api_token("k-dev", "org-dev", private_key, now)
-    typer.echo(f"export GW_CACHE_DIR={cache}")
-    typer.echo(f"export GW_BUNDLE_PUBLIC_KEY={public_b64}")
-    typer.echo(f"export AIRLLM_TOKEN={token}")
+    if write_env:
+        env_path = Path(".env")
+        env_path.touch(exist_ok=True)
+        for k, v in {"GW_CACHE_DIR": str(cache), "GW_BUNDLE_PUBLIC_KEY": public_b64, "AIRLLM_TOKEN": token}.items():
+            set_key(env_path, k, v)
+        typer.echo(f"wrote {env_path.resolve()}")
+        typer.echo(f"put your provider key there too: {credential_ref.removeprefix('env:')}=sk-...")
+    else:
+        typer.echo(f"export GW_CACHE_DIR={cache}")
+        typer.echo(f"export GW_BUNDLE_PUBLIC_KEY={public_b64}")
+        typer.echo(f"export AIRLLM_TOKEN={token}")
     typer.echo("")
     typer.echo("start:  uv run data-plane")
-    typer.echo("test:   curl -s localhost:8080/v1/chat/completions \\")
+    typer.echo("test:   source .env")
+    typer.echo("        curl -s localhost:8080/v1/chat/completions \\")
     typer.echo('          -H "Authorization: Bearer $AIRLLM_TOKEN" -H "Content-Type: application/json" \\')
     typer.echo(f'          -d \'{{"model": "{model}", "messages": [{{"role": "user", "content": "say hi"}}]}}\'')
 

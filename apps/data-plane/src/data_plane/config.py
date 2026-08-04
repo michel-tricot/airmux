@@ -5,6 +5,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
+from dotenv import find_dotenv, load_dotenv
+
 
 @dataclass(frozen=True)
 class Config:
@@ -18,6 +20,7 @@ class Config:
 
 
 def load_config() -> Config:
+    load_dotenv(find_dotenv(usecwd=True))
     return Config(
         control_plane_url=os.environ.get("GW_CONTROL_PLANE_URL"),
         dp_token=os.environ.get("GW_DP_TOKEN"),
