@@ -1,0 +1,32 @@
+[project]
+name = "data-plane"
+version = "0.1.0"
+requires-python = ">=3.13"
+dependencies = [
+  "gw-contract",
+  "starlette",
+  "uvicorn[standard]",
+  "httpx[http2]",
+  "pydantic>=2",
+  "cryptography",
+  "tiktoken",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/data_plane"]
+
+[tool.ruff]
+extend = "../../pyproject.toml"
+
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+"sqlalchemy".msg    = "data plane must never touch a database, add a field to the bundle"
+"sqlmodel".msg      = "data plane must never touch a database, add a field to the bundle"
+"asyncpg".msg       = "data plane must never touch a database, add a field to the bundle"
+"psycopg".msg       = "data plane must never touch a database, add a field to the bundle"
+"alembic".msg       = "control plane only"
+"fastapi".msg       = "data plane runs on bare Starlette, see spec 0"
+"control_plane".msg = "planes communicate only through gw_contract"
