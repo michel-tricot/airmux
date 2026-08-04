@@ -8,7 +8,7 @@ import typer
 import yaml
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
-from dotenv import dotenv_values, find_dotenv, load_dotenv, set_key, unset_key
+from dotenv import dotenv_values, set_key, unset_key
 
 from cli.client import admin_client, post_expecting, resolve_control_plane_url
 from cli.common import SETUP, app, console
@@ -107,7 +107,6 @@ def bootstrap(file: str = "bootstrap.yml", control_plane_url: str = "") -> None:
         console.print(f"[red]{file} not found[/red]")
         raise typer.Exit(1)
     spec = BootstrapSpec.model_validate(yaml.safe_load(path.read_text(encoding="utf-8")))
-    load_dotenv(find_dotenv(usecwd=True))
     cp_url = resolve_control_plane_url(control_plane_url)
     with admin_client(cp_url) as c:
         post_expecting(c, "/admin/orgs", {"id": spec.org}, ok=(200, 409))

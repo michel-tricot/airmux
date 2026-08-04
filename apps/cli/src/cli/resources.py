@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from dotenv import find_dotenv, load_dotenv
-
 from cli.client import admin_client, admin_get, resolve_control_plane_url
 from cli.common import bundles_app, console, keys_app, models_app, orgs_app, providers_app
 from cli.forms import register_create
@@ -89,7 +87,6 @@ def bundles_list(org: str | None = None, control_plane_url: str = "", fmt: Forma
 @bundles_app.command("compile")
 def bundles_compile(org: str = "org-dev", control_plane_url: str = "") -> None:
     """Recompile and sign the bundle for an org."""
-    load_dotenv(find_dotenv(usecwd=True))
     with admin_client(resolve_control_plane_url(control_plane_url)) as c:
         resp = c.post("/admin/bundles/compile", json={"org_id": org})
         resp.raise_for_status()

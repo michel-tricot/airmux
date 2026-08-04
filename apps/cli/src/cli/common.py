@@ -1,10 +1,17 @@
 from __future__ import annotations
 
 import typer
+from dotenv import find_dotenv, load_dotenv
 from rich.console import Console
 
 app = typer.Typer(name="airllm", no_args_is_help=True)
 console = Console()
+
+
+@app.callback()
+def _main() -> None:
+    load_dotenv(find_dotenv(usecwd=True))
+
 
 SETUP = "Setup"
 RESOURCES = "Resources"

@@ -6,7 +6,6 @@ from pathlib import Path
 import httpx
 import typer
 import yaml
-from dotenv import find_dotenv, load_dotenv
 
 from cli.common import console
 
@@ -26,7 +25,6 @@ def resolve_control_plane_url(override: str) -> str:
 
 
 def admin_client(control_plane_url: str) -> httpx.Client:
-    load_dotenv(find_dotenv(usecwd=True))
     admin_token = os.environ.get("GW_ADMIN_TOKEN")
     if not admin_token:
         console.print("[red]GW_ADMIN_TOKEN is not set, run `airllm init` first[/red]")
@@ -35,7 +33,6 @@ def admin_client(control_plane_url: str) -> httpx.Client:
 
 
 def admin_get(path: str, control_plane_url: str, org: str | None = None) -> list[dict]:
-    load_dotenv(find_dotenv(usecwd=True))
     with admin_client(resolve_control_plane_url(control_plane_url)) as c:
         resp = c.get(path, params={"org_id": org} if org else {})
         resp.raise_for_status()
