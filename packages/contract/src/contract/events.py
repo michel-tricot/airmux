@@ -32,6 +32,8 @@ class UsageEventV1(BaseModel):
     cost_usd: float  # cost_input_usd + cost_output_usd, from bundle pricing at request time, never a lookup service
     cost_input_usd: float = 0.0
     cost_output_usd: float = 0.0
+    cache_read_tokens: int = 0  # prompt-cache hit tokens, billed at a discount; part of input_tokens
+    cache_write_tokens: int = 0
     latency_ms: int
     status: UsageStatus  # cancelled still carries partial counts
     stream: bool

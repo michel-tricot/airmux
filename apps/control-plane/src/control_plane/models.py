@@ -66,6 +66,8 @@ class UsageEvent(SQLModel, table=True):
     cost_usd: float
     cost_input_usd: float = 0.0
     cost_output_usd: float = 0.0
+    cache_read_tokens: int = 0
+    cache_write_tokens: int = 0
     latency_ms: int
     status: str
     stream: bool

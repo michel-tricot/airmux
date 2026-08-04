@@ -189,6 +189,8 @@ def _record_usage(ctx: Ctx, final: CanonicalResponse, status: UsageStatus, req: 
                 bundle_id=ctx.bundle_id,
                 input_tokens=usage.input_tokens,
                 output_tokens=usage.output_tokens,
+                cache_read_tokens=usage.cache_read_tokens,
+                cache_write_tokens=usage.cache_write_tokens,
                 cost_usd=cost_in + cost_out,
                 cost_input_usd=cost_in,
                 cost_output_usd=cost_out,
@@ -198,7 +200,8 @@ def _record_usage(ctx: Ctx, final: CanonicalResponse, status: UsageStatus, req: 
             ),
         )
     logger.info(
-        "usage request_id=%s model=%s provider=%s status=%s stream=%s input_tokens=%d output_tokens=%d estimated=%s cost_usd=%.6f latency_ms=%d",
+        "usage request_id=%s model=%s provider=%s status=%s stream=%s input_tokens=%d output_tokens=%d "
+        "cache_read=%d cache_write=%d estimated=%s cost_usd=%.6f latency_ms=%d",
         ctx.request_id,
         ctx.model.model_id,
         ctx.provider.provider_id,
@@ -206,6 +209,8 @@ def _record_usage(ctx: Ctx, final: CanonicalResponse, status: UsageStatus, req: 
         ctx.stream,
         usage.input_tokens,
         usage.output_tokens,
+        usage.cache_read_tokens,
+        usage.cache_write_tokens,
         usage.estimated,
         cost_in + cost_out,
         latency_ms,
