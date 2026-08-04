@@ -14,7 +14,6 @@ import anyio
 import httpx
 from cryptography.exceptions import InvalidSignature
 from pydantic import ValidationError
-from rich.console import Console
 from starlette.applications import Starlette
 from starlette.responses import JSONResponse, Response, StreamingResponse
 from starlette.routing import Route
@@ -39,7 +38,6 @@ if TYPE_CHECKING:
     from starlette.requests import Request
 
 logger = logging.getLogger("data_plane")
-_console = Console(stderr=True)
 
 holder = BundleHolder()
 
@@ -193,13 +191,6 @@ def _record_usage(ctx: Ctx, final: CanonicalResponse, status: UsageStatus, promp
         cost,
         latency_ms,
     )
-    if state.config is not None and state.config.dev:
-        tokens = f"{final.usage.input_tokens}→{final.usage.output_tokens} tok" + ("~" if final.usage.estimated else "")
-        style = STATUS_STYLE.get(status, "red")
-        _console.print(
-            f"[dim]{ctx.request_id[:8]}[/dim] [bold]{ctx.model.model_id}[/bold][dim]@{ctx.provider.provider_id}[/dim] "
-            f"[{style}]{status:<9}[/{style}] {tokens:<12} ${cost:.6f}  {latency_ms}ms{'  [cyan]stream[/cyan]' if ctx.stream else ''}"
-        )
 
 
 def _sse(payload: dict) -> bytes:
