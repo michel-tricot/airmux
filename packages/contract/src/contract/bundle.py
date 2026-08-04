@@ -8,12 +8,17 @@ from pydantic import BaseModel, ConfigDict, HttpUrl
 
 
 class KeyEntry(BaseModel):
-    """An API key as the data plane sees it: enough to authenticate and authorize with zero I/O."""
+    """An API key as the data plane sees it: enough to authorize with zero I/O.
+
+    Authentication is the caller's signed JWT (see tokens.py), verified against the
+    signing public key; this entry is then looked up by the token's key_id claim.
+    A valid signature is not enough on its own: the key must exist here, be enabled,
+    and not be revoked, so revocation wins over any token still in the wild.
+    """
 
     model_config = ConfigDict(frozen=True)
 
     key_id: str
-    key_hash: str  # sha256(plaintext), hex; the data plane never sees plaintext
     org_id: str
     allowed_models: list[str]  # model_ids this key may call, ["*"] permitted
     disabled: bool = False

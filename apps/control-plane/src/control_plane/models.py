@@ -16,8 +16,6 @@ class Org(SQLModel, table=True):
 class ApiKey(SQLModel, table=True):
     id: str = Field(primary_key=True)
     org_id: str = Field(foreign_key="org.id")
-    key_hash: str
-    key_prefix: str
     allowed_models: list[str] = Field(default_factory=list, sa_type=JSON)
     disabled: bool = False
     created_at: datetime

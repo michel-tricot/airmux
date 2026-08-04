@@ -1,8 +1,8 @@
 """initial schema
 
-Revision ID: 2d35d395903e
+Revision ID: e9f8634c389b
 Revises:
-Create Date: 2026-08-03 17:32:30.635088
+Create Date: 2026-08-03 17:46:29.145783
 """
 
 from __future__ import annotations
@@ -12,7 +12,7 @@ import sqlmodel
 from alembic import op
 
 
-revision = "2d35d395903e"
+revision = "e9f8634c389b"
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -57,8 +57,6 @@ def upgrade() -> None:
         "apikey",
         sa.Column("id", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("org_id", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
-        sa.Column("key_hash", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
-        sa.Column("key_prefix", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("allowed_models", sa.JSON(), nullable=False),
         sa.Column("disabled", sa.Boolean(), nullable=False),
         sa.Column("created_at", sa.DateTime(), nullable=False),
