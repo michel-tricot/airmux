@@ -8,11 +8,29 @@ resolution-markers = [
 
 [manifest]
 members = [
+    "acceptance",
     "airllm",
     "cli",
     "contract",
     "control-plane",
     "data-plane",
+]
+
+[[package]]
+name = "acceptance"
+version = "0.1.0"
+source = { virtual = "tests/acceptance" }
+dependencies = [
+    { name = "httpx" },
+    { name = "python-dotenv" },
+    { name = "pyyaml" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "httpx" },
+    { name = "python-dotenv" },
+    { name = "pyyaml" },
 ]
 
 [[package]]

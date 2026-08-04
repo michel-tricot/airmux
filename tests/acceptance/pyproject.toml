@@ -1,0 +1,15 @@
+[project]
+name = "acceptance"
+version = "0.1.0"
+requires-python = ">=3.13"
+dependencies = [
+  "httpx",
+  "pyyaml",
+  "python-dotenv",
+]
+
+[tool.uv]
+package = false
+
+[tool.ruff]
+extend = "../../pyproject.toml"

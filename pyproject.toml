@@ -4,7 +4,8 @@ version = "0.1.0"
 requires-python = ">=3.13"
 
 [tool.uv.workspace]
-members = ["packages/*", "apps/*"]
+members = ["packages/*", "apps/*", "tests/*"]
+exclude = ["apps/webapp"]
 
 [tool.uv.sources]
 contract = { workspace = true }

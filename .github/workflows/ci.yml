@@ -17,3 +17,11 @@ jobs:
       - run: uv run lint-imports
       - run: ./scripts/generate-api-models.sh && git diff --exit-code apps/cli/src/cli/api_models.py
       - run: uv run pytest
+
+  acceptance:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uv sync --all-packages --frozen
+      - run: uv run pytest tests/acceptance
