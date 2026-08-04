@@ -314,6 +314,7 @@ for name, sub in (("orgs", orgs_app), ("keys", keys_app), ("providers", provider
 
 @orgs_app.command("list")
 def orgs_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
+    """List orgs."""
     _print_rows("orgs", _admin_get("/admin/orgs", control_plane_url), ORG_COLS, fmt)
 
 
@@ -327,6 +328,7 @@ def orgs_create(org_id: str, name: str = "", control_plane_url: str = "") -> Non
 
 @keys_app.command("list")
 def keys_list(org: str | None = None, control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
+    """List caller API keys with their status."""
     _print_rows("keys", _admin_get("/admin/keys", control_plane_url, org), KEY_COLS, fmt)
 
 
@@ -351,16 +353,19 @@ def keys_revoke(key_id: str, control_plane_url: str = "") -> None:
 
 @providers_app.command("list")
 def providers_list(org: str | None = None, control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
+    """List upstream providers and their credential references."""
     _print_rows("providers", _admin_get("/admin/providers", control_plane_url, org), PROVIDER_COLS, fmt)
 
 
 @models_app.command("list")
 def models_list(org: str | None = None, control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
+    """List routable models with pricing and capabilities."""
     _print_rows("models", _admin_get("/admin/models", control_plane_url, org), MODEL_COLS, fmt)
 
 
 @bundles_app.command("list")
 def bundles_list(org: str | None = None, control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
+    """List compiled bundle versions and their validity windows."""
     _print_rows("bundles", _admin_get("/admin/bundles", control_plane_url, org), BUNDLE_COLS, fmt)
 
 
@@ -381,9 +386,11 @@ app.add_typer(test_app, name="test", rich_help_panel=TESTING)
 
 @test_app.command()
 def verify() -> None:
+    """Run the acceptance checks against a running gateway. Not implemented yet."""
     raise NotImplementedError
 
 
 @test_app.command()
 def loadgen() -> None:
+    """Generate request load against the data plane. Not implemented yet."""
     raise NotImplementedError
