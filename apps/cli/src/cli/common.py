@@ -22,8 +22,16 @@ keys_app = typer.Typer(help="Caller API keys")
 providers_app = typer.Typer(help="Upstream providers")
 models_app = typer.Typer(help="Routable models")
 bundles_app = typer.Typer(help="Signed policy bundles")
+events_app = typer.Typer(help="Usage events ingested from data planes")
 test_app = typer.Typer(help="Acceptance and load testing", no_args_is_help=True)
 
-for name, sub in (("orgs", orgs_app), ("keys", keys_app), ("providers", providers_app), ("models", models_app), ("bundles", bundles_app)):
+for name, sub in (
+    ("orgs", orgs_app),
+    ("keys", keys_app),
+    ("providers", providers_app),
+    ("models", models_app),
+    ("bundles", bundles_app),
+    ("events", events_app),
+):
     app.add_typer(sub, name=name, rich_help_panel=RESOURCES, no_args_is_help=True)
 app.add_typer(test_app, name="test", rich_help_panel=TESTING)

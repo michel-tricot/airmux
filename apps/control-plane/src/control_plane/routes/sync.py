@@ -3,9 +3,9 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import select
 
-from contract import BundleV1, SignedBundle
+from contract import BundleV1, SignedBundle, UsageEventV1
 from control_plane.deps import SessionDep, require_dp
-from control_plane.models import Bundle
+from control_plane.models import Bundle, UsageEvent
 
 router = APIRouter(prefix="/v1", dependencies=[Depends(require_dp)])
 
@@ -22,8 +22,15 @@ async def bundle_latest(session: SessionDep, org_id: str | None = None) -> Signe
 
 
 @router.post("/events")
-async def ingest_events() -> dict[str, int]:
-    raise NotImplementedError
+async def ingest_events(events: list[UsageEventV1], session: SessionDep) -> dict[str, int]:
+    """Idempotent upsert on event_id: at-least-once delivery lands exactly once."""
+    ingested = 0
+    for event in events:
+        if await session.get(UsageEvent, event.event_id) is None:
+            session.add(UsageEvent(**event.model_dump(exclude={"schema_version"})))
+            ingested += 1
+    await session.commit()
+    return {"received": len(events), "ingested": ingested}
 
 
 @router.post("/heartbeat")

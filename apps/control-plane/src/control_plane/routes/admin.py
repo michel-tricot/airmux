@@ -12,7 +12,7 @@ from sqlmodel import select
 from contract import canonical_json, mint_api_token, private_key_from_b64, sign_bundle
 from control_plane.compiler import UnknownOrgError, compile_bundle
 from control_plane.deps import SessionDep, require_admin
-from control_plane.models import ApiKey, Bundle, Model, Org, Provider
+from control_plane.models import ApiKey, Bundle, Model, Org, Provider, UsageEvent
 
 router = APIRouter(prefix="/admin", dependencies=[Depends(require_admin)])
 
@@ -215,6 +215,18 @@ async def list_models(session: SessionDep, org_id: str | None = None) -> list[Mo
     if org_id:
         query = query.where(Model.org_id == org_id)
     return list((await session.execute(query)).scalars().all())
+
+
+@router.get("/events")
+async def list_events(session: SessionDep, org_id: str | None = None, after: datetime | None = None, limit: int = 50) -> list[UsageEvent]:
+    query = select(UsageEvent)
+    if org_id:
+        query = query.where(UsageEvent.org_id == org_id)
+    if after is not None:
+        query = query.where(UsageEvent.occurred_at > after).order_by(UsageEvent.occurred_at.asc())
+    else:
+        query = query.order_by(UsageEvent.occurred_at.desc())
+    return list((await session.execute(query.limit(limit))).scalars().all())
 
 
 @router.get("/bundles")

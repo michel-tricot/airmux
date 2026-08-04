@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from cli.client import admin_client, admin_get, post_expecting
-from cli.common import bundles_app, console, keys_app, models_app, orgs_app, providers_app
+from cli.common import bundles_app, console, events_app, keys_app, models_app, orgs_app, providers_app
 from cli.forms import register_create
 from cli.output import Col, FormatOption, OutputFormat, fmt_when, print_rows
 from cli.specs import KeyCreate, ModelCreate, OrgCreate, ProviderCreate
@@ -34,6 +34,19 @@ MODEL_COLS = [
     Col("output_price_per_mtok", "$/Mtok out"),
     Col("context_window", "Context"),
     Col("capabilities", "Capabilities", style="cyan", max_width=30),
+]
+EVENT_STATUS_STYLE = {"ok": "green", "cancelled": "yellow"}
+EVENT_COLS = [
+    Col("occurred_at", "When", no_wrap=True, fmt=lambda v: str(v)[:19].replace("T", " ")),
+    Col("request_id", "Request", style="dim", no_wrap=True, fmt=lambda v: str(v)[:8]),
+    Col("org_id", "Org"),
+    Col("model_id", "Model"),
+    Col("status", "Status", style="yellow"),
+    Col("input_tokens", "In"),
+    Col("output_tokens", "Out"),
+    Col("cost_usd", "Cost $", fmt=lambda v: f"{float(v or 0):.6f}"),
+    Col("latency_ms", "ms"),
+    Col("stream", "Stream", fmt=lambda v: "yes" if v else ""),
 ]
 BUNDLE_COLS = [
     Col("id", "ID", style="dim", no_wrap=True, fmt=lambda v: str(v)[:8]),
@@ -90,6 +103,46 @@ def bundles_compile(org: str = "org-dev", control_plane_url: str = "") -> None:
     with admin_client(control_plane_url) as c:
         compiled = post_expecting(c, "/admin/bundles/compile", {"org_id": org}, ok=(200,)).json()
     console.print(f"bundle [bold]{compiled['bundle_id']}[/bold] v{compiled['version']} compiled")
+
+
+@events_app.command("list")
+def events_list(org: str | None = None, control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
+    """List the most recent usage events, newest first."""
+    print_rows("events", admin_get("/admin/events", control_plane_url, org), EVENT_COLS, fmt)
+
+
+@events_app.command("tail")
+def events_tail(org: str | None = None, interval: float = 2.0, control_plane_url: str = "") -> None:
+    """Follow usage events as data planes flush them in; ctrl-c to stop."""
+    import time  # noqa: PLC0415 lazy import keeps CLI startup fast
+
+    cursor: str | None = None
+    console.print("[dim]tailing events, ctrl-c to stop[/dim]")
+    with admin_client(control_plane_url) as c:
+        try:
+            while True:
+                params: dict = {"org_id": org} if org else {}
+                if cursor is None:
+                    resp = c.get("/admin/events", params={**params, "limit": 1})
+                    resp.raise_for_status()
+                    latest = resp.json()
+                    cursor = latest[0]["occurred_at"] if latest else "1970-01-01T00:00:00"
+                    time.sleep(interval)
+                    continue
+                resp = c.get("/admin/events", params={**params, "after": cursor, "limit": 200})
+                resp.raise_for_status()
+                for event in resp.json():
+                    style = EVENT_STATUS_STYLE.get(event["status"], "red")
+                    estimated = "~" if event["input_tokens"] == 0 and event["output_tokens"] == 0 else ""
+                    console.print(
+                        f"[dim]{str(event['occurred_at'])[11:19]}[/dim] [bold]{event['model_id']}[/bold][dim]@{event['provider_id']}[/dim] "
+                        f"[{style}]{event['status']:<9}[/{style}] {event['input_tokens']}\u2192{event['output_tokens']} tok{estimated} "
+                        f"${float(event['cost_usd']):.6f}  {event['latency_ms']}ms{'  [cyan]stream[/cyan]' if event['stream'] else ''}"
+                    )
+                    cursor = event["occurred_at"]
+                time.sleep(interval)
+        except KeyboardInterrupt:
+            console.print("[dim]stopped[/dim]")
 
 
 def _key_created(resp: dict) -> None:

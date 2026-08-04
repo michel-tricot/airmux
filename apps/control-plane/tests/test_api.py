@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import asyncio
+from datetime import UTC, datetime
+from uuid import uuid4
 
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from fastapi.testclient import TestClient
@@ -148,3 +150,35 @@ def test_model_and_provider_upsert_converge(tmp_path, monkeypatch):
         updated = {**PROVIDER, "base_url": "https://other.example/v1"}
         assert c.post("/admin/providers", json=updated, headers=ADMIN).status_code == 200
         assert c.get("/admin/providers", headers=ADMIN).json()[0]["base_url"] == "https://other.example/v1"
+
+
+def _event(request_id: str) -> dict:
+    return {
+        "event_id": str(uuid4()),
+        "request_id": request_id,
+        "occurred_at": datetime.now(tz=UTC).isoformat(),
+        "org_id": "o1",
+        "key_id": "k1",
+        "model_id": "gpt-test",
+        "provider_id": "openai",
+        "bundle_id": str(uuid4()),
+        "input_tokens": 10,
+        "output_tokens": 5,
+        "cost_usd": 0.000004,
+        "latency_ms": 120,
+        "status": "ok",
+        "stream": False,
+    }
+
+
+def test_event_ingest_is_idempotent(tmp_path, monkeypatch):
+    setup_control_plane(tmp_path, monkeypatch)
+    events = [_event("r1"), _event("r2")]
+    with TestClient(app) as c:
+        first = c.post("/v1/events", json=events, headers=DP).json()
+        assert first == {"received": 2, "ingested": 2}
+        replay = c.post("/v1/events", json=events, headers=DP).json()
+        assert replay == {"received": 2, "ingested": 0}
+        rows = c.get("/admin/events", headers=ADMIN).json()
+        assert len(rows) == 2
+        assert c.post("/v1/events", json=events, headers=ADMIN).status_code == 401

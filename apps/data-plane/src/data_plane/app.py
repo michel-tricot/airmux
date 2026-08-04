@@ -7,7 +7,7 @@ import logging
 import time
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 from uuid import uuid4
 
 import anyio
@@ -19,12 +19,13 @@ from starlette.applications import Starlette
 from starlette.responses import JSONResponse, Response, StreamingResponse
 from starlette.routing import Route
 
-from contract import public_key_from_b64, verify_bundle
+from contract import UsageEventV1, public_key_from_b64, verify_bundle
 from data_plane.adapters import REGISTRY, ProviderAdapter
 from data_plane.auth import authenticate, index_keys
 from data_plane.cache import read_cached_bundle
 from data_plane.canonical import CanonicalRequest, CanonicalResponse, Ctx, UpstreamRequest, UpstreamStreamError, Usage
 from data_plane.config import Config, load_config
+from data_plane.events import buffer_event, run_flusher
 from data_plane.holder import BundleHolder
 from data_plane.metering import cost_usd, estimate_tokens
 from data_plane.policy import Deny, evaluate
@@ -93,7 +94,15 @@ async def _handle(request: Request) -> Response:
         raise RequestRejectedError(decision.status, decision.reason)
 
     adapter = REGISTRY[decision.provider.kind](decision.provider)
-    ctx = Ctx(request_id=uuid4().hex, model=decision.model, provider=decision.provider, stream=req.stream)
+    ctx = Ctx(
+        request_id=uuid4().hex,
+        model=decision.model,
+        provider=decision.provider,
+        stream=req.stream,
+        org_id=key.org_id,
+        key_id=key.key_id,
+        bundle_id=bundle.bundle_id,
+    )
     upstream = adapter.transform_request(req, decision.model)
     prompt = _prompt_text(req)
     if req.stream:
@@ -130,7 +139,10 @@ def _prompt_text(req: CanonicalRequest) -> str:
     return "\n".join(parts)
 
 
-def _record_usage(ctx: Ctx, final: CanonicalResponse, status: str, prompt: str = "") -> None:
+UsageStatus = Literal["ok", "upstream_error", "denied", "timeout", "cancelled"]
+
+
+def _record_usage(ctx: Ctx, final: CanonicalResponse, status: UsageStatus, prompt: str = "") -> None:
     """The single metering point; M5 turns this record into a buffered UsageEventV1."""
     if final.usage.estimated:
         output_text = "".join(str(part.get("text", "")) for part in final.content if part.get("type") == "text")
@@ -145,6 +157,26 @@ def _record_usage(ctx: Ctx, final: CanonicalResponse, status: str, prompt: str =
         )
     cost = cost_usd(final.usage, ctx.model)
     latency_ms = int((time.monotonic() - ctx.started_at) * 1000)
+    if ctx.bundle_id is not None and state.config is not None:
+        buffer_event(
+            state.config.bundle.cache_dir,
+            UsageEventV1(
+                event_id=uuid4(),
+                request_id=ctx.request_id,
+                occurred_at=datetime.now(tz=UTC),
+                org_id=ctx.org_id,
+                key_id=ctx.key_id,
+                model_id=ctx.model.model_id,
+                provider_id=ctx.provider.provider_id,
+                bundle_id=ctx.bundle_id,
+                input_tokens=final.usage.input_tokens,
+                output_tokens=final.usage.output_tokens,
+                cost_usd=cost,
+                latency_ms=latency_ms,
+                status=status,
+                stream=ctx.stream,
+            ),
+        )
     logger.info(
         "usage request_id=%s model=%s provider=%s status=%s stream=%s input_tokens=%d output_tokens=%d estimated=%s cost_usd=%.6f latency_ms=%d",
         ctx.request_id,
@@ -254,14 +286,18 @@ async def lifespan(_app: Starlette) -> AsyncIterator[None]:
     state.bundle_public_key = public_key_from_b64(config.bundle.public_key)
     state.token_public_key = public_key_from_b64(config.auth.token_public_key)
     _load_cached_bundle(config, state.bundle_public_key)
-    poller_task = asyncio.create_task(run_poller(config, holder, state.bundle_public_key)) if config.control_plane.url else None
+    tasks = (
+        [asyncio.create_task(run_poller(config, holder, state.bundle_public_key)), asyncio.create_task(run_flusher(config))]
+        if config.control_plane.url
+        else []
+    )
     try:
         yield
     finally:
-        if poller_task is not None:
-            poller_task.cancel()
+        for task in tasks:
+            task.cancel()
             with contextlib.suppress(asyncio.CancelledError):
-                await poller_task
+                await task
 
 
 app = Starlette(

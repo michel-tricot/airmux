@@ -1,25 +1,67 @@
 from __future__ import annotations
 
+import asyncio
+import logging
 from typing import TYPE_CHECKING
+
+import httpx
+
+from contract import UsageEventV1
+from data_plane.transport import client
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from contract import UsageEventV1
     from data_plane.config import Config
+
+logger = logging.getLogger("data_plane")
+
+
+def _buffer_path(cache_dir: Path) -> Path:
+    return cache_dir / "events.jsonl"
 
 
 def buffer_event(cache_dir: Path, event: UsageEventV1) -> None:
-    raise NotImplementedError
+    with _buffer_path(cache_dir).open("a", encoding="utf-8") as f:
+        f.write(event.model_dump_json() + "\n")
 
 
 def read_buffered_events(cache_dir: Path) -> list[UsageEventV1]:
-    raise NotImplementedError
+    path = _buffer_path(cache_dir)
+    if not path.exists():
+        return []
+    return [UsageEventV1.model_validate_json(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
 
 
-def truncate_buffer(cache_dir: Path) -> None:
-    raise NotImplementedError
+def _drop_first(cache_dir: Path, count: int) -> None:
+    path = _buffer_path(cache_dir)
+    lines = [line for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+    tmp = path.with_suffix(".jsonl.tmp")
+    tmp.write_text("".join(line + "\n" for line in lines[count:]), encoding="utf-8")
+    tmp.replace(path)
+
+
+async def flush_once(config: Config) -> int:
+    """At-least-once delivery: send the batch, then drop exactly what was sent; the CP dedups on event_id."""
+    events = read_buffered_events(config.bundle.cache_dir)
+    if not events or not config.control_plane.url:
+        return 0
+    resp = await client.post(
+        f"{config.control_plane.url}/v1/events",
+        headers={"authorization": f"Bearer {config.control_plane.token}"},
+        json=[e.model_dump(mode="json") for e in events],
+    )
+    resp.raise_for_status()
+    _drop_first(config.bundle.cache_dir, len(events))
+    return len(events)
 
 
 async def run_flusher(config: Config) -> None:
-    raise NotImplementedError
+    while True:
+        try:
+            sent = await flush_once(config)
+            if sent:
+                logger.info("flushed %d usage events to the control plane", sent)
+        except (httpx.HTTPError, OSError, ValueError):
+            logger.exception("event flush failed, keeping the buffer")
+        await asyncio.sleep(config.events.flush_interval_s)
