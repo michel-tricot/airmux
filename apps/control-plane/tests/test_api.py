@@ -96,3 +96,24 @@ def test_admin_and_dp_auth_required(tmp_path, monkeypatch):
         assert c.post("/admin/orgs", json={"id": "o1"}).status_code == 401
         assert c.get("/v1/bundle/latest").status_code == 401
         assert c.get("/v1/bundle/latest", headers=ADMIN).status_code == 401
+
+
+def test_list_endpoints_read_back(tmp_path, monkeypatch):
+    setup_control_plane(tmp_path, monkeypatch)
+    with TestClient(app) as c:
+        c.post("/admin/orgs", json={"id": "o1"}, headers=ADMIN)
+        key = c.post("/admin/keys", json={"org_id": "o1"}, headers=ADMIN).json()
+        c.post("/admin/providers", json=PROVIDER, headers=ADMIN)
+        c.post("/admin/models", json=MODEL, headers=ADMIN)
+        c.post("/admin/bundles/compile", json={"org_id": "o1"}, headers=ADMIN)
+
+        assert [o["id"] for o in c.get("/admin/orgs", headers=ADMIN).json()] == ["o1"]
+        keys = c.get("/admin/keys", headers=ADMIN, params={"org_id": "o1"}).json()
+        assert [k["id"] for k in keys] == [key["key_id"]]
+        assert "token" not in keys[0]
+        assert [p["id"] for p in c.get("/admin/providers", headers=ADMIN).json()] == ["openai"]
+        assert [m["id"] for m in c.get("/admin/models", headers=ADMIN).json()] == ["gpt-test"]
+        bundles = c.get("/admin/bundles", headers=ADMIN).json()
+        assert [b["version"] for b in bundles] == [1]
+        assert "payload" not in bundles[0]
+        assert c.get("/admin/orgs").status_code == 401

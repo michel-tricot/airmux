@@ -194,6 +194,54 @@ def compile_bundle(org: str = "org-dev", control_plane_url: str = "") -> None:
     typer.echo(f"bundle {compiled['bundle_id']} v{compiled['version']} compiled")
 
 
+list_app = typer.Typer(help="Read resources from the control plane")
+app.add_typer(list_app, name="list")
+
+
+def _admin_get(path: str, control_plane_url: str, org: str | None = None) -> list[dict]:
+    load_dotenv(find_dotenv(usecwd=True))
+    with _admin_client(_control_plane_url(control_plane_url)) as c:
+        resp = c.get(path, params={"org_id": org} if org else {})
+        resp.raise_for_status()
+        return resp.json()
+
+
+def _print_table(rows: list[dict]) -> None:
+    if not rows:
+        typer.echo("(none)")
+        return
+    cols = list(dict.fromkeys(k for r in rows for k in r))
+    widths = {c: max(len(c), *(len(str(r.get(c, ""))) for r in rows)) for c in cols}
+    typer.echo("  ".join(c.ljust(widths[c]) for c in cols))
+    for r in rows:
+        typer.echo("  ".join(str(r.get(c, "")).ljust(widths[c]) for c in cols))
+
+
+@list_app.command("orgs")
+def list_orgs(control_plane_url: str = "") -> None:
+    _print_table(_admin_get("/admin/orgs", control_plane_url))
+
+
+@list_app.command("keys")
+def list_keys(org: str | None = None, control_plane_url: str = "") -> None:
+    _print_table(_admin_get("/admin/keys", control_plane_url, org))
+
+
+@list_app.command("providers")
+def list_providers(org: str | None = None, control_plane_url: str = "") -> None:
+    _print_table(_admin_get("/admin/providers", control_plane_url, org))
+
+
+@list_app.command("models")
+def list_models(org: str | None = None, control_plane_url: str = "") -> None:
+    _print_table(_admin_get("/admin/models", control_plane_url, org))
+
+
+@list_app.command("bundles")
+def list_bundles(org: str | None = None, control_plane_url: str = "") -> None:
+    _print_table(_admin_get("/admin/bundles", control_plane_url, org))
+
+
 @app.command()
 def verify() -> None:
     raise NotImplementedError

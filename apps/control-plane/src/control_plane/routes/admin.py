@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 from typing import Literal
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field, field_validator
@@ -152,3 +152,50 @@ async def compile_endpoint(body: CompileIn, session: SessionDep, request: Reques
     )
     await session.commit()
     return {"bundle_id": str(bundle_id), "version": version + 1}
+
+
+class BundleOut(BaseModel):
+    id: UUID
+    org_id: str
+    version: int
+    issued_at: datetime
+    expires_at: datetime
+    signing_key_id: str
+
+
+@router.get("/orgs")
+async def list_orgs(session: SessionDep) -> list[Org]:
+    return list((await session.execute(select(Org).order_by(Org.id))).scalars().all())
+
+
+@router.get("/keys")
+async def list_keys(session: SessionDep, org_id: str | None = None) -> list[ApiKey]:
+    query = select(ApiKey).order_by(ApiKey.id)
+    if org_id:
+        query = query.where(ApiKey.org_id == org_id)
+    return list((await session.execute(query)).scalars().all())
+
+
+@router.get("/providers")
+async def list_providers(session: SessionDep, org_id: str | None = None) -> list[Provider]:
+    query = select(Provider).order_by(Provider.id)
+    if org_id:
+        query = query.where(Provider.org_id == org_id)
+    return list((await session.execute(query)).scalars().all())
+
+
+@router.get("/models")
+async def list_models(session: SessionDep, org_id: str | None = None) -> list[Model]:
+    query = select(Model).order_by(Model.id)
+    if org_id:
+        query = query.where(Model.org_id == org_id)
+    return list((await session.execute(query)).scalars().all())
+
+
+@router.get("/bundles")
+async def list_bundles(session: SessionDep, org_id: str | None = None) -> list[BundleOut]:
+    query = select(Bundle).order_by(Bundle.org_id, Bundle.version)
+    if org_id:
+        query = query.where(Bundle.org_id == org_id)
+    rows = (await session.execute(query)).scalars().all()
+    return [BundleOut(**r.model_dump(exclude={"payload", "signature"})) for r in rows]
