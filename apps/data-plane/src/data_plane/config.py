@@ -16,6 +16,7 @@ class ControlPlaneLink(BaseModel):
 
     url: str | None = None  # None means file-only mode, no polling
     token: str | None = None
+    heartbeat_interval_s: float = 30.0
 
 
 class BundleConfig(BaseModel):

@@ -77,6 +77,9 @@ class UsageEvent(SQLModel, table=True):
 
 class DataPlaneInstance(SQLModel, table=True):
     instance_id: str = Field(primary_key=True)
+    org_id: str | None = None
     version: str
     bundle_id: UUID | None = None
+    address: str | None = None
+    first_seen: datetime
     last_seen: datetime

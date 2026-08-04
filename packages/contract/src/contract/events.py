@@ -37,3 +37,14 @@ class UsageEventV1(BaseModel):
     latency_ms: int
     status: UsageStatus  # cancelled still carries partial counts
     stream: bool
+
+
+class HeartbeatV1(BaseModel):
+    """A data plane announcing itself to the control plane; the record survives, liveness is derived from last_seen."""
+
+    model_config = ConfigDict(frozen=True)
+
+    instance_id: str  # stable per data plane, persisted in its cache dir
+    version: str
+    org_id: str | None = None  # which org's bundle it serves
+    bundle_id: UUID | None = None  # the bundle it is currently serving

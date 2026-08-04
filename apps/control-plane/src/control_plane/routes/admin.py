@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Literal
 from uuid import UUID, uuid4
 
@@ -12,12 +12,14 @@ from sqlmodel import col, select
 from contract import canonical_json, mint_api_token, private_key_from_b64, sign_bundle
 from control_plane.compiler import UnknownOrgError, compile_bundle
 from control_plane.deps import SessionDep, require_admin
-from control_plane.models import ApiKey, Bundle, Model, Org, Provider, UsageEvent
+from control_plane.models import ApiKey, Bundle, DataPlaneInstance, Model, Org, Provider, UsageEvent
 
 router = APIRouter(prefix="/admin", dependencies=[Depends(require_admin)])
 
 ALLOWED_CREDENTIAL_SCHEMES = ("env:", "file:")
 SIGNING_KEY_ID = "k1"
+# A data plane is considered offline after three missed heartbeats; the row itself is never deleted.
+INSTANCE_STALE_AFTER = timedelta(seconds=90)
 
 
 class OrgIn(BaseModel):
@@ -237,6 +239,32 @@ async def list_models(session: SessionDep, org_id: str | None = None) -> list[Mo
     if org_id:
         query = query.where(Model.org_id == org_id)
     return list((await session.execute(query)).scalars().all())
+
+
+class InstanceOut(BaseModel):
+    instance_id: str
+    org_id: str | None
+    version: str
+    bundle_id: UUID | None
+    address: str | None
+    status: Literal["online", "offline"]
+    first_seen: datetime
+    last_seen: datetime
+
+
+@router.get("/instances")
+async def list_instances(session: SessionDep, include_offline: bool = False) -> list[InstanceOut]:
+    """Registered data planes; offline ones are kept as history and shown only with include_offline."""
+    now = datetime.now(tz=UTC)
+    rows = (await session.execute(select(DataPlaneInstance).order_by(col(DataPlaneInstance.last_seen).desc()))).scalars().all()
+    out: list[InstanceOut] = []
+    for r in rows:
+        last_seen = r.last_seen if r.last_seen.tzinfo else r.last_seen.replace(tzinfo=UTC)
+        status = "online" if now - last_seen < INSTANCE_STALE_AFTER else "offline"
+        if status == "offline" and not include_offline:
+            continue
+        out.append(InstanceOut(**r.model_dump(), status=status))
+    return out
 
 
 @router.get("/events")

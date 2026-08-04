@@ -1,11 +1,13 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException
+from datetime import UTC, datetime
+
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlmodel import col, select
 
-from contract import BundleV1, SignedBundle, UsageEventV1
+from contract import BundleV1, HeartbeatV1, SignedBundle, UsageEventV1
 from control_plane.deps import SessionDep, require_dp
-from control_plane.models import Bundle, UsageEvent
+from control_plane.models import Bundle, DataPlaneInstance, UsageEvent
 
 router = APIRouter(prefix="/v1", dependencies=[Depends(require_dp)])
 
@@ -34,5 +36,18 @@ async def ingest_events(events: list[UsageEventV1], session: SessionDep) -> dict
 
 
 @router.post("/heartbeat")
-async def heartbeat() -> dict[str, str]:
-    raise NotImplementedError
+async def heartbeat(body: HeartbeatV1, session: SessionDep, request: Request) -> dict[str, str]:
+    """Upsert the instance record; the row persists as history, last_seen drives liveness."""
+    now = datetime.now(tz=UTC)
+    address = request.client.host if request.client else None
+    instance = await session.get(DataPlaneInstance, body.instance_id)
+    if instance is None:
+        instance = DataPlaneInstance(instance_id=body.instance_id, version=body.version, first_seen=now, last_seen=now)
+    instance.org_id = body.org_id
+    instance.version = body.version
+    instance.bundle_id = body.bundle_id
+    instance.address = address
+    instance.last_seen = now
+    session.add(instance)
+    await session.commit()
+    return {"instance_id": body.instance_id}

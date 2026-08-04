@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 from typing import TYPE_CHECKING
+from uuid import uuid4
 
 from contract import SignedBundle
 
@@ -55,6 +56,16 @@ def atomic_write_text(path: Path, text: str) -> None:
     tmp = path.with_name(path.name + ".tmp")
     tmp.write_text(text, encoding="utf-8")
     tmp.replace(path)
+
+
+def instance_id(cache_dir: Path) -> str:
+    """A stable id per data plane, persisted beside the lock so a restart keeps its identity."""
+    path = cache_dir / "instance_id"
+    if path.exists():
+        return path.read_text(encoding="utf-8").strip()
+    new_id = uuid4().hex
+    path.write_text(new_id, encoding="utf-8")
+    return new_id
 
 
 def read_cached_bundle(cache_dir: Path) -> SignedBundle | None:

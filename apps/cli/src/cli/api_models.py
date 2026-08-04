@@ -35,6 +35,28 @@ class CompileOut(BaseModel):
     version: int = Field(..., title="Version")
 
 
+class HeartbeatV1(BaseModel):
+    """
+    A data plane announcing itself to the control plane; the record survives, liveness is derived from last_seen.
+    """
+
+    instance_id: str = Field(..., title="Instance Id")
+    version: str = Field(..., title="Version")
+    org_id: str | None = Field(None, title="Org Id")
+    bundle_id: UUID | None = Field(None, title="Bundle Id")
+
+
+class InstanceOut(BaseModel):
+    instance_id: str = Field(..., title="Instance Id")
+    org_id: str | None = Field(..., title="Org Id")
+    version: str = Field(..., title="Version")
+    bundle_id: UUID | None = Field(..., title="Bundle Id")
+    address: str | None = Field(..., title="Address")
+    status: Literal["online", "offline"] = Field(..., title="Status")
+    first_seen: AwareDatetime = Field(..., title="First Seen")
+    last_seen: AwareDatetime = Field(..., title="Last Seen")
+
+
 class KeyEntry(BaseModel):
     """
     An API key as the data plane sees it: enough to authorize with zero I/O.

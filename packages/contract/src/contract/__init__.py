@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from contract.bundle import BundleV1, Catalog, KeyEntry, ModelEntry, ProviderEntry, SignedBundle
-from contract.events import UsageEventV1, UsageStatus
+from contract.events import HeartbeatV1, UsageEventV1, UsageStatus
 from contract.signing import (
     canonical_json,
     private_key_from_b64,
@@ -16,6 +16,7 @@ from contract.tokens import TokenClaims, mint_api_token, verify_api_token
 __all__ = [
     "BundleV1",
     "Catalog",
+    "HeartbeatV1",
     "KeyEntry",
     "ModelEntry",
     "ProviderEntry",

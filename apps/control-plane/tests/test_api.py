@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import asyncio
-from datetime import UTC, datetime
+import sqlite3
+from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
@@ -184,3 +185,40 @@ def test_event_ingest_is_idempotent(tmp_path, monkeypatch):
         rows = c.get("/admin/events", headers=ADMIN).json()
         assert len(rows) == 2
         assert c.post("/v1/events", json=events, headers=ADMIN).status_code == 401
+
+
+def _heartbeat(instance_id: str, org: str = "o1") -> dict:
+    return {"instance_id": instance_id, "version": "0.1.0", "org_id": org, "bundle_id": str(uuid4())}
+
+
+def test_heartbeat_registers_and_lists_instances(tmp_path, monkeypatch):
+    setup_control_plane(tmp_path, monkeypatch)
+    with TestClient(app) as c:
+        assert c.post("/v1/heartbeat", json=_heartbeat("dp-1"), headers=DP).status_code == 200
+        assert c.post("/v1/heartbeat", json=_heartbeat("dp-2"), headers=DP).status_code == 200
+        # re-heartbeat dp-1 (upsert, not duplicate)
+        c.post("/v1/heartbeat", json=_heartbeat("dp-1"), headers=DP)
+        rows = c.get("/admin/instances", headers=ADMIN).json()
+        assert {r["instance_id"] for r in rows} == {"dp-1", "dp-2"}
+        assert all(r["status"] == "online" for r in rows)
+        assert c.post("/v1/heartbeat", json=_heartbeat("dp-1"), headers=ADMIN).status_code == 401  # admin token != dp token
+
+
+def test_stale_instance_is_offline_and_hidden_by_default(tmp_path, monkeypatch):
+    setup_control_plane(tmp_path, monkeypatch)
+    with TestClient(app) as c:
+        c.post("/v1/heartbeat", json=_heartbeat("fresh"), headers=DP)
+        # backdate a second instance far past the stale window, directly in the db
+        old = (datetime.now(tz=UTC) - timedelta(hours=1)).isoformat()
+        con = sqlite3.connect(f"{tmp_path}/cp.db")
+        con.execute(
+            "insert into dataplaneinstance (instance_id, version, first_seen, last_seen) values (?,?,?,?)",
+            ("gone", "0.1.0", old, old),
+        )
+        con.commit()
+        con.close()
+        default = c.get("/admin/instances", headers=ADMIN).json()
+        assert {r["instance_id"] for r in default} == {"fresh"}  # offline hidden
+        all_ = c.get("/admin/instances", headers=ADMIN, params={"include_offline": True}).json()
+        by_id = {r["instance_id"]: r["status"] for r in all_}
+        assert by_id == {"fresh": "online", "gone": "offline"}  # record kept

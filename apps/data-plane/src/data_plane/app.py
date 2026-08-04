@@ -21,9 +21,11 @@ from contract import UsageEventV1, UsageStatus, public_key_from_b64, verify_bund
 from data_plane.adapters import REGISTRY, ProviderAdapter
 from data_plane.auth import authenticate
 from data_plane.cache import acquire_cache_lock, read_cached_bundle, release_cache_lock
+from data_plane.cache import instance_id as cache_instance_id
 from data_plane.canonical import CanonicalRequest, CanonicalResponse, Ctx, StreamState, UpstreamRequest, UpstreamStreamError, Usage
 from data_plane.config import Config, load_config
 from data_plane.events import buffer_event, run_flusher
+from data_plane.heartbeat import run_heartbeat
 from data_plane.holder import BundleHolder, BundleSnapshot
 from data_plane.ingress import ANTHROPIC, CANONICAL, EgressStream, Ingress
 from data_plane.metering import cost_breakdown, estimate_tokens
@@ -312,8 +314,13 @@ async def lifespan(_app: Starlette) -> AsyncIterator[None]:
         state.bundle_public_key = public_key_from_b64(config.bundle.public_key)
         state.token_public_key = public_key_from_b64(config.auth.token_public_key)
         _load_cached_bundle(config, state.bundle_public_key)
+        instance_id = cache_instance_id(config.bundle.cache_dir)
         tasks = (
-            [asyncio.create_task(run_poller(config, holder, state.bundle_public_key)), asyncio.create_task(run_flusher(config))]
+            [
+                asyncio.create_task(run_poller(config, holder, state.bundle_public_key)),
+                asyncio.create_task(run_flusher(config)),
+                asyncio.create_task(run_heartbeat(config, holder, instance_id)),
+            ]
             if config.control_plane.url
             else []
         )

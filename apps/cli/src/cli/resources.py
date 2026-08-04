@@ -2,8 +2,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import typer
+from dotenv import find_dotenv, load_dotenv
+
 from cli.client import admin_client, admin_get, post_expecting
-from cli.common import bundles_app, console, events_app, keys_app, models_app, orgs_app, providers_app
+from cli.common import bundles_app, console, events_app, instances_app, keys_app, models_app, orgs_app, providers_app
 from cli.forms import register_create
 from cli.output import Col, FormatOption, OutputFormat, build_table, fmt_when, print_rows
 
@@ -117,6 +120,31 @@ def bundles_compile(org: str = "org-dev", control_plane_url: str = "") -> None:
     with admin_client(control_plane_url) as c:
         compiled = post_expecting(c, "/admin/bundles/compile", {"org_id": org}, ok=(200,)).json()
     console.print(f"bundle [bold]{compiled['bundle_id']}[/bold] v{compiled['version']} compiled")
+
+
+INSTANCE_COLS = [
+    Col("instance_id", "Instance", style="dim", no_wrap=True, fmt=lambda v: str(v)[:12]),
+    Col("org_id", "Org"),
+    Col("status", "Status", style="yellow"),
+    Col("version", "Version"),
+    Col("bundle_id", "Bundle", style="dim", fmt=lambda v: str(v)[:8] if v else ""),
+    Col("address", "Address"),
+    Col("last_seen", "Last seen", no_wrap=True, fmt=fmt_when),
+]
+
+
+@instances_app.command("list")
+def instances_list(
+    all_: bool = typer.Option(False, "--all", help="Include offline instances (kept as history)"),
+    control_plane_url: str = "",
+    fmt: FormatOption = OutputFormat.table,
+) -> None:
+    """List registered data planes; offline ones are shown only with --all."""
+    load_dotenv(find_dotenv(usecwd=True))
+    with admin_client(control_plane_url) as c:
+        resp = c.get("/admin/instances", params={"include_offline": all_})
+        resp.raise_for_status()
+        print_rows("instances", resp.json(), INSTANCE_COLS, fmt)
 
 
 @events_app.command("list")
