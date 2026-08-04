@@ -1,12 +1,14 @@
 from __future__ import annotations
 
+import inspect
 import json
 import os
 import secrets
+import sys
 from datetime import datetime
 from enum import StrEnum
 from pathlib import Path
-from typing import TYPE_CHECKING, Annotated, Literal, NamedTuple
+from typing import TYPE_CHECKING, Annotated, Literal, NamedTuple, get_origin
 
 import httpx
 import typer
@@ -14,7 +16,7 @@ import yaml
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from dotenv import dotenv_values, find_dotenv, load_dotenv, set_key, unset_key
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ValidationError
 from rich import box
 from rich.console import Console
 from rich.table import Table
@@ -23,6 +25,8 @@ from contract import private_key_to_b64, public_key_to_b64
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+
+    from pydantic.fields import FieldInfo
 
 app = typer.Typer(name="airllm", no_args_is_help=True)
 console = Console()
@@ -238,20 +242,20 @@ def init(control_plane_url: str = "http://127.0.0.1:8000", cache_dir: str = ".ai
 
 
 class ProviderSpec(BaseModel):
-    provider_id: str
-    kind: Literal["openai_compatible", "anthropic"] = "openai_compatible"
-    base_url: str
-    credential_ref: str
+    provider_id: str = Field(description="Provider id, e.g. openai")
+    kind: Literal["openai_compatible", "anthropic"] = Field("openai_compatible", description="Adapter kind")
+    base_url: str = Field(description="OpenAI-compatible endpoint, e.g. https://api.groq.com/openai/v1")
+    credential_ref: str = Field(description="env: or file: reference resolved by the data plane, never a raw secret")
 
 
 class ModelSpec(BaseModel):
-    model_id: str
-    provider_id: str
-    upstream_model: str = ""
-    input_price_per_mtok: float = 0.0
-    output_price_per_mtok: float = 0.0
-    context_window: int = 128000
-    capabilities: list[str] = Field(default_factory=lambda: ["streaming", "tools"])
+    model_id: str = Field(description="Caller-facing model id")
+    provider_id: str = Field(description="Provider id the model routes to")
+    upstream_model: str = Field("", description="What the provider is sent, defaults to the model id")
+    input_price_per_mtok: float = Field(0.0, description="USD per million input tokens")
+    output_price_per_mtok: float = Field(0.0, description="USD per million output tokens")
+    context_window: int = Field(128000, description="Context window in tokens")
+    capabilities: list[str] = Field(default_factory=lambda: ["streaming", "tools"], description="Capabilities, comma separated")
 
 
 class KeySpec(BaseModel):
@@ -318,28 +322,10 @@ def orgs_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat.tabl
     _print_rows("orgs", _admin_get("/admin/orgs", control_plane_url), ORG_COLS, fmt)
 
 
-@orgs_app.command("create")
-def orgs_create(org_id: str, name: str = "", control_plane_url: str = "") -> None:
-    """Create an org; keys, providers and models hang off it."""
-    with _admin_client(_control_plane_url(control_plane_url)) as c:
-        _post_expecting(c, "/admin/orgs", {"id": org_id, "name": name}, ok=(200,))
-    console.print(f"org [bold]{org_id}[/bold] created")
-
-
 @keys_app.command("list")
 def keys_list(org: str | None = None, control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
     """List caller API keys with their status."""
     _print_rows("keys", _admin_get("/admin/keys", control_plane_url, org), KEY_COLS, fmt)
-
-
-@keys_app.command("create")
-def keys_create(org: str = "org-dev", allowed_model: list[str] | None = None, control_plane_url: str = "") -> None:
-    """Mint a key; the token is shown once and never stored."""
-    with _admin_client(_control_plane_url(control_plane_url)) as c:
-        key = _post_expecting(c, "/admin/keys", {"org_id": org, "allowed_models": allowed_model or ["*"]}, ok=(200,)).json()
-    console.print(f"key [bold]{key['key_id']}[/bold] minted, token (shown once):")
-    console.print(key["token"])
-    console.print("[dim]run `airllm bundles compile` to include it in the next bundle[/dim]")
 
 
 @keys_app.command("revoke")
@@ -357,54 +343,10 @@ def providers_list(org: str | None = None, control_plane_url: str = "", fmt: For
     _print_rows("providers", _admin_get("/admin/providers", control_plane_url, org), PROVIDER_COLS, fmt)
 
 
-@providers_app.command("create")
-def providers_create(  # noqa: PLR0913, PLR0917 CLI options are a flat namespace by design
-    provider_id: str,
-    base_url: Annotated[str, typer.Option(help="OpenAI-compatible endpoint, e.g. https://api.groq.com/openai/v1")],
-    credential_ref: Annotated[str, typer.Option(help="env: or file: reference resolved by the data plane, never a raw secret")],
-    org: str = "org-dev",
-    kind: str = "openai_compatible",
-    control_plane_url: str = "",
-) -> None:
-    """Register an upstream provider."""
-    body = {"org_id": org, "provider_id": provider_id, "kind": kind, "base_url": base_url, "credential_ref": credential_ref}
-    with _admin_client(_control_plane_url(control_plane_url)) as c:
-        _post_expecting(c, "/admin/providers", body, ok=(200,))
-    console.print(f"provider [bold]{provider_id}[/bold] created, add models then `airllm bundles compile`")
-
-
 @models_app.command("list")
 def models_list(org: str | None = None, control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
     """List routable models with pricing and capabilities."""
     _print_rows("models", _admin_get("/admin/models", control_plane_url, org), MODEL_COLS, fmt)
-
-
-@models_app.command("create")
-def models_create(  # noqa: PLR0913, PLR0917 CLI options are a flat namespace by design
-    model_id: str,
-    provider: Annotated[str, typer.Option(help="provider_id the model routes to")],
-    org: str = "org-dev",
-    upstream_model: str = "",
-    input_price_per_mtok: float = 0.0,
-    output_price_per_mtok: float = 0.0,
-    context_window: int = 128000,
-    capability: list[str] | None = None,
-    control_plane_url: str = "",
-) -> None:
-    """Add a routable model; upstream_model defaults to the model id."""
-    body = {
-        "org_id": org,
-        "model_id": model_id,
-        "provider_id": provider,
-        "upstream_model": upstream_model or model_id,
-        "input_price_per_mtok": input_price_per_mtok,
-        "output_price_per_mtok": output_price_per_mtok,
-        "context_window": context_window,
-        "capabilities": capability or ["streaming", "tools"],
-    }
-    with _admin_client(_control_plane_url(control_plane_url)) as c:
-        _post_expecting(c, "/admin/models", body, ok=(200,))
-    console.print(f"model [bold]{model_id}[/bold] created, run `airllm bundles compile` to serve it")
 
 
 @bundles_app.command("list")
@@ -422,6 +364,114 @@ def bundles_compile(org: str = "org-dev", control_plane_url: str = "") -> None:
         resp.raise_for_status()
         compiled = resp.json()
     console.print(f"bundle [bold]{compiled['bundle_id']}[/bold] v{compiled['version']} compiled")
+
+
+class OrgCreate(BaseModel):
+    id: str = Field(description="Org id, e.g. org-dev")
+    name: str = Field("", description="Display name, defaults to the id")
+
+
+class KeyCreate(BaseModel):
+    org_id: str = Field("org-dev", description="Org the key belongs to")
+    allowed_models: list[str] = Field(default_factory=lambda: ["*"], description="Model ids this key may call, * for all")
+
+
+class ProviderCreate(ProviderSpec):
+    org_id: str = Field("org-dev", description="Org the provider belongs to")
+
+
+class ModelCreate(ModelSpec):
+    org_id: str = Field("org-dev", description="Org the model belongs to")
+
+
+def _is_list_field(field: FieldInfo) -> bool:
+    return get_origin(field.annotation) is list
+
+
+def _flag_annotation(field: FieldInfo) -> object:
+    if _is_list_field(field):
+        return list[str] | None
+    ann = field.annotation
+    return (ann | None) if ann in (str, float, int) else (str | None)
+
+
+def _fill_spec(spec_cls: type[BaseModel], provided: dict) -> BaseModel:
+    """Flags win; anything missing is prompted for, with the field description as the prompt."""
+    values = {k: v for k, v in provided.items() if v not in (None, [], ())}
+    for name, field in spec_cls.model_fields.items():
+        if name in values:
+            continue
+        has_default = not field.is_required()
+        if not sys.stdin.isatty():
+            if has_default:
+                continue
+            console.print(f"[red]missing --{name.replace('_', '-')} and no terminal to prompt for it[/red]")
+            raise typer.Exit(1)
+        label = field.description or name.replace("_", " ")
+        default = field.get_default(call_default_factory=True) if has_default else None
+        raw = typer.prompt(label, default=",".join(default) if isinstance(default, list) else default)
+        values[name] = [part.strip() for part in str(raw).split(",") if part.strip()] if _is_list_field(field) else raw
+    try:
+        return spec_cls.model_validate(values)
+    except ValidationError as e:
+        for err in e.errors():
+            console.print(f"[red]{'.'.join(str(x) for x in err['loc'])}: {err['msg']}[/red]")
+        raise typer.Exit(1) from e
+
+
+def _register_create(sub_app: typer.Typer, spec_cls: type[BaseModel], path: str, help_text: str, done: Callable[[dict], None]) -> None:
+    """Derive a create command from a spec model: one flag and one prompt per field, never hardcoded."""
+
+    def run(**kwargs: object) -> None:
+        control_plane_url = str(kwargs.pop("control_plane_url", "") or "")
+        spec = _fill_spec(spec_cls, kwargs)
+        with _admin_client(_control_plane_url(control_plane_url)) as c:
+            resp = _post_expecting(c, path, spec.model_dump(), ok=(200,))
+        done(resp.json())
+
+    params = [
+        inspect.Parameter(
+            name,
+            inspect.Parameter.POSITIONAL_OR_KEYWORD,
+            default=typer.Option(None, help=field.description),
+            annotation=_flag_annotation(field),
+        )
+        for name, field in spec_cls.model_fields.items()
+    ]
+    params.append(inspect.Parameter("control_plane_url", inspect.Parameter.POSITIONAL_OR_KEYWORD, default=typer.Option(""), annotation=str))
+    run.__signature__ = inspect.Signature(params)  # type: ignore[attr-defined]
+    run.__doc__ = help_text
+    sub_app.command("create")(run)
+
+
+def _key_created(resp: dict) -> None:
+    console.print(f"key [bold]{resp['key_id']}[/bold] minted, token (shown once):")
+    console.print(resp["token"])
+    console.print("[dim]run `airllm bundles compile` to include it in the next bundle[/dim]")
+
+
+_register_create(
+    orgs_app,
+    OrgCreate,
+    "/admin/orgs",
+    "Create an org; keys, providers and models hang off it.",
+    lambda resp: console.print(f"org [bold]{resp['id']}[/bold] created"),
+)
+_register_create(keys_app, KeyCreate, "/admin/keys", "Mint a key; the token is shown once and never stored.", _key_created)
+_register_create(
+    providers_app,
+    ProviderCreate,
+    "/admin/providers",
+    "Register an upstream provider.",
+    lambda resp: console.print(f"provider [bold]{resp['provider_id']}[/bold] created, add models then `airllm bundles compile`"),
+)
+_register_create(
+    models_app,
+    ModelCreate,
+    "/admin/models",
+    "Add a routable model.",
+    lambda resp: console.print(f"model [bold]{resp['model_id']}[/bold] created, run `airllm bundles compile` to serve it"),
+)
 
 
 test_app = typer.Typer(help="Acceptance and load testing", no_args_is_help=True)
