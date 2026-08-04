@@ -12,6 +12,7 @@ dependencies = [
   "tiktoken",
   "typer",
   "python-dotenv",
+  "rich",
   "pyyaml",
 ]
 

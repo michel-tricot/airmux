@@ -4,6 +4,7 @@ import asyncio
 import contextlib
 import json
 import logging
+import time
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
@@ -13,6 +14,7 @@ import anyio
 import httpx
 from cryptography.exceptions import InvalidSignature
 from pydantic import ValidationError
+from rich.console import Console
 from starlette.applications import Starlette
 from starlette.responses import JSONResponse, Response, StreamingResponse
 from starlette.routing import Route
@@ -24,6 +26,7 @@ from data_plane.cache import read_cached_bundle
 from data_plane.canonical import CanonicalRequest, CanonicalResponse, Ctx, UpstreamRequest, UpstreamStreamError
 from data_plane.config import Config, load_config
 from data_plane.holder import BundleHolder
+from data_plane.metering import cost_usd
 from data_plane.policy import Deny, evaluate
 from data_plane.poller import run_poller
 from data_plane.transport import client
@@ -35,6 +38,7 @@ if TYPE_CHECKING:
     from starlette.requests import Request
 
 logger = logging.getLogger("data_plane")
+_console = Console(stderr=True)
 
 holder = BundleHolder()
 
@@ -105,10 +109,15 @@ async def _handle(request: Request) -> Response:
     return JSONResponse(final.model_dump())
 
 
+STATUS_STYLE = {"ok": "green", "cancelled": "yellow", "upstream_error": "red", "denied": "red", "timeout": "red"}
+
+
 def _record_usage(ctx: Ctx, final: CanonicalResponse, status: str) -> None:
-    """The single metering point; M5 turns this log line into a buffered UsageEventV1."""
+    """The single metering point; M5 turns this record into a buffered UsageEventV1."""
+    cost = cost_usd(final.usage, ctx.model)
+    latency_ms = int((time.monotonic() - ctx.started_at) * 1000)
     logger.info(
-        "usage request_id=%s model=%s provider=%s status=%s stream=%s input_tokens=%d output_tokens=%d estimated=%s",
+        "usage request_id=%s model=%s provider=%s status=%s stream=%s input_tokens=%d output_tokens=%d estimated=%s cost_usd=%.6f latency_ms=%d",
         ctx.request_id,
         ctx.model.model_id,
         ctx.provider.provider_id,
@@ -117,7 +126,16 @@ def _record_usage(ctx: Ctx, final: CanonicalResponse, status: str) -> None:
         final.usage.input_tokens,
         final.usage.output_tokens,
         final.usage.estimated,
+        cost,
+        latency_ms,
     )
+    if state.config is not None and state.config.dev:
+        tokens = f"{final.usage.input_tokens}→{final.usage.output_tokens} tok" + ("~" if final.usage.estimated else "")
+        style = STATUS_STYLE.get(status, "red")
+        _console.print(
+            f"[dim]{ctx.request_id[:8]}[/dim] [bold]{ctx.model.model_id}[/bold][dim]@{ctx.provider.provider_id}[/dim] "
+            f"[{style}]{status:<9}[/{style}] {tokens:<12} ${cost:.6f}  {latency_ms}ms{'  [cyan]stream[/cyan]' if ctx.stream else ''}"
+        )
 
 
 def _sse(payload: dict) -> bytes:
@@ -197,8 +215,11 @@ def _load_cached_bundle(config: Config, public_key: Ed25519PublicKey) -> None:
 @contextlib.asynccontextmanager
 async def lifespan(_app: Starlette) -> AsyncIterator[None]:
     config = load_config()
-    if config.dev:
-        logging.basicConfig(level=logging.INFO, format="%(levelname)s:     %(message)s")
+    if config.dev and not logger.handlers:
+        handler = logging.StreamHandler()
+        handler.setFormatter(logging.Formatter("%(levelname)s:     %(message)s"))
+        logger.addHandler(handler)
+        logger.setLevel(logging.INFO)
     state.config = config
     state.bundle_public_key = public_key_from_b64(config.bundle.public_key)
     state.token_public_key = public_key_from_b64(config.auth.token_public_key)
