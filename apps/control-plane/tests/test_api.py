@@ -36,10 +36,14 @@ def _create_tables(url: str) -> None:
 def setup_control_plane(tmp_path, monkeypatch) -> Ed25519PrivateKey:
     url = f"sqlite+aiosqlite:///{tmp_path}/cp.db"
     signing_key = Ed25519PrivateKey.generate()
-    monkeypatch.setenv("GW_DATABASE_URL", url)
-    monkeypatch.setenv("GW_ADMIN_TOKEN", "test-admin")
-    monkeypatch.setenv("GW_DP_TOKEN", "test-dp")
-    monkeypatch.setenv("GW_SIGNING_KEY", private_key_to_b64(signing_key))
+    config = (
+        "control_plane:\n"
+        f"  database:\n    url: {url}\n"
+        "  auth:\n    admin_token: test-admin\n    dp_token: test-dp\n"
+        f'  signing:\n    private_key: "{private_key_to_b64(signing_key)}"\n'
+    )
+    (tmp_path / "airllm.yml").write_text(config, encoding="utf-8")
+    monkeypatch.setenv("GW_CONFIG", str(tmp_path / "airllm.yml"))
     _create_tables(url)
     return signing_key
 

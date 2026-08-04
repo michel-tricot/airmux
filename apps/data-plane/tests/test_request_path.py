@@ -59,10 +59,9 @@ def token(tmp_path, monkeypatch):
         private_key.public_key().public_bytes(encoding=serialization.Encoding.Raw, format=serialization.PublicFormat.Raw)
     ).decode("ascii")
     monkeypatch.chdir(tmp_path)
-    monkeypatch.setenv("GW_CACHE_DIR", str(tmp_path))
-    monkeypatch.setenv("GW_BUNDLE_PUBLIC_KEY", public_b64)
+    monkeypatch.delenv("GW_CONFIG", raising=False)
+    (tmp_path / "airllm.yml").write_text(f'data_plane:\n  bundle:\n    public_key: "{public_b64}"\n    cache_dir: {tmp_path}\n', encoding="utf-8")
     monkeypatch.setenv("OPENAI_API_KEY", "sk-test-not-real")
-    monkeypatch.setenv("GW_CONTROL_PLANE_URL", "")
     return mint_api_token("k-dev", "org-dev", private_key, NOW)
 
 

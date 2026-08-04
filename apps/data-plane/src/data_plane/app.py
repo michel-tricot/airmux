@@ -112,12 +112,12 @@ async def readyz(_request: Request) -> JSONResponse:
 
 def _load_cached_bundle(config: Config, public_key: Ed25519PublicKey) -> None:
     try:
-        signed = read_cached_bundle(config.cache_dir)
+        signed = read_cached_bundle(config.bundle.cache_dir)
     except ValidationError:
-        logger.exception("cached bundle in %s does not parse, ignoring it", config.cache_dir)
+        logger.exception("cached bundle in %s does not parse, ignoring it", config.bundle.cache_dir)
         return
     if signed is None:
-        logger.warning("no cached bundle in %s, serving 503 until one arrives", config.cache_dir)
+        logger.warning("no cached bundle in %s, serving 503 until one arrives", config.bundle.cache_dir)
         return
     try:
         bundle = verify_bundle(signed, public_key)
@@ -125,7 +125,7 @@ def _load_cached_bundle(config: Config, public_key: Ed25519PublicKey) -> None:
         logger.exception("cached bundle failed signature verification, ignoring it")
         return
     expired = bundle.expires_at <= datetime.now(tz=UTC)
-    if expired and config.staleness_policy == "refuse":
+    if expired and config.bundle.staleness_policy == "refuse":
         logger.error("cached bundle expired at %s and policy is refuse, not loading", bundle.expires_at)
         return
     if expired:
@@ -138,9 +138,9 @@ def _load_cached_bundle(config: Config, public_key: Ed25519PublicKey) -> None:
 async def lifespan(_app: Starlette) -> AsyncIterator[None]:
     config = load_config()
     state.config = config
-    state.public_key = public_key_from_b64(config.bundle_public_key_b64)
+    state.public_key = public_key_from_b64(config.bundle.public_key)
     _load_cached_bundle(config, state.public_key)
-    poller_task = asyncio.create_task(run_poller(config, holder, state.public_key)) if config.control_plane_url else None
+    poller_task = asyncio.create_task(run_poller(config, holder, state.public_key)) if config.control_plane.url else None
     try:
         yield
     finally:

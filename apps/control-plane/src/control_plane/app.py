@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 @contextlib.asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     settings = load_settings()
-    engine = make_engine(settings.database_url)
+    engine = make_engine(settings.database.url)
     app.state.settings = settings
     app.state.session_factory = make_session_factory(engine)
     try:

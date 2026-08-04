@@ -6,53 +6,51 @@ from data_plane.config import load_config
 
 CONFIG_YML = """
 data_plane:
-  control_plane_url: http://cp.internal:9000
-  bundle_public_key: env:MY_PUBLIC_KEY
-  cache_dir: /var/cache/from-file
-  poll_interval_s: 7
+  control_plane:
+    url: http://cp.internal:9000
+    poll_interval_s: 7
+  bundle:
+    public_key: env:MY_PUBLIC_KEY
+    cache_dir: /var/cache/from-file
 """
 
 
 @pytest.fixture
 def clean_env(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
-    for var in ("GW_BUNDLE_PUBLIC_KEY", "GW_CACHE_DIR", "GW_CONTROL_PLANE_URL", "GW_POLL_INTERVAL_S", "GW_CONFIG"):
+    for var in ("MY_PUBLIC_KEY", "GW_CONFIG", "GW_DEV"):
         monkeypatch.delenv(var, raising=False)
     return tmp_path
 
 
-def test_env_file_loaded_from_cwd(clean_env):
-    (clean_env / ".env").write_text("GW_BUNDLE_PUBLIC_KEY=from-dotenv\nGW_CACHE_DIR=/var/cache/from-dotenv\n", encoding="utf-8")
-    config = load_config()
-    assert config.bundle_public_key_b64 == "from-dotenv"
-    assert str(config.cache_dir) == "/var/cache/from-dotenv"
-
-
-def test_console_env_wins_over_env_file(clean_env, monkeypatch):
-    monkeypatch.setenv("GW_BUNDLE_PUBLIC_KEY", "from-console")
-    (clean_env / ".env").write_text("GW_BUNDLE_PUBLIC_KEY=from-dotenv\n", encoding="utf-8")
-    assert load_config().bundle_public_key_b64 == "from-console"
-
-
-def test_config_file_with_env_secret_resolution(clean_env):
+def test_config_file_with_env_secret_from_dotenv(clean_env):
     (clean_env / "airllm.yml").write_text(CONFIG_YML, encoding="utf-8")
     (clean_env / ".env").write_text("MY_PUBLIC_KEY=resolved-from-dotenv\n", encoding="utf-8")
     config = load_config()
-    assert config.bundle_public_key_b64 == "resolved-from-dotenv"
-    assert config.control_plane_url == "http://cp.internal:9000"
-    assert str(config.cache_dir) == "/var/cache/from-file"
-    assert config.poll_interval_s == 7.0
+    assert config.bundle.public_key == "resolved-from-dotenv"
+    assert config.control_plane.url == "http://cp.internal:9000"
+    assert config.control_plane.poll_interval_s == 7.0
+    assert str(config.bundle.cache_dir) == "/var/cache/from-file"
 
 
-def test_env_var_wins_over_config_file(clean_env, monkeypatch):
+def test_console_env_wins_over_dotenv_for_refs(clean_env, monkeypatch):
     (clean_env / "airllm.yml").write_text(CONFIG_YML, encoding="utf-8")
-    (clean_env / ".env").write_text("MY_PUBLIC_KEY=resolved\n", encoding="utf-8")
-    monkeypatch.setenv("GW_POLL_INTERVAL_S", "3")
-    assert load_config().poll_interval_s == 3.0
+    (clean_env / ".env").write_text("MY_PUBLIC_KEY=from-dotenv\n", encoding="utf-8")
+    monkeypatch.setenv("MY_PUBLIC_KEY", "from-console")
+    assert load_config().bundle.public_key == "from-console"
 
 
 def test_gw_config_selects_the_file(clean_env, monkeypatch):
     (clean_env / "other.yml").write_text(CONFIG_YML, encoding="utf-8")
-    (clean_env / ".env").write_text("MY_PUBLIC_KEY=resolved\n", encoding="utf-8")
+    monkeypatch.setenv("MY_PUBLIC_KEY", "resolved")
     monkeypatch.setenv("GW_CONFIG", str(clean_env / "other.yml"))
-    assert load_config().control_plane_url == "http://cp.internal:9000"
+    assert load_config().control_plane.url == "http://cp.internal:9000"
+
+
+def test_defaults_apply_for_missing_sections(clean_env, monkeypatch):
+    (clean_env / "airllm.yml").write_text("data_plane:\n  bundle:\n    public_key: pk\n", encoding="utf-8")
+    config = load_config()
+    assert config.control_plane.url is None
+    assert config.control_plane.poll_interval_s == 30.0
+    assert config.events.flush_interval_s == 5.0
+    assert config.bundle.staleness_policy == "serve_and_warn"

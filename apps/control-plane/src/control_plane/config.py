@@ -1,29 +1,52 @@
 from __future__ import annotations
 
 import os
-from dataclasses import dataclass
 from datetime import timedelta
 from pathlib import Path
 from typing import Any
 
 import yaml
 from dotenv import find_dotenv, load_dotenv
+from pydantic import BaseModel, ConfigDict, Field
 
 
-@dataclass(frozen=True)
-class Settings:
-    database_url: str
+class DatabaseConfig(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    url: str = "sqlite+aiosqlite:///airllm.db"
+
+
+class AuthConfig(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
     admin_token: str
     dp_token: str
-    signing_key_b64: str
-    signing_key_id: str
-    staleness_bound: timedelta
+
+
+class SigningConfig(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    private_key: str  # base64 raw Ed25519, signs bundles and API tokens
+
+
+class BundlePolicy(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    staleness_bound_hours: float = 24.0
+
+    @property
+    def staleness_bound(self) -> timedelta:
+        return timedelta(hours=self.staleness_bound_hours)
+
+
+class Settings(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    database: DatabaseConfig = Field(default_factory=DatabaseConfig)
+    auth: AuthConfig
+    signing: SigningConfig
+    bundle: BundlePolicy = Field(default_factory=BundlePolicy)
     dev: bool = False  # set by the --dev flag on the entry point, gate dev-only behavior on this
-
-
-class MissingConfigError(Exception):
-    def __init__(self, env_name: str, file_key: str) -> None:
-        super().__init__(f"missing setting: set {env_name} or control_plane.{file_key} in the config file")
 
 
 def _file_section(name: str) -> dict[str, Any]:
@@ -35,48 +58,30 @@ def _file_section(name: str) -> dict[str, Any]:
     return section if isinstance(section, dict) else {}
 
 
-def _resolve(value: object) -> str | None:
-    text = str(value)
-    if text.startswith("env:"):
-        return os.environ.get(text.removeprefix("env:"))
-    if text.startswith("file:"):
-        ref = Path(text.removeprefix("file:"))
-        return ref.read_text(encoding="utf-8").strip() if ref.exists() else None
-    return text
-
-
-def _setting(section: dict[str, Any], env_name: str, file_key: str, default: str | None = None) -> str | None:
-    if env_name in os.environ:
-        return os.environ[env_name]
-    if section.get(file_key) is not None:
-        resolved = _resolve(section[file_key])
-        if resolved is not None:
-            return resolved
-    return default
-
-
-def _required(section: dict[str, Any], env_name: str, file_key: str) -> str:
-    value = _setting(section, env_name, file_key)
-    if not value:
-        raise MissingConfigError(env_name, file_key)
-    return value
+def _resolve_refs(node: object) -> object:
+    if isinstance(node, dict):
+        return {k: _resolve_refs(v) for k, v in node.items()}
+    if isinstance(node, list):
+        return [_resolve_refs(v) for v in node]
+    if isinstance(node, str):
+        if node.startswith("env:"):
+            return os.environ.get(node.removeprefix("env:"))
+        if node.startswith("file:"):
+            ref = Path(node.removeprefix("file:"))
+            return ref.read_text(encoding="utf-8").strip() if ref.exists() else None
+    return node
 
 
 def database_url() -> str:
     load_dotenv(find_dotenv(usecwd=True))
-    section = _file_section("control_plane")
-    return _setting(section, "GW_DATABASE_URL", "database_url", "sqlite+aiosqlite:///airllm.db") or "sqlite+aiosqlite:///airllm.db"
+    raw = _resolve_refs(_file_section("control_plane"))
+    assert isinstance(raw, dict)  # noqa: S101 _resolve_refs preserves the dict shape
+    url = (raw.get("database") or {}).get("url")
+    return str(url) if url else "sqlite+aiosqlite:///airllm.db"
 
 
 def load_settings() -> Settings:
     load_dotenv(find_dotenv(usecwd=True))
-    section = _file_section("control_plane")
-    return Settings(
-        database_url=database_url(),
-        admin_token=_required(section, "GW_ADMIN_TOKEN", "admin_token"),
-        dp_token=_required(section, "GW_DP_TOKEN", "dp_token"),
-        signing_key_b64=_required(section, "GW_SIGNING_KEY", "signing_key"),
-        signing_key_id=_setting(section, "GW_SIGNING_KEY_ID", "signing_key_id", "k1") or "k1",
-        staleness_bound=timedelta(hours=float(_setting(section, "GW_STALENESS_BOUND_HOURS", "staleness_bound_hours", "24") or "24")),
-        dev=os.environ.get("GW_DEV") == "1",
-    )
+    raw = _resolve_refs(_file_section("control_plane"))
+    assert isinstance(raw, dict)  # noqa: S101 _resolve_refs preserves the dict shape
+    return Settings.model_validate({**raw, "dev": os.environ.get("GW_DEV") == "1"})

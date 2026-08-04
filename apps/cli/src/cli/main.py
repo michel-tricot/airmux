@@ -19,21 +19,27 @@ app = typer.Typer(name="airllm", no_args_is_help=True)
 
 
 DEFAULT_CONFIG_YML = """control_plane:
-  database_url: sqlite+aiosqlite:///airllm.db
-  admin_token: env:GW_ADMIN_TOKEN
-  dp_token: env:GW_DP_TOKEN
-  signing_key: env:GW_SIGNING_KEY
-  signing_key_id: k1
-  staleness_bound_hours: 24
+  database:
+    url: sqlite+aiosqlite:///airllm.db
+  auth:
+    admin_token: env:GW_ADMIN_TOKEN
+    dp_token: env:GW_DP_TOKEN
+  signing:
+    private_key: env:GW_SIGNING_KEY
+  bundle:
+    staleness_bound_hours: 24
 
 data_plane:
-  control_plane_url: {control_plane_url}
-  dp_token: env:GW_DP_TOKEN
-  bundle_public_key: env:GW_BUNDLE_PUBLIC_KEY
-  cache_dir: {cache_dir}
-  staleness_policy: serve_and_warn # or refuse
-  poll_interval_s: 5
-  flush_interval_s: 5
+  control_plane:
+    url: {control_plane_url}
+    token: env:GW_DP_TOKEN
+    poll_interval_s: 5
+  bundle:
+    public_key: env:GW_BUNDLE_PUBLIC_KEY
+    cache_dir: {cache_dir}
+    staleness_policy: serve_and_warn # or refuse
+  events:
+    flush_interval_s: 5
 """
 
 
@@ -54,7 +60,7 @@ def _control_plane_url(override: str) -> str:
     config_path = Path(os.environ.get("GW_CONFIG", "airllm.yml"))
     if config_path.exists():
         doc = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
-        url = (doc.get("data_plane") or {}).get("control_plane_url")
+        url = ((doc.get("data_plane") or {}).get("control_plane") or {}).get("url")
         if url:
             return str(url)
     return "http://127.0.0.1:8000"

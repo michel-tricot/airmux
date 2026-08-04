@@ -24,17 +24,17 @@ logger = logging.getLogger("data_plane")
 
 
 async def poll_once(config: Config, holder: BundleHolder, public_key: Ed25519PublicKey) -> None:
-    resp = await client.get(f"{config.control_plane_url}/v1/bundle/latest", headers={"authorization": f"Bearer {config.dp_token}"})
+    resp = await client.get(f"{config.control_plane.url}/v1/bundle/latest", headers={"authorization": f"Bearer {config.control_plane.token}"})
     resp.raise_for_status()
     signed = SignedBundle.model_validate_json(resp.content)
     bundle = verify_bundle(signed, public_key)
     if holder.current is not None and bundle.bundle_id == holder.current.bundle_id:
         return
-    if bundle.expires_at <= datetime.now(tz=UTC) and config.staleness_policy == "refuse":
+    if bundle.expires_at <= datetime.now(tz=UTC) and config.bundle.staleness_policy == "refuse":
         logger.warning("polled bundle %s already expired at %s, refusing per policy", bundle.bundle_id, bundle.expires_at)
         return
     holder.swap(bundle, index_keys(bundle))
-    write_cached_bundle(config.cache_dir, signed)
+    write_cached_bundle(config.bundle.cache_dir, signed)
     logger.info("swapped to bundle %s issued %s", bundle.bundle_id, bundle.issued_at)
 
 
@@ -44,4 +44,4 @@ async def run_poller(config: Config, holder: BundleHolder, public_key: Ed25519Pu
             await poll_once(config, holder, public_key)
         except (httpx.HTTPError, ValidationError, InvalidSignature, OSError):
             logger.exception("bundle poll failed, keeping current bundle")
-        await asyncio.sleep(config.poll_interval_s)
+        await asyncio.sleep(config.control_plane.poll_interval_s)

@@ -16,12 +16,12 @@ def _bearer_matches(authorization: str, expected: str) -> bool:
 
 
 async def require_admin(request: Request, authorization: Annotated[str, Header()] = "") -> None:
-    if not _bearer_matches(authorization, request.app.state.settings.admin_token):
+    if not _bearer_matches(authorization, request.app.state.settings.auth.admin_token):
         raise HTTPException(status_code=401)
 
 
 async def require_dp(request: Request, authorization: Annotated[str, Header()] = "") -> None:
-    if not _bearer_matches(authorization, request.app.state.settings.dp_token):
+    if not _bearer_matches(authorization, request.app.state.settings.auth.dp_token):
         raise HTTPException(status_code=401)
 
 

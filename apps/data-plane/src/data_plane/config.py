@@ -1,29 +1,43 @@
 from __future__ import annotations
 
 import os
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal
 
 import yaml
 from dotenv import find_dotenv, load_dotenv
+from pydantic import BaseModel, ConfigDict, Field
 
 
-@dataclass(frozen=True)
-class Config:
-    control_plane_url: str | None  # None means file-only mode, no polling
-    dp_token: str | None
-    bundle_public_key_b64: str
-    cache_dir: Path
-    staleness_policy: Literal["serve_and_warn", "refuse"]
-    dev: bool = False  # set by the --dev flag on the entry point, gate dev-only behavior on this
+class ControlPlaneLink(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    url: str | None = None  # None means file-only mode, no polling
+    token: str | None = None
     poll_interval_s: float = 30.0
+
+
+class BundleConfig(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    public_key: str
+    cache_dir: Path = Path("/var/cache/gateway")
+    staleness_policy: Literal["serve_and_warn", "refuse"] = "serve_and_warn"
+
+
+class EventsConfig(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
     flush_interval_s: float = 5.0
 
 
-class MissingConfigError(Exception):
-    def __init__(self, env_name: str, file_key: str) -> None:
-        super().__init__(f"missing setting: set {env_name} or data_plane.{file_key} in the config file")
+class Config(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    control_plane: ControlPlaneLink = Field(default_factory=ControlPlaneLink)
+    bundle: BundleConfig
+    events: EventsConfig = Field(default_factory=EventsConfig)
+    dev: bool = False  # set by the --dev flag on the entry point, gate dev-only behavior on this
 
 
 def _file_section(name: str) -> dict[str, Any]:
@@ -35,43 +49,22 @@ def _file_section(name: str) -> dict[str, Any]:
     return section if isinstance(section, dict) else {}
 
 
-def _resolve(value: object) -> str | None:
-    text = str(value)
-    if text.startswith("env:"):
-        return os.environ.get(text.removeprefix("env:"))
-    if text.startswith("file:"):
-        ref = Path(text.removeprefix("file:"))
-        return ref.read_text(encoding="utf-8").strip() if ref.exists() else None
-    return text
+def _resolve_refs(node: object) -> object:
+    if isinstance(node, dict):
+        return {k: _resolve_refs(v) for k, v in node.items()}
+    if isinstance(node, list):
+        return [_resolve_refs(v) for v in node]
+    if isinstance(node, str):
+        if node.startswith("env:"):
+            return os.environ.get(node.removeprefix("env:"))
+        if node.startswith("file:"):
+            ref = Path(node.removeprefix("file:"))
+            return ref.read_text(encoding="utf-8").strip() if ref.exists() else None
+    return node
 
 
 def load_config() -> Config:
     load_dotenv(find_dotenv(usecwd=True))
-    section = _file_section("data_plane")
-
-    def setting(env_name: str, file_key: str, default: str | None = None) -> str | None:
-        if env_name in os.environ:
-            return os.environ[env_name]
-        if section.get(file_key) is not None:
-            resolved = _resolve(section[file_key])
-            if resolved is not None:
-                return resolved
-        return default
-
-    def required(env_name: str, file_key: str) -> str:
-        value = setting(env_name, file_key)
-        if not value:
-            raise MissingConfigError(env_name, file_key)
-        return value
-
-    bundle_public_key = required("GW_BUNDLE_PUBLIC_KEY", "bundle_public_key")
-    return Config(
-        control_plane_url=setting("GW_CONTROL_PLANE_URL", "control_plane_url") or None,
-        dp_token=setting("GW_DP_TOKEN", "dp_token") or None,
-        bundle_public_key_b64=bundle_public_key,
-        cache_dir=Path(setting("GW_CACHE_DIR", "cache_dir", "/var/cache/gateway") or "/var/cache/gateway"),
-        staleness_policy="refuse" if setting("GW_STALENESS_POLICY", "staleness_policy", "serve_and_warn") == "refuse" else "serve_and_warn",
-        dev=os.environ.get("GW_DEV") == "1",
-        poll_interval_s=float(setting("GW_POLL_INTERVAL_S", "poll_interval_s", "30") or "30"),
-        flush_interval_s=float(setting("GW_FLUSH_INTERVAL_S", "flush_interval_s", "5") or "5"),
-    )
+    raw = _resolve_refs(_file_section("data_plane"))
+    assert isinstance(raw, dict)  # noqa: S101 _resolve_refs preserves the dict shape
+    return Config.model_validate({**raw, "dev": os.environ.get("GW_DEV") == "1"})
