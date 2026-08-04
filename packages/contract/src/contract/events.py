@@ -27,7 +27,9 @@ class UsageEventV1(BaseModel):
     bundle_id: UUID  # which policy version served this request
     input_tokens: int  # provider-reported where given, tiktoken estimate where not
     output_tokens: int
-    cost_usd: float  # computed from bundle pricing at request time, never from a lookup service
+    cost_usd: float  # cost_input_usd + cost_output_usd, from bundle pricing at request time, never a lookup service
+    cost_input_usd: float = 0.0
+    cost_output_usd: float = 0.0
     latency_ms: int
     status: Literal["ok", "upstream_error", "denied", "timeout", "cancelled"]  # cancelled still carries partial counts
     stream: bool

@@ -10,8 +10,13 @@ if TYPE_CHECKING:
     from data_plane.canonical import Usage
 
 
+def cost_breakdown(usage: Usage, model: ModelEntry) -> tuple[float, float]:
+    return usage.input_tokens * model.input_price_per_mtok / 1_000_000, usage.output_tokens * model.output_price_per_mtok / 1_000_000
+
+
 def cost_usd(usage: Usage, model: ModelEntry) -> float:
-    return (usage.input_tokens * model.input_price_per_mtok + usage.output_tokens * model.output_price_per_mtok) / 1_000_000
+    cost_in, cost_out = cost_breakdown(usage, model)
+    return cost_in + cost_out
 
 
 @functools.lru_cache(maxsize=64)

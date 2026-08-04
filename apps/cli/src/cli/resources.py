@@ -3,7 +3,7 @@ from __future__ import annotations
 from cli.client import admin_client, admin_get, post_expecting
 from cli.common import bundles_app, console, events_app, keys_app, models_app, orgs_app, providers_app
 from cli.forms import register_create
-from cli.output import Col, FormatOption, OutputFormat, fmt_when, print_rows
+from cli.output import Col, FormatOption, OutputFormat, build_table, fmt_when, print_rows
 from cli.specs import KeyCreate, ModelCreate, OrgCreate, ProviderCreate
 
 ORG_COLS = [
@@ -44,7 +44,9 @@ EVENT_COLS = [
     Col("status", "Status", style="yellow"),
     Col("input_tokens", "In"),
     Col("output_tokens", "Out"),
-    Col("cost_usd", "Cost $", fmt=lambda v: f"{float(v or 0):.6f}"),
+    Col("cost_input_usd", "$ in", fmt=lambda v: f"{float(v or 0):.6f}"),
+    Col("cost_output_usd", "$ out", fmt=lambda v: f"{float(v or 0):.6f}"),
+    Col("cost_usd", "$ total", fmt=lambda v: f"{float(v or 0):.6f}"),
     Col("latency_ms", "ms"),
     Col("stream", "Stream", fmt=lambda v: "yes" if v else ""),
 ]
@@ -112,35 +114,54 @@ def events_list(org: str | None = None, control_plane_url: str = "", fmt: Format
 
 
 @events_app.command("tail")
-def events_tail(org: str | None = None, interval: float = 2.0, control_plane_url: str = "") -> None:
-    """Follow usage events as data planes flush them in; ctrl-c to stop."""
+def events_tail(
+    org: str | None = None, interval: float = 2.0, keep: int = 30, control_plane_url: str = "", fmt: FormatOption = OutputFormat.table
+) -> None:
+    """Follow usage events; a live table by default, one json or text line per event otherwise."""
+    import json  # noqa: PLC0415 lazy import keeps CLI startup fast
     import time  # noqa: PLC0415 lazy import keeps CLI startup fast
+    from collections import deque  # noqa: PLC0415 lazy import keeps CLI startup fast
 
-    cursor: str | None = None
-    console.print("[dim]tailing events, ctrl-c to stop[/dim]")
+    from rich.live import Live  # noqa: PLC0415 lazy import keeps CLI startup fast
+
+    params: dict = {"org_id": org} if org else {}
+    rows: deque[dict] = deque(maxlen=keep)
+    fresh_ids: set[str] = set()
+
+    def table() -> object:
+        return build_table(list(rows), EVENT_COLS, lambda r: "blink bold cyan" if r["event_id"] in fresh_ids else None)
+
+    def emit(event: dict) -> None:
+        if fmt is OutputFormat.json:
+            print(json.dumps(event, ensure_ascii=False), flush=True)
+        else:
+            print("\t".join(c.fmt(event.get(c.key)) for c in EVENT_COLS), flush=True)
+
     with admin_client(control_plane_url) as c:
+        resp = c.get("/admin/events", params={**params, "limit": keep})
+        resp.raise_for_status()
+        rows.extend(reversed(resp.json()))
+        cursor = rows[-1]["occurred_at"] if rows else "1970-01-01T00:00:00"
         try:
-            while True:
-                params: dict = {"org_id": org} if org else {}
-                if cursor is None:
-                    resp = c.get("/admin/events", params={**params, "limit": 1})
-                    resp.raise_for_status()
-                    latest = resp.json()
-                    cursor = latest[0]["occurred_at"] if latest else "1970-01-01T00:00:00"
+            if fmt is not OutputFormat.table:
+                while True:
                     time.sleep(interval)
-                    continue
-                resp = c.get("/admin/events", params={**params, "after": cursor, "limit": 200})
-                resp.raise_for_status()
-                for event in resp.json():
-                    style = EVENT_STATUS_STYLE.get(event["status"], "red")
-                    estimated = "~" if event["input_tokens"] == 0 and event["output_tokens"] == 0 else ""
-                    console.print(
-                        f"[dim]{str(event['occurred_at'])[11:19]}[/dim] [bold]{event['model_id']}[/bold][dim]@{event['provider_id']}[/dim] "
-                        f"[{style}]{event['status']:<9}[/{style}] {event['input_tokens']}\u2192{event['output_tokens']} tok{estimated} "
-                        f"${float(event['cost_usd']):.6f}  {event['latency_ms']}ms{'  [cyan]stream[/cyan]' if event['stream'] else ''}"
-                    )
-                    cursor = event["occurred_at"]
-                time.sleep(interval)
+                    resp = c.get("/admin/events", params={**params, "after": cursor, "limit": 200})
+                    resp.raise_for_status()
+                    for event in resp.json():
+                        emit(event)
+                        cursor = event["occurred_at"]
+            with Live(table(), console=console, refresh_per_second=4) as live:
+                while True:
+                    time.sleep(interval)
+                    resp = c.get("/admin/events", params={**params, "after": cursor, "limit": 200})
+                    resp.raise_for_status()
+                    batch = resp.json()
+                    fresh_ids = {event["event_id"] for event in batch}
+                    if batch:
+                        rows.extend(batch)
+                        cursor = batch[-1]["occurred_at"]
+                    live.update(table())
         except KeyboardInterrupt:
             console.print("[dim]stopped[/dim]")
 

@@ -27,7 +27,7 @@ from data_plane.canonical import CanonicalRequest, CanonicalResponse, Ctx, Upstr
 from data_plane.config import Config, load_config
 from data_plane.events import buffer_event, run_flusher
 from data_plane.holder import BundleHolder
-from data_plane.metering import cost_usd, estimate_tokens
+from data_plane.metering import cost_breakdown, estimate_tokens
 from data_plane.policy import Deny, evaluate
 from data_plane.poller import run_poller
 from data_plane.transport import client
@@ -155,7 +155,8 @@ def _record_usage(ctx: Ctx, final: CanonicalResponse, status: UsageStatus, promp
                 )
             }
         )
-    cost = cost_usd(final.usage, ctx.model)
+    cost_in, cost_out = cost_breakdown(final.usage, ctx.model)
+    cost = cost_in + cost_out
     latency_ms = int((time.monotonic() - ctx.started_at) * 1000)
     if ctx.bundle_id is not None and state.config is not None:
         buffer_event(
@@ -172,6 +173,8 @@ def _record_usage(ctx: Ctx, final: CanonicalResponse, status: UsageStatus, promp
                 input_tokens=final.usage.input_tokens,
                 output_tokens=final.usage.output_tokens,
                 cost_usd=cost,
+                cost_input_usd=cost_in,
+                cost_output_usd=cost_out,
                 latency_ms=latency_ms,
                 status=status,
                 stream=ctx.stream,

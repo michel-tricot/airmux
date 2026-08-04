@@ -47,6 +47,15 @@ class Col(NamedTuple):
     fmt: Callable[[object], str] = cell
 
 
+def build_table(rows: list[dict], cols: list[Col], row_style: Callable[[dict], str | None] | None = None) -> Table:
+    table = Table(box=box.ROUNDED, header_style="bold")
+    for c in cols:
+        table.add_column(c.header, style=c.style, no_wrap=c.no_wrap, max_width=c.max_width)
+    for r in rows:
+        table.add_row(*(c.fmt(r.get(c.key)) for c in cols), style=row_style(r) if row_style else None)
+    return table
+
+
 def print_rows(name: str, rows: list[dict], cols: list[Col], fmt: OutputFormat) -> None:
     """Every command that outputs resource data renders through here; give it a FormatOption."""
     if fmt is OutputFormat.json:
@@ -59,9 +68,4 @@ def print_rows(name: str, rows: list[dict], cols: list[Col], fmt: OutputFormat) 
     if not rows:
         console.print(f"No {name} found.")
         return
-    table = Table(box=box.ROUNDED, header_style="bold")
-    for c in cols:
-        table.add_column(c.header, style=c.style, no_wrap=c.no_wrap, max_width=c.max_width)
-    for r in rows:
-        table.add_row(*(c.fmt(r.get(c.key)) for c in cols))
-    console.print(table)
+    console.print(build_table(rows, cols))
