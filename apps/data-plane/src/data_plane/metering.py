@@ -6,17 +6,14 @@ from typing import TYPE_CHECKING
 import tiktoken
 
 if TYPE_CHECKING:
-    from contract import ModelEntry
+    from contract import ModelEntry, ProviderEntry
     from data_plane.canonical import Usage
 
 
-CACHE_READ_MULT = 0.1  # ephemeral cache hit
-CACHE_WRITE_MULT = 1.25  # ephemeral cache write
-
-
-def cost_breakdown(usage: Usage, model: ModelEntry) -> tuple[float, float]:
+def cost_breakdown(usage: Usage, model: ModelEntry, provider: ProviderEntry) -> tuple[float, float]:
+    """Cache reads and writes are billed at provider-specific fractions of the input price."""
     fresh = usage.input_tokens - usage.cache_read_tokens - usage.cache_write_tokens
-    billable_in = fresh + usage.cache_write_tokens * CACHE_WRITE_MULT + usage.cache_read_tokens * CACHE_READ_MULT
+    billable_in = fresh + usage.cache_write_tokens * provider.cache_write_multiplier + usage.cache_read_tokens * provider.cache_read_multiplier
     return billable_in * model.input_price_per_mtok / 1_000_000, usage.output_tokens * model.output_price_per_mtok / 1_000_000
 
 

@@ -173,7 +173,7 @@ def _record_usage(ctx: Ctx, final: CanonicalResponse, status: UsageStatus, req: 
             output_tokens=estimate_tokens(output_text, ctx.model),
             estimated=True,
         )
-    cost_in, cost_out = cost_breakdown(usage, ctx.model)
+    cost_in, cost_out = cost_breakdown(usage, ctx.model, ctx.provider)
     latency_ms = int((time.monotonic() - ctx.started_at) * 1000)
     if ctx.bundle_id is not None and state.config is not None:
         buffer_event(

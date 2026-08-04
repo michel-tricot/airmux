@@ -108,3 +108,18 @@ def test_anthropic_request_uses_native_shape(monkeypatch):
     assert body["max_tokens"] == 100
     assert body["tools"] == [{"name": "f", "description": "d", "input_schema": {"type": "object"}}]
     assert body["stream"] is True
+
+
+def test_openai_usage_captures_cached_tokens():
+    adapter = REGISTRY["openai_compatible"](make_ctx("openai_compatible").provider)
+    reply = json.dumps(
+        {
+            "id": "c",
+            "model": "m",
+            "choices": [{"index": 0, "message": {"role": "assistant", "content": "hi"}, "finish_reason": "stop"}],
+            "usage": {"prompt_tokens": 3016, "completion_tokens": 4, "prompt_tokens_details": {"cached_tokens": 2944}},
+        }
+    ).encode()
+    usage = adapter.transform_response(reply, make_ctx("openai_compatible")).usage
+    assert usage.input_tokens == 3016  # prompt_tokens already includes cached
+    assert usage.cache_read_tokens == 2944

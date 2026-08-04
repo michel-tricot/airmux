@@ -39,7 +39,16 @@ async def compile_bundle(session: AsyncSession, org_id: str, bundle_id: UUID, no
         revocations=[r.id for r in key_rows if r.disabled],
         catalog=Catalog(
             providers=[
-                ProviderEntry.model_validate({"provider_id": r.id, "kind": r.kind, "base_url": r.base_url, "credential_ref": r.credential_ref})
+                ProviderEntry.model_validate(
+                    {
+                        "provider_id": r.id,
+                        "kind": r.kind,
+                        "base_url": r.base_url,
+                        "credential_ref": r.credential_ref,
+                        "cache_read_multiplier": r.cache_read_multiplier,
+                        "cache_write_multiplier": r.cache_write_multiplier,
+                    }
+                )
                 for r in provider_rows
             ],
             models=[

@@ -44,9 +44,12 @@ def _strip_cache_control(obj: object) -> object:
 
 def _usage(reported: dict[str, Any] | None) -> Usage:
     reported = reported or {}
+    # OpenAI auto-caches; prompt_tokens already includes the cached ones, so they are a subset, not an addition.
+    cached = (reported.get("prompt_tokens_details") or {}).get("cached_tokens", 0)
     return Usage(
         input_tokens=reported.get("prompt_tokens", 0),
         output_tokens=reported.get("completion_tokens", 0),
+        cache_read_tokens=cached,
         estimated=not reported,
     )
 

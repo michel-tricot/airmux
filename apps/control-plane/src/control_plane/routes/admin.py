@@ -36,6 +36,8 @@ class ProviderIn(BaseModel):
     kind: Literal["openai_compatible", "anthropic"] = Field("openai_compatible", description="Adapter kind")
     base_url: str = Field(description="OpenAI-compatible endpoint, e.g. https://api.groq.com/openai/v1")
     credential_ref: str = Field(description="env: or file: reference resolved by the data plane, never a raw secret")
+    cache_read_multiplier: float = Field(1.0, description="Input price factor for prompt-cache hits")
+    cache_write_multiplier: float = Field(1.0, description="Input price factor for cache writes")
 
     @field_validator("credential_ref")
     @classmethod
@@ -134,6 +136,8 @@ async def create_provider(body: ProviderIn, session: SessionDep) -> ProviderOut:
         provider.kind = body.kind
         provider.base_url = body.base_url
         provider.credential_ref = body.credential_ref
+    provider.cache_read_multiplier = body.cache_read_multiplier
+    provider.cache_write_multiplier = body.cache_write_multiplier
     session.add(provider)
     await session.commit()
     return ProviderOut(provider_id=body.provider_id)

@@ -146,6 +146,8 @@ class Provider(BaseModel):
     kind: str = Field(..., title="Kind")
     base_url: str = Field(..., title="Base Url")
     credential_ref: str = Field(..., title="Credential Ref")
+    cache_read_multiplier: float | None = Field(1.0, title="Cache Read Multiplier")
+    cache_write_multiplier: float | None = Field(1.0, title="Cache Write Multiplier")
 
 
 class ProviderEntry(BaseModel):
@@ -157,6 +159,8 @@ class ProviderEntry(BaseModel):
     kind: Literal["openai_compatible", "anthropic"] = Field(..., title="Kind")
     base_url: AnyUrl = Field(..., title="Base Url")
     credential_ref: str = Field(..., title="Credential Ref")
+    cache_read_multiplier: float | None = Field(1.0, title="Cache Read Multiplier")
+    cache_write_multiplier: float | None = Field(1.0, title="Cache Write Multiplier")
 
 
 class ProviderIn(BaseModel):
@@ -172,6 +176,16 @@ class ProviderIn(BaseModel):
         ...,
         description="env: or file: reference resolved by the data plane, never a raw secret",
         title="Credential Ref",
+    )
+    cache_read_multiplier: float | None = Field(
+        1.0,
+        description="Input price factor for prompt-cache hits",
+        title="Cache Read Multiplier",
+    )
+    cache_write_multiplier: float | None = Field(
+        1.0,
+        description="Input price factor for cache writes",
+        title="Cache Write Multiplier",
     )
 
 

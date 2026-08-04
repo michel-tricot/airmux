@@ -18,19 +18,27 @@ providers:
   - provider_id: openai
     base_url: https://api.openai.com/v1
     credential_ref: env:OPENAI_API_KEY
+    cache_read_multiplier: 0.5
+    cache_write_multiplier: 1.0
   - provider_id: anthropic
     kind: anthropic
     base_url: https://api.anthropic.com/v1
     credential_ref: env:ANTHROPIC_API_KEY
+    cache_read_multiplier: 0.1
+    cache_write_multiplier: 1.25
   - provider_id: gemini
     base_url: https://generativelanguage.googleapis.com/v1beta/openai
     credential_ref: env:GEMINI_API_KEY
+    cache_read_multiplier: 0.25
+    cache_write_multiplier: 1.0
   - provider_id: xai
     base_url: https://api.x.ai/v1
     credential_ref: env:XAI_API_KEY
   - provider_id: deepseek
     base_url: https://api.deepseek.com
     credential_ref: env:DEEPSEEK_API_KEY
+    cache_read_multiplier: 0.1
+    cache_write_multiplier: 1.0
   - provider_id: mistral
     base_url: https://api.mistral.ai/v1
     credential_ref: env:MISTRAL_API_KEY

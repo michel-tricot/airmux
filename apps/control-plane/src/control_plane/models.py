@@ -27,6 +27,8 @@ class Provider(SQLModel, table=True):
     kind: str
     base_url: str
     credential_ref: str
+    cache_read_multiplier: float = 1.0
+    cache_write_multiplier: float = 1.0
 
 
 class Model(SQLModel, table=True):
