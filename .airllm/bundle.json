@@ -1,10 +1,10 @@
 {
   "payload": {
     "schema_version": 1,
-    "bundle_id": "6d68afcd-7a0c-40ba-93a4-5500e1207ffe",
+    "bundle_id": "f5794121-d603-429a-b400-19387381ba4a",
     "org_id": "org-dev",
-    "issued_at": "2026-08-04T02:26:12.246467Z",
-    "expires_at": "2026-08-05T02:26:12.246467Z",
+    "issued_at": "2026-08-04T02:49:38.202165Z",
+    "expires_at": "2026-08-05T02:49:38.202165Z",
     "keys": [
       {
         "key_id": "k-152fdc17",
@@ -16,6 +16,14 @@
       },
       {
         "key_id": "k-42b221a0",
+        "org_id": "org-dev",
+        "allowed_models": [
+          "*"
+        ],
+        "disabled": false
+      },
+      {
+        "key_id": "k-57919a4d",
         "org_id": "org-dev",
         "allowed_models": [
           "*"
@@ -53,13 +61,85 @@
     "catalog": {
       "providers": [
         {
+          "provider_id": "anthropic",
+          "kind": "openai_compatible",
+          "base_url": "https://api.anthropic.com/v1",
+          "credential_ref": "env:ANTHROPIC_API_KEY"
+        },
+        {
+          "provider_id": "deepseek",
+          "kind": "openai_compatible",
+          "base_url": "https://api.deepseek.com/",
+          "credential_ref": "env:DEEPSEEK_API_KEY"
+        },
+        {
+          "provider_id": "gemini",
+          "kind": "openai_compatible",
+          "base_url": "https://generativelanguage.googleapis.com/v1beta/openai",
+          "credential_ref": "env:GEMINI_API_KEY"
+        },
+        {
+          "provider_id": "groq",
+          "kind": "openai_compatible",
+          "base_url": "https://api.groq.com/openai/v1",
+          "credential_ref": "env:GROQ_API_KEY"
+        },
+        {
+          "provider_id": "mistral",
+          "kind": "openai_compatible",
+          "base_url": "https://api.mistral.ai/v1",
+          "credential_ref": "env:MISTRAL_API_KEY"
+        },
+        {
           "provider_id": "openai",
           "kind": "openai_compatible",
           "base_url": "https://api.openai.com/v1",
           "credential_ref": "env:OPENAI_API_KEY"
+        },
+        {
+          "provider_id": "xai",
+          "kind": "openai_compatible",
+          "base_url": "https://api.x.ai/v1",
+          "credential_ref": "env:XAI_API_KEY"
         }
       ],
       "models": [
+        {
+          "model_id": "claude-sonnet-4-6",
+          "provider_id": "anthropic",
+          "upstream_model": "claude-sonnet-4-6",
+          "input_price_per_mtok": 3.0,
+          "output_price_per_mtok": 15.0,
+          "context_window": 200000,
+          "capabilities": [
+            "streaming",
+            "tools"
+          ]
+        },
+        {
+          "model_id": "deepseek-chat",
+          "provider_id": "deepseek",
+          "upstream_model": "deepseek-chat",
+          "input_price_per_mtok": 0.27,
+          "output_price_per_mtok": 1.1,
+          "context_window": 128000,
+          "capabilities": [
+            "streaming",
+            "tools"
+          ]
+        },
+        {
+          "model_id": "gemini-2.5-flash",
+          "provider_id": "gemini",
+          "upstream_model": "gemini-2.5-flash",
+          "input_price_per_mtok": 0.3,
+          "output_price_per_mtok": 2.5,
+          "context_window": 1048576,
+          "capabilities": [
+            "streaming",
+            "tools"
+          ]
+        },
         {
           "model_id": "gpt-4o-mini",
           "provider_id": "openai",
@@ -71,10 +151,46 @@
             "streaming",
             "tools"
           ]
+        },
+        {
+          "model_id": "grok-4-1-fast-reasoning",
+          "provider_id": "xai",
+          "upstream_model": "grok-4-1-fast-reasoning",
+          "input_price_per_mtok": 0.2,
+          "output_price_per_mtok": 0.5,
+          "context_window": 2000000,
+          "capabilities": [
+            "streaming",
+            "tools"
+          ]
+        },
+        {
+          "model_id": "llama-3.3-70b-versatile",
+          "provider_id": "groq",
+          "upstream_model": "llama-3.3-70b-versatile",
+          "input_price_per_mtok": 0.59,
+          "output_price_per_mtok": 0.79,
+          "context_window": 131072,
+          "capabilities": [
+            "streaming",
+            "tools"
+          ]
+        },
+        {
+          "model_id": "mistral-large-latest",
+          "provider_id": "mistral",
+          "upstream_model": "mistral-large-latest",
+          "input_price_per_mtok": 2.0,
+          "output_price_per_mtok": 6.0,
+          "context_window": 128000,
+          "capabilities": [
+            "streaming",
+            "tools"
+          ]
         }
       ]
     }
   },
-  "signature": "I0QlGdkD94I2dkSgyy0XUhtn534DE1aUDp4fdqa3uvCR1frMAR2nVDJNrKq0j0lQT3zDpxpCl3aQ+UQ1lECQDw==",
+  "signature": "BJVq0hCqVXZAnWWese7+bK0JerRlt4g/kOkzg0blz4HxLAhf9F2wNMjHNseDrKXFVIRYp0qVQYYx43tnkeQrAQ==",
   "signing_key_id": "k1"
 }

@@ -1,16 +1,76 @@
+# All providers here expose OpenAI-compatible chat completions, which is what
+# the current openai_compatible adapter (bearer auth, {base_url}/chat/completions)
+# supports. A model is only callable once its provider's env key is set; requests
+# to the others fail at call time, nothing breaks at bootstrap.
+#
+# anthropic uses their OpenAI SDK compatibility layer, which Anthropic documents
+# as an evaluation aid rather than a production path; the native Messages adapter
+# is milestone M4. Azure OpenAI, Bedrock and Vertex need auth schemes the
+# adapter does not speak yet.
+# Prices are USD per million tokens, approximate, for metering only.
+
 org: org-dev
 
 providers:
   - provider_id: openai
-    kind: openai_compatible
     base_url: https://api.openai.com/v1
     credential_ref: env:OPENAI_API_KEY
+  - provider_id: anthropic
+    kind: openai_compatible # compat layer; native adapter lands in M4
+    base_url: https://api.anthropic.com/v1
+    credential_ref: env:ANTHROPIC_API_KEY
+  - provider_id: gemini
+    base_url: https://generativelanguage.googleapis.com/v1beta/openai
+    credential_ref: env:GEMINI_API_KEY
+  - provider_id: xai
+    base_url: https://api.x.ai/v1
+    credential_ref: env:XAI_API_KEY
+  - provider_id: deepseek
+    base_url: https://api.deepseek.com
+    credential_ref: env:DEEPSEEK_API_KEY
+  - provider_id: mistral
+    base_url: https://api.mistral.ai/v1
+    credential_ref: env:MISTRAL_API_KEY
+  - provider_id: groq
+    base_url: https://api.groq.com/openai/v1
+    credential_ref: env:GROQ_API_KEY
 
 models:
   - model_id: gpt-4o-mini
     provider_id: openai
-    # upstream_model defaults to model_id; prices, context_window and
-    # capabilities have sensible defaults, see ModelSpec in the cli
+    input_price_per_mtok: 0.15
+    output_price_per_mtok: 0.60
+    context_window: 128000
+  - model_id: claude-sonnet-4-6
+    provider_id: anthropic
+    input_price_per_mtok: 3.00
+    output_price_per_mtok: 15.00
+    context_window: 200000
+  - model_id: gemini-2.5-flash
+    provider_id: gemini
+    input_price_per_mtok: 0.30
+    output_price_per_mtok: 2.50
+    context_window: 1048576
+  - model_id: grok-4-1-fast-reasoning
+    provider_id: xai
+    input_price_per_mtok: 0.20
+    output_price_per_mtok: 0.50
+    context_window: 2000000
+  - model_id: deepseek-chat
+    provider_id: deepseek
+    input_price_per_mtok: 0.27
+    output_price_per_mtok: 1.10
+    context_window: 128000
+  - model_id: mistral-large-latest
+    provider_id: mistral
+    input_price_per_mtok: 2.00
+    output_price_per_mtok: 6.00
+    context_window: 128000
+  - model_id: llama-3.3-70b-versatile
+    provider_id: groq
+    input_price_per_mtok: 0.59
+    output_price_per_mtok: 0.79
+    context_window: 131072
 
 keys:
   - allowed_models: ["*"]
