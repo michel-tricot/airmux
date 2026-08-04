@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, cast
 import httpx
 import pytest
 import respx
-from conftest import CTX, TEXT_LOG, delta_event, make_adapter, sse
+from conftest import CTX, TEXT_LOG, make_adapter, sse
 from starlette.responses import StreamingResponse
 from starlette.testclient import TestClient
 
@@ -95,7 +95,8 @@ async def test_cancellation_estimates_partial_tokens(caplog):
 @respx.mock
 async def test_mid_stream_error_event_becomes_sse_error(caplog):
     caplog.set_level(logging.INFO, logger="data_plane")
-    log = sse(delta_event({"content": "héllo "})) + sse({"error": {"code": "overloaded", "message": "try later"}})
+    hi = {"id": "cmpl-9", "model": "gpt-real", "choices": [{"index": 0, "delta": {"content": "héllo "}, "finish_reason": None}]}
+    log = sse(hi) + sse({"error": {"code": "overloaded", "message": "try later"}})
     respx.post("https://api.openai.com/v1/chat/completions").mock(return_value=httpx.Response(200, content=log))
     chunks = [chunk async for chunk in _body_gen(await _stream(make_adapter(), CTX, UPSTREAM))]
     assert any(b'"code": "overloaded"' in c for c in chunks)

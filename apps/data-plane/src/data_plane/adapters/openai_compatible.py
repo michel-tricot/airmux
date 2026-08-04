@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any
 import httpx
 
 from data_plane.adapters.base import ProviderAdapter
+from data_plane.adapters.shape import content_blocks
 from data_plane.canonical import CanonicalChunk, CanonicalError, CanonicalResponse, RawEvent, StreamState, UpstreamRequest, UpstreamStreamError, Usage
 from data_plane.secrets import resolve
 
@@ -39,13 +40,6 @@ def _usage(reported: dict[str, Any] | None) -> Usage:
         output_tokens=reported.get("completion_tokens", 0),
         estimated=not reported,
     )
-
-
-def _content(reasoning: str, text: str, tool_calls: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    reasoning_part = [{"type": "reasoning", "text": reasoning}] if reasoning else []
-    text_part = [{"type": "text", "text": text}] if text else []
-    tool_part = [{"type": "tool_call", "id": tc.get("id"), "function": tc.get("function") or {}} for tc in tool_calls]
-    return [*reasoning_part, *text_part, *tool_part]
 
 
 def _fold_tool_call(state: OpenAIStreamState, tc: dict[str, Any]) -> dict[str, Any]:
@@ -108,7 +102,7 @@ class OpenAICompatibleAdapter(ProviderAdapter):
         return CanonicalResponse(
             id=data.get("id", ctx.request_id),
             model=ctx.model.model_id,
-            content=_content(message.get("reasoning_content") or "", message.get("content") or "", message.get("tool_calls") or []),
+            content=content_blocks(message.get("reasoning_content") or "", message.get("content") or "", message.get("tool_calls") or []),
             finish_reason=choice.get("finish_reason"),
             usage=_usage(data.get("usage")),
         )
@@ -153,7 +147,7 @@ class OpenAICompatibleAdapter(ProviderAdapter):
         return CanonicalResponse(
             id=state.chunk_id,
             model=state.ctx.model.model_id,
-            content=_content("".join(state.reasoning), "".join(state.text), [state.tool_calls[i] for i in sorted(state.tool_calls)]),
+            content=content_blocks("".join(state.reasoning), "".join(state.text), [state.tool_calls[i] for i in sorted(state.tool_calls)]),
             finish_reason=state.finish_reason,
             usage=_usage(state.usage),
         )
