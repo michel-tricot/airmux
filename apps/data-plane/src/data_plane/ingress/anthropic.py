@@ -23,14 +23,29 @@ def _has_cache_control(blocks: object) -> bool:
     return isinstance(blocks, list) and any(isinstance(b, dict) and "cache_control" in b for b in blocks)
 
 
+def _is_directive(block: object) -> bool:
+    """Anthropic clients smuggle protocol metadata (e.g. a per-request x-anthropic-billing-header) as a system
+
+    text block. It is not prompt content; forwarding it verbatim would, for a provider that caches by exact
+    prefix, break caching on every request since it changes each call. Drop the whole x-anthropic-* namespace.
+    """
+    if not isinstance(block, dict):
+        return False
+    text = block.get("text")
+    return isinstance(text, str) and text.lstrip().lower().startswith("x-anthropic-")
+
+
 def _system_message(system: object) -> dict[str, Any] | None:
     """Preserve block structure when it carries cache_control (for prompt caching), else collapse to a string."""
     if isinstance(system, str):
         return {"role": "system", "content": system} if system else None
     if isinstance(system, list):
-        if _has_cache_control(system):
-            return {"role": "system", "content": system}
-        text = "".join(str(b.get("text", "")) for b in system if isinstance(b, dict))
+        blocks = [b for b in system if not _is_directive(b)]
+        if not blocks:
+            return None
+        if _has_cache_control(blocks):
+            return {"role": "system", "content": blocks}
+        text = "".join(str(b.get("text", "")) for b in blocks if isinstance(b, dict))
         return {"role": "system", "content": text} if text else None
     return None
 

@@ -9,7 +9,7 @@ from conftest import MODEL
 from starlette.testclient import TestClient
 
 from data_plane.adapters import REGISTRY
-from data_plane.app import _normalize_request, app
+from data_plane.app import app
 from data_plane.canonical import CanonicalChunk, CanonicalRequest, CanonicalResponse, Usage
 from data_plane.ingress import ANTHROPIC
 
@@ -127,15 +127,15 @@ def test_messages_endpoint_streaming_over_openai_provider(token):
 
 
 def test_max_tokens_clamped_to_model_output_limit():
+    from data_plane.normalize import normalize_request  # noqa: PLC0415
+
+    provider = make_ctx("openai_compatible").provider
     capped = MODEL.model_copy(update={"max_output_tokens": 16384})
     over = CanonicalRequest(model="m", messages=[], max_tokens=32000)
-    assert _normalize_request(over, capped).max_tokens == 16384
-    # under the cap is untouched
-    assert _normalize_request(CanonicalRequest(model="m", messages=[], max_tokens=100), capped).max_tokens == 100
-    # no cap known -> no clamp
-    assert _normalize_request(over, MODEL).max_tokens == 32000
-    # no max_tokens set -> unchanged (None)
-    assert _normalize_request(CanonicalRequest(model="m", messages=[]), capped).max_tokens is None
+    assert normalize_request(over, capped, provider).max_tokens == 16384
+    assert normalize_request(CanonicalRequest(model="m", messages=[], max_tokens=100), capped, provider).max_tokens == 100
+    assert normalize_request(over, MODEL, provider).max_tokens == 32000  # no cap known -> no clamp
+    assert normalize_request(CanonicalRequest(model="m", messages=[]), capped, provider).max_tokens is None
 
 
 def test_cache_control_survives_ingress_to_anthropic_upstream(monkeypatch):
@@ -187,3 +187,24 @@ def test_anthropic_usage_counts_cache_tokens():
     ).encode()
     resp = adapter.transform_response(reply, make_ctx("anthropic"))
     assert resp.usage.input_tokens == 30004  # cache-read tokens are still prompt tokens
+
+
+def test_anthropic_directive_blocks_stripped_from_system():
+    """A per-request x-anthropic-* metadata block must not reach the canonical prompt."""
+    body = json.dumps(
+        {
+            "model": "m",
+            "max_tokens": 10,
+            "system": [
+                {"type": "text", "text": "x-anthropic-billing-header: cc_version=2.1; cch=abc123;"},
+                {"type": "text", "text": "You are helpful.", "cache_control": {"type": "ephemeral"}},
+            ],
+            "messages": [{"role": "user", "content": "hi"}],
+        }
+    ).encode()
+    req = ANTHROPIC.parse(body)
+    system = req.messages[0]
+    assert system["role"] == "system"
+    texts = [b["text"] for b in system["content"]]
+    assert texts == ["You are helpful."]  # directive dropped, real content and its cache_control kept
+    assert system["content"][0]["cache_control"] == {"type": "ephemeral"}
