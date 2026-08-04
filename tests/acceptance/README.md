@@ -16,7 +16,8 @@ categories below use it, so a new test in either place gets the same one-line se
   percentiles and asserts a lenient ceiling, so a gross regression fails but normal runner noise
   does not.
 
-CI runs the two as separate steps.
+CI runs the two as separate jobs, so a slow benchmark sweep does not delay the correctness
+signal and can be gated independently.
 
 ## Adding a benchmark
 
