@@ -109,6 +109,7 @@ class Stack:
         staleness_policy: str = "serve_and_warn",
         poll_interval_s: int = 1,
         flush_interval_s: int = 1,
+        backend: str = "sqlite",
     ) -> None:
         cfg = {
             "control_plane": {
@@ -126,7 +127,7 @@ class Stack:
                     "poll_interval_s": poll_interval_s,
                 },
                 "auth": {"token_public_key": "env:GW_TOKEN_PUBLIC_KEY"},
-                "events": {"flush_interval_s": flush_interval_s},
+                "events": {"flush_interval_s": flush_interval_s, "backend": backend},
             },
         }
         self.config_path.write_text(yaml.safe_dump(cfg), encoding="utf-8")
