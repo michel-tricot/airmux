@@ -64,6 +64,7 @@ data_plane:
     token: env:GW_DP_TOKEN
   bundle:
     public_key: env:GW_BUNDLE_PUBLIC_KEY
+    org: org-dev
     cache_dir: {cache_dir}
     staleness_policy: serve_and_warn # or refuse
     poll_interval_s: 5

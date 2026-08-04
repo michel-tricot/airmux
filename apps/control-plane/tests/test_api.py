@@ -120,3 +120,17 @@ def test_list_endpoints_read_back(tmp_path, monkeypatch):
         assert [b["version"] for b in bundles] == [1]
         assert "payload" not in bundles[0]
         assert c.get("/admin/orgs").status_code == 401
+
+
+def test_bundle_latest_filters_by_org(tmp_path, monkeypatch):
+    signing_key, _ = setup_control_plane(tmp_path, monkeypatch)
+    with TestClient(app) as c:
+        c.post("/admin/orgs", json={"id": "o1"}, headers=ADMIN)
+        c.post("/admin/orgs", json={"id": "o2"}, headers=ADMIN)
+        c.post("/admin/bundles/compile", json={"org_id": "o1"}, headers=ADMIN)
+        c.post("/admin/bundles/compile", json={"org_id": "o2"}, headers=ADMIN)
+        latest = verify_bundle(SignedBundle.model_validate(c.get("/v1/bundle/latest", headers=DP).json()), signing_key.public_key())
+        assert latest.org_id == "o2"
+        scoped = c.get("/v1/bundle/latest", headers=DP, params={"org_id": "o1"})
+        bundle = verify_bundle(SignedBundle.model_validate(scoped.json()), signing_key.public_key())
+        assert bundle.org_id == "o1"

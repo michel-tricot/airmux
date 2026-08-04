@@ -24,7 +24,11 @@ logger = logging.getLogger("data_plane")
 
 
 async def poll_once(config: Config, holder: BundleHolder, public_key: Ed25519PublicKey) -> None:
-    resp = await client.get(f"{config.control_plane.url}/v1/bundle/latest", headers={"authorization": f"Bearer {config.control_plane.token}"})
+    resp = await client.get(
+        f"{config.control_plane.url}/v1/bundle/latest",
+        headers={"authorization": f"Bearer {config.control_plane.token}"},
+        params={"org_id": config.bundle.org} if config.bundle.org else {},
+    )
     resp.raise_for_status()
     signed = SignedBundle.model_validate_json(resp.content)
     bundle = verify_bundle(signed, public_key)

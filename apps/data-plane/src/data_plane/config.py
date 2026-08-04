@@ -20,6 +20,7 @@ class BundleConfig(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     public_key: str
+    org: str | None = None  # which org's bundle this data plane serves; None takes the newest across orgs
     cache_dir: Path = Path("/var/cache/gateway")
     staleness_policy: Literal["serve_and_warn", "refuse"] = "serve_and_warn"
     poll_interval_s: float = 30.0
