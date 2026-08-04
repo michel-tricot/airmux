@@ -61,6 +61,15 @@ The gateway also exposes Anthropic's Messages API at `POST /v1/messages`, so
 Anthropic-SDK clients can point at it; the request is routed to whatever provider
 the model maps to (an Anthropic-SDK call can even run on an OpenAI model).
 
+Because Claude Code itself speaks that API, you can run it on any cataloged model
+through the gateway:
+
+```bash
+scripts/claude-gateway.sh --list            # registered models
+scripts/claude-gateway.sh gpt-4o-mini       # Claude Code, backed by gpt-4o-mini
+scripts/claude-gateway.sh claude-sonnet-4-6
+```
+
 `bootstrap.yml` ships with a catalog of OpenAI-compatible hosted providers
 (openai, anthropic, gemini, xai, deepseek, mistral, groq). A model becomes
 callable as soon as its provider's key (for example `GROQ_API_KEY`) is in `.env`.
