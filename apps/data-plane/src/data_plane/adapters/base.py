@@ -22,6 +22,9 @@ if TYPE_CHECKING:
 class ProviderAdapter(ABC):
     kind: ClassVar[str]
 
+    def __init__(self, provider: ProviderEntry) -> None:
+        self.provider = provider
+
     @abstractmethod
     def validate_environment(self, p: ProviderEntry) -> None: ...
 
