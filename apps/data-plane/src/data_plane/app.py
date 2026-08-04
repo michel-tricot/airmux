@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import base64
+import asyncio
 import contextlib
 import logging
 from dataclasses import dataclass
@@ -10,13 +10,12 @@ from uuid import uuid4
 
 import httpx
 from cryptography.exceptions import InvalidSignature
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 from pydantic import ValidationError
 from starlette.applications import Starlette
 from starlette.responses import JSONResponse, Response
 from starlette.routing import Route
 
-from contract import verify_bundle
+from contract import public_key_from_b64, verify_bundle
 from data_plane.adapters import REGISTRY
 from data_plane.auth import authenticate, index_keys
 from data_plane.cache import read_cached_bundle
@@ -24,11 +23,13 @@ from data_plane.canonical import CanonicalRequest, Ctx
 from data_plane.config import Config, load_config
 from data_plane.holder import BundleHolder
 from data_plane.policy import Deny, evaluate
+from data_plane.poller import run_poller
 from data_plane.transport import client
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
     from starlette.requests import Request
 
 logger = logging.getLogger("data_plane")
@@ -137,9 +138,16 @@ def _load_cached_bundle(config: Config, public_key: Ed25519PublicKey) -> None:
 async def lifespan(_app: Starlette) -> AsyncIterator[None]:
     config = load_config()
     state.config = config
-    state.public_key = Ed25519PublicKey.from_public_bytes(base64.b64decode(config.bundle_public_key_b64))
+    state.public_key = public_key_from_b64(config.bundle_public_key_b64)
     _load_cached_bundle(config, state.public_key)
-    yield
+    poller_task = asyncio.create_task(run_poller(config, holder, state.public_key)) if config.control_plane_url else None
+    try:
+        yield
+    finally:
+        if poller_task is not None:
+            poller_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await poller_task
 
 
 app = Starlette(

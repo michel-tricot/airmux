@@ -1,18 +1,110 @@
 from __future__ import annotations
 
 import base64
+import os
+import secrets
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from uuid import uuid4
 
+import httpx
 import typer
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
-from dotenv import set_key
+from dotenv import dotenv_values, find_dotenv, load_dotenv, set_key
 
-from contract import BundleV1, Catalog, KeyEntry, ModelEntry, ProviderEntry, mint_api_token, sign_bundle
+from contract import (
+    BundleV1,
+    Catalog,
+    KeyEntry,
+    ModelEntry,
+    ProviderEntry,
+    mint_api_token,
+    private_key_to_b64,
+    public_key_to_b64,
+    sign_bundle,
+)
 
 app = typer.Typer(name="airllm", no_args_is_help=True)
+
+
+def _admin_client(control_plane_url: str) -> httpx.Client:
+    load_dotenv(find_dotenv(usecwd=True))
+    admin_token = os.environ.get("GW_ADMIN_TOKEN")
+    if not admin_token:
+        typer.echo("GW_ADMIN_TOKEN is not set, run `airllm init` first", err=True)
+        raise typer.Exit(1)
+    return httpx.Client(base_url=control_plane_url, headers={"authorization": f"Bearer {admin_token}"}, timeout=10.0)
+
+
+@app.command()
+def init(control_plane_url: str = "http://127.0.0.1:8000", cache_dir: str = ".airllm") -> None:
+    """Write the shared secrets and wiring for both planes into .env, reusing existing values."""
+    cache = Path(cache_dir).resolve()
+    cache.mkdir(parents=True, exist_ok=True)
+    private_key = _load_or_create_key(cache / "signing.key")
+    env_path = Path(".env")
+    env_path.touch(exist_ok=True)
+    existing = dotenv_values(env_path)
+    values = {
+        "GW_CONTROL_PLANE_URL": control_plane_url,
+        "GW_CACHE_DIR": str(cache),
+        "GW_SIGNING_KEY": private_key_to_b64(private_key),
+        "GW_BUNDLE_PUBLIC_KEY": public_key_to_b64(private_key.public_key()),
+        "GW_ADMIN_TOKEN": existing.get("GW_ADMIN_TOKEN") or secrets.token_urlsafe(24),
+        "GW_DP_TOKEN": existing.get("GW_DP_TOKEN") or secrets.token_urlsafe(24),
+        "GW_POLL_INTERVAL_S": existing.get("GW_POLL_INTERVAL_S") or "5",
+    }
+    for k, v in values.items():
+        set_key(env_path, k, v)
+    typer.echo(f"wrote {env_path.resolve()}")
+    typer.echo("next:   uv run control-plane serve --dev")
+    typer.echo("        uv run airllm bootstrap")
+    typer.echo("        uv run data-plane --dev")
+
+
+@app.command()
+def bootstrap(  # noqa: PLR0913, PLR0917 CLI options are a flat namespace by design
+    org: str = "org-dev",
+    model: str = "gpt-4o-mini",
+    base_url: str = "https://api.openai.com/v1",
+    upstream_model: str = "",
+    credential_ref: str = "env:OPENAI_API_KEY",
+    control_plane_url: str = "",
+) -> None:
+    """Create org, key, provider and model through the admin API, compile, and save the token to .env."""
+    load_dotenv(find_dotenv(usecwd=True))
+    cp_url = control_plane_url or os.environ.get("GW_CONTROL_PLANE_URL", "http://127.0.0.1:8000")
+    with _admin_client(cp_url) as c:
+        org_resp = c.post("/admin/orgs", json={"id": org})
+        if org_resp.status_code not in (200, 409):
+            typer.echo(f"create org failed: {org_resp.status_code} {org_resp.text}", err=True)
+            raise typer.Exit(1)
+        key_resp = c.post("/admin/keys", json={"org_id": org})
+        key_resp.raise_for_status()
+        key = key_resp.json()
+        provider_resp = c.post(
+            "/admin/providers",
+            json={"org_id": org, "provider_id": "openai", "kind": "openai_compatible", "base_url": base_url, "credential_ref": credential_ref},
+        )
+        if provider_resp.status_code not in (200, 409):
+            typer.echo(f"create provider failed: {provider_resp.status_code} {provider_resp.text}", err=True)
+            raise typer.Exit(1)
+        model_resp = c.post(
+            "/admin/models",
+            json={"org_id": org, "model_id": model, "provider_id": "openai", "upstream_model": upstream_model or model},
+        )
+        if model_resp.status_code not in (200, 409):
+            typer.echo(f"create model failed: {model_resp.status_code} {model_resp.text}", err=True)
+            raise typer.Exit(1)
+        compile_resp = c.post("/admin/bundles/compile", json={"org_id": org})
+        compile_resp.raise_for_status()
+        compiled = compile_resp.json()
+    env_path = Path(".env")
+    env_path.touch(exist_ok=True)
+    set_key(env_path, "AIRLLM_TOKEN", key["token"])
+    typer.echo(f"key {key['key_id']} created, token saved to .env as AIRLLM_TOKEN")
+    typer.echo(f"bundle {compiled['bundle_id']} v{compiled['version']} compiled, data plane picks it up within one poll interval")
 
 
 def _load_or_create_key(key_path: Path) -> Ed25519PrivateKey:
@@ -98,8 +190,15 @@ def seed(  # noqa: PLR0913, PLR0917 CLI options are a flat namespace by design
 
 
 @app.command("compile")
-def compile_bundle() -> None:
-    raise NotImplementedError
+def compile_bundle(org: str = "org-dev", control_plane_url: str = "") -> None:
+    """Recompile and sign the bundle for an org through the control plane."""
+    load_dotenv(find_dotenv(usecwd=True))
+    cp_url = control_plane_url or os.environ.get("GW_CONTROL_PLANE_URL", "http://127.0.0.1:8000")
+    with _admin_client(cp_url) as c:
+        resp = c.post("/admin/bundles/compile", json={"org_id": org})
+        resp.raise_for_status()
+        compiled = resp.json()
+    typer.echo(f"bundle {compiled['bundle_id']} v{compiled['version']} compiled")
 
 
 @app.command()

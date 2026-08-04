@@ -29,4 +29,5 @@ def load_config() -> Config:
         cache_dir=Path(os.environ.get("GW_CACHE_DIR", "/var/cache/gateway")),
         staleness_policy="serve_and_warn" if os.environ.get("GW_STALENESS_POLICY", "serve_and_warn") == "serve_and_warn" else "refuse",
         dev=os.environ.get("GW_DEV") == "1",
+        poll_interval_s=float(os.environ.get("GW_POLL_INTERVAL_S", "30")),
     )

@@ -2,12 +2,33 @@ from __future__ import annotations
 
 import base64
 import json
-from typing import TYPE_CHECKING
+
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey, Ed25519PublicKey
 
 from contract.bundle import BundleV1, SignedBundle
 
-if TYPE_CHECKING:
-    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey, Ed25519PublicKey
+
+def private_key_to_b64(private_key: Ed25519PrivateKey) -> str:
+    raw = private_key.private_bytes(
+        encoding=serialization.Encoding.Raw,
+        format=serialization.PrivateFormat.Raw,
+        encryption_algorithm=serialization.NoEncryption(),
+    )
+    return base64.b64encode(raw).decode("ascii")
+
+
+def private_key_from_b64(b64: str) -> Ed25519PrivateKey:
+    return Ed25519PrivateKey.from_private_bytes(base64.b64decode(b64))
+
+
+def public_key_to_b64(public_key: Ed25519PublicKey) -> str:
+    raw = public_key.public_bytes(encoding=serialization.Encoding.Raw, format=serialization.PublicFormat.Raw)
+    return base64.b64encode(raw).decode("ascii")
+
+
+def public_key_from_b64(b64: str) -> Ed25519PublicKey:
+    return Ed25519PublicKey.from_public_bytes(base64.b64decode(b64))
 
 
 def canonical_json(bundle: BundleV1) -> str:

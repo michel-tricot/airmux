@@ -1,13 +1,13 @@
 {
   "payload": {
     "schema_version": 1,
-    "bundle_id": "6b023b33-9037-4c75-b58a-8b10b555c97b",
+    "bundle_id": "8e513281-20ac-426b-98a7-631966db3d3e",
     "org_id": "org-dev",
-    "issued_at": "2026-08-04T01:18:02.164780Z",
-    "expires_at": "2026-08-05T01:18:02.164780Z",
+    "issued_at": "2026-08-04T01:44:07.962624Z",
+    "expires_at": "2026-08-05T01:44:07.962624Z",
     "keys": [
       {
-        "key_id": "k-dev",
+        "key_id": "k-42b221a0",
         "org_id": "org-dev",
         "allowed_models": [
           "*"
@@ -15,7 +15,9 @@
         "disabled": false
       }
     ],
-    "revocations": [],
+    "revocations": [
+      "k-eee1bb71"
+    ],
     "catalog": {
       "providers": [
         {
@@ -41,6 +43,6 @@
       ]
     }
   },
-  "signature": "FFq41qGmMxCnOzwXJYJSBTXH7KZFr1Gz5byJ8Z70SSm6vTRHF3moBESLdFKiT/VPDWFrkee2yEbm+1ztcfB4Bw==",
+  "signature": "yNL/7rbfMH5qmG0/8WPRMcS2nUXImxd+3cp6JmSqyPrhUtF+0rf65jBlJJuE4od9PbOQCNkgXMfTXugW0EDWBA==",
   "signing_key_id": "k1"
 }
