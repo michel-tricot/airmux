@@ -13,7 +13,7 @@ import typer
 import yaml
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
-from dotenv import dotenv_values, find_dotenv, load_dotenv, set_key
+from dotenv import dotenv_values, find_dotenv, load_dotenv, set_key, unset_key
 from pydantic import BaseModel, Field
 
 from contract import (
@@ -31,6 +31,25 @@ from contract import (
 app = typer.Typer(name="airllm", no_args_is_help=True)
 
 
+DEFAULT_CONFIG_YML = """control_plane:
+  database_url: sqlite+aiosqlite:///airllm.db
+  admin_token: env:GW_ADMIN_TOKEN
+  dp_token: env:GW_DP_TOKEN
+  signing_key: env:GW_SIGNING_KEY
+  signing_key_id: k1
+  staleness_bound_hours: 24
+
+data_plane:
+  control_plane_url: {control_plane_url}
+  dp_token: env:GW_DP_TOKEN
+  bundle_public_key: env:GW_BUNDLE_PUBLIC_KEY
+  cache_dir: {cache_dir}
+  staleness_policy: serve_and_warn # or refuse
+  poll_interval_s: 5
+  flush_interval_s: 5
+"""
+
+
 def _admin_client(control_plane_url: str) -> httpx.Client:
     load_dotenv(find_dotenv(usecwd=True))
     admin_token = os.environ.get("GW_ADMIN_TOKEN")
@@ -40,27 +59,47 @@ def _admin_client(control_plane_url: str) -> httpx.Client:
     return httpx.Client(base_url=control_plane_url, headers={"authorization": f"Bearer {admin_token}"}, timeout=10.0)
 
 
+def _control_plane_url(override: str) -> str:
+    if override:
+        return override
+    if os.environ.get("GW_CONTROL_PLANE_URL"):
+        return os.environ["GW_CONTROL_PLANE_URL"]
+    config_path = Path(os.environ.get("GW_CONFIG", "airllm.yml"))
+    if config_path.exists():
+        doc = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
+        url = (doc.get("data_plane") or {}).get("control_plane_url")
+        if url:
+            return str(url)
+    return "http://127.0.0.1:8000"
+
+
 @app.command()
 def init(control_plane_url: str = "http://127.0.0.1:8000", cache_dir: str = ".airllm") -> None:
-    """Write the shared secrets and wiring for both planes into .env, reusing existing values."""
-    cache = Path(cache_dir).resolve()
+    """Write secrets to .env and the shared airllm.yml config, reusing existing values."""
+    cache = Path(cache_dir)
     cache.mkdir(parents=True, exist_ok=True)
     private_key = _load_or_create_key(cache / "signing.key")
     env_path = Path(".env")
     env_path.touch(exist_ok=True)
     existing = dotenv_values(env_path)
     values = {
-        "GW_CONTROL_PLANE_URL": control_plane_url,
-        "GW_CACHE_DIR": str(cache),
         "GW_SIGNING_KEY": private_key_to_b64(private_key),
         "GW_BUNDLE_PUBLIC_KEY": public_key_to_b64(private_key.public_key()),
         "GW_ADMIN_TOKEN": existing.get("GW_ADMIN_TOKEN") or secrets.token_urlsafe(24),
         "GW_DP_TOKEN": existing.get("GW_DP_TOKEN") or secrets.token_urlsafe(24),
-        "GW_POLL_INTERVAL_S": existing.get("GW_POLL_INTERVAL_S") or "5",
     }
     for k, v in values.items():
         set_key(env_path, k, v)
-    typer.echo(f"wrote {env_path.resolve()}")
+    for stale in ("GW_CONTROL_PLANE_URL", "GW_CACHE_DIR", "GW_POLL_INTERVAL_S"):
+        if stale in existing:
+            unset_key(env_path, stale)
+    typer.echo(f"wrote secrets to {env_path.resolve()}")
+    config_path = Path(os.environ.get("GW_CONFIG", "airllm.yml"))
+    if config_path.exists():
+        typer.echo(f"kept existing {config_path}")
+    else:
+        config_path.write_text(DEFAULT_CONFIG_YML.format(control_plane_url=control_plane_url, cache_dir=cache), encoding="utf-8")
+        typer.echo(f"wrote {config_path}")
     typer.echo("next:   uv run control-plane serve --dev")
     typer.echo("        uv run airllm bootstrap")
     typer.echo("        uv run data-plane --dev")
@@ -111,7 +150,7 @@ def bootstrap(file: str = "bootstrap.yml", control_plane_url: str = "") -> None:
         raise typer.Exit(1)
     spec = BootstrapSpec.model_validate(yaml.safe_load(path.read_text(encoding="utf-8")))
     load_dotenv(find_dotenv(usecwd=True))
-    cp_url = control_plane_url or os.environ.get("GW_CONTROL_PLANE_URL", "http://127.0.0.1:8000")
+    cp_url = _control_plane_url(control_plane_url)
     with _admin_client(cp_url) as c:
         _post_expecting(c, "/admin/orgs", {"id": spec.org}, ok=(200, 409))
         for provider in spec.providers:
@@ -218,7 +257,7 @@ def seed(  # noqa: PLR0913, PLR0917 CLI options are a flat namespace by design
 def compile_bundle(org: str = "org-dev", control_plane_url: str = "") -> None:
     """Recompile and sign the bundle for an org through the control plane."""
     load_dotenv(find_dotenv(usecwd=True))
-    cp_url = control_plane_url or os.environ.get("GW_CONTROL_PLANE_URL", "http://127.0.0.1:8000")
+    cp_url = _control_plane_url(control_plane_url)
     with _admin_client(cp_url) as c:
         resp = c.post("/admin/bundles/compile", json={"org_id": org})
         resp.raise_for_status()

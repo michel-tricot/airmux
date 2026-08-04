@@ -12,6 +12,7 @@ dependencies = [
   "uvicorn[standard]",
   "typer",
   "python-dotenv",
+  "pyyaml",
 ]
 
 [project.scripts]

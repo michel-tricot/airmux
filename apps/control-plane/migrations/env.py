@@ -1,21 +1,15 @@
 from __future__ import annotations
 
 import asyncio
-import os
 
 from alembic import context
-from dotenv import find_dotenv, load_dotenv
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlmodel import SQLModel
 
 import control_plane.models  # noqa: F401  models must be imported for autogenerate
+from control_plane.config import database_url
 
 target_metadata = SQLModel.metadata
-
-
-def database_url() -> str:
-    load_dotenv(find_dotenv(usecwd=True))
-    return os.environ.get("GW_DATABASE_URL", "sqlite+aiosqlite:///airllm.db")
 
 
 def run_migrations_offline() -> None:

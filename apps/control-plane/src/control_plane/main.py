@@ -11,7 +11,8 @@ app = typer.Typer(name="control-plane", no_args_is_help=True)
 
 
 @app.command()
-def serve(host: str = "127.0.0.1", port: int = 8000, dev: bool = False) -> None:
+def serve(host: str = "127.0.0.1", port: int = 8000, dev: bool = False, config: str = "airllm.yml") -> None:
+    os.environ["GW_CONFIG"] = config
     if dev:
         os.environ["GW_DEV"] = "1"
         run_migrations()
@@ -19,5 +20,6 @@ def serve(host: str = "127.0.0.1", port: int = 8000, dev: bool = False) -> None:
 
 
 @app.command()
-def migrate() -> None:
+def migrate(config: str = "airllm.yml") -> None:
+    os.environ["GW_CONFIG"] = config
     run_migrations()

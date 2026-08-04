@@ -1,0 +1,20 @@
+# Shared gateway config. Secrets are env: references resolved from the
+# environment (including .env); never put a raw secret in this file.
+# Precedence for every setting: explicit env var > this file > built-in default.
+
+control_plane:
+  database_url: sqlite+aiosqlite:///airllm.db
+  admin_token: env:GW_ADMIN_TOKEN
+  dp_token: env:GW_DP_TOKEN
+  signing_key: env:GW_SIGNING_KEY
+  signing_key_id: k1
+  staleness_bound_hours: 24
+
+data_plane:
+  control_plane_url: http://127.0.0.1:8000
+  dp_token: env:GW_DP_TOKEN
+  bundle_public_key: env:GW_BUNDLE_PUBLIC_KEY
+  cache_dir: .airllm
+  staleness_policy: serve_and_warn # or refuse
+  poll_interval_s: 5
+  flush_interval_s: 5
