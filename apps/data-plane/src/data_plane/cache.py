@@ -18,5 +18,5 @@ def read_cached_bundle(cache_dir: Path) -> SignedBundle | None:
 def write_cached_bundle(cache_dir: Path, signed: SignedBundle) -> None:
     path = cache_dir / "bundle.json"
     tmp = cache_dir / "bundle.json.tmp"
-    tmp.write_text(signed.model_dump_json(), encoding="utf-8")
+    tmp.write_text(signed.model_dump_json(indent=2), encoding="utf-8")
     tmp.replace(path)

@@ -70,7 +70,7 @@ def seed(  # noqa: PLR0913, PLR0917 CLI options are a flat namespace by design
         ),
     )
     signed = sign_bundle(bundle, private_key, "k1")
-    (cache / "bundle.json").write_text(signed.model_dump_json(), encoding="utf-8")
+    (cache / "bundle.json").write_text(signed.model_dump_json(indent=2), encoding="utf-8")
     public_b64 = base64.b64encode(
         private_key.public_key().public_bytes(
             encoding=serialization.Encoding.Raw,
