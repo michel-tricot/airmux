@@ -21,6 +21,7 @@ if TYPE_CHECKING:
 class OpenAIStreamState(StreamState):
     ctx: Ctx | None = None
     response_id: str | None = None
+    reasoning: list[str] = field(default_factory=list)
     text: list[str] = field(default_factory=list)
     tool_calls: dict[int, dict[str, Any]] = field(default_factory=dict)
     finish_reason: str | None = None
@@ -53,13 +54,14 @@ class OpenAICompatibleAdapter(ProviderAdapter):
         data = json.loads(raw)
         choice = data["choices"][0]
         message = choice["message"]
+        reasoning_content = [{"type": "reasoning", "text": message["reasoning_content"]}] if message.get("reasoning_content") else []
         text_content = [{"type": "text", "text": message["content"]}] if message.get("content") is not None else []
         tool_content = [{"type": "tool_call", "id": tc.get("id"), "function": tc.get("function") or {}} for tc in message.get("tool_calls") or []]
         usage = data.get("usage") or {}
         return CanonicalResponse(
             id=data.get("id", ctx.request_id),
             model=ctx.model.model_id,
-            content=[*text_content, *tool_content],
+            content=[*reasoning_content, *text_content, *tool_content],
             finish_reason=choice.get("finish_reason"),
             usage=Usage(
                 input_tokens=usage.get("prompt_tokens", 0),
@@ -100,6 +102,10 @@ class OpenAICompatibleAdapter(ProviderAdapter):
             finish = choice.get("finish_reason")
             if finish:
                 state.finish_reason = finish
+            reasoning = delta.get("reasoning_content")
+            if reasoning:
+                state.reasoning.append(reasoning)
+                chunks.append(CanonicalChunk(id=chunk_id, delta={"type": "reasoning", "text": reasoning}, finish_reason=finish))
             content = delta.get("content")
             if content:
                 state.text.append(content)
@@ -117,7 +123,7 @@ class OpenAICompatibleAdapter(ProviderAdapter):
                 chunks.append(
                     CanonicalChunk(id=chunk_id, delta={"type": "tool_call", "index": index, "id": tc.get("id"), "function": fn}, finish_reason=finish)
                 )
-            if finish and not content and not delta.get("tool_calls"):
+            if finish and not content and not reasoning and not delta.get("tool_calls"):
                 chunks.append(CanonicalChunk(id=chunk_id, delta={}, finish_reason=finish))
         return chunks
 
@@ -128,6 +134,8 @@ class OpenAICompatibleAdapter(ProviderAdapter):
         cancellation handler for partial accounting after a client disconnect.
         """
         assert isinstance(state, OpenAIStreamState)  # noqa: S101 state comes from new_stream_state
+        reasoning = "".join(state.reasoning)
+        reasoning_content = [{"type": "reasoning", "text": reasoning}] if reasoning else []
         text = "".join(state.text)
         text_content = [{"type": "text", "text": text}] if text else []
         tool_content = [{"type": "tool_call", **state.tool_calls[index]} for index in sorted(state.tool_calls)]
@@ -135,7 +143,7 @@ class OpenAICompatibleAdapter(ProviderAdapter):
         return CanonicalResponse(
             id=state.response_id or (state.ctx.request_id if state.ctx else ""),
             model=state.ctx.model.model_id if state.ctx else "",
-            content=[*text_content, *tool_content],
+            content=[*reasoning_content, *text_content, *tool_content],
             finish_reason=state.finish_reason,
             usage=Usage(
                 input_tokens=usage.get("prompt_tokens", 0),

@@ -141,3 +141,39 @@ def test_tool_call_fragments_concatenate():
     (tool,) = response.content
     assert tool["function"]["name"] == "get_weather"
     assert json.loads(tool["function"]["arguments"]) == {"city": "Paris"}
+
+
+REASONING_EVENTS = [
+    delta_event({"role": "assistant"}),
+    delta_event({"reasoning_content": "The user wants "}),
+    delta_event({"reasoning_content": "a sum: 2+2=4."}),
+    delta_event({"content": "The answer "}),
+    delta_event({"content": "is 4."}),
+    delta_event({}, finish="stop"),
+    {"id": "chatcmpl-9", "model": "gpt-real", "choices": [], "usage": USAGE},
+]
+REASONING_LOG = b"".join(sse(e) for e in REASONING_EVENTS) + b"data: [DONE]\n\n"
+
+REASONING_NONSTREAM = {
+    "id": "chatcmpl-9",
+    "model": "gpt-real",
+    "choices": [
+        {
+            "index": 0,
+            "message": {"role": "assistant", "reasoning_content": "The user wants a sum: 2+2=4.", "content": "The answer is 4."},
+            "finish_reason": "stop",
+        }
+    ],
+    "usage": USAGE,
+}
+
+
+@pytest.mark.parametrize("chunk_size", [1, 7, len(REASONING_LOG)])
+def test_reasoning_streams_and_agrees(chunk_size):
+    chunks, response = fold(REASONING_LOG, chunk_size)
+    reasoning = "".join(c.delta["text"] for c in chunks if c.delta.get("type") == "reasoning")
+    assert reasoning == "The user wants a sum: 2+2=4."
+    assert response.content[0] == {"type": "reasoning", "text": "The user wants a sum: 2+2=4."}
+    assert response.content[1] == {"type": "text", "text": "The answer is 4."}
+    direct = make_adapter().transform_response(json.dumps(REASONING_NONSTREAM).encode(), CTX)
+    assert response == direct
