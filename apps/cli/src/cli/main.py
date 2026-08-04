@@ -298,6 +298,14 @@ def orgs_list(control_plane_url: str = "") -> None:
     _print_table("orgs", _admin_get("/admin/orgs", control_plane_url), ORG_COLS)
 
 
+@orgs_app.command("create")
+def orgs_create(org_id: str, name: str = "", control_plane_url: str = "") -> None:
+    """Create an org; keys, providers and models hang off it."""
+    with _admin_client(_control_plane_url(control_plane_url)) as c:
+        _post_expecting(c, "/admin/orgs", {"id": org_id, "name": name}, ok=(200,))
+    console.print(f"org [bold]{org_id}[/bold] created")
+
+
 @keys_app.command("list")
 def keys_list(org: str | None = None, control_plane_url: str = "") -> None:
     _print_table("keys", _admin_get("/admin/keys", control_plane_url, org), KEY_COLS)
