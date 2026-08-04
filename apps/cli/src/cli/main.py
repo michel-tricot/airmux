@@ -290,11 +290,15 @@ def bundles_compile(org: str = "org-dev", control_plane_url: str = "") -> None:
     console.print(f"bundle [bold]{compiled['bundle_id']}[/bold] v{compiled['version']} compiled")
 
 
-@app.command(rich_help_panel=TESTING)
+test_app = typer.Typer(help="Acceptance and load testing", no_args_is_help=True)
+app.add_typer(test_app, name="test", rich_help_panel=TESTING)
+
+
+@test_app.command()
 def verify() -> None:
     raise NotImplementedError
 
 
-@app.command(rich_help_panel=TESTING)
+@test_app.command()
 def loadgen() -> None:
     raise NotImplementedError
