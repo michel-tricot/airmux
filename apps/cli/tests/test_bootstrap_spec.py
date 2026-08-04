@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import yaml
 
-from cli.main import BootstrapSpec
+from cli.specs import BootstrapSpec
 
 
 def test_minimal_spec_gets_defaults():
