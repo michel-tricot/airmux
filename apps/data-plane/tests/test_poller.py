@@ -9,7 +9,7 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from contract import BundleV1, Catalog, KeyEntry, sign_bundle
 from data_plane.cache import read_cached_bundle
-from data_plane.config import BundleConfig, Config, ControlPlaneLink
+from data_plane.config import AuthConfig, BundleConfig, Config, ControlPlaneLink
 from data_plane.holder import BundleHolder
 from data_plane.poller import poll_once
 
@@ -33,6 +33,7 @@ def make_config(tmp_path):
     return Config(
         control_plane=ControlPlaneLink(url="http://cp.test", token="dp-token"),  # noqa: S106 test fixture, not a secret
         bundle=BundleConfig(public_key="unused-here", cache_dir=tmp_path),
+        auth=AuthConfig(token_public_key="unused-here"),  # noqa: S106 a public key, not a secret
     )
 
 

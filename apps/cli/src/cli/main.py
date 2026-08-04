@@ -24,20 +24,22 @@ DEFAULT_CONFIG_YML = """control_plane:
   auth:
     admin_token: env:GW_ADMIN_TOKEN
     dp_token: env:GW_DP_TOKEN
-  signing:
-    private_key: env:GW_SIGNING_KEY
+    token_signing_key: env:GW_TOKEN_SIGNING_KEY
   bundle:
+    signing_key: env:GW_BUNDLE_SIGNING_KEY
     staleness_bound_hours: 24
 
 data_plane:
   control_plane:
     url: {control_plane_url}
     token: env:GW_DP_TOKEN
-    poll_interval_s: 5
   bundle:
     public_key: env:GW_BUNDLE_PUBLIC_KEY
     cache_dir: {cache_dir}
     staleness_policy: serve_and_warn # or refuse
+    poll_interval_s: 5
+  auth:
+    token_public_key: env:GW_TOKEN_PUBLIC_KEY
   events:
     flush_interval_s: 5
 """
@@ -71,19 +73,25 @@ def init(control_plane_url: str = "http://127.0.0.1:8000", cache_dir: str = ".ai
     """Write secrets to .env and the shared airllm.yml config, reusing existing values."""
     cache = Path(cache_dir)
     cache.mkdir(parents=True, exist_ok=True)
-    private_key = _load_or_create_key(cache / "signing.key")
+    legacy = cache / "signing.key"
+    if legacy.exists() and not (cache / "bundle-signing.key").exists():
+        legacy.rename(cache / "bundle-signing.key")
+    bundle_key = _load_or_create_key(cache / "bundle-signing.key")
+    token_key = _load_or_create_key(cache / "token-signing.key")
     env_path = Path(".env")
     env_path.touch(exist_ok=True)
     existing = dotenv_values(env_path)
     values = {
-        "GW_SIGNING_KEY": private_key_to_b64(private_key),
-        "GW_BUNDLE_PUBLIC_KEY": public_key_to_b64(private_key.public_key()),
+        "GW_BUNDLE_SIGNING_KEY": private_key_to_b64(bundle_key),
+        "GW_BUNDLE_PUBLIC_KEY": public_key_to_b64(bundle_key.public_key()),
+        "GW_TOKEN_SIGNING_KEY": private_key_to_b64(token_key),
+        "GW_TOKEN_PUBLIC_KEY": public_key_to_b64(token_key.public_key()),
         "GW_ADMIN_TOKEN": existing.get("GW_ADMIN_TOKEN") or secrets.token_urlsafe(24),
         "GW_DP_TOKEN": existing.get("GW_DP_TOKEN") or secrets.token_urlsafe(24),
     }
     for k, v in values.items():
         set_key(env_path, k, v)
-    for stale in ("GW_CONTROL_PLANE_URL", "GW_CACHE_DIR", "GW_POLL_INTERVAL_S"):
+    for stale in ("GW_CONTROL_PLANE_URL", "GW_CACHE_DIR", "GW_POLL_INTERVAL_S", "GW_SIGNING_KEY"):
         if stale in existing:
             unset_key(env_path, stale)
     typer.echo(f"wrote secrets to {env_path.resolve()}")

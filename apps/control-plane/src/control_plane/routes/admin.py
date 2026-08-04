@@ -79,7 +79,7 @@ async def create_key(body: KeyIn, session: SessionDep, request: Request) -> dict
     session.add(ApiKey(id=key_id, org_id=body.org_id, allowed_models=body.allowed_models, disabled=False, created_at=now))
     await session.commit()
     settings = request.app.state.settings
-    token = mint_api_token(key_id, body.org_id, private_key_from_b64(settings.signing.private_key), now)
+    token = mint_api_token(key_id, body.org_id, private_key_from_b64(settings.auth.token_signing_key), now)
     return {"key_id": key_id, "token": token}
 
 
@@ -136,7 +136,7 @@ async def compile_endpoint(body: CompileIn, session: SessionDep, request: Reques
         bundle = await compile_bundle(session, body.org_id, bundle_id, now, settings.bundle.staleness_bound)
     except UnknownOrgError as e:
         raise HTTPException(status_code=404) from e
-    signed = sign_bundle(bundle, private_key_from_b64(settings.signing.private_key), SIGNING_KEY_ID)
+    signed = sign_bundle(bundle, private_key_from_b64(settings.bundle.signing_key), SIGNING_KEY_ID)
     version = (await session.execute(select(func.max(Bundle.version)).where(Bundle.org_id == body.org_id))).scalar() or 0
     session.add(
         Bundle(

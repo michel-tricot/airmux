@@ -44,4 +44,4 @@ async def run_poller(config: Config, holder: BundleHolder, public_key: Ed25519Pu
             await poll_once(config, holder, public_key)
         except (httpx.HTTPError, ValidationError, InvalidSignature, OSError):
             logger.exception("bundle poll failed, keeping current bundle")
-        await asyncio.sleep(config.control_plane.poll_interval_s)
+        await asyncio.sleep(config.bundle.poll_interval_s)

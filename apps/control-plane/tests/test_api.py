@@ -33,27 +33,30 @@ def _create_tables(url: str) -> None:
     asyncio.run(create())
 
 
-def setup_control_plane(tmp_path, monkeypatch) -> Ed25519PrivateKey:
+def setup_control_plane(tmp_path, monkeypatch) -> tuple[Ed25519PrivateKey, Ed25519PrivateKey]:
     url = f"sqlite+aiosqlite:///{tmp_path}/cp.db"
-    signing_key = Ed25519PrivateKey.generate()
+    bundle_key = Ed25519PrivateKey.generate()
+    token_key = Ed25519PrivateKey.generate()
     config = (
         "control_plane:\n"
         f"  database:\n    url: {url}\n"
-        "  auth:\n    admin_token: test-admin\n    dp_token: test-dp\n"
-        f'  signing:\n    private_key: "{private_key_to_b64(signing_key)}"\n'
+        f'  auth:\n    admin_token: test-admin\n    dp_token: test-dp\n    token_signing_key: "{private_key_to_b64(token_key)}"\n'
+        f'  bundle:\n    signing_key: "{private_key_to_b64(bundle_key)}"\n'
     )
     (tmp_path / "airllm.yml").write_text(config, encoding="utf-8")
     monkeypatch.setenv("GW_CONFIG", str(tmp_path / "airllm.yml"))
     _create_tables(url)
-    return signing_key
+    return bundle_key, token_key
 
 
 def test_full_admin_flow_to_verified_bundle(tmp_path, monkeypatch):
-    signing_key = setup_control_plane(tmp_path, monkeypatch)
+    bundle_key, token_key = setup_control_plane(tmp_path, monkeypatch)
+    signing_key = bundle_key
     with TestClient(app) as c:
         assert c.post("/admin/orgs", json={"id": "o1"}, headers=ADMIN).status_code == 200
         key = c.post("/admin/keys", json={"org_id": "o1"}, headers=ADMIN).json()
-        assert verify_api_token(key["token"], signing_key.public_key()).key_id == key["key_id"]
+        assert verify_api_token(key["token"], token_key.public_key()).key_id == key["key_id"]
+        assert verify_api_token(key["token"], bundle_key.public_key()) is None
         assert c.post("/admin/providers", json=PROVIDER, headers=ADMIN).status_code == 200
         assert c.post("/admin/models", json=MODEL, headers=ADMIN).status_code == 200
         compiled = c.post("/admin/bundles/compile", json={"org_id": "o1"}, headers=ADMIN).json()
@@ -69,7 +72,7 @@ def test_full_admin_flow_to_verified_bundle(tmp_path, monkeypatch):
 
 
 def test_revocation_lands_in_next_bundle(tmp_path, monkeypatch):
-    signing_key = setup_control_plane(tmp_path, monkeypatch)
+    signing_key, _ = setup_control_plane(tmp_path, monkeypatch)
     with TestClient(app) as c:
         c.post("/admin/orgs", json={"id": "o1"}, headers=ADMIN)
         key = c.post("/admin/keys", json={"org_id": "o1"}, headers=ADMIN).json()

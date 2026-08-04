@@ -28,6 +28,7 @@ OPENAI_RESPONSE = {
 @pytest.fixture
 def token(tmp_path, monkeypatch):
     private_key = Ed25519PrivateKey.generate()
+    token_key = Ed25519PrivateKey.generate()
     bundle = BundleV1(
         bundle_id=uuid4(),
         org_id="org-dev",
@@ -60,9 +61,13 @@ def token(tmp_path, monkeypatch):
     ).decode("ascii")
     monkeypatch.chdir(tmp_path)
     monkeypatch.delenv("GW_CONFIG", raising=False)
-    (tmp_path / "airllm.yml").write_text(f'data_plane:\n  bundle:\n    public_key: "{public_b64}"\n    cache_dir: {tmp_path}\n', encoding="utf-8")
+    token_pub_b64 = base64.b64encode(
+        token_key.public_key().public_bytes(encoding=serialization.Encoding.Raw, format=serialization.PublicFormat.Raw)
+    ).decode("ascii")
+    config = f'data_plane:\n  bundle:\n    public_key: "{public_b64}"\n    cache_dir: {tmp_path}\n  auth:\n    token_public_key: "{token_pub_b64}"\n'
+    (tmp_path / "airllm.yml").write_text(config, encoding="utf-8")
     monkeypatch.setenv("OPENAI_API_KEY", "sk-test-not-real")
-    return mint_api_token("k-dev", "org-dev", private_key, NOW)
+    return mint_api_token("k-dev", "org-dev", token_key, NOW)
 
 
 @respx.mock

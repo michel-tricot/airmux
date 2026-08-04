@@ -21,17 +21,13 @@ class AuthConfig(BaseModel):
 
     admin_token: str
     dp_token: str
-
-
-class SigningConfig(BaseModel):
-    model_config = ConfigDict(frozen=True)
-
-    private_key: str  # base64 raw Ed25519, signs bundles and API tokens
+    token_signing_key: str  # base64 raw Ed25519, mints caller API tokens; rotates independently of the bundle key
 
 
 class BundlePolicy(BaseModel):
     model_config = ConfigDict(frozen=True)
 
+    signing_key: str  # base64 raw Ed25519, signs bundles
     staleness_bound_hours: float = 24.0
 
     @property
@@ -44,8 +40,7 @@ class Settings(BaseModel):
 
     database: DatabaseConfig = Field(default_factory=DatabaseConfig)
     auth: AuthConfig
-    signing: SigningConfig
-    bundle: BundlePolicy = Field(default_factory=BundlePolicy)
+    bundle: BundlePolicy
     dev: bool = False  # set by the --dev flag on the entry point, gate dev-only behavior on this
 
 

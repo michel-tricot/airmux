@@ -40,7 +40,8 @@ holder = BundleHolder()
 @dataclass
 class AppState:
     config: Config | None = None
-    public_key: Ed25519PublicKey | None = None
+    bundle_public_key: Ed25519PublicKey | None = None
+    token_public_key: Ed25519PublicKey | None = None
 
 
 state = AppState()
@@ -66,13 +67,13 @@ async def chat_completions(request: Request) -> Response:
 
 async def _handle(request: Request) -> Response:
     bundle = holder.current
-    if bundle is None or state.public_key is None:
+    if bundle is None or state.token_public_key is None:
         raise RequestRejectedError(503, "bundle_unavailable")
 
     auth_header = request.headers.get("authorization", "")
     if not auth_header.startswith("Bearer "):
         raise RequestRejectedError(401, "missing_bearer_token")
-    key = authenticate(auth_header.removeprefix("Bearer "), state.public_key, holder.key_index, holder.revocations)
+    key = authenticate(auth_header.removeprefix("Bearer "), state.token_public_key, holder.key_index, holder.revocations)
     if key is None:
         raise RequestRejectedError(401, "invalid_token")
 
@@ -138,9 +139,10 @@ def _load_cached_bundle(config: Config, public_key: Ed25519PublicKey) -> None:
 async def lifespan(_app: Starlette) -> AsyncIterator[None]:
     config = load_config()
     state.config = config
-    state.public_key = public_key_from_b64(config.bundle.public_key)
-    _load_cached_bundle(config, state.public_key)
-    poller_task = asyncio.create_task(run_poller(config, holder, state.public_key)) if config.control_plane.url else None
+    state.bundle_public_key = public_key_from_b64(config.bundle.public_key)
+    state.token_public_key = public_key_from_b64(config.auth.token_public_key)
+    _load_cached_bundle(config, state.bundle_public_key)
+    poller_task = asyncio.create_task(run_poller(config, holder, state.bundle_public_key)) if config.control_plane.url else None
     try:
         yield
     finally:

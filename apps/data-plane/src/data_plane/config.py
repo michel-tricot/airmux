@@ -14,7 +14,6 @@ class ControlPlaneLink(BaseModel):
 
     url: str | None = None  # None means file-only mode, no polling
     token: str | None = None
-    poll_interval_s: float = 30.0
 
 
 class BundleConfig(BaseModel):
@@ -23,6 +22,13 @@ class BundleConfig(BaseModel):
     public_key: str
     cache_dir: Path = Path("/var/cache/gateway")
     staleness_policy: Literal["serve_and_warn", "refuse"] = "serve_and_warn"
+    poll_interval_s: float = 30.0
+
+
+class AuthConfig(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    token_public_key: str  # verifies caller API tokens; distinct from the bundle key
 
 
 class EventsConfig(BaseModel):
@@ -36,6 +42,7 @@ class Config(BaseModel):
 
     control_plane: ControlPlaneLink = Field(default_factory=ControlPlaneLink)
     bundle: BundleConfig
+    auth: AuthConfig
     events: EventsConfig = Field(default_factory=EventsConfig)
     dev: bool = False  # set by the --dev flag on the entry point, gate dev-only behavior on this
 

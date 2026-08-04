@@ -1,13 +1,37 @@
 {
   "payload": {
     "schema_version": 1,
-    "bundle_id": "8d2271fd-975c-45d4-9d37-bd022ee09a09",
+    "bundle_id": "6d68afcd-7a0c-40ba-93a4-5500e1207ffe",
     "org_id": "org-dev",
-    "issued_at": "2026-08-04T01:55:05.902778Z",
-    "expires_at": "2026-08-05T01:55:05.902778Z",
+    "issued_at": "2026-08-04T02:26:12.246467Z",
+    "expires_at": "2026-08-05T02:26:12.246467Z",
     "keys": [
       {
+        "key_id": "k-152fdc17",
+        "org_id": "org-dev",
+        "allowed_models": [
+          "*"
+        ],
+        "disabled": false
+      },
+      {
         "key_id": "k-42b221a0",
+        "org_id": "org-dev",
+        "allowed_models": [
+          "*"
+        ],
+        "disabled": false
+      },
+      {
+        "key_id": "k-c1c1451a",
+        "org_id": "org-dev",
+        "allowed_models": [
+          "*"
+        ],
+        "disabled": false
+      },
+      {
+        "key_id": "k-e3613db3",
         "org_id": "org-dev",
         "allowed_models": [
           "*"
@@ -51,6 +75,6 @@
       ]
     }
   },
-  "signature": "/B00yKcC/5LdC7c9xyak1VjTNAFS372JZEv1hgrG9uCgsV6NmcxSLphDQvMZ705ovU1VDQnBFvxfFgQWRo5sCQ==",
+  "signature": "I0QlGdkD94I2dkSgyy0XUhtn534DE1aUDp4fdqa3uvCR1frMAR2nVDJNrKq0j0lQT3zDpxpCl3aQ+UQ1lECQDw==",
   "signing_key_id": "k1"
 }
