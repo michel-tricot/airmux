@@ -22,7 +22,7 @@ from starlette.routing import Route
 from contract import UsageEventV1, public_key_from_b64, verify_bundle
 from data_plane.adapters import REGISTRY, ProviderAdapter
 from data_plane.auth import authenticate, index_keys
-from data_plane.cache import read_cached_bundle
+from data_plane.cache import acquire_cache_lock, read_cached_bundle, release_cache_lock
 from data_plane.canonical import CanonicalRequest, CanonicalResponse, Ctx, UpstreamRequest, UpstreamStreamError, Usage
 from data_plane.config import Config, load_config
 from data_plane.events import buffer_event, run_flusher
@@ -286,6 +286,7 @@ async def lifespan(_app: Starlette) -> AsyncIterator[None]:
         logger.addHandler(handler)
         logger.setLevel(logging.INFO)
     state.config = config
+    acquire_cache_lock(config.bundle.cache_dir)
     state.bundle_public_key = public_key_from_b64(config.bundle.public_key)
     state.token_public_key = public_key_from_b64(config.auth.token_public_key)
     _load_cached_bundle(config, state.bundle_public_key)
@@ -301,6 +302,7 @@ async def lifespan(_app: Starlette) -> AsyncIterator[None]:
             task.cancel()
             with contextlib.suppress(asyncio.CancelledError):
                 await task
+        release_cache_lock(config.bundle.cache_dir)
 
 
 app = Starlette(

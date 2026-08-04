@@ -68,3 +68,27 @@ async def test_failed_flush_keeps_the_buffer(tmp_path):
     with pytest.raises(httpx.HTTPStatusError):
         await flush_once(config)
     assert len(read_buffered_events(tmp_path)) == 1
+
+
+@respx.mock
+async def test_torn_final_line_is_dropped_and_flush_proceeds(tmp_path):
+    respx.post("http://cp.test/v1/events").mock(return_value=httpx.Response(200, json={}))
+    config = make_config(tmp_path)
+    buffer_event(tmp_path, make_event("r1"))
+    with (tmp_path / "events.jsonl").open("a", encoding="utf-8") as f:
+        f.write('{"event_id": "torn-mid-wr')
+    assert await flush_once(config) == 1
+    assert read_buffered_events(tmp_path) == []
+
+
+@respx.mock
+async def test_corrupt_middle_line_quarantines_buffer(tmp_path):
+    respx.post("http://cp.test/v1/events").mock(return_value=httpx.Response(200, json={}))
+    config = make_config(tmp_path)
+    buffer_event(tmp_path, make_event("r1"))
+    with (tmp_path / "events.jsonl").open("a", encoding="utf-8") as f:
+        f.write("garbage\n")
+    buffer_event(tmp_path, make_event("r2"))
+    assert await flush_once(config) == 0
+    assert (tmp_path / "events.jsonl.corrupt").exists()
+    assert not (tmp_path / "events.jsonl").exists()
