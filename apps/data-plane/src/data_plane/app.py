@@ -23,10 +23,10 @@ from contract import public_key_from_b64, verify_bundle
 from data_plane.adapters import REGISTRY, ProviderAdapter
 from data_plane.auth import authenticate, index_keys
 from data_plane.cache import read_cached_bundle
-from data_plane.canonical import CanonicalRequest, CanonicalResponse, Ctx, UpstreamRequest, UpstreamStreamError
+from data_plane.canonical import CanonicalRequest, CanonicalResponse, Ctx, UpstreamRequest, UpstreamStreamError, Usage
 from data_plane.config import Config, load_config
 from data_plane.holder import BundleHolder
-from data_plane.metering import cost_usd
+from data_plane.metering import cost_usd, estimate_tokens
 from data_plane.policy import Deny, evaluate
 from data_plane.poller import run_poller
 from data_plane.transport import client
@@ -95,25 +95,54 @@ async def _handle(request: Request) -> Response:
     adapter = REGISTRY[decision.provider.kind](decision.provider)
     ctx = Ctx(request_id=uuid4().hex, model=decision.model, provider=decision.provider, stream=req.stream)
     upstream = adapter.transform_request(req, decision.model)
+    prompt = _prompt_text(req)
     if req.stream:
-        return await _stream(adapter, ctx, upstream)
+        return await _stream(adapter, ctx, upstream, prompt)
     try:
         resp = await client.request(upstream.method, upstream.url, headers=upstream.headers, content=upstream.body)
     except httpx.HTTPError as e:
         err = adapter.map_error(e)
+        _record_usage(ctx, _empty_response(ctx), status="upstream_error", prompt=prompt)
         return JSONResponse({"error": {"code": err.code, "message": err.message}}, status_code=err.status)
     if resp.is_error:
+        _record_usage(ctx, _empty_response(ctx), status="upstream_error", prompt=prompt)
         return Response(resp.content, status_code=resp.status_code, media_type="application/json")
     final = adapter.transform_response(resp.content, ctx)
-    _record_usage(ctx, final, status="ok")
+    _record_usage(ctx, final, status="ok", prompt=prompt)
     return JSONResponse(final.model_dump())
+
+
+def _empty_response(ctx: Ctx) -> CanonicalResponse:
+    return CanonicalResponse(id=ctx.request_id, model=ctx.model.model_id, content=[], finish_reason=None, usage=Usage(estimated=True))
 
 
 STATUS_STYLE = {"ok": "green", "cancelled": "yellow", "upstream_error": "red", "denied": "red", "timeout": "red"}
 
 
-def _record_usage(ctx: Ctx, final: CanonicalResponse, status: str) -> None:
+def _prompt_text(req: CanonicalRequest) -> str:
+    parts: list[str] = []
+    for message in req.messages:
+        content = message.get("content")
+        if isinstance(content, str):
+            parts.append(content)
+        elif isinstance(content, list):
+            parts.extend(str(p.get("text", "")) for p in content if isinstance(p, dict))
+    return "\n".join(parts)
+
+
+def _record_usage(ctx: Ctx, final: CanonicalResponse, status: str, prompt: str = "") -> None:
     """The single metering point; M5 turns this record into a buffered UsageEventV1."""
+    if final.usage.estimated:
+        output_text = "".join(str(part.get("text", "")) for part in final.content if part.get("type") == "text")
+        final = final.model_copy(
+            update={
+                "usage": Usage(
+                    input_tokens=estimate_tokens(prompt, ctx.model),
+                    output_tokens=estimate_tokens(output_text, ctx.model),
+                    estimated=True,
+                )
+            }
+        )
     cost = cost_usd(final.usage, ctx.model)
     latency_ms = int((time.monotonic() - ctx.started_at) * 1000)
     logger.info(
@@ -142,7 +171,7 @@ def _sse(payload: dict) -> bytes:
     return b"data: " + json.dumps(payload, ensure_ascii=False).encode() + b"\n\n"
 
 
-async def _stream(adapter: ProviderAdapter, ctx: Ctx, upstream: UpstreamRequest) -> Response:
+async def _stream(adapter: ProviderAdapter, ctx: Ctx, upstream: UpstreamRequest, prompt: str = "") -> Response:
     stream_cm = client.stream(upstream.method, upstream.url, headers=upstream.headers, content=upstream.body)
     try:
         resp = await stream_cm.__aenter__()
@@ -152,6 +181,7 @@ async def _stream(adapter: ProviderAdapter, ctx: Ctx, upstream: UpstreamRequest)
     if resp.is_error:
         body = await resp.aread()
         await stream_cm.__aexit__(None, None, None)
+        _record_usage(ctx, _empty_response(ctx), status="upstream_error", prompt=prompt)
         return Response(body, status_code=resp.status_code, media_type="application/json")
     stream_state = adapter.new_stream_state(ctx)
 
@@ -164,13 +194,13 @@ async def _stream(adapter: ProviderAdapter, ctx: Ctx, upstream: UpstreamRequest)
             final = adapter.finalize(stream_state)
             yield _sse({"usage": final.usage.model_dump(), "finish_reason": final.finish_reason})
             yield b"data: [DONE]\n\n"
-            _record_usage(ctx, final, status="ok")
+            _record_usage(ctx, final, status="ok", prompt=prompt)
         except (UpstreamStreamError, httpx.HTTPError) as e:
             err = adapter.map_error(e)
             yield _sse({"error": {"code": err.code, "message": err.message}})
-            _record_usage(ctx, adapter.finalize(stream_state), status="upstream_error")
+            _record_usage(ctx, adapter.finalize(stream_state), status="upstream_error", prompt=prompt)
         except (asyncio.CancelledError, anyio.get_cancelled_exc_class()):
-            _record_usage(ctx, adapter.finalize(stream_state), status="cancelled")
+            _record_usage(ctx, adapter.finalize(stream_state), status="cancelled", prompt=prompt)
             raise
         finally:
             await stream_cm.__aexit__(None, None, None)

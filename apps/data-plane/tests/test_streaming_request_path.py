@@ -133,3 +133,19 @@ async def test_mid_stream_error_event_becomes_sse_error(caplog):
     chunks = [chunk async for chunk in _body_gen(await _stream(make_adapter(), CTX, UPSTREAM))]
     assert any(b'"code": "overloaded"' in c for c in chunks)
     assert any("status=upstream_error" in r.message for r in caplog.records)
+
+
+@respx.mock
+async def test_cancellation_estimates_partial_tokens(caplog):
+    caplog.set_level(logging.INFO, logger="data_plane")
+    respx.post("https://api.openai.com/v1/chat/completions").mock(return_value=httpx.Response(200, content=TEXT_LOG))
+    iterator = _body_gen(await _stream(make_adapter(), CTX, UPSTREAM, prompt="count to three"))
+    await anext(iterator)
+    await anext(iterator)
+    with pytest.raises(asyncio.CancelledError):
+        await iterator.athrow(asyncio.CancelledError())
+    (record,) = [r.message for r in caplog.records if "status=cancelled" in r.message]
+    assert "estimated=True" in record
+    assert "input_tokens=0" not in record
+    assert "output_tokens=0" not in record
+    assert "cost_usd=0.000000" not in record

@@ -123,33 +123,31 @@ async def revoke_key(key_id: str, session: SessionDep) -> KeyRevokedOut:
 
 @router.post("/providers")
 async def create_provider(body: ProviderIn, session: SessionDep) -> ProviderOut:
+    """Create or update: reapplying a bootstrap spec converges the catalog."""
     if await session.get(Org, body.org_id) is None:
         raise HTTPException(status_code=404)
-    if await session.get(Provider, body.provider_id) is not None:
-        raise HTTPException(status_code=409)
-    session.add(Provider(id=body.provider_id, org_id=body.org_id, kind=body.kind, base_url=body.base_url, credential_ref=body.credential_ref))
+    provider = await session.get(Provider, body.provider_id) or Provider(id=body.provider_id, org_id=body.org_id)
+    provider.kind = body.kind
+    provider.base_url = body.base_url
+    provider.credential_ref = body.credential_ref
+    session.add(provider)
     await session.commit()
     return ProviderOut(provider_id=body.provider_id)
 
 
 @router.post("/models")
 async def create_model(body: ModelIn, session: SessionDep) -> ModelOut:
+    """Create or update: reapplying a bootstrap spec converges the catalog."""
     if await session.get(Provider, body.provider_id) is None:
         raise HTTPException(status_code=404)
-    if await session.get(Model, body.model_id) is not None:
-        raise HTTPException(status_code=409)
-    session.add(
-        Model(
-            id=body.model_id,
-            org_id=body.org_id,
-            provider_id=body.provider_id,
-            upstream_model=body.upstream_model or body.model_id,
-            input_price_per_mtok=body.input_price_per_mtok,
-            output_price_per_mtok=body.output_price_per_mtok,
-            context_window=body.context_window,
-            capabilities=body.capabilities,
-        )
-    )
+    model = await session.get(Model, body.model_id) or Model(id=body.model_id, org_id=body.org_id, provider_id=body.provider_id)
+    model.provider_id = body.provider_id
+    model.upstream_model = body.upstream_model or body.model_id
+    model.input_price_per_mtok = body.input_price_per_mtok
+    model.output_price_per_mtok = body.output_price_per_mtok
+    model.context_window = body.context_window
+    model.capabilities = body.capabilities
+    session.add(model)
     await session.commit()
     return ModelOut(model_id=body.model_id)
 

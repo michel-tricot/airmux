@@ -134,3 +134,17 @@ def test_bundle_latest_filters_by_org(tmp_path, monkeypatch):
         scoped = c.get("/v1/bundle/latest", headers=DP, params={"org_id": "o1"})
         bundle = verify_bundle(SignedBundle.model_validate(scoped.json()), signing_key.public_key())
         assert bundle.org_id == "o1"
+
+
+def test_model_and_provider_upsert_converge(tmp_path, monkeypatch):
+    setup_control_plane(tmp_path, monkeypatch)
+    with TestClient(app) as c:
+        c.post("/admin/orgs", json={"id": "o1"}, headers=ADMIN)
+        c.post("/admin/providers", json=PROVIDER, headers=ADMIN)
+        c.post("/admin/models", json={**MODEL, "input_price_per_mtok": 0.0}, headers=ADMIN)
+        assert c.post("/admin/models", json={**MODEL, "input_price_per_mtok": 0.15}, headers=ADMIN).status_code == 200
+        models = c.get("/admin/models", headers=ADMIN).json()
+        assert models[0]["input_price_per_mtok"] == 0.15
+        updated = {**PROVIDER, "base_url": "https://other.example/v1"}
+        assert c.post("/admin/providers", json=updated, headers=ADMIN).status_code == 200
+        assert c.get("/admin/providers", headers=ADMIN).json()[0]["base_url"] == "https://other.example/v1"
