@@ -34,6 +34,9 @@ Line length is 150. Do not reformat unrelated lines to fit; run `ruff format` an
 
 ## CLI
 Anything started from the command line uses typer. Servers expose a typer entry point that wraps uvicorn.
+Commands are resource-first (keys list, bundles compile), grouped in help panels: Setup, Resources, Testing.
+Any command that outputs resource data takes -f/--format (table|json|text) via FormatOption and renders
+through _print_rows with a Col spec. Do not print resource data any other way.
 
 ## Style
 No comments unless asked. No emojis. No em dashes. No trailing periods in bullets.

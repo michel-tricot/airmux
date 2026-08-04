@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import json
 import os
 import secrets
 from datetime import datetime
+from enum import StrEnum
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal, NamedTuple
+from typing import TYPE_CHECKING, Annotated, Literal, NamedTuple
 
 import httpx
 import typer
@@ -28,6 +30,15 @@ console = Console()
 SETUP = "Setup"
 RESOURCES = "Resources"
 TESTING = "Testing"
+
+
+class OutputFormat(StrEnum):
+    table = "table"
+    json = "json"
+    text = "text"
+
+
+FormatOption = Annotated[OutputFormat, typer.Option("--format", "-f", help="Output format: table, json or text.")]
 
 
 DEFAULT_CONFIG_YML = """control_plane:
@@ -111,7 +122,15 @@ class Col(NamedTuple):
     fmt: Callable[[object], str] = _cell
 
 
-def _print_table(name: str, rows: list[dict], cols: list[Col]) -> None:
+def _print_rows(name: str, rows: list[dict], cols: list[Col], fmt: OutputFormat) -> None:
+    """Every command that outputs resource data renders through here; give it a FormatOption."""
+    if fmt is OutputFormat.json:
+        print(json.dumps(rows, indent=2, ensure_ascii=False))
+        return
+    if fmt is OutputFormat.text:
+        for r in rows:
+            print("\t".join(c.fmt(r.get(c.key)) for c in cols))
+        return
     if not rows:
         console.print(f"No {name} found.")
         return
@@ -294,8 +313,8 @@ for name, sub in (("orgs", orgs_app), ("keys", keys_app), ("providers", provider
 
 
 @orgs_app.command("list")
-def orgs_list(control_plane_url: str = "") -> None:
-    _print_table("orgs", _admin_get("/admin/orgs", control_plane_url), ORG_COLS)
+def orgs_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
+    _print_rows("orgs", _admin_get("/admin/orgs", control_plane_url), ORG_COLS, fmt)
 
 
 @orgs_app.command("create")
@@ -307,8 +326,8 @@ def orgs_create(org_id: str, name: str = "", control_plane_url: str = "") -> Non
 
 
 @keys_app.command("list")
-def keys_list(org: str | None = None, control_plane_url: str = "") -> None:
-    _print_table("keys", _admin_get("/admin/keys", control_plane_url, org), KEY_COLS)
+def keys_list(org: str | None = None, control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
+    _print_rows("keys", _admin_get("/admin/keys", control_plane_url, org), KEY_COLS, fmt)
 
 
 @keys_app.command("create")
@@ -331,18 +350,18 @@ def keys_revoke(key_id: str, control_plane_url: str = "") -> None:
 
 
 @providers_app.command("list")
-def providers_list(org: str | None = None, control_plane_url: str = "") -> None:
-    _print_table("providers", _admin_get("/admin/providers", control_plane_url, org), PROVIDER_COLS)
+def providers_list(org: str | None = None, control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
+    _print_rows("providers", _admin_get("/admin/providers", control_plane_url, org), PROVIDER_COLS, fmt)
 
 
 @models_app.command("list")
-def models_list(org: str | None = None, control_plane_url: str = "") -> None:
-    _print_table("models", _admin_get("/admin/models", control_plane_url, org), MODEL_COLS)
+def models_list(org: str | None = None, control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
+    _print_rows("models", _admin_get("/admin/models", control_plane_url, org), MODEL_COLS, fmt)
 
 
 @bundles_app.command("list")
-def bundles_list(org: str | None = None, control_plane_url: str = "") -> None:
-    _print_table("bundles", _admin_get("/admin/bundles", control_plane_url, org), BUNDLE_COLS)
+def bundles_list(org: str | None = None, control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
+    _print_rows("bundles", _admin_get("/admin/bundles", control_plane_url, org), BUNDLE_COLS, fmt)
 
 
 @bundles_app.command("compile")
