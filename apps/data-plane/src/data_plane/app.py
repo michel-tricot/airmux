@@ -24,13 +24,12 @@ from data_plane.cache import instance_id as cache_instance_id
 from data_plane.cache import read_cached_bundle
 from data_plane.canonical import CanonicalRequest, CanonicalResponse, Ctx, StreamState, UpstreamRequest, UpstreamStreamError, Usage
 from data_plane.config import Config, load_config
-from data_plane.events import run_flusher
 from data_plane.heartbeat import run_heartbeat
 from data_plane.holder import BundleHolder, BundleSnapshot
 from data_plane.ingress import ANTHROPIC, CANONICAL, EgressStream, Ingress
 from data_plane.metering import cost_breakdown, estimate_tokens
 from data_plane.normalize import normalize_request
-from data_plane.outbox import Outbox
+from data_plane.outbox import build_outbox
 from data_plane.policy import Deny, evaluate
 from data_plane.poller import run_poller
 from data_plane.transport import client
@@ -42,6 +41,7 @@ if TYPE_CHECKING:
     from starlette.requests import Request
 
     from contract import KeyEntry
+    from data_plane.outbox import EventOutbox
 
 logger = logging.getLogger("data_plane")
 
@@ -53,7 +53,7 @@ class AppState:
     config: Config | None = None
     bundle_public_key: Ed25519PublicKey | None = None
     token_public_key: Ed25519PublicKey | None = None
-    outbox: Outbox | None = None
+    outbox: EventOutbox | None = None
 
 
 state = AppState()
@@ -310,7 +310,7 @@ async def lifespan(_app: Starlette) -> AsyncIterator[None]:
     if config.dev:
         _configure_dev_logging()
     state.config = config
-    state.outbox = Outbox(config.bundle.cache_dir)
+    state.outbox = build_outbox(config)
     try:
         state.bundle_public_key = public_key_from_b64(config.bundle.public_key)
         state.token_public_key = public_key_from_b64(config.auth.token_public_key)
@@ -319,7 +319,7 @@ async def lifespan(_app: Starlette) -> AsyncIterator[None]:
         tasks = (
             [
                 asyncio.create_task(run_poller(config, holder, state.bundle_public_key)),
-                asyncio.create_task(run_flusher(config, state.outbox)),
+                asyncio.create_task(state.outbox.run()),
                 asyncio.create_task(run_heartbeat(config, holder, instance_id)),
             ]
             if config.control_plane.url

@@ -39,6 +39,7 @@ class EventsConfig(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     flush_interval_s: float = 5.0
+    backend: Literal["sqlite", "devnull"] = "sqlite"  # how usage events are collected; devnull discards them
 
 
 class Config(BaseModel):
