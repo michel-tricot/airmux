@@ -149,3 +149,36 @@ async def test_cancellation_estimates_partial_tokens(caplog):
     assert "input_tokens=0" not in record
     assert "output_tokens=0" not in record
     assert "cost_usd=0.000000" not in record
+
+
+async def test_error_body_read_failure_closes_upstream_and_maps(monkeypatch, caplog):
+    caplog.set_level(logging.INFO, logger="data_plane")
+
+    class FakeResp:
+        is_error = True
+
+        async def aread(self):
+            msg = "connection reset while reading error body"
+            raise httpx.ReadError(msg)
+
+    class FakeStreamCM:
+        def __init__(self):
+            self.exited = False
+
+        async def __aenter__(self):
+            return FakeResp()
+
+        async def __aexit__(self, *args):
+            self.exited = True
+
+    cm = FakeStreamCM()
+
+    class FakeClient:
+        def stream(self, *args, **kwargs):
+            return cm
+
+    monkeypatch.setattr("data_plane.app.client", FakeClient())
+    response = await _stream(make_adapter(), CTX, UPSTREAM)
+    assert cm.exited
+    assert response.status_code == 502
+    assert any("status=upstream_error" in r.message for r in caplog.records)

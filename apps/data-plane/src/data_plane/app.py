@@ -204,34 +204,46 @@ async def _stream(adapter: ProviderAdapter, ctx: Ctx, upstream: UpstreamRequest,
     except httpx.HTTPError as e:
         err = adapter.map_error(e)
         return JSONResponse({"error": {"code": err.code, "message": err.message}}, status_code=err.status)
-    if resp.is_error:
-        body = await resp.aread()
-        await stream_cm.__aexit__(None, None, None)
+    handed_off = False
+    result: Response
+    try:
+        if resp.is_error:
+            body = await resp.aread()
+            _record_usage(ctx, _empty_response(ctx), status="upstream_error", prompt=prompt)
+            result = Response(body, status_code=resp.status_code, media_type="application/json")
+        else:
+            stream_state = adapter.new_stream_state(ctx)
+
+            async def events() -> AsyncIterator[bytes]:
+                try:
+                    async for chunk in resp.aiter_bytes():
+                        for ev in adapter.frame(chunk, stream_state):
+                            for c in adapter.transform_stream_event(ev, stream_state):
+                                yield _sse(c.model_dump())
+                    final = adapter.finalize(stream_state)
+                    yield _sse({"usage": final.usage.model_dump(), "finish_reason": final.finish_reason})
+                    yield b"data: [DONE]\n\n"
+                    _record_usage(ctx, final, status="ok", prompt=prompt)
+                except (UpstreamStreamError, httpx.HTTPError) as e:
+                    err = adapter.map_error(e)
+                    yield _sse({"error": {"code": err.code, "message": err.message}})
+                    _record_usage(ctx, adapter.finalize(stream_state), status="upstream_error", prompt=prompt)
+                except (asyncio.CancelledError, anyio.get_cancelled_exc_class()):
+                    _record_usage(ctx, adapter.finalize(stream_state), status="cancelled", prompt=prompt)
+                    raise
+                finally:
+                    await stream_cm.__aexit__(None, None, None)
+
+            result = StreamingResponse(events(), media_type="text/event-stream")
+            handed_off = True
+    except httpx.HTTPError as e:
+        err = adapter.map_error(e)
         _record_usage(ctx, _empty_response(ctx), status="upstream_error", prompt=prompt)
-        return Response(body, status_code=resp.status_code, media_type="application/json")
-    stream_state = adapter.new_stream_state(ctx)
-
-    async def events() -> AsyncIterator[bytes]:
-        try:
-            async for chunk in resp.aiter_bytes():
-                for ev in adapter.frame(chunk, stream_state):
-                    for c in adapter.transform_stream_event(ev, stream_state):
-                        yield _sse(c.model_dump())
-            final = adapter.finalize(stream_state)
-            yield _sse({"usage": final.usage.model_dump(), "finish_reason": final.finish_reason})
-            yield b"data: [DONE]\n\n"
-            _record_usage(ctx, final, status="ok", prompt=prompt)
-        except (UpstreamStreamError, httpx.HTTPError) as e:
-            err = adapter.map_error(e)
-            yield _sse({"error": {"code": err.code, "message": err.message}})
-            _record_usage(ctx, adapter.finalize(stream_state), status="upstream_error", prompt=prompt)
-        except (asyncio.CancelledError, anyio.get_cancelled_exc_class()):
-            _record_usage(ctx, adapter.finalize(stream_state), status="cancelled", prompt=prompt)
-            raise
-        finally:
+        result = JSONResponse({"error": {"code": err.code, "message": err.message}}, status_code=err.status)
+    finally:
+        if not handed_off:
             await stream_cm.__aexit__(None, None, None)
-
-    return StreamingResponse(events(), media_type="text/event-stream")
+    return result
 
 
 async def healthz(_request: Request) -> JSONResponse:
