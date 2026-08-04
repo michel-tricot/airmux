@@ -7,7 +7,7 @@ import logging
 import time
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING
 from uuid import uuid4
 
 import anyio
@@ -18,14 +18,14 @@ from starlette.applications import Starlette
 from starlette.responses import JSONResponse, Response, StreamingResponse
 from starlette.routing import Route
 
-from contract import UsageEventV1, public_key_from_b64, verify_bundle
+from contract import UsageEventV1, UsageStatus, public_key_from_b64, verify_bundle
 from data_plane.adapters import REGISTRY, ProviderAdapter
-from data_plane.auth import authenticate, index_keys
+from data_plane.auth import authenticate
 from data_plane.cache import acquire_cache_lock, read_cached_bundle, release_cache_lock
-from data_plane.canonical import CanonicalRequest, CanonicalResponse, Ctx, UpstreamRequest, UpstreamStreamError, Usage
+from data_plane.canonical import CanonicalRequest, CanonicalResponse, Ctx, StreamState, UpstreamRequest, UpstreamStreamError, Usage
 from data_plane.config import Config, load_config
 from data_plane.events import buffer_event, run_flusher
-from data_plane.holder import BundleHolder
+from data_plane.holder import BundleHolder, BundleSnapshot
 from data_plane.metering import cost_breakdown, estimate_tokens
 from data_plane.policy import Deny, evaluate
 from data_plane.poller import run_poller
@@ -36,6 +36,8 @@ if TYPE_CHECKING:
 
     from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
     from starlette.requests import Request
+
+    from contract import KeyEntry
 
 logger = logging.getLogger("data_plane")
 
@@ -70,24 +72,27 @@ async def chat_completions(request: Request) -> Response:
         return _error(e.status, e.code)
 
 
-async def _handle(request: Request) -> Response:
-    bundle = holder.current
-    if bundle is None or state.token_public_key is None:
+async def _authorize(request: Request) -> tuple[CanonicalRequest, KeyEntry, BundleSnapshot]:
+    """Authentication and body validation; raises RequestRejectedError on every no."""
+    snap = holder.snapshot
+    if snap is None or state.token_public_key is None:
         raise RequestRejectedError(503, "bundle_unavailable")
-
     auth_header = request.headers.get("authorization", "")
     if not auth_header.startswith("Bearer "):
         raise RequestRejectedError(401, "missing_bearer_token")
-    key = authenticate(auth_header.removeprefix("Bearer "), state.token_public_key, holder.key_index, holder.revocations)
+    key = authenticate(auth_header.removeprefix("Bearer "), state.token_public_key, snap.key_index, snap.revocations)
     if key is None:
         raise RequestRejectedError(401, "invalid_token")
-
     try:
-        req = CanonicalRequest.model_validate(await request.json())
-    except (ValueError, ValidationError) as e:
+        req = CanonicalRequest.model_validate_json(await request.body())
+    except ValidationError as e:
         raise RequestRejectedError(400, "invalid_request") from e
+    return req, key, snap
 
-    decision = evaluate(req, key, bundle, datetime.now(tz=UTC))
+
+async def _handle(request: Request) -> Response:
+    req, key, snap = await _authorize(request)
+    decision = evaluate(req, key, snap.bundle, datetime.now(tz=UTC))
     if isinstance(decision, Deny):
         raise RequestRejectedError(decision.status, decision.reason)
 
@@ -99,31 +104,35 @@ async def _handle(request: Request) -> Response:
         stream=req.stream,
         org_id=key.org_id,
         key_id=key.key_id,
-        bundle_id=bundle.bundle_id,
+        bundle_id=snap.bundle.bundle_id,
     )
     upstream = adapter.transform_request(req, decision.model)
-    prompt = _prompt_text(req)
     if req.stream:
-        return await _stream(adapter, ctx, upstream, prompt)
+        return await _stream(adapter, ctx, upstream, req)
     try:
         resp = await client.request(upstream.method, upstream.url, headers=upstream.headers, content=upstream.body)
     except httpx.HTTPError as e:
-        err = adapter.map_error(e)
-        _record_usage(ctx, _empty_response(ctx), status="upstream_error", prompt=prompt)
-        return JSONResponse({"error": {"code": err.code, "message": err.message}}, status_code=err.status)
+        return _upstream_exception(adapter, ctx, e, req)
     if resp.is_error:
-        _record_usage(ctx, _empty_response(ctx), status="upstream_error", prompt=prompt)
-        return Response(resp.content, status_code=resp.status_code, media_type="application/json")
+        return _upstream_error_body(ctx, resp.content, resp.status_code, req)
     final = adapter.transform_response(resp.content, ctx)
-    _record_usage(ctx, final, status="ok", prompt=prompt)
-    return JSONResponse(final.model_dump())
+    _record_usage(ctx, final, status="ok", req=req)
+    return Response(final.model_dump_json(), media_type="application/json")
+
+
+def _upstream_exception(adapter: ProviderAdapter, ctx: Ctx, e: Exception, req: CanonicalRequest | None) -> JSONResponse:
+    err = adapter.map_error(e)
+    _record_usage(ctx, _empty_response(ctx), status="upstream_error", req=req)
+    return JSONResponse({"error": {"code": err.code, "message": err.message}}, status_code=err.status)
+
+
+def _upstream_error_body(ctx: Ctx, body: bytes, status_code: int, req: CanonicalRequest | None) -> Response:
+    _record_usage(ctx, _empty_response(ctx), status="upstream_error", req=req)
+    return Response(body, status_code=status_code, media_type="application/json")
 
 
 def _empty_response(ctx: Ctx) -> CanonicalResponse:
     return CanonicalResponse(id=ctx.request_id, model=ctx.model.model_id, content=[], finish_reason=None, usage=Usage(estimated=True))
-
-
-STATUS_STYLE = {"ok": "green", "cancelled": "yellow", "upstream_error": "red", "denied": "red", "timeout": "red"}
 
 
 def _prompt_text(req: CanonicalRequest) -> str:
@@ -137,24 +146,17 @@ def _prompt_text(req: CanonicalRequest) -> str:
     return "\n".join(parts)
 
 
-UsageStatus = Literal["ok", "upstream_error", "denied", "timeout", "cancelled"]
-
-
-def _record_usage(ctx: Ctx, final: CanonicalResponse, status: UsageStatus, prompt: str = "") -> None:
-    """The single metering point; M5 turns this record into a buffered UsageEventV1."""
-    if final.usage.estimated:
+def _record_usage(ctx: Ctx, final: CanonicalResponse, status: UsageStatus, req: CanonicalRequest | None = None) -> None:
+    """The single metering point: estimates fill missing provider counts, then buffer and log."""
+    usage = final.usage
+    if usage.estimated:
         output_text = "".join(str(part.get("text", "")) for part in final.content if part.get("type") == "text")
-        final = final.model_copy(
-            update={
-                "usage": Usage(
-                    input_tokens=estimate_tokens(prompt, ctx.model),
-                    output_tokens=estimate_tokens(output_text, ctx.model),
-                    estimated=True,
-                )
-            }
+        usage = Usage(
+            input_tokens=estimate_tokens(_prompt_text(req), ctx.model) if req else 0,
+            output_tokens=estimate_tokens(output_text, ctx.model),
+            estimated=True,
         )
-    cost_in, cost_out = cost_breakdown(final.usage, ctx.model)
-    cost = cost_in + cost_out
+    cost_in, cost_out = cost_breakdown(usage, ctx.model)
     latency_ms = int((time.monotonic() - ctx.started_at) * 1000)
     if ctx.bundle_id is not None and state.config is not None:
         buffer_event(
@@ -168,9 +170,9 @@ def _record_usage(ctx: Ctx, final: CanonicalResponse, status: UsageStatus, promp
                 model_id=ctx.model.model_id,
                 provider_id=ctx.provider.provider_id,
                 bundle_id=ctx.bundle_id,
-                input_tokens=final.usage.input_tokens,
-                output_tokens=final.usage.output_tokens,
-                cost_usd=cost,
+                input_tokens=usage.input_tokens,
+                output_tokens=usage.output_tokens,
+                cost_usd=cost_in + cost_out,
                 cost_input_usd=cost_in,
                 cost_output_usd=cost_out,
                 latency_ms=latency_ms,
@@ -185,10 +187,10 @@ def _record_usage(ctx: Ctx, final: CanonicalResponse, status: UsageStatus, promp
         ctx.provider.provider_id,
         status,
         ctx.stream,
-        final.usage.input_tokens,
-        final.usage.output_tokens,
-        final.usage.estimated,
-        cost,
+        usage.input_tokens,
+        usage.output_tokens,
+        usage.estimated,
+        cost_in + cost_out,
         latency_ms,
     )
 
@@ -197,7 +199,7 @@ def _sse(payload: dict) -> bytes:
     return b"data: " + json.dumps(payload, ensure_ascii=False).encode() + b"\n\n"
 
 
-async def _stream(adapter: ProviderAdapter, ctx: Ctx, upstream: UpstreamRequest, prompt: str = "") -> Response:
+async def _stream(adapter: ProviderAdapter, ctx: Ctx, upstream: UpstreamRequest, req: CanonicalRequest | None = None) -> Response:
     """Open the upstream and peek at the status, then hand the socket to the response generator.
 
     The stack owns the upstream connection: every early return or exception in
@@ -209,35 +211,40 @@ async def _stream(adapter: ProviderAdapter, ctx: Ctx, upstream: UpstreamRequest,
             resp = await stack.enter_async_context(client.stream(upstream.method, upstream.url, headers=upstream.headers, content=upstream.body))
             if resp.is_error:
                 body = await resp.aread()
-                _record_usage(ctx, _empty_response(ctx), status="upstream_error", prompt=prompt)
-                return Response(body, status_code=resp.status_code, media_type="application/json")
+                return _upstream_error_body(ctx, body, resp.status_code, req)
         except httpx.HTTPError as e:
-            err = adapter.map_error(e)
-            _record_usage(ctx, _empty_response(ctx), status="upstream_error", prompt=prompt)
-            return JSONResponse({"error": {"code": err.code, "message": err.message}}, status_code=err.status)
+            return _upstream_exception(adapter, ctx, e, req)
         stream_state = adapter.new_stream_state(ctx)
         handoff = stack.pop_all()
 
-    async def events() -> AsyncIterator[bytes]:
-        async with handoff:
-            try:
-                async for chunk in resp.aiter_bytes():
-                    for ev in adapter.frame(chunk, stream_state):
-                        for c in adapter.transform_stream_event(ev, stream_state):
-                            yield _sse(c.model_dump())
-                final = adapter.finalize(stream_state)
-                yield _sse({"usage": final.usage.model_dump(), "finish_reason": final.finish_reason})
-                yield b"data: [DONE]\n\n"
-                _record_usage(ctx, final, status="ok", prompt=prompt)
-            except (UpstreamStreamError, httpx.HTTPError) as e:
-                err = adapter.map_error(e)
-                yield _sse({"error": {"code": err.code, "message": err.message}})
-                _record_usage(ctx, adapter.finalize(stream_state), status="upstream_error", prompt=prompt)
-            except (asyncio.CancelledError, anyio.get_cancelled_exc_class()):
-                _record_usage(ctx, adapter.finalize(stream_state), status="cancelled", prompt=prompt)
-                raise
+    return StreamingResponse(_events(adapter, ctx, resp, handoff, stream_state, req), media_type="text/event-stream")
 
-    return StreamingResponse(events(), media_type="text/event-stream")
+
+async def _events(  # noqa: PLR0913, PLR0917 the streaming lifecycle genuinely spans these six
+    adapter: ProviderAdapter,
+    ctx: Ctx,
+    resp: httpx.Response,
+    handoff: contextlib.AsyncExitStack,
+    stream_state: StreamState,
+    req: CanonicalRequest | None,
+) -> AsyncIterator[bytes]:
+    async with handoff:
+        try:
+            async for chunk in resp.aiter_bytes():
+                for ev in adapter.frame(chunk, stream_state):
+                    for c in adapter.transform_stream_event(ev, stream_state):
+                        yield b"data: " + c.model_dump_json().encode() + b"\n\n"
+            final = adapter.finalize(stream_state)
+            yield _sse({"usage": final.usage.model_dump(), "finish_reason": final.finish_reason})
+            yield b"data: [DONE]\n\n"
+            _record_usage(ctx, final, status="ok", req=req)
+        except (UpstreamStreamError, httpx.HTTPError) as e:
+            err = adapter.map_error(e)
+            yield _sse({"error": {"code": err.code, "message": err.message}})
+            _record_usage(ctx, adapter.finalize(stream_state), status="upstream_error", req=req)
+        except (asyncio.CancelledError, anyio.get_cancelled_exc_class()):
+            _record_usage(ctx, adapter.finalize(stream_state), status="cancelled", req=req)
+            raise
 
 
 async def healthz(_request: Request) -> JSONResponse:
@@ -245,9 +252,17 @@ async def healthz(_request: Request) -> JSONResponse:
 
 
 async def readyz(_request: Request) -> JSONResponse:
-    if holder.current is None:
+    if holder.snapshot is None:
         return JSONResponse({"status": "no bundle"}, status_code=503)
     return JSONResponse({"status": "ready"})
+
+
+def _configure_dev_logging() -> None:
+    if not logger.handlers:
+        handler = logging.StreamHandler()
+        handler.setFormatter(logging.Formatter("%(levelname)s:     %(message)s"))
+        logger.addHandler(handler)
+        logger.setLevel(logging.INFO)
 
 
 def _load_cached_bundle(config: Config, public_key: Ed25519PublicKey) -> None:
@@ -264,41 +279,33 @@ def _load_cached_bundle(config: Config, public_key: Ed25519PublicKey) -> None:
     except InvalidSignature:
         logger.exception("cached bundle failed signature verification, ignoring it")
         return
-    expired = bundle.expires_at <= datetime.now(tz=UTC)
-    if expired and config.bundle.staleness_policy == "refuse":
-        logger.error("cached bundle expired at %s and policy is refuse, not loading", bundle.expires_at)
-        return
-    if expired:
-        logger.warning("cached bundle expired at %s, serving stale per policy", bundle.expires_at)
-    holder.swap(bundle, index_keys(bundle))
-    logger.info("loaded bundle %s issued %s", bundle.bundle_id, bundle.issued_at)
+    holder.admit(bundle, config.bundle.staleness_policy, source="cached")
 
 
 @contextlib.asynccontextmanager
 async def lifespan(_app: Starlette) -> AsyncIterator[None]:
     config = load_config()
-    if config.dev and not logger.handlers:
-        handler = logging.StreamHandler()
-        handler.setFormatter(logging.Formatter("%(levelname)s:     %(message)s"))
-        logger.addHandler(handler)
-        logger.setLevel(logging.INFO)
+    if config.dev:
+        _configure_dev_logging()
     state.config = config
     acquire_cache_lock(config.bundle.cache_dir)
-    state.bundle_public_key = public_key_from_b64(config.bundle.public_key)
-    state.token_public_key = public_key_from_b64(config.auth.token_public_key)
-    _load_cached_bundle(config, state.bundle_public_key)
-    tasks = (
-        [asyncio.create_task(run_poller(config, holder, state.bundle_public_key)), asyncio.create_task(run_flusher(config))]
-        if config.control_plane.url
-        else []
-    )
     try:
-        yield
+        state.bundle_public_key = public_key_from_b64(config.bundle.public_key)
+        state.token_public_key = public_key_from_b64(config.auth.token_public_key)
+        _load_cached_bundle(config, state.bundle_public_key)
+        tasks = (
+            [asyncio.create_task(run_poller(config, holder, state.bundle_public_key)), asyncio.create_task(run_flusher(config))]
+            if config.control_plane.url
+            else []
+        )
+        try:
+            yield
+        finally:
+            for task in tasks:
+                task.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await task
     finally:
-        for task in tasks:
-            task.cancel()
-            with contextlib.suppress(asyncio.CancelledError):
-                await task
         release_cache_lock(config.bundle.cache_dir)
 
 

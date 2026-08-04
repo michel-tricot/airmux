@@ -1,26 +1,15 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
-from uuid import uuid4
+from functools import partial
 
+from conftest import NOW
+from conftest import make_bundle as _make_bundle
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
-from contract import BundleV1, Catalog, KeyEntry, mint_api_token
+from contract import KeyEntry, mint_api_token
 from data_plane.auth import authenticate, index_keys
 
-NOW = datetime.now(tz=UTC)
-
-
-def make_bundle(keys, revocations=()):
-    return BundleV1(
-        bundle_id=uuid4(),
-        org_id="org-a",
-        issued_at=NOW,
-        expires_at=NOW + timedelta(hours=24),
-        keys=keys,
-        revocations=list(revocations),
-        catalog=Catalog(providers=[], models=[]),
-    )
+make_bundle = partial(_make_bundle, org="org-a")
 
 
 def test_valid_token_authenticates():

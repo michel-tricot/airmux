@@ -6,6 +6,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
 
+UsageStatus = Literal["ok", "upstream_error", "denied", "timeout", "cancelled"]
+
 
 class UsageEventV1(BaseModel):
     """One metered request, emitted by the data plane and ingested by the control plane.
@@ -31,5 +33,5 @@ class UsageEventV1(BaseModel):
     cost_input_usd: float = 0.0
     cost_output_usd: float = 0.0
     latency_ms: int
-    status: Literal["ok", "upstream_error", "denied", "timeout", "cancelled"]  # cancelled still carries partial counts
+    status: UsageStatus  # cancelled still carries partial counts
     stream: bool

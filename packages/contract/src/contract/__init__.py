@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from contract.bundle import BundleV1, Catalog, KeyEntry, ModelEntry, ProviderEntry, SignedBundle
-from contract.events import UsageEventV1
+from contract.events import UsageEventV1, UsageStatus
 from contract.signing import (
     canonical_json,
     private_key_from_b64,
@@ -22,6 +22,7 @@ __all__ = [
     "SignedBundle",
     "TokenClaims",
     "UsageEventV1",
+    "UsageStatus",
     "canonical_json",
     "mint_api_token",
     "private_key_from_b64",

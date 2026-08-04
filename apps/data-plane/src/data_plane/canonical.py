@@ -78,7 +78,6 @@ class Ctx:
 @dataclass
 class StreamState:
     buffer: bytes = b""
-    extra: dict[str, Any] = field(default_factory=dict)
 
 
 class UpstreamStreamError(Exception):

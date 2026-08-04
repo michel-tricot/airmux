@@ -14,11 +14,6 @@ def cost_breakdown(usage: Usage, model: ModelEntry) -> tuple[float, float]:
     return usage.input_tokens * model.input_price_per_mtok / 1_000_000, usage.output_tokens * model.output_price_per_mtok / 1_000_000
 
 
-def cost_usd(usage: Usage, model: ModelEntry) -> float:
-    cost_in, cost_out = cost_breakdown(usage, model)
-    return cost_in + cost_out
-
-
 @functools.lru_cache(maxsize=64)
 def _encoding(upstream_model: str) -> tiktoken.Encoding:
     try:

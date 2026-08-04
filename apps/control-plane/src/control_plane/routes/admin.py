@@ -7,7 +7,7 @@ from uuid import UUID, uuid4
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import func
-from sqlmodel import select
+from sqlmodel import col, select
 
 from contract import canonical_json, mint_api_token, private_key_from_b64, sign_bundle
 from control_plane.compiler import UnknownOrgError, compile_bundle
@@ -126,10 +126,13 @@ async def create_provider(body: ProviderIn, session: SessionDep) -> ProviderOut:
     """Create or update: reapplying a bootstrap spec converges the catalog."""
     if await session.get(Org, body.org_id) is None:
         raise HTTPException(status_code=404)
-    provider = await session.get(Provider, body.provider_id) or Provider(id=body.provider_id, org_id=body.org_id)
-    provider.kind = body.kind
-    provider.base_url = body.base_url
-    provider.credential_ref = body.credential_ref
+    provider = await session.get(Provider, body.provider_id)
+    if provider is None:
+        provider = Provider(id=body.provider_id, org_id=body.org_id, kind=body.kind, base_url=body.base_url, credential_ref=body.credential_ref)
+    else:
+        provider.kind = body.kind
+        provider.base_url = body.base_url
+        provider.credential_ref = body.credential_ref
     session.add(provider)
     await session.commit()
     return ProviderOut(provider_id=body.provider_id)
@@ -140,13 +143,25 @@ async def create_model(body: ModelIn, session: SessionDep) -> ModelOut:
     """Create or update: reapplying a bootstrap spec converges the catalog."""
     if await session.get(Provider, body.provider_id) is None:
         raise HTTPException(status_code=404)
-    model = await session.get(Model, body.model_id) or Model(id=body.model_id, org_id=body.org_id, provider_id=body.provider_id)
-    model.provider_id = body.provider_id
-    model.upstream_model = body.upstream_model or body.model_id
-    model.input_price_per_mtok = body.input_price_per_mtok
-    model.output_price_per_mtok = body.output_price_per_mtok
-    model.context_window = body.context_window
-    model.capabilities = body.capabilities
+    model = await session.get(Model, body.model_id)
+    if model is None:
+        model = Model(
+            id=body.model_id,
+            org_id=body.org_id,
+            provider_id=body.provider_id,
+            upstream_model=body.upstream_model or body.model_id,
+            input_price_per_mtok=body.input_price_per_mtok,
+            output_price_per_mtok=body.output_price_per_mtok,
+            context_window=body.context_window,
+            capabilities=body.capabilities,
+        )
+    else:
+        model.provider_id = body.provider_id
+        model.upstream_model = body.upstream_model or body.model_id
+        model.input_price_per_mtok = body.input_price_per_mtok
+        model.output_price_per_mtok = body.output_price_per_mtok
+        model.context_window = body.context_window
+        model.capabilities = body.capabilities
     session.add(model)
     await session.commit()
     return ModelOut(model_id=body.model_id)
@@ -223,15 +238,15 @@ async def list_events(session: SessionDep, org_id: str | None = None, after: dat
     if org_id:
         query = query.where(UsageEvent.org_id == org_id)
     if after is not None:
-        query = query.where(UsageEvent.occurred_at > after).order_by(UsageEvent.occurred_at.asc())
+        query = query.where(col(UsageEvent.occurred_at) > after).order_by(col(UsageEvent.occurred_at).asc())
     else:
-        query = query.order_by(UsageEvent.occurred_at.desc())
+        query = query.order_by(col(UsageEvent.occurred_at).desc())
     return list((await session.execute(query.limit(limit))).scalars().all())
 
 
 @router.get("/bundles")
 async def list_bundles(session: SessionDep, org_id: str | None = None) -> list[BundleOut]:
-    query = select(Bundle).order_by(Bundle.org_id, Bundle.version)
+    query = select(Bundle).order_by(col(Bundle.org_id), col(Bundle.version))
     if org_id:
         query = query.where(Bundle.org_id == org_id)
     rows = (await session.execute(query)).scalars().all()

@@ -13,8 +13,7 @@ jobs:
       - run: uv sync --all-packages --frozen
       - run: uv run ruff format --check .
       - run: uv run ruff check .
-      - run: uv run ty check packages/contract apps/data-plane
-      - run: uv run ty check apps/control-plane || true
+      - run: uv run ty check packages/contract apps/data-plane apps/cli apps/control-plane
       - run: uv run lint-imports
       - run: ./scripts/generate-api-models.sh && git diff --exit-code apps/cli/src/cli/api_models.py
       - run: uv run pytest

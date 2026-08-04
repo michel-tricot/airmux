@@ -84,6 +84,9 @@ ignore = [
 "examples/**"                  = ["T201", "INP001"]
 "apps/cli/src/cli/api_models.py" = ["ALL"]
 
+[tool.ruff.lint.mccabe]
+max-complexity = 10
+
 [tool.ruff.lint.isort]
 known-first-party = ["contract", "control_plane", "data_plane"]
 required-imports = ["from __future__ import annotations"]
@@ -93,6 +96,9 @@ mypy-init-return = true
 
 [tool.ruff.lint.flake8-type-checking]
 runtime-evaluated-base-classes = ["pydantic.BaseModel", "sqlmodel.SQLModel"]
+
+[tool.ty.src]
+exclude = ["**/migrations/versions"]
 
 [tool.ty.environment]
 python-version = "3.13"

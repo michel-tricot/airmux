@@ -71,7 +71,8 @@ def database_url() -> str:
     load_dotenv(find_dotenv(usecwd=True))
     raw = _resolve_refs(_file_section("control_plane"))
     assert isinstance(raw, dict)  # noqa: S101 _resolve_refs preserves the dict shape
-    url = (raw.get("database") or {}).get("url")
+    database = raw.get("database")
+    url = database.get("url") if isinstance(database, dict) else None
     return str(url) if url else "sqlite+aiosqlite:///airllm.db"
 
 

@@ -57,7 +57,9 @@ def test_full_admin_flow_to_verified_bundle(tmp_path, monkeypatch):
     with TestClient(app) as c:
         assert c.post("/admin/orgs", json={"id": "o1"}, headers=ADMIN).status_code == 200
         key = c.post("/admin/keys", json={"org_id": "o1"}, headers=ADMIN).json()
-        assert verify_api_token(key["token"], token_key.public_key()).key_id == key["key_id"]
+        claims = verify_api_token(key["token"], token_key.public_key())
+        assert claims is not None
+        assert claims.key_id == key["key_id"]
         assert verify_api_token(key["token"], bundle_key.public_key()) is None
         assert c.post("/admin/providers", json=PROVIDER, headers=ADMIN).status_code == 200
         assert c.post("/admin/models", json=MODEL, headers=ADMIN).status_code == 200

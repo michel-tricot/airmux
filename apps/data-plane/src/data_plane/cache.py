@@ -51,6 +51,12 @@ def release_cache_lock(cache_dir: Path) -> None:
         lock.unlink()
 
 
+def atomic_write_text(path: Path, text: str) -> None:
+    tmp = path.with_name(path.name + ".tmp")
+    tmp.write_text(text, encoding="utf-8")
+    tmp.replace(path)
+
+
 def read_cached_bundle(cache_dir: Path) -> SignedBundle | None:
     path = cache_dir / "bundle.json"
     if not path.exists():
@@ -59,7 +65,4 @@ def read_cached_bundle(cache_dir: Path) -> SignedBundle | None:
 
 
 def write_cached_bundle(cache_dir: Path, signed: SignedBundle) -> None:
-    path = cache_dir / "bundle.json"
-    tmp = cache_dir / "bundle.json.tmp"
-    tmp.write_text(signed.model_dump_json(indent=2), encoding="utf-8")
-    tmp.replace(path)
+    atomic_write_text(cache_dir / "bundle.json", signed.model_dump_json(indent=2))

@@ -7,9 +7,9 @@ from uuid import uuid4
 import httpx
 import pytest
 import respx
+from conftest import make_config
 
 from contract import UsageEventV1
-from data_plane.config import AuthConfig, BundleConfig, Config, ControlPlaneLink
 from data_plane.events import buffer_event, flush_once, read_buffered_events
 
 
@@ -29,14 +29,6 @@ def make_event(request_id: str) -> UsageEventV1:
         latency_ms=100,
         status="ok",
         stream=False,
-    )
-
-
-def make_config(tmp_path) -> Config:
-    return Config(
-        control_plane=ControlPlaneLink(url="http://cp.test", token="dp-token"),  # noqa: S106 test fixture, not a secret
-        bundle=BundleConfig(public_key="unused", cache_dir=tmp_path),
-        auth=AuthConfig(token_public_key="unused"),  # noqa: S106 a public key, not a secret
     )
 
 

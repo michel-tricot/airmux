@@ -1,9 +1,14 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from cli.client import admin_client, admin_get, post_expecting
 from cli.common import bundles_app, console, events_app, keys_app, models_app, orgs_app, providers_app
 from cli.forms import register_create
 from cli.output import Col, FormatOption, OutputFormat, build_table, fmt_when, print_rows
+
+if TYPE_CHECKING:
+    from rich.table import Table
 from cli.specs import KeyCreate, ModelCreate, OrgCreate, ProviderCreate
 
 ORG_COLS = [
@@ -35,7 +40,12 @@ MODEL_COLS = [
     Col("context_window", "Context"),
     Col("capabilities", "Capabilities", style="cyan", max_width=30),
 ]
-EVENT_STATUS_STYLE = {"ok": "green", "cancelled": "yellow"}
+
+
+def _money(value: object) -> str:
+    return f"{value:.6f}" if isinstance(value, int | float) else str(value or "")
+
+
 EVENT_COLS = [
     Col("occurred_at", "When", no_wrap=True, fmt=lambda v: str(v)[:19].replace("T", " ")),
     Col("request_id", "Request", style="dim", no_wrap=True, fmt=lambda v: str(v)[:8]),
@@ -44,9 +54,9 @@ EVENT_COLS = [
     Col("status", "Status", style="yellow"),
     Col("input_tokens", "In"),
     Col("output_tokens", "Out"),
-    Col("cost_input_usd", "$ in", fmt=lambda v: f"{float(v or 0):.6f}"),
-    Col("cost_output_usd", "$ out", fmt=lambda v: f"{float(v or 0):.6f}"),
-    Col("cost_usd", "$ total", fmt=lambda v: f"{float(v or 0):.6f}"),
+    Col("cost_input_usd", "$ in", fmt=_money),
+    Col("cost_output_usd", "$ out", fmt=_money),
+    Col("cost_usd", "$ total", fmt=_money),
     Col("latency_ms", "ms"),
     Col("stream", "Stream", fmt=lambda v: "yes" if v else ""),
 ]
@@ -128,7 +138,7 @@ def events_tail(
     rows: deque[dict] = deque(maxlen=keep)
     fresh_ids: set[str] = set()
 
-    def table() -> object:
+    def table() -> Table:
         return build_table(list(rows), EVENT_COLS, lambda r: "blink bold cyan" if r["event_id"] in fresh_ids else None)
 
     def emit(event: dict) -> None:

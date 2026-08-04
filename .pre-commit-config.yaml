@@ -11,13 +11,18 @@ repos:
         entry: uv run ruff check .
         language: system
         pass_filenames: false
-      - id: ty-contract-data-plane
-        name: ty check contract + data plane
-        entry: uv run ty check packages/contract apps/data-plane
+      - id: ty
+        name: ty check all projects
+        entry: uv run ty check packages/contract apps/data-plane apps/cli apps/control-plane
         language: system
         pass_filenames: false
       - id: lint-imports
         name: import-linter
         entry: uv run lint-imports
+        language: system
+        pass_filenames: false
+      - id: api-models-drift
+        name: generated API models match the OpenAPI spec
+        entry: bash -c './scripts/generate-api-models.sh && git diff --exit-code apps/cli/src/cli/api_models.py'
         language: system
         pass_filenames: false

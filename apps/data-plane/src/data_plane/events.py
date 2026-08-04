@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import logging
 from typing import TYPE_CHECKING
 
@@ -8,6 +7,8 @@ import httpx
 from pydantic import ValidationError
 
 from contract import UsageEventV1
+from data_plane.cache import atomic_write_text
+from data_plane.tasks import run_periodic
 from data_plane.transport import client
 
 if TYPE_CHECKING:
@@ -22,16 +23,20 @@ def _buffer_path(cache_dir: Path) -> Path:
     return cache_dir / "events.jsonl"
 
 
+def _lines(path: Path) -> list[str]:
+    """The one definition of the buffer's line format; every reader and rewriter goes through it."""
+    if not path.exists():
+        return []
+    return [line for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+
+
 def buffer_event(cache_dir: Path, event: UsageEventV1) -> None:
     with _buffer_path(cache_dir).open("a", encoding="utf-8") as f:
         f.write(event.model_dump_json() + "\n")
 
 
 def read_buffered_events(cache_dir: Path) -> list[UsageEventV1]:
-    path = _buffer_path(cache_dir)
-    if not path.exists():
-        return []
-    return [UsageEventV1.model_validate_json(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+    return [UsageEventV1.model_validate_json(line) for line in _lines(_buffer_path(cache_dir))]
 
 
 def _read_repairing(cache_dir: Path) -> list[UsageEventV1]:
@@ -43,9 +48,7 @@ def _read_repairing(cache_dir: Path) -> list[UsageEventV1]:
     line counting stays aligned.
     """
     path = _buffer_path(cache_dir)
-    if not path.exists():
-        return []
-    lines = [line for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+    lines = _lines(path)
     events: list[UsageEventV1] = []
     for i, line in enumerate(lines):
         try:
@@ -53,9 +56,7 @@ def _read_repairing(cache_dir: Path) -> list[UsageEventV1]:
         except ValidationError:
             if i == len(lines) - 1:
                 logger.warning("dropping torn final line in the event buffer, likely a crash during append")
-                tmp = path.with_suffix(".jsonl.tmp")
-                tmp.write_text("".join(line + "\n" for line in lines[:i]), encoding="utf-8")
-                tmp.replace(path)
+                atomic_write_text(path, "".join(line + "\n" for line in lines[:i]))
                 return events
             quarantine = path.with_suffix(".jsonl.corrupt")
             path.replace(quarantine)
@@ -66,10 +67,7 @@ def _read_repairing(cache_dir: Path) -> list[UsageEventV1]:
 
 def _drop_first(cache_dir: Path, count: int) -> None:
     path = _buffer_path(cache_dir)
-    lines = [line for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
-    tmp = path.with_suffix(".jsonl.tmp")
-    tmp.write_text("".join(line + "\n" for line in lines[count:]), encoding="utf-8")
-    tmp.replace(path)
+    atomic_write_text(path, "".join(line + "\n" for line in _lines(path)[count:]))
 
 
 async def flush_once(config: Config) -> int:
@@ -88,11 +86,9 @@ async def flush_once(config: Config) -> int:
 
 
 async def run_flusher(config: Config) -> None:
-    while True:
-        try:
-            sent = await flush_once(config)
-            if sent:
-                logger.info("flushed %d usage events to the control plane", sent)
-        except (httpx.HTTPError, OSError, ValueError):
-            logger.exception("event flush failed, keeping the buffer")
-        await asyncio.sleep(config.events.flush_interval_s)
+    async def once() -> None:
+        sent = await flush_once(config)
+        if sent:
+            logger.info("flushed %d usage events to the control plane", sent)
+
+    await run_periodic(once, config.events.flush_interval_s, (httpx.HTTPError, OSError, ValueError), "event flush")

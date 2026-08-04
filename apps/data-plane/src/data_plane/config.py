@@ -8,6 +8,8 @@ import yaml
 from dotenv import find_dotenv, load_dotenv
 from pydantic import BaseModel, ConfigDict, Field
 
+from data_plane.secrets import try_resolve
+
 
 class ControlPlaneLink(BaseModel):
     model_config = ConfigDict(frozen=True)
@@ -62,12 +64,8 @@ def _resolve_refs(node: object) -> object:
         return {k: _resolve_refs(v) for k, v in node.items()}
     if isinstance(node, list):
         return [_resolve_refs(v) for v in node]
-    if isinstance(node, str):
-        if node.startswith("env:"):
-            return os.environ.get(node.removeprefix("env:"))
-        if node.startswith("file:"):
-            ref = Path(node.removeprefix("file:"))
-            return ref.read_text(encoding="utf-8").strip() if ref.exists() else None
+    if isinstance(node, str) and node.startswith(("env:", "file:")):
+        return try_resolve(node)
     return node
 
 

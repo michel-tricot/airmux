@@ -29,14 +29,17 @@ def _is_list_field(field: FieldInfo) -> bool:
     return get_origin(_base_annotation(field.annotation)) is list
 
 
+_FLAG_TYPES: dict[object, object] = {str: str | None, float: float | None, int: int | None}
+
+
 def _flag_annotation(field: FieldInfo) -> object:
     base = _base_annotation(field.annotation)
     if get_origin(base) is list:
         return list[str] | None
-    return (base | None) if base in (str, float, int) else (str | None)
+    return _FLAG_TYPES.get(base, str | None)
 
 
-def fill_spec(spec_cls: type[BaseModel], provided: dict) -> BaseModel:
+def fill_spec[M: BaseModel](spec_cls: type[M], provided: dict) -> M:
     """Flags win; anything missing is prompted for, with the field description as the prompt."""
     values = {k: v for k, v in provided.items() if v not in (None, [], ())}
     for name, field in spec_cls.model_fields.items():
@@ -80,6 +83,6 @@ def register_create(sub_app: typer.Typer, spec_cls: type[BaseModel], path: str, 
         for name, field in spec_cls.model_fields.items()
     ]
     params.append(inspect.Parameter("control_plane_url", inspect.Parameter.POSITIONAL_OR_KEYWORD, default=typer.Option(""), annotation=str))
-    run.__signature__ = inspect.Signature(params)  # type: ignore[attr-defined]
+    setattr(run, "__signature__", inspect.Signature(params))  # noqa: B010 typer reads the dynamic signature
     run.__doc__ = help_text
     sub_app.command("create")(run)

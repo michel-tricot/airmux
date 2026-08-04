@@ -19,13 +19,64 @@ if TYPE_CHECKING:
 
 @dataclass
 class OpenAIStreamState(StreamState):
-    ctx: Ctx | None = None
+    ctx: Ctx = field(kw_only=True)
     response_id: str | None = None
     reasoning: list[str] = field(default_factory=list)
     text: list[str] = field(default_factory=list)
     tool_calls: dict[int, dict[str, Any]] = field(default_factory=dict)
     finish_reason: str | None = None
     usage: dict[str, Any] | None = None
+
+    @property
+    def chunk_id(self) -> str:
+        return self.response_id or self.ctx.request_id
+
+
+def _usage(reported: dict[str, Any] | None) -> Usage:
+    reported = reported or {}
+    return Usage(
+        input_tokens=reported.get("prompt_tokens", 0),
+        output_tokens=reported.get("completion_tokens", 0),
+        estimated=not reported,
+    )
+
+
+def _content(reasoning: str, text: str, tool_calls: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    reasoning_part = [{"type": "reasoning", "text": reasoning}] if reasoning else []
+    text_part = [{"type": "text", "text": text}] if text else []
+    tool_part = [{"type": "tool_call", "id": tc.get("id"), "function": tc.get("function") or {}} for tc in tool_calls]
+    return [*reasoning_part, *text_part, *tool_part]
+
+
+def _fold_tool_call(state: OpenAIStreamState, tc: dict[str, Any]) -> dict[str, Any]:
+    index = tc.get("index", 0)
+    slot = state.tool_calls.setdefault(index, {"id": None, "function": {"name": "", "arguments": ""}})
+    if tc.get("id"):
+        slot["id"] = tc["id"]
+    fn = tc.get("function") or {}
+    if fn.get("name"):
+        slot["function"]["name"] = fn["name"]
+    if fn.get("arguments"):
+        slot["function"]["arguments"] += fn["arguments"]
+    return {"type": "tool_call", "index": index, "id": tc.get("id"), "function": fn}
+
+
+def _fold_choice(state: OpenAIStreamState, choice: dict[str, Any]) -> list[CanonicalChunk]:
+    delta = choice.get("delta") or {}
+    finish = choice.get("finish_reason")
+    if finish:
+        state.finish_reason = finish
+    chunks: list[CanonicalChunk] = []
+    if reasoning := delta.get("reasoning_content"):
+        state.reasoning.append(reasoning)
+        chunks.append(CanonicalChunk(id=state.chunk_id, delta={"type": "reasoning", "text": reasoning}, finish_reason=finish))
+    if content := delta.get("content"):
+        state.text.append(content)
+        chunks.append(CanonicalChunk(id=state.chunk_id, delta={"type": "text", "text": content}, finish_reason=finish))
+    chunks.extend(CanonicalChunk(id=state.chunk_id, delta=_fold_tool_call(state, tc), finish_reason=finish) for tc in delta.get("tool_calls") or [])
+    if finish and not chunks:
+        chunks.append(CanonicalChunk(id=state.chunk_id, delta={}, finish_reason=finish))
+    return chunks
 
 
 class OpenAICompatibleAdapter(ProviderAdapter):
@@ -54,20 +105,12 @@ class OpenAICompatibleAdapter(ProviderAdapter):
         data = json.loads(raw)
         choice = data["choices"][0]
         message = choice["message"]
-        reasoning_content = [{"type": "reasoning", "text": message["reasoning_content"]}] if message.get("reasoning_content") else []
-        text_content = [{"type": "text", "text": message["content"]}] if message.get("content") is not None else []
-        tool_content = [{"type": "tool_call", "id": tc.get("id"), "function": tc.get("function") or {}} for tc in message.get("tool_calls") or []]
-        usage = data.get("usage") or {}
         return CanonicalResponse(
             id=data.get("id", ctx.request_id),
             model=ctx.model.model_id,
-            content=[*reasoning_content, *text_content, *tool_content],
+            content=_content(message.get("reasoning_content") or "", message.get("content") or "", message.get("tool_calls") or []),
             finish_reason=choice.get("finish_reason"),
-            usage=Usage(
-                input_tokens=usage.get("prompt_tokens", 0),
-                output_tokens=usage.get("completion_tokens", 0),
-                estimated=not usage,
-            ),
+            usage=_usage(data.get("usage")),
         )
 
     def new_stream_state(self, ctx: Ctx) -> OpenAIStreamState:
@@ -95,36 +138,9 @@ class OpenAICompatibleAdapter(ProviderAdapter):
             state.response_id = data["id"]
         if data.get("usage"):
             state.usage = data["usage"]
-        chunk_id = state.response_id or (state.ctx.request_id if state.ctx else "")
         chunks: list[CanonicalChunk] = []
         for choice in data.get("choices") or []:
-            delta = choice.get("delta") or {}
-            finish = choice.get("finish_reason")
-            if finish:
-                state.finish_reason = finish
-            reasoning = delta.get("reasoning_content")
-            if reasoning:
-                state.reasoning.append(reasoning)
-                chunks.append(CanonicalChunk(id=chunk_id, delta={"type": "reasoning", "text": reasoning}, finish_reason=finish))
-            content = delta.get("content")
-            if content:
-                state.text.append(content)
-                chunks.append(CanonicalChunk(id=chunk_id, delta={"type": "text", "text": content}, finish_reason=finish))
-            for tc in delta.get("tool_calls") or []:
-                index = tc.get("index", 0)
-                slot = state.tool_calls.setdefault(index, {"id": None, "function": {"name": "", "arguments": ""}})
-                if tc.get("id"):
-                    slot["id"] = tc["id"]
-                fn = tc.get("function") or {}
-                if fn.get("name"):
-                    slot["function"]["name"] = fn["name"]
-                if fn.get("arguments"):
-                    slot["function"]["arguments"] += fn["arguments"]
-                chunks.append(
-                    CanonicalChunk(id=chunk_id, delta={"type": "tool_call", "index": index, "id": tc.get("id"), "function": fn}, finish_reason=finish)
-                )
-            if finish and not content and not reasoning and not delta.get("tool_calls"):
-                chunks.append(CanonicalChunk(id=chunk_id, delta={}, finish_reason=finish))
+            chunks.extend(_fold_choice(state, choice))
         return chunks
 
     def finalize(self, state: StreamState) -> CanonicalResponse:
@@ -134,22 +150,12 @@ class OpenAICompatibleAdapter(ProviderAdapter):
         cancellation handler for partial accounting after a client disconnect.
         """
         assert isinstance(state, OpenAIStreamState)  # noqa: S101 state comes from new_stream_state
-        reasoning = "".join(state.reasoning)
-        reasoning_content = [{"type": "reasoning", "text": reasoning}] if reasoning else []
-        text = "".join(state.text)
-        text_content = [{"type": "text", "text": text}] if text else []
-        tool_content = [{"type": "tool_call", **state.tool_calls[index]} for index in sorted(state.tool_calls)]
-        usage = state.usage or {}
         return CanonicalResponse(
-            id=state.response_id or (state.ctx.request_id if state.ctx else ""),
-            model=state.ctx.model.model_id if state.ctx else "",
-            content=[*reasoning_content, *text_content, *tool_content],
+            id=state.chunk_id,
+            model=state.ctx.model.model_id,
+            content=_content("".join(state.reasoning), "".join(state.text), [state.tool_calls[i] for i in sorted(state.tool_calls)]),
             finish_reason=state.finish_reason,
-            usage=Usage(
-                input_tokens=usage.get("prompt_tokens", 0),
-                output_tokens=usage.get("completion_tokens", 0),
-                estimated=not usage,
-            ),
+            usage=_usage(state.usage),
         )
 
     def map_error(self, e: Exception) -> CanonicalError:

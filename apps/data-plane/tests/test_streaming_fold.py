@@ -3,50 +3,9 @@ from __future__ import annotations
 import json
 
 import pytest
+from conftest import CTX, TEXT_EVENTS, TEXT_LOG, TEXT_NONSTREAM, USAGE, delta_event, make_adapter, sse
 
-from contract import ModelEntry, ProviderEntry
-from data_plane.adapters import REGISTRY
-from data_plane.canonical import Ctx, UpstreamStreamError
-
-PROVIDER = ProviderEntry(provider_id="p1", kind="openai_compatible", base_url="https://api.openai.com/v1", credential_ref="env:OPENAI_API_KEY")
-MODEL = ModelEntry(
-    model_id="gpt-test",
-    provider_id="p1",
-    upstream_model="gpt-real",
-    input_price_per_mtok=1.0,
-    output_price_per_mtok=2.0,
-    context_window=128000,
-    capabilities=["streaming"],
-)
-CTX = Ctx(request_id="req-1", model=MODEL, provider=PROVIDER, stream=True)
-
-USAGE = {"prompt_tokens": 5, "completion_tokens": 7, "total_tokens": 12}
-
-
-def sse(payload: dict) -> bytes:
-    return b"data: " + json.dumps(payload, ensure_ascii=False).encode() + b"\n\n"
-
-
-def delta_event(delta: dict, finish: str | None = None) -> dict:
-    return {"id": "chatcmpl-9", "model": "gpt-real", "choices": [{"index": 0, "delta": delta, "finish_reason": finish}]}
-
-
-TEXT_EVENTS = [
-    delta_event({"role": "assistant"}),
-    delta_event({"content": "héllo "}),
-    delta_event({"content": "\U0001f30d wor"}),
-    delta_event({"content": "ld"}),
-    delta_event({}, finish="stop"),
-    {"id": "chatcmpl-9", "model": "gpt-real", "choices": [], "usage": USAGE},
-]
-TEXT_LOG = b"".join(sse(e) for e in TEXT_EVENTS) + b"data: [DONE]\n\n"
-
-TEXT_NONSTREAM = {
-    "id": "chatcmpl-9",
-    "model": "gpt-real",
-    "choices": [{"index": 0, "message": {"role": "assistant", "content": "héllo \U0001f30d world"}, "finish_reason": "stop"}],
-    "usage": USAGE,
-}
+from data_plane.canonical import UpstreamStreamError
 
 TOOL_EVENTS = [
     delta_event({"role": "assistant"}),
@@ -74,10 +33,6 @@ TOOL_NONSTREAM = {
     ],
     "usage": USAGE,
 }
-
-
-def make_adapter():
-    return REGISTRY["openai_compatible"](PROVIDER)
 
 
 def fold(raw: bytes, chunk_size: int):

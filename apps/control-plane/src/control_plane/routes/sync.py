@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlmodel import select
+from sqlmodel import col, select
 
 from contract import BundleV1, SignedBundle, UsageEventV1
 from control_plane.deps import SessionDep, require_dp
@@ -12,7 +12,7 @@ router = APIRouter(prefix="/v1", dependencies=[Depends(require_dp)])
 
 @router.get("/bundle/latest")
 async def bundle_latest(session: SessionDep, org_id: str | None = None) -> SignedBundle:
-    query = select(Bundle).order_by(Bundle.issued_at.desc(), Bundle.version.desc()).limit(1)
+    query = select(Bundle).order_by(col(Bundle.issued_at).desc(), col(Bundle.version).desc()).limit(1)
     if org_id:
         query = query.where(Bundle.org_id == org_id)
     row = (await session.execute(query)).scalars().first()

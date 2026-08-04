@@ -1,33 +1,12 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
-from uuid import uuid4
+from conftest import MODEL, NOW, PROVIDER, make_bundle
 
-from contract import BundleV1, Catalog, KeyEntry, ModelEntry, ProviderEntry
+from contract import Catalog, KeyEntry
 from data_plane.canonical import CanonicalRequest
 from data_plane.policy import Allow, Deny, evaluate
 
-NOW = datetime.now(tz=UTC)
-
-PROVIDER = ProviderEntry(provider_id="p1", kind="openai_compatible", base_url="https://api.openai.com/v1", credential_ref="env:OPENAI_API_KEY")
-MODEL = ModelEntry(
-    model_id="gpt-test",
-    provider_id="p1",
-    upstream_model="gpt-real",
-    input_price_per_mtok=1.0,
-    output_price_per_mtok=2.0,
-    context_window=128000,
-    capabilities=["streaming"],
-)
-BUNDLE = BundleV1(
-    bundle_id=uuid4(),
-    org_id="org-a",
-    issued_at=NOW,
-    expires_at=NOW + timedelta(hours=24),
-    keys=[],
-    revocations=[],
-    catalog=Catalog(providers=[PROVIDER], models=[MODEL]),
-)
+BUNDLE = make_bundle(catalog=Catalog(providers=[PROVIDER], models=[MODEL]), org="org-a")
 
 
 def make_request(model="gpt-test"):
