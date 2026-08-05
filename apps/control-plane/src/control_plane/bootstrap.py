@@ -54,7 +54,7 @@ async def auto_bootstrap(settings: Settings) -> bool:
     spec_path = _spec_file(settings)
     if spec_path is None:
         return False
-    if await Org.find(limit=1):
+    if await Org.first() is not None:
         return False
     spec = _parse_spec(spec_path)
     now = datetime.now(tz=UTC)

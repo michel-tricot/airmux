@@ -33,6 +33,11 @@ class Record(SQLModel):
             query = query.limit(limit)
         return list((await current_session().execute(query)).scalars().all())
 
+    @classmethod
+    async def first(cls, *conditions: ColumnElement[bool] | bool, order_by: OrderBy | tuple[OrderBy, ...] | None = None) -> Self | None:
+        rows = await cls.find(*conditions, order_by=order_by, limit=1)
+        return rows[0] if rows else None
+
     async def save(self) -> Self:
         session = current_session()
         session.add(self)

@@ -108,7 +108,7 @@ async def list_orgs() -> list[Org]:
 
 @router.post("/users")
 async def create_user(body: UserIn) -> UserOut:
-    if await User.find(User.email == body.email, limit=1):
+    if await User.first(User.email == body.email) is not None:
         raise HTTPException(status_code=409)
     user = User(
         id=f"u-{uuid4().hex[:8]}",

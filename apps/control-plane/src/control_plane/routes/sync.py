@@ -26,10 +26,9 @@ def _sync_org(claims_org: str | None, org_id: str | None) -> str | None:
 async def bundle_latest(claims: MgmtDep, org_id: str | None = None) -> SignedBundle:
     org = _sync_org(claims.org_id, org_id)
     conditions = (Bundle.org_id == org,) if org else ()
-    rows = await Bundle.find(*conditions, order_by=(col(Bundle.issued_at).desc(), col(Bundle.version).desc()), limit=1)
-    if not rows:
+    row = await Bundle.first(*conditions, order_by=(col(Bundle.issued_at).desc(), col(Bundle.version).desc()))
+    if row is None:
         raise HTTPException(status_code=404)
-    row = rows[0]
     return SignedBundle(payload=BundleV1.model_validate_json(row.payload), signature=row.signature, signing_key_id=row.signing_key_id)
 
 
