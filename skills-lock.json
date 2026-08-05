@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "skills": {
+    "api-design-principles": {
+      "source": "wshobson/agents",
+      "sourceType": "github",
+      "skillPath": "plugins/backend-development/skills/api-design-principles/SKILL.md",
+      "computedHash": "19715a3a3ff7bf7b1e2ab1cb631ebe810d5b050ed6b3ab0c358e39e5e2e6d33a"
+    },
+    "api-security-best-practices": {
+      "source": "sickn33/antigravity-awesome-skills",
+      "sourceType": "github",
+      "skillPath": "skills/api-security-best-practices/SKILL.md",
+      "computedHash": "12f1913c0571728b672b912bca6895b5847664651e7b40fc7c6b483c8238b8ac"
+    },
+    "fastapi": {
+      "source": "fastapi/fastapi",
+      "sourceType": "github",
+      "skillPath": "fastapi/.agents/skills/fastapi/SKILL.md",
+      "computedHash": "e85d9e223fbc3183b1a599bbe8b02d2edf275d046ff5bcfd14352c92cdff52b3"
+    }
+  }
+}
