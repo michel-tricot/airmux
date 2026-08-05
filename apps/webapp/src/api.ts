@@ -16,13 +16,19 @@ export class ApiError extends Error {
   status: number
 
   constructor(status: number) {
-    super(status === 401 ? 'unauthorized: check the admin token' : `request failed with status ${status}`)
+    super(
+      status === 401
+        ? 'unauthorized: check the management token'
+        : status === 403
+          ? 'forbidden: this view needs a different token scope'
+          : `request failed with status ${status}`,
+    )
     this.status = status
   }
 }
 
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`/admin${path}`, {
+  const res = await fetch(path, {
     ...init,
     headers: {
       'content-type': 'application/json',
@@ -111,20 +117,20 @@ export interface Instance {
   last_seen: string
 }
 
-export const listOrgs = () => api<Org[]>('/orgs')
-export const listKeys = () => api<ApiKey[]>('/keys')
-export const listProviders = () => api<Provider[]>('/providers')
-export const listModels = () => api<Model[]>('/models')
-export const listBundles = () => api<Bundle[]>('/bundles')
-export const listEvents = (limit = 100) => api<UsageEvent[]>(`/events?limit=${limit}`)
-export const listInstances = (includeOffline = true) => api<Instance[]>(`/instances?include_offline=${includeOffline}`)
+export const listOrgs = () => api<Org[]>('/instance/orgs')
+export const listKeys = () => api<ApiKey[]>('/org/keys')
+export const listProviders = () => api<Provider[]>('/org/providers')
+export const listModels = () => api<Model[]>('/org/models')
+export const listBundles = () => api<Bundle[]>('/org/bundles')
+export const listEvents = (limit = 100) => api<UsageEvent[]>(`/org/events?limit=${limit}`)
+export const listInstances = (includeOffline = true) => api<Instance[]>(`/org/instances?include_offline=${includeOffline}`)
 
-export const createOrg = (body: { id: string; name: string }) => api<{ id: string }>('/orgs', { method: 'POST', body: JSON.stringify(body) })
+export const createOrg = (body: { id: string; name: string }) => api<{ id: string }>('/instance/orgs', { method: 'POST', body: JSON.stringify(body) })
 
-export const createKey = (body: { org_id: string; allowed_models: string[] }) =>
-  api<{ key_id: string; token: string }>('/keys', { method: 'POST', body: JSON.stringify(body) })
+export const createKey = (body: { allowed_models: string[] }) =>
+  api<{ key_id: string; token: string }>('/org/keys', { method: 'POST', body: JSON.stringify(body) })
 
-export const revokeKey = (keyId: string) => api<{ key_id: string; status: string }>(`/keys/${keyId}`, { method: 'DELETE' })
+export const revokeKey = (keyId: string) => api<{ key_id: string; status: string }>(`/org/keys/${keyId}`, { method: 'DELETE' })
 
-export const compileBundle = (orgId: string) =>
-  api<{ bundle_id: string; version: number }>('/bundles/compile', { method: 'POST', body: JSON.stringify({ org_id: orgId }) })
+export const compileBundle = () =>
+  api<{ bundle_id: string; version: number }>('/org/bundles/compile', { method: 'POST', body: JSON.stringify({}) })

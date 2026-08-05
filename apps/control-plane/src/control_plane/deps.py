@@ -1,10 +1,13 @@
 from __future__ import annotations
 
-import hmac
 from typing import TYPE_CHECKING, Annotated
 
 from fastapi import Depends, HTTPException, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+
+from control_plane.db import transaction
+from control_plane.models import MgmtToken, OrgMembership, User
+from control_plane.tokens import ManagementClaims, verify_management_token
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -16,22 +19,45 @@ _bearer = HTTPBearer(auto_error=False)
 BearerDep = Annotated["HTTPAuthorizationCredentials | None", Depends(_bearer)]
 
 
-def _matches(credentials: HTTPAuthorizationCredentials | None, expected: str) -> bool:
-    return credentials is not None and hmac.compare_digest(credentials.credentials, expected)
-
-
-async def require_admin(request: Request, credentials: BearerDep) -> None:
-    if not _matches(credentials, request.app.state.settings.auth.admin_token):
+async def management_claims(request: Request, credentials: BearerDep, _session: SessionDep) -> ManagementClaims:
+    claims = verify_management_token(credentials.credentials, request.app.state.token_public_key) if credentials else None
+    if claims is None:
         raise HTTPException(status_code=401)
-
-
-async def require_dp(request: Request, credentials: BearerDep) -> None:
-    if not _matches(credentials, request.app.state.settings.auth.dp_token):
+    row = await MgmtToken.get(claims.token_id)
+    if row is not None and row.revoked:
         raise HTTPException(status_code=401)
+    if claims.user_id is not None:
+        user = await User.get(claims.user_id)
+        if user is None:
+            raise HTTPException(status_code=401)
+        if claims.org_id is None and not user.instance_admin:
+            raise HTTPException(status_code=401)
+        if claims.org_id is not None and not user.instance_admin and await OrgMembership.get((claims.user_id, claims.org_id)) is None:
+            raise HTTPException(status_code=401)
+    return claims
+
+
+MgmtDep = Annotated[ManagementClaims, Depends(management_claims)]
+
+
+async def instance_scope(claims: MgmtDep) -> ManagementClaims:
+    if claims.org_id is not None:
+        raise HTTPException(status_code=403)
+    return claims
+
+
+async def org_scope(claims: MgmtDep) -> str:
+    if claims.org_id is None:
+        raise HTTPException(status_code=403)
+    return claims.org_id
+
+
+InstanceDep = Annotated[ManagementClaims, Depends(instance_scope)]
+OrgDep = Annotated[str, Depends(org_scope)]
 
 
 async def get_session(request: Request) -> AsyncIterator[AsyncSession]:
-    async with request.app.state.session_factory() as session:
+    async with transaction(request.app.state.session_factory) as session:
         yield session
 
 

@@ -18,6 +18,14 @@ is wrong; fix the registry.
 - frame() and transform_stream_event() stay synchronous so the streaming path is testable as a
   pure fold over a recorded byte log.
 
+## Control plane data access
+- All DB access goes through the fat-model API on control_plane.models: Record.get/find/save/delete, OrgOwned.owned_by.
+- The session is ambient (ContextVar in control_plane.db). One transaction per request, committed at request end; save() flushes, never commits.
+- Routes take no SessionDep unless they need raw SQL. Raw sessions are only for what the model API cannot express:
+  aggregates, dialect-specific atomic upserts. Do not grow Record beyond those five methods to absorb them.
+- Org-scoped lookups go through owned_by, never a hand-rolled org_id check. NotOwnedError maps to 404 in app.py.
+- Non-request code (lifespan, CLI, background tasks) opens its own transaction(); never let a spawned task inherit a request session.
+
 ## Typing and lint
 ty must pass clean. Do not widen to Any to silence an error, and do not add `# ty: ignore` or a blanket
 `# noqa`. Fix the type or ask. Every suppression that does survive must name the exact rule and carry a

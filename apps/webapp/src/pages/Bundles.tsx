@@ -1,13 +1,10 @@
-import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { compileBundle, listBundles, listOrgs } from '../api'
-import { Button, formatWhen, inputClass, Page, QueryStatus, Table, Td } from '../ui'
+import { compileBundle, listBundles } from '../api'
+import { Button, formatWhen, Page, QueryStatus, Table, Td } from '../ui'
 
 export default function Bundles() {
   const queryClient = useQueryClient()
   const { data, isLoading, error } = useQuery({ queryKey: ['bundles'], queryFn: listBundles })
-  const { data: orgs } = useQuery({ queryKey: ['orgs'], queryFn: listOrgs })
-  const [orgId, setOrgId] = useState('')
 
   const compile = useMutation({
     mutationFn: compileBundle,
@@ -19,15 +16,7 @@ export default function Bundles() {
   return (
     <Page title="Bundles">
       <div className="mb-6 flex items-center gap-2">
-        <select className={inputClass} value={orgId} onChange={(e) => setOrgId(e.target.value)}>
-          <option value="">select org</option>
-          {(orgs ?? []).map((o) => (
-            <option key={o.id} value={o.id}>
-              {o.id}
-            </option>
-          ))}
-        </select>
-        <Button disabled={compile.isPending || !orgId} onClick={() => compile.mutate(orgId)}>
+        <Button disabled={compile.isPending} onClick={() => compile.mutate()}>
           Compile bundle
         </Button>
         {compile.data && (

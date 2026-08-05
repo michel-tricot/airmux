@@ -46,6 +46,37 @@ data plane, like the control-plane-down and event-replay scenarios already do.
   and reports the delta, so the cost of durable metering is tracked over time rather than measured
   by hand
 
+## Retire mint-root-token
+
+`control-plane mint-root-token` is the one remaining manual step between `airllm init` and a serving
+stack, and the only reason the console binary mints credentials at all. Ways to remove it:
+
+- Fold it into first-start bootstrap: the control plane already mints the org, data plane, and
+  caller tokens on an empty database; it could mint the instance token too and write GW_MGMT_TOKEN
+  to the same env file, even when no spec file is present. Launch becomes init, serve, data-plane.
+  Cost: a standing root credential is created implicitly rather than by an operator action.
+- Derive instance access from key possession instead of a standing token: any CLI command that needs
+  instance scope self-mints a short-lived management token from GW_TOKEN_SIGNING_KEY at invocation
+  time. No long-lived root token exists to leak or revoke; holding the signing key is already
+  equivalent to holding root. The webapp would mint through the CLI or an enrollment step since it
+  cannot hold the key.
+- One-time enrollment on first boot, the Jenkins pattern: first start prints a single-use code; the
+  operator exchanges it for a root token via the API or webapp login. Pairs naturally with
+  [service accounts](#service-accounts-as-control-plane-entities), where the exchange creates the
+  operator entity.
+
+The second option is the most aligned with how the project already treats the signing key as the
+instance root of trust, and it removes a stored secret instead of adding one.
+
+## Finish service accounts
+
+Users exist with a service_account flag, memberships, and token binding, but two pieces remain:
+first-start bootstrap still mints the data plane token ownerless instead of creating a service
+account (e.g. dataplane@org.local) to hold it, and nothing yet distinguishes the kinds in behavior;
+when human login lands, service accounts must be excluded from it, and kind-specific policies
+(token TTLs, sync-only permissions narrower than org admin) become possible. If a third principal
+kind ever appears, convert the boolean to a kind enum rather than stacking flags.
+
 ## Non-sqlite event collection backends
 
 The `EventOutbox` facade makes the collection method pluggable (sqlite, devnull today). Candidates:

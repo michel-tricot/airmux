@@ -8,12 +8,13 @@ from typing import TYPE_CHECKING, Union, get_args, get_origin
 import typer
 from pydantic import BaseModel, ValidationError
 
-from cli.client import admin_client, post_expecting
+from cli.client import org_client, post_expecting
 from cli.common import console
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+    import httpx
     from pydantic.fields import FieldInfo
 
 
@@ -63,13 +64,20 @@ def fill_spec[M: BaseModel](spec_cls: type[M], provided: dict) -> M:
         raise typer.Exit(1) from e
 
 
-def register_create(sub_app: typer.Typer, spec_cls: type[BaseModel], path: str, help_text: str, done: Callable[[dict], None]) -> None:
+def register_create(
+    sub_app: typer.Typer,
+    spec_cls: type[BaseModel],
+    path: str,
+    help_text: str,
+    done: Callable[[dict], None],
+    client: Callable[[str], httpx.Client] = org_client,
+) -> None:
     """Derive a create command from a spec model: one flag and one prompt per field, never hardcoded."""
 
     def run(**kwargs: object) -> None:
         control_plane_url = str(kwargs.pop("control_plane_url", "") or "")
         spec = fill_spec(spec_cls, kwargs)
-        with admin_client(control_plane_url) as c:
+        with client(control_plane_url) as c:
             resp = post_expecting(c, path, spec.model_dump(mode="json"), ok=(200,))
         done(resp.json())
 

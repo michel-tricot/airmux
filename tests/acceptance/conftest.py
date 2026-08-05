@@ -99,8 +99,26 @@ class Stack:
     def _init_secrets(self) -> None:
         base = {**os.environ, "GW_CONFIG": str(self.config_path)}
         self._run([_bin("airllm"), "init", "--control-plane-url", self.cp_url, "--cache-dir", str(self.cache_dir)], base)
+        self._run([_bin("control-plane"), "mint-root-token", "--config", str(self.config_path)], base)
+        self._write_bootstrap_spec()
         secrets = {k: v for k, v in dotenv_values(self.tmp / ".env").items() if v is not None}
         self.env = {**os.environ, **secrets, "GW_CONFIG": str(self.config_path), "OPENAI_API_KEY": "sk-stub"}
+
+    def _write_bootstrap_spec(self) -> None:
+        spec = {
+            "org": ORG,
+            "providers": [
+                {
+                    "provider_id": "stub",
+                    "kind": "openai_compatible",
+                    "base_url": f"http://127.0.0.1:{self.stub_port}",
+                    "credential_ref": "env:OPENAI_API_KEY",
+                }
+            ],
+            "models": [{"model_id": MODEL, "provider_id": "stub", "upstream_model": MODEL}],
+            "keys": [{"allowed_models": ["*"]}],
+        }
+        (self.tmp / "bootstrap.yml").write_text(yaml.safe_dump(spec), encoding="utf-8")
 
     def write_config(
         self,
@@ -114,7 +132,7 @@ class Stack:
         cfg = {
             "control_plane": {
                 "database": {"url": "sqlite+aiosqlite:///airllm.db"},
-                "auth": {"admin_token": "env:GW_ADMIN_TOKEN", "dp_token": "env:GW_DP_TOKEN", "token_signing_key": "env:GW_TOKEN_SIGNING_KEY"},
+                "auth": {"token_signing_key": "env:GW_TOKEN_SIGNING_KEY"},
                 "bundle": {"signing_key": "env:GW_BUNDLE_SIGNING_KEY", "staleness_bound_hours": staleness_bound_hours},
             },
             "data_plane": {
@@ -133,23 +151,13 @@ class Stack:
         self.config_path.write_text(yaml.safe_dump(cfg), encoding="utf-8")
 
     def bootstrap(self) -> None:
-        spec = {
-            "org": ORG,
-            "providers": [
-                {
-                    "provider_id": "stub",
-                    "kind": "openai_compatible",
-                    "base_url": f"http://127.0.0.1:{self.stub_port}",
-                    "credential_ref": "env:OPENAI_API_KEY",
-                }
-            ],
-            "models": [{"model_id": MODEL, "provider_id": "stub", "upstream_model": MODEL}],
-            "keys": [{"allowed_models": ["*"]}],
-        }
-        (self.tmp / "bootstrap.yml").write_text(yaml.safe_dump(spec), encoding="utf-8")
-        self._run([_bin("airllm"), "bootstrap", "--file", "bootstrap.yml", "--control-plane-url", self.cp_url], self.env)
-        token = dotenv_values(self.tmp / ".env").get("AIRLLM_TOKEN")
-        assert token, "bootstrap did not mint a caller token"
+        """Collect the tokens the control plane minted when it auto-bootstrapped on first start."""
+        secrets = {k: v for k, v in dotenv_values(self.tmp / ".env").items() if v is not None}
+        self.env = {**self.env, **secrets}
+        token = secrets.get("AIRLLM_TOKEN")
+        assert token, "control plane did not auto-bootstrap a caller token"
+        assert secrets.get("GW_ORG_TOKEN"), "control plane did not auto-bootstrap an org token"
+        assert secrets.get("GW_DP_TOKEN"), "control plane did not auto-bootstrap a data plane token"
         self.caller_token = token
 
     # processes ------------------------------------------------------------
@@ -198,9 +206,9 @@ class Stack:
 
     def events(self) -> list[dict]:
         resp = httpx.get(
-            f"{self.cp_url}/admin/events",
-            headers={"authorization": f"Bearer {self.env['GW_ADMIN_TOKEN']}"},
-            params={"org_id": ORG, "limit": 1000},
+            f"{self.cp_url}/org/events",
+            headers={"authorization": f"Bearer {self.env['GW_ORG_TOKEN']}"},
+            params={"limit": 1000},
             timeout=10.0,
         )
         resp.raise_for_status()

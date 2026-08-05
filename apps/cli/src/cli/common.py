@@ -18,7 +18,10 @@ RESOURCES = "Resources"
 TESTING = "Testing"
 
 orgs_app = typer.Typer(help="Orgs")
-keys_app = typer.Typer(help="Caller API keys")
+users_app = typer.Typer(help="Users and org memberships")
+service_accounts_app = typer.Typer(help="Service accounts, machine principals with derived emails")
+keys_app = typer.Typer(help="Inference API keys")
+tokens_app = typer.Typer(help="Management API tokens")
 providers_app = typer.Typer(help="Upstream providers")
 models_app = typer.Typer(help="Routable models")
 bundles_app = typer.Typer(help="Signed policy bundles")
@@ -28,7 +31,10 @@ test_app = typer.Typer(help="Acceptance and load testing", no_args_is_help=True)
 
 for name, sub in (
     ("orgs", orgs_app),
+    ("users", users_app),
+    ("service-accounts", service_accounts_app),
     ("keys", keys_app),
+    ("tokens", tokens_app),
     ("providers", providers_app),
     ("models", models_app),
     ("bundles", bundles_app),

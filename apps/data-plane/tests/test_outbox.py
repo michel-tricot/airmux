@@ -14,7 +14,7 @@ from data_plane.outbox import DevNullOutbox, SqliteOutbox, build_outbox
 
 
 def make_outbox(tmp_path, url="http://cp.test", flush_interval_s=5.0) -> SqliteOutbox:
-    return SqliteOutbox(cache_dir=tmp_path, control_plane_url=url, control_plane_token="dp-token", flush_interval_s=flush_interval_s)  # noqa: S106 test token
+    return SqliteOutbox(cache_dir=tmp_path, control_plane_url=url, control_plane_token="dp-token", flush_interval_s=flush_interval_s)
 
 
 def make_event(request_id: str) -> UsageEventV1:

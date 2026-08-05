@@ -13,7 +13,6 @@ def test_flags_only_no_prompting(monkeypatch):
         ProviderCreate,
         {"provider_id": "groq", "base_url": "https://api.groq.com/openai/v1", "credential_ref": "env:GROQ_API_KEY"},
     )
-    assert spec.org_id == "org-dev"
     assert spec.kind == "openai_compatible"
 
 
@@ -25,7 +24,7 @@ def test_missing_required_without_tty_exits(monkeypatch):
 
 def test_prompts_fill_missing_fields(monkeypatch):
     monkeypatch.setattr("sys.stdin.isatty", lambda: True)
-    answers = iter(["org-x", "m1", "p1", "", "0.5", "1.5", "64000", "", "streaming, tools, vision"])
+    answers = iter(["m1", "p1", "", "0.5", "1.5", "64000", "", "streaming, tools, vision"])
     monkeypatch.setattr(typer, "prompt", lambda label, default=None: next(answers) or default)
     spec = fill_spec(ModelCreate, {})
     assert spec.model_id == "m1"
@@ -33,7 +32,6 @@ def test_prompts_fill_missing_fields(monkeypatch):
     assert spec.input_price_per_mtok == 0.5
     assert spec.context_window == 64000
     assert spec.capabilities == ["streaming", "tools", "vision"]
-    assert spec.org_id == "org-x"
 
 
 def test_invalid_value_exits_with_message(monkeypatch):

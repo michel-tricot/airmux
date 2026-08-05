@@ -28,20 +28,40 @@ def resolve_control_plane_url(override: str) -> str:
     return "http://127.0.0.1:8000"
 
 
-def admin_client(control_plane_url: str = "") -> httpx.Client:
-    """Takes the raw --control-plane-url override and resolves it itself."""
+def _bearer_client(token: str, control_plane_url: str) -> httpx.Client:
     import httpx  # noqa: PLC0415 lazy import keeps CLI startup fast
 
-    admin_token = os.environ.get("GW_ADMIN_TOKEN")
-    if not admin_token:
-        console.print("[red]GW_ADMIN_TOKEN is not set, run `airllm init` first[/red]")
+    return httpx.Client(base_url=resolve_control_plane_url(control_plane_url), headers={"authorization": f"Bearer {token}"}, timeout=10.0)
+
+
+def instance_client(control_plane_url: str = "") -> httpx.Client:
+    """Instance-scoped client for /instance routes; takes the raw --control-plane-url override and resolves it itself."""
+    token = os.environ.get("GW_MGMT_TOKEN")
+    if not token:
+        console.print("[red]GW_MGMT_TOKEN is not set, run `airllm init` then `control-plane mint-root-token` first[/red]")
         raise typer.Exit(1)
-    return httpx.Client(base_url=resolve_control_plane_url(control_plane_url), headers={"authorization": f"Bearer {admin_token}"}, timeout=10.0)
+    return _bearer_client(token, control_plane_url)
 
 
-def admin_get(path: str, control_plane_url: str, org: str | None = None) -> list[dict]:
-    with admin_client(control_plane_url) as c:
-        resp = c.get(path, params={"org_id": org} if org else {})
+def org_client(control_plane_url: str = "", token: str | None = None) -> httpx.Client:
+    """Org-scoped client for /org routes; the token comes from bootstrap or `airllm tokens mint`."""
+    token = token or os.environ.get("GW_ORG_TOKEN")
+    if not token:
+        console.print("[red]GW_ORG_TOKEN is not set, run `airllm bootstrap` or `airllm tokens mint <org>` first[/red]")
+        raise typer.Exit(1)
+    return _bearer_client(token, control_plane_url)
+
+
+def instance_get(path: str, control_plane_url: str, params: dict | None = None) -> list[dict]:
+    with instance_client(control_plane_url) as c:
+        resp = c.get(path, params=params or {})
+        resp.raise_for_status()
+        return resp.json()
+
+
+def org_get(path: str, control_plane_url: str, params: dict | None = None) -> list[dict]:
+    with org_client(control_plane_url) as c:
+        resp = c.get(path, params=params or {})
         resp.raise_for_status()
         return resp.json()
 

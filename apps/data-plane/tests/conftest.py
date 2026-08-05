@@ -7,7 +7,7 @@ from uuid import uuid4
 import pytest
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
-from contract import BundleV1, Catalog, KeyEntry, ModelEntry, ProviderEntry, mint_api_token, public_key_to_b64, sign_bundle
+from contract import BundleV1, Catalog, KeyEntry, ModelEntry, ProviderEntry, mint_inference_token, public_key_to_b64, sign_bundle
 from data_plane.adapters import REGISTRY
 from data_plane.canonical import Ctx
 from data_plane.config import AuthConfig, BundleConfig, Config, ControlPlaneLink, EventsConfig
@@ -51,9 +51,9 @@ def make_signed(private_key, key_ids=("k1",), revocations=(), org="o1"):
 
 def make_config(tmp_path, backend="sqlite") -> Config:
     return Config(
-        control_plane=ControlPlaneLink(url="http://cp.test", token="dp-token"),  # noqa: S106 test fixture, not a secret
+        control_plane=ControlPlaneLink(url="http://cp.test", token="dp-token"),
         bundle=BundleConfig(public_key="unused", cache_dir=tmp_path),
-        auth=AuthConfig(token_public_key="unused"),  # noqa: S106 a public key, not a secret
+        auth=AuthConfig(token_public_key="unused"),
         events=EventsConfig(backend=backend),
     )
 
@@ -102,4 +102,4 @@ def token(tmp_path, monkeypatch):
     )
     (tmp_path / "airllm.yml").write_text(config, encoding="utf-8")
     monkeypatch.setenv("OPENAI_API_KEY", "sk-test-not-real")
-    return mint_api_token("k-dev", "org-dev", token_key, NOW)
+    return mint_inference_token("k-dev", "org-dev", token_key, NOW)

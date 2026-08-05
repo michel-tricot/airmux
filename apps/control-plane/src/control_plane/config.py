@@ -19,9 +19,14 @@ class DatabaseConfig(BaseModel):
 class AuthConfig(BaseModel):
     model_config = ConfigDict(frozen=True)
 
-    admin_token: str
-    dp_token: str
     token_signing_key: str  # base64 raw Ed25519, mints caller API tokens; rotates independently of the bundle key
+
+
+class BootstrapPolicy(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    file: str = "bootstrap.yml"  # spec applied on first start; resolved relative to the config file, skipped when absent
+    env_file: str = ".env"  # where the minted tokens land; resolved relative to the config file
 
 
 class BundlePolicy(BaseModel):
@@ -40,6 +45,7 @@ class Settings(BaseModel):
 
     database: DatabaseConfig = Field(default_factory=DatabaseConfig)
     auth: AuthConfig
+    bootstrap: BootstrapPolicy = Field(default_factory=BootstrapPolicy)
     bundle: BundlePolicy
     dev: bool = False  # set by the --dev flag on the entry point, gate dev-only behavior on this
 
@@ -76,8 +82,17 @@ def database_url() -> str:
     return str(url) if url else "sqlite+aiosqlite:///airllm.db"
 
 
+def _anchored(base: Path, value: object) -> str:
+    p = Path(str(value))
+    return str(p if p.is_absolute() else base / p)
+
+
 def load_settings() -> Settings:
     load_dotenv(find_dotenv(usecwd=True))
+    config_dir = Path(os.environ.get("GW_CONFIG", "airllm.yml")).parent
     raw = _resolve_refs(_file_section("control_plane"))
     assert isinstance(raw, dict)  # noqa: S101 _resolve_refs preserves the dict shape
-    return Settings.model_validate({**raw, "dev": os.environ.get("GW_DEV") == "1"})
+    boot_raw = raw.get("bootstrap")
+    boot = boot_raw if isinstance(boot_raw, dict) else {}
+    bootstrap = {"file": _anchored(config_dir, boot.get("file", "bootstrap.yml")), "env_file": _anchored(config_dir, boot.get("env_file", ".env"))}
+    return Settings.model_validate({**raw, "bootstrap": bootstrap, "dev": os.environ.get("GW_DEV") == "1"})

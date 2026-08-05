@@ -6,7 +6,8 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   server: {
     proxy: {
-      '/admin': 'http://127.0.0.1:8000',
+      '^/instance/': 'http://127.0.0.1:8000',
+      '^/org/': 'http://127.0.0.1:8000',
     },
   },
 })

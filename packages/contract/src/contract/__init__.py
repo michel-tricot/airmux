@@ -11,26 +11,27 @@ from contract.signing import (
     sign_bundle,
     verify_bundle,
 )
-from contract.tokens import TokenClaims, mint_api_token, verify_api_token
+from contract.tokens import INFERENCE_TOKEN_PREFIX, InferenceClaims, mint_inference_token, verify_inference_token
 
 __all__ = [
+    "INFERENCE_TOKEN_PREFIX",
     "BundleV1",
     "Catalog",
     "HeartbeatV1",
+    "InferenceClaims",
     "KeyEntry",
     "ModelEntry",
     "ProviderEntry",
     "SignedBundle",
-    "TokenClaims",
     "UsageEventV1",
     "UsageStatus",
     "canonical_json",
-    "mint_api_token",
+    "mint_inference_token",
     "private_key_from_b64",
     "private_key_to_b64",
     "public_key_from_b64",
     "public_key_to_b64",
     "sign_bundle",
-    "verify_api_token",
     "verify_bundle",
+    "verify_inference_token",
 ]

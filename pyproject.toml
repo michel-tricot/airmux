@@ -27,6 +27,7 @@ asyncio_mode = "auto"
 [tool.ruff]
 line-length = 150
 target-version = "py313"
+extend-exclude = [".agents", ".claude"]
 src = ["packages/contract/src", "apps/control-plane/src", "apps/data-plane/src", "apps/cli/src"]
 
 [tool.ruff.format]
@@ -78,7 +79,7 @@ ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"**/tests/**"                  = ["S101", "PLR2004", "ANN", "ARG", "SLF001", "INP001"]
+"**/tests/**"                  = ["S101", "S105", "S106", "PLR2004", "ANN", "ARG", "SLF001", "INP001"]
 "**/migrations/versions/*.py"  = ["ALL"]
 "**/migrations/env.py"         = ["INP001"]
 "apps/cli/**"                  = ["T201"]
@@ -96,7 +97,7 @@ required-imports = ["from __future__ import annotations"]
 mypy-init-return = true
 
 [tool.ruff.lint.flake8-type-checking]
-runtime-evaluated-base-classes = ["pydantic.BaseModel", "sqlmodel.SQLModel"]
+runtime-evaluated-base-classes = ["pydantic.BaseModel", "sqlmodel.SQLModel", "control_plane.models.base.Record", "control_plane.models.base.OrgOwned"]
 
 [tool.ty.src]
 exclude = ["**/migrations/versions"]

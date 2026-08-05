@@ -5,8 +5,20 @@ from typing import TYPE_CHECKING
 import typer
 from dotenv import find_dotenv, load_dotenv
 
-from cli.client import admin_client, admin_get, post_expecting
-from cli.common import bundles_app, console, events_app, instances_app, keys_app, models_app, orgs_app, providers_app
+from cli.client import instance_client, instance_get, org_client, org_get, post_expecting
+from cli.common import (
+    bundles_app,
+    console,
+    events_app,
+    instances_app,
+    keys_app,
+    models_app,
+    orgs_app,
+    providers_app,
+    service_accounts_app,
+    tokens_app,
+    users_app,
+)
 from cli.forms import register_create
 from cli.output import Col, FormatOption, OutputFormat, build_table, fmt_when, print_rows
 
@@ -77,48 +89,164 @@ BUNDLE_COLS = [
 
 @orgs_app.command("list")
 def orgs_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
-    """List orgs."""
-    print_rows("orgs", admin_get("/admin/orgs", control_plane_url), ORG_COLS, fmt)
+    """List orgs; needs the instance token."""
+    print_rows("orgs", instance_get("/instance/orgs", control_plane_url), ORG_COLS, fmt)
 
 
 @keys_app.command("list")
-def keys_list(org: str | None = None, control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
-    """List caller API keys with their status."""
-    print_rows("keys", admin_get("/admin/keys", control_plane_url, org), KEY_COLS, fmt)
+def keys_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
+    """List the org's inference keys with their status."""
+    print_rows("keys", org_get("/org/keys", control_plane_url), KEY_COLS, fmt)
 
 
 @keys_app.command("revoke")
 def keys_revoke(key_id: str, control_plane_url: str = "") -> None:
     """Disable a key; lands in revocations at the next compile."""
-    with admin_client(control_plane_url) as c:
-        resp = c.delete(f"/admin/keys/{key_id}")
+    with org_client(control_plane_url) as c:
+        resp = c.delete(f"/org/keys/{key_id}")
         resp.raise_for_status()
     console.print(f"key [bold]{key_id}[/bold] revoked, run `airllm bundles compile` to propagate")
 
 
+TOKEN_COLS = [
+    Col("id", "ID", style="dim", no_wrap=True),
+    Col("org_id", "Scope", fmt=lambda v: str(v) if v else "instance"),
+    Col("user_id", "Owner", style="dim", fmt=lambda v: str(v) if v else "system"),
+    Col("revoked", "Status", style="yellow", fmt=lambda v: "revoked" if v else "active"),
+    Col("created_at", "Created", no_wrap=True, fmt=fmt_when),
+]
+
+USER_COLS = [
+    Col("id", "ID", style="dim", no_wrap=True),
+    Col("email", "Email"),
+    Col("name", "Name", max_width=30),
+    Col("service_account", "Kind", fmt=lambda v: "service" if v else "human"),
+    Col("instance_admin", "Role", style="yellow", fmt=lambda v: "instance admin" if v else "member"),
+    Col("orgs", "Orgs", style="cyan", max_width=40),
+    Col("created_at", "Created", no_wrap=True, fmt=fmt_when),
+]
+
+
+@users_app.command("create")
+def users_create(
+    email: str,
+    name: str = "",
+    admin: bool = typer.Option(False, "--admin", help="Make the user an instance admin"),
+    control_plane_url: str = "",
+) -> None:
+    """Create a user; add org memberships with `airllm users join`. Needs the instance token."""
+    body = {"email": email, "name": name, "instance_admin": admin}
+    with instance_client(control_plane_url) as c:
+        resp = post_expecting(c, "/instance/users", body, ok=(200,)).json()
+    role = "instance admin" if resp["instance_admin"] else "member"
+    console.print(f"user [bold]{resp['id']}[/bold] created for {resp['email']} as {role}")
+
+
+@service_accounts_app.command("create")
+def service_accounts_create(
+    name: str | None = typer.Argument(None, help="Service account name; prompted for when omitted"),
+    admin: bool = typer.Option(False, "--admin", help="Make the service account an instance admin"),
+    control_plane_url: str = "",
+) -> None:
+    """Create a service account; its email is derived as name-<id>@airbytesvcaccount.ai. Needs the instance token."""
+    if not name:
+        name = typer.prompt("name")
+    with instance_client(control_plane_url) as c:
+        resp = post_expecting(c, "/instance/service-accounts", {"name": name, "instance_admin": admin}, ok=(200,)).json()
+    console.print(f"service account [bold]{resp['id']}[/bold] created as {resp['email']}")
+    console.print(
+        f"[dim]add it to an org with `airllm users join {resp['id']} <org>`, then mint its token with `airllm tokens mint <org> --user {resp['id']}`[/dim]"
+    )
+
+
+@service_accounts_app.command("list")
+def service_accounts_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
+    """List service accounts; needs the instance token."""
+    rows = [u for u in instance_get("/instance/users", control_plane_url) if u["service_account"]]
+    print_rows("service accounts", rows, USER_COLS, fmt)
+
+
+@users_app.command("list")
+def users_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
+    """List users with their org memberships; needs the instance token."""
+    print_rows("users", instance_get("/instance/users", control_plane_url), USER_COLS, fmt)
+
+
+@users_app.command("join")
+def users_join(user_id: str, org: str, control_plane_url: str = "") -> None:
+    """Add a user to an org; their org tokens start working immediately."""
+    with instance_client(control_plane_url) as c:
+        resp = c.put(f"/instance/users/{user_id}/orgs/{org}")
+        resp.raise_for_status()
+    console.print(f"user [bold]{user_id}[/bold] is now a member of [bold]{org}[/bold]")
+
+
+@users_app.command("leave")
+def users_leave(user_id: str, org: str, control_plane_url: str = "") -> None:
+    """Remove a user from an org; their tokens for that org stop working immediately."""
+    with instance_client(control_plane_url) as c:
+        resp = c.delete(f"/instance/users/{user_id}/orgs/{org}")
+        resp.raise_for_status()
+    console.print(f"user [bold]{user_id}[/bold] removed from [bold]{org}[/bold]")
+
+
+@tokens_app.command("list")
+def tokens_list(org: str | None = None, control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
+    """List management tokens minted through the API; needs the instance token."""
+    print_rows("tokens", instance_get("/instance/tokens", control_plane_url, {"org_id": org} if org else None), TOKEN_COLS, fmt)
+
+
+@tokens_app.command("mint")
+def tokens_mint(
+    org: str | None = typer.Argument(None, help="Org to scope the token to; omit for an instance token"),
+    user: str | None = typer.Option(None, "--user", help="Mint on behalf of a user; scope must be backed by their memberships"),
+    control_plane_url: str = "",
+) -> None:
+    """Mint a management token; the token is shown once and never stored."""
+    if user:
+        path, body = f"/instance/users/{user}/tokens", {"org_id": org}
+    else:
+        path, body = (f"/instance/orgs/{org}/tokens" if org else "/instance/tokens"), {}
+    with instance_client(control_plane_url) as c:
+        resp = post_expecting(c, path, body, ok=(200,)).json()
+    scope = resp["org_id"] or "instance"
+    owner = f" for user [bold]{resp['user_id']}[/bold]" if resp.get("user_id") else ""
+    console.print(f"management token [bold]{resp['token_id']}[/bold] minted for [bold]{scope}[/bold]{owner}, token (shown once):")
+    console.print(resp["token"])
+
+
+@tokens_app.command("revoke")
+def tokens_revoke(token_id: str, control_plane_url: str = "") -> None:
+    """Revoke a management token; takes effect on the next request."""
+    with instance_client(control_plane_url) as c:
+        resp = c.delete(f"/instance/tokens/{token_id}")
+        resp.raise_for_status()
+    console.print(f"management token [bold]{token_id}[/bold] revoked")
+
+
 @providers_app.command("list")
-def providers_list(org: str | None = None, control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
-    """List upstream providers and their credential references."""
-    print_rows("providers", admin_get("/admin/providers", control_plane_url, org), PROVIDER_COLS, fmt)
+def providers_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
+    """List the org's upstream providers and their credential references."""
+    print_rows("providers", org_get("/org/providers", control_plane_url), PROVIDER_COLS, fmt)
 
 
 @models_app.command("list")
-def models_list(org: str | None = None, control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
-    """List routable models with pricing and capabilities."""
-    print_rows("models", admin_get("/admin/models", control_plane_url, org), MODEL_COLS, fmt)
+def models_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
+    """List the org's routable models with pricing and capabilities."""
+    print_rows("models", org_get("/org/models", control_plane_url), MODEL_COLS, fmt)
 
 
 @bundles_app.command("list")
-def bundles_list(org: str | None = None, control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
-    """List compiled bundle versions and their validity windows."""
-    print_rows("bundles", admin_get("/admin/bundles", control_plane_url, org), BUNDLE_COLS, fmt)
+def bundles_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
+    """List the org's compiled bundle versions and their validity windows."""
+    print_rows("bundles", org_get("/org/bundles", control_plane_url), BUNDLE_COLS, fmt)
 
 
 @bundles_app.command("compile")
-def bundles_compile(org: str = "org-dev", control_plane_url: str = "") -> None:
-    """Recompile and sign the bundle for an org."""
-    with admin_client(control_plane_url) as c:
-        compiled = post_expecting(c, "/admin/bundles/compile", {"org_id": org}, ok=(200,)).json()
+def bundles_compile(control_plane_url: str = "") -> None:
+    """Recompile and sign the org's bundle."""
+    with org_client(control_plane_url) as c:
+        compiled = post_expecting(c, "/org/bundles/compile", {}, ok=(200,)).json()
     console.print(f"bundle [bold]{compiled['bundle_id']}[/bold] v{compiled['version']} compiled")
 
 
@@ -139,32 +267,30 @@ def instances_list(
     control_plane_url: str = "",
     fmt: FormatOption = OutputFormat.table,
 ) -> None:
-    """List registered data planes; offline ones are shown only with --all."""
+    """List the org's data planes; offline ones are shown only with --all."""
     load_dotenv(find_dotenv(usecwd=True))
-    with admin_client(control_plane_url) as c:
-        resp = c.get("/admin/instances", params={"include_offline": all_})
+    with org_client(control_plane_url) as c:
+        resp = c.get("/org/instances", params={"include_offline": all_})
         resp.raise_for_status()
         print_rows("instances", resp.json(), INSTANCE_COLS, fmt)
 
 
 @events_app.command("list")
-def events_list(org: str | None = None, control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
-    """List the most recent usage events, newest first."""
-    print_rows("events", admin_get("/admin/events", control_plane_url, org), EVENT_COLS, fmt)
+def events_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
+    """List the org's most recent usage events, newest first."""
+    print_rows("events", org_get("/org/events", control_plane_url), EVENT_COLS, fmt)
 
 
 @events_app.command("tail")
-def events_tail(
-    org: str | None = None, interval: float = 2.0, keep: int = 30, control_plane_url: str = "", fmt: FormatOption = OutputFormat.table
-) -> None:
-    """Follow usage events; a live table by default, one json or text line per event otherwise."""
+def events_tail(interval: float = 2.0, keep: int = 30, control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
+    """Follow the org's usage events; a live table by default, one json or text line per event otherwise."""
     import json  # noqa: PLC0415 lazy import keeps CLI startup fast
     import time  # noqa: PLC0415 lazy import keeps CLI startup fast
     from collections import deque  # noqa: PLC0415 lazy import keeps CLI startup fast
 
     from rich.live import Live  # noqa: PLC0415 lazy import keeps CLI startup fast
 
-    params: dict = {"org_id": org} if org else {}
+    params: dict = {}
     rows: deque[dict] = deque(maxlen=keep)
     fresh_ids: set[str] = set()
 
@@ -177,8 +303,8 @@ def events_tail(
         else:
             print("\t".join(c.fmt(event.get(c.key)) for c in EVENT_COLS), flush=True)
 
-    with admin_client(control_plane_url) as c:
-        resp = c.get("/admin/events", params={**params, "limit": keep})
+    with org_client(control_plane_url) as c:
+        resp = c.get("/org/events", params={**params, "limit": keep})
         resp.raise_for_status()
         rows.extend(reversed(resp.json()))
         cursor = rows[-1]["occurred_at"] if rows else "1970-01-01T00:00:00"
@@ -186,7 +312,7 @@ def events_tail(
             if fmt is not OutputFormat.table:
                 while True:
                     time.sleep(interval)
-                    resp = c.get("/admin/events", params={**params, "after": cursor, "limit": 200})
+                    resp = c.get("/org/events", params={**params, "after": cursor, "limit": 200})
                     resp.raise_for_status()
                     for event in resp.json():
                         emit(event)
@@ -194,7 +320,7 @@ def events_tail(
             with Live(table(), console=console, refresh_per_second=4) as live:
                 while True:
                     time.sleep(interval)
-                    resp = c.get("/admin/events", params={**params, "after": cursor, "limit": 200})
+                    resp = c.get("/org/events", params={**params, "after": cursor, "limit": 200})
                     resp.raise_for_status()
                     batch = resp.json()
                     fresh_ids = {event["event_id"] for event in batch}
@@ -215,22 +341,23 @@ def _key_created(resp: dict) -> None:
 register_create(
     orgs_app,
     OrgCreate,
-    "/admin/orgs",
-    "Create an org; keys, providers and models hang off it.",
-    lambda resp: console.print(f"org [bold]{resp['id']}[/bold] created"),
+    "/instance/orgs",
+    "Create an org; keys, providers and models hang off it. Needs the instance token.",
+    lambda resp: console.print(f"org [bold]{resp['id']}[/bold] created, mint its admin token with `airllm tokens mint {resp['id']}`"),
+    client=instance_client,
 )
-register_create(keys_app, KeyCreate, "/admin/keys", "Mint a key; the token is shown once and never stored.", _key_created)
+register_create(keys_app, KeyCreate, "/org/keys", "Mint a key; the token is shown once and never stored.", _key_created)
 register_create(
     providers_app,
     ProviderCreate,
-    "/admin/providers",
+    "/org/providers",
     "Register an upstream provider.",
     lambda resp: console.print(f"provider [bold]{resp['provider_id']}[/bold] created, add models then `airllm bundles compile`"),
 )
 register_create(
     models_app,
     ModelCreate,
-    "/admin/models",
+    "/org/models",
     "Add a routable model.",
     lambda resp: console.print(f"model [bold]{resp['model_id']}[/bold] created, run `airllm bundles compile` to serve it"),
 )

@@ -26,10 +26,6 @@ class BundleOut(BaseModel):
     signing_key_id: str = Field(..., title="Signing Key Id")
 
 
-class CompileIn(BaseModel):
-    org_id: str = Field(..., description="Org to compile the bundle for", title="Org Id")
-
-
 class CompileOut(BaseModel):
     bundle_id: str = Field(..., title="Bundle Id")
     version: int = Field(..., title="Version")
@@ -74,7 +70,6 @@ class KeyEntry(BaseModel):
 
 
 class KeyIn(BaseModel):
-    org_id: str = Field(..., description="Org the key belongs to", title="Org Id")
     allowed_models: list[str] | None = Field(
         ["*"],
         description="Model ids this key may call, * for all",
@@ -120,7 +115,6 @@ class ModelEntry(BaseModel):
 
 
 class ModelIn(BaseModel):
-    org_id: str = Field(..., description="Org the model belongs to", title="Org Id")
     model_id: str = Field(..., description="Caller-facing model id", title="Model Id")
     provider_id: str = Field(..., description="Provider id the model routes to", title="Provider Id")
     upstream_model: str | None = Field(
@@ -186,7 +180,6 @@ class ProviderEntry(BaseModel):
 
 
 class ProviderIn(BaseModel):
-    org_id: str = Field(..., description="Org the provider belongs to", title="Org Id")
     provider_id: str = Field(..., description="Provider id, e.g. openai", title="Provider Id")
     kind: Literal["openai_compatible", "anthropic"] | None = Field("openai_compatible", description="Adapter kind", title="Kind")
     base_url: str = Field(

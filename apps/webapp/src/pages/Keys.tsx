@@ -1,13 +1,11 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { createKey, listKeys, listOrgs, revokeKey } from '../api'
+import { createKey, listKeys, revokeKey } from '../api'
 import { Badge, Button, formatWhen, inputClass, Page, QueryStatus, Table, Td } from '../ui'
 
 export default function Keys() {
   const queryClient = useQueryClient()
   const { data, isLoading, error } = useQuery({ queryKey: ['keys'], queryFn: listKeys })
-  const { data: orgs } = useQuery({ queryKey: ['orgs'], queryFn: listOrgs })
-  const [orgId, setOrgId] = useState('')
   const [allowedModels, setAllowedModels] = useState('*')
   const [minted, setMinted] = useState<{ key_id: string; token: string } | null>(null)
 
@@ -33,24 +31,16 @@ export default function Keys() {
         onSubmit={(e) => {
           e.preventDefault()
           const models = allowedModels.split(',').map((m) => m.trim()).filter(Boolean)
-          if (orgId) create.mutate({ org_id: orgId, allowed_models: models.length > 0 ? models : ['*'] })
+          create.mutate({ allowed_models: models.length > 0 ? models : ['*'] })
         }}
       >
-        <select className={inputClass} value={orgId} onChange={(e) => setOrgId(e.target.value)}>
-          <option value="">select org</option>
-          {(orgs ?? []).map((o) => (
-            <option key={o.id} value={o.id}>
-              {o.id}
-            </option>
-          ))}
-        </select>
         <input
           className={`w-64 ${inputClass}`}
           placeholder="allowed models, comma separated"
           value={allowedModels}
           onChange={(e) => setAllowedModels(e.target.value)}
         />
-        <Button type="submit" disabled={create.isPending || !orgId}>
+        <Button type="submit" disabled={create.isPending}>
           Mint key
         </Button>
         {create.error && <span className="text-sm text-red-400">{create.error.message}</span>}
