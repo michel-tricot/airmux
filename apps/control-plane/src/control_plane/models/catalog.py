@@ -3,10 +3,13 @@ from __future__ import annotations
 from sqlalchemy import JSON
 from sqlmodel import Field
 
-from control_plane.models.base import OrgOwned
+from control_plane.models.audit import audited
+from control_plane.models.base import OrgOwned, Record
+from control_plane.models.tombstone import Tombstonable
 
 
-class Provider(OrgOwned, table=True):
+@audited
+class Provider(Record, OrgOwned, Tombstonable, table=True):
     id: str = Field(primary_key=True)
     org_id: str = Field(foreign_key="org.id")
     kind: str
@@ -16,7 +19,8 @@ class Provider(OrgOwned, table=True):
     cache_write_multiplier: float = 1.0
 
 
-class Model(OrgOwned, table=True):
+@audited
+class Model(Record, OrgOwned, Tombstonable, table=True):
     id: str = Field(primary_key=True)
     org_id: str = Field(foreign_key="org.id")
     provider_id: str = Field(foreign_key="provider.id")

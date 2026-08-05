@@ -96,6 +96,9 @@ required-imports = ["from __future__ import annotations"]
 [tool.ruff.lint.flake8-annotations]
 mypy-init-return = true
 
+[tool.ruff.lint.pep8-naming]
+classmethod-decorators = ["classmethod", "sqlalchemy.orm.declared_attr", "sqlalchemy.orm.declared_attr.directive"]
+
 [tool.ruff.lint.flake8-type-checking]
 runtime-evaluated-base-classes = ["pydantic.BaseModel", "sqlmodel.SQLModel", "control_plane.models.base.Record", "control_plane.models.base.OrgOwned"]
 

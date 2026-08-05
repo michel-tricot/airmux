@@ -12,8 +12,12 @@ from control_plane.config import database_url
 target_metadata = SQLModel.metadata
 
 
+def _url() -> str:
+    return context.config.get_main_option("sqlalchemy.url") or database_url()
+
+
 def run_migrations_offline() -> None:
-    url = database_url()
+    url = _url()
     context.configure(url=url, target_metadata=target_metadata, literal_binds=True, render_as_batch=url.startswith("sqlite"))
     with context.begin_transaction():
         context.run_migrations()
@@ -26,7 +30,7 @@ def do_run_migrations(connection) -> None:  # noqa: ANN001
 
 
 async def run_migrations_online() -> None:
-    engine = create_async_engine(database_url())
+    engine = create_async_engine(_url())
     async with engine.connect() as connection:
         await connection.run_sync(do_run_migrations)
         await connection.commit()

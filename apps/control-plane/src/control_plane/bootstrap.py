@@ -60,7 +60,7 @@ async def auto_bootstrap(settings: Settings) -> bool:
     now = datetime.now(tz=UTC)
     private_key = private_key_from_b64(settings.auth.token_signing_key)
 
-    await Org(id=spec.org, name=spec.org, created_at=now).save()
+    await Org(id=spec.org, name=spec.org).save()
     for p in spec.providers:
         await Provider(
             id=p.provider_id,
@@ -86,12 +86,12 @@ async def auto_bootstrap(settings: Settings) -> bool:
     caller_tokens = []
     for k in spec.keys:
         key_id = f"k-{uuid4().hex[:8]}"
-        await ApiKey(id=key_id, org_id=spec.org, allowed_models=k.allowed_models, disabled=False, created_at=now).save()
+        await ApiKey(id=key_id, org_id=spec.org, allowed_models=k.allowed_models, disabled=False).save()
         caller_tokens.append(mint_inference_token(key_id, spec.org, private_key, now))
     tokens = {}
     for env_name in ("GW_ORG_TOKEN", "GW_DP_TOKEN"):
         token_id = f"mt-{uuid4().hex[:8]}"
-        await MgmtToken(id=token_id, org_id=spec.org, created_at=now, revoked=False).save()
+        await MgmtToken(id=token_id, org_id=spec.org, revoked=False).save()
         tokens[env_name] = mint_management_token(spec.org, private_key, now, token_id)
     version = await compile_and_store(spec.org, uuid4(), now, settings.bundle.staleness_bound, settings.bundle.signing_key)
 

@@ -3,10 +3,9 @@ from __future__ import annotations
 import yaml
 from dotenv import dotenv_values
 from fastapi.testclient import TestClient
-from test_api import setup_control_plane
+from helpers import setup_control_plane
 
 from contract import verify_inference_token
-from control_plane.app import app
 from control_plane.bootstrap import BootstrapSpec
 
 SPEC = """
@@ -38,10 +37,10 @@ def test_full_spec_parses():
     assert len(spec.keys) == 1
 
 
-def test_first_start_bootstraps_and_writes_tokens(tmp_path, monkeypatch):
-    cp = setup_control_plane(tmp_path, monkeypatch)
+def test_first_start_bootstraps_and_writes_tokens(tmp_path):
+    cp = setup_control_plane(tmp_path)
     (tmp_path / "bootstrap.yml").write_text(SPEC, encoding="utf-8")
-    with TestClient(app) as c:
+    with TestClient(cp.app) as c:
         env = dotenv_values(tmp_path / ".env")
         org = {"authorization": f"Bearer {env['GW_ORG_TOKEN']}"}
         dp = {"authorization": f"Bearer {env['GW_DP_TOKEN']}"}
@@ -60,12 +59,12 @@ def test_first_start_bootstraps_and_writes_tokens(tmp_path, monkeypatch):
         assert len(minted) == 2
 
 
-def test_second_start_does_not_bootstrap_again(tmp_path, monkeypatch):
-    cp = setup_control_plane(tmp_path, monkeypatch)
+def test_second_start_does_not_bootstrap_again(tmp_path):
+    cp = setup_control_plane(tmp_path)
     (tmp_path / "bootstrap.yml").write_text(SPEC, encoding="utf-8")
-    with TestClient(app):
+    with TestClient(cp.app):
         first = dotenv_values(tmp_path / ".env")
-    with TestClient(app) as c:
+    with TestClient(cp.app) as c:
         assert dotenv_values(tmp_path / ".env") == first
         org = {"authorization": f"Bearer {first['GW_ORG_TOKEN']}"}
         assert len(c.get("/org/models", headers=org).json()) == 1
@@ -73,8 +72,8 @@ def test_second_start_does_not_bootstrap_again(tmp_path, monkeypatch):
         assert len(c.get("/instance/tokens", headers=cp.headers()).json()) == 2
 
 
-def test_no_spec_file_boots_empty(tmp_path, monkeypatch):
-    cp = setup_control_plane(tmp_path, monkeypatch)
-    with TestClient(app) as c:
+def test_no_spec_file_boots_empty(tmp_path):
+    cp = setup_control_plane(tmp_path)
+    with TestClient(cp.app) as c:
         assert c.get("/instance/orgs", headers=cp.headers()).json() == []
         assert not (tmp_path / ".env").exists()

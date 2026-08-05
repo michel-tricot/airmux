@@ -101,7 +101,7 @@ async def create_key(org: OrgDep, body: KeyIn, request: Request) -> KeyOut:
         raise HTTPException(status_code=404)
     now = datetime.now(tz=UTC)
     key_id = f"k-{uuid4().hex[:8]}"
-    await ApiKey(id=key_id, org_id=org, allowed_models=body.allowed_models, disabled=False, created_at=now).save()
+    await ApiKey(id=key_id, org_id=org, allowed_models=body.allowed_models, disabled=False).save()
     settings = request.app.state.settings
     token = mint_inference_token(key_id, org, private_key_from_b64(settings.auth.token_signing_key), now)
     return KeyOut(key_id=key_id, token=token)

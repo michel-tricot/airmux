@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Annotated
 from fastapi import Depends, HTTPException, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
-from control_plane.db import transaction
+from control_plane.db import current_actor, transaction
 from control_plane.models import MgmtToken, OrgMembership, User
 from control_plane.tokens import ManagementClaims, verify_management_token
 
@@ -34,6 +34,7 @@ async def management_claims(request: Request, credentials: BearerDep, _session: 
             raise HTTPException(status_code=401)
         if claims.org_id is not None and not user.instance_admin and await OrgMembership.get((claims.user_id, claims.org_id)) is None:
             raise HTTPException(status_code=401)
+    current_actor.set(claims.user_id)
     return claims
 
 

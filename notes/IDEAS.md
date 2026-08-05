@@ -83,3 +83,38 @@ The `EventOutbox` facade makes the collection method pluggable (sqlite, devnull 
 push straight to an external telemetry sink, write to a broker for cross-host aggregation, or a
 backend that survives sharing a cache dir across hosts (which the sqlite WAL backend cannot, since
 WAL does not work over a network filesystem). Each is a new subclass plus one line in build_outbox.
+
+## Trigger-based audit logging
+
+On SQLite, an ORM flush listener (audit.py, gated by AUDITED_DIALECTS) writes before/after AuditLog
+rows for @audited tables, attributed via the current_actor contextvar; snapshots exclude the
+database-owned tombstone timestamps. When Postgres lands, audit moves to database triggers installed
+by migration for each @audited table, serializing OLD/NEW with row_to_json and reading the acting
+user from a transaction-local GUC (set_config('app.user_id', ..., true)) set alongside the RLS org
+context at transaction start; the listener stays SQLite-only so the two mechanisms never double-write.
+Triggers catch every write path including Core upserts like the heartbeat, which the ORM listener
+cannot. Keep the @audited registry as the source of truth the trigger DDL is generated from.
+
+## Soft delete on Postgres
+
+Decision (2026-08-05): SQLite hard-deletes, full stop; deleted_at stays null until the Postgres
+migration, then soft delete lands as one coordinated change. The blueprint:
+
+- Delete conversion: a versioned BEFORE DELETE trigger (touch_trigger_ddl sibling) that sets
+  deleted_at and updated_at to the same instant and suppresses the row deletion (RETURN NULL).
+- Read filtering at the session layer: a do_orm_execute listener adds
+  with_loader_criteria(Tombstonable, lambda cls: cls.deleted_at.is_(None), include_aliases=True,
+  track_closure_variables=False) to every ORM select, so fat-model and hand-written queries are
+  both scoped to live rows. Escape hatch: execution_options(include_deleted=True), exposed as a
+  find/first parameter for admin and history views. Known edge: identity-map hits in session.get
+  bypass the filter within a request.
+- Identity: surrogate primary keys everywhere, business identity (org slug, provider name, email,
+  (user_id, org_id)) moves to partial unique indexes WHERE deleted_at IS NULL. FKs reference the
+  surrogate PK because neither dialect lets an FK target a partial index. This matches the existing
+  convention of server-minted ids split from caller-facing names.
+- Resurrection disappears as a concept: re-adding a removed membership inserts a fresh row; each
+  membership period is its own row and tombstones accumulate as history.
+- ApiKey.disabled and MgmtToken.revoked stay distinct from deleted_at: revoked feeds bundle
+  revocation lists and remains visible; deleted means gone from view.
+- Open policy question: what soft-deleting an org does to its keys, providers, and models
+  (cascade, orphan, or forbid).

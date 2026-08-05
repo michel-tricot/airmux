@@ -20,12 +20,13 @@ if TYPE_CHECKING:
 
     from fastapi import Request
 
+    from control_plane.config import Settings
+
 
 @contextlib.asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-    settings = load_settings()
+    settings = app.state.settings
     engine = make_engine(settings.database.url)
-    app.state.settings = settings
     app.state.token_public_key = private_key_from_b64(settings.auth.token_signing_key).public_key()
     app.state.session_factory = make_session_factory(engine)
     async with transaction(app.state.session_factory):
@@ -40,8 +41,11 @@ async def not_owned_handler(_request: Request, _exc: Exception) -> JSONResponse:
     return JSONResponse(status_code=404, content={"detail": "Not Found"})
 
 
-app = FastAPI(title="airllm control plane", lifespan=lifespan)
-app.add_exception_handler(NotOwnedError, not_owned_handler)
-app.include_router(instance_router)
-app.include_router(org_router)
-app.include_router(sync_router)
+def create_app(settings: Settings | None = None) -> FastAPI:
+    app = FastAPI(title="airllm control plane", lifespan=lifespan)
+    app.state.settings = settings if settings is not None else load_settings()
+    app.add_exception_handler(NotOwnedError, not_owned_handler)
+    app.include_router(instance_router)
+    app.include_router(org_router)
+    app.include_router(sync_router)
+    return app

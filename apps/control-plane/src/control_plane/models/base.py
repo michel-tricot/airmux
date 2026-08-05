@@ -1,10 +1,23 @@
 from __future__ import annotations
 
+import re
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any, Self
 
-from sqlmodel import SQLModel, select
+from sqlalchemy import func
+from sqlalchemy.orm import declared_attr
+from sqlmodel import Field, SQLModel, select
 
 from control_plane.db import current_session
+
+
+def utcnow() -> datetime:
+    return datetime.now(tz=UTC)
+
+
+def _snake(name: str) -> str:
+    return re.sub(r"(?<!^)(?=[A-Z])", "_", name).lower()
+
 
 if TYPE_CHECKING:
     from sqlalchemy import ColumnElement
@@ -18,6 +31,10 @@ class NotOwnedError(Exception):
 
 
 class Record(SQLModel):
+    @declared_attr.directive
+    def __tablename__(cls) -> str:
+        return _snake(cls.__name__)
+
     @classmethod
     async def get(cls, ident: object) -> Self | None:
         return await current_session().get(cls, ident)
@@ -50,12 +67,26 @@ class Record(SQLModel):
         await session.flush()
 
 
-class OrgOwned(Record):
+class OrgOwned(SQLModel):
     org_id: str
 
     @classmethod
     async def owned_by(cls, org: str, ident: object) -> Self:
-        row = await cls.get(ident)
+        row = await current_session().get(cls, ident)
         if row is None or row.org_id != org:
             raise NotOwnedError
         return row
+
+
+class Tombstonable(SQLModel):
+    """Lifecycle timestamps for every tombstonable table; models inherit these fields and never declare them.
+
+    The database owns these values through the touch triggers in tombstone.py: updated_at is never
+    null, equals created_at on creation, and refreshes on every update. deleted_at stays null under
+    SQLite, which hard-deletes; trigger-based soft delete arrives with Postgres, see notes/IDEAS.md.
+    The field defaults are placeholders that satisfy NOT NULL until the insert trigger overwrites them.
+    """
+
+    created_at: datetime = Field(default_factory=utcnow, sa_column_kwargs={"server_default": func.now()})
+    updated_at: datetime = Field(default_factory=utcnow, sa_column_kwargs={"server_default": func.now()})
+    deleted_at: datetime | None = None

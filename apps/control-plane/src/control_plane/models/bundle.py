@@ -5,10 +5,10 @@ from uuid import UUID
 
 from sqlmodel import Field
 
-from control_plane.models.base import OrgOwned
+from control_plane.models.base import OrgOwned, Record
 
 
-class Bundle(OrgOwned, table=True):
+class Bundle(Record, OrgOwned, table=True):
     id: UUID = Field(primary_key=True)
     org_id: str = Field(foreign_key="org.id")
     version: int

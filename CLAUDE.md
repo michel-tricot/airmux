@@ -25,6 +25,19 @@ is wrong; fix the registry.
   aggregates, dialect-specific atomic upserts. Do not grow Record into a query builder to absorb them.
 - Org-scoped lookups go through owned_by, never a hand-rolled org_id check. NotOwnedError maps to 404 in app.py.
 - Non-request code (lifespan, CLI, background tasks) opens its own transaction(); never let a spawned task inherit a request session.
+- @audited marks tables for audit coverage. On SQLite an ORM flush listener writes before/after AuditLog rows attributed to
+  the acting user, excluding the database-owned timestamps; on Postgres audit will move to triggers and the listener no-ops.
+  Never write AuditLog rows by hand. Core statements (session.execute of an insert/update) bypass the ORM audit.
+- Models list Record first, then capability mixins: OrgOwned, Tombstonable, future ones. Mixins are plain SQLModel classes
+  and never subclass Record.
+- Tombstonable provides created_at, updated_at, and deleted_at. The database owns the values through touch triggers installed
+  by both create_all and migrations; the ORM never maintains them. updated_at is never null: it equals created_at on creation
+  and refreshes on every update. deleted_at stays null under SQLite, which hard-deletes; trigger-based soft delete arrives
+  with Postgres (blueprint in notes/IDEAS.md). Never declare those fields on a model; a model without them is one that is
+  deliberately not tombstonable.
+- Trigger DDL functions are versioned (touch_trigger_ddl_v1) and frozen once a migration imports them. To change trigger SQL,
+  add the next version, point install_touch_triggers at it, and write a migration swapping the triggers.
+- test_schema.py diffs migrated schema against model metadata; hand-written migrations must keep that diff empty.
 
 ## Typing and lint
 ty must pass clean. Do not widen to Any to silence an error, and do not add `# ty: ignore` or a blanket

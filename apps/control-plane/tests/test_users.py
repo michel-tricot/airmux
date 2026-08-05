@@ -3,15 +3,13 @@ from __future__ import annotations
 import re
 
 from fastapi.testclient import TestClient
-from test_api import PROVIDER, setup_control_plane
-
-from control_plane.app import app
+from helpers import PROVIDER, setup_control_plane
 
 
-def test_user_create_returns_full_resource_with_server_id(tmp_path, monkeypatch):
-    cp = setup_control_plane(tmp_path, monkeypatch)
+def test_user_create_returns_full_resource_with_server_id(tmp_path):
+    cp = setup_control_plane(tmp_path)
     root = cp.headers()
-    with TestClient(app) as c:
+    with TestClient(cp.app) as c:
         created = c.post("/instance/users", json={"email": "michel@example.com"}, headers=root).json()
         assert created["id"].startswith("u-")
         assert created["email"] == "michel@example.com"
@@ -21,10 +19,10 @@ def test_user_create_returns_full_resource_with_server_id(tmp_path, monkeypatch)
         assert c.post("/instance/users", json={"email": "michel@example.com"}, headers=root).status_code == 409
 
 
-def test_service_account_gets_a_derived_email(tmp_path, monkeypatch):
-    cp = setup_control_plane(tmp_path, monkeypatch)
+def test_service_account_gets_a_derived_email(tmp_path):
+    cp = setup_control_plane(tmp_path)
     root = cp.headers()
-    with TestClient(app) as c:
+    with TestClient(cp.app) as c:
         created = c.post("/instance/service-accounts", json={"name": "Data Plane"}, headers=root).json()
         assert created["service_account"] is True
         assert created["name"] == "Data Plane"
@@ -34,10 +32,10 @@ def test_service_account_gets_a_derived_email(tmp_path, monkeypatch):
         assert c.post("/instance/service-accounts", json={"name": "!!"}, headers=root).status_code == 422
 
 
-def test_service_account_is_a_full_principal(tmp_path, monkeypatch):
-    cp = setup_control_plane(tmp_path, monkeypatch)
+def test_service_account_is_a_full_principal(tmp_path):
+    cp = setup_control_plane(tmp_path)
     root = cp.headers()
-    with TestClient(app) as c:
+    with TestClient(cp.app) as c:
         c.post("/instance/orgs", json={"id": "o1"}, headers=root)
         created = c.post("/instance/service-accounts", json={"name": "dp"}, headers=root).json()
         human = c.post("/instance/users", json={"email": "m@example.com"}, headers=root).json()
@@ -54,10 +52,10 @@ def test_service_account_is_a_full_principal(tmp_path, monkeypatch):
         assert by_email == {created["email"]: True, "m@example.com": False}
 
 
-def test_membership_lifecycle_and_listing(tmp_path, monkeypatch):
-    cp = setup_control_plane(tmp_path, monkeypatch)
+def test_membership_lifecycle_and_listing(tmp_path):
+    cp = setup_control_plane(tmp_path)
     root = cp.headers()
-    with TestClient(app) as c:
+    with TestClient(cp.app) as c:
         c.post("/instance/orgs", json={"id": "o1"}, headers=root)
         c.post("/instance/orgs", json={"id": "o2"}, headers=root)
         user = c.post("/instance/users", json={"email": "m@example.com"}, headers=root).json()
@@ -78,10 +76,10 @@ def test_membership_lifecycle_and_listing(tmp_path, monkeypatch):
         assert c.get("/instance/users", headers=root).json()[0]["orgs"] == ["o1"]
 
 
-def test_user_org_token_requires_membership(tmp_path, monkeypatch):
-    cp = setup_control_plane(tmp_path, monkeypatch)
+def test_user_org_token_requires_membership(tmp_path):
+    cp = setup_control_plane(tmp_path)
     root = cp.headers()
-    with TestClient(app) as c:
+    with TestClient(cp.app) as c:
         c.post("/instance/orgs", json={"id": "o1"}, headers=root)
         uid = c.post("/instance/users", json={"email": "m@example.com"}, headers=root).json()["id"]
         assert c.post(f"/instance/users/{uid}/tokens", json={"org_id": "o1"}, headers=root).status_code == 403
@@ -94,10 +92,10 @@ def test_user_org_token_requires_membership(tmp_path, monkeypatch):
         assert c.get("/org/providers", headers=org).status_code == 200
 
 
-def test_instance_token_requires_instance_admin(tmp_path, monkeypatch):
-    cp = setup_control_plane(tmp_path, monkeypatch)
+def test_instance_token_requires_instance_admin(tmp_path):
+    cp = setup_control_plane(tmp_path)
     root = cp.headers()
-    with TestClient(app) as c:
+    with TestClient(cp.app) as c:
         member = c.post("/instance/users", json={"email": "m@example.com"}, headers=root).json()["id"]
         admin = c.post("/instance/users", json={"email": "a@example.com", "instance_admin": True}, headers=root).json()["id"]
         assert c.post(f"/instance/users/{member}/tokens", json={}, headers=root).status_code == 403
@@ -107,10 +105,10 @@ def test_instance_token_requires_instance_admin(tmp_path, monkeypatch):
         assert c.get("/instance/users", headers=headers).status_code == 200
 
 
-def test_instance_admin_can_take_org_scope_without_membership(tmp_path, monkeypatch):
-    cp = setup_control_plane(tmp_path, monkeypatch)
+def test_instance_admin_can_take_org_scope_without_membership(tmp_path):
+    cp = setup_control_plane(tmp_path)
     root = cp.headers()
-    with TestClient(app) as c:
+    with TestClient(cp.app) as c:
         c.post("/instance/orgs", json={"id": "o1"}, headers=root)
         admin = c.post("/instance/users", json={"email": "a@example.com", "instance_admin": True}, headers=root).json()["id"]
         minted = c.post(f"/instance/users/{admin}/tokens", json={"org_id": "o1"}, headers=root).json()
@@ -118,10 +116,10 @@ def test_instance_admin_can_take_org_scope_without_membership(tmp_path, monkeypa
         assert c.get("/org/keys", headers=org).status_code == 200
 
 
-def test_removing_membership_invalidates_user_tokens(tmp_path, monkeypatch):
-    cp = setup_control_plane(tmp_path, monkeypatch)
+def test_removing_membership_invalidates_user_tokens(tmp_path):
+    cp = setup_control_plane(tmp_path)
     root = cp.headers()
-    with TestClient(app) as c:
+    with TestClient(cp.app) as c:
         c.post("/instance/orgs", json={"id": "o1"}, headers=root)
         uid = c.post("/instance/users", json={"email": "m@example.com"}, headers=root).json()["id"]
         c.put(f"/instance/users/{uid}/orgs/o1", headers=root)
@@ -132,10 +130,10 @@ def test_removing_membership_invalidates_user_tokens(tmp_path, monkeypatch):
         assert c.get("/org/keys", headers=org).status_code == 401
 
 
-def test_token_listing_shows_the_owner(tmp_path, monkeypatch):
-    cp = setup_control_plane(tmp_path, monkeypatch)
+def test_token_listing_shows_the_owner(tmp_path):
+    cp = setup_control_plane(tmp_path)
     root = cp.headers()
-    with TestClient(app) as c:
+    with TestClient(cp.app) as c:
         c.post("/instance/orgs", json={"id": "o1"}, headers=root)
         uid = c.post("/instance/users", json={"email": "m@example.com"}, headers=root).json()["id"]
         c.put(f"/instance/users/{uid}/orgs/o1", headers=root)

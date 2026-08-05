@@ -87,7 +87,7 @@ class MembershipOut(BaseModel):
 async def _mint(request: Request, org_id: str | None, user_id: str | None = None) -> MgmtTokenOut:
     now = datetime.now(tz=UTC)
     token_id = f"mt-{uuid4().hex[:8]}"
-    await MgmtToken(id=token_id, org_id=org_id, user_id=user_id, created_at=now, revoked=False).save()
+    await MgmtToken(id=token_id, org_id=org_id, user_id=user_id, revoked=False).save()
     settings = request.app.state.settings
     token = mint_management_token(org_id, private_key_from_b64(settings.auth.token_signing_key), now, token_id, user_id)
     return MgmtTokenOut(token_id=token_id, org_id=org_id, user_id=user_id, token=token)
@@ -97,7 +97,7 @@ async def _mint(request: Request, org_id: str | None, user_id: str | None = None
 async def create_org(body: OrgIn) -> OrgOut:
     if await Org.get(body.id) is not None:
         raise HTTPException(status_code=409)
-    await Org(id=body.id, name=body.name or body.id, created_at=datetime.now(tz=UTC)).save()
+    await Org(id=body.id, name=body.name or body.id).save()
     return OrgOut(id=body.id)
 
 
@@ -110,14 +110,7 @@ async def list_orgs() -> list[Org]:
 async def create_user(body: UserIn) -> UserOut:
     if await User.first(User.email == body.email) is not None:
         raise HTTPException(status_code=409)
-    user = User(
-        id=f"u-{uuid4().hex[:8]}",
-        email=body.email,
-        name=body.name or body.email,
-        instance_admin=body.instance_admin,
-        service_account=False,
-        created_at=datetime.now(tz=UTC),
-    )
+    user = User(id=f"u-{uuid4().hex[:8]}", email=body.email, name=body.name or body.email, instance_admin=body.instance_admin, service_account=False)
     return _user_out(await user.save(), [])
 
 
@@ -129,7 +122,6 @@ async def create_service_account(body: ServiceAccountIn) -> UserOut:
         name=body.name,
         instance_admin=body.instance_admin,
         service_account=True,
-        created_at=datetime.now(tz=UTC),
     )
     return _user_out(await user.save(), [])
 
@@ -208,7 +200,7 @@ async def revoke_token(token_id: str) -> TokenRevokedOut:
     """Revoke any management token by id; unknown ids get a tombstone so offline-minted tokens can be killed too."""
     row = await MgmtToken.get(token_id)
     if row is None:
-        row = MgmtToken(id=token_id, org_id=None, created_at=datetime.now(tz=UTC), revoked=True)
+        row = MgmtToken(id=token_id, org_id=None, revoked=True)
     else:
         row.revoked = True
     await row.save()

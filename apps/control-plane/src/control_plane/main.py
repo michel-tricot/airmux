@@ -16,7 +16,7 @@ def serve(host: str = "127.0.0.1", port: int = 8000, dev: bool = False, config: 
     if dev:
         os.environ["GW_DEV"] = "1"
         run_migrations()
-    uvicorn.run("control_plane.app:app", host=host, port=port, reload=dev)
+    uvicorn.run("control_plane.app:create_app", factory=True, host=host, port=port, reload=dev)
 
 
 @app.command()
