@@ -9,7 +9,7 @@
     "groups": [
       {
         "group": "Home",
-        "pages": ["index"]
+        "pages": ["docs/index"]
       }
     ]
   }
