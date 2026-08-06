@@ -1,6 +1,10 @@
 {
   "$schema": "https://mintlify.com",
+  "theme": "mint",
   "name": "AirLLM",
+  "colors": {
+    "primary": "#ff0000"
+  },
   "navigation": [
     {
       "group": "Get Started",
