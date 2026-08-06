@@ -6,6 +6,8 @@ import yaml
 from pydantic import BaseModel, Field, field_validator
 
 from control_plane.models import Model, Provider
+from control_plane.models.model import ModelOut
+from control_plane.models.provider import ProviderOut
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -52,6 +54,11 @@ class ModelIn(BaseModel):
 class TaxonomySpec(BaseModel):
     providers: list[ProviderIn] = Field(default_factory=list)
     models: list[ModelIn] = Field(default_factory=list)
+
+
+class TaxonomyOut(BaseModel):
+    providers: list[ProviderOut]
+    models: list[ModelOut]
 
 
 def parse_taxonomy(path: Path) -> TaxonomySpec:

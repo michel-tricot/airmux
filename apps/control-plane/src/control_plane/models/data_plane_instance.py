@@ -4,6 +4,7 @@ from datetime import UTC, datetime, timedelta
 from typing import ClassVar, Literal
 from uuid import UUID
 
+from pydantic import BaseModel
 from sqlmodel import Field
 
 from control_plane.models.base import Record
@@ -38,3 +39,7 @@ class DataPlaneInstanceOut(ApiOut):
     last_seen: datetime
 
     api_extra: ClassVar[frozenset[str]] = frozenset({"status"})
+
+
+class HeartbeatOut(BaseModel):
+    instance_id: str

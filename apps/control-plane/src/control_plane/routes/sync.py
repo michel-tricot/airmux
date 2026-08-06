@@ -9,6 +9,8 @@ from sqlmodel import col
 from contract import BundleV1, HeartbeatV1, SignedBundle, UsageEventV1
 from control_plane.deps import MgmtDep, SessionDep  # noqa: TC001 FastAPI resolves dependency annotations at runtime
 from control_plane.models import Bundle, DataPlaneInstance, UsageEvent
+from control_plane.models.data_plane_instance import HeartbeatOut
+from control_plane.models.usage_event import EventsIngestedOut
 from control_plane.schemas import Envelope
 
 router = APIRouter()
@@ -34,18 +36,18 @@ async def bundle_latest(claims: MgmtDep, org_id: str | None = None) -> Envelope[
 
 
 @router.post("/events")
-async def ingest_events(claims: MgmtDep, events: list[UsageEventV1]) -> Envelope[dict[str, int]]:
+async def ingest_events(claims: MgmtDep, events: list[UsageEventV1]) -> Envelope[EventsIngestedOut]:
     """Idempotent upsert on event_id: at-least-once delivery lands exactly once, and a failed batch lands nothing."""
     if claims.org_id is not None and any(event.org_id != claims.org_id for event in events):
         raise HTTPException(status_code=403)
     fresh = [event for event in events if await UsageEvent.get(event.event_id) is None]
     for event in fresh:
         await UsageEvent(**event.model_dump(exclude={"schema_version"})).save()
-    return Envelope(data={"received": len(events), "ingested": len(fresh)})
+    return Envelope(data=EventsIngestedOut(received=len(events), ingested=len(fresh)))
 
 
 @router.post("/heartbeat")
-async def heartbeat(claims: MgmtDep, body: HeartbeatV1, session: SessionDep, request: Request) -> Envelope[dict[str, str]]:
+async def heartbeat(claims: MgmtDep, body: HeartbeatV1, session: SessionDep, request: Request) -> Envelope[HeartbeatOut]:
     """Upsert the instance record; the row persists as history, last_seen drives liveness.
 
     Every worker of a multi-worker data plane heartbeats with the same instance_id, so the first
@@ -61,4 +63,4 @@ async def heartbeat(claims: MgmtDep, body: HeartbeatV1, session: SessionDep, req
         .on_conflict_do_update(index_elements=[DataPlaneInstance.instance_id], set_=fields)
     )
     await session.execute(stmt)
-    return Envelope(data={"instance_id": body.instance_id})
+    return Envelope(data=HeartbeatOut(instance_id=body.instance_id))

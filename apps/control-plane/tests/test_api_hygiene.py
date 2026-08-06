@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import get_args
+from typing import get_args, get_origin
 
 from fastapi.routing import APIRoute
 from helpers import setup_control_plane
@@ -60,6 +60,21 @@ def test_no_table_model_crosses_the_wire(tmp_path):
     assert offenders == [], (
         f"Table rows must not serialize directly, or api_hidden fields leak. Serve an ApiOut subclass (XOut.model_validate(row)) and register it "
         f"in test_api_parity.RESOURCES: {offenders}"
+    )
+
+
+def test_payloads_are_named_models(tmp_path):
+    """Anonymous dict payloads document nothing in OpenAPI; every envelope carries a named model."""
+    cp = setup_control_plane(tmp_path)
+    offenders = []
+    for route in _api_routes(cp.app):
+        assert route.response_model is not None
+        data = route.response_model.model_fields["data"].annotation
+        inner = get_args(data)[0] if get_origin(data) is list else data
+        if not (isinstance(inner, type) and issubclass(inner, BaseModel)):
+            offenders.append(f"{sorted(route.methods or ())} {route.path} -> {data}")
+    assert offenders == [], (
+        f"Replace anonymous payloads with a named model colocated with its resource (an action Out if no table backs it): {offenders}"
     )
 
 

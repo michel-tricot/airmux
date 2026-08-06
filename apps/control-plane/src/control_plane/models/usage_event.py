@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from uuid import UUID
 
+from pydantic import BaseModel
 from sqlmodel import Field
 
 from control_plane.models.base import Record
@@ -49,3 +50,8 @@ class UsageEventOut(ApiOut):
     latency_ms: int
     status: str
     stream: bool
+
+
+class EventsIngestedOut(BaseModel):
+    received: int
+    ingested: int

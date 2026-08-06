@@ -65,14 +65,6 @@ class EnvelopeDeletedOutStr(BaseModel):
     data: DeletedOutStr
 
 
-class EnvelopeDictStrInt(BaseModel):
-    data: dict[str, int] = Field(..., title="Data")
-
-
-class EnvelopeDictStrStr(BaseModel):
-    data: dict[str, str] = Field(..., title="Data")
-
-
 class EnvelopeListApiKeyOut(BaseModel):
     data: list[ApiKeyOut] = Field(..., title="Data")
 
@@ -83,6 +75,15 @@ class EnvelopeListBundleOut(BaseModel):
 
 class EnvelopeListDataPlaneInstanceOut(BaseModel):
     data: list[DataPlaneInstanceOut] = Field(..., title="Data")
+
+
+class EventsIngestedOut(BaseModel):
+    received: int = Field(..., title="Received")
+    ingested: int = Field(..., title="Ingested")
+
+
+class HeartbeatOut(BaseModel):
+    instance_id: str = Field(..., title="Instance Id")
 
 
 class HeartbeatV1(BaseModel):
@@ -382,6 +383,14 @@ class Catalog(BaseModel):
 
     providers: list[ProviderEntry] = Field(..., title="Providers")
     models: list[ModelEntry] = Field(..., title="Models")
+
+
+class EnvelopeEventsIngestedOut(BaseModel):
+    data: EventsIngestedOut
+
+
+class EnvelopeHeartbeatOut(BaseModel):
+    data: HeartbeatOut
 
 
 class EnvelopeKeyOut(BaseModel):

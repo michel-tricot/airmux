@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
 from sqlmodel import col
 
 from control_plane.deps import InstanceDep, MgmtDep  # noqa: TC001 FastAPI resolves dependency annotations at runtime
@@ -9,14 +8,9 @@ from control_plane.models import Model, Provider
 from control_plane.models.model import ModelOut
 from control_plane.models.provider import ProviderOut
 from control_plane.schemas import Envelope
-from control_plane.taxonomy import ModelIn, ProviderIn, UnknownProviderError, upsert_model, upsert_provider
+from control_plane.taxonomy import ModelIn, ProviderIn, TaxonomyOut, UnknownProviderError, upsert_model, upsert_provider
 
 router = APIRouter(prefix="/taxonomy")
-
-
-class TaxonomyOut(BaseModel):
-    providers: list[ProviderOut]
-    models: list[ModelOut]
 
 
 @router.get("")
