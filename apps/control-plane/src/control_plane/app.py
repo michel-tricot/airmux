@@ -12,6 +12,7 @@ from control_plane.models import NotOwnedError
 from control_plane.routes.instance import router as instance_router
 from control_plane.routes.org import router as org_router
 from control_plane.routes.sync import router as sync_router
+from control_plane.routes.taxonomy import router as taxonomy_router
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -44,4 +45,5 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(instance_router)
     app.include_router(org_router)
     app.include_router(sync_router)
+    app.include_router(taxonomy_router)
     return app

@@ -130,7 +130,7 @@ def init(  # noqa: PLR0913, PLR0915, PLR0917 the flags and sequential steps are 
             with _step("models") as s:
                 spec = parse_taxonomy(taxonomy_path)
                 async with transaction(factory):
-                    providers, models = await apply_taxonomy(spec, org)
+                    providers, models = await apply_taxonomy(spec)
                 s["message"] = f"applied {providers} providers, {models} models from {taxonomy_path.name}"
             with _step("bundle") as s:
                 async with transaction(factory):
@@ -152,9 +152,8 @@ def init(  # noqa: PLR0913, PLR0915, PLR0917 the flags and sequential steps are 
 def taxonomy(
     config: str = "airllm.yml",
     file: str = typer.Option("taxonomy.yml", "--file", help="Models taxonomy path, resolved next to the config"),
-    org: str = typer.Option("", help="Org to apply the taxonomy to; defaults to the sole org"),
 ) -> None:
-    """Apply the models taxonomy to the catalog and compile a new bundle; run after editing the taxonomy file."""
+    """Apply the models taxonomy to the instance catalog and compile a new bundle per org; run after editing the taxonomy file."""
     settings = load_settings(config)
     taxonomy_path = Path(config).parent / file
     if not taxonomy_path.exists():
@@ -162,20 +161,19 @@ def taxonomy(
         raise typer.Exit(1)
     spec = parse_taxonomy(taxonomy_path)
 
-    async def run() -> tuple[str, int, int, int]:
+    async def run() -> tuple[int, int, list[tuple[str, int]]]:
         async with standalone_transaction(settings.database.url):
-            orgs = await Org.find()
-            target = org or (orgs[0].id if len(orgs) == 1 else "")
-            if not target:
-                hint = "no org exists yet, run `control-plane init` first" if not orgs else "multiple orgs exist, pass --org"
-                typer.echo(hint, err=True)
-                raise typer.Exit(1)
-            providers, models = await apply_taxonomy(spec, target)
-            version = await compile_and_store(target, uuid4(), datetime.now(tz=UTC), settings.bundle.staleness_bound, settings.bundle.signing_key)
-            return target, providers, models, version
+            providers, models = await apply_taxonomy(spec)
+            now = datetime.now(tz=UTC)
+            versions = [
+                (org.id, await compile_and_store(org.id, uuid4(), now, settings.bundle.staleness_bound, settings.bundle.signing_key))
+                for org in await Org.find()
+            ]
+            return providers, models, versions
 
-    target, providers, models, version = asyncio.run(run())
-    typer.echo(f"applied {taxonomy_path.name} to {target}: {providers} providers, {models} models; compiled bundle v{version}")
+    providers, models, versions = asyncio.run(run())
+    bundles_part = ", ".join(f"{org_id} v{version}" for org_id, version in versions) or "no orgs yet"
+    typer.echo(f"applied {taxonomy_path.name}: {providers} providers, {models} models; compiled bundles: {bundles_part}")
 
 
 @admin_app.command()

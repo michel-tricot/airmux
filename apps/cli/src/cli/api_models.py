@@ -10,11 +10,13 @@ from pydantic import AnyUrl, AwareDatetime, BaseModel, Field
 
 
 class ApiKey(BaseModel):
-    id: str = Field(..., title="Id")
+    created_at: AwareDatetime | None = Field(None, title="Created At")
+    updated_at: AwareDatetime | None = Field(None, title="Updated At")
+    deleted_at: AwareDatetime | None = Field(None, title="Deleted At")
     org_id: str = Field(..., title="Org Id")
+    id: str = Field(..., title="Id")
     allowed_models: list[str] | None = Field(None, title="Allowed Models")
     disabled: bool | None = Field(False, title="Disabled")
-    created_at: AwareDatetime = Field(..., title="Created At")
 
 
 class BundleOut(BaseModel):
@@ -87,9 +89,34 @@ class KeyRevokedOut(BaseModel):
     status: Literal["revoked"] = Field(..., title="Status")
 
 
-class Model(BaseModel):
-    id: str = Field(..., title="Id")
+class MembershipOut(BaseModel):
+    user_id: str = Field(..., title="User Id")
     org_id: str = Field(..., title="Org Id")
+    status: Literal["member", "removed"] = Field(..., title="Status")
+
+
+class MgmtToken(BaseModel):
+    created_at: AwareDatetime | None = Field(None, title="Created At")
+    updated_at: AwareDatetime | None = Field(None, title="Updated At")
+    deleted_at: AwareDatetime | None = Field(None, title="Deleted At")
+    id: str = Field(..., title="Id")
+    org_id: str | None = Field(None, title="Org Id")
+    user_id: str | None = Field(None, title="User Id")
+    revoked: bool | None = Field(False, title="Revoked")
+
+
+class MgmtTokenOut(BaseModel):
+    token_id: str = Field(..., title="Token Id")
+    org_id: str | None = Field(..., title="Org Id")
+    user_id: str | None = Field(None, title="User Id")
+    token: str = Field(..., title="Token")
+
+
+class Model(BaseModel):
+    created_at: AwareDatetime | None = Field(None, title="Created At")
+    updated_at: AwareDatetime | None = Field(None, title="Updated At")
+    deleted_at: AwareDatetime | None = Field(None, title="Deleted At")
+    id: str = Field(..., title="Id")
     provider_id: str = Field(..., title="Provider Id")
     upstream_model: str = Field(..., title="Upstream Model")
     input_price_per_mtok: float = Field(..., title="Input Price Per Mtok")
@@ -142,9 +169,11 @@ class ModelOut(BaseModel):
 
 
 class Org(BaseModel):
+    created_at: AwareDatetime | None = Field(None, title="Created At")
+    updated_at: AwareDatetime | None = Field(None, title="Updated At")
+    deleted_at: AwareDatetime | None = Field(None, title="Deleted At")
     id: str = Field(..., title="Id")
     name: str = Field(..., title="Name")
-    created_at: AwareDatetime = Field(..., title="Created At")
 
 
 class OrgIn(BaseModel):
@@ -157,8 +186,10 @@ class OrgOut(BaseModel):
 
 
 class Provider(BaseModel):
+    created_at: AwareDatetime | None = Field(None, title="Created At")
+    updated_at: AwareDatetime | None = Field(None, title="Updated At")
+    deleted_at: AwareDatetime | None = Field(None, title="Deleted At")
     id: str = Field(..., title="Id")
-    org_id: str = Field(..., title="Org Id")
     kind: str = Field(..., title="Kind")
     base_url: str = Field(..., title="Base Url")
     credential_ref: str = Field(..., title="Credential Ref")
@@ -206,6 +237,29 @@ class ProviderIn(BaseModel):
 
 class ProviderOut(BaseModel):
     provider_id: str = Field(..., title="Provider Id")
+
+
+class ServiceAccountIn(BaseModel):
+    name: str = Field(
+        ...,
+        description="Service account name; the email is derived as name-<id>@airbytesvcaccount.ai",
+        title="Name",
+    )
+    instance_admin: bool | None = Field(
+        False,
+        description="Whether the service account administers the whole instance",
+        title="Instance Admin",
+    )
+
+
+class TaxonomyOut(BaseModel):
+    providers: list[Provider] = Field(..., title="Providers")
+    models: list[Model] = Field(..., title="Models")
+
+
+class TokenRevokedOut(BaseModel):
+    token_id: str = Field(..., title="Token Id")
+    status: Literal["revoked"] = Field(..., title="Status")
 
 
 class UsageEvent(BaseModel):
@@ -256,6 +310,34 @@ class UsageEventV1(BaseModel):
     latency_ms: int = Field(..., title="Latency Ms")
     status: Literal["ok", "upstream_error", "denied", "timeout", "cancelled"] = Field(..., title="Status")
     stream: bool = Field(..., title="Stream")
+
+
+class UserIn(BaseModel):
+    email: str = Field(..., description="Unique email identifying the user", title="Email")
+    name: str | None = Field("", description="Display name, defaults to the email", title="Name")
+    instance_admin: bool | None = Field(
+        False,
+        description="Whether the user administers the whole instance",
+        title="Instance Admin",
+    )
+
+
+class UserOut(BaseModel):
+    id: str = Field(..., title="Id")
+    email: str = Field(..., title="Email")
+    name: str = Field(..., title="Name")
+    instance_admin: bool = Field(..., title="Instance Admin")
+    service_account: bool = Field(..., title="Service Account")
+    created_at: AwareDatetime = Field(..., title="Created At")
+    orgs: list[str] = Field(..., title="Orgs")
+
+
+class UserTokenIn(BaseModel):
+    org_id: str | None = Field(
+        None,
+        description="Org to scope the token to; omit for an instance token, instance admins only",
+        title="Org Id",
+    )
 
 
 class ValidationError(BaseModel):

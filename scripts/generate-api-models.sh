@@ -3,7 +3,17 @@
 # CI regenerates and fails on drift; never hand-edit the output file.
 set -euo pipefail
 cd "$(dirname "$0")/.."
-uv run python -c "import json; from control_plane.app import app; print(json.dumps(app.openapi()))" > /tmp/airllm-openapi.json
+uv run python - > /tmp/airllm-openapi.json <<'PY'
+import json
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+from contract import private_key_to_b64
+from control_plane.app import create_app
+from control_plane.config import AuthConfig, BundlePolicy, Settings
+
+key = private_key_to_b64(Ed25519PrivateKey.generate())
+settings = Settings(auth=AuthConfig(token_signing_key=key), bundle=BundlePolicy(signing_key=key))
+print(json.dumps(create_app(settings).openapi()))
+PY
 uv run datamodel-codegen \
   --input /tmp/airllm-openapi.json \
   --input-file-type openapi \

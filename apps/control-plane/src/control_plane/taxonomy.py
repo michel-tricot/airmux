@@ -14,15 +14,11 @@ ALLOWED_CREDENTIAL_SCHEMES = ("env:", "file:")
 
 
 class TaxonomyError(Exception):
-    """The taxonomy cannot be applied to this org."""
-
-
-class TaxonomyConflictError(TaxonomyError):
-    """A provider or model id in the taxonomy already belongs to another org."""
+    """The taxonomy cannot be applied."""
 
 
 class UnknownProviderError(TaxonomyError):
-    """A model routes to a provider that does not exist in this org."""
+    """A model routes to a provider that does not exist."""
 
 
 class ProviderIn(BaseModel):
@@ -62,13 +58,11 @@ def parse_taxonomy(path: Path) -> TaxonomySpec:
     return TaxonomySpec.model_validate(yaml.safe_load(path.read_text(encoding="utf-8")) or {})
 
 
-async def upsert_provider(org_id: str, p: ProviderIn) -> Provider:
+async def upsert_provider(p: ProviderIn) -> Provider:
     """Create or update; the single upsert shared by the API route and taxonomy application."""
     provider = await Provider.get(p.provider_id)
-    if provider is not None and provider.org_id != org_id:
-        raise TaxonomyConflictError(p.provider_id)
     if provider is None:
-        provider = Provider(id=p.provider_id, org_id=org_id, kind=p.kind, base_url=p.base_url, credential_ref=p.credential_ref)
+        provider = Provider(id=p.provider_id, kind=p.kind, base_url=p.base_url, credential_ref=p.credential_ref)
     else:
         provider.kind = p.kind
         provider.base_url = p.base_url
@@ -78,18 +72,14 @@ async def upsert_provider(org_id: str, p: ProviderIn) -> Provider:
     return await provider.save()
 
 
-async def upsert_model(org_id: str, m: ModelIn) -> Model:
+async def upsert_model(m: ModelIn) -> Model:
     """Create or update; the single upsert shared by the API route and taxonomy application."""
-    provider = await Provider.get(m.provider_id)
-    if provider is None or provider.org_id != org_id:
+    if await Provider.get(m.provider_id) is None:
         raise UnknownProviderError(m.provider_id)
     model = await Model.get(m.model_id)
-    if model is not None and model.org_id != org_id:
-        raise TaxonomyConflictError(m.model_id)
     if model is None:
         model = Model(
             id=m.model_id,
-            org_id=org_id,
             provider_id=m.provider_id,
             upstream_model=m.upstream_model or m.model_id,
             input_price_per_mtok=m.input_price_per_mtok,
@@ -109,13 +99,13 @@ async def upsert_model(org_id: str, m: ModelIn) -> Model:
     return await model.save()
 
 
-async def apply_taxonomy(spec: TaxonomySpec, org_id: str) -> tuple[int, int]:
-    """Converge the org's catalog on the taxonomy: create missing providers and models, update existing ones.
+async def apply_taxonomy(spec: TaxonomySpec) -> tuple[int, int]:
+    """Converge the instance catalog on the taxonomy: create missing providers and models, update existing ones.
 
     Entries absent from the taxonomy are left alone; removal stays an explicit API operation.
     """
     for p in spec.providers:
-        await upsert_provider(org_id, p)
+        await upsert_provider(p)
     for m in spec.models:
-        await upsert_model(org_id, m)
+        await upsert_model(m)
     return len(spec.providers), len(spec.models)

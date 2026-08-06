@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 
 from fastapi.testclient import TestClient
-from helpers import PROVIDER, setup_control_plane
+from helpers import setup_control_plane
 
 
 def test_user_create_returns_full_resource_with_server_id(tmp_path):
@@ -88,8 +88,8 @@ def test_user_org_token_requires_membership(tmp_path):
         assert minted["org_id"] == "o1"
         assert minted["user_id"] == uid
         org = {"authorization": f"Bearer {minted['token']}"}
-        assert c.post("/org/providers", json=PROVIDER, headers=org).status_code == 200
-        assert c.get("/org/providers", headers=org).status_code == 200
+        assert c.post("/org/keys", json={}, headers=org).status_code == 200
+        assert c.get("/org/keys", headers=org).status_code == 200
 
 
 def test_instance_token_requires_instance_admin(tmp_path):

@@ -10,8 +10,7 @@ from sqlmodel import col
 
 from control_plane.compiler import UnknownOrgError, compile_and_store
 from control_plane.deps import OrgDep  # noqa: TC001 FastAPI resolves dependency annotations at runtime
-from control_plane.models import ApiKey, Bundle, DataPlaneInstance, Model, Org, Provider, UsageEvent
-from control_plane.taxonomy import ModelIn, ProviderIn, TaxonomyConflictError, UnknownProviderError, upsert_model, upsert_provider
+from control_plane.models import ApiKey, Bundle, DataPlaneInstance, Org, UsageEvent
 from control_plane.tokens import mint_inference_key
 
 router = APIRouter(prefix="/org")
@@ -32,14 +31,6 @@ class KeyOut(BaseModel):
 class KeyRevokedOut(BaseModel):
     key_id: str
     status: Literal["revoked"]
-
-
-class ProviderOut(BaseModel):
-    provider_id: str
-
-
-class ModelOut(BaseModel):
-    model_id: str
 
 
 class CompileOut(BaseModel):
@@ -83,28 +74,6 @@ async def revoke_key(org: OrgDep, key_id: str) -> KeyRevokedOut:
     return KeyRevokedOut(key_id=key_id, status="revoked")
 
 
-@router.post("/providers")
-async def create_provider(org: OrgDep, body: ProviderIn) -> ProviderOut:
-    """Create or update: reapplying a taxonomy converges the catalog."""
-    try:
-        await upsert_provider(org, body)
-    except TaxonomyConflictError:
-        raise HTTPException(status_code=409) from None
-    return ProviderOut(provider_id=body.provider_id)
-
-
-@router.post("/models")
-async def create_model(org: OrgDep, body: ModelIn) -> ModelOut:
-    """Create or update: reapplying a taxonomy converges the catalog."""
-    try:
-        await upsert_model(org, body)
-    except UnknownProviderError:
-        raise HTTPException(status_code=404) from None
-    except TaxonomyConflictError:
-        raise HTTPException(status_code=409) from None
-    return ModelOut(model_id=body.model_id)
-
-
 @router.post("/bundles/compile")
 async def compile_endpoint(org: OrgDep, request: Request) -> CompileOut:
     settings = request.app.state.settings
@@ -120,16 +89,6 @@ async def compile_endpoint(org: OrgDep, request: Request) -> CompileOut:
 @router.get("/keys")
 async def list_keys(org: OrgDep) -> list[ApiKey]:
     return await ApiKey.find(ApiKey.org_id == org, order_by=col(ApiKey.id))
-
-
-@router.get("/providers")
-async def list_providers(org: OrgDep) -> list[Provider]:
-    return await Provider.find(Provider.org_id == org, order_by=col(Provider.id))
-
-
-@router.get("/models")
-async def list_models(org: OrgDep) -> list[Model]:
-    return await Model.find(Model.org_id == org, order_by=col(Model.id))
 
 
 @router.get("/bundles")

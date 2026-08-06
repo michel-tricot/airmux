@@ -1,20 +1,19 @@
 import { useQuery } from '@tanstack/react-query'
-import { listModels } from '../api'
+import { getTaxonomy } from '../api'
 import { Page, QueryStatus, Table, Td } from '../ui'
 
 export default function Models() {
-  const { data, isLoading, error } = useQuery({ queryKey: ['models'], queryFn: listModels })
-  const models = data ?? []
+  const { data, isLoading, error } = useQuery({ queryKey: ['taxonomy'], queryFn: getTaxonomy })
+  const models = data?.models ?? []
 
   return (
     <Page title="Models">
       <QueryStatus isLoading={isLoading} error={error} empty={models.length === 0} />
       {models.length > 0 && (
-        <Table headers={['Id', 'Org', 'Provider', 'Upstream', 'In $/Mtok', 'Out $/Mtok', 'Context', 'Max out', 'Capabilities']}>
+        <Table headers={['Id', 'Provider', 'Upstream', 'In $/Mtok', 'Out $/Mtok', 'Context', 'Max out', 'Capabilities']}>
           {models.map((m) => (
             <tr key={m.id} className="hover:bg-slate-900/50">
               <Td mono>{m.id}</Td>
-              <Td mono>{m.org_id}</Td>
               <Td mono>{m.provider_id}</Td>
               <Td mono>{m.upstream_model}</Td>
               <Td mono>{m.input_price_per_mtok}</Td>

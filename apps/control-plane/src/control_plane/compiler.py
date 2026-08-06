@@ -50,8 +50,8 @@ async def compile_bundle(org_id: str, bundle_id: UUID, now: datetime, staleness_
     if org is None:
         raise UnknownOrgError(org_id)
     key_rows = await ApiKey.find(ApiKey.org_id == org_id, order_by=col(ApiKey.id))
-    provider_rows = await Provider.find(Provider.org_id == org_id, order_by=col(Provider.id))
-    model_rows = await Model.find(Model.org_id == org_id, order_by=col(Model.id))
+    provider_rows = await Provider.find(order_by=col(Provider.id))
+    model_rows = await Model.find(order_by=col(Model.id))
     return BundleV1(
         bundle_id=bundle_id,
         org_id=org_id,

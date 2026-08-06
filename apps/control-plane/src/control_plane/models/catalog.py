@@ -4,14 +4,13 @@ from sqlalchemy import JSON
 from sqlmodel import Field
 
 from control_plane.models.audit import audited
-from control_plane.models.base import OrgOwned, Record
+from control_plane.models.base import Record
 from control_plane.models.tombstone import Tombstonable
 
 
 @audited
-class Provider(Record, OrgOwned, Tombstonable, table=True):
+class Provider(Record, Tombstonable, table=True):
     id: str = Field(primary_key=True)
-    org_id: str = Field(foreign_key="org.id")
     kind: str
     base_url: str
     credential_ref: str
@@ -20,9 +19,8 @@ class Provider(Record, OrgOwned, Tombstonable, table=True):
 
 
 @audited
-class Model(Record, OrgOwned, Tombstonable, table=True):
+class Model(Record, Tombstonable, table=True):
     id: str = Field(primary_key=True)
-    org_id: str = Field(foreign_key="org.id")
     provider_id: str = Field(foreign_key="provider.id")
     upstream_model: str
     input_price_per_mtok: float

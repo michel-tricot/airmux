@@ -32,14 +32,9 @@ def test_empty_taxonomy_parses_to_defaults():
 def test_apply_taxonomy_upserts(tmp_path):
     setup_control_plane(tmp_path)
     spec = TaxonomySpec.model_validate(yaml.safe_load(TAXONOMY))
-
-    async def first_apply():
-        await Org(id="o1", name="o1").save()
-        return await apply_taxonomy(spec, "o1")
-
-    assert run_in_db(tmp_path, first_apply) == (1, 1)
+    assert run_in_db(tmp_path, lambda: apply_taxonomy(spec)) == (1, 1)
     changed = TaxonomySpec.model_validate(yaml.safe_load(TAXONOMY.replace("stub.example", "stub2.example")))
-    assert run_in_db(tmp_path, lambda: apply_taxonomy(changed, "o1")) == (1, 1)
+    assert run_in_db(tmp_path, lambda: apply_taxonomy(changed)) == (1, 1)
     providers = run_in_db(tmp_path, Provider.find)
     assert [p.base_url for p in providers] == ["https://stub2.example/v1"]
     assert len(run_in_db(tmp_path, Model.find)) == 1
@@ -48,13 +43,8 @@ def test_apply_taxonomy_upserts(tmp_path):
 def test_apply_taxonomy_rejects_a_model_with_an_unknown_provider(tmp_path):
     setup_control_plane(tmp_path)
     spec = TaxonomySpec.model_validate({"models": [{"model_id": "ghost", "provider_id": "nope"}]})
-
-    async def apply():
-        await Org(id="o1", name="o1").save()
-        return await apply_taxonomy(spec, "o1")
-
     with pytest.raises(UnknownProviderError):
-        run_in_db(tmp_path, apply)
+        run_in_db(tmp_path, lambda: apply_taxonomy(spec))
     assert run_in_db(tmp_path, Model.find) == []
 
 
@@ -72,12 +62,24 @@ def test_taxonomy_command_applies_and_compiles(tmp_path):
     assert [b.version for b in run_in_db(tmp_path, Bundle.find)] == [1, 2]
 
 
-def test_taxonomy_command_requires_an_org(tmp_path):
+def test_taxonomy_command_compiles_a_bundle_per_org(tmp_path):
+    init = run_init(tmp_path, taxonomy=TAXONOMY)
+    assert init.exit_code == 0, init.output
+    run_in_db(tmp_path, lambda: Org(id="org-two", name="org-two").save())
+    result = runner.invoke(app, ["taxonomy", "--config", str(tmp_path / "airllm.yml")])
+    assert result.exit_code == 0, result.output
+    bundles = run_in_db(tmp_path, Bundle.find)
+    assert {b.org_id for b in bundles} == {"org-dev", "org-two"}
+
+
+def test_taxonomy_command_applies_without_orgs(tmp_path):
     cp = setup_control_plane(tmp_path)
     cfg = write_config(tmp_path, cp)
     (tmp_path / "taxonomy.yml").write_text(TAXONOMY, encoding="utf-8")
     result = runner.invoke(app, ["taxonomy", "--config", cfg])
-    assert result.exit_code == 1
+    assert result.exit_code == 0, result.output
+    assert [p.id for p in run_in_db(tmp_path, Provider.find)] == ["stub"]
+    assert run_in_db(tmp_path, Bundle.find) == []
 
 
 def test_serve_does_not_seed(tmp_path):

@@ -162,16 +162,11 @@ def upgrade() -> None:
         sa.Column("updated_at", sa.DateTime(), server_default=sa.text("(CURRENT_TIMESTAMP)"), nullable=False),
         sa.Column("deleted_at", sa.DateTime(), nullable=True),
         sa.Column("id", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
-        sa.Column("org_id", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("kind", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("base_url", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("credential_ref", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("cache_read_multiplier", sa.Float(), nullable=False),
         sa.Column("cache_write_multiplier", sa.Float(), nullable=False),
-        sa.ForeignKeyConstraint(
-            ["org_id"],
-            ["org.id"],
-        ),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_table(
@@ -180,7 +175,6 @@ def upgrade() -> None:
         sa.Column("updated_at", sa.DateTime(), server_default=sa.text("(CURRENT_TIMESTAMP)"), nullable=False),
         sa.Column("deleted_at", sa.DateTime(), nullable=True),
         sa.Column("id", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
-        sa.Column("org_id", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("provider_id", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("upstream_model", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("input_price_per_mtok", sa.Float(), nullable=False),
@@ -188,10 +182,6 @@ def upgrade() -> None:
         sa.Column("context_window", sa.Integer(), nullable=False),
         sa.Column("max_output_tokens", sa.Integer(), nullable=True),
         sa.Column("capabilities", sa.JSON(), nullable=False),
-        sa.ForeignKeyConstraint(
-            ["org_id"],
-            ["org.id"],
-        ),
         sa.ForeignKeyConstraint(
             ["provider_id"],
             ["provider.id"],

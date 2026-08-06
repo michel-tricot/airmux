@@ -56,7 +56,6 @@ export interface ApiKey {
 
 export interface Provider {
   id: string
-  org_id: string
   kind: string
   base_url: string
   credential_ref: string
@@ -66,7 +65,6 @@ export interface Provider {
 
 export interface Model {
   id: string
-  org_id: string
   provider_id: string
   upstream_model: string
   input_price_per_mtok: number
@@ -117,10 +115,14 @@ export interface Instance {
   last_seen: string
 }
 
+export interface Taxonomy {
+  providers: Provider[]
+  models: Model[]
+}
+
 export const listOrgs = () => api<Org[]>('/instance/orgs')
 export const listKeys = () => api<ApiKey[]>('/org/keys')
-export const listProviders = () => api<Provider[]>('/org/providers')
-export const listModels = () => api<Model[]>('/org/models')
+export const getTaxonomy = () => api<Taxonomy>('/taxonomy')
 export const listBundles = () => api<Bundle[]>('/org/bundles')
 export const listEvents = (limit = 100) => api<UsageEvent[]>(`/org/events?limit=${limit}`)
 export const listInstances = (includeOffline = true) => api<Instance[]>(`/org/instances?include_offline=${includeOffline}`)

@@ -44,14 +44,12 @@ KEY_COLS = [
 ]
 PROVIDER_COLS = [
     Col("id", "ID", style="dim", no_wrap=True),
-    Col("org_id", "Org"),
     Col("kind", "Kind"),
     Col("base_url", "Base URL", max_width=45),
     Col("credential_ref", "Credential", style="cyan", max_width=30),
 ]
 MODEL_COLS = [
     Col("id", "ID", style="dim", no_wrap=True),
-    Col("org_id", "Org"),
     Col("provider_id", "Provider"),
     Col("upstream_model", "Upstream model"),
     Col("input_price_per_mtok", "$/Mtok in"),
@@ -229,16 +227,23 @@ def tokens_revoke(token_id: str, control_plane_url: str = "") -> None:
     console.print(f"management token [bold]{token_id}[/bold] revoked")
 
 
+def _taxonomy(control_plane_url: str) -> dict:
+    with org_client(control_plane_url) as c:
+        resp = c.get("/taxonomy")
+        resp.raise_for_status()
+        return resp.json()
+
+
 @providers_app.command("list")
 def providers_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
-    """List the org's upstream providers and their credential references."""
-    print_rows("providers", org_get("/org/providers", control_plane_url), PROVIDER_COLS, fmt)
+    """List the instance's upstream providers and their credential references."""
+    print_rows("providers", _taxonomy(control_plane_url)["providers"], PROVIDER_COLS, fmt)
 
 
 @models_app.command("list")
 def models_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
-    """List the org's routable models with pricing and capabilities."""
-    print_rows("models", org_get("/org/models", control_plane_url), MODEL_COLS, fmt)
+    """List the instance's routable models with pricing and capabilities."""
+    print_rows("models", _taxonomy(control_plane_url)["models"], MODEL_COLS, fmt)
 
 
 @bundles_app.command("list")
@@ -341,7 +346,7 @@ register_create(
     orgs_app,
     OrgCreate,
     "/instance/orgs",
-    "Create an org; keys, providers and models hang off it. Needs the instance token.",
+    "Create an org; keys and bundles hang off it. Needs the instance token.",
     lambda resp: console.print(f"org [bold]{resp['id']}[/bold] created, mint its admin token with `airllm tokens mint {resp['id']}`"),
     client=instance_client,
 )
@@ -349,14 +354,16 @@ register_create(keys_app, KeyCreate, "/org/keys", "Mint a key; the token is show
 register_create(
     providers_app,
     ProviderCreate,
-    "/org/providers",
-    "Register an upstream provider.",
+    "/taxonomy/providers",
+    "Register an upstream provider for the whole instance. Needs the instance token.",
     lambda resp: console.print(f"provider [bold]{resp['provider_id']}[/bold] created, add models then `airllm bundles compile`"),
+    client=instance_client,
 )
 register_create(
     models_app,
     ModelCreate,
-    "/org/models",
-    "Add a routable model.",
+    "/taxonomy/models",
+    "Add a routable model for the whole instance. Needs the instance token.",
     lambda resp: console.print(f"model [bold]{resp['model_id']}[/bold] created, run `airllm bundles compile` to serve it"),
+    client=instance_client,
 )

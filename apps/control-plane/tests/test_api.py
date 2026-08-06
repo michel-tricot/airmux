@@ -23,8 +23,8 @@ def test_full_flow_to_verified_bundle(tmp_path):
         assert claims.key_id == key["key_id"]
         assert claims.org_id == "o1"
         assert verify_inference_token(key["token"], cp.bundle_key.public_key()) is None
-        assert c.post("/org/providers", json=PROVIDER, headers=org).status_code == 200
-        assert c.post("/org/models", json=MODEL, headers=org).status_code == 200
+        assert c.post("/taxonomy/providers", json=PROVIDER, headers=root).status_code == 200
+        assert c.post("/taxonomy/models", json=MODEL, headers=root).status_code == 200
         compiled = c.post("/org/bundles/compile", headers=org).json()
         assert compiled["version"] == 1
 
@@ -56,14 +56,12 @@ def test_revocation_lands_in_next_bundle(tmp_path):
 def test_updated_at_tracks_modifications(tmp_path):
     cp = setup_control_plane(tmp_path)
     root = cp.headers()
-    org = cp.headers("o1")
     with TestClient(cp.app) as c:
-        c.post("/instance/orgs", json={"id": "o1"}, headers=root)
-        c.post("/org/providers", json=PROVIDER, headers=org)
-        created = c.get("/org/providers", headers=org).json()[0]
+        c.post("/taxonomy/providers", json=PROVIDER, headers=root)
+        created = c.get("/taxonomy", headers=root).json()["providers"][0]
         assert created["updated_at"] == created["created_at"]
-        c.post("/org/providers", json={**PROVIDER, "base_url": "https://eu.api.openai.com/v1"}, headers=org)
-        second = c.get("/org/providers", headers=org).json()[0]["updated_at"]
+        c.post("/taxonomy/providers", json={**PROVIDER, "base_url": "https://eu.api.openai.com/v1"}, headers=root)
+        second = c.get("/taxonomy", headers=root).json()["providers"][0]["updated_at"]
         assert second > created["updated_at"]
 
 
@@ -84,18 +82,17 @@ def test_cross_org_key_revocation_is_not_found(tmp_path):
 def test_secret_shaped_credential_ref_rejected(tmp_path):
     cp = setup_control_plane(tmp_path)
     root = cp.headers()
-    org = cp.headers("o1")
     with TestClient(cp.app) as c:
-        c.post("/instance/orgs", json={"id": "o1"}, headers=root)
         bad = {**PROVIDER, "credential_ref": "sk-live-abc123"}
-        assert c.post("/org/providers", json=bad, headers=org).status_code == 422
+        assert c.post("/taxonomy/providers", json=bad, headers=root).status_code == 422
 
 
 def test_auth_required_everywhere(tmp_path):
     cp = setup_control_plane(tmp_path)
     with TestClient(cp.app) as c:
         assert c.post("/instance/orgs", json={"id": "o1"}).status_code == 401
-        assert c.get("/org/providers").status_code == 401
+        assert c.get("/org/keys").status_code == 401
+        assert c.get("/taxonomy").status_code == 401
         assert c.post("/instance/orgs", json={"id": "o1"}, headers={"authorization": "Bearer garbage"}).status_code == 401
         assert c.get("/v1/bundle/latest").status_code == 401
         assert c.get("/v1/bundle/latest", headers={"authorization": "Bearer garbage"}).status_code == 401
@@ -115,11 +112,14 @@ def test_scopes_are_strictly_separated(tmp_path):
         assert c.get("/instance/tokens", headers=org).status_code == 403
         assert c.delete("/instance/tokens/mt-x", headers=org).status_code == 403
 
-        assert c.post("/org/providers", json=PROVIDER, headers=root).status_code == 403
-        assert c.post("/org/models", json=MODEL, headers=root).status_code == 403
+        assert c.post("/taxonomy/providers", json=PROVIDER, headers=org).status_code == 403
+        assert c.post("/taxonomy/models", json=MODEL, headers=org).status_code == 403
+        assert c.get("/taxonomy", headers=org).status_code == 200
+        assert c.get("/taxonomy", headers=root).status_code == 200
+
         assert c.post("/org/keys", json={}, headers=root).status_code == 403
         assert c.post("/org/bundles/compile", headers=root).status_code == 403
-        for path in ("/org/keys", "/org/providers", "/org/models", "/org/bundles", "/org/events", "/org/instances"):
+        for path in ("/org/keys", "/org/bundles", "/org/events", "/org/instances"):
             assert c.get(path, headers=root).status_code == 403
 
 
@@ -143,15 +143,14 @@ def test_orgs_cannot_reach_each_other(tmp_path):
     with TestClient(cp.app) as c:
         c.post("/instance/orgs", json={"id": "o1"}, headers=root)
         c.post("/instance/orgs", json={"id": "o2"}, headers=root)
-        assert c.post("/org/providers", json=PROVIDER, headers=o1).status_code == 200
-        assert c.post("/org/models", json=MODEL, headers=o1).status_code == 200
+        c.post("/taxonomy/providers", json=PROVIDER, headers=root)
         key = c.post("/org/keys", json={}, headers=o1).json()
 
-        assert c.post("/org/providers", json=PROVIDER, headers=o2).status_code == 409
-        assert c.post("/org/models", json={**MODEL, "model_id": "other"}, headers=o2).status_code == 404
         assert c.delete(f"/org/keys/{key['key_id']}", headers=o2).status_code == 404
-        assert c.get("/org/providers", headers=o2).json() == []
         assert c.get("/org/keys", headers=o2).json() == []
+        taxonomy = c.get("/taxonomy", headers=o2).json()
+        assert [p["id"] for p in taxonomy["providers"]] == ["openai"]
+        assert taxonomy == c.get("/taxonomy", headers=o1).json()
 
 
 def test_token_lifecycle_via_api(tmp_path):
@@ -196,16 +195,17 @@ def test_list_endpoints_read_back(tmp_path):
     with TestClient(cp.app) as c:
         c.post("/instance/orgs", json={"id": "o1"}, headers=root)
         key = c.post("/org/keys", json={}, headers=org).json()
-        c.post("/org/providers", json=PROVIDER, headers=org)
-        c.post("/org/models", json=MODEL, headers=org)
+        c.post("/taxonomy/providers", json=PROVIDER, headers=root)
+        c.post("/taxonomy/models", json=MODEL, headers=root)
         c.post("/org/bundles/compile", headers=org)
 
         assert [o["id"] for o in c.get("/instance/orgs", headers=root).json()] == ["o1"]
         keys = c.get("/org/keys", headers=org).json()
         assert [k["id"] for k in keys] == [key["key_id"]]
         assert "token" not in keys[0]
-        assert [p["id"] for p in c.get("/org/providers", headers=org).json()] == ["openai"]
-        assert [m["id"] for m in c.get("/org/models", headers=org).json()] == ["gpt-test"]
+        taxonomy = c.get("/taxonomy", headers=org).json()
+        assert [p["id"] for p in taxonomy["providers"]] == ["openai"]
+        assert [m["id"] for m in taxonomy["models"]] == ["gpt-test"]
         bundles = c.get("/org/bundles", headers=org).json()
         assert [b["version"] for b in bundles] == [1]
         assert "payload" not in bundles[0]
@@ -229,17 +229,20 @@ def test_bundle_latest_filters_by_org(tmp_path):
 def test_model_and_provider_upsert_converge(tmp_path):
     cp = setup_control_plane(tmp_path)
     root = cp.headers()
-    org = cp.headers("o1")
     with TestClient(cp.app) as c:
-        c.post("/instance/orgs", json={"id": "o1"}, headers=root)
-        c.post("/org/providers", json=PROVIDER, headers=org)
-        c.post("/org/models", json={**MODEL, "input_price_per_mtok": 0.0}, headers=org)
-        assert c.post("/org/models", json={**MODEL, "input_price_per_mtok": 0.15}, headers=org).status_code == 200
-        models = c.get("/org/models", headers=org).json()
-        assert models[0]["input_price_per_mtok"] == 0.15
+        c.post("/taxonomy/providers", json=PROVIDER, headers=root)
+        c.post("/taxonomy/models", json={**MODEL, "input_price_per_mtok": 0.0}, headers=root)
+        assert c.post("/taxonomy/models", json={**MODEL, "input_price_per_mtok": 0.15}, headers=root).status_code == 200
+        assert c.get("/taxonomy", headers=root).json()["models"][0]["input_price_per_mtok"] == 0.15
         updated = {**PROVIDER, "base_url": "https://other.example/v1"}
-        assert c.post("/org/providers", json=updated, headers=org).status_code == 200
-        assert c.get("/org/providers", headers=org).json()[0]["base_url"] == "https://other.example/v1"
+        assert c.post("/taxonomy/providers", json=updated, headers=root).status_code == 200
+        assert c.get("/taxonomy", headers=root).json()["providers"][0]["base_url"] == "https://other.example/v1"
+
+
+def test_model_with_unknown_provider_is_not_found(tmp_path):
+    cp = setup_control_plane(tmp_path)
+    with TestClient(cp.app) as c:
+        assert c.post("/taxonomy/models", json={**MODEL, "provider_id": "nope"}, headers=cp.headers()).status_code == 404
 
 
 def _event(request_id: str, org: str = "o1") -> dict:

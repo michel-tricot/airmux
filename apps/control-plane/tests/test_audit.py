@@ -17,8 +17,8 @@ def test_create_update_and_saveless_mutation_are_audited(tmp_path):
     org = cp.headers("o1")
     with TestClient(cp.app) as c:
         c.post("/instance/orgs", json={"id": "o1"}, headers=root)
-        c.post("/org/providers", json=PROVIDER, headers=org)
-        c.post("/org/providers", json={**PROVIDER, "base_url": "https://eu.api.openai.com/v1"}, headers=org)
+        c.post("/taxonomy/providers", json=PROVIDER, headers=root)
+        c.post("/taxonomy/providers", json={**PROVIDER, "base_url": "https://eu.api.openai.com/v1"}, headers=root)
         key = c.post("/org/keys", json={}, headers=org).json()
         c.delete(f"/org/keys/{key['key_id']}", headers=org)
 
@@ -101,11 +101,9 @@ def test_membership_removal_writes_a_delete_log(tmp_path):
 def test_noop_upsert_writes_no_update_log(tmp_path):
     cp = setup_control_plane(tmp_path)
     root = cp.headers()
-    org = cp.headers("o1")
     with TestClient(cp.app) as c:
-        c.post("/instance/orgs", json={"id": "o1"}, headers=root)
-        c.post("/org/providers", json=PROVIDER, headers=org)
-        c.post("/org/providers", json=PROVIDER, headers=org)
+        c.post("/taxonomy/providers", json=PROVIDER, headers=root)
+        c.post("/taxonomy/providers", json=PROVIDER, headers=root)
 
     rows = _audit_rows(tmp_path)
     assert [(r.table_name, r.action) for r in rows if r.table_name == "provider"] == [("provider", "create")]
