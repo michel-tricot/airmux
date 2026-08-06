@@ -13,7 +13,7 @@ from control_plane.models.data_plane_instance import HeartbeatOut
 from control_plane.models.usage_event import EventsIngestedOut
 from control_plane.schemas import Envelope
 
-router = APIRouter()
+router = APIRouter(tags=["Sync"])
 
 
 def _sync_org(claims_org: str | None, org_id: str | None) -> str | None:

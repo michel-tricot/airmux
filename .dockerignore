@@ -1,0 +1,10 @@
+*
+!pyproject.toml
+!uv.lock
+!packages
+!apps
+apps/webapp
+**/__pycache__
+**/*.pyc
+**/node_modules
+**/.venv

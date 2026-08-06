@@ -34,6 +34,20 @@ def test_every_endpoint_declares_an_envelope(tmp_path):
     )
 
 
+def test_every_endpoint_is_tagged_for_docs(tmp_path):
+    """ReDoc renders one sidebar section per tag: every operation carries exactly one resource tag, every tag is declared with a
+    description, and x-tagGroups covers every tag so none drop out of the grouped sidebar."""
+    cp = setup_control_plane(tmp_path)
+    untagged = [f"{sorted(r.methods or ())} {r.path}" for r in _api_routes(cp.app) if len(r.tags) != 1]
+    assert untagged == [], f"Give these operations exactly one resource tag: {untagged}"
+    schema = cp.app.openapi()
+    used = {str(tag) for r in _api_routes(cp.app) for tag in r.tags}
+    declared = {t["name"] for t in schema.get("tags", [])}
+    grouped = {tag for group in schema.get("x-tagGroups", []) for tag in group["tags"]}
+    assert used == declared, f"Declare every used tag in openapi_tags with a description: {used ^ declared}"
+    assert used == grouped, f"List every tag in an x-tagGroups group or it disappears from the ReDoc sidebar: {used ^ grouped}"
+
+
 def _nested_models(tp: object, seen: set[type] | None = None) -> set[type]:
     """Every BaseModel reachable from a type annotation, through generics and model fields."""
     found = seen if seen is not None else set()

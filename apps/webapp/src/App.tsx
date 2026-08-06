@@ -34,12 +34,12 @@ function TokenGate({ onSubmit }: { onSubmit: (token: string) => void }) {
       >
         <div>
           <h1 className="text-lg font-semibold text-slate-100">airllm console</h1>
-          <p className="mt-1 text-sm text-slate-500">Enter the control plane admin token</p>
+          <p className="mt-1 text-sm text-slate-500">Enter a control plane management token</p>
         </div>
         <input
           className={`w-full ${inputClass}`}
           type="password"
-          placeholder="admin token"
+          placeholder="management token"
           value={value}
           onChange={(e) => setValue(e.target.value)}
           autoFocus

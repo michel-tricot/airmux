@@ -81,6 +81,14 @@ def test_updated_at_tracks_modifications(tmp_path):
         assert second > created["updated_at"]
 
 
+def test_healthz_is_unauthenticated_and_touches_the_database(tmp_path):
+    cp = setup_control_plane(tmp_path)
+    with TestClient(cp.app) as c:
+        res = c.get("/healthz")
+        assert res.status_code == 200
+        assert res.json() == {"status": "ok"}
+
+
 def test_cross_org_key_revocation_is_not_found(tmp_path):
     cp = setup_control_plane(tmp_path)
     root = cp.headers()

@@ -10,7 +10,7 @@ from control_plane.models.provider import ProviderOut
 from control_plane.schemas import Envelope
 from control_plane.taxonomy import ModelIn, ProviderIn, TaxonomyOut, UnknownProviderError, upsert_model, upsert_provider
 
-router = APIRouter(prefix="/taxonomy")
+router = APIRouter(prefix="/taxonomy", tags=["Taxonomy"])
 
 
 @router.get("")

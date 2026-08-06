@@ -1,4 +1,4 @@
-# Models taxonomy applied by `control-plane init` and re-applied with `control-plane taxonomy`.
+# Models taxonomy applied by `airllmcp init` and re-applied with `airllmcp taxonomy`.
 #
 # All providers here expose OpenAI-compatible chat completions, which is what
 # the current openai_compatible adapter (bearer auth, {base_url}/chat/completions)

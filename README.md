@@ -29,7 +29,34 @@ uv run airllmcp serve --dev
 uv run airllmdp --dev
 ```
 
-Then make a request through the gateway:
+### Docker Compose
+
+The same stack runs under compose: a one-shot `init` service bootstraps a shared
+`state` volume (keys, config, db, bundle cache), then the control plane, data
+plane and console start against it. `init` is idempotent, so every `up` re-runs
+it and it converges without churning tokens.
+
+```bash
+AIRLLM_ADMIN_EMAIL=you@example.com OPENAI_API_KEY=sk-... docker compose up -d --wait
+
+# caller key for requests through the gateway
+export AIRLLM_TOKEN=$(docker compose exec data-plane sh -c '. /state/.env && echo $AIRLLM_TOKEN')
+
+# management token to sign in to the console
+docker compose exec data-plane sh -c '. /state/.env && echo $GW_ORG_MGMT_TOKEN'
+```
+
+Provider keys are passed through the environment (compose also reads them from
+`.env` at the repo root); the minted caller and management tokens live in
+`/state/.env` on the volume, read through `docker compose exec` as above. The
+gateway listens on `localhost:8080`, the control plane API on `localhost:8000`,
+and the console on `localhost:3000`. With `AIRLLM_TOKEN` exported, the request
+below works without the `source .env` step. `docker compose down -v` resets the
+instance.
+
+### Making a request
+
+With either setup running, make a request through the gateway:
 
 ```bash
 source .env

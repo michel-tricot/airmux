@@ -19,7 +19,7 @@ from control_plane.tokens import mint_inference_key
 router = APIRouter(prefix="/org")
 
 
-@router.post("/keys")
+@router.post("/keys", tags=["API Keys"])
 async def create_key(org: OrgDep, body: ApiKeyCreate, request: Request) -> Envelope[KeyOut]:
     if await Org.get(org) is None:
         raise HTTPException(status_code=404)
@@ -28,14 +28,14 @@ async def create_key(org: OrgDep, body: ApiKeyCreate, request: Request) -> Envel
     return Envelope(data=KeyOut(key_id=key_id, token=token))
 
 
-@router.delete("/keys/{key_id}")
+@router.delete("/keys/{key_id}", tags=["API Keys"])
 async def revoke_key(org: OrgDep, key_id: str) -> Envelope[KeyRevokedOut]:
     key = await ApiKey.owned_by(org, key_id)
     key.disabled = True
     return Envelope(data=KeyRevokedOut(key_id=key_id, status="revoked"))
 
 
-@router.post("/bundles/compile")
+@router.post("/bundles/compile", tags=["Bundles"])
 async def compile_endpoint(org: OrgDep, request: Request) -> Envelope[CompileOut]:
     settings = request.app.state.settings
     now = datetime.now(tz=UTC)
@@ -47,18 +47,18 @@ async def compile_endpoint(org: OrgDep, request: Request) -> Envelope[CompileOut
     return Envelope(data=CompileOut(bundle_id=str(bundle_id), version=version))
 
 
-@router.get("/keys")
+@router.get("/keys", tags=["API Keys"])
 async def list_keys(org: OrgDep) -> Envelope[list[ApiKeyOut]]:
     return Envelope(data=[ApiKeyOut.model_validate(r) for r in await ApiKey.find(ApiKey.org_id == org, order_by=col(ApiKey.id))])
 
 
-@router.get("/bundles")
+@router.get("/bundles", tags=["Bundles"])
 async def list_bundles(org: OrgDep) -> Envelope[list[BundleOut]]:
     rows = await Bundle.find(Bundle.org_id == org, order_by=col(Bundle.version))
     return Envelope(data=[BundleOut.model_validate(r) for r in rows])
 
 
-@router.get("/instances")
+@router.get("/instances", tags=["Instances"])
 async def list_instances(org: OrgDep, include_offline: bool = False) -> Envelope[list[DataPlaneInstanceOut]]:
     """Data planes serving this org; offline ones are kept as history and shown only with include_offline."""
     now = datetime.now(tz=UTC)
@@ -67,7 +67,7 @@ async def list_instances(org: OrgDep, include_offline: bool = False) -> Envelope
     return Envelope(data=out)
 
 
-@router.get("/events")
+@router.get("/events", tags=["Events"])
 async def list_events(org: OrgDep, after: datetime | None = None, limit: int = 50) -> Envelope[list[UsageEventOut]]:
     if after is not None:
         conditions = (UsageEvent.org_id == org, col(UsageEvent.occurred_at) > after)

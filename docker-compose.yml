@@ -1,14 +1,56 @@
 services:
-  postgres:
-    image: postgres:17
+  init:
+    build: .
     environment:
-      POSTGRES_USER: gateway
-      POSTGRES_PASSWORD: gateway
-      POSTGRES_DB: gateway
-    ports:
-      - "5432:5432"
+      AIRLLM_ADMIN_EMAIL: ${AIRLLM_ADMIN_EMAIL:-}
+    command: >
+      sh -c '[ -n "$$AIRLLM_ADMIN_EMAIL" ] || { echo "set AIRLLM_ADMIN_EMAIL to the instance admin email" >&2; exit 1; };
+      exec airllmcp init --email "$$AIRLLM_ADMIN_EMAIL" --control-plane-url http://control-plane:8000'
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - state:/state
+      - ./taxonomy.yml:/state/taxonomy.yml:ro
+
+  control-plane:
+    build: .
+    command: airllmcp serve --host 0.0.0.0 --port 8000
+    volumes:
+      - state:/state
+    ports:
+      - "8000:8000"
+    depends_on:
+      init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/healthz')"]
+      interval: 5s
+      start_period: 10s
+
+  data-plane:
+    build: .
+    command: airllmdp --host 0.0.0.0 --port 8080
+    volumes:
+      - state:/state
+    environment:
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+    ports:
+      - "8080:8080"
+    depends_on:
+      control-plane:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/readyz')"]
+      interval: 5s
+      start_period: 15s
+
+  webapp:
+    build: apps/webapp
+    ports:
+      - "3000:80"
+    depends_on:
+      control-plane:
+        condition: service_healthy
 
 volumes:
-  pgdata:
+  state:

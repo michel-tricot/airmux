@@ -24,7 +24,7 @@ async def _mint(request: Request, org_id: str | None, user_id: str | None = None
     return MintedTokenOut(token_id=token_id, org_id=org_id, user_id=user_id, token=token)
 
 
-@router.post("/orgs")
+@router.post("/orgs", tags=["Orgs"])
 async def create_org(body: OrgCreate) -> Envelope[OrgOut]:
     if await Org.get(body.id) is not None:
         raise HTTPException(status_code=409)
@@ -32,7 +32,7 @@ async def create_org(body: OrgCreate) -> Envelope[OrgOut]:
     return Envelope(data=OrgOut.model_validate(org))
 
 
-@router.patch("/orgs/{org_id}")
+@router.patch("/orgs/{org_id}", tags=["Orgs"])
 async def update_org(org_id: str, body: OrgPatch) -> Envelope[OrgOut]:
     org = await Org.get(org_id)
     if org is None:
@@ -42,12 +42,12 @@ async def update_org(org_id: str, body: OrgPatch) -> Envelope[OrgOut]:
     return Envelope(data=OrgOut.model_validate(await org.save()))
 
 
-@router.get("/orgs")
+@router.get("/orgs", tags=["Orgs"])
 async def list_orgs() -> Envelope[list[OrgOut]]:
     return Envelope(data=[OrgOut.model_validate(r) for r in await Org.find(order_by=col(Org.id))])
 
 
-@router.post("/users")
+@router.post("/users", tags=["Users"])
 async def create_user(body: UserCreate) -> Envelope[UserOut]:
     if await User.first(User.email == body.email) is not None:
         raise HTTPException(status_code=409)
@@ -55,7 +55,7 @@ async def create_user(body: UserCreate) -> Envelope[UserOut]:
     return Envelope(data=_user_out(await user.save(), []))
 
 
-@router.post("/service-accounts")
+@router.post("/service-accounts", tags=["Users"])
 async def create_service_account(body: ServiceAccountIn) -> Envelope[UserOut]:
     user = User.new_service_account(body.name, instance_admin=body.instance_admin)
     return Envelope(data=_user_out(await user.save(), []))
@@ -65,7 +65,7 @@ def _user_out(u: User, orgs: list[str]) -> UserOut:
     return UserOut.model_validate({**u.model_dump(), "orgs": orgs})
 
 
-@router.get("/users")
+@router.get("/users", tags=["Users"])
 async def list_users() -> Envelope[list[UserOut]]:
     users = await User.find(order_by=col(User.email))
     memberships = await OrgMembership.find(order_by=col(OrgMembership.org_id))
@@ -75,7 +75,7 @@ async def list_users() -> Envelope[list[UserOut]]:
     return Envelope(data=[_user_out(u, orgs_by_user.get(u.id, [])) for u in users])
 
 
-@router.put("/users/{user_id}/orgs/{org_id}")
+@router.put("/users/{user_id}/orgs/{org_id}", tags=["Users"])
 async def add_membership(user_id: str, org_id: str) -> Envelope[MembershipOut]:
     if await User.get(user_id) is None or await Org.get(org_id) is None:
         raise HTTPException(status_code=404)
@@ -84,7 +84,7 @@ async def add_membership(user_id: str, org_id: str) -> Envelope[MembershipOut]:
     return Envelope(data=MembershipOut(user_id=user_id, org_id=org_id, status="member"))
 
 
-@router.delete("/users/{user_id}/orgs/{org_id}")
+@router.delete("/users/{user_id}/orgs/{org_id}", tags=["Users"])
 async def remove_membership(user_id: str, org_id: str) -> Envelope[DeletedOut[str]]:
     membership = await OrgMembership.get((user_id, org_id))
     if membership is None:
@@ -93,7 +93,7 @@ async def remove_membership(user_id: str, org_id: str) -> Envelope[DeletedOut[st
     return Envelope(data=DeletedOut(id=f"{user_id}/{org_id}", deleted_at=datetime.now(tz=UTC)))
 
 
-@router.post("/users/{user_id}/tokens")
+@router.post("/users/{user_id}/tokens", tags=["Management Tokens"])
 async def mint_user_token(user_id: str, request: Request, body: UserTokenIn | None = None) -> Envelope[MintedTokenOut]:
     user = await User.get(user_id)
     if user is None:
@@ -110,25 +110,25 @@ async def mint_user_token(user_id: str, request: Request, body: UserTokenIn | No
     return Envelope(data=await _mint(request, org_id, user_id))
 
 
-@router.post("/tokens")
+@router.post("/tokens", tags=["Management Tokens"])
 async def mint_instance_token(request: Request) -> Envelope[MintedTokenOut]:
     return Envelope(data=await _mint(request, None))
 
 
-@router.post("/orgs/{org_id}/tokens")
+@router.post("/orgs/{org_id}/tokens", tags=["Management Tokens"])
 async def mint_org_token(org_id: str, request: Request) -> Envelope[MintedTokenOut]:
     if await Org.get(org_id) is None:
         raise HTTPException(status_code=404)
     return Envelope(data=await _mint(request, org_id))
 
 
-@router.get("/tokens")
+@router.get("/tokens", tags=["Management Tokens"])
 async def list_tokens(org_id: str | None = None) -> Envelope[list[MgmtTokenOut]]:
     conditions = (MgmtToken.org_id == org_id,) if org_id else ()
     return Envelope(data=[MgmtTokenOut.model_validate(r) for r in await MgmtToken.find(*conditions, order_by=col(MgmtToken.id))])
 
 
-@router.delete("/tokens/{token_id}")
+@router.delete("/tokens/{token_id}", tags=["Management Tokens"])
 async def revoke_token(token_id: str) -> Envelope[TokenRevokedOut]:
     """Revoke any management token by id; unknown ids get a tombstone so offline-minted tokens can be killed too."""
     row = await MgmtToken.get(token_id)
