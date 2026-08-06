@@ -5,9 +5,11 @@ from uuid import uuid4
 
 from fastapi.testclient import TestClient
 from helpers import MODEL, PROVIDER, run_in_db, setup_control_plane
+from sqlalchemy import event
+from sqlalchemy.orm import Session
 
 from contract import SignedBundle, verify_bundle, verify_inference_token
-from control_plane.models import DataPlaneInstance
+from control_plane.models import DataPlaneInstance, Org
 from control_plane.tokens import MANAGEMENT_TOKEN_PREFIX
 
 
@@ -316,6 +318,22 @@ def test_stale_instance_is_offline_and_hidden_by_default(tmp_path):
         all_ = c.get("/org/instances", headers=org, params={"include_offline": True}).json()
         by_id = {r["instance_id"]: r["status"] for r in all_}
         assert by_id == {"fresh": "online", "gone": "offline"}  # record kept
+
+
+def test_failed_commit_is_not_reported_as_success(tmp_path):
+    cp = setup_control_plane(tmp_path)
+
+    def refuse_commit(session):
+        raise RuntimeError
+
+    event.listen(Session, "before_commit", refuse_commit)
+    try:
+        with TestClient(cp.app, raise_server_exceptions=False) as c:
+            resp = c.post("/instance/orgs", json={"id": "o1"}, headers=cp.headers())
+            assert resp.status_code == 500
+    finally:
+        event.remove(Session, "before_commit", refuse_commit)
+    assert run_in_db(tmp_path, Org.find) == []
 
 
 def test_revoked_token_is_rejected_on_sync_routes(tmp_path):
