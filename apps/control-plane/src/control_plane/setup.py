@@ -10,12 +10,12 @@ from dotenv import dotenv_values, set_key, unset_key
 from pydantic import BaseModel
 from sqlmodel import col
 
-from contract import mint_inference_token, private_key_from_b64, private_key_to_b64, public_key_to_b64, verify_inference_token
+from contract import private_key_from_b64, private_key_to_b64, public_key_to_b64, verify_inference_token
 from control_plane.compiler import compile_and_store
 from control_plane.db import current_actor
-from control_plane.models import ApiKey, Bundle, MgmtToken, Org, OrgMembership, User
-from control_plane.routes.instance import SERVICE_ACCOUNT_EMAIL_DOMAIN
-from control_plane.tokens import mint_management_token, verify_management_token
+from control_plane.deps import claims_are_backed
+from control_plane.models import ApiKey, Bundle, Org, OrgMembership, User
+from control_plane.tokens import mint_caller_key, mint_mgmt, verify_management_token
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -110,10 +110,8 @@ async def create_admin(settings: Settings, email: str, name: str = "", *, if_mis
     current_actor.set(user.id)
     if created:
         await user.save()
-    token_id = f"mt-{uuid4().hex[:8]}"
-    await MgmtToken(id=token_id, org_id=None, user_id=user.id, revoked=False).save()
     private_key = private_key_from_b64(settings.auth.token_signing_key)
-    token = mint_management_token(None, private_key, datetime.now(tz=UTC), token_id, user.id)
+    token_id, token = await mint_mgmt(None, private_key, datetime.now(tz=UTC), user.id)
     return AdminToken(user_id=user.id, email=email, token_id=token_id, token=token, created=created)
 
 
@@ -145,15 +143,7 @@ async def _mgmt_token_is_live(settings: Settings, token: str | None, org_id: str
     claims = verify_management_token(token, private_key_from_b64(settings.auth.token_signing_key).public_key()) if token else None
     if claims is None or claims.org_id != org_id or (expected_user is not None and claims.user_id != expected_user):
         return False
-    row = await MgmtToken.get(claims.token_id)
-    if row is not None and row.revoked:
-        return False
-    if claims.user_id is None:
-        return True
-    user = await User.get(claims.user_id)
-    if user is None:
-        return False
-    return user.instance_admin or org_id is None or await OrgMembership.get((claims.user_id, org_id)) is not None
+    return await claims_are_backed(claims)
 
 
 async def _caller_token_is_live(settings: Settings, token: str | None, org_id: str) -> bool:
@@ -186,14 +176,7 @@ async def _ensure_service_account(org_id: str) -> User:
         user = await User.get(membership.user_id)
         if user is not None and user.service_account:
             return user
-    sa = User(
-        id=f"u-{uuid4().hex[:8]}",
-        email=f"data-plane-{uuid4().hex[:8]}@{SERVICE_ACCOUNT_EMAIL_DOMAIN}",
-        name="data-plane",
-        instance_admin=False,
-        service_account=True,
-    )
-    await sa.save()
+    sa = await User.new_service_account("data-plane").save()
     await OrgMembership(user_id=sa.id, org_id=org_id).save()
     return sa
 
@@ -216,13 +199,9 @@ async def ensure_org(settings: Settings, org_id: str, env_path: Path, *, skip_ke
     for env_name, owner in (("GW_ORG_MGMT_TOKEN", admin.id if admin else None), ("GW_DATAPLANE_TOKEN", sa.id)):
         if await _mgmt_token_is_live(settings, env.get(env_name), org_id):
             continue
-        token_id = f"mt-{uuid4().hex[:8]}"
-        await MgmtToken(id=token_id, org_id=org_id, user_id=owner, revoked=False).save()
-        minted[env_name] = mint_management_token(org_id, private_key, now, token_id, owner)
+        _, minted[env_name] = await mint_mgmt(org_id, private_key, now, owner)
     if not skip_key and not await _caller_token_is_live(settings, env.get("AIRLLM_TOKEN"), org_id):
-        key_id = f"k-{uuid4().hex[:8]}"
-        await ApiKey(id=key_id, org_id=org_id, allowed_models=["*"], disabled=False).save()
-        minted["AIRLLM_TOKEN"] = mint_inference_token(key_id, org_id, private_key, now)
+        _, minted["AIRLLM_TOKEN"] = await mint_caller_key(org_id, ["*"], private_key, now)
     for env_name, token in minted.items():
         set_key(env_path, env_name, token)
     state = "created" if created else "exists"

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import re
 from datetime import UTC, datetime
 from typing import Literal
 from uuid import uuid4
@@ -12,7 +11,8 @@ from sqlmodel import col
 from contract import private_key_from_b64
 from control_plane.deps import instance_scope
 from control_plane.models import MgmtToken, Org, OrgMembership, User
-from control_plane.tokens import mint_management_token
+from control_plane.models.identity import slug
+from control_plane.tokens import mint_mgmt
 
 router = APIRouter(prefix="/instance", dependencies=[Depends(instance_scope)])
 
@@ -38,13 +38,6 @@ class TokenRevokedOut(BaseModel):
     status: Literal["revoked"]
 
 
-SERVICE_ACCOUNT_EMAIL_DOMAIN = "airbytesvcaccount.ai"
-
-
-def _slug(name: str) -> str:
-    return re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
-
-
 class UserIn(BaseModel):
     email: str = Field(description="Unique email identifying the user")
     name: str = Field("", description="Display name, defaults to the email")
@@ -58,7 +51,7 @@ class ServiceAccountIn(BaseModel):
     @field_validator("name")
     @classmethod
     def name_yields_an_email_local_part(cls, v: str) -> str:
-        if not _slug(v):
+        if not slug(v):
             msg = "name must contain at least one letter or digit"
             raise ValueError(msg)
         return v
@@ -85,11 +78,8 @@ class MembershipOut(BaseModel):
 
 
 async def _mint(request: Request, org_id: str | None, user_id: str | None = None) -> MgmtTokenOut:
-    now = datetime.now(tz=UTC)
-    token_id = f"mt-{uuid4().hex[:8]}"
-    await MgmtToken(id=token_id, org_id=org_id, user_id=user_id, revoked=False).save()
     settings = request.app.state.settings
-    token = mint_management_token(org_id, private_key_from_b64(settings.auth.token_signing_key), now, token_id, user_id)
+    token_id, token = await mint_mgmt(org_id, private_key_from_b64(settings.auth.token_signing_key), datetime.now(tz=UTC), user_id)
     return MgmtTokenOut(token_id=token_id, org_id=org_id, user_id=user_id, token=token)
 
 
@@ -116,13 +106,7 @@ async def create_user(body: UserIn) -> UserOut:
 
 @router.post("/service-accounts")
 async def create_service_account(body: ServiceAccountIn) -> UserOut:
-    user = User(
-        id=f"u-{uuid4().hex[:8]}",
-        email=f"{_slug(body.name)}-{uuid4().hex[:8]}@{SERVICE_ACCOUNT_EMAIL_DOMAIN}",
-        name=body.name,
-        instance_admin=body.instance_admin,
-        service_account=True,
-    )
+    user = User.new_service_account(body.name, instance_admin=body.instance_admin)
     return _user_out(await user.save(), [])
 
 

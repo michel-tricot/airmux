@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import pytest
 import yaml
 from fastapi.testclient import TestClient
 from helpers import run_in_db, setup_control_plane
@@ -8,7 +9,7 @@ from typer.testing import CliRunner
 from contract import private_key_to_b64
 from control_plane.main import app
 from control_plane.models import Bundle, Model, Org, Provider
-from control_plane.taxonomy import TaxonomySpec, apply_taxonomy
+from control_plane.taxonomy import TaxonomySpec, UnknownProviderError, apply_taxonomy
 
 runner = CliRunner()
 
@@ -43,6 +44,19 @@ def test_apply_taxonomy_upserts(tmp_path):
     providers = run_in_db(tmp_path, Provider.find)
     assert [p.base_url for p in providers] == ["https://stub2.example/v1"]
     assert len(run_in_db(tmp_path, Model.find)) == 1
+
+
+def test_apply_taxonomy_rejects_a_model_with_an_unknown_provider(tmp_path):
+    setup_control_plane(tmp_path)
+    spec = TaxonomySpec.model_validate({"models": [{"model_id": "ghost", "provider_id": "nope"}]})
+
+    async def apply():
+        await Org(id="o1", name="o1").save()
+        return await apply_taxonomy(spec, "o1")
+
+    with pytest.raises(UnknownProviderError):
+        run_in_db(tmp_path, apply)
+    assert run_in_db(tmp_path, Model.find) == []
 
 
 def test_taxonomy_command_applies_and_compiles(tmp_path):
