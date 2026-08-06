@@ -1,17 +1,16 @@
 {
-  "$schema": "https://mintlify.com",
+  "$schema": "https://mintlify.com/docs.json",
   "theme": "mint",
-  "name": "AirLLM",
+  "name": "Your project name",
   "colors": {
     "primary": "#ff0000"
   },
-  "navigation": [
-    {
-      "group": "Get Started",
-      "pages": [
-        "docs/introduction",
-        "docs/quickstart"
-      ]
-    }
-  ]
+  "navigation": {
+    "groups": [
+      {
+        "group": "Home",
+        "pages": ["index"]
+      }
+    ]
+  }
 }
