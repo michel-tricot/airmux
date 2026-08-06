@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 from contract import private_key_to_b64
 from control_plane.app import create_app
 from control_plane.config import AuthConfig, BundlePolicy, DatabaseConfig, Settings
-from control_plane.db import make_session_factory, transaction
+from control_plane.db import standalone_transaction
 from control_plane.tokens import mint_management_token
 
 PROVIDER = {
@@ -43,11 +43,8 @@ def run_in_db(tmp_path, action):
     """Run one fat-model call against the test database: tests are non-request code, so they open their own transaction."""
 
     async def runner():
-        engine = create_async_engine(f"sqlite+aiosqlite:///{tmp_path}/cp.db")
-        async with transaction(make_session_factory(engine)):
-            result = await action()
-        await engine.dispose()
-        return result
+        async with standalone_transaction(f"sqlite+aiosqlite:///{tmp_path}/cp.db"):
+            return await action()
 
     return asyncio.run(runner())
 

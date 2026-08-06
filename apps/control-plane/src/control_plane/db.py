@@ -38,3 +38,23 @@ async def transaction(factory: async_sessionmaker[AsyncSession]) -> AsyncIterato
             await session.commit()
         finally:
             _session.reset(token)
+
+
+@asynccontextmanager
+async def standalone_engine(database_url: str) -> AsyncIterator[async_sessionmaker[AsyncSession]]:
+    """Engine and session factory for non-request code (CLI commands, background tasks); disposed on exit.
+
+    Open transaction() per unit of work; use standalone_transaction for the single-transaction case.
+    """
+    engine = make_engine(database_url)
+    try:
+        yield make_session_factory(engine)
+    finally:
+        await engine.dispose()
+
+
+@asynccontextmanager
+async def standalone_transaction(database_url: str) -> AsyncIterator[AsyncSession]:
+    """One unit of work for non-request code that needs exactly one transaction."""
+    async with standalone_engine(database_url) as factory, transaction(factory) as session:
+        yield session

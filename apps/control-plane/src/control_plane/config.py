@@ -42,8 +42,8 @@ class Settings(BaseModel):
     dev: bool = False  # set by the --dev flag on the entry point, gate dev-only behavior on this
 
 
-def _file_section(name: str) -> dict[str, Any]:
-    path = Path(os.environ.get("GW_CONFIG", "airllm.yml"))
+def _file_section(name: str, config_path: str | Path | None = None) -> dict[str, Any]:
+    path = Path(config_path) if config_path else Path(os.environ.get("GW_CONFIG", "airllm.yml"))
     if not path.exists():
         return {}
     doc = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
@@ -74,8 +74,9 @@ def database_url() -> str:
     return str(url) if url else "sqlite+aiosqlite:///airllm.db"
 
 
-def load_settings() -> Settings:
+def load_settings(config_path: str | Path | None = None) -> Settings:
+    """Load settings from an explicit config path, falling back to GW_CONFIG for the serve/migrate contexts that pass it via env."""
     load_dotenv(find_dotenv(usecwd=True))
-    raw = _resolve_refs(_file_section("control_plane"))
+    raw = _resolve_refs(_file_section("control_plane", config_path))
     assert isinstance(raw, dict)  # noqa: S101 _resolve_refs preserves the dict shape
     return Settings.model_validate({**raw, "dev": os.environ.get("GW_DEV") == "1"})

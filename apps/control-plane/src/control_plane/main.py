@@ -10,12 +10,12 @@ from uuid import uuid4
 
 import typer
 import uvicorn
-from dotenv import load_dotenv, set_key
+from dotenv import dotenv_values, load_dotenv, set_key
 from rich.console import Console
 
 from control_plane.compiler import compile_and_store
 from control_plane.config import load_settings
-from control_plane.db import make_engine, make_session_factory, transaction
+from control_plane.db import standalone_engine, standalone_transaction, transaction
 from control_plane.migrate import run_migrations
 from control_plane.models import Org
 from control_plane.setup import (
@@ -102,8 +102,8 @@ def init(  # noqa: PLR0913, PLR0915, PLR0917 the flags and sequential steps are 
             s["message"] = f"wrote [bold]{config_path}[/bold] for both planes, control plane at {control_plane_url}"
     os.environ["GW_CONFIG"] = config
     load_dotenv(env_path, override=True)
-    settings = load_settings()
-    taxonomy_path = Path(taxonomy_file) if Path(taxonomy_file).is_absolute() else config_path.parent / taxonomy_file
+    settings = load_settings(config_path)
+    taxonomy_path = config_path.parent / taxonomy_file
     with _step("taxonomy") as s:
         if not taxonomy_path.exists():
             s["message"] = f"[bold]{taxonomy_path}[/bold] not found; provide a models taxonomy (see taxonomy.yml in the repo)"
@@ -114,15 +114,18 @@ def init(  # noqa: PLR0913, PLR0915, PLR0917 the flags and sequential steps are 
         s["message"] = "migrated to the latest schema"
 
     async def db_phase() -> None:
-        engine = make_engine(settings.database.url)
-        try:
-            factory = make_session_factory(engine)
+        stored = dotenv_values(env_path)
+        async with standalone_engine(settings.database.url) as factory:
             with _step("admin") as s:
                 async with transaction(factory):
-                    s["message"] = await ensure_admin(settings, email, name, env_path)
+                    s["message"], minted = await ensure_admin(settings, email, name, stored)
+                for env_name, token in minted.items():
+                    set_key(env_path, env_name, token)
             with _step("org") as s:
                 async with transaction(factory):
-                    s["message"] = await ensure_org(settings, org, env_path, skip_key=skip_key)
+                    s["message"], minted = await ensure_org(settings, org, stored, skip_key=skip_key)
+                for env_name, token in minted.items():
+                    set_key(env_path, env_name, token)
             with _step("models") as s:
                 spec = parse_taxonomy(taxonomy_path)
                 async with transaction(factory):
@@ -131,8 +134,6 @@ def init(  # noqa: PLR0913, PLR0915, PLR0917 the flags and sequential steps are 
             with _step("bundle") as s:
                 async with transaction(factory):
                     s["message"] = await ensure_bundle(settings, org)
-        finally:
-            await engine.dispose()
 
     try:
         asyncio.run(db_phase())
@@ -153,29 +154,24 @@ def taxonomy(
     org: str = typer.Option("", help="Org to apply the taxonomy to; defaults to the sole org"),
 ) -> None:
     """Apply the models taxonomy to the catalog and compile a new bundle; run after editing the taxonomy file."""
-    os.environ["GW_CONFIG"] = config
-    settings = load_settings()
-    taxonomy_path = Path(file) if Path(file).is_absolute() else Path(config).parent / file
+    settings = load_settings(config)
+    taxonomy_path = Path(config).parent / file
     if not taxonomy_path.exists():
         typer.echo(f"{taxonomy_path} does not exist", err=True)
         raise typer.Exit(1)
     spec = parse_taxonomy(taxonomy_path)
 
     async def run() -> tuple[str, int, int, int]:
-        engine = make_engine(settings.database.url)
-        try:
-            async with transaction(make_session_factory(engine)):
-                orgs = await Org.find()
-                target = org or (orgs[0].id if len(orgs) == 1 else "")
-                if not target:
-                    hint = "no org exists yet, run `control-plane init` first" if not orgs else "multiple orgs exist, pass --org"
-                    typer.echo(hint, err=True)
-                    raise typer.Exit(1)
-                providers, models = await apply_taxonomy(spec, target)
-                version = await compile_and_store(target, uuid4(), datetime.now(tz=UTC), settings.bundle.staleness_bound, settings.bundle.signing_key)
-                return target, providers, models, version
-        finally:
-            await engine.dispose()
+        async with standalone_transaction(settings.database.url):
+            orgs = await Org.find()
+            target = org or (orgs[0].id if len(orgs) == 1 else "")
+            if not target:
+                hint = "no org exists yet, run `control-plane init` first" if not orgs else "multiple orgs exist, pass --org"
+                typer.echo(hint, err=True)
+                raise typer.Exit(1)
+            providers, models = await apply_taxonomy(spec, target)
+            version = await compile_and_store(target, uuid4(), datetime.now(tz=UTC), settings.bundle.staleness_bound, settings.bundle.signing_key)
+            return target, providers, models, version
 
     target, providers, models, version = asyncio.run(run())
     typer.echo(f"applied {taxonomy_path.name} to {target}: {providers} providers, {models} models; compiled bundle v{version}")
@@ -188,16 +184,11 @@ def create(email: str, name: str = "", config: str = "airllm.yml", env_file: str
     An existing admin gets a fresh token, the break-glass path for lost credentials; --if-missing
     makes that case a no-op so scripted setups never churn tokens.
     """
-    os.environ["GW_CONFIG"] = config
-    settings = load_settings()
+    settings = load_settings(config)
 
     async def run() -> AdminToken | None:
-        engine = make_engine(settings.database.url)
-        try:
-            async with transaction(make_session_factory(engine)):
-                return await create_admin(settings, email, name, if_missing=if_missing)
-        finally:
-            await engine.dispose()
+        async with standalone_transaction(settings.database.url):
+            return await create_admin(settings, email, name, if_missing=if_missing)
 
     try:
         minted = asyncio.run(run())
