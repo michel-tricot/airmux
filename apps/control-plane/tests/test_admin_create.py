@@ -36,7 +36,7 @@ def test_create_mints_a_user_bound_instance_token(tmp_path):
     assert row.user_id == user.id
     assert not row.revoked
     with TestClient(cp.app) as c:
-        assert c.get("/instance/orgs", headers={"authorization": f"Bearer {token}"}).status_code == 200
+        assert c.get("/v1/instance/orgs", headers={"authorization": f"Bearer {token}"}).status_code == 200
 
 
 def test_create_audits_as_the_new_admin(tmp_path):

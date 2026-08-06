@@ -9,8 +9,9 @@ from sqlmodel import col
 from contract import BundleV1, HeartbeatV1, SignedBundle, UsageEventV1
 from control_plane.deps import MgmtDep, SessionDep  # noqa: TC001 FastAPI resolves dependency annotations at runtime
 from control_plane.models import Bundle, DataPlaneInstance, UsageEvent
+from control_plane.schemas import Envelope
 
-router = APIRouter(prefix="/v1")
+router = APIRouter()
 
 
 def _sync_org(claims_org: str | None, org_id: str | None) -> str | None:
@@ -23,28 +24,28 @@ def _sync_org(claims_org: str | None, org_id: str | None) -> str | None:
 
 
 @router.get("/bundle/latest")
-async def bundle_latest(claims: MgmtDep, org_id: str | None = None) -> SignedBundle:
+async def bundle_latest(claims: MgmtDep, org_id: str | None = None) -> Envelope[SignedBundle]:
     org = _sync_org(claims.org_id, org_id)
     conditions = (Bundle.org_id == org,) if org else ()
     row = await Bundle.first(*conditions, order_by=(col(Bundle.issued_at).desc(), col(Bundle.version).desc()))
     if row is None:
         raise HTTPException(status_code=404)
-    return SignedBundle(payload=BundleV1.model_validate_json(row.payload), signature=row.signature, signing_key_id=row.signing_key_id)
+    return Envelope(data=SignedBundle(payload=BundleV1.model_validate_json(row.payload), signature=row.signature, signing_key_id=row.signing_key_id))
 
 
 @router.post("/events")
-async def ingest_events(claims: MgmtDep, events: list[UsageEventV1]) -> dict[str, int]:
+async def ingest_events(claims: MgmtDep, events: list[UsageEventV1]) -> Envelope[dict[str, int]]:
     """Idempotent upsert on event_id: at-least-once delivery lands exactly once, and a failed batch lands nothing."""
     if claims.org_id is not None and any(event.org_id != claims.org_id for event in events):
         raise HTTPException(status_code=403)
     fresh = [event for event in events if await UsageEvent.get(event.event_id) is None]
     for event in fresh:
         await UsageEvent(**event.model_dump(exclude={"schema_version"})).save()
-    return {"received": len(events), "ingested": len(fresh)}
+    return Envelope(data={"received": len(events), "ingested": len(fresh)})
 
 
 @router.post("/heartbeat")
-async def heartbeat(claims: MgmtDep, body: HeartbeatV1, session: SessionDep, request: Request) -> dict[str, str]:
+async def heartbeat(claims: MgmtDep, body: HeartbeatV1, session: SessionDep, request: Request) -> Envelope[dict[str, str]]:
     """Upsert the instance record; the row persists as history, last_seen drives liveness.
 
     Every worker of a multi-worker data plane heartbeats with the same instance_id, so the first
@@ -60,4 +61,4 @@ async def heartbeat(claims: MgmtDep, body: HeartbeatV1, session: SessionDep, req
         .on_conflict_do_update(index_elements=[DataPlaneInstance.instance_id], set_=fields)
     )
     await session.execute(stmt)
-    return {"instance_id": body.instance_id}
+    return Envelope(data={"instance_id": body.instance_id})

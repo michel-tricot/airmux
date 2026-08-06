@@ -92,20 +92,20 @@ BUNDLE_COLS = [
 @orgs_app.command("list")
 def orgs_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
     """List orgs; needs the instance token."""
-    print_rows("orgs", instance_get("/instance/orgs", control_plane_url), ORG_COLS, fmt)
+    print_rows("orgs", instance_get("/v1/instance/orgs", control_plane_url), ORG_COLS, fmt)
 
 
 @keys_app.command("list")
 def keys_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
     """List the org's inference keys with their status."""
-    print_rows("keys", org_get("/org/keys", control_plane_url), KEY_COLS, fmt)
+    print_rows("keys", org_get("/v1/org/keys", control_plane_url), KEY_COLS, fmt)
 
 
 @keys_app.command("revoke")
 def keys_revoke(key_id: str, control_plane_url: str = "") -> None:
     """Disable a key; lands in revocations at the next compile."""
     with org_client(control_plane_url) as c:
-        resp = c.delete(f"/org/keys/{key_id}")
+        resp = c.delete(f"/v1/org/keys/{key_id}")
         resp.raise_for_status()
     console.print(f"key [bold]{key_id}[/bold] revoked, run `airllm bundles compile` to propagate")
 
@@ -139,7 +139,7 @@ def users_create(
     """Create a user; add org memberships with `airllm users join`. Needs the instance token."""
     body = {"email": email, "name": name, "instance_admin": admin}
     with instance_client(control_plane_url) as c:
-        resp = post_expecting(c, "/instance/users", body, ok=(200,)).json()
+        resp = post_expecting(c, "/v1/instance/users", body, ok=(200,)).json()["data"]
     role = "instance admin" if resp["instance_admin"] else "member"
     console.print(f"user [bold]{resp['id']}[/bold] created for {resp['email']} as {role}")
 
@@ -154,7 +154,7 @@ def service_accounts_create(
     if not name:
         name = typer.prompt("name")
     with instance_client(control_plane_url) as c:
-        resp = post_expecting(c, "/instance/service-accounts", {"name": name, "instance_admin": admin}, ok=(200,)).json()
+        resp = post_expecting(c, "/v1/instance/service-accounts", {"name": name, "instance_admin": admin}, ok=(200,)).json()["data"]
     console.print(f"service account [bold]{resp['id']}[/bold] created as {resp['email']}")
     console.print(
         f"[dim]add it to an org with `airllm users join {resp['id']} <org>`, "
@@ -165,21 +165,21 @@ def service_accounts_create(
 @service_accounts_app.command("list")
 def service_accounts_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
     """List service accounts; needs the instance token."""
-    rows = [u for u in instance_get("/instance/users", control_plane_url) if u["service_account"]]
+    rows = [u for u in instance_get("/v1/instance/users", control_plane_url) if u["service_account"]]
     print_rows("service accounts", rows, USER_COLS, fmt)
 
 
 @users_app.command("list")
 def users_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
     """List users with their org memberships; needs the instance token."""
-    print_rows("users", instance_get("/instance/users", control_plane_url), USER_COLS, fmt)
+    print_rows("users", instance_get("/v1/instance/users", control_plane_url), USER_COLS, fmt)
 
 
 @users_app.command("join")
 def users_join(user_id: str, org: str, control_plane_url: str = "") -> None:
     """Add a user to an org; their org tokens start working immediately."""
     with instance_client(control_plane_url) as c:
-        resp = c.put(f"/instance/users/{user_id}/orgs/{org}")
+        resp = c.put(f"/v1/instance/users/{user_id}/orgs/{org}")
         resp.raise_for_status()
     console.print(f"user [bold]{user_id}[/bold] is now a member of [bold]{org}[/bold]")
 
@@ -188,7 +188,7 @@ def users_join(user_id: str, org: str, control_plane_url: str = "") -> None:
 def users_leave(user_id: str, org: str, control_plane_url: str = "") -> None:
     """Remove a user from an org; their tokens for that org stop working immediately."""
     with instance_client(control_plane_url) as c:
-        resp = c.delete(f"/instance/users/{user_id}/orgs/{org}")
+        resp = c.delete(f"/v1/instance/users/{user_id}/orgs/{org}")
         resp.raise_for_status()
     console.print(f"user [bold]{user_id}[/bold] removed from [bold]{org}[/bold]")
 
@@ -196,7 +196,7 @@ def users_leave(user_id: str, org: str, control_plane_url: str = "") -> None:
 @tokens_app.command("list")
 def tokens_list(org: str | None = None, control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
     """List management tokens minted through the API; needs the instance token."""
-    print_rows("tokens", instance_get("/instance/tokens", control_plane_url, {"org_id": org} if org else None), TOKEN_COLS, fmt)
+    print_rows("tokens", instance_get("/v1/instance/tokens", control_plane_url, {"org_id": org} if org else None), TOKEN_COLS, fmt)
 
 
 @tokens_app.command("mint")
@@ -207,11 +207,11 @@ def tokens_mint(
 ) -> None:
     """Mint a management token; the token is shown once and never stored."""
     if user:
-        path, body = f"/instance/users/{user}/tokens", {"org_id": org}
+        path, body = f"/v1/instance/users/{user}/tokens", {"org_id": org}
     else:
-        path, body = (f"/instance/orgs/{org}/tokens" if org else "/instance/tokens"), {}
+        path, body = (f"/v1/instance/orgs/{org}/tokens" if org else "/v1/instance/tokens"), {}
     with instance_client(control_plane_url) as c:
-        resp = post_expecting(c, path, body, ok=(200,)).json()
+        resp = post_expecting(c, path, body, ok=(200,)).json()["data"]
     scope = resp["org_id"] or "instance"
     owner = f" for user [bold]{resp['user_id']}[/bold]" if resp.get("user_id") else ""
     console.print(f"management token [bold]{resp['token_id']}[/bold] minted for [bold]{scope}[/bold]{owner}, token (shown once):")
@@ -222,16 +222,16 @@ def tokens_mint(
 def tokens_revoke(token_id: str, control_plane_url: str = "") -> None:
     """Revoke a management token; takes effect on the next request."""
     with instance_client(control_plane_url) as c:
-        resp = c.delete(f"/instance/tokens/{token_id}")
+        resp = c.delete(f"/v1/instance/tokens/{token_id}")
         resp.raise_for_status()
     console.print(f"management token [bold]{token_id}[/bold] revoked")
 
 
 def _taxonomy(control_plane_url: str) -> dict:
     with org_client(control_plane_url) as c:
-        resp = c.get("/taxonomy")
+        resp = c.get("/v1/taxonomy")
         resp.raise_for_status()
-        return resp.json()
+        return resp.json()["data"]
 
 
 @providers_app.command("list")
@@ -249,14 +249,14 @@ def models_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat.ta
 @bundles_app.command("list")
 def bundles_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
     """List the org's compiled bundle versions and their validity windows."""
-    print_rows("bundles", org_get("/org/bundles", control_plane_url), BUNDLE_COLS, fmt)
+    print_rows("bundles", org_get("/v1/org/bundles", control_plane_url), BUNDLE_COLS, fmt)
 
 
 @bundles_app.command("compile")
 def bundles_compile(control_plane_url: str = "") -> None:
     """Recompile and sign the org's bundle."""
     with org_client(control_plane_url) as c:
-        compiled = post_expecting(c, "/org/bundles/compile", {}, ok=(200,)).json()
+        compiled = post_expecting(c, "/v1/org/bundles/compile", {}, ok=(200,)).json()["data"]
     console.print(f"bundle [bold]{compiled['bundle_id']}[/bold] v{compiled['version']} compiled")
 
 
@@ -280,15 +280,15 @@ def instances_list(
     """List the org's data planes; offline ones are shown only with --all."""
     load_dotenv(find_dotenv(usecwd=True))
     with org_client(control_plane_url) as c:
-        resp = c.get("/org/instances", params={"include_offline": all_})
+        resp = c.get("/v1/org/instances", params={"include_offline": all_})
         resp.raise_for_status()
-        print_rows("instances", resp.json(), INSTANCE_COLS, fmt)
+        print_rows("instances", resp.json()["data"], INSTANCE_COLS, fmt)
 
 
 @events_app.command("list")
 def events_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
     """List the org's most recent usage events, newest first."""
-    print_rows("events", org_get("/org/events", control_plane_url), EVENT_COLS, fmt)
+    print_rows("events", org_get("/v1/org/events", control_plane_url), EVENT_COLS, fmt)
 
 
 @events_app.command("tail")
@@ -308,25 +308,25 @@ def events_tail(interval: float = 2.0, keep: int = 30, control_plane_url: str = 
             print("\t".join(c.fmt(event.get(c.key)) for c in EVENT_COLS), flush=True)
 
     with org_client(control_plane_url) as c:
-        resp = c.get("/org/events", params={**params, "limit": keep})
+        resp = c.get("/v1/org/events", params={**params, "limit": keep})
         resp.raise_for_status()
-        rows.extend(reversed(resp.json()))
+        rows.extend(reversed(resp.json()["data"]))
         cursor = rows[-1]["occurred_at"] if rows else "1970-01-01T00:00:00"
         try:
             if fmt is not OutputFormat.table:
                 while True:
                     time.sleep(interval)
-                    resp = c.get("/org/events", params={**params, "after": cursor, "limit": 200})
+                    resp = c.get("/v1/org/events", params={**params, "after": cursor, "limit": 200})
                     resp.raise_for_status()
-                    for event in resp.json():
+                    for event in resp.json()["data"]:
                         emit(event)
                         cursor = event["occurred_at"]
             with Live(table(), console=console, refresh_per_second=4) as live:
                 while True:
                     time.sleep(interval)
-                    resp = c.get("/org/events", params={**params, "after": cursor, "limit": 200})
+                    resp = c.get("/v1/org/events", params={**params, "after": cursor, "limit": 200})
                     resp.raise_for_status()
-                    batch = resp.json()
+                    batch = resp.json()["data"]
                     fresh_ids = {event["event_id"] for event in batch}
                     if batch:
                         rows.extend(batch)
@@ -345,16 +345,16 @@ def _key_created(resp: dict) -> None:
 register_create(
     orgs_app,
     OrgCreate,
-    "/instance/orgs",
+    "/v1/instance/orgs",
     "Create an org; keys and bundles hang off it. Needs the instance token.",
     lambda resp: console.print(f"org [bold]{resp['id']}[/bold] created, mint its admin token with `airllm tokens mint {resp['id']}`"),
     client=instance_client,
 )
-register_create(keys_app, KeyCreate, "/org/keys", "Mint a key; the token is shown once and never stored.", _key_created)
+register_create(keys_app, KeyCreate, "/v1/org/keys", "Mint a key; the token is shown once and never stored.", _key_created)
 register_create(
     providers_app,
     ProviderCreate,
-    "/taxonomy/providers",
+    "/v1/taxonomy/providers",
     "Register an upstream provider for the whole instance. Needs the instance token.",
     lambda resp: console.print(f"provider [bold]{resp['provider_id']}[/bold] created, add models then `airllm bundles compile`"),
     client=instance_client,
@@ -362,7 +362,7 @@ register_create(
 register_create(
     models_app,
     ModelCreate,
-    "/taxonomy/models",
+    "/v1/taxonomy/models",
     "Add a routable model for the whole instance. Needs the instance token.",
     lambda resp: console.print(f"model [bold]{resp['model_id']}[/bold] created, run `airllm bundles compile` to serve it"),
     client=instance_client,

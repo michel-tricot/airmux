@@ -55,14 +55,14 @@ def instance_get(path: str, control_plane_url: str, params: dict | None = None) 
     with instance_client(control_plane_url) as c:
         resp = c.get(path, params=params or {})
         resp.raise_for_status()
-        return resp.json()
+        return resp.json()["data"]
 
 
 def org_get(path: str, control_plane_url: str, params: dict | None = None) -> list[dict]:
     with org_client(control_plane_url) as c:
         resp = c.get(path, params=params or {})
         resp.raise_for_status()
-        return resp.json()
+        return resp.json()["data"]
 
 
 def post_expecting(client: httpx.Client, path: str, body: dict, ok: tuple[int, ...]) -> httpx.Response:

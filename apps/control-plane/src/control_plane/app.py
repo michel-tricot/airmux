@@ -3,7 +3,7 @@ from __future__ import annotations
 import contextlib
 from typing import TYPE_CHECKING
 
-from fastapi import FastAPI
+from fastapi import APIRouter, FastAPI
 from fastapi.responses import JSONResponse
 
 from control_plane.config import load_settings
@@ -42,8 +42,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app = FastAPI(title="airllm control plane", lifespan=lifespan)
     app.state.settings = settings if settings is not None else load_settings()
     app.add_exception_handler(NotOwnedError, not_owned_handler)
-    app.include_router(instance_router)
-    app.include_router(org_router)
-    app.include_router(sync_router)
-    app.include_router(taxonomy_router)
+    v1 = APIRouter(prefix="/v1")
+    for router in (instance_router, org_router, sync_router, taxonomy_router):
+        v1.include_router(router)
+    app.include_router(v1)
     return app

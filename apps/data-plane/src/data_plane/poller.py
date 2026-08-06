@@ -28,7 +28,7 @@ async def poll_once(config: Config, holder: BundleHolder, public_key: Ed25519Pub
         params={"org_id": config.bundle.org} if config.bundle.org else {},
     )
     resp.raise_for_status()
-    signed = SignedBundle.model_validate_json(resp.content)
+    signed = SignedBundle.model_validate(resp.json()["data"])
     if holder.snapshot is not None and signed.payload.bundle_id == holder.snapshot.bundle.bundle_id:
         return
     bundle = verify_bundle(signed, public_key)

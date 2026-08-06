@@ -33,6 +33,26 @@ class CompileOut(BaseModel):
     version: int = Field(..., title="Version")
 
 
+class EnvelopeCompileOut(BaseModel):
+    data: CompileOut
+
+
+class EnvelopeDictStrInt(BaseModel):
+    data: dict[str, int] = Field(..., title="Data")
+
+
+class EnvelopeDictStrStr(BaseModel):
+    data: dict[str, str] = Field(..., title="Data")
+
+
+class EnvelopeListApiKey(BaseModel):
+    data: list[ApiKey] = Field(..., title="Data")
+
+
+class EnvelopeListBundleOut(BaseModel):
+    data: list[BundleOut] = Field(..., title="Data")
+
+
 class HeartbeatV1(BaseModel):
     """
     A data plane announcing itself to the control plane; the record survives, liveness is derived from last_seen.
@@ -357,6 +377,66 @@ class Catalog(BaseModel):
     models: list[ModelEntry] = Field(..., title="Models")
 
 
+class EnvelopeKeyOut(BaseModel):
+    data: KeyOut
+
+
+class EnvelopeKeyRevokedOut(BaseModel):
+    data: KeyRevokedOut
+
+
+class EnvelopeMembershipOut(BaseModel):
+    data: MembershipOut
+
+
+class EnvelopeMgmtTokenOut(BaseModel):
+    data: MgmtTokenOut
+
+
+class EnvelopeModelOut(BaseModel):
+    data: ModelOut
+
+
+class EnvelopeOrgOut(BaseModel):
+    data: OrgOut
+
+
+class EnvelopeProviderOut(BaseModel):
+    data: ProviderOut
+
+
+class EnvelopeTaxonomyOut(BaseModel):
+    data: TaxonomyOut
+
+
+class EnvelopeTokenRevokedOut(BaseModel):
+    data: TokenRevokedOut
+
+
+class EnvelopeUserOut(BaseModel):
+    data: UserOut
+
+
+class EnvelopeListInstanceOut(BaseModel):
+    data: list[InstanceOut] = Field(..., title="Data")
+
+
+class EnvelopeListMgmtToken(BaseModel):
+    data: list[MgmtToken] = Field(..., title="Data")
+
+
+class EnvelopeListOrg(BaseModel):
+    data: list[Org] = Field(..., title="Data")
+
+
+class EnvelopeListUsageEvent(BaseModel):
+    data: list[UsageEvent] = Field(..., title="Data")
+
+
+class EnvelopeListUserOut(BaseModel):
+    data: list[UserOut] = Field(..., title="Data")
+
+
 class HTTPValidationError(BaseModel):
     detail: list[ValidationError] | None = Field(None, title="Detail")
 
@@ -390,3 +470,7 @@ class SignedBundle(BaseModel):
     payload: BundleV1
     signature: str = Field(..., title="Signature")
     signing_key_id: str = Field(..., title="Signing Key Id")
+
+
+class EnvelopeSignedBundle(BaseModel):
+    data: SignedBundle

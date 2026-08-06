@@ -37,7 +37,8 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
     },
   })
   if (!res.ok) throw new ApiError(res.status)
-  return res.json() as Promise<T>
+  const body = (await res.json()) as { data: T }
+  return body.data
 }
 
 export interface Org {
@@ -120,19 +121,19 @@ export interface Taxonomy {
   models: Model[]
 }
 
-export const listOrgs = () => api<Org[]>('/instance/orgs')
-export const listKeys = () => api<ApiKey[]>('/org/keys')
-export const getTaxonomy = () => api<Taxonomy>('/taxonomy')
-export const listBundles = () => api<Bundle[]>('/org/bundles')
-export const listEvents = (limit = 100) => api<UsageEvent[]>(`/org/events?limit=${limit}`)
-export const listInstances = (includeOffline = true) => api<Instance[]>(`/org/instances?include_offline=${includeOffline}`)
+export const listOrgs = () => api<Org[]>('/v1/instance/orgs')
+export const listKeys = () => api<ApiKey[]>('/v1/org/keys')
+export const getTaxonomy = () => api<Taxonomy>('/v1/taxonomy')
+export const listBundles = () => api<Bundle[]>('/v1/org/bundles')
+export const listEvents = (limit = 100) => api<UsageEvent[]>(`/v1/org/events?limit=${limit}`)
+export const listInstances = (includeOffline = true) => api<Instance[]>(`/v1/org/instances?include_offline=${includeOffline}`)
 
-export const createOrg = (body: { id: string; name: string }) => api<{ id: string }>('/instance/orgs', { method: 'POST', body: JSON.stringify(body) })
+export const createOrg = (body: { id: string; name: string }) => api<{ id: string }>('/v1/instance/orgs', { method: 'POST', body: JSON.stringify(body) })
 
 export const createKey = (body: { allowed_models: string[] }) =>
-  api<{ key_id: string; token: string }>('/org/keys', { method: 'POST', body: JSON.stringify(body) })
+  api<{ key_id: string; token: string }>('/v1/org/keys', { method: 'POST', body: JSON.stringify(body) })
 
-export const revokeKey = (keyId: string) => api<{ key_id: string; status: string }>(`/org/keys/${keyId}`, { method: 'DELETE' })
+export const revokeKey = (keyId: string) => api<{ key_id: string; status: string }>(`/v1/org/keys/${keyId}`, { method: 'DELETE' })
 
 export const compileBundle = () =>
-  api<{ bundle_id: string; version: number }>('/org/bundles/compile', { method: 'POST', body: JSON.stringify({}) })
+  api<{ bundle_id: string; version: number }>('/v1/org/bundles/compile', { method: 'POST', body: JSON.stringify({}) })

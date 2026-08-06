@@ -79,7 +79,7 @@ def register_create(  # noqa: PLR0913, PLR0917 the six registration facts are th
         spec = fill_spec(spec_cls, kwargs)
         with client(control_plane_url) as c:
             resp = post_expecting(c, path, spec.model_dump(mode="json"), ok=(200,))
-        done(resp.json())
+        done(resp.json()["data"])
 
     params = [
         inspect.Parameter(
