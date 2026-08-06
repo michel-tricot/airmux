@@ -12,6 +12,7 @@ from data_plane.adapters import REGISTRY
 from data_plane.app import app
 from data_plane.canonical import CanonicalChunk, CanonicalRequest, CanonicalResponse, Usage
 from data_plane.ingress import ANTHROPIC
+from data_plane.normalize import normalize_request
 
 # --- upstream fixtures (what the provider returns) ---
 
@@ -127,8 +128,6 @@ def test_messages_endpoint_streaming_over_openai_provider(token):
 
 
 def test_max_tokens_clamped_to_model_output_limit():
-    from data_plane.normalize import normalize_request  # noqa: PLC0415
-
     provider = make_ctx("openai_compatible").provider
     capped = MODEL.model_copy(update={"max_output_tokens": 16384})
     over = CanonicalRequest(model="m", messages=[], max_tokens=32000)

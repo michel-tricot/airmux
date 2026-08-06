@@ -12,16 +12,20 @@ import os
 import shutil
 import signal
 import socket
+import statistics
 import subprocess
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TextIO
 
 import httpx
 import pytest
 import yaml
 from dotenv import dotenv_values
+from rich import box
+from rich.console import Console
+from rich.table import Table
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
@@ -72,7 +76,7 @@ class _StubHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
-    def log_message(self, *_args: object) -> None:  # keep the stub silent
+    def log_message(self, format: str, *args: object) -> None:  # noqa: A002 name fixed by the BaseHTTPRequestHandler override; keeps the stub silent
         return
 
 
@@ -89,24 +93,39 @@ class Stack:
         self.cache_dir = tmp / ".airllm"
         self.config_path = tmp / "config.yml"
         self.caller_token = ""
-        self._procs: dict[str, tuple[subprocess.Popen[bytes], object]] = {}
+        self.env: dict[str, str] = {}
+        self._procs: dict[str, tuple[subprocess.Popen[bytes], TextIO]] = {}
         self._stub = ThreadingHTTPServer(("127.0.0.1", self.stub_port), _StubHandler)
         threading.Thread(target=self._stub.serve_forever, daemon=True).start()
-        self._init_secrets()
 
     # setup ----------------------------------------------------------------
 
     def _init_secrets(self) -> None:
+        """Run `control-plane init` against whatever config the test wrote; deferred to start_cp so config knobs land in bundle v1."""
         base = {**os.environ, "GW_CONFIG": str(self.config_path)}
-        self._run([_bin("airllm"), "init", "--control-plane-url", self.cp_url, "--cache-dir", str(self.cache_dir)], base)
-        self._run([_bin("control-plane"), "mint-root-token", "--config", str(self.config_path)], base)
-        self._write_bootstrap_spec()
+        self._write_taxonomy()
+        self._run(
+            [
+                _bin("control-plane"),
+                "init",
+                "--email",
+                "admin@acceptance.test",
+                "--org",
+                ORG,
+                "--config",
+                str(self.config_path),
+                "--control-plane-url",
+                self.cp_url,
+                "--cache-dir",
+                str(self.cache_dir),
+            ],
+            base,
+        )
         secrets = {k: v for k, v in dotenv_values(self.tmp / ".env").items() if v is not None}
         self.env = {**os.environ, **secrets, "GW_CONFIG": str(self.config_path), "OPENAI_API_KEY": "sk-stub"}
 
-    def _write_bootstrap_spec(self) -> None:
+    def _write_taxonomy(self) -> None:
         spec = {
-            "org": ORG,
             "providers": [
                 {
                     "provider_id": "stub",
@@ -116,9 +135,8 @@ class Stack:
                 }
             ],
             "models": [{"model_id": MODEL, "provider_id": "stub", "upstream_model": MODEL}],
-            "keys": [{"allowed_models": ["*"]}],
         }
-        (self.tmp / "bootstrap.yml").write_text(yaml.safe_dump(spec), encoding="utf-8")
+        (self.tmp / "taxonomy.yml").write_text(yaml.safe_dump(spec), encoding="utf-8")
 
     def write_config(
         self,
@@ -136,7 +154,7 @@ class Stack:
                 "bundle": {"signing_key": "env:GW_BUNDLE_SIGNING_KEY", "staleness_bound_hours": staleness_bound_hours},
             },
             "data_plane": {
-                "control_plane": {"url": self.cp_url, "token": "env:GW_DP_TOKEN", "heartbeat_interval_s": 2},
+                "control_plane": {"url": self.cp_url, "token": "env:GW_DATAPLANE_TOKEN", "heartbeat_interval_s": 2},
                 "bundle": {
                     "public_key": "env:GW_BUNDLE_PUBLIC_KEY",
                     "org": ORG,
@@ -150,19 +168,21 @@ class Stack:
         }
         self.config_path.write_text(yaml.safe_dump(cfg), encoding="utf-8")
 
-    def bootstrap(self) -> None:
-        """Collect the tokens the control plane minted when it auto-bootstrapped on first start."""
+    def collect_tokens(self) -> None:
+        """Collect the tokens init minted into .env; a checkpoint that they all exist."""
         secrets = {k: v for k, v in dotenv_values(self.tmp / ".env").items() if v is not None}
         self.env = {**self.env, **secrets}
         token = secrets.get("AIRLLM_TOKEN")
-        assert token, "control plane did not auto-bootstrap a caller token"
-        assert secrets.get("GW_ORG_TOKEN"), "control plane did not auto-bootstrap an org token"
-        assert secrets.get("GW_DP_TOKEN"), "control plane did not auto-bootstrap a data plane token"
+        assert token, "init did not mint a caller token"
+        assert secrets.get("GW_ORG_MGMT_TOKEN"), "init did not mint an org token"
+        assert secrets.get("GW_DATAPLANE_TOKEN"), "init did not mint a data plane token"
         self.caller_token = token
 
     # processes ------------------------------------------------------------
 
     def start_cp(self) -> None:
+        if not self.env:
+            self._init_secrets()
         self._run([_bin("control-plane"), "migrate", "--config", str(self.config_path)], self.env)
         self._spawn("cp", [_bin("control-plane"), "serve", "--host", "127.0.0.1", "--port", str(self.cp_port), "--config", str(self.config_path)])
         assert _poll(lambda: self._up(f"{self.cp_url}/openapi.json"), READY_TIMEOUT), "control plane did not come up"
@@ -180,7 +200,7 @@ class Stack:
         except subprocess.TimeoutExpired:
             proc.kill()
             proc.wait()
-        log.close()  # type: ignore[attr-defined]
+        log.close()
 
     def teardown(self) -> None:
         for name in list(self._procs):
@@ -207,7 +227,7 @@ class Stack:
     def events(self) -> list[dict]:
         resp = httpx.get(
             f"{self.cp_url}/org/events",
-            headers={"authorization": f"Bearer {self.env['GW_ORG_TOKEN']}"},
+            headers={"authorization": f"Bearer {self.env['GW_ORG_MGMT_TOKEN']}"},
             params={"limit": 1000},
             timeout=10.0,
         )
@@ -254,3 +274,84 @@ def stack(tmp_path: Path) -> Iterator[Stack]:
         yield s
     finally:
         s.teardown()
+
+
+# benchmark reporting ------------------------------------------------------
+
+PERCENTILES = (50, 90, 99)
+
+
+def _pct(xs: list[float], q: float) -> float:
+    ordered = sorted(xs)
+    rank = max(0, min(len(ordered) - 1, round(q / 100 * len(ordered)) - 1))
+    return ordered[rank]
+
+
+class Bench:
+    """Collects named timing series (milliseconds) and prints them as one rich table.
+
+    Every benchmark uses the `bench` fixture so they all warm up, sample and report the same
+    way. Measure a cost as a difference against a baseline (see benchmarks/test_overhead.py);
+    the table shows each series and, when a baseline and treatment are named, the
+    per-percentile overhead row.
+    """
+
+    def __init__(self, capsys: pytest.CaptureFixture[str]) -> None:
+        self._capsys = capsys
+        self._series: dict[str, list[float]] = {}
+
+    def measure(self, name: str, call: Callable[[], object], *, warmup: int = 20, samples: int = 200) -> None:
+        times: list[float] = []
+        for i in range(warmup + samples):
+            start = time.perf_counter()
+            resp = call()
+            elapsed = (time.perf_counter() - start) * 1000
+            assert getattr(resp, "status_code", 200) == 200
+            if i >= warmup:
+                times.append(elapsed)
+        self._series[name] = times
+
+    @staticmethod
+    def percentile(xs: list[float], q: float) -> float:
+        return _pct(xs, q)
+
+    def pct(self, name: str, q: float) -> float:
+        return _pct(self._series[name], q)
+
+    def overhead(self, treatment: str, baseline: str, q: float = 50) -> float:
+        return _pct(self._series[treatment], q) - _pct(self._series[baseline], q)
+
+    def report(self, *, title: str, baseline: str | None = None, treatment: str | None = None) -> None:
+        table = Table(title=title, box=box.ROUNDED, header_style="bold", title_style="bold", caption="latency in milliseconds")
+        table.add_column("series", style="cyan", no_wrap=True)
+        table.add_column("n", justify="right")
+        for q in PERCENTILES:
+            table.add_column(f"p{q}", justify="right")
+        table.add_column("max", justify="right")
+        table.add_column("mean", justify="right")
+        for name, xs in self._series.items():
+            cells = [f"{_pct(xs, q):.2f}" for q in PERCENTILES] + [f"{max(xs):.2f}", f"{statistics.fmean(xs):.2f}"]
+            table.add_row(name, str(len(xs)), *cells)
+        if baseline and treatment:
+            base, treat = self._series[baseline], self._series[treatment]
+            deltas = [f"{_pct(treat, q) - _pct(base, q):.2f}" for q in PERCENTILES] + ["", f"{statistics.fmean(treat) - statistics.fmean(base):.2f}"]
+            table.add_section()
+            table.add_row("overhead", "", *deltas, style="bold magenta")
+        with self._capsys.disabled():
+            Console().print(table)
+
+    def table(self, *, title: str, columns: list[str], rows: list[tuple[object, ...]], caption: str = "") -> None:
+        """Render arbitrary tabular results (e.g. a throughput sweep) with the same styling."""
+        out = Table(title=title, box=box.ROUNDED, header_style="bold", title_style="bold", caption=caption)
+        out.add_column(columns[0], style="cyan", no_wrap=True)
+        for name in columns[1:]:
+            out.add_column(name, justify="right")
+        for row in rows:
+            out.add_row(*(str(cell) for cell in row))
+        with self._capsys.disabled():
+            Console().print(out)
+
+
+@pytest.fixture
+def bench(capsys: pytest.CaptureFixture[str]) -> Bench:
+    return Bench(capsys)

@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 
 from contract import private_key_to_b64
 from control_plane.app import create_app
-from control_plane.config import AuthConfig, BootstrapPolicy, BundlePolicy, DatabaseConfig, Settings
+from control_plane.config import AuthConfig, BundlePolicy, DatabaseConfig, Settings
 from control_plane.db import make_session_factory, transaction
 from control_plane.tokens import mint_management_token
 
@@ -70,7 +70,6 @@ def setup_control_plane(tmp_path) -> ControlPlane:
         database=DatabaseConfig(url=url),
         auth=AuthConfig(token_signing_key=private_key_to_b64(token_key)),
         bundle=BundlePolicy(signing_key=private_key_to_b64(bundle_key)),
-        bootstrap=BootstrapPolicy(file=str(tmp_path / "bootstrap.yml"), env_file=str(tmp_path / ".env")),
     )
     _create_tables(url)
     return ControlPlane(bundle_key=bundle_key, token_key=token_key, app=create_app(settings))

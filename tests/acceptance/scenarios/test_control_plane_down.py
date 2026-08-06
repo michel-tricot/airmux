@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 def test_serves_from_disk_through_outage_and_cold_restart(stack: Stack) -> None:
     stack.write_config()
     stack.start_cp()
-    stack.bootstrap()
+    stack.collect_tokens()
     stack.start_dp()
     stack.wait_dp_ready()
     assert stack.request().status_code == 200

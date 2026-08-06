@@ -27,7 +27,7 @@ MAX_P99_OVERHEAD_MS = 250.0
 def test_proxy_overhead_stays_small(stack: Stack, bench: Bench) -> None:
     stack.write_config()
     stack.start_cp()
-    stack.bootstrap()
+    stack.collect_tokens()
     stack.start_dp()
     stack.wait_dp_ready()
 

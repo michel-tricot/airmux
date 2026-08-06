@@ -11,3 +11,5 @@ dist/
 
 .airllm
 .secrets
+notes/model-metadata/
+

@@ -15,7 +15,7 @@ REQUESTS = 50
 def test_buffered_events_replay_exactly_once(stack: Stack) -> None:
     stack.write_config()
     stack.start_cp()
-    stack.bootstrap()
+    stack.collect_tokens()
     stack.start_dp()
     stack.wait_dp_ready()
 

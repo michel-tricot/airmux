@@ -3,14 +3,13 @@ from __future__ import annotations
 from control_plane.config import database_url, load_settings
 
 
-def test_load_settings_resolves_refs_and_anchors_bootstrap(tmp_path, monkeypatch):
+def test_load_settings_resolves_refs(tmp_path, monkeypatch):
     (tmp_path / "bundle.key").write_text("bundle-key-from-file", encoding="utf-8")
     config = (
         "control_plane:\n"
         "  database:\n    url: sqlite+aiosqlite:///cp.db\n"
         "  auth:\n    token_signing_key: env:TEST_TOKEN_KEY\n"
         f"  bundle:\n    signing_key: file:{tmp_path}/bundle.key\n"
-        "  bootstrap:\n    file: seed.yml\n"
     )
     (tmp_path / "airllm.yml").write_text(config, encoding="utf-8")
     monkeypatch.setenv("GW_CONFIG", str(tmp_path / "airllm.yml"))
@@ -20,8 +19,6 @@ def test_load_settings_resolves_refs_and_anchors_bootstrap(tmp_path, monkeypatch
     assert settings.database.url == "sqlite+aiosqlite:///cp.db"
     assert settings.auth.token_signing_key == "token-key-from-env"
     assert settings.bundle.signing_key == "bundle-key-from-file"
-    assert settings.bootstrap.file == str(tmp_path / "seed.yml")
-    assert settings.bootstrap.env_file == str(tmp_path / ".env")
     assert settings.dev is False
 
 

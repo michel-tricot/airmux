@@ -58,7 +58,7 @@ def _load(url: str, headers: dict[str, str], body: dict, workers: int, duration:
 def test_single_data_plane_throughput(stack: Stack, bench: Bench) -> None:
     stack.write_config()
     stack.start_cp()
-    stack.bootstrap()
+    stack.collect_tokens()
     stack.start_dp()
     stack.wait_dp_ready()
 

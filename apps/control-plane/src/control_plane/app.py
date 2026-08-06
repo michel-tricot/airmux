@@ -7,9 +7,8 @@ from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 
 from contract import private_key_from_b64
-from control_plane.bootstrap import auto_bootstrap
 from control_plane.config import load_settings
-from control_plane.db import make_engine, make_session_factory, transaction
+from control_plane.db import make_engine, make_session_factory
 from control_plane.models import NotOwnedError
 from control_plane.routes.instance import router as instance_router
 from control_plane.routes.org import router as org_router
@@ -29,8 +28,6 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     engine = make_engine(settings.database.url)
     app.state.token_public_key = private_key_from_b64(settings.auth.token_signing_key).public_key()
     app.state.session_factory = make_session_factory(engine)
-    async with transaction(app.state.session_factory):
-        await auto_bootstrap(settings)
     try:
         yield
     finally:

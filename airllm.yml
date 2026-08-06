@@ -1,6 +1,3 @@
-# Shared gateway config. Secrets are env: references resolved from the
-# environment (including .env); never put a raw secret in this file.
-
 control_plane:
   database:
     url: sqlite+aiosqlite:///airllm.db
@@ -13,7 +10,7 @@ control_plane:
 data_plane:
   control_plane:
     url: http://127.0.0.1:8000
-    token: env:GW_DP_TOKEN
+    token: env:GW_DATAPLANE_TOKEN
   bundle:
     public_key: env:GW_BUNDLE_PUBLIC_KEY
     org: org-dev

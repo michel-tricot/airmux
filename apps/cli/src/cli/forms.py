@@ -64,7 +64,7 @@ def fill_spec[M: BaseModel](spec_cls: type[M], provided: dict) -> M:
         raise typer.Exit(1) from e
 
 
-def register_create(
+def register_create(  # noqa: PLR0913, PLR0917 the six registration facts are the command's interface
     sub_app: typer.Typer,
     spec_cls: type[BaseModel],
     path: str,

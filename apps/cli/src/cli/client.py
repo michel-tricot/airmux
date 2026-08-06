@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import typer
+import yaml
 
 from cli.common import console
 
@@ -19,8 +20,6 @@ def resolve_control_plane_url(override: str) -> str:
         return url
     config_path = Path(os.environ.get("GW_CONFIG", "airllm.yml"))
     if config_path.exists():
-        import yaml  # noqa: PLC0415 lazy import keeps CLI startup fast
-
         doc = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
         url = ((doc.get("data_plane") or {}).get("control_plane") or {}).get("url")
         if url:
@@ -36,18 +35,18 @@ def _bearer_client(token: str, control_plane_url: str) -> httpx.Client:
 
 def instance_client(control_plane_url: str = "") -> httpx.Client:
     """Instance-scoped client for /instance routes; takes the raw --control-plane-url override and resolves it itself."""
-    token = os.environ.get("GW_MGMT_TOKEN")
+    token = os.environ.get("GW_ADMIN_MGMT_TOKEN")
     if not token:
-        console.print("[red]GW_MGMT_TOKEN is not set, run `airllm init` then `control-plane mint-root-token` first[/red]")
+        console.print("[red]GW_ADMIN_MGMT_TOKEN is not set, run `control-plane init` first[/red]")
         raise typer.Exit(1)
     return _bearer_client(token, control_plane_url)
 
 
 def org_client(control_plane_url: str = "", token: str | None = None) -> httpx.Client:
-    """Org-scoped client for /org routes; the token comes from bootstrap or `airllm tokens mint`."""
-    token = token or os.environ.get("GW_ORG_TOKEN")
+    """Org-scoped client for /org routes; the token comes from `control-plane init` or `airllm tokens mint`."""
+    token = token or os.environ.get("GW_ORG_MGMT_TOKEN")
     if not token:
-        console.print("[red]GW_ORG_TOKEN is not set, run `airllm bootstrap` or `airllm tokens mint <org>` first[/red]")
+        console.print("[red]GW_ORG_MGMT_TOKEN is not set, run `control-plane init` or `airllm tokens mint <org>` first[/red]")
         raise typer.Exit(1)
     return _bearer_client(token, control_plane_url)
 

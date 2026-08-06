@@ -116,7 +116,7 @@ async def revoke_key(org: OrgDep, key_id: str) -> KeyRevokedOut:
 
 @router.post("/providers")
 async def create_provider(org: OrgDep, body: ProviderIn) -> ProviderOut:
-    """Create or update: reapplying a bootstrap spec converges the catalog."""
+    """Create or update: reapplying a taxonomy converges the catalog."""
     provider = await Provider.get(body.provider_id)
     if provider is not None and provider.org_id != org:
         raise HTTPException(status_code=409)
@@ -134,7 +134,7 @@ async def create_provider(org: OrgDep, body: ProviderIn) -> ProviderOut:
 
 @router.post("/models")
 async def create_model(org: OrgDep, body: ModelIn) -> ModelOut:
-    """Create or update: reapplying a bootstrap spec converges the catalog."""
+    """Create or update: reapplying a taxonomy converges the catalog."""
     provider = await Provider.get(body.provider_id)
     if provider is None or provider.org_id != org:
         raise HTTPException(status_code=404)

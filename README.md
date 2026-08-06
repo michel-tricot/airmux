@@ -18,17 +18,14 @@ You need [uv](https://docs.astral.sh/uv/) and an OpenAI API key.
 ```bash
 uv sync --all-packages
 
-# 1. Generate keys and tokens into .env, and the airllm.yml config if missing
-uv run airllm init
+# 1. Set up everything: keys, config, schema, admin, org, tokens, bundle v1 (applies taxonomy.yml)
+uv run control-plane init --email you@example.com
 echo 'OPENAI_API_KEY=sk-...' >> .env
 
 # 2. Start the control plane (dev mode auto-runs migrations and reloads on change)
 uv run control-plane serve --dev
 
-# 3. In another shell: create org, providers, models and a caller key, compile a bundle
-uv run airllm bootstrap
-
-# 4. Start the data plane; it polls the bundle and goes ready
+# 3. Start the data plane; it polls the bundle and goes ready
 uv run data-plane --dev
 ```
 
@@ -70,14 +67,15 @@ scripts/claude-gateway.sh gpt-4o-mini       # Claude Code, backed by gpt-4o-mini
 scripts/claude-gateway.sh claude-sonnet-4-6
 ```
 
-`bootstrap.yml` ships with a catalog of OpenAI-compatible hosted providers
-(openai, anthropic, gemini, xai, deepseek, mistral, groq). A model becomes
-callable as soon as its provider's key (for example `GROQ_API_KEY`) is in `.env`.
+`taxonomy.yml` ships with a catalog of OpenAI-compatible hosted providers
+(openai, anthropic, gemini, xai, deepseek, mistral, groq); after editing it, apply
+with `uv run control-plane taxonomy`. A model becomes callable as soon as its
+provider's key (for example `GROQ_API_KEY`) is in `.env`.
 
 ## Everyday commands
 
 ```bash
-uv run airllm --help            # commands are grouped: Setup, Resources, Testing
+uv run airllm --help            # commands are grouped: Resources, Testing
 uv run airllm keys list         # every list command takes -f table|json|text
 uv run airllm keys create       # flags, or interactive prompts for anything omitted
 uv run airllm keys revoke k-... # takes effect at the next compile
@@ -85,28 +83,30 @@ uv run airllm bundles compile   # recompile and sign after any change
 ```
 
 The admin API is browsable at `http://localhost:8000/docs`; authorize with the
-`GW_ADMIN_TOKEN` from `.env`.
+`GW_ADMIN_MGMT_TOKEN` from `.env`.
 
 ## Configuration
 
 - `airllm.yml` holds all non-secret config for both planes, grouped by domain.
   Secrets are referenced as `env:VAR` entries and resolved from the environment.
-- `.env` holds only secrets: signing keys, admin and data plane bearers, provider
-  API keys. `airllm init` maintains it and never overwrites existing tokens.
+- `.env` holds the secrets: signing keys, admin and data plane bearers, provider
+  API keys. `control-plane init` maintains it: tokens that are still valid against
+  the database are kept, stale or orphaned ones are re-minted.
 - Precedence: explicit environment variable, then the config file, then defaults.
 
 ## Development
 
 ```bash
-uv run pytest                   # test suite
+uv run pytest                   # unit tests for all packages
+uv run pytest tests/acceptance  # black-box scenarios against real processes
 uv run ruff format --check .    # formatting
 uv run ruff check .             # lint, including the plane boundary rules
-uv run ty check packages/contract apps/data-plane
+uv run ty check .               # types, whole workspace
 uv run lint-imports             # data plane may never import the control plane or a database
 ./scripts/generate-api-models.sh  # regenerate the CLI's API models from the OpenAPI spec
 ```
 
 Repo layout: `packages/contract` is the only code both planes share (bundle and
 event schemas, signing, tokens). `apps/control-plane`, `apps/data-plane` and
-`apps/cli` are uv workspace members. The full design spec lives in
-`notes/PROTOTYPE.md`, and the working rules in `CLAUDE.md`.
+`apps/cli` are uv workspace members; `apps/webapp` is the React console. The full
+design spec lives in `notes/PROTOTYPE.md`, and the working rules in `CLAUDE.md`.

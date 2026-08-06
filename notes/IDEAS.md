@@ -46,36 +46,24 @@ data plane, like the control-plane-down and event-replay scenarios already do.
   and reports the delta, so the cost of durable metering is tracked over time rather than measured
   by hand
 
-## Retire mint-root-token
+## Self-minted instance access from key possession
 
-`control-plane mint-root-token` is the one remaining manual step between `airllm init` and a serving
-stack, and the only reason the console binary mints credentials at all. Ways to remove it:
-
-- Fold it into first-start bootstrap: the control plane already mints the org, data plane, and
-  caller tokens on an empty database; it could mint the instance token too and write GW_MGMT_TOKEN
-  to the same env file, even when no spec file is present. Launch becomes init, serve, data-plane.
-  Cost: a standing root credential is created implicitly rather than by an operator action.
-- Derive instance access from key possession instead of a standing token: any CLI command that needs
-  instance scope self-mints a short-lived management token from GW_TOKEN_SIGNING_KEY at invocation
-  time. No long-lived root token exists to leak or revoke; holding the signing key is already
-  equivalent to holding root. The webapp would mint through the CLI or an enrollment step since it
-  cannot hold the key.
-- One-time enrollment on first boot, the Jenkins pattern: first start prints a single-use code; the
-  operator exchanges it for a root token via the API or webapp login. Pairs naturally with
-  [service accounts](#service-accounts-as-control-plane-entities), where the exchange creates the
-  operator entity.
-
-The second option is the most aligned with how the project already treats the signing key as the
-instance root of trust, and it removes a stored secret instead of adding one.
+`control-plane admin create` replaced mint-root-token with a user-bound instance token, but a
+standing root credential still lands in .env. Alternative: any CLI command that needs instance
+scope self-mints a short-lived management token from GW_TOKEN_SIGNING_KEY at invocation time. No
+long-lived root token exists to leak or revoke; holding the signing key is already equivalent to
+holding root. The webapp would mint through the CLI or an enrollment step since it cannot hold the
+key. The Jenkins-style variant remains an option for operators without key access: first start
+prints a single-use code exchanged for a token via the API or webapp login, pairing naturally with
+[service accounts](#service-accounts-as-control-plane-entities).
 
 ## Finish service accounts
 
-Users exist with a service_account flag, memberships, and token binding, but two pieces remain:
-first-start bootstrap still mints the data plane token ownerless instead of creating a service
-account (e.g. dataplane@org.local) to hold it, and nothing yet distinguishes the kinds in behavior;
-when human login lands, service accounts must be excluded from it, and kind-specific policies
-(token TTLs, sync-only permissions narrower than org admin) become possible. If a third principal
-kind ever appears, convert the boolean to a kind enum rather than stacking flags.
+Users exist with a service_account flag, memberships, and token binding, and `control-plane init`
+creates a data-plane service account to hold GW_DATAPLANE_TOKEN. What remains: nothing yet distinguishes the kinds
+in behavior; when human login lands, service accounts must be excluded from it, and kind-specific
+policies (token TTLs, sync-only permissions narrower than org admin) become possible. If a third
+principal kind ever appears, convert the boolean to a kind enum rather than stacking flags.
 
 ## Non-sqlite event collection backends
 
@@ -118,3 +106,29 @@ migration, then soft delete lands as one coordinated change. The blueprint:
   revocation lists and remains visible; deleted means gone from view.
 - Open policy question: what soft-deleting an org does to its keys, providers, and models
   (cascade, orphan, or forbid).
+
+## Sign-the-bytes bundle signing
+
+SignedBundle.payload becomes the exact serialized string the signature covers (sign once at compile
+time, verify those bytes verbatim, parse BundleV1 only after the signature holds). Removes
+canonical_json and the constraint that both planes run the same contract version: a lagging data
+plane verifies bytes it never re-serializes, then parses with its own model, ignoring unknown
+fields. Also fixes the ordering weakness of parsing attacker-controllable input before verifying.
+Costs: one coordinated breaking change to SignedBundle (the last such change the envelope needs),
+and bundles at rest inspect as `jq -r .payload | jq` instead of `jq .payload`. Independent of
+encoding; this is the pattern signed protobufs use, without switching the contract off JSON.
+Protobuf itself was considered and rejected: gzip erases the size win, Pydantic already ignores
+unknown fields, and proto3 would cost HttpUrl/UUID/datetime/Literal validation. Revisit only if a
+non-Python data plane or third-party contract consumers appear.
+
+## Org id should be a minted unique id
+
+Org ids are caller-chosen today (`--org org-dev` at init, `OrgIn.id` on /instance/orgs) and double
+as the human handle. Every other record follows the server-mints-ids convention (u-, mt-, k-) with
+the caller-facing name split out; orgs should too: mint `o-<hex>` at creation, keep the display
+name (already derived from the admin email domain) as a mutable field, and add a slug if CLI
+ergonomics need a stable human handle. Cost: org_id is threaded through bundles, tokens, the data
+plane config (`data_plane.bundle.org`), and usage events, so the switch needs either slug-based
+references in config or a resolve step at data-plane sync. Pairs with the surrogate-key bullet of
+[soft delete](#soft-delete-on-postgres), which wants the same id/identity split for partial unique
+indexes.

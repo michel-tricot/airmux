@@ -1,9 +1,13 @@
 from __future__ import annotations
 
+import json
+import time
+from collections import deque
 from typing import TYPE_CHECKING
 
 import typer
 from dotenv import find_dotenv, load_dotenv
+from rich.live import Live
 
 from cli.client import instance_client, instance_get, org_client, org_get, post_expecting
 from cli.common import (
@@ -155,7 +159,8 @@ def service_accounts_create(
         resp = post_expecting(c, "/instance/service-accounts", {"name": name, "instance_admin": admin}, ok=(200,)).json()
     console.print(f"service account [bold]{resp['id']}[/bold] created as {resp['email']}")
     console.print(
-        f"[dim]add it to an org with `airllm users join {resp['id']} <org>`, then mint its token with `airllm tokens mint <org> --user {resp['id']}`[/dim]"
+        f"[dim]add it to an org with `airllm users join {resp['id']} <org>`, "
+        f"then mint its token with `airllm tokens mint <org> --user {resp['id']}`[/dim]"
     )
 
 
@@ -284,12 +289,6 @@ def events_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat.ta
 @events_app.command("tail")
 def events_tail(interval: float = 2.0, keep: int = 30, control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
     """Follow the org's usage events; a live table by default, one json or text line per event otherwise."""
-    import json  # noqa: PLC0415 lazy import keeps CLI startup fast
-    import time  # noqa: PLC0415 lazy import keeps CLI startup fast
-    from collections import deque  # noqa: PLC0415 lazy import keeps CLI startup fast
-
-    from rich.live import Live  # noqa: PLC0415 lazy import keeps CLI startup fast
-
     params: dict = {}
     rows: deque[dict] = deque(maxlen=keep)
     fresh_ids: set[str] = set()

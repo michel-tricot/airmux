@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 def test_expired_bundle_served_with_warning_by_default(stack: Stack) -> None:
     stack.write_config(staleness_bound_hours=0, staleness_policy="serve_and_warn")
     stack.start_cp()
-    stack.bootstrap()
+    stack.collect_tokens()
     stack.start_dp()
     stack.wait_dp_ready()
 
@@ -24,7 +24,7 @@ def test_expired_bundle_served_with_warning_by_default(stack: Stack) -> None:
 def test_expired_bundle_refused_when_policy_is_refuse(stack: Stack) -> None:
     stack.write_config(staleness_bound_hours=0, staleness_policy="refuse")
     stack.start_cp()
-    stack.bootstrap()
+    stack.collect_tokens()
     stack.start_dp()
 
     assert stack.wait_dp_log("policy is refuse")

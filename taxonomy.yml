@@ -1,7 +1,9 @@
+# Models taxonomy applied by `control-plane init` and re-applied with `control-plane taxonomy`.
+#
 # All providers here expose OpenAI-compatible chat completions, which is what
 # the current openai_compatible adapter (bearer auth, {base_url}/chat/completions)
 # supports. A model is only callable once its provider's env key is set; requests
-# to the others fail at call time, nothing breaks at bootstrap.
+# to the others fail at call time, nothing breaks while keys are absent.
 #
 # Model list, prices (USD per million tokens, for metering) and context windows
 # come from public provider pricing data; regenerate rather than hand-edit.
@@ -11,8 +13,6 @@
 # as an evaluation aid rather than a production path; the native Messages adapter
 # is milestone M4. Azure OpenAI, Bedrock and Vertex need auth schemes the
 # adapter does not speak yet.
-
-org: org-dev
 
 providers:
   - provider_id: openai
@@ -852,5 +852,3 @@ models:
     max_output_tokens: 131000
     capabilities: [streaming, tools]
 
-keys:
-  - allowed_models: ["*"]

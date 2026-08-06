@@ -103,7 +103,7 @@ classmethod-decorators = ["classmethod", "sqlalchemy.orm.declared_attr", "sqlalc
 runtime-evaluated-base-classes = ["pydantic.BaseModel", "sqlmodel.SQLModel", "control_plane.models.base.Record", "control_plane.models.base.OrgOwned"]
 
 [tool.ty.src]
-exclude = ["**/migrations/versions"]
+exclude = ["**/migrations/versions", "examples/anthropic_sdk.py"]
 
 [tool.ty.environment]
 python-version = "3.13"
