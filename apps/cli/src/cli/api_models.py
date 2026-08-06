@@ -49,12 +49,25 @@ class DeletedOutStr(BaseModel):
     deleted_at: AwareDatetime = Field(..., title="Deleted At")
 
 
+class DiscoverIn(BaseModel):
+    email: str = Field(..., title="Email")
+
+
+class DiscoverOut(BaseModel):
+    method: Literal["password", "sso"] = Field(..., title="Method")
+    connection_id: str | None = Field(None, title="Connection Id")
+
+
 class EnvelopeCompileOut(BaseModel):
     data: CompileOut
 
 
 class EnvelopeDeletedOutStr(BaseModel):
     data: DeletedOutStr
+
+
+class EnvelopeDiscoverOut(BaseModel):
+    data: DiscoverOut
 
 
 class EnvelopeListApiKeyOut(BaseModel):
@@ -113,6 +126,19 @@ class KeyOut(BaseModel):
 class KeyRevokedOut(BaseModel):
     key_id: str = Field(..., title="Key Id")
     status: Literal["revoked"] = Field(..., title="Status")
+
+
+class LoginIn(BaseModel):
+    email: str = Field(..., title="Email")
+    password: str = Field(..., title="Password")
+
+
+class MeOut(BaseModel):
+    user_id: str = Field(..., title="User Id")
+    email: str = Field(..., title="Email")
+    name: str = Field(..., title="Name")
+    instance_admin: bool = Field(..., title="Instance Admin")
+    orgs: list[str] = Field(..., title="Orgs")
 
 
 class MembershipOut(BaseModel):
@@ -207,6 +233,25 @@ class OrgPatch(BaseModel):
     name: str | None = Field(None, title="Name")
 
 
+class PasswordChangeIn(BaseModel):
+    current_password: str = Field(..., title="Current Password")
+    new_password: str = Field(..., title="New Password")
+
+
+class PasswordChangedOut(BaseModel):
+    user_id: str = Field(..., title="User Id")
+    status: Literal["changed"] = Field(..., title="Status")
+
+
+class PasswordSetIn(BaseModel):
+    password: str = Field(..., title="Password")
+
+
+class PasswordSetOut(BaseModel):
+    user_id: str = Field(..., title="User Id")
+    status: Literal["set"] = Field(..., title="Status")
+
+
 class ProviderEntry(BaseModel):
     """
     An upstream LLM provider endpoint.
@@ -268,6 +313,37 @@ class ServiceAccountIn(BaseModel):
         description="Whether the service account administers the whole instance",
         title="Instance Admin",
     )
+
+
+class SsoConnectionIn(BaseModel):
+    issuer: str = Field(..., title="Issuer")
+    client_id: str = Field(..., title="Client Id")
+    client_secret: str = Field(..., title="Client Secret")
+    email_domains: list[str] = Field(..., title="Email Domains")
+    jit: bool | None = Field(False, title="Jit")
+
+
+class SsoConnectionOut(BaseModel):
+    id: str = Field(..., title="Id")
+    org_id: str = Field(..., title="Org Id")
+    issuer: str = Field(..., title="Issuer")
+    client_id: str = Field(..., title="Client Id")
+    email_domains: list[str] = Field(..., title="Email Domains")
+    jit: bool = Field(..., title="Jit")
+    authorization_endpoint: str = Field(..., title="Authorization Endpoint")
+    token_endpoint: str = Field(..., title="Token Endpoint")
+    jwks_uri: str = Field(..., title="Jwks Uri")
+    created_at: AwareDatetime = Field(..., title="Created At")
+    updated_at: AwareDatetime = Field(..., title="Updated At")
+    deleted_at: AwareDatetime | None = Field(..., title="Deleted At")
+
+
+class SsoStartIn(BaseModel):
+    connection_id: str = Field(..., title="Connection Id")
+
+
+class SsoStartOut(BaseModel):
+    authorize_url: str = Field(..., title="Authorize Url")
 
 
 class TaxonomyOut(BaseModel):
@@ -393,6 +469,10 @@ class EnvelopeKeyRevokedOut(BaseModel):
     data: KeyRevokedOut
 
 
+class EnvelopeMeOut(BaseModel):
+    data: MeOut
+
+
 class EnvelopeMembershipOut(BaseModel):
     data: MembershipOut
 
@@ -409,8 +489,24 @@ class EnvelopeOrgOut(BaseModel):
     data: OrgOut
 
 
+class EnvelopePasswordChangedOut(BaseModel):
+    data: PasswordChangedOut
+
+
+class EnvelopePasswordSetOut(BaseModel):
+    data: PasswordSetOut
+
+
 class EnvelopeProviderOut(BaseModel):
     data: ProviderOut
+
+
+class EnvelopeSsoConnectionOut(BaseModel):
+    data: SsoConnectionOut
+
+
+class EnvelopeSsoStartOut(BaseModel):
+    data: SsoStartOut
 
 
 class EnvelopeTaxonomyOut(BaseModel):
@@ -431,6 +527,10 @@ class EnvelopeListMgmtTokenOut(BaseModel):
 
 class EnvelopeListOrgOut(BaseModel):
     data: list[OrgOut] = Field(..., title="Data")
+
+
+class EnvelopeListSsoConnectionOut(BaseModel):
+    data: list[SsoConnectionOut] = Field(..., title="Data")
 
 
 class EnvelopeListUsageEventOut(BaseModel):

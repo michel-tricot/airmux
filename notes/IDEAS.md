@@ -60,9 +60,9 @@ exchanged for a token via the API or webapp login, pairing naturally with
 ## Finish service accounts
 
 Users exist with a service_account flag, memberships, and token binding, and `airllmcp init`
-creates a data-plane service account to hold GW_DATAPLANE_TOKEN. What remains: nothing yet distinguishes the kinds
-in behavior; when human login lands, service accounts must be excluded from it, and kind-specific
-policies (token TTLs, sync-only permissions narrower than org admin) become possible. If a third
+creates a data-plane service account to hold GW_DATAPLANE_TOKEN. Human login now excludes service
+accounts everywhere (password set, password login, SSO resolution, session use). What remains:
+kind-specific policies (token TTLs, sync-only permissions narrower than org admin). If a third
 principal kind ever appears, convert the boolean to a kind enum rather than stacking flags.
 
 ## Non-sqlite event collection backends
@@ -121,45 +121,35 @@ Protobuf itself was considered and rejected: gzip erases the size win, Pydantic 
 unknown fields, and proto3 would cost HttpUrl/UUID/datetime/Literal validation. Revisit only if a
 non-Python data plane or third-party contract consumers appear.
 
-## Pluggable human login (password, OIDC, SAML via broker)
+## Webapp login switch and session policy
 
-PROTOTYPE.md says do not build SSO, so this is the blueprint for when human login lands. The seam
-already exists: every client authenticates with a minted management token and deps.py only ever
-verifies that token, so login methods never touch authorization. Authentication's whole job is to
-end in "verified user, mint a MgmtToken exactly as tokens.py does today". Revocation,
-claims_are_backed, org scoping, and the data plane are untouched.
+Human login is built (2026-08-06): password (argon2 on AuthIdentity) plus one generic OIDC relying
+party with PKCE, per-org SsoConnection config with cached discovery endpoints, home-realm
+discovery over email_domains, JIT provisioning, and cookie sessions (ab-sess- opaque token, sha256
+at rest, 12h sliding / 14d absolute) as a second door into the management API through
+management_claims: bearer wins, cookie branch does CSRF (static X-Requested-With plus
+Sec-Fetch-Site) and org scoping via X-Org-Id backed by memberships. SAML and WorkOS stay
+config-only: any broker presenting as an OIDC issuer is one SsoConnection row.
 
-The app implements exactly two mechanisms regardless of how many providers exist:
+The webapp now rides the cookie door: password login/signup page (open self-signup via
+/v1/auth/signup; fresh accounts hold nothing until granted), api() sends X-Requested-With always
+and X-Org-Id outside /v1/instance and /v1/auth, a sidebar org selector persisted per browser, and
+a 401 anywhere flips the me query back to the login screen. The localStorage bearer is gone.
 
-- Local password: email plus argon2 hash, verified in-process.
-- One generic OIDC relying party: authorization-code + PKCE against any issuer (authlib).
+What remains:
 
-Everything else (SAML, social, magic links, directory sync) arrives through a broker that presents
-as an OIDC issuer. WorkOS AuthKit is one row of OIDC configuration, not a special integration; so
-are Auth0, Keycloak, Dex, authentik. SAML never touches the codebase: hand-rolled SAML SPs are a
-security tarpit (XML signature wrapping) and every broker does it. Swapping WorkOS for Keycloak in
-a self-hosted deployment is a config change, not a code change.
-
-Models, one per file as usual:
-
-- AuthIdentity: user_id, provider (`password` | `oidc:<connection-id>`), subject (the provider's
-  stable sub claim, or email for password), unique on (provider, subject). Lets one user hold
-  multiple login methods and resolves SSO assertions without trusting email matching forever.
-- PasswordCredential: the argon2 hash, never on User. Service accounts never get one, which
-  satisfies the exclusion noted in [finish service accounts](#finish-service-accounts).
-- SsoConnection: OrgOwned; issuer URL, client id/secret, email_domains for home-realm discovery.
-  Enterprise SSO is per-org config. An instance-wide default is a row with org_id null.
-
-Flow: user enters email, domain matches an SsoConnection or falls back to password, OIDC callback
-resolves or creates the AuthIdentity, JIT-provisions User plus OrgMembership if the connection
-allows, mints a MgmtToken. If a driver seam is wanted in code it mirrors the adapter pattern: an
-IdentityProvider protocol with begin(connection, redirect_uri, state) and callback(connection,
-params) returning a frozen VerifiedIdentity(provider, subject, email, name); password and oidc are
-the only shipped implementations, a native workos driver only if Directory Sync/SCIM is ever
-wanted. Cheap to do now: keep anything from assuming User-to-credential is 1:1 so AuthIdentity
-slots in without a migration headache. When login lands, the webapp should move the management
-token from localStorage to an httpOnly cookie set by the callback; an XSS-readable admin token is
-the first thing enterprise security review flags.
+- SSO in the webapp: the login page does not yet call /auth/discover or run the authorize
+  redirect; the landing page that forwards state/code to /auth/sso/callback via fetch is unbuilt
+  (the callback returns JSON, not a redirect, for exactly this shape).
+- Session-only actions: claims minted from a session carry the s- token_id prefix, so restricting
+  mgmt-key minting and SSO config changes to the session door is one check when wanted (a stolen
+  key must not breed keys).
+- Instance-wide default SsoConnection (org_id null) if login for instance admins should not
+  require an org connection; today connections are strictly org-owned.
+- Expired sessions are inert rather than deleted (the 401 rolls the request transaction back);
+  a sweeper or delete-on-logout-only policy if the table ever matters.
+- Hosted deployments could delegate the session lifecycle to WorkOS AuthKit sealed sessions
+  behind the same cookie branch; self-hosted keeps the session row.
 
 ## Per-data-plane credentials with enrollment
 
@@ -173,39 +163,17 @@ What remains from that design: one token per data-plane instance, bound to a Dat
 one deployment can be revoked without touching the rest and heartbeats get identity for free
 (today all data planes of an org share GW_DATAPLANE_TOKEN). Bootstrap via a single-use enrollment
 code rather than pasting long-lived secrets into env, pairing with the Jenkins-style variant in
-[self-minted instance access](#self-minted-instance-access-from-key-possession). Console sessions
-are the other unbuilt credential, detailed in
-[cookie sessions for the console](#cookie-sessions-for-the-console).
+[self-minted instance access](#self-minted-instance-access-from-key-possession).
 
-## Cookie sessions for the console
+## Audit redaction for secret-bearing tables
 
-The UI holds a session, not a key. Login ([pluggable human login](#pluggable-human-login-password-oidc-saml-via-broker))
-ends with the server setting an opaque session token in an httpOnly Secure SameSite=Lax cookie:
-a DB row like any other credential, sliding expiry of hours, absolute cap of a couple weeks. The
-browser never sees a management key; a human who needs programmatic access mints a mgmt key
-through the session, keeping "revoke when a laptop is stolen" (session) separate from "revoke when
-CI leaks" (key).
-
-Both doors converge in one dependency: current_actor resolves either the Authorization header
-(key) or the session cookie into a frozen Actor(user_id, org_id, scopes, via, credential_id).
-Header wins when both are present, never silent fallback. Routes and authorization see only Actor;
-keys resolve to their owning user so membership checks and audit attribution stay uniform, with
-credential_id recording which key or session acted. A few actions are session-only via the `via`
-field: minting new mgmt keys and changing SSO config, so a stolen key cannot breed keys. The API
-always returns plain 401 JSON; the webapp api() wrapper is where 401 becomes a login redirect.
-
-CSRF applies only to the cookie branch. No token is minted anywhere: the api() wrapper sets a
-static custom header on every request (cross-site pages cannot set custom headers without failing
-CORS preflight) and the server additionally checks the browser-set Sec-Fetch-Site. Requests
-authenticated by Authorization header are immune by construction and are never asked for CSRF
-proof. Preconditions: no permissive CORS middleware, SameSite=Lax as the second layer.
-
-Libraries, since the FastAPI ecosystem has no Django-grade hardened session framework: hosted
-deployments can delegate the whole lifecycle to WorkOS AuthKit sealed sessions (SDK handles
-refresh, JWKS, rotation; the cookie branch of current_actor just calls the SDK); self-hosted falls
-back to starsessions or the session-as-a-row above, which contains no cryptography to get wrong.
-fastapi-users rejected: it insists on owning the user table, which collides with the fat-model
-Record design.
+AuthIdentity, AuthSession, SsoConnection, and LoginAttempt are deliberately not @audited: the
+listener snapshots whole rows into AuditLog.before/after, which would copy argon2 hashes, session
+token hashes, and OIDC client secrets into audit rows. The enabler is per-table redaction: let
+@audited take an exclude set (like the tombstone timestamps already excluded) or a redact-to-hash
+policy, then audit identity and connection changes, which are exactly the security events an
+auditor wants. The session sliding-refresh write would also need an actor story, since it happens
+before current_actor is set.
 
 ## Capability-based authorization on the management API
 

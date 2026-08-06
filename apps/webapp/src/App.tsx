@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Navigate, NavLink, Route, Routes } from 'react-router-dom'
-import { useQueryClient } from '@tanstack/react-query'
-import { clearToken, getToken, setToken } from './api'
-import { inputClass, Button } from './ui'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { fetchMe, getCurrentOrg, listOrgs, logout, setCurrentOrg, type Me } from './api'
+import { inputClass } from './ui'
+import Login from './pages/Login'
 import Events from './pages/Events'
 import Orgs from './pages/Orgs'
 import Keys from './pages/Keys'
@@ -21,49 +22,56 @@ const NAV = [
   { to: '/instances', label: 'Instances' },
 ]
 
-function TokenGate({ onSubmit }: { onSubmit: (token: string) => void }) {
-  const [value, setValue] = useState('')
+function OrgSelect({ me }: { me: Me }) {
+  const queryClient = useQueryClient()
+  const { data: allOrgs } = useQuery({ queryKey: ['orgs'], queryFn: listOrgs, enabled: me.instance_admin })
+  const options = me.instance_admin ? (allOrgs ?? []).map((o) => o.id) : me.orgs
+  const [selected, setSelected] = useState(getCurrentOrg())
+  const effective = selected && options.includes(selected) ? selected : (options[0] ?? null)
+
+  useEffect(() => {
+    if (effective !== getCurrentOrg()) {
+      setCurrentOrg(effective)
+      queryClient.invalidateQueries()
+    }
+  }, [effective, queryClient])
+
+  if (options.length === 0) return null
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-950">
-      <form
-        className="w-96 space-y-4 rounded-xl border border-slate-800 bg-slate-900 p-8"
-        onSubmit={(e) => {
-          e.preventDefault()
-          if (value.trim()) onSubmit(value.trim())
+    <div className="px-3 pb-2">
+      <select
+        className={`w-full ${inputClass}`}
+        value={effective ?? ''}
+        onChange={(e) => {
+          setSelected(e.target.value)
+          setCurrentOrg(e.target.value)
+          queryClient.invalidateQueries()
         }}
       >
-        <div>
-          <h1 className="text-lg font-semibold text-slate-100">airllm console</h1>
-          <p className="mt-1 text-sm text-slate-500">Enter a control plane management token</p>
-        </div>
-        <input
-          className={`w-full ${inputClass}`}
-          type="password"
-          placeholder="management token"
-          value={value}
-          onChange={(e) => setValue(e.target.value)}
-          autoFocus
-        />
-        <Button type="submit">Connect</Button>
-      </form>
+        {options.map((org) => (
+          <option key={org} value={org}>
+            {org}
+          </option>
+        ))}
+      </select>
     </div>
   )
 }
 
 export default function App() {
-  const [token, setTokenState] = useState(getToken())
   const queryClient = useQueryClient()
+  const { data: me, isLoading } = useQuery({ queryKey: ['me'], queryFn: fetchMe })
 
-  if (!token) {
-    return (
-      <TokenGate
-        onSubmit={(value) => {
-          setToken(value)
-          setTokenState(value)
-        }}
-      />
-    )
-  }
+  const signOut = useMutation({
+    mutationFn: logout,
+    onSettled: () => {
+      setCurrentOrg(null)
+      queryClient.clear()
+    },
+  })
+
+  if (isLoading) return <div className="min-h-screen bg-slate-950" />
+  if (!me) return <Login />
 
   return (
     <div className="flex min-h-screen bg-slate-950">
@@ -87,17 +95,17 @@ export default function App() {
             </NavLink>
           ))}
         </nav>
-        <div className="px-3 py-4">
+        <OrgSelect me={me} />
+        <div className="border-t border-slate-800 px-3 py-4">
+          <p className="truncate px-3 text-xs text-slate-500" title={me.email}>
+            {me.email}
+          </p>
           <button
             type="button"
-            className="w-full rounded-md px-3 py-2 text-left text-sm text-slate-500 hover:bg-slate-800 hover:text-slate-300"
-            onClick={() => {
-              clearToken()
-              setTokenState(null)
-              queryClient.clear()
-            }}
+            className="mt-1 w-full rounded-md px-3 py-2 text-left text-sm text-slate-500 hover:bg-slate-800 hover:text-slate-300"
+            onClick={() => signOut.mutate()}
           >
-            Reset token
+            Log out
           </button>
         </div>
       </aside>

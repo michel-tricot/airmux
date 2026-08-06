@@ -18,6 +18,12 @@ class DatabaseConfig(BaseModel):
     url: str = "sqlite+aiosqlite:///airllm.db"
 
 
+class AuthConfig(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    public_base_url: str = "http://127.0.0.1:8000"  # the URL browsers reach this control plane on; builds the OIDC redirect_uri
+
+
 class BundlePolicy(BaseModel):
     model_config = ConfigDict(frozen=True, arbitrary_types_allowed=True)
 
@@ -33,6 +39,7 @@ class Settings(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     database: DatabaseConfig = Field(default_factory=DatabaseConfig)
+    auth: AuthConfig = Field(default_factory=AuthConfig)
     bundle: BundlePolicy
     dev: bool = False  # set by the --dev flag on the entry point, gate dev-only behavior on this
 

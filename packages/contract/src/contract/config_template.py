@@ -11,6 +11,8 @@ from __future__ import annotations
 DEFAULT_CONFIG_YML = """control_plane:
   database:
     url: {db_url}
+  auth:
+    public_base_url: {control_plane_url}
   bundle:
     signing_key: env:GW_BUNDLE_SIGNING_KEY
     staleness_bound_hours: 24

@@ -11,6 +11,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from control_plane.config import load_settings
 from control_plane.db import make_engine, make_session_factory
 from control_plane.models import NotOwnedError
+from control_plane.routes.auth import router as auth_router
 from control_plane.routes.instance import router as instance_router
 from control_plane.routes.org import router as org_router
 from control_plane.routes.sync import router as sync_router
@@ -28,7 +29,9 @@ API_TAGS = [
     {"name": "Orgs", "description": "Tenants of the instance; every key, bundle and event belongs to one org"},
     {"name": "Users", "description": "Instance admins, org members and service accounts, with their org memberships"},
     {"name": "Management Tokens", "description": "User-bound bearer tokens for this API, instance- or org-scoped"},
-    {"name": "API Keys", "description": "Caller credentials for the gateway: signed JWTs distributed to data planes through bundles"},
+    {"name": "API Keys", "description": "Caller credentials for the gateway: opaque keys whose hashes reach data planes through bundles"},
+    {"name": "Auth", "description": "Human login: password and SSO, cookie sessions, account endpoints"},
+    {"name": "SSO", "description": "Per-org OIDC issuer connections driving SSO login and home-realm discovery"},
     {"name": "Bundles", "description": "Signed policy bundles compiled per org and polled by data planes"},
     {"name": "Instances", "description": "Data plane instances known to the org through their heartbeats"},
     {"name": "Events", "description": "Usage events reported by data planes"},
@@ -38,7 +41,8 @@ API_TAGS = [
 
 TAG_GROUPS = [
     {"name": "Instance Admin", "tags": ["Orgs", "Users", "Management Tokens"]},
-    {"name": "Org Management", "tags": ["API Keys", "Bundles", "Instances", "Events"]},
+    {"name": "Org Management", "tags": ["API Keys", "Bundles", "Instances", "Events", "SSO"]},
+    {"name": "Account", "tags": ["Auth"]},
     {"name": "Catalog", "tags": ["Taxonomy"]},
     {"name": "Data Plane", "tags": ["Sync"]},
 ]
@@ -82,7 +86,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.add_exception_handler(NotOwnedError, not_owned_handler)
     app.add_route("/healthz", healthz)
     v1 = APIRouter(prefix="/v1")
-    for router in (instance_router, org_router, sync_router, taxonomy_router):
+    for router in (auth_router, instance_router, org_router, sync_router, taxonomy_router):
         v1.include_router(router)
     app.include_router(v1)
     return app

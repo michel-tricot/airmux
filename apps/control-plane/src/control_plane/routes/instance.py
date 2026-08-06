@@ -1,17 +1,20 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from typing import Literal
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel, Field
 from sqlmodel import col
 
 from control_plane.deps import instance_scope
-from control_plane.models import MgmtToken, Org, OrgMembership, User
+from control_plane.models import AuthIdentity, MgmtToken, Org, OrgMembership, User
 from control_plane.models.mgmt_token import MgmtTokenOut, MintedTokenOut, TokenRevokedOut, UserTokenIn
 from control_plane.models.org import OrgCreate, OrgOut, OrgPatch
 from control_plane.models.org_membership import MembershipOut
 from control_plane.models.user import ServiceAccountIn, UserCreate, UserOut
+from control_plane.passwords import hash_password
 from control_plane.schemas import DeletedOut, Envelope
 from control_plane.tokens import mint_mgmt_key
 
@@ -85,6 +88,31 @@ async def remove_membership(user_id: str, org_id: str) -> Envelope[DeletedOut[st
         raise HTTPException(status_code=404)
     await membership.delete()
     return Envelope(data=DeletedOut(id=f"{user_id}/{org_id}", deleted_at=datetime.now(tz=UTC)))
+
+
+class PasswordSetIn(BaseModel):
+    password: str = Field(min_length=8)
+
+
+class PasswordSetOut(BaseModel):
+    user_id: str
+    status: Literal["set"]
+
+
+@router.put("/users/{user_id}/password", tags=["Users"])
+async def set_password(user_id: str, body: PasswordSetIn) -> Envelope[PasswordSetOut]:
+    """Admin set or reset; the bootstrap path for the first password, since there is no email delivery."""
+    user = await User.get(user_id)
+    if user is None:
+        raise HTTPException(status_code=404)
+    if user.service_account:
+        raise HTTPException(status_code=422, detail="service accounts cannot log in")
+    identity = await AuthIdentity.first(AuthIdentity.provider == "password", AuthIdentity.subject == user.email.lower())
+    if identity is None:
+        identity = AuthIdentity(id=f"ai-{uuid4().hex[:8]}", user_id=user.id, provider="password", subject=user.email.lower())
+    identity.secret_hash = hash_password(body.password)
+    await identity.save()
+    return Envelope(data=PasswordSetOut(user_id=user.id, status="set"))
 
 
 @router.post("/users/{user_id}/tokens", tags=["Management Tokens"])

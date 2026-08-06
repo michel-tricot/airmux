@@ -1,15 +1,15 @@
-const TOKEN_KEY = 'airllm_admin_token'
+const ORG_KEY = 'airllm_org'
 
-export function getToken(): string | null {
-  return localStorage.getItem(TOKEN_KEY)
+let currentOrg: string | null = localStorage.getItem(ORG_KEY)
+
+export function getCurrentOrg(): string | null {
+  return currentOrg
 }
 
-export function setToken(token: string): void {
-  localStorage.setItem(TOKEN_KEY, token)
-}
-
-export function clearToken(): void {
-  localStorage.removeItem(TOKEN_KEY)
+export function setCurrentOrg(org: string | null): void {
+  currentOrg = org
+  if (org) localStorage.setItem(ORG_KEY, org)
+  else localStorage.removeItem(ORG_KEY)
 }
 
 export class ApiError extends Error {
@@ -18,21 +18,26 @@ export class ApiError extends Error {
   constructor(status: number) {
     super(
       status === 401
-        ? 'unauthorized: check the management token'
+        ? 'session expired, log in again'
         : status === 403
-          ? 'forbidden: this view needs a different token scope'
+          ? 'forbidden: this view needs org access or admin rights'
           : `request failed with status ${status}`,
     )
     this.status = status
   }
 }
 
+function authHeaders(path: string): Record<string, string> {
+  const headers: Record<string, string> = { 'content-type': 'application/json', 'X-Requested-With': 'fetch' }
+  if (currentOrg && !path.startsWith('/v1/instance/') && !path.startsWith('/v1/auth/')) headers['X-Org-Id'] = currentOrg
+  return headers
+}
+
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(path, {
     ...init,
     headers: {
-      'content-type': 'application/json',
-      authorization: `Bearer ${getToken() ?? ''}`,
+      ...authHeaders(path),
       ...init?.headers,
     },
   })
@@ -120,6 +125,29 @@ export interface Taxonomy {
   providers: Provider[]
   models: Model[]
 }
+
+export interface Me {
+  user_id: string
+  email: string
+  name: string
+  instance_admin: boolean
+  orgs: string[]
+}
+
+export async function fetchMe(): Promise<Me | null> {
+  const res = await fetch('/v1/auth/me', { headers: { 'X-Requested-With': 'fetch' } })
+  if (res.status === 401 || res.status === 403) return null
+  if (!res.ok) throw new ApiError(res.status)
+  const body = (await res.json()) as { data: Me }
+  return body.data
+}
+
+export const login = (body: { email: string; password: string }) => api<Me>('/v1/auth/login', { method: 'POST', body: JSON.stringify(body) })
+
+export const signup = (body: { email: string; name: string; password: string }) =>
+  api<Me>('/v1/auth/signup', { method: 'POST', body: JSON.stringify(body) })
+
+export const logout = () => api<{ id: string }>('/v1/auth/logout', { method: 'POST' })
 
 export const listOrgs = () => api<Org[]>('/v1/instance/orgs')
 export const listKeys = () => api<ApiKey[]>('/v1/org/keys')

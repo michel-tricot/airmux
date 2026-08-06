@@ -42,9 +42,16 @@ AIRLLM_ADMIN_EMAIL=you@example.com OPENAI_API_KEY=sk-... docker compose up -d --
 
 # caller key for requests through the gateway
 export AIRLLM_TOKEN=$(docker compose exec data-plane sh -c '. /state/.env && echo $AIRLLM_TOKEN')
+```
 
-# management token to sign in to the console
-docker compose exec data-plane sh -c '. /state/.env && echo $GW_ORG_MGMT_TOKEN'
+The console signs in with email and password: sign up on the login page, or set
+the init admin's password once with the admin bearer:
+
+```bash
+docker compose exec data-plane sh -c '. /state/.env && echo $GW_ADMIN_MGMT_TOKEN'
+curl -X PUT localhost:8000/v1/instance/users/<user-id>/password \
+  -H "Authorization: Bearer <admin token>" -H "Content-Type: application/json" \
+  -d '{"password":"..."}'
 ```
 
 Provider keys are passed through the environment (compose also reads them from

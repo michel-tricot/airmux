@@ -13,6 +13,9 @@ dependencies = [
   "typer",
   "python-dotenv",
   "pyyaml",
+  "authlib>=1.6,<2",
+  "argon2-cffi>=23.1",
+  "httpx",
 ]
 
 [project.scripts]
