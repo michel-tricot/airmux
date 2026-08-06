@@ -1,9 +1,6 @@
 {
   "$schema": "https://mintlify.com",
   "name": "AirLLM",
-  "colors": {
-    "primary": "#0D9372"
-  },
   "navigation": [
     {
       "group": "Get Started",
