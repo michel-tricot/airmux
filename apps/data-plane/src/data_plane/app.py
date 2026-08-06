@@ -17,7 +17,7 @@ from starlette.applications import Starlette
 from starlette.responses import JSONResponse, Response, StreamingResponse
 from starlette.routing import Route
 
-from contract import UsageEventV1, UsageStatus, public_key_from_b64, verify_bundle
+from contract import UsageEventV1, UsageStatus, verify_bundle
 from data_plane.adapters import REGISTRY, ProviderAdapter
 from data_plane.auth import authenticate
 from data_plane.cache import instance_id as cache_instance_id
@@ -337,44 +337,49 @@ def _load_cached_bundle(config: Config, public_key: Ed25519PublicKey) -> None:
     holder.admit(bundle, config.bundle.staleness_policy, source="cached")
 
 
-@contextlib.asynccontextmanager
-async def lifespan(_app: Starlette) -> AsyncIterator[None]:
-    config = load_config()
-    if config.dev:
-        _configure_dev_logging()
-    state.config = config
-    state.outbox = build_outbox(config)
-    try:
-        state.bundle_public_key = public_key_from_b64(config.bundle.public_key)
-        state.token_public_key = public_key_from_b64(config.auth.token_public_key)
-        _load_cached_bundle(config, state.bundle_public_key)
-        instance_id = cache_instance_id(config.bundle.cache_dir)
-        tasks = (
-            [
-                asyncio.create_task(run_poller(config, holder, state.bundle_public_key)),
-                asyncio.create_task(state.outbox.run()),
-                asyncio.create_task(run_heartbeat(config, holder, instance_id)),
-            ]
-            if config.control_plane.url
-            else []
-        )
+def create_app(config_override: Config | None = None) -> Starlette:
+    """App factory: production loads the config file, tests inject a constructed Config."""
+
+    @contextlib.asynccontextmanager
+    async def lifespan(_app: Starlette) -> AsyncIterator[None]:
+        config = config_override or load_config()
+        if config.dev:
+            _configure_dev_logging()
+        state.config = config
+        state.outbox = build_outbox(config)
         try:
-            yield
+            state.bundle_public_key = config.bundle.public_key
+            state.token_public_key = config.auth.token_public_key
+            _load_cached_bundle(config, state.bundle_public_key)
+            instance_id = cache_instance_id(config.bundle.cache_dir)
+            tasks = (
+                [
+                    asyncio.create_task(run_poller(config, holder, state.bundle_public_key)),
+                    asyncio.create_task(state.outbox.run()),
+                    asyncio.create_task(run_heartbeat(config, holder, instance_id)),
+                ]
+                if config.control_plane.url
+                else []
+            )
+            try:
+                yield
+            finally:
+                for task in tasks:
+                    task.cancel()
+                    with contextlib.suppress(asyncio.CancelledError):
+                        await task
         finally:
-            for task in tasks:
-                task.cancel()
-                with contextlib.suppress(asyncio.CancelledError):
-                    await task
-    finally:
-        state.outbox.close()
+            state.outbox.close()
+
+    return Starlette(
+        routes=[
+            Route("/v1/chat/completions", chat_completions, methods=["POST"]),
+            Route("/v1/messages", messages, methods=["POST"]),
+            Route("/healthz", healthz),
+            Route("/readyz", readyz),
+        ],
+        lifespan=lifespan,
+    )
 
 
-app = Starlette(
-    routes=[
-        Route("/v1/chat/completions", chat_completions, methods=["POST"]),
-        Route("/v1/messages", messages, methods=["POST"]),
-        Route("/healthz", healthz),
-        Route("/readyz", readyz),
-    ],
-    lifespan=lifespan,
-)
+app = create_app()

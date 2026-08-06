@@ -1,33 +1,16 @@
 from __future__ import annotations
 
 import pytest
-import yaml
 from dotenv import dotenv_values
 from fastapi.testclient import TestClient
-from helpers import run_in_db, setup_control_plane
+from helpers import EMAIL, run_in_db, setup_control_plane, write_config
 from typer.testing import CliRunner
 
-from contract import private_key_to_b64
 from control_plane.main import app
 from control_plane.models import AuditLog, MgmtToken, User
 from control_plane.tokens import verify_management_token
 
 runner = CliRunner()
-
-EMAIL = "michel@example.com"
-
-
-def _config(tmp_path, cp) -> str:
-    doc = {
-        "control_plane": {
-            "database": {"url": f"sqlite+aiosqlite:///{tmp_path}/cp.db"},
-            "auth": {"token_signing_key": private_key_to_b64(cp.token_key)},
-            "bundle": {"signing_key": private_key_to_b64(cp.bundle_key)},
-        }
-    }
-    cfg = tmp_path / "airllm.yml"
-    cfg.write_text(yaml.safe_dump(doc), encoding="utf-8")
-    return str(cfg)
 
 
 def _create(tmp_path, cfg: str, *extra: str):
@@ -36,7 +19,7 @@ def _create(tmp_path, cfg: str, *extra: str):
 
 def test_create_mints_a_user_bound_instance_token(tmp_path):
     cp = setup_control_plane(tmp_path)
-    result = _create(tmp_path, _config(tmp_path, cp))
+    result = _create(tmp_path, write_config(tmp_path, cp))
     assert result.exit_code == 0, result.output
     token = dotenv_values(tmp_path / ".env")["GW_ADMIN_MGMT_TOKEN"]
     assert token is not None
@@ -58,7 +41,7 @@ def test_create_mints_a_user_bound_instance_token(tmp_path):
 
 def test_create_audits_as_the_new_admin(tmp_path):
     cp = setup_control_plane(tmp_path)
-    assert _create(tmp_path, _config(tmp_path, cp)).exit_code == 0
+    assert _create(tmp_path, write_config(tmp_path, cp)).exit_code == 0
     user = run_in_db(tmp_path, lambda: User.first(User.email == EMAIL))
     assert user is not None
     entries = run_in_db(tmp_path, lambda: AuditLog.find(AuditLog.table_name == "user"))
@@ -67,7 +50,7 @@ def test_create_audits_as_the_new_admin(tmp_path):
 
 def test_existing_admin_gets_a_fresh_token(tmp_path):
     cp = setup_control_plane(tmp_path)
-    cfg = _config(tmp_path, cp)
+    cfg = write_config(tmp_path, cp)
     assert _create(tmp_path, cfg).exit_code == 0
     first = dotenv_values(tmp_path / ".env")["GW_ADMIN_MGMT_TOKEN"]
     result = _create(tmp_path, cfg)
@@ -84,7 +67,7 @@ def test_existing_admin_gets_a_fresh_token(tmp_path):
 
 def test_if_missing_skips_an_existing_admin(tmp_path):
     cp = setup_control_plane(tmp_path)
-    cfg = _config(tmp_path, cp)
+    cfg = write_config(tmp_path, cp)
     assert _create(tmp_path, cfg).exit_code == 0
     before = dotenv_values(tmp_path / ".env")
     result = _create(tmp_path, cfg, "--if-missing")
@@ -96,7 +79,7 @@ def test_if_missing_skips_an_existing_admin(tmp_path):
 @pytest.mark.parametrize(("instance_admin", "service_account"), [(False, False), (True, True)])
 def test_refuses_emails_that_are_not_human_admins(tmp_path, instance_admin, service_account):
     cp = setup_control_plane(tmp_path)
-    cfg = _config(tmp_path, cp)
+    cfg = write_config(tmp_path, cp)
     run_in_db(
         tmp_path,
         lambda: User(id="u-seeded", email=EMAIL, name="seeded", instance_admin=instance_admin, service_account=service_account).save(),
@@ -110,7 +93,7 @@ def test_refuses_emails_that_are_not_human_admins(tmp_path, instance_admin, serv
 @pytest.mark.parametrize(("instance_admin", "service_account"), [(False, False), (True, True)])
 def test_if_missing_still_refuses_non_admin_emails(tmp_path, instance_admin, service_account):
     cp = setup_control_plane(tmp_path)
-    cfg = _config(tmp_path, cp)
+    cfg = write_config(tmp_path, cp)
     run_in_db(
         tmp_path,
         lambda: User(id="u-seeded", email=EMAIL, name="seeded", instance_admin=instance_admin, service_account=service_account).save(),

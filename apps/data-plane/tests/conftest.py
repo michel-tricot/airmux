@@ -1,18 +1,26 @@
 from __future__ import annotations
 
 import json
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
+from typing import TYPE_CHECKING
 from uuid import uuid4
 
 import pytest
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
-from contract import BundleV1, Catalog, KeyEntry, ModelEntry, ProviderEntry, mint_inference_token, public_key_to_b64, sign_bundle
+from contract import BundleV1, Catalog, KeyEntry, ModelEntry, ProviderEntry, mint_inference_token, sign_bundle
 from data_plane.adapters import REGISTRY
+from data_plane.app import create_app
 from data_plane.canonical import Ctx
 from data_plane.config import AuthConfig, BundleConfig, Config, ControlPlaneLink, EventsConfig
 
+if TYPE_CHECKING:
+    from starlette.applications import Starlette
+
 NOW = datetime.now(tz=UTC)
+
+UNUSED_PUBLIC_KEY = Ed25519PrivateKey.generate().public_key()
 
 PROVIDER = ProviderEntry(provider_id="p1", kind="openai_compatible", base_url="https://api.openai.com/v1", credential_ref="env:OPENAI_API_KEY")
 MODEL = ModelEntry(
@@ -52,8 +60,8 @@ def make_signed(private_key, key_ids=("k1",), revocations=(), org="o1"):
 def make_config(tmp_path, backend="sqlite") -> Config:
     return Config(
         control_plane=ControlPlaneLink(url="http://cp.test", token="dp-token"),
-        bundle=BundleConfig(public_key="unused", cache_dir=tmp_path),
-        auth=AuthConfig(token_public_key="unused"),
+        bundle=BundleConfig(public_key=UNUSED_PUBLIC_KEY, cache_dir=tmp_path),
+        auth=AuthConfig(token_public_key=UNUSED_PUBLIC_KEY),
         events=EventsConfig(backend=backend),
     )
 
@@ -84,9 +92,19 @@ TEXT_NONSTREAM = {
 }
 
 
+@dataclass(frozen=True)
+class BootedApp:
+    app: Starlette
+    token: str
+
+
 @pytest.fixture
-def token(tmp_path, monkeypatch):
-    """A booted-app environment: signed bundle on disk, config file, and a valid caller token."""
+def booted(tmp_path, monkeypatch) -> BootedApp:
+    """A booted-app environment: signed bundle on disk, an app built from a constructed Config, and a valid caller token.
+
+    The config is constructed and injected through create_app, never parsed; parsing the config
+    file is test_config.py's job.
+    """
     bundle_key = Ed25519PrivateKey.generate()
     token_key = Ed25519PrivateKey.generate()
     bundle = make_bundle(
@@ -94,12 +112,19 @@ def token(tmp_path, monkeypatch):
         catalog=Catalog(providers=[PROVIDER], models=[MODEL]),
     )
     (tmp_path / "bundle.json").write_text(sign_bundle(bundle, bundle_key, "k1").model_dump_json(), encoding="utf-8")
-    monkeypatch.chdir(tmp_path)
-    monkeypatch.delenv("GW_CONFIG", raising=False)
-    config = (
-        f'data_plane:\n  bundle:\n    public_key: "{public_key_to_b64(bundle_key.public_key())}"\n    cache_dir: {tmp_path}\n'
-        f'  auth:\n    token_public_key: "{public_key_to_b64(token_key.public_key())}"\n'
+    config = Config(
+        bundle=BundleConfig(public_key=bundle_key.public_key(), cache_dir=tmp_path),
+        auth=AuthConfig(token_public_key=token_key.public_key()),
     )
-    (tmp_path / "airllm.yml").write_text(config, encoding="utf-8")
     monkeypatch.setenv("OPENAI_API_KEY", "sk-test-not-real")
-    return mint_inference_token("k-dev", "org-dev", token_key, NOW)
+    return BootedApp(app=create_app(config), token=mint_inference_token("k-dev", "org-dev", token_key, NOW))
+
+
+@pytest.fixture
+def token(booted: BootedApp) -> str:
+    return booted.token
+
+
+@pytest.fixture
+def dp_app(booted: BootedApp) -> Starlette:
+    return booted.app

@@ -8,7 +8,6 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field, field_validator
 from sqlmodel import col
 
-from contract import private_key_from_b64
 from control_plane.deps import instance_scope
 from control_plane.models import MgmtToken, Org, OrgMembership, User
 from control_plane.models.identity import slug
@@ -79,7 +78,7 @@ class MembershipOut(BaseModel):
 
 async def _mint(request: Request, org_id: str | None, user_id: str | None = None) -> MgmtTokenOut:
     settings = request.app.state.settings
-    token_id, token = await mint_mgmt(org_id, private_key_from_b64(settings.auth.token_signing_key), datetime.now(tz=UTC), user_id)
+    token_id, token = await mint_mgmt(org_id, settings.auth.token_signing_key, datetime.now(tz=UTC), user_id)
     return MgmtTokenOut(token_id=token_id, org_id=org_id, user_id=user_id, token=token)
 
 

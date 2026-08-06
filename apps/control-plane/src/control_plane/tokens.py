@@ -63,7 +63,7 @@ async def mint_mgmt(org_id: str | None, private_key: Ed25519PrivateKey, now: dat
     return token_id, mint_management_token(org_id, private_key, now, token_id, user_id)
 
 
-async def mint_caller_key(org_id: str, allowed_models: list[str], private_key: Ed25519PrivateKey, now: datetime) -> tuple[str, str]:
+async def mint_inference_key(org_id: str, allowed_models: list[str], private_key: Ed25519PrivateKey, now: datetime) -> tuple[str, str]:
     """Mint an inference API key row and its caller token; returns (key_id, token). Runs inside the caller's transaction."""
     key_id = f"k-{uuid4().hex[:8]}"
     await ApiKey(id=key_id, org_id=org_id, allowed_models=allowed_models, disabled=False).save()

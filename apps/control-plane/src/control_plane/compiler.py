@@ -5,13 +5,15 @@ from typing import TYPE_CHECKING
 from sqlalchemy import func
 from sqlmodel import col, select
 
-from contract import BundleV1, Catalog, KeyEntry, ModelEntry, ProviderEntry, canonical_json, private_key_from_b64, sign_bundle
+from contract import BundleV1, Catalog, KeyEntry, ModelEntry, ProviderEntry, canonical_json, sign_bundle
 from control_plane.db import current_session
 from control_plane.models import ApiKey, Bundle, Model, Org, Provider
 
 if TYPE_CHECKING:
     from datetime import datetime, timedelta
     from uuid import UUID
+
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 SIGNING_KEY_ID = "k1"
 
@@ -21,10 +23,10 @@ class UnknownOrgError(LookupError):
         super().__init__(org_id)
 
 
-async def compile_and_store(org_id: str, bundle_id: UUID, now: datetime, staleness_bound: timedelta, signing_key: str) -> int:
+async def compile_and_store(org_id: str, bundle_id: UUID, now: datetime, staleness_bound: timedelta, signing_key: Ed25519PrivateKey) -> int:
     """Compile, sign, and persist the next bundle version for an org; returns the new version."""
     bundle = await compile_bundle(org_id, bundle_id, now, staleness_bound)
-    signed = sign_bundle(bundle, private_key_from_b64(signing_key), SIGNING_KEY_ID)
+    signed = sign_bundle(bundle, signing_key, SIGNING_KEY_ID)
     version = (await current_session().execute(select(func.max(Bundle.version)).where(Bundle.org_id == org_id))).scalar() or 0
     await Bundle(
         id=bundle_id,

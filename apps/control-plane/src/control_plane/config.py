@@ -9,6 +9,8 @@ import yaml
 from dotenv import find_dotenv, load_dotenv
 from pydantic import BaseModel, ConfigDict, Field
 
+from contract import Ed25519PrivateKeyB64
+
 
 class DatabaseConfig(BaseModel):
     model_config = ConfigDict(frozen=True)
@@ -17,15 +19,15 @@ class DatabaseConfig(BaseModel):
 
 
 class AuthConfig(BaseModel):
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, arbitrary_types_allowed=True)
 
-    token_signing_key: str  # base64 raw Ed25519, mints caller API tokens; rotates independently of the bundle key
+    token_signing_key: Ed25519PrivateKeyB64  # parsed once from base64 at load; mints caller API tokens; rotates independently of the bundle key
 
 
 class BundlePolicy(BaseModel):
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, arbitrary_types_allowed=True)
 
-    signing_key: str  # base64 raw Ed25519, signs bundles
+    signing_key: Ed25519PrivateKeyB64  # parsed once from base64 at load; signs bundles, rotates independently of the token key
     staleness_bound_hours: float = 24.0
 
     @property

@@ -1,18 +1,12 @@
 from __future__ import annotations
 
 from dotenv import dotenv_values
-from helpers import run_in_db
-from typer.testing import CliRunner
+from helpers import EMAIL, run_in_db, run_init
 
 from contract import private_key_from_b64, verify_inference_token
-from control_plane.main import app
 from control_plane.models import Bundle, MgmtToken, Model, Org, OrgMembership, Provider, User
 from control_plane.setup import org_name_from_email
 from control_plane.tokens import verify_management_token
-
-runner = CliRunner()
-
-EMAIL = "michel@example.com"
 
 ALL_ENV_KEYS = (
     "GW_BUNDLE_SIGNING_KEY",
@@ -26,42 +20,6 @@ ALL_ENV_KEYS = (
 )
 
 
-TAXONOMY = """
-providers:
-  - provider_id: openai
-    base_url: https://api.openai.com/v1
-    credential_ref: env:OPENAI_API_KEY
-  - provider_id: anthropic
-    kind: anthropic
-    base_url: https://api.anthropic.com/v1
-    credential_ref: env:ANTHROPIC_API_KEY
-models:
-  - model_id: gpt-4o
-    provider_id: openai
-  - model_id: claude-sonnet-4-6
-    provider_id: anthropic
-"""
-
-
-def _init(tmp_path, *extra: str, stdin: str | None = None, taxonomy: str | None = TAXONOMY):
-    if taxonomy is not None:
-        (tmp_path / "taxonomy.yml").write_text(taxonomy, encoding="utf-8")
-    args = [
-        "init",
-        *(["--email", EMAIL] if stdin is None else []),
-        "--config",
-        str(tmp_path / "airllm.yml"),
-        "--env-file",
-        str(tmp_path / ".env"),
-        "--cache-dir",
-        str(tmp_path / ".airllm"),
-        "--db-url",
-        f"sqlite+aiosqlite:///{tmp_path}/cp.db",
-        *extra,
-    ]
-    return runner.invoke(app, args, input=stdin)
-
-
 def _public_key(tmp_path):
     signing_key = dotenv_values(tmp_path / ".env")["GW_TOKEN_SIGNING_KEY"]
     assert signing_key
@@ -69,7 +27,7 @@ def _public_key(tmp_path):
 
 
 def test_init_yields_a_fully_ready_instance(tmp_path):
-    result = _init(tmp_path)
+    result = run_init(tmp_path)
     assert result.exit_code == 0, result.output
     env = {key: value for key, value in dotenv_values(tmp_path / ".env").items() if value}
     for key in ALL_ENV_KEYS:
@@ -109,9 +67,9 @@ def test_init_yields_a_fully_ready_instance(tmp_path):
 
 
 def test_init_is_idempotent(tmp_path):
-    assert _init(tmp_path).exit_code == 0
+    assert run_init(tmp_path).exit_code == 0
     before = dotenv_values(tmp_path / ".env")
-    result = _init(tmp_path)
+    result = run_init(tmp_path)
     assert result.exit_code == 0, result.output
     assert dotenv_values(tmp_path / ".env") == before
     assert len(run_in_db(tmp_path, MgmtToken.find)) == 3
@@ -121,14 +79,14 @@ def test_init_is_idempotent(tmp_path):
 
 
 def test_init_prompts_for_email_when_not_given(tmp_path):
-    result = _init(tmp_path, stdin=f"{EMAIL}\n")
+    result = run_init(tmp_path, stdin=f"{EMAIL}\n")
     assert result.exit_code == 0, result.output
     assert "Admin email" in result.output
     assert dotenv_values(tmp_path / ".env").get("GW_ADMIN_MGMT_TOKEN")
 
 
 def test_init_skip_key_mints_no_caller_token(tmp_path):
-    result = _init(tmp_path, "--skip-key")
+    result = run_init(tmp_path, "--skip-key")
     assert result.exit_code == 0, result.output
     env = dotenv_values(tmp_path / ".env")
     assert env.get("GW_ORG_MGMT_TOKEN")
@@ -136,7 +94,7 @@ def test_init_skip_key_mints_no_caller_token(tmp_path):
 
 
 def test_init_custom_org(tmp_path):
-    result = _init(tmp_path, "--org", "org-acme")
+    result = run_init(tmp_path, "--org", "org-acme")
     assert result.exit_code == 0, result.output
     assert run_in_db(tmp_path, lambda: Org.get("org-acme")) is not None
     org_token = dotenv_values(tmp_path / ".env")["GW_ORG_MGMT_TOKEN"]
@@ -147,14 +105,14 @@ def test_init_custom_org(tmp_path):
 
 
 def test_init_never_prints_tokens(tmp_path):
-    result = _init(tmp_path)
+    result = run_init(tmp_path)
     assert result.exit_code == 0, result.output
     assert "ab-mgmt-" not in result.output
     assert "ab-inf-" not in result.output
 
 
 def test_init_fails_without_a_taxonomy_file(tmp_path):
-    result = _init(tmp_path, taxonomy=None)
+    result = run_init(tmp_path, taxonomy=None)
     assert result.exit_code == 1
     assert "taxonomy" in result.output
     assert not (tmp_path / "taxonomy.yml").exists()
@@ -162,10 +120,10 @@ def test_init_fails_without_a_taxonomy_file(tmp_path):
 
 
 def test_init_remints_tokens_orphaned_by_a_database_reset(tmp_path):
-    assert _init(tmp_path).exit_code == 0
+    assert run_init(tmp_path).exit_code == 0
     before = dotenv_values(tmp_path / ".env")
     (tmp_path / "cp.db").unlink()
-    result = _init(tmp_path)
+    result = run_init(tmp_path)
     assert result.exit_code == 0, result.output
     env = {key: value for key, value in dotenv_values(tmp_path / ".env").items() if value}
     public = _public_key(tmp_path)

@@ -6,7 +6,6 @@ import httpx
 import respx
 from starlette.testclient import TestClient
 
-from data_plane.app import app
 from data_plane.outbox import SqliteOutbox
 
 
@@ -26,9 +25,9 @@ OPENAI_RESPONSE = {
 
 
 @respx.mock
-def test_chat_completion_end_to_end(token):
+def test_chat_completion_end_to_end(token, dp_app):
     route = respx.post("https://api.openai.com/v1/chat/completions").mock(return_value=httpx.Response(200, json=OPENAI_RESPONSE))
-    with TestClient(app) as client:
+    with TestClient(dp_app) as client:
         r = client.post(
             "/v1/chat/completions",
             headers={"Authorization": f"Bearer {token}"},
@@ -44,16 +43,16 @@ def test_chat_completion_end_to_end(token):
 
 
 @respx.mock
-def test_missing_token_rejected(token):
-    with TestClient(app) as client:
+def test_missing_token_rejected(token, dp_app):
+    with TestClient(dp_app) as client:
         r = client.post("/v1/chat/completions", json={"model": "gpt-test", "messages": []})
     assert r.status_code == 401
 
 
 @respx.mock
-def test_upstream_error_passed_through(token):
+def test_upstream_error_passed_through(token, dp_app):
     respx.post("https://api.openai.com/v1/chat/completions").mock(return_value=httpx.Response(429, json={"error": {"code": "rate_limited"}}))
-    with TestClient(app) as client:
+    with TestClient(dp_app) as client:
         r = client.post(
             "/v1/chat/completions",
             headers={"Authorization": f"Bearer {token}"},
@@ -63,8 +62,8 @@ def test_upstream_error_passed_through(token):
 
 
 @respx.mock
-def test_policy_denial_is_metered(token, tmp_path):
-    with TestClient(app) as client:
+def test_policy_denial_is_metered(token, dp_app, tmp_path):
+    with TestClient(dp_app) as client:
         r = client.post(
             "/v1/chat/completions",
             headers={"Authorization": f"Bearer {token}"},
@@ -76,9 +75,9 @@ def test_policy_denial_is_metered(token, tmp_path):
 
 
 @respx.mock
-def test_upstream_timeout_is_metered_as_timeout(token, tmp_path):
+def test_upstream_timeout_is_metered_as_timeout(token, dp_app, tmp_path):
     respx.post("https://api.openai.com/v1/chat/completions").mock(side_effect=httpx.ReadTimeout("timed out"))
-    with TestClient(app) as client:
+    with TestClient(dp_app) as client:
         r = client.post(
             "/v1/chat/completions",
             headers={"Authorization": f"Bearer {token}"},

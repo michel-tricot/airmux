@@ -13,13 +13,14 @@ import uvicorn
 from dotenv import dotenv_values, load_dotenv, set_key
 from rich.console import Console
 
+from contract import DEFAULT_CONFIG_YML
 from control_plane.compiler import compile_and_store
 from control_plane.config import load_settings
 from control_plane.db import standalone_engine, standalone_transaction, transaction
 from control_plane.migrate import run_migrations
 from control_plane.models import Org
 from control_plane.setup import (
-    DEFAULT_CONFIG_YML,
+    ADMIN_TOKEN_ENV,
     AdminToken,
     NotAnAdminError,
     create_admin,
@@ -198,7 +199,7 @@ def create(email: str, name: str = "", config: str = "airllm.yml", env_file: str
     if minted is None:
         typer.echo(f"instance admin {email} already exists, nothing to do")
         return
-    set_key(env_file, "GW_ADMIN_MGMT_TOKEN", minted.token)
+    set_key(env_file, ADMIN_TOKEN_ENV, minted.token)
     verb = "created instance admin" if minted.created else "existing instance admin"
-    typer.echo(f"{verb} {minted.user_id} ({email}), minted instance token {minted.token_id}, saved to {env_file} as GW_ADMIN_MGMT_TOKEN")
+    typer.echo(f"{verb} {minted.user_id} ({email}), minted instance token {minted.token_id}, saved to {env_file} as {ADMIN_TOKEN_ENV}")
     typer.echo(minted.token)

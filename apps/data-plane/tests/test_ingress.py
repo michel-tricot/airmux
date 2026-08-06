@@ -9,7 +9,6 @@ from conftest import MODEL
 from starlette.testclient import TestClient
 
 from data_plane.adapters import REGISTRY
-from data_plane.app import app
 from data_plane.canonical import CanonicalChunk, CanonicalRequest, CanonicalResponse, Usage
 from data_plane.ingress import ANTHROPIC
 from data_plane.normalize import normalize_request
@@ -80,10 +79,10 @@ def test_egress_stream_is_a_valid_anthropic_sequence():
 
 
 @respx.mock
-def test_messages_endpoint_end_to_end_over_openai_provider(token):
+def test_messages_endpoint_end_to_end_over_openai_provider(token, dp_app):
     """A client uses the Anthropic Messages surface; the model routes to an OpenAI provider."""
     respx.post("https://api.openai.com/v1/chat/completions").mock(return_value=httpx.Response(200, json=OPENAI_REPLY))
-    with TestClient(app) as client:
+    with TestClient(dp_app) as client:
         r = client.post(
             "/v1/messages",
             headers={"Authorization": f"Bearer {token}"},
@@ -98,7 +97,7 @@ def test_messages_endpoint_end_to_end_over_openai_provider(token):
 
 
 @respx.mock
-def test_messages_endpoint_streaming_over_openai_provider(token):
+def test_messages_endpoint_streaming_over_openai_provider(token, dp_app):
     log = (
         b'data: {"id":"cmpl-1","choices":[{"index":0,"delta":{"content":"Hi"},"finish_reason":null}]}\n\n'
         b'data: {"id":"cmpl-1","choices":[{"index":0,"delta":{},"finish_reason":"stop"}]}\n\n'
@@ -107,7 +106,7 @@ def test_messages_endpoint_streaming_over_openai_provider(token):
     )
     respx.post("https://api.openai.com/v1/chat/completions").mock(return_value=httpx.Response(200, content=log))
     with (
-        TestClient(app) as client,
+        TestClient(dp_app) as client,
         client.stream(
             "POST",
             "/v1/messages",

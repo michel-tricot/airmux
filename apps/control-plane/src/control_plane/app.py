@@ -6,7 +6,6 @@ from typing import TYPE_CHECKING
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 
-from contract import private_key_from_b64
 from control_plane.config import load_settings
 from control_plane.db import make_engine, make_session_factory
 from control_plane.models import NotOwnedError
@@ -26,7 +25,7 @@ if TYPE_CHECKING:
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     settings = app.state.settings
     engine = make_engine(settings.database.url)
-    app.state.token_public_key = private_key_from_b64(settings.auth.token_signing_key).public_key()
+    app.state.token_public_key = settings.auth.token_signing_key.public_key()
     app.state.session_factory = make_session_factory(engine)
     try:
         yield

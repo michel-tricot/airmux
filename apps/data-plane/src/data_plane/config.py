@@ -8,6 +8,7 @@ import yaml
 from dotenv import find_dotenv, load_dotenv
 from pydantic import BaseModel, ConfigDict, Field
 
+from contract import Ed25519PublicKeyB64
 from data_plane.secrets import try_resolve
 
 
@@ -20,9 +21,9 @@ class ControlPlaneLink(BaseModel):
 
 
 class BundleConfig(BaseModel):
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, arbitrary_types_allowed=True)
 
-    public_key: str
+    public_key: Ed25519PublicKeyB64  # parsed once from base64 at load; verifies bundle signatures
     org: str | None = None  # which org's bundle this data plane serves; None takes the newest across orgs
     cache_dir: Path = Path("/var/cache/gateway")
     staleness_policy: Literal["serve_and_warn", "refuse"] = "serve_and_warn"
@@ -30,9 +31,9 @@ class BundleConfig(BaseModel):
 
 
 class AuthConfig(BaseModel):
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(frozen=True, arbitrary_types_allowed=True)
 
-    token_public_key: str  # verifies caller API tokens; distinct from the bundle key
+    token_public_key: Ed25519PublicKeyB64  # parsed once from base64 at load; verifies caller API tokens, distinct from the bundle key
 
 
 class EventsConfig(BaseModel):

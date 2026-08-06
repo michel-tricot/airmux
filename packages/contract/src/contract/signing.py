@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import base64
 import json
+from typing import Annotated
 
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey, Ed25519PublicKey
+from pydantic import BeforeValidator, PlainSerializer
 
 from contract.bundle import BundleV1, SignedBundle
 
@@ -29,6 +31,24 @@ def public_key_to_b64(public_key: Ed25519PublicKey) -> str:
 
 def public_key_from_b64(b64: str) -> Ed25519PublicKey:
     return Ed25519PublicKey.from_public_bytes(base64.b64decode(b64))
+
+
+def _private_key_before(v: object) -> object:
+    return private_key_from_b64(v) if isinstance(v, str) else v
+
+
+def _public_key_before(v: object) -> object:
+    return public_key_from_b64(v) if isinstance(v, str) else v
+
+
+Ed25519PrivateKeyB64 = Annotated[Ed25519PrivateKey, BeforeValidator(_private_key_before), PlainSerializer(private_key_to_b64, return_type=str)]
+"""A config/model field that is base64 on the wire and a parsed key object in code; malformed keys fail at validation.
+
+Models using it need arbitrary_types_allowed. Serializing emits the raw private key, so dump such
+models deliberately.
+"""
+
+Ed25519PublicKeyB64 = Annotated[Ed25519PublicKey, BeforeValidator(_public_key_before), PlainSerializer(public_key_to_b64, return_type=str)]
 
 
 def canonical_json(bundle: BundleV1) -> str:

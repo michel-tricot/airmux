@@ -3,10 +3,9 @@ from __future__ import annotations
 import pytest
 import yaml
 from fastapi.testclient import TestClient
-from helpers import run_in_db, setup_control_plane
+from helpers import run_in_db, run_init, setup_control_plane, write_config
 from typer.testing import CliRunner
 
-from contract import private_key_to_b64
 from control_plane.main import app
 from control_plane.models import Bundle, Model, Org, Provider
 from control_plane.taxonomy import TaxonomySpec, UnknownProviderError, apply_taxonomy
@@ -60,23 +59,7 @@ def test_apply_taxonomy_rejects_a_model_with_an_unknown_provider(tmp_path):
 
 
 def test_taxonomy_command_applies_and_compiles(tmp_path):
-    (tmp_path / "taxonomy.yml").write_text(TAXONOMY, encoding="utf-8")
-    init = runner.invoke(
-        app,
-        [
-            "init",
-            "--email",
-            "michel@example.com",
-            "--config",
-            str(tmp_path / "airllm.yml"),
-            "--env-file",
-            str(tmp_path / ".env"),
-            "--cache-dir",
-            str(tmp_path / ".airllm"),
-            "--db-url",
-            f"sqlite+aiosqlite:///{tmp_path}/cp.db",
-        ],
-    )
+    init = run_init(tmp_path, taxonomy=TAXONOMY)
     assert init.exit_code == 0, init.output
     tax_path = tmp_path / "taxonomy.yml"
     doc = yaml.safe_load(tax_path.read_text(encoding="utf-8"))
@@ -91,21 +74,9 @@ def test_taxonomy_command_applies_and_compiles(tmp_path):
 
 def test_taxonomy_command_requires_an_org(tmp_path):
     cp = setup_control_plane(tmp_path)
-    cfg = tmp_path / "cfg.yml"
-    cfg.write_text(
-        yaml.safe_dump(
-            {
-                "control_plane": {
-                    "database": {"url": f"sqlite+aiosqlite:///{tmp_path}/cp.db"},
-                    "auth": {"token_signing_key": private_key_to_b64(cp.token_key)},
-                    "bundle": {"signing_key": private_key_to_b64(cp.bundle_key)},
-                }
-            }
-        ),
-        encoding="utf-8",
-    )
+    cfg = write_config(tmp_path, cp)
     (tmp_path / "taxonomy.yml").write_text(TAXONOMY, encoding="utf-8")
-    result = runner.invoke(app, ["taxonomy", "--config", str(cfg)])
+    result = runner.invoke(app, ["taxonomy", "--config", cfg])
     assert result.exit_code == 1
 
 

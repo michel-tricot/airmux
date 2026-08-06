@@ -12,7 +12,7 @@ from conftest import CTX, TEXT_LOG, make_adapter, sse
 from starlette.responses import StreamingResponse
 from starlette.testclient import TestClient
 
-from data_plane.app import _stream, app
+from data_plane.app import _stream
 from data_plane.canonical import CanonicalRequest, UpstreamRequest
 
 if TYPE_CHECKING:
@@ -22,10 +22,10 @@ UPSTREAM = UpstreamRequest(method="POST", url="https://api.openai.com/v1/chat/co
 
 
 @respx.mock
-def test_streaming_end_to_end(token):
+def test_streaming_end_to_end(token, dp_app):
     respx.post("https://api.openai.com/v1/chat/completions").mock(return_value=httpx.Response(200, content=TEXT_LOG))
     with (
-        TestClient(app) as client,
+        TestClient(dp_app) as client,
         client.stream(
             "POST",
             "/v1/chat/completions",
@@ -45,9 +45,9 @@ def test_streaming_end_to_end(token):
 
 
 @respx.mock
-def test_streaming_upstream_error_status_passes_through(token):
+def test_streaming_upstream_error_status_passes_through(token, dp_app):
     respx.post("https://api.openai.com/v1/chat/completions").mock(return_value=httpx.Response(429, json={"error": {"code": "rate_limited"}}))
-    with TestClient(app) as client:
+    with TestClient(dp_app) as client:
         r = client.post(
             "/v1/chat/completions",
             headers={"Authorization": f"Bearer {token}"},

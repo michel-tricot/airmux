@@ -8,12 +8,11 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 from sqlmodel import col
 
-from contract import private_key_from_b64
 from control_plane.compiler import UnknownOrgError, compile_and_store
 from control_plane.deps import OrgDep  # noqa: TC001 FastAPI resolves dependency annotations at runtime
 from control_plane.models import ApiKey, Bundle, DataPlaneInstance, Model, Org, Provider, UsageEvent
 from control_plane.taxonomy import ModelIn, ProviderIn, TaxonomyConflictError, UnknownProviderError, upsert_model, upsert_provider
-from control_plane.tokens import mint_caller_key
+from control_plane.tokens import mint_inference_key
 
 router = APIRouter(prefix="/org")
 
@@ -73,7 +72,7 @@ async def create_key(org: OrgDep, body: KeyIn, request: Request) -> KeyOut:
     if await Org.get(org) is None:
         raise HTTPException(status_code=404)
     settings = request.app.state.settings
-    key_id, token = await mint_caller_key(org, body.allowed_models, private_key_from_b64(settings.auth.token_signing_key), datetime.now(tz=UTC))
+    key_id, token = await mint_inference_key(org, body.allowed_models, settings.auth.token_signing_key, datetime.now(tz=UTC))
     return KeyOut(key_id=key_id, token=token)
 
 
