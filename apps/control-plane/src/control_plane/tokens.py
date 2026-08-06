@@ -1,86 +1,71 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+import secrets
 from uuid import uuid4
 
-import jwt
-from pydantic import BaseModel, ConfigDict, ValidationError
+from pydantic import BaseModel, ConfigDict
 
-from contract import mint_inference_token
-from control_plane.models import ApiKey, MgmtToken
-
-if TYPE_CHECKING:
-    from datetime import datetime
-
-    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey, Ed25519PublicKey
+from contract import INFERENCE_TOKEN_PREFIX, token_hash
+from control_plane.models import ApiKey, MgmtToken, OrgMembership, User
 
 MANAGEMENT_TOKEN_PREFIX = "ab-mgmt-"  # noqa: S105 token prefix, not a secret
 
-_MANAGEMENT_USE = "management"
-
 
 class ManagementClaims(BaseModel):
-    """The scope a management token asserts: one org, or the whole instance when org_id is None.
+    """The scope a management key grants: one org, or the whole instance when org_id is None.
 
-    Management tokens are a control-plane concern only; the data plane never sees or
-    verifies them. token_id is the revocation handle: the control plane refuses tokens
-    whose id it has marked revoked, so verification stays stateless but revocation does not.
-    user_id binds the token to a user; the claimed scope must still be backed by that
-    user's memberships at request time, checked against the database.
+    Management keys are a control-plane concern only; the data plane never sees or
+    verifies them. Claims are built from the key's database row, never parsed from
+    the presented secret, and the claimed scope must be backed by the owning user's
+    memberships at request time.
     """
 
     model_config = ConfigDict(frozen=True)
 
     token_id: str
     org_id: str | None = None
-    user_id: str | None = None
+    user_id: str
 
 
-def mint_management_token(org_id: str | None, private_key: Ed25519PrivateKey, issued_at: datetime, token_id: str, user_id: str | None = None) -> str:
-    """Mint an admin token, scoped to one org or to the whole instance when org_id is None.
+def _new_token(prefix: str) -> str:
+    return prefix + secrets.token_urlsafe(32)
 
-    Same shape as the contract's inference tokens: a prefixed EdDSA JWT whose hyphen
-    keeps the eyJ header detectable by generic VCS secret scanners.
+
+async def mint_mgmt_key(org_id: str | None, user_id: str) -> tuple[str, str]:
+    """Mint a management key and its backing row; returns (token_id, token).
+
+    The plaintext exists only in the return value; the row stores its hash.
+    Runs inside the caller's transaction.
     """
-    payload = {
-        "use": _MANAGEMENT_USE,
-        "jti": token_id,
-        "iat": int(issued_at.timestamp()),
-        **({"org": org_id} if org_id is not None else {}),
-        **({"sub": user_id} if user_id is not None else {}),
-    }
-    return MANAGEMENT_TOKEN_PREFIX + jwt.encode(payload, private_key, algorithm="EdDSA")
-
-
-async def mint_mgmt(org_id: str | None, private_key: Ed25519PrivateKey, now: datetime, user_id: str | None = None) -> tuple[str, str]:
-    """Mint a management token together with its backing row; returns (token_id, token).
-
-    The single recipe behind every mgmt token: the row id is the revocation handle, so a JWT
-    must never exist without its row. Runs inside the caller's transaction.
-    """
+    token = _new_token(MANAGEMENT_TOKEN_PREFIX)
     token_id = f"mt-{uuid4().hex[:8]}"
-    await MgmtToken(id=token_id, org_id=org_id, user_id=user_id, revoked=False).save()
-    return token_id, mint_management_token(org_id, private_key, now, token_id, user_id)
+    await MgmtToken(id=token_id, org_id=org_id, user_id=user_id, token_hash=token_hash(token), revoked=False).save()
+    return token_id, token
 
 
-async def mint_inference_key(org_id: str, allowed_models: list[str], private_key: Ed25519PrivateKey, now: datetime) -> tuple[str, str]:
+async def mint_inference_key(org_id: str, user_id: str) -> tuple[str, str]:
     """Mint an inference API key row and its caller token; returns (key_id, token). Runs inside the caller's transaction."""
+    token = _new_token(INFERENCE_TOKEN_PREFIX)
     key_id = f"k-{uuid4().hex[:8]}"
-    await ApiKey(id=key_id, org_id=org_id, allowed_models=allowed_models, disabled=False).save()
-    return key_id, mint_inference_token(key_id, org_id, private_key, now)
+    await ApiKey(id=key_id, org_id=org_id, user_id=user_id, token_hash=token_hash(token), disabled=False).save()
+    return key_id, token
 
 
-def verify_management_token(token: str, public_key: Ed25519PublicKey) -> ManagementClaims | None:
-    """Verify prefix, signature, and shape; returns None on any failure. Zero I/O."""
+async def verify_management_token(token: str) -> ManagementClaims | None:
+    """Resolve a presented bearer to backed claims; returns None on any failure.
+
+    One lookup by hash, then the backing checks: the row is not revoked and the owning
+    user exists and holds the claimed scope (instance admin, or membership in the org).
+    Lookup through the unique hash index is the timing-safe comparison.
+    """
     if not token.startswith(MANAGEMENT_TOKEN_PREFIX):
         return None
-    try:
-        payload = jwt.decode(token.removeprefix(MANAGEMENT_TOKEN_PREFIX), public_key, algorithms=["EdDSA"])
-    except jwt.InvalidTokenError:
+    row = await MgmtToken.first(MgmtToken.token_hash == token_hash(token))
+    if row is None or row.revoked:
         return None
-    if payload.get("use") != _MANAGEMENT_USE:
+    user = await User.get(row.user_id)
+    if user is None:
         return None
-    try:
-        return ManagementClaims(token_id=payload["jti"], org_id=payload.get("org"), user_id=payload.get("sub"))
-    except (KeyError, ValidationError):
+    if not user.instance_admin and (row.org_id is None or await OrgMembership.get((row.user_id, row.org_id)) is None):
         return None
+    return ManagementClaims(token_id=row.id, org_id=row.org_id, user_id=row.user_id)

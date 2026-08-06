@@ -28,7 +28,6 @@ def make_bundle() -> BundleV1:
         issued_at=now,
         expires_at=now + timedelta(hours=24),
         keys=[],
-        revocations=[],
         catalog=Catalog(providers=[], models=[]),
     )
 

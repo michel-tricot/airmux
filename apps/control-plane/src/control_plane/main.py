@@ -119,12 +119,12 @@ def init(  # noqa: PLR0913, PLR0915, PLR0917 the flags and sequential steps are 
         async with standalone_engine(settings.database.url) as factory:
             with _step("admin") as s:
                 async with transaction(factory):
-                    s["message"], minted = await ensure_admin(settings, email, name, stored)
+                    s["message"], minted = await ensure_admin(email, name, stored)
                 for env_name, token in minted.items():
                     set_key(env_path, env_name, token)
             with _step("org") as s:
                 async with transaction(factory):
-                    s["message"], minted = await ensure_org(settings, org, stored, skip_key=skip_key)
+                    s["message"], minted = await ensure_org(org, stored, skip_key=skip_key)
                 for env_name, token in minted.items():
                     set_key(env_path, env_name, token)
             with _step("models") as s:
@@ -187,7 +187,7 @@ def create(email: str, name: str = "", config: str = "airllm.yml", env_file: str
 
     async def run() -> AdminToken | None:
         async with standalone_transaction(settings.database.url):
-            return await create_admin(settings, email, name, if_missing=if_missing)
+            return await create_admin(email, name, if_missing=if_missing)
 
     try:
         minted = asyncio.run(run())

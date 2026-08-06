@@ -2,56 +2,43 @@ from __future__ import annotations
 
 from functools import partial
 
-import jwt
-from conftest import NOW
 from conftest import make_bundle as _make_bundle
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+from conftest import make_key as _make_key
 
-from contract import KeyEntry, mint_inference_token
 from data_plane.auth import authenticate, index_keys
 
 make_bundle = partial(_make_bundle, org="org-a")
+make_key = partial(_make_key, org="org-a")
 
 
-def test_valid_token_authenticates():
-    private_key = Ed25519PrivateKey.generate()
-    bundle = make_bundle([KeyEntry(key_id="k1", org_id="org-a", allowed_models=["*"])])
-    token = mint_inference_token("k1", "org-a", private_key, NOW)
-    key = authenticate(token, private_key.public_key(), index_keys(bundle), frozenset(bundle.revocations))
+def test_valid_opaque_token_authenticates():
+    token, entry = make_key("k1")
+    key = authenticate(token, index_keys(make_bundle([entry])))
     assert key is not None
     assert key.key_id == "k1"
 
 
-def test_token_signed_by_other_key_rejected():
-    private_key = Ed25519PrivateKey.generate()
-    bundle = make_bundle([KeyEntry(key_id="k1", org_id="org-a", allowed_models=["*"])])
-    forged = mint_inference_token("k1", "org-a", Ed25519PrivateKey.generate(), NOW)
-    assert authenticate(forged, private_key.public_key(), index_keys(bundle), frozenset()) is None
+def test_token_absent_from_bundle_rejected():
+    token, _ = make_key("k1")
+    _, other = make_key("k2")
+    assert authenticate(token, index_keys(make_bundle([other]))) is None
+    assert authenticate(token, index_keys(make_bundle([]))) is None
 
 
-def test_revoked_key_rejected_despite_valid_signature():
-    private_key = Ed25519PrivateKey.generate()
-    bundle = make_bundle([KeyEntry(key_id="k1", org_id="org-a", allowed_models=["*"])], revocations=["k1"])
-    token = mint_inference_token("k1", "org-a", private_key, NOW)
-    assert authenticate(token, private_key.public_key(), index_keys(bundle), frozenset(bundle.revocations)) is None
+def test_tampered_token_rejected():
+    token, entry = make_key("k1")
+    index = index_keys(make_bundle([entry]))
+    assert authenticate(token[:-1], index) is None
+    assert authenticate(token + "x", index) is None
 
 
-def test_unknown_key_id_rejected():
-    private_key = Ed25519PrivateKey.generate()
-    bundle = make_bundle([])
-    token = mint_inference_token("ghost", "org-a", private_key, NOW)
-    assert authenticate(token, private_key.public_key(), index_keys(bundle), frozenset()) is None
+def test_management_prefixed_token_rejected():
+    _, entry = make_key("k1")
+    assert authenticate("ab-mgmt-anything", index_keys(make_bundle([entry]))) is None
 
 
-def test_management_shaped_token_rejected_for_inference():
-    private_key = Ed25519PrivateKey.generate()
-    bundle = make_bundle([KeyEntry(key_id="k1", org_id="org-a", allowed_models=["*"])])
-    payload = {"use": "management", "jti": "mt-1", "org": "org-a", "iat": int(NOW.timestamp())}
-    token = "ab-mgmt-" + jwt.encode(payload, private_key, algorithm="EdDSA")
-    assert authenticate(token, private_key.public_key(), index_keys(bundle), frozenset()) is None
-
-
-def test_garbage_token_rejected():
-    private_key = Ed25519PrivateKey.generate()
-    bundle = make_bundle([KeyEntry(key_id="k1", org_id="org-a", allowed_models=["*"])])
-    assert authenticate("not-a-jwt", private_key.public_key(), index_keys(bundle), frozenset()) is None
+def test_garbage_and_empty_rejected():
+    _, entry = make_key("k1")
+    index = index_keys(make_bundle([entry]))
+    assert authenticate("not-a-token", index) is None
+    assert authenticate("", index) is None

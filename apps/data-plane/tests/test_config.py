@@ -18,8 +18,6 @@ data_plane:
     public_key: env:MY_PUBLIC_KEY
     cache_dir: /var/cache/from-file
     poll_interval_s: 7
-  auth:
-    token_public_key: env:MY_PUBLIC_KEY
 """
 
 
@@ -62,14 +60,12 @@ def test_shared_config_template_parses_through_the_data_plane_loader(clean_env, 
     (clean_env / "airllm.yml").write_text(rendered, encoding="utf-8")
     monkeypatch.setenv("GW_DATAPLANE_TOKEN", "dp-token")
     monkeypatch.setenv("GW_BUNDLE_PUBLIC_KEY", PUBLIC_KEY_B64)
-    monkeypatch.setenv("GW_TOKEN_PUBLIC_KEY", OTHER_KEY_B64)
     config = load_config()
     assert config.control_plane.url == "http://127.0.0.1:8000"
     assert config.control_plane.token == "dp-token"
     assert config.bundle.org == "org-dev"
     assert public_key_to_b64(config.bundle.public_key) == PUBLIC_KEY_B64
     assert str(config.bundle.cache_dir) == ".airllm"
-    assert public_key_to_b64(config.auth.token_public_key) == OTHER_KEY_B64
 
 
 def test_malformed_public_key_fails_at_load(clean_env):
@@ -80,7 +76,7 @@ def test_malformed_public_key_fails_at_load(clean_env):
 
 
 def test_defaults_apply_for_missing_sections(clean_env, monkeypatch):
-    config = f"data_plane:\n  bundle:\n    public_key: {PUBLIC_KEY_B64}\n  auth:\n    token_public_key: {PUBLIC_KEY_B64}\n"
+    config = f"data_plane:\n  bundle:\n    public_key: {PUBLIC_KEY_B64}\n"
     (clean_env / "airllm.yml").write_text(config, encoding="utf-8")
     config = load_config()
     assert config.control_plane.url is None

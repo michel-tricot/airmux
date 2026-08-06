@@ -28,7 +28,7 @@ from cli.output import Col, FormatOption, OutputFormat, build_table, fmt_when, p
 
 if TYPE_CHECKING:
     from rich.table import Table
-from cli.specs import KeyCreate, ModelCreate, OrgCreate, ProviderCreate
+from cli.specs import ModelCreate, OrgCreate, ProviderCreate
 
 ORG_COLS = [
     Col("id", "ID", style="dim", no_wrap=True),
@@ -38,7 +38,7 @@ ORG_COLS = [
 KEY_COLS = [
     Col("id", "ID", style="dim", no_wrap=True),
     Col("org_id", "Org"),
-    Col("allowed_models", "Allowed models", style="cyan", max_width=40),
+    Col("user_id", "Owner", style="dim", no_wrap=True),
     Col("disabled", "Status", style="yellow", fmt=lambda v: "revoked" if v else "active"),
     Col("created_at", "Created", no_wrap=True, fmt=fmt_when),
 ]
@@ -103,7 +103,7 @@ def keys_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat.tabl
 
 @keys_app.command("revoke")
 def keys_revoke(key_id: str, control_plane_url: str = "") -> None:
-    """Disable a key; lands in revocations at the next compile."""
+    """Disable a key; drops out of the bundle at the next compile."""
     with org_client(control_plane_url) as c:
         resp = c.delete(f"/v1/org/keys/{key_id}")
         resp.raise_for_status()
@@ -202,19 +202,17 @@ def tokens_list(org: str | None = None, control_plane_url: str = "", fmt: Format
 @tokens_app.command("mint")
 def tokens_mint(
     org: str | None = typer.Argument(None, help="Org to scope the token to; omit for an instance token"),
-    user: str | None = typer.Option(None, "--user", help="Mint on behalf of a user; scope must be backed by their memberships"),
+    user: str = typer.Option(..., "--user", help="User the token is minted for; the scope must be backed by their memberships"),
     control_plane_url: str = "",
 ) -> None:
     """Mint a management token; the token is shown once and never stored."""
-    if user:
-        path, body = f"/v1/instance/users/{user}/tokens", {"org_id": org}
-    else:
-        path, body = (f"/v1/instance/orgs/{org}/tokens" if org else "/v1/instance/tokens"), {}
     with instance_client(control_plane_url) as c:
-        resp = payload(post_expecting(c, path, body, ok=(200,)))
+        resp = payload(post_expecting(c, f"/v1/instance/users/{user}/tokens", {"org_id": org}, ok=(200,)))
     scope = resp["org_id"] or "instance"
-    owner = f" for user [bold]{resp['user_id']}[/bold]" if resp.get("user_id") else ""
-    console.print(f"management token [bold]{resp['token_id']}[/bold] minted for [bold]{scope}[/bold]{owner}, token (shown once):")
+    console.print(
+        f"management token [bold]{resp['token_id']}[/bold] minted for [bold]{scope}[/bold] "
+        f"for user [bold]{resp['user_id']}[/bold], token (shown once):"
+    )
     console.print(resp["token"])
 
 
@@ -350,7 +348,15 @@ register_create(
     lambda resp: console.print(f"org [bold]{resp['id']}[/bold] created, mint its admin token with `airllm tokens mint {resp['id']}`"),
     client=instance_client,
 )
-register_create(keys_app, KeyCreate, "/v1/org/keys", "Mint a key; the token is shown once and never stored.", _key_created)
+
+
+@keys_app.command("create")
+def keys_create(control_plane_url: str = "") -> None:
+    """Mint a key; the token is shown once and never stored."""
+    with org_client(control_plane_url) as c:
+        _key_created(payload(post_expecting(c, "/v1/org/keys", None, ok=(200,))))
+
+
 register_create(
     providers_app,
     ProviderCreate,

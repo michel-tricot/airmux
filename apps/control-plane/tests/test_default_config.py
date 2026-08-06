@@ -24,12 +24,9 @@ def test_default_config_matches_repo_airllm_yml():
 def test_template_parses_through_control_plane_settings(tmp_path, monkeypatch):
     cfg = tmp_path / "airllm.yml"
     cfg.write_text(RENDERED, encoding="utf-8")
-    token_key = private_key_to_b64(Ed25519PrivateKey.generate())
     bundle_key = private_key_to_b64(Ed25519PrivateKey.generate())
-    monkeypatch.setenv("GW_TOKEN_SIGNING_KEY", token_key)
     monkeypatch.setenv("GW_BUNDLE_SIGNING_KEY", bundle_key)
     monkeypatch.delenv("GW_DEV", raising=False)
     settings = load_settings(cfg)
     assert settings.database.url == "sqlite+aiosqlite:///airllm.db"
-    assert private_key_to_b64(settings.auth.token_signing_key) == token_key
     assert private_key_to_b64(settings.bundle.signing_key) == bundle_key

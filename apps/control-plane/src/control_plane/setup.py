@@ -10,12 +10,11 @@ from dotenv import dotenv_values, set_key
 from pydantic import BaseModel
 from sqlmodel import col
 
-from contract import private_key_from_b64, private_key_to_b64, public_key_to_b64, verify_inference_token
+from contract import INFERENCE_TOKEN_PREFIX, private_key_from_b64, private_key_to_b64, public_key_to_b64, token_hash
 from control_plane.compiler import compile_and_store
 from control_plane.db import current_actor
-from control_plane.deps import claims_are_backed
 from control_plane.models import ApiKey, Bundle, Org, OrgMembership, User
-from control_plane.tokens import mint_inference_key, mint_mgmt, verify_management_token
+from control_plane.tokens import mint_inference_key, mint_mgmt_key, verify_management_token
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -23,12 +22,12 @@ if TYPE_CHECKING:
 
     from control_plane.config import Settings
 
-_SIGNING_KEYS = (("GW_BUNDLE_SIGNING_KEY", "GW_BUNDLE_PUBLIC_KEY"), ("GW_TOKEN_SIGNING_KEY", "GW_TOKEN_PUBLIC_KEY"))
+_SIGNING_KEYS = (("GW_BUNDLE_SIGNING_KEY", "GW_BUNDLE_PUBLIC_KEY"),)
 ADMIN_TOKEN_ENV = "GW_ADMIN_MGMT_TOKEN"  # noqa: S105 env var name, not a secret
 
 
 def ensure_signing_keys(env_path: Path) -> tuple[list[str], list[str]]:
-    """Generate or reuse the two Ed25519 key pairs; returns the (generated, reused) private-key env names."""
+    """Generate or reuse the Ed25519 bundle key pair; returns the (generated, reused) private-key env names."""
     env_path.parent.mkdir(parents=True, exist_ok=True)
     env_path.touch(exist_ok=True)
     existing = dotenv_values(env_path)
@@ -55,7 +54,7 @@ class AdminToken(BaseModel):
     created: bool
 
 
-async def create_admin(settings: Settings, email: str, name: str = "", *, if_missing: bool = False) -> AdminToken | None:
+async def create_admin(email: str, name: str = "", *, if_missing: bool = False) -> AdminToken | None:
     """Create an instance admin and mint their instance-scoped token, both audited as that user.
 
     An existing admin just gets a fresh token: this is the break-glass path for lost credentials,
@@ -74,8 +73,7 @@ async def create_admin(settings: Settings, email: str, name: str = "", *, if_mis
     current_actor.set(user.id)
     if created:
         await user.save()
-    private_key = settings.auth.token_signing_key
-    token_id, token = await mint_mgmt(None, private_key, datetime.now(tz=UTC), user.id)
+    token_id, token = await mint_mgmt_key(None, user.id)
     return AdminToken(user_id=user.id, token_id=token_id, token=token, created=created)
 
 
@@ -97,30 +95,25 @@ def org_name_from_email(email: str) -> str:
     return " ".join(word.capitalize() for word in words) or "My Organization"
 
 
-async def _mgmt_token_is_live(settings: Settings, token: str | None, org_id: str | None, expected_user: str | None = None) -> bool:
-    """A stored env token is kept only if the current signing key verifies it and its claims still hold in this database.
+async def _mgmt_token_is_live(token: str | None, org_id: str | None, expected_user: str | None = None) -> bool:
+    """A stored env token is kept only if this database still backs it.
 
     The env file and the database can drift apart (a recreated database orphans the users old
     tokens are bound to, and the control plane 401s those), so presence in the env file alone is
     never proof of validity.
     """
-    claims = verify_management_token(token, settings.auth.token_signing_key.public_key()) if token else None
-    if claims is None or claims.org_id != org_id or (expected_user is not None and claims.user_id != expected_user):
+    claims = await verify_management_token(token) if token else None
+    return claims is not None and claims.org_id == org_id and (expected_user is None or claims.user_id == expected_user)
+
+
+async def _caller_token_is_live(token: str | None, org_id: str) -> bool:
+    if not token or not token.startswith(INFERENCE_TOKEN_PREFIX):
         return False
-    return await claims_are_backed(claims)
+    key = await ApiKey.first(ApiKey.token_hash == token_hash(token))
+    return key is not None and key.org_id == org_id and not key.disabled
 
 
-async def _caller_token_is_live(settings: Settings, token: str | None, org_id: str) -> bool:
-    if not token:
-        return False
-    claims = verify_inference_token(token, settings.auth.token_signing_key.public_key())
-    if claims is None or claims.org_id != org_id:
-        return False
-    key = await ApiKey.get(claims.key_id)
-    return key is not None and not key.disabled
-
-
-async def ensure_admin(settings: Settings, email: str, name: str, env: Mapping[str, str | None]) -> tuple[str, dict[str, str]]:
+async def ensure_admin(email: str, name: str, env: Mapping[str, str | None]) -> tuple[str, dict[str, str]]:
     """Idempotent admin step for init: create the admin if missing, mint GW_ADMIN_MGMT_TOKEN unless the stored one is still live.
 
     Returns the step message and the tokens to write to the env file; the caller writes them after
@@ -129,10 +122,10 @@ async def ensure_admin(settings: Settings, email: str, name: str, env: Mapping[s
     user = await User.first(User.email == email)
     if user is not None and (user.service_account or not user.instance_admin):
         raise NotAnAdminError(email)
-    if user is not None and await _mgmt_token_is_live(settings, env.get(ADMIN_TOKEN_ENV), None, expected_user=user.id):
+    if user is not None and await _mgmt_token_is_live(env.get(ADMIN_TOKEN_ENV), None, expected_user=user.id):
         current_actor.set(user.id)
         return f"instance admin {user.id} ({email}) exists, {ADMIN_TOKEN_ENV} kept", {}
-    minted = await create_admin(settings, email, name)
+    minted = await create_admin(email, name)
     assert minted is not None  # noqa: S101 if_missing is False so create_admin always mints
     verb = "created instance admin" if minted.created else f"re-minted {ADMIN_TOKEN_ENV} for instance admin"
     return f"{verb} {minted.user_id} ({email})", {ADMIN_TOKEN_ENV: minted.token}
@@ -148,27 +141,26 @@ async def _ensure_service_account(org_id: str) -> User:
     return sa
 
 
-async def ensure_org(settings: Settings, org_id: str, env: Mapping[str, str | None], *, skip_key: bool = False) -> tuple[str, dict[str, str]]:
+async def ensure_org(org_id: str, env: Mapping[str, str | None], *, skip_key: bool = False) -> tuple[str, dict[str, str]]:
     """Idempotent org step for init: org, data-plane service account, and whichever org-scoped tokens the env file is missing.
 
-    GW_ORG_MGMT_TOKEN binds to the earliest instance admin when one exists, GW_DATAPLANE_TOKEN to the service
-    account, AIRLLM_TOKEN to a fresh wildcard API key unless skip_key. Returns the step message and
-    the tokens to write to the env file; the caller writes them after the transaction commits.
+    GW_ORG_MGMT_TOKEN binds to the earliest instance admin when one exists (the service account
+    otherwise), GW_DATAPLANE_TOKEN to the service account, AIRLLM_TOKEN to a fresh API key unless
+    skip_key. Returns the step message and the tokens to write to the env file; the caller writes
+    them after the transaction commits.
     """
     admin = await find_admin()
     created = await Org.get(org_id) is None
     if created:
         await Org(id=org_id, name=org_name_from_email(admin.email) if admin else "My Organization").save()
     sa = await _ensure_service_account(org_id)
-    now = datetime.now(tz=UTC)
-    private_key = settings.auth.token_signing_key
     minted: dict[str, str] = {}
-    for env_name, owner in (("GW_ORG_MGMT_TOKEN", admin.id if admin else None), ("GW_DATAPLANE_TOKEN", sa.id)):
-        if await _mgmt_token_is_live(settings, env.get(env_name), org_id):
+    for env_name, owner in (("GW_ORG_MGMT_TOKEN", admin.id if admin else sa.id), ("GW_DATAPLANE_TOKEN", sa.id)):
+        if await _mgmt_token_is_live(env.get(env_name), org_id):
             continue
-        _, minted[env_name] = await mint_mgmt(org_id, private_key, now, owner)
-    if not skip_key and not await _caller_token_is_live(settings, env.get("AIRLLM_TOKEN"), org_id):
-        _, minted["AIRLLM_TOKEN"] = await mint_inference_key(org_id, ["*"], private_key, now)
+        _, minted[env_name] = await mint_mgmt_key(org_id, owner)
+    if not skip_key and not await _caller_token_is_live(env.get("AIRLLM_TOKEN"), org_id):
+        _, minted["AIRLLM_TOKEN"] = await mint_inference_key(org_id, sa.id)
     state = "created" if created else "exists"
     tokens_part = f"minted {', '.join(minted)}" if minted else "all tokens present"
     return f"org {org_id} {state}, service account {sa.id}, {tokens_part}", minted

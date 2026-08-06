@@ -3,7 +3,12 @@ from __future__ import annotations
 import re
 
 from fastapi.testclient import TestClient
-from helpers import setup_control_plane
+from helpers import FIXTURE_ADMIN_EMAIL, setup_control_plane
+
+
+def _users(c, headers):
+    """Instance user listing minus the fixture admin that headers() creates."""
+    return [u for u in c.get("/v1/instance/users", headers=headers).json()["data"] if u["email"] != FIXTURE_ADMIN_EMAIL]
 
 
 def test_user_create_returns_full_resource_with_server_id(tmp_path):
@@ -48,7 +53,7 @@ def test_service_account_is_a_full_principal(tmp_path):
         c.delete(f"/v1/instance/users/{created['id']}/orgs/o1", headers=root)
         assert c.get("/v1/org/keys", headers=org).status_code == 401
 
-        by_email = {u["email"]: u["service_account"] for u in c.get("/v1/instance/users", headers=root).json()["data"]}
+        by_email = {u["email"]: u["service_account"] for u in _users(c, root)}
         assert by_email == {created["email"]: True, "m@example.com": False}
 
 
@@ -67,7 +72,7 @@ def test_membership_lifecycle_and_listing(tmp_path):
         assert c.put(f"/v1/instance/users/{uid}/orgs/missing", headers=root).status_code == 404
         assert c.put("/v1/instance/users/u-ghost/orgs/o1", headers=root).status_code == 404
 
-        listed = c.get("/v1/instance/users", headers=root).json()["data"]
+        listed = _users(c, root)
         assert [u["id"] for u in listed] == [uid]
         assert listed[0]["orgs"] == ["o1", "o2"]
 
@@ -75,7 +80,7 @@ def test_membership_lifecycle_and_listing(tmp_path):
         assert deleted["id"] == f"{uid}/o2"
         assert deleted["deleted_at"] is not None
         assert c.delete(f"/v1/instance/users/{uid}/orgs/o2", headers=root).status_code == 404
-        assert c.get("/v1/instance/users", headers=root).json()["data"][0]["orgs"] == ["o1"]
+        assert _users(c, root)[0]["orgs"] == ["o1"]
 
 
 def test_user_org_token_requires_membership(tmp_path):
@@ -139,8 +144,7 @@ def test_token_listing_shows_the_owner(tmp_path):
         c.post("/v1/instance/orgs", json={"id": "o1"}, headers=root)
         uid = c.post("/v1/instance/users", json={"email": "m@example.com"}, headers=root).json()["data"]["id"]
         c.put(f"/v1/instance/users/{uid}/orgs/o1", headers=root)
-        c.post(f"/v1/instance/users/{uid}/tokens", json={"org_id": "o1"}, headers=root)
-        ownerless = c.post("/v1/instance/orgs/o1/tokens", headers=root).json()["data"]
+        minted = c.post(f"/v1/instance/users/{uid}/tokens", json={"org_id": "o1"}, headers=root).json()["data"]
         listed = {t["id"]: t["user_id"] for t in c.get("/v1/instance/tokens", headers=root).json()["data"]}
-        assert set(listed.values()) == {uid, None}
-        assert listed[ownerless["token_id"]] is None
+        assert listed[minted["token_id"]] == uid
+        assert all(owner for owner in listed.values())

@@ -8,8 +8,9 @@ and compiles them into signed, self-contained policy bundles. The **data plane**
 Messages API) using only a bundle it polled
 and cached on disk: auth, policy and routing happen with zero I/O on the request
 path, and the data plane keeps serving even if the control plane is down.
-Caller credentials are Ed25519-signed JWTs; revocation propagates through bundle
-recompilation within one poll interval.
+Caller credentials are opaque secrets stored only as SHA-256 hashes; the bundle
+carries the hash index, so the data plane authenticates by hash lookup and
+revocation is absence from the next bundle, propagating within one poll interval.
 
 ## Getting started
 
@@ -116,9 +117,10 @@ The admin API is browsable at `http://localhost:8000/docs`; authorize with the
 
 - `airllm.yml` holds all non-secret config for both planes, grouped by domain.
   Secrets are referenced as `env:VAR` entries and resolved from the environment.
-- `.env` holds the secrets: signing keys, admin and data plane bearers, provider
-  API keys. `airllmcp init` maintains it: tokens that are still valid against
-  the database are kept, stale or orphaned ones are re-minted.
+- `.env` holds the secrets: the bundle signing key pair, admin and data plane
+  bearers, provider API keys. `airllmcp init` maintains it: tokens that are
+  still valid against the database are kept, stale or orphaned ones are
+  re-minted.
 - Precedence: explicit environment variable, then the config file, then defaults.
 
 ## Development

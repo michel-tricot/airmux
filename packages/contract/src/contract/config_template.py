@@ -11,8 +11,6 @@ from __future__ import annotations
 DEFAULT_CONFIG_YML = """control_plane:
   database:
     url: {db_url}
-  auth:
-    token_signing_key: env:GW_TOKEN_SIGNING_KEY
   bundle:
     signing_key: env:GW_BUNDLE_SIGNING_KEY
     staleness_bound_hours: 24
@@ -27,8 +25,6 @@ data_plane:
     cache_dir: {cache_dir}
     staleness_policy: serve_and_warn # or refuse
     poll_interval_s: 5
-  auth:
-    token_public_key: env:GW_TOKEN_PUBLIC_KEY
   events:
     flush_interval_s: 5
 """

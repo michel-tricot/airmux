@@ -49,12 +49,12 @@ data plane, like the control-plane-down and event-replay scenarios already do.
 ## Self-minted instance access from key possession
 
 `airllmcp admin create` replaced mint-root-token with a user-bound instance token, but a
-standing root credential still lands in .env. Alternative: any CLI command that needs instance
-scope self-mints a short-lived management token from GW_TOKEN_SIGNING_KEY at invocation time. No
-long-lived root token exists to leak or revoke; holding the signing key is already equivalent to
-holding root. The webapp would mint through the CLI or an enrollment step since it cannot hold the
-key. The Jenkins-style variant remains an option for operators without key access: first start
-prints a single-use code exchanged for a token via the API or webapp login, pairing naturally with
+standing root credential still lands in .env. The original variant (self-mint a short-lived token
+from the signing key at invocation time) died with the token signing key: management keys are now
+opaque and verified by database lookup, so there is no key whose possession equals root. What
+survives is the Jenkins-style variant: any command with database access can mint directly through
+the fat-model API, and for operators without database access, first start prints a single-use code
+exchanged for a token via the API or webapp login, pairing naturally with
 [service accounts](#service-accounts-as-control-plane-entities).
 
 ## Finish service accounts
@@ -102,8 +102,8 @@ migration, then soft delete lands as one coordinated change. The blueprint:
   convention of server-minted ids split from caller-facing names.
 - Resurrection disappears as a concept: re-adding a removed membership inserts a fresh row; each
   membership period is its own row and tombstones accumulate as history.
-- ApiKey.disabled and MgmtToken.revoked stay distinct from deleted_at: revoked feeds bundle
-  revocation lists and remains visible; deleted means gone from view.
+- ApiKey.disabled and MgmtToken.revoked stay distinct from deleted_at: a disabled key drops out
+  of the compiled bundle but remains visible; deleted means gone from view.
 - Open policy question: what soft-deleting an org does to its keys, providers, and models
   (cascade, orphan, or forbid).
 
@@ -161,34 +161,21 @@ slots in without a migration headache. When login lands, the webapp should move 
 token from localStorage to an httpOnly cookie set by the callback; an XSS-readable admin token is
 the first thing enterprise security review flags.
 
-## Opaque credentials everywhere, zero JWTs
+## Per-data-plane credentials with enrollment
 
-Greenfield credential design (2026-08-06). Four secrets exist: management API keys, inference keys,
-the dp-cp token, and console sessions. All four are the same mechanism, an opaque high-entropy
-secret with a scanner-friendly prefix (ab_mgmt_, ab_inf_, ab_dp_), SHA-256 hashed at rest (high
-entropy needs no argon2), shown once at mint, verified by lookup. They differ only in where the
-lookup table lives: the control-plane database for mgmt keys, dp tokens, and sessions; the pushed
-bundle for inference keys. JWTs exist to solve "verifier cannot reach a database" and the bundle
-already solves that by shipping the database, so no signed tokens remain; the only signature in
-the system is the bundle's ([sign-the-bytes](#sign-the-bytes-bundle-signing)).
+Built 2026-08-06 from the opaque-credentials design: management keys and inference keys are now
+opaque secrets (ab-mgmt-, ab-inf- prefixes), SHA-256 hashed at rest, user-bound, verified by
+lookup (CP database for mgmt keys, the bundle hash index for inference keys, absence is
+invalidity). The JWTs and the token signing key pair are gone; the only signature left is the
+bundle's ([sign-the-bytes](#sign-the-bytes-bundle-signing)).
 
-- Management keys: CP verifies with a DB lookup. Revocation is deleting the row; scopes and org
-  binding live on the row, so meaning changes without reissuing. Rotation is two active keys per
-  principal.
-- Inference keys: the bundle index maps hash(key) to key metadata; the data plane hashes the
-  presented key and looks it up in memory. The separate revocation list disappears, absence from
-  the bundle is invalidity. Claims are never frozen at mint: changing allowed_models propagates at
-  the next poll without rotating the customer's credential. No token parsing on the
-  unauthenticated edge. Propagation latency is unchanged, since a newly minted JWT key already
-  waited one poll to enter the index.
-- DP-CP: one token per data-plane instance, bound to a DataPlane record, so one deployment can be
-  revoked without touching the rest and heartbeats get identity for free. Bootstrap via a
-  single-use enrollment code rather than pasting long-lived secrets into env, pairing with
-  [self-minted instance access](#self-minted-instance-access-from-key-possession). The reverse
-  direction, DP trusting bundles from CP, stays the asymmetric bundle signing key.
-
-Replaces today's EdDSA management-token and inference-token JWTs. Console sessions are the fourth
-credential, detailed in [cookie sessions for the console](#cookie-sessions-for-the-console).
+What remains from that design: one token per data-plane instance, bound to a DataPlane record, so
+one deployment can be revoked without touching the rest and heartbeats get identity for free
+(today all data planes of an org share GW_DATAPLANE_TOKEN). Bootstrap via a single-use enrollment
+code rather than pasting long-lived secrets into env, pairing with the Jenkins-style variant in
+[self-minted instance access](#self-minted-instance-access-from-key-possession). Console sessions
+are the other unbuilt credential, detailed in
+[cookie sessions for the console](#cookie-sessions-for-the-console).
 
 ## Cookie sessions for the console
 
@@ -258,6 +245,32 @@ now: a network hop on the request path for a prototype that needs three roles.
 
 Status codes stay split by axis: wrong org is 404 via owned_by so existence never leaks, right org
 but missing permission is 403 via require.
+
+## Off-the-shelf rule engine for policy in evaluate()
+
+Survey (2026-08-06) of fast Python rule engines, in case policy outgrows hand-rolled checks in
+evaluate(). The fast ones are native cores with Python bindings; pure-Python engines all sit at
+10-100us+ per eval. The fit with our architecture is the same for all of them: the control plane
+stores the rule source, ships it in the bundle, the data plane compiles once at bundle load and
+keeps the compiled program in memory, evaluation stays a pure sync call so evaluate() keeps its
+no-I/O contract.
+
+- zen-engine (GoRules): Rust core, single-digit microsecond evals, rules are JSON decision graphs
+  (JDM) with decision tables and a visual editor. Rules-as-data fits bundle shipping exactly.
+  Healthiest adoption profile: 340k downloads/month, 1.9k stars, actively developed. Caveat: use
+  the pre-created sync decision object, never its async loader interface.
+- CEL: non-Turing-complete boolean expressions over a context, the policy language of Kubernetes
+  and Envoy, so the format outlives any binding. Rust binding (common-expression-language) is
+  microsecond-fast; celpy is pure Python, slower, dependency-light. Right shape if policies are
+  short expressions rather than tables.
+- regopy: OPA's Rego in-process via rego-cpp, Microsoft-maintained but tiny community (47 stars).
+  Worth it only if policies grow real structure.
+- Also looked at: pycasbin (authz-specific, now Apache-governed), rule-engine (pleasant pure-Python
+  DSL, ~10x slower), durable-rules and experta (Rete engines, unmaintained, ruled out).
+
+The alternative that beats all of them while rules stay simple: compile bundle policy to plain
+Python closures at bundle load. Nanoseconds, no dependency, trivially testable. Reach for ZEN or
+CEL only when policy becomes user-authored or needs tables a human edits.
 
 ## Org id should be a minted unique id
 

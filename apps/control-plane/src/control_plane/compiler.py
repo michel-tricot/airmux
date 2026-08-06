@@ -57,8 +57,7 @@ async def compile_bundle(org_id: str, bundle_id: UUID, now: datetime, staleness_
         org_id=org_id,
         issued_at=now,
         expires_at=now + staleness_bound,
-        keys=[KeyEntry(key_id=r.id, org_id=r.org_id, allowed_models=r.allowed_models, disabled=False) for r in key_rows if not r.disabled],
-        revocations=[r.id for r in key_rows if r.disabled],
+        keys=[KeyEntry(key_id=r.id, org_id=r.org_id, token_hash=r.token_hash) for r in key_rows if not r.disabled],
         catalog=Catalog(
             providers=[
                 ProviderEntry.model_validate(

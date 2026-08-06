@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import col
 
 from control_plane.deps import instance_scope
@@ -13,15 +13,9 @@ from control_plane.models.org import OrgCreate, OrgOut, OrgPatch
 from control_plane.models.org_membership import MembershipOut
 from control_plane.models.user import ServiceAccountIn, UserCreate, UserOut
 from control_plane.schemas import DeletedOut, Envelope
-from control_plane.tokens import mint_mgmt
+from control_plane.tokens import mint_mgmt_key
 
 router = APIRouter(prefix="/instance", dependencies=[Depends(instance_scope)])
-
-
-async def _mint(request: Request, org_id: str | None, user_id: str | None = None) -> MintedTokenOut:
-    settings = request.app.state.settings
-    token_id, token = await mint_mgmt(org_id, settings.auth.token_signing_key, datetime.now(tz=UTC), user_id)
-    return MintedTokenOut(token_id=token_id, org_id=org_id, user_id=user_id, token=token)
 
 
 @router.post("/orgs", tags=["Orgs"])
@@ -94,7 +88,7 @@ async def remove_membership(user_id: str, org_id: str) -> Envelope[DeletedOut[st
 
 
 @router.post("/users/{user_id}/tokens", tags=["Management Tokens"])
-async def mint_user_token(user_id: str, request: Request, body: UserTokenIn | None = None) -> Envelope[MintedTokenOut]:
+async def mint_user_token(user_id: str, body: UserTokenIn | None = None) -> Envelope[MintedTokenOut]:
     user = await User.get(user_id)
     if user is None:
         raise HTTPException(status_code=404)
@@ -107,19 +101,8 @@ async def mint_user_token(user_id: str, request: Request, body: UserTokenIn | No
             raise HTTPException(status_code=404)
         if not user.instance_admin and await OrgMembership.get((user_id, org_id)) is None:
             raise HTTPException(status_code=403)
-    return Envelope(data=await _mint(request, org_id, user_id))
-
-
-@router.post("/tokens", tags=["Management Tokens"])
-async def mint_instance_token(request: Request) -> Envelope[MintedTokenOut]:
-    return Envelope(data=await _mint(request, None))
-
-
-@router.post("/orgs/{org_id}/tokens", tags=["Management Tokens"])
-async def mint_org_token(org_id: str, request: Request) -> Envelope[MintedTokenOut]:
-    if await Org.get(org_id) is None:
-        raise HTTPException(status_code=404)
-    return Envelope(data=await _mint(request, org_id))
+    token_id, token = await mint_mgmt_key(org_id, user_id)
+    return Envelope(data=MintedTokenOut(token_id=token_id, org_id=org_id, user_id=user_id, token=token))
 
 
 @router.get("/tokens", tags=["Management Tokens"])
@@ -130,11 +113,9 @@ async def list_tokens(org_id: str | None = None) -> Envelope[list[MgmtTokenOut]]
 
 @router.delete("/tokens/{token_id}", tags=["Management Tokens"])
 async def revoke_token(token_id: str) -> Envelope[TokenRevokedOut]:
-    """Revoke any management token by id; unknown ids get a tombstone so offline-minted tokens can be killed too."""
     row = await MgmtToken.get(token_id)
     if row is None:
-        row = MgmtToken(id=token_id, org_id=None, revoked=True)
-    else:
-        row.revoked = True
+        raise HTTPException(status_code=404)
+    row.revoked = True
     await row.save()
     return Envelope(data=TokenRevokedOut(token_id=token_id, status="revoked"))

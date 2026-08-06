@@ -23,7 +23,7 @@ def test_create_mints_a_user_bound_instance_token(tmp_path):
     assert result.exit_code == 0, result.output
     token = dotenv_values(tmp_path / ".env")["GW_ADMIN_MGMT_TOKEN"]
     assert token is not None
-    claims = verify_management_token(token, cp.token_key.public_key())
+    claims = run_in_db(tmp_path, lambda: verify_management_token(token))
     assert claims is not None
     assert claims.org_id is None
     user = run_in_db(tmp_path, lambda: User.first(User.email == EMAIL))

@@ -52,7 +52,6 @@ holder = BundleHolder()
 class AppState:
     config: Config | None = None
     bundle_public_key: Ed25519PublicKey | None = None
-    token_public_key: Ed25519PublicKey | None = None
     outbox: EventOutbox | None = None
 
 
@@ -92,9 +91,7 @@ async def _authorize(request: Request, ingress: Ingress) -> tuple[CanonicalReque
     auth_header = request.headers.get("authorization", "")
     if not auth_header.startswith("Bearer "):
         raise RequestRejectedError(401, "missing_bearer_token")
-    if state.token_public_key is None:
-        raise RequestRejectedError(503, "token_verifier_unavailable")
-    key = authenticate(auth_header.removeprefix("Bearer "), state.token_public_key, snap.key_index, snap.revocations)
+    key = authenticate(auth_header.removeprefix("Bearer "), snap.key_index)
     if key is None:
         raise RequestRejectedError(401, "invalid_token")
     try:
@@ -349,7 +346,6 @@ def create_app(config_override: Config | None = None) -> Starlette:
         state.outbox = build_outbox(config)
         try:
             state.bundle_public_key = config.bundle.public_key
-            state.token_public_key = config.auth.token_public_key
             _load_cached_bundle(config, state.bundle_public_key)
             instance_id = cache_instance_id(config.bundle.cache_dir)
             tasks = (

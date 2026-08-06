@@ -7,10 +7,6 @@ class OrgCreate(api_models.OrgCreate):
     """Every resource gets a CLI spec subclassing its generated create model; CLI-side defaults go here."""
 
 
-class KeyCreate(api_models.ApiKeyCreate):
-    pass
-
-
 class ProviderCreate(api_models.ProviderIn):
     pass
 

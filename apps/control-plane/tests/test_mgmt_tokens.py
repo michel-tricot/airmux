@@ -1,58 +1,110 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from helpers import run_in_db, setup_control_plane
 
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
-
-from contract import INFERENCE_TOKEN_PREFIX, mint_inference_token, verify_inference_token
-from control_plane.tokens import MANAGEMENT_TOKEN_PREFIX, mint_management_token, verify_management_token
-
-NOW = datetime(2026, 8, 4, tzinfo=UTC)
+from contract import INFERENCE_TOKEN_PREFIX, token_hash
+from control_plane.models import MgmtToken, Org, OrgMembership, User
+from control_plane.tokens import MANAGEMENT_TOKEN_PREFIX, mint_mgmt_key, verify_management_token
 
 
-def test_management_token_instance_round_trip():
-    key = Ed25519PrivateKey.generate()
-    token = mint_management_token(None, key, NOW, "mt-root")
-    claims = verify_management_token(token, key.public_key())
+async def _admin(user_id: str = "u-admin") -> User:
+    return await User(id=user_id, email=f"{user_id}@example.com", name=user_id, instance_admin=True).save()
+
+
+async def _member(user_id: str, org_id: str) -> User:
+    user = await User(id=user_id, email=f"{user_id}@example.com", name=user_id).save()
+    await Org(id=org_id, name=org_id).save()
+    await OrgMembership(user_id=user_id, org_id=org_id).save()
+    return user
+
+
+def test_minted_token_has_prefix_and_stored_hash(tmp_path):
+    setup_control_plane(tmp_path)
+
+    async def mint():
+        await _admin()
+        token_id, token = await mint_mgmt_key(None, "u-admin")
+        return token, await MgmtToken.get(token_id)
+
+    token, row = run_in_db(tmp_path, mint)
+    assert token.startswith(MANAGEMENT_TOKEN_PREFIX)
+    assert row.token_hash == token_hash(token)
+    assert token not in row.model_dump_json()
+
+
+def test_verify_accepts_a_minted_token_and_builds_claims_from_the_row(tmp_path):
+    setup_control_plane(tmp_path)
+
+    async def flow():
+        await _member("u-1", "o1")
+        token_id, token = await mint_mgmt_key("o1", "u-1")
+        return token_id, await verify_management_token(token)
+
+    token_id, claims = run_in_db(tmp_path, flow)
     assert claims is not None
-    assert claims.org_id is None
-    assert claims.token_id == "mt-root"
+    assert claims.token_id == token_id
+    assert claims.org_id == "o1"
+    assert claims.user_id == "u-1"
 
 
-def test_management_token_org_round_trip():
-    key = Ed25519PrivateKey.generate()
-    token = mint_management_token("org-dev", key, NOW, "mt-1")
-    claims = verify_management_token(token, key.public_key())
-    assert claims is not None
-    assert claims.org_id == "org-dev"
-    assert claims.token_id == "mt-1"
+def test_revoked_row_is_rejected(tmp_path):
+    setup_control_plane(tmp_path)
+
+    async def flow():
+        await _admin()
+        token_id, token = await mint_mgmt_key(None, "u-admin")
+        before = await verify_management_token(token)
+        row = await MgmtToken.get(token_id)
+        assert row is not None
+        row.revoked = True
+        await row.save()
+        return before, await verify_management_token(token)
+
+    before, after = run_in_db(tmp_path, flow)
+    assert before is not None
+    assert after is None
 
 
-def test_prefix_keeps_the_jwt_scannable():
-    key = Ed25519PrivateKey.generate()
-    assert mint_management_token("org-dev", key, NOW, "mt-1").startswith(f"{MANAGEMENT_TOKEN_PREFIX}eyJ")
-    assert MANAGEMENT_TOKEN_PREFIX.endswith("-")
+def test_unknown_garbage_and_inference_prefixed_tokens_are_rejected(tmp_path):
+    setup_control_plane(tmp_path)
+
+    async def flow():
+        return (
+            await verify_management_token(MANAGEMENT_TOKEN_PREFIX + "never-minted"),
+            await verify_management_token("garbage"),
+            await verify_management_token(""),
+            await verify_management_token(INFERENCE_TOKEN_PREFIX + "not-a-mgmt-token"),
+        )
+
+    assert run_in_db(tmp_path, flow) == (None, None, None, None)
 
 
-def test_token_kinds_are_not_interchangeable():
-    key = Ed25519PrivateKey.generate()
-    inference = mint_inference_token("k-1", "org-dev", key, NOW)
-    management = mint_management_token("org-dev", key, NOW, "mt-1")
-    assert verify_management_token(inference, key.public_key()) is None
-    assert verify_inference_token(management, key.public_key()) is None
+def test_tampered_token_is_rejected(tmp_path):
+    setup_control_plane(tmp_path)
+
+    async def flow():
+        await _admin()
+        _, token = await mint_mgmt_key(None, "u-admin")
+        tampered = token[:-1] + ("A" if token[-1] != "A" else "B")
+        return await verify_management_token(token), await verify_management_token(tampered)
+
+    valid, forged = run_in_db(tmp_path, flow)
+    assert valid is not None
+    assert forged is None
 
 
-def test_reprefixed_token_is_rejected():
-    key = Ed25519PrivateKey.generate()
-    inference = mint_inference_token("k-1", "org-dev", key, NOW)
-    forged = MANAGEMENT_TOKEN_PREFIX + inference.removeprefix(INFERENCE_TOKEN_PREFIX)
-    assert verify_management_token(forged, key.public_key()) is None
+def test_membership_backing_still_gates_user_bound_tokens(tmp_path):
+    setup_control_plane(tmp_path)
 
+    async def flow():
+        await _member("u-1", "o1")
+        _, token = await mint_mgmt_key("o1", "u-1")
+        before = await verify_management_token(token)
+        membership = await OrgMembership.get(("u-1", "o1"))
+        assert membership is not None
+        await membership.delete()
+        return before, await verify_management_token(token)
 
-def test_wrong_key_and_garbage_are_rejected():
-    key = Ed25519PrivateKey.generate()
-    other = Ed25519PrivateKey.generate()
-    token = mint_management_token(None, key, NOW, "mt-root")
-    assert verify_management_token(token, other.public_key()) is None
-    assert verify_management_token("ab-mgmt-not-a-jwt", key.public_key()) is None
-    assert verify_management_token("", key.public_key()) is None
+    before, after = run_in_db(tmp_path, flow)
+    assert before is not None
+    assert after is None

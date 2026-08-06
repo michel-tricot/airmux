@@ -150,7 +150,6 @@ class Stack:
         cfg = {
             "control_plane": {
                 "database": {"url": "sqlite+aiosqlite:///airllm.db"},
-                "auth": {"token_signing_key": "env:GW_TOKEN_SIGNING_KEY"},
                 "bundle": {"signing_key": "env:GW_BUNDLE_SIGNING_KEY", "staleness_bound_hours": staleness_bound_hours},
             },
             "data_plane": {
@@ -162,7 +161,6 @@ class Stack:
                     "staleness_policy": staleness_policy,
                     "poll_interval_s": poll_interval_s,
                 },
-                "auth": {"token_public_key": "env:GW_TOKEN_PUBLIC_KEY"},
                 "events": {"flush_interval_s": flush_interval_s, "backend": backend},
             },
         }
@@ -226,13 +224,13 @@ class Stack:
 
     def events(self) -> list[dict]:
         resp = httpx.get(
-            f"{self.cp_url}/org/events",
+            f"{self.cp_url}/v1/org/events",
             headers={"authorization": f"Bearer {self.env['GW_ORG_MGMT_TOKEN']}"},
             params={"limit": 1000},
             timeout=10.0,
         )
         resp.raise_for_status()
-        return resp.json()
+        return resp.json()["data"]
 
     def dp_log_contains(self, needle: str) -> bool:
         log = self.tmp / "dp.log"

@@ -30,8 +30,6 @@ def evaluate(req: CanonicalRequest, key: KeyEntry, bundle: BundleV1, now: dateti
     model = next((m for m in bundle.catalog.models if m.model_id == req.model), None)
     if model is None:
         return Deny(reason="unknown_model", status=404)
-    if "*" not in key.allowed_models and req.model not in key.allowed_models:
-        return Deny(reason="model_not_allowed", status=403)
     provider = next((p for p in bundle.catalog.providers if p.provider_id == model.provider_id), None)
     if provider is None:
         return Deny(reason="provider_not_configured", status=502)

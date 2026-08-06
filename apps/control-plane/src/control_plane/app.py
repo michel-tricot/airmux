@@ -55,7 +55,6 @@ class ControlPlaneApp(FastAPI):
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     settings = app.state.settings
     engine = make_engine(settings.database.url)
-    app.state.token_public_key = settings.auth.token_signing_key.public_key()
     app.state.session_factory = make_session_factory(engine)
     try:
         yield

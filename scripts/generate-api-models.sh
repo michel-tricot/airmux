@@ -8,10 +8,10 @@ import json
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from contract import private_key_to_b64
 from control_plane.app import create_app
-from control_plane.config import AuthConfig, BundlePolicy, Settings
+from control_plane.config import BundlePolicy, Settings
 
 key = private_key_to_b64(Ed25519PrivateKey.generate())
-settings = Settings(auth=AuthConfig(token_signing_key=key), bundle=BundlePolicy(signing_key=key))
+settings = Settings(bundle=BundlePolicy(signing_key=key))
 print(json.dumps(create_app(settings).openapi()))
 PY
 uv run datamodel-codegen \

@@ -10,18 +10,18 @@ from pydantic import BaseModel, ConfigDict, HttpUrl
 class KeyEntry(BaseModel):
     """An API key as the data plane sees it: enough to authorize with zero I/O.
 
-    Authentication is the caller's signed JWT (see tokens.py), verified against the
-    signing public key; this entry is then looked up by the token's key_id claim.
-    A valid signature is not enough on its own: the key must exist here, be enabled,
-    and not be revoked, so revocation wins over any token still in the wild.
+    The caller's bearer is an opaque secret; the data plane hashes it (see
+    credentials.py) and looks the hash up here. Absence is invalidity, so
+    revocation is simply dropping out of the next bundle. key_id exists for
+    event attribution only. The bundle carries hashes of live secrets and
+    stays org-sensitive even though the hashes are not reversible.
     """
 
     model_config = ConfigDict(frozen=True)
 
     key_id: str
     org_id: str
-    allowed_models: list[str]  # model_ids this key may call, ["*"] permitted
-    disabled: bool = False
+    token_hash: str  # sha256 hex of the caller's bearer, the lookup key
 
 
 class ProviderEntry(BaseModel):
@@ -77,7 +77,6 @@ class BundleV1(BaseModel):
     issued_at: datetime
     expires_at: datetime  # staleness bound: issued_at + STALENESS_BOUND, checked on every swap
     keys: list[KeyEntry]
-    revocations: list[str]  # key_ids revoked since issue, rejected even if still in keys
     catalog: Catalog
 
 

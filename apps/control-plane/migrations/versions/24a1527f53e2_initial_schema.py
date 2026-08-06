@@ -100,13 +100,19 @@ def upgrade() -> None:
         sa.Column("deleted_at", sa.DateTime(), nullable=True),
         sa.Column("id", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("org_id", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
-        sa.Column("allowed_models", sa.JSON(), nullable=False),
+        sa.Column("user_id", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+        sa.Column("token_hash", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("disabled", sa.Boolean(), nullable=False),
         sa.ForeignKeyConstraint(
             ["org_id"],
             ["org.id"],
         ),
+        sa.ForeignKeyConstraint(
+            ["user_id"],
+            ["user.id"],
+        ),
         sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("token_hash"),
     )
     op.create_table(
         "bundle",
@@ -131,13 +137,15 @@ def upgrade() -> None:
         sa.Column("deleted_at", sa.DateTime(), nullable=True),
         sa.Column("id", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("org_id", sqlmodel.sql.sqltypes.AutoString(), nullable=True),
-        sa.Column("user_id", sqlmodel.sql.sqltypes.AutoString(), nullable=True),
+        sa.Column("user_id", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+        sa.Column("token_hash", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("revoked", sa.Boolean(), nullable=False),
         sa.ForeignKeyConstraint(
             ["user_id"],
             ["user.id"],
         ),
         sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("token_hash"),
     )
     op.create_table(
         "org_membership",

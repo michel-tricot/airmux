@@ -59,8 +59,6 @@ class KeyEntry(BaseModel):
     key_id: str
     key_hash: str  # sha256(plaintext), hex
     org_id: str
-    allowed_models: list[str]  # ["*"] permitted
-    disabled: bool = False
 
 
 class ProviderEntry(BaseModel):
@@ -87,7 +85,6 @@ class BundleV1(BaseModel):
     issued_at: datetime
     expires_at: datetime  # staleness bound, see §6
     keys: list[KeyEntry]
-    revocations: list[str]
     catalog: Catalog  # providers + models
 
 
@@ -140,7 +137,7 @@ SQLModel tables: `Org`, `ApiKey`, `Provider`, `Model`, `Bundle`, `UsageEvent`, `
 |---|---|---|
 | POST | `/admin/orgs` | |
 | POST | `/admin/keys` | returns plaintext once |
-| DELETE | `/admin/keys/{id}` | disables, adds to revocations |
+| DELETE | `/admin/keys/{id}` | disables, drops out of the bundle at the next compile |
 | POST | `/admin/providers` | takes `credential_ref`, rejects anything shaped like a secret |
 | POST | `/admin/models` | |
 | POST | `/admin/bundles/compile` | compile, validate, sign, persist, return bundle_id |
@@ -174,7 +171,7 @@ ingress -> auth -> policy -> route -> adapter.transform_request
         -> meter -> emit event
 ```
 
-**Auth.** sha256 the bearer, look it up in a `dict[str, KeyEntry]` built once per bundle swap. Check the revocation set. Zero I/O.
+**Auth.** sha256 the bearer, look it up in a `dict[str, KeyEntry]` built once per bundle swap. Absence is invalidity. Zero I/O.
 
 **Policy.** A pure synchronous function, and it must stay that way:
 

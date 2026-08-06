@@ -9,18 +9,10 @@ from uuid import UUID
 from pydantic import AnyUrl, AwareDatetime, BaseModel, Field
 
 
-class ApiKeyCreate(BaseModel):
-    allowed_models: list[str] | None = Field(
-        ["*"],
-        description="Model ids this key may call, * for all",
-        title="Allowed Models",
-    )
-
-
 class ApiKeyOut(BaseModel):
     id: str = Field(..., title="Id")
     org_id: str = Field(..., title="Org Id")
-    allowed_models: list[str] = Field(..., title="Allowed Models")
+    user_id: str = Field(..., title="User Id")
     disabled: bool = Field(..., title="Disabled")
     created_at: AwareDatetime = Field(..., title="Created At")
     updated_at: AwareDatetime = Field(..., title="Updated At")
@@ -101,16 +93,16 @@ class KeyEntry(BaseModel):
     """
     An API key as the data plane sees it: enough to authorize with zero I/O.
 
-    Authentication is the caller's signed JWT (see tokens.py), verified against the
-    signing public key; this entry is then looked up by the token's key_id claim.
-    A valid signature is not enough on its own: the key must exist here, be enabled,
-    and not be revoked, so revocation wins over any token still in the wild.
+    The caller's bearer is an opaque secret; the data plane hashes it (see
+    credentials.py) and looks the hash up here. Absence is invalidity, so
+    revocation is simply dropping out of the next bundle. key_id exists for
+    event attribution only. The bundle carries hashes of live secrets and
+    stays org-sensitive even though the hashes are not reversible.
     """
 
     key_id: str = Field(..., title="Key Id")
     org_id: str = Field(..., title="Org Id")
-    allowed_models: list[str] = Field(..., title="Allowed Models")
-    disabled: bool | None = Field(False, title="Disabled")
+    token_hash: str = Field(..., title="Token Hash")
 
 
 class KeyOut(BaseModel):
@@ -132,7 +124,7 @@ class MembershipOut(BaseModel):
 class MgmtTokenOut(BaseModel):
     id: str = Field(..., title="Id")
     org_id: str | None = Field(..., title="Org Id")
-    user_id: str | None = Field(..., title="User Id")
+    user_id: str = Field(..., title="User Id")
     revoked: bool = Field(..., title="Revoked")
     created_at: AwareDatetime = Field(..., title="Created At")
     updated_at: AwareDatetime = Field(..., title="Updated At")
@@ -142,7 +134,7 @@ class MgmtTokenOut(BaseModel):
 class MintedTokenOut(BaseModel):
     token_id: str = Field(..., title="Token Id")
     org_id: str | None = Field(..., title="Org Id")
-    user_id: str | None = Field(None, title="User Id")
+    user_id: str = Field(..., title="User Id")
     token: str = Field(..., title="Token")
 
 
@@ -468,7 +460,6 @@ class BundleV1(BaseModel):
     issued_at: AwareDatetime = Field(..., title="Issued At")
     expires_at: AwareDatetime = Field(..., title="Expires At")
     keys: list[KeyEntry] = Field(..., title="Keys")
-    revocations: list[str] = Field(..., title="Revocations")
     catalog: Catalog
 
 

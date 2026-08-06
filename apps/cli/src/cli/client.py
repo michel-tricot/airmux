@@ -74,7 +74,7 @@ def org_get(path: str, control_plane_url: str, params: dict | None = None) -> li
         return payload_rows(resp)
 
 
-def post_expecting(client: httpx.Client, path: str, body: dict, ok: tuple[int, ...]) -> httpx.Response:
+def post_expecting(client: httpx.Client, path: str, body: dict | None, ok: tuple[int, ...]) -> httpx.Response:
     resp = client.post(path, json=body)
     if resp.status_code not in ok:
         console.print(f"[red]POST {path} failed: {resp.status_code} {resp.text}[/red]")

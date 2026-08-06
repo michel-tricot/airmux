@@ -18,16 +18,10 @@ class DatabaseConfig(BaseModel):
     url: str = "sqlite+aiosqlite:///airllm.db"
 
 
-class AuthConfig(BaseModel):
-    model_config = ConfigDict(frozen=True, arbitrary_types_allowed=True)
-
-    token_signing_key: Ed25519PrivateKeyB64  # parsed once from base64 at load; mints caller API tokens; rotates independently of the bundle key
-
-
 class BundlePolicy(BaseModel):
     model_config = ConfigDict(frozen=True, arbitrary_types_allowed=True)
 
-    signing_key: Ed25519PrivateKeyB64  # parsed once from base64 at load; signs bundles, rotates independently of the token key
+    signing_key: Ed25519PrivateKeyB64  # parsed once from base64 at load; signs bundles
     staleness_bound_hours: float = 24.0
 
     @property
@@ -39,7 +33,6 @@ class Settings(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     database: DatabaseConfig = Field(default_factory=DatabaseConfig)
-    auth: AuthConfig
     bundle: BundlePolicy
     dev: bool = False  # set by the --dev flag on the entry point, gate dev-only behavior on this
 

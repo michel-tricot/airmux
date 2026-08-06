@@ -36,7 +36,7 @@ def test_create_update_and_saveless_mutation_are_audited(tmp_path):
     assert provider_update.before["base_url"] == PROVIDER["base_url"]
     assert provider_update.after["base_url"] == "https://eu.api.openai.com/v1"
     assert provider_update.record_id == PROVIDER["provider_id"]
-    assert provider_update.user_id is None
+    assert provider_update.user_id is not None
     assert provider_update.occurred_at is not None
 
     revocation = next(r for r in rows if (r.table_name, r.action) == ("api_key", "update"))
@@ -74,8 +74,8 @@ def test_audit_records_the_acting_user(tmp_path):
         c.post("/v1/instance/orgs", json={"id": "o2"}, headers={"authorization": f"Bearer {token}"})
 
     rows = _audit_rows(tmp_path)
-    user_creation = next(r for r in rows if (r.table_name, r.action) == ("user", "create"))
-    assert user_creation.user_id is None
+    user_creation = next(r for r in rows if (r.table_name, r.action) == ("user", "create") and r.record_id == user["id"])
+    assert user_creation.user_id != user["id"]
     org_creation = next(r for r in rows if (r.table_name, r.action) == ("org", "create"))
     assert org_creation.user_id == user["id"]
 

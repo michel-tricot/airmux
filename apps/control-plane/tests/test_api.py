@@ -8,9 +8,13 @@ from helpers import MODEL, PROVIDER, run_in_db, setup_control_plane
 from sqlalchemy import event
 from sqlalchemy.orm import Session
 
-from contract import SignedBundle, verify_bundle, verify_inference_token
+from contract import INFERENCE_TOKEN_PREFIX, SignedBundle, token_hash, verify_bundle
 from control_plane.models import DataPlaneInstance, Org
 from control_plane.tokens import MANAGEMENT_TOKEN_PREFIX
+
+
+def _api_user(c, root, email: str = "ops@example.com", *, instance_admin: bool = True) -> str:
+    return c.post("/v1/instance/users", json={"email": email, "instance_admin": instance_admin}, headers=root).json()["data"]["id"]
 
 
 def test_create_returns_the_full_resource_and_patch_updates_it(tmp_path):
@@ -32,13 +36,11 @@ def test_full_flow_to_verified_bundle(tmp_path):
     root = cp.headers()
     with TestClient(cp.app) as c:
         assert c.post("/v1/instance/orgs", json={"id": "o1"}, headers=root).status_code == 200
-        org = {"authorization": f"Bearer {c.post('/v1/instance/orgs/o1/tokens', headers=root).json()['data']['token']}"}
-        key = c.post("/v1/org/keys", json={}, headers=org).json()["data"]
-        claims = verify_inference_token(key["token"], cp.token_key.public_key())
-        assert claims is not None
-        assert claims.key_id == key["key_id"]
-        assert claims.org_id == "o1"
-        assert verify_inference_token(key["token"], cp.bundle_key.public_key()) is None
+        user_id = _api_user(c, root)
+        minted = c.post(f"/v1/instance/users/{user_id}/tokens", json={"org_id": "o1"}, headers=root).json()["data"]
+        org = {"authorization": f"Bearer {minted['token']}"}
+        key = c.post("/v1/org/keys", headers=org).json()["data"]
+        assert key["token"].startswith(INFERENCE_TOKEN_PREFIX)
         assert c.post("/v1/taxonomy/providers", json=PROVIDER, headers=root).status_code == 200
         assert c.post("/v1/taxonomy/models", json=MODEL, headers=root).status_code == 200
         compiled = c.post("/v1/org/bundles/compile", headers=org).json()["data"]
@@ -49,8 +51,8 @@ def test_full_flow_to_verified_bundle(tmp_path):
         bundle = verify_bundle(SignedBundle.model_validate(latest.json()["data"]), cp.bundle_key.public_key())
         assert str(bundle.bundle_id) == compiled["bundle_id"]
         assert [k.key_id for k in bundle.keys] == [key["key_id"]]
+        assert [k.token_hash for k in bundle.keys] == [token_hash(key["token"])]
         assert bundle.catalog.models[0].upstream_model == "gpt-real"
-        assert bundle.revocations == []
 
 
 def test_revocation_lands_in_next_bundle(tmp_path):
@@ -59,14 +61,13 @@ def test_revocation_lands_in_next_bundle(tmp_path):
     org = cp.headers("o1")
     with TestClient(cp.app) as c:
         c.post("/v1/instance/orgs", json={"id": "o1"}, headers=root)
-        key = c.post("/v1/org/keys", json={}, headers=org).json()["data"]
+        key = c.post("/v1/org/keys", headers=org).json()["data"]
         c.post("/v1/org/bundles/compile", headers=org)
         assert c.delete(f"/v1/org/keys/{key['key_id']}", headers=org).status_code == 200
         compiled = c.post("/v1/org/bundles/compile", headers=org).json()["data"]
         assert compiled["version"] == 2
         bundle = verify_bundle(SignedBundle.model_validate(c.get("/v1/bundle/latest", headers=root).json()["data"]), cp.bundle_key.public_key())
         assert bundle.keys == []
-        assert bundle.revocations == [key["key_id"]]
 
 
 def test_updated_at_tracks_modifications(tmp_path):
@@ -95,12 +96,11 @@ def test_cross_org_key_revocation_is_not_found(tmp_path):
     with TestClient(cp.app) as c:
         c.post("/v1/instance/orgs", json={"id": "o1"}, headers=root)
         c.post("/v1/instance/orgs", json={"id": "o2"}, headers=root)
-        key = c.post("/v1/org/keys", json={}, headers=cp.headers("o1")).json()["data"]
+        key = c.post("/v1/org/keys", headers=cp.headers("o1")).json()["data"]
         assert c.delete(f"/v1/org/keys/{key['key_id']}", headers=cp.headers("o2")).status_code == 404
         c.post("/v1/org/bundles/compile", headers=cp.headers("o1"))
         bundle = verify_bundle(SignedBundle.model_validate(c.get("/v1/bundle/latest", headers=root).json()["data"]), cp.bundle_key.public_key())
         assert [k.key_id for k in bundle.keys] == [key["key_id"]]
-        assert bundle.revocations == []
 
 
 def test_secret_shaped_credential_ref_rejected(tmp_path):
@@ -131,8 +131,7 @@ def test_scopes_are_strictly_separated(tmp_path):
 
         assert c.post("/v1/instance/orgs", json={"id": "o2"}, headers=org).status_code == 403
         assert c.get("/v1/instance/orgs", headers=org).status_code == 403
-        assert c.post("/v1/instance/tokens", headers=org).status_code == 403
-        assert c.post("/v1/instance/orgs/o1/tokens", headers=org).status_code == 403
+        assert c.post("/v1/instance/users/u-x/tokens", headers=org).status_code == 403
         assert c.get("/v1/instance/tokens", headers=org).status_code == 403
         assert c.delete("/v1/instance/tokens/mt-x", headers=org).status_code == 403
 
@@ -141,7 +140,7 @@ def test_scopes_are_strictly_separated(tmp_path):
         assert c.get("/v1/taxonomy", headers=org).status_code == 200
         assert c.get("/v1/taxonomy", headers=root).status_code == 200
 
-        assert c.post("/v1/org/keys", json={}, headers=root).status_code == 403
+        assert c.post("/v1/org/keys", headers=root).status_code == 403
         assert c.post("/v1/org/bundles/compile", headers=root).status_code == 403
         for path in ("/v1/org/keys", "/v1/org/bundles", "/v1/org/events", "/v1/org/instances"):
             assert c.get(path, headers=root).status_code == 403
@@ -153,7 +152,7 @@ def test_inference_token_is_rejected_on_management_routes(tmp_path):
     org = cp.headers("o1")
     with TestClient(cp.app) as c:
         c.post("/v1/instance/orgs", json={"id": "o1"}, headers=root)
-        key = c.post("/v1/org/keys", json={}, headers=org).json()["data"]
+        key = c.post("/v1/org/keys", headers=org).json()["data"]
         inference = {"authorization": f"Bearer {key['token']}"}
         assert c.get("/v1/instance/orgs", headers=inference).status_code == 401
         assert c.get("/v1/org/keys", headers=inference).status_code == 401
@@ -168,7 +167,7 @@ def test_orgs_cannot_reach_each_other(tmp_path):
         c.post("/v1/instance/orgs", json={"id": "o1"}, headers=root)
         c.post("/v1/instance/orgs", json={"id": "o2"}, headers=root)
         c.post("/v1/taxonomy/providers", json=PROVIDER, headers=root)
-        key = c.post("/v1/org/keys", json={}, headers=o1).json()["data"]
+        key = c.post("/v1/org/keys", headers=o1).json()["data"]
 
         assert c.delete(f"/v1/org/keys/{key['key_id']}", headers=o2).status_code == 404
         assert c.get("/v1/org/keys", headers=o2).json()["data"] == []
@@ -182,14 +181,18 @@ def test_token_lifecycle_via_api(tmp_path):
     root = cp.headers()
     with TestClient(cp.app) as c:
         c.post("/v1/instance/orgs", json={"id": "o1"}, headers=root)
-        assert c.post("/v1/instance/orgs/missing/tokens", headers=root).status_code == 404
-        org_token = c.post("/v1/instance/orgs/o1/tokens", headers=root).json()["data"]
+        user_id = _api_user(c, root)
+        assert c.post(f"/v1/instance/users/{user_id}/tokens", json={"org_id": "missing"}, headers=root).status_code == 404
+        assert c.post("/v1/instance/users/u-ghost/tokens", headers=root).status_code == 404
+        org_token = c.post(f"/v1/instance/users/{user_id}/tokens", json={"org_id": "o1"}, headers=root).json()["data"]
         assert org_token["org_id"] == "o1"
+        assert org_token["user_id"] == user_id
         assert org_token["token"].startswith(MANAGEMENT_TOKEN_PREFIX)
-        peer = c.post("/v1/instance/tokens", headers=root).json()["data"]
+        peer = c.post(f"/v1/instance/users/{user_id}/tokens", headers=root).json()["data"]
         assert peer["org_id"] is None
         listed = c.get("/v1/instance/tokens", headers=root).json()["data"]
-        assert {t["id"] for t in listed} == {org_token["token_id"], peer["token_id"]}
+        assert {org_token["token_id"], peer["token_id"]} <= {t["id"] for t in listed}
+        assert all("token_hash" not in t for t in listed)
 
         scoped = {"authorization": f"Bearer {org_token['token']}"}
         assert c.get("/v1/org/keys", headers=scoped).status_code == 200
@@ -201,15 +204,7 @@ def test_token_lifecycle_via_api(tmp_path):
         assert c.delete(f"/v1/instance/tokens/{peer['token_id']}", headers=root).status_code == 200
         assert c.get("/v1/instance/orgs", headers=peer_headers).status_code == 401
 
-
-def test_offline_minted_token_can_be_tombstoned(tmp_path):
-    cp = setup_control_plane(tmp_path)
-    root = cp.headers()
-    rogue = cp.headers(token_id="mt-rogue")
-    with TestClient(cp.app) as c:
-        assert c.get("/v1/instance/orgs", headers=rogue).status_code == 200
-        assert c.delete("/v1/instance/tokens/mt-rogue", headers=root).status_code == 200
-        assert c.get("/v1/instance/orgs", headers=rogue).status_code == 401
+        assert c.delete("/v1/instance/tokens/mt-ghost", headers=root).status_code == 404
 
 
 def test_list_endpoints_read_back(tmp_path):
@@ -218,7 +213,7 @@ def test_list_endpoints_read_back(tmp_path):
     org = cp.headers("o1")
     with TestClient(cp.app) as c:
         c.post("/v1/instance/orgs", json={"id": "o1"}, headers=root)
-        key = c.post("/v1/org/keys", json={}, headers=org).json()["data"]
+        key = c.post("/v1/org/keys", headers=org).json()["data"]
         c.post("/v1/taxonomy/providers", json=PROVIDER, headers=root)
         c.post("/v1/taxonomy/models", json=MODEL, headers=root)
         c.post("/v1/org/bundles/compile", headers=org)
@@ -227,6 +222,8 @@ def test_list_endpoints_read_back(tmp_path):
         keys = c.get("/v1/org/keys", headers=org).json()["data"]
         assert [k["id"] for k in keys] == [key["key_id"]]
         assert "token" not in keys[0]
+        assert "token_hash" not in keys[0]
+        assert keys[0]["user_id"].startswith("u-")
         taxonomy = c.get("/v1/taxonomy", headers=org).json()["data"]
         assert [p["id"] for p in taxonomy["providers"]] == ["openai"]
         assert [m["id"] for m in taxonomy["models"]] == ["gpt-test"]
@@ -344,6 +341,7 @@ def test_stale_instance_is_offline_and_hidden_by_default(tmp_path):
 
 def test_failed_commit_is_not_reported_as_success(tmp_path):
     cp = setup_control_plane(tmp_path)
+    root = cp.headers()
 
     def refuse_commit(session):
         raise RuntimeError
@@ -351,7 +349,7 @@ def test_failed_commit_is_not_reported_as_success(tmp_path):
     event.listen(Session, "before_commit", refuse_commit)
     try:
         with TestClient(cp.app, raise_server_exceptions=False) as c:
-            resp = c.post("/v1/instance/orgs", json={"id": "o1"}, headers=cp.headers())
+            resp = c.post("/v1/instance/orgs", json={"id": "o1"}, headers=root)
             assert resp.status_code == 500
     finally:
         event.remove(Session, "before_commit", refuse_commit)
@@ -363,7 +361,8 @@ def test_revoked_token_is_rejected_on_sync_routes(tmp_path):
     root = cp.headers()
     with TestClient(cp.app) as c:
         c.post("/v1/instance/orgs", json={"id": "o1"}, headers=root)
-        minted = c.post("/v1/instance/orgs/o1/tokens", headers=root).json()["data"]
+        user_id = _api_user(c, root)
+        minted = c.post(f"/v1/instance/users/{user_id}/tokens", json={"org_id": "o1"}, headers=root).json()["data"]
         dp = {"authorization": f"Bearer {minted['token']}"}
         assert c.post("/v1/heartbeat", json=_heartbeat("dp-1"), headers=dp).status_code == 200
         assert c.delete(f"/v1/instance/tokens/{minted['token_id']}", headers=root).status_code == 200

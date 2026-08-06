@@ -11,26 +11,18 @@ from control_plane.config import database_url, load_settings
 def test_load_settings_resolves_refs(tmp_path, monkeypatch):
     bundle_key_b64 = private_key_to_b64(Ed25519PrivateKey.generate())
     (tmp_path / "bundle.key").write_text(bundle_key_b64, encoding="utf-8")
-    config = (
-        "control_plane:\n"
-        "  database:\n    url: sqlite+aiosqlite:///cp.db\n"
-        "  auth:\n    token_signing_key: env:TEST_TOKEN_KEY\n"
-        f"  bundle:\n    signing_key: file:{tmp_path}/bundle.key\n"
-    )
+    config = "control_plane:\n  database:\n    url: sqlite+aiosqlite:///cp.db\n" + f"  bundle:\n    signing_key: file:{tmp_path}/bundle.key\n"
     (tmp_path / "airllm.yml").write_text(config, encoding="utf-8")
-    token_key_b64 = private_key_to_b64(Ed25519PrivateKey.generate())
     monkeypatch.setenv("GW_CONFIG", str(tmp_path / "airllm.yml"))
-    monkeypatch.setenv("TEST_TOKEN_KEY", token_key_b64)
 
     settings = load_settings()
     assert settings.database.url == "sqlite+aiosqlite:///cp.db"
-    assert private_key_to_b64(settings.auth.token_signing_key) == token_key_b64
     assert private_key_to_b64(settings.bundle.signing_key) == bundle_key_b64
     assert settings.dev is False
 
 
 def test_malformed_signing_key_fails_at_load(tmp_path, monkeypatch):
-    config = 'control_plane:\n  auth:\n    token_signing_key: "not-a-key"\n  bundle:\n    signing_key: "k"\n'
+    config = 'control_plane:\n  bundle:\n    signing_key: "not-a-key"\n'
     (tmp_path / "airllm.yml").write_text(config, encoding="utf-8")
     monkeypatch.setenv("GW_CONFIG", str(tmp_path / "airllm.yml"))
     with pytest.raises((ValidationError, ValueError)):
@@ -39,7 +31,7 @@ def test_malformed_signing_key_fails_at_load(tmp_path, monkeypatch):
 
 def test_dev_flag_comes_from_the_environment(tmp_path, monkeypatch):
     key = private_key_to_b64(Ed25519PrivateKey.generate())
-    config = f'control_plane:\n  auth:\n    token_signing_key: "{key}"\n  bundle:\n    signing_key: "{key}"\n'
+    config = f'control_plane:\n  bundle:\n    signing_key: "{key}"\n'
     (tmp_path / "airllm.yml").write_text(config, encoding="utf-8")
     monkeypatch.setenv("GW_CONFIG", str(tmp_path / "airllm.yml"))
     monkeypatch.setenv("GW_DEV", "1")

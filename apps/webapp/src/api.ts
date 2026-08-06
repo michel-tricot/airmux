@@ -50,7 +50,7 @@ export interface Org {
 export interface ApiKey {
   id: string
   org_id: string
-  allowed_models: string[]
+  user_id: string
   disabled: boolean
   created_at: string
 }
@@ -130,8 +130,7 @@ export const listInstances = (includeOffline = true) => api<Instance[]>(`/v1/org
 
 export const createOrg = (body: { id: string; name: string }) => api<{ id: string }>('/v1/instance/orgs', { method: 'POST', body: JSON.stringify(body) })
 
-export const createKey = (body: { allowed_models: string[] }) =>
-  api<{ key_id: string; token: string }>('/v1/org/keys', { method: 'POST', body: JSON.stringify(body) })
+export const createKey = () => api<{ key_id: string; token: string }>('/v1/org/keys', { method: 'POST' })
 
 export const revokeKey = (keyId: string) => api<{ key_id: string; status: string }>(`/v1/org/keys/${keyId}`, { method: 'DELETE' })
 

@@ -9,11 +9,11 @@ from uuid import uuid4
 import pytest
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
-from contract import BundleV1, Catalog, KeyEntry, ModelEntry, ProviderEntry, mint_inference_token, sign_bundle
+from contract import INFERENCE_TOKEN_PREFIX, BundleV1, Catalog, KeyEntry, ModelEntry, ProviderEntry, sign_bundle, token_hash
 from data_plane.adapters import REGISTRY
 from data_plane.app import create_app
 from data_plane.canonical import Ctx
-from data_plane.config import AuthConfig, BundleConfig, Config, ControlPlaneLink, EventsConfig
+from data_plane.config import BundleConfig, Config, ControlPlaneLink, EventsConfig
 
 if TYPE_CHECKING:
     from starlette.applications import Starlette
@@ -40,28 +40,32 @@ def make_adapter():
     return REGISTRY["openai_compatible"](PROVIDER)
 
 
-def make_bundle(keys=(), revocations=(), catalog=None, org="org-dev"):
+def make_key(key_id="k-dev", org="org-dev"):
+    """A deterministic opaque token and its bundle entry; the token derives from the key_id so tests stay reproducible."""
+    token = f"{INFERENCE_TOKEN_PREFIX}secret-{key_id}"
+    return token, KeyEntry(key_id=key_id, org_id=org, token_hash=token_hash(token))
+
+
+def make_bundle(keys=(), catalog=None, org="org-dev"):
     return BundleV1(
         bundle_id=uuid4(),
         org_id=org,
         issued_at=NOW,
         expires_at=NOW + timedelta(hours=24),
         keys=list(keys),
-        revocations=list(revocations),
         catalog=catalog or Catalog(providers=[], models=[]),
     )
 
 
-def make_signed(private_key, key_ids=("k1",), revocations=(), org="o1"):
-    keys = [KeyEntry(key_id=k, org_id=org, allowed_models=["*"]) for k in key_ids]
-    return sign_bundle(make_bundle(keys=keys, revocations=revocations, org=org), private_key, "k1")
+def make_signed(private_key, key_ids=("k1",), org="o1"):
+    keys = [make_key(k, org)[1] for k in key_ids]
+    return sign_bundle(make_bundle(keys=keys, org=org), private_key, "k1")
 
 
 def make_config(tmp_path, backend="sqlite") -> Config:
     return Config(
         control_plane=ControlPlaneLink(url="http://cp.test", token="dp-token"),
         bundle=BundleConfig(public_key=UNUSED_PUBLIC_KEY, cache_dir=tmp_path),
-        auth=AuthConfig(token_public_key=UNUSED_PUBLIC_KEY),
         events=EventsConfig(backend=backend),
     )
 
@@ -106,18 +110,12 @@ def booted(tmp_path, monkeypatch) -> BootedApp:
     file is test_config.py's job.
     """
     bundle_key = Ed25519PrivateKey.generate()
-    token_key = Ed25519PrivateKey.generate()
-    bundle = make_bundle(
-        keys=[KeyEntry(key_id="k-dev", org_id="org-dev", allowed_models=["*"])],
-        catalog=Catalog(providers=[PROVIDER], models=[MODEL]),
-    )
+    caller_token, entry = make_key()
+    bundle = make_bundle(keys=[entry], catalog=Catalog(providers=[PROVIDER], models=[MODEL]))
     (tmp_path / "bundle.json").write_text(sign_bundle(bundle, bundle_key, "k1").model_dump_json(), encoding="utf-8")
-    config = Config(
-        bundle=BundleConfig(public_key=bundle_key.public_key(), cache_dir=tmp_path),
-        auth=AuthConfig(token_public_key=token_key.public_key()),
-    )
+    config = Config(bundle=BundleConfig(public_key=bundle_key.public_key(), cache_dir=tmp_path))
     monkeypatch.setenv("OPENAI_API_KEY", "sk-test-not-real")
-    return BootedApp(app=create_app(config), token=mint_inference_token("k-dev", "org-dev", token_key, NOW))
+    return BootedApp(app=create_app(config), token=caller_token)
 
 
 @pytest.fixture

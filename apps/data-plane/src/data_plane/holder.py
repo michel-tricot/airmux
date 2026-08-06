@@ -23,7 +23,6 @@ class BundleSnapshot:
 
     bundle: BundleV1
     key_index: dict[str, KeyEntry]
-    revocations: frozenset[str]
 
 
 class BundleHolder:
@@ -38,6 +37,6 @@ class BundleHolder:
             return False
         if expired:
             logger.warning("%s bundle %s expired at %s, serving stale per policy", source, bundle.bundle_id, bundle.expires_at)
-        self.snapshot = BundleSnapshot(bundle=bundle, key_index=index_keys(bundle), revocations=frozenset(bundle.revocations))
+        self.snapshot = BundleSnapshot(bundle=bundle, key_index=index_keys(bundle))
         logger.info("adopted %s bundle %s issued %s", source, bundle.bundle_id, bundle.issued_at)
         return True

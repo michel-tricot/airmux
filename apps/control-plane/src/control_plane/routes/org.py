@@ -7,9 +7,9 @@ from fastapi import APIRouter, HTTPException, Request
 from sqlmodel import col
 
 from control_plane.compiler import UnknownOrgError, compile_and_store
-from control_plane.deps import OrgDep  # noqa: TC001 FastAPI resolves dependency annotations at runtime
+from control_plane.deps import MgmtDep, OrgDep  # noqa: TC001 FastAPI resolves dependency annotations at runtime
 from control_plane.models import ApiKey, Bundle, DataPlaneInstance, Org, UsageEvent
-from control_plane.models.api_key import ApiKeyCreate, ApiKeyOut, KeyOut, KeyRevokedOut
+from control_plane.models.api_key import ApiKeyOut, KeyOut, KeyRevokedOut
 from control_plane.models.bundle import BundleOut, CompileOut
 from control_plane.models.data_plane_instance import DataPlaneInstanceOut
 from control_plane.models.usage_event import UsageEventOut
@@ -20,11 +20,10 @@ router = APIRouter(prefix="/org")
 
 
 @router.post("/keys", tags=["API Keys"])
-async def create_key(org: OrgDep, body: ApiKeyCreate, request: Request) -> Envelope[KeyOut]:
+async def create_key(org: OrgDep, claims: MgmtDep) -> Envelope[KeyOut]:
     if await Org.get(org) is None:
         raise HTTPException(status_code=404)
-    settings = request.app.state.settings
-    key_id, token = await mint_inference_key(org, body.allowed_models, settings.auth.token_signing_key, datetime.now(tz=UTC))
+    key_id, token = await mint_inference_key(org, claims.user_id)
     return Envelope(data=KeyOut(key_id=key_id, token=token))
 
 

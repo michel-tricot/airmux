@@ -30,12 +30,6 @@ class BundleConfig(BaseModel):
     poll_interval_s: float = 30.0
 
 
-class AuthConfig(BaseModel):
-    model_config = ConfigDict(frozen=True, arbitrary_types_allowed=True)
-
-    token_public_key: Ed25519PublicKeyB64  # parsed once from base64 at load; verifies caller API tokens, distinct from the bundle key
-
-
 class EventsConfig(BaseModel):
     model_config = ConfigDict(frozen=True)
 
@@ -48,7 +42,6 @@ class Config(BaseModel):
 
     control_plane: ControlPlaneLink = Field(default_factory=ControlPlaneLink)
     bundle: BundleConfig
-    auth: AuthConfig
     events: EventsConfig = Field(default_factory=EventsConfig)
     dev: bool = False  # set by the --dev flag on the entry point, gate dev-only behavior on this
 
