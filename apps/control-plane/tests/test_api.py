@@ -13,6 +13,20 @@ from control_plane.models import DataPlaneInstance, Org
 from control_plane.tokens import MANAGEMENT_TOKEN_PREFIX
 
 
+def test_create_returns_the_full_resource_and_patch_updates_it(tmp_path):
+    cp = setup_control_plane(tmp_path)
+    root = cp.headers()
+    with TestClient(cp.app) as c:
+        created = c.post("/v1/instance/orgs", json={"id": "o1"}, headers=root).json()["data"]
+        assert created["name"] == "o1"
+        assert created["created_at"] is not None
+        patched = c.patch("/v1/instance/orgs/o1", json={"name": "Acme"}, headers=root).json()["data"]
+        assert patched["name"] == "Acme"
+        assert patched["id"] == "o1"
+        assert c.patch("/v1/instance/orgs/ghost", json={"name": "x"}, headers=root).status_code == 404
+        assert [o["name"] for o in c.get("/v1/instance/orgs", headers=root).json()["data"]] == ["Acme"]
+
+
 def test_full_flow_to_verified_bundle(tmp_path):
     cp = setup_control_plane(tmp_path)
     root = cp.headers()

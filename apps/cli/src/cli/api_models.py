@@ -9,14 +9,22 @@ from uuid import UUID
 from pydantic import AnyUrl, AwareDatetime, BaseModel, Field
 
 
-class ApiKey(BaseModel):
-    created_at: AwareDatetime | None = Field(None, title="Created At")
-    updated_at: AwareDatetime | None = Field(None, title="Updated At")
-    deleted_at: AwareDatetime | None = Field(None, title="Deleted At")
-    org_id: str = Field(..., title="Org Id")
+class ApiKeyCreate(BaseModel):
+    allowed_models: list[str] | None = Field(
+        ["*"],
+        description="Model ids this key may call, * for all",
+        title="Allowed Models",
+    )
+
+
+class ApiKeyOut(BaseModel):
     id: str = Field(..., title="Id")
-    allowed_models: list[str] | None = Field(None, title="Allowed Models")
-    disabled: bool | None = Field(False, title="Disabled")
+    org_id: str = Field(..., title="Org Id")
+    allowed_models: list[str] = Field(..., title="Allowed Models")
+    disabled: bool = Field(..., title="Disabled")
+    created_at: AwareDatetime = Field(..., title="Created At")
+    updated_at: AwareDatetime = Field(..., title="Updated At")
+    deleted_at: AwareDatetime | None = Field(..., title="Deleted At")
 
 
 class BundleOut(BaseModel):
@@ -33,8 +41,28 @@ class CompileOut(BaseModel):
     version: int = Field(..., title="Version")
 
 
+class DataPlaneInstanceOut(BaseModel):
+    instance_id: str = Field(..., title="Instance Id")
+    org_id: str | None = Field(..., title="Org Id")
+    version: str = Field(..., title="Version")
+    bundle_id: UUID | None = Field(..., title="Bundle Id")
+    address: str | None = Field(..., title="Address")
+    status: Literal["online", "offline"] = Field(..., title="Status")
+    first_seen: AwareDatetime = Field(..., title="First Seen")
+    last_seen: AwareDatetime = Field(..., title="Last Seen")
+
+
+class DeletedOutStr(BaseModel):
+    id: str = Field(..., title="Id")
+    deleted_at: AwareDatetime = Field(..., title="Deleted At")
+
+
 class EnvelopeCompileOut(BaseModel):
     data: CompileOut
+
+
+class EnvelopeDeletedOutStr(BaseModel):
+    data: DeletedOutStr
 
 
 class EnvelopeDictStrInt(BaseModel):
@@ -45,12 +73,16 @@ class EnvelopeDictStrStr(BaseModel):
     data: dict[str, str] = Field(..., title="Data")
 
 
-class EnvelopeListApiKey(BaseModel):
-    data: list[ApiKey] = Field(..., title="Data")
+class EnvelopeListApiKeyOut(BaseModel):
+    data: list[ApiKeyOut] = Field(..., title="Data")
 
 
 class EnvelopeListBundleOut(BaseModel):
     data: list[BundleOut] = Field(..., title="Data")
+
+
+class EnvelopeListDataPlaneInstanceOut(BaseModel):
+    data: list[DataPlaneInstanceOut] = Field(..., title="Data")
 
 
 class HeartbeatV1(BaseModel):
@@ -62,17 +94,6 @@ class HeartbeatV1(BaseModel):
     version: str = Field(..., title="Version")
     org_id: str | None = Field(None, title="Org Id")
     bundle_id: UUID | None = Field(None, title="Bundle Id")
-
-
-class InstanceOut(BaseModel):
-    instance_id: str = Field(..., title="Instance Id")
-    org_id: str | None = Field(..., title="Org Id")
-    version: str = Field(..., title="Version")
-    bundle_id: UUID | None = Field(..., title="Bundle Id")
-    address: str | None = Field(..., title="Address")
-    status: Literal["online", "offline"] = Field(..., title="Status")
-    first_seen: AwareDatetime = Field(..., title="First Seen")
-    last_seen: AwareDatetime = Field(..., title="Last Seen")
 
 
 class KeyEntry(BaseModel):
@@ -91,14 +112,6 @@ class KeyEntry(BaseModel):
     disabled: bool | None = Field(False, title="Disabled")
 
 
-class KeyIn(BaseModel):
-    allowed_models: list[str] | None = Field(
-        ["*"],
-        description="Model ids this key may call, * for all",
-        title="Allowed Models",
-    )
-
-
 class KeyOut(BaseModel):
     key_id: str = Field(..., title="Key Id")
     token: str = Field(..., title="Token")
@@ -112,38 +125,24 @@ class KeyRevokedOut(BaseModel):
 class MembershipOut(BaseModel):
     user_id: str = Field(..., title="User Id")
     org_id: str = Field(..., title="Org Id")
-    status: Literal["member", "removed"] = Field(..., title="Status")
-
-
-class MgmtToken(BaseModel):
-    created_at: AwareDatetime | None = Field(None, title="Created At")
-    updated_at: AwareDatetime | None = Field(None, title="Updated At")
-    deleted_at: AwareDatetime | None = Field(None, title="Deleted At")
-    id: str = Field(..., title="Id")
-    org_id: str | None = Field(None, title="Org Id")
-    user_id: str | None = Field(None, title="User Id")
-    revoked: bool | None = Field(False, title="Revoked")
+    status: Literal["member"] = Field(..., title="Status")
 
 
 class MgmtTokenOut(BaseModel):
+    id: str = Field(..., title="Id")
+    org_id: str | None = Field(..., title="Org Id")
+    user_id: str | None = Field(..., title="User Id")
+    revoked: bool = Field(..., title="Revoked")
+    created_at: AwareDatetime = Field(..., title="Created At")
+    updated_at: AwareDatetime = Field(..., title="Updated At")
+    deleted_at: AwareDatetime | None = Field(..., title="Deleted At")
+
+
+class MintedTokenOut(BaseModel):
     token_id: str = Field(..., title="Token Id")
     org_id: str | None = Field(..., title="Org Id")
     user_id: str | None = Field(None, title="User Id")
     token: str = Field(..., title="Token")
-
-
-class Model(BaseModel):
-    created_at: AwareDatetime | None = Field(None, title="Created At")
-    updated_at: AwareDatetime | None = Field(None, title="Updated At")
-    deleted_at: AwareDatetime | None = Field(None, title="Deleted At")
-    id: str = Field(..., title="Id")
-    provider_id: str = Field(..., title="Provider Id")
-    upstream_model: str = Field(..., title="Upstream Model")
-    input_price_per_mtok: float = Field(..., title="Input Price Per Mtok")
-    output_price_per_mtok: float = Field(..., title="Output Price Per Mtok")
-    context_window: int = Field(..., title="Context Window")
-    max_output_tokens: int | None = Field(None, title="Max Output Tokens")
-    capabilities: list[str] | None = Field(None, title="Capabilities")
 
 
 class ModelEntry(BaseModel):
@@ -185,36 +184,34 @@ class ModelIn(BaseModel):
 
 
 class ModelOut(BaseModel):
-    model_id: str = Field(..., title="Model Id")
-
-
-class Org(BaseModel):
-    created_at: AwareDatetime | None = Field(None, title="Created At")
-    updated_at: AwareDatetime | None = Field(None, title="Updated At")
-    deleted_at: AwareDatetime | None = Field(None, title="Deleted At")
     id: str = Field(..., title="Id")
-    name: str = Field(..., title="Name")
+    provider_id: str = Field(..., title="Provider Id")
+    upstream_model: str = Field(..., title="Upstream Model")
+    input_price_per_mtok: float = Field(..., title="Input Price Per Mtok")
+    output_price_per_mtok: float = Field(..., title="Output Price Per Mtok")
+    context_window: int = Field(..., title="Context Window")
+    max_output_tokens: int | None = Field(..., title="Max Output Tokens")
+    capabilities: list[str] = Field(..., title="Capabilities")
+    created_at: AwareDatetime = Field(..., title="Created At")
+    updated_at: AwareDatetime = Field(..., title="Updated At")
+    deleted_at: AwareDatetime | None = Field(..., title="Deleted At")
 
 
-class OrgIn(BaseModel):
+class OrgCreate(BaseModel):
     id: str = Field(..., description="Org id, e.g. org-dev", title="Id")
     name: str | None = Field("", description="Display name, defaults to the id", title="Name")
 
 
 class OrgOut(BaseModel):
     id: str = Field(..., title="Id")
+    name: str = Field(..., title="Name")
+    created_at: AwareDatetime = Field(..., title="Created At")
+    updated_at: AwareDatetime = Field(..., title="Updated At")
+    deleted_at: AwareDatetime | None = Field(..., title="Deleted At")
 
 
-class Provider(BaseModel):
-    created_at: AwareDatetime | None = Field(None, title="Created At")
-    updated_at: AwareDatetime | None = Field(None, title="Updated At")
-    deleted_at: AwareDatetime | None = Field(None, title="Deleted At")
-    id: str = Field(..., title="Id")
-    kind: str = Field(..., title="Kind")
-    base_url: str = Field(..., title="Base Url")
-    credential_ref: str = Field(..., title="Credential Ref")
-    cache_read_multiplier: float | None = Field(1.0, title="Cache Read Multiplier")
-    cache_write_multiplier: float | None = Field(1.0, title="Cache Write Multiplier")
+class OrgPatch(BaseModel):
+    name: str | None = Field(None, title="Name")
 
 
 class ProviderEntry(BaseModel):
@@ -256,7 +253,15 @@ class ProviderIn(BaseModel):
 
 
 class ProviderOut(BaseModel):
-    provider_id: str = Field(..., title="Provider Id")
+    id: str = Field(..., title="Id")
+    kind: str = Field(..., title="Kind")
+    base_url: str = Field(..., title="Base Url")
+    credential_ref: str = Field(..., title="Credential Ref")
+    cache_read_multiplier: float = Field(..., title="Cache Read Multiplier")
+    cache_write_multiplier: float = Field(..., title="Cache Write Multiplier")
+    created_at: AwareDatetime = Field(..., title="Created At")
+    updated_at: AwareDatetime = Field(..., title="Updated At")
+    deleted_at: AwareDatetime | None = Field(..., title="Deleted At")
 
 
 class ServiceAccountIn(BaseModel):
@@ -273,8 +278,8 @@ class ServiceAccountIn(BaseModel):
 
 
 class TaxonomyOut(BaseModel):
-    providers: list[Provider] = Field(..., title="Providers")
-    models: list[Model] = Field(..., title="Models")
+    providers: list[ProviderOut] = Field(..., title="Providers")
+    models: list[ModelOut] = Field(..., title="Models")
 
 
 class TokenRevokedOut(BaseModel):
@@ -282,7 +287,7 @@ class TokenRevokedOut(BaseModel):
     status: Literal["revoked"] = Field(..., title="Status")
 
 
-class UsageEvent(BaseModel):
+class UsageEventOut(BaseModel):
     event_id: UUID = Field(..., title="Event Id")
     request_id: str = Field(..., title="Request Id")
     occurred_at: AwareDatetime = Field(..., title="Occurred At")
@@ -294,10 +299,10 @@ class UsageEvent(BaseModel):
     input_tokens: int = Field(..., title="Input Tokens")
     output_tokens: int = Field(..., title="Output Tokens")
     cost_usd: float = Field(..., title="Cost Usd")
-    cost_input_usd: float | None = Field(0.0, title="Cost Input Usd")
-    cost_output_usd: float | None = Field(0.0, title="Cost Output Usd")
-    cache_read_tokens: int | None = Field(0, title="Cache Read Tokens")
-    cache_write_tokens: int | None = Field(0, title="Cache Write Tokens")
+    cost_input_usd: float = Field(..., title="Cost Input Usd")
+    cost_output_usd: float = Field(..., title="Cost Output Usd")
+    cache_read_tokens: int = Field(..., title="Cache Read Tokens")
+    cache_write_tokens: int = Field(..., title="Cache Write Tokens")
     latency_ms: int = Field(..., title="Latency Ms")
     status: str = Field(..., title="Status")
     stream: bool = Field(..., title="Stream")
@@ -332,7 +337,7 @@ class UsageEventV1(BaseModel):
     stream: bool = Field(..., title="Stream")
 
 
-class UserIn(BaseModel):
+class UserCreate(BaseModel):
     email: str = Field(..., description="Unique email identifying the user", title="Email")
     name: str | None = Field("", description="Display name, defaults to the email", title="Name")
     instance_admin: bool | None = Field(
@@ -349,6 +354,8 @@ class UserOut(BaseModel):
     instance_admin: bool = Field(..., title="Instance Admin")
     service_account: bool = Field(..., title="Service Account")
     created_at: AwareDatetime = Field(..., title="Created At")
+    updated_at: AwareDatetime = Field(..., title="Updated At")
+    deleted_at: AwareDatetime | None = Field(..., title="Deleted At")
     orgs: list[str] = Field(..., title="Orgs")
 
 
@@ -389,8 +396,8 @@ class EnvelopeMembershipOut(BaseModel):
     data: MembershipOut
 
 
-class EnvelopeMgmtTokenOut(BaseModel):
-    data: MgmtTokenOut
+class EnvelopeMintedTokenOut(BaseModel):
+    data: MintedTokenOut
 
 
 class EnvelopeModelOut(BaseModel):
@@ -417,20 +424,16 @@ class EnvelopeUserOut(BaseModel):
     data: UserOut
 
 
-class EnvelopeListInstanceOut(BaseModel):
-    data: list[InstanceOut] = Field(..., title="Data")
+class EnvelopeListMgmtTokenOut(BaseModel):
+    data: list[MgmtTokenOut] = Field(..., title="Data")
 
 
-class EnvelopeListMgmtToken(BaseModel):
-    data: list[MgmtToken] = Field(..., title="Data")
+class EnvelopeListOrgOut(BaseModel):
+    data: list[OrgOut] = Field(..., title="Data")
 
 
-class EnvelopeListOrg(BaseModel):
-    data: list[Org] = Field(..., title="Data")
-
-
-class EnvelopeListUsageEvent(BaseModel):
-    data: list[UsageEvent] = Field(..., title="Data")
+class EnvelopeListUsageEventOut(BaseModel):
+    data: list[UsageEventOut] = Field(..., title="Data")
 
 
 class EnvelopeListUserOut(BaseModel):

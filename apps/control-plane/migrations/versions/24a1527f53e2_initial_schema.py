@@ -15,7 +15,7 @@ import sqlalchemy as sa
 import sqlmodel
 from alembic import op
 
-from control_plane.models.tombstone import touch_trigger_ddl_v1
+from control_plane.models.mixins.tombstone import touch_trigger_ddl_v1
 
 revision = "24a1527f53e2"
 down_revision = None

@@ -10,7 +10,7 @@ from sqlmodel import Field
 
 from control_plane.db import current_actor
 from control_plane.models.base import Record
-from control_plane.models.tombstone import TOMBSTONE_COLUMNS
+from control_plane.models.mixins.tombstone import TOMBSTONE_COLUMNS
 
 _AUDITED: set[type[Record]] = set()
 

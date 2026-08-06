@@ -1,19 +1,19 @@
 from __future__ import annotations
 
-from cli.api_models import KeyIn, ModelIn, OrgIn, ProviderIn
+from cli import api_models
 
 
-class OrgCreate(OrgIn):
-    """Every resource gets a CLI spec subclassing its generated *In model; CLI-side defaults go here."""
+class OrgCreate(api_models.OrgCreate):
+    """Every resource gets a CLI spec subclassing its generated create model; CLI-side defaults go here."""
 
 
-class KeyCreate(KeyIn):
+class KeyCreate(api_models.ApiKeyCreate):
     pass
 
 
-class ProviderCreate(ProviderIn):
+class ProviderCreate(api_models.ProviderIn):
     pass
 
 
-class ModelCreate(ModelIn):
+class ModelCreate(api_models.ModelIn):
     pass

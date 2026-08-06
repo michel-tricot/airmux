@@ -39,6 +39,24 @@ is wrong; fix the registry.
   add the next version, point install_touch_triggers at it, and write a migration swapping the triggers.
 - test_schema.py diffs migrated schema against model metadata; hand-written migrations must keep that diff empty.
 
+## Control plane API surface
+Adding a resource is four steps; test_api_hygiene and test_api_parity name the exact fix when any rule below is broken.
+- One model per file under models/: the table plus its api models. Mixins live in models/mixins and bring their field
+  policy with them.
+- Every table column gets a disposition, declared as ClassVar frozensets on the table: api_hidden never crosses the wire,
+  api_readonly is server-owned and never accepted as input, api_immutable is create-only. Declarations union across the
+  MRO, so mixins contribute theirs; hidden beats readonly beats immutable, and policy can tighten but never loosen.
+- Resource representations subclass the markers in schemas.py and pair to their table by name: <Table>Out with every
+  public column written flat (computed fields also listed in api_extra), <Table>Create with the writable columns, <Table>Patch
+  with the mutable columns as `field: T | None = None`. Discovery is by subclass walk; there is no registry.
+- Once a table has a Create or Patch, its primary key must be api_readonly (server-minted) or api_immutable (caller-chosen).
+- Every endpoint returns Envelope: annotate `-> Envelope[XOut]` and return `Envelope(data=XOut.model_validate(row))`.
+  Rows never serialize directly. Errors stay FastAPI's `{"detail": ...}`.
+- Action shapes (minted secrets, revocations, compile results) are plain BaseModel, exempt from parity by that choice.
+  Deletions return DeletedOut; revocations are not deletions and keep their own result models.
+- Clients unwrap the envelope in one place each: the webapp api() wrapper, cli client payload helpers, the data plane
+  poller. Never unwrap at call sites.
+
 ## Typing and lint
 ty must pass clean. Do not widen to Any to silence an error, and do not add `# ty: ignore` or a blanket
 `# noqa`. Fix the type or ask. Every suppression that does survive must name the exact rule and carry a

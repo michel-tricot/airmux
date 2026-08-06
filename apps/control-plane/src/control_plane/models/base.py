@@ -1,18 +1,12 @@
 from __future__ import annotations
 
 import re
-from datetime import UTC, datetime
-from typing import TYPE_CHECKING, Any, Self
+from typing import TYPE_CHECKING, Any, ClassVar, Self
 
-from sqlalchemy import func
 from sqlalchemy.orm import declared_attr
-from sqlmodel import Field, SQLModel, select
+from sqlmodel import SQLModel, select
 
 from control_plane.db import current_session
-
-
-def utcnow() -> datetime:
-    return datetime.now(tz=UTC)
 
 
 def _snake(name: str) -> str:
@@ -26,11 +20,11 @@ if TYPE_CHECKING:
     type OrderBy = ColumnElement[Any] | Mapped[Any]
 
 
-class NotOwnedError(Exception):
-    pass
-
-
 class Record(SQLModel):
+    api_hidden: ClassVar[frozenset[str]] = frozenset()
+    api_readonly: ClassVar[frozenset[str]] = frozenset()
+    api_immutable: ClassVar[frozenset[str]] = frozenset()
+
     @declared_attr.directive
     def __tablename__(cls) -> str:
         return _snake(cls.__name__)
@@ -65,28 +59,3 @@ class Record(SQLModel):
         session = current_session()
         await session.delete(self)
         await session.flush()
-
-
-class OrgOwned(SQLModel):
-    org_id: str
-
-    @classmethod
-    async def owned_by(cls, org: str, ident: object) -> Self:
-        row = await current_session().get(cls, ident)
-        if row is None or row.org_id != org:
-            raise NotOwnedError
-        return row
-
-
-class Tombstonable(SQLModel):
-    """Lifecycle timestamps for every tombstonable table; models inherit these fields and never declare them.
-
-    The database owns these values through the touch triggers in tombstone.py: updated_at is never
-    null, equals created_at on creation, and refreshes on every update. deleted_at stays null under
-    SQLite, which hard-deletes; trigger-based soft delete arrives with Postgres, see notes/IDEAS.md.
-    The field defaults are placeholders that satisfy NOT NULL until the insert trigger overwrites them.
-    """
-
-    created_at: datetime = Field(default_factory=utcnow, sa_column_kwargs={"server_default": func.now()})
-    updated_at: datetime = Field(default_factory=utcnow, sa_column_kwargs={"server_default": func.now()})
-    deleted_at: datetime | None = None

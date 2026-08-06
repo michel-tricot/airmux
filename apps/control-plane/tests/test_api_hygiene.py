@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+from typing import get_args
+
 from fastapi.routing import APIRoute
 from helpers import setup_control_plane
+from pydantic import BaseModel
 
 from control_plane.schemas import Envelope
 
@@ -26,7 +29,38 @@ def test_every_endpoint_declares_an_envelope(tmp_path):
         for r in routes
         if r.response_model is None or not (isinstance(r.response_model, type) and issubclass(r.response_model, Envelope))
     ]
-    assert offenders == []
+    assert offenders == [], (
+        f"Every endpoint responds {{'data': ...}}: annotate these with `-> Envelope[YourOut]` and return Envelope(data=...): {offenders}"
+    )
+
+
+def _nested_models(tp: object, seen: set[type] | None = None) -> set[type]:
+    """Every BaseModel reachable from a type annotation, through generics and model fields."""
+    found = seen if seen is not None else set()
+    if isinstance(tp, type) and issubclass(tp, BaseModel):
+        if tp not in found:
+            found.add(tp)
+            for f in tp.model_fields.values():
+                _nested_models(f.annotation, found)
+    else:
+        for arg in get_args(tp):
+            _nested_models(arg, found)
+    return found
+
+
+def test_no_table_model_crosses_the_wire(tmp_path):
+    """Rows never serialize directly: every response payload goes through an Out model, so api_hidden fields cannot leak."""
+    cp = setup_control_plane(tmp_path)
+    offenders = sorted(
+        f"{model.__name__} via {route.path}"
+        for route in _api_routes(cp.app)
+        for model in _nested_models(route.response_model)
+        if hasattr(model, "__table__")
+    )
+    assert offenders == [], (
+        f"Table rows must not serialize directly, or api_hidden fields leak. Serve an ApiOut subclass (XOut.model_validate(row)) and register it "
+        f"in test_api_parity.RESOURCES: {offenders}"
+    )
 
 
 def test_response_schemas_are_pure_envelopes(tmp_path):

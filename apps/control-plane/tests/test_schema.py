@@ -10,7 +10,7 @@ from sqlalchemy import create_engine, inspect, text
 from sqlmodel import SQLModel
 
 import control_plane
-from control_plane.models.tombstone import TOMBSTONE_COLUMNS, tombstoned_models, tombstoned_tables
+from control_plane.models.mixins.tombstone import TOMBSTONE_COLUMNS, tombstoned_models, tombstoned_tables
 
 CONTROL_PLANE_DIR = Path(control_plane.__file__).resolve().parents[2]
 

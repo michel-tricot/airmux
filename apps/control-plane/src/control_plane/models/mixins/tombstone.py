@@ -1,10 +1,32 @@
 from __future__ import annotations
 
-from sqlalchemy import DDL, Table, event, inspect
+from datetime import UTC, datetime
+from typing import ClassVar
 
-from control_plane.models.base import Tombstonable
+from sqlalchemy import DDL, Table, event, func, inspect
+from sqlmodel import Field, SQLModel
 
 TOMBSTONE_COLUMNS = frozenset({"created_at", "updated_at", "deleted_at"})
+
+
+def utcnow() -> datetime:
+    return datetime.now(tz=UTC)
+
+
+class Tombstonable(SQLModel):
+    """Lifecycle timestamps for every tombstonable table; models inherit these fields and never declare them.
+
+    The database owns these values through the touch triggers below: updated_at is never
+    null, equals created_at on creation, and refreshes on every update. deleted_at stays null under
+    SQLite, which hard-deletes; trigger-based soft delete arrives with Postgres, see notes/IDEAS.md.
+    The field defaults are placeholders that satisfy NOT NULL until the insert trigger overwrites them.
+    """
+
+    created_at: datetime = Field(default_factory=utcnow, sa_column_kwargs={"server_default": func.now()})
+    updated_at: datetime = Field(default_factory=utcnow, sa_column_kwargs={"server_default": func.now()})
+    deleted_at: datetime | None = None
+
+    api_readonly: ClassVar[frozenset[str]] = TOMBSTONE_COLUMNS
 
 
 def touch_trigger_ddl_v1(table: str) -> tuple[str, str]:

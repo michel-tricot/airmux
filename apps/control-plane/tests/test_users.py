@@ -71,7 +71,9 @@ def test_membership_lifecycle_and_listing(tmp_path):
         assert [u["id"] for u in listed] == [uid]
         assert listed[0]["orgs"] == ["o1", "o2"]
 
-        assert c.delete(f"/v1/instance/users/{uid}/orgs/o2", headers=root).status_code == 200
+        deleted = c.delete(f"/v1/instance/users/{uid}/orgs/o2", headers=root).json()["data"]
+        assert deleted["id"] == f"{uid}/o2"
+        assert deleted["deleted_at"] is not None
         assert c.delete(f"/v1/instance/users/{uid}/orgs/o2", headers=root).status_code == 404
         assert c.get("/v1/instance/users", headers=root).json()["data"][0]["orgs"] == ["o1"]
 

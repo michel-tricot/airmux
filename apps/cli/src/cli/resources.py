@@ -9,7 +9,7 @@ import typer
 from dotenv import find_dotenv, load_dotenv
 from rich.live import Live
 
-from cli.client import instance_client, instance_get, org_client, org_get, post_expecting
+from cli.client import instance_client, instance_get, org_client, org_get, payload, payload_rows, post_expecting
 from cli.common import (
     bundles_app,
     console,
@@ -139,7 +139,7 @@ def users_create(
     """Create a user; add org memberships with `airllm users join`. Needs the instance token."""
     body = {"email": email, "name": name, "instance_admin": admin}
     with instance_client(control_plane_url) as c:
-        resp = post_expecting(c, "/v1/instance/users", body, ok=(200,)).json()["data"]
+        resp = payload(post_expecting(c, "/v1/instance/users", body, ok=(200,)))
     role = "instance admin" if resp["instance_admin"] else "member"
     console.print(f"user [bold]{resp['id']}[/bold] created for {resp['email']} as {role}")
 
@@ -154,7 +154,7 @@ def service_accounts_create(
     if not name:
         name = typer.prompt("name")
     with instance_client(control_plane_url) as c:
-        resp = post_expecting(c, "/v1/instance/service-accounts", {"name": name, "instance_admin": admin}, ok=(200,)).json()["data"]
+        resp = payload(post_expecting(c, "/v1/instance/service-accounts", {"name": name, "instance_admin": admin}, ok=(200,)))
     console.print(f"service account [bold]{resp['id']}[/bold] created as {resp['email']}")
     console.print(
         f"[dim]add it to an org with `airllm users join {resp['id']} <org>`, "
@@ -211,7 +211,7 @@ def tokens_mint(
     else:
         path, body = (f"/v1/instance/orgs/{org}/tokens" if org else "/v1/instance/tokens"), {}
     with instance_client(control_plane_url) as c:
-        resp = post_expecting(c, path, body, ok=(200,)).json()["data"]
+        resp = payload(post_expecting(c, path, body, ok=(200,)))
     scope = resp["org_id"] or "instance"
     owner = f" for user [bold]{resp['user_id']}[/bold]" if resp.get("user_id") else ""
     console.print(f"management token [bold]{resp['token_id']}[/bold] minted for [bold]{scope}[/bold]{owner}, token (shown once):")
@@ -231,7 +231,7 @@ def _taxonomy(control_plane_url: str) -> dict:
     with org_client(control_plane_url) as c:
         resp = c.get("/v1/taxonomy")
         resp.raise_for_status()
-        return resp.json()["data"]
+        return payload(resp)
 
 
 @providers_app.command("list")
@@ -256,7 +256,7 @@ def bundles_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat.t
 def bundles_compile(control_plane_url: str = "") -> None:
     """Recompile and sign the org's bundle."""
     with org_client(control_plane_url) as c:
-        compiled = post_expecting(c, "/v1/org/bundles/compile", {}, ok=(200,)).json()["data"]
+        compiled = payload(post_expecting(c, "/v1/org/bundles/compile", {}, ok=(200,)))
     console.print(f"bundle [bold]{compiled['bundle_id']}[/bold] v{compiled['version']} compiled")
 
 
@@ -282,7 +282,7 @@ def instances_list(
     with org_client(control_plane_url) as c:
         resp = c.get("/v1/org/instances", params={"include_offline": all_})
         resp.raise_for_status()
-        print_rows("instances", resp.json()["data"], INSTANCE_COLS, fmt)
+        print_rows("instances", payload_rows(resp), INSTANCE_COLS, fmt)
 
 
 @events_app.command("list")
@@ -310,7 +310,7 @@ def events_tail(interval: float = 2.0, keep: int = 30, control_plane_url: str = 
     with org_client(control_plane_url) as c:
         resp = c.get("/v1/org/events", params={**params, "limit": keep})
         resp.raise_for_status()
-        rows.extend(reversed(resp.json()["data"]))
+        rows.extend(reversed(payload_rows(resp)))
         cursor = rows[-1]["occurred_at"] if rows else "1970-01-01T00:00:00"
         try:
             if fmt is not OutputFormat.table:
@@ -318,7 +318,7 @@ def events_tail(interval: float = 2.0, keep: int = 30, control_plane_url: str = 
                     time.sleep(interval)
                     resp = c.get("/v1/org/events", params={**params, "after": cursor, "limit": 200})
                     resp.raise_for_status()
-                    for event in resp.json()["data"]:
+                    for event in payload_rows(resp):
                         emit(event)
                         cursor = event["occurred_at"]
             with Live(table(), console=console, refresh_per_second=4) as live:
@@ -326,7 +326,7 @@ def events_tail(interval: float = 2.0, keep: int = 30, control_plane_url: str = 
                     time.sleep(interval)
                     resp = c.get("/v1/org/events", params={**params, "after": cursor, "limit": 200})
                     resp.raise_for_status()
-                    batch = resp.json()["data"]
+                    batch = payload_rows(resp)
                     fresh_ids = {event["event_id"] for event in batch}
                     if batch:
                         rows.extend(batch)
@@ -356,7 +356,7 @@ register_create(
     ProviderCreate,
     "/v1/taxonomy/providers",
     "Register an upstream provider for the whole instance. Needs the instance token.",
-    lambda resp: console.print(f"provider [bold]{resp['provider_id']}[/bold] created, add models then `airllm bundles compile`"),
+    lambda resp: console.print(f"provider [bold]{resp['id']}[/bold] created, add models then `airllm bundles compile`"),
     client=instance_client,
 )
 register_create(
@@ -364,6 +364,6 @@ register_create(
     ModelCreate,
     "/v1/taxonomy/models",
     "Add a routable model for the whole instance. Needs the instance token.",
-    lambda resp: console.print(f"model [bold]{resp['model_id']}[/bold] created, run `airllm bundles compile` to serve it"),
+    lambda resp: console.print(f"model [bold]{resp['id']}[/bold] created, run `airllm bundles compile` to serve it"),
     client=instance_client,
 )

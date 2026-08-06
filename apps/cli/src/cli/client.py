@@ -51,18 +51,27 @@ def org_client(control_plane_url: str = "", token: str | None = None) -> httpx.C
     return _bearer_client(token, control_plane_url)
 
 
+def payload(resp: httpx.Response) -> dict:
+    """The data field of an enveloped response; every control plane response is {"data": ...}, unwrapped here and in payload_rows only."""
+    return resp.json()["data"]
+
+
+def payload_rows(resp: httpx.Response) -> list[dict]:
+    return resp.json()["data"]
+
+
 def instance_get(path: str, control_plane_url: str, params: dict | None = None) -> list[dict]:
     with instance_client(control_plane_url) as c:
         resp = c.get(path, params=params or {})
         resp.raise_for_status()
-        return resp.json()["data"]
+        return payload_rows(resp)
 
 
 def org_get(path: str, control_plane_url: str, params: dict | None = None) -> list[dict]:
     with org_client(control_plane_url) as c:
         resp = c.get(path, params=params or {})
         resp.raise_for_status()
-        return resp.json()["data"]
+        return payload_rows(resp)
 
 
 def post_expecting(client: httpx.Client, path: str, body: dict, ok: tuple[int, ...]) -> httpx.Response:
