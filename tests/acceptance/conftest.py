@@ -101,12 +101,12 @@ class Stack:
     # setup ----------------------------------------------------------------
 
     def _init_secrets(self) -> None:
-        """Run `control-plane init` against whatever config the test wrote; deferred to start_cp so config knobs land in bundle v1."""
+        """Run `airllmcp init` against whatever config the test wrote; deferred to start_cp so config knobs land in bundle v1."""
         base = {**os.environ, "GW_CONFIG": str(self.config_path)}
         self._write_taxonomy()
         self._run(
             [
-                _bin("control-plane"),
+                _bin("airllmcp"),
                 "init",
                 "--email",
                 "admin@acceptance.test",
@@ -183,12 +183,12 @@ class Stack:
     def start_cp(self) -> None:
         if not self.env:
             self._init_secrets()
-        self._run([_bin("control-plane"), "migrate", "--config", str(self.config_path)], self.env)
-        self._spawn("cp", [_bin("control-plane"), "serve", "--host", "127.0.0.1", "--port", str(self.cp_port), "--config", str(self.config_path)])
+        self._run([_bin("airllmcp"), "migrate", "--config", str(self.config_path)], self.env)
+        self._spawn("cp", [_bin("airllmcp"), "serve", "--host", "127.0.0.1", "--port", str(self.cp_port), "--config", str(self.config_path)])
         assert _poll(lambda: self._up(f"{self.cp_url}/openapi.json"), READY_TIMEOUT), "control plane did not come up"
 
     def start_dp(self, workers: int = 1) -> None:
-        cmd = [_bin("data-plane"), "--host", "127.0.0.1", "--port", str(self.dp_port), "--config", str(self.config_path), "--workers", str(workers)]
+        cmd = [_bin("airllmdp"), "--host", "127.0.0.1", "--port", str(self.dp_port), "--config", str(self.config_path), "--workers", str(workers)]
         self._spawn("dp", cmd)
         assert _poll(lambda: self._responds(f"{self.dp_url}/readyz"), READY_TIMEOUT), "data plane process did not start"
 

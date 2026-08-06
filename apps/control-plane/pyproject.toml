@@ -16,7 +16,7 @@ dependencies = [
 ]
 
 [project.scripts]
-control-plane = "control_plane.main:app"
+airllmcp = "control_plane.main:app"
 
 [build-system]
 requires = ["hatchling"]

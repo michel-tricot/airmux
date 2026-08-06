@@ -16,7 +16,7 @@ dependencies = [
 ]
 
 [project.scripts]
-data-plane = "data_plane.main:app"
+airllmdp = "data_plane.main:app"
 
 [build-system]
 requires = ["hatchling"]

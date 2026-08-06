@@ -19,14 +19,14 @@ You need [uv](https://docs.astral.sh/uv/) and an OpenAI API key.
 uv sync --all-packages
 
 # 1. Set up everything: keys, config, schema, admin, org, tokens, bundle v1 (applies taxonomy.yml)
-uv run control-plane init --email you@example.com
+uv run airllmcp init --email you@example.com
 echo 'OPENAI_API_KEY=sk-...' >> .env
 
 # 2. Start the control plane (dev mode auto-runs migrations and reloads on change)
-uv run control-plane serve --dev
+uv run airllmcp serve --dev
 
 # 3. Start the data plane; it polls the bundle and goes ready
-uv run data-plane --dev
+uv run airllmdp --dev
 ```
 
 Then make a request through the gateway:
@@ -69,7 +69,7 @@ scripts/claude-gateway.sh claude-sonnet-4-6
 
 `taxonomy.yml` ships with a catalog of OpenAI-compatible hosted providers
 (openai, anthropic, gemini, xai, deepseek, mistral, groq); after editing it, apply
-with `uv run control-plane taxonomy`. A model becomes callable as soon as its
+with `uv run airllmcp taxonomy`. A model becomes callable as soon as its
 provider's key (for example `GROQ_API_KEY`) is in `.env`.
 
 ## Everyday commands
@@ -90,7 +90,7 @@ The admin API is browsable at `http://localhost:8000/docs`; authorize with the
 - `airllm.yml` holds all non-secret config for both planes, grouped by domain.
   Secrets are referenced as `env:VAR` entries and resolved from the environment.
 - `.env` holds the secrets: signing keys, admin and data plane bearers, provider
-  API keys. `control-plane init` maintains it: tokens that are still valid against
+  API keys. `airllmcp init` maintains it: tokens that are still valid against
   the database are kept, stale or orphaned ones are re-minted.
 - Precedence: explicit environment variable, then the config file, then defaults.
 

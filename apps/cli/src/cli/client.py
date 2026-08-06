@@ -37,16 +37,16 @@ def instance_client(control_plane_url: str = "") -> httpx.Client:
     """Instance-scoped client for /instance routes; takes the raw --control-plane-url override and resolves it itself."""
     token = os.environ.get("GW_ADMIN_MGMT_TOKEN")
     if not token:
-        console.print("[red]GW_ADMIN_MGMT_TOKEN is not set, run `control-plane init` first[/red]")
+        console.print("[red]GW_ADMIN_MGMT_TOKEN is not set, run `airllmcp init` first[/red]")
         raise typer.Exit(1)
     return _bearer_client(token, control_plane_url)
 
 
 def org_client(control_plane_url: str = "", token: str | None = None) -> httpx.Client:
-    """Org-scoped client for /org routes; the token comes from `control-plane init` or `airllm tokens mint`."""
+    """Org-scoped client for /org routes; the token comes from `airllmcp init` or `airllm tokens mint`."""
     token = token or os.environ.get("GW_ORG_MGMT_TOKEN")
     if not token:
-        console.print("[red]GW_ORG_MGMT_TOKEN is not set, run `control-plane init` or `airllm tokens mint <org>` first[/red]")
+        console.print("[red]GW_ORG_MGMT_TOKEN is not set, run `airllmcp init` or `airllm tokens mint <org>` first[/red]")
         raise typer.Exit(1)
     return _bearer_client(token, control_plane_url)
 

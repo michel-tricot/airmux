@@ -34,7 +34,7 @@ from control_plane.taxonomy import apply_taxonomy, parse_taxonomy
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
-app = typer.Typer(name="control-plane", no_args_is_help=True)
+app = typer.Typer(name="airllmcp", no_args_is_help=True)
 
 admin_app = typer.Typer(help="Instance admins", no_args_is_help=True)
 app.add_typer(admin_app, name="admin")
@@ -143,8 +143,8 @@ def init(  # noqa: PLR0913, PLR0915, PLR0917 the flags and sequential steps are 
         raise typer.Exit(1) from None
     console.print()
     console.print("ready, start the planes with:")
-    console.print("  [bold]uv run control-plane serve --dev[/bold]")
-    console.print("  [bold]uv run data-plane --dev[/bold]")
+    console.print("  [bold]uv run airllmcp serve --dev[/bold]")
+    console.print("  [bold]uv run airllmdp --dev[/bold]")
     console.print(f"[dim]tokens are in {env_path.resolve()}; add provider keys (OPENAI_API_KEY, ANTHROPIC_API_KEY) there to route models[/dim]")
 
 

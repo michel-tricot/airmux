@@ -1,4 +1,4 @@
-"""The shared airllm.yml template written by `control-plane init`.
+"""The shared airllm.yml template written by `airllmcp init`.
 
 It lives in contract because it is the one file both planes parse: the control_plane section
 through control_plane.config.Settings and the data_plane section through data_plane.config.Config.

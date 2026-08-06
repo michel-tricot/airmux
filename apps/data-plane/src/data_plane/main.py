@@ -5,7 +5,7 @@ import os
 import typer
 import uvicorn
 
-app = typer.Typer(name="data-plane")
+app = typer.Typer(name="airllmdp")
 
 
 @app.command()

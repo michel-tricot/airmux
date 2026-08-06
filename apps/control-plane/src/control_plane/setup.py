@@ -175,9 +175,9 @@ async def ensure_org(settings: Settings, org_id: str, env: Mapping[str, str | No
 
 
 async def ensure_bundle(settings: Settings, org_id: str) -> str:
-    """Compile bundle v1 if the org has none; taxonomy edits recompile through `control-plane taxonomy`."""
+    """Compile bundle v1 if the org has none; taxonomy edits recompile through `airllmcp taxonomy`."""
     latest = await Bundle.first(Bundle.org_id == org_id, order_by=col(Bundle.version).desc())
     if latest is not None:
-        return f"bundle v{latest.version} current, run `control-plane taxonomy` after taxonomy edits"
+        return f"bundle v{latest.version} current, run `airllmcp taxonomy` after taxonomy edits"
     version = await compile_and_store(org_id, uuid4(), datetime.now(tz=UTC), settings.bundle.staleness_bound, settings.bundle.signing_key)
     return f"compiled bundle v{version}"

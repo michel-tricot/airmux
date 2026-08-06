@@ -108,7 +108,7 @@ def write_config(tmp_path, cp: ControlPlane) -> str:
 
 
 def run_init(tmp_path, *extra: str, stdin: str | None = None, taxonomy: str | None = INIT_TAXONOMY):
-    """Invoke `control-plane init` against tmp_path, writing the given taxonomy first (None to write nothing)."""
+    """Invoke `airllmcp init` against tmp_path, writing the given taxonomy first (None to write nothing)."""
     if taxonomy is not None:
         (tmp_path / "taxonomy.yml").write_text(taxonomy, encoding="utf-8")
     args = [

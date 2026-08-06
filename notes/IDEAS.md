@@ -48,7 +48,7 @@ data plane, like the control-plane-down and event-replay scenarios already do.
 
 ## Self-minted instance access from key possession
 
-`control-plane admin create` replaced mint-root-token with a user-bound instance token, but a
+`airllmcp admin create` replaced mint-root-token with a user-bound instance token, but a
 standing root credential still lands in .env. Alternative: any CLI command that needs instance
 scope self-mints a short-lived management token from GW_TOKEN_SIGNING_KEY at invocation time. No
 long-lived root token exists to leak or revoke; holding the signing key is already equivalent to
@@ -59,7 +59,7 @@ prints a single-use code exchanged for a token via the API or webapp login, pair
 
 ## Finish service accounts
 
-Users exist with a service_account flag, memberships, and token binding, and `control-plane init`
+Users exist with a service_account flag, memberships, and token binding, and `airllmcp init`
 creates a data-plane service account to hold GW_DATAPLANE_TOKEN. What remains: nothing yet distinguishes the kinds
 in behavior; when human login lands, service accounts must be excluded from it, and kind-specific
 policies (token TTLs, sync-only permissions narrower than org admin) become possible. If a third
