@@ -6,6 +6,7 @@ from uuid import uuid4
 from pydantic import BaseModel, ConfigDict
 
 from contract import INFERENCE_TOKEN_PREFIX, token_hash
+from control_plane.authz import ALL_SCOPES
 from control_plane.models import ApiKey, MgmtToken, OrgMembership, User
 
 MANAGEMENT_TOKEN_PREFIX = "ab-mgmt-"  # noqa: S105 token prefix, not a secret
@@ -17,7 +18,8 @@ class ManagementClaims(BaseModel):
     Management keys are a control-plane concern only; the data plane never sees or
     verifies them. Claims are built from the key's database row, never parsed from
     the presented secret, and the claimed scope must be backed by the owning user's
-    memberships at request time.
+    memberships at request time. scopes defaults to full authority: sessions and
+    unrestricted keys act as their user, only an explicit mint-time list narrows.
     """
 
     model_config = ConfigDict(frozen=True)
@@ -25,21 +27,23 @@ class ManagementClaims(BaseModel):
     token_id: str
     org_id: str | None = None
     user_id: str
+    scopes: frozenset[str] = ALL_SCOPES
 
 
 def _new_token(prefix: str) -> str:
     return prefix + secrets.token_urlsafe(32)
 
 
-async def mint_mgmt_key(org_id: str | None, user_id: str) -> tuple[str, str]:
+async def mint_mgmt_key(org_id: str | None, user_id: str, scopes: list[str] | None = None) -> tuple[str, str]:
     """Mint a management key and its backing row; returns (token_id, token).
 
     The plaintext exists only in the return value; the row stores its hash.
+    scopes=None mints an unrestricted key acting with the user's full authority.
     Runs inside the caller's transaction.
     """
     token = _new_token(MANAGEMENT_TOKEN_PREFIX)
     token_id = f"mt-{uuid4().hex[:8]}"
-    await MgmtToken(id=token_id, org_id=org_id, user_id=user_id, token_hash=token_hash(token), revoked=False).save()
+    await MgmtToken(id=token_id, org_id=org_id, user_id=user_id, token_hash=token_hash(token), revoked=False, scopes=scopes).save()
     return token_id, token
 
 
@@ -68,4 +72,5 @@ async def verify_management_token(token: str) -> ManagementClaims | None:
         return None
     if not user.instance_admin and (row.org_id is None or await OrgMembership.get((row.user_id, row.org_id)) is None):
         return None
-    return ManagementClaims(token_id=row.id, org_id=row.org_id, user_id=row.user_id)
+    scopes = ALL_SCOPES if row.scopes is None else frozenset(row.scopes)
+    return ManagementClaims(token_id=row.id, org_id=row.org_id, user_id=row.user_id, scopes=scopes)

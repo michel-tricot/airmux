@@ -41,7 +41,7 @@ def test_service_account_is_a_full_principal(tmp_path):
     cp = setup_control_plane(tmp_path)
     root = cp.headers()
     with TestClient(cp.app) as c:
-        c.post("/v1/instance/orgs", json={"id": "o1"}, headers=root)
+        c.post("/v1/orgs", json={"id": "o1"}, headers=root)
         created = c.post("/v1/instance/service-accounts", json={"name": "dp"}, headers=root).json()["data"]
         human = c.post("/v1/instance/users", json={"email": "m@example.com"}, headers=root).json()["data"]
         assert human["service_account"] is False
@@ -61,8 +61,8 @@ def test_membership_lifecycle_and_listing(tmp_path):
     cp = setup_control_plane(tmp_path)
     root = cp.headers()
     with TestClient(cp.app) as c:
-        c.post("/v1/instance/orgs", json={"id": "o1"}, headers=root)
-        c.post("/v1/instance/orgs", json={"id": "o2"}, headers=root)
+        c.post("/v1/orgs", json={"id": "o1"}, headers=root)
+        c.post("/v1/orgs", json={"id": "o2"}, headers=root)
         user = c.post("/v1/instance/users", json={"email": "m@example.com"}, headers=root).json()["data"]
         uid = user["id"]
 
@@ -87,7 +87,7 @@ def test_user_org_token_requires_membership(tmp_path):
     cp = setup_control_plane(tmp_path)
     root = cp.headers()
     with TestClient(cp.app) as c:
-        c.post("/v1/instance/orgs", json={"id": "o1"}, headers=root)
+        c.post("/v1/orgs", json={"id": "o1"}, headers=root)
         uid = c.post("/v1/instance/users", json={"email": "m@example.com"}, headers=root).json()["data"]["id"]
         assert c.post(f"/v1/instance/users/{uid}/tokens", json={"org_id": "o1"}, headers=root).status_code == 403
         c.put(f"/v1/instance/users/{uid}/orgs/o1", headers=root)
@@ -116,7 +116,7 @@ def test_instance_admin_can_take_org_scope_without_membership(tmp_path):
     cp = setup_control_plane(tmp_path)
     root = cp.headers()
     with TestClient(cp.app) as c:
-        c.post("/v1/instance/orgs", json={"id": "o1"}, headers=root)
+        c.post("/v1/orgs", json={"id": "o1"}, headers=root)
         admin = c.post("/v1/instance/users", json={"email": "a@example.com", "instance_admin": True}, headers=root).json()["data"]["id"]
         minted = c.post(f"/v1/instance/users/{admin}/tokens", json={"org_id": "o1"}, headers=root).json()["data"]
         org = {"authorization": f"Bearer {minted['token']}"}
@@ -127,7 +127,7 @@ def test_removing_membership_invalidates_user_tokens(tmp_path):
     cp = setup_control_plane(tmp_path)
     root = cp.headers()
     with TestClient(cp.app) as c:
-        c.post("/v1/instance/orgs", json={"id": "o1"}, headers=root)
+        c.post("/v1/orgs", json={"id": "o1"}, headers=root)
         uid = c.post("/v1/instance/users", json={"email": "m@example.com"}, headers=root).json()["data"]["id"]
         c.put(f"/v1/instance/users/{uid}/orgs/o1", headers=root)
         minted = c.post(f"/v1/instance/users/{uid}/tokens", json={"org_id": "o1"}, headers=root).json()["data"]
@@ -141,7 +141,7 @@ def test_token_listing_shows_the_owner(tmp_path):
     cp = setup_control_plane(tmp_path)
     root = cp.headers()
     with TestClient(cp.app) as c:
-        c.post("/v1/instance/orgs", json={"id": "o1"}, headers=root)
+        c.post("/v1/orgs", json={"id": "o1"}, headers=root)
         uid = c.post("/v1/instance/users", json={"email": "m@example.com"}, headers=root).json()["data"]["id"]
         c.put(f"/v1/instance/users/{uid}/orgs/o1", headers=root)
         minted = c.post(f"/v1/instance/users/{uid}/tokens", json={"org_id": "o1"}, headers=root).json()["data"]

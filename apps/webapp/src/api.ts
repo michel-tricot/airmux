@@ -29,7 +29,7 @@ export class ApiError extends Error {
 
 function authHeaders(path: string): Record<string, string> {
   const headers: Record<string, string> = { 'content-type': 'application/json', 'X-Requested-With': 'fetch' }
-  if (currentOrg && !path.startsWith('/v1/instance/') && !path.startsWith('/v1/auth/')) headers['X-Org-Id'] = currentOrg
+  if (currentOrg && !path.startsWith('/v1/instance/') && !path.startsWith('/v1/auth/') && !path.startsWith('/v1/orgs')) headers['X-Org-Id'] = currentOrg
   return headers
 }
 
@@ -149,14 +149,14 @@ export const signup = (body: { email: string; name: string; password: string }) 
 
 export const logout = () => api<{ id: string }>('/v1/auth/logout', { method: 'POST' })
 
-export const listOrgs = () => api<Org[]>('/v1/instance/orgs')
+export const listOrgs = () => api<Org[]>('/v1/orgs')
 export const listKeys = () => api<ApiKey[]>('/v1/org/keys')
 export const getTaxonomy = () => api<Taxonomy>('/v1/taxonomy')
 export const listBundles = () => api<Bundle[]>('/v1/org/bundles')
 export const listEvents = (limit = 100) => api<UsageEvent[]>(`/v1/org/events?limit=${limit}`)
 export const listInstances = (includeOffline = true) => api<Instance[]>(`/v1/org/instances?include_offline=${includeOffline}`)
 
-export const createOrg = (body: { id: string; name: string }) => api<{ id: string }>('/v1/instance/orgs', { method: 'POST', body: JSON.stringify(body) })
+export const createOrg = (body: { id: string; name: string }) => api<{ id: string }>('/v1/orgs', { method: 'POST', body: JSON.stringify(body) })
 
 export const createKey = () => api<{ key_id: string; token: string }>('/v1/org/keys', { method: 'POST' })
 

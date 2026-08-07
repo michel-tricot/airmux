@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import time
 from collections import deque
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Annotated
 
 import typer
 from dotenv import find_dotenv, load_dotenv
@@ -92,7 +92,7 @@ BUNDLE_COLS = [
 @orgs_app.command("list")
 def orgs_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
     """List orgs; needs the instance token."""
-    print_rows("orgs", instance_get("/v1/instance/orgs", control_plane_url), ORG_COLS, fmt)
+    print_rows("orgs", instance_get("/v1/orgs", control_plane_url), ORG_COLS, fmt)
 
 
 @keys_app.command("list")
@@ -114,6 +114,7 @@ TOKEN_COLS = [
     Col("id", "ID", style="dim", no_wrap=True),
     Col("org_id", "Scope", fmt=lambda v: str(v) if v else "instance"),
     Col("user_id", "Owner", style="dim", fmt=lambda v: str(v) if v else "system"),
+    Col("scopes", "Scopes", style="cyan", max_width=40, fmt=lambda v: ", ".join(map(str, v)) if isinstance(v, list) else "all"),
     Col("revoked", "Status", style="yellow", fmt=lambda v: "revoked" if v else "active"),
     Col("created_at", "Created", no_wrap=True, fmt=fmt_when),
 ]
@@ -203,15 +204,20 @@ def tokens_list(org: str | None = None, control_plane_url: str = "", fmt: Format
 def tokens_mint(
     org: str | None = typer.Argument(None, help="Org to scope the token to; omit for an instance token"),
     user: str = typer.Option(..., "--user", help="User the token is minted for; the scope must be backed by their memberships"),
+    scope: Annotated[
+        list[str] | None, typer.Option("--scope", help="Restrict the token to a scope, repeatable (e.g. keys:read); omit for full authority")
+    ] = None,
     control_plane_url: str = "",
 ) -> None:
     """Mint a management token; the token is shown once and never stored."""
+    body = {"org_id": org, "scopes": scope or None}
     with instance_client(control_plane_url) as c:
-        resp = payload(post_expecting(c, f"/v1/instance/users/{user}/tokens", {"org_id": org}, ok=(200,)))
-    scope = resp["org_id"] or "instance"
+        resp = payload(post_expecting(c, f"/v1/instance/users/{user}/tokens", body, ok=(200,)))
+    scoped_to = resp["org_id"] or "instance"
+    restriction = f" restricted to {', '.join(resp['scopes'])}" if resp.get("scopes") else ""
     console.print(
-        f"management token [bold]{resp['token_id']}[/bold] minted for [bold]{scope}[/bold] "
-        f"for user [bold]{resp['user_id']}[/bold], token (shown once):"
+        f"management token [bold]{resp['token_id']}[/bold] minted for [bold]{scoped_to}[/bold] "
+        f"for user [bold]{resp['user_id']}[/bold]{restriction}, token (shown once):"
     )
     console.print(resp["token"])
 
@@ -343,7 +349,7 @@ def _key_created(resp: dict) -> None:
 register_create(
     orgs_app,
     OrgCreate,
-    "/v1/instance/orgs",
+    "/v1/orgs",
     "Create an org; keys and bundles hang off it. Needs the instance token.",
     lambda resp: console.print(f"org [bold]{resp['id']}[/bold] created, mint its admin token with `airllm tokens mint {resp['id']}`"),
     client=instance_client,

@@ -17,7 +17,7 @@ def _client(cp) -> TestClient:
 
 
 def _connection(c, cp, org="o1", *, jit=True, domains=("corp.test",)) -> dict:
-    c.post("/v1/instance/orgs", json={"id": org}, headers=cp.headers())
+    c.post("/v1/orgs", json={"id": org}, headers=cp.headers())
     body = {"issuer": ISSUER, "client_id": CLIENT_ID, "client_secret": "s3cret", "email_domains": list(domains), "jit": jit}
     resp = c.post("/v1/org/sso-connections", json=body, headers=cp.headers(org))
     assert resp.status_code == 200, resp.text

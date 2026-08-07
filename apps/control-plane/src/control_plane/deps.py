@@ -1,17 +1,18 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Annotated
+from typing import TYPE_CHECKING, Annotated, Protocol, cast
 
-from fastapi import Cookie, Depends, Header, HTTPException, Request
+from fastapi import Cookie, Depends, Header, HTTPException, Request, params
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
+from control_plane.authz import Scope, allowed
 from control_plane.db import current_actor, transaction
 from control_plane.models import Org, OrgMembership, User
 from control_plane.sessions import SESSION_COOKIE, verify_session
 from control_plane.tokens import ManagementClaims, verify_management_token
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterator
+    from collections.abc import AsyncIterator, Awaitable
 
     from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -88,6 +89,52 @@ async def org_scope(claims: MgmtDep) -> str:
 
 InstanceDep = Annotated[ManagementClaims, Depends(instance_scope)]
 OrgDep = Annotated[str, Depends(org_scope)]
+
+
+class ScopeCheck(Protocol):
+    """The checker require() builds: a dependency callable tagged with the scope it enforces,
+    so the hygiene test can introspect required_scope on every route and prove coverage."""
+
+    required_scope: Scope
+
+    def __call__(self, claims: ManagementClaims) -> Awaitable[None]: ...
+
+
+def require(scope: Scope) -> params.Depends:
+    async def check_scope(claims: MgmtDep) -> None:
+        if not allowed(claims, scope):
+            raise HTTPException(status_code=403, detail=f"credential lacks the {scope.value} scope")
+
+    checker = cast("ScopeCheck", check_scope)
+    checker.required_scope = scope
+    return Depends(checker)
+
+
+class AccessTag(Protocol):
+    """The marker public() and user_scoped() build: a no-op dependency tagging the route's access
+    level, so the hygiene test can prove every route declares its authorization exactly once."""
+
+    access: str
+
+    def __call__(self) -> Awaitable[None]: ...
+
+
+def _access_marker(kind: str) -> params.Depends:
+    async def access_marker() -> None: ...
+
+    tagged = cast("AccessTag", access_marker)
+    tagged.access = kind
+    return Depends(tagged)
+
+
+def public() -> params.Depends:
+    """Deliberately unauthenticated: reachable before any credential exists."""
+    return _access_marker("public")
+
+
+def user_scoped() -> params.Depends:
+    """Authenticated user through either door; no org or scope semantics apply."""
+    return _access_marker("user")
 
 
 async def get_session(request: Request) -> AsyncIterator[AsyncSession]:

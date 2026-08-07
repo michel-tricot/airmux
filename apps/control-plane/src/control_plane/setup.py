@@ -11,6 +11,7 @@ from pydantic import BaseModel
 from sqlmodel import col
 
 from contract import INFERENCE_TOKEN_PREFIX, private_key_from_b64, private_key_to_b64, public_key_to_b64, token_hash
+from control_plane.authz import Scope
 from control_plane.compiler import compile_and_store
 from control_plane.db import current_actor
 from control_plane.models import ApiKey, Bundle, Org, OrgMembership, User
@@ -145,9 +146,9 @@ async def ensure_org(org_id: str, env: Mapping[str, str | None], *, skip_key: bo
     """Idempotent org step for init: org, data-plane service account, and whichever org-scoped tokens the env file is missing.
 
     GW_ORG_MGMT_TOKEN binds to the earliest instance admin when one exists (the service account
-    otherwise), GW_DATAPLANE_TOKEN to the service account, AIRLLM_TOKEN to a fresh API key unless
-    skip_key. Returns the step message and the tokens to write to the env file; the caller writes
-    them after the transaction commits.
+    otherwise), GW_DATAPLANE_TOKEN to the service account with the sync scope only, AIRLLM_TOKEN
+    to a fresh API key unless skip_key. Returns the step message and the tokens to write to the
+    env file; the caller writes them after the transaction commits.
     """
     admin = await find_admin()
     created = await Org.get(org_id) is None
@@ -155,10 +156,11 @@ async def ensure_org(org_id: str, env: Mapping[str, str | None], *, skip_key: bo
         await Org(id=org_id, name=org_name_from_email(admin.email) if admin else "My Organization").save()
     sa = await _ensure_service_account(org_id)
     minted: dict[str, str] = {}
-    for env_name, owner in (("GW_ORG_MGMT_TOKEN", admin.id if admin else sa.id), ("GW_DATAPLANE_TOKEN", sa.id)):
+    tokens = (("GW_ORG_MGMT_TOKEN", admin.id if admin else sa.id, None), ("GW_DATAPLANE_TOKEN", sa.id, [Scope.sync.value]))
+    for env_name, owner, scopes in tokens:
         if await _mgmt_token_is_live(env.get(env_name), org_id):
             continue
-        _, minted[env_name] = await mint_mgmt_key(org_id, owner)
+        _, minted[env_name] = await mint_mgmt_key(org_id, owner, scopes=scopes)
     if not skip_key and not await _caller_token_is_live(env.get("AIRLLM_TOKEN"), org_id):
         _, minted["AIRLLM_TOKEN"] = await mint_inference_key(org_id, sa.id)
     state = "created" if created else "exists"

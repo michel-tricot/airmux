@@ -15,7 +15,7 @@ from joserfc.errors import JoseError as JoseRfcError
 from pydantic import BaseModel, Field
 
 from control_plane.db import current_actor
-from control_plane.deps import BearerDep, SessionDep, require_csrf
+from control_plane.deps import BearerDep, SessionDep, public, require_csrf, user_scoped
 from control_plane.models import AuthIdentity, LoginAttempt, OrgMembership, SsoConnection, User
 from control_plane.passwords import DUMMY_HASH, hash_password, needs_rehash, verify_password
 from control_plane.schemas import DeletedOut, Envelope
@@ -149,7 +149,7 @@ async def _sso_connection_for(email: str) -> SsoConnection | None:
     return None
 
 
-@router.post("/discover", tags=["Auth"])
+@router.post("/discover", tags=["Auth"], dependencies=[public()])
 async def discover(body: DiscoverIn, _session: SessionDep) -> Envelope[DiscoverOut]:
     """Home-realm discovery: purely domain-driven, so it never reveals whether a user exists."""
     connection = await _sso_connection_for(body.email)
@@ -158,7 +158,7 @@ async def discover(body: DiscoverIn, _session: SessionDep) -> Envelope[DiscoverO
     return Envelope(data=DiscoverOut(method="password"))
 
 
-@router.post("/login", tags=["Auth"])
+@router.post("/login", tags=["Auth"], dependencies=[public()])
 async def login(body: LoginIn, request: Request, response: Response, _session: SessionDep) -> Envelope[MeOut]:
     user = await _login_user(body.email, body.password)
     current_actor.set(user.id)
@@ -167,7 +167,7 @@ async def login(body: LoginIn, request: Request, response: Response, _session: S
     return Envelope(data=await _me_out(user))
 
 
-@router.post("/signup", tags=["Auth"])
+@router.post("/signup", tags=["Auth"], dependencies=[public()])
 async def signup(body: SignupIn, request: Request, response: Response, _session: SessionDep) -> Envelope[MeOut]:
     """Open self-signup: a fresh account holds no memberships and no admin bit, so it can see nothing until granted."""
     if await _sso_connection_for(body.email) is not None:
@@ -185,7 +185,7 @@ async def signup(body: SignupIn, request: Request, response: Response, _session:
     return Envelope(data=await _me_out(user))
 
 
-@router.post("/logout", tags=["Auth"])
+@router.post("/logout", tags=["Auth"], dependencies=[user_scoped()])
 async def logout(
     response: Response,
     _session: SessionDep,
@@ -205,7 +205,7 @@ async def logout(
     return Envelope(data=DeletedOut(id=row.id, deleted_at=datetime.now(tz=UTC)))
 
 
-@router.get("/me", tags=["Auth"])
+@router.get("/me", tags=["Auth"], dependencies=[user_scoped()])
 async def me(
     _session: SessionDep,
     credentials: BearerDep = None,
@@ -217,7 +217,7 @@ async def me(
     return Envelope(data=await _me_out(user))
 
 
-@router.post("/password", tags=["Auth"])
+@router.post("/password", tags=["Auth"], dependencies=[user_scoped()])
 async def change_password(
     body: PasswordChangeIn,
     _session: SessionDep,
@@ -235,7 +235,7 @@ async def change_password(
     return Envelope(data=PasswordChangedOut(user_id=user.id, status="changed"))
 
 
-@router.post("/sso/start", tags=["Auth"])
+@router.post("/sso/start", tags=["Auth"], dependencies=[public()])
 async def sso_start(body: SsoStartIn, request: Request, _session: SessionDep) -> Envelope[SsoStartOut]:
     connection = await SsoConnection.get(body.connection_id)
     if connection is None:
@@ -318,7 +318,7 @@ async def _resolve_sso_user(connection: SsoConnection, claims: dict) -> User:
     return user
 
 
-@router.get("/sso/callback", tags=["Auth"])
+@router.get("/sso/callback", tags=["Auth"], dependencies=[public()])
 async def sso_callback(state: str, code: str, request: Request, response: Response, _session: SessionDep) -> Envelope[MeOut]:
     attempt = await LoginAttempt.get(state)
     if attempt is None or aware(attempt.expires_at) <= datetime.now(tz=UTC):

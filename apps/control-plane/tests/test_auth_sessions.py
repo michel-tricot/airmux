@@ -34,7 +34,7 @@ def test_password_login_sets_cookie_and_cookie_reaches_org_routes(tmp_path):
     cp = setup_control_plane(tmp_path)
     root = cp.headers()
     with _client(cp) as c:
-        c.post("/v1/instance/orgs", json={"id": "o1"}, headers=root)
+        c.post("/v1/orgs", json={"id": "o1"}, headers=root)
         user = _make_user(c, root, org="o1")
         resp = c.post("/v1/auth/login", json={"email": "m@example.com", "password": PASSWORD})
         assert resp.status_code == 200
@@ -69,10 +69,10 @@ def test_cookie_without_csrf_header_or_with_cross_site_fetch_site_is_403(tmp_pat
     with _client(cp) as c:
         _make_user(c, root, admin=True)
         _login(c)
-        assert c.get("/v1/instance/orgs", headers=CSRF).status_code == 200
-        assert c.get("/v1/instance/orgs").status_code == 403
-        assert c.get("/v1/instance/orgs", headers={**CSRF, "Sec-Fetch-Site": "cross-site"}).status_code == 403
-        assert c.get("/v1/instance/orgs", headers={**CSRF, "Sec-Fetch-Site": "same-origin"}).status_code == 200
+        assert c.get("/v1/orgs", headers=CSRF).status_code == 200
+        assert c.get("/v1/orgs").status_code == 403
+        assert c.get("/v1/orgs", headers={**CSRF, "Sec-Fetch-Site": "cross-site"}).status_code == 403
+        assert c.get("/v1/orgs", headers={**CSRF, "Sec-Fetch-Site": "same-origin"}).status_code == 200
 
 
 def test_bearer_wins_over_cookie_and_a_bad_bearer_never_falls_back(tmp_path):
@@ -81,26 +81,26 @@ def test_bearer_wins_over_cookie_and_a_bad_bearer_never_falls_back(tmp_path):
     with _client(cp) as c:
         _make_user(c, root, admin=True)
         _login(c)
-        assert c.get("/v1/instance/orgs", headers={**CSRF, "authorization": "Bearer ab-mgmt-garbage"}).status_code == 401
-        assert c.get("/v1/instance/orgs", headers=root).status_code == 200
+        assert c.get("/v1/orgs", headers={**CSRF, "authorization": "Bearer ab-mgmt-garbage"}).status_code == 401
+        assert c.get("/v1/orgs", headers=root).status_code == 200
 
 
 def test_x_org_id_requires_membership_and_absence_requires_instance_admin(tmp_path):
     cp = setup_control_plane(tmp_path)
     root = cp.headers()
     with _client(cp) as c:
-        c.post("/v1/instance/orgs", json={"id": "o1"}, headers=root)
-        c.post("/v1/instance/orgs", json={"id": "o2"}, headers=root)
+        c.post("/v1/orgs", json={"id": "o1"}, headers=root)
+        c.post("/v1/orgs", json={"id": "o2"}, headers=root)
         _make_user(c, root, org="o1")
         _login(c)
         assert c.get("/v1/org/keys", headers={**CSRF, "X-Org-Id": "o1"}).status_code == 200
         assert c.get("/v1/org/keys", headers={**CSRF, "X-Org-Id": "o2"}).status_code == 403
         assert c.get("/v1/org/keys", headers={**CSRF, "X-Org-Id": "ghost"}).status_code == 403
-        assert c.get("/v1/instance/orgs", headers=CSRF).status_code == 403
+        assert c.get("/v1/orgs", headers=CSRF).status_code == 403
 
         _make_user(c, root, email="root@example.com", admin=True)
         _login(c, email="root@example.com")
-        assert c.get("/v1/instance/orgs", headers=CSRF).status_code == 200
+        assert c.get("/v1/orgs", headers=CSRF).status_code == 200
         assert c.get("/v1/org/keys", headers={**CSRF, "X-Org-Id": "o1"}).status_code == 200
 
 
@@ -117,7 +117,7 @@ def test_expired_session_is_401_and_half_life_touch_slides_expiry(tmp_path):
             await row.save()
 
         run_in_db(tmp_path, expire)
-        assert c.get("/v1/instance/orgs", headers=CSRF).status_code == 401
+        assert c.get("/v1/orgs", headers=CSRF).status_code == 401
 
     async def sliding():
         slider = await User(id="u-slider", email="slider@example.com", name="slider").save()
@@ -144,12 +144,12 @@ def test_logout_revokes_session_and_clears_cookie(tmp_path):
         _make_user(c, root, admin=True)
         _login(c)
         stolen = c.cookies[SESSION_COOKIE]
-        assert c.get("/v1/instance/orgs", headers=CSRF).status_code == 200
+        assert c.get("/v1/orgs", headers=CSRF).status_code == 200
         out = c.post("/v1/auth/logout", headers=CSRF)
         assert out.status_code == 200
         assert out.json()["data"]["id"].startswith("s-")
         c.cookies.set(SESSION_COOKIE, stolen)
-        assert c.get("/v1/instance/orgs", headers=CSRF).status_code == 401
+        assert c.get("/v1/orgs", headers=CSRF).status_code == 401
 
 
 def test_admin_sets_password_and_self_change_requires_current_password(tmp_path):
@@ -198,7 +198,7 @@ def test_signup_creates_user_identity_and_session(tmp_path):
         assert me["instance_admin"] is False
         assert me["orgs"] == []
         assert c.get("/v1/auth/me", headers=CSRF).json()["data"]["user_id"] == me["user_id"]
-        assert c.get("/v1/instance/orgs", headers=CSRF).status_code == 403
+        assert c.get("/v1/orgs", headers=CSRF).status_code == 403
         c.cookies.clear()
         _login(c, email="New@Example.com")
 

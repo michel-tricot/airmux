@@ -7,8 +7,9 @@ import httpx
 from fastapi import APIRouter, HTTPException, Request
 from sqlmodel import col
 
+from control_plane.authz import Scope
 from control_plane.compiler import UnknownOrgError, compile_and_store
-from control_plane.deps import MgmtDep, OrgDep  # noqa: TC001 FastAPI resolves dependency annotations at runtime
+from control_plane.deps import MgmtDep, OrgDep, require
 from control_plane.models import ApiKey, Bundle, DataPlaneInstance, Org, SsoConnection, UsageEvent
 from control_plane.models.api_key import ApiKeyOut, KeyOut, KeyRevokedOut
 from control_plane.models.bundle import BundleOut, CompileOut
@@ -21,7 +22,7 @@ from control_plane.tokens import mint_inference_key
 router = APIRouter(prefix="/org")
 
 
-@router.post("/keys", tags=["API Keys"])
+@router.post("/keys", tags=["API Keys"], dependencies=[require(Scope.keys_write)])
 async def create_key(org: OrgDep, claims: MgmtDep) -> Envelope[KeyOut]:
     if await Org.get(org) is None:
         raise HTTPException(status_code=404)
@@ -29,14 +30,14 @@ async def create_key(org: OrgDep, claims: MgmtDep) -> Envelope[KeyOut]:
     return Envelope(data=KeyOut(key_id=key_id, token=token))
 
 
-@router.delete("/keys/{key_id}", tags=["API Keys"])
+@router.delete("/keys/{key_id}", tags=["API Keys"], dependencies=[require(Scope.keys_write)])
 async def revoke_key(org: OrgDep, key_id: str) -> Envelope[KeyRevokedOut]:
     key = await ApiKey.owned_by(org, key_id)
     key.disabled = True
     return Envelope(data=KeyRevokedOut(key_id=key_id, status="revoked"))
 
 
-@router.post("/bundles/compile", tags=["Bundles"])
+@router.post("/bundles/compile", tags=["Bundles"], dependencies=[require(Scope.bundles_write)])
 async def compile_endpoint(org: OrgDep, request: Request) -> Envelope[CompileOut]:
     settings = request.app.state.settings
     now = datetime.now(tz=UTC)
@@ -48,18 +49,18 @@ async def compile_endpoint(org: OrgDep, request: Request) -> Envelope[CompileOut
     return Envelope(data=CompileOut(bundle_id=str(bundle_id), version=version))
 
 
-@router.get("/keys", tags=["API Keys"])
+@router.get("/keys", tags=["API Keys"], dependencies=[require(Scope.keys_read)])
 async def list_keys(org: OrgDep) -> Envelope[list[ApiKeyOut]]:
     return Envelope(data=[ApiKeyOut.model_validate(r) for r in await ApiKey.find(ApiKey.org_id == org, order_by=col(ApiKey.id))])
 
 
-@router.get("/bundles", tags=["Bundles"])
+@router.get("/bundles", tags=["Bundles"], dependencies=[require(Scope.bundles_read)])
 async def list_bundles(org: OrgDep) -> Envelope[list[BundleOut]]:
     rows = await Bundle.find(Bundle.org_id == org, order_by=col(Bundle.version))
     return Envelope(data=[BundleOut.model_validate(r) for r in rows])
 
 
-@router.get("/instances", tags=["Instances"])
+@router.get("/instances", tags=["Instances"], dependencies=[require(Scope.instances_read)])
 async def list_instances(org: OrgDep, include_offline: bool = False) -> Envelope[list[DataPlaneInstanceOut]]:
     """Data planes serving this org; offline ones are kept as history and shown only with include_offline."""
     now = datetime.now(tz=UTC)
@@ -68,7 +69,7 @@ async def list_instances(org: OrgDep, include_offline: bool = False) -> Envelope
     return Envelope(data=out)
 
 
-@router.post("/sso-connections", tags=["SSO"])
+@router.post("/sso-connections", tags=["SSO"], dependencies=[require(Scope.sso_write)])
 async def create_sso_connection(org: OrgDep, body: SsoConnectionIn) -> Envelope[SsoConnectionOut]:
     """Register an OIDC issuer for the org; the issuer's discovery document is fetched once here
     and its endpoints cached, so misconfiguration surfaces now and logins never depend on it."""
@@ -96,20 +97,20 @@ async def create_sso_connection(org: OrgDep, body: SsoConnectionIn) -> Envelope[
     return Envelope(data=SsoConnectionOut.model_validate(row))
 
 
-@router.get("/sso-connections", tags=["SSO"])
+@router.get("/sso-connections", tags=["SSO"], dependencies=[require(Scope.sso_read)])
 async def list_sso_connections(org: OrgDep) -> Envelope[list[SsoConnectionOut]]:
     rows = await SsoConnection.find(SsoConnection.org_id == org, order_by=col(SsoConnection.id))
     return Envelope(data=[SsoConnectionOut.model_validate(r) for r in rows])
 
 
-@router.delete("/sso-connections/{connection_id}", tags=["SSO"])
+@router.delete("/sso-connections/{connection_id}", tags=["SSO"], dependencies=[require(Scope.sso_write)])
 async def delete_sso_connection(org: OrgDep, connection_id: str) -> Envelope[DeletedOut[str]]:
     connection = await SsoConnection.owned_by(org, connection_id)
     await connection.delete()
     return Envelope(data=DeletedOut(id=connection_id, deleted_at=datetime.now(tz=UTC)))
 
 
-@router.get("/events", tags=["Events"])
+@router.get("/events", tags=["Events"], dependencies=[require(Scope.events_read)])
 async def list_events(org: OrgDep, after: datetime | None = None, limit: int = 50) -> Envelope[list[UsageEventOut]]:
     if after is not None:
         conditions = (UsageEvent.org_id == org, col(UsageEvent.occurred_at) > after)

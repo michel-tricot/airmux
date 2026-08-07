@@ -86,5 +86,5 @@ def test_serve_does_not_seed(tmp_path):
     cp = setup_control_plane(tmp_path)
     (tmp_path / "taxonomy.yml").write_text(TAXONOMY, encoding="utf-8")
     with TestClient(cp.app) as c:
-        assert c.get("/v1/instance/orgs", headers=cp.headers()).json()["data"] == []
+        assert c.get("/v1/orgs", headers=cp.headers()).json()["data"] == []
     assert run_in_db(tmp_path, Org.find) == []

@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 
 from fastapi import APIRouter, FastAPI
 from fastapi.responses import JSONResponse
+from fastapi.routing import APIRoute
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -14,6 +15,7 @@ from control_plane.models import NotOwnedError
 from control_plane.routes.auth import router as auth_router
 from control_plane.routes.instance import router as instance_router
 from control_plane.routes.org import router as org_router
+from control_plane.routes.orgs import router as orgs_router
 from control_plane.routes.sync import router as sync_router
 from control_plane.routes.taxonomy import router as taxonomy_router
 
@@ -48,10 +50,41 @@ TAG_GROUPS = [
 ]
 
 
+def _api_routes(routes: list[Any]) -> list[APIRoute]:
+    """All served routes, reaching through FastAPI's lazily included routers at any depth."""
+    routers = (getattr(r, "original_router", None) for r in routes)
+    nested = [route for router in routers if router is not None for route in _api_routes(router.routes)]
+    return [*(r for r in routes if isinstance(r, APIRoute)), *nested]
+
+
 class ControlPlaneApp(FastAPI):
     def openapi(self) -> dict[str, Any]:
+        """The security arrays are derived from the require() markers on the routes, so the spec
+        can never drift from enforcement. OpenAPI 3.1 permits role names in security requirements
+        on non-OAuth2 schemes; stamping them here keeps the runtime dependency chain single and
+        cached, which Security(scopes=...) would not (its scopes fork the dependency cache key).
+        super().openapi() caches and returns the same dict on every call, so the stamping must run
+        once: the early return keeps the description append from compounding on each request."""
+        if self.openapi_schema:
+            return self.openapi_schema
         schema = super().openapi()
         schema["x-tagGroups"] = TAG_GROUPS
+        for route in _api_routes(self.routes):
+            scopes = [str(s) for dep in route.dependant.dependencies if (s := getattr(dep.call, "required_scope", None)) is not None]
+            access = [a for dep in route.dependant.dependencies if (a := getattr(dep.call, "access", None)) is not None]
+            for method in route.methods or ():
+                operation = schema["paths"]["/v1" + route.path][method.lower()]
+                if scopes:
+                    operation["security"] = [{"HTTPBearer": scopes}]
+                    line = f"Requires the `{'`, `'.join(scopes)}` scope."
+                elif "public" in access:
+                    operation["security"] = []
+                    line = "No authentication required."
+                elif "user" in access:
+                    line = "Requires an authenticated user; not org-scoped."
+                else:
+                    continue
+                operation["description"] = f"{operation['description']}\n\n{line}" if operation.get("description") else line
         return schema
 
 
@@ -86,7 +119,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.add_exception_handler(NotOwnedError, not_owned_handler)
     app.add_route("/healthz", healthz)
     v1 = APIRouter(prefix="/v1")
-    for router in (auth_router, instance_router, org_router, sync_router, taxonomy_router):
+    for router in (auth_router, instance_router, orgs_router, org_router, sync_router, taxonomy_router):
         v1.include_router(router)
     app.include_router(v1)
     return app

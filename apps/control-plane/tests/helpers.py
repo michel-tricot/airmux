@@ -58,7 +58,7 @@ class ControlPlane:
     app: FastAPI
     db_url: str
 
-    def headers(self, org_id: str | None = None) -> dict[str, str]:
+    def headers(self, org_id: str | None = None, scopes: list[str] | None = None) -> dict[str, str]:
         """Mint a real backed management key for the shared fixture admin; instance_admin backs both scopes."""
 
         async def mint() -> str:
@@ -66,7 +66,7 @@ class ControlPlane:
                 admin = await User.first(User.email == FIXTURE_ADMIN_EMAIL)
                 if admin is None:
                     admin = await User(id=f"u-{uuid4().hex[:8]}", email=FIXTURE_ADMIN_EMAIL, name="Fixture Admin", instance_admin=True).save()
-                _, token = await mint_mgmt_key(org_id, admin.id)
+                _, token = await mint_mgmt_key(org_id, admin.id, scopes=scopes)
                 return token
 
         return {"authorization": f"Bearer {asyncio.run(mint())}"}

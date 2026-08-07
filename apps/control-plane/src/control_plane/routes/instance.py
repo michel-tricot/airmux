@@ -8,10 +8,10 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlmodel import col
 
-from control_plane.deps import instance_scope
+from control_plane.authz import Scope
+from control_plane.deps import instance_scope, require
 from control_plane.models import AuthIdentity, MgmtToken, Org, OrgMembership, User
 from control_plane.models.mgmt_token import MgmtTokenOut, MintedTokenOut, TokenRevokedOut, UserTokenIn
-from control_plane.models.org import OrgCreate, OrgOut, OrgPatch
 from control_plane.models.org_membership import MembershipOut
 from control_plane.models.user import ServiceAccountIn, UserCreate, UserOut
 from control_plane.passwords import hash_password
@@ -21,30 +21,7 @@ from control_plane.tokens import mint_mgmt_key
 router = APIRouter(prefix="/instance", dependencies=[Depends(instance_scope)])
 
 
-@router.post("/orgs", tags=["Orgs"])
-async def create_org(body: OrgCreate) -> Envelope[OrgOut]:
-    if await Org.get(body.id) is not None:
-        raise HTTPException(status_code=409)
-    org = await Org(id=body.id, name=body.name or body.id).save()
-    return Envelope(data=OrgOut.model_validate(org))
-
-
-@router.patch("/orgs/{org_id}", tags=["Orgs"])
-async def update_org(org_id: str, body: OrgPatch) -> Envelope[OrgOut]:
-    org = await Org.get(org_id)
-    if org is None:
-        raise HTTPException(status_code=404)
-    for name, value in body.model_dump(exclude_unset=True).items():
-        setattr(org, name, value)
-    return Envelope(data=OrgOut.model_validate(await org.save()))
-
-
-@router.get("/orgs", tags=["Orgs"])
-async def list_orgs() -> Envelope[list[OrgOut]]:
-    return Envelope(data=[OrgOut.model_validate(r) for r in await Org.find(order_by=col(Org.id))])
-
-
-@router.post("/users", tags=["Users"])
+@router.post("/users", tags=["Users"], dependencies=[require(Scope.users_write)])
 async def create_user(body: UserCreate) -> Envelope[UserOut]:
     if await User.first(User.email == body.email) is not None:
         raise HTTPException(status_code=409)
@@ -52,7 +29,7 @@ async def create_user(body: UserCreate) -> Envelope[UserOut]:
     return Envelope(data=_user_out(await user.save(), []))
 
 
-@router.post("/service-accounts", tags=["Users"])
+@router.post("/service-accounts", tags=["Users"], dependencies=[require(Scope.users_write)])
 async def create_service_account(body: ServiceAccountIn) -> Envelope[UserOut]:
     user = User.new_service_account(body.name, instance_admin=body.instance_admin)
     return Envelope(data=_user_out(await user.save(), []))
@@ -62,7 +39,7 @@ def _user_out(u: User, orgs: list[str]) -> UserOut:
     return UserOut.model_validate({**u.model_dump(), "orgs": orgs})
 
 
-@router.get("/users", tags=["Users"])
+@router.get("/users", tags=["Users"], dependencies=[require(Scope.users_read)])
 async def list_users() -> Envelope[list[UserOut]]:
     users = await User.find(order_by=col(User.email))
     memberships = await OrgMembership.find(order_by=col(OrgMembership.org_id))
@@ -72,7 +49,7 @@ async def list_users() -> Envelope[list[UserOut]]:
     return Envelope(data=[_user_out(u, orgs_by_user.get(u.id, [])) for u in users])
 
 
-@router.put("/users/{user_id}/orgs/{org_id}", tags=["Users"])
+@router.put("/users/{user_id}/orgs/{org_id}", tags=["Users"], dependencies=[require(Scope.users_write)])
 async def add_membership(user_id: str, org_id: str) -> Envelope[MembershipOut]:
     if await User.get(user_id) is None or await Org.get(org_id) is None:
         raise HTTPException(status_code=404)
@@ -81,7 +58,7 @@ async def add_membership(user_id: str, org_id: str) -> Envelope[MembershipOut]:
     return Envelope(data=MembershipOut(user_id=user_id, org_id=org_id, status="member"))
 
 
-@router.delete("/users/{user_id}/orgs/{org_id}", tags=["Users"])
+@router.delete("/users/{user_id}/orgs/{org_id}", tags=["Users"], dependencies=[require(Scope.users_write)])
 async def remove_membership(user_id: str, org_id: str) -> Envelope[DeletedOut[str]]:
     membership = await OrgMembership.get((user_id, org_id))
     if membership is None:
@@ -99,7 +76,7 @@ class PasswordSetOut(BaseModel):
     status: Literal["set"]
 
 
-@router.put("/users/{user_id}/password", tags=["Users"])
+@router.put("/users/{user_id}/password", tags=["Users"], dependencies=[require(Scope.users_write)])
 async def set_password(user_id: str, body: PasswordSetIn) -> Envelope[PasswordSetOut]:
     """Admin set or reset; the bootstrap path for the first password, since there is no email delivery."""
     user = await User.get(user_id)
@@ -115,7 +92,7 @@ async def set_password(user_id: str, body: PasswordSetIn) -> Envelope[PasswordSe
     return Envelope(data=PasswordSetOut(user_id=user.id, status="set"))
 
 
-@router.post("/users/{user_id}/tokens", tags=["Management Tokens"])
+@router.post("/users/{user_id}/tokens", tags=["Management Tokens"], dependencies=[require(Scope.tokens_write)])
 async def mint_user_token(user_id: str, body: UserTokenIn | None = None) -> Envelope[MintedTokenOut]:
     user = await User.get(user_id)
     if user is None:
@@ -129,17 +106,18 @@ async def mint_user_token(user_id: str, body: UserTokenIn | None = None) -> Enve
             raise HTTPException(status_code=404)
         if not user.instance_admin and await OrgMembership.get((user_id, org_id)) is None:
             raise HTTPException(status_code=403)
-    token_id, token = await mint_mgmt_key(org_id, user_id)
-    return Envelope(data=MintedTokenOut(token_id=token_id, org_id=org_id, user_id=user_id, token=token))
+    scopes = [s.value for s in body.scopes] if body and body.scopes is not None else None
+    token_id, token = await mint_mgmt_key(org_id, user_id, scopes=scopes)
+    return Envelope(data=MintedTokenOut(token_id=token_id, org_id=org_id, user_id=user_id, scopes=scopes, token=token))
 
 
-@router.get("/tokens", tags=["Management Tokens"])
+@router.get("/tokens", tags=["Management Tokens"], dependencies=[require(Scope.tokens_read)])
 async def list_tokens(org_id: str | None = None) -> Envelope[list[MgmtTokenOut]]:
     conditions = (MgmtToken.org_id == org_id,) if org_id else ()
     return Envelope(data=[MgmtTokenOut.model_validate(r) for r in await MgmtToken.find(*conditions, order_by=col(MgmtToken.id))])
 
 
-@router.delete("/tokens/{token_id}", tags=["Management Tokens"])
+@router.delete("/tokens/{token_id}", tags=["Management Tokens"], dependencies=[require(Scope.tokens_write)])
 async def revoke_token(token_id: str) -> Envelope[TokenRevokedOut]:
     row = await MgmtToken.get(token_id)
     if row is None:

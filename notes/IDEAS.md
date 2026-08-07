@@ -151,19 +151,69 @@ What remains:
 - Hosted deployments could delegate the session lifecycle to WorkOS AuthKit sealed sessions
   behind the same cookie branch; self-hosted keeps the session row.
 
+## Three-ring OIDC testing
+
+Testing plan (2026-08-06) for the SSO implementation. Because SAML and brokers are config-only
+(any issuer is one SsoConnection row), there is exactly one OIDC relying party to test, ever.
+Three rings, each answering a different question; only the outermost needs Docker.
+
+- Ring 1, below the identity seam, no network: everything downstream of a verified identity
+  (AuthIdentity resolve-or-create, JIT provisioning, membership, session mint, service-account
+  exclusion, invite email-match when invites land) is tested with a canned verified identity and
+  ordinary route tests. The combinatorics (new user x existing identity x subject collision x
+  pending invite) all live here, fast and pure.
+- Ring 2, the workhorse: a ~150-line FastAPI fake IdP as a pytest fixture serving discovery,
+  /authorize (302s straight back with a code, no login form), /token, and /jwks, signing real
+  JWTs with a per-run key, on an ephemeral localhost port via uvicorn in a thread (authlib does
+  real HTTP for discovery and token exchange, so a real socket, not ASGI mounting). The whole
+  code flow drives with httpx following redirects; no browser. The point of the fake over a
+  container is failure injection as a constructor argument: wrong nonce, unknown signing key,
+  issuer or audience mismatch, expired or skewed tokens, missing or unverified email claim,
+  tampered state, reused code, JWKS rotation mid-session. Cookie attribute assertions (httpOnly,
+  Secure, SameSite=Lax) also live here where the response is a real exchange.
+- Ring 3, conformance acceptance: a pinned Dex container (static YAML: staticClients plus
+  enablePasswordDB, plain-HTML login form POSTable with httpx), health-checked by polling
+  /.well-known/openid-configuration, as a GH Actions service or testcontainers fixture. A handful
+  of scenarios only: login lands a session, second login reuses the AuthIdentity by sub, logout,
+  and Dex restarted with a new signing key forces a JWKS refetch. Parameterize the happy path
+  over [fake_idp, dex] like the adapter suites, so the real IdP validates the fake.
+
+Out of CI: a nightly smoke against a hosted broker (WorkOS AuthKit test env) once one is
+integrated; needs secrets and sometimes JS, never a PR gate. Password login needs none of this,
+it is ring 1 plus an argon2 verify.
+
 ## Per-data-plane credentials with enrollment
 
-Built 2026-08-06 from the opaque-credentials design: management keys and inference keys are now
-opaque secrets (ab-mgmt-, ab-inf- prefixes), SHA-256 hashed at rest, user-bound, verified by
-lookup (CP database for mgmt keys, the bundle hash index for inference keys, absence is
-invalidity). The JWTs and the token signing key pair are gone; the only signature left is the
-bundle's ([sign-the-bytes](#sign-the-bytes-bundle-signing)).
+Context: management and inference keys are opaque secrets (built 2026-08-06), all data planes of
+an org still share GW_DATAPLANE_TOKEN, and the bundle public key is a second shared .env secret.
+Enrollment gives each data plane its own credential and its pinned bundle key through a one-time
+exchange, reusing the existing verify path wholesale: a per-instance credential is just a
+management key owned by a per-instance service account.
 
-What remains from that design: one token per data-plane instance, bound to a DataPlane record, so
-one deployment can be revoked without touching the rest and heartbeats get identity for free
-(today all data planes of an org share GW_DATAPLANE_TOKEN). Bootstrap via a single-use enrollment
-code rather than pasting long-lived secrets into env, pairing with the Jenkins-style variant in
-[self-minted instance access](#self-minted-instance-access-from-key-possession).
+- EnrollmentCode table in the house shape: id, org_id, label, token_hash (sha256), expires_at
+  (~24h), consumed_at. Minted by an org admin (`airllm instances enroll <org> --name rack-7` or
+  console), printed once as `ab-enroll-<token_urlsafe>`. The code is the only secret carried to
+  the new machine.
+- `POST /v1/enroll {code}` (unauthenticated): hash lookup, reject expired or consumed, consume
+  before any other work (the OIDC callback's single-use-first discipline). Then create the
+  instance identity: service account named after the label, membership in the code's org, an
+  org-scoped key via mint_mgmt_key. Respond once with {token, bundle_public_key, org_id}. The
+  exchange trusts the transport exactly once: operator-chosen URL, short-TTL single-use code;
+  after it, the pinned bundle key is the anchor (which is why the key can never come from
+  bundle/latest: a key fetched over the channel it verifies verifies nothing).
+- Data plane config shrinks to control_plane.url + enrollment_code. First boot with no stored
+  credential enrolls and persists {token, bundle_public_key, org} to a 0600 file in cache_dir;
+  later boots read the file and the code is dead. Poller, heartbeat, and events are untouched;
+  they just read bearer and key from the enrollment file.
+- Buys: revoke one deployment (revoke its key or delete its service account; it degrades to
+  serving its cached bundle, the tested control-plane-down behavior) instead of all data planes at
+  once; heartbeats attributable to an enrolled identity rather than a self-reported instance_id;
+  GW_DATAPLANE_TOKEN and GW_BUNDLE_PUBLIC_KEY stop being shared multi-machine secrets; unblocks
+  folding init into serve since init no longer pre-writes dp credentials into a shared .env.
+- Dev loop: single-host init keeps provisioning the local dp directly (it has database access);
+  enrollment earns its keep from the second data plane on, the machine that does not share a disk
+  with the control plane. Pairs with the Jenkins-style variant in
+  [self-minted instance access](#self-minted-instance-access-from-key-possession).
 
 ## Audit redaction for secret-bearing tables
 
@@ -175,44 +225,36 @@ policy, then audit identity and connection changes, which are exactly the securi
 auditor wants. The session sliding-refresh write would also need an actor story, since it happens
 before current_actor is set.
 
-## Capability-based authorization on the management API
+## Roles over credential scopes
 
-Blueprint (2026-08-06) for the missing authorization axis. Access control decomposes into three
-orthogonal questions: which rows (solved by OrgOwned.owned_by, do not touch), which verbs (missing,
-this idea), and via what credential (the `via` field in
-[cookie sessions](#cookie-sessions-for-the-console)). Today the verbs axis is two booleans:
-instance_admin and binary org membership.
+Credential scopes shipped (2026-08-06), inverting the original roles-first blueprint: the verbs
+axis landed as restrictions on the credential (GitHub-PAT style) with roles deferred. What exists
+now: Scope StrEnum and pure allowed() in authz.py, require(Scope...) declared on every org, sync,
+and taxonomy route, a hygiene test in test_authz.py proving coverage (every route carries exactly
+one scope, is instance-scoped, or sits in an explicit PUBLIC list), MgmtToken.scopes as a nullable
+JSON column where NULL means the owning user's full authority, and `airllm tokens mint --scope`.
+Init mints GW_DATAPLANE_TOKEN with the sync scope only, the first kind-specific policy from
+[finish service accounts](#finish-service-accounts). A scope restricts, never expands: sessions
+carry all scopes, an explicit list correctly excludes scopes invented later. 403 for
+right-org-wrong-scope, 404 stays for wrong-org via owned_by.
 
-The design mirrors the API-surface machinery: declarations as frozensets, a pure decision function,
-and a hygiene test that makes omissions loud. One module, control_plane/authz.py:
+What remains when roles arrive, layered on the same machinery with no route changes:
 
-- Permission is a StrEnum (`keys:read`, `keys:write`, `bundles:write`, `members:manage`, ...).
-  Roles are nothing but named frozensets of permissions in a GRANTS mapping (viewer, editor, admin,
-  and a sync role for data-plane service accounts holding only bundle read plus event write, which
-  closes the kind-specific-policy gap in [finish service accounts](#finish-service-accounts)).
-- OrgMembership grows a `role` column. claims_are_backed already fetches the membership row, so
-  resolving role to permissions adds zero queries.
-- A frozen Actor(user_id, org_id, instance_admin, permissions, via) replaces raw claims at the
-  route boundary; effective permissions are role grants intersected with any scopes on the
-  credential itself, which is where the scoped keys of
-  [opaque credentials](#opaque-credentials-everywhere-zero-jwts) plug in without route changes.
-- allowed(actor, permission) is pure, the control-plane sibling of the data plane's evaluate():
-  no I/O, no session, table-testable.
-- Routes declare requirements through a dependency factory:
-  `@org_router.post("/keys", dependencies=[require(Permission.keys_write)])`. Routes never see
-  anything but Actor and a permission name.
-- A hygiene test walks app.routes and asserts every org-router route carries exactly one
-  require(...) dependency, same trick as test_api_hygiene, so an unauthorized new endpoint is a
-  named test failure instead of a silent hole.
-
-Extension paths: new permission is an enum member plus GRANTS rows plus the route line; new role is
-one GRANTS entry; session-only actions pass a via requirement into require(); per-resource sharing
-later grows allowed() a resource parameter or swaps its body for a relationship engine (OpenFGA,
-SpiceDB) while route declarations survive intact. External engines were considered and rejected for
-now: a network hop on the request path for a prototype that needs three roles.
-
-Status codes stay split by axis: wrong org is 404 via owned_by so existence never leaks, right org
-but missing permission is 403 via require.
+- Roles are named frozensets over the same Scope values in a GRANTS mapping (viewer, editor,
+  admin). OrgMembership grows a `role` column; verify_management_token and the cookie door already
+  fetch the membership row, so resolving role to scopes adds zero queries.
+- Effective authority becomes GRANTS[role] intersected with the credential's scopes; today's
+  behavior is the degenerate case where every member holds all scopes.
+- Session-only actions (mint keys, change SSO config) add a `via` requirement to require(), so a
+  stolen key cannot breed keys; claims minted from sessions already carry the s- token_id prefix.
+- Instance routes carry scopes too (orgs, users, tokens read/write, taxonomy:write, added
+  2026-08-06 for restricted instance credentials like a read-only auditor token); instance_admin
+  stays as the row-scope gate underneath. Roles could subsume the boolean as an instance-level
+  role when a second instance role is needed.
+- Per-resource sharing later grows allowed() a resource parameter or swaps its body for a
+  relationship engine (OpenFGA, SpiceDB) while route declarations survive intact. External engines
+  stay rejected until then: a network hop on the request path for a prototype that needs three
+  roles.
 
 ## Off-the-shelf rule engine for policy in evaluate()
 
