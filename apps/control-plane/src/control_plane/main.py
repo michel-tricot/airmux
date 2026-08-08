@@ -23,7 +23,7 @@ app = typer.Typer(name="airllmcp", no_args_is_help=True)
 
 @app.command()
 def keygen(
-    out: str = typer.Option("signing.key", "--out", help="Bundle private key file; the public key is written to <out>.pub"),
+    out: str = typer.Option(".airllm/signing.key", "--out", help="Bundle private key file; the public key is written to <out>.pub"),
     force: bool = typer.Option(False, "--force", help="Rotate an existing key; this invalidates every bundle signed with the old one"),
 ) -> None:
     """Generate the bundle signing key pair, the one secret the instance cannot mint for itself.

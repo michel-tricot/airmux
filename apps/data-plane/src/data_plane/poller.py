@@ -7,7 +7,7 @@ import httpx
 from cryptography.exceptions import InvalidSignature
 from pydantic import ValidationError
 
-from contract import SignedBundle, verify_bundle
+from contract import SignedBundle, public_key_to_b64, verify_bundle
 from data_plane.cache import write_cached_bundle
 from data_plane.tasks import run_periodic
 from data_plane.transport import client
@@ -31,7 +31,18 @@ async def poll_once(config: Config, holder: BundleHolder, public_key: Ed25519Pub
     signed = SignedBundle.model_validate(resp.json()["data"])
     if holder.snapshot is not None and signed.payload.bundle_id == holder.snapshot.bundle.bundle_id:
         return
-    bundle = verify_bundle(signed, public_key)
+    try:
+        bundle = verify_bundle(signed, public_key)
+    except InvalidSignature:
+        logger.error(  # noqa: TRY400 run_periodic already logs the traceback; this adds only the key diagnostic, no stack
+            "bundle signature rejected: verifying with pubkey %s, bundle %s signed by key_id=%s for org=%s; "
+            "if the pubkey matches the control plane's signing key this is a payload/canonicalization mismatch, not a key mismatch",
+            public_key_to_b64(public_key),
+            signed.payload.bundle_id,
+            signed.signing_key_id,
+            signed.payload.org_id,
+        )
+        raise
     if holder.admit(bundle, config.bundle.staleness_policy, source="polled"):
         write_cached_bundle(config.bundle.cache_dir, signed)
 

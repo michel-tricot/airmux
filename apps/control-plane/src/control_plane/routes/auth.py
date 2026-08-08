@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING, Literal
+from typing import Literal
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Request, Response
@@ -14,9 +14,6 @@ from control_plane.models.cli_auth_request import AUTH_REQUEST_TTL
 from control_plane.models.common.wire import DeletedOut, Envelope
 from control_plane.passwords import DUMMY_HASH, hash_password, needs_rehash, verify_password
 from control_plane.sessions import SESSION_ABSOLUTE_TTL, SESSION_COOKIE, mint_session, verify_session
-
-if TYPE_CHECKING:
-    from control_plane.config import Settings
 
 router = APIRouter(prefix="/auth")
 
@@ -50,13 +47,15 @@ class PasswordChangedOut(BaseModel):
     status: Literal["changed"]
 
 
-def _set_session_cookie(response: Response, token: str, settings: Settings) -> None:
+def _set_session_cookie(response: Response, token: str, request: Request) -> None:
+    """Secure follows the request scheme: set over https, omitted over http so localhost and the
+    docker network work without a dev flag. Deploy the control plane behind TLS in production."""
     response.set_cookie(
         SESSION_COOKIE,
         token,
         httponly=True,
         samesite="lax",
-        secure=not settings.dev,
+        secure=request.url.scheme == "https",
         path="/",
         max_age=int(SESSION_ABSOLUTE_TTL.total_seconds()),
     )
@@ -88,7 +87,7 @@ async def _login_user(email: str, password: str) -> User:
 async def login(body: LoginIn, request: Request, response: Response, _session: SessionDep) -> Envelope[MeOut]:
     user = await _login_user(body.email, body.password)
     _, token = await mint_session(user.id)
-    _set_session_cookie(response, token, request.app.state.settings)
+    _set_session_cookie(response, token, request)
     return Envelope(data=await _me_out(user))
 
 
@@ -102,7 +101,7 @@ async def signup(body: SignupIn, request: Request, response: Response, _session:
     await user.save()
     await AuthIdentity.set_password(user, body.password)
     _, token = await mint_session(user.id)
-    _set_session_cookie(response, token, request.app.state.settings)
+    _set_session_cookie(response, token, request)
     return Envelope(data=await _me_out(user))
 
 

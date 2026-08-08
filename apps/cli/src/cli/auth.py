@@ -4,8 +4,12 @@ import os
 import socket
 import time
 import webbrowser
+from typing import TYPE_CHECKING
 
 import typer
+
+if TYPE_CHECKING:
+    import httpx
 
 from cli.client import payload, resolve_control_plane_url
 from cli.common import SETUP, app, console, orgs_app
@@ -21,9 +25,78 @@ MINE_COLS = [
 
 HTTP_GONE = 410
 
+CSRF = {"X-Requested-With": "airllm-cli"}
+
 
 def _client_name() -> str:
     return f"cli@{socket.gethostname()}"
+
+
+def _payload_or_die(resp: httpx.Response, what: str) -> dict:
+    if not resp.is_success:
+        console.print(f"[red]{what} failed: {resp.status_code} {resp.text}[/red]")
+        raise typer.Exit(1)
+    return payload(resp)
+
+
+def _step(done: str) -> None:
+    console.print(f"  [green]✓[/green] {done}")
+
+
+@app.command(rich_help_panel=SETUP)
+def quickstart(
+    control_plane_url: str = "",
+    email: str = typer.Option(..., prompt="Email", help="Email for the first account"),
+    password: str = typer.Option(..., prompt="Password", hide_input=True, confirmation_prompt=True, help="At least 8 characters"),
+    org: str = typer.Option("", help="Org name to create; defaults to the email local part"),
+    gateway_url: str = typer.Option("http://localhost:8080", help="Where the data plane serves, for the printed example"),
+) -> None:
+    """Bootstrap a fresh instance end to end: account, org, tokens, data plane, and a ready-to-use inference key."""
+    import httpx  # noqa: PLC0415 lazy import keeps CLI startup fast
+
+    url = resolve_control_plane_url(control_plane_url)
+    console.rule("[bold]airllm quickstart")
+    with httpx.Client(base_url=url, timeout=10.0, headers=CSRF) as c:
+        if _payload_or_die(c.get("/v1/instance/claim"), "claim check")["claimed"]:
+            console.print(f"[red]this instance is already set up; run [bold]airllm login[/bold] against {url} instead[/red]")
+            raise typer.Exit(1)
+
+        _payload_or_die(c.post("/v1/auth/signup", json={"email": email, "name": email, "password": password}), "sign up")
+        _step(f"created account [bold]{email}[/bold]")
+
+        created = _payload_or_die(c.post("/v1/enroll/org", json={"name": org or email.split("@", maxsplit=1)[0]}), "org creation")
+        org_id, org_name = created["id"], created["name"]
+        _step(f"created org [bold]{org_name}[/bold]")
+
+        started = _payload_or_die(c.post("/v1/auth/cli/start", json={"client_name": _client_name()}), "token request")
+        _payload_or_die(c.post("/v1/auth/cli/approve", json={"user_code": started["user_code"], "org_id": org_id}), "token approval")
+        token = _payload_or_die(c.post("/v1/auth/cli/poll", json={"poll_secret": started["poll_secret"]}), "token delivery")["token"]
+        upsert_profile(org_name, {"control_plane_url": url, "org_id": org_id, "org_name": org_name, "token": token})
+        _step(f"minted management token, saved to {config_path()}")
+
+        quick = c.post("/v1/instance/oss-quickstart", json={"token": token})
+        if quick.is_success:
+            _step("dropped the data plane token; it will come online shortly")
+        else:
+            console.print(f"  [yellow]![/yellow] could not drop the data plane token ({quick.status_code}); set GW_DATAPLANE_TOKEN yourself")
+
+        bearer = {"authorization": f"Bearer {token}"}
+        key = _payload_or_die(c.post("/v1/org/keys", json={"label": "quickstart"}, headers=bearer), "key mint")
+        compiled = _payload_or_die(c.post("/v1/org/bundles/compile", json={}, headers=bearer), "bundle compile")
+        _step(f"minted an inference key and compiled bundle v{compiled['version']}")
+
+    curl = (
+        f"curl {gateway_url}/v1/chat/completions \\\n"
+        f"  -H 'Authorization: Bearer {key['token']}' \\\n"
+        f"  -H 'Content-Type: application/json' \\\n"
+        f"  -d '{{\"model\": \"gpt-4o\", \"messages\": [{{\"role\": \"user\", \"content\": \"hi\"}}]}}'"
+    )
+    console.print(f"\n[green]ready[/green]  org [bold]{org_name}[/bold], token saved to {config_path()}")
+    # Plain print for the copyable parts: no panel borders or rich line-wrapping to break a paste.
+    console.print("\n[dim]inference key (shown once)[/dim]")
+    print(key["token"])
+    console.print("\n[dim]try it once the data plane is online[/dim]")
+    print(curl)
 
 
 @app.command(rich_help_panel=SETUP)

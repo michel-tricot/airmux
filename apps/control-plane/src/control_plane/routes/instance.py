@@ -19,7 +19,9 @@ router = APIRouter(prefix="/instance", dependencies=[Depends(instance_scope)])
 
 claim_router = APIRouter(prefix="/instance")
 
-DATA_PLANE_KEY_PATH = Path("/state/dataplane.key")  # the shared volume the data plane container watches
+DATA_PLANE_KEY_FILE = "dataplane.key"
+# Where the data plane looks for its token: the docker shared volume first, then the local cache dir.
+DATA_PLANE_KEY_DIRS = (Path("/state"), Path(".airllm"))
 
 
 class ClaimOut(BaseModel):
@@ -56,13 +58,17 @@ async def oss_quickstart(body: OssQuickstartIn, _session: SessionDep) -> Envelop
         raise HTTPException(status_code=409, detail="a data plane has already registered; quickstart is closed")
     if not body.token.startswith(MANAGEMENT_KEY_PREFIX):
         raise HTTPException(status_code=422, detail=f"token must be a management key ({MANAGEMENT_KEY_PREFIX}...)")
-    await run_sync(_write_data_plane_key, body.token)
-    return Envelope(data=OssQuickstartOut(path=str(DATA_PLANE_KEY_PATH)))
+    return Envelope(data=OssQuickstartOut(path=await run_sync(_write_data_plane_key, body.token)))
 
 
-def _write_data_plane_key(token: str) -> None:
-    DATA_PLANE_KEY_PATH.parent.mkdir(parents=True, exist_ok=True)
-    DATA_PLANE_KEY_PATH.write_text(token, encoding="utf-8")
+def _write_data_plane_key(token: str) -> str:
+    directory = next((d for d in DATA_PLANE_KEY_DIRS if d.is_dir()), None)
+    if directory is None:
+        joined = " or ".join(str(d) for d in DATA_PLANE_KEY_DIRS)
+        raise HTTPException(status_code=503, detail=f"no data plane state directory to write to ({joined})")
+    destination = directory / DATA_PLANE_KEY_FILE
+    destination.write_text(token, encoding="utf-8")
+    return str(destination)
 
 
 @router.get("/tokens", tags=["Management Tokens"], dependencies=[require(Scope.tokens_read)])

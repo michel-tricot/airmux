@@ -158,6 +158,12 @@ What remains:
   a sweeper or delete-on-logout-only policy if the table ever matters.
 - Hosted deployments could delegate the session lifecycle to WorkOS AuthKit sealed sessions
   behind the same cookie branch; self-hosted keeps the session row.
+- Session-cookie Secure flag follows the request scheme (2026-08-08): set over https, omitted over
+  http so localhost, the docker network, and `airllm quickstart` work without a dev flag. Security
+  risk behind a TLS-terminating proxy that forwards as http: request.url.scheme reads http, so the
+  cookie is minted without Secure and can leak over a plaintext hop. Before any such deployment,
+  add ProxyHeadersMiddleware (or trust X-Forwarded-Proto) so the scheme reflects the external one,
+  and consider forcing Secure on when a configured public base URL is https.
 
 ## SSO login (parked)
 

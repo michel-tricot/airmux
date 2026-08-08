@@ -23,12 +23,15 @@ def clean_env(tmp_path, monkeypatch):
 def test_repo_config_parses_through_the_data_plane_loader(clean_env, monkeypatch):
     repo_config = Path(__file__).resolve().parents[3] / "airllm.yml"
     (clean_env / "airllm.yml").write_text(repo_config.read_text(encoding="utf-8"), encoding="utf-8")
+    # The repo config resolves the public key from a file the operator generates with `airllmcp keygen`.
+    key = Ed25519PrivateKey.generate()
+    (clean_env / ".airllm").mkdir()
+    (clean_env / ".airllm" / "signing.pub").write_text(public_key_to_b64(key.public_key()), encoding="utf-8")
     monkeypatch.setenv("GW_DATAPLANE_TOKEN", "dp-token")
-    monkeypatch.setenv("GW_BUNDLE_PUBLIC_KEY", PUBLIC_KEY_B64)
     config = load_config()
     assert config.control_plane.url == "http://127.0.0.1:8000"
     assert config.control_plane.token == "dp-token"
-    assert public_key_to_b64(config.bundle.public_key) == PUBLIC_KEY_B64
+    assert public_key_to_b64(config.bundle.public_key) == public_key_to_b64(key.public_key())
 
 
 def test_malformed_public_key_fails_at_load(clean_env):
