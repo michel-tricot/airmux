@@ -10,8 +10,8 @@ def test_profile_round_trip_and_permissions(tmp_path, monkeypatch):
     assert load_config() == {}
     assert active_profile() is None
 
-    upsert_profile("acme", {"control_plane_url": "http://cp:8000", "org_id": "o1", "org_name": "acme", "token": "ab-mgmt-x"})
-    upsert_profile("beta", {"control_plane_url": "http://cp:8000", "org_id": "o2", "org_name": "beta", "token": "ab-mgmt-y"})
+    upsert_profile("acme", {"control_plane_url": "http://cp:8000", "org_id": "o1", "org_name": "acme", "token": "sk-mgmt-x"})
+    upsert_profile("beta", {"control_plane_url": "http://cp:8000", "org_id": "o2", "org_name": "beta", "token": "sk-mgmt-y"})
 
     latest = active_profile()
     assert latest is not None
@@ -20,7 +20,7 @@ def test_profile_round_trip_and_permissions(tmp_path, monkeypatch):
     profile = active_profile()
     assert profile is not None
     assert profile["name"] == "acme"
-    assert profile["token"] == "ab-mgmt-x"
+    assert profile["token"] == "sk-mgmt-x"
 
     mode = stat.S_IMODE(config_path().stat().st_mode)
     assert mode == 0o600

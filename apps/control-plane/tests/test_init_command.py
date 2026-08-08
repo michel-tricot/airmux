@@ -108,8 +108,8 @@ def test_init_custom_org(tmp_path):
 def test_init_never_prints_tokens(tmp_path):
     result = run_init(tmp_path)
     assert result.exit_code == 0, result.output
-    assert "ab-mgmt-" not in result.output
-    assert "ab-inf-" not in result.output
+    assert "sk-mgmt-" not in result.output
+    assert "sk-inf-" not in result.output
 
 
 def test_migrate_reports_what_it_did(tmp_path):

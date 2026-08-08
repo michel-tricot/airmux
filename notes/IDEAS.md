@@ -131,7 +131,7 @@ non-Python data plane or third-party contract consumers appear.
 
 ## Webapp login switch and session policy
 
-Human login is password only (2026-08-06, argon2 on AuthIdentity) with cookie sessions (ab-sess-
+Human login is password only (2026-08-06, argon2 on AuthIdentity) with cookie sessions (sk-sess-
 opaque token, sha256 at rest, 12h sliding / 14d absolute) as a second door into the management API
 through management_claims: bearer wins, cookie branch does CSRF (static X-Requested-With plus
 Sec-Fetch-Site) and org scoping via X-Org-Id backed by memberships. SSO shipped alongside it and
@@ -229,7 +229,7 @@ management key owned by a per-instance service account.
 
 - EnrollmentCode table in the house shape: id, org_id, label, token_hash (sha256), expires_at
   (~24h), consumed_at. Minted by an org admin (`airllm instances enroll <org> --name rack-7` or
-  console), printed once as `ab-enroll-<token_urlsafe>`. The code is the only secret carried to
+  console), printed once as `sk-enroll-<token_urlsafe>`. The code is the only secret carried to
   the new machine.
 - `POST /v1/enroll {code}` (unauthenticated): hash lookup, reject expired or consumed, consume
   before any other work (the OIDC callback's single-use-first discipline). Then create the

@@ -9,7 +9,7 @@ from contract import INFERENCE_TOKEN_PREFIX, token_hash
 from control_plane.authz import ALL_SCOPES
 from control_plane.models import InferenceKey, ManagementKey, OrgMembership, User
 
-MANAGEMENT_KEY_PREFIX = "ab-mgmt-"
+MANAGEMENT_KEY_PREFIX = "sk-mgmt-"
 
 
 class ManagementClaims(BaseModel):

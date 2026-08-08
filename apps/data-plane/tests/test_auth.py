@@ -36,7 +36,7 @@ def test_tampered_token_rejected():
 
 def test_management_prefixed_token_rejected():
     _, entry = make_key("k1")
-    assert authenticate("ab-mgmt-anything", index_keys(make_bundle([entry]))) is None
+    assert authenticate("sk-mgmt-anything", index_keys(make_bundle([entry]))) is None
 
 
 def test_garbage_and_empty_rejected():

@@ -12,7 +12,7 @@ from control_plane.models.common import Identified, Tombstonable
 from control_plane.models.common.base import Record
 from control_plane.models.common.column_types import UTCDateTime
 
-POLL_SECRET_PREFIX = "ab-cli-"  # noqa: S105 token prefix, not a secret
+POLL_SECRET_PREFIX = "sk-cli-"  # noqa: S105 token prefix, not a secret
 USER_CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"
 AUTH_REQUEST_TTL = timedelta(minutes=10)
 

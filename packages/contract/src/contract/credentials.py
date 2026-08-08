@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import hashlib
 
-INFERENCE_TOKEN_PREFIX = "ab-inf-"  # noqa: S105 token prefix, not a secret
+INFERENCE_TOKEN_PREFIX = "sk-inf-"  # noqa: S105 token prefix, not a secret
 
 
 def token_hash(token: str) -> str:

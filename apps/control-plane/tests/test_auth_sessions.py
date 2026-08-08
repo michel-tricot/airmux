@@ -96,7 +96,7 @@ def test_bearer_wins_over_cookie_and_a_bad_bearer_never_falls_back(tmp_path):
     with _client(cp) as c:
         _make_user(c, root, admin=True, tmp_path=tmp_path)
         _login(c)
-        assert c.get("/v1/orgs", headers={**CSRF, "authorization": "Bearer ab-mgmt-garbage"}).status_code == 401
+        assert c.get("/v1/orgs", headers={**CSRF, "authorization": "Bearer sk-mgmt-garbage"}).status_code == 401
         assert c.get("/v1/orgs", headers=root).status_code == 200
 
 
