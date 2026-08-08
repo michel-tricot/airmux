@@ -5,6 +5,7 @@ from contract.config_template import DEFAULT_CONFIG_YML
 from contract.credentials import INFERENCE_TOKEN_PREFIX, token_hash
 from contract.events import HeartbeatV1, UsageEventV1, UsageStatus
 from contract.ids import uuid7
+from contract.refs import UnsupportedRefSchemeError, load_config_section, resolve_ref, try_resolve_ref
 from contract.signing import (
     Ed25519PrivateKeyB64,
     Ed25519PublicKeyB64,
@@ -29,15 +30,19 @@ __all__ = [
     "ModelEntry",
     "ProviderEntry",
     "SignedBundle",
+    "UnsupportedRefSchemeError",
     "UsageEventV1",
     "UsageStatus",
     "canonical_json",
+    "load_config_section",
     "private_key_from_b64",
     "private_key_to_b64",
     "public_key_from_b64",
     "public_key_to_b64",
+    "resolve_ref",
     "sign_bundle",
     "token_hash",
+    "try_resolve_ref",
     "uuid7",
     "verify_bundle",
 ]

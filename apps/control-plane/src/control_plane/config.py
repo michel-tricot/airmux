@@ -2,14 +2,14 @@ from __future__ import annotations
 
 import os
 from datetime import timedelta
-from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING
 
-import yaml
-from dotenv import find_dotenv, load_dotenv
 from pydantic import BaseModel, ConfigDict, Field
 
-from contract import Ed25519PrivateKeyB64
+from contract import Ed25519PrivateKeyB64, load_config_section
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 class DatabaseConfig(BaseModel):
@@ -38,40 +38,13 @@ class Settings(BaseModel):
     dev: bool = False  # set by the --dev flag on the entry point, gate dev-only behavior on this
 
 
-def _file_section(name: str, config_path: str | Path | None = None) -> dict[str, Any]:
-    path = Path(config_path) if config_path else Path(os.environ.get("GW_CONFIG", "airllm.yml"))
-    if not path.exists():
-        return {}
-    doc = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
-    section = doc.get(name)
-    return section if isinstance(section, dict) else {}
-
-
-def _resolve_refs(node: object) -> object:
-    if isinstance(node, dict):
-        return {k: _resolve_refs(v) for k, v in node.items()}
-    if isinstance(node, list):
-        return [_resolve_refs(v) for v in node]
-    if isinstance(node, str):
-        if node.startswith("env:"):
-            return os.environ.get(node.removeprefix("env:"))
-        if node.startswith("file:"):
-            ref = Path(node.removeprefix("file:"))
-            return ref.read_text(encoding="utf-8").strip() if ref.exists() else None
-    return node
-
-
 def database_url() -> str:
     """The database section alone, for contexts (migrate, alembic env) that have no signing key and cannot build full Settings."""
-    load_dotenv(find_dotenv(usecwd=True))
-    raw = _resolve_refs(_file_section("control_plane"))
-    assert isinstance(raw, dict)  # noqa: S101 _resolve_refs preserves the dict shape
-    return DatabaseConfig.model_validate(raw.get("database") or {}).url
+    section = load_config_section("control_plane")
+    return DatabaseConfig.model_validate(section.get("database") or {}).url
 
 
 def load_settings(config_path: str | Path | None = None) -> Settings:
     """Load settings from an explicit config path, falling back to GW_CONFIG for the serve/migrate contexts that pass it via env."""
-    load_dotenv(find_dotenv(usecwd=True))
-    raw = _resolve_refs(_file_section("control_plane", config_path))
-    assert isinstance(raw, dict)  # noqa: S101 _resolve_refs preserves the dict shape
-    return Settings.model_validate({**raw, "dev": os.environ.get("GW_DEV") == "1"})
+    section = load_config_section("control_plane", config_path)
+    return Settings.model_validate({**section, "dev": os.environ.get("GW_DEV") == "1"})

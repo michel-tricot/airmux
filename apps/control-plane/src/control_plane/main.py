@@ -187,8 +187,7 @@ def taxonomy(
     async def run() -> tuple[int, int, list[tuple[str, int]]]:
         async with standalone_transaction(settings.database.url):
             admin = await find_admin()
-            if admin is not None:
-                await set_actor(admin.id)
+            await set_actor(admin.id if admin is not None else "root")
             providers, models = await apply_taxonomy(spec)
             now = datetime.now(tz=UTC)
             versions = [

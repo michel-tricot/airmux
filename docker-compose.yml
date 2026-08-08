@@ -5,6 +5,8 @@ services:
       POSTGRES_USER: airllm
       POSTGRES_PASSWORD: airllm
       POSTGRES_DB: airllm
+    ports:
+      - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql
     healthcheck:
@@ -12,33 +14,20 @@ services:
       interval: 5s
       start_period: 10s
 
-  init:
-    build: .
-    environment:
-      AIRLLM_ADMIN_EMAIL: ${AIRLLM_ADMIN_EMAIL:-}
-    command: >
-      sh -c '[ -n "$$AIRLLM_ADMIN_EMAIL" ] || { echo "set AIRLLM_ADMIN_EMAIL to the instance admin email" >&2; exit 1; };
-      exec airllmcp init --email "$$AIRLLM_ADMIN_EMAIL" --control-plane-url http://control-plane:8000
-      --db-url postgresql+asyncpg://airllm:airllm@postgres:5432/airllm'
-    volumes:
-      - state:/state
-      - ./taxonomy.yml:/state/taxonomy.yml:ro
-    depends_on:
-      postgres:
-        condition: service_healthy
-
   control-plane:
     build: .
-    command: airllmcp serve --host 0.0.0.0 --port 8000
+    command: sh -c 'airllmcp migrate && airllmcp taxonomy && airllmcp serve --host 0.0.0.0 --port 8000'
+    environment:
+      GW_BUNDLE_SIGNING_KEY: ${GW_BUNDLE_SIGNING_KEY:?set GW_BUNDLE_SIGNING_KEY in .env, base64 Ed25519 private key}
     volumes:
       - state:/state
+      - ./docker/airllm.yml:/state/airllm.yml:ro
+      - ./taxonomy.yml:/state/taxonomy.yml:ro
     ports:
       - "8000:8000"
     depends_on:
       postgres:
         condition: service_healthy
-      init:
-        condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/healthz')"]
       interval: 5s
@@ -47,12 +36,15 @@ services:
   data-plane:
     build: .
     command: airllmdp --host 0.0.0.0 --port 8080
-    volumes:
-      - state:/state
     environment:
+      GW_DATAPLANE_TOKEN: ${GW_DATAPLANE_TOKEN:-}
+      GW_BUNDLE_PUBLIC_KEY: ${GW_BUNDLE_PUBLIC_KEY:-}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+    volumes:
+      - state:/state
+      - ./docker/airllm.yml:/state/airllm.yml:ro
     ports:
       - "8080:8080"
     depends_on:

@@ -7,7 +7,7 @@ from helpers import run_in_db, run_init, setup_control_plane, setup_db, write_co
 from typer.testing import CliRunner
 
 from control_plane.main import app
-from control_plane.models import Bundle, Model, Org, Provider, set_actor
+from control_plane.models import AuditLog, Bundle, Model, Org, Provider, set_actor
 from control_plane.setup import create_admin
 from control_plane.taxonomy import TaxonomySpec, UnknownProviderError, apply_taxonomy
 
@@ -85,6 +85,17 @@ def test_taxonomy_command_compiles_a_bundle_per_org(tmp_path):
     bundles = run_in_db(tmp_path, Bundle.find)
     orgs = run_in_db(tmp_path, Org.find)
     assert {b.org_id for b in bundles} == {o.id for o in orgs}
+
+
+def test_taxonomy_command_seeds_a_virgin_database_as_root(tmp_path):
+    """The docker startup chain seeds before any admin exists; the writes are attributed to root."""
+    cp = setup_control_plane(tmp_path)
+    cfg = write_config(tmp_path, cp)
+    (tmp_path / "taxonomy.yml").write_text(TAXONOMY, encoding="utf-8")
+    result = runner.invoke(app, ["taxonomy", "--config", cfg])
+    assert result.exit_code == 0, result.output
+    assert [p.name for p in run_in_db(tmp_path, Provider.find)] == ["stub"]
+    assert {entry.user_id for entry in run_in_db(tmp_path, AuditLog.find)} == {"root"}
 
 
 def test_taxonomy_command_applies_without_orgs(tmp_path):

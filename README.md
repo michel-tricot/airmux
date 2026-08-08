@@ -35,35 +35,24 @@ uv run airllmdp --dev
 
 ### Docker Compose
 
-The same stack runs under compose: Postgres comes up first, a one-shot `init`
-service bootstraps a shared `state` volume (keys, config, bundle cache), then the
-control plane, data plane and console start against it. `init` is idempotent, so every `up` re-runs
-it and it converges without churning tokens.
+The same stack runs under compose: Postgres comes up first, then the control
+plane starts with `migrate && seed && serve` (schema to head, taxonomy applied,
+attributed to `root`), then the data plane and console. There is no init
+service and no account provisioning at startup; the stack config is the
+checked-in `docker/airllm.yml`.
 
 ```bash
-AIRLLM_ADMIN_EMAIL=you@example.com OPENAI_API_KEY=sk-... docker compose up -d --wait
-
-# caller key for requests through the gateway
-export AIRLLM_TOKEN=$(docker compose exec data-plane sh -c '. /state/.env && echo $AIRLLM_TOKEN')
+# .env at the repo root: compose reads it for interpolation
+# GW_BUNDLE_SIGNING_KEY=<base64 Ed25519 private key>
+# OPENAI_API_KEY=sk-...
+docker compose up -d --build --wait
 ```
 
-The console signs in with email and password: sign up on the login page. A
-fresh account holds nothing until granted, so add it to the org with the admin
-bearer (`GET /v1/users` and `GET /v1/orgs` list the ids):
-
-```bash
-docker compose exec data-plane sh -c '. /state/.env && echo $GW_ADMIN_MGMT_TOKEN'
-curl -X PUT localhost:8000/v1/users/<user-id>/orgs/<org-id> \
-  -H "Authorization: Bearer <admin token>"
-```
-
-Provider keys are passed through the environment (compose also reads them from
-`.env` at the repo root); the minted caller and management tokens live in
-`/state/.env` on the volume, read through `docker compose exec` as above. The
-gateway listens on `localhost:8080`, the control plane API on `localhost:8000`,
-and the console on `localhost:3000`. With `AIRLLM_TOKEN` exported, the request
-below works without the `source .env` step. `docker compose down -v` resets the
-instance.
+Accounts are self-serve: sign up on the console login page
+(`localhost:3000`), create your organization, and mint an inference key on the
+Keys page; `airllm login` connects the CLI through the browser. The gateway
+listens on `localhost:8080` and the control plane API on `localhost:8000`.
+`docker compose down -v` resets the instance.
 
 ### Making a request
 
@@ -126,7 +115,11 @@ The admin API is browsable at `http://localhost:8000/docs`; authorize with the
 ## Configuration
 
 - `airllm.yml` holds all non-secret config for both planes, grouped by domain.
-  Secrets are referenced as `env:VAR` entries and resolved from the environment.
+  Secrets are referenced as `env:VAR` or `file:PATH` entries and resolved at load.
+  Refs also interpolate inside strings as `${env:VAR}` / `${file:PATH}`, e.g.
+  `url: postgresql+asyncpg://${env:DB_USER}:${env:DB_PASSWORD}@db:5432/airllm`;
+  a string with any unresolvable ref loads as null and fails validation instead
+  of producing a half-filled value.
 - `.env` holds the secrets: the bundle signing key pair, admin and data plane
   bearers, provider API keys. `airllmcp init` maintains it: tokens that are
   still valid against the database are kept, stale or orphaned ones are

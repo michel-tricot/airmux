@@ -421,12 +421,16 @@ source = { editable = "packages/contract" }
 dependencies = [
     { name = "cryptography" },
     { name = "pydantic" },
+    { name = "python-dotenv" },
+    { name = "pyyaml" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "cryptography" },
     { name = "pydantic", specifier = ">=2" },
+    { name = "python-dotenv" },
+    { name = "pyyaml" },
 ]
 
 [[package]]

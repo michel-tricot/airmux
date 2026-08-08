@@ -5,6 +5,8 @@ requires-python = ">=3.13"
 dependencies = [
   "pydantic>=2",
   "cryptography",
+  "pyyaml",
+  "python-dotenv",
 ]
 
 [build-system]

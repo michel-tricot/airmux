@@ -6,10 +6,10 @@ from typing import TYPE_CHECKING, Any
 
 import httpx
 
+from contract import resolve_ref
 from data_plane.adapters.base import ProviderAdapter
 from data_plane.adapters.shape import content_blocks
 from data_plane.canonical import CanonicalChunk, CanonicalError, CanonicalResponse, RawEvent, StreamState, UpstreamRequest, UpstreamStreamError, Usage
-from data_plane.secrets import resolve
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -136,7 +136,7 @@ class AnthropicAdapter(ProviderAdapter):
     kind = "anthropic"
 
     def validate_environment(self, p: ProviderEntry) -> None:
-        resolve(p.credential_ref)
+        resolve_ref(p.credential_ref)
 
     def transform_request(self, req: CanonicalRequest, m: ModelEntry) -> UpstreamRequest:
         system = _system_field([msg for msg in req.messages if msg.get("role") == "system"])
@@ -154,7 +154,7 @@ class AnthropicAdapter(ProviderAdapter):
         if req.stream:
             body["stream"] = True
         headers = {
-            "x-api-key": resolve(self.provider.credential_ref),
+            "x-api-key": resolve_ref(self.provider.credential_ref),
             "anthropic-version": ANTHROPIC_VERSION,
             "content-type": "application/json",
         }

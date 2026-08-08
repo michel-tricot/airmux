@@ -2,15 +2,12 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import Any, Literal
+from typing import Literal
 from uuid import UUID
 
-import yaml
-from dotenv import find_dotenv, load_dotenv
 from pydantic import BaseModel, ConfigDict, Field
 
-from contract import Ed25519PublicKeyB64
-from data_plane.secrets import try_resolve
+from contract import Ed25519PublicKeyB64, load_config_section
 
 
 class ControlPlaneLink(BaseModel):
@@ -47,27 +44,6 @@ class Config(BaseModel):
     dev: bool = False  # set by the --dev flag on the entry point, gate dev-only behavior on this
 
 
-def _file_section(name: str) -> dict[str, Any]:
-    path = Path(os.environ.get("GW_CONFIG", "airllm.yml"))
-    if not path.exists():
-        return {}
-    doc = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
-    section = doc.get(name)
-    return section if isinstance(section, dict) else {}
-
-
-def _resolve_refs(node: object) -> object:
-    if isinstance(node, dict):
-        return {k: _resolve_refs(v) for k, v in node.items()}
-    if isinstance(node, list):
-        return [_resolve_refs(v) for v in node]
-    if isinstance(node, str) and node.startswith(("env:", "file:")):
-        return try_resolve(node)
-    return node
-
-
 def load_config() -> Config:
-    load_dotenv(find_dotenv(usecwd=True))
-    raw = _resolve_refs(_file_section("data_plane"))
-    assert isinstance(raw, dict)  # noqa: S101 _resolve_refs preserves the dict shape
-    return Config.model_validate({**raw, "dev": os.environ.get("GW_DEV") == "1"})
+    section = load_config_section("data_plane")
+    return Config.model_validate({**section, "dev": os.environ.get("GW_DEV") == "1"})

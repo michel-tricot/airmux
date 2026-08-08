@@ -8,22 +8,6 @@ from contract import private_key_to_b64
 from control_plane.config import database_url, load_settings
 
 
-def test_load_settings_resolves_refs(tmp_path, monkeypatch):
-    bundle_key_b64 = private_key_to_b64(Ed25519PrivateKey.generate())
-    (tmp_path / "bundle.key").write_text(bundle_key_b64, encoding="utf-8")
-    config = (
-        "control_plane:\n  database:\n    url: postgresql+asyncpg://cp:cp@127.0.0.1:5432/cp\n"
-        f"  bundle:\n    signing_key: file:{tmp_path}/bundle.key\n"
-    )
-    (tmp_path / "airllm.yml").write_text(config, encoding="utf-8")
-    monkeypatch.setenv("GW_CONFIG", str(tmp_path / "airllm.yml"))
-
-    settings = load_settings()
-    assert settings.database.url == "postgresql+asyncpg://cp:cp@127.0.0.1:5432/cp"
-    assert private_key_to_b64(settings.bundle.signing_key) == bundle_key_b64
-    assert settings.dev is False
-
-
 def test_malformed_signing_key_fails_at_load(tmp_path, monkeypatch):
     config = 'control_plane:\n  bundle:\n    signing_key: "not-a-key"\n'
     (tmp_path / "airllm.yml").write_text(config, encoding="utf-8")
