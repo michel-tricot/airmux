@@ -5,8 +5,8 @@ services:
       POSTGRES_USER: airllm
       POSTGRES_PASSWORD: airllm
       POSTGRES_DB: airllm
-    ports:
-      - "5432:5432"
+#    ports:
+#      - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql
     healthcheck:
@@ -16,9 +16,16 @@ services:
 
   control-plane:
     build: .
-    command: sh -c 'airllmcp migrate && airllmcp taxonomy && airllmcp serve --host 0.0.0.0 --port 8000'
+    # Generate a signing key into the shared volume on first boot if none was supplied, then reuse it.
+    command: >
+      sh -c '
+        if [ -z "$$GW_BUNDLE_SIGNING_KEY" ]; then
+          [ -f /state/signing.key ] || airllmcp keygen --out /state/signing.key;
+          export GW_BUNDLE_SIGNING_KEY=$$(cat /state/signing.key); 
+        fi;
+      airllmcp migrate && airllmcp taxonomy && airllmcp serve --host 0.0.0.0 --port 8000'
     environment:
-      GW_BUNDLE_SIGNING_KEY: ${GW_BUNDLE_SIGNING_KEY:?set GW_BUNDLE_SIGNING_KEY in .env, base64 Ed25519 private key}
+      GW_BUNDLE_SIGNING_KEY: ${GW_BUNDLE_SIGNING_KEY:-}
     volumes:
       - state:/state
       - ./docker/airllm.yml:/state/airllm.yml:ro
@@ -35,7 +42,18 @@ services:
 
   data-plane:
     build: .
-    command: airllmdp --host 0.0.0.0 --port 8080
+    # Read the public key the control plane generated into the shared volume, and use GW_DATAPLANE_TOKEN
+    # if set, else wait for the token oss-quickstart drops on the shared volume.
+    command: >
+      sh -c '
+      if [ -z "$$GW_BUNDLE_PUBLIC_KEY" ] && [ -f /state/signing.pub ]; then 
+        export GW_BUNDLE_PUBLIC_KEY=$$(cat /state/signing.pub); 
+      fi;
+      if [ -z "$$GW_DATAPLANE_TOKEN" ]; then
+        until [ -f /state/dataplane.key ]; do echo "waiting for /state/dataplane.key (run oss-quickstart)"; sleep 2; done;
+        export GW_DATAPLANE_TOKEN=$$(cat /state/dataplane.key); 
+      fi;
+      exec airllmdp --host 0.0.0.0 --port 8080'
     environment:
       GW_DATAPLANE_TOKEN: ${GW_DATAPLANE_TOKEN:-}
       GW_BUNDLE_PUBLIC_KEY: ${GW_BUNDLE_PUBLIC_KEY:-}

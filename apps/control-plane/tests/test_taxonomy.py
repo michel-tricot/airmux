@@ -3,12 +3,11 @@ from __future__ import annotations
 import pytest
 import yaml
 from fastapi.testclient import TestClient
-from helpers import run_in_db, run_init, setup_control_plane, setup_db, write_config
+from helpers import run_in_db, setup_control_plane, setup_db, write_config
 from typer.testing import CliRunner
 
 from control_plane.main import app
 from control_plane.models import AuditLog, Bundle, Model, Org, Provider, set_actor
-from control_plane.setup import create_admin
 from control_plane.taxonomy import TaxonomySpec, UnknownProviderError, apply_taxonomy
 
 runner = CliRunner()
@@ -57,14 +56,26 @@ def test_apply_taxonomy_rejects_a_model_with_an_unknown_provider(tmp_path):
     assert run_in_db(tmp_path, Model.find) == []
 
 
+def _seed_orgs(tmp_path, *names: str) -> None:
+    async def seed() -> None:
+        await set_actor("root")
+        for name in names:
+            await Org(name=name).save()
+
+    run_in_db(tmp_path, seed)
+
+
 def test_taxonomy_command_applies_and_compiles(tmp_path):
-    init = run_init(tmp_path, taxonomy=TAXONOMY)
-    assert init.exit_code == 0, init.output
+    cp = setup_control_plane(tmp_path)
+    cfg = write_config(tmp_path, cp)
+    _seed_orgs(tmp_path, "org-dev")
     tax_path = tmp_path / "taxonomy.yml"
+    tax_path.write_text(TAXONOMY, encoding="utf-8")
+    assert runner.invoke(app, ["taxonomy", "--config", cfg]).exit_code == 0
     doc = yaml.safe_load(tax_path.read_text(encoding="utf-8"))
     doc["models"].append({"model_id": "echo-2", "provider_id": "stub"})
     tax_path.write_text(yaml.safe_dump(doc), encoding="utf-8")
-    result = runner.invoke(app, ["taxonomy", "--config", str(tmp_path / "airllm.yml")])
+    result = runner.invoke(app, ["taxonomy", "--config", cfg])
     assert result.exit_code == 0, result.output
     models = run_in_db(tmp_path, Model.find)
     assert "echo-2" in {m.name for m in models}
@@ -72,15 +83,11 @@ def test_taxonomy_command_applies_and_compiles(tmp_path):
 
 
 def test_taxonomy_command_compiles_a_bundle_per_org(tmp_path):
-    init = run_init(tmp_path, taxonomy=TAXONOMY)
-    assert init.exit_code == 0, init.output
-
-    async def second_org():
-        await set_actor("u-test")
-        return await Org(name="org-two").save()
-
-    run_in_db(tmp_path, second_org)
-    result = runner.invoke(app, ["taxonomy", "--config", str(tmp_path / "airllm.yml")])
+    cp = setup_control_plane(tmp_path)
+    cfg = write_config(tmp_path, cp)
+    _seed_orgs(tmp_path, "org-one", "org-two")
+    (tmp_path / "taxonomy.yml").write_text(TAXONOMY, encoding="utf-8")
+    result = runner.invoke(app, ["taxonomy", "--config", cfg])
     assert result.exit_code == 0, result.output
     bundles = run_in_db(tmp_path, Bundle.find)
     orgs = run_in_db(tmp_path, Org.find)
@@ -101,7 +108,6 @@ def test_taxonomy_command_seeds_a_virgin_database_as_root(tmp_path):
 def test_taxonomy_command_applies_without_orgs(tmp_path):
     cp = setup_control_plane(tmp_path)
     cfg = write_config(tmp_path, cp)
-    run_in_db(tmp_path, lambda: create_admin("admin@example.com"))
     (tmp_path / "taxonomy.yml").write_text(TAXONOMY, encoding="utf-8")
     result = runner.invoke(app, ["taxonomy", "--config", cfg])
     assert result.exit_code == 0, result.output

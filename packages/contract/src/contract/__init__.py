@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from contract.bundle import BundleV1, Catalog, KeyEntry, ModelEntry, ProviderEntry, SignedBundle
-from contract.config_template import DEFAULT_CONFIG_YML
 from contract.credentials import INFERENCE_TOKEN_PREFIX, token_hash
 from contract.events import HeartbeatV1, UsageEventV1, UsageStatus
 from contract.ids import uuid7
@@ -19,7 +18,6 @@ from contract.signing import (
 )
 
 __all__ = [
-    "DEFAULT_CONFIG_YML",
     "INFERENCE_TOKEN_PREFIX",
     "BundleV1",
     "Catalog",

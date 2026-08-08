@@ -1,13 +1,14 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from pydantic import ValidationError
 
-from contract import DEFAULT_CONFIG_YML, public_key_to_b64, uuid7
+from contract import public_key_to_b64
 from data_plane.config import load_config
 
-TEMPLATE_ORG = uuid7()
 PUBLIC_KEY_B64 = public_key_to_b64(Ed25519PrivateKey.generate().public_key())
 
 
@@ -19,22 +20,15 @@ def clean_env(tmp_path, monkeypatch):
     return tmp_path
 
 
-def test_shared_config_template_parses_through_the_data_plane_loader(clean_env, monkeypatch):
-    rendered = DEFAULT_CONFIG_YML.format(
-        db_url="postgresql+asyncpg://airllm:airllm@127.0.0.1:5432/airllm",
-        control_plane_url="http://127.0.0.1:8000",
-        org=str(TEMPLATE_ORG),
-        cache_dir=".airllm",
-    )
-    (clean_env / "airllm.yml").write_text(rendered, encoding="utf-8")
+def test_repo_config_parses_through_the_data_plane_loader(clean_env, monkeypatch):
+    repo_config = Path(__file__).resolve().parents[3] / "airllm.yml"
+    (clean_env / "airllm.yml").write_text(repo_config.read_text(encoding="utf-8"), encoding="utf-8")
     monkeypatch.setenv("GW_DATAPLANE_TOKEN", "dp-token")
     monkeypatch.setenv("GW_BUNDLE_PUBLIC_KEY", PUBLIC_KEY_B64)
     config = load_config()
     assert config.control_plane.url == "http://127.0.0.1:8000"
     assert config.control_plane.token == "dp-token"
-    assert config.bundle.org == TEMPLATE_ORG
     assert public_key_to_b64(config.bundle.public_key) == PUBLIC_KEY_B64
-    assert str(config.bundle.cache_dir) == ".airllm"
 
 
 def test_malformed_public_key_fails_at_load(clean_env):

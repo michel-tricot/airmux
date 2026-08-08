@@ -1,69 +1,47 @@
 from __future__ import annotations
 
 import asyncio
-import contextlib
 import os
-import re
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 import typer
 import uvicorn
-from dotenv import dotenv_values, load_dotenv, set_key
-from rich.console import Console
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from sqlalchemy.engine import make_url
 
-from contract import DEFAULT_CONFIG_YML, uuid7
+from contract import private_key_to_b64, public_key_to_b64, uuid7
 from control_plane.compiler import compile_and_store
 from control_plane.config import database_url, load_settings
-from control_plane.db import standalone_engine, standalone_transaction, transaction
+from control_plane.db import standalone_transaction
 from control_plane.migrate import current_revision, head_revision, run_migrations
 from control_plane.models import Org, set_actor
-from control_plane.setup import (
-    ADMIN_TOKEN_ENV,
-    AdminToken,
-    NotAnAdminError,
-    create_admin,
-    ensure_admin,
-    ensure_bundle,
-    ensure_org,
-    ensure_signing_keys,
-    find_admin,
-)
 from control_plane.taxonomy import apply_taxonomy, parse_taxonomy
-
-if TYPE_CHECKING:
-    from collections.abc import Iterator
-    from uuid import UUID
 
 app = typer.Typer(name="airllmcp", no_args_is_help=True)
 
-admin_app = typer.Typer(help="Instance admins", no_args_is_help=True)
-app.add_typer(admin_app, name="admin")
 
-console = Console()
+@app.command()
+def keygen(
+    out: str = typer.Option("signing.key", "--out", help="Bundle private key file; the public key is written to <out>.pub"),
+    force: bool = typer.Option(False, "--force", help="Rotate an existing key; this invalidates every bundle signed with the old one"),
+) -> None:
+    """Generate the bundle signing key pair, the one secret the instance cannot mint for itself.
 
-
-def _write_org_reference(config_path: Path, org_id: UUID) -> None:
-    """Point the data plane at the org by id; the config template holds the org name until the id exists."""
-    text = config_path.read_text(encoding="utf-8")
-    updated = re.sub(r"(?m)^(\s*org:\s*).*$", rf"\g<1>{org_id}", text, count=1)
-    if updated != text:
-        config_path.write_text(updated, encoding="utf-8")
-
-
-@contextlib.contextmanager
-def _step(label: str) -> Iterator[dict[str, str]]:
-    """One init step: spinner while the body runs, then a checkmark line with the message the body set."""
-    state = {"message": ""}
-    try:
-        with console.status(f"[bold]{label}[/bold]"):
-            yield state
-    except Exception:
-        console.print(f"[red]✗[/red] [dim]{label:>8}[/dim]  {state['message'] or 'failed'}")
-        raise
-    console.print(f"[green]✓[/green] [dim]{label:>8}[/dim]  {state['message']}")
+    Refuses to overwrite an existing key file unless --force is given. Point the config at the files
+    with file: refs: control_plane.bundle.signing_key and data_plane.bundle.public_key.
+    """
+    key_path = Path(out)
+    public_path = key_path.with_suffix(".pub")
+    if key_path.exists() and not force:
+        typer.echo(f"{key_path} exists; pass --force to rotate (invalidates existing bundles)", err=True)
+        raise typer.Exit(1)
+    key_path.parent.mkdir(parents=True, exist_ok=True)
+    key = Ed25519PrivateKey.generate()
+    key_path.write_text(private_key_to_b64(key), encoding="utf-8")
+    key_path.chmod(0o600)
+    public_path.write_text(public_key_to_b64(key.public_key()), encoding="utf-8")
+    typer.echo(f"wrote {key_path} and {public_path}")
 
 
 @app.command()
@@ -90,88 +68,6 @@ def migrate(config: str = "airllm.yml") -> None:
 
 
 @app.command()
-def init(  # noqa: PLR0913, PLR0915, PLR0917 the flags and sequential steps are the command's interface
-    email: str = typer.Option(..., "--email", prompt="Admin email", help="Instance admin to create"),
-    name: str = typer.Option("", help="Admin display name, defaults to the email"),
-    org: str = typer.Option("org-dev", help="Initial org name; its id is written into the data plane config"),
-    config: str = typer.Option("airllm.yml", help="Shared config for both planes, written if missing"),
-    env_file: str = typer.Option(".env", help="Where the signing keys and minted tokens land"),
-    cache_dir: str = typer.Option(".airllm", help="Data plane bundle cache, written into the config"),
-    taxonomy_file: str = typer.Option("taxonomy.yml", "--taxonomy", help="Models taxonomy path, resolved next to the config"),
-    control_plane_url: str = typer.Option("http://127.0.0.1:8000", help="Control plane URL written into the data plane config"),
-    db_url: str = typer.Option("postgresql+asyncpg://airllm:airllm@127.0.0.1:5432/airllm", help="Database URL written into the config"),
-    skip_key: bool = typer.Option(False, help="Do not mint the wildcard caller key (AIRLLM_TOKEN)"),
-) -> None:
-    """Set up a ready-to-serve control plane: keys, config, taxonomy, schema, admin, org, tokens, and bundle v1.
-
-    Idempotent: every step keeps what already exists, so re-running converges and never churns
-    tokens. After init the only missing pieces are the provider API keys.
-    """
-    env_path = Path(env_file)
-    config_path = Path(config)
-    with _step("secrets") as s:
-        generated, reused = ensure_signing_keys(env_path)
-        parts = (f"generated {', '.join(generated)}" if generated else None, f"reused {', '.join(reused)}" if reused else None)
-        s["message"] = f"{', '.join(p for p in parts if p)}, saved with their public keys to [bold]{env_path.resolve()}[/bold]"
-    with _step("config") as s:
-        if config_path.exists():
-            s["message"] = f"kept existing [bold]{config_path}[/bold]"
-        else:
-            content = DEFAULT_CONFIG_YML.format(db_url=db_url, control_plane_url=control_plane_url, org=org, cache_dir=cache_dir)
-            config_path.write_text(content, encoding="utf-8")
-            s["message"] = f"wrote [bold]{config_path}[/bold] for both planes, control plane at {control_plane_url}"
-    os.environ["GW_CONFIG"] = config
-    load_dotenv(env_path, override=True)
-    settings = load_settings(config_path)
-    taxonomy_path = config_path.parent / taxonomy_file
-    with _step("taxonomy") as s:
-        if not taxonomy_path.exists():
-            s["message"] = f"[bold]{taxonomy_path}[/bold] not found; provide a models taxonomy (see taxonomy.yml in the repo)"
-            raise typer.Exit(1)
-        s["message"] = f"using [bold]{taxonomy_path}[/bold]"
-    with _step("database") as s:
-        run_migrations()
-        s["message"] = "migrated to the latest schema"
-
-    async def db_phase() -> None:
-        stored = dotenv_values(env_path)
-        async with standalone_engine(settings.database.url) as factory:
-            with _step("admin") as s:
-                async with transaction(factory):
-                    s["message"], minted = await ensure_admin(email, name, stored)
-                for env_name, token in minted.items():
-                    set_key(env_path, env_name, token)
-            with _step("org") as s:
-                async with transaction(factory):
-                    s["message"], minted, org_id = await ensure_org(org, stored, skip_key=skip_key)
-                for env_name, token in minted.items():
-                    set_key(env_path, env_name, token)
-                _write_org_reference(config_path, org_id)
-            with _step("models") as s:
-                spec = parse_taxonomy(taxonomy_path)
-                async with transaction(factory):
-                    admin = await find_admin()
-                    if admin is not None:
-                        await set_actor(admin.id)
-                    providers, models = await apply_taxonomy(spec)
-                s["message"] = f"applied {providers} providers, {models} models from {taxonomy_path.name}"
-            with _step("bundle") as s:
-                async with transaction(factory):
-                    s["message"] = await ensure_bundle(settings, org_id)
-
-    try:
-        asyncio.run(db_phase())
-    except NotAnAdminError:
-        console.print(f"[red]{email} belongs to an existing user that is not an instance admin[/red]")
-        raise typer.Exit(1) from None
-    console.print()
-    console.print("ready, start the planes with:")
-    console.print("  [bold]uv run airllmcp serve --dev[/bold]")
-    console.print("  [bold]uv run airllmdp --dev[/bold]")
-    console.print(f"[dim]tokens are in {env_path.resolve()}; add provider keys (OPENAI_API_KEY, ANTHROPIC_API_KEY) there to route models[/dim]")
-
-
-@app.command()
 def taxonomy(
     config: str = "airllm.yml",
     file: str = typer.Option("taxonomy.yml", "--file", help="Models taxonomy path, resolved next to the config"),
@@ -186,8 +82,7 @@ def taxonomy(
 
     async def run() -> tuple[int, int, list[tuple[str, int]]]:
         async with standalone_transaction(settings.database.url):
-            admin = await find_admin()
-            await set_actor(admin.id if admin is not None else "root")
+            await set_actor("root")
             providers, models = await apply_taxonomy(spec)
             now = datetime.now(tz=UTC)
             versions = [
@@ -199,30 +94,3 @@ def taxonomy(
     providers, models, versions = asyncio.run(run())
     bundles_part = ", ".join(f"{org_id} v{version}" for org_id, version in versions) or "no orgs yet"
     typer.echo(f"applied {taxonomy_path.name}: {providers} providers, {models} models; compiled bundles: {bundles_part}")
-
-
-@admin_app.command()
-def create(email: str, name: str = "", config: str = "airllm.yml", env_file: str = ".env", if_missing: bool = False) -> None:
-    """Create an instance admin and mint their instance token, saved to .env as GW_ADMIN_MGMT_TOKEN.
-
-    An existing admin gets a fresh token, the break-glass path for lost credentials; --if-missing
-    makes that case a no-op so scripted setups never churn tokens.
-    """
-    settings = load_settings(config)
-
-    async def run() -> AdminToken | None:
-        async with standalone_transaction(settings.database.url):
-            return await create_admin(email, name, if_missing=if_missing)
-
-    try:
-        minted = asyncio.run(run())
-    except NotAnAdminError:
-        typer.echo(f"{email} belongs to an existing user that is not an instance admin, refusing to mint", err=True)
-        raise typer.Exit(1) from None
-    if minted is None:
-        typer.echo(f"instance admin {email} already exists, nothing to do")
-        return
-    set_key(env_file, ADMIN_TOKEN_ENV, minted.token)
-    verb = "created instance admin" if minted.created else "existing instance admin"
-    typer.echo(f"{verb} {minted.user_id} ({email}), minted instance token {minted.token_id}, saved to {env_file} as {ADMIN_TOKEN_ENV}")
-    typer.echo(minted.token)

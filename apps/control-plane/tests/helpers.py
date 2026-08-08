@@ -7,7 +7,6 @@ from uuid import UUID
 
 import yaml
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
-from typer.testing import CliRunner
 
 if TYPE_CHECKING:
     from fastapi import FastAPI
@@ -19,7 +18,6 @@ from control_plane.app import create_app
 from control_plane.config import BundlePolicy, DatabaseConfig, Settings
 from control_plane.db import standalone_transaction
 from control_plane.keys import mint_management_key
-from control_plane.main import app as cli_app
 from control_plane.models import User, set_actor
 
 PROVIDER = {
@@ -31,23 +29,6 @@ PROVIDER = {
 MODEL = {"model_id": "gpt-test", "provider_id": "openai", "upstream_model": "gpt-real"}
 
 EMAIL = "michel@example.com"
-
-INIT_TAXONOMY = """
-providers:
-  - provider_id: openai
-    base_url: https://api.openai.com/v1
-    credential_ref: env:OPENAI_API_KEY
-  - provider_id: anthropic
-    kind: anthropic
-    base_url: https://api.anthropic.com/v1
-    credential_ref: env:ANTHROPIC_API_KEY
-models:
-  - model_id: gpt-4o
-    provider_id: openai
-  - model_id: claude-sonnet-4-6
-    provider_id: anthropic
-"""
-
 
 FIXTURE_ADMIN_EMAIL = "fixture-admin@example.com"
 
@@ -143,27 +124,3 @@ def write_config(tmp_path, cp: ControlPlane) -> str:
     cfg = tmp_path / "airllm.yml"
     cfg.write_text(yaml.safe_dump(doc), encoding="utf-8")
     return str(cfg)
-
-
-def run_init(tmp_path, *extra: str, stdin: str | None = None, taxonomy: str | None = INIT_TAXONOMY):
-    """Invoke `airllmcp init` against tmp_path, writing the given taxonomy first (None to write nothing).
-
-    The database starts empty, never from the template: init runs the migration chain itself,
-    so every init test also proves the migrations against Postgres.
-    """
-    if taxonomy is not None:
-        (tmp_path / "taxonomy.yml").write_text(taxonomy, encoding="utf-8")
-    args = [
-        "init",
-        *(["--email", EMAIL] if stdin is None else []),
-        "--config",
-        str(tmp_path / "airllm.yml"),
-        "--env-file",
-        str(tmp_path / ".env"),
-        "--cache-dir",
-        str(tmp_path / ".airllm"),
-        "--db-url",
-        ensure_database(db_name_for(tmp_path)),
-        *extra,
-    ]
-    return CliRunner().invoke(cli_app, args, input=stdin)
