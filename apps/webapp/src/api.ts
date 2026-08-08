@@ -27,9 +27,11 @@ export class ApiError extends Error {
   }
 }
 
+const instanceScopedPrefixes = ['/v1/instance/', '/v1/auth/', '/v1/orgs', '/v1/users', '/v1/service-accounts']
+
 function authHeaders(path: string): Record<string, string> {
   const headers: Record<string, string> = { 'content-type': 'application/json', 'X-Requested-With': 'fetch' }
-  if (currentOrg && !path.startsWith('/v1/instance/') && !path.startsWith('/v1/auth/') && !path.startsWith('/v1/orgs')) headers['X-Org-Id'] = currentOrg
+  if (currentOrg && !instanceScopedPrefixes.some((p) => path.startsWith(p))) headers['X-Org-Id'] = currentOrg
   return headers
 }
 
@@ -49,6 +51,7 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
 export interface Org {
   id: string
   name: string
+  personal_for: string | null
   created_at: string
 }
 
@@ -57,6 +60,7 @@ export interface ApiKey {
   org_id: string
   user_id: string
   revoked: boolean
+  label: string
   created_at: string
 }
 
@@ -158,8 +162,28 @@ export const listInstances = (includeOffline = true) => api<Instance[]>(`/v1/org
 
 export const createOrg = (body: { id: string; name: string }) => api<{ id: string }>('/v1/orgs', { method: 'POST', body: JSON.stringify(body) })
 
-export const createKey = () => api<{ id: string; token: string }>('/v1/org/keys', { method: 'POST' })
+export const createKey = (label: string) => api<{ id: string; token: string }>('/v1/org/keys', { method: 'POST', body: JSON.stringify({ label }) })
 
 export const revokeKey = (keyId: string) => api<{ id: string; status: string }>(`/v1/org/keys/${keyId}`, { method: 'DELETE' })
 
 export const compileBundle = () => api<Bundle>('/v1/org/bundles/compile', { method: 'POST', body: JSON.stringify({}) })
+
+export interface Enrollment {
+  orgs: Org[]
+  personal_org_id: string | null
+}
+
+export const getEnrollment = () => api<Enrollment>('/v1/enroll')
+
+export const createPersonalOrg = (body: { name: string }) => api<Org>('/v1/enroll/org', { method: 'POST', body: JSON.stringify(body) })
+
+export interface CliRequest {
+  client_name: string
+  requester: string
+  expires_at: string
+}
+
+export const getCliRequest = (code: string) => api<CliRequest>(`/v1/auth/cli/request?code=${encodeURIComponent(code)}`)
+
+export const approveCli = (body: { user_code: string; org_id: string }) =>
+  api<{ status: string; client_name: string }>('/v1/auth/cli/approve', { method: 'POST', body: JSON.stringify(body) })

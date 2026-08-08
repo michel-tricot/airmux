@@ -23,6 +23,11 @@ is wrong; fix the registry.
 - The session is ambient (ContextVar in control_plane.db). One transaction per request, committed at request end; save() flushes, never commits.
 - Routes take no SessionDep unless they need raw SQL. Raw sessions are only for what the model API cannot express:
   aggregates, dialect-specific atomic upserts. Do not grow Record into a query builder to absorb them.
+- Schemas are fat: raw operations a resource needs are wrapped as named methods on its model running through the
+  ambient session, so routes stay free of SessionDep and the domain operation has one home. Same for compound
+  lookups (Org.joined_by, Org.personal_of, CliAuthRequest.by_user_code): promote them to the model instead of
+  composing find() calls in routes. Prefer constraints over guard code: a uniqueness rule enforced by the schema
+  (org.personal_for) beats a conditional update defending the same invariant.
 - Org-scoped lookups go through owned_by, never a hand-rolled org_id check. NotOwnedError maps to 404 in app.py.
 - Non-request code (lifespan, CLI, background tasks) opens its own transaction(); never let a spawned task inherit a request session.
 - @audited marks tables for audit coverage; the registry is the source the audit trigger DDL is generated from.
@@ -98,4 +103,6 @@ through _print_rows with a Col spec. Do not print resource data any other way.
 
 ## Style
 No comments unless asked. No emojis. No em dashes. No trailing periods in bullets.
+Name variables after the entity they hold, never the storage shape: auth_request, key, membership,
+not row, obj, record. Docstrings and errors speak the domain language too.
 Do not add Claude attribution to commits or PRs.

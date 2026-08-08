@@ -18,6 +18,58 @@ class BundleOut(BaseModel):
     signing_key_id: Annotated[str, Field(title="Signing Key Id")]
 
 
+class ClaimOut(BaseModel):
+    claimed: Annotated[bool, Field(title="Claimed")]
+
+
+class CliAuthApproveIn(BaseModel):
+    user_code: Annotated[str, Field(title="User Code")]
+    org_id: Annotated[UUID, Field(title="Org Id")]
+
+
+class CliAuthApprovedOut(BaseModel):
+    status: Annotated[Literal["approved"], Field(title="Status")]
+    client_name: Annotated[str, Field(title="Client Name")]
+
+
+class CliAuthPollIn(BaseModel):
+    poll_secret: Annotated[str, Field(title="Poll Secret")]
+
+
+class CliAuthPollOut(BaseModel):
+    status: Annotated[Literal["pending", "complete"], Field(title="Status")]
+    interval_seconds: Annotated[int, Field(title="Interval Seconds")]
+    token: Annotated[str | None, Field(title="Token")] = None
+    org_id: Annotated[UUID | None, Field(title="Org Id")] = None
+    org_name: Annotated[str | None, Field(title="Org Name")] = None
+
+
+class CliAuthRequestOut(BaseModel):
+    client_name: Annotated[str, Field(title="Client Name")]
+    requester: Annotated[str, Field(title="Requester")]
+    expires_at: Annotated[AwareDatetime, Field(title="Expires At")]
+
+
+class CliAuthStartIn(BaseModel):
+    client_name: Annotated[
+        str,
+        Field(
+            description="Where the CLI runs, e.g. the hostname; becomes the minted key's label",
+            max_length=80,
+            min_length=1,
+            title="Client Name",
+        ),
+    ]
+
+
+class CliAuthStartOut(BaseModel):
+    user_code: Annotated[str, Field(title="User Code")]
+    verification_url: Annotated[str, Field(title="Verification Url")]
+    poll_secret: Annotated[str, Field(title="Poll Secret")]
+    interval_seconds: Annotated[int, Field(title="Interval Seconds")]
+    expires_in_seconds: Annotated[int, Field(title="Expires In Seconds")]
+
+
 class DataPlaneInstanceOut(BaseModel):
     instance_id: Annotated[UUID, Field(title="Instance Id")]
     org_id: Annotated[UUID | None, Field(title="Org Id")]
@@ -41,6 +93,26 @@ class DeletedOutStr(BaseModel):
 
 class EnvelopeBundleOut(BaseModel):
     data: BundleOut
+
+
+class EnvelopeClaimOut(BaseModel):
+    data: ClaimOut
+
+
+class EnvelopeCliAuthApprovedOut(BaseModel):
+    data: CliAuthApprovedOut
+
+
+class EnvelopeCliAuthPollOut(BaseModel):
+    data: CliAuthPollOut
+
+
+class EnvelopeCliAuthRequestOut(BaseModel):
+    data: CliAuthRequestOut
+
+
+class EnvelopeCliAuthStartOut(BaseModel):
+    data: CliAuthStartOut
 
 
 class EnvelopeDeletedOutUUID(BaseModel):
@@ -79,6 +151,18 @@ class HeartbeatV1(BaseModel):
     bundle_id: Annotated[UUID | None, Field(title="Bundle Id")] = None
 
 
+class InferenceKeyIn(BaseModel):
+    label: Annotated[
+        str,
+        Field(
+            description="What this key is for, e.g. staging or the calling app; shown in listings",
+            max_length=80,
+            min_length=1,
+            title="Label",
+        ),
+    ]
+
+
 class InferenceKeyMintedOut(BaseModel):
     """
     The mint result: the id plus the one-time plaintext token, which is not a column and never returns again.
@@ -93,6 +177,7 @@ class InferenceKeyOut(BaseModel):
     org_id: Annotated[UUID, Field(title="Org Id")]
     user_id: Annotated[UUID, Field(title="User Id")]
     revoked: Annotated[bool, Field(title="Revoked")]
+    label: Annotated[str, Field(title="Label")]
     created_at: Annotated[AwareDatetime, Field(title="Created At")]
     updated_at: Annotated[AwareDatetime, Field(title="Updated At")]
     deleted_at: Annotated[AwareDatetime | None, Field(title="Deleted At")]
@@ -129,6 +214,7 @@ class ManagementKeyMintedOut(BaseModel):
     org_id: Annotated[UUID | None, Field(title="Org Id")]
     user_id: Annotated[UUID, Field(title="User Id")]
     scopes: Annotated[list[str] | None, Field(title="Scopes")]
+    label: Annotated[str, Field(title="Label")]
     token: Annotated[str, Field(title="Token")]
 
 
@@ -138,6 +224,7 @@ class ManagementKeyOut(BaseModel):
     user_id: Annotated[UUID, Field(title="User Id")]
     revoked: Annotated[bool, Field(title="Revoked")]
     scopes: Annotated[list[str] | None, Field(title="Scopes")]
+    label: Annotated[str, Field(title="Label")]
     created_at: Annotated[AwareDatetime, Field(title="Created At")]
     updated_at: Annotated[AwareDatetime, Field(title="Updated At")]
     deleted_at: Annotated[AwareDatetime | None, Field(title="Deleted At")]
@@ -234,6 +321,7 @@ class OrgCreate(BaseModel):
 class OrgOut(BaseModel):
     id: Annotated[UUID, Field(title="Id")]
     name: Annotated[str, Field(title="Name")]
+    personal_for: Annotated[UUID | None, Field(title="Personal For")]
     created_at: Annotated[AwareDatetime, Field(title="Created At")]
     updated_at: Annotated[AwareDatetime, Field(title="Updated At")]
     deleted_at: Annotated[AwareDatetime | None, Field(title="Deleted At")]
@@ -369,13 +457,6 @@ class ServiceAccountIn(BaseModel):
             title="Name",
         ),
     ]
-    instance_admin: Annotated[
-        bool | None,
-        Field(
-            description="Whether the service account administers the whole instance",
-            title="Instance Admin",
-        ),
-    ] = False
 
 
 class SignupIn(BaseModel):
@@ -448,20 +529,12 @@ class UserCreate(BaseModel):
         str | None,
         Field(description="Display name, defaults to the email", title="Name"),
     ] = ""
-    instance_admin: Annotated[
-        bool | None,
-        Field(
-            description="Whether the user administers the whole instance",
-            title="Instance Admin",
-        ),
-    ] = False
 
 
 class UserOut(BaseModel):
     id: Annotated[UUID, Field(title="Id")]
     email: Annotated[str, Field(title="Email")]
     name: Annotated[str, Field(title="Name")]
-    instance_admin: Annotated[bool, Field(title="Instance Admin")]
     service_account: Annotated[bool, Field(title="Service Account")]
     created_at: Annotated[AwareDatetime, Field(title="Created At")]
     updated_at: Annotated[AwareDatetime, Field(title="Updated At")]
@@ -484,6 +557,15 @@ class Catalog(BaseModel):
 
     providers: Annotated[list[ProviderEntry], Field(title="Providers")]
     models: Annotated[list[ModelEntry], Field(title="Models")]
+
+
+class EnrollOut(BaseModel):
+    orgs: Annotated[list[OrgOut], Field(title="Orgs")]
+    personal_org_id: Annotated[UUID | None, Field(title="Personal Org Id")]
+
+
+class EnvelopeEnrollOut(BaseModel):
+    data: EnrollOut
 
 
 class EnvelopeEventsIngestedOut(BaseModel):
@@ -567,6 +649,15 @@ class HTTPValidationError(BaseModel):
 
 
 class ManagementKeyIn(BaseModel):
+    label: Annotated[
+        str,
+        Field(
+            description="Where this token lives, e.g. ci or laptop; shown in listings",
+            max_length=80,
+            min_length=1,
+            title="Label",
+        ),
+    ]
     org_id: Annotated[
         UUID | None,
         Field(

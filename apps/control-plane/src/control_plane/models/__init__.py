@@ -4,6 +4,7 @@ from control_plane.models.audit import AuditLog, audited, set_actor
 from control_plane.models.auth_identity import AuthIdentity
 from control_plane.models.auth_session import AuthSession
 from control_plane.models.bundle import Bundle
+from control_plane.models.cli_auth_request import CliAuthRequest
 from control_plane.models.common import Identified, NotOwnedError, OrgOwned, Tombstonable
 from control_plane.models.common.base import Record
 from control_plane.models.data_plane_instance import DataPlaneInstance
@@ -21,6 +22,7 @@ __all__ = [
     "AuthIdentity",
     "AuthSession",
     "Bundle",
+    "CliAuthRequest",
     "DataPlaneInstance",
     "Identified",
     "InferenceKey",

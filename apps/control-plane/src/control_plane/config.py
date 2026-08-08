@@ -34,6 +34,7 @@ class Settings(BaseModel):
 
     database: DatabaseConfig = Field(default_factory=DatabaseConfig)
     bundle: BundlePolicy
+    webapp_url: str = "http://127.0.0.1:5173"  # where the webapp lives; device-flow verification URLs are built from it
     dev: bool = False  # set by the --dev flag on the entry point, gate dev-only behavior on this
 
 

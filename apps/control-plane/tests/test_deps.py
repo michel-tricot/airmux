@@ -8,7 +8,7 @@ whose failure surfaces as an error, never as a phantom success.
 from __future__ import annotations
 
 from fastapi.testclient import TestClient
-from helpers import run_in_db, setup_control_plane
+from helpers import make_admin, run_in_db, setup_control_plane
 from sqlalchemy import event
 from sqlalchemy.orm import Session
 from sqlmodel import col
@@ -21,8 +21,9 @@ def test_api_requests_attribute_the_acting_user(tmp_path):
     cp = setup_control_plane(tmp_path)
     root = cp.headers()
     with TestClient(cp.app) as c:
-        user = c.post("/v1/instance/users", json={"email": "admin@example.com", "instance_admin": True}, headers=root).json()["data"]
-        token = c.post(f"/v1/instance/users/{user['id']}/tokens", json={}, headers=root).json()["data"]["token"]
+        user = c.post("/v1/users", json={"email": "admin@example.com"}, headers=root).json()["data"]
+        make_admin(tmp_path, user["id"])
+        token = c.post(f"/v1/users/{user['id']}/tokens", json={"label": "t"}, headers=root).json()["data"]["token"]
         c.post("/v1/orgs", json={"name": "o2"}, headers={"authorization": f"Bearer {token}"})
 
     rows = run_in_db(tmp_path, lambda: AuditLog.find(order_by=col(AuditLog.id)))

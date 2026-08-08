@@ -293,6 +293,13 @@ What remains when roles arrive, layered on the same machinery with no route chan
   relationship engine (OpenFGA, SpiceDB) while route declarations survive intact. External engines
   stay rejected until then: a network hop on the request path for a prototype that needs three
   roles.
+- Delegation must attenuate (noted 2026-08-07): once users carry claims of their own (role-derived
+  scopes rather than today's implicit full authority), every path that hands authority onward must
+  cap the grant at a subset of the granter's claims: an admin minting a token for a user caps at
+  that user's claims, the device-flow approve caps the CLI key at the approving user's claims, and
+  any future self-serve mint caps at the presenting credential's claims. Today this holds
+  degenerately because every member holds all scopes and keys can only restrict; when roles land,
+  the subset check must become explicit at every mint site or a viewer could mint an editor token.
 
 ## Off-the-shelf rule engine for policy in evaluate()
 
@@ -319,6 +326,55 @@ no-I/O contract.
 The alternative that beats all of them while rules stay simple: compile bundle policy to plain
 Python closures at bundle load. Nanoseconds, no dependency, trivially testable. Reach for ZEN or
 CEL only when policy becomes user-authored or needs tables a human edits.
+
+## Scope down user listing
+
+GET /v1/users (noted 2026-08-07) returns every user on the instance, email and org memberships
+included, to any credential carrying users:read. The scope was added for restricted instance
+credentials (the read-only auditor token), but it makes user listing all-or-nothing: anything that
+legitimately needs to list some users (a future org-admin members page, support tooling scoped to
+one tenant) must be handed cross-tenant PII to get it. Fix direction: an org-scoped members
+endpoint under /org (the claims org's memberships only, backed by owned_by-style filtering), with
+instance-wide listing staying an instance-credential affair; when roles land, users:read on an
+org-scoped credential must mean "members of my org", never "everyone on the instance". Same
+review applies to the membership mutation routes, which are instance-only today and will need org-
+admin variants with the same tenant fence.
+
+## Simplify key creation
+
+Minting has accumulated parts (noted 2026-08-07, after mandatory labels and the CLI device flow
+landed). Two shapes of duplication:
+
+- The backing policy "may this user hold an org-scoped credential for this org" (instance_admin, or
+  membership in the org) now lives in three places: mint_user_token in routes/users.py, the
+  device-flow approve in routes/auth.py, and _cookie_claims in deps.py. One shared helper should
+  own it; when roles land, that helper is also where delegation attenuation
+  ([roles over credential scopes](#roles-over-credential-scopes)) gets enforced once instead of
+  three times.
+- Each credential kind carries a full set of moving parts: table, mint function in keys.py, In
+  action shape, MintedOut, create route, revoke route, and now retire_for_client. Making labels
+  mandatory touched every one of them. Worth collapsing toward fat-model mints (ManagementKey.mint,
+  InferenceKey.mint) with keys.py keeping only the shared token format and verify paths, so the
+  next field or the next credential kind is one file's change instead of five.
+
+## Generate the CLI client from the OpenAPI spec
+
+Half exists (noted 2026-08-07): scripts/generate-api-models.sh dumps the spec and datamodel-codegen
+produces cli/api_models.py, CI fails on drift, and specs.py subclasses the generated create models
+for the form-driven commands. What stays hand-written is the transport: client.py carries string
+paths and commands post raw dicts (`{"label": label}`), so nothing ties a call site to the
+operation it invokes; the key_id/id crash in `keys create` (fixed 2026-08-07) is exactly the drift
+class this permits. The idea is to generate the operations too: one typed function per endpoint,
+taking and returning the generated models, either via openapi-python-client or a small jinja pass
+over the spec (ours is unusually trustworthy input: security arrays and descriptions are derived
+from route markers and pinned by hygiene tests). Keep hand-written: the typer UX layer, Col
+rendering, the login device flow, the profile keyring, and the envelope unwrap seam (payload/
+payload_rows stay the single unwrap point per CLAUDE.md). Costs to weigh: generator pinning and
+template churn, wiring the generated client to the two-door auth model (instance vs org token,
+env-then-profile resolution), and generated-code noise. A cheap intermediate step with most of the
+value: keep the hand transport but make every command construct its body through the generated In
+models and parse responses through the generated Out models, so call sites type-check against the
+spec without new tooling.
 
 ## Org id should be a minted unique id
 

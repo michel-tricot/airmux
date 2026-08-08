@@ -70,7 +70,7 @@ class ControlPlane:
                     await admin.save()
                 else:
                     await set_actor(admin.id)
-                _, token = await mint_management_key(org_id, admin.id, scopes=scopes)
+                _, token = await mint_management_key(org_id, admin.id, label="fixture-admin", scopes=scopes)
                 return token
 
         return {"authorization": f"Bearer {asyncio.run(mint())}"}
@@ -89,6 +89,19 @@ def run_in_db(tmp_path, action):
             return await action()
 
     return asyncio.run(runner())
+
+
+def make_admin(tmp_path, user_id: UUID | str) -> None:
+    """Set the instance_admin bit directly in the database; the API deliberately exposes no path to it."""
+
+    async def promote():
+        user = await User.find_by_id(UUID(str(user_id)))
+        assert user is not None
+        await set_actor(user.id)
+        user.instance_admin = True
+        await user.save()
+
+    run_in_db(tmp_path, promote)
 
 
 def setup_db(tmp_path) -> str:

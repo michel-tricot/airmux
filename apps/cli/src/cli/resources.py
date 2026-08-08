@@ -37,6 +37,7 @@ ORG_COLS = [
 ]
 KEY_COLS = [
     Col("id", "ID", style="dim", no_wrap=True),
+    Col("label", "Label", max_width=30),
     Col("org_id", "Org"),
     Col("user_id", "Owner", style="dim", no_wrap=True),
     Col("revoked", "Status", style="yellow", fmt=lambda v: "revoked" if v else "active"),
@@ -112,6 +113,7 @@ def keys_revoke(key_id: str, control_plane_url: str = "") -> None:
 
 TOKEN_COLS = [
     Col("id", "ID", style="dim", no_wrap=True),
+    Col("label", "Label", max_width=30),
     Col("org_id", "Scope", fmt=lambda v: str(v) if v else "instance"),
     Col("user_id", "Owner", style="dim", fmt=lambda v: str(v) if v else "system"),
     Col("scopes", "Scopes", style="cyan", max_width=40, fmt=lambda v: ", ".join(map(str, v)) if isinstance(v, list) else "all"),
@@ -124,7 +126,6 @@ USER_COLS = [
     Col("email", "Email"),
     Col("name", "Name", max_width=30),
     Col("service_account", "Kind", fmt=lambda v: "service" if v else "human"),
-    Col("instance_admin", "Role", style="yellow", fmt=lambda v: "instance admin" if v else "member"),
     Col("orgs", "Orgs", style="cyan", max_width=40),
     Col("created_at", "Created", no_wrap=True, fmt=fmt_when),
 ]
@@ -134,53 +135,47 @@ USER_COLS = [
 def users_create(
     email: str,
     name: str = "",
-    admin: bool = typer.Option(False, "--admin", help="Make the user an instance admin"),
     control_plane_url: str = "",
 ) -> None:
     """Create a user; add org memberships with `airllm users join`. Needs the instance token."""
-    body = {"email": email, "name": name, "instance_admin": admin}
+    body = {"email": email, "name": name}
     with instance_client(control_plane_url) as c:
-        resp = payload(post_expecting(c, "/v1/instance/users", body, ok=(200,)))
-    role = "instance admin" if resp["instance_admin"] else "member"
-    console.print(f"user [bold]{resp['id']}[/bold] created for {resp['email']} as {role}")
+        resp = payload(post_expecting(c, "/v1/users", body, ok=(200,)))
+    console.print(f"user [bold]{resp['id']}[/bold] created for {resp['email']}")
 
 
 @service_accounts_app.command("create")
 def service_accounts_create(
     name: str | None = typer.Argument(None, help="Service account name; prompted for when omitted"),
-    admin: bool = typer.Option(False, "--admin", help="Make the service account an instance admin"),
     control_plane_url: str = "",
 ) -> None:
     """Create a service account; its email is derived as name-<id>@airbytesvcaccount.ai. Needs the instance token."""
     if not name:
         name = typer.prompt("name")
     with instance_client(control_plane_url) as c:
-        resp = payload(post_expecting(c, "/v1/instance/service-accounts", {"name": name, "instance_admin": admin}, ok=(200,)))
+        resp = payload(post_expecting(c, "/v1/service-accounts", {"name": name}, ok=(200,)))
     console.print(f"service account [bold]{resp['id']}[/bold] created as {resp['email']}")
-    console.print(
-        f"[dim]add it to an org with `airllm users join {resp['id']} <org>`, "
-        f"then mint its token with `airllm tokens mint <org> --user {resp['id']}`[/dim]"
-    )
+    console.print(f"[dim]add it to an org with `airllm users join {resp['id']} <org>`[/dim]")
 
 
 @service_accounts_app.command("list")
 def service_accounts_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
     """List service accounts; needs the instance token."""
-    rows = [u for u in instance_get("/v1/instance/users", control_plane_url) if u["service_account"]]
+    rows = [u for u in instance_get("/v1/users", control_plane_url) if u["service_account"]]
     print_rows("service accounts", rows, USER_COLS, fmt)
 
 
 @users_app.command("list")
 def users_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
     """List users with their org memberships; needs the instance token."""
-    print_rows("users", instance_get("/v1/instance/users", control_plane_url), USER_COLS, fmt)
+    print_rows("users", instance_get("/v1/users", control_plane_url), USER_COLS, fmt)
 
 
 @users_app.command("join")
 def users_join(user_id: str, org: str, control_plane_url: str = "") -> None:
     """Add a user to an org; their org tokens start working immediately."""
     with instance_client(control_plane_url) as c:
-        resp = c.put(f"/v1/instance/users/{user_id}/orgs/{org}")
+        resp = c.put(f"/v1/users/{user_id}/orgs/{org}")
         resp.raise_for_status()
     console.print(f"user [bold]{user_id}[/bold] is now a member of [bold]{org}[/bold]")
 
@@ -189,7 +184,7 @@ def users_join(user_id: str, org: str, control_plane_url: str = "") -> None:
 def users_leave(user_id: str, org: str, control_plane_url: str = "") -> None:
     """Remove a user from an org; their tokens for that org stop working immediately."""
     with instance_client(control_plane_url) as c:
-        resp = c.delete(f"/v1/instance/users/{user_id}/orgs/{org}")
+        resp = c.delete(f"/v1/users/{user_id}/orgs/{org}")
         resp.raise_for_status()
     console.print(f"user [bold]{user_id}[/bold] removed from [bold]{org}[/bold]")
 
@@ -204,15 +199,16 @@ def tokens_list(org: str | None = None, control_plane_url: str = "", fmt: Format
 def tokens_mint(
     org: str | None = typer.Argument(None, help="Org to scope the token to; omit for an instance token"),
     user: str = typer.Option(..., "--user", help="User the token is minted for; the scope must be backed by their memberships"),
+    label: str = typer.Option(..., "--label", help="Where the token will live, e.g. ci; shown in listings"),
     scope: Annotated[
         list[str] | None, typer.Option("--scope", help="Restrict the token to a scope, repeatable (e.g. keys:read); omit for full authority")
     ] = None,
     control_plane_url: str = "",
 ) -> None:
     """Mint a management token; the token is shown once and never stored."""
-    body = {"org_id": org, "scopes": scope or None}
+    body = {"org_id": org, "scopes": scope or None, "label": label}
     with instance_client(control_plane_url) as c:
-        resp = payload(post_expecting(c, f"/v1/instance/users/{user}/tokens", body, ok=(200,)))
+        resp = payload(post_expecting(c, f"/v1/users/{user}/tokens", body, ok=(200,)))
     scoped_to = resp["org_id"] or "instance"
     restriction = f" restricted to {', '.join(resp['scopes'])}" if resp.get("scopes") else ""
     console.print(
@@ -341,7 +337,7 @@ def events_tail(interval: float = 2.0, keep: int = 30, control_plane_url: str = 
 
 
 def _key_created(resp: dict) -> None:
-    console.print(f"key [bold]{resp['key_id']}[/bold] minted, token (shown once):")
+    console.print(f"key [bold]{resp['id']}[/bold] minted, token (shown once):")
     console.print(resp["token"])
     console.print("[dim]run `airllm bundles compile` to include it in the next bundle[/dim]")
 
@@ -351,16 +347,19 @@ register_create(
     OrgCreate,
     "/v1/orgs",
     "Create an org; keys and bundles hang off it. Needs the instance token.",
-    lambda resp: console.print(f"org [bold]{resp['id']}[/bold] created, mint its admin token with `airllm tokens mint {resp['id']}`"),
+    lambda resp: console.print(f"org [bold]{resp['id']}[/bold] created, add members with `airllm users join <user> {resp['id']}`"),
     client=instance_client,
 )
 
 
 @keys_app.command("create")
-def keys_create(control_plane_url: str = "") -> None:
+def keys_create(
+    label: str = typer.Argument(..., help="What the key is for, e.g. staging; shown in listings"),
+    control_plane_url: str = "",
+) -> None:
     """Mint a key; the token is shown once and never stored."""
     with org_client(control_plane_url) as c:
-        _key_created(payload(post_expecting(c, "/v1/org/keys", None, ok=(200,))))
+        _key_created(payload(post_expecting(c, "/v1/org/keys", {"label": label}, ok=(200,))))
 
 
 register_create(

@@ -13,6 +13,7 @@ def _main() -> None:
     load_dotenv(find_dotenv(usecwd=True))
 
 
+SETUP = "Setup"
 RESOURCES = "Resources"
 TESTING = "Testing"
 

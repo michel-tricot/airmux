@@ -11,6 +11,8 @@ import Providers from './pages/Providers'
 import Models from './pages/Models'
 import Bundles from './pages/Bundles'
 import Instances from './pages/Instances'
+import CliApprove from './pages/CliApprove'
+import Onboarding from './pages/Onboarding'
 
 const NAV = [
   { to: '/events', label: 'Events' },
@@ -72,6 +74,8 @@ export default function App() {
 
   if (isLoading) return <div className="min-h-screen bg-slate-950" />
   if (!me) return <Login />
+  if (window.location.pathname === '/cli') return <CliApprove />
+  if (!me.instance_admin && me.orgs.length === 0) return <Onboarding />
 
   return (
     <div className="flex min-h-screen bg-slate-950">
@@ -119,6 +123,7 @@ export default function App() {
           <Route path="/models" element={<Models />} />
           <Route path="/bundles" element={<Bundles />} />
           <Route path="/instances" element={<Instances />} />
+          <Route path="/cli" element={<CliApprove />} />
         </Routes>
       </main>
     </div>

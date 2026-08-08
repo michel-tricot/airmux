@@ -117,7 +117,7 @@ def test_unscoped_token_keeps_full_authority(tmp_path):
     with TestClient(cp.app) as client:
         o1 = _seed_org(client, cp.headers())
         org = cp.headers(org_id=o1)
-        assert client.post("/v1/org/keys", headers=org).status_code == 200
+        assert client.post("/v1/org/keys", json={"label": "k"}, headers=org).status_code == 200
         assert client.get("/v1/org/keys", headers=org).status_code == 200
 
 
@@ -138,11 +138,11 @@ def test_mint_accepts_scopes_and_rejects_unknown_ones(tmp_path):
     with TestClient(cp.app) as client:
         root = cp.headers()
         o1 = _seed_org(client, root)
-        user = client.post("/v1/instance/users", json={"email": "dev@example.com"}, headers=root).json()["data"]
-        assert client.put(f"/v1/instance/users/{user['id']}/orgs/{o1}", headers=root).status_code == 200
-        bad = client.post(f"/v1/instance/users/{user['id']}/tokens", json={"org_id": str(o1), "scopes": ["nope"]}, headers=root)
+        user = client.post("/v1/users", json={"email": "dev@example.com"}, headers=root).json()["data"]
+        assert client.put(f"/v1/users/{user['id']}/orgs/{o1}", headers=root).status_code == 200
+        bad = client.post(f"/v1/users/{user['id']}/tokens", json={"org_id": str(o1), "scopes": ["nope"], "label": "t"}, headers=root)
         assert bad.status_code == 422
-        minted = client.post(f"/v1/instance/users/{user['id']}/tokens", json={"org_id": str(o1), "scopes": ["keys:read"]}, headers=root)
+        minted = client.post(f"/v1/users/{user['id']}/tokens", json={"org_id": str(o1), "scopes": ["keys:read"], "label": "t"}, headers=root)
         assert minted.status_code == 200
         assert minted.json()["data"]["scopes"] == ["keys:read"]
         rows = client.get("/v1/instance/tokens", params={"org_id": str(o1)}, headers=root).json()["data"]
@@ -153,10 +153,10 @@ def test_restricted_instance_credential(tmp_path):
     cp = setup_control_plane(tmp_path)
     with TestClient(cp.app) as client:
         auditor = cp.headers(scopes=["users:read", "tokens:read"])
-        assert client.get("/v1/instance/users", headers=auditor).status_code == 200
+        assert client.get("/v1/users", headers=auditor).status_code == 200
         assert client.get("/v1/instance/tokens", headers=auditor).status_code == 200
         assert client.get("/v1/orgs", headers=auditor).status_code == 403
-        assert client.post("/v1/instance/users", json={"email": "x@example.com"}, headers=auditor).status_code == 403
+        assert client.post("/v1/users", json={"email": "x@example.com"}, headers=auditor).status_code == 403
         assert client.post("/v1/taxonomy/providers", json={}, headers=auditor).status_code == 403
         provisioner = cp.headers(scopes=["orgs:write", "users:write"])
         assert client.post("/v1/orgs", json={"name": "o2"}, headers=provisioner).status_code == 200

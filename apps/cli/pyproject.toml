@@ -9,6 +9,7 @@ dependencies = [
   "python-dotenv",
   "pyyaml",
   "rich",
+  "tomli-w>=1.2.0",
 ]
 
 [project.scripts]

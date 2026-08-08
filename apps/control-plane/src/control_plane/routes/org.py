@@ -15,17 +15,17 @@ from control_plane.models import Bundle, DataPlaneInstance, InferenceKey, Org, U
 from control_plane.models.bundle import BundleOut
 from control_plane.models.common.wire import Envelope
 from control_plane.models.data_plane_instance import DataPlaneInstanceOut
-from control_plane.models.inference_key import InferenceKeyMintedOut, InferenceKeyOut, InferenceKeyRevokedOut
+from control_plane.models.inference_key import InferenceKeyIn, InferenceKeyMintedOut, InferenceKeyOut, InferenceKeyRevokedOut
 from control_plane.models.usage_event import UsageEventOut
 
 router = APIRouter(prefix="/org")
 
 
 @router.post("/keys", tags=["API Keys"], dependencies=[require(Scope.keys_write)])
-async def create_key(org_id: OrgDep, claims: MgmtDep) -> Envelope[InferenceKeyMintedOut]:
+async def create_key(body: InferenceKeyIn, org_id: OrgDep, claims: MgmtDep) -> Envelope[InferenceKeyMintedOut]:
     if await Org.find_by_id(org_id) is None:
         raise HTTPException(status_code=404)
-    key_id, token = await mint_inference_key(org_id, claims.user_id)
+    key_id, token = await mint_inference_key(org_id, claims.user_id, label=body.label)
     return Envelope(data=InferenceKeyMintedOut(id=key_id, token=token))
 
 

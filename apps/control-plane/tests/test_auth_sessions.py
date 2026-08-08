@@ -24,7 +24,7 @@ def _make_user(c, root, email="m@example.com", *, admin=False, org=None, tmp_pat
     c.cookies.clear()
     user = {"id": me["user_id"], **me}
     if org is not None:
-        assert c.put(f"/v1/instance/users/{user['id']}/orgs/{org}", headers=root).status_code == 200
+        assert c.put(f"/v1/users/{user['id']}/orgs/{org}", headers=root).status_code == 200
     if admin:
         assert tmp_path is not None
 
@@ -201,7 +201,7 @@ def test_service_accounts_rejected_from_password_login(tmp_path):
     cp = setup_control_plane(tmp_path)
     root = cp.headers()
     with _client(cp) as c:
-        sa = c.post("/v1/instance/service-accounts", json={"name": "dp"}, headers=root).json()["data"]
+        sa = c.post("/v1/service-accounts", json={"name": "dp"}, headers=root).json()["data"]
 
         async def plant_password():
             row = await User.find_by_id(UUID(sa["id"]))

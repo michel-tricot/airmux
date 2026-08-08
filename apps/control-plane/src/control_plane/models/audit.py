@@ -73,6 +73,21 @@ def audit_trigger_ddl_v1(table: str, pk_columns: tuple[str, ...]) -> tuple[str, 
     return function, trigger
 
 
+def audit_trigger_drop_ddl_v1(table: str) -> tuple[str, str]:
+    """The inverse of audit_trigger_ddl_v1, for migration downgrades. Versioned and frozen like it.
+
+    Mirrors the creation side's idempotence like touch_trigger_drop_ddl_v1: the function drop is
+    guarded on no remaining triggers, so the last table's drop sweeps the function away.
+    """
+    drop_trigger = f'DROP TRIGGER IF EXISTS {table}_audit ON "{table}"'
+    drop_function = (
+        "DO $$ BEGIN IF NOT EXISTS (SELECT FROM pg_trigger t JOIN pg_proc p ON t.tgfoid = p.oid "
+        "WHERE p.proname = 'audit_row_v1' AND NOT t.tgisinternal) "
+        "THEN DROP FUNCTION IF EXISTS audit_row_v1(); END IF; END $$"
+    )
+    return drop_trigger, drop_function
+
+
 def audited_tables() -> list[Table]:
     mappers = (inspect(cls, raiseerr=False) for cls in _AUDITED)
     return sorted(

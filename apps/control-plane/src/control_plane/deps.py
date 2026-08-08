@@ -117,6 +117,24 @@ async def acting_user(
 ActingUserDep = Annotated[User, Depends(acting_user)]
 
 
+async def cookie_user(
+    _session: SessionDep,
+    session_cookie: SessionCookie = None,
+    x_requested_with: RequestedWith = None,
+    sec_fetch_site: FetchSite = None,
+) -> User:
+    """The cookie door only, for endpoints a bearer key must never reach (device approval): a
+    delegated credential can never approve its own successor."""
+    if session_cookie is None:
+        raise HTTPException(status_code=401)
+    _, user = await _session_user(session_cookie, x_requested_with, sec_fetch_site)
+    await set_actor(user.id)
+    return user
+
+
+CookieUserDep = Annotated[User, Depends(cookie_user)]
+
+
 async def instance_scope(claims: MgmtDep) -> ManagementClaims:
     if claims.org_id is not None:
         raise HTTPException(status_code=403)

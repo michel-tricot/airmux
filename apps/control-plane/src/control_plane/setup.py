@@ -72,7 +72,7 @@ async def create_admin(email: str, name: str = "", *, if_missing: bool = False) 
     await set_actor(user.id)
     if created:
         await user.save()
-    token_id, token = await mint_management_key(None, user.id)
+    token_id, token = await mint_management_key(None, user.id, label=ADMIN_TOKEN_ENV)
     return AdminToken(user_id=user.id, token_id=token_id, token=token, created=created)
 
 
@@ -148,9 +148,9 @@ async def ensure_org(org_name: str, env: Mapping[str, str | None], *, skip_key: 
     for env_name, owner_id, scopes in tokens:
         if await _management_key_is_live(env.get(env_name), org.id):
             continue
-        _, minted[env_name] = await mint_management_key(org.id, owner_id, scopes=scopes)
+        _, minted[env_name] = await mint_management_key(org.id, owner_id, label=env_name, scopes=scopes)
     if not skip_key and not await _caller_key_is_live(env.get("AIRLLM_TOKEN"), org.id):
-        _, minted["AIRLLM_TOKEN"] = await mint_inference_key(org.id, sa.id)
+        _, minted["AIRLLM_TOKEN"] = await mint_inference_key(org.id, sa.id, label="AIRLLM_TOKEN")
     state = "created" if created else "exists"
     tokens_part = f"minted {', '.join(minted)}" if minted else "all tokens present"
     return f"org {org_name} ({org.id}) {state}, service account {sa.id}, {tokens_part}", minted, org.id

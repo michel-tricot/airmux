@@ -54,6 +54,23 @@ def touch_trigger_ddl_v1(table: str) -> tuple[str, str, str]:
     return function, on_insert, on_update
 
 
+def touch_trigger_drop_ddl_v1(table: str) -> tuple[str, str, str]:
+    """The inverse of touch_trigger_ddl_v1, for migration downgrades. Versioned and frozen like it.
+
+    Mirrors the creation side's idempotence: creation lets every table carry the shared function
+    statement through CREATE OR REPLACE, deletion lets every table carry the function drop by
+    guarding it on no remaining triggers. The last table's drop sweeps the function away.
+    """
+    drop_insert = f'DROP TRIGGER IF EXISTS {table}_touch_insert ON "{table}"'
+    drop_update = f'DROP TRIGGER IF EXISTS {table}_touch_update ON "{table}"'
+    drop_function = (
+        "DO $$ BEGIN IF NOT EXISTS (SELECT FROM pg_trigger t JOIN pg_proc p ON t.tgfoid = p.oid "
+        "WHERE p.proname = 'touch_timestamps_v1' AND NOT t.tgisinternal) "
+        "THEN DROP FUNCTION IF EXISTS touch_timestamps_v1(); END IF; END $$"
+    )
+    return drop_insert, drop_update, drop_function
+
+
 def tombstoned_models() -> list[type[Tombstonable]]:
     return _descendants(Tombstonable)
 

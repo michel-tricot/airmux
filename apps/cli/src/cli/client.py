@@ -8,6 +8,7 @@ import typer
 import yaml
 
 from cli.common import console
+from cli.profiles import active_profile
 
 if TYPE_CHECKING:
     import httpx
@@ -18,6 +19,9 @@ def resolve_control_plane_url(override: str) -> str:
         return override
     if url := os.environ.get("GW_CONTROL_PLANE_URL"):
         return url
+    profile = active_profile()
+    if profile and profile.get("control_plane_url"):
+        return str(profile["control_plane_url"])
     config_path = Path(os.environ.get("GW_CONFIG", "airllm.yml"))
     if config_path.exists():
         doc = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
@@ -37,16 +41,19 @@ def instance_client(control_plane_url: str = "") -> httpx.Client:
     """Instance-scoped client for /instance routes; takes the raw --control-plane-url override and resolves it itself."""
     token = os.environ.get("GW_ADMIN_MGMT_TOKEN")
     if not token:
-        console.print("[red]GW_ADMIN_MGMT_TOKEN is not set, run `airllmcp init` first[/red]")
+        console.print("[red]GW_ADMIN_MGMT_TOKEN is not set; this command needs the instance admin token[/red]")
         raise typer.Exit(1)
     return _bearer_client(token, control_plane_url)
 
 
 def org_client(control_plane_url: str = "", token: str | None = None) -> httpx.Client:
-    """Org-scoped client for /org routes; the token comes from `airllmcp init` or `airllm tokens mint`."""
+    """Org-scoped client for /org routes: an explicit token, the env override, then the active login profile."""
     token = token or os.environ.get("GW_ORG_MGMT_TOKEN")
     if not token:
-        console.print("[red]GW_ORG_MGMT_TOKEN is not set, run `airllmcp init` or `airllm tokens mint <org>` first[/red]")
+        profile = active_profile()
+        token = str(profile["token"]) if profile and profile.get("token") else None
+    if not token:
+        console.print("[red]no org token: run `airllm login`[/red]")
         raise typer.Exit(1)
     return _bearer_client(token, control_plane_url)
 

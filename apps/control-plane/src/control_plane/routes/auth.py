@@ -7,8 +7,10 @@ from uuid import UUID
 from fastapi import APIRouter, HTTPException, Request, Response
 from pydantic import BaseModel, Field
 
-from control_plane.deps import ActingUserDep, FetchSite, RequestedWith, SessionCookie, SessionDep, public, require_csrf, user_scoped
-from control_plane.models import AuthIdentity, OrgMembership, User, set_actor
+from control_plane.deps import ActingUserDep, CookieUserDep, FetchSite, RequestedWith, SessionCookie, SessionDep, public, require_csrf, user_scoped
+from control_plane.keys import mint_management_key
+from control_plane.models import AuthIdentity, CliAuthRequest, ManagementKey, Org, OrgMembership, User, set_actor
+from control_plane.models.cli_auth_request import AUTH_REQUEST_TTL
 from control_plane.models.common.wire import DeletedOut, Envelope
 from control_plane.passwords import DUMMY_HASH, hash_password, needs_rehash, verify_password
 from control_plane.sessions import SESSION_ABSOLUTE_TTL, SESSION_COOKIE, mint_session, verify_session
@@ -135,3 +137,120 @@ async def change_password(body: PasswordChangeIn, user: ActingUserDep) -> Envelo
         raise HTTPException(status_code=403)
     await AuthIdentity.set_password(user, body.new_password)
     return Envelope(data=PasswordChangedOut(user_id=user.id, status="changed"))
+
+
+CLI_POLL_INTERVAL_SECONDS = 5
+
+
+class CliAuthStartIn(BaseModel):
+    client_name: str = Field(min_length=1, max_length=80, description="Where the CLI runs, e.g. the hostname; becomes the minted key's label")
+
+
+class CliAuthStartOut(BaseModel):
+    user_code: str
+    verification_url: str
+    poll_secret: str
+    interval_seconds: int
+    expires_in_seconds: int
+
+
+class CliAuthRequestOut(BaseModel):
+    client_name: str
+    requester: str
+    expires_at: datetime
+
+
+class CliAuthApproveIn(BaseModel):
+    user_code: str
+    org_id: UUID
+
+
+class CliAuthApprovedOut(BaseModel):
+    status: Literal["approved"]
+    client_name: str
+
+
+class CliAuthPollIn(BaseModel):
+    poll_secret: str
+
+
+class CliAuthPollOut(BaseModel):
+    status: Literal["pending", "complete"]
+    interval_seconds: int
+    token: str | None = None
+    org_id: UUID | None = None
+    org_name: str | None = None
+
+
+def _live(auth_request: CliAuthRequest | None) -> CliAuthRequest:
+    if auth_request is None:
+        raise HTTPException(status_code=404)
+    if auth_request.expired:
+        raise HTTPException(status_code=410)
+    return auth_request
+
+
+@router.post("/cli/start", tags=["Auth"], dependencies=[public()])
+async def cli_auth_start(body: CliAuthStartIn, request: Request, _session: SessionDep) -> Envelope[CliAuthStartOut]:
+    """Open a device authorization: unauthenticated like signup, it grants nothing by itself."""
+    _, user_code, poll_secret = await CliAuthRequest.open(body.client_name, request.client.host if request.client else "")
+    settings = request.app.state.settings
+    return Envelope(
+        data=CliAuthStartOut(
+            user_code=user_code,
+            verification_url=f"{settings.webapp_url.rstrip('/')}/cli",
+            poll_secret=poll_secret,
+            interval_seconds=CLI_POLL_INTERVAL_SECONDS,
+            expires_in_seconds=int(AUTH_REQUEST_TTL.total_seconds()),
+        )
+    )
+
+
+@router.get("/cli/request", tags=["Auth"], dependencies=[user_scoped()])
+async def cli_auth_request_details(code: str, _user: CookieUserDep) -> Envelope[CliAuthRequestOut]:
+    """Context for the approve page: who is asking, from where, until when."""
+    auth_request = _live(await CliAuthRequest.by_user_code(code))
+    if auth_request.approved_user_id is not None:
+        raise HTTPException(status_code=409)
+    return Envelope(
+        data=CliAuthRequestOut(client_name=auth_request.client_name, requester=auth_request.requester, expires_at=auth_request.expires_at)
+    )
+
+
+@router.post("/cli/approve", tags=["Auth"], dependencies=[user_scoped()])
+async def cli_auth_approve(body: CliAuthApproveIn, user: CookieUserDep) -> Envelope[CliAuthApprovedOut]:
+    """The human confirms the code and picks the org; membership backs the pick like key minting."""
+    auth_request = _live(await CliAuthRequest.by_user_code(body.user_code))
+    if auth_request.approved_user_id is not None:
+        raise HTTPException(status_code=409)
+    if await Org.find_by_id(body.org_id) is None:
+        raise HTTPException(status_code=403)
+    if not user.instance_admin and await OrgMembership.get((user.id, body.org_id)) is None:
+        raise HTTPException(status_code=403)
+    auth_request.approved_user_id = user.id
+    auth_request.approved_org_id = body.org_id
+    await auth_request.save()
+    return Envelope(data=CliAuthApprovedOut(status="approved", client_name=auth_request.client_name))
+
+
+@router.post("/cli/poll", tags=["Auth"], dependencies=[public()])
+async def cli_auth_poll(body: CliAuthPollIn, _session: SessionDep) -> Envelope[CliAuthPollOut]:
+    """The CLI's side of the flow: pending until approved, then the key exactly once.
+
+    The key is minted here, not at approve, so its plaintext never rests in the pending request;
+    deleting the request in the same transaction makes delivery one-time. Route-level actor stamp
+    like signup: the poller is anonymous, the audited key write is attributed to the human who
+    approved. Re-approving from the same client replaces that client's previous key for the org
+    instead of accumulating.
+    """
+    auth_request = _live(await CliAuthRequest.by_poll_secret(body.poll_secret))
+    if auth_request.approved_user_id is None or auth_request.approved_org_id is None:
+        return Envelope(data=CliAuthPollOut(status="pending", interval_seconds=CLI_POLL_INTERVAL_SECONDS))
+    org = await Org.find_by_id(auth_request.approved_org_id)
+    if org is None:
+        raise HTTPException(status_code=410)
+    await set_actor(auth_request.approved_user_id)
+    await ManagementKey.retire_for_client(auth_request.approved_user_id, auth_request.approved_org_id, auth_request.client_name)
+    _, token = await mint_management_key(auth_request.approved_org_id, auth_request.approved_user_id, label=auth_request.client_name)
+    await auth_request.delete()
+    return Envelope(data=CliAuthPollOut(status="complete", interval_seconds=CLI_POLL_INTERVAL_SECONDS, token=token, org_id=org.id, org_name=org.name))

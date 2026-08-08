@@ -16,9 +16,9 @@ import sqlalchemy as sa
 import sqlmodel
 from alembic import op
 
-from control_plane.models.audit import audit_trigger_ddl_v1
+from control_plane.models.audit import audit_trigger_ddl_v1, audit_trigger_drop_ddl_v1
 from control_plane.models.common.column_types import UTCDateTime
-from control_plane.models.common.tombstone import touch_trigger_ddl_v1
+from control_plane.models.common.tombstone import touch_trigger_ddl_v1, touch_trigger_drop_ddl_v1
 
 revision = "f1a7c3d9e5b2"
 down_revision = None
@@ -268,12 +268,11 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     for table, _ in AUDITED:
-        op.execute(f'DROP TRIGGER IF EXISTS {table}_audit ON "{table}"')
-    op.execute("DROP FUNCTION IF EXISTS audit_row_v1()")
+        for statement in audit_trigger_drop_ddl_v1(table):
+            op.execute(statement)
     for table in TOMBSTONED:
-        op.execute(f'DROP TRIGGER IF EXISTS {table}_touch_insert ON "{table}"')
-        op.execute(f'DROP TRIGGER IF EXISTS {table}_touch_update ON "{table}"')
-    op.execute("DROP FUNCTION IF EXISTS touch_timestamps_v1()")
+        for statement in touch_trigger_drop_ddl_v1(table):
+            op.execute(statement)
     op.drop_table("org_membership")
     op.drop_table("model")
     op.drop_table("management_key")

@@ -1,17 +1,19 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createKey, listKeys, revokeKey } from '../api'
-import { Badge, Button, formatWhen, Page, QueryStatus, Table, Td } from '../ui'
+import { Badge, Button, formatWhen, inputClass, Page, QueryStatus, Table, Td } from '../ui'
 
 export default function Keys() {
   const queryClient = useQueryClient()
   const { data, isLoading, error } = useQuery({ queryKey: ['keys'], queryFn: listKeys })
   const [minted, setMinted] = useState<{ id: string; token: string } | null>(null)
+  const [label, setLabel] = useState('')
 
   const create = useMutation({
-    mutationFn: createKey,
+    mutationFn: () => createKey(label),
     onSuccess: (result) => {
       setMinted(result)
+      setLabel('')
       queryClient.invalidateQueries({ queryKey: ['keys'] })
     },
   })
@@ -26,7 +28,13 @@ export default function Keys() {
   return (
     <Page title="Keys">
       <div className="mb-4 flex items-center gap-2">
-        <Button disabled={create.isPending} onClick={() => create.mutate()}>
+        <input
+          className={inputClass}
+          placeholder="label, e.g. staging"
+          value={label}
+          onChange={(e) => setLabel(e.target.value)}
+        />
+        <Button disabled={!label.trim() || create.isPending} onClick={() => create.mutate()}>
           Mint key
         </Button>
         {create.error && <span className="text-sm text-red-400">{create.error.message}</span>}
@@ -51,10 +59,11 @@ export default function Keys() {
       )}
       <QueryStatus isLoading={isLoading} error={error} empty={keys.length === 0} />
       {keys.length > 0 && (
-        <Table headers={['Key', 'Org', 'Owner', 'Status', 'Created', '']}>
+        <Table headers={['Key', 'Label', 'Org', 'Owner', 'Status', 'Created', '']}>
           {keys.map((k) => (
             <tr key={k.id} className="hover:bg-slate-900/50">
               <Td mono>{k.id}</Td>
+              <Td>{k.label}</Td>
               <Td mono>{k.org_id}</Td>
               <Td mono>{k.user_id}</Td>
               <Td>

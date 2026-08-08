@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import ClassVar, Literal
+from typing import ClassVar, Literal, Self
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -22,9 +22,19 @@ class ManagementKey(Record, Identified, Tombstonable, table=True):
     token_hash: str = Field(unique=True)
     revoked: bool = False
     scopes: list[str] | None = Field(default=None, sa_type=JSON)
+    label: str
 
     api_hidden: ClassVar[frozenset[str]] = frozenset({"token_hash"})
-    api_readonly: ClassVar[frozenset[str]] = frozenset({"scopes"})
+    api_readonly: ClassVar[frozenset[str]] = frozenset({"scopes", "label"})
+
+    @classmethod
+    async def retire_for_client(cls, user_id: UUID, org_id: UUID, label: str) -> list[Self]:
+        """Revoke the live keys this client label holds for the org, so a re-login replaces its key instead of accumulating."""
+        keys = [k for k in await cls.find(cls.user_id == user_id, cls.org_id == org_id, cls.label == label) if not k.revoked]
+        for key in keys:
+            key.revoked = True
+            await key.save()
+        return keys
 
 
 class ManagementKeyOut(RecordOut[ManagementKey]):
@@ -33,6 +43,7 @@ class ManagementKeyOut(RecordOut[ManagementKey]):
     user_id: UUID
     revoked: bool
     scopes: list[str] | None
+    label: str
     created_at: datetime
     updated_at: datetime
     deleted_at: datetime | None
@@ -43,6 +54,7 @@ class ManagementKeyMintedOut(BaseModel):
     org_id: UUID | None
     user_id: UUID
     scopes: list[str] | None
+    label: str
     token: str
 
 
@@ -52,5 +64,6 @@ class ManagementKeyRevokedOut(BaseModel):
 
 
 class ManagementKeyIn(BaseModel):
+    label: str = Field(description="Where this token lives, e.g. ci or laptop; shown in listings", min_length=1, max_length=80)
     org_id: UUID | None = Field(None, description="Org to scope the token to; omit for an instance token, instance admins only")
     scopes: list[Scope] | None = Field(None, description="Restrict the token to these scopes; omit for the user's full authority")

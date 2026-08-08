@@ -28,7 +28,7 @@ def test_minted_token_has_prefix_and_stored_hash(tmp_path):
 
     async def mint():
         admin = await _admin()
-        token_id, token = await mint_management_key(None, admin.id)
+        token_id, token = await mint_management_key(None, admin.id, label="t")
         return token, await ManagementKey.find_by_id(token_id)
 
     token, row = run_in_db(tmp_path, mint)
@@ -42,7 +42,7 @@ def test_verify_accepts_a_minted_token_and_builds_claims_from_the_row(tmp_path):
 
     async def flow():
         member, org_id = await _member()
-        token_id, token = await mint_management_key(org_id, member.id)
+        token_id, token = await mint_management_key(org_id, member.id, label="t")
         return member.id, org_id, token_id, await verify_management_key(token)
 
     user_id, org_id, token_id, claims = run_in_db(tmp_path, flow)
@@ -57,8 +57,8 @@ def test_verify_builds_scopes_from_the_row(tmp_path):
 
     async def mint_and_verify():
         member, org_id = await _member()
-        _, restricted = await mint_management_key(org_id, member.id, scopes=["sync"])
-        _, unrestricted = await mint_management_key(org_id, member.id)
+        _, restricted = await mint_management_key(org_id, member.id, label="t", scopes=["sync"])
+        _, unrestricted = await mint_management_key(org_id, member.id, label="t")
         return await verify_management_key(restricted), await verify_management_key(unrestricted)
 
     restricted_claims, unrestricted_claims = run_in_db(tmp_path, mint_and_verify)
@@ -86,7 +86,7 @@ def test_revoked_row_is_rejected(tmp_path):
 
     async def flow():
         admin = await _admin()
-        token_id, token = await mint_management_key(None, admin.id)
+        token_id, token = await mint_management_key(None, admin.id, label="t")
         before = await verify_management_key(token)
         row = await ManagementKey.find_by_id(token_id)
         assert row is not None
@@ -118,7 +118,7 @@ def test_tampered_token_is_rejected(tmp_path):
 
     async def flow():
         admin = await _admin()
-        _, token = await mint_management_key(None, admin.id)
+        _, token = await mint_management_key(None, admin.id, label="t")
         tampered = token[:-1] + ("A" if token[-1] != "A" else "B")
         return await verify_management_key(token), await verify_management_key(tampered)
 
@@ -132,7 +132,7 @@ def test_membership_backing_still_gates_user_bound_tokens(tmp_path):
 
     async def flow():
         member, org_id = await _member()
-        _, token = await mint_management_key(org_id, member.id)
+        _, token = await mint_management_key(org_id, member.id, label="t")
         before = await verify_management_key(token)
         membership = await OrgMembership.get((member.id, org_id))
         assert membership is not None

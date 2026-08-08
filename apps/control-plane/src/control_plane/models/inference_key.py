@@ -19,9 +19,14 @@ class InferenceKey(Record, Identified, OrgOwned, Tombstonable, table=True):
     user_id: UUID = Field(foreign_key="user.id")
     token_hash: str = Field(unique=True)
     revoked: bool = False
+    label: str
 
     api_hidden: ClassVar[frozenset[str]] = frozenset({"token_hash"})
-    api_readonly: ClassVar[frozenset[str]] = frozenset({"user_id", "revoked"})
+    api_readonly: ClassVar[frozenset[str]] = frozenset({"user_id", "revoked", "label"})
+
+
+class InferenceKeyIn(BaseModel):
+    label: str = Field(description="What this key is for, e.g. staging or the calling app; shown in listings", min_length=1, max_length=80)
 
 
 class InferenceKeyOut(RecordOut[InferenceKey]):
@@ -29,6 +34,7 @@ class InferenceKeyOut(RecordOut[InferenceKey]):
     org_id: UUID
     user_id: UUID
     revoked: bool
+    label: str
     created_at: datetime
     updated_at: datetime
     deleted_at: datetime | None

@@ -35,22 +35,23 @@ def _new_key(prefix: str) -> str:
     return prefix + secrets.token_urlsafe(32)
 
 
-async def mint_management_key(org_id: UUID | None, user_id: UUID, scopes: list[str] | None = None) -> tuple[UUID, str]:
+async def mint_management_key(org_id: UUID | None, user_id: UUID, *, label: str, scopes: list[str] | None = None) -> tuple[UUID, str]:
     """Mint a management key and its backing row; returns (key_id, token).
 
     The plaintext exists only in the return value; the row stores its hash.
     scopes=None mints an unrestricted key acting with the user's full authority.
+    Every key carries a label so listings can say where it came from.
     Runs inside the caller's transaction.
     """
     token = _new_key(MANAGEMENT_KEY_PREFIX)
-    key = await ManagementKey(org_id=org_id, user_id=user_id, token_hash=token_hash(token), revoked=False, scopes=scopes).save()
+    key = await ManagementKey(org_id=org_id, user_id=user_id, token_hash=token_hash(token), revoked=False, scopes=scopes, label=label).save()
     return key.id, token
 
 
-async def mint_inference_key(org_id: UUID, user_id: UUID) -> tuple[UUID, str]:
+async def mint_inference_key(org_id: UUID, user_id: UUID, *, label: str) -> tuple[UUID, str]:
     """Mint an inference API key row and its caller token; returns (key_id, token). Runs inside the caller's transaction."""
     token = _new_key(INFERENCE_TOKEN_PREFIX)
-    key = await InferenceKey(org_id=org_id, user_id=user_id, token_hash=token_hash(token), revoked=False).save()
+    key = await InferenceKey(org_id=org_id, user_id=user_id, token_hash=token_hash(token), revoked=False, label=label).save()
     return key.id, token
 
 
