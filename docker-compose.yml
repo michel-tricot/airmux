@@ -44,7 +44,7 @@ services:
   data-plane:
     build: .
     # Bring your own GW_BUNDLE_PUBLIC_KEY (must match the control plane's signing key), or leave it unset
-    # and wait for the key keygen wrote to the shared volume. Then wait for the token oss-quickstart drops.
+    # and wait for the key keygen wrote to the shared volume. Then wait for the token airllm quickstart drops.
     command: >
       sh -c '
       if [ -z "$$GW_BUNDLE_PUBLIC_KEY" ]; then
@@ -52,7 +52,7 @@ services:
         export GW_BUNDLE_PUBLIC_KEY=$$(cat /state/signing.pub);
       fi;
       if [ -z "$$GW_DATAPLANE_TOKEN" ]; then
-        until [ -f /state/dataplane.key ]; do echo "waiting for /state/dataplane.key (run oss-quickstart)"; sleep 2; done;
+        until [ -f /state/dataplane.key ]; do echo "waiting for /state/dataplane.key (run airllm quickstart)"; sleep 2; done;
         export GW_DATAPLANE_TOKEN=$$(cat /state/dataplane.key);
       fi;
       exec airllmdp --host 0.0.0.0 --port 8080'
