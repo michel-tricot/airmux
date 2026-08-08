@@ -62,6 +62,13 @@ def make_org(client, headers: dict[str, str], name: str = "org-test") -> UUID:
     return UUID(client.post("/v1/orgs", json={"name": name}, headers=headers).json()["data"]["id"])
 
 
+def make_workspace(client, headers: dict[str, str], name: str = "ws-test") -> UUID:
+    """Create a workspace in the caller's org scope and return its server-minted id."""
+    response = client.post("/v1/org/workspaces", json={"name": name}, headers=headers)
+    assert response.status_code == 200, response.text
+    return UUID(response.json()["data"]["id"])
+
+
 def run_in_db(tmp_path, action):
     """Run one fat-model call against the test database: tests are non-request code, so they open their own transaction."""
 

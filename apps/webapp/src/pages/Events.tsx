@@ -19,11 +19,11 @@ export default function Events() {
     >
       <QueryStatus isLoading={isLoading} error={error} empty={events.length === 0} />
       {events.length > 0 && (
-        <Table headers={['When', 'Org', 'Key', 'Model', 'Status', 'In', 'Out', 'Cache r/w', 'Cost', 'Latency']}>
+        <Table headers={['When', 'Workspace', 'Key', 'Model', 'Status', 'In', 'Out', 'Cache r/w', 'Cost', 'Latency']}>
           {events.map((e) => (
             <tr key={e.event_id} className="hover:bg-slate-900/50">
               <Td>{formatWhen(e.occurred_at)}</Td>
-              <Td mono>{e.org_id}</Td>
+              <Td mono>{e.workspace_id.slice(0, 8)}</Td>
               <Td mono>{e.key_id}</Td>
               <Td mono>
                 {e.model_id}

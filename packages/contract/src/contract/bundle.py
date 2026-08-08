@@ -21,6 +21,7 @@ class KeyEntry(BaseModel):
 
     key_id: str
     org_id: UUID
+    workspace_id: UUID  # the workspace the key was minted in, stamped onto usage events
     token_hash: str  # sha256 hex of the caller's bearer, the lookup key
 
 

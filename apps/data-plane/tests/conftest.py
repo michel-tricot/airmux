@@ -20,6 +20,7 @@ if TYPE_CHECKING:
 
 NOW = datetime.now(tz=UTC)
 ORG = uuid7()
+WORKSPACE = uuid7()
 
 UNUSED_PUBLIC_KEY = Ed25519PrivateKey.generate().public_key()
 
@@ -41,10 +42,10 @@ def make_adapter():
     return REGISTRY["openai_compatible"](PROVIDER)
 
 
-def make_key(key_id="k-dev", org=ORG):
+def make_key(key_id="k-dev", org=ORG, workspace=WORKSPACE):
     """A deterministic opaque token and its bundle entry; the token derives from the key_id so tests stay reproducible."""
     token = f"{INFERENCE_TOKEN_PREFIX}secret-{key_id}"
-    return token, KeyEntry(key_id=key_id, org_id=org, token_hash=token_hash(token))
+    return token, KeyEntry(key_id=key_id, org_id=org, workspace_id=workspace, token_hash=token_hash(token))
 
 
 def make_bundle(keys=(), catalog=None, org=ORG):

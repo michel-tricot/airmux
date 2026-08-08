@@ -6,7 +6,7 @@ from uuid import UUID, uuid4
 import pytest
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from fastapi.testclient import TestClient
-from helpers import MODEL, PROVIDER, make_admin, make_org, run_in_db, setup_control_plane
+from helpers import MODEL, PROVIDER, make_admin, make_org, make_workspace, run_in_db, setup_control_plane
 from pg import db_name_for, ensure_database
 
 from contract import INFERENCE_TOKEN_PREFIX, SignedBundle, private_key_to_b64, token_hash, uuid7, verify_bundle
@@ -42,9 +42,10 @@ def test_full_flow_to_verified_bundle(tmp_path):
     with TestClient(cp.app) as c:
         o1 = make_org(c, root, "o1")
         user_id = _api_user(c, root, tmp_path)
-        minted = c.post(f"/v1/users/{user_id}/tokens", json={"org_id": str(o1), "label": "t"}, headers=root).json()["data"]
+        minted = c.post("/v1/org/management-keys", json={"user_id": user_id, "label": "t"}, headers=cp.headers(o1)).json()["data"]
         org = {"authorization": f"Bearer {minted['token']}"}
-        key = c.post("/v1/org/keys", json={"label": "k"}, headers=org).json()["data"]
+        ws = make_workspace(c, org)
+        key = c.post(f"/v1/org/workspaces/{ws}/inference-keys", json={"label": "k"}, headers=org).json()["data"]
         assert key["token"].startswith(INFERENCE_TOKEN_PREFIX)
         assert c.post("/v1/taxonomy/providers", json=PROVIDER, headers=root).status_code == 200
         assert c.post("/v1/taxonomy/models", json=MODEL, headers=root).status_code == 200
@@ -57,6 +58,7 @@ def test_full_flow_to_verified_bundle(tmp_path):
         assert str(bundle.bundle_id) == compiled["id"]
         assert [k.key_id for k in bundle.keys] == [key["id"]]
         assert [k.token_hash for k in bundle.keys] == [token_hash(key["token"])]
+        assert [k.workspace_id for k in bundle.keys] == [ws]
         assert bundle.catalog.models[0].upstream_model == "gpt-real"
 
 
@@ -65,9 +67,10 @@ def test_revocation_lands_in_next_bundle(tmp_path):
     root = cp.headers()
     with TestClient(cp.app) as c:
         org = cp.headers(make_org(c, root, "o1"))
-        key = c.post("/v1/org/keys", json={"label": "k"}, headers=org).json()["data"]
+        ws = make_workspace(c, org)
+        key = c.post(f"/v1/org/workspaces/{ws}/inference-keys", json={"label": "k"}, headers=org).json()["data"]
         c.post("/v1/org/bundles/compile", headers=org)
-        assert c.delete(f"/v1/org/keys/{key['id']}", headers=org).status_code == 200
+        assert c.delete(f"/v1/org/workspaces/{ws}/inference-keys/{key['id']}", headers=org).status_code == 200
         compiled = c.post("/v1/org/bundles/compile", headers=org).json()["data"]
         assert compiled["version"] == 2
         bundle = verify_bundle(SignedBundle.model_validate(c.get("/v1/bundle/latest", headers=root).json()["data"]), cp.bundle_key.public_key())
@@ -108,8 +111,9 @@ def test_cross_org_key_revocation_is_not_found(tmp_path):
     with TestClient(cp.app) as c:
         o1 = make_org(c, root, "o1")
         o2 = make_org(c, root, "o2")
-        key = c.post("/v1/org/keys", json={"label": "k"}, headers=cp.headers(o1)).json()["data"]
-        assert c.delete(f"/v1/org/keys/{key['id']}", headers=cp.headers(o2)).status_code == 404
+        ws = make_workspace(c, cp.headers(o1))
+        key = c.post(f"/v1/org/workspaces/{ws}/inference-keys", json={"label": "k"}, headers=cp.headers(o1)).json()["data"]
+        assert c.delete(f"/v1/org/workspaces/{ws}/inference-keys/{key['id']}", headers=cp.headers(o2)).status_code == 404
         c.post("/v1/org/bundles/compile", headers=cp.headers(o1))
         bundle = verify_bundle(SignedBundle.model_validate(c.get("/v1/bundle/latest", headers=root).json()["data"]), cp.bundle_key.public_key())
         assert [k.key_id for k in bundle.keys] == [key["id"]]
@@ -127,7 +131,7 @@ def test_auth_required_everywhere(tmp_path):
     cp = setup_control_plane(tmp_path)
     with TestClient(cp.app) as c:
         assert c.post("/v1/orgs", json={"name": "o1"}).status_code == 401
-        assert c.get("/v1/org/keys").status_code == 401
+        assert c.get("/v1/org/workspaces").status_code == 401
         assert c.get("/v1/taxonomy").status_code == 401
         assert c.post("/v1/orgs", json={"name": "o1"}, headers={"authorization": "Bearer garbage"}).status_code == 401
         assert c.get("/v1/bundle/latest").status_code == 401
@@ -142,18 +146,18 @@ def test_scopes_are_strictly_separated(tmp_path):
 
         assert c.post("/v1/orgs", json={"name": "o2"}, headers=org).status_code == 403
         assert c.get("/v1/orgs", headers=org).status_code == 403
-        assert c.post(f"/v1/users/{uuid7()}/tokens", headers=org).status_code == 403
-        assert c.get("/v1/instance/tokens", headers=org).status_code == 403
-        assert c.delete(f"/v1/instance/tokens/{uuid7()}", headers=org).status_code == 403
+        assert c.post("/v1/instance/management-keys", headers=org).status_code == 403
+        assert c.get("/v1/instance/management-keys", headers=org).status_code == 403
+        assert c.delete(f"/v1/instance/management-keys/{uuid7()}", headers=org).status_code == 403
 
         assert c.post("/v1/taxonomy/providers", json=PROVIDER, headers=org).status_code == 403
         assert c.post("/v1/taxonomy/models", json=MODEL, headers=org).status_code == 403
         assert c.get("/v1/taxonomy", headers=org).status_code == 200
         assert c.get("/v1/taxonomy", headers=root).status_code == 200
 
-        assert c.post("/v1/org/keys", headers=root).status_code == 403
+        assert c.post("/v1/org/workspaces", headers=root).status_code == 403
         assert c.post("/v1/org/bundles/compile", headers=root).status_code == 403
-        for path in ("/v1/org/keys", "/v1/org/bundles", "/v1/org/events", "/v1/org/instances"):
+        for path in ("/v1/org/workspaces", "/v1/org/bundles", "/v1/org/events", "/v1/org/instances"):
             assert c.get(path, headers=root).status_code == 403
 
 
@@ -162,10 +166,11 @@ def test_inference_token_is_rejected_on_management_routes(tmp_path):
     root = cp.headers()
     with TestClient(cp.app) as c:
         org = cp.headers(make_org(c, root, "o1"))
-        key = c.post("/v1/org/keys", json={"label": "k"}, headers=org).json()["data"]
+        ws = make_workspace(c, org)
+        key = c.post(f"/v1/org/workspaces/{ws}/inference-keys", json={"label": "k"}, headers=org).json()["data"]
         inference = {"authorization": f"Bearer {key['token']}"}
         assert c.get("/v1/orgs", headers=inference).status_code == 401
-        assert c.get("/v1/org/keys", headers=inference).status_code == 401
+        assert c.get("/v1/org/workspaces", headers=inference).status_code == 401
 
 
 def test_orgs_cannot_reach_each_other(tmp_path):
@@ -175,10 +180,11 @@ def test_orgs_cannot_reach_each_other(tmp_path):
         o1 = cp.headers(make_org(c, root, "o1"))
         o2 = cp.headers(make_org(c, root, "o2"))
         c.post("/v1/taxonomy/providers", json=PROVIDER, headers=root)
-        key = c.post("/v1/org/keys", json={"label": "k"}, headers=o1).json()["data"]
+        ws = make_workspace(c, o1)
+        key = c.post(f"/v1/org/workspaces/{ws}/inference-keys", json={"label": "k"}, headers=o1).json()["data"]
 
-        assert c.delete(f"/v1/org/keys/{key['id']}", headers=o2).status_code == 404
-        assert c.get("/v1/org/keys", headers=o2).json()["data"] == []
+        assert c.delete(f"/v1/org/workspaces/{ws}/inference-keys/{key['id']}", headers=o2).status_code == 404
+        assert c.get("/v1/org/workspaces", headers=o2).json()["data"] == []
         taxonomy = c.get("/v1/taxonomy", headers=o2).json()["data"]
         assert [p["name"] for p in taxonomy["providers"]] == ["openai"]
         assert taxonomy == c.get("/v1/taxonomy", headers=o1).json()["data"]
@@ -190,29 +196,29 @@ def test_token_lifecycle_via_api(tmp_path):
     with TestClient(cp.app) as c:
         o1 = make_org(c, root, "o1")
         user_id = _api_user(c, root, tmp_path)
-        assert c.post(f"/v1/users/{user_id}/tokens", json={"org_id": str(uuid7()), "label": "t"}, headers=root).status_code == 404
-        assert c.post(f"/v1/users/{uuid7()}/tokens", json={"label": "t"}, headers=root).status_code == 404
-        org_token = c.post(f"/v1/users/{user_id}/tokens", json={"org_id": str(o1), "label": "t"}, headers=root).json()["data"]
+        assert c.post("/v1/org/management-keys", json={"user_id": str(uuid7()), "label": "t"}, headers=cp.headers(o1)).status_code == 404
+        assert c.post("/v1/instance/management-keys", json={"user_id": str(uuid7()), "label": "t"}, headers=root).status_code == 404
+        org_token = c.post("/v1/org/management-keys", json={"user_id": user_id, "label": "t"}, headers=cp.headers(o1)).json()["data"]
         assert org_token["org_id"] == str(o1)
         assert org_token["user_id"] == user_id
         assert org_token["token"].startswith(MANAGEMENT_KEY_PREFIX)
-        peer = c.post(f"/v1/users/{user_id}/tokens", json={"label": "t"}, headers=root).json()["data"]
+        peer = c.post("/v1/instance/management-keys", json={"user_id": user_id, "label": "t"}, headers=root).json()["data"]
         assert peer["org_id"] is None
-        listed = c.get("/v1/instance/tokens", headers=root).json()["data"]
+        listed = c.get("/v1/instance/management-keys", headers=root).json()["data"]
         assert {org_token["id"], peer["id"]} <= {t["id"] for t in listed}
         assert all("token_hash" not in t for t in listed)
 
         scoped = {"authorization": f"Bearer {org_token['token']}"}
-        assert c.get("/v1/org/keys", headers=scoped).status_code == 200
-        assert c.delete(f"/v1/instance/tokens/{org_token['id']}", headers=root).status_code == 200
-        assert c.get("/v1/org/keys", headers=scoped).status_code == 401
+        assert c.get("/v1/org/workspaces", headers=scoped).status_code == 200
+        assert c.delete(f"/v1/instance/management-keys/{org_token['id']}", headers=root).status_code == 200
+        assert c.get("/v1/org/workspaces", headers=scoped).status_code == 401
 
         peer_headers = {"authorization": f"Bearer {peer['token']}"}
         assert c.get("/v1/orgs", headers=peer_headers).status_code == 200
-        assert c.delete(f"/v1/instance/tokens/{peer['id']}", headers=root).status_code == 200
+        assert c.delete(f"/v1/instance/management-keys/{peer['id']}", headers=root).status_code == 200
         assert c.get("/v1/orgs", headers=peer_headers).status_code == 401
 
-        assert c.delete(f"/v1/instance/tokens/{uuid7()}", headers=root).status_code == 404
+        assert c.delete(f"/v1/instance/management-keys/{uuid7()}", headers=root).status_code == 404
 
 
 def test_list_endpoints_read_back(tmp_path):
@@ -220,14 +226,16 @@ def test_list_endpoints_read_back(tmp_path):
     root = cp.headers()
     with TestClient(cp.app) as c:
         org = cp.headers(make_org(c, root, "o1"))
-        key = c.post("/v1/org/keys", json={"label": "k"}, headers=org).json()["data"]
+        ws = make_workspace(c, org)
+        key = c.post(f"/v1/org/workspaces/{ws}/inference-keys", json={"label": "k"}, headers=org).json()["data"]
         c.post("/v1/taxonomy/providers", json=PROVIDER, headers=root)
         c.post("/v1/taxonomy/models", json=MODEL, headers=root)
         c.post("/v1/org/bundles/compile", headers=org)
 
         assert [o["name"] for o in c.get("/v1/orgs", headers=root).json()["data"]] == ["o1"]
-        keys = c.get("/v1/org/keys", headers=org).json()["data"]
+        keys = c.get(f"/v1/org/workspaces/{ws}/inference-keys", headers=org).json()["data"]
         assert [k["id"] for k in keys] == [key["id"]]
+        assert keys[0]["workspace_id"] == str(ws)
         assert "token" not in keys[0]
         assert "token_hash" not in keys[0]
         assert UUID(keys[0]["user_id"]).version == 7
@@ -279,6 +287,7 @@ def _event(org: UUID) -> dict:
         "request_id": str(uuid7()),
         "occurred_at": datetime.now(tz=UTC).isoformat(),
         "org_id": str(org),
+        "workspace_id": str(uuid7()),
         "key_id": "k1",
         "model_id": "gpt-test",
         "provider_id": "openai",
@@ -360,9 +369,9 @@ def test_revoked_token_is_rejected_on_sync_routes(tmp_path):
     with TestClient(cp.app) as c:
         o1 = make_org(c, root, "o1")
         user_id = _api_user(c, root, tmp_path)
-        minted = c.post(f"/v1/users/{user_id}/tokens", json={"org_id": str(o1), "label": "t"}, headers=root).json()["data"]
+        minted = c.post("/v1/org/management-keys", json={"user_id": user_id, "label": "t"}, headers=cp.headers(o1)).json()["data"]
         dp = {"authorization": f"Bearer {minted['token']}"}
         dp1 = uuid7()
         assert c.post("/v1/heartbeat", json=_heartbeat(dp1, o1), headers=dp).status_code == 200
-        assert c.delete(f"/v1/instance/tokens/{minted['id']}", headers=root).status_code == 200
+        assert c.delete(f"/v1/instance/management-keys/{minted['id']}", headers=root).status_code == 200
         assert c.post("/v1/heartbeat", json=_heartbeat(dp1, o1), headers=dp).status_code == 401

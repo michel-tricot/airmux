@@ -16,6 +16,8 @@ from control_plane.models.org_membership import OrgMembership
 from control_plane.models.provider import Provider
 from control_plane.models.usage_event import UsageEvent
 from control_plane.models.user import User
+from control_plane.models.workspace import Workspace
+from control_plane.models.workspace_membership import WorkspaceMembership
 
 __all__ = [
     "AuditLog",
@@ -37,6 +39,8 @@ __all__ = [
     "Tombstonable",
     "UsageEvent",
     "User",
+    "Workspace",
+    "WorkspaceMembership",
     "audited",
     "set_actor",
 ]

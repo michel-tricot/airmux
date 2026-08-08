@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from fastapi.testclient import TestClient
-from helpers import make_app, make_org, setup_control_plane
+from helpers import make_app, make_org, make_workspace, setup_control_plane
 from test_api_hygiene import _api_routes
 
 from contract import uuid7
@@ -72,8 +72,8 @@ def test_spec_stamping_is_idempotent_across_requests():
     """FastAPI caches the generated schema and returns the same dict on every call; the scope
     stamping must not compound on it, or each page refresh grows every description by one line."""
     app = make_app()
-    first = app.openapi()["paths"]["/v1/org/keys"]["post"].get("description")
-    second = app.openapi()["paths"]["/v1/org/keys"]["post"].get("description")
+    first = app.openapi()["paths"]["/v1/org/workspaces"]["post"].get("description")
+    second = app.openapi()["paths"]["/v1/org/workspaces"]["post"].get("description")
     assert first == second
     assert first is not None
     assert first.count("Requires the") == 1
@@ -84,9 +84,9 @@ def _claims(scopes) -> ManagementClaims:
 
 
 def test_allowed_is_a_pure_scope_membership_check():
-    assert allowed(_claims(ALL_SCOPES), Scope.keys_write)
-    assert allowed(_claims({"keys:read"}), Scope.keys_read)
-    assert not allowed(_claims({"keys:read"}), Scope.keys_write)
+    assert allowed(_claims(ALL_SCOPES), Scope.inference_keys_write)
+    assert allowed(_claims({"inference-keys:read"}), Scope.inference_keys_read)
+    assert not allowed(_claims({"inference-keys:read"}), Scope.inference_keys_write)
     assert not allowed(_claims(()), Scope.sync)
 
 
@@ -105,9 +105,12 @@ def test_scoped_token_restricts_verbs_within_the_org(tmp_path):
     cp = setup_control_plane(tmp_path)
     with TestClient(cp.app) as client:
         o1 = _seed_org(client, cp.headers())
-        reader = cp.headers(org_id=o1, scopes=["keys:read"])
-        assert client.get("/v1/org/keys", headers=reader).status_code == 200
-        assert client.post("/v1/org/keys", headers=reader).status_code == 403
+        ws = make_workspace(client, cp.headers(org_id=o1))
+        reader = cp.headers(org_id=o1, scopes=["workspaces:read", "inference-keys:read"])
+        assert client.get("/v1/org/workspaces", headers=reader).status_code == 200
+        assert client.post("/v1/org/workspaces", headers=reader).status_code == 403
+        assert client.get(f"/v1/org/workspaces/{ws}/inference-keys", headers=reader).status_code == 200
+        assert client.post(f"/v1/org/workspaces/{ws}/inference-keys", headers=reader).status_code == 403
         assert client.post("/v1/org/bundles/compile", headers=reader).status_code == 403
         assert client.get("/v1/org/events", headers=reader).status_code == 403
 
@@ -117,8 +120,9 @@ def test_unscoped_token_keeps_full_authority(tmp_path):
     with TestClient(cp.app) as client:
         o1 = _seed_org(client, cp.headers())
         org = cp.headers(org_id=o1)
-        assert client.post("/v1/org/keys", json={"label": "k"}, headers=org).status_code == 200
-        assert client.get("/v1/org/keys", headers=org).status_code == 200
+        ws = make_workspace(client, org)
+        assert client.post(f"/v1/org/workspaces/{ws}/inference-keys", json={"label": "k"}, headers=org).status_code == 200
+        assert client.get(f"/v1/org/workspaces/{ws}/inference-keys", headers=org).status_code == 200
 
 
 def test_sync_scope_covers_the_data_plane_surface_and_nothing_else(tmp_path):
@@ -129,7 +133,7 @@ def test_sync_scope_covers_the_data_plane_surface_and_nothing_else(tmp_path):
         sync = cp.headers(org_id=o1, scopes=["sync"])
         assert client.get("/v1/bundle/latest", headers=sync).status_code == 200
         assert client.post("/v1/events", json=[], headers=sync).status_code == 200
-        assert client.get("/v1/org/keys", headers=sync).status_code == 403
+        assert client.get("/v1/org/workspaces", headers=sync).status_code == 403
         assert client.get("/v1/taxonomy", headers=sync).status_code == 403
 
 
@@ -140,21 +144,23 @@ def test_mint_accepts_scopes_and_rejects_unknown_ones(tmp_path):
         o1 = _seed_org(client, root)
         user = client.post("/v1/users", json={"email": "dev@example.com"}, headers=root).json()["data"]
         assert client.put(f"/v1/users/{user['id']}/orgs/{o1}", headers=root).status_code == 200
-        bad = client.post(f"/v1/users/{user['id']}/tokens", json={"org_id": str(o1), "scopes": ["nope"], "label": "t"}, headers=root)
+        bad = client.post("/v1/org/management-keys", json={"user_id": user["id"], "scopes": ["nope"], "label": "t"}, headers=cp.headers(org_id=o1))
         assert bad.status_code == 422
-        minted = client.post(f"/v1/users/{user['id']}/tokens", json={"org_id": str(o1), "scopes": ["keys:read"], "label": "t"}, headers=root)
+        minted = client.post(
+            "/v1/org/management-keys", json={"user_id": user["id"], "scopes": ["inference-keys:read"], "label": "t"}, headers=cp.headers(org_id=o1)
+        )
         assert minted.status_code == 200
-        assert minted.json()["data"]["scopes"] == ["keys:read"]
-        rows = client.get("/v1/instance/tokens", params={"org_id": str(o1)}, headers=root).json()["data"]
-        assert {r["id"]: r["scopes"] for r in rows}[minted.json()["data"]["id"]] == ["keys:read"]
+        assert minted.json()["data"]["scopes"] == ["inference-keys:read"]
+        rows = client.get("/v1/instance/management-keys", params={"org_id": str(o1)}, headers=root).json()["data"]
+        assert {r["id"]: r["scopes"] for r in rows}[minted.json()["data"]["id"]] == ["inference-keys:read"]
 
 
 def test_restricted_instance_credential(tmp_path):
     cp = setup_control_plane(tmp_path)
     with TestClient(cp.app) as client:
-        auditor = cp.headers(scopes=["users:read", "tokens:read"])
+        auditor = cp.headers(scopes=["users:read", "management-keys:read"])
         assert client.get("/v1/users", headers=auditor).status_code == 200
-        assert client.get("/v1/instance/tokens", headers=auditor).status_code == 200
+        assert client.get("/v1/instance/management-keys", headers=auditor).status_code == 200
         assert client.get("/v1/orgs", headers=auditor).status_code == 403
         assert client.post("/v1/users", json={"email": "x@example.com"}, headers=auditor).status_code == 403
         assert client.post("/v1/taxonomy/providers", json={}, headers=auditor).status_code == 403

@@ -16,6 +16,7 @@ class UsageEvent(Record, table=True):
     request_id: UUID
     occurred_at: datetime = Field(sa_type=UTCDateTime)
     org_id: UUID
+    workspace_id: UUID
     key_id: str
     model_id: str
     provider_id: str
@@ -37,6 +38,7 @@ class UsageEventOut(RecordOut[UsageEvent]):
     request_id: UUID
     occurred_at: datetime
     org_id: UUID
+    workspace_id: UUID
     key_id: str
     model_id: str
     provider_id: str

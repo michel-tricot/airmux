@@ -15,8 +15,10 @@ class Scope(StrEnum):
     invented later. Roles arrive later as named bundles over these same values.
     """
 
-    keys_read = "keys:read"
-    keys_write = "keys:write"
+    inference_keys_read = "inference-keys:read"
+    inference_keys_write = "inference-keys:write"
+    workspaces_read = "workspaces:read"
+    workspaces_write = "workspaces:write"
     bundles_read = "bundles:read"
     bundles_write = "bundles:write"
     events_read = "events:read"
@@ -27,8 +29,8 @@ class Scope(StrEnum):
     orgs_write = "orgs:write"
     users_read = "users:read"
     users_write = "users:write"
-    tokens_read = "tokens:read"
-    tokens_write = "tokens:write"
+    management_keys_read = "management-keys:read"
+    management_keys_write = "management-keys:write"
     sync = "sync"
 
 

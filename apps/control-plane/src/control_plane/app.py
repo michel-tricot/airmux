@@ -22,6 +22,7 @@ from control_plane.routes.oss import router as oss_router
 from control_plane.routes.sync import router as sync_router
 from control_plane.routes.taxonomy import router as taxonomy_router
 from control_plane.routes.users import router as users_router
+from control_plane.routes.workspaces import router as workspaces_router
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -36,8 +37,9 @@ API_TAGS = [
     {"name": "Instance", "description": "Instance-level state: whether this deployment has a claimed account yet"},
     {"name": "Orgs", "description": "Tenants of the instance; every key, bundle and event belongs to one org"},
     {"name": "Users", "description": "Instance admins, org members and service accounts, with their org memberships"},
-    {"name": "Management Tokens", "description": "User-bound bearer tokens for this API, instance- or org-scoped"},
-    {"name": "API Keys", "description": "Caller credentials for the gateway: opaque keys whose hashes reach data planes through bundles"},
+    {"name": "Management Keys", "description": "User-bound bearer keys for this API, instance- or org-scoped"},
+    {"name": "Workspaces", "description": "Scopes inside an org where inference keys live; members are drawn from the org"},
+    {"name": "Inference Keys", "description": "Caller credentials for the gateway: opaque keys whose hashes reach data planes through bundles"},
     {"name": "Auth", "description": "Human login: password, cookie sessions, account endpoints, CLI device authorization"},
     {"name": "Enrollment", "description": "A user's path into orgs: their standing and their one self-serve personal org"},
     {"name": "Bundles", "description": "Signed policy bundles compiled per org and polled by data planes"},
@@ -48,8 +50,8 @@ API_TAGS = [
 ]
 
 TAG_GROUPS = [
-    {"name": "Instance Admin", "tags": ["Instance", "Orgs", "Users", "Management Tokens"]},
-    {"name": "Org Management", "tags": ["API Keys", "Bundles", "Instances", "Events"]},
+    {"name": "Instance Admin", "tags": ["Instance", "Orgs", "Users"]},
+    {"name": "Org Management", "tags": ["Management Keys", "Workspaces", "Inference Keys", "Bundles", "Instances", "Events"]},
     {"name": "Account", "tags": ["Auth", "Enrollment"]},
     {"name": "Catalog", "tags": ["Taxonomy"]},
     {"name": "Data Plane", "tags": ["Sync"]},
@@ -140,7 +142,18 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.add_exception_handler(NotOwnedError, not_owned_handler)
     app.add_route("/healthz", healthz)
     v1 = APIRouter(prefix="/v1")
-    for router in (auth_router, enroll_router, oss_router, instance_router, users_router, orgs_router, org_router, sync_router, taxonomy_router):
+    for router in (
+        auth_router,
+        enroll_router,
+        oss_router,
+        instance_router,
+        users_router,
+        orgs_router,
+        workspaces_router,
+        org_router,
+        sync_router,
+        taxonomy_router,
+    ):
         v1.include_router(router)
     app.include_router(v1)
     return app

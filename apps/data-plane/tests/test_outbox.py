@@ -23,6 +23,7 @@ def make_event(request_id) -> UsageEventV1:
         request_id=request_id,
         occurred_at=datetime.now(tz=UTC),
         org_id=uuid7(),
+        workspace_id=uuid7(),
         key_id="k1",
         model_id="gpt-test",
         provider_id="openai",

@@ -9,7 +9,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from control_plane.authz import ALL_SCOPES, Scope, allowed
 from control_plane.db import transaction
 from control_plane.keys import ManagementClaims, verify_management_key
-from control_plane.models import Org, OrgMembership, User, set_actor
+from control_plane.models import Org, OrgMembership, User, Workspace, WorkspaceMembership, set_actor
 from control_plane.sessions import SESSION_COOKIE, verify_session
 
 SessionCookie = Annotated[str | None, Cookie(alias=SESSION_COOKIE)]
@@ -149,6 +149,22 @@ async def org_scope(claims: MgmtDep) -> UUID:
 
 InstanceDep = Annotated[ManagementClaims, Depends(instance_scope)]
 OrgDep = Annotated[UUID, Depends(org_scope)]
+
+
+async def workspace_member(workspace_id: UUID, org_id: OrgDep, claims: MgmtDep) -> Workspace:
+    """Key operations require membership in the workspace, not just the org; instance admins bypass.
+
+    Ownership resolves first, so a workspace outside the org scope is a 404 before it is a 403.
+    """
+    workspace = await Workspace.owned_by(org_id, workspace_id)
+    if await WorkspaceMembership.get((claims.user_id, workspace_id)) is None:
+        user = await User.find_by_id(claims.user_id)
+        if user is None or not user.instance_admin:
+            raise HTTPException(status_code=403, detail="not a member of this workspace")
+    return workspace
+
+
+WorkspaceDep = Annotated[Workspace, Depends(workspace_member)]
 
 
 class ScopeCheck(Protocol):

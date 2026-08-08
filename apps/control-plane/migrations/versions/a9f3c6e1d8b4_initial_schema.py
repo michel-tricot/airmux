@@ -1,13 +1,17 @@
 """initial schema
 
-Squashed from the pre-release Postgres conversion on 2026-08-06 and re-squashed 2026-08-07
-(revoked rename, SSO removal, management_key rename); nothing had deployed, so the chain had no
-consumers. From first deployment on the chain is append-only: never squash again or edit a
-shipped revision.
+Consolidated on 2026-08-08 from the pre-release chain (initial schema, enrollment and cli auth,
+workspaces); nothing had deployed, so the chain had no consumers. From first deployment on the
+chain is append-only: never squash again or edit a shipped revision.
 
-Revision ID: f1a7c3d9e5b2
+The tenancy model: users and orgs are instance-level, org_membership ties them, workspaces live
+under an org, workspace_membership's composite foreign keys make cross-org membership
+structurally impossible (with a cascade evicting users whose org membership goes), and
+inference keys live in workspaces with org_id kept consistent by a composite foreign key.
+
+Revision ID: a9f3c6e1d8b4
 Revises:
-Create Date: 2026-08-06
+Create Date: 2026-08-08
 """
 
 from __future__ import annotations
@@ -20,7 +24,7 @@ from control_plane.models.audit import audit_trigger_ddl_v1, audit_trigger_drop_
 from control_plane.models.common.column_types import UTCDateTime
 from control_plane.models.common.tombstone import touch_trigger_ddl_v1, touch_trigger_drop_ddl_v1
 
-revision = "f1a7c3d9e5b2"
+revision = "a9f3c6e1d8b4"
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -35,6 +39,9 @@ TOMBSTONED = (
     "management_key",
     "model",
     "org_membership",
+    "cli_auth_request",
+    "workspace",
+    "workspace_membership",
 )
 
 AUDITED = (
@@ -45,6 +52,8 @@ AUDITED = (
     ("org_membership", ("user_id", "org_id")),
     ("provider", ("id",)),
     ("user", ("id",)),
+    ("workspace", ("id",)),
+    ("workspace_membership", ("user_id", "workspace_id")),
 )
 
 
@@ -73,13 +82,33 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("instance_id"),
     )
     op.create_table(
+        "user",
+        sa.Column("created_at", UTCDateTime(), server_default=sa.text("now()"), nullable=False),
+        sa.Column("updated_at", UTCDateTime(), server_default=sa.text("now()"), nullable=False),
+        sa.Column("deleted_at", UTCDateTime(), nullable=True),
+        sa.Column("id", sa.Uuid(), server_default=sa.text("uuidv7()"), nullable=False),
+        sa.Column("email", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+        sa.Column("name", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+        sa.Column("instance_admin", sa.Boolean(), nullable=False),
+        sa.Column("service_account", sa.Boolean(), nullable=False),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("email"),
+    )
+    op.create_table(
         "org",
         sa.Column("created_at", UTCDateTime(), server_default=sa.text("now()"), nullable=False),
         sa.Column("updated_at", UTCDateTime(), server_default=sa.text("now()"), nullable=False),
         sa.Column("deleted_at", UTCDateTime(), nullable=True),
         sa.Column("id", sa.Uuid(), server_default=sa.text("uuidv7()"), nullable=False),
         sa.Column("name", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+        sa.Column("personal_for", sa.Uuid(), nullable=True),
+        sa.ForeignKeyConstraint(
+            ["personal_for"],
+            ["user.id"],
+            name="org_personal_for_fkey",
+        ),
         sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("personal_for", name="org_personal_for_key"),
     )
     op.create_table(
         "provider",
@@ -102,6 +131,7 @@ def upgrade() -> None:
         sa.Column("request_id", sa.Uuid(), nullable=False),
         sa.Column("occurred_at", UTCDateTime(), nullable=False),
         sa.Column("org_id", sa.Uuid(), nullable=False),
+        sa.Column("workspace_id", sa.Uuid(), nullable=False),
         sa.Column("key_id", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("model_id", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("provider_id", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
@@ -117,40 +147,6 @@ def upgrade() -> None:
         sa.Column("status", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("stream", sa.Boolean(), nullable=False),
         sa.PrimaryKeyConstraint("event_id"),
-    )
-    op.create_table(
-        "user",
-        sa.Column("created_at", UTCDateTime(), server_default=sa.text("now()"), nullable=False),
-        sa.Column("updated_at", UTCDateTime(), server_default=sa.text("now()"), nullable=False),
-        sa.Column("deleted_at", UTCDateTime(), nullable=True),
-        sa.Column("id", sa.Uuid(), server_default=sa.text("uuidv7()"), nullable=False),
-        sa.Column("email", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
-        sa.Column("name", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
-        sa.Column("instance_admin", sa.Boolean(), nullable=False),
-        sa.Column("service_account", sa.Boolean(), nullable=False),
-        sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint("email"),
-    )
-    op.create_table(
-        "inference_key",
-        sa.Column("created_at", UTCDateTime(), server_default=sa.text("now()"), nullable=False),
-        sa.Column("updated_at", UTCDateTime(), server_default=sa.text("now()"), nullable=False),
-        sa.Column("deleted_at", UTCDateTime(), nullable=True),
-        sa.Column("org_id", sa.Uuid(), nullable=False),
-        sa.Column("id", sa.Uuid(), server_default=sa.text("uuidv7()"), nullable=False),
-        sa.Column("user_id", sa.Uuid(), nullable=False),
-        sa.Column("token_hash", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
-        sa.Column("revoked", sa.Boolean(), nullable=False),
-        sa.ForeignKeyConstraint(
-            ["org_id"],
-            ["org.id"],
-        ),
-        sa.ForeignKeyConstraint(
-            ["user_id"],
-            ["user.id"],
-        ),
-        sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint("token_hash"),
     )
     op.create_table(
         "auth_identity",
@@ -213,6 +209,7 @@ def upgrade() -> None:
         sa.Column("token_hash", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("revoked", sa.Boolean(), nullable=False),
         sa.Column("scopes", sa.JSON(), nullable=True),
+        sa.Column("label", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.ForeignKeyConstraint(
             ["user_id"],
             ["user.id"],
@@ -258,6 +255,92 @@ def upgrade() -> None:
         ),
         sa.PrimaryKeyConstraint("user_id", "org_id"),
     )
+    op.create_table(
+        "cli_auth_request",
+        sa.Column("created_at", UTCDateTime(), server_default=sa.text("now()"), nullable=False),
+        sa.Column("updated_at", UTCDateTime(), server_default=sa.text("now()"), nullable=False),
+        sa.Column("deleted_at", UTCDateTime(), nullable=True),
+        sa.Column("id", sa.Uuid(), server_default=sa.text("uuidv7()"), nullable=False),
+        sa.Column("user_code_hash", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+        sa.Column("poll_secret_hash", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+        sa.Column("client_name", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+        sa.Column("requester", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+        sa.Column("expires_at", UTCDateTime(), nullable=False),
+        sa.Column("approved_user_id", sa.Uuid(), nullable=True),
+        sa.Column("approved_org_id", sa.Uuid(), nullable=True),
+        sa.ForeignKeyConstraint(
+            ["approved_user_id"],
+            ["user.id"],
+        ),
+        sa.ForeignKeyConstraint(
+            ["approved_org_id"],
+            ["org.id"],
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("user_code_hash"),
+        sa.UniqueConstraint("poll_secret_hash"),
+    )
+    op.create_table(
+        "workspace",
+        sa.Column("created_at", UTCDateTime(), server_default=sa.text("now()"), nullable=False),
+        sa.Column("updated_at", UTCDateTime(), server_default=sa.text("now()"), nullable=False),
+        sa.Column("deleted_at", UTCDateTime(), nullable=True),
+        sa.Column("id", sa.Uuid(), server_default=sa.text("uuidv7()"), nullable=False),
+        sa.Column("org_id", sa.Uuid(), nullable=False),
+        sa.Column("name", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["org_id"],
+            ["org.id"],
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("id", "org_id", name="workspace_id_org_id_key"),
+    )
+    op.create_table(
+        "workspace_membership",
+        sa.Column("created_at", UTCDateTime(), server_default=sa.text("now()"), nullable=False),
+        sa.Column("updated_at", UTCDateTime(), server_default=sa.text("now()"), nullable=False),
+        sa.Column("deleted_at", UTCDateTime(), nullable=True),
+        sa.Column("user_id", sa.Uuid(), nullable=False),
+        sa.Column("workspace_id", sa.Uuid(), nullable=False),
+        sa.Column("org_id", sa.Uuid(), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["workspace_id", "org_id"],
+            ["workspace.id", "workspace.org_id"],
+        ),
+        sa.ForeignKeyConstraint(
+            ["user_id", "org_id"],
+            ["org_membership.user_id", "org_membership.org_id"],
+            ondelete="CASCADE",
+        ),
+        sa.PrimaryKeyConstraint("user_id", "workspace_id"),
+    )
+    op.create_table(
+        "inference_key",
+        sa.Column("created_at", UTCDateTime(), server_default=sa.text("now()"), nullable=False),
+        sa.Column("updated_at", UTCDateTime(), server_default=sa.text("now()"), nullable=False),
+        sa.Column("deleted_at", UTCDateTime(), nullable=True),
+        sa.Column("org_id", sa.Uuid(), nullable=False),
+        sa.Column("id", sa.Uuid(), server_default=sa.text("uuidv7()"), nullable=False),
+        sa.Column("workspace_id", sa.Uuid(), nullable=False),
+        sa.Column("user_id", sa.Uuid(), nullable=False),
+        sa.Column("token_hash", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+        sa.Column("revoked", sa.Boolean(), nullable=False),
+        sa.Column("label", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["org_id"],
+            ["org.id"],
+        ),
+        sa.ForeignKeyConstraint(
+            ["user_id"],
+            ["user.id"],
+        ),
+        sa.ForeignKeyConstraint(
+            ["workspace_id", "org_id"],
+            ["workspace.id", "workspace.org_id"],
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("token_hash"),
+    )
     for table in TOMBSTONED:
         for statement in touch_trigger_ddl_v1(table):
             op.execute(statement)
@@ -273,16 +356,19 @@ def downgrade() -> None:
     for table in TOMBSTONED:
         for statement in touch_trigger_drop_ddl_v1(table):
             op.execute(statement)
+    op.drop_table("inference_key")
+    op.drop_table("workspace_membership")
+    op.drop_table("workspace")
+    op.drop_table("cli_auth_request")
     op.drop_table("org_membership")
     op.drop_table("model")
     op.drop_table("management_key")
     op.drop_table("bundle")
     op.drop_table("auth_session")
     op.drop_table("auth_identity")
-    op.drop_table("inference_key")
-    op.drop_table("user")
     op.drop_table("usage_event")
     op.drop_table("provider")
     op.drop_table("org")
+    op.drop_table("user")
     op.drop_table("data_plane_instance")
     op.drop_table("audit_log")

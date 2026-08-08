@@ -10,30 +10,45 @@ from contract import uuid7
 from control_plane.authz import Scope
 from control_plane.compiler import UnknownOrgError, compile_and_store
 from control_plane.deps import MgmtDep, OrgDep, require
-from control_plane.keys import mint_inference_key
-from control_plane.models import Bundle, DataPlaneInstance, InferenceKey, Org, UsageEvent
+from control_plane.keys import mint_management_key
+from control_plane.models import Bundle, DataPlaneInstance, ManagementKey, OrgMembership, UsageEvent, User
 from control_plane.models.bundle import BundleOut
 from control_plane.models.common.wire import Envelope
 from control_plane.models.data_plane_instance import DataPlaneInstanceOut
-from control_plane.models.inference_key import InferenceKeyIn, InferenceKeyMintedOut, InferenceKeyOut, InferenceKeyRevokedOut
+from control_plane.models.management_key import ManagementKeyIn, ManagementKeyMintedOut, ManagementKeyOut, ManagementKeyRevokedOut
 from control_plane.models.usage_event import UsageEventOut
 
 router = APIRouter(prefix="/org")
 
 
-@router.post("/keys", tags=["API Keys"], dependencies=[require(Scope.keys_write)])
-async def create_key(body: InferenceKeyIn, org_id: OrgDep, claims: MgmtDep) -> Envelope[InferenceKeyMintedOut]:
-    if await Org.find_by_id(org_id) is None:
+@router.get("/management-keys", tags=["Management Keys"], dependencies=[require(Scope.management_keys_read)])
+async def list_management_keys(org_id: OrgDep) -> Envelope[list[ManagementKeyOut]]:
+    keys = await ManagementKey.find(ManagementKey.org_id == org_id, order_by=col(ManagementKey.id))
+    return Envelope(data=[ManagementKeyOut.model_validate(k) for k in keys])
+
+
+@router.post("/management-keys", tags=["Management Keys"], dependencies=[require(Scope.management_keys_write)])
+async def mint_management_key_endpoint(body: ManagementKeyIn, org_id: OrgDep, claims: MgmtDep) -> Envelope[ManagementKeyMintedOut]:
+    """Mint an org-scoped key for the acting user, or for another org member when user_id names one."""
+    user_id = body.user_id or claims.user_id
+    user = await User.find_by_id(user_id)
+    if user is None:
         raise HTTPException(status_code=404)
-    key_id, token = await mint_inference_key(org_id, claims.user_id, label=body.label)
-    return Envelope(data=InferenceKeyMintedOut(id=key_id, token=token))
+    if not user.instance_admin and await OrgMembership.get((user_id, org_id)) is None:
+        raise HTTPException(status_code=403)
+    scopes = [s.value for s in body.scopes] if body.scopes is not None else None
+    key_id, token = await mint_management_key(org_id, user_id, label=body.label, scopes=scopes)
+    return Envelope(data=ManagementKeyMintedOut(id=key_id, org_id=org_id, user_id=user_id, scopes=scopes, label=body.label, token=token))
 
 
-@router.delete("/keys/{key_id}", tags=["API Keys"], dependencies=[require(Scope.keys_write)])
-async def revoke_key(org_id: OrgDep, key_id: UUID) -> Envelope[InferenceKeyRevokedOut]:
-    key = await InferenceKey.owned_by(org_id, key_id)
+@router.delete("/management-keys/{key_id}", tags=["Management Keys"], dependencies=[require(Scope.management_keys_write)])
+async def revoke_management_key(org_id: OrgDep, key_id: UUID) -> Envelope[ManagementKeyRevokedOut]:
+    key = await ManagementKey.find_by_id(key_id)
+    if key is None or key.org_id != org_id:
+        raise HTTPException(status_code=404)
     key.revoked = True
-    return Envelope(data=InferenceKeyRevokedOut(id=key_id, status="revoked"))
+    await key.save()
+    return Envelope(data=ManagementKeyRevokedOut(id=key_id, status="revoked"))
 
 
 @router.post("/bundles/compile", tags=["Bundles"], dependencies=[require(Scope.bundles_write)])
@@ -45,13 +60,6 @@ async def compile_endpoint(org_id: OrgDep, request: Request) -> Envelope[BundleO
     except UnknownOrgError as e:
         raise HTTPException(status_code=404) from e
     return Envelope(data=BundleOut.model_validate(bundle))
-
-
-@router.get("/keys", tags=["API Keys"], dependencies=[require(Scope.keys_read)])
-async def list_keys(org_id: OrgDep) -> Envelope[list[InferenceKeyOut]]:
-    return Envelope(
-        data=[InferenceKeyOut.model_validate(r) for r in await InferenceKey.find(InferenceKey.org_id == org_id, order_by=col(InferenceKey.id))]
-    )
 
 
 @router.get("/bundles", tags=["Bundles"], dependencies=[require(Scope.bundles_read)])

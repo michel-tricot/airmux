@@ -103,9 +103,9 @@ provider's key (for example `GROQ_API_KEY`) is in `.env`.
 
 ```bash
 uv run airllm --help            # commands are grouped: Resources, Testing
-uv run airllm keys list         # every list command takes -f table|json|text
-uv run airllm keys create       # flags, or interactive prompts for anything omitted
-uv run airllm keys revoke <id>  # takes effect at the next compile
+uv run airllm inference-keys list        # every list command takes -f table|json|text
+uv run airllm inference-keys create      # flags, or interactive prompts for anything omitted
+uv run airllm inference-keys revoke <id> # takes effect at the next compile
 uv run airllm bundles compile   # recompile and sign after any change
 ```
 

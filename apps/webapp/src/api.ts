@@ -55,9 +55,23 @@ export interface Org {
   created_at: string
 }
 
+export interface Workspace {
+  id: string
+  org_id: string
+  name: string
+  created_at: string
+}
+
+export interface WorkspaceMember {
+  user_id: string
+  workspace_id: string
+  status: string
+}
+
 export interface ApiKey {
   id: string
   org_id: string
+  workspace_id: string
   user_id: string
   revoked: boolean
   label: string
@@ -98,6 +112,7 @@ export interface UsageEvent {
   request_id: string
   occurred_at: string
   org_id: string
+  workspace_id: string
   key_id: string
   model_id: string
   provider_id: string
@@ -154,7 +169,9 @@ export const signup = (body: { email: string; name: string; password: string }) 
 export const logout = () => api<{ id: string }>('/v1/auth/logout', { method: 'POST' })
 
 export const listOrgs = () => api<Org[]>('/v1/orgs')
-export const listKeys = () => api<ApiKey[]>('/v1/org/keys')
+export const listWorkspaces = () => api<Workspace[]>('/v1/org/workspaces')
+export const listWorkspaceMembers = (workspaceId: string) => api<WorkspaceMember[]>(`/v1/org/workspaces/${workspaceId}/members`)
+export const listKeys = (workspaceId: string) => api<ApiKey[]>(`/v1/org/workspaces/${workspaceId}/inference-keys`)
 export const getTaxonomy = () => api<Taxonomy>('/v1/taxonomy')
 export const listBundles = () => api<Bundle[]>('/v1/org/bundles')
 export const listEvents = (limit = 100) => api<UsageEvent[]>(`/v1/org/events?limit=${limit}`)
@@ -162,9 +179,19 @@ export const listInstances = (includeOffline = true) => api<Instance[]>(`/v1/org
 
 export const createOrg = (body: { id: string; name: string }) => api<{ id: string }>('/v1/orgs', { method: 'POST', body: JSON.stringify(body) })
 
-export const createKey = (label: string) => api<{ id: string; token: string }>('/v1/org/keys', { method: 'POST', body: JSON.stringify({ label }) })
+export const createWorkspace = (name: string) => api<Workspace>('/v1/org/workspaces', { method: 'POST', body: JSON.stringify({ name }) })
 
-export const revokeKey = (keyId: string) => api<{ id: string; status: string }>(`/v1/org/keys/${keyId}`, { method: 'DELETE' })
+export const addWorkspaceMember = (workspaceId: string, userId: string) =>
+  api<WorkspaceMember>(`/v1/org/workspaces/${workspaceId}/members/${userId}`, { method: 'PUT' })
+
+export const removeWorkspaceMember = (workspaceId: string, userId: string) =>
+  api<{ id: string }>(`/v1/org/workspaces/${workspaceId}/members/${userId}`, { method: 'DELETE' })
+
+export const createKey = (workspaceId: string, label: string) =>
+  api<{ id: string; token: string }>(`/v1/org/workspaces/${workspaceId}/inference-keys`, { method: 'POST', body: JSON.stringify({ label }) })
+
+export const revokeKey = (workspaceId: string, keyId: string) =>
+  api<{ id: string; status: string }>(`/v1/org/workspaces/${workspaceId}/inference-keys/${keyId}`, { method: 'DELETE' })
 
 export const compileBundle = () => api<Bundle>('/v1/org/bundles/compile', { method: 'POST', body: JSON.stringify({}) })
 
