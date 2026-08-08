@@ -1,0 +1,790 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: LLM Gateway management API (placeholder contract, swap for the real backend spec later)
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+  - name: organizations
+  - name: users
+  - name: workspaces
+  - name: keys
+  - name: dashboard
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+  /dashboard/summary:
+    get:
+      operationId: getDashboardSummary
+      tags: [dashboard]
+      summary: Aggregate counts across the gateway
+      responses:
+        "200":
+          description: Summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+  /dashboard/activity:
+    get:
+      operationId: getRecentActivity
+      tags: [dashboard]
+      summary: Recent activity feed
+      responses:
+        "200":
+          description: Activity events, newest first
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ActivityEvent"
+  /organizations:
+    get:
+      operationId: listOrganizations
+      tags: [organizations]
+      responses:
+        "200":
+          description: Organizations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Organization"
+    post:
+      operationId: createOrganization
+      tags: [organizations]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrganizationInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Organization"
+  /organizations/{orgId}:
+    get:
+      operationId: getOrganization
+      tags: [organizations]
+      parameters:
+        - $ref: "#/components/parameters/OrgId"
+      responses:
+        "200":
+          description: Organization
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Organization"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorMessage"
+    patch:
+      operationId: updateOrganization
+      tags: [organizations]
+      parameters:
+        - $ref: "#/components/parameters/OrgId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrganizationUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Organization"
+    delete:
+      operationId: deleteOrganization
+      tags: [organizations]
+      parameters:
+        - $ref: "#/components/parameters/OrgId"
+      responses:
+        "204":
+          description: Deleted
+  /organizations/{orgId}/members:
+    get:
+      operationId: listOrgMembers
+      tags: [organizations]
+      parameters:
+        - $ref: "#/components/parameters/OrgId"
+      responses:
+        "200":
+          description: Members of the organization
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/OrgMember"
+    post:
+      operationId: addOrgMember
+      tags: [organizations]
+      parameters:
+        - $ref: "#/components/parameters/OrgId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrgMemberInput"
+      responses:
+        "201":
+          description: Added
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrgMember"
+  /organizations/{orgId}/members/{userId}:
+    patch:
+      operationId: updateOrgMember
+      tags: [organizations]
+      parameters:
+        - $ref: "#/components/parameters/OrgId"
+        - $ref: "#/components/parameters/UserId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrgMemberUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrgMember"
+    delete:
+      operationId: removeOrgMember
+      tags: [organizations]
+      parameters:
+        - $ref: "#/components/parameters/OrgId"
+        - $ref: "#/components/parameters/UserId"
+      responses:
+        "204":
+          description: Removed
+  /organizations/{orgId}/management-keys:
+    get:
+      operationId: listManagementKeys
+      tags: [keys]
+      parameters:
+        - $ref: "#/components/parameters/OrgId"
+      responses:
+        "200":
+          description: Management keys for the organization
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ManagementKey"
+    post:
+      operationId: createManagementKey
+      tags: [keys]
+      parameters:
+        - $ref: "#/components/parameters/OrgId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ManagementKeyInput"
+      responses:
+        "201":
+          description: Created key. The secret is only returned once.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreatedKey"
+  /organizations/{orgId}/management-keys/{keyId}:
+    patch:
+      operationId: updateManagementKey
+      tags: [keys]
+      parameters:
+        - $ref: "#/components/parameters/OrgId"
+        - $ref: "#/components/parameters/KeyId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/KeyUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ManagementKey"
+    delete:
+      operationId: revokeManagementKey
+      tags: [keys]
+      parameters:
+        - $ref: "#/components/parameters/OrgId"
+        - $ref: "#/components/parameters/KeyId"
+      responses:
+        "204":
+          description: Revoked
+  /organizations/{orgId}/workspaces:
+    get:
+      operationId: listWorkspaces
+      tags: [workspaces]
+      parameters:
+        - $ref: "#/components/parameters/OrgId"
+      responses:
+        "200":
+          description: Workspaces in the organization
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Workspace"
+    post:
+      operationId: createWorkspace
+      tags: [workspaces]
+      parameters:
+        - $ref: "#/components/parameters/OrgId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkspaceInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Workspace"
+  /workspaces/{workspaceId}:
+    get:
+      operationId: getWorkspace
+      tags: [workspaces]
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      responses:
+        "200":
+          description: Workspace
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Workspace"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorMessage"
+    patch:
+      operationId: updateWorkspace
+      tags: [workspaces]
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkspaceUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Workspace"
+    delete:
+      operationId: deleteWorkspace
+      tags: [workspaces]
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      responses:
+        "204":
+          description: Deleted
+  /workspaces/{workspaceId}/members:
+    get:
+      operationId: listWorkspaceMembers
+      tags: [workspaces]
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      responses:
+        "200":
+          description: Members of the workspace
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/WorkspaceMember"
+    post:
+      operationId: addWorkspaceMember
+      tags: [workspaces]
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkspaceMemberInput"
+      responses:
+        "201":
+          description: Added
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkspaceMember"
+  /workspaces/{workspaceId}/members/{userId}:
+    delete:
+      operationId: removeWorkspaceMember
+      tags: [workspaces]
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+        - $ref: "#/components/parameters/UserId"
+      responses:
+        "204":
+          description: Removed
+  /workspaces/{workspaceId}/inference-keys:
+    get:
+      operationId: listInferenceKeys
+      tags: [keys]
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      responses:
+        "200":
+          description: Inference keys for the workspace
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/InferenceKey"
+    post:
+      operationId: createInferenceKey
+      tags: [keys]
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InferenceKeyInput"
+      responses:
+        "201":
+          description: Created key. The secret is only returned once.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreatedKey"
+  /workspaces/{workspaceId}/inference-keys/{keyId}:
+    patch:
+      operationId: updateInferenceKey
+      tags: [keys]
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+        - $ref: "#/components/parameters/KeyId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/KeyUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InferenceKey"
+    delete:
+      operationId: revokeInferenceKey
+      tags: [keys]
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+        - $ref: "#/components/parameters/KeyId"
+      responses:
+        "204":
+          description: Revoked
+  /users:
+    get:
+      operationId: listUsers
+      tags: [users]
+      responses:
+        "200":
+          description: All users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/User"
+    post:
+      operationId: createUser
+      tags: [users]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+  /users/{userId}:
+    get:
+      operationId: getUser
+      tags: [users]
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      responses:
+        "200":
+          description: User
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiErrorMessage"
+    patch:
+      operationId: updateUser
+      tags: [users]
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+    delete:
+      operationId: deleteUser
+      tags: [users]
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      responses:
+        "204":
+          description: Deleted
+  /users/{userId}/organizations:
+    get:
+      operationId: listUserOrganizations
+      tags: [users]
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      responses:
+        "200":
+          description: Organizations the user belongs to, with their role
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/UserOrgMembership"
+  /users/{userId}/workspaces:
+    get:
+      operationId: listUserWorkspaces
+      tags: [users]
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      responses:
+        "200":
+          description: Workspaces the user is a member of, across all their organizations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Workspace"
+components:
+  parameters:
+    OrgId:
+      name: orgId
+      in: path
+      required: true
+      schema:
+        type: integer
+    UserId:
+      name: userId
+      in: path
+      required: true
+      schema:
+        type: integer
+    WorkspaceId:
+      name: workspaceId
+      in: path
+      required: true
+      schema:
+        type: integer
+    KeyId:
+      name: keyId
+      in: path
+      required: true
+      schema:
+        type: integer
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required: [status]
+    ApiErrorMessage:
+      type: object
+      properties:
+        error:
+          type: string
+      required: [error]
+    DashboardSummary:
+      type: object
+      required:
+        [
+          organizationCount,
+          userCount,
+          workspaceCount,
+          managementKeyCount,
+          inferenceKeyCount,
+          activeInferenceKeyCount,
+        ]
+      properties:
+        organizationCount: { type: integer }
+        userCount: { type: integer }
+        workspaceCount: { type: integer }
+        managementKeyCount: { type: integer }
+        inferenceKeyCount: { type: integer }
+        activeInferenceKeyCount: { type: integer }
+    ActivityEvent:
+      type: object
+      required: [id, type, message, createdAt]
+      properties:
+        id: { type: integer }
+        type:
+          type: string
+          description: e.g. org.created, user.added, key.created, key.revoked, workspace.created
+        message: { type: string }
+        createdAt: { type: string }
+    Organization:
+      type: object
+      required: [id, name, slug, createdAt, memberCount, workspaceCount]
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        slug: { type: string }
+        description: { type: ["string", "null"] }
+        createdAt: { type: string }
+        memberCount: { type: integer }
+        workspaceCount: { type: integer }
+    OrganizationInput:
+      type: object
+      required: [name, slug]
+      properties:
+        name: { type: string, minLength: 1 }
+        slug: { type: string, minLength: 1 }
+        description: { type: string }
+    OrganizationUpdate:
+      type: object
+      properties:
+        name: { type: string, minLength: 1 }
+        slug: { type: string, minLength: 1 }
+        description: { type: ["string", "null"] }
+    User:
+      type: object
+      required: [id, name, email, createdAt, orgCount]
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        email: { type: string }
+        createdAt: { type: string }
+        orgCount: { type: integer }
+    UserInput:
+      type: object
+      required: [name, email]
+      properties:
+        name: { type: string, minLength: 1 }
+        email: { type: string, minLength: 3 }
+    UserUpdate:
+      type: object
+      properties:
+        name: { type: string, minLength: 1 }
+        email: { type: string, minLength: 3 }
+    OrgMember:
+      type: object
+      required: [userId, orgId, name, email, role, joinedAt]
+      properties:
+        userId: { type: integer }
+        orgId: { type: integer }
+        name: { type: string }
+        email: { type: string }
+        role:
+          type: string
+          enum: [owner, admin, member]
+        joinedAt: { type: string }
+    OrgMemberInput:
+      type: object
+      required: [userId, role]
+      properties:
+        userId: { type: integer }
+        role:
+          type: string
+          enum: [owner, admin, member]
+    OrgMemberUpdate:
+      type: object
+      required: [role]
+      properties:
+        role:
+          type: string
+          enum: [owner, admin, member]
+    UserOrgMembership:
+      type: object
+      required: [orgId, orgName, orgSlug, role, joinedAt]
+      properties:
+        orgId: { type: integer }
+        orgName: { type: string }
+        orgSlug: { type: string }
+        role:
+          type: string
+          enum: [owner, admin, member]
+        joinedAt: { type: string }
+    Workspace:
+      type: object
+      required: [id, orgId, name, slug, createdAt, memberCount, inferenceKeyCount]
+      properties:
+        id: { type: integer }
+        orgId: { type: integer }
+        orgName: { type: ["string", "null"] }
+        name: { type: string }
+        slug: { type: string }
+        description: { type: ["string", "null"] }
+        createdAt: { type: string }
+        memberCount: { type: integer }
+        inferenceKeyCount: { type: integer }
+    WorkspaceInput:
+      type: object
+      required: [name, slug]
+      properties:
+        name: { type: string, minLength: 1 }
+        slug: { type: string, minLength: 1 }
+        description: { type: string }
+    WorkspaceUpdate:
+      type: object
+      properties:
+        name: { type: string, minLength: 1 }
+        slug: { type: string, minLength: 1 }
+        description: { type: ["string", "null"] }
+    WorkspaceMember:
+      type: object
+      required: [userId, workspaceId, name, email, addedAt]
+      properties:
+        userId: { type: integer }
+        workspaceId: { type: integer }
+        name: { type: string }
+        email: { type: string }
+        addedAt: { type: string }
+    WorkspaceMemberInput:
+      type: object
+      required: [userId]
+      properties:
+        userId: { type: integer }
+    ManagementKey:
+      type: object
+      required: [id, orgId, name, prefix, status, createdAt]
+      properties:
+        id: { type: integer }
+        orgId: { type: integer }
+        name: { type: string }
+        prefix:
+          type: string
+          description: First characters of the key for display, e.g. "mk_live_a1b2"
+        status:
+          type: string
+          enum: [active, revoked]
+        createdAt: { type: string }
+        lastUsedAt: { type: ["string", "null"] }
+    ManagementKeyInput:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string, minLength: 1 }
+    InferenceKey:
+      type: object
+      required: [id, workspaceId, name, prefix, status, createdAt]
+      properties:
+        id: { type: integer }
+        workspaceId: { type: integer }
+        name: { type: string }
+        prefix:
+          type: string
+          description: First characters of the key for display, e.g. "ik_live_a1b2"
+        status:
+          type: string
+          enum: [active, revoked]
+        createdAt: { type: string }
+        lastUsedAt: { type: ["string", "null"] }
+    InferenceKeyInput:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string, minLength: 1 }
+    KeyUpdate:
+      type: object
+      properties:
+        name: { type: string, minLength: 1 }
+        status:
+          type: string
+          enum: [active, revoked]
+    CreatedKey:
+      type: object
+      required: [id, name, prefix, status, createdAt, secret]
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        prefix: { type: string }
+        status:
+          type: string
+          enum: [active, revoked]
+        createdAt: { type: string }
+        secret:
+          type: string
+          description: Full key secret, shown only once at creation time
