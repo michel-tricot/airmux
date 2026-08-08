@@ -54,7 +54,7 @@ export default function CliApprove() {
     retry: false,
   })
   const enrollment = useQuery({ queryKey: ['enrollment'], queryFn: getEnrollment, enabled: submitted !== null })
-  const approve = useMutation({ mutationFn: () => approveCli({ user_code: submitted ?? '', org_id: orgId }) })
+  const approve = useMutation({ mutationFn: (approveOrgId: string) => approveCli({ user_code: submitted ?? '', org_id: approveOrgId }) })
 
   const orgs = enrollment.data?.orgs ?? []
   const selected = orgId || (orgs[0]?.id ?? '')
@@ -114,7 +114,7 @@ export default function CliApprove() {
               </div>
             )}
             {approve.error != null && <p className="text-sm text-red-400">approval failed; the request may have expired</p>}
-            <Button disabled={!selected || approve.isPending} onClick={() => approve.mutate()}>
+            <Button disabled={!selected || approve.isPending} onClick={() => approve.mutate(selected)}>
               Approve
             </Button>
           </div>

@@ -7,6 +7,7 @@ import webbrowser
 from typing import TYPE_CHECKING
 
 import typer
+from rich.panel import Panel
 
 if TYPE_CHECKING:
     import httpx
@@ -44,12 +45,13 @@ def _step(done: str) -> None:
 
 
 @app.command(rich_help_panel=SETUP)
-def quickstart(
+def quickstart(  # noqa: PLR0913, PLR0917 flags are the command's interface
     control_plane_url: str = "",
     email: str = typer.Option(..., prompt="Email", help="Email for the first account"),
     password: str = typer.Option(..., prompt="Password", hide_input=True, confirmation_prompt=True, help="At least 8 characters"),
     org: str = typer.Option("", help="Org name to create; defaults to the email local part"),
     gateway_url: str = typer.Option("http://localhost:8080", help="Where the data plane serves, for the printed example"),
+    webapp_url: str = typer.Option("http://localhost:3000", help="Where the console is served, printed at the end"),
 ) -> None:
     """Bootstrap a fresh instance end to end: account, org, tokens, data plane, and a ready-to-use inference key."""
     import httpx  # noqa: PLC0415 lazy import keeps CLI startup fast
@@ -92,11 +94,10 @@ def quickstart(
         f"  -d '{{\"model\": \"gpt-4o\", \"messages\": [{{\"role\": \"user\", \"content\": \"hi\"}}]}}'"
     )
     console.print(f"\n[green]ready[/green]  org [bold]{org_name}[/bold], token saved to {config_path()}")
-    # Plain print for the copyable parts: no panel borders or rich line-wrapping to break a paste.
-    console.print("\n[dim]inference key (shown once)[/dim]")
-    print(key["token"])
-    console.print("\n[dim]try it once the data plane is online[/dim]")
+    console.print(Panel(key["token"], title="AIRLLM_API_KEY", border_style="cyan", expand=False))
+    console.print("[dim]try it once the data plane is online[/dim]")
     print(curl)
+    console.print(f"\n[dim]webapp[/dim] {webapp_url}")
 
 
 @app.command(rich_help_panel=SETUP)

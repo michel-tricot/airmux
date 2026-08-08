@@ -33,7 +33,7 @@ def test_device_flow_end_to_end(tmp_path):
     with _client(cp) as c:
         _, org = _signup_with_org(c)
         started = _start(c)
-        assert started["verification_url"].endswith("/cli")
+        assert f"/cli?code={started['user_code']}" in started["verification_url"]
 
         pending = c.post("/v1/auth/cli/poll", json={"poll_secret": started["poll_secret"]})
         assert pending.json()["data"]["status"] == "pending"

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 from typing import Literal
+from urllib.parse import quote
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Request, Response
@@ -197,7 +198,7 @@ async def cli_auth_start(body: CliAuthStartIn, request: Request, _session: Sessi
     return Envelope(
         data=CliAuthStartOut(
             user_code=user_code,
-            verification_url=f"{settings.webapp_url.rstrip('/')}/cli",
+            verification_url=f"{settings.webapp_url.rstrip('/')}/cli?code={quote(user_code)}",
             poll_secret=poll_secret,
             interval_seconds=CLI_POLL_INTERVAL_SECONDS,
             expires_in_seconds=int(AUTH_REQUEST_TTL.total_seconds()),
