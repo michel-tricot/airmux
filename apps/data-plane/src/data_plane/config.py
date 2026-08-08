@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 from typing import Any, Literal
+from uuid import UUID
 
 import yaml
 from dotenv import find_dotenv, load_dotenv
@@ -24,7 +25,7 @@ class BundleConfig(BaseModel):
     model_config = ConfigDict(frozen=True, arbitrary_types_allowed=True)
 
     public_key: Ed25519PublicKeyB64  # parsed once from base64 at load; verifies bundle signatures
-    org: str | None = None  # which org's bundle this data plane serves; None takes the newest across orgs
+    org: UUID | None = None  # which org's bundle this data plane serves; None takes the newest across orgs
     cache_dir: Path = Path("/var/cache/gateway")
     staleness_policy: Literal["serve_and_warn", "refuse"] = "serve_and_warn"
     poll_interval_s: float = 30.0

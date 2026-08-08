@@ -6,9 +6,9 @@ from sqlmodel import col
 from control_plane.authz import Scope
 from control_plane.deps import InstanceDep, MgmtDep, require
 from control_plane.models import Model, Provider
+from control_plane.models.common.wire import Envelope
 from control_plane.models.model import ModelOut
 from control_plane.models.provider import ProviderOut
-from control_plane.schemas import Envelope
 from control_plane.taxonomy import ModelIn, ProviderIn, TaxonomyOut, UnknownProviderError, upsert_model, upsert_provider
 
 router = APIRouter(prefix="/taxonomy", tags=["Taxonomy"])
@@ -19,8 +19,8 @@ async def get_taxonomy(_claims: MgmtDep) -> Envelope[TaxonomyOut]:
     """The instance-wide catalog, readable by any management token."""
     return Envelope(
         data=TaxonomyOut(
-            providers=[ProviderOut.model_validate(r) for r in await Provider.find(order_by=col(Provider.id))],
-            models=[ModelOut.model_validate(r) for r in await Model.find(order_by=col(Model.id))],
+            providers=[ProviderOut.model_validate(r) for r in await Provider.find(order_by=col(Provider.name))],
+            models=[ModelOut.model_validate(r) for r in await Model.find(order_by=col(Model.name))],
         )
     )
 

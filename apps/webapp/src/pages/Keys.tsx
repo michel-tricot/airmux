@@ -6,7 +6,7 @@ import { Badge, Button, formatWhen, Page, QueryStatus, Table, Td } from '../ui'
 export default function Keys() {
   const queryClient = useQueryClient()
   const { data, isLoading, error } = useQuery({ queryKey: ['keys'], queryFn: listKeys })
-  const [minted, setMinted] = useState<{ key_id: string; token: string } | null>(null)
+  const [minted, setMinted] = useState<{ id: string; token: string } | null>(null)
 
   const create = useMutation({
     mutationFn: createKey,
@@ -35,7 +35,7 @@ export default function Keys() {
         <div className="mb-6 flex items-center gap-3 rounded-lg border border-emerald-800 bg-emerald-950/50 px-4 py-3">
           <div className="min-w-0 flex-1">
             <p className="text-sm text-emerald-300">
-              Key <span className="font-mono">{minted.key_id}</span> minted. Copy the token now, it is not shown again
+              Key <span className="font-mono">{minted.id}</span> minted. Copy the token now, it is not shown again
             </p>
             <p className="mt-1 truncate font-mono text-xs text-emerald-500">{minted.token}</p>
           </div>
@@ -58,11 +58,11 @@ export default function Keys() {
               <Td mono>{k.org_id}</Td>
               <Td mono>{k.user_id}</Td>
               <Td>
-                <Badge tone={k.disabled ? 'err' : 'ok'}>{k.disabled ? 'revoked' : 'active'}</Badge>
+                <Badge tone={k.revoked ? 'err' : 'ok'}>{k.revoked ? 'revoked' : 'active'}</Badge>
               </Td>
               <Td>{formatWhen(k.created_at)}</Td>
               <Td>
-                {!k.disabled && (
+                {!k.revoked && (
                   <Button danger disabled={revoke.isPending} onClick={() => revoke.mutate(k.id)}>
                     Revoke
                   </Button>

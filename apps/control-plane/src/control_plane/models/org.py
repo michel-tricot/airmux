@@ -1,35 +1,31 @@
 from __future__ import annotations
 
-from datetime import datetime  # noqa: TC003 pydantic resolves field annotations at runtime
-from typing import ClassVar
+from datetime import datetime
+from uuid import UUID
 
 from sqlmodel import Field
 
 from control_plane.models.audit import audited
-from control_plane.models.base import Record
-from control_plane.models.mixins import Tombstonable
-from control_plane.schemas import ApiCreate, ApiOut, ApiPatch
+from control_plane.models.common import Identified, Tombstonable
+from control_plane.models.common.base import Record
+from control_plane.models.common.wire import RecordCreate, RecordOut, RecordUpdate
 
 
 @audited
-class Org(Record, Tombstonable, table=True):
-    id: str = Field(primary_key=True)
+class Org(Record, Identified, Tombstonable, table=True):
     name: str
 
-    api_immutable: ClassVar[frozenset[str]] = frozenset({"id"})
+
+class OrgCreate(RecordCreate[Org]):
+    name: str = Field(description="Org name, e.g. My Org")
 
 
-class OrgCreate(ApiCreate):
-    id: str = Field(description="Org id, e.g. org-dev")
-    name: str = Field("", description="Display name, defaults to the id")
-
-
-class OrgPatch(ApiPatch):
+class OrgUpdate(RecordUpdate[Org]):
     name: str | None = None
 
 
-class OrgOut(ApiOut):
-    id: str
+class OrgOut(RecordOut[Org]):
+    id: UUID
     name: str
     created_at: datetime
     updated_at: datetime

@@ -3,92 +3,69 @@
 
 from __future__ import annotations
 
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 from uuid import UUID
 
-from pydantic import AnyUrl, AwareDatetime, BaseModel, Field
-
-
-class ApiKeyOut(BaseModel):
-    id: str = Field(..., title="Id")
-    org_id: str = Field(..., title="Org Id")
-    user_id: str = Field(..., title="User Id")
-    disabled: bool = Field(..., title="Disabled")
-    created_at: AwareDatetime = Field(..., title="Created At")
-    updated_at: AwareDatetime = Field(..., title="Updated At")
-    deleted_at: AwareDatetime | None = Field(..., title="Deleted At")
+from pydantic import AnyUrl, AwareDatetime, BaseModel, Field, RootModel
 
 
 class BundleOut(BaseModel):
-    id: UUID = Field(..., title="Id")
-    org_id: str = Field(..., title="Org Id")
-    version: int = Field(..., title="Version")
-    issued_at: AwareDatetime = Field(..., title="Issued At")
-    expires_at: AwareDatetime = Field(..., title="Expires At")
-    signing_key_id: str = Field(..., title="Signing Key Id")
-
-
-class CompileOut(BaseModel):
-    bundle_id: str = Field(..., title="Bundle Id")
-    version: int = Field(..., title="Version")
+    id: Annotated[UUID, Field(title="Id")]
+    org_id: Annotated[UUID, Field(title="Org Id")]
+    version: Annotated[int, Field(title="Version")]
+    issued_at: Annotated[AwareDatetime, Field(title="Issued At")]
+    expires_at: Annotated[AwareDatetime, Field(title="Expires At")]
+    signing_key_id: Annotated[str, Field(title="Signing Key Id")]
 
 
 class DataPlaneInstanceOut(BaseModel):
-    instance_id: str = Field(..., title="Instance Id")
-    org_id: str | None = Field(..., title="Org Id")
-    version: str = Field(..., title="Version")
-    bundle_id: UUID | None = Field(..., title="Bundle Id")
-    address: str | None = Field(..., title="Address")
-    status: Literal["online", "offline"] = Field(..., title="Status")
-    first_seen: AwareDatetime = Field(..., title="First Seen")
-    last_seen: AwareDatetime = Field(..., title="Last Seen")
+    instance_id: Annotated[UUID, Field(title="Instance Id")]
+    org_id: Annotated[UUID | None, Field(title="Org Id")]
+    version: Annotated[str, Field(title="Version")]
+    bundle_id: Annotated[UUID | None, Field(title="Bundle Id")]
+    address: Annotated[str | None, Field(title="Address")]
+    status: Annotated[Literal["online", "offline"], Field(title="Status")]
+    first_seen: Annotated[AwareDatetime, Field(title="First Seen")]
+    last_seen: Annotated[AwareDatetime, Field(title="Last Seen")]
+
+
+class DeletedOutUUID(BaseModel):
+    id: Annotated[UUID, Field(title="Id")]
+    deleted_at: Annotated[AwareDatetime, Field(title="Deleted At")]
 
 
 class DeletedOutStr(BaseModel):
-    id: str = Field(..., title="Id")
-    deleted_at: AwareDatetime = Field(..., title="Deleted At")
+    id: Annotated[str, Field(title="Id")]
+    deleted_at: Annotated[AwareDatetime, Field(title="Deleted At")]
 
 
-class DiscoverIn(BaseModel):
-    email: str = Field(..., title="Email")
+class EnvelopeBundleOut(BaseModel):
+    data: BundleOut
 
 
-class DiscoverOut(BaseModel):
-    method: Literal["password", "sso"] = Field(..., title="Method")
-    connection_id: str | None = Field(None, title="Connection Id")
-
-
-class EnvelopeCompileOut(BaseModel):
-    data: CompileOut
+class EnvelopeDeletedOutUUID(BaseModel):
+    data: DeletedOutUUID
 
 
 class EnvelopeDeletedOutStr(BaseModel):
     data: DeletedOutStr
 
 
-class EnvelopeDiscoverOut(BaseModel):
-    data: DiscoverOut
-
-
-class EnvelopeListApiKeyOut(BaseModel):
-    data: list[ApiKeyOut] = Field(..., title="Data")
-
-
 class EnvelopeListBundleOut(BaseModel):
-    data: list[BundleOut] = Field(..., title="Data")
+    data: Annotated[list[BundleOut], Field(title="Data")]
 
 
 class EnvelopeListDataPlaneInstanceOut(BaseModel):
-    data: list[DataPlaneInstanceOut] = Field(..., title="Data")
+    data: Annotated[list[DataPlaneInstanceOut], Field(title="Data")]
 
 
 class EventsIngestedOut(BaseModel):
-    received: int = Field(..., title="Received")
-    ingested: int = Field(..., title="Ingested")
+    received: Annotated[int, Field(title="Received")]
+    ingested: Annotated[int, Field(title="Ingested")]
 
 
 class HeartbeatOut(BaseModel):
-    instance_id: str = Field(..., title="Instance Id")
+    instance_id: Annotated[UUID, Field(title="Instance Id")]
 
 
 class HeartbeatV1(BaseModel):
@@ -96,10 +73,34 @@ class HeartbeatV1(BaseModel):
     A data plane announcing itself to the control plane; the record survives, liveness is derived from last_seen.
     """
 
-    instance_id: str = Field(..., title="Instance Id")
-    version: str = Field(..., title="Version")
-    org_id: str | None = Field(None, title="Org Id")
-    bundle_id: UUID | None = Field(None, title="Bundle Id")
+    instance_id: Annotated[UUID, Field(title="Instance Id")]
+    version: Annotated[str, Field(title="Version")]
+    org_id: Annotated[UUID | None, Field(title="Org Id")] = None
+    bundle_id: Annotated[UUID | None, Field(title="Bundle Id")] = None
+
+
+class InferenceKeyMintedOut(BaseModel):
+    """
+    The mint result: the id plus the one-time plaintext token, which is not a column and never returns again.
+    """
+
+    id: Annotated[UUID, Field(title="Id")]
+    token: Annotated[str, Field(title="Token")]
+
+
+class InferenceKeyOut(BaseModel):
+    id: Annotated[UUID, Field(title="Id")]
+    org_id: Annotated[UUID, Field(title="Org Id")]
+    user_id: Annotated[UUID, Field(title="User Id")]
+    revoked: Annotated[bool, Field(title="Revoked")]
+    created_at: Annotated[AwareDatetime, Field(title="Created At")]
+    updated_at: Annotated[AwareDatetime, Field(title="Updated At")]
+    deleted_at: Annotated[AwareDatetime | None, Field(title="Deleted At")]
+
+
+class InferenceKeyRevokedOut(BaseModel):
+    id: Annotated[UUID, Field(title="Id")]
+    status: Annotated[Literal["revoked"], Field(title="Status")]
 
 
 class KeyEntry(BaseModel):
@@ -113,55 +114,52 @@ class KeyEntry(BaseModel):
     stays org-sensitive even though the hashes are not reversible.
     """
 
-    key_id: str = Field(..., title="Key Id")
-    org_id: str = Field(..., title="Org Id")
-    token_hash: str = Field(..., title="Token Hash")
-
-
-class KeyOut(BaseModel):
-    key_id: str = Field(..., title="Key Id")
-    token: str = Field(..., title="Token")
-
-
-class KeyRevokedOut(BaseModel):
-    key_id: str = Field(..., title="Key Id")
-    status: Literal["revoked"] = Field(..., title="Status")
+    key_id: Annotated[str, Field(title="Key Id")]
+    org_id: Annotated[UUID, Field(title="Org Id")]
+    token_hash: Annotated[str, Field(title="Token Hash")]
 
 
 class LoginIn(BaseModel):
-    email: str = Field(..., title="Email")
-    password: str = Field(..., title="Password")
+    email: Annotated[str, Field(title="Email")]
+    password: Annotated[str, Field(title="Password")]
+
+
+class ManagementKeyMintedOut(BaseModel):
+    id: Annotated[UUID, Field(title="Id")]
+    org_id: Annotated[UUID | None, Field(title="Org Id")]
+    user_id: Annotated[UUID, Field(title="User Id")]
+    scopes: Annotated[list[str] | None, Field(title="Scopes")]
+    token: Annotated[str, Field(title="Token")]
+
+
+class ManagementKeyOut(BaseModel):
+    id: Annotated[UUID, Field(title="Id")]
+    org_id: Annotated[UUID | None, Field(title="Org Id")]
+    user_id: Annotated[UUID, Field(title="User Id")]
+    revoked: Annotated[bool, Field(title="Revoked")]
+    scopes: Annotated[list[str] | None, Field(title="Scopes")]
+    created_at: Annotated[AwareDatetime, Field(title="Created At")]
+    updated_at: Annotated[AwareDatetime, Field(title="Updated At")]
+    deleted_at: Annotated[AwareDatetime | None, Field(title="Deleted At")]
+
+
+class ManagementKeyRevokedOut(BaseModel):
+    id: Annotated[UUID, Field(title="Id")]
+    status: Annotated[Literal["revoked"], Field(title="Status")]
 
 
 class MeOut(BaseModel):
-    user_id: str = Field(..., title="User Id")
-    email: str = Field(..., title="Email")
-    name: str = Field(..., title="Name")
-    instance_admin: bool = Field(..., title="Instance Admin")
-    orgs: list[str] = Field(..., title="Orgs")
+    user_id: Annotated[UUID, Field(title="User Id")]
+    email: Annotated[str, Field(title="Email")]
+    name: Annotated[str, Field(title="Name")]
+    instance_admin: Annotated[bool, Field(title="Instance Admin")]
+    orgs: Annotated[list[UUID], Field(title="Orgs")]
 
 
 class MembershipOut(BaseModel):
-    user_id: str = Field(..., title="User Id")
-    org_id: str = Field(..., title="Org Id")
-    status: Literal["member"] = Field(..., title="Status")
-
-
-class MgmtTokenOut(BaseModel):
-    id: str = Field(..., title="Id")
-    org_id: str | None = Field(..., title="Org Id")
-    user_id: str = Field(..., title="User Id")
-    revoked: bool = Field(..., title="Revoked")
-    created_at: AwareDatetime = Field(..., title="Created At")
-    updated_at: AwareDatetime = Field(..., title="Updated At")
-    deleted_at: AwareDatetime | None = Field(..., title="Deleted At")
-
-
-class MintedTokenOut(BaseModel):
-    token_id: str = Field(..., title="Token Id")
-    org_id: str | None = Field(..., title="Org Id")
-    user_id: str = Field(..., title="User Id")
-    token: str = Field(..., title="Token")
+    user_id: Annotated[UUID, Field(title="User Id")]
+    org_id: Annotated[UUID, Field(title="Org Id")]
+    status: Annotated[Literal["member"], Field(title="Status")]
 
 
 class ModelEntry(BaseModel):
@@ -169,87 +167,90 @@ class ModelEntry(BaseModel):
     A routable model: the caller-facing id plus how to reach and bill it.
     """
 
-    model_id: str = Field(..., title="Model Id")
-    provider_id: str = Field(..., title="Provider Id")
-    upstream_model: str = Field(..., title="Upstream Model")
-    input_price_per_mtok: float = Field(..., title="Input Price Per Mtok")
-    output_price_per_mtok: float = Field(..., title="Output Price Per Mtok")
-    context_window: int = Field(..., title="Context Window")
-    max_output_tokens: int | None = Field(None, title="Max Output Tokens")
-    capabilities: list[str] = Field(..., title="Capabilities")
+    model_id: Annotated[str, Field(title="Model Id")]
+    provider_id: Annotated[str, Field(title="Provider Id")]
+    upstream_model: Annotated[str, Field(title="Upstream Model")]
+    input_price_per_mtok: Annotated[float, Field(title="Input Price Per Mtok")]
+    output_price_per_mtok: Annotated[float, Field(title="Output Price Per Mtok")]
+    context_window: Annotated[int, Field(title="Context Window")]
+    max_output_tokens: Annotated[int | None, Field(title="Max Output Tokens")] = None
+    capabilities: Annotated[list[str], Field(title="Capabilities")]
 
 
 class ModelIn(BaseModel):
-    model_id: str = Field(..., description="Caller-facing model id", title="Model Id")
-    provider_id: str = Field(..., description="Provider id the model routes to", title="Provider Id")
-    upstream_model: str | None = Field(
-        "",
-        description="Model name sent to the provider, lets model_id be an alias; defaults to model_id",
-        title="Upstream Model",
-    )
-    input_price_per_mtok: float | None = Field(0.0, description="USD per million input tokens", title="Input Price Per Mtok")
-    output_price_per_mtok: float | None = Field(0.0, description="USD per million output tokens", title="Output Price Per Mtok")
-    context_window: int | None = Field(128000, description="Context window in tokens", title="Context Window")
-    max_output_tokens: int | None = Field(
-        None,
-        description="Max completion tokens; requests are clamped to it",
-        title="Max Output Tokens",
-    )
-    capabilities: list[str] | None = Field(
-        ["streaming", "tools"],
-        description="Capabilities, comma separated",
-        title="Capabilities",
-    )
+    model_id: Annotated[str, Field(description="Caller-facing model name", title="Model Id")]
+    provider_id: Annotated[str, Field(description="Provider id the model routes to", title="Provider Id")]
+    upstream_model: Annotated[
+        str | None,
+        Field(
+            description="Model name sent to the provider, lets model_id be an alias; defaults to model_id",
+            title="Upstream Model",
+        ),
+    ] = ""
+    input_price_per_mtok: Annotated[
+        float | None,
+        Field(description="USD per million input tokens", title="Input Price Per Mtok"),
+    ] = 0.0
+    output_price_per_mtok: Annotated[
+        float | None,
+        Field(description="USD per million output tokens", title="Output Price Per Mtok"),
+    ] = 0.0
+    context_window: Annotated[
+        int | None,
+        Field(description="Context window in tokens", title="Context Window"),
+    ] = 128000
+    max_output_tokens: Annotated[
+        int | None,
+        Field(
+            description="Max completion tokens; requests are clamped to it",
+            title="Max Output Tokens",
+        ),
+    ] = None
+    capabilities: Annotated[
+        list[str] | None,
+        Field(description="Capabilities, comma separated", title="Capabilities"),
+    ] = ["streaming", "tools"]
 
 
 class ModelOut(BaseModel):
-    id: str = Field(..., title="Id")
-    provider_id: str = Field(..., title="Provider Id")
-    upstream_model: str = Field(..., title="Upstream Model")
-    input_price_per_mtok: float = Field(..., title="Input Price Per Mtok")
-    output_price_per_mtok: float = Field(..., title="Output Price Per Mtok")
-    context_window: int = Field(..., title="Context Window")
-    max_output_tokens: int | None = Field(..., title="Max Output Tokens")
-    capabilities: list[str] = Field(..., title="Capabilities")
-    created_at: AwareDatetime = Field(..., title="Created At")
-    updated_at: AwareDatetime = Field(..., title="Updated At")
-    deleted_at: AwareDatetime | None = Field(..., title="Deleted At")
+    id: Annotated[UUID, Field(title="Id")]
+    name: Annotated[str, Field(title="Name")]
+    provider_id: Annotated[UUID, Field(title="Provider Id")]
+    upstream_model: Annotated[str, Field(title="Upstream Model")]
+    input_price_per_mtok: Annotated[float, Field(title="Input Price Per Mtok")]
+    output_price_per_mtok: Annotated[float, Field(title="Output Price Per Mtok")]
+    context_window: Annotated[int, Field(title="Context Window")]
+    max_output_tokens: Annotated[int | None, Field(title="Max Output Tokens")]
+    capabilities: Annotated[list[str], Field(title="Capabilities")]
+    created_at: Annotated[AwareDatetime, Field(title="Created At")]
+    updated_at: Annotated[AwareDatetime, Field(title="Updated At")]
+    deleted_at: Annotated[AwareDatetime | None, Field(title="Deleted At")]
 
 
 class OrgCreate(BaseModel):
-    id: str = Field(..., description="Org id, e.g. org-dev", title="Id")
-    name: str | None = Field("", description="Display name, defaults to the id", title="Name")
+    name: Annotated[str, Field(description="Org name, e.g. My Org", title="Name")]
 
 
 class OrgOut(BaseModel):
-    id: str = Field(..., title="Id")
-    name: str = Field(..., title="Name")
-    created_at: AwareDatetime = Field(..., title="Created At")
-    updated_at: AwareDatetime = Field(..., title="Updated At")
-    deleted_at: AwareDatetime | None = Field(..., title="Deleted At")
+    id: Annotated[UUID, Field(title="Id")]
+    name: Annotated[str, Field(title="Name")]
+    created_at: Annotated[AwareDatetime, Field(title="Created At")]
+    updated_at: Annotated[AwareDatetime, Field(title="Updated At")]
+    deleted_at: Annotated[AwareDatetime | None, Field(title="Deleted At")]
 
 
-class OrgPatch(BaseModel):
-    name: str | None = Field(None, title="Name")
+class OrgUpdate(BaseModel):
+    name: Annotated[str | None, Field(title="Name")] = None
 
 
 class PasswordChangeIn(BaseModel):
-    current_password: str = Field(..., title="Current Password")
-    new_password: str = Field(..., title="New Password")
+    current_password: Annotated[str, Field(title="Current Password")]
+    new_password: Annotated[str, Field(min_length=8, title="New Password")]
 
 
 class PasswordChangedOut(BaseModel):
-    user_id: str = Field(..., title="User Id")
-    status: Literal["changed"] = Field(..., title="Status")
-
-
-class PasswordSetIn(BaseModel):
-    password: str = Field(..., title="Password")
-
-
-class PasswordSetOut(BaseModel):
-    user_id: str = Field(..., title="User Id")
-    status: Literal["set"] = Field(..., title="Status")
+    user_id: Annotated[UUID, Field(title="User Id")]
+    status: Annotated[Literal["changed"], Field(title="Status")]
 
 
 class ProviderEntry(BaseModel):
@@ -257,124 +258,156 @@ class ProviderEntry(BaseModel):
     An upstream LLM provider endpoint.
     """
 
-    provider_id: str = Field(..., title="Provider Id")
-    kind: Literal["openai_compatible", "anthropic"] = Field(..., title="Kind")
-    base_url: AnyUrl = Field(..., title="Base Url")
-    credential_ref: str = Field(..., title="Credential Ref")
-    cache_read_multiplier: float | None = Field(1.0, title="Cache Read Multiplier")
-    cache_write_multiplier: float | None = Field(1.0, title="Cache Write Multiplier")
+    provider_id: Annotated[str, Field(title="Provider Id")]
+    kind: Annotated[Literal["openai_compatible", "anthropic"], Field(title="Kind")]
+    base_url: Annotated[AnyUrl, Field(title="Base Url")]
+    credential_ref: Annotated[str, Field(title="Credential Ref")]
+    cache_read_multiplier: Annotated[float | None, Field(title="Cache Read Multiplier")] = 1.0
+    cache_write_multiplier: Annotated[float | None, Field(title="Cache Write Multiplier")] = 1.0
 
 
 class ProviderIn(BaseModel):
-    provider_id: str = Field(..., description="Provider id, e.g. openai", title="Provider Id")
-    kind: Literal["openai_compatible", "anthropic"] | None = Field("openai_compatible", description="Adapter kind", title="Kind")
-    base_url: str = Field(
-        ...,
-        description="OpenAI-compatible endpoint, e.g. https://api.groq.com/openai/v1",
-        title="Base Url",
-    )
-    credential_ref: str = Field(
-        ...,
-        description="env: or file: reference resolved by the data plane, never a raw secret",
-        title="Credential Ref",
-    )
-    cache_read_multiplier: float | None = Field(
-        1.0,
-        description="Input price factor for prompt-cache hits",
-        title="Cache Read Multiplier",
-    )
-    cache_write_multiplier: float | None = Field(
-        1.0,
-        description="Input price factor for cache writes",
-        title="Cache Write Multiplier",
-    )
+    provider_id: Annotated[str, Field(description="Provider name, e.g. openai", title="Provider Id")]
+    kind: Annotated[
+        Literal["openai_compatible", "anthropic"] | None,
+        Field(description="Adapter kind", title="Kind"),
+    ] = "openai_compatible"
+    base_url: Annotated[
+        str,
+        Field(
+            description="OpenAI-compatible endpoint, e.g. https://api.groq.com/openai/v1",
+            title="Base Url",
+        ),
+    ]
+    credential_ref: Annotated[
+        str,
+        Field(
+            description="env: or file: reference resolved by the data plane, never a raw secret",
+            title="Credential Ref",
+        ),
+    ]
+    cache_read_multiplier: Annotated[
+        float | None,
+        Field(
+            description="Input price factor for prompt-cache hits",
+            title="Cache Read Multiplier",
+        ),
+    ] = 1.0
+    cache_write_multiplier: Annotated[
+        float | None,
+        Field(
+            description="Input price factor for cache writes",
+            title="Cache Write Multiplier",
+        ),
+    ] = 1.0
 
 
 class ProviderOut(BaseModel):
-    id: str = Field(..., title="Id")
-    kind: str = Field(..., title="Kind")
-    base_url: str = Field(..., title="Base Url")
-    credential_ref: str = Field(..., title="Credential Ref")
-    cache_read_multiplier: float = Field(..., title="Cache Read Multiplier")
-    cache_write_multiplier: float = Field(..., title="Cache Write Multiplier")
-    created_at: AwareDatetime = Field(..., title="Created At")
-    updated_at: AwareDatetime = Field(..., title="Updated At")
-    deleted_at: AwareDatetime | None = Field(..., title="Deleted At")
+    id: Annotated[UUID, Field(title="Id")]
+    name: Annotated[str, Field(title="Name")]
+    kind: Annotated[str, Field(title="Kind")]
+    base_url: Annotated[str, Field(title="Base Url")]
+    credential_ref: Annotated[str, Field(title="Credential Ref")]
+    cache_read_multiplier: Annotated[float, Field(title="Cache Read Multiplier")]
+    cache_write_multiplier: Annotated[float, Field(title="Cache Write Multiplier")]
+    created_at: Annotated[AwareDatetime, Field(title="Created At")]
+    updated_at: Annotated[AwareDatetime, Field(title="Updated At")]
+    deleted_at: Annotated[AwareDatetime | None, Field(title="Deleted At")]
+
+
+class Scope(
+    RootModel[
+        Literal[
+            "keys:read",
+            "keys:write",
+            "bundles:read",
+            "bundles:write",
+            "events:read",
+            "instances:read",
+            "taxonomy:read",
+            "taxonomy:write",
+            "orgs:read",
+            "orgs:write",
+            "users:read",
+            "users:write",
+            "tokens:read",
+            "tokens:write",
+            "sync",
+        ]
+    ]
+):
+    root: Annotated[
+        Literal[
+            "keys:read",
+            "keys:write",
+            "bundles:read",
+            "bundles:write",
+            "events:read",
+            "instances:read",
+            "taxonomy:read",
+            "taxonomy:write",
+            "orgs:read",
+            "orgs:write",
+            "users:read",
+            "users:write",
+            "tokens:read",
+            "tokens:write",
+            "sync",
+        ],
+        Field(
+            description="What a management credential may do; org and instance row-scoping are a separate axis.\n\nA scope restricts the credential, never expands it: a token minted without scopes carries the\nowning user's full authority, an explicit list is a restriction that also excludes scopes\ninvented later. Roles arrive later as named bundles over these same values.",
+            title="Scope",
+        ),
+    ]
 
 
 class ServiceAccountIn(BaseModel):
-    name: str = Field(
-        ...,
-        description="Service account name; the email is derived as name-<id>@airbytesvcaccount.ai",
-        title="Name",
-    )
-    instance_admin: bool | None = Field(
-        False,
-        description="Whether the service account administers the whole instance",
-        title="Instance Admin",
-    )
+    name: Annotated[
+        str,
+        Field(
+            description="Service account name; the email is derived as name-<id>@airbytesvcaccount.ai",
+            title="Name",
+        ),
+    ]
+    instance_admin: Annotated[
+        bool | None,
+        Field(
+            description="Whether the service account administers the whole instance",
+            title="Instance Admin",
+        ),
+    ] = False
 
 
-class SsoConnectionIn(BaseModel):
-    issuer: str = Field(..., title="Issuer")
-    client_id: str = Field(..., title="Client Id")
-    client_secret: str = Field(..., title="Client Secret")
-    email_domains: list[str] = Field(..., title="Email Domains")
-    jit: bool | None = Field(False, title="Jit")
-
-
-class SsoConnectionOut(BaseModel):
-    id: str = Field(..., title="Id")
-    org_id: str = Field(..., title="Org Id")
-    issuer: str = Field(..., title="Issuer")
-    client_id: str = Field(..., title="Client Id")
-    email_domains: list[str] = Field(..., title="Email Domains")
-    jit: bool = Field(..., title="Jit")
-    authorization_endpoint: str = Field(..., title="Authorization Endpoint")
-    token_endpoint: str = Field(..., title="Token Endpoint")
-    jwks_uri: str = Field(..., title="Jwks Uri")
-    created_at: AwareDatetime = Field(..., title="Created At")
-    updated_at: AwareDatetime = Field(..., title="Updated At")
-    deleted_at: AwareDatetime | None = Field(..., title="Deleted At")
-
-
-class SsoStartIn(BaseModel):
-    connection_id: str = Field(..., title="Connection Id")
-
-
-class SsoStartOut(BaseModel):
-    authorize_url: str = Field(..., title="Authorize Url")
+class SignupIn(BaseModel):
+    email: Annotated[str, Field(title="Email")]
+    name: Annotated[str | None, Field(title="Name")] = ""
+    password: Annotated[str, Field(min_length=8, title="Password")]
 
 
 class TaxonomyOut(BaseModel):
-    providers: list[ProviderOut] = Field(..., title="Providers")
-    models: list[ModelOut] = Field(..., title="Models")
-
-
-class TokenRevokedOut(BaseModel):
-    token_id: str = Field(..., title="Token Id")
-    status: Literal["revoked"] = Field(..., title="Status")
+    providers: Annotated[list[ProviderOut], Field(title="Providers")]
+    models: Annotated[list[ModelOut], Field(title="Models")]
 
 
 class UsageEventOut(BaseModel):
-    event_id: UUID = Field(..., title="Event Id")
-    request_id: str = Field(..., title="Request Id")
-    occurred_at: AwareDatetime = Field(..., title="Occurred At")
-    org_id: str = Field(..., title="Org Id")
-    key_id: str = Field(..., title="Key Id")
-    model_id: str = Field(..., title="Model Id")
-    provider_id: str = Field(..., title="Provider Id")
-    bundle_id: UUID = Field(..., title="Bundle Id")
-    input_tokens: int = Field(..., title="Input Tokens")
-    output_tokens: int = Field(..., title="Output Tokens")
-    cost_usd: float = Field(..., title="Cost Usd")
-    cost_input_usd: float = Field(..., title="Cost Input Usd")
-    cost_output_usd: float = Field(..., title="Cost Output Usd")
-    cache_read_tokens: int = Field(..., title="Cache Read Tokens")
-    cache_write_tokens: int = Field(..., title="Cache Write Tokens")
-    latency_ms: int = Field(..., title="Latency Ms")
-    status: str = Field(..., title="Status")
-    stream: bool = Field(..., title="Stream")
+    event_id: Annotated[UUID, Field(title="Event Id")]
+    request_id: Annotated[UUID, Field(title="Request Id")]
+    occurred_at: Annotated[AwareDatetime, Field(title="Occurred At")]
+    org_id: Annotated[UUID, Field(title="Org Id")]
+    key_id: Annotated[str, Field(title="Key Id")]
+    model_id: Annotated[str, Field(title="Model Id")]
+    provider_id: Annotated[str, Field(title="Provider Id")]
+    bundle_id: Annotated[UUID, Field(title="Bundle Id")]
+    input_tokens: Annotated[int, Field(title="Input Tokens")]
+    output_tokens: Annotated[int, Field(title="Output Tokens")]
+    cost_usd: Annotated[float, Field(title="Cost Usd")]
+    cost_input_usd: Annotated[float, Field(title="Cost Input Usd")]
+    cost_output_usd: Annotated[float, Field(title="Cost Output Usd")]
+    cache_read_tokens: Annotated[int, Field(title="Cache Read Tokens")]
+    cache_write_tokens: Annotated[int, Field(title="Cache Write Tokens")]
+    latency_ms: Annotated[int, Field(title="Latency Ms")]
+    status: Annotated[str, Field(title="Status")]
+    stream: Annotated[bool, Field(title="Stream")]
 
 
 class UsageEventV1(BaseModel):
@@ -385,63 +418,63 @@ class UsageEventV1(BaseModel):
     event_id, so replays after an outage land exactly once.
     """
 
-    schema_version: Literal[1] = Field(1, title="Schema Version")
-    event_id: UUID = Field(..., title="Event Id")
-    request_id: str = Field(..., title="Request Id")
-    occurred_at: AwareDatetime = Field(..., title="Occurred At")
-    org_id: str = Field(..., title="Org Id")
-    key_id: str = Field(..., title="Key Id")
-    model_id: str = Field(..., title="Model Id")
-    provider_id: str = Field(..., title="Provider Id")
-    bundle_id: UUID = Field(..., title="Bundle Id")
-    input_tokens: int = Field(..., title="Input Tokens")
-    output_tokens: int = Field(..., title="Output Tokens")
-    cost_usd: float = Field(..., title="Cost Usd")
-    cost_input_usd: float | None = Field(0.0, title="Cost Input Usd")
-    cost_output_usd: float | None = Field(0.0, title="Cost Output Usd")
-    cache_read_tokens: int | None = Field(0, title="Cache Read Tokens")
-    cache_write_tokens: int | None = Field(0, title="Cache Write Tokens")
-    latency_ms: int = Field(..., title="Latency Ms")
-    status: Literal["ok", "upstream_error", "denied", "timeout", "cancelled"] = Field(..., title="Status")
-    stream: bool = Field(..., title="Stream")
+    schema_version: Annotated[Literal[1], Field(title="Schema Version")] = 1
+    event_id: Annotated[UUID, Field(title="Event Id")]
+    request_id: Annotated[UUID, Field(title="Request Id")]
+    occurred_at: Annotated[AwareDatetime, Field(title="Occurred At")]
+    org_id: Annotated[UUID, Field(title="Org Id")]
+    key_id: Annotated[str, Field(title="Key Id")]
+    model_id: Annotated[str, Field(title="Model Id")]
+    provider_id: Annotated[str, Field(title="Provider Id")]
+    bundle_id: Annotated[UUID, Field(title="Bundle Id")]
+    input_tokens: Annotated[int, Field(title="Input Tokens")]
+    output_tokens: Annotated[int, Field(title="Output Tokens")]
+    cost_usd: Annotated[float, Field(title="Cost Usd")]
+    cost_input_usd: Annotated[float | None, Field(title="Cost Input Usd")] = 0.0
+    cost_output_usd: Annotated[float | None, Field(title="Cost Output Usd")] = 0.0
+    cache_read_tokens: Annotated[int | None, Field(title="Cache Read Tokens")] = 0
+    cache_write_tokens: Annotated[int | None, Field(title="Cache Write Tokens")] = 0
+    latency_ms: Annotated[int, Field(title="Latency Ms")]
+    status: Annotated[
+        Literal["ok", "upstream_error", "denied", "timeout", "cancelled"],
+        Field(title="Status"),
+    ]
+    stream: Annotated[bool, Field(title="Stream")]
 
 
 class UserCreate(BaseModel):
-    email: str = Field(..., description="Unique email identifying the user", title="Email")
-    name: str | None = Field("", description="Display name, defaults to the email", title="Name")
-    instance_admin: bool | None = Field(
-        False,
-        description="Whether the user administers the whole instance",
-        title="Instance Admin",
-    )
+    email: Annotated[str, Field(description="Unique email identifying the user", title="Email")]
+    name: Annotated[
+        str | None,
+        Field(description="Display name, defaults to the email", title="Name"),
+    ] = ""
+    instance_admin: Annotated[
+        bool | None,
+        Field(
+            description="Whether the user administers the whole instance",
+            title="Instance Admin",
+        ),
+    ] = False
 
 
 class UserOut(BaseModel):
-    id: str = Field(..., title="Id")
-    email: str = Field(..., title="Email")
-    name: str = Field(..., title="Name")
-    instance_admin: bool = Field(..., title="Instance Admin")
-    service_account: bool = Field(..., title="Service Account")
-    created_at: AwareDatetime = Field(..., title="Created At")
-    updated_at: AwareDatetime = Field(..., title="Updated At")
-    deleted_at: AwareDatetime | None = Field(..., title="Deleted At")
-    orgs: list[str] = Field(..., title="Orgs")
-
-
-class UserTokenIn(BaseModel):
-    org_id: str | None = Field(
-        None,
-        description="Org to scope the token to; omit for an instance token, instance admins only",
-        title="Org Id",
-    )
+    id: Annotated[UUID, Field(title="Id")]
+    email: Annotated[str, Field(title="Email")]
+    name: Annotated[str, Field(title="Name")]
+    instance_admin: Annotated[bool, Field(title="Instance Admin")]
+    service_account: Annotated[bool, Field(title="Service Account")]
+    created_at: Annotated[AwareDatetime, Field(title="Created At")]
+    updated_at: Annotated[AwareDatetime, Field(title="Updated At")]
+    deleted_at: Annotated[AwareDatetime | None, Field(title="Deleted At")]
+    orgs: Annotated[list[UUID], Field(title="Orgs")]
 
 
 class ValidationError(BaseModel):
-    loc: list[str | int] = Field(..., title="Location")
-    msg: str = Field(..., title="Message")
-    type: str = Field(..., title="Error Type")
-    input: Any | None = Field(None, title="Input")
-    ctx: dict[str, Any] | None = Field(None, title="Context")
+    loc: Annotated[list[str | int], Field(title="Location")]
+    msg: Annotated[str, Field(title="Message")]
+    type: Annotated[str, Field(title="Error Type")]
+    input: Annotated[Any | None, Field(title="Input")] = None
+    ctx: Annotated[dict[str, Any] | None, Field(title="Context")] = None
 
 
 class Catalog(BaseModel):
@@ -449,8 +482,8 @@ class Catalog(BaseModel):
     Everything routable in one org: providers and the models that point at them.
     """
 
-    providers: list[ProviderEntry] = Field(..., title="Providers")
-    models: list[ModelEntry] = Field(..., title="Models")
+    providers: Annotated[list[ProviderEntry], Field(title="Providers")]
+    models: Annotated[list[ModelEntry], Field(title="Models")]
 
 
 class EnvelopeEventsIngestedOut(BaseModel):
@@ -461,12 +494,20 @@ class EnvelopeHeartbeatOut(BaseModel):
     data: HeartbeatOut
 
 
-class EnvelopeKeyOut(BaseModel):
-    data: KeyOut
+class EnvelopeInferenceKeyMintedOut(BaseModel):
+    data: InferenceKeyMintedOut
 
 
-class EnvelopeKeyRevokedOut(BaseModel):
-    data: KeyRevokedOut
+class EnvelopeInferenceKeyRevokedOut(BaseModel):
+    data: InferenceKeyRevokedOut
+
+
+class EnvelopeManagementKeyMintedOut(BaseModel):
+    data: ManagementKeyMintedOut
+
+
+class EnvelopeManagementKeyRevokedOut(BaseModel):
+    data: ManagementKeyRevokedOut
 
 
 class EnvelopeMeOut(BaseModel):
@@ -475,10 +516,6 @@ class EnvelopeMeOut(BaseModel):
 
 class EnvelopeMembershipOut(BaseModel):
     data: MembershipOut
-
-
-class EnvelopeMintedTokenOut(BaseModel):
-    data: MintedTokenOut
 
 
 class EnvelopeModelOut(BaseModel):
@@ -493,56 +530,57 @@ class EnvelopePasswordChangedOut(BaseModel):
     data: PasswordChangedOut
 
 
-class EnvelopePasswordSetOut(BaseModel):
-    data: PasswordSetOut
-
-
 class EnvelopeProviderOut(BaseModel):
     data: ProviderOut
-
-
-class EnvelopeSsoConnectionOut(BaseModel):
-    data: SsoConnectionOut
-
-
-class EnvelopeSsoStartOut(BaseModel):
-    data: SsoStartOut
 
 
 class EnvelopeTaxonomyOut(BaseModel):
     data: TaxonomyOut
 
 
-class EnvelopeTokenRevokedOut(BaseModel):
-    data: TokenRevokedOut
-
-
 class EnvelopeUserOut(BaseModel):
     data: UserOut
 
 
-class EnvelopeListMgmtTokenOut(BaseModel):
-    data: list[MgmtTokenOut] = Field(..., title="Data")
+class EnvelopeListInferenceKeyOut(BaseModel):
+    data: Annotated[list[InferenceKeyOut], Field(title="Data")]
+
+
+class EnvelopeListManagementKeyOut(BaseModel):
+    data: Annotated[list[ManagementKeyOut], Field(title="Data")]
 
 
 class EnvelopeListOrgOut(BaseModel):
-    data: list[OrgOut] = Field(..., title="Data")
-
-
-class EnvelopeListSsoConnectionOut(BaseModel):
-    data: list[SsoConnectionOut] = Field(..., title="Data")
+    data: Annotated[list[OrgOut], Field(title="Data")]
 
 
 class EnvelopeListUsageEventOut(BaseModel):
-    data: list[UsageEventOut] = Field(..., title="Data")
+    data: Annotated[list[UsageEventOut], Field(title="Data")]
 
 
 class EnvelopeListUserOut(BaseModel):
-    data: list[UserOut] = Field(..., title="Data")
+    data: Annotated[list[UserOut], Field(title="Data")]
 
 
 class HTTPValidationError(BaseModel):
-    detail: list[ValidationError] | None = Field(None, title="Detail")
+    detail: Annotated[list[ValidationError] | None, Field(title="Detail")] = None
+
+
+class ManagementKeyIn(BaseModel):
+    org_id: Annotated[
+        UUID | None,
+        Field(
+            description="Org to scope the token to; omit for an instance token, instance admins only",
+            title="Org Id",
+        ),
+    ] = None
+    scopes: Annotated[
+        list[Scope] | None,
+        Field(
+            description="Restrict the token to these scopes; omit for the user's full authority",
+            title="Scopes",
+        ),
+    ] = None
 
 
 class BundleV1(BaseModel):
@@ -554,12 +592,12 @@ class BundleV1(BaseModel):
     is missing a field; add the field here instead.
     """
 
-    schema_version: Literal[1] = Field(1, title="Schema Version")
-    bundle_id: UUID = Field(..., title="Bundle Id")
-    org_id: str = Field(..., title="Org Id")
-    issued_at: AwareDatetime = Field(..., title="Issued At")
-    expires_at: AwareDatetime = Field(..., title="Expires At")
-    keys: list[KeyEntry] = Field(..., title="Keys")
+    schema_version: Annotated[Literal[1], Field(title="Schema Version")] = 1
+    bundle_id: Annotated[UUID, Field(title="Bundle Id")]
+    org_id: Annotated[UUID, Field(title="Org Id")]
+    issued_at: Annotated[AwareDatetime, Field(title="Issued At")]
+    expires_at: Annotated[AwareDatetime, Field(title="Expires At")]
+    keys: Annotated[list[KeyEntry], Field(title="Keys")]
     catalog: Catalog
 
 
@@ -571,8 +609,8 @@ class SignedBundle(BaseModel):
     """
 
     payload: BundleV1
-    signature: str = Field(..., title="Signature")
-    signing_key_id: str = Field(..., title="Signing Key Id")
+    signature: Annotated[str, Field(title="Signature")]
+    signing_key_id: Annotated[str, Field(title="Signing Key Id")]
 
 
 class EnvelopeSignedBundle(BaseModel):

@@ -3,12 +3,13 @@ from __future__ import annotations
 import time
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
+from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
 
-if TYPE_CHECKING:
-    from uuid import UUID
+NIL_ORG = UUID(int=0)
 
+if TYPE_CHECKING:
     from contract import ModelEntry, ProviderEntry
 
 
@@ -71,7 +72,7 @@ class Ctx:
     model: ModelEntry
     provider: ProviderEntry
     stream: bool = False
-    org_id: str = ""
+    org_id: UUID = NIL_ORG
     key_id: str = ""
     bundle_id: UUID | None = None
     started_at: float = field(default_factory=time.monotonic)

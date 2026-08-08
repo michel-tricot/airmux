@@ -1,17 +1,17 @@
 from __future__ import annotations
 
 import re
-from datetime import datetime  # noqa: TC003 pydantic resolves field annotations at runtime
+from datetime import datetime
 from typing import ClassVar, Self
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from pydantic import BaseModel, field_validator
 from sqlmodel import Field
 
 from control_plane.models.audit import audited
-from control_plane.models.base import Record
-from control_plane.models.mixins import Tombstonable
-from control_plane.schemas import ApiCreate, ApiOut
+from control_plane.models.common import Identified, Tombstonable
+from control_plane.models.common.base import Record
+from control_plane.models.common.wire import RecordCreate, RecordOut
 
 SERVICE_ACCOUNT_EMAIL_DOMAIN = "airbytesvcaccount.ai"
 
@@ -21,21 +21,19 @@ def slug(name: str) -> str:
 
 
 @audited
-class User(Record, Tombstonable, table=True):
-    id: str = Field(primary_key=True)
+class User(Record, Identified, Tombstonable, table=True):
     email: str = Field(unique=True)
     name: str
     instance_admin: bool = False
     service_account: bool = False
 
-    api_readonly: ClassVar[frozenset[str]] = frozenset({"id", "service_account"})
+    api_readonly: ClassVar[frozenset[str]] = frozenset({"service_account"})
     api_immutable: ClassVar[frozenset[str]] = frozenset({"email"})
 
     @classmethod
     def new_service_account(cls, name: str, *, instance_admin: bool = False) -> Self:
         """Machine principal with a derived unique email; the caller saves it and adds memberships."""
         return cls(
-            id=f"u-{uuid4().hex[:8]}",
             email=f"{slug(name)}-{uuid4().hex[:8]}@{SERVICE_ACCOUNT_EMAIL_DOMAIN}",
             name=name,
             instance_admin=instance_admin,
@@ -43,7 +41,7 @@ class User(Record, Tombstonable, table=True):
         )
 
 
-class UserCreate(ApiCreate):
+class UserCreate(RecordCreate[User]):
     email: str = Field(description="Unique email identifying the user")
     name: str = Field("", description="Display name, defaults to the email")
     instance_admin: bool = Field(default=False, description="Whether the user administers the whole instance")
@@ -62,8 +60,8 @@ class ServiceAccountIn(BaseModel):
         return v
 
 
-class UserOut(ApiOut):
-    id: str
+class UserOut(RecordOut[User]):
+    id: UUID
     email: str
     name: str
     instance_admin: bool
@@ -71,6 +69,6 @@ class UserOut(ApiOut):
     created_at: datetime
     updated_at: datetime
     deleted_at: datetime | None
-    orgs: list[str]
+    orgs: list[UUID]
 
     api_extra: ClassVar[frozenset[str]] = frozenset({"orgs"})

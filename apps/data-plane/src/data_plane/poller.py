@@ -25,7 +25,7 @@ async def poll_once(config: Config, holder: BundleHolder, public_key: Ed25519Pub
     resp = await client.get(
         f"{config.control_plane.url}/v1/bundle/latest",
         headers={"authorization": f"Bearer {config.control_plane.token}"},
-        params={"org_id": config.bundle.org} if config.bundle.org else {},
+        params={"org_id": str(config.bundle.org)} if config.bundle.org else {},
     )
     resp.raise_for_status()
     signed = SignedBundle.model_validate(resp.json()["data"])

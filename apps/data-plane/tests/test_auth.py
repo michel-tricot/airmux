@@ -5,10 +5,12 @@ from functools import partial
 from conftest import make_bundle as _make_bundle
 from conftest import make_key as _make_key
 
+from contract import uuid7
 from data_plane.auth import authenticate, index_keys
 
-make_bundle = partial(_make_bundle, org="org-a")
-make_key = partial(_make_key, org="org-a")
+ORG_A = uuid7()
+make_bundle = partial(_make_bundle, org=ORG_A)
+make_key = partial(_make_key, org=ORG_A)
 
 
 def test_valid_opaque_token_authenticates():

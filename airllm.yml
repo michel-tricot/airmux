@@ -1,8 +1,6 @@
 control_plane:
   database:
-    url: sqlite+aiosqlite:///airllm.db
-  auth:
-    public_base_url: http://127.0.0.1:8000
+    url: postgresql+asyncpg://airllm:airllm@127.0.0.1:5432/airllm
   bundle:
     signing_key: env:GW_BUNDLE_SIGNING_KEY
     staleness_bound_hours: 24

@@ -4,6 +4,7 @@ from contract.bundle import BundleV1, Catalog, KeyEntry, ModelEntry, ProviderEnt
 from contract.config_template import DEFAULT_CONFIG_YML
 from contract.credentials import INFERENCE_TOKEN_PREFIX, token_hash
 from contract.events import HeartbeatV1, UsageEventV1, UsageStatus
+from contract.ids import uuid7
 from contract.signing import (
     Ed25519PrivateKeyB64,
     Ed25519PublicKeyB64,
@@ -37,5 +38,6 @@ __all__ = [
     "public_key_to_b64",
     "sign_bundle",
     "token_hash",
+    "uuid7",
     "verify_bundle",
 ]

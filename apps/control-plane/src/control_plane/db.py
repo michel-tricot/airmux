@@ -13,8 +13,6 @@ if TYPE_CHECKING:
 
 _session: ContextVar[AsyncSession] = ContextVar("session")
 
-current_actor: ContextVar[str | None] = ContextVar("actor", default=None)
-
 
 def make_engine(database_url: str) -> AsyncEngine:
     return create_async_engine(database_url)

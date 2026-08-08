@@ -20,9 +20,9 @@ class UsageEventV1(BaseModel):
 
     schema_version: Literal[1] = 1
     event_id: UUID  # idempotency key for the upsert
-    request_id: str
+    request_id: UUID
     occurred_at: datetime
-    org_id: str
+    org_id: UUID
     key_id: str
     model_id: str
     provider_id: str
@@ -44,7 +44,7 @@ class HeartbeatV1(BaseModel):
 
     model_config = ConfigDict(frozen=True)
 
-    instance_id: str  # stable per data plane, persisted in its cache dir
+    instance_id: UUID  # stable per data plane, persisted in its cache dir
     version: str
-    org_id: str | None = None  # which org's bundle it serves
+    org_id: UUID | None = None  # which org's bundle it serves
     bundle_id: UUID | None = None  # the bundle it is currently serving

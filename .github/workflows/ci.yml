@@ -16,7 +16,7 @@ jobs:
       - run: uv run ty check packages/contract apps/data-plane apps/cli apps/control-plane
       - run: uv run lint-imports
       - run: ./scripts/generate-api-models.sh && git diff --exit-code apps/cli/src/cli/api_models.py
-      - run: uv run pytest
+      - run: uv run pytest -n auto
 
   acceptance:
     runs-on: ubuntu-latest

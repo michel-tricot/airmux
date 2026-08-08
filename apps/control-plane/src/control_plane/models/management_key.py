@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from datetime import datetime  # noqa: TC003 pydantic resolves field annotations at runtime
+from datetime import datetime
 from typing import ClassVar, Literal
+from uuid import UUID
 
 from pydantic import BaseModel
 from sqlalchemy import JSON
@@ -9,16 +10,15 @@ from sqlmodel import Field
 
 from control_plane.authz import Scope
 from control_plane.models.audit import audited
-from control_plane.models.base import Record
-from control_plane.models.mixins import Tombstonable
-from control_plane.schemas import ApiOut
+from control_plane.models.common import Identified, Tombstonable
+from control_plane.models.common.base import Record
+from control_plane.models.common.wire import RecordOut
 
 
 @audited
-class MgmtToken(Record, Tombstonable, table=True):
-    id: str = Field(primary_key=True)
-    org_id: str | None = None
-    user_id: str = Field(foreign_key="user.id")
+class ManagementKey(Record, Identified, Tombstonable, table=True):
+    org_id: UUID | None = None
+    user_id: UUID = Field(foreign_key="user.id")
     token_hash: str = Field(unique=True)
     revoked: bool = False
     scopes: list[str] | None = Field(default=None, sa_type=JSON)
@@ -27,10 +27,10 @@ class MgmtToken(Record, Tombstonable, table=True):
     api_readonly: ClassVar[frozenset[str]] = frozenset({"scopes"})
 
 
-class MgmtTokenOut(ApiOut):
-    id: str
-    org_id: str | None
-    user_id: str
+class ManagementKeyOut(RecordOut[ManagementKey]):
+    id: UUID
+    org_id: UUID | None
+    user_id: UUID
     revoked: bool
     scopes: list[str] | None
     created_at: datetime
@@ -38,19 +38,19 @@ class MgmtTokenOut(ApiOut):
     deleted_at: datetime | None
 
 
-class MintedTokenOut(BaseModel):
-    token_id: str
-    org_id: str | None
-    user_id: str
+class ManagementKeyMintedOut(BaseModel):
+    id: UUID
+    org_id: UUID | None
+    user_id: UUID
     scopes: list[str] | None
     token: str
 
 
-class TokenRevokedOut(BaseModel):
-    token_id: str
+class ManagementKeyRevokedOut(BaseModel):
+    id: UUID
     status: Literal["revoked"]
 
 
-class UserTokenIn(BaseModel):
-    org_id: str | None = Field(None, description="Org to scope the token to; omit for an instance token, instance admins only")
+class ManagementKeyIn(BaseModel):
+    org_id: UUID | None = Field(None, description="Org to scope the token to; omit for an instance token, instance admins only")
     scopes: list[Scope] | None = Field(None, description="Restrict the token to these scopes; omit for the user's full authority")

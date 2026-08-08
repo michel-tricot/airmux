@@ -23,6 +23,7 @@ uv run datamodel-codegen \
   --use-union-operator \
   --use-standard-collections \
   --use-schema-description \
+  --use-annotated \
   --target-python-version 3.13 \
   --disable-timestamp
 uv run ruff format -q apps/cli/src/cli/api_models.py

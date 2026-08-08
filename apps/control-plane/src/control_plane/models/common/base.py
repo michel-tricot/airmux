@@ -13,6 +13,19 @@ def _snake(name: str) -> str:
     return re.sub(r"(?<!^)(?=[A-Z])", "_", name).lower()
 
 
+def api_set(model: type, name: str) -> frozenset[str]:
+    """Union the class's own api_* declaration with every mixin's, not first-wins like attribute lookup."""
+    return frozenset().union(*(vars(base).get(name, ()) for base in model.__mro__))
+
+
+def api_dispositions(model: type) -> tuple[frozenset[str], frozenset[str], frozenset[str]]:
+    """(hidden, readonly, immutable) composed across the MRO; hidden beats readonly beats immutable, so policy can tighten but never loosen."""
+    hidden = api_set(model, "api_hidden")
+    readonly = api_set(model, "api_readonly") - hidden
+    immutable = api_set(model, "api_immutable") - hidden - readonly
+    return hidden, readonly, immutable
+
+
 if TYPE_CHECKING:
     from sqlalchemy import ColumnElement
     from sqlalchemy.orm import Mapped
@@ -46,8 +59,8 @@ class Record(SQLModel):
 
     @classmethod
     async def first(cls, *conditions: ColumnElement[bool] | bool, order_by: OrderBy | tuple[OrderBy, ...] | None = None) -> Self | None:
-        rows = await cls.find(*conditions, order_by=order_by, limit=1)
-        return rows[0] if rows else None
+        records = await cls.find(*conditions, order_by=order_by, limit=1)
+        return records[0] if records else None
 
     async def save(self) -> Self:
         session = current_session()

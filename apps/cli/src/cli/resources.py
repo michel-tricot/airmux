@@ -39,7 +39,7 @@ KEY_COLS = [
     Col("id", "ID", style="dim", no_wrap=True),
     Col("org_id", "Org"),
     Col("user_id", "Owner", style="dim", no_wrap=True),
-    Col("disabled", "Status", style="yellow", fmt=lambda v: "revoked" if v else "active"),
+    Col("revoked", "Status", style="yellow", fmt=lambda v: "revoked" if v else "active"),
     Col("created_at", "Created", no_wrap=True, fmt=fmt_when),
 ]
 PROVIDER_COLS = [
@@ -216,7 +216,7 @@ def tokens_mint(
     scoped_to = resp["org_id"] or "instance"
     restriction = f" restricted to {', '.join(resp['scopes'])}" if resp.get("scopes") else ""
     console.print(
-        f"management token [bold]{resp['token_id']}[/bold] minted for [bold]{scoped_to}[/bold] "
+        f"management token [bold]{resp['id']}[/bold] minted for [bold]{scoped_to}[/bold] "
         f"for user [bold]{resp['user_id']}[/bold]{restriction}, token (shown once):"
     )
     console.print(resp["token"])
@@ -261,7 +261,7 @@ def bundles_compile(control_plane_url: str = "") -> None:
     """Recompile and sign the org's bundle."""
     with org_client(control_plane_url) as c:
         compiled = payload(post_expecting(c, "/v1/org/bundles/compile", {}, ok=(200,)))
-    console.print(f"bundle [bold]{compiled['bundle_id']}[/bold] v{compiled['version']} compiled")
+    console.print(f"bundle [bold]{compiled['id']}[/bold] v{compiled['version']} compiled")
 
 
 INSTANCE_COLS = [

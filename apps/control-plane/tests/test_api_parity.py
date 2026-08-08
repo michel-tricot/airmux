@@ -6,8 +6,8 @@ import pytest
 from sqlalchemy import inspect
 
 import control_plane.app  # noqa: F401 imports every route module so the marker subclass walks below see all api models
-from control_plane.models.base import Record
-from control_plane.schemas import ApiCreate, ApiOut, ApiPatch, api_dispositions, api_set
+from control_plane.models.common.base import Record, api_dispositions, api_set
+from control_plane.models.common.wire import RecordCreate, RecordOut, RecordUpdate
 
 if TYPE_CHECKING:
     from pydantic import BaseModel
@@ -22,25 +22,51 @@ def _subclasses[T](cls: type[T]) -> set[type[T]]:
 TABLES = {cls.__name__: cls for cls in _subclasses(Record) if hasattr(cls, "__table__")}
 
 
-def _paired(marker: type[BaseModel], suffix: str) -> tuple[dict[type[Record], type[BaseModel]], list[str]]:
-    """Pair every marker subclass to its table by name: <Table><suffix> -> <Table>."""
-    pairs: dict[type[Record], type[BaseModel]] = {}
+def _declared_table(cls: type[BaseModel], marker: type[BaseModel]) -> type[Record] | None:
+    """The type argument of the marker base: RecordOut[Org] -> Org; pydantic keeps it in the generic metadata."""
+    metadata = (getattr(base, "__pydantic_generic_metadata__", None) for base in cls.__mro__)
+    arg = next((meta["args"][0] for meta in metadata if meta and meta["origin"] is marker and meta["args"]), None)
+    return arg if isinstance(arg, type) and issubclass(arg, Record) and hasattr(arg, "__table__") else None
+
+
+def _paired(marker: type[BaseModel]) -> tuple[dict[type[Record], list[type[BaseModel]]], list[str]]:
+    """Group every marker subclass under the table it is parametrized with; the type argument is the pairing, never the name."""
+    pairs: dict[type[Record], list[type[BaseModel]]] = {}
     problems: list[str] = []
     for cls in sorted(_subclasses(marker), key=lambda c: c.__name__):
-        table = TABLES.get(cls.__name__.removesuffix(suffix))
-        if not cls.__name__.endswith(suffix) or table is None:
-            problems.append(
-                f"{cls.__name__} subclasses {marker.__name__} but does not pair with a table: name it <Table>{suffix} "
-                f"for one of {sorted(TABLES)}, or make it a plain BaseModel if it is an action body."
-            )
+        if cls.__pydantic_generic_metadata__["origin"] is marker:
+            continue
+        table = _declared_table(cls, marker)
+        if table is None:
+            problems.append(f"{cls.__name__} does not declare its table: subclass {marker.__name__}[SomeTable], not bare {marker.__name__}.")
         else:
-            pairs[table] = cls
+            pairs.setdefault(table, []).append(cls)
     return pairs, problems
 
 
-OUTS, OUT_PROBLEMS = _paired(ApiOut, "Out")
-CREATES, CREATE_PROBLEMS = _paired(ApiCreate, "Create")
-PATCHES, PATCH_PROBLEMS = _paired(ApiPatch, "Patch")
+def _single(pairs: dict[type[Record], list[type[BaseModel]]], marker_name: str) -> tuple[dict[type[Record], type[BaseModel]], list[str]]:
+    """Create and Update stay one per table; only Outs may have summary variants."""
+    problems = [
+        f"{table.__name__} has {len(models)} {marker_name} models ({', '.join(m.__name__ for m in models)}): one table, one input shape."
+        for table, models in pairs.items()
+        if len(models) > 1
+    ]
+    return {table: models[0] for table, models in pairs.items()}, problems
+
+
+OUTS, OUT_PROBLEMS = _paired(RecordOut)
+_CREATE_GROUPS, _CREATE_GROUP_PROBLEMS = _paired(RecordCreate)
+_UPDATE_GROUPS, _UPDATE_GROUP_PROBLEMS = _paired(RecordUpdate)
+CREATES, _CREATE_SINGLE_PROBLEMS = _single(_CREATE_GROUPS, "RecordCreate")
+UPDATES, _UPDATE_SINGLE_PROBLEMS = _single(_UPDATE_GROUPS, "RecordUpdate")
+CREATE_PROBLEMS = _CREATE_GROUP_PROBLEMS + _CREATE_SINGLE_PROBLEMS
+UPDATE_PROBLEMS = _UPDATE_GROUP_PROBLEMS + _UPDATE_SINGLE_PROBLEMS
+
+
+def _cases(pairs) -> pytest.MarkDecorator:
+    items = sorted(pairs.items(), key=lambda item: item[0].__name__)
+    return pytest.mark.parametrize("table", [table for table, _ in items], ids=[table.__name__ for table, _ in items])
+
 
 tables = pytest.mark.parametrize("table", [TABLES[name] for name in sorted(TABLES)], ids=sorted(TABLES))
 
@@ -49,8 +75,8 @@ def _report(problems: list[str]) -> str:
     return "\n".join(problems)
 
 
-def test_every_api_model_pairs_with_a_table():
-    assert OUT_PROBLEMS + CREATE_PROBLEMS + PATCH_PROBLEMS == [], _report(OUT_PROBLEMS + CREATE_PROBLEMS + PATCH_PROBLEMS)
+def test_every_api_model_declares_its_table():
+    assert OUT_PROBLEMS + CREATE_PROBLEMS + UPDATE_PROBLEMS == [], _report(OUT_PROBLEMS + CREATE_PROBLEMS + UPDATE_PROBLEMS)
 
 
 @tables
@@ -64,11 +90,9 @@ def test_disposition_names_exist_on_the_table(table: type[Record]):
     assert problems == [], _report(problems)
 
 
-@tables
+@_cases(CREATES | UPDATES)
 def test_primary_keys_are_never_writable(table: type[Record]):
     """A writable or patchable primary key would let callers rename rows; tables with inputs must place the pk in a frozen disposition."""
-    if table not in CREATES and table not in PATCHES:
-        pytest.skip("table has no input models, so callers cannot send an id")
     hidden, readonly, immutable = api_dispositions(table)
     mapper = inspect(table, raiseerr=False)
     assert mapper is not None
@@ -96,33 +120,43 @@ def _field_sync(table: type[Record], kind: type[BaseModel], expected: set[str], 
     return problems
 
 
-@tables
-def test_out_mirrors_the_table_minus_hidden(table: type[Record]):
-    out = OUTS.get(table)
-    if out is None:
-        pytest.skip("table has no Out model")
+@_cases(OUTS)
+def test_outs_stay_within_the_table_and_one_mirrors_it_fully(table: type[Record]):
+    """Every Out is a subset of the public columns plus its own api_extra (a summary can narrow, never leak),
+    and exactly one Out per table is the full mirror, so a forgotten column always fails somewhere."""
     hidden, _, _ = api_dispositions(table)
-    extra = api_set(out, "api_extra")
-    problems = (
-        [f"{out.__name__}.api_extra names table columns {sorted(extra & set(table.model_fields))}; api_extra is only for computed response fields."]
-        if extra & set(table.model_fields)
-        else []
-    )
-    problems += _field_sync(
-        table,
-        out,
-        (set(table.model_fields) - hidden) | extra,
-        f"A public column belongs in {out.__name__}; a column that must never cross the wire belongs in {table.__name__}.api_hidden; "
-        f"a computed response field belongs in {out.__name__}.api_extra.",
-    )
+    public = set(table.model_fields) - hidden
+    problems: list[str] = []
+    mirrors: list[str] = []
+    for out in OUTS[table]:
+        extra = api_set(out, "api_extra")
+        if bad := sorted(extra & set(table.model_fields)):
+            problems.append(f"{out.__name__}.api_extra names table columns {bad}; api_extra is only for computed response fields.")
+        fields = set(out.model_fields)
+        if leaked := sorted(fields - public - extra):
+            problems.append(
+                f"{out.__name__} exposes {leaked}, which are hidden or not columns; an Out stays within the public columns plus its api_extra."
+            )
+        problems.extend(
+            f"{out.__name__}.{name} is annotated {out.model_fields[name].annotation} but {table.__name__}.{name} is "
+            f"{table.model_fields[name].annotation}. Annotations must match the table exactly."
+            for name in sorted(fields & public)
+            if out.model_fields[name].annotation != table.model_fields[name].annotation
+        )
+        if fields == public | extra:
+            mirrors.append(out.__name__)
+    if len(mirrors) != 1:
+        others = ", ".join(mirrors) if mirrors else "none"
+        problems.append(
+            f"{table.__name__} needs exactly one full Out mirror carrying every public column (found: {others}); "
+            f"summaries must drop at least one public column."
+        )
     assert problems == [], _report(problems)
 
 
-@tables
+@_cases(CREATES)
 def test_create_accepts_exactly_the_writable_fields(table: type[Record]):
-    create = CREATES.get(table)
-    if create is None:
-        pytest.skip("table has no Create model")
+    create = CREATES[table]
     hidden, readonly, _ = api_dispositions(table)
     problems = _field_sync(
         table,
@@ -133,27 +167,25 @@ def test_create_accepts_exactly_the_writable_fields(table: type[Record]):
     assert problems == [], _report(problems)
 
 
-@tables
-def test_patch_is_the_optional_mutable_subset(table: type[Record]):
-    patch = PATCHES.get(table)
-    if patch is None:
-        pytest.skip("table has no Patch model")
+@_cases(UPDATES)
+def test_update_is_the_optional_mutable_subset(table: type[Record]):
+    update = UPDATES[table]
     hidden, readonly, immutable = api_dispositions(table)
     expected = set(table.model_fields) - hidden - readonly - immutable
     problems = []
-    if missing := sorted(expected - set(patch.model_fields)):
+    if missing := sorted(expected - set(update.model_fields)):
         problems.append(
-            f"{patch.__name__} is missing fields {missing}. A mutable column belongs in {patch.__name__} as `field: T | None = None`; "
+            f"{update.__name__} is missing fields {missing}. A mutable column belongs in {update.__name__} as `field: T | None = None`; "
             f"a create-only column belongs in {table.__name__}.api_immutable."
         )
-    if unexpected := sorted(set(patch.model_fields) - expected):
-        problems.append(f"{patch.__name__} has unexpected fields {unexpected}; hidden, readonly, and immutable columns are not patchable.")
-    for name in sorted(expected & set(patch.model_fields)):
-        field = patch.model_fields[name]
+    if unexpected := sorted(set(update.model_fields) - expected):
+        problems.append(f"{update.__name__} has unexpected fields {unexpected}; hidden, readonly, and immutable columns are not patchable.")
+    for name in sorted(expected & set(update.model_fields)):
+        field = update.model_fields[name]
         expected_annotation = table.model_fields[name].annotation | None
         if field.annotation != expected_annotation or field.is_required() or field.default is not None:
             problems.append(
-                f"{patch.__name__}.{name} must be declared `{name}: {expected_annotation} = None` so PATCH can distinguish "
+                f"{update.__name__}.{name} must be declared `{name}: {expected_annotation} = None` so PATCH can distinguish "
                 f"omitted from explicitly-null; got {field.annotation} with default {field.default!r}."
             )
     assert problems == [], _report(problems)

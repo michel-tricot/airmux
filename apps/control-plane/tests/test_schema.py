@@ -1,29 +1,69 @@
+"""One question, six angles: do all the ways of building the schema agree?
+
+The models (rendered through create_all plus the current trigger DDL) and the alembic migrations
+are two sources of schema truth that can drift apart; every test here pins them together.
+"""
+
 from __future__ import annotations
 
+import asyncio
 from pathlib import Path
 
+import pytest
 from alembic import command
 from alembic.autogenerate import compare_metadata
 from alembic.config import Config
 from alembic.runtime.migration import MigrationContext
-from sqlalchemy import create_engine, inspect, text
+from pg import db_name_for, drop_database, ensure_database
+from sqlalchemy import inspect, text
+from sqlalchemy.ext.asyncio import create_async_engine
 from sqlmodel import SQLModel
 
 import control_plane
-from control_plane.models.mixins.tombstone import TOMBSTONE_COLUMNS, tombstoned_models, tombstoned_tables
+from control_plane.models.audit import audit_trigger_ddl_v1, audited_tables
+from control_plane.models.common.tombstone import TOMBSTONE_COLUMNS, tombstoned_models, tombstoned_tables, touch_trigger_ddl_v1
 
 CONTROL_PLANE_DIR = Path(control_plane.__file__).resolve().parents[2]
 
 
-def _migrated_engine(tmp_path):
+@pytest.fixture
+def pg_db(tmp_path):
+    """Named scratch databases beyond the test's standard one, dropped at teardown."""
+    created = []
+
+    def make(suffix: str) -> str:
+        name = f"{db_name_for(tmp_path)}_{suffix}"
+        created.append(name)
+        return ensure_database(name)
+
+    yield make
+    for name in created:
+        drop_database(name)
+
+
+def _migrated_url(pg_db) -> str:
+    url = pg_db("migrated")
     config = Config(str(CONTROL_PLANE_DIR / "alembic.ini"))
     config.set_main_option("script_location", str(CONTROL_PLANE_DIR / "migrations"))
-    config.set_main_option("sqlalchemy.url", f"sqlite+aiosqlite:///{tmp_path}/migrated.db")
+    config.set_main_option("sqlalchemy.url", url)
     command.upgrade(config, "head")
-    return create_engine(f"sqlite:///{tmp_path}/migrated.db")
+    return url
+
+
+def _run_sync(url: str, fn):
+    async def run():
+        engine = create_async_engine(url)
+        try:
+            async with engine.connect() as conn:
+                return await conn.run_sync(fn)
+        finally:
+            await engine.dispose()
+
+    return asyncio.run(run())
 
 
 def test_tombstoned_models_carry_the_columns_in_metadata():
+    """Every Tombstonable table has the three lifecycle columns in its metadata."""
     tables = tombstoned_tables()
     assert tables
     for table in tables:
@@ -31,37 +71,92 @@ def test_tombstoned_models_carry_the_columns_in_metadata():
 
 
 def test_tombstonable_models_inherit_the_lifecycle_fields():
+    """Every Tombstonable model exposes the lifecycle fields to pydantic, not just to the database."""
     models = tombstoned_models()
     assert models
     for cls in models:
         assert set(cls.model_fields) >= TOMBSTONE_COLUMNS, cls.__name__
 
 
-def test_migrated_tables_carry_the_tombstone_columns(tmp_path):
-    inspector = inspect(_migrated_engine(tmp_path))
+def test_migrated_tables_carry_the_tombstone_columns(pg_db):
+    """The migration chain, run from an empty database, produces the lifecycle columns."""
+    url = _migrated_url(pg_db)
+    columns_by_table = _run_sync(url, lambda conn: {t.name: {c["name"] for c in inspect(conn).get_columns(t.name)} for t in tombstoned_tables()})
     for table in tombstoned_tables():
-        columns = {column["name"] for column in inspector.get_columns(table.name)}
-        assert columns >= TOMBSTONE_COLUMNS, table.name
+        assert columns_by_table[table.name] >= TOMBSTONE_COLUMNS, table.name
 
 
-def test_migrations_produce_the_model_schema(tmp_path):
-    engine = _migrated_engine(tmp_path)
-    with engine.connect() as connection:
-        diff = compare_metadata(MigrationContext.configure(connection), SQLModel.metadata)
+def test_migrations_produce_the_model_schema(pg_db):
+    """The migrated schema is identical to the models: a hand-written migration that drifts fails here."""
+    url = _migrated_url(pg_db)
+    diff = _run_sync(url, lambda conn: compare_metadata(MigrationContext.configure(conn), SQLModel.metadata))
     assert diff == []
 
 
-def _triggers(engine) -> dict[str, str]:
-    with engine.connect() as connection:
-        return {row[0]: row[1] for row in connection.execute(text("select name, sql from sqlite_master where type = 'trigger'"))}
+def _triggers(conn) -> dict[str, str]:
+    """Trigger and trigger-function definitions, keyed by name; our trigger names embed the table."""
+    triggers = conn.execute(text("SELECT tgname, pg_get_triggerdef(oid) FROM pg_trigger WHERE NOT tgisinternal"))
+    functions = conn.execute(
+        text("SELECT proname, pg_get_functiondef(oid) FROM pg_proc WHERE proname LIKE 'touch_timestamps%' OR proname LIKE 'audit_row%'")
+    )
+    return {row[0]: row[1] for row in [*triggers, *functions]}
 
 
-def test_touch_triggers_match_between_schema_paths(tmp_path):
-    created = create_engine(f"sqlite:///{tmp_path}/created.db")
-    SQLModel.metadata.create_all(created)
-    created_triggers = _triggers(created)
-    migrated_triggers = _triggers(_migrated_engine(tmp_path))
+def _current_trigger_ddl() -> list[str]:
+    """The triggers the current DDL versions produce over the current model set; the intent side of the parity test."""
+    touch = [statement for table in tombstoned_tables() for statement in touch_trigger_ddl_v1(table.name)]
+    audit = [
+        statement
+        for table in audited_tables()
+        for statement in audit_trigger_ddl_v1(table.name, tuple(column.name for column in table.primary_key.columns))
+    ]
+    return [*touch, *audit]
+
+
+def _created_triggers(url: str) -> dict[str, str]:
+    async def create_all() -> None:
+        engine = create_async_engine(url)
+        try:
+            async with engine.begin() as conn:
+                await conn.run_sync(SQLModel.metadata.create_all)
+                for statement in _current_trigger_ddl():
+                    await conn.exec_driver_sql(statement)
+        finally:
+            await engine.dispose()
+
+    asyncio.run(create_all())
+    return _run_sync(url, _triggers)
+
+
+def test_touch_triggers_match_between_schema_paths(pg_db):
+    """The current DDL versions and the migrations install the same triggers (invisible to compare_metadata); no tombstoned table lacks its pair."""
+    created_triggers = _created_triggers(pg_db("created"))
+    migrated_triggers = _run_sync(_migrated_url(pg_db), _triggers)
     assert created_triggers == migrated_triggers
     for table in tombstoned_tables():
         assert f"{table.name}_touch_insert" in created_triggers, table.name
         assert f"{table.name}_touch_update" in created_triggers, table.name
+
+
+def test_database_mints_uuid7_ids_for_raw_inserts(pg_db):
+    """The uuidv7() server default is the backstop: a write path that skips the ORM still gets a time-ordered id."""
+    url = _migrated_url(pg_db)
+
+    def raw_insert(conn):
+        conn.execute(text("SELECT set_config('app.user_id', 'schema-test', true)"))
+        row = conn.execute(
+            text("INSERT INTO \"user\" (email, name, instance_admin, service_account) VALUES ('raw@example.com', 'raw', false, false) RETURNING id")
+        )
+        return row.scalar_one()
+
+    minted = _run_sync(url, raw_insert)
+    assert minted.version == 7
+
+
+def test_audit_triggers_cover_every_audited_table(pg_db):
+    """Every @audited model gets its audit trigger from the current DDL; the parity test above pins the migration path to it."""
+    created_triggers = _created_triggers(pg_db("created"))
+    tables = audited_tables()
+    assert tables
+    for table in tables:
+        assert f"{table.name}_audit" in created_triggers, table.name

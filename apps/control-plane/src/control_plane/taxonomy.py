@@ -24,7 +24,7 @@ class UnknownProviderError(TaxonomyError):
 
 
 class ProviderIn(BaseModel):
-    provider_id: str = Field(description="Provider id, e.g. openai")
+    provider_id: str = Field(description="Provider name, e.g. openai")
     kind: Literal["openai_compatible", "anthropic"] = Field("openai_compatible", description="Adapter kind")
     base_url: str = Field(description="OpenAI-compatible endpoint, e.g. https://api.groq.com/openai/v1")
     credential_ref: str = Field(description="env: or file: reference resolved by the data plane, never a raw secret")
@@ -41,7 +41,7 @@ class ProviderIn(BaseModel):
 
 
 class ModelIn(BaseModel):
-    model_id: str = Field(description="Caller-facing model id")
+    model_id: str = Field(description="Caller-facing model name")
     provider_id: str = Field(description="Provider id the model routes to")
     upstream_model: str = Field("", description="Model name sent to the provider, lets model_id be an alias; defaults to model_id")
     input_price_per_mtok: float = Field(0.0, description="USD per million input tokens")
@@ -66,10 +66,10 @@ def parse_taxonomy(path: Path) -> TaxonomySpec:
 
 
 async def upsert_provider(p: ProviderIn) -> Provider:
-    """Create or update; the single upsert shared by the API route and taxonomy application."""
-    provider = await Provider.get(p.provider_id)
+    """Create or update by name; the single upsert shared by the API route and taxonomy application."""
+    provider = await Provider.first(Provider.name == p.provider_id)
     if provider is None:
-        provider = Provider(id=p.provider_id, kind=p.kind, base_url=p.base_url, credential_ref=p.credential_ref)
+        provider = Provider(name=p.provider_id, kind=p.kind, base_url=p.base_url, credential_ref=p.credential_ref)
     else:
         provider.kind = p.kind
         provider.base_url = p.base_url
@@ -80,14 +80,15 @@ async def upsert_provider(p: ProviderIn) -> Provider:
 
 
 async def upsert_model(m: ModelIn) -> Model:
-    """Create or update; the single upsert shared by the API route and taxonomy application."""
-    if await Provider.get(m.provider_id) is None:
+    """Create or update by name; the single upsert shared by the API route and taxonomy application."""
+    provider = await Provider.first(Provider.name == m.provider_id)
+    if provider is None:
         raise UnknownProviderError(m.provider_id)
-    model = await Model.get(m.model_id)
+    model = await Model.first(Model.name == m.model_id)
     if model is None:
         model = Model(
-            id=m.model_id,
-            provider_id=m.provider_id,
+            name=m.model_id,
+            provider_id=provider.id,
             upstream_model=m.upstream_model or m.model_id,
             input_price_per_mtok=m.input_price_per_mtok,
             output_price_per_mtok=m.output_price_per_mtok,
@@ -96,7 +97,7 @@ async def upsert_model(m: ModelIn) -> Model:
             capabilities=m.capabilities,
         )
     else:
-        model.provider_id = m.provider_id
+        model.provider_id = provider.id
         model.upstream_model = m.upstream_model or m.model_id
         model.input_price_per_mtok = m.input_price_per_mtok
         model.output_price_per_mtok = m.output_price_per_mtok

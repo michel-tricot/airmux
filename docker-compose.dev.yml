@@ -1,0 +1,21 @@
+# Dependencies only, for local development: the planes run from source (uv run airllmcp serve,
+# uv run airllmdp) against these. Matches the default database url in airllm.yml.
+#   docker compose -f docker-compose.dev.yml up -d --wait
+services:
+  postgres:
+    image: postgres:18
+    environment:
+      POSTGRES_USER: airllm
+      POSTGRES_PASSWORD: airllm
+      POSTGRES_DB: airllm
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata-dev:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U airllm"]
+      interval: 5s
+      start_period: 10s
+
+volumes:
+  pgdata-dev:

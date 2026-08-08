@@ -1,39 +1,41 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from uuid import UUID  # noqa: TC003 fastapi resolves query param annotations at runtime
 
 from fastapi import APIRouter, HTTPException, Request
-from sqlalchemy.dialects.sqlite import insert as sqlite_insert
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlmodel import col
 
 from contract import BundleV1, HeartbeatV1, SignedBundle, UsageEventV1
 from control_plane.authz import Scope
 from control_plane.deps import MgmtDep, SessionDep, require
 from control_plane.models import Bundle, DataPlaneInstance, UsageEvent
+from control_plane.models.common.wire import Envelope
 from control_plane.models.data_plane_instance import HeartbeatOut
 from control_plane.models.usage_event import EventsIngestedOut
-from control_plane.schemas import Envelope
 
 router = APIRouter(tags=["Sync"])
 
 
-def _sync_org(claims_org: str | None, org_id: str | None) -> str | None:
+def _sync_org(claims_org_id: UUID | None, org_id: UUID | None) -> UUID | None:
     """A data plane authenticates with a management token; an org-scoped one is pinned to its org."""
-    if claims_org is None:
+    if claims_org_id is None:
         return org_id
-    if org_id is not None and org_id != claims_org:
+    if org_id is not None and org_id != claims_org_id:
         raise HTTPException(status_code=403)
-    return claims_org
+    return claims_org_id
 
 
 @router.get("/bundle/latest", dependencies=[require(Scope.sync)])
-async def bundle_latest(claims: MgmtDep, org_id: str | None = None) -> Envelope[SignedBundle]:
-    org = _sync_org(claims.org_id, org_id)
-    conditions = (Bundle.org_id == org,) if org else ()
-    row = await Bundle.first(*conditions, order_by=(col(Bundle.issued_at).desc(), col(Bundle.version).desc()))
-    if row is None:
+async def bundle_latest(claims: MgmtDep, org_id: UUID | None = None) -> Envelope[SignedBundle]:
+    org_id = _sync_org(claims.org_id, org_id)
+    conditions = (Bundle.org_id == org_id,) if org_id else ()
+    bundle = await Bundle.first(*conditions, order_by=(col(Bundle.issued_at).desc(), col(Bundle.version).desc()))
+    if bundle is None:
         raise HTTPException(status_code=404)
-    return Envelope(data=SignedBundle(payload=BundleV1.model_validate_json(row.payload), signature=row.signature, signing_key_id=row.signing_key_id))
+    signed = SignedBundle(payload=BundleV1.model_validate_json(bundle.payload), signature=bundle.signature, signing_key_id=bundle.signing_key_id)
+    return Envelope(data=signed)
 
 
 @router.post("/events", dependencies=[require(Scope.sync)])
@@ -59,9 +61,9 @@ async def heartbeat(claims: MgmtDep, body: HeartbeatV1, session: SessionDep, req
     address = request.client.host if request.client else None
     fields = {"org_id": org, "version": body.version, "bundle_id": body.bundle_id, "address": address, "last_seen": now}
     stmt = (
-        sqlite_insert(DataPlaneInstance)
+        pg_insert(DataPlaneInstance)
         .values(instance_id=body.instance_id, first_seen=now, **fields)
-        .on_conflict_do_update(index_elements=[DataPlaneInstance.instance_id], set_=fields)
+        .on_conflict_do_update(index_elements=["instance_id"], set_=fields)
     )
     await session.execute(stmt)
     return Envelope(data=HeartbeatOut(instance_id=body.instance_id))

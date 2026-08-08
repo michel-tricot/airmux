@@ -3,22 +3,23 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import os
+import re
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
-from uuid import uuid4
 
 import typer
 import uvicorn
 from dotenv import dotenv_values, load_dotenv, set_key
 from rich.console import Console
+from sqlalchemy.engine import make_url
 
-from contract import DEFAULT_CONFIG_YML
+from contract import DEFAULT_CONFIG_YML, uuid7
 from control_plane.compiler import compile_and_store
-from control_plane.config import load_settings
+from control_plane.config import database_url, load_settings
 from control_plane.db import standalone_engine, standalone_transaction, transaction
-from control_plane.migrate import run_migrations
-from control_plane.models import Org
+from control_plane.migrate import current_revision, head_revision, run_migrations
+from control_plane.models import Org, set_actor
 from control_plane.setup import (
     ADMIN_TOKEN_ENV,
     AdminToken,
@@ -28,11 +29,13 @@ from control_plane.setup import (
     ensure_bundle,
     ensure_org,
     ensure_signing_keys,
+    find_admin,
 )
 from control_plane.taxonomy import apply_taxonomy, parse_taxonomy
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
+    from uuid import UUID
 
 app = typer.Typer(name="airllmcp", no_args_is_help=True)
 
@@ -40,6 +43,14 @@ admin_app = typer.Typer(help="Instance admins", no_args_is_help=True)
 app.add_typer(admin_app, name="admin")
 
 console = Console()
+
+
+def _write_org_reference(config_path: Path, org_id: UUID) -> None:
+    """Point the data plane at the org by id; the config template holds the org name until the id exists."""
+    text = config_path.read_text(encoding="utf-8")
+    updated = re.sub(r"(?m)^(\s*org:\s*).*$", rf"\g<1>{org_id}", text, count=1)
+    if updated != text:
+        config_path.write_text(updated, encoding="utf-8")
 
 
 @contextlib.contextmanager
@@ -67,20 +78,28 @@ def serve(host: str = "127.0.0.1", port: int = 8000, dev: bool = False, config: 
 @app.command()
 def migrate(config: str = "airllm.yml") -> None:
     os.environ["GW_CONFIG"] = config
+    url = database_url()
+    shown = make_url(url).render_as_string(hide_password=True)
+    before = current_revision(url)
     run_migrations()
+    head = head_revision()
+    if before == head:
+        typer.echo(f"{shown} already at {head}")
+    else:
+        typer.echo(f"{shown} migrated {before or 'empty'} -> {head}")
 
 
 @app.command()
 def init(  # noqa: PLR0913, PLR0915, PLR0917 the flags and sequential steps are the command's interface
     email: str = typer.Option(..., "--email", prompt="Admin email", help="Instance admin to create"),
     name: str = typer.Option("", help="Admin display name, defaults to the email"),
-    org: str = typer.Option("org-dev", help="Initial org id, also written into the data plane config"),
+    org: str = typer.Option("org-dev", help="Initial org name; its id is written into the data plane config"),
     config: str = typer.Option("airllm.yml", help="Shared config for both planes, written if missing"),
     env_file: str = typer.Option(".env", help="Where the signing keys and minted tokens land"),
     cache_dir: str = typer.Option(".airllm", help="Data plane bundle cache, written into the config"),
     taxonomy_file: str = typer.Option("taxonomy.yml", "--taxonomy", help="Models taxonomy path, resolved next to the config"),
     control_plane_url: str = typer.Option("http://127.0.0.1:8000", help="Control plane URL written into the data plane config"),
-    db_url: str = typer.Option("sqlite+aiosqlite:///airllm.db", help="Database URL written into the config"),
+    db_url: str = typer.Option("postgresql+asyncpg://airllm:airllm@127.0.0.1:5432/airllm", help="Database URL written into the config"),
     skip_key: bool = typer.Option(False, help="Do not mint the wildcard caller key (AIRLLM_TOKEN)"),
 ) -> None:
     """Set up a ready-to-serve control plane: keys, config, taxonomy, schema, admin, org, tokens, and bundle v1.
@@ -124,17 +143,21 @@ def init(  # noqa: PLR0913, PLR0915, PLR0917 the flags and sequential steps are 
                     set_key(env_path, env_name, token)
             with _step("org") as s:
                 async with transaction(factory):
-                    s["message"], minted = await ensure_org(org, stored, skip_key=skip_key)
+                    s["message"], minted, org_id = await ensure_org(org, stored, skip_key=skip_key)
                 for env_name, token in minted.items():
                     set_key(env_path, env_name, token)
+                _write_org_reference(config_path, org_id)
             with _step("models") as s:
                 spec = parse_taxonomy(taxonomy_path)
                 async with transaction(factory):
+                    admin = await find_admin()
+                    if admin is not None:
+                        await set_actor(admin.id)
                     providers, models = await apply_taxonomy(spec)
                 s["message"] = f"applied {providers} providers, {models} models from {taxonomy_path.name}"
             with _step("bundle") as s:
                 async with transaction(factory):
-                    s["message"] = await ensure_bundle(settings, org)
+                    s["message"] = await ensure_bundle(settings, org_id)
 
     try:
         asyncio.run(db_phase())
@@ -163,10 +186,13 @@ def taxonomy(
 
     async def run() -> tuple[int, int, list[tuple[str, int]]]:
         async with standalone_transaction(settings.database.url):
+            admin = await find_admin()
+            if admin is not None:
+                await set_actor(admin.id)
             providers, models = await apply_taxonomy(spec)
             now = datetime.now(tz=UTC)
             versions = [
-                (org.id, await compile_and_store(org.id, uuid4(), now, settings.bundle.staleness_bound, settings.bundle.signing_key))
+                (org.name, (await compile_and_store(org.id, uuid7(), now, settings.bundle.staleness_bound, settings.bundle.signing_key)).version)
                 for org in await Org.find()
             ]
             return providers, models, versions

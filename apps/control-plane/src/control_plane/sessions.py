@@ -2,10 +2,13 @@ from __future__ import annotations
 
 import secrets
 from datetime import UTC, datetime, timedelta
-from uuid import uuid4
+from typing import TYPE_CHECKING
 
 from contract import token_hash
 from control_plane.models import AuthSession
+
+if TYPE_CHECKING:
+    from uuid import UUID
 
 SESSION_TOKEN_PREFIX = "ab-sess-"  # noqa: S105 token prefix, not a secret
 SESSION_COOKIE = "airllm_session"
@@ -17,7 +20,7 @@ def aware(dt: datetime) -> datetime:
     return dt if dt.tzinfo else dt.replace(tzinfo=UTC)
 
 
-async def mint_session(user_id: str) -> tuple[AuthSession, str]:
+async def mint_session(user_id: UUID) -> tuple[AuthSession, str]:
     """Mint a session row and its cookie token; the plaintext exists only in the return value.
 
     Every login mints a fresh row, so a session id can never be fixated. Runs inside the
@@ -25,14 +28,13 @@ async def mint_session(user_id: str) -> tuple[AuthSession, str]:
     """
     token = SESSION_TOKEN_PREFIX + secrets.token_urlsafe(32)
     now = datetime.now(tz=UTC)
-    row = await AuthSession(
-        id=f"s-{uuid4().hex}",
+    auth_session = await AuthSession(
         user_id=user_id,
         token_hash=token_hash(token),
         expires_at=now + SESSION_IDLE_TTL,
         absolute_expires_at=now + SESSION_ABSOLUTE_TTL,
     ).save()
-    return row, token
+    return auth_session, token
 
 
 async def verify_session(token: str) -> AuthSession | None:
@@ -45,13 +47,13 @@ async def verify_session(token: str) -> AuthSession | None:
     """
     if not token.startswith(SESSION_TOKEN_PREFIX):
         return None
-    row = await AuthSession.first(AuthSession.token_hash == token_hash(token))
-    if row is None:
+    auth_session = await AuthSession.first(AuthSession.token_hash == token_hash(token))
+    if auth_session is None:
         return None
     now = datetime.now(tz=UTC)
-    if aware(row.expires_at) <= now or aware(row.absolute_expires_at) <= now:
+    if aware(auth_session.expires_at) <= now or aware(auth_session.absolute_expires_at) <= now:
         return None
-    if aware(row.expires_at) - now < SESSION_IDLE_TTL / 2:
-        row.expires_at = min(now + SESSION_IDLE_TTL, aware(row.absolute_expires_at))
-        await row.save()
-    return row
+    if aware(auth_session.expires_at) - now < SESSION_IDLE_TTL / 2:
+        auth_session.expires_at = min(now + SESSION_IDLE_TTL, aware(auth_session.absolute_expires_at))
+        await auth_session.save()
+    return auth_session

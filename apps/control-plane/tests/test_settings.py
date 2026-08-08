@@ -11,12 +11,15 @@ from control_plane.config import database_url, load_settings
 def test_load_settings_resolves_refs(tmp_path, monkeypatch):
     bundle_key_b64 = private_key_to_b64(Ed25519PrivateKey.generate())
     (tmp_path / "bundle.key").write_text(bundle_key_b64, encoding="utf-8")
-    config = "control_plane:\n  database:\n    url: sqlite+aiosqlite:///cp.db\n" + f"  bundle:\n    signing_key: file:{tmp_path}/bundle.key\n"
+    config = (
+        "control_plane:\n  database:\n    url: postgresql+asyncpg://cp:cp@127.0.0.1:5432/cp\n"
+        f"  bundle:\n    signing_key: file:{tmp_path}/bundle.key\n"
+    )
     (tmp_path / "airllm.yml").write_text(config, encoding="utf-8")
     monkeypatch.setenv("GW_CONFIG", str(tmp_path / "airllm.yml"))
 
     settings = load_settings()
-    assert settings.database.url == "sqlite+aiosqlite:///cp.db"
+    assert settings.database.url == "postgresql+asyncpg://cp:cp@127.0.0.1:5432/cp"
     assert private_key_to_b64(settings.bundle.signing_key) == bundle_key_b64
     assert settings.dev is False
 
@@ -40,4 +43,4 @@ def test_dev_flag_comes_from_the_environment(tmp_path, monkeypatch):
 
 def test_database_url_falls_back_without_a_config_file(tmp_path, monkeypatch):
     monkeypatch.setenv("GW_CONFIG", str(tmp_path / "missing.yml"))
-    assert database_url() == "sqlite+aiosqlite:///airllm.db"
+    assert database_url() == "postgresql+asyncpg://airllm:airllm@127.0.0.1:5432/airllm"

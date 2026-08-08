@@ -6,15 +6,16 @@ from uuid import UUID
 from pydantic import BaseModel
 from sqlmodel import Field
 
-from control_plane.models.base import Record
-from control_plane.schemas import ApiOut
+from control_plane.models.common.base import Record
+from control_plane.models.common.column_types import UTCDateTime
+from control_plane.models.common.wire import RecordOut
 
 
 class UsageEvent(Record, table=True):
     event_id: UUID = Field(primary_key=True)
-    request_id: str
-    occurred_at: datetime
-    org_id: str
+    request_id: UUID
+    occurred_at: datetime = Field(sa_type=UTCDateTime)
+    org_id: UUID
     key_id: str
     model_id: str
     provider_id: str
@@ -31,11 +32,11 @@ class UsageEvent(Record, table=True):
     stream: bool
 
 
-class UsageEventOut(ApiOut):
+class UsageEventOut(RecordOut[UsageEvent]):
     event_id: UUID
-    request_id: str
+    request_id: UUID
     occurred_at: datetime
-    org_id: str
+    org_id: UUID
     key_id: str
     model_id: str
     provider_id: str

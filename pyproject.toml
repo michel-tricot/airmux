@@ -14,7 +14,8 @@ contract = { workspace = true }
 dev = [
   "ruff>=0.14",
   "ty>=0.0.50",
-  "pytest", "pytest-asyncio", "respx", "anyio",
+  "pytest", "pytest-asyncio", "pytest-xdist", "respx", "anyio",
+  "testcontainers",
   "import-linter",
   "pre-commit",
   "datamodel-code-generator",
@@ -100,7 +101,10 @@ mypy-init-return = true
 classmethod-decorators = ["classmethod", "sqlalchemy.orm.declared_attr", "sqlalchemy.orm.declared_attr.directive"]
 
 [tool.ruff.lint.flake8-type-checking]
-runtime-evaluated-base-classes = ["pydantic.BaseModel", "sqlmodel.SQLModel", "control_plane.models.base.Record", "control_plane.models.base.OrgOwned"]
+runtime-evaluated-base-classes = [
+  "pydantic.BaseModel", "sqlmodel.SQLModel", "control_plane.models.common.base.Record",
+  "control_plane.models.common.wire.RecordOut", "control_plane.models.common.wire.RecordCreate", "control_plane.models.common.wire.RecordUpdate",
+]
 
 [tool.ty.src]
 exclude = ["**/migrations/versions", "examples/anthropic_sdk.py"]

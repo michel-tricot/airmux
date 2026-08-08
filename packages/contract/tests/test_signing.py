@@ -16,6 +16,7 @@ from contract import (
     private_key_to_b64,
     public_key_to_b64,
     sign_bundle,
+    uuid7,
     verify_bundle,
 )
 
@@ -24,7 +25,7 @@ def make_bundle() -> BundleV1:
     now = datetime.now(tz=UTC)
     return BundleV1(
         bundle_id=uuid4(),
-        org_id="org-test",
+        org_id=uuid7(),
         issued_at=now,
         expires_at=now + timedelta(hours=24),
         keys=[],
@@ -42,7 +43,7 @@ def test_sign_and_verify_roundtrip():
 def test_tampered_payload_rejected():
     private_key = Ed25519PrivateKey.generate()
     signed = sign_bundle(make_bundle(), private_key, "k1")
-    tampered = signed.model_copy(update={"payload": signed.payload.model_copy(update={"org_id": "org-evil"})})
+    tampered = signed.model_copy(update={"payload": signed.payload.model_copy(update={"org_id": uuid7()})})
     with pytest.raises(InvalidSignature):
         verify_bundle(tampered, private_key.public_key())
 

@@ -9,7 +9,7 @@ import pytest
 import respx
 from conftest import make_config
 
-from contract import UsageEventV1
+from contract import UsageEventV1, uuid7
 from data_plane.outbox import DevNullOutbox, SqliteOutbox, build_outbox
 
 
@@ -17,12 +17,12 @@ def make_outbox(tmp_path, url="http://cp.test", flush_interval_s=5.0) -> SqliteO
     return SqliteOutbox(cache_dir=tmp_path, control_plane_url=url, control_plane_token="dp-token", flush_interval_s=flush_interval_s)
 
 
-def make_event(request_id: str) -> UsageEventV1:
+def make_event(request_id) -> UsageEventV1:
     return UsageEventV1(
         event_id=uuid4(),
         request_id=request_id,
         occurred_at=datetime.now(tz=UTC),
-        org_id="o1",
+        org_id=uuid7(),
         key_id="k1",
         model_id="gpt-test",
         provider_id="openai",
@@ -38,7 +38,7 @@ def make_event(request_id: str) -> UsageEventV1:
 
 def test_record_roundtrips_in_order(tmp_path):
     outbox = make_outbox(tmp_path)
-    events = [make_event("r1"), make_event("r2")]
+    events = [make_event(uuid7()), make_event(uuid7())]
     for e in events:
         outbox.record(e)
     assert outbox._read_batch(10) == events
@@ -47,7 +47,7 @@ def test_record_roundtrips_in_order(tmp_path):
 
 def test_record_is_idempotent_on_event_id(tmp_path):
     outbox = make_outbox(tmp_path)
-    event = make_event("r1")
+    event = make_event(uuid7())
     outbox.record(event)
     outbox.record(event)
     assert outbox._pending() == 1
@@ -57,12 +57,13 @@ def test_record_is_idempotent_on_event_id(tmp_path):
 async def test_flush_sends_batch_and_deletes(tmp_path):
     route = respx.post("http://cp.test/v1/events").mock(return_value=httpx.Response(200, json={"received": 2, "ingested": 2}))
     outbox = make_outbox(tmp_path)
-    outbox.record(make_event("r1"))
-    outbox.record(make_event("r2"))
+    first, second = uuid7(), uuid7()
+    outbox.record(make_event(first))
+    outbox.record(make_event(second))
     assert await outbox._flush() == 2
     assert outbox._pending() == 0
     sent = json.loads(route.calls.last.request.content)
-    assert [e["request_id"] for e in sent] == ["r1", "r2"]
+    assert [e["request_id"] for e in sent] == [str(first), str(second)]
     assert route.calls.last.request.headers["authorization"] == "Bearer dp-token"
 
 
@@ -70,7 +71,7 @@ async def test_flush_sends_batch_and_deletes(tmp_path):
 async def test_failed_flush_keeps_the_events(tmp_path):
     respx.post("http://cp.test/v1/events").mock(return_value=httpx.Response(503))
     outbox = make_outbox(tmp_path)
-    outbox.record(make_event("r1"))
+    outbox.record(make_event(uuid7()))
     with pytest.raises(httpx.HTTPStatusError):
         await outbox._flush()
     assert outbox._pending() == 1
@@ -89,7 +90,7 @@ def test_only_one_holder_wins_the_flush_lease(tmp_path):
 
 async def test_devnull_discards_and_runs_without_work():
     outbox = DevNullOutbox()
-    outbox.record(make_event("r1"))
+    outbox.record(make_event(uuid7()))
     await outbox.run()  # returns at once, no background work
     outbox.close()
 

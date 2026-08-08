@@ -4,7 +4,7 @@ from enum import StrEnum
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from control_plane.tokens import ManagementClaims
+    from control_plane.keys import ManagementClaims
 
 
 class Scope(StrEnum):
@@ -19,8 +19,6 @@ class Scope(StrEnum):
     keys_write = "keys:write"
     bundles_read = "bundles:read"
     bundles_write = "bundles:write"
-    sso_read = "sso:read"
-    sso_write = "sso:write"
     events_read = "events:read"
     instances_read = "instances:read"
     taxonomy_read = "taxonomy:read"

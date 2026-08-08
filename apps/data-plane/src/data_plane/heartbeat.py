@@ -10,6 +10,8 @@ from data_plane.tasks import run_periodic
 from data_plane.transport import client
 
 if TYPE_CHECKING:
+    from uuid import UUID
+
     from data_plane.config import Config
     from data_plane.holder import BundleHolder
 
@@ -19,7 +21,7 @@ except PackageNotFoundError:  # pragma: no cover - only when running from a non-
     VERSION = "unknown"
 
 
-async def heartbeat_once(config: Config, holder: BundleHolder, instance_id: str) -> None:
+async def heartbeat_once(config: Config, holder: BundleHolder, instance_id: UUID) -> None:
     snapshot = holder.snapshot
     body = HeartbeatV1(
         instance_id=instance_id,
@@ -35,7 +37,7 @@ async def heartbeat_once(config: Config, holder: BundleHolder, instance_id: str)
     resp.raise_for_status()
 
 
-async def run_heartbeat(config: Config, holder: BundleHolder, instance_id: str) -> None:
+async def run_heartbeat(config: Config, holder: BundleHolder, instance_id: UUID) -> None:
     await run_periodic(
         lambda: heartbeat_once(config, holder, instance_id),
         config.control_plane.heartbeat_interval_s,

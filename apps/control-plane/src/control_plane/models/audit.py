@@ -1,28 +1,30 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
-from typing import Any
+from datetime import datetime
+from typing import TYPE_CHECKING, Any
 
-from fastapi.encoders import jsonable_encoder
-from sqlalchemy import JSON, event, inspect
-from sqlalchemy.orm import Session
+from sqlalchemy import JSON, Table, inspect, text
 from sqlmodel import Field
 
-from control_plane.db import current_actor
-from control_plane.models.base import Record
-from control_plane.models.mixins.tombstone import TOMBSTONE_COLUMNS
+from control_plane.db import current_session
+from control_plane.models.common.base import Record
+from control_plane.models.common.column_types import UTCDateTime
+
+if TYPE_CHECKING:
+    from uuid import UUID
 
 _AUDITED: set[type[Record]] = set()
 
-AUDITED_DIALECTS = frozenset({"sqlite"})
+ACTOR_GUC = "app.user_id"
 
 
 def audited[T: Record](cls: type[T]) -> type[T]:
     """Marks a table for audit coverage.
 
-    On SQLite the flush listener below writes the AuditLog rows; on Postgres audit will move to
-    database triggers generated from this registry (see notes/IDEAS.md), and the listener no-ops.
-    Never write AuditLog rows by hand, and remember Core statements bypass the ORM audit.
+    This registry is the source the audit trigger DDL is generated from: database triggers write
+    the AuditLog rows on every write path, including Core statements the ORM never sees. The
+    acting user reaches the triggers through the transaction-local ACTOR_GUC set_actor stamps.
+    Never write AuditLog rows by hand.
     """
     _AUDITED.add(cls)
     return cls
@@ -33,47 +35,59 @@ class AuditLog(Record, table=True):
     table_name: str
     record_id: str
     action: str
-    user_id: str | None = None
+    user_id: str
     before: dict[str, Any] | None = Field(default=None, sa_type=JSON)
     after: dict[str, Any] | None = Field(default=None, sa_type=JSON)
-    occurred_at: datetime
+    occurred_at: datetime = Field(sa_type=UTCDateTime)
 
 
-def _entry(obj: Record, action: str, before: dict[str, Any] | None, after: dict[str, Any] | None, now: datetime) -> AuditLog:
-    mapper = inspect(type(obj))
-    record_id = "/".join(str(getattr(obj, mapper.get_property_by_column(column).key)) for column in mapper.primary_key)
-    actor = current_actor.get()
-    return AuditLog(
-        table_name=mapper.persist_selectable.name, record_id=record_id, action=action, user_id=actor, before=before, after=after, occurred_at=now
+def audit_trigger_ddl_v1(table: str, pk_columns: tuple[str, ...]) -> tuple[str, str]:
+    """Audit triggers write the AuditLog row for any write to an audited table, whoever wrote it.
+
+    Versioned and frozen like touch_trigger_ddl_v1: migrations import this by version, so its
+    output can never change. One shared AFTER trigger function; the primary key columns arrive
+    as trigger arguments so record_id joins them in declaration order, matching the old ORM
+    listener. Snapshots exclude the database-owned tombstone timestamps. The actor comes from
+    the transaction-local GUC and is mandatory: an unset or empty actor raises, so an audited
+    write can never land unattributed.
+    """
+    function = (
+        "CREATE OR REPLACE FUNCTION audit_row_v1() RETURNS trigger LANGUAGE plpgsql AS $$ "  # noqa: S608 the interpolated GUC name is our own constant, not user input
+        "DECLARE source jsonb; rid text; actor text; BEGIN "
+        f"actor := NULLIF(current_setting('{ACTOR_GUC}', true), ''); "
+        "IF actor IS NULL THEN RAISE EXCEPTION 'unattributed write to audited table %, call set_actor first', TG_TABLE_NAME; END IF; "
+        "IF TG_OP = 'DELETE' THEN source := to_jsonb(OLD); ELSE source := to_jsonb(NEW); END IF; "
+        "SELECT string_agg(source ->> pk, '/' ORDER BY ord) INTO rid FROM unnest(TG_ARGV) WITH ORDINALITY AS t(pk, ord); "
+        "INSERT INTO audit_log (table_name, record_id, action, user_id, before, after, occurred_at) VALUES ("
+        "TG_TABLE_NAME, rid, "
+        "CASE TG_OP WHEN 'INSERT' THEN 'create' WHEN 'UPDATE' THEN 'update' ELSE 'delete' END, "
+        "actor, "
+        "(CASE WHEN TG_OP = 'INSERT' THEN NULL ELSE to_jsonb(OLD) - 'created_at' - 'updated_at' - 'deleted_at' END)::json, "
+        "(CASE WHEN TG_OP = 'DELETE' THEN NULL ELSE to_jsonb(NEW) - 'created_at' - 'updated_at' - 'deleted_at' END)::json, "
+        "now()); RETURN NULL; END $$"
+    )
+    columns = ", ".join(f"'{column}'" for column in pk_columns)
+    trigger = (
+        f'CREATE OR REPLACE TRIGGER {table}_audit AFTER INSERT OR UPDATE OR DELETE ON "{table}" FOR EACH ROW EXECUTE FUNCTION audit_row_v1({columns})'
+    )
+    return function, trigger
+
+
+def audited_tables() -> list[Table]:
+    mappers = (inspect(cls, raiseerr=False) for cls in _AUDITED)
+    return sorted(
+        (table for mapper in mappers if mapper is not None and isinstance(table := mapper.persist_selectable, Table)),
+        key=lambda table: table.name,
     )
 
 
-def _snapshot(obj: Record) -> dict[str, Any]:
-    """Business fields only: the lifecycle timestamps are database-owned and stale on the ORM side."""
-    return jsonable_encoder(obj.model_dump(exclude=set(TOMBSTONE_COLUMNS)))
+async def set_actor(user_id: UUID | str) -> None:
+    """Stamp the transaction-local GUC the audit triggers read as the acting user.
 
-
-def _snapshot_before(obj: Record) -> dict[str, Any]:
-    state = inspect(obj)
-    if state is None:
-        return _snapshot(obj)
-    old = {
-        attr.key: attr.history.deleted[0]
-        for attr in state.attrs
-        if attr.key not in TOMBSTONE_COLUMNS and attr.history.has_changes() and attr.history.deleted
-    }
-    return jsonable_encoder({**obj.model_dump(exclude=set(TOMBSTONE_COLUMNS)), **old})
-
-
-@event.listens_for(Session, "before_flush")
-def _audit_before_flush(session: Session, _flush_context: object, _instances: object) -> None:
-    if session.get_bind().dialect.name not in AUDITED_DIALECTS:
-        return
-    now = datetime.now(tz=UTC)
-    updated = [obj for obj in session.dirty if type(obj) in _AUDITED and session.is_modified(obj)]
-    entries = [
-        *[_entry(obj, "create", None, _snapshot(obj), now) for obj in session.new if type(obj) in _AUDITED],
-        *[_entry(obj, "update", _snapshot_before(obj), _snapshot(obj), now) for obj in updated],
-        *[_entry(obj, "delete", _snapshot(obj), None, now) for obj in session.deleted if type(obj) in _AUDITED],
-    ]
-    session.add_all(entries)
+    Call it wherever identity is established, before the first audited write of the unit of
+    work. Transaction-local means the stamp dies at commit, so a pooled connection can never
+    leak an actor into the next request, and every transaction attributes explicitly or not at
+    all. Goes through the Core connection so it can never autoflush writes that predate it.
+    """
+    connection = await current_session().connection()
+    await connection.execute(text("SELECT set_config(:guc, :actor, true)"), {"guc": ACTOR_GUC, "actor": str(user_id)})

@@ -1,109 +1,128 @@
+"""The audit trigger mechanism, driven through the fat models with set_actor called directly.
+
+These tests prove the triggers write correct rows (actions, snapshots, record ids, attribution)
+for any ORM write. The link they deliberately fake, a real request's bearer token becoming the
+stamped actor, is proven in test_deps.py.
+"""
+
 from __future__ import annotations
 
-from fastapi.testclient import TestClient
-from helpers import PROVIDER, run_in_db, setup_control_plane
+import pytest
+from helpers import run_in_db, setup_db
+from sqlalchemy.exc import DBAPIError
 from sqlmodel import col
 
-from control_plane.models import AuditLog
+from control_plane.models import AuditLog, Org, OrgMembership, Provider, User, set_actor
+
+ACTOR = "u-actor"
 
 
 def _audit_rows(tmp_path) -> list[AuditLog]:
     return run_in_db(tmp_path, lambda: AuditLog.find(order_by=col(AuditLog.id)))
 
 
-def test_create_update_and_saveless_mutation_are_audited(tmp_path):
-    cp = setup_control_plane(tmp_path)
-    root = cp.headers()
-    org = cp.headers("o1")
-    with TestClient(cp.app) as c:
-        c.post("/v1/orgs", json={"id": "o1"}, headers=root)
-        c.post("/v1/taxonomy/providers", json=PROVIDER, headers=root)
-        c.post("/v1/taxonomy/providers", json={**PROVIDER, "base_url": "https://eu.api.openai.com/v1"}, headers=root)
-        key = c.post("/v1/org/keys", json={}, headers=org).json()["data"]
-        c.delete(f"/v1/org/keys/{key['key_id']}", headers=org)
+def _create_provider(tmp_path, base_url: str = "https://api.openai.com/v1"):
+    async def create():
+        await set_actor(ACTOR)
+        provider = Provider(name="openai", kind="openai_compatible", base_url=base_url, credential_ref="env:OPENAI_API_KEY")
+        await provider.save()
+        return provider.id
 
-    rows = _audit_rows(tmp_path)
-    actions = [(r.table_name, r.action) for r in rows]
-    assert ("org", "create") in actions
-    assert ("provider", "create") in actions
-    assert ("provider", "update") in actions
-    assert ("api_key", "create") in actions
-    assert ("api_key", "update") in actions
+    return run_in_db(tmp_path, create)
 
-    provider_update = next(r for r in rows if (r.table_name, r.action) == ("provider", "update"))
-    assert provider_update.before is not None
-    assert provider_update.after is not None
-    assert provider_update.before["base_url"] == PROVIDER["base_url"]
-    assert provider_update.after["base_url"] == "https://eu.api.openai.com/v1"
-    assert provider_update.record_id == PROVIDER["provider_id"]
-    assert provider_update.user_id is not None
-    assert provider_update.occurred_at is not None
 
-    revocation = next(r for r in rows if (r.table_name, r.action) == ("api_key", "update"))
-    assert revocation.before is not None
-    assert revocation.after is not None
-    assert revocation.before["disabled"] is False
-    assert revocation.after["disabled"] is True
-    assert revocation.record_id == key["key_id"]
+def test_create_update_and_delete_write_attributed_rows(tmp_path):
+    setup_db(tmp_path)
+    provider_id = _create_provider(tmp_path)
 
-    creation = next(r for r in rows if (r.table_name, r.action) == ("org", "create"))
+    async def saveless_update():
+        await set_actor(ACTOR)
+        provider = await Provider.first(Provider.name == "openai")
+        assert provider is not None
+        provider.base_url = "https://eu.api.openai.com/v1"
+
+    run_in_db(tmp_path, saveless_update)
+
+    async def delete():
+        await set_actor(ACTOR)
+        provider = await Provider.first(Provider.name == "openai")
+        assert provider is not None
+        await provider.delete()
+
+    run_in_db(tmp_path, delete)
+
+    creation, update, deletion = _audit_rows(tmp_path)
+    assert (creation.table_name, creation.action) == ("provider", "create")
+    assert (update.table_name, update.action) == ("provider", "update")
+    assert (deletion.table_name, deletion.action) == ("provider", "delete")
+    assert all(r.record_id == str(provider_id) and r.user_id == ACTOR and r.occurred_at is not None for r in (creation, update, deletion))
     assert creation.before is None
     assert creation.after is not None
-    assert creation.after["id"] == "o1"
+    assert creation.after["base_url"] == "https://api.openai.com/v1"
+    assert update.before is not None
+    assert update.after is not None
+    assert update.before["base_url"] == "https://api.openai.com/v1"
+    assert update.after["base_url"] == "https://eu.api.openai.com/v1"
+    assert deletion.before is not None
+    assert deletion.after is None
 
 
 def test_snapshots_exclude_database_owned_timestamps(tmp_path):
-    cp = setup_control_plane(tmp_path)
-    root = cp.headers()
-    with TestClient(cp.app) as c:
-        c.post("/v1/orgs", json={"id": "o1"}, headers=root)
+    setup_db(tmp_path)
+    _create_provider(tmp_path)
 
-    creation = next(r for r in _audit_rows(tmp_path) if (r.table_name, r.action) == ("org", "create"))
+    creation = _audit_rows(tmp_path)[0]
     assert creation.after is not None
-    assert "created_at" not in creation.after
-    assert "updated_at" not in creation.after
-    assert "deleted_at" not in creation.after
+    for column in ("created_at", "updated_at", "deleted_at"):
+        assert column not in creation.after
 
 
-def test_audit_records_the_acting_user(tmp_path):
-    cp = setup_control_plane(tmp_path)
-    root = cp.headers()
-    with TestClient(cp.app) as c:
-        user = c.post("/v1/instance/users", json={"email": "admin@example.com", "instance_admin": True}, headers=root).json()["data"]
-        token = c.post(f"/v1/instance/users/{user['id']}/tokens", json={}, headers=root).json()["data"]["token"]
-        c.post("/v1/orgs", json={"id": "o2"}, headers={"authorization": f"Bearer {token}"})
+def test_composite_primary_keys_join_in_record_id(tmp_path):
+    setup_db(tmp_path)
 
-    rows = _audit_rows(tmp_path)
-    user_creation = next(r for r in rows if (r.table_name, r.action) == ("user", "create") and r.record_id == user["id"])
-    assert user_creation.user_id != user["id"]
-    org_creation = next(r for r in rows if (r.table_name, r.action) == ("org", "create"))
-    assert org_creation.user_id == user["id"]
+    async def build():
+        await set_actor(ACTOR)
+        user = User(email="m@example.com", name="m")
+        await user.save()
+        org = await Org(name="O1").save()
+        await OrgMembership(user_id=user.id, org_id=org.id).save()
+        return user.id, org.id
 
+    user_id, org_id = run_in_db(tmp_path, build)
 
-def test_membership_removal_writes_a_delete_log(tmp_path):
-    cp = setup_control_plane(tmp_path)
-    root = cp.headers()
-    with TestClient(cp.app) as c:
-        c.post("/v1/orgs", json={"id": "o1"}, headers=root)
-        user = c.post("/v1/instance/users", json={"email": "m@example.com"}, headers=root).json()["data"]
-        c.put(f"/v1/instance/users/{user['id']}/orgs/o1", headers=root)
-        c.delete(f"/v1/instance/users/{user['id']}/orgs/o1", headers=root)
+    async def remove():
+        await set_actor(ACTOR)
+        membership = await OrgMembership.get((user_id, org_id))
+        assert membership is not None
+        await membership.delete()
 
-    rows = _audit_rows(tmp_path)
-    deletion = next(r for r in rows if (r.table_name, r.action) == ("org_membership", "delete"))
+    run_in_db(tmp_path, remove)
+
+    deletion = next(r for r in _audit_rows(tmp_path) if (r.table_name, r.action) == ("org_membership", "delete"))
+    assert deletion.record_id == f"{user_id}/{org_id}"
     assert deletion.before is not None
+    assert deletion.before["user_id"] == str(user_id)
+    assert deletion.before["org_id"] == str(org_id)
     assert deletion.after is None
-    assert deletion.before["user_id"] == user["id"]
-    assert deletion.before["org_id"] == "o1"
-    assert deletion.record_id == f"{user['id']}/o1"
 
 
-def test_noop_upsert_writes_no_update_log(tmp_path):
-    cp = setup_control_plane(tmp_path)
-    root = cp.headers()
-    with TestClient(cp.app) as c:
-        c.post("/v1/taxonomy/providers", json=PROVIDER, headers=root)
-        c.post("/v1/taxonomy/providers", json=PROVIDER, headers=root)
+def test_noop_flush_writes_no_rows(tmp_path):
+    setup_db(tmp_path)
+    _create_provider(tmp_path)
 
-    rows = _audit_rows(tmp_path)
-    assert [(r.table_name, r.action) for r in rows if r.table_name == "provider"] == [("provider", "create")]
+    async def touch_with_same_value():
+        provider = await Provider.first(Provider.name == "openai")
+        assert provider is not None
+        provider.base_url = provider.base_url
+
+    run_in_db(tmp_path, touch_with_same_value)
+
+    assert [(r.table_name, r.action) for r in _audit_rows(tmp_path)] == [("provider", "create")]
+
+
+def test_writes_without_an_actor_are_rejected(tmp_path):
+    """The trigger closes the audit gap: an audited write with no stamped actor fails, never lands silently."""
+    setup_db(tmp_path)
+    with pytest.raises(DBAPIError, match="unattributed write to audited table"):
+        run_in_db(tmp_path, lambda: Org(name="Ghost").save())
+    assert run_in_db(tmp_path, Org.find) == []

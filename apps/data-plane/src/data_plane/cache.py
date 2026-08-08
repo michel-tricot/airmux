@@ -3,9 +3,9 @@ from __future__ import annotations
 import os
 import time
 from typing import TYPE_CHECKING
-from uuid import uuid4
+from uuid import UUID, uuid4
 
-from contract import SignedBundle
+from contract import SignedBundle, uuid7
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -18,7 +18,7 @@ def atomic_write_text(path: Path, text: str) -> None:
     tmp.replace(path)
 
 
-def instance_id(cache_dir: Path) -> str:
+def instance_id(cache_dir: Path) -> UUID:
     """A stable id for the deployment sharing this cache dir, created once and read by every process.
 
     Exclusive create means exactly one writer mints the id; other processes (uvicorn workers or
@@ -28,13 +28,13 @@ def instance_id(cache_dir: Path) -> str:
     path = cache_dir / "instance_id"
     try:
         with path.open("x", encoding="utf-8") as f:
-            f.write(uuid4().hex)
+            f.write(str(uuid7()))
     except FileExistsError:
         pass
     for _ in range(100):  # cover the sub-millisecond window between another process creating and writing the file
         existing = path.read_text(encoding="utf-8").strip()
         if existing:
-            return existing
+            return UUID(existing)
         time.sleep(0.005)
     msg = f"instance_id in {cache_dir} never became readable"
     raise RuntimeError(msg)

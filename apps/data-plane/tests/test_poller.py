@@ -23,7 +23,7 @@ async def test_poll_swaps_and_persists(tmp_path):
     await poll_once(make_config(tmp_path), holder, private_key.public_key())
     assert holder.snapshot is not None
     assert holder.snapshot.bundle.bundle_id == signed.payload.bundle_id
-    assert make_key("k1", org="o1")[1].token_hash in holder.snapshot.key_index
+    assert make_key("k1")[1].token_hash in holder.snapshot.key_index
     cached = read_cached_bundle(tmp_path)
     assert cached is not None
     assert cached.payload.bundle_id == signed.payload.bundle_id
@@ -52,7 +52,7 @@ async def test_poll_revocation_updates_holder(tmp_path):
     config = make_config(tmp_path)
     await poll_once(config, holder, private_key.public_key())
     assert holder.snapshot is not None
-    assert make_key("k1", org="o1")[1].token_hash in holder.snapshot.key_index
+    assert make_key("k1")[1].token_hash in holder.snapshot.key_index
     route.mock(return_value=httpx.Response(200, content=enveloped(second)))
     await poll_once(config, holder, private_key.public_key())
     assert holder.snapshot.key_index == {}

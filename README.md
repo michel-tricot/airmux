@@ -2,7 +2,7 @@
 
 An LLM gateway prototype with a strict control plane / data plane split.
 
-The **control plane** (FastAPI + SQLite) holds orgs, API keys, providers and models,
+The **control plane** (FastAPI + Postgres) holds orgs, API keys, providers and models,
 and compiles them into signed, self-contained policy bundles. The **data plane**
 (bare Starlette) serves `POST /v1/chat/completions` (and `POST /v1/messages`, the Anthropic
 Messages API) using only a bundle it polled
@@ -14,10 +14,13 @@ revocation is absence from the next bundle, propagating within one poll interval
 
 ## Getting started
 
-You need [uv](https://docs.astral.sh/uv/) and an OpenAI API key.
+You need [uv](https://docs.astral.sh/uv/), Docker (or a local Postgres), and an OpenAI API key.
 
 ```bash
 uv sync --all-packages
+
+# 0. Start the non-code dependencies (Postgres) for local development
+docker compose -f docker-compose.dev.yml up -d --wait
 
 # 1. Set up everything: keys, config, schema, admin, org, tokens, bundle v1 (applies taxonomy.yml)
 uv run airllmcp init --email you@example.com
@@ -32,9 +35,9 @@ uv run airllmdp --dev
 
 ### Docker Compose
 
-The same stack runs under compose: a one-shot `init` service bootstraps a shared
-`state` volume (keys, config, db, bundle cache), then the control plane, data
-plane and console start against it. `init` is idempotent, so every `up` re-runs
+The same stack runs under compose: Postgres comes up first, a one-shot `init`
+service bootstraps a shared `state` volume (keys, config, bundle cache), then the
+control plane, data plane and console start against it. `init` is idempotent, so every `up` re-runs
 it and it converges without churning tokens.
 
 ```bash
@@ -113,7 +116,7 @@ provider's key (for example `GROQ_API_KEY`) is in `.env`.
 uv run airllm --help            # commands are grouped: Resources, Testing
 uv run airllm keys list         # every list command takes -f table|json|text
 uv run airllm keys create       # flags, or interactive prompts for anything omitted
-uv run airllm keys revoke k-... # takes effect at the next compile
+uv run airllm keys revoke <id>  # takes effect at the next compile
 uv run airllm bundles compile   # recompile and sign after any change
 ```
 

@@ -9,7 +9,7 @@ from uuid import uuid4
 import pytest
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
-from contract import INFERENCE_TOKEN_PREFIX, BundleV1, Catalog, KeyEntry, ModelEntry, ProviderEntry, sign_bundle, token_hash
+from contract import INFERENCE_TOKEN_PREFIX, BundleV1, Catalog, KeyEntry, ModelEntry, ProviderEntry, sign_bundle, token_hash, uuid7
 from data_plane.adapters import REGISTRY
 from data_plane.app import create_app
 from data_plane.canonical import Ctx
@@ -19,6 +19,7 @@ if TYPE_CHECKING:
     from starlette.applications import Starlette
 
 NOW = datetime.now(tz=UTC)
+ORG = uuid7()
 
 UNUSED_PUBLIC_KEY = Ed25519PrivateKey.generate().public_key()
 
@@ -40,13 +41,13 @@ def make_adapter():
     return REGISTRY["openai_compatible"](PROVIDER)
 
 
-def make_key(key_id="k-dev", org="org-dev"):
+def make_key(key_id="k-dev", org=ORG):
     """A deterministic opaque token and its bundle entry; the token derives from the key_id so tests stay reproducible."""
     token = f"{INFERENCE_TOKEN_PREFIX}secret-{key_id}"
     return token, KeyEntry(key_id=key_id, org_id=org, token_hash=token_hash(token))
 
 
-def make_bundle(keys=(), catalog=None, org="org-dev"):
+def make_bundle(keys=(), catalog=None, org=ORG):
     return BundleV1(
         bundle_id=uuid4(),
         org_id=org,
@@ -57,7 +58,7 @@ def make_bundle(keys=(), catalog=None, org="org-dev"):
     )
 
 
-def make_signed(private_key, key_ids=("k1",), org="o1"):
+def make_signed(private_key, key_ids=("k1",), org=ORG):
     keys = [make_key(k, org)[1] for k in key_ids]
     return sign_bundle(make_bundle(keys=keys, org=org), private_key, "k1")
 

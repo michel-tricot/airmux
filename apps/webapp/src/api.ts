@@ -56,7 +56,7 @@ export interface ApiKey {
   id: string
   org_id: string
   user_id: string
-  disabled: boolean
+  revoked: boolean
   created_at: string
 }
 
@@ -158,9 +158,8 @@ export const listInstances = (includeOffline = true) => api<Instance[]>(`/v1/org
 
 export const createOrg = (body: { id: string; name: string }) => api<{ id: string }>('/v1/orgs', { method: 'POST', body: JSON.stringify(body) })
 
-export const createKey = () => api<{ key_id: string; token: string }>('/v1/org/keys', { method: 'POST' })
+export const createKey = () => api<{ id: string; token: string }>('/v1/org/keys', { method: 'POST' })
 
-export const revokeKey = (keyId: string) => api<{ key_id: string; status: string }>(`/v1/org/keys/${keyId}`, { method: 'DELETE' })
+export const revokeKey = (keyId: string) => api<{ id: string; status: string }>(`/v1/org/keys/${keyId}`, { method: 'DELETE' })
 
-export const compileBundle = () =>
-  api<{ bundle_id: string; version: number }>('/v1/org/bundles/compile', { method: 'POST', body: JSON.stringify({}) })
+export const compileBundle = () => api<Bundle>('/v1/org/bundles/compile', { method: 'POST', body: JSON.stringify({}) })

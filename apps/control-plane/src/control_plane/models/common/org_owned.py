@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import ClassVar, Self
+from uuid import UUID
 
 from sqlmodel import SQLModel
 
@@ -12,13 +13,13 @@ class NotOwnedError(Exception):
 
 
 class OrgOwned(SQLModel):
-    org_id: str
+    org_id: UUID
 
     api_readonly: ClassVar[frozenset[str]] = frozenset({"org_id"})
 
     @classmethod
-    async def owned_by(cls, org: str, ident: object) -> Self:
-        row = await current_session().get(cls, ident)
-        if row is None or row.org_id != org:
+    async def owned_by(cls, org_id: UUID, ident: object) -> Self:
+        record = await current_session().get(cls, ident)
+        if record is None or record.org_id != org_id:
             raise NotOwnedError
-        return row
+        return record

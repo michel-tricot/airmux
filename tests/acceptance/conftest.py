@@ -18,6 +18,7 @@ import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import TYPE_CHECKING, TextIO
+from uuid import uuid4
 
 import httpx
 import pytest
@@ -26,6 +27,7 @@ from dotenv import dotenv_values
 from rich import box
 from rich.console import Console
 from rich.table import Table
+from testcontainers.core.container import DockerContainer
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
@@ -34,6 +36,49 @@ if TYPE_CHECKING:
 ORG = "org-acc"
 MODEL = "echo"
 READY_TIMEOUT = 30.0
+
+PG_IMAGE = "postgres:18"
+PG_COMMAND = "postgres -c fsync=off -c synchronous_commit=off -c full_page_writes=off"
+
+_pg: dict[str, DockerContainer | str] = {}
+
+
+def pytest_configure(config: pytest.Config) -> None:
+    """One throwaway Postgres per run; each Stack gets its own database inside it.
+
+    Provisioning goes through psql inside the container, so the harness stays free of any
+    database driver or control_plane import. The TCP probe matters: initdb runs a throwaway
+    socket-only server that would answer pg_isready.
+    """
+    container = (
+        DockerContainer(PG_IMAGE)
+        .with_env("POSTGRES_USER", "test")
+        .with_env("POSTGRES_PASSWORD", "test")
+        .with_env("POSTGRES_DB", "postgres")
+        .with_command(PG_COMMAND)
+        .with_exposed_ports(5432)
+        .with_tmpfs_mount("/var/lib/postgresql")
+    )
+    container.start()
+    ready = lambda: container.exec(["psql", "-h", "127.0.0.1", "-U", "test", "-d", "postgres", "-c", "SELECT 1"]).exit_code == 0  # noqa: E731
+    assert _poll(ready, READY_TIMEOUT), "test postgres did not come up"
+    _pg["container"] = container
+    _pg["host"] = container.get_container_host_ip()
+    _pg["port"] = str(container.get_exposed_port(5432))
+
+
+def pytest_unconfigure(config: pytest.Config) -> None:
+    container = _pg.pop("container", None)
+    if isinstance(container, DockerContainer):
+        container.stop()
+
+
+def _create_database(name: str) -> str:
+    container = _pg["container"]
+    assert isinstance(container, DockerContainer)
+    result = container.exec(["psql", "-h", "127.0.0.1", "-U", "test", "-d", "postgres", "-c", f'CREATE DATABASE "{name}"'])
+    assert result.exit_code == 0, result.output
+    return f"postgresql+asyncpg://test:test@{_pg['host']}:{_pg['port']}/{name}"
 
 
 def _bin(name: str) -> str:
@@ -81,10 +126,11 @@ class _StubHandler(BaseHTTPRequestHandler):
 
 
 class Stack:
-    """One isolated deployment: cache dir, sqlite db, config and three processes under a tmp cwd."""
+    """One isolated deployment: cache dir, its own postgres database, config and three processes under a tmp cwd."""
 
     def __init__(self, tmp: Path) -> None:
         self.tmp = tmp
+        self.db_url = _create_database(f"acc_{uuid4().hex[:12]}")
         self.cp_port = _free_port()
         self.dp_port = _free_port()
         self.stub_port = _free_port()
@@ -118,6 +164,8 @@ class Stack:
                 self.cp_url,
                 "--cache-dir",
                 str(self.cache_dir),
+                "--db-url",
+                self.db_url,
             ],
             base,
         )
@@ -149,7 +197,7 @@ class Stack:
     ) -> None:
         cfg = {
             "control_plane": {
-                "database": {"url": "sqlite+aiosqlite:///airllm.db"},
+                "database": {"url": self.db_url},
                 "bundle": {"signing_key": "env:GW_BUNDLE_SIGNING_KEY", "staleness_bound_hours": staleness_bound_hours},
             },
             "data_plane": {

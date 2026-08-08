@@ -7,7 +7,6 @@ function errorMessage(error: unknown, mode: 'login' | 'signup'): string {
   if (error instanceof ApiError) {
     if (error.status === 401) return 'wrong email or password'
     if (error.status === 409) return 'an account with this email already exists'
-    if (error.status === 403) return 'this email domain signs in with SSO'
     if (error.status === 422) return 'password must be at least 8 characters'
   }
   return mode === 'login' ? 'login failed' : 'signup failed'

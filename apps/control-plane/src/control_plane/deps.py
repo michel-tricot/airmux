@@ -1,20 +1,27 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Annotated, Protocol, cast
+from uuid import UUID
 
 from fastapi import Cookie, Depends, Header, HTTPException, Request, params
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
-from control_plane.authz import Scope, allowed
-from control_plane.db import current_actor, transaction
-from control_plane.models import Org, OrgMembership, User
+from control_plane.authz import ALL_SCOPES, Scope, allowed
+from control_plane.db import transaction
+from control_plane.keys import ManagementClaims, verify_management_key
+from control_plane.models import Org, OrgMembership, User, set_actor
 from control_plane.sessions import SESSION_COOKIE, verify_session
-from control_plane.tokens import ManagementClaims, verify_management_token
+
+SessionCookie = Annotated[str | None, Cookie(alias=SESSION_COOKIE)]
+RequestedWith = Annotated[str | None, Header(alias="X-Requested-With")]
+FetchSite = Annotated[str | None, Header(alias="Sec-Fetch-Site")]
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Awaitable
 
     from sqlalchemy.ext.asyncio import AsyncSession
+
+    from control_plane.models import AuthSession
 
 _bearer = HTTPBearer(auto_error=False)
 
@@ -23,32 +30,41 @@ BearerDep = Annotated["HTTPAuthorizationCredentials | None", Depends(_bearer)]
 
 def require_csrf(x_requested_with: str | None, sec_fetch_site: str | None) -> None:
     """Cookie-door requests only: the custom header cannot be attached cross-origin without CORS
-    approval, and Sec-Fetch-Site is the browser's own cross-site declaration. Bearer requests are
-    immune by construction and never checked."""
+    approval, and Sec-Fetch-Site is the browser's own cross-site declaration."""
     if x_requested_with is None:
         raise HTTPException(status_code=403, detail="Missing X-Requested-With")
     if sec_fetch_site is not None and sec_fetch_site not in ("same-origin", "none"):
         raise HTTPException(status_code=403, detail="Cross-site request rejected")
 
 
-async def _cookie_claims(token: str, x_org_id: str | None) -> ManagementClaims:
-    """A session is user-scoped; X-Org-Id selects the org scope, backed by the same membership
-    rules as key minting. Without it, only instance admins get instance scope."""
-    row = await verify_session(token)
-    if row is None:
+async def _session_user(session_cookie: str, x_requested_with: str | None, sec_fetch_site: str | None) -> tuple[AuthSession, User]:
+    """Cookie-door resolution shared by the org-scoped and user-scoped deps: CSRF, a live session, a human user."""
+    require_csrf(x_requested_with, sec_fetch_site)
+    auth_session = await verify_session(session_cookie)
+    if auth_session is None:
         raise HTTPException(status_code=401)
-    user = await User.get(row.user_id)
+    user = await User.find_by_id(auth_session.user_id)
     if user is None or user.service_account:
         raise HTTPException(status_code=401)
+    return auth_session, user
+
+
+async def _cookie_claims(auth_session: AuthSession, user: User, x_org_id: str | None) -> ManagementClaims:
+    """A session is user-scoped; X-Org-Id selects the org scope, backed by the same membership
+    rules as key minting. Without it, only instance admins get instance scope."""
     if x_org_id is None:
         if not user.instance_admin:
             raise HTTPException(status_code=403, detail="X-Org-Id required")
-        return ManagementClaims(token_id=row.id, org_id=None, user_id=user.id)
-    if await Org.get(x_org_id) is None:
+        return ManagementClaims(token_id=auth_session.id, org_id=None, user_id=user.id, scopes=ALL_SCOPES)
+    try:
+        org_id = UUID(x_org_id)
+    except ValueError:
+        raise HTTPException(status_code=403) from None
+    if await Org.find_by_id(org_id) is None:
         raise HTTPException(status_code=403)
-    if not user.instance_admin and await OrgMembership.get((user.id, x_org_id)) is None:
+    if not user.instance_admin and await OrgMembership.get((user.id, org_id)) is None:
         raise HTTPException(status_code=403)
-    return ManagementClaims(token_id=row.id, org_id=x_org_id, user_id=user.id)
+    return ManagementClaims(token_id=auth_session.id, org_id=org_id, user_id=user.id, scopes=ALL_SCOPES)
 
 
 async def management_claims(
@@ -60,19 +76,45 @@ async def management_claims(
     sec_fetch_site: Annotated[str | None, Header(alias="Sec-Fetch-Site")] = None,
 ) -> ManagementClaims:
     if credentials is not None:
-        claims = await verify_management_token(credentials.credentials)
+        claims = await verify_management_key(credentials.credentials)
         if claims is None:
             raise HTTPException(status_code=401)
     elif session_cookie is not None:
-        require_csrf(x_requested_with, sec_fetch_site)
-        claims = await _cookie_claims(session_cookie, x_org_id)
+        auth_session, user = await _session_user(session_cookie, x_requested_with, sec_fetch_site)
+        claims = await _cookie_claims(auth_session, user, x_org_id)
     else:
         raise HTTPException(status_code=401)
-    current_actor.set(claims.user_id)
+    await set_actor(claims.user_id)
     return claims
 
 
 MgmtDep = Annotated[ManagementClaims, Depends(management_claims)]
+
+
+async def acting_user(
+    credentials: BearerDep,
+    _session: SessionDep,
+    session_cookie: SessionCookie = None,
+    x_requested_with: RequestedWith = None,
+    sec_fetch_site: FetchSite = None,
+) -> User:
+    """User-level resolution for account endpoints: either door, no org scope involved."""
+    if credentials is not None:
+        claims = await verify_management_key(credentials.credentials)
+        if claims is None:
+            raise HTTPException(status_code=401)
+        user = await User.find_by_id(claims.user_id)
+        if user is None or user.service_account:
+            raise HTTPException(status_code=401)
+    elif session_cookie is not None:
+        _, user = await _session_user(session_cookie, x_requested_with, sec_fetch_site)
+    else:
+        raise HTTPException(status_code=401)
+    await set_actor(user.id)
+    return user
+
+
+ActingUserDep = Annotated[User, Depends(acting_user)]
 
 
 async def instance_scope(claims: MgmtDep) -> ManagementClaims:
@@ -81,14 +123,14 @@ async def instance_scope(claims: MgmtDep) -> ManagementClaims:
     return claims
 
 
-async def org_scope(claims: MgmtDep) -> str:
+async def org_scope(claims: MgmtDep) -> UUID:
     if claims.org_id is None:
         raise HTTPException(status_code=403)
     return claims.org_id
 
 
 InstanceDep = Annotated[ManagementClaims, Depends(instance_scope)]
-OrgDep = Annotated[str, Depends(org_scope)]
+OrgDep = Annotated[UUID, Depends(org_scope)]
 
 
 class ScopeCheck(Protocol):

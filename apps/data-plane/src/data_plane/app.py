@@ -7,7 +7,6 @@ import time
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
-from uuid import uuid4
 
 import anyio
 import httpx
@@ -17,7 +16,7 @@ from starlette.applications import Starlette
 from starlette.responses import JSONResponse, Response, StreamingResponse
 from starlette.routing import Route
 
-from contract import UsageEventV1, UsageStatus, verify_bundle
+from contract import UsageEventV1, UsageStatus, uuid7, verify_bundle
 from data_plane.adapters import REGISTRY, ProviderAdapter
 from data_plane.auth import authenticate
 from data_plane.cache import instance_id as cache_instance_id
@@ -110,7 +109,7 @@ async def _handle(request: Request, ingress: Ingress) -> Response:
 
     adapter = REGISTRY[decision.provider.kind](decision.provider)
     ctx = Ctx(
-        request_id=uuid4().hex,
+        request_id=str(uuid7()),
         model=decision.model,
         provider=decision.provider,
         stream=req.stream,
@@ -173,8 +172,8 @@ def _record_denied(key: KeyEntry, snap: BundleSnapshot, req: CanonicalRequest) -
         return
     state.outbox.record(
         UsageEventV1(
-            event_id=uuid4(),
-            request_id=uuid4().hex,
+            event_id=uuid7(),
+            request_id=uuid7(),
             occurred_at=datetime.now(tz=UTC),
             org_id=key.org_id,
             key_id=key.key_id,
@@ -206,7 +205,7 @@ def _record_usage(ctx: Ctx, final: CanonicalResponse, status: UsageStatus, req: 
     if ctx.bundle_id is not None and state.outbox is not None:
         state.outbox.record(
             UsageEventV1(
-                event_id=uuid4(),
+                event_id=uuid7(),
                 request_id=ctx.request_id,
                 occurred_at=datetime.now(tz=UTC),
                 org_id=ctx.org_id,

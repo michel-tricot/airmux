@@ -6,6 +6,25 @@ building one, move it out of this file and into the code or the spec.
 
 ---
 
+## URGENT: session opening ergonomics
+
+Open conversation (2026-08-07), resume soon. Public auth routes must each declare
+`_session: SessionDep` to open the request transaction (authenticated routes inherit it through
+management_claims/acting_user); forgetting one is a loud runtime failure but still a per-route
+chore. The always-open-via-middleware alternative was analyzed and rejected: FastAPI exception
+handlers turn HTTPExceptions into responses before middleware sees them, so middleware would
+commit on 4xx paths instead of rolling back (the 401-rolls-back-the-sliding-refresh behavior
+depends on the exception crossing the transaction boundary), and a middleware-held transaction
+pins its connection across response send instead of ending at handler return (which is what
+SessionDep's scope="function" buys). Lazy connection checkout makes the per-request cost argument
+minor either way.
+
+Proposed fix, not yet applied: attach the dependency once at the router level,
+`APIRouter(prefix="/auth", dependencies=[Depends(get_session)])`, and drop the per-route _session
+parameters. FastAPI's per-request dependency cache makes the redundant resolution on
+authenticated routes free. Decide, apply, and consider a hygiene test that public DB-touching
+routes resolve a session.
+
 ## Token counting endpoint
 
 `POST /v1/messages/count_tokens` on the Anthropic ingress. Claude Code calls it to drive its context
@@ -61,7 +80,7 @@ exchanged for a token via the API or webapp login, pairing naturally with
 
 Users exist with a service_account flag, memberships, and token binding, and `airllmcp init`
 creates a data-plane service account to hold GW_DATAPLANE_TOKEN. Human login now excludes service
-accounts everywhere (password set, password login, SSO resolution, session use). What remains:
+accounts everywhere (password login, session use). What remains:
 kind-specific policies (token TTLs, sync-only permissions narrower than org admin). If a third
 principal kind ever appears, convert the boolean to a kind enum rather than stacking flags.
 
@@ -72,21 +91,10 @@ push straight to an external telemetry sink, write to a broker for cross-host ag
 backend that survives sharing a cache dir across hosts (which the sqlite WAL backend cannot, since
 WAL does not work over a network filesystem). Each is a new subclass plus one line in build_outbox.
 
-## Trigger-based audit logging
-
-On SQLite, an ORM flush listener (audit.py, gated by AUDITED_DIALECTS) writes before/after AuditLog
-rows for @audited tables, attributed via the current_actor contextvar; snapshots exclude the
-database-owned tombstone timestamps. When Postgres lands, audit moves to database triggers installed
-by migration for each @audited table, serializing OLD/NEW with row_to_json and reading the acting
-user from a transaction-local GUC (set_config('app.user_id', ..., true)) set alongside the RLS org
-context at transaction start; the listener stays SQLite-only so the two mechanisms never double-write.
-Triggers catch every write path including Core upserts like the heartbeat, which the ORM listener
-cannot. Keep the @audited registry as the source of truth the trigger DDL is generated from.
-
 ## Soft delete on Postgres
 
-Decision (2026-08-05): SQLite hard-deletes, full stop; deleted_at stays null until the Postgres
-migration, then soft delete lands as one coordinated change. The blueprint:
+Decision (2026-08-05, restated 2026-08-06 after the Postgres conversion): deletes stay hard and
+deleted_at stays null until soft delete lands as one coordinated change. The blueprint:
 
 - Delete conversion: a versioned BEFORE DELETE trigger (touch_trigger_ddl sibling) that sets
   deleted_at and updated_at to the same instant and suppresses the row deletion (RETURN NULL).
@@ -102,7 +110,7 @@ migration, then soft delete lands as one coordinated change. The blueprint:
   convention of server-minted ids split from caller-facing names.
 - Resurrection disappears as a concept: re-adding a removed membership inserts a fresh row; each
   membership period is its own row and tombstones accumulate as history.
-- ApiKey.disabled and MgmtToken.revoked stay distinct from deleted_at: a disabled key drops out
+- InferenceKey.revoked and ManagementKey.revoked stay distinct from deleted_at: a revoked key drops out
   of the compiled bundle but remains visible; deleted means gone from view.
 - Open policy question: what soft-deleting an org does to its keys, providers, and models
   (cascade, orphan, or forbid).
@@ -123,37 +131,66 @@ non-Python data plane or third-party contract consumers appear.
 
 ## Webapp login switch and session policy
 
-Human login is built (2026-08-06): password (argon2 on AuthIdentity) plus one generic OIDC relying
-party with PKCE, per-org SsoConnection config with cached discovery endpoints, home-realm
-discovery over email_domains, JIT provisioning, and cookie sessions (ab-sess- opaque token, sha256
-at rest, 12h sliding / 14d absolute) as a second door into the management API through
-management_claims: bearer wins, cookie branch does CSRF (static X-Requested-With plus
-Sec-Fetch-Site) and org scoping via X-Org-Id backed by memberships. SAML and WorkOS stay
-config-only: any broker presenting as an OIDC issuer is one SsoConnection row.
+Human login is password only (2026-08-06, argon2 on AuthIdentity) with cookie sessions (ab-sess-
+opaque token, sha256 at rest, 12h sliding / 14d absolute) as a second door into the management API
+through management_claims: bearer wins, cookie branch does CSRF (static X-Requested-With plus
+Sec-Fetch-Site) and org scoping via X-Org-Id backed by memberships. SSO shipped alongside it and
+was removed untested on 2026-08-07 to cut clutter; the design is parked in
+[SSO login](#sso-login-parked).
 
-The webapp now rides the cookie door: password login/signup page (open self-signup via
+The webapp rides the cookie door: password login/signup page (open self-signup via
 /v1/auth/signup; fresh accounts hold nothing until granted), api() sends X-Requested-With always
 and X-Org-Id outside /v1/instance and /v1/auth, a sidebar org selector persisted per browser, and
 a 401 anywhere flips the me query back to the login screen. The localStorage bearer is gone.
 
+Decision (2026-08-07): self-signup is the only way a human gets a password. The admin
+set/reset-password endpoint was removed as unreachable surface (no CLI or webapp consumer);
+admins grant memberships and mint tokens after signup, and password recovery without email means
+signing up fresh or an operator editing the database. Revisit when email delivery or SSO lands,
+which is also what closed-signup corporate provisioning waits on.
+
 What remains:
 
-- SSO in the webapp: the login page does not yet call /auth/discover or run the authorize
-  redirect; the landing page that forwards state/code to /auth/sso/callback via fetch is unbuilt
-  (the callback returns JSON, not a redirect, for exactly this shape).
 - Session-only actions: claims minted from a session carry the s- token_id prefix, so restricting
-  mgmt-key minting and SSO config changes to the session door is one check when wanted (a stolen
+  mgmt-key minting to the session door is one check when wanted (a stolen
   key must not breed keys).
-- Instance-wide default SsoConnection (org_id null) if login for instance admins should not
-  require an org connection; today connections are strictly org-owned.
 - Expired sessions are inert rather than deleted (the 401 rolls the request transaction back);
   a sweeper or delete-on-logout-only policy if the table ever matters.
 - Hosted deployments could delegate the session lifecycle to WorkOS AuthKit sealed sessions
   behind the same cookie branch; self-hosted keeps the session row.
 
+## SSO login (parked)
+
+Built 2026-08-06, removed 2026-08-07 before any real-world use: it cluttered the auth surface
+while password is the only door anyone walks through. The implementation lives in git history
+(removed 2026-08-07); what existed, for when it returns:
+
+- One generic OIDC relying party with PKCE: /auth/discover (home-realm discovery over
+  email_domains, purely domain-driven so it never reveals whether a user exists), /auth/sso/start
+  (mints a LoginAttempt row keyed by state, carrying nonce and code_verifier, 10 minute expiry),
+  /auth/sso/callback (code exchange, id_token validated against the connection's cached jwks_uri;
+  returns JSON, not a redirect, so a landing page can forward state/code via fetch).
+- Per-org SsoConnection rows: issuer, client_id/secret, email_domains, jit flag, and the three
+  endpoints cached from the issuer's discovery document at create time so logins never depend on
+  an outbound discovery fetch. CRUD under /org/sso-connections behind sso:read/sso:write scopes.
+  SAML and WorkOS stay config-only: any broker presenting as an OIDC issuer is one row.
+- Identity resolution: AuthIdentity(provider="oidc:<connection_id>", subject=sub), email-match
+  linking to existing users, JIT provisioning into the connection's org when jit is set, service
+  accounts excluded everywhere. AuthIdentity itself survives the removal; only the oidc:* minters
+  are gone.
+- Signup refused emails whose domain matched a connection, so SSO domains could not shadow
+  themselves with password accounts.
+- Unbuilt when parked: the webapp side (discover call, authorize redirect, callback landing page)
+  and an instance-wide default connection (org_id null) for instance admins.
+
+Restoring means: the SsoConnection and LoginAttempt models and their tables, the three auth routes plus the org CRUD, the authlib dependency, the sso:read
+and sso:write scopes, and settings.auth.public_base_url for the redirect_uri. The test plan is
+[three-ring OIDC testing](#three-ring-oidc-testing).
+
 ## Three-ring OIDC testing
 
-Testing plan (2026-08-06) for the SSO implementation. Because SAML and brokers are config-only
+Testing plan (2026-08-06) for the [parked SSO implementation](#sso-login-parked), kept for its
+return. Because SAML and brokers are config-only
 (any issuer is one SsoConnection row), there is exactly one OIDC relying party to test, ever.
 Three rings, each answering a different question; only the outermost needs Docker.
 
@@ -197,7 +234,7 @@ management key owned by a per-instance service account.
 - `POST /v1/enroll {code}` (unauthenticated): hash lookup, reject expired or consumed, consume
   before any other work (the OIDC callback's single-use-first discipline). Then create the
   instance identity: service account named after the label, membership in the code's org, an
-  org-scoped key via mint_mgmt_key. Respond once with {token, bundle_public_key, org_id}. The
+  org-scoped key via mint_management_key. Respond once with {token, bundle_public_key, org_id}. The
   exchange trusts the transport exactly once: operator-chosen URL, short-TTL single-use code;
   after it, the pinned bundle key is the anchor (which is why the key can never come from
   bundle/latest: a key fetched over the channel it verifies verifies nothing).
@@ -217,9 +254,10 @@ management key owned by a per-instance service account.
 
 ## Audit redaction for secret-bearing tables
 
-AuthIdentity, AuthSession, SsoConnection, and LoginAttempt are deliberately not @audited: the
-listener snapshots whole rows into AuditLog.before/after, which would copy argon2 hashes, session
-token hashes, and OIDC client secrets into audit rows. The enabler is per-table redaction: let
+AuthIdentity and AuthSession are deliberately not @audited: the
+listener snapshots whole rows into AuditLog.before/after, which would copy argon2 hashes and
+session token hashes into audit rows (SsoConnection's client secrets join the list if SSO
+returns). The enabler is per-table redaction: let
 @audited take an exclude set (like the tombstone timestamps already excluded) or a redact-to-hash
 policy, then audit identity and connection changes, which are exactly the security events an
 auditor wants. The session sliding-refresh write would also need an actor story, since it happens
@@ -231,7 +269,7 @@ Credential scopes shipped (2026-08-06), inverting the original roles-first bluep
 axis landed as restrictions on the credential (GitHub-PAT style) with roles deferred. What exists
 now: Scope StrEnum and pure allowed() in authz.py, require(Scope...) declared on every org, sync,
 and taxonomy route, a hygiene test in test_authz.py proving coverage (every route carries exactly
-one scope, is instance-scoped, or sits in an explicit PUBLIC list), MgmtToken.scopes as a nullable
+one scope, is instance-scoped, or sits in an explicit PUBLIC list), ManagementKey.scopes as a nullable
 JSON column where NULL means the owning user's full authority, and `airllm tokens mint --scope`.
 Init mints GW_DATAPLANE_TOKEN with the sync scope only, the first kind-specific policy from
 [finish service accounts](#finish-service-accounts). A scope restricts, never expands: sessions
@@ -245,7 +283,7 @@ What remains when roles arrive, layered on the same machinery with no route chan
   fetch the membership row, so resolving role to scopes adds zero queries.
 - Effective authority becomes GRANTS[role] intersected with the credential's scopes; today's
   behavior is the degenerate case where every member holds all scopes.
-- Session-only actions (mint keys, change SSO config) add a `via` requirement to require(), so a
+- Session-only actions (mint keys) add a `via` requirement to require(), so a
   stolen key cannot breed keys; claims minted from sessions already carry the s- token_id prefix.
 - Instance routes carry scopes too (orgs, users, tokens read/write, taxonomy:write, added
   2026-08-06 for restricted instance credentials like a read-only auditor token); instance_admin

@@ -1,0 +1,289 @@
+"""initial schema
+
+Squashed from the pre-release Postgres conversion on 2026-08-06 and re-squashed 2026-08-07
+(revoked rename, SSO removal, management_key rename); nothing had deployed, so the chain had no
+consumers. From first deployment on the chain is append-only: never squash again or edit a
+shipped revision.
+
+Revision ID: f1a7c3d9e5b2
+Revises:
+Create Date: 2026-08-06
+"""
+
+from __future__ import annotations
+
+import sqlalchemy as sa
+import sqlmodel
+from alembic import op
+
+from control_plane.models.audit import audit_trigger_ddl_v1
+from control_plane.models.common.column_types import UTCDateTime
+from control_plane.models.common.tombstone import touch_trigger_ddl_v1
+
+revision = "f1a7c3d9e5b2"
+down_revision = None
+branch_labels = None
+depends_on = None
+
+TOMBSTONED = (
+    "org",
+    "provider",
+    "user",
+    "inference_key",
+    "auth_identity",
+    "auth_session",
+    "management_key",
+    "model",
+    "org_membership",
+)
+
+AUDITED = (
+    ("inference_key", ("id",)),
+    ("management_key", ("id",)),
+    ("model", ("id",)),
+    ("org", ("id",)),
+    ("org_membership", ("user_id", "org_id")),
+    ("provider", ("id",)),
+    ("user", ("id",)),
+)
+
+
+def upgrade() -> None:
+    op.create_table(
+        "audit_log",
+        sa.Column("id", sa.Integer(), nullable=False),
+        sa.Column("table_name", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+        sa.Column("record_id", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+        sa.Column("action", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+        sa.Column("user_id", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+        sa.Column("before", sa.JSON(), nullable=True),
+        sa.Column("after", sa.JSON(), nullable=True),
+        sa.Column("occurred_at", UTCDateTime(), nullable=False),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_table(
+        "data_plane_instance",
+        sa.Column("instance_id", sa.Uuid(), nullable=False),
+        sa.Column("org_id", sa.Uuid(), nullable=True),
+        sa.Column("version", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+        sa.Column("bundle_id", sa.Uuid(), nullable=True),
+        sa.Column("address", sqlmodel.sql.sqltypes.AutoString(), nullable=True),
+        sa.Column("first_seen", UTCDateTime(), nullable=False),
+        sa.Column("last_seen", UTCDateTime(), nullable=False),
+        sa.PrimaryKeyConstraint("instance_id"),
+    )
+    op.create_table(
+        "org",
+        sa.Column("created_at", UTCDateTime(), server_default=sa.text("now()"), nullable=False),
+        sa.Column("updated_at", UTCDateTime(), server_default=sa.text("now()"), nullable=False),
+        sa.Column("deleted_at", UTCDateTime(), nullable=True),
+        sa.Column("id", sa.Uuid(), server_default=sa.text("uuidv7()"), nullable=False),
+        sa.Column("name", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_table(
+        "provider",
+        sa.Column("created_at", UTCDateTime(), server_default=sa.text("now()"), nullable=False),
+        sa.Column("updated_at", UTCDateTime(), server_default=sa.text("now()"), nullable=False),
+        sa.Column("deleted_at", UTCDateTime(), nullable=True),
+        sa.Column("id", sa.Uuid(), server_default=sa.text("uuidv7()"), nullable=False),
+        sa.Column("name", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+        sa.Column("kind", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+        sa.Column("base_url", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+        sa.Column("credential_ref", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+        sa.Column("cache_read_multiplier", sa.Float(), nullable=False),
+        sa.Column("cache_write_multiplier", sa.Float(), nullable=False),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("name"),
+    )
+    op.create_table(
+        "usage_event",
+        sa.Column("event_id", sa.Uuid(), nullable=False),
+        sa.Column("request_id", sa.Uuid(), nullable=False),
+        sa.Column("occurred_at", UTCDateTime(), nullable=False),
+        sa.Column("org_id", sa.Uuid(), nullable=False),
+        sa.Column("key_id", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+        sa.Column("model_id", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+        sa.Column("provider_id", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+        sa.Column("bundle_id", sa.Uuid(), nullable=False),
+        sa.Column("input_tokens", sa.Integer(), nullable=False),
+        sa.Column("output_tokens", sa.Integer(), nullable=False),
+        sa.Column("cost_usd", sa.Float(), nullable=False),
+        sa.Column("cost_input_usd", sa.Float(), nullable=False),
+        sa.Column("cost_output_usd", sa.Float(), nullable=False),
+        sa.Column("cache_read_tokens", sa.Integer(), nullable=False),
+        sa.Column("cache_write_tokens", sa.Integer(), nullable=False),
+        sa.Column("latency_ms", sa.Integer(), nullable=False),
+        sa.Column("status", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+        sa.Column("stream", sa.Boolean(), nullable=False),
+        sa.PrimaryKeyConstraint("event_id"),
+    )
+    op.create_table(
+        "user",
+        sa.Column("created_at", UTCDateTime(), server_default=sa.text("now()"), nullable=False),
+        sa.Column("updated_at", UTCDateTime(), server_default=sa.text("now()"), nullable=False),
+        sa.Column("deleted_at", UTCDateTime(), nullable=True),
+        sa.Column("id", sa.Uuid(), server_default=sa.text("uuidv7()"), nullable=False),
+        sa.Column("email", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+        sa.Column("name", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+        sa.Column("instance_admin", sa.Boolean(), nullable=False),
+        sa.Column("service_account", sa.Boolean(), nullable=False),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("email"),
+    )
+    op.create_table(
+        "inference_key",
+        sa.Column("created_at", UTCDateTime(), server_default=sa.text("now()"), nullable=False),
+        sa.Column("updated_at", UTCDateTime(), server_default=sa.text("now()"), nullable=False),
+        sa.Column("deleted_at", UTCDateTime(), nullable=True),
+        sa.Column("org_id", sa.Uuid(), nullable=False),
+        sa.Column("id", sa.Uuid(), server_default=sa.text("uuidv7()"), nullable=False),
+        sa.Column("user_id", sa.Uuid(), nullable=False),
+        sa.Column("token_hash", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+        sa.Column("revoked", sa.Boolean(), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["org_id"],
+            ["org.id"],
+        ),
+        sa.ForeignKeyConstraint(
+            ["user_id"],
+            ["user.id"],
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("token_hash"),
+    )
+    op.create_table(
+        "auth_identity",
+        sa.Column("created_at", UTCDateTime(), server_default=sa.text("now()"), nullable=False),
+        sa.Column("updated_at", UTCDateTime(), server_default=sa.text("now()"), nullable=False),
+        sa.Column("deleted_at", UTCDateTime(), nullable=True),
+        sa.Column("id", sa.Uuid(), server_default=sa.text("uuidv7()"), nullable=False),
+        sa.Column("user_id", sa.Uuid(), nullable=False),
+        sa.Column("provider", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+        sa.Column("subject", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+        sa.Column("secret_hash", sqlmodel.sql.sqltypes.AutoString(), nullable=True),
+        sa.ForeignKeyConstraint(
+            ["user_id"],
+            ["user.id"],
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("provider", "subject"),
+    )
+    op.create_table(
+        "auth_session",
+        sa.Column("created_at", UTCDateTime(), server_default=sa.text("now()"), nullable=False),
+        sa.Column("updated_at", UTCDateTime(), server_default=sa.text("now()"), nullable=False),
+        sa.Column("deleted_at", UTCDateTime(), nullable=True),
+        sa.Column("id", sa.Uuid(), server_default=sa.text("uuidv7()"), nullable=False),
+        sa.Column("user_id", sa.Uuid(), nullable=False),
+        sa.Column("token_hash", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+        sa.Column("expires_at", UTCDateTime(), nullable=False),
+        sa.Column("absolute_expires_at", UTCDateTime(), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["user_id"],
+            ["user.id"],
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("token_hash"),
+    )
+    op.create_table(
+        "bundle",
+        sa.Column("org_id", sa.Uuid(), nullable=False),
+        sa.Column("id", sa.Uuid(), nullable=False),
+        sa.Column("version", sa.Integer(), nullable=False),
+        sa.Column("issued_at", UTCDateTime(), nullable=False),
+        sa.Column("expires_at", UTCDateTime(), nullable=False),
+        sa.Column("payload", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+        sa.Column("signature", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+        sa.Column("signing_key_id", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["org_id"],
+            ["org.id"],
+        ),
+        sa.PrimaryKeyConstraint("id"),
+    )
+    op.create_table(
+        "management_key",
+        sa.Column("created_at", UTCDateTime(), server_default=sa.text("now()"), nullable=False),
+        sa.Column("updated_at", UTCDateTime(), server_default=sa.text("now()"), nullable=False),
+        sa.Column("deleted_at", UTCDateTime(), nullable=True),
+        sa.Column("id", sa.Uuid(), server_default=sa.text("uuidv7()"), nullable=False),
+        sa.Column("org_id", sa.Uuid(), nullable=True),
+        sa.Column("user_id", sa.Uuid(), nullable=False),
+        sa.Column("token_hash", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+        sa.Column("revoked", sa.Boolean(), nullable=False),
+        sa.Column("scopes", sa.JSON(), nullable=True),
+        sa.ForeignKeyConstraint(
+            ["user_id"],
+            ["user.id"],
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("token_hash"),
+    )
+    op.create_table(
+        "model",
+        sa.Column("created_at", UTCDateTime(), server_default=sa.text("now()"), nullable=False),
+        sa.Column("updated_at", UTCDateTime(), server_default=sa.text("now()"), nullable=False),
+        sa.Column("deleted_at", UTCDateTime(), nullable=True),
+        sa.Column("id", sa.Uuid(), server_default=sa.text("uuidv7()"), nullable=False),
+        sa.Column("name", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+        sa.Column("provider_id", sa.Uuid(), nullable=False),
+        sa.Column("upstream_model", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+        sa.Column("input_price_per_mtok", sa.Float(), nullable=False),
+        sa.Column("output_price_per_mtok", sa.Float(), nullable=False),
+        sa.Column("context_window", sa.Integer(), nullable=False),
+        sa.Column("max_output_tokens", sa.Integer(), nullable=True),
+        sa.Column("capabilities", sa.JSON(), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["provider_id"],
+            ["provider.id"],
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("name"),
+    )
+    op.create_table(
+        "org_membership",
+        sa.Column("created_at", UTCDateTime(), server_default=sa.text("now()"), nullable=False),
+        sa.Column("updated_at", UTCDateTime(), server_default=sa.text("now()"), nullable=False),
+        sa.Column("deleted_at", UTCDateTime(), nullable=True),
+        sa.Column("user_id", sa.Uuid(), nullable=False),
+        sa.Column("org_id", sa.Uuid(), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["org_id"],
+            ["org.id"],
+        ),
+        sa.ForeignKeyConstraint(
+            ["user_id"],
+            ["user.id"],
+        ),
+        sa.PrimaryKeyConstraint("user_id", "org_id"),
+    )
+    for table in TOMBSTONED:
+        for statement in touch_trigger_ddl_v1(table):
+            op.execute(statement)
+    for table, pk_columns in AUDITED:
+        for statement in audit_trigger_ddl_v1(table, pk_columns):
+            op.execute(statement)
+
+
+def downgrade() -> None:
+    for table, _ in AUDITED:
+        op.execute(f'DROP TRIGGER IF EXISTS {table}_audit ON "{table}"')
+    op.execute("DROP FUNCTION IF EXISTS audit_row_v1()")
+    for table in TOMBSTONED:
+        op.execute(f'DROP TRIGGER IF EXISTS {table}_touch_insert ON "{table}"')
+        op.execute(f'DROP TRIGGER IF EXISTS {table}_touch_update ON "{table}"')
+    op.execute("DROP FUNCTION IF EXISTS touch_timestamps_v1()")
+    op.drop_table("org_membership")
+    op.drop_table("model")
+    op.drop_table("management_key")
+    op.drop_table("bundle")
+    op.drop_table("auth_session")
+    op.drop_table("auth_identity")
+    op.drop_table("inference_key")
+    op.drop_table("user")
+    op.drop_table("usage_event")
+    op.drop_table("provider")
+    op.drop_table("org")
+    op.drop_table("data_plane_instance")
+    op.drop_table("audit_log")

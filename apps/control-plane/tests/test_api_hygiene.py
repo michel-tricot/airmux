@@ -3,10 +3,10 @@ from __future__ import annotations
 from typing import get_args, get_origin
 
 from fastapi.routing import APIRoute
-from helpers import setup_control_plane
+from helpers import make_app
 from pydantic import BaseModel
 
-from control_plane.schemas import Envelope
+from control_plane.models.common.wire import Envelope
 
 
 def _api_routes(app) -> list[APIRoute]:
@@ -20,9 +20,8 @@ def _api_routes(app) -> list[APIRoute]:
     return walk(app.routes)
 
 
-def test_every_endpoint_declares_an_envelope(tmp_path):
-    cp = setup_control_plane(tmp_path)
-    routes = _api_routes(cp.app)
+def test_every_endpoint_declares_an_envelope():
+    routes = _api_routes(make_app())
     assert routes
     offenders = [
         f"{sorted(r.methods or ())} {r.path}"
@@ -34,14 +33,14 @@ def test_every_endpoint_declares_an_envelope(tmp_path):
     )
 
 
-def test_every_endpoint_is_tagged_for_docs(tmp_path):
+def test_every_endpoint_is_tagged_for_docs():
     """ReDoc renders one sidebar section per tag: every operation carries exactly one resource tag, every tag is declared with a
     description, and x-tagGroups covers every tag so none drop out of the grouped sidebar."""
-    cp = setup_control_plane(tmp_path)
-    untagged = [f"{sorted(r.methods or ())} {r.path}" for r in _api_routes(cp.app) if len(r.tags) != 1]
+    app = make_app()
+    untagged = [f"{sorted(r.methods or ())} {r.path}" for r in _api_routes(app) if len(r.tags) != 1]
     assert untagged == [], f"Give these operations exactly one resource tag: {untagged}"
-    schema = cp.app.openapi()
-    used = {str(tag) for r in _api_routes(cp.app) for tag in r.tags}
+    schema = app.openapi()
+    used = {str(tag) for r in _api_routes(app) for tag in r.tags}
     declared = {t["name"] for t in schema.get("tags", [])}
     grouped = {tag for group in schema.get("x-tagGroups", []) for tag in group["tags"]}
     assert used == declared, f"Declare every used tag in openapi_tags with a description: {used ^ declared}"
@@ -62,26 +61,36 @@ def _nested_models(tp: object, seen: set[type] | None = None) -> set[type]:
     return found
 
 
-def test_no_table_model_crosses_the_wire(tmp_path):
+def test_no_table_model_crosses_the_wire():
     """Rows never serialize directly: every response payload goes through an Out model, so api_hidden fields cannot leak."""
-    cp = setup_control_plane(tmp_path)
     offenders = sorted(
         f"{model.__name__} via {route.path}"
-        for route in _api_routes(cp.app)
+        for route in _api_routes(make_app())
         for model in _nested_models(route.response_model)
         if hasattr(model, "__table__")
     )
     assert offenders == [], (
-        f"Table rows must not serialize directly, or api_hidden fields leak. Serve an ApiOut subclass (XOut.model_validate(row)) and register it "
-        f"in test_api_parity.RESOURCES: {offenders}"
+        f"Table rows must not serialize directly, or api_hidden fields leak. Serve a RecordOut[Table] subclass "
+        f"(XOut.model_validate(row)): {offenders}"
     )
 
 
-def test_payloads_are_named_models(tmp_path):
+def test_no_table_model_is_accepted_as_input():
+    """Callers never post a table shape: a table model as a body would accept hidden and server-owned columns."""
+    offenders = sorted(
+        f"{model.__name__} via {sorted(route.methods or ())} {route.path}"
+        for route in _api_routes(make_app())
+        for field in route.dependant.body_params
+        for model in _nested_models(field.field_info.annotation)
+        if hasattr(model, "__table__")
+    )
+    assert offenders == [], f"Accept a RecordCreate[Table] or RecordUpdate[Table] subclass instead: {offenders}"
+
+
+def test_payloads_are_named_models():
     """Anonymous dict payloads document nothing in OpenAPI; every envelope carries a named model."""
-    cp = setup_control_plane(tmp_path)
     offenders = []
-    for route in _api_routes(cp.app):
+    for route in _api_routes(make_app()):
         assert route.response_model is not None
         data = route.response_model.model_fields["data"].annotation
         inner = get_args(data)[0] if get_origin(data) is list else data
@@ -92,9 +101,8 @@ def test_payloads_are_named_models(tmp_path):
     )
 
 
-def test_response_schemas_are_pure_envelopes(tmp_path):
-    cp = setup_control_plane(tmp_path)
-    spec = cp.app.openapi()
+def test_response_schemas_are_pure_envelopes():
+    spec = make_app().openapi()
     offenders = []
     for path, ops in spec["paths"].items():
         for method, op in ops.items():

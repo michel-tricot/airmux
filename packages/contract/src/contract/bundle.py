@@ -20,7 +20,7 @@ class KeyEntry(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     key_id: str
-    org_id: str
+    org_id: UUID
     token_hash: str  # sha256 hex of the caller's bearer, the lookup key
 
 
@@ -73,7 +73,7 @@ class BundleV1(BaseModel):
 
     schema_version: Literal[1] = 1
     bundle_id: UUID
-    org_id: str
+    org_id: UUID
     issued_at: datetime
     expires_at: datetime  # staleness bound: issued_at + STALENESS_BOUND, checked on every swap
     keys: list[KeyEntry]

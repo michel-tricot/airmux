@@ -15,13 +15,7 @@ from contract import Ed25519PrivateKeyB64
 class DatabaseConfig(BaseModel):
     model_config = ConfigDict(frozen=True)
 
-    url: str = "sqlite+aiosqlite:///airllm.db"
-
-
-class AuthConfig(BaseModel):
-    model_config = ConfigDict(frozen=True)
-
-    public_base_url: str = "http://127.0.0.1:8000"  # the URL browsers reach this control plane on; builds the OIDC redirect_uri
+    url: str = "postgresql+asyncpg://airllm:airllm@127.0.0.1:5432/airllm"
 
 
 class BundlePolicy(BaseModel):
@@ -39,7 +33,6 @@ class Settings(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     database: DatabaseConfig = Field(default_factory=DatabaseConfig)
-    auth: AuthConfig = Field(default_factory=AuthConfig)
     bundle: BundlePolicy
     dev: bool = False  # set by the --dev flag on the entry point, gate dev-only behavior on this
 
@@ -68,12 +61,11 @@ def _resolve_refs(node: object) -> object:
 
 
 def database_url() -> str:
+    """The database section alone, for contexts (migrate, alembic env) that have no signing key and cannot build full Settings."""
     load_dotenv(find_dotenv(usecwd=True))
     raw = _resolve_refs(_file_section("control_plane"))
     assert isinstance(raw, dict)  # noqa: S101 _resolve_refs preserves the dict shape
-    database = raw.get("database")
-    url = database.get("url") if isinstance(database, dict) else None
-    return str(url) if url else "sqlite+aiosqlite:///airllm.db"
+    return DatabaseConfig.model_validate(raw.get("database") or {}).url
 
 
 def load_settings(config_path: str | Path | None = None) -> Settings:

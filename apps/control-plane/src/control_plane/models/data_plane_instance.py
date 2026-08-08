@@ -7,18 +7,19 @@ from uuid import UUID
 from pydantic import BaseModel
 from sqlmodel import Field
 
-from control_plane.models.base import Record
-from control_plane.schemas import ApiOut
+from control_plane.models.common.base import Record
+from control_plane.models.common.column_types import UTCDateTime
+from control_plane.models.common.wire import RecordOut
 
 
 class DataPlaneInstance(Record, table=True):
-    instance_id: str = Field(primary_key=True)
-    org_id: str | None = None
+    instance_id: UUID = Field(primary_key=True)
+    org_id: UUID | None = None
     version: str
     bundle_id: UUID | None = None
     address: str | None = None
-    first_seen: datetime
-    last_seen: datetime
+    first_seen: datetime = Field(sa_type=UTCDateTime)
+    last_seen: datetime = Field(sa_type=UTCDateTime)
 
     # A data plane is considered offline after three missed heartbeats; the row itself is never deleted.
     STALE_AFTER: ClassVar[timedelta] = timedelta(seconds=90)
@@ -28,9 +29,9 @@ class DataPlaneInstance(Record, table=True):
         return "online" if now - last_seen < self.STALE_AFTER else "offline"
 
 
-class DataPlaneInstanceOut(ApiOut):
-    instance_id: str
-    org_id: str | None
+class DataPlaneInstanceOut(RecordOut[DataPlaneInstance]):
+    instance_id: UUID
+    org_id: UUID | None
     version: str
     bundle_id: UUID | None
     address: str | None
@@ -42,4 +43,4 @@ class DataPlaneInstanceOut(ApiOut):
 
 
 class HeartbeatOut(BaseModel):
-    instance_id: str
+    instance_id: UUID

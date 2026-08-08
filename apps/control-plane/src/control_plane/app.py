@@ -7,10 +7,11 @@ from fastapi import APIRouter, FastAPI
 from fastapi.responses import JSONResponse
 from fastapi.routing import APIRoute
 from sqlalchemy import text
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.exc import ProgrammingError, SQLAlchemyError
 
 from control_plane.config import load_settings
 from control_plane.db import make_engine, make_session_factory
+from control_plane.migrate import head_revision
 from control_plane.models import NotOwnedError
 from control_plane.routes.auth import router as auth_router
 from control_plane.routes.instance import router as instance_router
@@ -24,6 +25,7 @@ if TYPE_CHECKING:
     from typing import Any
 
     from fastapi import Request
+    from sqlalchemy.ext.asyncio import AsyncEngine
 
     from control_plane.config import Settings
 
@@ -32,8 +34,7 @@ API_TAGS = [
     {"name": "Users", "description": "Instance admins, org members and service accounts, with their org memberships"},
     {"name": "Management Tokens", "description": "User-bound bearer tokens for this API, instance- or org-scoped"},
     {"name": "API Keys", "description": "Caller credentials for the gateway: opaque keys whose hashes reach data planes through bundles"},
-    {"name": "Auth", "description": "Human login: password and SSO, cookie sessions, account endpoints"},
-    {"name": "SSO", "description": "Per-org OIDC issuer connections driving SSO login and home-realm discovery"},
+    {"name": "Auth", "description": "Human login: password, cookie sessions, account endpoints"},
     {"name": "Bundles", "description": "Signed policy bundles compiled per org and polled by data planes"},
     {"name": "Instances", "description": "Data plane instances known to the org through their heartbeats"},
     {"name": "Events", "description": "Usage events reported by data planes"},
@@ -43,7 +44,7 @@ API_TAGS = [
 
 TAG_GROUPS = [
     {"name": "Instance Admin", "tags": ["Orgs", "Users", "Management Tokens"]},
-    {"name": "Org Management", "tags": ["API Keys", "Bundles", "Instances", "Events", "SSO"]},
+    {"name": "Org Management", "tags": ["API Keys", "Bundles", "Instances", "Events"]},
     {"name": "Account", "tags": ["Auth"]},
     {"name": "Catalog", "tags": ["Taxonomy"]},
     {"name": "Data Plane", "tags": ["Sync"]},
@@ -88,12 +89,27 @@ class ControlPlaneApp(FastAPI):
         return schema
 
 
+async def _require_migrated_schema(engine: AsyncEngine) -> None:
+    """Refuse to serve a database that is empty or behind: one clear startup error beats one 500 per request."""
+    try:
+        async with engine.connect() as conn:
+            current = (await conn.execute(text("SELECT version_num FROM alembic_version"))).scalar_one_or_none()
+    except ProgrammingError:
+        current = None
+    head = head_revision()
+    if current != head:
+        state = f"at revision {current}" if current else "empty"
+        msg = f"database schema is {state} but the code expects {head}: run `airllmcp migrate` (serve --dev migrates automatically)"
+        raise RuntimeError(msg)
+
+
 @contextlib.asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     settings = app.state.settings
     engine = make_engine(settings.database.url)
-    app.state.session_factory = make_session_factory(engine)
     try:
+        await _require_migrated_schema(engine)
+        app.state.session_factory = make_session_factory(engine)
         yield
     finally:
         await engine.dispose()

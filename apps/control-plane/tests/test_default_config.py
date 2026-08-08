@@ -9,7 +9,7 @@ from contract import DEFAULT_CONFIG_YML, private_key_to_b64
 from control_plane.config import load_settings
 
 RENDERED = DEFAULT_CONFIG_YML.format(
-    db_url="sqlite+aiosqlite:///airllm.db",
+    db_url="postgresql+asyncpg://airllm:airllm@127.0.0.1:5432/airllm",
     control_plane_url="http://127.0.0.1:8000",
     org="org-dev",
     cache_dir=".airllm",
@@ -28,5 +28,5 @@ def test_template_parses_through_control_plane_settings(tmp_path, monkeypatch):
     monkeypatch.setenv("GW_BUNDLE_SIGNING_KEY", bundle_key)
     monkeypatch.delenv("GW_DEV", raising=False)
     settings = load_settings(cfg)
-    assert settings.database.url == "sqlite+aiosqlite:///airllm.db"
+    assert settings.database.url == "postgresql+asyncpg://airllm:airllm@127.0.0.1:5432/airllm"
     assert private_key_to_b64(settings.bundle.signing_key) == bundle_key
