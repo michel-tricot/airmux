@@ -403,6 +403,14 @@ class ProviderOut(BaseModel):
     deleted_at: Annotated[AwareDatetime | None, Field(title="Deleted At")]
 
 
+class QuickstartIn(BaseModel):
+    token: Annotated[str, Field(title="Token")]
+
+
+class QuickstartOut(BaseModel):
+    path: Annotated[str, Field(title="Path")]
+
+
 class Scope(
     RootModel[
         Literal[
@@ -614,6 +622,10 @@ class EnvelopePasswordChangedOut(BaseModel):
 
 class EnvelopeProviderOut(BaseModel):
     data: ProviderOut
+
+
+class EnvelopeQuickstartOut(BaseModel):
+    data: QuickstartOut
 
 
 class EnvelopeTaxonomyOut(BaseModel):

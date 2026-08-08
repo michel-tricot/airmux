@@ -15,10 +15,10 @@ from control_plane.migrate import head_revision
 from control_plane.models import NotOwnedError
 from control_plane.routes.auth import router as auth_router
 from control_plane.routes.enroll import router as enroll_router
-from control_plane.routes.instance import claim_router
 from control_plane.routes.instance import router as instance_router
 from control_plane.routes.org import router as org_router
 from control_plane.routes.orgs import router as orgs_router
+from control_plane.routes.oss import router as oss_router
 from control_plane.routes.sync import router as sync_router
 from control_plane.routes.taxonomy import router as taxonomy_router
 from control_plane.routes.users import router as users_router
@@ -140,7 +140,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.add_exception_handler(NotOwnedError, not_owned_handler)
     app.add_route("/healthz", healthz)
     v1 = APIRouter(prefix="/v1")
-    for router in (auth_router, enroll_router, claim_router, instance_router, users_router, orgs_router, org_router, sync_router, taxonomy_router):
+    for router in (auth_router, enroll_router, oss_router, instance_router, users_router, orgs_router, org_router, sync_router, taxonomy_router):
         v1.include_router(router)
     app.include_router(v1)
     return app

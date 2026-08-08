@@ -59,7 +59,7 @@ def quickstart(  # noqa: PLR0913, PLR0917 flags are the command's interface
     url = resolve_control_plane_url(control_plane_url)
     console.rule("[bold]airllm quickstart")
     with httpx.Client(base_url=url, timeout=10.0, headers=CSRF) as c:
-        if _payload_or_die(c.get("/v1/instance/claim"), "claim check")["claimed"]:
+        if _payload_or_die(c.get("/v1/instance/oss/claim"), "claim check")["claimed"]:
             console.print(f"[red]this instance is already set up; run [bold]airllm login[/bold] against {url} instead[/red]")
             raise typer.Exit(1)
 
@@ -76,7 +76,7 @@ def quickstart(  # noqa: PLR0913, PLR0917 flags are the command's interface
         upsert_profile(org_name, {"control_plane_url": url, "org_id": org_id, "org_name": org_name, "token": token})
         _step(f"minted management token, saved to {config_path()}")
 
-        quick = c.post("/v1/instance/oss-quickstart", json={"token": token})
+        quick = c.post("/v1/instance/oss/quickstart", json={"token": token})
         if quick.is_success:
             _step("dropped the data plane token; it will come online shortly")
         else:
@@ -91,7 +91,7 @@ def quickstart(  # noqa: PLR0913, PLR0917 flags are the command's interface
         f"curl {gateway_url}/v1/chat/completions \\\n"
         f"  -H 'Authorization: Bearer {key['token']}' \\\n"
         f"  -H 'Content-Type: application/json' \\\n"
-        f"  -d '{{\"model\": \"gpt-4o\", \"messages\": [{{\"role\": \"user\", \"content\": \"hi\"}}]}}'"
+        f'  -d \'{{"model": "gpt-4o", "messages": [{{"role": "user", "content": "hi"}}]}}\''
     )
     console.print(f"\n[green]ready[/green]  org [bold]{org_name}[/bold], token saved to {config_path()}")
     console.print(Panel(key["token"], title="AIRLLM_API_KEY", border_style="cyan", expand=False))
