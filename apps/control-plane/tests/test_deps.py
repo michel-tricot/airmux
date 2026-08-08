@@ -23,7 +23,7 @@ def test_api_requests_attribute_the_acting_user(tmp_path):
     with TestClient(cp.app) as c:
         user = c.post("/v1/users", json={"email": "admin@example.com"}, headers=root).json()["data"]
         make_admin(tmp_path, user["id"])
-        token = c.post(f"/v1/users/{user['id']}/tokens", json={"label": "t"}, headers=root).json()["data"]["token"]
+        token = c.post("/v1/instance/management-keys", json={"user_id": user["id"], "label": "t"}, headers=root).json()["data"]["token"]
         c.post("/v1/orgs", json={"name": "o2"}, headers={"authorization": f"Bearer {token}"})
 
     rows = run_in_db(tmp_path, lambda: AuditLog.find(order_by=col(AuditLog.id)))

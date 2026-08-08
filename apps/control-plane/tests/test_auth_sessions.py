@@ -60,7 +60,7 @@ def test_password_login_sets_cookie_and_cookie_reaches_org_routes(tmp_path):
         assert resp.json()["data"]["user_id"] == user["id"]
         assert resp.json()["data"]["orgs"] == [str(org_id)]
 
-        keys = c.get("/v1/org/keys", headers={**CSRF, "X-Org-Id": str(org_id)})
+        keys = c.get("/v1/org/workspaces", headers={**CSRF, "X-Org-Id": str(org_id)})
         assert keys.status_code == 200
         me = c.get("/v1/auth/me", headers=CSRF)
         assert me.status_code == 200
@@ -108,15 +108,15 @@ def test_x_org_id_requires_membership_and_absence_requires_instance_admin(tmp_pa
         o2 = make_org(c, root, "o2")
         _make_user(c, root, org=o1)
         _login(c)
-        assert c.get("/v1/org/keys", headers={**CSRF, "X-Org-Id": str(o1)}).status_code == 200
-        assert c.get("/v1/org/keys", headers={**CSRF, "X-Org-Id": str(o2)}).status_code == 403
-        assert c.get("/v1/org/keys", headers={**CSRF, "X-Org-Id": "ghost"}).status_code == 403
+        assert c.get("/v1/org/workspaces", headers={**CSRF, "X-Org-Id": str(o1)}).status_code == 200
+        assert c.get("/v1/org/workspaces", headers={**CSRF, "X-Org-Id": str(o2)}).status_code == 403
+        assert c.get("/v1/org/workspaces", headers={**CSRF, "X-Org-Id": "ghost"}).status_code == 403
         assert c.get("/v1/orgs", headers=CSRF).status_code == 403
 
         _make_user(c, root, email="root@example.com", admin=True, tmp_path=tmp_path)
         _login(c, email="root@example.com")
         assert c.get("/v1/orgs", headers=CSRF).status_code == 200
-        assert c.get("/v1/org/keys", headers={**CSRF, "X-Org-Id": str(o1)}).status_code == 200
+        assert c.get("/v1/org/workspaces", headers={**CSRF, "X-Org-Id": str(o1)}).status_code == 200
 
 
 def test_expired_session_is_401_and_half_life_touch_slides_expiry(tmp_path):

@@ -53,11 +53,11 @@ def quickstart(  # noqa: PLR0913, PLR0917 flags are the command's interface
     gateway_url: str = typer.Option("http://localhost:8080", help="Where the data plane serves, for the printed example"),
     webapp_url: str = typer.Option("http://localhost:3000", help="Where the console is served, printed at the end"),
 ) -> None:
-    """Bootstrap a fresh instance end to end: account, org, tokens, data plane, and a ready-to-use inference key."""
+    """Bootstrap a fresh instance end to end: account, org, keys, data plane, and a ready-to-use inference key."""
     import httpx  # noqa: PLC0415 lazy import keeps CLI startup fast
 
     url = resolve_control_plane_url(control_plane_url)
-    console.rule("[bold]airllm quickstart")
+    console.print("[bold]airllm quickstart[/bold]")
     with httpx.Client(base_url=url, timeout=10.0, headers=CSRF) as c:
         if _payload_or_die(c.get("/v1/instance/oss/claim"), "claim check")["claimed"]:
             console.print(f"[red]this instance is already set up; run [bold]airllm login[/bold] against {url} instead[/red]")
@@ -70,11 +70,24 @@ def quickstart(  # noqa: PLR0913, PLR0917 flags are the command's interface
         org_id, org_name = created["id"], created["name"]
         _step(f"created org [bold]{org_name}[/bold]")
 
-        started = _payload_or_die(c.post("/v1/auth/cli/start", json={"client_name": _client_name()}), "token request")
-        _payload_or_die(c.post("/v1/auth/cli/approve", json={"user_code": started["user_code"], "org_id": org_id}), "token approval")
-        token = _payload_or_die(c.post("/v1/auth/cli/poll", json={"poll_secret": started["poll_secret"]}), "token delivery")["token"]
-        upsert_profile(org_name, {"control_plane_url": url, "org_id": org_id, "org_name": org_name, "token": token})
-        _step(f"minted management token, saved to {config_path()}")
+        started = _payload_or_die(c.post("/v1/auth/cli/start", json={"client_name": _client_name()}), "management key request")
+        _payload_or_die(c.post("/v1/auth/cli/approve", json={"user_code": started["user_code"], "org_id": org_id}), "management key approval")
+        token = _payload_or_die(c.post("/v1/auth/cli/poll", json={"poll_secret": started["poll_secret"]}), "management key delivery")["token"]
+
+        bearer = {"authorization": f"Bearer {token}"}
+        workspace = _payload_or_die(c.post("/v1/org/workspaces", json={"name": "default"}, headers=bearer), "workspace creation")
+        upsert_profile(
+            org_name,
+            {
+                "control_plane_url": url,
+                "org_id": org_id,
+                "org_name": org_name,
+                "token": token,
+                "workspace_id": workspace["id"],
+                "workspace_name": workspace["name"],
+            },
+        )
+        _step(f"minted management key and created workspace [bold]{workspace['name']}[/bold], saved to {config_path()}")
 
         quick = c.post("/v1/instance/oss/quickstart", json={"token": token})
         if quick.is_success:
@@ -82,8 +95,9 @@ def quickstart(  # noqa: PLR0913, PLR0917 flags are the command's interface
         else:
             console.print(f"  [yellow]![/yellow] could not drop the data plane token ({quick.status_code}); set GW_DATAPLANE_TOKEN yourself")
 
-        bearer = {"authorization": f"Bearer {token}"}
-        key = _payload_or_die(c.post("/v1/org/keys", json={"label": "quickstart"}, headers=bearer), "key mint")
+        key = _payload_or_die(
+            c.post(f"/v1/org/workspaces/{workspace['id']}/inference-keys", json={"label": "quickstart"}, headers=bearer), "key mint"
+        )
         compiled = _payload_or_die(c.post("/v1/org/bundles/compile", json={}, headers=bearer), "bundle compile")
         _step(f"minted an inference key and compiled bundle v{compiled['version']}")
 
@@ -93,7 +107,7 @@ def quickstart(  # noqa: PLR0913, PLR0917 flags are the command's interface
         f"  -H 'Content-Type: application/json' \\\n"
         f'  -d \'{{"model": "gpt-4o", "messages": [{{"role": "user", "content": "hi"}}]}}\''
     )
-    console.print(f"\n[green]ready[/green]  org [bold]{org_name}[/bold], token saved to {config_path()}")
+    console.print(f"\n[green]ready[/green]  org [bold]{org_name}[/bold], management key saved to {config_path()}")
     console.print(Panel(key["token"], title="AIRLLM_API_KEY", border_style="cyan", expand=False))
     console.print("[dim]try it once the data plane is online[/dim]")
     print(curl)
@@ -105,7 +119,7 @@ def login(
     control_plane_url: str = "",
     no_browser: bool = typer.Option(False, "--no-browser", help="Print the URL instead of opening a browser"),
 ) -> None:
-    """Log in through the browser and store this machine's org token; signup and org setup happen there too."""
+    """Log in through the browser and store this machine's org management key; signup and org setup happen there too."""
     import httpx  # noqa: PLC0415 lazy import keeps CLI startup fast
 
     url = resolve_control_plane_url(control_plane_url)
@@ -131,7 +145,7 @@ def login(
                     done["org_name"],
                     {"control_plane_url": url, "org_id": done["org_id"], "org_name": done["org_name"], "token": done["token"]},
                 )
-                console.print(f"Logged in to [bold]{done['org_name']}[/bold]; token stored in {config_path()} as the active profile.")
+                console.print(f"Logged in to [bold]{done['org_name']}[/bold]; management key stored in {config_path()} as the active profile.")
                 return
     console.print("[red]login timed out, run `airllm login` again[/red]")
     raise typer.Exit(1)
@@ -139,7 +153,7 @@ def login(
 
 @orgs_app.command("switch")
 def orgs_switch(name: str, control_plane_url: str = "") -> None:
-    """Make an org's stored token the active one; runs the browser login when none is stored."""
+    """Make an org's stored management key the active one; runs the browser login when none is stored."""
     if os.environ.get("GW_ORG_MGMT_TOKEN"):
         console.print("[yellow]GW_ORG_MGMT_TOKEN is set and overrides stored profiles; unset it for the switch to take effect[/yellow]")
     config = load_config()
@@ -147,7 +161,7 @@ def orgs_switch(name: str, control_plane_url: str = "") -> None:
         set_active(name)
         console.print(f"switched to [bold]{name}[/bold]")
         return
-    console.print(f"no stored token for [bold]{name}[/bold], starting browser login; pick [bold]{name}[/bold] on the approve page")
+    console.print(f"no stored management key for [bold]{name}[/bold], starting browser login; pick [bold]{name}[/bold] on the approve page")
     login(control_plane_url=control_plane_url)
     active = load_config().get("active")
     if active != name:

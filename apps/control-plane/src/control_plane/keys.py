@@ -48,10 +48,12 @@ async def mint_management_key(org_id: UUID | None, user_id: UUID, *, label: str,
     return key.id, token
 
 
-async def mint_inference_key(org_id: UUID, user_id: UUID, *, label: str) -> tuple[UUID, str]:
+async def mint_inference_key(org_id: UUID, workspace_id: UUID, user_id: UUID, *, label: str) -> tuple[UUID, str]:
     """Mint an inference API key row and its caller token; returns (key_id, token). Runs inside the caller's transaction."""
     token = _new_key(INFERENCE_TOKEN_PREFIX)
-    key = await InferenceKey(org_id=org_id, user_id=user_id, token_hash=token_hash(token), revoked=False, label=label).save()
+    key = await InferenceKey(
+        org_id=org_id, workspace_id=workspace_id, user_id=user_id, token_hash=token_hash(token), revoked=False, label=label
+    ).save()
     return key.id, token
 
 

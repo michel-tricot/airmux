@@ -41,7 +41,7 @@ def instance_client(control_plane_url: str = "") -> httpx.Client:
     """Instance-scoped client for /instance routes; takes the raw --control-plane-url override and resolves it itself."""
     token = os.environ.get("GW_ADMIN_MGMT_TOKEN")
     if not token:
-        console.print("[red]GW_ADMIN_MGMT_TOKEN is not set; this command needs the instance admin token[/red]")
+        console.print("[red]GW_ADMIN_MGMT_TOKEN is not set; this command needs the instance admin management key[/red]")
         raise typer.Exit(1)
     return _bearer_client(token, control_plane_url)
 
@@ -53,7 +53,7 @@ def org_client(control_plane_url: str = "", token: str | None = None) -> httpx.C
         profile = active_profile()
         token = str(profile["token"]) if profile and profile.get("token") else None
     if not token:
-        console.print("[red]no org token: run `airllm login`[/red]")
+        console.print("[red]no org management key: run `airllm login`[/red]")
         raise typer.Exit(1)
     return _bearer_client(token, control_plane_url)
 
@@ -79,6 +79,23 @@ def org_get(path: str, control_plane_url: str, params: dict | None = None) -> li
         resp = c.get(path, params=params or {})
         resp.raise_for_status()
         return payload_rows(resp)
+
+
+def resolve_workspace(workspace: str, control_plane_url: str) -> str:
+    """The workspace for key commands: an explicit name or id wins, then the profile's stored default."""
+    if workspace:
+        rows = org_get("/v1/org/workspaces", control_plane_url)
+        match = next((r for r in rows if workspace in (r["id"], r["name"])), None)
+        if match is None:
+            names = ", ".join(r["name"] for r in rows) or "none yet, run `airllm workspaces create`"
+            console.print(f"[red]no workspace [bold]{workspace}[/bold] in this org; available: {names}[/red]")
+            raise typer.Exit(1)
+        return str(match["id"])
+    profile = active_profile()
+    if profile and profile.get("workspace_id"):
+        return str(profile["workspace_id"])
+    console.print("[red]no workspace: pass --workspace or run `airllm workspaces use <name>`[/red]")
+    raise typer.Exit(1)
 
 
 def post_expecting(client: httpx.Client, path: str, body: dict | None, ok: tuple[int, ...]) -> httpx.Response:

@@ -4,7 +4,7 @@ import re
 from uuid import UUID
 
 from fastapi.testclient import TestClient
-from helpers import FIXTURE_ADMIN_EMAIL, make_admin, make_org, run_in_db, setup_control_plane
+from helpers import FIXTURE_ADMIN_EMAIL, make_admin, make_org, make_workspace, run_in_db, setup_control_plane
 
 from contract import uuid7
 from control_plane.models import User, set_actor
@@ -68,11 +68,11 @@ def test_service_account_is_a_full_principal(tmp_path):
         assert human["service_account"] is False
 
         c.put(f"/v1/users/{created['id']}/orgs/{o1}", headers=root)
-        minted = c.post(f"/v1/users/{created['id']}/tokens", json={"org_id": str(o1), "label": "t"}, headers=root).json()["data"]
+        minted = c.post("/v1/org/management-keys", json={"user_id": created["id"], "label": "t"}, headers=cp.headers(o1)).json()["data"]
         org = {"authorization": f"Bearer {minted['token']}"}
-        assert c.get("/v1/org/keys", headers=org).status_code == 200
+        assert c.get("/v1/org/workspaces", headers=org).status_code == 200
         c.delete(f"/v1/users/{created['id']}/orgs/{o1}", headers=root)
-        assert c.get("/v1/org/keys", headers=org).status_code == 401
+        assert c.get("/v1/org/workspaces", headers=org).status_code == 401
 
         by_email = {u["email"]: u["service_account"] for u in _users(c, root)}
         assert by_email == {created["email"]: True, "m@example.com": False}
@@ -110,14 +110,15 @@ def test_user_org_token_requires_membership(tmp_path):
     with TestClient(cp.app) as c:
         o1 = make_org(c, root, "o1")
         uid = c.post("/v1/users", json={"email": "m@example.com"}, headers=root).json()["data"]["id"]
-        assert c.post(f"/v1/users/{uid}/tokens", json={"org_id": str(o1), "label": "t"}, headers=root).status_code == 403
+        assert c.post("/v1/org/management-keys", json={"user_id": uid, "label": "t"}, headers=cp.headers(o1)).status_code == 403
         c.put(f"/v1/users/{uid}/orgs/{o1}", headers=root)
-        minted = c.post(f"/v1/users/{uid}/tokens", json={"org_id": str(o1), "label": "t"}, headers=root).json()["data"]
+        minted = c.post("/v1/org/management-keys", json={"user_id": uid, "label": "t"}, headers=cp.headers(o1)).json()["data"]
         assert minted["org_id"] == str(o1)
         assert minted["user_id"] == uid
         org = {"authorization": f"Bearer {minted['token']}"}
-        assert c.post("/v1/org/keys", json={"label": "k"}, headers=org).status_code == 200
-        assert c.get("/v1/org/keys", headers=org).status_code == 200
+        ws = make_workspace(c, org)
+        assert c.post(f"/v1/org/workspaces/{ws}/inference-keys", json={"label": "k"}, headers=org).status_code == 200
+        assert c.get(f"/v1/org/workspaces/{ws}/inference-keys", headers=org).status_code == 200
 
 
 def test_instance_token_requires_instance_admin(tmp_path):
@@ -127,8 +128,8 @@ def test_instance_token_requires_instance_admin(tmp_path):
         member = c.post("/v1/users", json={"email": "m@example.com"}, headers=root).json()["data"]["id"]
         admin = c.post("/v1/users", json={"email": "a@example.com"}, headers=root).json()["data"]["id"]
         make_admin(tmp_path, admin)
-        assert c.post(f"/v1/users/{member}/tokens", json={"label": "t"}, headers=root).status_code == 403
-        minted = c.post(f"/v1/users/{admin}/tokens", json={"label": "t"}, headers=root).json()["data"]
+        assert c.post("/v1/instance/management-keys", json={"user_id": member, "label": "t"}, headers=root).status_code == 403
+        minted = c.post("/v1/instance/management-keys", json={"user_id": admin, "label": "t"}, headers=root).json()["data"]
         assert minted["org_id"] is None
         headers = {"authorization": f"Bearer {minted['token']}"}
         assert c.get("/v1/users", headers=headers).status_code == 200
@@ -141,9 +142,9 @@ def test_instance_admin_can_take_org_scope_without_membership(tmp_path):
         o1 = make_org(c, root, "o1")
         admin = c.post("/v1/users", json={"email": "a@example.com"}, headers=root).json()["data"]["id"]
         make_admin(tmp_path, admin)
-        minted = c.post(f"/v1/users/{admin}/tokens", json={"org_id": str(o1), "label": "t"}, headers=root).json()["data"]
+        minted = c.post("/v1/org/management-keys", json={"user_id": admin, "label": "t"}, headers=cp.headers(o1)).json()["data"]
         org = {"authorization": f"Bearer {minted['token']}"}
-        assert c.get("/v1/org/keys", headers=org).status_code == 200
+        assert c.get("/v1/org/workspaces", headers=org).status_code == 200
 
 
 def test_removing_membership_invalidates_user_tokens(tmp_path):
@@ -153,11 +154,11 @@ def test_removing_membership_invalidates_user_tokens(tmp_path):
         o1 = make_org(c, root, "o1")
         uid = c.post("/v1/users", json={"email": "m@example.com"}, headers=root).json()["data"]["id"]
         c.put(f"/v1/users/{uid}/orgs/{o1}", headers=root)
-        minted = c.post(f"/v1/users/{uid}/tokens", json={"org_id": str(o1), "label": "t"}, headers=root).json()["data"]
+        minted = c.post("/v1/org/management-keys", json={"user_id": uid, "label": "t"}, headers=cp.headers(o1)).json()["data"]
         org = {"authorization": f"Bearer {minted['token']}"}
-        assert c.get("/v1/org/keys", headers=org).status_code == 200
+        assert c.get("/v1/org/workspaces", headers=org).status_code == 200
         c.delete(f"/v1/users/{uid}/orgs/{o1}", headers=root)
-        assert c.get("/v1/org/keys", headers=org).status_code == 401
+        assert c.get("/v1/org/workspaces", headers=org).status_code == 401
 
 
 def test_token_listing_shows_the_owner(tmp_path):
@@ -167,7 +168,7 @@ def test_token_listing_shows_the_owner(tmp_path):
         o1 = make_org(c, root, "o1")
         uid = c.post("/v1/users", json={"email": "m@example.com"}, headers=root).json()["data"]["id"]
         c.put(f"/v1/users/{uid}/orgs/{o1}", headers=root)
-        minted = c.post(f"/v1/users/{uid}/tokens", json={"org_id": str(o1), "label": "t"}, headers=root).json()["data"]
-        listed = {t["id"]: t["user_id"] for t in c.get("/v1/instance/tokens", headers=root).json()["data"]}
+        minted = c.post("/v1/org/management-keys", json={"user_id": uid, "label": "t"}, headers=cp.headers(o1)).json()["data"]
+        listed = {t["id"]: t["user_id"] for t in c.get("/v1/instance/management-keys", headers=root).json()["data"]}
         assert listed[minted["id"]] == uid
         assert all(owner for owner in listed.values())

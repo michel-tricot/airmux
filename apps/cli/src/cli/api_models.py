@@ -175,6 +175,7 @@ class InferenceKeyMintedOut(BaseModel):
 class InferenceKeyOut(BaseModel):
     id: Annotated[UUID, Field(title="Id")]
     org_id: Annotated[UUID, Field(title="Org Id")]
+    workspace_id: Annotated[UUID, Field(title="Workspace Id")]
     user_id: Annotated[UUID, Field(title="User Id")]
     revoked: Annotated[bool, Field(title="Revoked")]
     label: Annotated[str, Field(title="Label")]
@@ -201,6 +202,7 @@ class KeyEntry(BaseModel):
 
     key_id: Annotated[str, Field(title="Key Id")]
     org_id: Annotated[UUID, Field(title="Org Id")]
+    workspace_id: Annotated[UUID, Field(title="Workspace Id")]
     token_hash: Annotated[str, Field(title="Token Hash")]
 
 
@@ -414,8 +416,10 @@ class QuickstartOut(BaseModel):
 class Scope(
     RootModel[
         Literal[
-            "keys:read",
-            "keys:write",
+            "inference-keys:read",
+            "inference-keys:write",
+            "workspaces:read",
+            "workspaces:write",
             "bundles:read",
             "bundles:write",
             "events:read",
@@ -426,16 +430,18 @@ class Scope(
             "orgs:write",
             "users:read",
             "users:write",
-            "tokens:read",
-            "tokens:write",
+            "management-keys:read",
+            "management-keys:write",
             "sync",
         ]
     ]
 ):
     root: Annotated[
         Literal[
-            "keys:read",
-            "keys:write",
+            "inference-keys:read",
+            "inference-keys:write",
+            "workspaces:read",
+            "workspaces:write",
             "bundles:read",
             "bundles:write",
             "events:read",
@@ -446,8 +452,8 @@ class Scope(
             "orgs:write",
             "users:read",
             "users:write",
-            "tokens:read",
-            "tokens:write",
+            "management-keys:read",
+            "management-keys:write",
             "sync",
         ],
         Field(
@@ -483,6 +489,7 @@ class UsageEventOut(BaseModel):
     request_id: Annotated[UUID, Field(title="Request Id")]
     occurred_at: Annotated[AwareDatetime, Field(title="Occurred At")]
     org_id: Annotated[UUID, Field(title="Org Id")]
+    workspace_id: Annotated[UUID, Field(title="Workspace Id")]
     key_id: Annotated[str, Field(title="Key Id")]
     model_id: Annotated[str, Field(title="Model Id")]
     provider_id: Annotated[str, Field(title="Provider Id")]
@@ -512,6 +519,7 @@ class UsageEventV1(BaseModel):
     request_id: Annotated[UUID, Field(title="Request Id")]
     occurred_at: Annotated[AwareDatetime, Field(title="Occurred At")]
     org_id: Annotated[UUID, Field(title="Org Id")]
+    workspace_id: Annotated[UUID, Field(title="Workspace Id")]
     key_id: Annotated[str, Field(title="Key Id")]
     model_id: Annotated[str, Field(title="Model Id")]
     provider_id: Annotated[str, Field(title="Provider Id")]
@@ -556,6 +564,29 @@ class ValidationError(BaseModel):
     type: Annotated[str, Field(title="Error Type")]
     input: Annotated[Any | None, Field(title="Input")] = None
     ctx: Annotated[dict[str, Any] | None, Field(title="Context")] = None
+
+
+class WorkspaceCreate(BaseModel):
+    name: Annotated[str, Field(description="Workspace name, e.g. staging", title="Name")]
+
+
+class WorkspaceMembershipOut(BaseModel):
+    user_id: Annotated[UUID, Field(title="User Id")]
+    workspace_id: Annotated[UUID, Field(title="Workspace Id")]
+    status: Annotated[Literal["member"], Field(title="Status")]
+
+
+class WorkspaceOut(BaseModel):
+    id: Annotated[UUID, Field(title="Id")]
+    org_id: Annotated[UUID, Field(title="Org Id")]
+    name: Annotated[str, Field(title="Name")]
+    created_at: Annotated[AwareDatetime, Field(title="Created At")]
+    updated_at: Annotated[AwareDatetime, Field(title="Updated At")]
+    deleted_at: Annotated[AwareDatetime | None, Field(title="Deleted At")]
+
+
+class WorkspaceUpdate(BaseModel):
+    name: Annotated[str | None, Field(title="Name")] = None
 
 
 class Catalog(BaseModel):
@@ -636,6 +667,14 @@ class EnvelopeUserOut(BaseModel):
     data: UserOut
 
 
+class EnvelopeWorkspaceMembershipOut(BaseModel):
+    data: WorkspaceMembershipOut
+
+
+class EnvelopeWorkspaceOut(BaseModel):
+    data: WorkspaceOut
+
+
 class EnvelopeListInferenceKeyOut(BaseModel):
     data: Annotated[list[InferenceKeyOut], Field(title="Data")]
 
@@ -656,6 +695,14 @@ class EnvelopeListUserOut(BaseModel):
     data: Annotated[list[UserOut], Field(title="Data")]
 
 
+class EnvelopeListWorkspaceMembershipOut(BaseModel):
+    data: Annotated[list[WorkspaceMembershipOut], Field(title="Data")]
+
+
+class EnvelopeListWorkspaceOut(BaseModel):
+    data: Annotated[list[WorkspaceOut], Field(title="Data")]
+
+
 class HTTPValidationError(BaseModel):
     detail: Annotated[list[ValidationError] | None, Field(title="Detail")] = None
 
@@ -664,23 +711,23 @@ class ManagementKeyIn(BaseModel):
     label: Annotated[
         str,
         Field(
-            description="Where this token lives, e.g. ci or laptop; shown in listings",
+            description="Where this key lives, e.g. ci or laptop; shown in listings",
             max_length=80,
             min_length=1,
             title="Label",
         ),
     ]
-    org_id: Annotated[
+    user_id: Annotated[
         UUID | None,
         Field(
-            description="Org to scope the token to; omit for an instance token, instance admins only",
-            title="Org Id",
+            description="User the key is minted for; defaults to the acting user",
+            title="User Id",
         ),
     ] = None
     scopes: Annotated[
         list[Scope] | None,
         Field(
-            description="Restrict the token to these scopes; omit for the user's full authority",
+            description="Restrict the key to these scopes; omit for the user's full authority",
             title="Scopes",
         ),
     ] = None

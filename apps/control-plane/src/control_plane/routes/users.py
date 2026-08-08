@@ -8,10 +8,8 @@ from sqlmodel import col
 
 from control_plane.authz import Scope
 from control_plane.deps import instance_scope, require
-from control_plane.keys import mint_management_key
 from control_plane.models import Org, OrgMembership, User
 from control_plane.models.common.wire import DeletedOut, Envelope
-from control_plane.models.management_key import ManagementKeyIn, ManagementKeyMintedOut
 from control_plane.models.org_membership import MembershipOut
 from control_plane.models.user import ServiceAccountIn, UserCreate, UserOut
 
@@ -62,22 +60,3 @@ async def remove_membership(user_id: UUID, org_id: UUID) -> Envelope[DeletedOut[
         raise HTTPException(status_code=404)
     await membership.delete()
     return Envelope(data=DeletedOut(id=f"{user_id}/{org_id}", deleted_at=datetime.now(tz=UTC)))
-
-
-@router.post("/users/{user_id}/tokens", tags=["Management Tokens"], dependencies=[require(Scope.tokens_write)])
-async def mint_user_token(user_id: UUID, body: ManagementKeyIn) -> Envelope[ManagementKeyMintedOut]:
-    user = await User.find_by_id(user_id)
-    if user is None:
-        raise HTTPException(status_code=404)
-    org_id = body.org_id
-    if org_id is None:
-        if not user.instance_admin:
-            raise HTTPException(status_code=403)
-    else:
-        if await Org.find_by_id(org_id) is None:
-            raise HTTPException(status_code=404)
-        if not user.instance_admin and await OrgMembership.get((user_id, org_id)) is None:
-            raise HTTPException(status_code=403)
-    scopes = [s.value for s in body.scopes] if body.scopes is not None else None
-    token_id, token = await mint_management_key(org_id, user_id, label=body.label, scopes=scopes)
-    return Envelope(data=ManagementKeyMintedOut(id=token_id, org_id=org_id, user_id=user_id, scopes=scopes, label=body.label, token=token))

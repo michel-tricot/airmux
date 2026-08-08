@@ -32,7 +32,7 @@ def test_personal_org_is_born_with_its_creator_as_member(tmp_path):
         assert [o["id"] for o in standing["orgs"]] == [org["id"]]
         assert standing["personal_org_id"] == org["id"]
         assert c.get("/v1/auth/me", headers=CSRF).json()["data"]["orgs"] == [org["id"]]
-        assert c.get("/v1/org/keys", headers={**CSRF, "X-Org-Id": org["id"]}).status_code == 200
+        assert c.get("/v1/org/workspaces", headers={**CSRF, "X-Org-Id": org["id"]}).status_code == 200
 
 
 def test_personal_org_is_capped_at_one_per_user(tmp_path):

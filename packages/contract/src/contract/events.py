@@ -23,6 +23,7 @@ class UsageEventV1(BaseModel):
     request_id: UUID
     occurred_at: datetime
     org_id: UUID
+    workspace_id: UUID  # the workspace of the key that made the request
     key_id: str
     model_id: str
     provider_id: str

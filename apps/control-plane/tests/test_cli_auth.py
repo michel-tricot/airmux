@@ -54,7 +54,7 @@ def test_device_flow_end_to_end(tmp_path):
         assert done["org_name"] == "mine"
 
         bearer = {"authorization": f"Bearer {done['token']}"}
-        assert c.get("/v1/org/keys", headers=bearer).status_code == 200
+        assert c.get("/v1/org/workspaces", headers=bearer).status_code == 200
         assert c.post("/v1/auth/cli/poll", json={"poll_secret": started["poll_secret"]}).status_code == 404
 
 
@@ -69,10 +69,10 @@ def test_reapproving_from_the_same_client_replaces_the_previous_key(tmp_path):
             return c.post("/v1/auth/cli/poll", json={"poll_secret": started["poll_secret"]}).json()["data"]["token"]
 
         first = login_once()
-        assert c.get("/v1/org/keys", headers={"authorization": f"Bearer {first}"}).status_code == 200
+        assert c.get("/v1/org/workspaces", headers={"authorization": f"Bearer {first}"}).status_code == 200
         second = login_once()
-        assert c.get("/v1/org/keys", headers={"authorization": f"Bearer {second}"}).status_code == 200
-        assert c.get("/v1/org/keys", headers={"authorization": f"Bearer {first}"}).status_code == 401
+        assert c.get("/v1/org/workspaces", headers={"authorization": f"Bearer {second}"}).status_code == 200
+        assert c.get("/v1/org/workspaces", headers={"authorization": f"Bearer {first}"}).status_code == 401
 
 
 def test_approval_requires_membership_and_a_browser_session(tmp_path):

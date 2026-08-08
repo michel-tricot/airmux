@@ -8,6 +8,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict
 
 NIL_ORG = UUID(int=0)
+NIL_WORKSPACE = UUID(int=0)
 
 if TYPE_CHECKING:
     from contract import ModelEntry, ProviderEntry
@@ -73,6 +74,7 @@ class Ctx:
     provider: ProviderEntry
     stream: bool = False
     org_id: UUID = NIL_ORG
+    workspace_id: UUID = NIL_WORKSPACE
     key_id: str = ""
     bundle_id: UUID | None = None
     started_at: float = field(default_factory=time.monotonic)

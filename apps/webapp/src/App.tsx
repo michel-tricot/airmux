@@ -6,6 +6,7 @@ import { inputClass } from './ui'
 import Login from './pages/Login'
 import Events from './pages/Events'
 import Orgs from './pages/Orgs'
+import Workspaces from './pages/Workspaces'
 import Keys from './pages/Keys'
 import Providers from './pages/Providers'
 import Models from './pages/Models'
@@ -17,6 +18,7 @@ import Onboarding from './pages/Onboarding'
 const NAV = [
   { to: '/events', label: 'Events' },
   { to: '/orgs', label: 'Orgs' },
+  { to: '/workspaces', label: 'Workspaces' },
   { to: '/keys', label: 'Keys' },
   { to: '/providers', label: 'Providers' },
   { to: '/models', label: 'Models' },
@@ -118,6 +120,7 @@ export default function App() {
           <Route path="/" element={<Navigate to="/events" replace />} />
           <Route path="/events" element={<Events />} />
           <Route path="/orgs" element={<Orgs />} />
+          <Route path="/workspaces" element={<Workspaces />} />
           <Route path="/keys" element={<Keys />} />
           <Route path="/providers" element={<Providers />} />
           <Route path="/models" element={<Models />} />

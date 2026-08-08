@@ -114,6 +114,7 @@ async def _handle(request: Request, ingress: Ingress) -> Response:
         provider=decision.provider,
         stream=req.stream,
         org_id=key.org_id,
+        workspace_id=key.workspace_id,
         key_id=key.key_id,
         bundle_id=snap.bundle.bundle_id,
     )
@@ -176,6 +177,7 @@ def _record_denied(key: KeyEntry, snap: BundleSnapshot, req: CanonicalRequest) -
             request_id=uuid7(),
             occurred_at=datetime.now(tz=UTC),
             org_id=key.org_id,
+            workspace_id=key.workspace_id,
             key_id=key.key_id,
             model_id=req.model,
             provider_id="",
@@ -209,6 +211,7 @@ def _record_usage(ctx: Ctx, final: CanonicalResponse, status: UsageStatus, req: 
                 request_id=ctx.request_id,
                 occurred_at=datetime.now(tz=UTC),
                 org_id=ctx.org_id,
+                workspace_id=ctx.workspace_id,
                 key_id=ctx.key_id,
                 model_id=ctx.model.model_id,
                 provider_id=ctx.provider.provider_id,

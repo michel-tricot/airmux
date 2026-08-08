@@ -4,6 +4,7 @@ import json
 
 import httpx
 import respx
+from conftest import ORG, WORKSPACE
 from starlette.testclient import TestClient
 
 from data_plane.outbox import SqliteOutbox
@@ -25,7 +26,7 @@ OPENAI_RESPONSE = {
 
 
 @respx.mock
-def test_chat_completion_end_to_end(token, dp_app):
+def test_chat_completion_end_to_end(token, dp_app, tmp_path):
     route = respx.post("https://api.openai.com/v1/chat/completions").mock(return_value=httpx.Response(200, json=OPENAI_RESPONSE))
     with TestClient(dp_app) as client:
         r = client.post(
@@ -37,6 +38,8 @@ def test_chat_completion_end_to_end(token, dp_app):
     body = r.json()
     assert body["content"] == [{"type": "text", "text": "hello there"}]
     assert body["usage"] == {"input_tokens": 5, "output_tokens": 2, "cache_read_tokens": 0, "cache_write_tokens": 0, "estimated": False}
+    events = _recorded(tmp_path)
+    assert [(e.status, e.org_id, e.workspace_id) for e in events] == [("ok", ORG, WORKSPACE)]
     sent = json.loads(route.calls.last.request.content)
     assert sent["model"] == "gpt-real"
     assert route.calls.last.request.headers["authorization"] == "Bearer sk-test-not-real"
@@ -71,7 +74,7 @@ def test_policy_denial_is_metered(token, dp_app, tmp_path):
         )
     assert r.status_code == 404  # unknown model
     events = _recorded(tmp_path)
-    assert [(e.status, e.model_id, e.key_id) for e in events] == [("denied", "ghost", "k-dev")]
+    assert [(e.status, e.model_id, e.key_id, e.workspace_id) for e in events] == [("denied", "ghost", "k-dev", WORKSPACE)]
 
 
 @respx.mock

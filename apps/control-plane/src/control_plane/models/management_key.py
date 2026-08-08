@@ -64,6 +64,6 @@ class ManagementKeyRevokedOut(BaseModel):
 
 
 class ManagementKeyIn(BaseModel):
-    label: str = Field(description="Where this token lives, e.g. ci or laptop; shown in listings", min_length=1, max_length=80)
-    org_id: UUID | None = Field(None, description="Org to scope the token to; omit for an instance token, instance admins only")
-    scopes: list[Scope] | None = Field(None, description="Restrict the token to these scopes; omit for the user's full authority")
+    label: str = Field(description="Where this key lives, e.g. ci or laptop; shown in listings", min_length=1, max_length=80)
+    user_id: UUID | None = Field(None, description="User the key is minted for; defaults to the acting user")
+    scopes: list[Scope] | None = Field(None, description="Restrict the key to these scopes; omit for the user's full authority")
