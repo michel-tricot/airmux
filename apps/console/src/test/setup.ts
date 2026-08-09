@@ -7,8 +7,8 @@ window.HTMLElement.prototype.releasePointerCapture = () => {};
 window.HTMLElement.prototype.scrollIntoView = () => {};
 import { afterAll, afterEach, beforeAll } from 'vitest';
 import { cleanup } from '@testing-library/react';
-import { server } from './msw';
 import { queryClient } from '@/App';
+import { server } from './msw';
 
 // jsdom lacks these APIs that Radix Select relies on.
 Element.prototype.scrollIntoView ??= () => {};
