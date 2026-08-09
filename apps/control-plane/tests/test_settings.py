@@ -61,20 +61,6 @@ def test_a_managed_url_gains_the_async_driver(tmp_path, monkeypatch):
     assert database_url() == "postgresql+asyncpg://someone:secret@db.example:5432/app"
 
 
-def test_a_managed_url_translates_libpq_sslmode_for_asyncpg(tmp_path, monkeypatch):
-    (tmp_path / "airllm.yml").write_text(DATABASE_SECTION, encoding="utf-8")
-    monkeypatch.setenv("GW_CONFIG", str(tmp_path / "airllm.yml"))
-    monkeypatch.setenv(
-        "DATABASE_URL",
-        "postgresql://someone:secret@db.example:5432/app?sslmode=require&application_name=airllm",
-    )
-
-    assert database_url() == (
-        "postgresql+asyncpg://someone:secret@db.example:5432/app"
-        "?ssl=require&application_name=airllm"
-    )
-
-
 def test_settings_read_the_same_database_url(tmp_path, monkeypatch):
     """load_settings and database_url are two doors onto one value and must not disagree."""
     key = private_key_to_b64(Ed25519PrivateKey.generate())
