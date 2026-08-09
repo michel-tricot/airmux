@@ -2,7 +2,7 @@
 
     uv run python examples/chat.py [prompt ...]
 
-Reads AIRLLM_TOKEN from .env (run `airllm bootstrap` to mint one).
+Reads AIRLLM_TOKEN from .env (run `airllm quickstart` to mint one).
 Override the defaults with AIRLLM_URL and AIRLLM_MODEL env vars.
 """
 
@@ -19,7 +19,7 @@ def main() -> int:
     load_dotenv(find_dotenv(usecwd=True))
     token = os.environ.get("AIRLLM_TOKEN")
     if not token:
-        print("AIRLLM_TOKEN is not set, run `uv run airllm bootstrap` first")
+        print("AIRLLM_TOKEN is not set, run `uv run airllm quickstart` first")
         return 1
     gateway = os.environ.get("AIRLLM_URL", "http://127.0.0.1:8080")
     model = os.environ.get("AIRLLM_MODEL", "gpt-4o-mini")

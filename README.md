@@ -22,16 +22,27 @@ uv sync --all-packages
 # 0. Start the non-code dependencies (Postgres) for local development
 docker compose -f docker-compose.dev.yml up -d --wait
 
-# 1. Set up everything: keys, config, schema, admin, org, tokens, bundle v1 (applies taxonomy.yml)
-uv run airllmcp init --email you@example.com
+# 1. Generate the bundle signing key pair (private to .airllm/signing.key, public alongside it)
+uv run airllmcp keygen
 echo 'OPENAI_API_KEY=sk-...' >> .env
 
 # 2. Start the control plane (dev mode auto-runs migrations and reloads on change)
 uv run airllmcp serve --dev
 
-# 3. Start the data plane; it polls the bundle and goes ready
+# 3. Claim the instance: the first account to sign up becomes its admin
+open http://localhost:5173  # or POST /v1/auth/signup
+
+# 4. Load the models catalog and compile the first bundle
+uv run airllmcp taxonomy
+
+# 5. Start the data plane; it polls the bundle and goes ready
 uv run airllmdp --dev
 ```
+
+The first human account on a fresh deployment claims it and becomes the instance
+admin; every signup after that is an ordinary account. Claim a deployment before
+exposing it, or provision the admin yourself with `airllmcp admin --email you@example.com`,
+which is also how a second admin is granted: the bit never crosses the API.
 
 ### Docker Compose
 
@@ -53,6 +64,33 @@ Accounts are self-serve: sign up on the console login page
 Keys page; `airllm login` connects the CLI through the browser. The gateway
 listens on `localhost:8080` and the control plane API on `localhost:8000`.
 `docker compose down -v` resets the instance.
+
+### The console
+
+Two consoles live in the repo. `apps/webapp` is the one in use: Docker Compose
+builds it and serves it on `localhost:3000`, and it calls the control plane
+directly.
+
+`apps/console` is the v2 console. It is a bun/TypeScript workspace, separate
+from the uv one, sharing `lib/api-client-react` (generated React Query hooks)
+and `lib/api-zod` (generated schemas). You need [bun](https://bun.sh).
+
+```bash
+bun install                                      # once, at the repo root
+bun run --filter '@workspace/gateway-console' dev   # http://localhost:5000
+```
+
+`PORT` and `BASE_PATH` override the port and the base path. `bun run build`
+typechecks the whole workspace and emits `apps/console/dist/public`, which
+`bun run --filter '@workspace/gateway-console' serve` previews.
+
+v2 talks to the real control plane. The dev server proxies `/v1` to
+`localhost:8000`, which `CONTROL_PLANE_URL` overrides; the session cookie is
+same-site, so the API has to answer on the console's own origin. Signing in
+takes an account on the instance (the login page also signs one up). Two
+sections live behind that: `/app` is the org console, where the org travels in
+the `X-Org-Id` header the session picks, and `/` is the instance admin console,
+which instance admins alone can open.
 
 ### Making a request
 
@@ -122,9 +160,9 @@ management keys reach one org's.
   a string with any unresolvable ref loads as null and fails validation instead
   of producing a half-filled value.
 - `.env` holds the secrets: the bundle signing key pair, admin and data plane
-  bearers, provider API keys. `airllmcp init` maintains it: tokens that are
-  still valid against the database are kept, stale or orphaned ones are
-  re-minted.
+  bearers, provider API keys. Nothing maintains it for you: `airllmcp keygen`
+  writes the key pair to files, and tokens are minted through the API or the
+  CLI and pasted in.
 - Precedence: explicit environment variable, then the config file, then defaults.
 
 ## Development
@@ -136,10 +174,30 @@ uv run ruff format --check .    # formatting
 uv run ruff check .             # lint, including the plane boundary rules
 uv run ty check .               # types, whole workspace
 uv run lint-imports             # data plane may never import the control plane or a database
-./scripts/generate-api-models.sh  # regenerate the CLI's API models from the OpenAPI spec
+./scripts/export-openapi.sh       # re-export lib/api-spec/openapi.yaml from the routes
+./scripts/generate-api-models.sh  # regenerate lib/api-models from that spec
 ```
 
-Repo layout: `packages/contract` is the only code both planes share (bundle and
-event schemas, signing, tokens). `apps/control-plane`, `apps/data-plane` and
-`apps/cli` are uv workspace members; `apps/webapp` is the React console. The full
-design spec lives in `notes/PROTOTYPE.md`, and the working rules in `CLAUDE.md`.
+The bun workspace is checked separately, and CI does not cover it yet:
+
+```bash
+bun run typecheck               # lib/* project references, then the console
+bun run build                   # typecheck, then build apps/console
+bun run --cwd lib/api-spec codegen  # regenerate lib/api-client-react and lib/api-zod
+```
+
+`lib/api-spec/openapi.yaml` is the committed contract every client generates
+from: `lib/api-models` for python, `lib/api-client-react` and `lib/api-zod` for
+typescript. It is exported from the control plane routes, and CI fails on drift
+in the spec or in the python models, so change a route and re-export rather than
+hand-editing the spec or anything under a `generated/` directory. Orval unwraps
+the `{"data": ...}` envelope out of the typescript types and `customFetch` strips
+it at runtime, so the console's hooks return payloads.
+
+Repo layout: `lib/contract` is the only code both planes share (bundle and
+event schemas, signing, tokens). `apps/control-plane`, `apps/data-plane`,
+`apps/cli`, `lib/contract` and `lib/api-models` are uv workspace members.
+`apps/webapp` is the React console in use; `apps/console` and the other `lib/*`
+packages are the bun workspace holding the v2 console and its generated clients.
+The full design spec lives in `notes/PROTOTYPE.md`, and the working rules in
+`CLAUDE.md`.

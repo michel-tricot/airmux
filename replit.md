@@ -23,9 +23,11 @@ See README.md for the full getting-started guide. The short version:
 ```bash
 uv sync --all-packages
 docker compose -f docker-compose.dev.yml up -d --wait   # Postgres
-uv run airllmcp init --email you@example.com
+uv run airllmcp keygen          # bundle signing key pair
 # add OPENAI_API_KEY to .env
 uv run airllmcp serve --dev     # control plane on :8000
+# sign up at the console: the first account claims the instance
+uv run airllmcp taxonomy        # load the catalog, compile bundle v1
 uv run airllmdp --dev           # data plane on :8080
 ```
 
@@ -36,13 +38,14 @@ See `.env.example`. Key variables:
 | Variable | Purpose |
 |---|---|
 | `OPENAI_API_KEY` | Route requests to OpenAI (and other providers) |
-| `GW_SIGNING_KEY` | Ed25519 private key — signs bundles and tokens |
+| `GW_BUNDLE_SIGNING_KEY` | Ed25519 private key — signs bundles |
 | `GW_BUNDLE_PUBLIC_KEY` | Ed25519 public key — data plane verifies bundles |
-| `GW_ADMIN_TOKEN` | Bearer for the admin API |
-| `GW_DP_TOKEN` | Data plane → control plane bearer |
-| `AIRLLM_TOKEN` | Caller inference key (minted by `airllmcp init`) |
+| `GW_INSTANCE_KEY` | Bearer for the instance API |
+| `GW_DATAPLANE_TOKEN` | Data plane → control plane bearer |
+| `AIRLLM_TOKEN` | Caller inference key |
 
-`uv run airllmcp init` generates and writes the `GW_*` secrets automatically.
+`uv run airllmcp keygen` writes the key pair; the tokens are minted through the
+API or the CLI and pasted in.
 
 ## Project layout
 

@@ -34,6 +34,8 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 ORG = "org-acc"
+ADMIN_EMAIL = "admin@acceptance.test"
+ADMIN_PASSWORD = "acceptance-admin-password"
 MODEL = "echo"
 READY_TIMEOUT = 30.0
 
@@ -94,6 +96,12 @@ def _free_port() -> int:
         return int(s.getsockname()[1])
 
 
+def _payload(response: httpx.Response) -> dict:
+    """The data out of one envelope, with the status checked; the harness speaks the public API only."""
+    response.raise_for_status()
+    return response.json()["data"]
+
+
 def _poll(predicate: Callable[[], bool], timeout: float) -> bool:
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
@@ -139,6 +147,7 @@ class Stack:
         self.cache_dir = tmp / ".airllm"
         self.config_path = tmp / "config.yml"
         self.caller_token = ""
+        self.provisioned = False
         self.env: dict[str, str] = {}
         self._procs: dict[str, tuple[subprocess.Popen[bytes], TextIO]] = {}
         self._stub = ThreadingHTTPServer(("127.0.0.1", self.stub_port), _StubHandler)
@@ -146,31 +155,54 @@ class Stack:
 
     # setup ----------------------------------------------------------------
 
-    def _init_secrets(self) -> None:
-        """Run `airllmcp init` against whatever config the test wrote; deferred to start_cp so config knobs land in bundle v1."""
-        base = {**os.environ, "GW_CONFIG": str(self.config_path)}
+    def _provision_keys(self) -> None:
+        """What has to exist before the control plane starts: the bundle key pair and the catalog file.
+
+        The signing key comes from `airllmcp keygen`, the same command an operator runs; the config
+        reads both halves out of the environment.
+        """
         self._write_taxonomy()
-        self._run(
-            [
-                _bin("airllmcp"),
-                "init",
-                "--email",
-                "admin@acceptance.test",
-                "--org",
-                ORG,
-                "--config",
-                str(self.config_path),
-                "--control-plane-url",
-                self.cp_url,
-                "--cache-dir",
-                str(self.cache_dir),
-                "--db-url",
-                self.db_url,
-            ],
-            base,
-        )
-        secrets = {k: v for k, v in dotenv_values(self.tmp / ".env").items() if v is not None}
-        self.env = {**os.environ, **secrets, "GW_CONFIG": str(self.config_path), "OPENAI_API_KEY": "sk-stub"}
+        base = {**os.environ, "GW_CONFIG": str(self.config_path)}
+        key_path = self.cache_dir / "signing.key"
+        self._run([_bin("airllmcp"), "keygen", "--out", str(key_path)], base)
+        self.env = {
+            **os.environ,
+            "GW_CONFIG": str(self.config_path),
+            "OPENAI_API_KEY": "sk-stub",
+            "GW_BUNDLE_SIGNING_KEY": key_path.read_text(encoding="utf-8").strip(),
+            "GW_BUNDLE_PUBLIC_KEY": key_path.with_suffix(".pub").read_text(encoding="utf-8").strip(),
+        }
+
+    def _bootstrap(self) -> None:
+        """Provision the deployment the way an operator does, over the public surfaces only.
+
+        The first signup claims the instance, which is what makes the rest reachable: the org, a
+        workspace, the caller's inference key and the two management keys. The taxonomy runs last so
+        the catalog and the keys land in the same bundle v1.
+        """
+        with httpx.Client(base_url=self.cp_url, headers={"X-Requested-With": "XMLHttpRequest"}, timeout=10.0) as session:
+            me = _payload(session.post("/v1/auth/signup", json={"email": ADMIN_EMAIL, "name": "Acceptance Admin", "password": ADMIN_PASSWORD}))
+            assert me["instance_admin"], "the first signup should have claimed the instance"
+            org = _payload(session.post("/v1/orgs", json={"name": ORG}))
+            scope = {"X-Org-Id": org["id"]}
+            _payload(session.put(f"/v1/org/users/{me['user_id']}", headers=scope))
+            workspace = _payload(session.post("/v1/org/workspaces", json={"name": "acceptance"}, headers=scope))
+            caller = _payload(session.post(f"/v1/org/workspaces/{workspace['id']}/inference-keys", json={"label": "caller"}, headers=scope))
+            org_key = _payload(session.post("/v1/org/management-keys", json={"label": "acceptance"}, headers=scope))
+            data_plane_key = _payload(session.post("/v1/org/management-keys", json={"label": "data-plane"}, headers=scope))
+
+        self._run([_bin("airllmcp"), "taxonomy", "--config", str(self.config_path)], self.env)
+
+        secrets = {
+            "AIRLLM_TOKEN": caller["token"],
+            "GW_ORG_MGMT_TOKEN": org_key["token"],
+            "GW_DATAPLANE_TOKEN": data_plane_key["token"],
+            "GW_BUNDLE_SIGNING_KEY": self.env["GW_BUNDLE_SIGNING_KEY"],
+            "GW_BUNDLE_PUBLIC_KEY": self.env["GW_BUNDLE_PUBLIC_KEY"],
+        }
+        (self.tmp / ".env").write_text("".join(f"{name}={value}\n" for name, value in secrets.items()), encoding="utf-8")
+        self.env = {**self.env, **secrets}
+        self.provisioned = True
 
     def _write_taxonomy(self) -> None:
         spec = {
@@ -204,7 +236,6 @@ class Stack:
                 "control_plane": {"url": self.cp_url, "token": "env:GW_DATAPLANE_TOKEN", "heartbeat_interval_s": 2},
                 "bundle": {
                     "public_key": "env:GW_BUNDLE_PUBLIC_KEY",
-                    "org": ORG,
                     "cache_dir": str(self.cache_dir),
                     "staleness_policy": staleness_policy,
                     "poll_interval_s": poll_interval_s,
@@ -228,10 +259,12 @@ class Stack:
 
     def start_cp(self) -> None:
         if not self.env:
-            self._init_secrets()
+            self._provision_keys()
         self._run([_bin("airllmcp"), "migrate", "--config", str(self.config_path)], self.env)
         self._spawn("cp", [_bin("airllmcp"), "serve", "--host", "127.0.0.1", "--port", str(self.cp_port), "--config", str(self.config_path)])
         assert _poll(lambda: self._up(f"{self.cp_url}/openapi.json"), READY_TIMEOUT), "control plane did not come up"
+        if not self.provisioned:
+            self._bootstrap()  # a restart keeps the deployment it already provisioned
 
     def start_dp(self, workers: int = 1) -> None:
         cmd = [_bin("airllmdp"), "--host", "127.0.0.1", "--port", str(self.dp_port), "--config", str(self.config_path), "--workers", str(workers)]
