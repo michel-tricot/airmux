@@ -11,6 +11,7 @@ dependencies = [
   "alembic",
   "uvicorn[standard]",
   "typer",
+  "rich",
   "python-dotenv",
   "pyyaml",
   "argon2-cffi>=23.1",
