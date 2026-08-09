@@ -12,7 +12,7 @@ from control_plane.keys import MANAGEMENT_KEY_PREFIX
 from control_plane.models import DataPlaneInstance, User
 from control_plane.models.common.wire import Envelope
 
-router = APIRouter(prefix="/instance/oss", tags=["Instance"])
+router = APIRouter(prefix="/instance/oss", tags=["OSS"])
 
 DATA_PLANE_KEY_FILE = "dataplane.key"
 # Where the data plane looks for its token: the docker shared volume first, then the local cache dir.

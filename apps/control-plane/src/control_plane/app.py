@@ -34,27 +34,30 @@ if TYPE_CHECKING:
     from control_plane.config import Settings
 
 API_TAGS = [
-    {"name": "Instance", "description": "Instance-level state: whether this deployment has a claimed account yet"},
     {"name": "Orgs", "description": "Tenants of the instance; every key, bundle and event belongs to one org"},
     {"name": "Users", "description": "Instance admins, org members and service accounts, with their org memberships"},
+    {
+        "name": "Instance Management Keys",
+        "x-displayName": "Management Keys",
+        "description": "Instance-wide oversight: every management key across orgs, plus instance-scoped keys for admins",
+    },
+    {"name": "Data Plane", "description": "Data-plane-facing endpoints: bundle polling, event ingestion, heartbeats"},
+    {"name": "OSS", "description": "Self-hosted bootstrap: whether this deployment has a claimed account yet, and the quickstart trapdoor"},
     {"name": "Management Keys", "description": "User-bound bearer keys for this API, instance- or org-scoped"},
     {"name": "Workspaces", "description": "Scopes inside an org where inference keys live; members are drawn from the org"},
     {"name": "Inference Keys", "description": "Caller credentials for the gateway: opaque keys whose hashes reach data planes through bundles"},
     {"name": "Auth", "description": "Human login: password, cookie sessions, account endpoints, CLI device authorization"},
     {"name": "Enrollment", "description": "A user's path into orgs: their standing and their one self-serve personal org"},
     {"name": "Bundles", "description": "Signed policy bundles compiled per org and polled by data planes"},
-    {"name": "Instances", "description": "Data plane instances known to the org through their heartbeats"},
     {"name": "Events", "description": "Usage events reported by data planes"},
     {"name": "Taxonomy", "description": "The models catalog: providers and models compiled into bundles"},
-    {"name": "Sync", "description": "Data-plane-facing endpoints: bundle polling, event ingestion, heartbeats"},
 ]
 
 TAG_GROUPS = [
-    {"name": "Instance Admin", "tags": ["Instance", "Orgs", "Users"]},
-    {"name": "Org Management", "tags": ["Management Keys", "Workspaces", "Inference Keys", "Bundles", "Instances", "Events"]},
+    {"name": "Org Management", "tags": ["Management Keys", "Workspaces", "Inference Keys", "Bundles", "Events"]},
     {"name": "Account", "tags": ["Auth", "Enrollment"]},
     {"name": "Catalog", "tags": ["Taxonomy"]},
-    {"name": "Data Plane", "tags": ["Sync"]},
+    {"name": "Instance Admin", "tags": ["Orgs", "Users", "Instance Management Keys", "Data Plane", "OSS"]},
 ]
 
 
