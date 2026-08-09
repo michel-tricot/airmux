@@ -54,7 +54,7 @@ export default function AppDashboard() {
               {workspaces.map(ws => (
                 <TableRow key={ws.id} className="group">
                   <TableCell className="font-medium">
-                    <Link href={`/app/workspaces/${ws.id}`} className="flex items-center gap-2 hover:text-primary transition-colors">
+                    <Link href={`/org/workspaces/${ws.id}`} className="flex items-center gap-2 hover:text-primary transition-colors">
                       <FolderGit2 className="w-4 h-4 text-muted-foreground group-hover:text-primary" />
                       {ws.name}
                     </Link>

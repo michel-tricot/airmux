@@ -37,7 +37,7 @@ import WorkspaceSettings from '@/pages/app/workspace/Settings';
 import WorkspaceComingSoon from '@/pages/app/workspace/ComingSoon';
 import { Database, Route as RouteIcon, ShieldCheck } from 'lucide-react';
 
-const queryClient = new QueryClient({
+export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       retry: 1,
@@ -54,28 +54,28 @@ function AppSection() {
 
   // A stored org the user no longer holds would send every org-scoped query on the page to a 403
   // before anything could correct it, so the selection is checked against enrollment first.
-  if (!orgId || !enrollment?.orgs.some(o => o.id === orgId)) return <AppOrgPicker />;
+  if (!orgId || !enrollment?.orgs.some(o => o.id === orgId)) return <Redirect to="/orgs" />;
 
   return (
     <AppLayout>
       <Switch>
-        <Route path="/app" component={AppDashboard} />
-        <Route path="/app/workspaces/:workspaceId/keys" component={WorkspaceApiKeys} />
-        <Route path="/app/workspaces/:workspaceId/byok">
+        <Route path="/org" component={AppDashboard} />
+        <Route path="/org/workspaces/:workspaceId/keys" component={WorkspaceApiKeys} />
+        <Route path="/org/workspaces/:workspaceId/byok">
           <WorkspaceComingSoon title="BYOK" icon={Database}
             description="Bring your own provider keys and route traffic through them." />
         </Route>
-        <Route path="/app/workspaces/:workspaceId/routing">
+        <Route path="/org/workspaces/:workspaceId/routing">
           <WorkspaceComingSoon title="Routing" icon={RouteIcon}
             description="Model routing rules, fallbacks, and load balancing." />
         </Route>
-        <Route path="/app/workspaces/:workspaceId/policies">
+        <Route path="/org/workspaces/:workspaceId/policies">
           <WorkspaceComingSoon title="Policies" icon={ShieldCheck}
             description="Guardrails, rate limits, and usage policies for this workspace." />
         </Route>
-        <Route path="/app/workspaces/:workspaceId/settings" component={WorkspaceSettings} />
-        <Route path="/app/workspaces/:workspaceId" component={WorkspaceOverview} />
-        <Route path="/app/settings" component={AppOrgSettings} />
+        <Route path="/org/workspaces/:workspaceId/settings" component={WorkspaceSettings} />
+        <Route path="/org/workspaces/:workspaceId" component={WorkspaceOverview} />
+        <Route path="/org/settings" component={AppOrgSettings} />
         <Route component={NotFound} />
       </Switch>
     </AppLayout>
@@ -87,12 +87,13 @@ function AdminSection() {
     <Shell>
       <RoutedErrorBoundary>
         <Switch>
-          <Route path="/" component={Dashboard} />
-          <Route path="/organizations" component={Organizations} />
-          <Route path="/organizations/:orgId" component={OrganizationDetail} />
-          <Route path="/organizations/:orgId/workspaces/:workspaceId" component={WorkspaceDetail} />
-          <Route path="/users" component={Users} />
-          <Route path="/users/:userId" component={UserDetail} />
+          <Route path="/"><Redirect to="/instance" replace /></Route>
+          <Route path="/instance" component={Dashboard} />
+          <Route path="/instance/organizations" component={Organizations} />
+          <Route path="/instance/organizations/:orgId" component={OrganizationDetail} />
+          <Route path="/instance/organizations/:orgId/workspaces/:workspaceId" component={WorkspaceDetail} />
+          <Route path="/instance/users" component={Users} />
+          <Route path="/instance/users/:userId" component={UserDetail} />
           <Route component={NotFound} />
         </Switch>
       </RoutedErrorBoundary>
@@ -118,7 +119,16 @@ function Router() {
     );
   }
 
-  if (location.startsWith('/app')) {
+  // /orgs is the full-page org picker; /org/... is the console scoped to the selected org.
+  if (location === '/orgs' || location.startsWith('/orgs/')) {
+    return (
+      <RoutedErrorBoundary>
+        <AppOrgPicker />
+      </RoutedErrorBoundary>
+    );
+  }
+
+  if (location === '/org' || location.startsWith('/org/')) {
     return (
       <RoutedErrorBoundary>
         <AppSection />
@@ -128,7 +138,7 @@ function Router() {
 
   // The instance admin pages run without an org scope, which the control plane grants to
   // instance admins alone; everyone else belongs in their org console.
-  if (!user.instance_admin) return <Redirect to="/app" />;
+  if (!user.instance_admin) return <Redirect to="/org" />;
 
   return <AdminSection />;
 }

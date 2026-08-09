@@ -8,6 +8,7 @@ window.HTMLElement.prototype.scrollIntoView = () => {};
 import { afterAll, afterEach, beforeAll } from 'vitest';
 import { cleanup } from '@testing-library/react';
 import { server } from './msw';
+import { queryClient } from '@/App';
 
 // jsdom lacks these APIs that Radix Select relies on.
 Element.prototype.scrollIntoView ??= () => {};
@@ -20,5 +21,8 @@ afterEach(() => {
   cleanup();
   server.resetHandlers();
   localStorage.clear();
+  // The app's query client is a module-level singleton; without this, cached
+  // rows from one test leak into the next (same org id, different handlers).
+  queryClient.clear();
 });
 afterAll(() => server.close());

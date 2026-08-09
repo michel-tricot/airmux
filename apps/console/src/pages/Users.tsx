@@ -70,7 +70,7 @@ export default function UsersList() {
               {filteredUsers.map((user) => (
                 <TableRow key={user.id} className="group">
                   <TableCell className="font-medium">
-                    <Link href={`/users/${user.id}`} className="flex items-center gap-2 hover:text-primary transition-colors">
+                    <Link href={`/instance/users/${user.id}`} className="flex items-center gap-2 hover:text-primary transition-colors">
                       <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center text-xs font-bold text-muted-foreground">
                         {user.name.charAt(0)}
                       </div>
