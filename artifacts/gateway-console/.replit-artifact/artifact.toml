@@ -12,10 +12,10 @@ paths = [ "/" ]
 localPort = 20383
 
 [services.development]
-run = "pnpm --filter @workspace/gateway-console run dev"
+run = "bun run --filter @workspace/gateway-console dev"
 
 [services.production]
-build = [ "pnpm", "--filter", "@workspace/gateway-console", "run", "build" ]
+build = [ "bun", "run", "--filter", "@workspace/gateway-console", "build" ]
 serve = "static"
 publicDir = "artifacts/gateway-console/dist/public"
 

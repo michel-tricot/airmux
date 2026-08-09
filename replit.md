@@ -1,6 +1,6 @@
 # airllm
 
-An LLM gateway prototype with a strict control plane / data plane split, plus a new admin console (pnpm workspace, merged from a separate Replit project that briefly lived in `webapp2/`).
+An LLM gateway prototype with a strict control plane / data plane split, plus a new admin console (Bun workspace, merged from a separate Replit project that briefly lived in `webapp2/`).
 
 ## What it does
 
@@ -54,11 +54,11 @@ apps/
   webapp/        # older React/Vite console (port 3000)
 packages/
   contract/      # shared bundle/event schemas, signing, tokens
-artifacts/       # pnpm workspace apps (new console)
+artifacts/       # Bun workspace apps (new console)
   api-server/       # Express 5 stand-in backend with seed data
   gateway-console/  # React/Vite admin console ("Precision Control Room")
   mockup-sandbox/   # canvas component previews
-lib/             # pnpm workspace libs
+lib/             # Bun workspace libs
   api-spec/         # openapi.yaml — API contract (codegen via orval)
   api-zod/          # generated zod schemas
   api-client-react/ # generated react-query client
@@ -66,19 +66,19 @@ lib/             # pnpm workspace libs
 docs/            # MkDocs site
 examples/        # ready-made curl / Python scripts
 notes/           # design docs and prototype spec
-scripts/         # shell helpers + pnpm workspace scripts package
+scripts/         # shell helpers + Bun workspace scripts package
 ```
 
-## New admin console (pnpm workspace)
+## New admin console (Bun workspace)
 
 Tenancy model: organizations → (members, management keys, workspaces); workspaces → (workspace members, inference keys); users are top-level and can belong to multiple orgs.
 
 The `artifacts/api-server` backend is a placeholder; the plan is to swap in the real gateway backend by replacing `lib/api-spec/openapi.yaml` and re-running codegen.
 
 ```bash
-pnpm install
-pnpm run build       # typecheck + build all workspace packages
-pnpm run typecheck
+bun install
+bun run build        # typecheck + build all workspace packages
+bun run typecheck
 ```
 
 ## Development commands
@@ -93,4 +93,4 @@ uv run ty check .                # type checking
 
 ## User preferences
 
-<!-- Add any workspace preferences here -->
+- Use Bun (not pnpm) as the JS package manager and workspace runner for this project.

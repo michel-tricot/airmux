@@ -1,0 +1,7 @@
+# Bun install policy (carried over from the previous pnpm-workspace.yaml settings)
+
+[install]
+# Reject packages published less than 24h ago (supply-chain protection),
+# equivalent to pnpm's minimumReleaseAge: 1440 (minutes). Bun uses seconds.
+minimumReleaseAge = 86400
+minimumReleaseAgeExcludes = ["@replit/vite-plugin-cartographer", "@replit/vite-plugin-dev-banner", "@replit/vite-plugin-runtime-error-modal", "@replit/connectors-sdk", "stripe-replit-sync"]
