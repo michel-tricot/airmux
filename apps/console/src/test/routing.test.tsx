@@ -35,14 +35,10 @@ describe('workspace section deep links', () => {
     renderAt(`/app/workspaces/${WS.id}${suffix}`);
     expect(await screen.findByRole('heading', { level: 1, name: heading })).toBeInTheDocument();
     // The workspace dropdown reflects the workspace from the URL.
-    expect(await screen.findByRole('combobox', { name: 'Workspace' })).toHaveValue(WS.id);
+    expect(await screen.findByRole('combobox', { name: 'Workspace' })).toHaveTextContent(WS.name);
   });
 
-  it('renders the org dashboard at /app and org settings at /app/settings', async () => {
-    const { unmount } = renderAt('/app');
-    expect(await screen.findByRole('heading', { level: 1, name: 'Organization Overview' })).toBeInTheDocument();
-    unmount();
-
+  it('keeps /app/settings out of the workspace routes', async () => {
     renderAt('/app/settings');
     // /app/settings must not be captured by the workspace routes.
     await waitFor(() => {
@@ -53,14 +49,43 @@ describe('workspace section deep links', () => {
   });
 });
 
+describe('default workspace selection', () => {
+  it('redirects /app to the first workspace when none was selected before', async () => {
+    renderAt('/app');
+    await waitFor(() => {
+      expect(window.location.pathname).toBe(`/app/workspaces/${WORKSPACES[0].id}`);
+    });
+    expect(await screen.findByRole('heading', { level: 1, name: WORKSPACES[0].name })).toBeInTheDocument();
+  });
+
+  it('redirects /app to the last-selected workspace', async () => {
+    localStorage.setItem(`airllm_last_ws_${ORG.id}`, WORKSPACES[1].id);
+    renderAt('/app');
+    await waitFor(() => {
+      expect(window.location.pathname).toBe(`/app/workspaces/${WORKSPACES[1].id}`);
+    });
+    expect(await screen.findByRole('heading', { level: 1, name: WORKSPACES[1].name })).toBeInTheDocument();
+  });
+
+  it('remembers the workspace visited via a deep link', async () => {
+    renderAt(`/app/workspaces/${WORKSPACES[1].id}/keys`);
+    await screen.findByRole('heading', { level: 1, name: 'API Keys' });
+    await waitFor(() => {
+      expect(localStorage.getItem(`airllm_last_ws_${ORG.id}`)).toBe(WORKSPACES[1].id);
+    });
+  });
+});
+
 describe('workspace switching keeps the active section', () => {
   it.each(SECTIONS)('stays on $suffix when switching workspaces', async ({ suffix, heading }) => {
     const user = userEvent.setup();
     renderAt(`/app/workspaces/${WORKSPACES[0].id}${suffix}`);
     await screen.findByRole('heading', { level: 1, name: heading });
 
+    // The picker is a Radix Select: open the trigger, then click the option.
     const dropdown = await screen.findByRole('combobox', { name: 'Workspace' });
-    await user.selectOptions(dropdown, WORKSPACES[1].id);
+    await user.click(dropdown);
+    await user.click(await screen.findByRole('option', { name: WORKSPACES[1].name }));
 
     // URL keeps the section suffix, only the workspace id changes.
     await waitFor(() => {
