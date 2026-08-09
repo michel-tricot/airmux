@@ -10,14 +10,20 @@ from sqlmodel import Field
 
 from control_plane.authz import Scope
 from control_plane.models.audit import audited
-from control_plane.models.common import Identified, Tombstonable
+from control_plane.models.common import Identified, OrgOwned, Tombstonable
 from control_plane.models.common.base import Record
 from control_plane.models.common.wire import RecordOut
 
 
 @audited
-class ManagementKey(Record, Identified, Tombstonable, table=True):
-    org_id: UUID | None = None
+class ManagementKey(Record, Identified, OrgOwned, Tombstonable, table=True):
+    """A user's bearer credential for one org.
+
+    org_id is mandatory, which is what makes owned_by the lookup for every org-scoped route: the key
+    belongs to exactly one org, and no management key can express instance scope by omitting it.
+    """
+
+    org_id: UUID = Field(foreign_key="org.id")
     user_id: UUID = Field(foreign_key="user.id")
     token_hash: str = Field(unique=True)
     revoked: bool = False
@@ -39,7 +45,7 @@ class ManagementKey(Record, Identified, Tombstonable, table=True):
 
 class ManagementKeyOut(RecordOut[ManagementKey]):
     id: UUID
-    org_id: UUID | None
+    org_id: UUID
     user_id: UUID
     revoked: bool
     scopes: list[str] | None
@@ -51,7 +57,7 @@ class ManagementKeyOut(RecordOut[ManagementKey]):
 
 class ManagementKeyMintedOut(BaseModel):
     id: UUID
-    org_id: UUID | None
+    org_id: UUID
     user_id: UUID
     scopes: list[str] | None
     label: str

@@ -16,6 +16,7 @@ from cli.common import (
     data_planes_app,
     events_app,
     inference_keys_app,
+    instance_keys_app,
     management_keys_app,
     models_app,
     orgs_app,
@@ -174,13 +175,25 @@ def inference_keys_revoke(key_id: str, workspace: WorkspaceOption = "", control_
     console.print(f"key [bold]{key_id}[/bold] revoked, run `airllm bundles compile` to propagate")
 
 
+_SCOPES_COL = Col("scopes", "Scopes", style="cyan", max_width=40, fmt=lambda v: ", ".join(map(str, v)) if isinstance(v, list) else "all")
+_STATUS_COL = Col("revoked", "Status", style="yellow", fmt=lambda v: "revoked" if v else "active")
+
 MANAGEMENT_KEY_COLS = [
     Col("id", "ID", style="dim", no_wrap=True),
     Col("label", "Label", max_width=30),
-    Col("org_id", "Scope", fmt=lambda v: str(v) if v else "instance"),
+    Col("org_id", "Org", no_wrap=True),
     Col("user_id", "Owner", style="dim", fmt=lambda v: str(v) if v else "system"),
-    Col("scopes", "Scopes", style="cyan", max_width=40, fmt=lambda v: ", ".join(map(str, v)) if isinstance(v, list) else "all"),
-    Col("revoked", "Status", style="yellow", fmt=lambda v: "revoked" if v else "active"),
+    _SCOPES_COL,
+    _STATUS_COL,
+    Col("created_at", "Created", no_wrap=True, fmt=fmt_when),
+]
+
+INSTANCE_KEY_COLS = [
+    Col("id", "ID", style="dim", no_wrap=True),
+    Col("label", "Label", max_width=30),
+    Col("user_id", "Owner", style="dim", fmt=lambda v: str(v) if v else "system"),
+    _SCOPES_COL,
+    _STATUS_COL,
     Col("created_at", "Created", no_wrap=True, fmt=fmt_when),
 ]
 
@@ -286,6 +299,39 @@ def management_keys_revoke(key_id: str, control_plane_url: str = "") -> None:
         resp = c.delete(f"/v1/org/management-keys/{key_id}")
         resp.raise_for_status()
     console.print(f"management key [bold]{key_id}[/bold] revoked")
+
+
+@instance_keys_app.command("list")
+def instance_keys_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
+    """List the instance keys; there is no org axis to filter on."""
+    print_rows("instance keys", instance_get("/v1/instance/instance-keys", control_plane_url), INSTANCE_KEY_COLS, fmt)
+
+
+@instance_keys_app.command("mint")
+def instance_keys_mint(
+    label: str = typer.Option(..., "--label", help="Where the key will live, e.g. ci or a data plane; shown in listings"),
+    user: str = typer.Option("", "--user", help="Instance admin the key is minted for; defaults to you"),
+    scope: Annotated[
+        list[str] | None, typer.Option("--scope", help="Restrict the key to a scope, repeatable (e.g. sync); omit for full authority")
+    ] = None,
+    control_plane_url: str = "",
+) -> None:
+    """Mint an instance key; the secret is shown once and never stored."""
+    body = {"user_id": user or None, "scopes": scope or None, "label": label}
+    with instance_client(control_plane_url) as c:
+        resp = payload(post_expecting(c, "/v1/instance/instance-keys", body, ok=(200,)))
+    restriction = f" restricted to {', '.join(resp['scopes'])}" if resp.get("scopes") else ""
+    console.print(f"instance key [bold]{resp['id']}[/bold] minted for user [bold]{resp['user_id']}[/bold]{restriction}, secret (shown once):")
+    console.print(resp["token"])
+
+
+@instance_keys_app.command("revoke")
+def instance_keys_revoke(key_id: str, control_plane_url: str = "") -> None:
+    """Revoke an instance key; takes effect on the next request."""
+    with instance_client(control_plane_url) as c:
+        resp = c.delete(f"/v1/instance/instance-keys/{key_id}")
+        resp.raise_for_status()
+    console.print(f"instance key [bold]{key_id}[/bold] revoked")
 
 
 def _taxonomy(control_plane_url: str) -> dict:

@@ -8,7 +8,7 @@ from pydantic import BaseModel
 from sqlmodel import col
 
 from control_plane.deps import SessionDep, public
-from control_plane.keys import MANAGEMENT_KEY_PREFIX
+from control_plane.keys import INSTANCE_KEY_PREFIX, MANAGEMENT_KEY_PREFIX
 from control_plane.models import DataPlaneInstance, User
 from control_plane.models.common.wire import Envelope
 
@@ -42,17 +42,22 @@ class QuickstartOut(BaseModel):
 
 @router.post("/quickstart", dependencies=[public()])
 async def quickstart(body: QuickstartIn, _session: SessionDep) -> Envelope[QuickstartOut]:
-    """Drop the data plane's management token onto the shared volume so the first data plane can boot.
+    """Drop the data plane's sync credential onto the shared volume so the first data plane can boot.
 
     A single-use bootstrap trapdoor: public, but it only fires while no data plane has ever
     registered, and it closes the moment one heartbeats. The caller already holds the token it
     writes, so nothing is minted or leaked here; the endpoint only bridges a token the operator
     has into the file the co-mounted data plane container waits for.
+
+    Either control-plane key type can drive a data plane: a management key pins it to one org's
+    bundles, an instance key leaves the org to its config. The prefix check only catches a token
+    that could never work at all, an inference key or a paste accident.
     """
     if await DataPlaneInstance.first() is not None:
         raise HTTPException(status_code=409, detail="a data plane has already registered; quickstart is closed")
-    if not body.token.startswith(MANAGEMENT_KEY_PREFIX):
-        raise HTTPException(status_code=422, detail=f"token must be a management key ({MANAGEMENT_KEY_PREFIX}...)")
+    if not body.token.startswith((MANAGEMENT_KEY_PREFIX, INSTANCE_KEY_PREFIX)):
+        accepted = f"{MANAGEMENT_KEY_PREFIX}... or {INSTANCE_KEY_PREFIX}..."
+        raise HTTPException(status_code=422, detail=f"token must be a management or instance key ({accepted})")
     return Envelope(data=QuickstartOut(path=await run_sync(_write_data_plane_key, body.token)))
 
 

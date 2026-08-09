@@ -8,7 +8,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from control_plane.authz import ALL_SCOPES, Scope, allowed
 from control_plane.db import transaction
-from control_plane.keys import ManagementClaims, verify_management_key
+from control_plane.keys import ManagementClaims, verify_bearer
 from control_plane.models import Org, OrgMembership, User, Workspace, WorkspaceMembership, set_actor
 from control_plane.sessions import SESSION_COOKIE, verify_session
 
@@ -76,7 +76,7 @@ async def management_claims(
     sec_fetch_site: Annotated[str | None, Header(alias="Sec-Fetch-Site")] = None,
 ) -> ManagementClaims:
     if credentials is not None:
-        claims = await verify_management_key(credentials.credentials)
+        claims = await verify_bearer(credentials.credentials)
         if claims is None:
             raise HTTPException(status_code=401)
     elif session_cookie is not None:
@@ -100,7 +100,7 @@ async def acting_user(
 ) -> User:
     """User-level resolution for account endpoints: either door, no org scope involved."""
     if credentials is not None:
-        claims = await verify_management_key(credentials.credentials)
+        claims = await verify_bearer(credentials.credentials)
         if claims is None:
             raise HTTPException(status_code=401)
         user = await User.find_by_id(claims.user_id)

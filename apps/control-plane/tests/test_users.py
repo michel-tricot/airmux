@@ -128,9 +128,9 @@ def test_instance_token_requires_instance_admin(tmp_path):
         member = c.post("/v1/users", json={"email": "m@example.com"}, headers=root).json()["data"]["id"]
         admin = c.post("/v1/users", json={"email": "a@example.com"}, headers=root).json()["data"]["id"]
         make_admin(tmp_path, admin)
-        assert c.post("/v1/instance/management-keys", json={"user_id": member, "label": "t"}, headers=root).status_code == 403
-        minted = c.post("/v1/instance/management-keys", json={"user_id": admin, "label": "t"}, headers=root).json()["data"]
-        assert minted["org_id"] is None
+        assert c.post("/v1/instance/instance-keys", json={"user_id": member, "label": "t"}, headers=root).status_code == 403
+        minted = c.post("/v1/instance/instance-keys", json={"user_id": admin, "label": "t"}, headers=root).json()["data"]
+        assert minted["user_id"] == admin
         headers = {"authorization": f"Bearer {minted['token']}"}
         assert c.get("/v1/users", headers=headers).status_code == 200
 

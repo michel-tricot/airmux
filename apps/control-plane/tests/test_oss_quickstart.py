@@ -6,11 +6,12 @@ import pytest
 from fastapi.testclient import TestClient
 from helpers import run_in_db, setup_control_plane
 
-from contract import uuid7
+from contract import INFERENCE_TOKEN_PREFIX, uuid7
+from control_plane.keys import INSTANCE_KEY_PREFIX, MANAGEMENT_KEY_PREFIX
 from control_plane.models import DataPlaneInstance
 from control_plane.routes import oss
 
-TOKEN = "sk-mgmt-quickstart-token"
+TOKEN = INSTANCE_KEY_PREFIX + "quickstart-token"
 
 
 @pytest.fixture
@@ -53,12 +54,23 @@ def test_oss_quickstart_closes_once_a_data_plane_has_registered(tmp_path, key_pa
         assert not key_path.exists()
 
 
-def test_oss_quickstart_rejects_a_token_without_the_management_prefix(tmp_path, key_path):
+def test_oss_quickstart_rejects_a_token_that_could_never_drive_a_data_plane(tmp_path, key_path):
+    """Either control-plane key type is accepted; an inference key or a paste accident is not."""
     cp = setup_control_plane(tmp_path)
     with TestClient(cp.app) as c:
-        resp = c.post("/v1/instance/oss/quickstart", json={"token": "not-a-mgmt-token"})
-        assert resp.status_code == 422
-        assert not key_path.exists()
+        for token in ("not-a-key", INFERENCE_TOKEN_PREFIX + "caller-key", ""):
+            resp = c.post("/v1/instance/oss/quickstart", json={"token": token})
+            assert resp.status_code == 422, token
+            assert not key_path.exists()
+
+
+def test_oss_quickstart_accepts_a_management_key_too(tmp_path, key_path):
+    """A single-org deployment hands its data plane an org key; quickstart writes it unchanged."""
+    cp = setup_control_plane(tmp_path)
+    with TestClient(cp.app) as c:
+        management_token = MANAGEMENT_KEY_PREFIX + "org-scoped-token"
+        assert c.post("/v1/instance/oss/quickstart", json={"token": management_token}).status_code == 200
+        assert key_path.read_text(encoding="utf-8") == management_token
 
 
 def test_oss_quickstart_prefers_the_first_existing_directory(tmp_path, monkeypatch):

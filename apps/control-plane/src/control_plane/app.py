@@ -38,12 +38,13 @@ API_TAGS = [
     {"name": "Users", "description": "Instance admins, org members and service accounts, with their org memberships"},
     {
         "name": "Instance Management Keys",
-        "x-displayName": "Management Keys",
-        "description": "Instance-wide oversight: every management key across orgs, plus instance-scoped keys for admins",
+        "x-displayName": "Org Management Keys",
+        "description": "Instance-wide oversight of every org's management keys",
     },
+    {"name": "Instance Keys", "description": "Admin-held bearer keys for the instance endpoints, and the credential a data plane carries"},
     {"name": "Data Plane", "description": "Data-plane-facing endpoints: bundle polling, event ingestion, heartbeats"},
     {"name": "OSS", "description": "Self-hosted bootstrap: whether this deployment has a claimed account yet, and the quickstart trapdoor"},
-    {"name": "Management Keys", "description": "User-bound bearer keys for this API, instance- or org-scoped"},
+    {"name": "Management Keys", "description": "User-bound bearer keys for one org; instance reach is a separate key type"},
     {"name": "Workspaces", "description": "Scopes inside an org where inference keys live; members are drawn from the org"},
     {"name": "Inference Keys", "description": "Caller credentials for the gateway: opaque keys whose hashes reach data planes through bundles"},
     {"name": "Auth", "description": "Human login: password, cookie sessions, account endpoints, CLI device authorization"},
@@ -57,7 +58,7 @@ TAG_GROUPS = [
     {"name": "Org Management", "tags": ["Management Keys", "Workspaces", "Inference Keys", "Bundles", "Events"]},
     {"name": "Account", "tags": ["Auth", "Enrollment"]},
     {"name": "Catalog", "tags": ["Taxonomy"]},
-    {"name": "Instance Admin", "tags": ["Orgs", "Users", "Instance Management Keys", "Data Plane", "OSS"]},
+    {"name": "Instance Admin", "tags": ["Orgs", "Users", "Instance Keys", "Instance Management Keys", "Data Plane", "OSS"]},
 ]
 
 

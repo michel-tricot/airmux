@@ -19,7 +19,9 @@ router = APIRouter(tags=["Data Plane"])
 
 
 def _sync_org(claims_org_id: UUID | None, org_id: UUID | None) -> UUID | None:
-    """A data plane authenticates with a management token; an org-scoped one is pinned to its org."""
+    """The org a sync request may touch: an instance key leaves the choice to the caller, an
+    org-scoped management key pins it. Only the bundle and event paths have an org to pin; the
+    heartbeat registers the data plane against the instance and names no org at all."""
     if claims_org_id is None:
         return org_id
     if org_id is not None and org_id != claims_org_id:
@@ -50,16 +52,15 @@ async def ingest_events(claims: MgmtDep, events: list[UsageEventV1]) -> Envelope
 
 
 @router.post("/heartbeat", dependencies=[require(Scope.sync)])
-async def heartbeat(claims: MgmtDep, body: HeartbeatV1, session: SessionDep, request: Request) -> Envelope[HeartbeatOut]:
+async def heartbeat(_claims: MgmtDep, body: HeartbeatV1, session: SessionDep, request: Request) -> Envelope[HeartbeatOut]:
     """Upsert the instance record; the row persists as history, last_seen drives liveness.
 
     Every worker of a multi-worker data plane heartbeats with the same instance_id, so the first
     insert can race; do it as one atomic upsert instead of read-then-write.
     """
-    org = _sync_org(claims.org_id, body.org_id)
     now = datetime.now(tz=UTC)
     address = request.client.host if request.client else None
-    fields = {"org_id": org, "version": body.version, "bundle_id": body.bundle_id, "address": address, "last_seen": now}
+    fields = {"version": body.version, "bundle_id": body.bundle_id, "address": address, "last_seen": now}
     stmt = (
         pg_insert(DataPlaneInstance)
         .values(instance_id=body.instance_id, first_seen=now, **fields)

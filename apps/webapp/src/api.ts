@@ -131,7 +131,6 @@ export interface UsageEvent {
 
 export interface Instance {
   instance_id: string
-  org_id: string | null
   version: string
   bundle_id: string | null
   address: string | null

@@ -39,9 +39,9 @@ def _bearer_client(token: str, control_plane_url: str) -> httpx.Client:
 
 def instance_client(control_plane_url: str = "") -> httpx.Client:
     """Instance-scoped client for /instance routes; takes the raw --control-plane-url override and resolves it itself."""
-    token = os.environ.get("GW_ADMIN_MGMT_TOKEN")
+    token = os.environ.get("GW_INSTANCE_KEY")
     if not token:
-        console.print("[red]GW_ADMIN_MGMT_TOKEN is not set; this command needs the instance admin management key[/red]")
+        console.print("[red]GW_INSTANCE_KEY is not set; this command needs an instance key (`airllm instance-keys mint`)[/red]")
         raise typer.Exit(1)
     return _bearer_client(token, control_plane_url)
 

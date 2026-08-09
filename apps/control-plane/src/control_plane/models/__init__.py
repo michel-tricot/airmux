@@ -9,6 +9,7 @@ from control_plane.models.common import Identified, NotOwnedError, OrgOwned, Tom
 from control_plane.models.common.base import Record
 from control_plane.models.data_plane_instance import DataPlaneInstance
 from control_plane.models.inference_key import InferenceKey
+from control_plane.models.instance_key import InstanceKey
 from control_plane.models.management_key import ManagementKey
 from control_plane.models.model import Model
 from control_plane.models.org import Org
@@ -28,6 +29,7 @@ __all__ = [
     "DataPlaneInstance",
     "Identified",
     "InferenceKey",
+    "InstanceKey",
     "ManagementKey",
     "Model",
     "NotOwnedError",

@@ -72,7 +72,6 @@ class CliAuthStartOut(BaseModel):
 
 class DataPlaneInstanceOut(BaseModel):
     instance_id: Annotated[UUID, Field(title="Instance Id")]
-    org_id: Annotated[UUID | None, Field(title="Org Id")]
     version: Annotated[str, Field(title="Version")]
     bundle_id: Annotated[UUID | None, Field(title="Bundle Id")]
     address: Annotated[str | None, Field(title="Address")]
@@ -143,11 +142,13 @@ class HeartbeatOut(BaseModel):
 class HeartbeatV1(BaseModel):
     """
     A data plane announcing itself to the control plane; the record survives, liveness is derived from last_seen.
+
+    A data plane registers against the instance: which bundle it happens to serve is
+    config, and bundle_id already says which one that is.
     """
 
     instance_id: Annotated[UUID, Field(title="Instance Id")]
     version: Annotated[str, Field(title="Version")]
-    org_id: Annotated[UUID | None, Field(title="Org Id")] = None
     bundle_id: Annotated[UUID | None, Field(title="Bundle Id")] = None
 
 
@@ -189,6 +190,30 @@ class InferenceKeyRevokedOut(BaseModel):
     status: Annotated[Literal["revoked"], Field(title="Status")]
 
 
+class InstanceKeyMintedOut(BaseModel):
+    id: Annotated[UUID, Field(title="Id")]
+    user_id: Annotated[UUID, Field(title="User Id")]
+    scopes: Annotated[list[str] | None, Field(title="Scopes")]
+    label: Annotated[str, Field(title="Label")]
+    token: Annotated[str, Field(title="Token")]
+
+
+class InstanceKeyOut(BaseModel):
+    id: Annotated[UUID, Field(title="Id")]
+    user_id: Annotated[UUID, Field(title="User Id")]
+    revoked: Annotated[bool, Field(title="Revoked")]
+    scopes: Annotated[list[str] | None, Field(title="Scopes")]
+    label: Annotated[str, Field(title="Label")]
+    created_at: Annotated[AwareDatetime, Field(title="Created At")]
+    updated_at: Annotated[AwareDatetime, Field(title="Updated At")]
+    deleted_at: Annotated[AwareDatetime | None, Field(title="Deleted At")]
+
+
+class InstanceKeyRevokedOut(BaseModel):
+    id: Annotated[UUID, Field(title="Id")]
+    status: Annotated[Literal["revoked"], Field(title="Status")]
+
+
 class KeyEntry(BaseModel):
     """
     An API key as the data plane sees it: enough to authorize with zero I/O.
@@ -213,7 +238,7 @@ class LoginIn(BaseModel):
 
 class ManagementKeyMintedOut(BaseModel):
     id: Annotated[UUID, Field(title="Id")]
-    org_id: Annotated[UUID | None, Field(title="Org Id")]
+    org_id: Annotated[UUID, Field(title="Org Id")]
     user_id: Annotated[UUID, Field(title="User Id")]
     scopes: Annotated[list[str] | None, Field(title="Scopes")]
     label: Annotated[str, Field(title="Label")]
@@ -222,7 +247,7 @@ class ManagementKeyMintedOut(BaseModel):
 
 class ManagementKeyOut(BaseModel):
     id: Annotated[UUID, Field(title="Id")]
-    org_id: Annotated[UUID | None, Field(title="Org Id")]
+    org_id: Annotated[UUID, Field(title="Org Id")]
     user_id: Annotated[UUID, Field(title="User Id")]
     revoked: Annotated[bool, Field(title="Revoked")]
     scopes: Annotated[list[str] | None, Field(title="Scopes")]
@@ -432,6 +457,8 @@ class Scope(
             "users:write",
             "management-keys:read",
             "management-keys:write",
+            "instance-keys:read",
+            "instance-keys:write",
             "sync",
         ]
     ]
@@ -454,6 +481,8 @@ class Scope(
             "users:write",
             "management-keys:read",
             "management-keys:write",
+            "instance-keys:read",
+            "instance-keys:write",
             "sync",
         ],
         Field(
@@ -623,6 +652,14 @@ class EnvelopeInferenceKeyRevokedOut(BaseModel):
     data: InferenceKeyRevokedOut
 
 
+class EnvelopeInstanceKeyMintedOut(BaseModel):
+    data: InstanceKeyMintedOut
+
+
+class EnvelopeInstanceKeyRevokedOut(BaseModel):
+    data: InstanceKeyRevokedOut
+
+
 class EnvelopeManagementKeyMintedOut(BaseModel):
     data: ManagementKeyMintedOut
 
@@ -679,6 +716,10 @@ class EnvelopeListInferenceKeyOut(BaseModel):
     data: Annotated[list[InferenceKeyOut], Field(title="Data")]
 
 
+class EnvelopeListInstanceKeyOut(BaseModel):
+    data: Annotated[list[InstanceKeyOut], Field(title="Data")]
+
+
 class EnvelopeListManagementKeyOut(BaseModel):
     data: Annotated[list[ManagementKeyOut], Field(title="Data")]
 
@@ -705,6 +746,32 @@ class EnvelopeListWorkspaceOut(BaseModel):
 
 class HTTPValidationError(BaseModel):
     detail: Annotated[list[ValidationError] | None, Field(title="Detail")] = None
+
+
+class InstanceKeyIn(BaseModel):
+    label: Annotated[
+        str,
+        Field(
+            description="Where this key lives, e.g. ci or a data plane; shown in listings",
+            max_length=80,
+            min_length=1,
+            title="Label",
+        ),
+    ]
+    user_id: Annotated[
+        UUID | None,
+        Field(
+            description="Instance admin the key is minted for; defaults to the acting user",
+            title="User Id",
+        ),
+    ] = None
+    scopes: Annotated[
+        list[Scope] | None,
+        Field(
+            description="Restrict the key to these scopes; omit for the user's full authority",
+            title="Scopes",
+        ),
+    ] = None
 
 
 class ManagementKeyIn(BaseModel):

@@ -42,9 +42,7 @@ async def mint_management_key_endpoint(body: ManagementKeyIn, org_id: OrgDep, cl
 
 @router.delete("/management-keys/{key_id}", tags=["Management Keys"], dependencies=[require(Scope.management_keys_write)])
 async def revoke_management_key(org_id: OrgDep, key_id: UUID) -> Envelope[ManagementKeyRevokedOut]:
-    key = await ManagementKey.find_by_id(key_id)
-    if key is None or key.org_id != org_id:
-        raise HTTPException(status_code=404)
+    key = await ManagementKey.owned_by(org_id, key_id)
     key.revoked = True
     await key.save()
     return Envelope(data=ManagementKeyRevokedOut(id=key_id, status="revoked"))
