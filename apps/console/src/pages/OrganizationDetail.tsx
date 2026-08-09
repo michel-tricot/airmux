@@ -17,7 +17,7 @@ import {
   getListManagementKeysQueryKey,
   getListOrgUsersQueryKey,
 } from '@workspace/api-client-react';
-import { Card, Button, Input, Label, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Modal, Badge, Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/elements';
+import { Card, Button, Input, Label, Select, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Modal, Badge, Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/elements';
 import { Building2, Plus, ArrowLeft, Key, TerminalSquare, Users, X, Pencil, Trash2, ShieldAlert } from 'lucide-react';
 import { formatDate } from '@/lib/format';
 import { Link, useParams, useLocation } from 'wouter';
@@ -254,13 +254,12 @@ export default function OrganizationDetail() {
         <form onSubmit={e => { e.preventDefault(); addMember.mutate({ userId: memberId }); }} className="space-y-4 pt-4">
           <div className="space-y-2">
             <Label htmlFor="member">User</Label>
-            <select id="member" required value={memberId} onChange={e => setMemberId(e.target.value)}
-              className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm">
+            <Select id="member" required value={memberId} onChange={e => setMemberId(e.target.value)}>
               <option value="" disabled>Select a user</option>
               {outsiders?.map(user => (
                 <option key={user.id} value={user.id}>{user.name} ({user.email})</option>
               ))}
-            </select>
+            </Select>
           </div>
           <div className="flex justify-end gap-2 pt-4">
             <Button type="button" variant="outline" onClick={() => setMemberOpen(false)}>Cancel</Button>

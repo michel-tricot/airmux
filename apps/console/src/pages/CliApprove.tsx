@@ -9,7 +9,7 @@ import {
   getEnrollmentQueryKey,
   ApiError,
 } from '@workspace/api-client-react';
-import { Card, Button, Input, Label } from '@/components/ui/elements';
+import { Card, Button, Input, Label, Select } from '@/components/ui/elements';
 import { TerminalSquare, CheckCircle2 } from 'lucide-react';
 import { formatRelative } from '@/lib/format';
 
@@ -95,12 +95,11 @@ export default function CliApprove() {
             {orgs.length > 0 ? (
               <div className="space-y-2">
                 <Label htmlFor="org">Organization the CLI will act in</Label>
-                <select id="org" value={selected} onChange={e => setOrgId(e.target.value)}
-                  className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm">
+                <Select id="org" value={selected} onChange={e => setOrgId(e.target.value)}>
                   {orgs.map(org => (
                     <option key={org.id} value={org.id}>{org.name}</option>
                   ))}
-                </select>
+                </Select>
               </div>
             ) : (
               <form className="space-y-2" onSubmit={e => { e.preventDefault(); createPersonalOrg.mutate({ data: { name } }); }}>

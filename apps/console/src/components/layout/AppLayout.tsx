@@ -1,13 +1,17 @@
+import { useState } from 'react';
 import { useSession } from '@/lib/session';
 import { orgScope } from '@/lib/api';
-import { useListWorkspaces, getListWorkspacesQueryKey } from '@workspace/api-client-react';
+import { useQueryClient } from '@tanstack/react-query';
+import { useListWorkspaces, useCreateWorkspace, getListWorkspacesQueryKey } from '@workspace/api-client-react';
 import { Link, useLocation } from 'wouter';
 import {
   TerminalSquare, Settings, LogOut, Shield, ArrowLeftRight,
   LayoutGrid, KeyRound, Database, Route as RouteIcon, ShieldCheck, Building2,
 } from 'lucide-react';
-import { Button } from '@/components/ui/elements';
+import { Button, Input, Label, Modal, Select } from '@/components/ui/elements';
 import { cn } from '@/lib/utils';
+
+const NEW_WORKSPACE = '__new__';
 
 const SECTIONS = [
   { label: 'Overview', suffix: '', icon: LayoutGrid },
@@ -20,11 +24,15 @@ const SECTIONS = [
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, orgId, setOrgId, logout } = useSession();
+  const queryClient = useQueryClient();
+  const workspacesKey = [...getListWorkspacesQueryKey(), orgId];
   const { data: workspaces } = useListWorkspaces({
-    query: { queryKey: [...getListWorkspacesQueryKey(), orgId] },
+    query: { queryKey: workspacesKey },
     request: orgScope(orgId!),
   });
   const [location, setLocation] = useLocation();
+  const [createOpen, setCreateOpen] = useState(false);
+  const [wsName, setWsName] = useState('');
 
   // /app/workspaces/<id>[/section] — the id selects the workspace, the tail names the section.
   const match = location.match(/^\/app\/workspaces\/([^/]+)(\/[^/]+)?/);
@@ -32,9 +40,25 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const activeSuffix = match?.[2] ?? '';
 
   const switchWorkspace = (id: string) => {
+    if (id === NEW_WORKSPACE) {
+      setCreateOpen(true);
+      return;
+    }
     // Keep the section when hopping between workspaces so the context survives the switch.
     setLocation(`/app/workspaces/${id}${activeSuffix}`);
   };
+
+  const createWorkspace = useCreateWorkspace({
+    mutation: {
+      onSuccess: (created) => {
+        queryClient.invalidateQueries({ queryKey: workspacesKey });
+        setCreateOpen(false);
+        setWsName('');
+        setLocation(`/app/workspaces/${created.id}`);
+      },
+    },
+    request: orgScope(orgId!),
+  });
 
   return (
     <div className="h-[100dvh] flex w-full overflow-hidden bg-background font-sans">
@@ -63,17 +87,18 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
 
         <div className="p-3 border-b border-border/50 shrink-0">
-          <select
+          <Select
             value={activeWorkspaceId}
             onChange={e => switchWorkspace(e.target.value)}
             aria-label="Workspace"
-            className="w-full bg-muted border border-input hover:border-border rounded-md text-sm font-medium focus:ring-1 focus:ring-primary focus:outline-none px-3 py-2 cursor-pointer transition-colors"
+            className="bg-muted font-medium"
           >
             <option value="" disabled>Select a workspace</option>
             {workspaces?.map(ws => (
               <option key={ws.id} value={ws.id}>{ws.name}</option>
             ))}
-          </select>
+            <option value={NEW_WORKSPACE}>+ New workspace…</option>
+          </Select>
         </div>
 
         <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
@@ -156,6 +181,19 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <main className="flex-1 flex flex-col min-w-0 overflow-auto bg-muted/20 relative">
         {children}
       </main>
+
+      <Modal open={createOpen} onOpenChange={setCreateOpen} title="New Workspace" description="Workspaces group inference keys and members within your organization.">
+        <form onSubmit={e => { e.preventDefault(); createWorkspace.mutate({ data: { name: wsName } }); }} className="space-y-4 pt-4">
+          <div className="space-y-2">
+            <Label htmlFor="new-ws-name">Name</Label>
+            <Input id="new-ws-name" required autoFocus value={wsName} placeholder="e.g. production" onChange={e => setWsName(e.target.value)} />
+          </div>
+          <div className="flex justify-end gap-2 pt-4">
+            <Button type="button" variant="outline" onClick={() => setCreateOpen(false)}>Cancel</Button>
+            <Button type="submit" disabled={createWorkspace.isPending}>Create</Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }
