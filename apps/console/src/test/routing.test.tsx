@@ -1,0 +1,91 @@
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { beforeEach, describe, expect, it } from 'vitest';
+import App from '@/App';
+import { ORG, WORKSPACES } from './msw';
+
+// The console keys the org selection off localStorage; the tests sign in as a
+// member of ORG so the app section renders instead of the org picker.
+beforeEach(() => {
+  localStorage.setItem('airllm_org_id', ORG.id);
+});
+
+function renderAt(path: string) {
+  window.history.replaceState(null, '', path);
+  return render(<App />);
+}
+
+const WS = WORKSPACES[0];
+
+// Every sidebar section has its own URL. Each case visits the deep link
+// directly and asserts the section's page renders — this catches route
+// shadowing if the wouter routes are ever reordered (e.g. the bare
+// `/app/workspaces/:workspaceId` route capturing `/keys`).
+const SECTIONS: Array<{ suffix: string; heading: string | RegExp }> = [
+  { suffix: '', heading: WS.name }, // Overview shows the workspace name
+  { suffix: '/keys', heading: 'API Keys' },
+  { suffix: '/byok', heading: 'BYOK' },
+  { suffix: '/routing', heading: 'Routing' },
+  { suffix: '/policies', heading: 'Policies' },
+  { suffix: '/settings', heading: 'Workspace Settings' },
+];
+
+describe('workspace section deep links', () => {
+  it.each(SECTIONS)('renders the right page for /app/workspaces/:id$suffix', async ({ suffix, heading }) => {
+    renderAt(`/app/workspaces/${WS.id}${suffix}`);
+    expect(await screen.findByRole('heading', { level: 1, name: heading })).toBeInTheDocument();
+    // The workspace dropdown reflects the workspace from the URL.
+    expect(await screen.findByRole('combobox', { name: 'Workspace' })).toHaveValue(WS.id);
+  });
+
+  it('renders the org dashboard at /app and org settings at /app/settings', async () => {
+    const { unmount } = renderAt('/app');
+    expect(await screen.findByRole('heading', { level: 1, name: 'Organization Overview' })).toBeInTheDocument();
+    unmount();
+
+    renderAt('/app/settings');
+    // /app/settings must not be captured by the workspace routes.
+    await waitFor(() => {
+      expect(window.location.pathname).toBe('/app/settings');
+    });
+    expect(screen.queryByRole('combobox', { name: 'Workspace' })).toBeInTheDocument();
+    expect(screen.queryByText('API Keys', { selector: 'h1' })).not.toBeInTheDocument();
+  });
+});
+
+describe('workspace switching keeps the active section', () => {
+  it.each(SECTIONS)('stays on $suffix when switching workspaces', async ({ suffix, heading }) => {
+    const user = userEvent.setup();
+    renderAt(`/app/workspaces/${WORKSPACES[0].id}${suffix}`);
+    await screen.findByRole('heading', { level: 1, name: heading });
+
+    const dropdown = await screen.findByRole('combobox', { name: 'Workspace' });
+    await user.selectOptions(dropdown, WORKSPACES[1].id);
+
+    // URL keeps the section suffix, only the workspace id changes.
+    await waitFor(() => {
+      expect(window.location.pathname).toBe(`/app/workspaces/${WORKSPACES[1].id}${suffix}`);
+    });
+
+    // The section's page renders for the new workspace.
+    const expectedHeading = suffix === '' ? WORKSPACES[1].name : heading;
+    expect(await screen.findByRole('heading', { level: 1, name: expectedHeading })).toBeInTheDocument();
+
+    // The sidebar marks that section as active for the new workspace.
+    const active = document.querySelector(`a[href="/app/workspaces/${WORKSPACES[1].id}${suffix}"]`);
+    expect(active).not.toBeNull();
+    expect(active).toHaveClass('text-primary');
+    expect(active).toHaveTextContent(sectionLabel(suffix));
+  });
+});
+
+function sectionLabel(suffix: string): string {
+  return {
+    '': 'Overview',
+    '/keys': 'API Keys',
+    '/byok': 'BYOK',
+    '/routing': 'Routing',
+    '/policies': 'Policies',
+    '/settings': 'Settings',
+  }[suffix]!;
+}
