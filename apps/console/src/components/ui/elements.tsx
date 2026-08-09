@@ -2,7 +2,8 @@ import React, { forwardRef } from 'react';
 import { cn } from '@/lib/utils';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import * as TabsPrimitive from '@radix-ui/react-tabs';
-import { X, ChevronDown } from 'lucide-react';
+import * as SelectPrimitive from '@radix-ui/react-select';
+import { X, Check, ChevronsUpDown } from 'lucide-react';
 
 export const Button = forwardRef<HTMLButtonElement, React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'default' | 'outline' | 'ghost' | 'destructive' | 'secondary', size?: 'default' | 'sm' | 'lg' | 'icon' }>(
   ({ className, variant = 'default', size = 'default', ...props }, ref) => {
@@ -63,24 +64,94 @@ export const Label = forwardRef<HTMLLabelElement, React.LabelHTMLAttributes<HTML
 );
 Label.displayName = 'Label';
 
-export const Select = forwardRef<HTMLSelectElement, React.SelectHTMLAttributes<HTMLSelectElement>>(
-  ({ className, children, ...props }, ref) => (
-    <div className="relative w-full">
-      <select
-        ref={ref}
-        className={cn(
-          'flex h-9 w-full cursor-pointer appearance-none rounded-md border border-input bg-background px-3 py-1 pr-8 text-sm shadow-sm transition-colors hover:border-border focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50',
-          className
-        )}
-        {...props}
+const ACTION_PREFIX = '__action__:';
+
+export type DropdownOption = { value: string; label: React.ReactNode };
+export type DropdownAction = { label: React.ReactNode; icon?: React.ReactNode; onSelect: () => void };
+
+export const Dropdown = ({
+  value,
+  onValueChange,
+  options,
+  actions,
+  placeholder = 'Select…',
+  disabled,
+  className,
+  'aria-label': ariaLabel,
+}: {
+  value: string;
+  onValueChange: (value: string) => void;
+  options: DropdownOption[];
+  actions?: DropdownAction[];
+  placeholder?: string;
+  disabled?: boolean;
+  className?: string;
+  'aria-label'?: string;
+}) => (
+  <SelectPrimitive.Root
+    value={value}
+    onValueChange={v => {
+      if (v.startsWith(ACTION_PREFIX)) {
+        actions?.[Number(v.slice(ACTION_PREFIX.length))]?.onSelect();
+        return;
+      }
+      onValueChange(v);
+    }}
+    disabled={disabled}
+  >
+    <SelectPrimitive.Trigger
+      aria-label={ariaLabel}
+      className={cn(
+        'flex h-9 w-full items-center justify-between gap-2 rounded-md border border-input bg-background px-3 text-sm shadow-sm transition-colors hover:border-border focus:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 data-[placeholder]:text-muted-foreground',
+        className
+      )}
+    >
+      <span className="truncate text-left">
+        <SelectPrimitive.Value placeholder={placeholder} />
+      </span>
+      <SelectPrimitive.Icon asChild>
+        <ChevronsUpDown className="h-4 w-4 shrink-0 text-muted-foreground" />
+      </SelectPrimitive.Icon>
+    </SelectPrimitive.Trigger>
+    <SelectPrimitive.Portal>
+      <SelectPrimitive.Content
+        position="popper"
+        sideOffset={6}
+        className="z-50 min-w-[var(--radix-select-trigger-width)] overflow-hidden rounded-lg border border-border bg-card text-card-foreground shadow-xl animate-in fade-in-0 zoom-in-95"
       >
-        {children}
-      </select>
-      <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-    </div>
-  )
+        <SelectPrimitive.Viewport className="p-1 max-h-72">
+          {options.map(option => (
+            <SelectPrimitive.Item
+              key={option.value}
+              value={option.value}
+              className="relative flex cursor-pointer select-none items-center rounded-md px-3 py-2.5 pr-9 text-sm outline-none transition-colors data-[highlighted]:bg-muted data-[state=checked]:text-primary"
+            >
+              <SelectPrimitive.ItemText>{option.label}</SelectPrimitive.ItemText>
+              <SelectPrimitive.ItemIndicator className="absolute right-3">
+                <Check className="h-4 w-4" />
+              </SelectPrimitive.ItemIndicator>
+            </SelectPrimitive.Item>
+          ))}
+          {actions && actions.length > 0 && (
+            <>
+              {options.length > 0 && <div className="my-1 h-px bg-border" />}
+              {actions.map((action, i) => (
+                <SelectPrimitive.Item
+                  key={i}
+                  value={`${ACTION_PREFIX}${i}`}
+                  className="flex cursor-pointer select-none items-center justify-between gap-3 rounded-md px-3 py-2.5 text-sm outline-none transition-colors data-[highlighted]:bg-muted"
+                >
+                  <SelectPrimitive.ItemText>{action.label}</SelectPrimitive.ItemText>
+                  {action.icon && <span className="shrink-0 text-muted-foreground">{action.icon}</span>}
+                </SelectPrimitive.Item>
+              ))}
+            </>
+          )}
+        </SelectPrimitive.Viewport>
+      </SelectPrimitive.Content>
+    </SelectPrimitive.Portal>
+  </SelectPrimitive.Root>
 );
-Select.displayName = 'Select';
 
 export const Badge = ({ className, variant = 'default', ...props }: React.HTMLAttributes<HTMLDivElement> & { variant?: 'default' | 'secondary' | 'destructive' | 'outline' | 'success' | 'mono' }) => {
   const variants = {
