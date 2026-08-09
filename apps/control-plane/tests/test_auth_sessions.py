@@ -17,14 +17,14 @@ def _client(cp) -> TestClient:
     return TestClient(cp.app, base_url="https://testserver")
 
 
-def _make_user(c, root, email="m@example.com", *, admin=False, org=None, tmp_path=None):  # noqa: PLR0913 test helper mirrors the fixtures each test holds
+def _make_user(c, cp, email="m@example.com", *, admin=False, org=None, tmp_path=None):  # noqa: PLR0913 test helper mirrors the fixtures each test holds
     """Self-signup is the only way a human gets a password; the admin bit has no API and is flipped in the database."""
     me = c.post("/v1/auth/signup", json={"email": email, "name": email, "password": PASSWORD}).json()["data"]
     assert c.post("/v1/auth/logout", headers=CSRF).status_code == 200
     c.cookies.clear()
     user = {"id": me["user_id"], **me}
     if org is not None:
-        assert c.put(f"/v1/users/{user['id']}/orgs/{org}", headers=root).status_code == 200
+        assert c.put(f"/v1/org/users/{user['id']}", headers=cp.headers(org)).status_code == 200
     if admin:
         assert tmp_path is not None
 
@@ -50,7 +50,7 @@ def test_password_login_sets_cookie_and_cookie_reaches_org_routes(tmp_path):
     root = cp.headers()
     with _client(cp) as c:
         org_id = make_org(c, root, "o1")
-        user = _make_user(c, root, org=org_id)
+        user = _make_user(c, cp, org=org_id)
         resp = c.post("/v1/auth/login", json={"email": "m@example.com", "password": PASSWORD})
         assert resp.status_code == 200
         set_cookie = resp.headers["set-cookie"]
@@ -69,9 +69,8 @@ def test_password_login_sets_cookie_and_cookie_reaches_org_routes(tmp_path):
 
 def test_wrong_password_and_unknown_email_are_indistinguishable_401s(tmp_path):
     cp = setup_control_plane(tmp_path)
-    root = cp.headers()
     with _client(cp) as c:
-        _make_user(c, root)
+        _make_user(c, cp)
         wrong = c.post("/v1/auth/login", json={"email": "m@example.com", "password": "nope-nope-nope"})
         unknown = c.post("/v1/auth/login", json={"email": "ghost@example.com", "password": "nope-nope-nope"})
         assert wrong.status_code == unknown.status_code == 401
@@ -80,9 +79,8 @@ def test_wrong_password_and_unknown_email_are_indistinguishable_401s(tmp_path):
 
 def test_cookie_without_csrf_header_or_with_cross_site_fetch_site_is_403(tmp_path):
     cp = setup_control_plane(tmp_path)
-    root = cp.headers()
     with _client(cp) as c:
-        _make_user(c, root, admin=True, tmp_path=tmp_path)
+        _make_user(c, cp, admin=True, tmp_path=tmp_path)
         _login(c)
         assert c.get("/v1/orgs", headers=CSRF).status_code == 200
         assert c.get("/v1/orgs").status_code == 403
@@ -94,7 +92,7 @@ def test_bearer_wins_over_cookie_and_a_bad_bearer_never_falls_back(tmp_path):
     cp = setup_control_plane(tmp_path)
     root = cp.headers()
     with _client(cp) as c:
-        _make_user(c, root, admin=True, tmp_path=tmp_path)
+        _make_user(c, cp, admin=True, tmp_path=tmp_path)
         _login(c)
         assert c.get("/v1/orgs", headers={**CSRF, "authorization": "Bearer sk-mgmt-garbage"}).status_code == 401
         assert c.get("/v1/orgs", headers=root).status_code == 200
@@ -106,14 +104,14 @@ def test_x_org_id_requires_membership_and_absence_requires_instance_admin(tmp_pa
     with _client(cp) as c:
         o1 = make_org(c, root, "o1")
         o2 = make_org(c, root, "o2")
-        _make_user(c, root, org=o1)
+        _make_user(c, cp, org=o1)
         _login(c)
         assert c.get("/v1/org/workspaces", headers={**CSRF, "X-Org-Id": str(o1)}).status_code == 200
         assert c.get("/v1/org/workspaces", headers={**CSRF, "X-Org-Id": str(o2)}).status_code == 403
         assert c.get("/v1/org/workspaces", headers={**CSRF, "X-Org-Id": "ghost"}).status_code == 403
         assert c.get("/v1/orgs", headers=CSRF).status_code == 403
 
-        _make_user(c, root, email="root@example.com", admin=True, tmp_path=tmp_path)
+        _make_user(c, cp, email="root@example.com", admin=True, tmp_path=tmp_path)
         _login(c, email="root@example.com")
         assert c.get("/v1/orgs", headers=CSRF).status_code == 200
         assert c.get("/v1/org/workspaces", headers={**CSRF, "X-Org-Id": str(o1)}).status_code == 200
@@ -121,9 +119,8 @@ def test_x_org_id_requires_membership_and_absence_requires_instance_admin(tmp_pa
 
 def test_expired_session_is_401_and_half_life_touch_slides_expiry(tmp_path):
     cp = setup_control_plane(tmp_path)
-    root = cp.headers()
     with _client(cp) as c:
-        _make_user(c, root, admin=True, tmp_path=tmp_path)
+        _make_user(c, cp, admin=True, tmp_path=tmp_path)
         _login(c)
 
         async def expire():
@@ -156,9 +153,8 @@ def test_expired_session_is_401_and_half_life_touch_slides_expiry(tmp_path):
 
 def test_logout_revokes_session_and_clears_cookie(tmp_path):
     cp = setup_control_plane(tmp_path)
-    root = cp.headers()
     with _client(cp) as c:
-        _make_user(c, root, admin=True, tmp_path=tmp_path)
+        _make_user(c, cp, admin=True, tmp_path=tmp_path)
         _login(c)
         stolen = c.cookies[SESSION_COOKIE]
         assert c.get("/v1/orgs", headers=CSRF).status_code == 200
@@ -171,9 +167,8 @@ def test_logout_revokes_session_and_clears_cookie(tmp_path):
 
 def test_self_change_requires_current_password(tmp_path):
     cp = setup_control_plane(tmp_path)
-    root = cp.headers()
     with _client(cp) as c:
-        _make_user(c, root)
+        _make_user(c, cp)
         _login(c)
         wrong = c.post("/v1/auth/password", json={"current_password": "wrong-wrong-1", "new_password": "next-next-next1"}, headers=CSRF)
         assert wrong.status_code == 403
@@ -185,9 +180,8 @@ def test_self_change_requires_current_password(tmp_path):
 
 def test_login_mints_a_fresh_session_each_time(tmp_path):
     cp = setup_control_plane(tmp_path)
-    root = cp.headers()
     with _client(cp) as c:
-        _make_user(c, root, admin=True, tmp_path=tmp_path)
+        _make_user(c, cp, admin=True, tmp_path=tmp_path)
         _login(c)
         first = c.cookies[SESSION_COOKIE]
         _login(c)
@@ -231,9 +225,8 @@ def test_signup_creates_user_identity_and_session(tmp_path):
 
 def test_signup_duplicate_email_is_409(tmp_path):
     cp = setup_control_plane(tmp_path)
-    root = cp.headers()
     with _client(cp) as c:
-        _make_user(c, root)
+        _make_user(c, cp)
         assert c.post("/v1/auth/signup", json={"email": "m@example.com", "password": PASSWORD}).status_code == 409
 
 

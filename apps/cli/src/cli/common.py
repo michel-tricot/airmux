@@ -18,13 +18,16 @@ RESOURCES = "Resources"
 TESTING = "Testing"
 
 orgs_app = typer.Typer(help="Orgs")
+org_members_app = typer.Typer(help="Org members, the users a management key's org is made of")
+orgs_app.add_typer(org_members_app, name="members", no_args_is_help=True)
 workspaces_app = typer.Typer(help="Workspaces, the org scopes inference keys live in")
 workspace_members_app = typer.Typer(help="Workspace members, drawn from the org")
 workspaces_app.add_typer(workspace_members_app, name="members", no_args_is_help=True)
 users_app = typer.Typer(help="Users and org memberships")
 service_accounts_app = typer.Typer(help="Service accounts, machine principals with derived emails")
 inference_keys_app = typer.Typer(help="Inference API keys, the caller credentials the gateway verifies")
-management_keys_app = typer.Typer(help="Management API keys, user-bound credentials for this API")
+management_keys_app = typer.Typer(help="Management API keys, user-bound credentials for one org")
+instance_keys_app = typer.Typer(help="Instance API keys, admin credentials for the instance endpoints")
 providers_app = typer.Typer(help="Upstream providers")
 models_app = typer.Typer(help="Routable models")
 bundles_app = typer.Typer(help="Signed policy bundles")
@@ -39,6 +42,7 @@ for name, sub in (
     ("service-accounts", service_accounts_app),
     ("inference-keys", inference_keys_app),
     ("management-keys", management_keys_app),
+    ("instance-keys", instance_keys_app),
     ("providers", providers_app),
     ("models", models_app),
     ("bundles", bundles_app),

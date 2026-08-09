@@ -6,12 +6,13 @@ from typing import ClassVar, Self
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel, field_validator
-from sqlmodel import Field
+from sqlmodel import Field, col, select
 
 from control_plane.models.audit import audited
 from control_plane.models.common import Identified, Tombstonable
 from control_plane.models.common.base import Record
 from control_plane.models.common.wire import RecordCreate, RecordOut
+from control_plane.models.org_membership import OrgMembership
 
 SERVICE_ACCOUNT_EMAIL_DOMAIN = "airbytesvcaccount.ai"
 
@@ -30,6 +31,19 @@ class User(Record, Identified, Tombstonable, table=True):
     api_hidden: ClassVar[frozenset[str]] = frozenset({"instance_admin"})
     api_readonly: ClassVar[frozenset[str]] = frozenset({"service_account"})
     api_immutable: ClassVar[frozenset[str]] = frozenset({"email"})
+
+    @classmethod
+    async def members_of(cls, org_id: UUID) -> list[Self]:
+        """The users holding a membership in the org, by email; the mirror of Org.joined_by.
+
+        The membership ids stay in the database as a subquery rather than round-tripping through
+        Python: Postgres plans it as the same hash join an explicit join would produce, and an
+        empty org is an empty result instead of a case to guard.
+        """
+        return await cls.find(
+            col(cls.id).in_(select(OrgMembership.user_id).where(OrgMembership.org_id == org_id)),
+            order_by=col(cls.email),
+        )
 
     @classmethod
     def new_service_account(cls, name: str) -> Self:

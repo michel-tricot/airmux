@@ -9,6 +9,10 @@ under an org, workspace_membership's composite foreign keys make cross-org membe
 structurally impossible (with a cascade evicting users whose org membership goes), and
 inference keys live in workspaces with org_id kept consistent by a composite foreign key.
 
+Credentials split by reach: management_key names its org and cannot omit it, instance_key carries
+instance-wide authority for admins, and data_plane_instance registers against the instance with no
+org of its own.
+
 Server-minted ids default to uuidv7(), native on Postgres 18; on 16 and 17 the migration
 detects the version and installs a pure-SQL equivalent (millisecond timestamp overlaid on
 gen_random_uuid with the version bits set to 7) before any table references it. The default is
@@ -42,6 +46,7 @@ TOMBSTONED = (
     "inference_key",
     "auth_identity",
     "auth_session",
+    "instance_key",
     "management_key",
     "model",
     "org_membership",
@@ -52,6 +57,7 @@ TOMBSTONED = (
 
 AUDITED = (
     ("inference_key", ("id",)),
+    ("instance_key", ("id",)),
     ("management_key", ("id",)),
     ("model", ("id",)),
     ("org", ("id",)),
@@ -81,7 +87,6 @@ def upgrade() -> None:
     op.create_table(
         "data_plane_instance",
         sa.Column("instance_id", sa.Uuid(), nullable=False),
-        sa.Column("org_id", sa.Uuid(), nullable=True),
         sa.Column("version", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("bundle_id", sa.Uuid(), nullable=True),
         sa.Column("address", sqlmodel.sql.sqltypes.AutoString(), nullable=True),
@@ -211,8 +216,30 @@ def upgrade() -> None:
         sa.Column("created_at", UTCDateTime(), server_default=sa.text("now()"), nullable=False),
         sa.Column("updated_at", UTCDateTime(), server_default=sa.text("now()"), nullable=False),
         sa.Column("deleted_at", UTCDateTime(), nullable=True),
+        sa.Column("org_id", sa.Uuid(), nullable=False),
         sa.Column("id", sa.Uuid(), server_default=sa.text("uuidv7()"), nullable=False),
-        sa.Column("org_id", sa.Uuid(), nullable=True),
+        sa.Column("user_id", sa.Uuid(), nullable=False),
+        sa.Column("token_hash", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+        sa.Column("revoked", sa.Boolean(), nullable=False),
+        sa.Column("scopes", sa.JSON(), nullable=True),
+        sa.Column("label", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+        sa.ForeignKeyConstraint(
+            ["org_id"],
+            ["org.id"],
+        ),
+        sa.ForeignKeyConstraint(
+            ["user_id"],
+            ["user.id"],
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("token_hash"),
+    )
+    op.create_table(
+        "instance_key",
+        sa.Column("created_at", UTCDateTime(), server_default=sa.text("now()"), nullable=False),
+        sa.Column("updated_at", UTCDateTime(), server_default=sa.text("now()"), nullable=False),
+        sa.Column("deleted_at", UTCDateTime(), nullable=True),
+        sa.Column("id", sa.Uuid(), server_default=sa.text("uuidv7()"), nullable=False),
         sa.Column("user_id", sa.Uuid(), nullable=False),
         sa.Column("token_hash", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("revoked", sa.Boolean(), nullable=False),
@@ -263,6 +290,7 @@ def upgrade() -> None:
         ),
         sa.PrimaryKeyConstraint("user_id", "org_id"),
     )
+    op.create_index(op.f("ix_org_membership_org_id"), "org_membership", ["org_id"], unique=False)
     op.create_table(
         "cli_auth_request",
         sa.Column("created_at", UTCDateTime(), server_default=sa.text("now()"), nullable=False),
@@ -368,8 +396,10 @@ def downgrade() -> None:
     op.drop_table("workspace_membership")
     op.drop_table("workspace")
     op.drop_table("cli_auth_request")
+    op.drop_index(op.f("ix_org_membership_org_id"), table_name="org_membership")
     op.drop_table("org_membership")
     op.drop_table("model")
+    op.drop_table("instance_key")
     op.drop_table("management_key")
     op.drop_table("bundle")
     op.drop_table("auth_session")

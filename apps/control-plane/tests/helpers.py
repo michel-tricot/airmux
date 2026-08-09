@@ -17,7 +17,7 @@ from contract import private_key_to_b64
 from control_plane.app import create_app
 from control_plane.config import BundlePolicy, DatabaseConfig, Settings
 from control_plane.db import standalone_transaction
-from control_plane.keys import mint_management_key
+from control_plane.keys import mint_instance_key, mint_management_key
 from control_plane.models import User, set_actor
 
 PROVIDER = {
@@ -40,7 +40,11 @@ class ControlPlane:
     db_url: str
 
     def headers(self, org_id: UUID | None = None, scopes: list[str] | None = None) -> dict[str, str]:
-        """Mint a real backed management key for the shared fixture admin; instance_admin backs both scopes."""
+        """Mint a real backed key for the shared fixture admin: an org key when org_id names one, an instance key otherwise.
+
+        The key type is what carries the scope now, so the two doors a test can knock on are the
+        two tables; instance_admin backs both.
+        """
 
         async def mint() -> str:
             async with standalone_transaction(self.db_url):
@@ -51,7 +55,10 @@ class ControlPlane:
                     await admin.save()
                 else:
                     await set_actor(admin.id)
-                _, token = await mint_management_key(org_id, admin.id, label="fixture-admin", scopes=scopes)
+                if org_id is None:
+                    _, token = await mint_instance_key(admin.id, label="fixture-admin", scopes=scopes)
+                else:
+                    _, token = await mint_management_key(org_id, admin.id, label="fixture-admin", scopes=scopes)
                 return token
 
         return {"authorization": f"Bearer {asyncio.run(mint())}"}

@@ -13,8 +13,13 @@ from control_plane.models.common.wire import RecordOut
 
 
 class DataPlaneInstance(Record, table=True):
+    """A data plane that has heartbeated, registered against the instance rather than any one org.
+
+    A data plane polls whichever org's bundle its config names, so the registration itself carries
+    no org: liveness is derived from last_seen and the row survives as history.
+    """
+
     instance_id: UUID = Field(primary_key=True)
-    org_id: UUID | None = None
     version: str
     bundle_id: UUID | None = None
     address: str | None = None
@@ -31,7 +36,6 @@ class DataPlaneInstance(Record, table=True):
 
 class DataPlaneInstanceOut(RecordOut[DataPlaneInstance]):
     instance_id: UUID
-    org_id: UUID | None
     version: str
     bundle_id: UUID | None
     address: str | None

@@ -13,6 +13,7 @@ dist/
 .secrets
 notes/model-metadata/
 
+.claude/worktrees/
 
 # Node / pnpm workspace
 node_modules

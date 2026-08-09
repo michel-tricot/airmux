@@ -6,18 +6,24 @@ from uuid import UUID
 
 from pydantic import BaseModel
 from sqlalchemy import JSON
-from sqlmodel import Field
+from sqlmodel import Field, col
 
 from control_plane.authz import Scope
 from control_plane.models.audit import audited
-from control_plane.models.common import Identified, Tombstonable
+from control_plane.models.common import Identified, OrgOwned, Tombstonable
 from control_plane.models.common.base import Record
 from control_plane.models.common.wire import RecordOut
 
 
 @audited
-class ManagementKey(Record, Identified, Tombstonable, table=True):
-    org_id: UUID | None = None
+class ManagementKey(Record, Identified, OrgOwned, Tombstonable, table=True):
+    """A user's bearer credential for one org.
+
+    org_id is mandatory, which is what makes owned_by the lookup for every org-scoped route: the key
+    belongs to exactly one org, and no management key can express instance scope by omitting it.
+    """
+
+    org_id: UUID = Field(foreign_key="org.id")
     user_id: UUID = Field(foreign_key="user.id")
     token_hash: str = Field(unique=True)
     revoked: bool = False
@@ -29,8 +35,13 @@ class ManagementKey(Record, Identified, Tombstonable, table=True):
 
     @classmethod
     async def retire_for_client(cls, user_id: UUID, org_id: UUID, label: str) -> list[Self]:
-        """Revoke the live keys this client label holds for the org, so a re-login replaces its key instead of accumulating."""
-        keys = [k for k in await cls.find(cls.user_id == user_id, cls.org_id == org_id, cls.label == label) if not k.revoked]
+        """Revoke the live keys this client label holds for the org, so a re-login replaces its key instead of accumulating.
+
+        The live filter belongs in the query, not in Python: already-revoked keys are not rows this
+        needs to read. The writes stay one per key because that is what the model API expresses, and
+        a client label holds one live key in the ordinary case.
+        """
+        keys = await cls.find(cls.user_id == user_id, cls.org_id == org_id, cls.label == label, col(cls.revoked).is_(False))
         for key in keys:
             key.revoked = True
             await key.save()
@@ -39,7 +50,7 @@ class ManagementKey(Record, Identified, Tombstonable, table=True):
 
 class ManagementKeyOut(RecordOut[ManagementKey]):
     id: UUID
-    org_id: UUID | None
+    org_id: UUID
     user_id: UUID
     revoked: bool
     scopes: list[str] | None
@@ -51,7 +62,7 @@ class ManagementKeyOut(RecordOut[ManagementKey]):
 
 class ManagementKeyMintedOut(BaseModel):
     id: UUID
-    org_id: UUID | None
+    org_id: UUID
     user_id: UUID
     scopes: list[str] | None
     label: str

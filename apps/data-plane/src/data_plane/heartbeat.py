@@ -23,12 +23,7 @@ except PackageNotFoundError:  # pragma: no cover - only when running from a non-
 
 async def heartbeat_once(config: Config, holder: BundleHolder, instance_id: UUID) -> None:
     snapshot = holder.snapshot
-    body = HeartbeatV1(
-        instance_id=instance_id,
-        version=VERSION,
-        org_id=config.bundle.org,
-        bundle_id=snapshot.bundle.bundle_id if snapshot else None,
-    )
+    body = HeartbeatV1(instance_id=instance_id, version=VERSION, bundle_id=snapshot.bundle.bundle_id if snapshot else None)
     resp = await client.post(
         f"{config.control_plane.url}/v1/heartbeat",
         headers={"authorization": f"Bearer {config.control_plane.token}"},
