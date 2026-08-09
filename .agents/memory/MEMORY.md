@@ -1,2 +1,3 @@
 - [Orval zod v4 import](orval-zod-v4.md) — codegen script rewrites generated zod import to 'zod/v4' after orval; keep that step when touching codegen.
 - [Replit workflow host binding](replit-workflow-host-binding.md) — monitored backend services must bind to 0.0.0.0, not loopback-only.
+- [Replit DATABASE_URL and asyncpg](database-url-asyncpg.md) — normalize managed sslmode URL parameters for asyncpg while keeping DATABASE_URL as the sole source.
