@@ -1,6 +1,6 @@
 # airllm
 
-An LLM gateway prototype with a strict control plane / data plane split.
+An LLM gateway prototype with a strict control plane / data plane split, plus a new admin console (pnpm workspace, merged from a separate Replit project that briefly lived in `webapp2/`).
 
 ## What it does
 
@@ -51,12 +51,34 @@ apps/
   cli/           # airllm / airllmcp CLI
   control-plane/ # FastAPI admin + compile API
   data-plane/    # Starlette inference gateway
-  webapp/        # React/Vite console (port 3000)
+  webapp/        # older React/Vite console (port 3000)
 packages/
   contract/      # shared bundle/event schemas, signing, tokens
+artifacts/       # pnpm workspace apps (new console)
+  api-server/       # Express 5 stand-in backend with seed data
+  gateway-console/  # React/Vite admin console ("Precision Control Room")
+  mockup-sandbox/   # canvas component previews
+lib/             # pnpm workspace libs
+  api-spec/         # openapi.yaml — API contract (codegen via orval)
+  api-zod/          # generated zod schemas
+  api-client-react/ # generated react-query client
+  db/               # Drizzle schema (Postgres)
 docs/            # MkDocs site
 examples/        # ready-made curl / Python scripts
 notes/           # design docs and prototype spec
+scripts/         # shell helpers + pnpm workspace scripts package
+```
+
+## New admin console (pnpm workspace)
+
+Tenancy model: organizations → (members, management keys, workspaces); workspaces → (workspace members, inference keys); users are top-level and can belong to multiple orgs.
+
+The `artifacts/api-server` backend is a placeholder; the plan is to swap in the real gateway backend by replacing `lib/api-spec/openapi.yaml` and re-running codegen.
+
+```bash
+pnpm install
+pnpm run build       # typecheck + build all workspace packages
+pnpm run typecheck
 ```
 
 ## Development commands
