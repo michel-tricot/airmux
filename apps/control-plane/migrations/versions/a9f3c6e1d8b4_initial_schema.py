@@ -9,6 +9,11 @@ under an org, workspace_membership's composite foreign keys make cross-org membe
 structurally impossible (with a cascade evicting users whose org membership goes), and
 inference keys live in workspaces with org_id kept consistent by a composite foreign key.
 
+Server-minted ids default to uuidv7(), native on Postgres 18; on 16 and 17 the migration
+detects the version and installs a pure-SQL equivalent (millisecond timestamp overlaid on
+gen_random_uuid with the version bits set to 7) before any table references it. The default is
+only the backstop for raw inserts; the ORM mints ids client-side through contract.uuid7.
+
 Revision ID: a9f3c6e1d8b4
 Revises:
 Create Date: 2026-08-08
@@ -22,6 +27,7 @@ from alembic import op
 
 from control_plane.models.audit import audit_trigger_ddl_v1, audit_trigger_drop_ddl_v1
 from control_plane.models.common.column_types import UTCDateTime
+from control_plane.models.common.identified import UUIDV7_SHIM_DDL_V1, needs_uuidv7_shim
 from control_plane.models.common.tombstone import touch_trigger_ddl_v1, touch_trigger_drop_ddl_v1
 
 revision = "a9f3c6e1d8b4"
@@ -58,6 +64,8 @@ AUDITED = (
 
 
 def upgrade() -> None:
+    if needs_uuidv7_shim(op.get_bind()):
+        op.execute(UUIDV7_SHIM_DDL_V1)
     op.create_table(
         "audit_log",
         sa.Column("id", sa.Integer(), nullable=False),
@@ -372,3 +380,5 @@ def downgrade() -> None:
     op.drop_table("user")
     op.drop_table("data_plane_instance")
     op.drop_table("audit_log")
+    if needs_uuidv7_shim(op.get_bind()):
+        op.execute("DROP FUNCTION uuidv7()")

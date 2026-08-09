@@ -37,7 +37,7 @@ ORG = "org-acc"
 MODEL = "echo"
 READY_TIMEOUT = 30.0
 
-PG_IMAGE = "postgres:18"
+PG_IMAGE = "postgres:16"
 PG_COMMAND = "postgres -c fsync=off -c synchronous_commit=off -c full_page_writes=off"
 
 _pg: dict[str, DockerContainer | str] = {}
@@ -57,7 +57,7 @@ def pytest_configure(config: pytest.Config) -> None:
         .with_env("POSTGRES_DB", "postgres")
         .with_command(PG_COMMAND)
         .with_exposed_ports(5432)
-        .with_tmpfs_mount("/var/lib/postgresql")
+        .with_tmpfs_mount("/var/lib/postgresql/data")
     )
     container.start()
     ready = lambda: container.exec(["psql", "-h", "127.0.0.1", "-U", "test", "-d", "postgres", "-c", "SELECT 1"]).exit_code == 0  # noqa: E731

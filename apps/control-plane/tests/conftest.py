@@ -26,7 +26,7 @@ from testcontainers.core.container import DockerContainer
 
 CONTROL_PLANE_DIR = Path(__file__).resolve().parents[1]
 
-PG_IMAGE = "postgres:18"
+PG_IMAGE = "postgres:16"
 PG_COMMAND = "postgres -c fsync=off -c synchronous_commit=off -c full_page_writes=off"
 
 _container_key: pytest.StashKey[DockerContainer] = pytest.StashKey()
@@ -53,7 +53,7 @@ def _start_server(config: pytest.Config) -> str:
         .with_env("POSTGRES_DB", "postgres")
         .with_command(PG_COMMAND)
         .with_exposed_ports(5432)
-        .with_tmpfs_mount("/var/lib/postgresql")
+        .with_tmpfs_mount("/var/lib/postgresql/data")
     )
     container.start()
     config.stash[_container_key] = container
