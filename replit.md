@@ -80,6 +80,42 @@ bun run build        # typecheck + build all workspace packages
 bun run typecheck
 ```
 
+## Replit development workflow
+
+Replit changes should be limited to the console in `apps/console`. Do not
+rewrite, migrate, or scaffold the Python backend as part of console work.
+The registered Replit artifact is the console and its managed workflow runs:
+
+```bash
+bun run --filter @workspace/gateway-console dev
+```
+
+The root equivalent is `bun run dev`. The console expects the control plane
+on `http://127.0.0.1:8000` by default and proxies `/v1` requests there.
+
+When the backend is needed for local console development, Replit's managed
+PostgreSQL provides the `PGUSER`, `PGPASSWORD`, `PGHOST`, `PGPORT`, and
+`PGDATABASE` variables used by `airllm.yml`. Run the backend bootstrap from the
+repository root:
+
+```bash
+./scripts/replit-backend.sh
+```
+
+That script runs the required sequence:
+
+1. `uv run airllmcp keygen` (when `.airllm/signing.key` and
+   `.airllm/signing.pub` do not exist)
+2. `uv run airllmcp migrate`
+3. `uv run airllmcp taxonomy`
+4. `uv run airllmcp fixtures`
+5. `uv run airllmcp serve --dev` (the helper adds `--host 0.0.0.0` for Replit)
+
+If migration fails, the script drops and recreates the development database,
+then repeats the full sequence. This reset is intentionally destructive and
+is only for the Replit development database. The backend support workflow is
+separate from the console artifact; Replit code changes remain console-only.
+
 ## Development commands
 
 ```bash
