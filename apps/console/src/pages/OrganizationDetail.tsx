@@ -1,46 +1,89 @@
 import { useState } from 'react';
-import { useGetOrganization, useListWorkspaces, useListManagementKeys, useListOrgMembers, useCreateWorkspace, useCreateManagementKey, useAddOrgMember, useUpdateOrgMember, useRemoveOrgMember, useDeleteOrganization, useRevokeManagementKey, getListWorkspacesQueryKey, getListManagementKeysQueryKey, getListOrgMembersQueryKey, getListOrganizationsQueryKey, getGetOrganizationQueryKey, getListUserOrganizationsQueryKey } from '@workspace/api-client-react';
+import {
+  useGetOrg,
+  useDeleteOrg,
+  useUpdateOrg,
+  useListWorkspaces,
+  useCreateWorkspace,
+  useListManagementKeys,
+  useRevokeManagementKey,
+  useListUsers,
+  useListOrgUsers,
+  useAddOrgUser,
+  useRemoveOrgUser,
+  getListOrgsQueryKey,
+  getGetOrgQueryKey,
+  getListWorkspacesQueryKey,
+  getListManagementKeysQueryKey,
+  getListOrgUsersQueryKey,
+} from '@workspace/api-client-react';
 import { Card, Button, Input, Label, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Modal, Badge, Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/elements';
-import { Building2, Plus, ArrowLeft, Key, TerminalSquare, Users, Trash2, ShieldAlert } from 'lucide-react';
+import { Building2, Plus, ArrowLeft, Key, TerminalSquare, Users, X, Pencil, Trash2, ShieldAlert } from 'lucide-react';
 import { formatDate } from '@/lib/format';
 import { Link, useParams, useLocation } from 'wouter';
 import { useQueryClient } from '@tanstack/react-query';
-import { KeyRevealDialog } from '@/components/KeyRevealDialog';
+import { orgScope } from '@/lib/api';
 
 export default function OrganizationDetail() {
-  const { id } = useParams();
-  const orgId = Number(id);
+  const { orgId } = useParams();
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
+  const scope = orgScope(orgId!);
 
-  const { data: org, isLoading: loadingOrg } = useGetOrganization(orgId, { query: { enabled: !!orgId, queryKey: getGetOrganizationQueryKey(orgId) } });
-  const { data: workspaces } = useListWorkspaces(orgId, { query: { enabled: !!orgId, queryKey: getListWorkspacesQueryKey(orgId) } });
-  const { data: mKeys } = useListManagementKeys(orgId, { query: { enabled: !!orgId, queryKey: getListManagementKeysQueryKey(orgId) } });
-  const { data: members } = useListOrgMembers(orgId, { query: { enabled: !!orgId, queryKey: getListOrgMembersQueryKey(orgId) } });
+  const workspacesKey = [...getListWorkspacesQueryKey(), orgId];
+  const keysKey = [...getListManagementKeysQueryKey(), orgId];
+  const membersKey = [...getListOrgUsersQueryKey(), orgId];
 
-  // Dialogs
+  const { data: org, isLoading } = useGetOrg(orgId!, { query: { queryKey: [...getGetOrgQueryKey(orgId!)] } });
+
+  const { data: workspaces } = useListWorkspaces({ query: { queryKey: workspacesKey }, request: scope });
+  const { data: keys } = useListManagementKeys({ query: { queryKey: keysKey }, request: scope });
+  const { data: members } = useListOrgUsers({ query: { queryKey: membersKey }, request: scope });
+  const { data: users } = useListUsers();
+  const outsiders = users?.filter(u => !members?.some(m => m.user_id === u.id));
+
   const [wsOpen, setWsOpen] = useState(false);
-  const [mkOpen, setMkOpen] = useState(false);
   const [memberOpen, setMemberOpen] = useState(false);
+  const [renameOpen, setRenameOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [wsName, setWsName] = useState('');
+  const [memberId, setMemberId] = useState('');
+  const [name, setName] = useState('');
 
-  // Forms
-  const [wsForm, setWsForm] = useState({ name: '', slug: '', description: '' });
-  const [mkForm, setMkForm] = useState({ name: '' });
-  const [memberForm, setMemberForm] = useState({ userId: '', role: 'member' as any });
+  const createWorkspace = useCreateWorkspace({
+    mutation: { onSuccess: () => { queryClient.invalidateQueries({ queryKey: workspacesKey }); setWsOpen(false); setWsName(''); } },
+    request: scope,
+  });
+  const revokeKey = useRevokeManagementKey({
+    mutation: { onSuccess: () => queryClient.invalidateQueries({ queryKey: keysKey }) },
+    request: scope,
+  });
+  const addMember = useAddOrgUser({
+    mutation: { onSuccess: () => { queryClient.invalidateQueries({ queryKey: membersKey }); setMemberOpen(false); setMemberId(''); } },
+    request: scope,
+  });
+  const removeMember = useRemoveOrgUser({
+    mutation: { onSuccess: () => queryClient.invalidateQueries({ queryKey: membersKey }) },
+    request: scope,
+  });
+  const rename = useUpdateOrg({
+    mutation: {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getListOrgsQueryKey() });
+        queryClient.invalidateQueries({ queryKey: getGetOrgQueryKey(orgId!) });
+        setRenameOpen(false);
+      },
+    },
+  });
+  const deleteOrg = useDeleteOrg({
+    mutation: {
+      onSuccess: () => { queryClient.invalidateQueries({ queryKey: getListOrgsQueryKey() }); setLocation('/organizations'); },
+      onError: (error) => setDeleteError(error.message),
+    },
+  });
 
-  // Key Reveal
-  const [createdKey, setCreatedKey] = useState<any>(null);
-
-  // Mutations
-  const createWs = useCreateWorkspace({ mutation: { onSuccess: () => { queryClient.invalidateQueries({ queryKey: getListWorkspacesQueryKey(orgId) }); setWsOpen(false); } } });
-  const createMk = useCreateManagementKey({ mutation: { onSuccess: (data) => { queryClient.invalidateQueries({ queryKey: getListManagementKeysQueryKey(orgId) }); setMkOpen(false); setCreatedKey(data); } } });
-  const addMember = useAddOrgMember({ mutation: { onSuccess: (data, variables) => { queryClient.invalidateQueries({ queryKey: getListOrgMembersQueryKey(orgId) }); queryClient.invalidateQueries({ queryKey: getListUserOrganizationsQueryKey(variables.data.userId) }); setMemberOpen(false); } } });
-  const removeMember = useRemoveOrgMember({ mutation: { onSuccess: (data, variables) => { queryClient.invalidateQueries({ queryKey: getListOrgMembersQueryKey(orgId) }); queryClient.invalidateQueries({ queryKey: getListUserOrganizationsQueryKey(variables.userId) }); } } });
-  const revokeKey = useRevokeManagementKey({ mutation: { onSuccess: () => queryClient.invalidateQueries({ queryKey: getListManagementKeysQueryKey(orgId) }) } });
-  const deleteOrg = useDeleteOrganization({ mutation: { onSuccess: () => { queryClient.invalidateQueries({ queryKey: getListOrganizationsQueryKey() }); setLocation('/organizations'); } } });
-
-  if (loadingOrg) return <div className="p-8 text-center">Loading...</div>;
+  if (isLoading) return <div className="p-8 text-center text-muted-foreground font-mono text-sm">LOADING...</div>;
   if (!org) return <div className="p-8 text-center text-destructive">Organization not found</div>;
 
   return (
@@ -56,25 +99,31 @@ export default function OrganizationDetail() {
           </div>
           <div>
             <h1 className="text-3xl font-bold tracking-tight">{org.name}</h1>
-            <p className="text-muted-foreground font-mono text-sm">{org.slug}</p>
+            <p className="text-muted-foreground font-mono text-sm">{org.id}</p>
           </div>
         </div>
-        <Button variant="outline" className="text-destructive hover:bg-destructive hover:text-destructive-foreground" onClick={() => setDeleteOpen(true)}>
-          <Trash2 className="w-4 h-4 mr-2" /> Delete Organization
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => { setName(org.name); setRenameOpen(true); }}>
+            <Pencil className="w-4 h-4 mr-2" /> Rename
+          </Button>
+          <Button variant="outline" className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
+            onClick={() => { setDeleteError(null); setDeleteOpen(true); }}>
+            <Trash2 className="w-4 h-4 mr-2" /> Delete
+          </Button>
+        </div>
       </div>
 
       <Tabs defaultValue="workspaces" className="w-full">
         <TabsList className="mb-4">
-          <TabsTrigger value="workspaces" className="gap-2"><TerminalSquare className="w-4 h-4"/> Workspaces</TabsTrigger>
-          <TabsTrigger value="keys" className="gap-2"><Key className="w-4 h-4"/> Management Keys</TabsTrigger>
-          <TabsTrigger value="members" className="gap-2"><Users className="w-4 h-4"/> Members</TabsTrigger>
+          <TabsTrigger value="workspaces" className="gap-2"><TerminalSquare className="w-4 h-4" /> Workspaces</TabsTrigger>
+          <TabsTrigger value="keys" className="gap-2"><Key className="w-4 h-4" /> Management Keys</TabsTrigger>
+          <TabsTrigger value="members" className="gap-2"><Users className="w-4 h-4" /> Members</TabsTrigger>
         </TabsList>
 
         <TabsContent value="workspaces" className="space-y-4 mt-0">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-lg font-semibold">Workspaces</h2>
-            <Button onClick={() => setWsOpen(true)} size="sm"><Plus className="w-4 h-4 mr-1"/> New Workspace</Button>
+            <Button onClick={() => setWsOpen(true)} size="sm"><Plus className="w-4 h-4 mr-1" /> New Workspace</Button>
           </div>
           <Card>
             {workspaces && workspaces.length > 0 ? (
@@ -82,20 +131,18 @@ export default function OrganizationDetail() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Name</TableHead>
-                    <TableHead>Slug</TableHead>
-                    <TableHead className="text-right">Keys</TableHead>
-                    <TableHead className="text-right">Members</TableHead>
+                    <TableHead>ID</TableHead>
+                    <TableHead className="text-right">Created</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {workspaces.map(ws => (
                     <TableRow key={ws.id}>
                       <TableCell className="font-medium">
-                        <Link href={`/workspaces/${ws.id}`} className="hover:text-primary transition-colors">{ws.name}</Link>
+                        <Link href={`/organizations/${org.id}/workspaces/${ws.id}`} className="hover:text-primary transition-colors">{ws.name}</Link>
                       </TableCell>
-                      <TableCell className="font-mono text-xs text-muted-foreground">{ws.slug}</TableCell>
-                      <TableCell className="text-right font-mono">{ws.inferenceKeyCount}</TableCell>
-                      <TableCell className="text-right font-mono">{ws.memberCount}</TableCell>
+                      <TableCell className="font-mono text-xs text-muted-foreground">{ws.id}</TableCell>
+                      <TableCell className="text-right text-muted-foreground text-sm">{formatDate(ws.created_at)}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -109,30 +156,34 @@ export default function OrganizationDetail() {
         <TabsContent value="keys" className="space-y-4 mt-0">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-lg font-semibold">Management Keys</h2>
-            <Button onClick={() => setMkOpen(true)} size="sm"><Plus className="w-4 h-4 mr-1"/> Generate Key</Button>
           </div>
           <Card>
-            {mKeys && mKeys.length > 0 ? (
+            {keys && keys.length > 0 ? (
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Prefix</TableHead>
+                    <TableHead>Label</TableHead>
+                    <TableHead>Key</TableHead>
+                    <TableHead>User</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Created</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {mKeys.map(key => (
+                  {keys.map(key => (
                     <TableRow key={key.id}>
-                      <TableCell className="font-medium">{key.name}</TableCell>
-                      <TableCell className="font-mono text-xs">{key.prefix}***</TableCell>
-                      <TableCell><Badge variant={key.status === 'active' ? 'success' : 'outline'}>{key.status.toUpperCase()}</Badge></TableCell>
-                      <TableCell className="text-muted-foreground text-sm">{formatDate(key.createdAt)}</TableCell>
+                      <TableCell className="font-medium">{key.label}</TableCell>
+                      <TableCell className="font-mono text-xs text-muted-foreground">{key.prefix}…</TableCell>
+                      <TableCell className="text-muted-foreground text-sm">
+                        {members?.find(m => m.user_id === key.user_id)?.email ?? key.user_id}
+                      </TableCell>
+                      <TableCell><Badge variant={key.revoked ? 'outline' : 'success'}>{key.revoked ? 'REVOKED' : 'ACTIVE'}</Badge></TableCell>
+                      <TableCell className="text-muted-foreground text-sm">{formatDate(key.created_at)}</TableCell>
                       <TableCell className="text-right">
-                        {key.status === 'active' && (
-                          <Button variant="ghost" size="sm" className="text-destructive hover:bg-destructive/10" onClick={() => revokeKey.mutate({ orgId, keyId: key.id })}>
+                        {!key.revoked && (
+                          <Button variant="ghost" size="sm" className="text-destructive hover:bg-destructive/10"
+                            onClick={() => revokeKey.mutate({ keyId: key.id })}>
                             Revoke
                           </Button>
                         )}
@@ -142,7 +193,7 @@ export default function OrganizationDetail() {
                 </TableBody>
               </Table>
             ) : (
-              <div className="p-8 text-center text-muted-foreground">No management keys generated.</div>
+              <div className="p-8 text-center text-muted-foreground">No management keys for this org.</div>
             )}
           </Card>
         </TabsContent>
@@ -150,7 +201,7 @@ export default function OrganizationDetail() {
         <TabsContent value="members" className="space-y-4 mt-0">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-lg font-semibold">Organization Members</h2>
-            <Button onClick={() => setMemberOpen(true)} size="sm"><Plus className="w-4 h-4 mr-1"/> Add Member</Button>
+            <Button onClick={() => setMemberOpen(true)} size="sm"><Plus className="w-4 h-4 mr-1" /> Add Member</Button>
           </div>
           <Card>
             {members && members.length > 0 ? (
@@ -159,77 +210,56 @@ export default function OrganizationDetail() {
                   <TableRow>
                     <TableHead>User</TableHead>
                     <TableHead>Email</TableHead>
-                    <TableHead>Role</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {members.map(member => (
-                    <TableRow key={member.userId}>
+                    <TableRow key={member.user_id}>
                       <TableCell className="font-medium">
-                        <Link href={`/users/${member.userId}`} className="hover:text-primary">{member.name}</Link>
+                        <Link href={`/users/${member.user_id}`} className="hover:text-primary">{member.name}</Link>
                       </TableCell>
                       <TableCell className="text-muted-foreground">{member.email}</TableCell>
-                      <TableCell><Badge variant="secondary" className="uppercase text-[10px] tracking-wider">{member.role}</Badge></TableCell>
                       <TableCell className="text-right">
-                         <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10" onClick={() => removeMember.mutate({ orgId, userId: member.userId })}>
-                           <X className="w-4 h-4" />
-                         </Button>
+                        <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10"
+                          onClick={() => removeMember.mutate({ userId: member.user_id })}>
+                          <X className="w-4 h-4" />
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
             ) : (
-              <div className="p-8 text-center text-muted-foreground">No members found.</div>
+              <div className="p-8 text-center text-muted-foreground">No members yet.</div>
             )}
           </Card>
         </TabsContent>
       </Tabs>
 
-      {/* Dialogs */}
       <Modal open={wsOpen} onOpenChange={setWsOpen} title="New Workspace">
-        <form onSubmit={e => { e.preventDefault(); createWs.mutate({ orgId, data: wsForm }); }} className="space-y-4 pt-4">
+        <form onSubmit={e => { e.preventDefault(); createWorkspace.mutate({ data: { name: wsName } }); }} className="space-y-4 pt-4">
           <div className="space-y-2">
             <Label>Name</Label>
-            <Input required value={wsForm.name} onChange={e => setWsForm(p => ({...p, name: e.target.value, slug: p.slug || e.target.value.toLowerCase().replace(/[^a-z0-9]+/g, '-')}))} />
-          </div>
-          <div className="space-y-2">
-            <Label>Slug</Label>
-            <Input required value={wsForm.slug} className="font-mono text-sm" onChange={e => setWsForm(p => ({...p, slug: e.target.value}))} />
+            <Input required value={wsName} placeholder="staging" onChange={e => setWsName(e.target.value)} />
           </div>
           <div className="flex justify-end gap-2 pt-4">
             <Button type="button" variant="outline" onClick={() => setWsOpen(false)}>Cancel</Button>
-            <Button type="submit" disabled={createWs.isPending}>Create</Button>
-          </div>
-        </form>
-      </Modal>
-
-      <Modal open={mkOpen} onOpenChange={setMkOpen} title="Generate Management Key" description="Keys allow programmatic access to the gateway API for this org.">
-        <form onSubmit={e => { e.preventDefault(); createMk.mutate({ orgId, data: mkForm }); }} className="space-y-4 pt-4">
-          <div className="space-y-2">
-            <Label>Key Name</Label>
-            <Input required value={mkForm.name} placeholder="e.g. CI/CD Production" onChange={e => setMkForm(p => ({...p, name: e.target.value}))} />
-          </div>
-          <div className="flex justify-end gap-2 pt-4">
-            <Button type="button" variant="outline" onClick={() => setMkOpen(false)}>Cancel</Button>
-            <Button type="submit" disabled={createMk.isPending}>Generate</Button>
+            <Button type="submit" disabled={createWorkspace.isPending}>Create</Button>
           </div>
         </form>
       </Modal>
 
       <Modal open={memberOpen} onOpenChange={setMemberOpen} title="Add Member">
-        <form onSubmit={e => { e.preventDefault(); addMember.mutate({ orgId, data: { userId: Number(memberForm.userId), role: memberForm.role } }); }} className="space-y-4 pt-4">
+        <form onSubmit={e => { e.preventDefault(); addMember.mutate({ userId: memberId }); }} className="space-y-4 pt-4">
           <div className="space-y-2">
-            <Label>User ID</Label>
-            <Input required type="number" value={memberForm.userId} onChange={e => setMemberForm(p => ({...p, userId: e.target.value}))} />
-          </div>
-          <div className="space-y-2">
-            <Label>Role</Label>
-            <select className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm" value={memberForm.role} onChange={e => setMemberForm(p => ({...p, role: e.target.value as any}))}>
-              <option value="member">Member</option>
-              <option value="admin">Admin</option>
-              <option value="owner">Owner</option>
+            <Label htmlFor="member">User</Label>
+            <select id="member" required value={memberId} onChange={e => setMemberId(e.target.value)}
+              className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm">
+              <option value="" disabled>Select a user</option>
+              {outsiders?.map(user => (
+                <option key={user.id} value={user.id}>{user.name} ({user.email})</option>
+              ))}
             </select>
           </div>
           <div className="flex justify-end gap-2 pt-4">
@@ -239,23 +269,35 @@ export default function OrganizationDetail() {
         </form>
       </Modal>
 
-      <Modal open={deleteOpen} onOpenChange={setDeleteOpen} title="Delete Organization" description="This action cannot be undone. All workspaces and keys will be destroyed.">
+      <Modal open={deleteOpen} onOpenChange={setDeleteOpen} title="Delete Organization"
+        description="The org goes with its workspaces, their inference keys, its management keys, memberships and bundles.">
         <div className="space-y-4 pt-4">
           <div className="p-4 bg-destructive/10 text-destructive rounded-md flex items-start gap-3 border border-destructive/20">
             <ShieldAlert className="w-5 h-5 flex-shrink-0 mt-0.5" />
-            <p className="text-sm font-medium">You are about to delete <strong>{org.name}</strong>. Type the organization slug to confirm.</p>
+            <p className="text-sm font-medium">Deleting <strong>{org.name}</strong> cannot be undone. The usage it recorded stays.</p>
           </div>
+          {deleteError && <p className="text-sm text-destructive">{deleteError}</p>}
           <div className="flex justify-end gap-2 pt-4">
             <Button type="button" variant="outline" onClick={() => setDeleteOpen(false)}>Cancel</Button>
-            <Button variant="destructive" onClick={() => deleteOrg.mutate({ orgId })}>Delete Forever</Button>
+            <Button variant="destructive" disabled={deleteOrg.isPending} onClick={() => deleteOrg.mutate({ orgId: org.id })}>
+              Delete Organization
+            </Button>
           </div>
         </div>
       </Modal>
 
-      {createdKey && (
-        <KeyRevealDialog open={!!createdKey} onOpenChange={(v) => !v && setCreatedKey(null)} createdKey={createdKey} />
-      )}
+      <Modal open={renameOpen} onOpenChange={setRenameOpen} title="Rename Organization">
+        <form onSubmit={e => { e.preventDefault(); rename.mutate({ orgId: org.id, data: { name } }); }} className="space-y-4 pt-4">
+          <div className="space-y-2">
+            <Label>Name</Label>
+            <Input required value={name} onChange={e => setName(e.target.value)} />
+          </div>
+          <div className="flex justify-end gap-2 pt-4">
+            <Button type="button" variant="outline" onClick={() => setRenameOpen(false)}>Cancel</Button>
+            <Button type="submit" disabled={rename.isPending}>Save</Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }
-import { X } from 'lucide-react';

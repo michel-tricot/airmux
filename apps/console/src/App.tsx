@@ -5,14 +5,16 @@ import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import NotFound from '@/pages/not-found';
 import {
+  Redirect,
   Route,
   Switch,
   useLocation,
   Router as WouterRouter,
 } from 'wouter';
 import { Shell } from '@/components/layout/Shell';
+import '@/lib/api';
 
-// Admin Pages
+// Instance Admin Pages
 import Dashboard from '@/pages/Dashboard';
 import Organizations from '@/pages/Organizations';
 import OrganizationDetail from '@/pages/OrganizationDetail';
@@ -20,10 +22,11 @@ import WorkspaceDetail from '@/pages/WorkspaceDetail';
 import Users from '@/pages/Users';
 import UserDetail from '@/pages/UserDetail';
 
-// App Pages (Normal User)
+// Org Pages (Any Member)
+import { useEnrollment } from '@workspace/api-client-react';
 import { SessionProvider, useSession } from '@/lib/session';
 import AppLayout from '@/components/layout/AppLayout';
-import AppLogin from '@/pages/app/Login';
+import Login from '@/pages/Login';
 import AppOrgPicker from '@/pages/app/OrgPicker';
 import AppDashboard from '@/pages/app/Dashboard';
 import AppWorkspaceDetail from '@/pages/app/WorkspaceDetail';
@@ -39,16 +42,20 @@ const queryClient = new QueryClient({
 });
 
 function AppSection() {
-  const { userId, orgId } = useSession();
-  
-  if (!userId) return <AppLogin />;
-  if (!orgId) return <AppOrgPicker />;
-  
+  const { orgId } = useSession();
+  const { data: enrollment, isLoading } = useEnrollment();
+
+  if (isLoading) return <Splash>LOADING ORGANIZATIONS...</Splash>;
+
+  // A stored org the user no longer holds would send every org-scoped query on the page to a 403
+  // before anything could correct it, so the selection is checked against enrollment first.
+  if (!orgId || !enrollment?.orgs.some(o => o.id === orgId)) return <AppOrgPicker />;
+
   return (
     <AppLayout>
       <Switch>
         <Route path="/app" component={AppDashboard} />
-        <Route path="/app/workspaces/:id" component={AppWorkspaceDetail} />
+        <Route path="/app/workspaces/:workspaceId" component={AppWorkspaceDetail} />
         <Route path="/app/settings" component={AppOrgSettings} />
         <Route component={NotFound} />
       </Switch>
@@ -56,8 +63,31 @@ function AppSection() {
   );
 }
 
+function AdminSection() {
+  return (
+    <Shell>
+      <RoutedErrorBoundary>
+        <Switch>
+          <Route path="/" component={Dashboard} />
+          <Route path="/organizations" component={Organizations} />
+          <Route path="/organizations/:orgId" component={OrganizationDetail} />
+          <Route path="/organizations/:orgId/workspaces/:workspaceId" component={WorkspaceDetail} />
+          <Route path="/users" component={Users} />
+          <Route path="/users/:userId" component={UserDetail} />
+          <Route component={NotFound} />
+        </Switch>
+      </RoutedErrorBoundary>
+    </Shell>
+  );
+}
+
 function Router() {
   const [location] = useLocation();
+  const { user, isLoading } = useSession();
+
+  if (isLoading) return <Splash>LOADING SESSION...</Splash>;
+
+  if (!user) return <Login />;
 
   if (location.startsWith('/app')) {
     return (
@@ -67,20 +97,18 @@ function Router() {
     );
   }
 
+  // The instance admin pages run without an org scope, which the control plane grants to
+  // instance admins alone; everyone else belongs in their org console.
+  if (!user.instance_admin) return <Redirect to="/app" />;
+
+  return <AdminSection />;
+}
+
+function Splash({ children }: { children: ReactNode }) {
   return (
-    <Shell>
-      <RoutedErrorBoundary>
-        <Switch>
-          <Route path="/" component={Dashboard} />
-          <Route path="/organizations" component={Organizations} />
-          <Route path="/organizations/:id" component={OrganizationDetail} />
-          <Route path="/workspaces/:id" component={WorkspaceDetail} />
-          <Route path="/users" component={Users} />
-          <Route path="/users/:id" component={UserDetail} />
-          <Route component={NotFound} />
-        </Switch>
-      </RoutedErrorBoundary>
-    </Shell>
+    <div className="min-h-[100dvh] flex items-center justify-center bg-muted/30 text-muted-foreground font-mono text-sm">
+      {children}
+    </div>
   );
 }
 
