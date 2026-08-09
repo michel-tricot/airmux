@@ -4,7 +4,7 @@ control_plane:
   bundle:
     signing_key: ${env:GW_BUNDLE_SIGNING_KEY}
     staleness_bound_hours: 24
-  webapp_url: http://localhost:3000
+  console_url: http://localhost:3000
 
 data_plane:
   control_plane:
