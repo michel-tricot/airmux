@@ -10,7 +10,7 @@ import {
 } from '@workspace/api-client-react';
 import { useMutation } from '@tanstack/react-query';
 import { orgScope } from '@/lib/api';
-import { Card, Button, Label, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Modal, Badge } from '@/components/ui/elements';
+import { Card, Button, Label, Select, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Modal, Badge } from '@/components/ui/elements';
 import { ArrowLeft, Building2, Plus, X, Trash2 } from 'lucide-react';
 import { formatDate } from '@/lib/format';
 import { Link, useParams, useLocation } from 'wouter';
@@ -149,13 +149,12 @@ export default function UserDetail() {
         <form onSubmit={e => { e.preventDefault(); addMember.mutate({ userId: user.id, orgId }); }} className="space-y-4 pt-4">
           <div className="space-y-2">
             <Label htmlFor="org">Organization</Label>
-            <select id="org" required value={orgId} onChange={e => setOrgId(e.target.value)}
-              className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm">
+            <Select id="org" required value={orgId} onChange={e => setOrgId(e.target.value)}>
               <option value="" disabled>Select an organization</option>
               {available?.map(org => (
                 <option key={org.id} value={org.id}>{org.name}</option>
               ))}
-            </select>
+            </Select>
           </div>
           <div className="flex justify-end gap-2 pt-4">
             <Button type="button" variant="outline" onClick={() => setAddOpen(false)}>Cancel</Button>
