@@ -157,7 +157,7 @@ def test_scopes_are_strictly_separated(tmp_path):
 
         assert c.post("/v1/org/workspaces", headers=root).status_code == 403
         assert c.post("/v1/org/bundles/compile", headers=root).status_code == 403
-        for path in ("/v1/org/workspaces", "/v1/org/bundles", "/v1/org/events", "/v1/org/instances"):
+        for path in ("/v1/org/workspaces", "/v1/org/bundles", "/v1/org/events"):
             assert c.get(path, headers=root).status_code == 403
 
 
@@ -338,9 +338,11 @@ def test_heartbeat_registers_and_lists_instances(tmp_path):
         assert c.post("/v1/heartbeat", json=_heartbeat(dp3, o2), headers=root).status_code == 200
         # re-heartbeat dp1 (upsert, not duplicate)
         c.post("/v1/heartbeat", json=_heartbeat(dp1, o1), headers=org)
-        rows = c.get("/v1/org/instances", headers=org).json()["data"]
-        assert {r["instance_id"] for r in rows} == {str(dp1), str(dp2)}
+        rows = c.get("/v1/instance/data-planes", headers=root).json()["data"]
+        assert {r["instance_id"] for r in rows} == {str(dp1), str(dp2), str(dp3)}
+        assert {r["instance_id"]: r["org_id"] for r in rows}[str(dp3)] == str(o2)
         assert all(r["status"] == "online" for r in rows)
+        assert c.get("/v1/instance/data-planes", headers=org).status_code == 403
         assert c.post("/v1/heartbeat", json=_heartbeat(uuid7(), o2), headers=org).status_code == 403
         assert c.post("/v1/heartbeat", json=_heartbeat(uuid7(), o1)).status_code == 401
 
@@ -356,9 +358,9 @@ def test_stale_instance_is_offline_and_hidden_by_default(tmp_path):
         # backdate a second instance far past the stale window, directly in the db
         old = datetime.now(tz=UTC) - timedelta(hours=1)
         run_in_db(tmp_path, lambda: DataPlaneInstance(instance_id=gone, org_id=o1, version="0.1.0", first_seen=old, last_seen=old).save())
-        default = c.get("/v1/org/instances", headers=org).json()["data"]
+        default = c.get("/v1/instance/data-planes", headers=root).json()["data"]
         assert {r["instance_id"] for r in default} == {str(fresh)}  # offline hidden
-        all_ = c.get("/v1/org/instances", headers=org, params={"include_offline": True}).json()["data"]
+        all_ = c.get("/v1/instance/data-planes", headers=root, params={"include_offline": True}).json()["data"]
         by_id = {r["instance_id"]: r["status"] for r in all_}
         assert by_id == {str(fresh): "online", str(gone): "offline"}  # record kept
 

@@ -11,7 +11,7 @@ import Keys from './pages/Keys'
 import Providers from './pages/Providers'
 import Models from './pages/Models'
 import Bundles from './pages/Bundles'
-import Instances from './pages/Instances'
+import DataPlanes from './pages/DataPlanes'
 import CliApprove from './pages/CliApprove'
 import Onboarding from './pages/Onboarding'
 
@@ -23,7 +23,7 @@ const NAV = [
   { to: '/providers', label: 'Providers' },
   { to: '/models', label: 'Models' },
   { to: '/bundles', label: 'Bundles' },
-  { to: '/instances', label: 'Instances' },
+  { to: '/data-planes', label: 'Data planes', adminOnly: true },
 ]
 
 function OrgSelect({ me }: { me: Me }) {
@@ -87,7 +87,7 @@ export default function App() {
           <span className="ml-2 text-xs text-slate-500">console</span>
         </div>
         <nav className="flex-1 space-y-1 px-3">
-          {NAV.map(({ to, label }) => (
+          {NAV.filter(({ adminOnly }) => !adminOnly || me.instance_admin).map(({ to, label }) => (
             <NavLink
               key={to}
               to={to}
@@ -125,7 +125,7 @@ export default function App() {
           <Route path="/providers" element={<Providers />} />
           <Route path="/models" element={<Models />} />
           <Route path="/bundles" element={<Bundles />} />
-          <Route path="/instances" element={<Instances />} />
+          <Route path="/data-planes" element={<DataPlanes />} />
           <Route path="/cli" element={<CliApprove />} />
         </Routes>
       </main>

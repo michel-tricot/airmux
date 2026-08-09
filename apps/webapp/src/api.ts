@@ -175,7 +175,7 @@ export const listKeys = (workspaceId: string) => api<ApiKey[]>(`/v1/org/workspac
 export const getTaxonomy = () => api<Taxonomy>('/v1/taxonomy')
 export const listBundles = () => api<Bundle[]>('/v1/org/bundles')
 export const listEvents = (limit = 100) => api<UsageEvent[]>(`/v1/org/events?limit=${limit}`)
-export const listInstances = (includeOffline = true) => api<Instance[]>(`/v1/org/instances?include_offline=${includeOffline}`)
+export const listDataPlanes = (includeOffline = true) => api<Instance[]>(`/v1/instance/data-planes?include_offline=${includeOffline}`)
 
 export const createOrg = (body: { id: string; name: string }) => api<{ id: string }>('/v1/orgs', { method: 'POST', body: JSON.stringify(body) })
 

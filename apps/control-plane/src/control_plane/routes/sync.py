@@ -15,7 +15,7 @@ from control_plane.models.common.wire import Envelope
 from control_plane.models.data_plane_instance import HeartbeatOut
 from control_plane.models.usage_event import EventsIngestedOut
 
-router = APIRouter(tags=["Sync"])
+router = APIRouter(tags=["Data Plane"])
 
 
 def _sync_org(claims_org_id: UUID | None, org_id: UUID | None) -> UUID | None:

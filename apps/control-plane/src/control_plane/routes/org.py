@@ -11,10 +11,9 @@ from control_plane.authz import Scope
 from control_plane.compiler import UnknownOrgError, compile_and_store
 from control_plane.deps import MgmtDep, OrgDep, require
 from control_plane.keys import mint_management_key
-from control_plane.models import Bundle, DataPlaneInstance, ManagementKey, OrgMembership, UsageEvent, User
+from control_plane.models import Bundle, ManagementKey, OrgMembership, UsageEvent, User
 from control_plane.models.bundle import BundleOut
 from control_plane.models.common.wire import Envelope
-from control_plane.models.data_plane_instance import DataPlaneInstanceOut
 from control_plane.models.management_key import ManagementKeyIn, ManagementKeyMintedOut, ManagementKeyOut, ManagementKeyRevokedOut
 from control_plane.models.usage_event import UsageEventOut
 
@@ -66,15 +65,6 @@ async def compile_endpoint(org_id: OrgDep, request: Request) -> Envelope[BundleO
 async def list_bundles(org_id: OrgDep) -> Envelope[list[BundleOut]]:
     bundles = await Bundle.find(Bundle.org_id == org_id, order_by=col(Bundle.version))
     return Envelope(data=[BundleOut.model_validate(b) for b in bundles])
-
-
-@router.get("/instances", tags=["Instances"], dependencies=[require(Scope.instances_read)])
-async def list_instances(org_id: OrgDep, include_offline: bool = False) -> Envelope[list[DataPlaneInstanceOut]]:
-    """Data planes serving this org; offline ones are kept as history and shown only with include_offline."""
-    now = datetime.now(tz=UTC)
-    instances = await DataPlaneInstance.find(DataPlaneInstance.org_id == org_id, order_by=col(DataPlaneInstance.last_seen).desc())
-    out = [DataPlaneInstanceOut(**i.model_dump(), status=status) for i in instances if (status := i.status(now)) == "online" or include_offline]
-    return Envelope(data=out)
 
 
 @router.get("/events", tags=["Events"], dependencies=[require(Scope.events_read)])

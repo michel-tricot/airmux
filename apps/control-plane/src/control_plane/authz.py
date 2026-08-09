@@ -22,7 +22,7 @@ class Scope(StrEnum):
     bundles_read = "bundles:read"
     bundles_write = "bundles:write"
     events_read = "events:read"
-    instances_read = "instances:read"
+    data_planes_read = "data-planes:read"
     taxonomy_read = "taxonomy:read"
     taxonomy_write = "taxonomy:write"
     orgs_read = "orgs:read"

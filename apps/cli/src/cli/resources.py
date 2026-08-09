@@ -13,9 +13,9 @@ from cli.client import instance_client, instance_get, org_client, org_get, paylo
 from cli.common import (
     bundles_app,
     console,
+    data_planes_app,
     events_app,
     inference_keys_app,
-    instances_app,
     management_keys_app,
     models_app,
     orgs_app,
@@ -332,18 +332,18 @@ INSTANCE_COLS = [
 ]
 
 
-@instances_app.command("list")
-def instances_list(
-    all_: bool = typer.Option(False, "--all", help="Include offline instances (kept as history)"),
+@data_planes_app.command("list")
+def data_planes_list(
+    all_: bool = typer.Option(False, "--all", help="Include offline data planes (kept as history)"),
     control_plane_url: str = "",
     fmt: FormatOption = OutputFormat.table,
 ) -> None:
-    """List the org's data planes; offline ones are shown only with --all."""
+    """List the instance's data planes; offline ones are shown only with --all. Needs the instance management key."""
     load_dotenv(find_dotenv(usecwd=True))
-    with org_client(control_plane_url) as c:
-        resp = c.get("/v1/org/instances", params={"include_offline": all_})
+    with instance_client(control_plane_url) as c:
+        resp = c.get("/v1/instance/data-planes", params={"include_offline": all_})
         resp.raise_for_status()
-        print_rows("instances", payload_rows(resp), INSTANCE_COLS, fmt)
+        print_rows("data planes", payload_rows(resp), INSTANCE_COLS, fmt)
 
 
 @events_app.command("list")

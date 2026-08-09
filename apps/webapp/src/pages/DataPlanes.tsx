@@ -1,17 +1,17 @@
 import { useQuery } from '@tanstack/react-query'
-import { listInstances } from '../api'
+import { listDataPlanes } from '../api'
 import { Badge, formatWhen, Page, QueryStatus, Table, Td } from '../ui'
 
-export default function Instances() {
+export default function DataPlanes() {
   const { data, isLoading, error } = useQuery({
-    queryKey: ['instances'],
-    queryFn: () => listInstances(true),
+    queryKey: ['data-planes'],
+    queryFn: () => listDataPlanes(true),
     refetchInterval: 10000,
   })
   const instances = data ?? []
 
   return (
-    <Page title="Instances">
+    <Page title="Data planes">
       <QueryStatus isLoading={isLoading} error={error} empty={instances.length === 0} />
       {instances.length > 0 && (
         <Table headers={['Instance', 'Org', 'Version', 'Bundle', 'Address', 'Status', 'First seen', 'Last seen']}>
