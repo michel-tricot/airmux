@@ -4,44 +4,44 @@ set -euo pipefail
 # Replit development helper for the externally managed Python backend.
 # The console remains the only Replit-managed application/artifact.
 
-require_database_vars() {
-  local name
-  for name in PGUSER PGPASSWORD PGHOST PGPORT PGDATABASE; do
-    if [[ -z "${!name:-}" ]]; then
-      printf 'Missing required PostgreSQL environment variable: %s\n' "$name" >&2
-      exit 1
-    fi
-  done
+require_database_url() {
+  if [[ -z "${DATABASE_URL:-}" ]]; then
+    printf 'Missing required database environment variable: DATABASE_URL\n' >&2
+    exit 1
+  fi
 }
 
 reset_database() {
   printf '%s\n' 'Migration failed; resetting the Replit development database.'
 
-  # Connect to the default maintenance database so the target database is not
-  # the active connection while it is being dropped.
-  local admin_url="postgresql://${PGUSER}:${PGPASSWORD}@${PGHOST}:${PGPORT}/postgres"
-  PGPASSWORD="$PGPASSWORD" dropdb \
+  # DATABASE_URL carries the host, credentials, and target database. Connect
+  # to the default maintenance database so the target is not active while it
+  # is being dropped.
+  local maintenance_url
+  maintenance_url="$(DATABASE_URL="$DATABASE_URL" python - <<'PY'
+import os
+from urllib.parse import urlsplit, urlunsplit
+
+url = os.environ["DATABASE_URL"]
+parts = urlsplit(url)
+scheme = parts.scheme.removesuffix("+asyncpg")
+if scheme not in {"postgres", "postgresql"} or not parts.netloc:
+    raise SystemExit("DATABASE_URL must be a PostgreSQL connection URL")
+print(urlunsplit((scheme, parts.netloc, "/postgres", parts.query, parts.fragment)))
+PY
+)"
+
+  dropdb \
     --if-exists \
     --force \
-    --maintenance-db="$admin_url" \
-    --username="$PGUSER" \
-    --host="$PGHOST" \
-    --port="$PGPORT" \
-    "$PGDATABASE"
-  PGPASSWORD="$PGPASSWORD" createdb \
-    --maintenance-db="$admin_url" \
-    --username="$PGUSER" \
-    --host="$PGHOST" \
-    --port="$PGPORT" \
-    "$PGDATABASE"
+    --maintenance-db="$maintenance_url" \
+    "$DATABASE_URL"
+  createdb \
+    --maintenance-db="$maintenance_url" \
+    "$DATABASE_URL"
 }
 
-require_database_vars
-
-# airllm.yml reads DATABASE_URL and falls back to the local compose database, which would be the
-# wrong server here. Compose it from the variables checked above rather than trusting the host to
-# export it too; the asyncpg driver is named on load.
-export DATABASE_URL="postgresql://${PGUSER}:${PGPASSWORD}@${PGHOST}:${PGPORT}/${PGDATABASE}"
+require_database_url
 
 if [[ ! -f .airllm/signing.key || ! -f .airllm/signing.pub ]]; then
   uv run airllmcp keygen
@@ -56,9 +56,9 @@ uv run airllmcp taxonomy
 
 # Fixtures are intentionally fresh-database-only. Keep the workflow restartable
 # after the first successful seed without hiding real fixture errors.
-if [[ "$(PGPASSWORD="$PGPASSWORD" psql "$DATABASE_URL" -tAc \
+if [[ "$(psql "$DATABASE_URL" -tAc \
   "SELECT to_regclass('public.user') IS NOT NULL;" | tr -d '[:space:]')" == "t" ]] &&
-  [[ "$(PGPASSWORD="$PGPASSWORD" psql "$DATABASE_URL" -tAc \
+  [[ "$(psql "$DATABASE_URL" -tAc \
   "SELECT EXISTS (SELECT 1 FROM public.\"user\" LIMIT 1);" | tr -d '[:space:]')" == "t" ]]; then
   printf '%s\n' 'fixtures already loaded; skipping fresh-database seed.'
 else

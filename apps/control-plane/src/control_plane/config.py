@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 from datetime import timedelta
 from typing import TYPE_CHECKING
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -27,9 +28,20 @@ class DatabaseConfig(BaseModel):
         """Managed hosts hand out postgresql:// URLs, and every engine here is async, so asyncpg has to be named.
 
         Left alone when the URL already names a driver, so an explicitly configured one still wins.
+        libpq uses sslmode while asyncpg expects ssl; normalize that query parameter before SQLAlchemy
+        passes the URL options to asyncpg.connect.
         """
         scheme, separator, rest = url.partition("://")
-        return f"postgresql+asyncpg://{rest}" if separator and scheme in {"postgres", "postgresql"} else url
+        if not separator or scheme not in {"postgres", "postgresql", "postgresql+asyncpg"}:
+            return url
+
+        normalized_scheme = "postgresql+asyncpg" if scheme in {"postgres", "postgresql"} else scheme
+        parsed = urlsplit(f"{normalized_scheme}://{rest}")
+        query = [
+            ("ssl" if key == "sslmode" else key, value)
+            for key, value in parse_qsl(parsed.query, keep_blank_values=True)
+        ]
+        return urlunsplit(parsed._replace(query=urlencode(query)))
 
 
 class BundlePolicy(BaseModel):
