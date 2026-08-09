@@ -74,7 +74,7 @@ Adding a resource is four steps; test_api_hygiene and test_api_parity name the e
 - Action shapes (minted secrets, revocations) are plain BaseModel, exempt from parity by that choice. An action that
   mints a resource returns that resource's Out (compile returns BundleOut).
   Deletions return DeletedOut; revocations are not deletions and keep their own result models.
-- Clients unwrap the envelope in one place each: the webapp api() wrapper, cli client payload helpers, the data plane
+- Clients unwrap the envelope in one place each: the console's customFetch, cli client payload helpers, the data plane
   poller. Never unwrap at call sites.
 
 ## Typing and lint
