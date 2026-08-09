@@ -1,9 +1,9 @@
 control_plane:
   database:
-    # Replit's managed PostgreSQL exposes these connection fields automatically.
-    # The local Docker URL can still be used by copying this file and replacing
-    # the URL for non-Replit development.
-    url: postgresql+asyncpg://${env:PGUSER}:${env:PGPASSWORD}@${env:PGHOST}:${env:PGPORT}/${env:PGDATABASE}
+    # DATABASE_URL when the host sets one, as Replit's managed PostgreSQL does;
+    # otherwise the docker-compose.dev.yml database. A postgresql:// URL gains
+    # the asyncpg driver on load, so a managed one can be used as handed over.
+    url: ${env:DATABASE_URL}
   bundle:
     # Generate these files with: uv run airllmcp keygen
     signing_key: ${file:.airllm/signing.key}

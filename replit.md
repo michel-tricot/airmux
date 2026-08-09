@@ -95,8 +95,9 @@ on `http://127.0.0.1:8000` by default and proxies `/v1` requests there.
 
 When the backend is needed for local console development, Replit's managed
 PostgreSQL provides the `PGUSER`, `PGPASSWORD`, `PGHOST`, `PGPORT`, and
-`PGDATABASE` variables used by `airllm.yml`. Run the backend bootstrap from the
-repository root:
+`PGDATABASE` variables. `airllm.yml` reads `DATABASE_URL`, which the bootstrap
+script composes from those; without it the config falls back to the local
+`docker-compose.dev.yml` database. Run the bootstrap from the repository root:
 
 ```bash
 ./scripts/replit-backend.sh
