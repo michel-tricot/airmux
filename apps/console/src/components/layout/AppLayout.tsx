@@ -1,46 +1,43 @@
 import { useSession } from '@/lib/session';
 import { orgScope } from '@/lib/api';
-import { useEnrollment, useListWorkspaces, getListWorkspacesQueryKey } from '@workspace/api-client-react';
+import { useListWorkspaces, getListWorkspacesQueryKey } from '@workspace/api-client-react';
 import { Link, useLocation } from 'wouter';
-import { TerminalSquare, Settings, LogOut, Shield, FolderGit2 } from 'lucide-react';
+import { TerminalSquare, Settings, LogOut, Shield, FolderGit2, ArrowLeftRight } from 'lucide-react';
 import { Button } from '@/components/ui/elements';
 import { cn } from '@/lib/utils';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, orgId, setOrgId, logout } = useSession();
-  const { data: enrollment } = useEnrollment();
   const { data: workspaces } = useListWorkspaces({
     query: { queryKey: [...getListWorkspacesQueryKey(), orgId] },
     request: orgScope(orgId!),
   });
-  const [location] = useLocation();
-
-  const orgs = enrollment?.orgs;
+  const [location, setLocation] = useLocation();
 
   return (
     <div className="h-[100dvh] flex w-full overflow-hidden bg-background font-sans">
       {/* Sidebar */}
       <aside className="w-64 flex-col bg-card text-card-foreground flex border-r border-border shadow-sm shrink-0">
-        <div className="h-14 flex items-center px-6 border-b border-border/50 shrink-0">
-          <Link href="/app" className="flex items-center gap-2 font-mono font-bold tracking-tight text-foreground hover:text-primary transition-colors">
-            <div className="w-6 h-6 rounded bg-primary flex items-center justify-center shadow-[0_0_8px_rgba(255,255,255,0.1)]">
+        <div className="h-14 flex items-center justify-between gap-2 px-4 border-b border-border/50 shrink-0">
+          <Link href="/app" className="flex min-w-0 items-center gap-2 font-mono font-bold tracking-tight text-foreground hover:text-primary transition-colors">
+            <div className="w-6 h-6 rounded bg-primary flex items-center justify-center shadow-[0_0_8px_rgba(255,255,255,0.1)] shrink-0">
               <TerminalSquare className="w-4 h-4 text-primary-foreground" />
             </div>
-            GATEWAY
+            <span>GATEWAY</span>
           </Link>
-        </div>
-
-        <div className="p-4 border-b border-border/50 shrink-0">
-          <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-1">Organization</div>
-          <select
-            value={orgId ?? ''}
-            onChange={e => setOrgId(e.target.value)}
-            className="w-full bg-muted border border-input hover:border-border rounded-md text-sm font-medium focus:ring-1 focus:ring-primary focus:outline-none px-3 py-2 cursor-pointer transition-colors"
+          <Button
+            variant="ghost"
+            size="icon"
+            title="Switch organization"
+            aria-label="Switch organization"
+            onClick={() => {
+              setOrgId(null);
+              setLocation('/app');
+            }}
+            className="h-8 w-8 shrink-0 text-muted-foreground hover:text-foreground"
           >
-            {orgs?.map(o => (
-              <option key={o.id} value={o.id}>{o.name}</option>
-            ))}
-          </select>
+            <ArrowLeftRight className="w-4 h-4" />
+          </Button>
         </div>
 
         <div className="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
