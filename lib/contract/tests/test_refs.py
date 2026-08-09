@@ -98,3 +98,43 @@ def test_load_config_section_missing_file_or_section_is_empty(tmp_path):
     assert load_config_section("app", tmp_path / "absent.yml") == {}
     path = _write_config(tmp_path, "other:\n  b: 2\n")
     assert load_config_section("app", path) == {}
+
+
+def test_a_ref_falls_back_to_its_default(tmp_path, monkeypatch):
+    monkeypatch.delenv("REFS_TEST_DEFAULTED", raising=False)
+    assert try_resolve_ref("env:REFS_TEST_DEFAULTED:-fallback") == "fallback"
+    assert resolve_ref("env:REFS_TEST_DEFAULTED:-fallback") == "fallback"
+
+
+def test_a_present_value_wins_over_the_default(monkeypatch):
+    monkeypatch.setenv("REFS_TEST_DEFAULTED", "real")
+    assert try_resolve_ref("env:REFS_TEST_DEFAULTED:-fallback") == "real"
+
+
+def test_a_missing_file_falls_back_to_its_default(tmp_path):
+    assert try_resolve_ref(f"file:{tmp_path}/absent.txt:-fallback") == "fallback"
+
+
+def test_an_empty_default_resolves_to_the_empty_string(monkeypatch):
+    """Shell semantics: the separator being present is what makes a value, even an empty one."""
+    monkeypatch.delenv("REFS_TEST_DEFAULTED", raising=False)
+    assert try_resolve_ref("env:REFS_TEST_DEFAULTED:-") == ""
+
+
+def test_a_default_carries_through_interpolation(tmp_path, monkeypatch):
+    monkeypatch.delenv("REFS_TEST_DEFAULTED", raising=False)
+    path = _write_config(tmp_path, "app:\n  url: ${env:REFS_TEST_DEFAULTED:-postgresql://localhost:5432/app}\n")
+    assert load_config_section("app", path)["url"] == "postgresql://localhost:5432/app"
+
+
+def test_a_default_can_sit_beside_other_text(tmp_path, monkeypatch):
+    monkeypatch.delenv("REFS_TEST_DEFAULTED", raising=False)
+    path = _write_config(tmp_path, "app:\n  token: ${env:REFS_TEST_DEFAULTED:-anon}-suffix\n")
+    assert load_config_section("app", path)["token"] == "anon-suffix"
+
+
+def test_a_ref_without_a_default_still_voids_the_string(tmp_path, monkeypatch):
+    """The forgiving default is opt-in; a bare ref that resolves to nothing keeps voiding its string."""
+    monkeypatch.delenv("REFS_TEST_ABSENT", raising=False)
+    path = _write_config(tmp_path, "app:\n  token: ${env:REFS_TEST_ABSENT}-suffix\n")
+    assert load_config_section("app", path)["token"] is None

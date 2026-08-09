@@ -21,12 +21,18 @@ def clean_env(tmp_path, monkeypatch):
 
 
 def test_repo_config_parses_through_the_data_plane_loader(clean_env, monkeypatch):
+    """The config the repo ships has to keep loading; nothing else guards an edit to it.
+
+    Where the token comes from is the config file's business, so both sources are laid out with the
+    same value: this stays green whether it names the keygen file or the environment variable.
+    """
     repo_config = Path(__file__).resolve().parents[3] / "airllm.yml"
     (clean_env / "airllm.yml").write_text(repo_config.read_text(encoding="utf-8"), encoding="utf-8")
     # The repo config resolves the public key from a file the operator generates with `airllmcp keygen`.
     key = Ed25519PrivateKey.generate()
     (clean_env / ".airllm").mkdir()
     (clean_env / ".airllm" / "signing.pub").write_text(public_key_to_b64(key.public_key()), encoding="utf-8")
+    (clean_env / ".airllm" / "dataplane.key").write_text("dp-token", encoding="utf-8")
     monkeypatch.setenv("GW_DATAPLANE_TOKEN", "dp-token")
     config = load_config()
     assert config.control_plane.url == "http://127.0.0.1:8000"

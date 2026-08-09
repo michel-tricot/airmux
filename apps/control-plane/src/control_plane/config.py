@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 from datetime import timedelta
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -52,22 +52,13 @@ class Settings(BaseModel):
     dev: bool = False  # set by the --dev flag on the entry point, gate dev-only behavior on this
 
 
-def _database(section: dict[str, Any]) -> DatabaseConfig:
-    """The database config, treating a ref that resolved to nothing as unset.
-
-    A ${env:DATABASE_URL} the host never set arrives here as None, which is the same situation as
-    the key being absent: the default belongs to DatabaseConfig, not to the config file.
-    """
-    database = section.get("database") or {}
-    return DatabaseConfig.model_validate({key: value for key, value in database.items() if value is not None})
-
-
 def database_url() -> str:
     """The database section alone, for contexts (migrate, alembic env) that have no signing key and cannot build full Settings."""
-    return _database(load_config_section("control_plane")).url
+    section = load_config_section("control_plane")
+    return DatabaseConfig.model_validate(section.get("database") or {}).url
 
 
 def load_settings(config_path: str | Path | None = None) -> Settings:
     """Load settings from an explicit config path, falling back to GW_CONFIG for the serve/migrate contexts that pass it via env."""
     section = load_config_section("control_plane", config_path)
-    return Settings.model_validate({**section, "database": _database(section), "dev": os.environ.get("GW_DEV") == "1"})
+    return Settings.model_validate({**section, "dev": os.environ.get("GW_DEV") == "1"})

@@ -16,28 +16,47 @@ class UnsupportedRefSchemeError(Exception):
         super().__init__(f"unsupported ref scheme: {scheme}")
 
 
+DEFAULT_SEPARATOR = ":-"
+
+
+def _split_default(rest: str) -> tuple[str, str | None]:
+    """Separate a ref's target from the default written after :-, shell style.
+
+    The separator being present is what makes a default, so ${env:NAME:-} is an empty value rather
+    than a missing one. A target that legitimately contains :- cannot take a default, which no
+    environment variable name and no path here does.
+    """
+    target, separator, fallback = rest.partition(DEFAULT_SEPARATOR)
+    return (target, fallback) if separator else (target, None)
+
+
 def resolve_ref(ref: str) -> str:
     scheme, _, rest = ref.partition(":")
+    target, fallback = _split_default(rest)
     if scheme == "env":
-        return os.environ[rest]
+        return os.environ[target] if fallback is None else os.environ.get(target, fallback)
     if scheme == "file":
-        return Path(rest).read_text(encoding="utf-8").strip()
+        source = Path(target)
+        if fallback is not None and not source.exists():
+            return fallback
+        return source.read_text(encoding="utf-8").strip()
     raise UnsupportedRefSchemeError(scheme)
 
 
 def try_resolve_ref(ref: str) -> str | None:
-    """The forgiving variant for config refs: missing values become None instead of raising."""
+    """The forgiving variant for config refs: missing values become None instead of raising, unless the ref carries a default."""
     scheme, _, rest = ref.partition(":")
+    target, fallback = _split_default(rest)
     if scheme == "env":
-        return os.environ.get(rest)
+        return os.environ.get(target, fallback)
     if scheme == "file":
-        source = Path(rest)
-        return source.read_text(encoding="utf-8").strip() if source.exists() else None
+        source = Path(target)
+        return source.read_text(encoding="utf-8").strip() if source.exists() else fallback
     raise UnsupportedRefSchemeError(scheme)
 
 
 def _interpolate(value: str) -> str | None:
-    """Substitute every ${env:NAME} and ${file:PATH} placeholder; any missing ref voids the whole string."""
+    """Substitute every ${env:NAME} and ${file:PATH} placeholder; a missing ref with no :- default voids the whole string."""
     refs = {match.group(0): try_resolve_ref(f"{match.group(1)}:{match.group(2)}") for match in _REF.finditer(value)}
     if not refs:
         return value
