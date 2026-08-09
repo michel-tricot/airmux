@@ -2,9 +2,21 @@ import { useSession } from '@/lib/session';
 import { orgScope } from '@/lib/api';
 import { useListWorkspaces, getListWorkspacesQueryKey } from '@workspace/api-client-react';
 import { Link, useLocation } from 'wouter';
-import { TerminalSquare, Settings, LogOut, Shield, FolderGit2, ArrowLeftRight } from 'lucide-react';
+import {
+  TerminalSquare, Settings, LogOut, Shield, ArrowLeftRight,
+  LayoutGrid, KeyRound, Database, Route as RouteIcon, ShieldCheck, Building2,
+} from 'lucide-react';
 import { Button } from '@/components/ui/elements';
 import { cn } from '@/lib/utils';
+
+const SECTIONS = [
+  { label: 'Overview', suffix: '', icon: LayoutGrid },
+  { label: 'API Keys', suffix: '/keys', icon: KeyRound },
+  { label: 'BYOK', suffix: '/byok', icon: Database, soon: true },
+  { label: 'Routing', suffix: '/routing', icon: RouteIcon, soon: true },
+  { label: 'Policies', suffix: '/policies', icon: ShieldCheck, soon: true },
+  { label: 'Settings', suffix: '/settings', icon: Settings },
+];
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, orgId, setOrgId, logout } = useSession();
@@ -13,6 +25,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     request: orgScope(orgId!),
   });
   const [location, setLocation] = useLocation();
+
+  // /app/workspaces/<id>[/section] — the id selects the workspace, the tail names the section.
+  const match = location.match(/^\/app\/workspaces\/([^/]+)(\/[^/]+)?/);
+  const activeWorkspaceId = match?.[1] ?? '';
+  const activeSuffix = match?.[2] ?? '';
+
+  const switchWorkspace = (id: string) => {
+    // Keep the section when hopping between workspaces so the context survives the switch.
+    setLocation(`/app/workspaces/${id}${activeSuffix}`);
+  };
 
   return (
     <div className="h-[100dvh] flex w-full overflow-hidden bg-background font-sans">
@@ -40,32 +62,59 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </Button>
         </div>
 
-        <div className="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
-          <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-3 mt-2">
-            Workspaces
-          </div>
+        <div className="p-3 border-b border-border/50 shrink-0">
+          <select
+            value={activeWorkspaceId}
+            onChange={e => switchWorkspace(e.target.value)}
+            aria-label="Workspace"
+            className="w-full bg-muted border border-input hover:border-border rounded-md text-sm font-medium focus:ring-1 focus:ring-primary focus:outline-none px-3 py-2 cursor-pointer transition-colors"
+          >
+            <option value="" disabled>Select a workspace</option>
+            {workspaces?.map(ws => (
+              <option key={ws.id} value={ws.id}>{ws.name}</option>
+            ))}
+          </select>
+        </div>
 
-          {workspaces?.map((ws) => {
-            const isActive = location === `/app/workspaces/${ws.id}`;
-            return (
-              <Link key={ws.id} href={`/app/workspaces/${ws.id}`} className={cn(
-                "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-all duration-200",
-                isActive
-                  ? "bg-primary/10 text-primary"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
-              )}>
-                <FolderGit2 className="w-4 h-4 shrink-0" />
-                <span className="truncate">{ws.name}</span>
-              </Link>
-            );
-          })}
-
-          {workspaces?.length === 0 && (
-            <div className="px-3 py-2 text-xs text-muted-foreground italic">No workspaces found.</div>
+        <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
+          {activeWorkspaceId ? (
+            SECTIONS.map(({ label, suffix, icon: Icon, soon }) => {
+              const href = `/app/workspaces/${activeWorkspaceId}${suffix}`;
+              const isActive = location === href;
+              return (
+                <Link key={suffix} href={href} className={cn(
+                  "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-all duration-200",
+                  isActive
+                    ? "bg-primary/10 text-primary"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                )}>
+                  <Icon className="w-4 h-4 shrink-0" />
+                  <span className="truncate">{label}</span>
+                  {soon && (
+                    <span className="ml-auto inline-flex items-center rounded-full border border-primary/20 bg-primary/10 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-primary">
+                      Soon
+                    </span>
+                  )}
+                </Link>
+              );
+            })
+          ) : (
+            <div className="px-3 py-2 text-xs text-muted-foreground italic">
+              {workspaces?.length === 0 ? 'No workspaces in this organization.' : 'Select a workspace above.'}
+            </div>
           )}
 
           <div className="mt-8">
-            <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-3 mt-6">Settings</div>
+            <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-3 mt-6">Organization</div>
+            <Link href="/app" className={cn(
+              "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-all duration-200",
+              location === '/app'
+                ? "bg-primary/10 text-primary"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+            )}>
+              <Building2 className="w-4 h-4 shrink-0" />
+              Overview
+            </Link>
             <Link href="/app/settings" className={cn(
               "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-all duration-200",
               location === '/app/settings'
@@ -76,7 +125,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               Org Settings
             </Link>
           </div>
-        </div>
+        </nav>
 
         <div className="p-4 border-t border-border/50 shrink-0 bg-muted/30">
           <div className="flex items-center gap-3 px-1 mb-4">

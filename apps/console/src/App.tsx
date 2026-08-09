@@ -30,8 +30,12 @@ import Login from '@/pages/Login';
 import CliApprove from '@/pages/CliApprove';
 import AppOrgPicker from '@/pages/app/OrgPicker';
 import AppDashboard from '@/pages/app/Dashboard';
-import AppWorkspaceDetail from '@/pages/app/WorkspaceDetail';
 import AppOrgSettings from '@/pages/app/OrgSettings';
+import WorkspaceOverview from '@/pages/app/workspace/Overview';
+import WorkspaceApiKeys from '@/pages/app/workspace/ApiKeys';
+import WorkspaceSettings from '@/pages/app/workspace/Settings';
+import WorkspaceComingSoon from '@/pages/app/workspace/ComingSoon';
+import { Database, Route as RouteIcon, ShieldCheck } from 'lucide-react';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -56,7 +60,21 @@ function AppSection() {
     <AppLayout>
       <Switch>
         <Route path="/app" component={AppDashboard} />
-        <Route path="/app/workspaces/:workspaceId" component={AppWorkspaceDetail} />
+        <Route path="/app/workspaces/:workspaceId/keys" component={WorkspaceApiKeys} />
+        <Route path="/app/workspaces/:workspaceId/byok">
+          <WorkspaceComingSoon title="BYOK" icon={Database}
+            description="Bring your own provider keys and route traffic through them." />
+        </Route>
+        <Route path="/app/workspaces/:workspaceId/routing">
+          <WorkspaceComingSoon title="Routing" icon={RouteIcon}
+            description="Model routing rules, fallbacks, and load balancing." />
+        </Route>
+        <Route path="/app/workspaces/:workspaceId/policies">
+          <WorkspaceComingSoon title="Policies" icon={ShieldCheck}
+            description="Guardrails, rate limits, and usage policies for this workspace." />
+        </Route>
+        <Route path="/app/workspaces/:workspaceId/settings" component={WorkspaceSettings} />
+        <Route path="/app/workspaces/:workspaceId" component={WorkspaceOverview} />
         <Route path="/app/settings" component={AppOrgSettings} />
         <Route component={NotFound} />
       </Switch>
