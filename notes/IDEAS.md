@@ -73,7 +73,7 @@ from the signing key at invocation time) died with the token signing key: manage
 opaque and verified by database lookup, so there is no key whose possession equals root. What
 survives is the Jenkins-style variant: any command with database access can mint directly through
 the fat-model API, and for operators without database access, first start prints a single-use code
-exchanged for a token via the API or webapp login, pairing naturally with
+exchanged for a token via the API or console login, pairing naturally with
 [service accounts](#service-accounts-as-control-plane-entities).
 
 ## Finish service accounts
@@ -129,7 +129,7 @@ Protobuf itself was considered and rejected: gzip erases the size win, Pydantic 
 unknown fields, and proto3 would cost HttpUrl/UUID/datetime/Literal validation. Revisit only if a
 non-Python data plane or third-party contract consumers appear.
 
-## Webapp login switch and session policy
+## Console login switch and session policy
 
 Human login is password only (2026-08-06, argon2 on AuthIdentity) with cookie sessions (sk-sess-
 opaque token, sha256 at rest, 12h sliding / 14d absolute) as a second door into the management API
@@ -138,13 +138,13 @@ Sec-Fetch-Site) and org scoping via X-Org-Id backed by memberships. SSO shipped 
 was removed untested on 2026-08-07 to cut clutter; the design is parked in
 [SSO login](#sso-login-parked).
 
-The webapp rides the cookie door: password login/signup page (open self-signup via
-/v1/auth/signup; fresh accounts hold nothing until granted), api() sends X-Requested-With always
-and X-Org-Id outside /v1/instance and /v1/auth, a sidebar org selector persisted per browser, and
+The console rides the cookie door: password login/signup page (open self-signup via
+/v1/auth/signup; fresh accounts hold nothing until granted), customFetch sends X-Requested-With
+always and X-Org-Id on org-scoped calls, a sidebar org selector persisted per browser, and
 a 401 anywhere flips the me query back to the login screen. The localStorage bearer is gone.
 
 Decision (2026-08-07): self-signup is the only way a human gets a password. The admin
-set/reset-password endpoint was removed as unreachable surface (no CLI or webapp consumer);
+set/reset-password endpoint was removed as unreachable surface (no CLI or console consumer);
 admins grant memberships and mint tokens after signup, and password recovery without email means
 signing up fresh or an operator editing the database. Revisit when email delivery or SSO lands,
 which is also what closed-signup corporate provisioning waits on.
@@ -186,7 +186,7 @@ while password is the only door anyone walks through. The implementation lives i
   are gone.
 - Signup refused emails whose domain matched a connection, so SSO domains could not shadow
   themselves with password accounts.
-- Unbuilt when parked: the webapp side (discover call, authorize redirect, callback landing page)
+- Unbuilt when parked: the console side (discover call, authorize redirect, callback landing page)
   and an instance-wide default connection (org_id null) for instance admins.
 
 Restoring means: the SsoConnection and LoginAttempt models and their tables, the three auth routes plus the org CRUD, the authlib dependency, the sso:read
