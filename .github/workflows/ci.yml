@@ -3,6 +3,7 @@ name: ci
 on:
   push:
   pull_request:
+  workflow_dispatch:
 
 jobs:
   ci:
@@ -27,7 +28,11 @@ jobs:
       - run: uv sync --all-packages --frozen
       - run: uv run pytest tests/acceptance/scenarios
 
+  # Off by default: the numbers are host bound, and a shared runner loses requests under the
+  # higher concurrency levels, so this has never passed here. Run it from the Actions tab, or
+  # locally with uv run pytest tests/acceptance/benchmarks, where the table is the point.
   benchmarks:
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
