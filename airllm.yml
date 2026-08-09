@@ -1,7 +1,11 @@
 control_plane:
   database:
-    url: postgresql+asyncpg://airllm:airllm@127.0.0.1:5432/airllm
+    # Replit's managed PostgreSQL exposes these connection fields automatically.
+    # The local Docker URL can still be used by copying this file and replacing
+    # the URL for non-Replit development.
+    url: postgresql+asyncpg://${env:PGUSER}:${env:PGPASSWORD}@${env:PGHOST}:${env:PGPORT}/${env:PGDATABASE}
   bundle:
+    # Generate these files with: uv run airllmcp keygen
     signing_key: ${file:.airllm/signing.key}
     staleness_bound_hours: 24
 
@@ -10,6 +14,7 @@ data_plane:
     url: http://127.0.0.1:8000
     token: ${file:.airllm/dataplane.key}
   bundle:
+    # signing.pub is generated alongside signing.key by: uv run airllmcp keygen
     public_key: ${file:.airllm/signing.pub}
     cache_dir: .airllm
     staleness_policy: serve_and_warn # or refuse

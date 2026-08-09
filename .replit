@@ -1,4 +1,4 @@
-modules = ["nodejs-24", "python-base-3.13"]
+modules = ["bash", "web", "postgresql-16", "python-base-3.13", "nodejs-24"]
 
 [deployment]
 router = "application"
@@ -9,7 +9,19 @@ args = ["bun", "pm", "cache", "rm"]
 env = { "CI" = "true" }
 
 [workflows]
-runButton = "Project"
+runButton = "apps/console: web"
+
+[[workflows.workflow]]
+name = "backend: control plane"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "./scripts/replit-backend.sh"
+waitForPort = 8000
+
+[workflows.workflow.metadata]
+outputType = "console"
 
 [agent]
 stack = "PNPM_WORKSPACE"
