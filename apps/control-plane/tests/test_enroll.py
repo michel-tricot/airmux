@@ -51,7 +51,7 @@ def test_enrollment_lists_granted_orgs_but_only_marks_the_personal_one(tmp_path)
     with _client(cp) as c:
         granted = make_org(c, root, "granted")
         me = _signup(c)
-        assert c.put(f"/v1/users/{me['user_id']}/orgs/{granted}", headers=root).status_code == 200
+        assert c.put(f"/v1/org/users/{me['user_id']}", headers=cp.headers(granted)).status_code == 200
         personal = c.post("/v1/enroll/org", json={"name": "mine"}, headers=CSRF).json()["data"]
 
         standing = c.get("/v1/enroll", headers=CSRF).json()["data"]
@@ -81,11 +81,10 @@ def test_admin_provisioned_orgs_are_not_personal(tmp_path):
 
 def test_personal_slot_survives_membership_removal(tmp_path):
     cp = setup_control_plane(tmp_path)
-    root = cp.headers()
     with _client(cp) as c:
         me = _signup(c)
         org = c.post("/v1/enroll/org", json={"name": "mine"}, headers=CSRF).json()["data"]
-        assert c.delete(f"/v1/users/{me['user_id']}/orgs/{org['id']}", headers=root).status_code == 200
+        assert c.delete(f"/v1/org/users/{me['user_id']}", headers=cp.headers(org["id"])).status_code == 200
 
         standing = c.get("/v1/enroll", headers=CSRF).json()["data"]
         assert standing["orgs"] == []

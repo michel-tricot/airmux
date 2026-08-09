@@ -41,11 +41,14 @@ class UsageEventV1(BaseModel):
 
 
 class HeartbeatV1(BaseModel):
-    """A data plane announcing itself to the control plane; the record survives, liveness is derived from last_seen."""
+    """A data plane announcing itself to the control plane; the record survives, liveness is derived from last_seen.
+
+    A data plane registers against the instance: which bundle it happens to serve is
+    config, and bundle_id already says which one that is.
+    """
 
     model_config = ConfigDict(frozen=True)
 
     instance_id: UUID  # stable per data plane, persisted in its cache dir
     version: str
-    org_id: UUID | None = None  # which org's bundle it serves
     bundle_id: UUID | None = None  # the bundle it is currently serving

@@ -67,11 +67,11 @@ def test_service_account_is_a_full_principal(tmp_path):
         human = c.post("/v1/users", json={"email": "m@example.com"}, headers=root).json()["data"]
         assert human["service_account"] is False
 
-        c.put(f"/v1/users/{created['id']}/orgs/{o1}", headers=root)
+        c.put(f"/v1/org/users/{created['id']}", headers=cp.headers(o1))
         minted = c.post("/v1/org/management-keys", json={"user_id": created["id"], "label": "t"}, headers=cp.headers(o1)).json()["data"]
         org = {"authorization": f"Bearer {minted['token']}"}
         assert c.get("/v1/org/workspaces", headers=org).status_code == 200
-        c.delete(f"/v1/users/{created['id']}/orgs/{o1}", headers=root)
+        c.delete(f"/v1/org/users/{created['id']}", headers=cp.headers(o1))
         assert c.get("/v1/org/workspaces", headers=org).status_code == 401
 
         by_email = {u["email"]: u["service_account"] for u in _users(c, root)}
@@ -87,21 +87,56 @@ def test_membership_lifecycle_and_listing(tmp_path):
         user = c.post("/v1/users", json={"email": "m@example.com"}, headers=root).json()["data"]
         uid = user["id"]
 
-        assert c.put(f"/v1/users/{uid}/orgs/{o1}", headers=root).status_code == 200
-        assert c.put(f"/v1/users/{uid}/orgs/{o2}", headers=root).status_code == 200
-        assert c.put(f"/v1/users/{uid}/orgs/{o1}", headers=root).status_code == 200
-        assert c.put(f"/v1/users/{uid}/orgs/{uuid7()}", headers=root).status_code == 404
-        assert c.put(f"/v1/users/{uuid7()}/orgs/{o1}", headers=root).status_code == 404
+        assert c.put(f"/v1/org/users/{uid}", headers=cp.headers(o1)).status_code == 200
+        assert c.put(f"/v1/org/users/{uid}", headers=cp.headers(o2)).status_code == 200
+        assert c.put(f"/v1/org/users/{uid}", headers=cp.headers(o1)).status_code == 200
+        assert c.put(f"/v1/org/users/{uuid7()}", headers=cp.headers(o1)).status_code == 404
 
         listed = _users(c, root)
         assert [u["id"] for u in listed] == [uid]
         assert sorted(listed[0]["orgs"]) == sorted([str(o1), str(o2)])
 
-        deleted = c.delete(f"/v1/users/{uid}/orgs/{o2}", headers=root).json()["data"]
+        deleted = c.delete(f"/v1/org/users/{uid}", headers=cp.headers(o2)).json()["data"]
         assert deleted["id"] == f"{uid}/{o2}"
         assert deleted["deleted_at"] is not None
-        assert c.delete(f"/v1/users/{uid}/orgs/{o2}", headers=root).status_code == 404
+        assert c.delete(f"/v1/org/users/{uid}", headers=cp.headers(o2)).status_code == 404
         assert _users(c, root)[0]["orgs"] == [str(o1)]
+
+
+def test_org_user_listing_is_scoped_to_the_acting_org(tmp_path):
+    """The roster an org credential can read, and the cross-org membership it deliberately cannot."""
+    cp = setup_control_plane(tmp_path)
+    root = cp.headers()
+    with TestClient(cp.app) as c:
+        o1 = make_org(c, root, "o1")
+        o2 = make_org(c, root, "o2")
+        both = c.post("/v1/users", json={"email": "both@example.com", "name": "Both"}, headers=root).json()["data"]["id"]
+        only_two = c.post("/v1/users", json={"email": "two@example.com"}, headers=root).json()["data"]["id"]
+        for org, user in ((o1, both), (o2, both), (o2, only_two)):
+            assert c.put(f"/v1/org/users/{user}", headers=cp.headers(org)).status_code == 200
+
+        first = c.get("/v1/org/users", headers=cp.headers(o1)).json()["data"]
+        assert [m["user_id"] for m in first] == [both]
+        assert first[0]["email"] == "both@example.com"
+        assert first[0]["name"] == "Both"
+        assert first[0]["status"] == "member"
+        assert "orgs" not in first[0]
+
+        second = c.get("/v1/org/users", headers=cp.headers(o2)).json()["data"]
+        assert sorted(m["email"] for m in second) == ["both@example.com", "two@example.com"]
+
+
+def test_org_users_are_unreachable_without_org_scope(tmp_path):
+    """Membership moved off the instance router; an instance credential has no org to act on."""
+    cp = setup_control_plane(tmp_path)
+    root = cp.headers()
+    with TestClient(cp.app) as c:
+        o1 = make_org(c, root, "o1")
+        uid = c.post("/v1/users", json={"email": "m@example.com"}, headers=root).json()["data"]["id"]
+        assert c.get("/v1/org/users", headers=root).status_code == 403
+        assert c.put(f"/v1/org/users/{uid}", headers=root).status_code == 403
+        assert c.delete(f"/v1/org/users/{uid}", headers=root).status_code == 403
+        assert c.put(f"/v1/users/{uid}/orgs/{o1}", headers=root).status_code == 404
 
 
 def test_user_org_token_requires_membership(tmp_path):
@@ -111,7 +146,7 @@ def test_user_org_token_requires_membership(tmp_path):
         o1 = make_org(c, root, "o1")
         uid = c.post("/v1/users", json={"email": "m@example.com"}, headers=root).json()["data"]["id"]
         assert c.post("/v1/org/management-keys", json={"user_id": uid, "label": "t"}, headers=cp.headers(o1)).status_code == 403
-        c.put(f"/v1/users/{uid}/orgs/{o1}", headers=root)
+        c.put(f"/v1/org/users/{uid}", headers=cp.headers(o1))
         minted = c.post("/v1/org/management-keys", json={"user_id": uid, "label": "t"}, headers=cp.headers(o1)).json()["data"]
         assert minted["org_id"] == str(o1)
         assert minted["user_id"] == uid
@@ -128,9 +163,9 @@ def test_instance_token_requires_instance_admin(tmp_path):
         member = c.post("/v1/users", json={"email": "m@example.com"}, headers=root).json()["data"]["id"]
         admin = c.post("/v1/users", json={"email": "a@example.com"}, headers=root).json()["data"]["id"]
         make_admin(tmp_path, admin)
-        assert c.post("/v1/instance/management-keys", json={"user_id": member, "label": "t"}, headers=root).status_code == 403
-        minted = c.post("/v1/instance/management-keys", json={"user_id": admin, "label": "t"}, headers=root).json()["data"]
-        assert minted["org_id"] is None
+        assert c.post("/v1/instance/instance-keys", json={"user_id": member, "label": "t"}, headers=root).status_code == 403
+        minted = c.post("/v1/instance/instance-keys", json={"user_id": admin, "label": "t"}, headers=root).json()["data"]
+        assert minted["user_id"] == admin
         headers = {"authorization": f"Bearer {minted['token']}"}
         assert c.get("/v1/users", headers=headers).status_code == 200
 
@@ -153,11 +188,11 @@ def test_removing_membership_invalidates_user_tokens(tmp_path):
     with TestClient(cp.app) as c:
         o1 = make_org(c, root, "o1")
         uid = c.post("/v1/users", json={"email": "m@example.com"}, headers=root).json()["data"]["id"]
-        c.put(f"/v1/users/{uid}/orgs/{o1}", headers=root)
+        c.put(f"/v1/org/users/{uid}", headers=cp.headers(o1))
         minted = c.post("/v1/org/management-keys", json={"user_id": uid, "label": "t"}, headers=cp.headers(o1)).json()["data"]
         org = {"authorization": f"Bearer {minted['token']}"}
         assert c.get("/v1/org/workspaces", headers=org).status_code == 200
-        c.delete(f"/v1/users/{uid}/orgs/{o1}", headers=root)
+        c.delete(f"/v1/org/users/{uid}", headers=cp.headers(o1))
         assert c.get("/v1/org/workspaces", headers=org).status_code == 401
 
 
@@ -167,7 +202,7 @@ def test_token_listing_shows_the_owner(tmp_path):
     with TestClient(cp.app) as c:
         o1 = make_org(c, root, "o1")
         uid = c.post("/v1/users", json={"email": "m@example.com"}, headers=root).json()["data"]["id"]
-        c.put(f"/v1/users/{uid}/orgs/{o1}", headers=root)
+        c.put(f"/v1/org/users/{uid}", headers=cp.headers(o1))
         minted = c.post("/v1/org/management-keys", json={"user_id": uid, "label": "t"}, headers=cp.headers(o1)).json()["data"]
         listed = {t["id"]: t["user_id"] for t in c.get("/v1/instance/management-keys", headers=root).json()["data"]}
         assert listed[minted["id"]] == uid

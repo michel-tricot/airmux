@@ -19,7 +19,9 @@ router = APIRouter(tags=["Data Plane"])
 
 
 def _sync_org(claims_org_id: UUID | None, org_id: UUID | None) -> UUID | None:
-    """A data plane authenticates with a management token; an org-scoped one is pinned to its org."""
+    """The org a sync request may touch: an instance key leaves the choice to the caller, an
+    org-scoped management key pins it. Only the bundle and event paths have an org to pin; the
+    heartbeat registers the data plane against the instance and names no org at all."""
     if claims_org_id is None:
         return org_id
     if org_id is not None and org_id != claims_org_id:
@@ -39,27 +41,37 @@ async def bundle_latest(claims: MgmtDep, org_id: UUID | None = None) -> Envelope
 
 
 @router.post("/events", dependencies=[require(Scope.sync)])
-async def ingest_events(claims: MgmtDep, events: list[UsageEventV1]) -> Envelope[EventsIngestedOut]:
-    """Idempotent upsert on event_id: at-least-once delivery lands exactly once, and a failed batch lands nothing."""
+async def ingest_events(claims: MgmtDep, events: list[UsageEventV1], session: SessionDep) -> Envelope[EventsIngestedOut]:
+    """Idempotent on event_id: at-least-once delivery lands exactly once, and a failed batch lands nothing.
+
+    One atomic upsert rather than a read per event. Reading first would also be racy: two flushes
+    carrying the same event_id would both see it missing and collide on the primary key, failing
+    both batches, and at-least-once delivery makes that overlap ordinary rather than exotic. The
+    outbox drains up to a thousand events at a time, so the per-event round trip cost was real too.
+    ingested counts what RETURNING hands back, which under DO NOTHING is exactly the rows written,
+    so a replay reports zero.
+    """
     if claims.org_id is not None and any(event.org_id != claims.org_id for event in events):
         raise HTTPException(status_code=403)
-    fresh = [event for event in events if await UsageEvent.get(event.event_id) is None]
-    for event in fresh:
-        await UsageEvent(**event.model_dump(exclude={"schema_version"})).save()
-    return Envelope(data=EventsIngestedOut(received=len(events), ingested=len(fresh)))
+    if not events:
+        return Envelope(data=EventsIngestedOut(received=0, ingested=0))
+    # A batch may repeat an event_id; keep the first so the statement has one row per key
+    rows = list({event.event_id: event.model_dump(exclude={"schema_version"}) for event in events}.values())
+    stmt = pg_insert(UsageEvent).values(rows).on_conflict_do_nothing(index_elements=["event_id"]).returning(col(UsageEvent.event_id))
+    inserted = (await session.execute(stmt)).scalars().all()
+    return Envelope(data=EventsIngestedOut(received=len(events), ingested=len(inserted)))
 
 
 @router.post("/heartbeat", dependencies=[require(Scope.sync)])
-async def heartbeat(claims: MgmtDep, body: HeartbeatV1, session: SessionDep, request: Request) -> Envelope[HeartbeatOut]:
+async def heartbeat(_claims: MgmtDep, body: HeartbeatV1, session: SessionDep, request: Request) -> Envelope[HeartbeatOut]:
     """Upsert the instance record; the row persists as history, last_seen drives liveness.
 
     Every worker of a multi-worker data plane heartbeats with the same instance_id, so the first
     insert can race; do it as one atomic upsert instead of read-then-write.
     """
-    org = _sync_org(claims.org_id, body.org_id)
     now = datetime.now(tz=UTC)
     address = request.client.host if request.client else None
-    fields = {"org_id": org, "version": body.version, "bundle_id": body.bundle_id, "address": address, "last_seen": now}
+    fields = {"version": body.version, "bundle_id": body.bundle_id, "address": address, "last_seen": now}
     stmt = (
         pg_insert(DataPlaneInstance)
         .values(instance_id=body.instance_id, first_seen=now, **fields)

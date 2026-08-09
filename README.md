@@ -110,7 +110,8 @@ uv run airllm bundles compile   # recompile and sign after any change
 ```
 
 The admin API is browsable at `http://localhost:8000/docs`; authorize with the
-`GW_ADMIN_MGMT_TOKEN` from `.env`.
+`GW_INSTANCE_KEY` from `.env`. Instance keys reach the `/instance` endpoints,
+management keys reach one org's.
 
 ## Configuration
 

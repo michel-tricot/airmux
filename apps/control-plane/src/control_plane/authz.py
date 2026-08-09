@@ -31,6 +31,8 @@ class Scope(StrEnum):
     users_write = "users:write"
     management_keys_read = "management-keys:read"
     management_keys_write = "management-keys:write"
+    instance_keys_read = "instance-keys:read"
+    instance_keys_write = "instance-keys:write"
     sync = "sync"
 
 

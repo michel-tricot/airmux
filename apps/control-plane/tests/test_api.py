@@ -12,7 +12,7 @@ from pg import db_name_for, ensure_database
 from contract import INFERENCE_TOKEN_PREFIX, SignedBundle, private_key_to_b64, token_hash, uuid7, verify_bundle
 from control_plane.app import create_app
 from control_plane.config import BundlePolicy, DatabaseConfig, Settings
-from control_plane.keys import MANAGEMENT_KEY_PREFIX
+from control_plane.keys import INSTANCE_KEY_PREFIX, MANAGEMENT_KEY_PREFIX
 from control_plane.models import DataPlaneInstance
 
 
@@ -146,9 +146,11 @@ def test_scopes_are_strictly_separated(tmp_path):
 
         assert c.post("/v1/orgs", json={"name": "o2"}, headers=org).status_code == 403
         assert c.get("/v1/orgs", headers=org).status_code == 403
-        assert c.post("/v1/instance/management-keys", headers=org).status_code == 403
         assert c.get("/v1/instance/management-keys", headers=org).status_code == 403
         assert c.delete(f"/v1/instance/management-keys/{uuid7()}", headers=org).status_code == 403
+        assert c.post("/v1/instance/instance-keys", headers=org).status_code == 403
+        assert c.get("/v1/instance/instance-keys", headers=org).status_code == 403
+        assert c.delete(f"/v1/instance/instance-keys/{uuid7()}", headers=org).status_code == 403
 
         assert c.post("/v1/taxonomy/providers", json=PROVIDER, headers=org).status_code == 403
         assert c.post("/v1/taxonomy/models", json=MODEL, headers=org).status_code == 403
@@ -197,15 +199,16 @@ def test_token_lifecycle_via_api(tmp_path):
         o1 = make_org(c, root, "o1")
         user_id = _api_user(c, root, tmp_path)
         assert c.post("/v1/org/management-keys", json={"user_id": str(uuid7()), "label": "t"}, headers=cp.headers(o1)).status_code == 404
-        assert c.post("/v1/instance/management-keys", json={"user_id": str(uuid7()), "label": "t"}, headers=root).status_code == 404
+        assert c.post("/v1/instance/instance-keys", json={"user_id": str(uuid7()), "label": "t"}, headers=root).status_code == 404
         org_token = c.post("/v1/org/management-keys", json={"user_id": user_id, "label": "t"}, headers=cp.headers(o1)).json()["data"]
         assert org_token["org_id"] == str(o1)
         assert org_token["user_id"] == user_id
         assert org_token["token"].startswith(MANAGEMENT_KEY_PREFIX)
-        peer = c.post("/v1/instance/management-keys", json={"user_id": user_id, "label": "t"}, headers=root).json()["data"]
-        assert peer["org_id"] is None
+        peer = c.post("/v1/instance/instance-keys", json={"user_id": user_id, "label": "t"}, headers=root).json()["data"]
+        assert peer["token"].startswith(INSTANCE_KEY_PREFIX)
         listed = c.get("/v1/instance/management-keys", headers=root).json()["data"]
-        assert {org_token["id"], peer["id"]} <= {t["id"] for t in listed}
+        assert org_token["id"] in {t["id"] for t in listed}
+        assert peer["id"] not in {t["id"] for t in listed}
         assert all("token_hash" not in t for t in listed)
 
         scoped = {"authorization": f"Bearer {org_token['token']}"}
@@ -215,10 +218,11 @@ def test_token_lifecycle_via_api(tmp_path):
 
         peer_headers = {"authorization": f"Bearer {peer['token']}"}
         assert c.get("/v1/orgs", headers=peer_headers).status_code == 200
-        assert c.delete(f"/v1/instance/management-keys/{peer['id']}", headers=root).status_code == 200
+        assert c.delete(f"/v1/instance/instance-keys/{peer['id']}", headers=root).status_code == 200
         assert c.get("/v1/orgs", headers=peer_headers).status_code == 401
 
         assert c.delete(f"/v1/instance/management-keys/{uuid7()}", headers=root).status_code == 404
+        assert c.delete(f"/v1/instance/instance-keys/{uuid7()}", headers=root).status_code == 404
 
 
 def test_list_endpoints_read_back(tmp_path):
@@ -321,43 +325,70 @@ def test_event_ingest_is_idempotent_and_org_scoped(tmp_path):
         assert c.post("/v1/events", json=events).status_code == 401
 
 
-def _heartbeat(instance_id: UUID, org: UUID) -> dict:
-    return {"instance_id": str(instance_id), "version": "0.1.0", "org_id": str(org), "bundle_id": str(uuid7())}
+def test_event_ingest_survives_a_repeat_inside_one_batch(tmp_path):
+    """At-least-once delivery can repeat an event_id within a single flush; the batch still lands."""
+    cp = setup_control_plane(tmp_path)
+    root = cp.headers()
+    with TestClient(cp.app) as c:
+        o1 = make_org(c, root, "o1")
+        duplicated = _event(o1)
+        other = _event(o1)
+        batch = [duplicated, other, duplicated]
+        landed = c.post("/v1/events", json=batch, headers=root)
+        assert landed.status_code == 200, landed.text
+        assert landed.json()["data"] == {"received": 3, "ingested": 2}
+
+        stored = c.get("/v1/org/events", headers=cp.headers(o1)).json()["data"]
+        assert sorted(e["event_id"] for e in stored) == sorted({duplicated["event_id"], other["event_id"]})
+
+        replay = c.post("/v1/events", json=batch, headers=root).json()["data"]
+        assert replay == {"received": 3, "ingested": 0}
+
+
+def test_event_ingest_accepts_an_empty_batch(tmp_path):
+    """An idle outbox flush posts nothing; it is a no-op, not a malformed statement."""
+    cp = setup_control_plane(tmp_path)
+    root = cp.headers()
+    with TestClient(cp.app) as c:
+        empty = c.post("/v1/events", json=[], headers=root)
+        assert empty.status_code == 200, empty.text
+        assert empty.json()["data"] == {"received": 0, "ingested": 0}
+
+
+def _heartbeat(instance_id: UUID) -> dict:
+    return {"instance_id": str(instance_id), "version": "0.1.0", "bundle_id": str(uuid7())}
 
 
 def test_heartbeat_registers_and_lists_instances(tmp_path):
+    """A data plane registers against the instance, so either key type may heartbeat and no org is recorded."""
     cp = setup_control_plane(tmp_path)
     root = cp.headers()
     dp1, dp2, dp3 = uuid7(), uuid7(), uuid7()
     with TestClient(cp.app) as c:
-        o1 = make_org(c, root, "o1")
-        o2 = make_org(c, root, "o2")
-        org = cp.headers(o1)
-        assert c.post("/v1/heartbeat", json=_heartbeat(dp1, o1), headers=org).status_code == 200
-        assert c.post("/v1/heartbeat", json=_heartbeat(dp2, o1), headers=root).status_code == 200
-        assert c.post("/v1/heartbeat", json=_heartbeat(dp3, o2), headers=root).status_code == 200
+        org = cp.headers(make_org(c, root, "o1"))
+        assert c.post("/v1/heartbeat", json=_heartbeat(dp1), headers=org).status_code == 200
+        assert c.post("/v1/heartbeat", json=_heartbeat(dp2), headers=root).status_code == 200
+        assert c.post("/v1/heartbeat", json=_heartbeat(dp3), headers=root).status_code == 200
         # re-heartbeat dp1 (upsert, not duplicate)
-        c.post("/v1/heartbeat", json=_heartbeat(dp1, o1), headers=org)
+        c.post("/v1/heartbeat", json=_heartbeat(dp1), headers=org)
         rows = c.get("/v1/instance/data-planes", headers=root).json()["data"]
         assert {r["instance_id"] for r in rows} == {str(dp1), str(dp2), str(dp3)}
-        assert {r["instance_id"]: r["org_id"] for r in rows}[str(dp3)] == str(o2)
+        assert all("org_id" not in r for r in rows)
         assert all(r["status"] == "online" for r in rows)
         assert c.get("/v1/instance/data-planes", headers=org).status_code == 403
-        assert c.post("/v1/heartbeat", json=_heartbeat(uuid7(), o2), headers=org).status_code == 403
-        assert c.post("/v1/heartbeat", json=_heartbeat(uuid7(), o1)).status_code == 401
+        assert c.post("/v1/heartbeat", json=_heartbeat(uuid7())).status_code == 401
 
 
 def test_stale_instance_is_offline_and_hidden_by_default(tmp_path):
     cp = setup_control_plane(tmp_path)
     root = cp.headers()
     with TestClient(cp.app) as c:
-        o1 = make_org(c, root, "o1")
-        org = cp.headers(o1)
+        org = cp.headers(make_org(c, root, "o1"))
         fresh, gone = uuid7(), uuid7()
-        c.post("/v1/heartbeat", json=_heartbeat(fresh, o1), headers=org)
+        c.post("/v1/heartbeat", json=_heartbeat(fresh), headers=org)
         # backdate a second instance far past the stale window, directly in the db
         old = datetime.now(tz=UTC) - timedelta(hours=1)
-        run_in_db(tmp_path, lambda: DataPlaneInstance(instance_id=gone, org_id=o1, version="0.1.0", first_seen=old, last_seen=old).save())
+        run_in_db(tmp_path, lambda: DataPlaneInstance(instance_id=gone, version="0.1.0", first_seen=old, last_seen=old).save())
         default = c.get("/v1/instance/data-planes", headers=root).json()["data"]
         assert {r["instance_id"] for r in default} == {str(fresh)}  # offline hidden
         all_ = c.get("/v1/instance/data-planes", headers=root, params={"include_offline": True}).json()["data"]
@@ -374,6 +405,6 @@ def test_revoked_token_is_rejected_on_sync_routes(tmp_path):
         minted = c.post("/v1/org/management-keys", json={"user_id": user_id, "label": "t"}, headers=cp.headers(o1)).json()["data"]
         dp = {"authorization": f"Bearer {minted['token']}"}
         dp1 = uuid7()
-        assert c.post("/v1/heartbeat", json=_heartbeat(dp1, o1), headers=dp).status_code == 200
+        assert c.post("/v1/heartbeat", json=_heartbeat(dp1), headers=dp).status_code == 200
         assert c.delete(f"/v1/instance/management-keys/{minted['id']}", headers=root).status_code == 200
-        assert c.post("/v1/heartbeat", json=_heartbeat(dp1, o1), headers=dp).status_code == 401
+        assert c.post("/v1/heartbeat", json=_heartbeat(dp1), headers=dp).status_code == 401

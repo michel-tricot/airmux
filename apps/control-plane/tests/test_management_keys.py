@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from helpers import run_in_db, setup_db
+from helpers import make_org, run_in_db, setup_control_plane, setup_db
+from starlette.testclient import TestClient
 
 from contract import INFERENCE_TOKEN_PREFIX, token_hash, uuid7
 from control_plane.authz import ALL_SCOPES
@@ -27,14 +28,14 @@ def test_minted_token_has_prefix_and_stored_hash(tmp_path):
     setup_db(tmp_path)
 
     async def mint():
-        admin = await _admin()
-        token_id, token = await mint_management_key(None, admin.id, label="t")
+        member, org_id = await _member()
+        token_id, token = await mint_management_key(org_id, member.id, label="t")
         return token, await ManagementKey.find_by_id(token_id)
 
-    token, row = run_in_db(tmp_path, mint)
+    token, key = run_in_db(tmp_path, mint)
     assert token.startswith(MANAGEMENT_KEY_PREFIX)
-    assert row.token_hash == token_hash(token)
-    assert token not in row.model_dump_json()
+    assert key.token_hash == token_hash(token)
+    assert token not in key.model_dump_json()
 
 
 def test_verify_accepts_a_minted_token_and_builds_claims_from_the_row(tmp_path):
@@ -85,13 +86,13 @@ def test_revoked_row_is_rejected(tmp_path):
     setup_db(tmp_path)
 
     async def flow():
-        admin = await _admin()
-        token_id, token = await mint_management_key(None, admin.id, label="t")
+        member, org_id = await _member()
+        token_id, token = await mint_management_key(org_id, member.id, label="t")
         before = await verify_management_key(token)
-        row = await ManagementKey.find_by_id(token_id)
-        assert row is not None
-        row.revoked = True
-        await row.save()
+        key = await ManagementKey.find_by_id(token_id)
+        assert key is not None
+        key.revoked = True
+        await key.save()
         return before, await verify_management_key(token)
 
     before, after = run_in_db(tmp_path, flow)
@@ -117,8 +118,8 @@ def test_tampered_token_is_rejected(tmp_path):
     setup_db(tmp_path)
 
     async def flow():
-        admin = await _admin()
-        _, token = await mint_management_key(None, admin.id, label="t")
+        member, org_id = await _member()
+        _, token = await mint_management_key(org_id, member.id, label="t")
         tampered = token[:-1] + ("A" if token[-1] != "A" else "B")
         return await verify_management_key(token), await verify_management_key(tampered)
 
@@ -142,3 +143,18 @@ def test_membership_backing_still_gates_user_bound_tokens(tmp_path):
     before, after = run_in_db(tmp_path, flow)
     assert before is not None
     assert after is None
+
+
+def test_revoking_reaches_only_the_scoped_org(tmp_path):
+    """Ownership resolves before anything else, so another org's key is a 404 rather than a revocation."""
+    cp = setup_control_plane(tmp_path)
+    with TestClient(cp.app) as client:
+        instance_headers = cp.headers()
+        first = make_org(client, instance_headers, name="org-one")
+        second = make_org(client, instance_headers, name="org-two")
+        minted = client.post("/v1/org/management-keys", json={"label": "ci"}, headers=cp.headers(org_id=second))
+        assert minted.status_code == 200, minted.text
+        key_id = minted.json()["data"]["id"]
+
+        assert client.delete(f"/v1/org/management-keys/{key_id}", headers=cp.headers(org_id=first)).status_code == 404
+        assert client.delete(f"/v1/org/management-keys/{key_id}", headers=cp.headers(org_id=second)).status_code == 200

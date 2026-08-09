@@ -230,8 +230,16 @@ it is ring 1 plus an argon2 verify.
 Context: management and inference keys are opaque secrets (built 2026-08-06), all data planes of
 an org still share GW_DATAPLANE_TOKEN, and the bundle public key is a second shared .env secret.
 Enrollment gives each data plane its own credential and its pinned bundle key through a one-time
-exchange, reusing the existing verify path wholesale: a per-instance credential is just a
-management key owned by a per-instance service account.
+exchange, reusing the existing verify path wholesale: a per-instance credential is just a key
+owned by a per-instance service account.
+
+Revised 2026-08-08, when instance keys landed and data planes stopped recording an org: which key
+type enrollment mints is now an open decision. An instance key matches how a data plane registers
+(the heartbeat names no org) and is what a data plane serving several orgs would need, but it
+requires the instance_admin bit on the service account, which is a lot of authority for a bundle
+poller. An org-scoped management key keeps the blast radius to one org and matches today's
+single-org config (data_plane.bundle.org). The quickstart trapdoor accepts either prefix, so
+nothing forces the choice yet. Decide before building; the plan below is otherwise unaffected.
 
 - EnrollmentCode table in the house shape: id, org_id, label, token_hash (sha256), expires_at
   (~24h), consumed_at. Minted by an org admin (`airllm instances enroll <org> --name rack-7` or
@@ -239,8 +247,10 @@ management key owned by a per-instance service account.
   the new machine.
 - `POST /v1/enroll {code}` (unauthenticated): hash lookup, reject expired or consumed, consume
   before any other work (the OIDC callback's single-use-first discipline). Then create the
-  instance identity: service account named after the label, membership in the code's org, an
-  org-scoped key via mint_management_key. Respond once with {token, bundle_public_key, org_id}. The
+  instance identity: service account named after the label, membership in the code's org, and a
+  key of whichever type the decision above settles on (mint_management_key for the org-scoped
+  choice, mint_instance_key for the instance-scoped one). Respond once with {token,
+  bundle_public_key, org_id}. The
   exchange trusts the transport exactly once: operator-chosen URL, short-TTL single-use code;
   after it, the pinned bundle key is the anchor (which is why the key can never come from
   bundle/latest: a key fetched over the channel it verifies verifies nothing).

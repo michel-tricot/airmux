@@ -14,11 +14,10 @@ export default function DataPlanes() {
     <Page title="Data planes">
       <QueryStatus isLoading={isLoading} error={error} empty={instances.length === 0} />
       {instances.length > 0 && (
-        <Table headers={['Instance', 'Org', 'Version', 'Bundle', 'Address', 'Status', 'First seen', 'Last seen']}>
+        <Table headers={['Instance', 'Version', 'Bundle', 'Address', 'Status', 'First seen', 'Last seen']}>
           {instances.map((i) => (
             <tr key={i.instance_id} className="hover:bg-slate-900/50">
               <Td mono>{i.instance_id}</Td>
-              <Td mono>{i.org_id ?? '-'}</Td>
               <Td mono>{i.version}</Td>
               <Td mono>{i.bundle_id ?? '-'}</Td>
               <Td mono>{i.address ?? '-'}</Td>
