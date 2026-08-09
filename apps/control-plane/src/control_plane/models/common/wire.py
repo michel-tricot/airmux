@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from datetime import datetime
-from typing import ClassVar
+from datetime import UTC, datetime
+from typing import ClassVar, Self
 
 from pydantic import BaseModel, ConfigDict
 
@@ -23,6 +23,10 @@ class DeletedOut[I](BaseModel):
 
     id: I
     deleted_at: datetime
+
+    @classmethod
+    def of(cls, ident: I) -> Self:
+        return cls(id=ident, deleted_at=datetime.now(tz=UTC))
 
 
 class RecordOut[T: Record](BaseModel):

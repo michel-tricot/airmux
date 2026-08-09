@@ -11,6 +11,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
       - run: uv sync --all-packages --frozen
       - run: uv run ruff format --check .
       - run: uv run ruff check .
@@ -25,6 +27,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
       - run: uv sync --all-packages --frozen
       - run: uv run pytest tests/acceptance/scenarios
 
@@ -37,5 +41,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
       - run: uv sync --all-packages --frozen
       - run: uv run pytest tests/acceptance/benchmarks

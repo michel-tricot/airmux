@@ -9,7 +9,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from control_plane.authz import ALL_SCOPES, Scope, allowed
 from control_plane.db import transaction
 from control_plane.keys import ManagementClaims, verify_bearer
-from control_plane.models import Org, OrgMembership, User, Workspace, WorkspaceMembership, set_actor
+from control_plane.models import Org, User, Workspace, WorkspaceMembership, set_actor
 from control_plane.sessions import SESSION_COOKIE, verify_session
 
 SessionCookie = Annotated[str | None, Cookie(alias=SESSION_COOKIE)]
@@ -62,7 +62,7 @@ async def _cookie_claims(auth_session: AuthSession, user: User, x_org_id: str | 
         raise HTTPException(status_code=403) from None
     if await Org.find_by_id(org_id) is None:
         raise HTTPException(status_code=403)
-    if not user.instance_admin and await OrgMembership.get((user.id, org_id)) is None:
+    if not await user.backs_org(org_id):
         raise HTTPException(status_code=403)
     return ManagementClaims(token_id=auth_session.id, org_id=org_id, user_id=user.id, scopes=ALL_SCOPES)
 

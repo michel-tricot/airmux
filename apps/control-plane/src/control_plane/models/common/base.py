@@ -27,6 +27,7 @@ def api_dispositions(model: type) -> tuple[frozenset[str], frozenset[str], froze
 
 
 if TYPE_CHECKING:
+    from pydantic import BaseModel
     from sqlalchemy import ColumnElement
     from sqlalchemy.orm import Mapped
 
@@ -61,6 +62,12 @@ class Record(SQLModel):
     async def first(cls, *conditions: ColumnElement[bool] | bool, order_by: OrderBy | tuple[OrderBy, ...] | None = None) -> Self | None:
         records = await cls.find(*conditions, order_by=order_by, limit=1)
         return records[0] if records else None
+
+    def apply(self, update: BaseModel) -> Self:
+        """Patch the record with the fields the caller actually sent; the Update model is the mutable subset."""
+        for name, value in update.model_dump(exclude_unset=True).items():
+            setattr(self, name, value)
+        return self
 
     async def save(self) -> Self:
         session = current_session()

@@ -18,7 +18,7 @@ from control_plane.app import create_app
 from control_plane.config import BundlePolicy, DatabaseConfig, Settings
 from control_plane.db import standalone_transaction
 from control_plane.keys import mint_instance_key, mint_management_key
-from control_plane.models import User, set_actor
+from control_plane.models import Org, OrgMembership, User, set_actor
 
 PROVIDER = {
     "provider_id": "openai",
@@ -138,3 +138,20 @@ def write_config(tmp_path, cp: ControlPlane) -> str:
     cfg = tmp_path / "airllm.yml"
     cfg.write_text(yaml.safe_dump(doc), encoding="utf-8")
     return str(cfg)
+
+
+async def seed_admin(email: str = "admin@example.com") -> User:
+    """An instance admin straight through the model; the API exposes no path to the bit."""
+    user = User(email=email, name=email, instance_admin=True)
+    await set_actor(user.id)
+    return await user.save()
+
+
+async def seed_member(email: str = "member@example.com", org_name: str = "o1") -> tuple[User, UUID]:
+    """A plain user with a membership, and the org they belong to."""
+    user = User(email=email, name=email)
+    await set_actor(user.id)
+    await user.save()
+    org = await Org(name=org_name).save()
+    await OrgMembership(user_id=user.id, org_id=org.id).save()
+    return user, org.id

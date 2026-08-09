@@ -2,22 +2,16 @@ from __future__ import annotations
 
 from typing import get_args, get_origin
 
-from fastapi.routing import APIRoute
 from helpers import make_app
 from pydantic import BaseModel
 
+from control_plane.app import _api_routes as _walk_routes
 from control_plane.models.common.wire import Envelope
 
 
-def _api_routes(app) -> list[APIRoute]:
-    """All routes the app serves, reaching through FastAPI's lazily included routers at any depth."""
-
-    def walk(routes) -> list[APIRoute]:
-        routers = (getattr(r, "original_router", None) for r in routes)
-        nested = [route for router in routers if router is not None for route in walk(router.routes)]
-        return [*(r for r in routes if isinstance(r, APIRoute)), *nested]
-
-    return walk(app.routes)
+def _api_routes(app):
+    """The routes the app serves, through the same walker that stamps the OpenAPI security arrays."""
+    return _walk_routes(app.routes)
 
 
 def test_every_endpoint_declares_an_envelope():

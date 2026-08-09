@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
 from uuid import UUID  # noqa: TC003 fastapi resolves path param annotations at runtime
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -26,9 +25,7 @@ async def update_org(org_id: UUID, body: OrgUpdate) -> Envelope[OrgOut]:
     org = await Org.find_by_id(org_id)
     if org is None:
         raise HTTPException(status_code=404)
-    for name, value in body.model_dump(exclude_unset=True).items():
-        setattr(org, name, value)
-    return Envelope(data=OrgOut.model_validate(await org.save()))
+    return Envelope(data=OrgOut.model_validate(await org.apply(body).save()))
 
 
 @router.get("", tags=["Orgs"], dependencies=[require(Scope.orgs_read)])
@@ -55,4 +52,4 @@ async def delete_org(org_id: UUID) -> Envelope[DeletedOut[UUID]]:
     if org is None:
         raise HTTPException(status_code=404)
     await org.delete_with_contents()
-    return Envelope(data=DeletedOut(id=org_id, deleted_at=datetime.now(tz=UTC)))
+    return Envelope(data=DeletedOut.of(org_id))

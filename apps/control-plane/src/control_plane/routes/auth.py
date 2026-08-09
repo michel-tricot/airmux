@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import datetime
 from typing import Literal
 from urllib.parse import quote
 from uuid import UUID
@@ -129,7 +129,7 @@ async def logout(
         raise HTTPException(status_code=401)
     await auth_session.delete()
     response.delete_cookie(SESSION_COOKIE, path="/")
-    return Envelope(data=DeletedOut(id=auth_session.id, deleted_at=datetime.now(tz=UTC)))
+    return Envelope(data=DeletedOut.of(auth_session.id))
 
 
 @router.get("/me", tags=["Auth"], dependencies=[user_scoped()])
@@ -232,7 +232,7 @@ async def cli_auth_approve(body: CliAuthApproveIn, user: CookieUserDep) -> Envel
         raise HTTPException(status_code=409)
     if await Org.find_by_id(body.org_id) is None:
         raise HTTPException(status_code=403)
-    if not user.instance_admin and await OrgMembership.get((user.id, body.org_id)) is None:
+    if not await user.backs_org(body.org_id):
         raise HTTPException(status_code=403)
     auth_request.approved_user_id = user.id
     auth_request.approved_org_id = body.org_id

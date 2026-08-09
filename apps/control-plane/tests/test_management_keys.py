@@ -1,34 +1,19 @@
 from __future__ import annotations
 
-from helpers import make_org, run_in_db, setup_control_plane, setup_db
+from helpers import make_org, run_in_db, seed_admin, seed_member, setup_control_plane, setup_db
 from starlette.testclient import TestClient
 
 from contract import INFERENCE_TOKEN_PREFIX, token_hash, uuid7
 from control_plane.authz import ALL_SCOPES
 from control_plane.keys import MANAGEMENT_KEY_PREFIX, mint_management_key, verify_management_key
-from control_plane.models import ManagementKey, Org, OrgMembership, User, set_actor
-
-
-async def _admin() -> User:
-    user = User(email="admin@example.com", name="admin", instance_admin=True)
-    await set_actor(user.id)
-    return await user.save()
-
-
-async def _member():
-    user = User(email="member@example.com", name="member")
-    await set_actor(user.id)
-    await user.save()
-    org = await Org(name="o1").save()
-    await OrgMembership(user_id=user.id, org_id=org.id).save()
-    return user, org.id
+from control_plane.models import ManagementKey, OrgMembership, User
 
 
 def test_minted_token_has_prefix_and_stored_hash(tmp_path):
     setup_db(tmp_path)
 
     async def mint():
-        member, org_id = await _member()
+        member, org_id = await seed_member()
         token_id, token = await mint_management_key(org_id, member.id, label="t")
         return token, await ManagementKey.find_by_id(token_id)
 
@@ -42,7 +27,7 @@ def test_verify_accepts_a_minted_token_and_builds_claims_from_the_row(tmp_path):
     setup_db(tmp_path)
 
     async def flow():
-        member, org_id = await _member()
+        member, org_id = await seed_member()
         token_id, token = await mint_management_key(org_id, member.id, label="t")
         return member.id, org_id, token_id, await verify_management_key(token)
 
@@ -57,7 +42,7 @@ def test_verify_builds_scopes_from_the_row(tmp_path):
     setup_db(tmp_path)
 
     async def mint_and_verify():
-        member, org_id = await _member()
+        member, org_id = await seed_member()
         _, restricted = await mint_management_key(org_id, member.id, label="t", scopes=["sync"])
         _, unrestricted = await mint_management_key(org_id, member.id, label="t")
         return await verify_management_key(restricted), await verify_management_key(unrestricted)
@@ -73,7 +58,7 @@ def test_find_by_id_round_trips_identified_rows(tmp_path):
     setup_db(tmp_path)
 
     async def flow():
-        admin = await _admin()
+        admin = await seed_admin()
         return admin.id, await User.find_by_id(admin.id), await User.find_by_id(uuid7())
 
     admin_id, found, missing = run_in_db(tmp_path, flow)
@@ -86,7 +71,7 @@ def test_revoked_row_is_rejected(tmp_path):
     setup_db(tmp_path)
 
     async def flow():
-        member, org_id = await _member()
+        member, org_id = await seed_member()
         token_id, token = await mint_management_key(org_id, member.id, label="t")
         before = await verify_management_key(token)
         key = await ManagementKey.find_by_id(token_id)
@@ -118,7 +103,7 @@ def test_tampered_token_is_rejected(tmp_path):
     setup_db(tmp_path)
 
     async def flow():
-        member, org_id = await _member()
+        member, org_id = await seed_member()
         _, token = await mint_management_key(org_id, member.id, label="t")
         tampered = token[:-1] + ("A" if token[-1] != "A" else "B")
         return await verify_management_key(token), await verify_management_key(tampered)
@@ -132,7 +117,7 @@ def test_membership_backing_still_gates_user_bound_tokens(tmp_path):
     setup_db(tmp_path)
 
     async def flow():
-        member, org_id = await _member()
+        member, org_id = await seed_member()
         _, token = await mint_management_key(org_id, member.id, label="t")
         before = await verify_management_key(token)
         membership = await OrgMembership.get((member.id, org_id))

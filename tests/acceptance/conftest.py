@@ -246,13 +246,13 @@ class Stack:
         self.config_path.write_text(yaml.safe_dump(cfg), encoding="utf-8")
 
     def collect_tokens(self) -> None:
-        """Collect the tokens init minted into .env; a checkpoint that they all exist."""
+        """Collect the tokens the bootstrap minted into .env; a checkpoint that they all exist."""
         secrets = {k: v for k, v in dotenv_values(self.tmp / ".env").items() if v is not None}
         self.env = {**self.env, **secrets}
         token = secrets.get("AIRLLM_TOKEN")
-        assert token, "init did not mint a caller token"
-        assert secrets.get("GW_ORG_MGMT_TOKEN"), "init did not mint an org token"
-        assert secrets.get("GW_DATAPLANE_TOKEN"), "init did not mint a data plane token"
+        assert token, "bootstrap did not mint a caller token"
+        assert secrets.get("GW_ORG_MGMT_TOKEN"), "bootstrap did not mint an org token"
+        assert secrets.get("GW_DATAPLANE_TOKEN"), "bootstrap did not mint a data plane token"
         self.caller_token = token
 
     # processes ------------------------------------------------------------
