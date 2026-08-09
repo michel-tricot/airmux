@@ -21,6 +21,7 @@ from sqlmodel import SQLModel
 
 import control_plane
 from control_plane.models.audit import audit_trigger_ddl_v1, audited_tables
+from control_plane.models.common.identified import UUIDV7_SHIM_DDL_V1, needs_uuidv7_shim
 from control_plane.models.common.tombstone import TOMBSTONE_COLUMNS, tombstoned_models, tombstoned_tables, touch_trigger_ddl_v1
 
 CONTROL_PLANE_DIR = Path(control_plane.__file__).resolve().parents[2]
@@ -118,6 +119,8 @@ def _created_triggers(url: str) -> dict[str, str]:
         engine = create_async_engine(url)
         try:
             async with engine.begin() as conn:
+                if await conn.run_sync(needs_uuidv7_shim):
+                    await conn.exec_driver_sql(UUIDV7_SHIM_DDL_V1)
                 await conn.run_sync(SQLModel.metadata.create_all)
                 for statement in _current_trigger_ddl():
                     await conn.exec_driver_sql(statement)

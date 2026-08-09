@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:18
+    image: postgres:16
     environment:
       POSTGRES_USER: airllm
       POSTGRES_PASSWORD: airllm
@@ -8,7 +8,7 @@ services:
 #    ports:
 #      - "5432:5432"
     volumes:
-      - pgdata:/var/lib/postgresql
+      - pgdata:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U airllm"]
       interval: 5s
