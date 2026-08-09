@@ -87,7 +87,6 @@ function AdminSection() {
     <Shell>
       <RoutedErrorBoundary>
         <Switch>
-          <Route path="/"><Redirect to="/instance" replace /></Route>
           <Route path="/instance" component={Dashboard} />
           <Route path="/instance/organizations" component={Organizations} />
           <Route path="/instance/organizations/:orgId" component={OrganizationDetail} />
@@ -103,7 +102,7 @@ function AdminSection() {
 
 function Router() {
   const [location] = useLocation();
-  const { user, isLoading } = useSession();
+  const { user, isLoading, orgId } = useSession();
 
   if (isLoading) return <Splash>LOADING SESSION...</Splash>;
 
@@ -135,6 +134,11 @@ function Router() {
       </RoutedErrorBoundary>
     );
   }
+
+  // Fresh sign-ins land at the root: send them to the last-selected org, or the
+  // picker when none is remembered. (An invalid remembered org still falls back
+  // to the picker via the enrollment check in AppSection.)
+  if (location === '/') return <Redirect to={orgId ? '/org' : '/orgs'} replace />;
 
   // The instance admin pages run without an org scope, which the control plane grants to
   // instance admins alone; everyone else belongs in their org console.

@@ -32,8 +32,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(() => {
     logoutMutation.mutate(undefined, {
       onSettled: () => {
-        localStorage.removeItem(ORG_STORAGE_KEY);
-        setOrgIdState(null);
+        // The stored org is kept so the next sign-in lands back in it; if another
+        // account signs in here, the enrollment check bounces them to the picker.
         queryClient.clear();
       },
     });
