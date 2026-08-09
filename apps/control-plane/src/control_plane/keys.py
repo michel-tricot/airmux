@@ -37,10 +37,15 @@ class ManagementClaims(BaseModel):
     scopes: frozenset[str] = frozenset()
 
 
+def key_prefix(token: str, kind: str) -> str:
+    """The head of a token worth storing beside its hash."""
+    return token[: len(kind) + PREFIX_SECRET_CHARS]
+
+
 def _new_key(kind: str) -> tuple[str, str]:
     """A fresh token and the head of it worth storing: (token, prefix)."""
     token = kind + secrets.token_urlsafe(32)
-    return token, token[: len(kind) + PREFIX_SECRET_CHARS]
+    return token, key_prefix(token, kind)
 
 
 async def mint_management_key(org_id: UUID, user_id: UUID, *, label: str, scopes: list[str] | None = None) -> tuple[UUID, str]:

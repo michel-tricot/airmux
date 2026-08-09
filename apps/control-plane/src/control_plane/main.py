@@ -4,11 +4,15 @@ import asyncio
 import os
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import typer
 import uvicorn
 import yaml
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+from rich import box
+from rich.console import Console
+from rich.table import Table
 from sqlalchemy.engine import make_url
 
 from contract import private_key_to_b64, public_key_to_b64, uuid7
@@ -16,11 +20,28 @@ from control_plane.app import create_app
 from control_plane.compiler import compile_and_store
 from control_plane.config import BundlePolicy, Settings, database_url, load_settings
 from control_plane.db import standalone_transaction
+from control_plane.fixtures import Fixtures, apply_fixtures
 from control_plane.migrate import current_revision, head_revision, run_migrations
-from control_plane.models import Org, User, set_actor
+from control_plane.models import Model, Org, User, set_actor
 from control_plane.taxonomy import apply_taxonomy, parse_taxonomy
 
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+
 app = typer.Typer(name="airllmcp", no_args_is_help=True)
+
+console = Console()
+
+
+def _table(title: str, headers: tuple[str, ...], rows: Sequence[tuple[str, ...]]) -> Table:
+    """The airllm CLI renders resource listings through cli.output; this is the same look for the one
+    control-plane command with rows to show, which cannot import across apps."""
+    table = Table(title=title, box=box.ROUNDED, header_style="bold", title_justify="left")
+    for header in headers:
+        table.add_column(header)
+    for row in rows:
+        table.add_row(*row)
+    return table
 
 
 def _database_url(config: str) -> str:
@@ -97,6 +118,47 @@ def admin(
         typer.echo(f"{email}: {e}", err=True)
         raise typer.Exit(1) from e
     typer.echo(f"{granted} is already an instance admin" if already else f"{granted} is now an instance admin")
+
+
+@app.command()
+def fixtures(config: str = "airllm.yml") -> None:
+    """Seed a fresh instance with development data: orgs, workspaces, keys, and recorded usage for frontend work.
+
+    Seeds an empty database only, and refuses one that already holds accounts. There is no merge
+    and no partial reset: to start over, drop the database and recreate it. Ids and secrets are
+    derived from names rather than minted, so console URLs, the shared login, and the tokens below
+    come back identical every time you do.
+    """
+    settings = load_settings(config)
+
+    async def run() -> tuple[Fixtures, list[tuple[str, int]], int]:
+        async with standalone_transaction(settings.database.url):
+            seeded = await apply_fixtures(datetime.now(tz=UTC))
+            now = datetime.now(tz=UTC)
+            versions = [
+                (org.name, (await compile_and_store(org.id, uuid7(), now, settings.bundle.staleness_bound, settings.bundle.signing_key)).version)
+                for org in await Org.find()
+            ]
+            return seeded, versions, len(await Model.find())
+
+    try:
+        seeded, versions, models = asyncio.run(run())
+    except ValueError as e:
+        typer.echo(str(e), err=True)
+        raise typer.Exit(1) from e
+
+    typer.echo(f"seeded; bundles: {', '.join(f'{name} v{version}' for name, version in versions)}")
+    if models == 0:
+        typer.echo("catalog is empty, so the bundles route nothing; run `airllmcp taxonomy` to fill it")
+
+    logins = [(email, seeded.password, "instance admin" if email == seeded.admin_email else "member") for email in seeded.emails]
+    keys = [
+        ("inference (Acme production)", seeded.inference_token),
+        ("management (Acme)", seeded.management_token),
+        ("instance", seeded.instance_token),
+    ]
+    console.print(_table("logins", ("Email", "Password", "Role"), logins))
+    console.print(_table("keys", ("Key", "Token"), keys))
 
 
 @app.command()
