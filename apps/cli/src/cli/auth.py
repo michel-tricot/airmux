@@ -49,14 +49,18 @@ DEV_CONSOLE_URL = "http://localhost:5000"
 DEFAULT_CONSOLE_URL = "http://localhost:3000"
 
 
-def resolve_urls(control_plane_url: str, console_url: str, *, dev: bool) -> tuple[str, str]:
-    """The control plane and console this run talks to.
+def resolve_cp_url(control_plane_url: str, *, dev: bool) -> str:
+    """The control plane this run talks to.
 
-    An explicit flag always wins. --dev then names the local pair, ahead of the environment,
-    the active profile and airllm.yml, so a stale profile cannot redirect a development run.
+    An explicit flag always wins. --dev then names the local one, ahead of the environment, the
+    active profile and airllm.yml, so a stale profile cannot redirect a development run.
     """
-    resolved = resolve_control_plane_url(control_plane_url or (DEV_CONTROL_PLANE_URL if dev else ""))
-    return resolved, console_url or (DEV_CONSOLE_URL if dev else DEFAULT_CONSOLE_URL)
+    return resolve_control_plane_url(control_plane_url or (DEV_CONTROL_PLANE_URL if dev else ""))
+
+
+def resolve_urls(control_plane_url: str, console_url: str, *, dev: bool) -> tuple[str, str]:
+    """The control plane and the console, for the commands that print where the console lives."""
+    return resolve_cp_url(control_plane_url, dev=dev), console_url or (DEV_CONSOLE_URL if dev else DEFAULT_CONSOLE_URL)
 
 
 @app.command(rich_help_panel=SETUP)
@@ -134,11 +138,12 @@ def quickstart(  # noqa: PLR0913, PLR0917 flags are the command's interface
 def login(
     control_plane_url: str = "",
     no_browser: bool = typer.Option(False, "--no-browser", help="Print the URL instead of opening a browser"),
+    dev: bool = typer.Option(False, "--dev", help="Target a local development control plane on 127.0.0.1:8000"),
 ) -> None:
     """Log in through the browser and store this machine's org management key; signup and org setup happen there too."""
     import httpx  # noqa: PLC0415 lazy import keeps CLI startup fast
 
-    url = resolve_control_plane_url(control_plane_url)
+    url = resolve_cp_url(control_plane_url, dev=dev)
     client_name = _client_name()
     with httpx.Client(base_url=url, timeout=10.0) as c:
         resp = c.post("/v1/auth/cli/start", json={"client_name": client_name})

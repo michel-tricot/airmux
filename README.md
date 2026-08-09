@@ -38,7 +38,8 @@ uv run airllmdp --dev
 
 `uv run airllm quickstart --dev` bootstraps against that stack in one step: it targets the
 control plane on `127.0.0.1:8000` and prints the console at `localhost:5000`, ahead of any
-profile or `GW_CONTROL_PLANE_URL` left over from another instance.
+profile or `GW_CONTROL_PLANE_URL` left over from another instance. `airllm login --dev` takes
+the same shortcut for an instance that is already set up.
 
 The first human account on a fresh deployment claims it and becomes the instance
 admin; every signup after that is an ordinary account. Claim a deployment before

@@ -1,10 +1,10 @@
-"""Which control plane and console quickstart talks to, and how --dev shortcuts them."""
+"""Which control plane and console quickstart and login talk to, and how --dev shortcuts them."""
 
 from __future__ import annotations
 
 import pytest
 
-from cli.auth import DEFAULT_CONSOLE_URL, DEV_CONSOLE_URL, DEV_CONTROL_PLANE_URL, resolve_urls
+from cli.auth import DEFAULT_CONSOLE_URL, DEV_CONSOLE_URL, DEV_CONTROL_PLANE_URL, resolve_cp_url, resolve_urls
 
 
 @pytest.fixture(autouse=True)
@@ -38,3 +38,11 @@ def test_dev_beats_an_ambient_control_plane_url(monkeypatch):
     monkeypatch.setenv("GW_CONTROL_PLANE_URL", "https://prod.example.com")
     assert resolve_urls("", "", dev=True)[0] == DEV_CONTROL_PLANE_URL
     assert resolve_urls("", "", dev=False)[0] == "https://prod.example.com"
+
+
+def test_login_takes_the_same_dev_control_plane(monkeypatch):
+    """login has no console to print, so --dev only moves the control plane, by the same precedence."""
+    monkeypatch.setenv("GW_CONTROL_PLANE_URL", "https://prod.example.com")
+    assert resolve_cp_url("", dev=True) == DEV_CONTROL_PLANE_URL
+    assert resolve_cp_url("https://cp.example.com", dev=True) == "https://cp.example.com"
+    assert resolve_cp_url("", dev=False) == "https://prod.example.com"
