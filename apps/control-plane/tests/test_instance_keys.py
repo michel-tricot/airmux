@@ -6,35 +6,20 @@ other, since that separation is the whole reason management keys can carry a man
 
 from __future__ import annotations
 
-from helpers import run_in_db, setup_control_plane, setup_db
+from helpers import run_in_db, seed_admin, seed_member, setup_control_plane, setup_db
 from starlette.testclient import TestClient
 
 from contract import token_hash
 from control_plane.authz import ALL_SCOPES
 from control_plane.keys import INSTANCE_KEY_PREFIX, MANAGEMENT_KEY_PREFIX, mint_instance_key, mint_management_key, verify_bearer
-from control_plane.models import InstanceKey, Org, OrgMembership, User, set_actor
-
-
-async def _admin() -> User:
-    user = User(email="admin@example.com", name="admin", instance_admin=True)
-    await set_actor(user.id)
-    return await user.save()
-
-
-async def _member():
-    user = User(email="member@example.com", name="member")
-    await set_actor(user.id)
-    await user.save()
-    org = await Org(name="o1").save()
-    await OrgMembership(user_id=user.id, org_id=org.id).save()
-    return user, org.id
+from control_plane.models import InstanceKey, Org
 
 
 def test_minted_instance_key_has_its_own_prefix_and_stored_hash(tmp_path):
     setup_db(tmp_path)
 
     async def mint():
-        admin = await _admin()
+        admin = await seed_admin()
         key_id, token = await mint_instance_key(admin.id, label="t")
         return token, await InstanceKey.find_by_id(key_id)
 
@@ -49,7 +34,7 @@ def test_verify_builds_instance_scoped_claims_with_no_org(tmp_path):
     setup_db(tmp_path)
 
     async def flow():
-        admin = await _admin()
+        admin = await seed_admin()
         key_id, token = await mint_instance_key(admin.id, label="t")
         return admin.id, key_id, await verify_bearer(token)
 
@@ -65,7 +50,7 @@ def test_verify_builds_scopes_from_the_row(tmp_path):
     setup_db(tmp_path)
 
     async def flow():
-        admin = await _admin()
+        admin = await seed_admin()
         _, restricted = await mint_instance_key(admin.id, label="t", scopes=["sync"])
         _, unrestricted = await mint_instance_key(admin.id, label="t")
         return await verify_bearer(restricted), await verify_bearer(unrestricted)
@@ -81,7 +66,7 @@ def test_revoked_instance_key_is_rejected(tmp_path):
     setup_db(tmp_path)
 
     async def flow():
-        admin = await _admin()
+        admin = await seed_admin()
         key_id, token = await mint_instance_key(admin.id, label="t")
         before = await verify_bearer(token)
         key = await InstanceKey.find_by_id(key_id)
@@ -100,7 +85,7 @@ def test_losing_the_admin_bit_kills_the_instance_key(tmp_path):
     setup_db(tmp_path)
 
     async def flow():
-        admin = await _admin()
+        admin = await seed_admin()
         _, token = await mint_instance_key(admin.id, label="t")
         before = await verify_bearer(token)
         admin.instance_admin = False
@@ -117,7 +102,7 @@ def test_a_management_key_never_resolves_to_instance_scope(tmp_path):
     setup_db(tmp_path)
 
     async def flow():
-        member, org_id = await _member()
+        member, org_id = await seed_member()
         _, token = await mint_management_key(org_id, member.id, label="t")
         return org_id, await verify_bearer(token)
 
@@ -131,7 +116,7 @@ def test_a_token_is_only_checked_against_the_table_that_minted_it(tmp_path):
     setup_db(tmp_path)
 
     async def flow():
-        admin = await _admin()
+        admin = await seed_admin()
         _, instance_token = await mint_instance_key(admin.id, label="t")
         _, management_token = await mint_management_key((await Org(name="o2").save()).id, admin.id, label="t")
         swapped_instance = MANAGEMENT_KEY_PREFIX + instance_token.removeprefix(INSTANCE_KEY_PREFIX)

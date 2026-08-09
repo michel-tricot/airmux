@@ -48,7 +48,7 @@ async def remove_org_user(user_id: UUID, org_id: OrgDep) -> Envelope[DeletedOut[
     if membership is None:
         raise HTTPException(status_code=404)
     await membership.delete()
-    return Envelope(data=DeletedOut(id=f"{user_id}/{org_id}", deleted_at=datetime.now(tz=UTC)))
+    return Envelope(data=DeletedOut.of(f"{user_id}/{org_id}"))
 
 
 @router.get("/management-keys", tags=["Management Keys"], dependencies=[require(Scope.management_keys_read)])
@@ -98,11 +98,11 @@ async def list_bundles(org_id: OrgDep) -> Envelope[list[BundleOut]]:
 
 @router.get("/events", tags=["Events"], dependencies=[require(Scope.events_read)])
 async def list_events(org_id: OrgDep, after: datetime | None = None, limit: int = 50) -> Envelope[list[UsageEventOut]]:
-    if after is not None:
-        conditions = (UsageEvent.org_id == org_id, col(UsageEvent.occurred_at) > after)
-        events = await UsageEvent.find(*conditions, order_by=col(UsageEvent.occurred_at).asc(), limit=limit)
-    else:
-        events = await UsageEvent.find(UsageEvent.org_id == org_id, order_by=col(UsageEvent.occurred_at).desc(), limit=limit)
+    occurred_at = col(UsageEvent.occurred_at)
+    # Paging forward from a cursor reads oldest first; the unanchored view is the newest events.
+    after_cursor = (occurred_at > after,) if after is not None else ()
+    order = occurred_at.asc() if after is not None else occurred_at.desc()
+    events = await UsageEvent.find(UsageEvent.org_id == org_id, *after_cursor, order_by=order, limit=limit)
     return Envelope(data=[UsageEventOut.model_validate(e) for e in events])
 
 

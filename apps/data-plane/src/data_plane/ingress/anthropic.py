@@ -9,7 +9,7 @@ from data_plane.canonical import CanonicalRequest
 from data_plane.ingress.base import EgressStream, Ingress
 
 if TYPE_CHECKING:
-    from data_plane.canonical import CanonicalChunk, CanonicalError, CanonicalResponse, Ctx
+    from data_plane.canonical import CanonicalChunk, CanonicalError, CanonicalResponse, Ctx, Usage
 
 # Canonical finish reasons (the OpenAI-ish set the adapters emit) -> Anthropic stop reasons.
 REVERSE_STOP = {"stop": "end_turn", "length": "max_tokens", "tool_calls": "tool_use"}
@@ -77,6 +77,16 @@ def _tool_input(arguments: str) -> dict[str, Any]:
         return json.loads(arguments) if arguments else {}
     except json.JSONDecodeError:
         return {}
+
+
+def _usage_payload(usage: Usage) -> dict[str, int]:
+    """Anthropic counts cache tokens outside input_tokens; canonical counts them inside."""
+    return {
+        "input_tokens": usage.input_tokens - usage.cache_read_tokens - usage.cache_write_tokens,
+        "cache_read_input_tokens": usage.cache_read_tokens,
+        "cache_creation_input_tokens": usage.cache_write_tokens,
+        "output_tokens": usage.output_tokens,
+    }
 
 
 def _input_json(index: int, fragment: str) -> dict[str, Any]:
@@ -167,21 +177,11 @@ class AnthropicEgressStream(EgressStream):
             block = {"type": "tool_use", "id": delta.get("id"), "name": fn.get("name", ""), "input": {}}
             out.append(_event("content_block_start", {"type": "content_block_start", "index": index, "content_block": block}))
             if fn.get("arguments"):
-                out.append(
-                    _event(
-                        "content_block_delta",
-                        {"type": "content_block_delta", "index": index, "delta": {"type": "input_json_delta", "partial_json": fn["arguments"]}},
-                    )
-                )
+                out.append(_event("content_block_delta", _input_json(index, fn["arguments"])))
             return out
         index = self.tool_blocks[canonical_index]
         if fn.get("arguments"):
-            return [
-                _event(
-                    "content_block_delta",
-                    {"type": "content_block_delta", "index": index, "delta": {"type": "input_json_delta", "partial_json": fn["arguments"]}},
-                )
-            ]
+            return [_event("content_block_delta", _input_json(index, fn["arguments"]))]
         return []
 
     def finish(self, final: CanonicalResponse) -> list[bytes]:
@@ -192,12 +192,7 @@ class AnthropicEgressStream(EgressStream):
         message_delta = {
             "type": "message_delta",
             "delta": {"stop_reason": stop, "stop_sequence": None},
-            "usage": {
-                "input_tokens": final.usage.input_tokens - final.usage.cache_read_tokens - final.usage.cache_write_tokens,
-                "cache_read_input_tokens": final.usage.cache_read_tokens,
-                "cache_creation_input_tokens": final.usage.cache_write_tokens,
-                "output_tokens": final.usage.output_tokens,
-            },
+            "usage": _usage_payload(final.usage),
         }
         out.append(_event("message_delta", message_delta))
         out.append(_event("message_stop", {"type": "message_stop"}))
@@ -235,12 +230,7 @@ class AnthropicIngress(Ingress):
             "content": _to_anthropic_content(final.content),
             "stop_reason": REVERSE_STOP.get(final.finish_reason or "", "end_turn"),
             "stop_sequence": None,
-            "usage": {
-                "input_tokens": final.usage.input_tokens - final.usage.cache_read_tokens - final.usage.cache_write_tokens,
-                "cache_read_input_tokens": final.usage.cache_read_tokens,
-                "cache_creation_input_tokens": final.usage.cache_write_tokens,
-                "output_tokens": final.usage.output_tokens,
-            },
+            "usage": _usage_payload(final.usage),
         }
         return Response(json.dumps(message), media_type="application/json")
 

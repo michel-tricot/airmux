@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
 from uuid import UUID  # noqa: TC003 fastapi resolves path param annotations at runtime
 
 from fastapi import APIRouter, HTTPException
@@ -46,15 +45,13 @@ async def delete_workspace(workspace_id: UUID, org_id: OrgDep) -> Envelope[Delet
     """Delete a workspace with its inference keys and its members; the usage it recorded stays, as it does for an org."""
     workspace = await Workspace.owned_by(org_id, workspace_id)
     await workspace.delete_with_contents()
-    return Envelope(data=DeletedOut(id=workspace_id, deleted_at=datetime.now(tz=UTC)))
+    return Envelope(data=DeletedOut.of(workspace_id))
 
 
 @router.patch("/{workspace_id}", tags=["Workspaces"], dependencies=[require(Scope.workspaces_write)])
 async def update_workspace(workspace_id: UUID, body: WorkspaceUpdate, org_id: OrgDep) -> Envelope[WorkspaceOut]:
     workspace = await Workspace.owned_by(org_id, workspace_id)
-    for name, value in body.model_dump(exclude_unset=True).items():
-        setattr(workspace, name, value)
-    return Envelope(data=WorkspaceOut.model_validate(await workspace.save()))
+    return Envelope(data=WorkspaceOut.model_validate(await workspace.apply(body).save()))
 
 
 @router.get("/{workspace_id}/members", tags=["Workspaces"], dependencies=[require(Scope.workspaces_read)])
@@ -84,7 +81,7 @@ async def remove_member(workspace_id: UUID, user_id: UUID, org_id: OrgDep) -> En
     if membership is None:
         raise HTTPException(status_code=404)
     await membership.delete()
-    return Envelope(data=DeletedOut(id=f"{user_id}/{workspace_id}", deleted_at=datetime.now(tz=UTC)))
+    return Envelope(data=DeletedOut.of(f"{user_id}/{workspace_id}"))
 
 
 @router.post("/{workspace_id}/inference-keys", tags=["Inference Keys"], dependencies=[require(Scope.inference_keys_write)])
@@ -105,4 +102,5 @@ async def revoke_inference_key(workspace: WorkspaceDep, key_id: UUID) -> Envelop
     if key.workspace_id != workspace.id:
         raise HTTPException(status_code=404)
     key.revoked = True
+    await key.save()
     return Envelope(data=InferenceKeyRevokedOut(id=key_id, status="revoked"))

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
-from uuid import UUID
 
 from sqlalchemy import func
 from sqlmodel import col, select

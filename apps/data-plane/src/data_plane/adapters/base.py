@@ -3,13 +3,16 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, ClassVar
 
+import httpx
+
+from data_plane.canonical import CanonicalError, UpstreamStreamError
+
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
     from contract import ModelEntry, ProviderEntry
     from data_plane.canonical import (
         CanonicalChunk,
-        CanonicalError,
         CanonicalRequest,
         CanonicalResponse,
         Ctx,
@@ -53,5 +56,12 @@ class ProviderAdapter(ABC):
         being valid mid-stream.
         """
 
-    @abstractmethod
-    def map_error(self, e: Exception) -> CanonicalError: ...
+    def map_error(self, e: Exception) -> CanonicalError:
+        """Transport failures mapped to a canonical error; override only for provider-specific codes."""
+        if isinstance(e, UpstreamStreamError):
+            return CanonicalError(status=502, code=e.code, message=e.message)
+        if isinstance(e, httpx.TimeoutException):
+            return CanonicalError(status=504, code="upstream_timeout", message=str(e))
+        if isinstance(e, httpx.ConnectError):
+            return CanonicalError(status=502, code="upstream_unreachable", message=str(e))
+        return CanonicalError(status=502, code="upstream_error", message=str(e))

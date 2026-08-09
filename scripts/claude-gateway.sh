@@ -49,7 +49,7 @@ esac
 shift
 
 token="$(env_value AIRLLM_TOKEN)"
-[ -n "$token" ] || die "AIRLLM_TOKEN not in .env — run 'uv run airllm bootstrap' first"
+[ -n "$token" ] || die "AIRLLM_TOKEN not in .env — run 'uv run airllm quickstart' first"
 
 if models="$(list_models)" && [ -n "$models" ] && ! grep -qxF "$model" <<<"$models"; then
   echo "warning: '$model' is not in the catalog; starting anyway (requests may 404)" >&2

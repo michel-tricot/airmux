@@ -4,12 +4,10 @@ import json
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
-import httpx
-
 from contract import resolve_ref
 from data_plane.adapters.base import ProviderAdapter
 from data_plane.adapters.shape import content_blocks
-from data_plane.canonical import CanonicalChunk, CanonicalError, CanonicalResponse, RawEvent, StreamState, UpstreamRequest, UpstreamStreamError, Usage
+from data_plane.canonical import CanonicalChunk, CanonicalResponse, RawEvent, StreamState, UpstreamRequest, UpstreamStreamError, Usage
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -245,12 +243,3 @@ class AnthropicAdapter(ProviderAdapter):
                 estimated=not state.saw_usage,
             ),
         )
-
-    def map_error(self, e: Exception) -> CanonicalError:
-        if isinstance(e, UpstreamStreamError):
-            return CanonicalError(status=502, code=e.code, message=e.message)
-        if isinstance(e, httpx.TimeoutException):
-            return CanonicalError(status=504, code="upstream_timeout", message=str(e))
-        if isinstance(e, httpx.ConnectError):
-            return CanonicalError(status=502, code="upstream_unreachable", message=str(e))
-        return CanonicalError(status=502, code="upstream_error", message=str(e))

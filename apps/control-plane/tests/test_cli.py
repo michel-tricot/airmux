@@ -3,8 +3,8 @@ from __future__ import annotations
 import stat
 
 import yaml
-from helpers import run_in_db
-from pg import TEMPLATE_DB, db_name_for, ensure_database
+from helpers import run_in_db, setup_db
+from pg import db_name_for, ensure_database
 from typer.testing import CliRunner
 
 from contract import private_key_from_b64, public_key_to_b64
@@ -56,7 +56,7 @@ def test_migrate_reports_what_it_did(tmp_path):
 
 def _config(tmp_path):
     cfg = tmp_path / "airllm.yml"
-    url = ensure_database(db_name_for(tmp_path), template=TEMPLATE_DB)
+    url = setup_db(tmp_path)
     cfg.write_text(yaml.safe_dump({"control_plane": {"database": {"url": url}}}), encoding="utf-8")
     return cfg
 

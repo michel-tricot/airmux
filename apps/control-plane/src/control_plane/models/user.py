@@ -67,6 +67,27 @@ class User(Record, Identified, Tombstonable, table=True):
         await current_session().execute(text("SELECT pg_advisory_xact_lock(:key)"), {"key": _CLAIM_LOCK})
         return not await cls.instance_claimed()
 
+    async def backs_org(self, org_id: UUID) -> bool:
+        """Whether this user's authority covers the org: instance admins everywhere, everyone else by membership.
+
+        The rule every org-scoped credential is checked against, so it has one home rather than one per door.
+        """
+        return self.instance_admin or await OrgMembership.get((self.id, org_id)) is not None
+
+    async def delete_with_contents(self) -> None:
+        """Delete the user with the entities they own that are theirs alone: identities, sessions, management and instance keys.
+
+        The sibling of Org.delete_with_contents and Workspace.delete_with_contents. Everything else a
+        user touches outlives them, so the route refuses rather than cascading: a membership is the
+        org's decision, a personal org is a tenant, an inference key belongs to its workspace.
+        """
+        from control_plane import models  # noqa: PLC0415 auth_identity imports user, so the two only meet at call time
+
+        for owned in (models.AuthIdentity, models.AuthSession, models.ManagementKey, models.InstanceKey):
+            for record in await owned.find(owned.user_id == self.id):
+                await record.delete()
+        await self.delete()
+
     @classmethod
     def new_service_account(cls, name: str) -> Self:
         """Machine principal with a derived unique email; the caller saves it and adds memberships."""

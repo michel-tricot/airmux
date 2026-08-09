@@ -6,7 +6,6 @@ org from the credential is what keeps a grant inside the scope the caller alread
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
 from uuid import UUID  # noqa: TC003 fastapi resolves path param annotations at runtime
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -14,7 +13,7 @@ from sqlmodel import col
 
 from control_plane.authz import Scope
 from control_plane.deps import instance_scope, require
-from control_plane.models import AuthIdentity, AuthSession, InferenceKey, InstanceKey, ManagementKey, Org, OrgMembership, User
+from control_plane.models import InferenceKey, Org, OrgMembership, User
 from control_plane.models.common.wire import DeletedOut, Envelope
 from control_plane.models.user import ServiceAccountIn, UserCreate, UserOut
 
@@ -65,16 +64,8 @@ async def delete_user(user_id: UUID) -> Envelope[DeletedOut[UUID]]:
         raise HTTPException(status_code=409, detail="user owns a personal org; delete the org first")
     if await InferenceKey.first(InferenceKey.user_id == user_id) is not None:
         raise HTTPException(status_code=409, detail="user minted inference keys that outlive them; delete those workspaces first")
-    for identity in await AuthIdentity.find(AuthIdentity.user_id == user_id):
-        await identity.delete()
-    for session in await AuthSession.find(AuthSession.user_id == user_id):
-        await session.delete()
-    for key in await ManagementKey.find(ManagementKey.user_id == user_id):
-        await key.delete()
-    for key in await InstanceKey.find(InstanceKey.user_id == user_id):
-        await key.delete()
-    await user.delete()
-    return Envelope(data=DeletedOut(id=user_id, deleted_at=datetime.now(tz=UTC)))
+    await user.delete_with_contents()
+    return Envelope(data=DeletedOut.of(user_id))
 
 
 @router.get("/users", tags=["Users"], dependencies=[require(Scope.users_read)])

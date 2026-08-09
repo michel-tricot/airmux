@@ -384,7 +384,6 @@ def bundles_compile(control_plane_url: str = "") -> None:
 
 INSTANCE_COLS = [
     Col("instance_id", "Instance", style="dim", no_wrap=True, fmt=lambda v: str(v)[:12]),
-    Col("org_id", "Org"),
     Col("status", "Status", style="yellow"),
     Col("version", "Version"),
     Col("bundle_id", "Bundle", style="dim", fmt=lambda v: str(v)[:8] if v else ""),
@@ -416,7 +415,6 @@ def events_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat.ta
 @events_app.command("tail")
 def events_tail(interval: float = 2.0, keep: int = 30, control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
     """Follow the org's usage events; a live table by default, one json or text line per event otherwise."""
-    params: dict = {}
     rows: deque[dict] = deque(maxlen=keep)
     fresh_ids: set[str] = set()
 
@@ -430,7 +428,7 @@ def events_tail(interval: float = 2.0, keep: int = 30, control_plane_url: str = 
             print("\t".join(c.fmt(event.get(c.key)) for c in EVENT_COLS), flush=True)
 
     with org_client(control_plane_url) as c:
-        resp = c.get("/v1/org/events", params={**params, "limit": keep})
+        resp = c.get("/v1/org/events", params={"limit": keep})
         resp.raise_for_status()
         rows.extend(reversed(payload_rows(resp)))
         cursor = rows[-1]["occurred_at"] if rows else "1970-01-01T00:00:00"
@@ -438,7 +436,7 @@ def events_tail(interval: float = 2.0, keep: int = 30, control_plane_url: str = 
             if fmt is not OutputFormat.table:
                 while True:
                     time.sleep(interval)
-                    resp = c.get("/v1/org/events", params={**params, "after": cursor, "limit": 200})
+                    resp = c.get("/v1/org/events", params={"after": cursor, "limit": 200})
                     resp.raise_for_status()
                     for event in payload_rows(resp):
                         emit(event)
@@ -446,7 +444,7 @@ def events_tail(interval: float = 2.0, keep: int = 30, control_plane_url: str = 
             with Live(table(), console=console, refresh_per_second=4) as live:
                 while True:
                     time.sleep(interval)
-                    resp = c.get("/v1/org/events", params={**params, "after": cursor, "limit": 200})
+                    resp = c.get("/v1/org/events", params={"after": cursor, "limit": 200})
                     resp.raise_for_status()
                     batch = payload_rows(resp)
                     fresh_ids = {event["event_id"] for event in batch}
