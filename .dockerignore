@@ -1,7 +1,10 @@
 *
 !pyproject.toml
 !uv.lock
-!packages
+!lib
+lib/*
+!lib/api-models
+!lib/contract
 !apps
 apps/webapp
 **/__pycache__

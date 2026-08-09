@@ -47,6 +47,16 @@ def test_every_endpoint_is_tagged_for_docs():
     assert used == grouped, f"List every tag in an x-tagGroups group or it disappears from the ReDoc sidebar: {used ^ grouped}"
 
 
+def test_operation_ids_are_the_handler_names():
+    """Generated clients name every method after operationId, so the ids are the handler names: FastAPI's default bakes the path
+    and the verb into each one and turns useListOrgs into useListOrgsV1OrgsGet."""
+    app = make_app()
+    operation_ids = [op["operationId"] for operations in app.openapi()["paths"].values() for op in operations.values()]
+    assert sorted(operation_ids) == sorted(r.name for r in _api_routes(app))
+    duplicates = sorted({name for name in operation_ids if operation_ids.count(name) > 1})
+    assert duplicates == [], f"Two handlers share a name, so one client method overwrites the other: {duplicates}"
+
+
 def _nested_models(tp: object, seen: set[type] | None = None) -> set[type]:
     """Every BaseModel reachable from a type annotation, through generics and model fields."""
     found = seen if seen is not None else set()

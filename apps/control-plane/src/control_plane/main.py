@@ -7,18 +7,26 @@ from pathlib import Path
 
 import typer
 import uvicorn
+import yaml
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from sqlalchemy.engine import make_url
 
 from contract import private_key_to_b64, public_key_to_b64, uuid7
+from control_plane.app import create_app
 from control_plane.compiler import compile_and_store
-from control_plane.config import database_url, load_settings
+from control_plane.config import BundlePolicy, Settings, database_url, load_settings
 from control_plane.db import standalone_transaction
 from control_plane.migrate import current_revision, head_revision, run_migrations
-from control_plane.models import Org, set_actor
+from control_plane.models import Org, User, set_actor
 from control_plane.taxonomy import apply_taxonomy, parse_taxonomy
 
 app = typer.Typer(name="airllmcp", no_args_is_help=True)
+
+
+def _database_url(config: str) -> str:
+    """The database alone, for the commands that touch rows without needing a signing key."""
+    os.environ["GW_CONFIG"] = config
+    return database_url()
 
 
 @app.command()
@@ -54,9 +62,61 @@ def serve(host: str = "127.0.0.1", port: int = 8000, dev: bool = False, config: 
 
 
 @app.command()
+def admin(
+    email: str = typer.Option(..., "--email", help="Account to promote; created if no account holds that email"),
+    name: str = typer.Option("", "--name", help="Display name when the account is created; defaults to the email"),
+    config: str = "airllm.yml",
+) -> None:
+    """Grant instance authority to a human account, the one path to it that is not the first signup.
+
+    The bit never crosses the API in either direction, so this is how a deployment gains a second
+    admin, or a first one on an instance nobody claimed. Promoting an account that already signed up
+    is the usual case: an account created here holds no password, and signup will not add one to an
+    email that already exists, so its holder cannot sign in until an identity is set for them.
+    """
+    settings_url = _database_url(config)
+
+    async def run() -> tuple[str, bool]:
+        async with standalone_transaction(settings_url):
+            user = await User.first(User.email == email)
+            if user is None:
+                user = User(email=email, name=name or email)
+            elif user.service_account:
+                msg = "instance authority belongs to a human account"
+                raise ValueError(msg)
+            elif user.instance_admin:
+                return email, True
+            await set_actor(user.id)
+            user.instance_admin = True
+            await user.save()
+            return email, False
+
+    try:
+        granted, already = asyncio.run(run())
+    except ValueError as e:
+        typer.echo(f"{email}: {e}", err=True)
+        raise typer.Exit(1) from e
+    typer.echo(f"{granted} is already an instance admin" if already else f"{granted} is now an instance admin")
+
+
+@app.command()
+def openapi(out: str = typer.Option("-", "--out", help="Write the spec here; - writes it to stdout")) -> None:
+    """Export the API spec as YAML; it is committed at lib/api-spec/openapi.yaml and the console and CLI clients generate from it.
+
+    The spec depends on the routes alone, so this runs against an ephemeral signing key and touches no database and no config file.
+    """
+    settings = Settings(bundle=BundlePolicy(signing_key=private_key_to_b64(Ed25519PrivateKey.generate())))
+    spec = yaml.safe_dump(create_app(settings).openapi(), sort_keys=False, allow_unicode=True, width=120)
+    if out == "-":
+        typer.echo(spec, nl=False)
+    else:
+        Path(out).write_text(spec, encoding="utf-8")
+        typer.echo(f"wrote {out}")
+
+
+@app.command()
 def migrate(config: str = "airllm.yml") -> None:
-    os.environ["GW_CONFIG"] = config
-    url = database_url()
+    url = _database_url(config)
     shown = make_url(url).render_as_string(hide_password=True)
     before = current_revision(url)
     run_migrations()

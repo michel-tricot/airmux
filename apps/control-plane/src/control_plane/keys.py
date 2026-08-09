@@ -12,6 +12,10 @@ from control_plane.models import InferenceKey, InstanceKey, ManagementKey, OrgMe
 MANAGEMENT_KEY_PREFIX = "sk-mgmt-"
 INSTANCE_KEY_PREFIX = "sk-inst-"
 
+# How much of the secret the stored prefix keeps. Enough that two keys of a kind read apart in a
+# listing, far short of enough to guess the rest: the hash stays the only thing that authenticates.
+PREFIX_SECRET_CHARS = 6
+
 
 class ManagementClaims(BaseModel):
     """The scope a credential grants: one org, or the whole instance when org_id is None.
@@ -33,8 +37,10 @@ class ManagementClaims(BaseModel):
     scopes: frozenset[str] = frozenset()
 
 
-def _new_key(prefix: str) -> str:
-    return prefix + secrets.token_urlsafe(32)
+def _new_key(kind: str) -> tuple[str, str]:
+    """A fresh token and the head of it worth storing: (token, prefix)."""
+    token = kind + secrets.token_urlsafe(32)
+    return token, token[: len(kind) + PREFIX_SECRET_CHARS]
 
 
 async def mint_management_key(org_id: UUID, user_id: UUID, *, label: str, scopes: list[str] | None = None) -> tuple[UUID, str]:
@@ -45,8 +51,10 @@ async def mint_management_key(org_id: UUID, user_id: UUID, *, label: str, scopes
     Every key carries a label so listings can say where it came from.
     Runs inside the caller's transaction.
     """
-    token = _new_key(MANAGEMENT_KEY_PREFIX)
-    key = await ManagementKey(org_id=org_id, user_id=user_id, token_hash=token_hash(token), revoked=False, scopes=scopes, label=label).save()
+    token, prefix = _new_key(MANAGEMENT_KEY_PREFIX)
+    key = await ManagementKey(
+        org_id=org_id, user_id=user_id, token_hash=token_hash(token), prefix=prefix, revoked=False, scopes=scopes, label=label
+    ).save()
     return key.id, token
 
 
@@ -57,16 +65,16 @@ async def mint_instance_key(user_id: UUID, *, label: str, scopes: list[str] | No
     rather than the absence of a scope. The caller checks the instance_admin bit before minting
     and verify_instance_key checks it again on every request. Runs inside the caller's transaction.
     """
-    token = _new_key(INSTANCE_KEY_PREFIX)
-    key = await InstanceKey(user_id=user_id, token_hash=token_hash(token), revoked=False, scopes=scopes, label=label).save()
+    token, prefix = _new_key(INSTANCE_KEY_PREFIX)
+    key = await InstanceKey(user_id=user_id, token_hash=token_hash(token), prefix=prefix, revoked=False, scopes=scopes, label=label).save()
     return key.id, token
 
 
 async def mint_inference_key(org_id: UUID, workspace_id: UUID, user_id: UUID, *, label: str) -> tuple[UUID, str]:
     """Mint an inference API key row and its caller token; returns (key_id, token). Runs inside the caller's transaction."""
-    token = _new_key(INFERENCE_TOKEN_PREFIX)
+    token, prefix = _new_key(INFERENCE_TOKEN_PREFIX)
     key = await InferenceKey(
-        org_id=org_id, workspace_id=workspace_id, user_id=user_id, token_hash=token_hash(token), revoked=False, label=label
+        org_id=org_id, workspace_id=workspace_id, user_id=user_id, token_hash=token_hash(token), prefix=prefix, revoked=False, label=label
     ).save()
     return key.id, token
 

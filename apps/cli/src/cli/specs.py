@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from cli import api_models
+import api_models
 
 
 class OrgCreate(api_models.OrgCreate):

@@ -36,6 +36,19 @@ async def list_workspaces(org_id: OrgDep) -> Envelope[list[WorkspaceOut]]:
     return Envelope(data=[WorkspaceOut.model_validate(w) for w in workspaces])
 
 
+@router.get("/{workspace_id}", tags=["Workspaces"], dependencies=[require(Scope.workspaces_read)])
+async def get_workspace(workspace_id: UUID, org_id: OrgDep) -> Envelope[WorkspaceOut]:
+    return Envelope(data=WorkspaceOut.model_validate(await Workspace.owned_by(org_id, workspace_id)))
+
+
+@router.delete("/{workspace_id}", tags=["Workspaces"], dependencies=[require(Scope.workspaces_write)])
+async def delete_workspace(workspace_id: UUID, org_id: OrgDep) -> Envelope[DeletedOut[UUID]]:
+    """Delete a workspace with its inference keys and its members; the usage it recorded stays, as it does for an org."""
+    workspace = await Workspace.owned_by(org_id, workspace_id)
+    await workspace.delete_with_contents()
+    return Envelope(data=DeletedOut(id=workspace_id, deleted_at=datetime.now(tz=UTC)))
+
+
 @router.patch("/{workspace_id}", tags=["Workspaces"], dependencies=[require(Scope.workspaces_write)])
 async def update_workspace(workspace_id: UUID, body: WorkspaceUpdate, org_id: OrgDep) -> Envelope[WorkspaceOut]:
     workspace = await Workspace.owned_by(org_id, workspace_id)

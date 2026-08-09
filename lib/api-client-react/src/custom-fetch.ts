@@ -8,6 +8,8 @@ export type BodyType<T> = T;
 
 export type AuthTokenGetter = () => Promise<string | null> | string | null;
 
+export type DefaultHeadersGetter = () => Record<string, string | null>;
+
 const NO_BODY_STATUS = new Set([204, 205, 304]);
 const DEFAULT_JSON_ACCEPT = "application/json, application/problem+json";
 
@@ -17,6 +19,7 @@ const DEFAULT_JSON_ACCEPT = "application/json, application/problem+json";
 
 let _baseUrl: string | null = null;
 let _authTokenGetter: AuthTokenGetter | null = null;
+let _defaultHeadersGetter: DefaultHeadersGetter | null = null;
 
 /**
  * Set a base URL that is prepended to every relative request URL
@@ -42,6 +45,17 @@ export function setBaseUrl(url: string | null): void {
  */
 export function setAuthTokenGetter(getter: AuthTokenGetter | null): void {
   _authTokenGetter = getter;
+}
+
+/**
+ * Register a getter for headers every request carries: the CSRF header the cookie door
+ * requires, and whatever scope the app selects. Entries whose value is null are skipped,
+ * and a header set on the call itself wins over the default.
+ *
+ * Pass `null` to clear the getter.
+ */
+export function setDefaultHeaders(getter: DefaultHeadersGetter | null): void {
+  _defaultHeadersGetter = getter;
 }
 
 function isRequest(input: RequestInfo | URL): input is Request {
@@ -282,6 +296,16 @@ async function parseErrorBody(response: Response, method: string): Promise<unkno
   return raw;
 }
 
+// Every control plane response is `{"data": <payload>}`. The generated types are payload-shaped because
+// orval's input transformer unwraps the envelope schemas, so the parsed body is unwrapped here to match.
+// This is the one place the envelope is known; call sites never see it.
+function unwrapEnvelope(body: unknown): unknown {
+  if (!body || typeof body !== "object" || Array.isArray(body)) return body;
+
+  const keys = Object.keys(body as Record<string, unknown>);
+  return keys.length === 1 && keys[0] === "data" ? (body as { data: unknown }).data : body;
+}
+
 function inferResponseType(response: Response): "json" | "text" | "blob" {
   const mediaType = getMediaType(response.headers);
 
@@ -304,7 +328,7 @@ async function parseSuccessBody(
 
   switch (effectiveType) {
     case "json":
-      return parseJsonBody(response, requestInfo);
+      return unwrapEnvelope(await parseJsonBody(response, requestInfo));
 
     case "text": {
       const text = await response.text();
@@ -356,6 +380,10 @@ export async function customFetch<T = unknown>(
     if (token) {
       headers.set("authorization", `Bearer ${token}`);
     }
+  }
+
+  for (const [key, value] of Object.entries(_defaultHeadersGetter?.() ?? {})) {
+    if (value !== null && !headers.has(key)) headers.set(key, value);
   }
 
   const requestInfo = { method, url: resolveUrl(input) };

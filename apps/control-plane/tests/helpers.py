@@ -102,7 +102,7 @@ def make_admin(tmp_path, user_id: UUID | str) -> None:
 def setup_db(tmp_path) -> str:
     """A bare database for tests that never build the app: a clone of the migrated template.
 
-    An existing database (e.g. from run_init) is kept as is.
+    An existing database is kept as is.
     """
     return ensure_database(db_name_for(tmp_path), template=TEMPLATE_DB)
 

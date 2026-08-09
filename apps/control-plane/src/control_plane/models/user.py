@@ -6,8 +6,10 @@ from typing import ClassVar, Self
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel, field_validator
+from sqlalchemy import text
 from sqlmodel import Field, col, select
 
+from control_plane.db import current_session
 from control_plane.models.audit import audited
 from control_plane.models.common import Identified, Tombstonable
 from control_plane.models.common.base import Record
@@ -15,6 +17,9 @@ from control_plane.models.common.wire import RecordCreate, RecordOut
 from control_plane.models.org_membership import OrgMembership
 
 SERVICE_ACCOUNT_EMAIL_DOMAIN = "airbytesvcaccount.ai"
+
+# Advisory lock key for the instance claim. Arbitrary and constant: it names the claim, nothing else.
+_CLAIM_LOCK = 0x41524C4C
 
 
 def slug(name: str) -> str:
@@ -44,6 +49,23 @@ class User(Record, Identified, Tombstonable, table=True):
             col(cls.id).in_(select(OrgMembership.user_id).where(OrgMembership.org_id == org_id)),
             order_by=col(cls.email),
         )
+
+    @classmethod
+    async def instance_claimed(cls) -> bool:
+        """Whether any human account exists. Service accounts do not claim an instance."""
+        return await cls.first(col(cls.service_account).is_(False)) is not None
+
+    @classmethod
+    async def claims_the_instance(cls) -> bool:
+        """Whether the account about to be created is the first human, and so founds the deployment.
+
+        The transaction-scoped advisory lock serializes the check against the insert that follows
+        it, so two signups racing on a fresh deployment cannot both come back true; the loser sees
+        the winner's row. The lock dies with the transaction, and it is taken only while the
+        instance is unclaimed, so it costs a signup nothing once someone holds an account.
+        """
+        await current_session().execute(text("SELECT pg_advisory_xact_lock(:key)"), {"key": _CLAIM_LOCK})
+        return not await cls.instance_claimed()
 
     @classmethod
     def new_service_account(cls, name: str) -> Self:
