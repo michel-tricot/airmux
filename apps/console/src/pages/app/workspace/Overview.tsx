@@ -13,7 +13,7 @@ import {
   getListMembersQueryKey,
   getListOrgUsersQueryKey,
 } from '@workspace/api-client-react';
-import { Card, Button, Label, Select, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Modal } from '@/components/ui/elements';
+import { Card, Button, Label, Dropdown, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Modal } from '@/components/ui/elements';
 import { TerminalSquare, Plus, Users, X } from 'lucide-react';
 
 export default function WorkspaceOverview() {
@@ -101,16 +101,17 @@ export default function WorkspaceOverview() {
         <form onSubmit={e => { e.preventDefault(); addMember.mutate({ workspaceId: workspaceId!, userId: memberId }); }} className="space-y-4 pt-4">
           <div className="space-y-2">
             <Label htmlFor="workspace-member">User</Label>
-            <Select id="workspace-member" required value={memberId} onChange={e => setMemberId(e.target.value)}>
-              <option value="" disabled>Select an org member</option>
-              {candidates?.map(user => (
-                <option key={user.user_id} value={user.user_id}>{user.name} ({user.email})</option>
-              ))}
-            </Select>
+            <Dropdown
+              aria-label="User"
+              value={memberId}
+              onValueChange={setMemberId}
+              placeholder="Select an org member"
+              options={(candidates ?? []).map(user => ({ value: user.user_id, label: `${user.name} (${user.email})` }))}
+            />
           </div>
           <div className="flex justify-end gap-2 pt-4">
             <Button type="button" variant="outline" onClick={() => setMemberOpen(false)}>Cancel</Button>
-            <Button type="submit" disabled={addMember.isPending}>Add</Button>
+            <Button type="submit" disabled={!memberId || addMember.isPending}>Add</Button>
           </div>
         </form>
       </Modal>

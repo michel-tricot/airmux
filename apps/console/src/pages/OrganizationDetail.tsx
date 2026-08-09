@@ -17,7 +17,7 @@ import {
   getListManagementKeysQueryKey,
   getListOrgUsersQueryKey,
 } from '@workspace/api-client-react';
-import { Card, Button, Input, Label, Select, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Modal, Badge, Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/elements';
+import { Card, Button, Input, Label, Dropdown, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Modal, Badge, Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/elements';
 import { Building2, Plus, ArrowLeft, Key, TerminalSquare, Users, X, Pencil, Trash2, ShieldAlert } from 'lucide-react';
 import { formatDate } from '@/lib/format';
 import { Link, useParams, useLocation } from 'wouter';
@@ -254,16 +254,17 @@ export default function OrganizationDetail() {
         <form onSubmit={e => { e.preventDefault(); addMember.mutate({ userId: memberId }); }} className="space-y-4 pt-4">
           <div className="space-y-2">
             <Label htmlFor="member">User</Label>
-            <Select id="member" required value={memberId} onChange={e => setMemberId(e.target.value)}>
-              <option value="" disabled>Select a user</option>
-              {outsiders?.map(user => (
-                <option key={user.id} value={user.id}>{user.name} ({user.email})</option>
-              ))}
-            </Select>
+            <Dropdown
+              aria-label="User"
+              value={memberId}
+              onValueChange={setMemberId}
+              placeholder="Select a user"
+              options={(outsiders ?? []).map(user => ({ value: user.id, label: `${user.name} (${user.email})` }))}
+            />
           </div>
           <div className="flex justify-end gap-2 pt-4">
             <Button type="button" variant="outline" onClick={() => setMemberOpen(false)}>Cancel</Button>
-            <Button type="submit" disabled={addMember.isPending}>Add</Button>
+            <Button type="submit" disabled={!memberId || addMember.isPending}>Add</Button>
           </div>
         </form>
       </Modal>

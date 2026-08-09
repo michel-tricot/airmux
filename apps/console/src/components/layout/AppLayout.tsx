@@ -8,10 +8,9 @@ import {
   TerminalSquare, Settings, LogOut, Shield, ArrowLeftRight,
   LayoutGrid, KeyRound, Database, Route as RouteIcon, ShieldCheck, Building2,
 } from 'lucide-react';
-import { Button, Input, Label, Modal, Select } from '@/components/ui/elements';
+import { Button, Input, Label, Modal, Dropdown } from '@/components/ui/elements';
 import { cn } from '@/lib/utils';
-
-const NEW_WORKSPACE = '__new__';
+import { Plus } from 'lucide-react';
 
 const SECTIONS = [
   { label: 'Overview', suffix: '', icon: LayoutGrid },
@@ -40,10 +39,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const activeSuffix = match?.[2] ?? '';
 
   const switchWorkspace = (id: string) => {
-    if (id === NEW_WORKSPACE) {
-      setCreateOpen(true);
-      return;
-    }
     // Keep the section when hopping between workspaces so the context survives the switch.
     setLocation(`/app/workspaces/${id}${activeSuffix}`);
   };
@@ -87,18 +82,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
 
         <div className="p-3 border-b border-border/50 shrink-0">
-          <Select
+          <Dropdown
             value={activeWorkspaceId}
-            onChange={e => switchWorkspace(e.target.value)}
+            onValueChange={switchWorkspace}
             aria-label="Workspace"
+            placeholder="Select a workspace"
             className="bg-muted font-medium"
-          >
-            <option value="" disabled>Select a workspace</option>
-            {workspaces?.map(ws => (
-              <option key={ws.id} value={ws.id}>{ws.name}</option>
-            ))}
-            <option value={NEW_WORKSPACE}>+ New workspace…</option>
-          </Select>
+            options={(workspaces ?? []).map(ws => ({ value: ws.id, label: ws.name }))}
+            actions={[{ label: 'Create Workspace', icon: <Plus className="h-4 w-4" />, onSelect: () => setCreateOpen(true) }]}
+          />
         </div>
 
         <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
