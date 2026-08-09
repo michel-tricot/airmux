@@ -67,6 +67,20 @@ describe('sign-in gate', () => {
   });
 });
 
+describe('sign-in landing', () => {
+  it('lands in the last-selected org', async () => {
+    localStorage.setItem('airllm_org_id', ORG.id);
+    renderAt('/');
+    expect(await screen.findByRole('heading', { level: 1, name: 'Production' })).toBeInTheDocument();
+  });
+
+  it('lands on the picker when no org was selected before', async () => {
+    withTwoOrgs();
+    renderAt('/');
+    expect(await screen.findByRole('heading', { name: 'Select Organization' })).toBeInTheDocument();
+  });
+});
+
 describe('instance admin gate', () => {
   it('redirects non-admin users from /instance to the org console', async () => {
     localStorage.setItem('airllm_org_id', ORG.id);
