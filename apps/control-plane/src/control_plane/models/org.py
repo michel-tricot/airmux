@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import ClassVar, Self
 from uuid import UUID
 
-from sqlmodel import Field, col
+from sqlmodel import Field, col, select
 
 from control_plane.models.audit import audited
 from control_plane.models.common import Identified, Tombstonable
@@ -31,10 +31,11 @@ class Org(Record, Identified, Tombstonable, table=True):
 
     @classmethod
     async def joined_by(cls, user_id: UUID) -> list[Self]:
-        """The orgs the user is a member of, by name."""
-        memberships = await OrgMembership.find(OrgMembership.user_id == user_id)
-        org_ids = [m.org_id for m in memberships]
-        return await cls.find(col(cls.id).in_(org_ids), order_by=col(cls.name)) if org_ids else []
+        """The orgs the user is a member of, by name; the mirror of User.members_of, one query like it."""
+        return await cls.find(
+            col(cls.id).in_(select(OrgMembership.org_id).where(OrgMembership.user_id == user_id)),
+            order_by=col(cls.name),
+        )
 
 
 class OrgCreate(RecordCreate[Org]):

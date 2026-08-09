@@ -325,6 +325,36 @@ def test_event_ingest_is_idempotent_and_org_scoped(tmp_path):
         assert c.post("/v1/events", json=events).status_code == 401
 
 
+def test_event_ingest_survives_a_repeat_inside_one_batch(tmp_path):
+    """At-least-once delivery can repeat an event_id within a single flush; the batch still lands."""
+    cp = setup_control_plane(tmp_path)
+    root = cp.headers()
+    with TestClient(cp.app) as c:
+        o1 = make_org(c, root, "o1")
+        duplicated = _event(o1)
+        other = _event(o1)
+        batch = [duplicated, other, duplicated]
+        landed = c.post("/v1/events", json=batch, headers=root)
+        assert landed.status_code == 200, landed.text
+        assert landed.json()["data"] == {"received": 3, "ingested": 2}
+
+        stored = c.get("/v1/org/events", headers=cp.headers(o1)).json()["data"]
+        assert sorted(e["event_id"] for e in stored) == sorted({duplicated["event_id"], other["event_id"]})
+
+        replay = c.post("/v1/events", json=batch, headers=root).json()["data"]
+        assert replay == {"received": 3, "ingested": 0}
+
+
+def test_event_ingest_accepts_an_empty_batch(tmp_path):
+    """An idle outbox flush posts nothing; it is a no-op, not a malformed statement."""
+    cp = setup_control_plane(tmp_path)
+    root = cp.headers()
+    with TestClient(cp.app) as c:
+        empty = c.post("/v1/events", json=[], headers=root)
+        assert empty.status_code == 200, empty.text
+        assert empty.json()["data"] == {"received": 0, "ingested": 0}
+
+
 def _heartbeat(instance_id: UUID) -> dict:
     return {"instance_id": str(instance_id), "version": "0.1.0", "bundle_id": str(uuid7())}
 

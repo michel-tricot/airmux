@@ -6,7 +6,7 @@ from uuid import UUID
 
 from pydantic import BaseModel
 from sqlalchemy import JSON
-from sqlmodel import Field
+from sqlmodel import Field, col
 
 from control_plane.authz import Scope
 from control_plane.models.audit import audited
@@ -35,8 +35,13 @@ class ManagementKey(Record, Identified, OrgOwned, Tombstonable, table=True):
 
     @classmethod
     async def retire_for_client(cls, user_id: UUID, org_id: UUID, label: str) -> list[Self]:
-        """Revoke the live keys this client label holds for the org, so a re-login replaces its key instead of accumulating."""
-        keys = [k for k in await cls.find(cls.user_id == user_id, cls.org_id == org_id, cls.label == label) if not k.revoked]
+        """Revoke the live keys this client label holds for the org, so a re-login replaces its key instead of accumulating.
+
+        The live filter belongs in the query, not in Python: already-revoked keys are not rows this
+        needs to read. The writes stay one per key because that is what the model API expresses, and
+        a client label holds one live key in the ordinary case.
+        """
+        keys = await cls.find(cls.user_id == user_id, cls.org_id == org_id, cls.label == label, col(cls.revoked).is_(False))
         for key in keys:
             key.revoked = True
             await key.save()
