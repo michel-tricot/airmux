@@ -78,8 +78,8 @@ exchanged for a token via the API or webapp login, pairing naturally with
 
 ## Finish service accounts
 
-Users exist with a service_account flag, memberships, and token binding, and `airllmcp init`
-creates a data-plane service account to hold GW_DATAPLANE_TOKEN. Human login now excludes service
+Users exist with a service_account flag, memberships, and token binding, and a data plane carries
+an org management key today rather than a service account of its own. Human login now excludes service
 accounts everywhere (password login, session use). What remains:
 kind-specific policies (token TTLs, sync-only permissions narrower than org admin). If a third
 principal kind ever appears, convert the boolean to a kind enum rather than stacking flags.
