@@ -5,8 +5,7 @@
   "workspaces": {
     "packages": [
       "apps/console",
-      "lib/*",
-      "lib/integrations/*"
+      "lib/*"
     ],
     "catalog": {
       "@replit/vite-plugin-cartographer": "^0.5.21",
