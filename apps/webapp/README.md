@@ -1,3 +1,13 @@
+# webapp (deprecated)
+
+The previous console. `apps/console` replaced it: compose builds and serves that
+one on `localhost:3000`, the docs describe it, and `airllm login` sends the
+browser to its `/cli` page.
+
+Nothing builds this app any more. It is kept only so anything still pointing at
+it has somewhere to look while it moves over, and it will be deleted once nothing
+does.
+
 # React + TypeScript + Vite
 
 This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.

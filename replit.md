@@ -1,12 +1,12 @@
 # airllm
 
-An LLM gateway prototype with a strict control plane / data plane split, plus a new admin console (Bun workspace, merged from a separate Replit project that briefly lived in `webapp2/`).
+An LLM gateway prototype with a strict control plane / data plane split, plus the console (Bun workspace) that serves both the org and instance admin views.
 
 ## What it does
 
 - **Control plane** (FastAPI + Postgres): manages orgs, API keys, providers, and models; compiles signed policy bundles
 - **Data plane** (bare Starlette): serves `POST /v1/chat/completions` and `POST /v1/messages` (Anthropic API) with zero I/O on the hot path
-- **Console** (`apps/webapp`): React/Vite admin UI
+- **Console** (`apps/console`): React/Vite admin and org console
 - **CLI** (`apps/cli`): `airllm` and `airllmcp` commands for managing the gateway
 
 ## Stack
@@ -54,7 +54,7 @@ apps/
   cli/           # airllm / airllmcp CLI
   control-plane/ # FastAPI admin + compile API
   data-plane/    # Starlette inference gateway
-  webapp/        # older React/Vite console (port 3000)
+  webapp/        # deprecated previous console; nothing builds it
 packages/
   contract/      # shared bundle/event schemas, signing, tokens
 apps/console/    # React/Vite admin console ("Precision Control Room") — the only Replit-managed app
@@ -72,7 +72,7 @@ scripts/         # shell helpers + Bun workspace scripts package
 
 Tenancy model: organizations → (members, management keys, workspaces); workspaces → (workspace members, inference keys); users are top-level and can belong to multiple orgs.
 
-Replit only manages the webapp (`apps/console`, workspace package `@workspace/gateway-console`). The backend/API/proxy (control plane, data plane) are the Python apps under `apps/`, managed externally with uv — do not scaffold or run backends from Replit. To wire the console to the real backend, replace `lib/api-spec/openapi.yaml` with the control plane's OpenAPI spec and re-run codegen.
+Replit only manages the console (`apps/console`, workspace package `@workspace/gateway-console`). The backend/API/proxy (control plane, data plane) are the Python apps under `apps/`, managed externally with uv — do not scaffold or run backends from Replit. The console already talks to the real backend: `lib/api-spec/openapi.yaml` is exported from the control plane routes, and the clients are generated from it.
 
 ```bash
 bun install

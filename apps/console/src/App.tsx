@@ -27,6 +27,7 @@ import { useEnrollment } from '@workspace/api-client-react';
 import { SessionProvider, useSession } from '@/lib/session';
 import AppLayout from '@/components/layout/AppLayout';
 import Login from '@/pages/Login';
+import CliApprove from '@/pages/CliApprove';
 import AppOrgPicker from '@/pages/app/OrgPicker';
 import AppDashboard from '@/pages/app/Dashboard';
 import AppWorkspaceDetail from '@/pages/app/WorkspaceDetail';
@@ -88,6 +89,16 @@ function Router() {
   if (isLoading) return <Splash>LOADING SESSION...</Splash>;
 
   if (!user) return <Login />;
+
+  // Where `airllm login` sends the browser. Any signed-in account can approve its own device
+  // login, so this sits ahead of the instance-admin gate rather than inside either console.
+  if (location.startsWith('/cli')) {
+    return (
+      <RoutedErrorBoundary>
+        <CliApprove />
+      </RoutedErrorBoundary>
+    );
+  }
 
   if (location.startsWith('/app')) {
     return (

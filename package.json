@@ -33,7 +33,10 @@
   },
   "scripts": {
     "preinstall": "sh -c 'rm -f package-lock.json yarn.lock pnpm-lock.yaml; case \"$npm_config_user_agent\" in bun/*) ;; *) echo \"Use bun instead\" >&2; exit 1 ;; esac'",
+    "dev": "bun run --filter '@workspace/gateway-console' dev",
+    "serve": "bun run --filter '@workspace/gateway-console' serve",
     "build": "bun run typecheck && bun run --filter '@workspace/gateway-console' build",
+    "codegen": "bun run --cwd lib/api-spec codegen",
     "typecheck:libs": "tsc --build",
     "typecheck": "bun run typecheck:libs && bun run --filter '@workspace/gateway-console' typecheck"
   },

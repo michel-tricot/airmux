@@ -29,13 +29,10 @@ echo 'OPENAI_API_KEY=sk-...' >> .env
 # 2. Start the control plane (dev mode auto-runs migrations and reloads on change)
 uv run airllmcp serve --dev
 
-# 3. Claim the instance: the first account to sign up becomes its admin
-open http://localhost:5173  # or POST /v1/auth/signup
+# 3. Start the console and claim the instance: the first account to sign up becomes its admin
+bun install && bun run --filter '@workspace/gateway-console' dev   # http://localhost:5000
 
-# 4. Load the models catalog and compile the first bundle
-uv run airllmcp taxonomy
-
-# 5. Start the data plane; it polls the bundle and goes ready
+# 4. Start the data plane; it polls the bundle and goes ready
 uv run airllmdp --dev
 ```
 
@@ -47,10 +44,12 @@ which is also how a second admin is granted: the bit never crosses the API.
 ### Docker Compose
 
 The same stack runs under compose: Postgres comes up first, then the control
-plane starts with `migrate && seed && serve` (schema to head, taxonomy applied,
-attributed to `root`), then the data plane and console. There is no init
-service and no account provisioning at startup; the stack config is the
-checked-in `docker/airllm.yml`.
+plane starts with `migrate && taxonomy && serve` (schema to head, catalog applied,
+attributed to `root`), then the data plane, then the console on
+`localhost:3000`, which nginx serves and which proxies `/v1` to the control
+plane. There is no init service and no account provisioning at startup: claim the
+instance by signing up in the console. The stack config is the checked-in
+`docker/airllm.yml`.
 
 ```bash
 # .env at the repo root: compose reads it for interpolation
@@ -59,38 +58,40 @@ checked-in `docker/airllm.yml`.
 docker compose up -d --build --wait
 ```
 
-Accounts are self-serve: sign up on the console login page
-(`localhost:3000`), create your organization, and mint an inference key on the
-Keys page; `airllm login` connects the CLI through the browser. The gateway
+Accounts are self-serve: sign up on the console login page (`localhost:3000`),
+where the first account claims the instance, then create your organization and
+mint an inference key on a workspace; `airllm login` connects the CLI through the
+browser, which the console approves at `/cli`. The gateway
 listens on `localhost:8080` and the control plane API on `localhost:8000`.
 `docker compose down -v` resets the instance.
 
 ### The console
 
-Two consoles live in the repo. `apps/webapp` is the one in use: Docker Compose
-builds it and serves it on `localhost:3000`, and it calls the control plane
-directly.
-
-`apps/console` is the v2 console. It is a bun/TypeScript workspace, separate
-from the uv one, sharing `lib/api-client-react` (generated React Query hooks)
-and `lib/api-zod` (generated schemas). You need [bun](https://bun.sh).
+`apps/console` is the console. It is a bun/TypeScript workspace, separate from
+the uv one, sharing `lib/api-client-react` (generated React Query hooks) and
+`lib/api-zod` (generated schemas). You need [bun](https://bun.sh).
 
 ```bash
 bun install                                      # once, at the repo root
 bun run --filter '@workspace/gateway-console' dev   # http://localhost:5000
 ```
 
+`apps/webapp` is the previous console, kept only until anything still pointing at
+it is moved over. Nothing builds or serves it: compose serves `apps/console`, and
+the docs describe that one.
+
 `PORT` and `BASE_PATH` override the port and the base path. `bun run build`
 typechecks the whole workspace and emits `apps/console/dist/public`, which
 `bun run --filter '@workspace/gateway-console' serve` previews.
 
-v2 talks to the real control plane. The dev server proxies `/v1` to
-`localhost:8000`, which `CONTROL_PLANE_URL` overrides; the session cookie is
-same-site, so the API has to answer on the console's own origin. Signing in
-takes an account on the instance (the login page also signs one up). Two
-sections live behind that: `/app` is the org console, where the org travels in
-the `X-Org-Id` header the session picks, and `/` is the instance admin console,
-which instance admins alone can open.
+The dev server proxies `/v1` to `localhost:8000`, which `CONTROL_PLANE_URL`
+overrides; under compose nginx proxies the same path to the control plane. Either
+way the API answers on the console's own origin, which is what the same-site
+session cookie needs. Signing in takes an account on the instance (the login page
+also signs one up). Three sections live behind that: `/app` is the org console,
+where the org travels in the `X-Org-Id` header the session picks, `/` is the
+instance admin console, which instance admins alone can open, and `/cli` is where
+`airllm login` sends the browser to approve a device login.
 
 ### Making a request
 
@@ -197,7 +198,8 @@ it at runtime, so the console's hooks return payloads.
 Repo layout: `lib/contract` is the only code both planes share (bundle and
 event schemas, signing, tokens). `apps/control-plane`, `apps/data-plane`,
 `apps/cli`, `lib/contract` and `lib/api-models` are uv workspace members.
-`apps/webapp` is the React console in use; `apps/console` and the other `lib/*`
-packages are the bun workspace holding the v2 console and its generated clients.
+`apps/console` and the other `lib/*` packages are the bun workspace holding the
+console and its generated clients; `apps/webapp` is the deprecated previous
+console and is not built by anything.
 The full design spec lives in `notes/PROTOTYPE.md`, and the working rules in
 `CLAUDE.md`.

@@ -51,7 +51,7 @@ def quickstart(  # noqa: PLR0913, PLR0917 flags are the command's interface
     password: str = typer.Option(..., prompt="Password", hide_input=True, confirmation_prompt=True, help="At least 8 characters"),
     org: str = typer.Option("", help="Org name to create; defaults to the email local part"),
     gateway_url: str = typer.Option("http://localhost:8080", help="Where the data plane serves, for the printed example"),
-    webapp_url: str = typer.Option("http://localhost:3000", help="Where the console is served, printed at the end"),
+    console_url: str = typer.Option("http://localhost:3000", help="Where the console is served, printed at the end"),
 ) -> None:
     """Bootstrap a fresh instance end to end: account, org, keys, data plane, and a ready-to-use inference key."""
     import httpx  # noqa: PLC0415 lazy import keeps CLI startup fast
@@ -111,7 +111,7 @@ def quickstart(  # noqa: PLR0913, PLR0917 flags are the command's interface
     console.print(Panel(key["token"], title="AIRLLM_API_KEY", border_style="cyan", expand=False))
     console.print("[dim]try it once the data plane is online[/dim]")
     print(curl)
-    console.print(f"\n[dim]webapp[/dim] {webapp_url}")
+    console.print(f"\n[dim]console[/dim] {console_url}")
 
 
 @app.command(rich_help_panel=SETUP)
