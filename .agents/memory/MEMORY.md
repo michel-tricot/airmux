@@ -1,2 +1,1 @@
 - [Orval zod v4 import](orval-zod-v4.md) — codegen script rewrites generated zod import to 'zod/v4' after orval; keep that step when touching codegen.
-- [Drizzle correlated subqueries](drizzle-correlated-subqueries.md) — interpolating columns in sql`` subqueries renders them unqualified and silently breaks correlation; write fully qualified raw SQL.

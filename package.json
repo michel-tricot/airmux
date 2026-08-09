@@ -6,8 +6,7 @@
     "packages": [
       "artifacts/*",
       "lib/*",
-      "lib/integrations/*",
-      "scripts"
+      "lib/integrations/*"
     ],
     "catalog": {
       "@replit/vite-plugin-cartographer": "^0.5.21",
@@ -21,7 +20,6 @@
       "@vitejs/plugin-react": "^5.0.4",
       "class-variance-authority": "^0.7.1",
       "clsx": "^2.1.1",
-      "drizzle-orm": "0.45.2",
       "framer-motion": "^12.23.24",
       "lucide-react": "^0.545.0",
       "react": "19.1.0",
@@ -36,9 +34,9 @@
   },
   "scripts": {
     "preinstall": "sh -c 'rm -f package-lock.json yarn.lock pnpm-lock.yaml; case \"$npm_config_user_agent\" in bun/*) ;; *) echo \"Use bun instead\" >&2; exit 1 ;; esac'",
-    "build": "bun run typecheck && bun run --filter '@workspace/api-server' --filter '@workspace/gateway-console' build",
+    "build": "bun run typecheck && bun run --filter '@workspace/gateway-console' build",
     "typecheck:libs": "tsc --build",
-    "typecheck": "bun run typecheck:libs && bun run --filter './artifacts/**' --filter './scripts' typecheck"
+    "typecheck": "bun run typecheck:libs && bun run --filter './artifacts/**' typecheck"
   },
   "private": true,
   "overrides": {

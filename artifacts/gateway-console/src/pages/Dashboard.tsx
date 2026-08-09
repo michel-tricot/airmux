@@ -53,7 +53,7 @@ export default function Dashboard() {
           <CardContent>
             {loadingActivity ? (
               <div className="py-8 text-center text-muted-foreground font-mono text-sm">LOADING EVENTS...</div>
-            ) : activities && activities.length > 0 ? (
+            ) : Array.isArray(activities) && activities.length > 0 ? (
               <Table>
                 <TableHeader>
                   <TableRow>
