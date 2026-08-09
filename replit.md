@@ -12,7 +12,7 @@ An LLM gateway prototype with a strict control plane / data plane split, plus th
 ## Stack
 
 - Python 3.12, managed with `uv` (workspace with multiple packages)
-- Node 20 / Bun for the React console
+- Node 24 / Bun for the React console
 - PostgreSQL (required — used by the control plane)
 - FastAPI (control plane), Starlette (data plane)
 
