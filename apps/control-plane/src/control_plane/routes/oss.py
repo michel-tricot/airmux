@@ -5,7 +5,6 @@ from pathlib import Path
 from anyio.to_thread import run_sync
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from sqlmodel import col
 
 from control_plane.deps import SessionDep, public
 from control_plane.keys import INSTANCE_KEY_PREFIX, MANAGEMENT_KEY_PREFIX
@@ -29,7 +28,7 @@ async def claim(_session: SessionDep) -> Envelope[ClaimOut]:
 
     Service accounts do not claim an instance; it leaks nothing beyond set-up-or-not, like healthz.
     """
-    return Envelope(data=ClaimOut(claimed=await User.first(col(User.service_account).is_(False)) is not None))
+    return Envelope(data=ClaimOut(claimed=await User.instance_claimed()))
 
 
 class QuickstartIn(BaseModel):

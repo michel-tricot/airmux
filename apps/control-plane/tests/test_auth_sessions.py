@@ -18,7 +18,8 @@ def _client(cp) -> TestClient:
 
 
 def _make_user(c, cp, email="m@example.com", *, admin=False, org=None, tmp_path=None):  # noqa: PLR0913 test helper mirrors the fixtures each test holds
-    """Self-signup is the only way a human gets a password; the admin bit has no API and is flipped in the database."""
+    """Self-signup is the only way a human gets a password; the admin bit is flipped in the database here, since the
+    signup that would have claimed the instance belongs to whoever came first."""
     me = c.post("/v1/auth/signup", json={"email": email, "name": email, "password": PASSWORD}).json()["data"]
     assert c.post("/v1/auth/logout", headers=CSRF).status_code == 200
     c.cookies.clear()
@@ -208,8 +209,16 @@ def test_service_accounts_rejected_from_password_login(tmp_path):
 
 
 def test_signup_creates_user_identity_and_session(tmp_path):
+    """An ordinary signup: an account, an identity, a session, and no authority anywhere.
+
+    The founder goes first because the first signup on a fresh deployment claims it; that path has
+    its own tests.
+    """
     cp = setup_control_plane(tmp_path)
     with _client(cp) as c:
+        c.post("/v1/auth/signup", json={"email": "founder@example.com", "name": "Founder", "password": PASSWORD})
+        c.cookies.clear()
+
         resp = c.post("/v1/auth/signup", json={"email": "New@Example.com", "name": "New", "password": PASSWORD})
         assert resp.status_code == 200, resp.text
         assert SESSION_COOKIE in resp.cookies

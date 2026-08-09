@@ -13,7 +13,7 @@ repos:
         pass_filenames: false
       - id: ty
         name: ty check all projects
-        entry: uv run ty check packages/contract apps/data-plane apps/cli apps/control-plane
+        entry: uv run ty check .
         language: system
         pass_filenames: false
       - id: lint-imports
@@ -21,8 +21,13 @@ repos:
         entry: uv run lint-imports
         language: system
         pass_filenames: false
+      - id: openapi-drift
+        name: committed OpenAPI spec matches the routes
+        entry: bash -c './scripts/export-openapi.sh && git diff --exit-code lib/api-spec/openapi.yaml'
+        language: system
+        pass_filenames: false
       - id: api-models-drift
         name: generated API models match the OpenAPI spec
-        entry: bash -c './scripts/generate-api-models.sh && git diff --exit-code apps/cli/src/cli/api_models.py'
+        entry: bash -c './scripts/generate-api-models.sh && git diff --exit-code lib/api-models'
         language: system
         pass_filenames: false

@@ -11,7 +11,8 @@ from control_plane.authz import Scope
 from control_plane.compiler import UnknownOrgError, compile_and_store
 from control_plane.deps import MgmtDep, OrgDep, require
 from control_plane.keys import mint_management_key
-from control_plane.models import Bundle, ManagementKey, OrgMembership, UsageEvent, User
+from control_plane.models import AuditLog, Bundle, ManagementKey, OrgMembership, UsageEvent, User
+from control_plane.models.audit import ActivityOut
 from control_plane.models.bundle import BundleOut
 from control_plane.models.common.wire import DeletedOut, Envelope
 from control_plane.models.management_key import ManagementKeyIn, ManagementKeyMintedOut, ManagementKeyOut, ManagementKeyRevokedOut
@@ -57,7 +58,7 @@ async def list_management_keys(org_id: OrgDep) -> Envelope[list[ManagementKeyOut
 
 
 @router.post("/management-keys", tags=["Management Keys"], dependencies=[require(Scope.management_keys_write)])
-async def mint_management_key_endpoint(body: ManagementKeyIn, org_id: OrgDep, claims: MgmtDep) -> Envelope[ManagementKeyMintedOut]:
+async def mint_org_management_key(body: ManagementKeyIn, org_id: OrgDep, claims: MgmtDep) -> Envelope[ManagementKeyMintedOut]:
     """Mint an org-scoped key for the acting user, or for another org member when user_id names one."""
     user_id = body.user_id or claims.user_id
     user = await User.find_by_id(user_id)
@@ -79,7 +80,7 @@ async def revoke_management_key(org_id: OrgDep, key_id: UUID) -> Envelope[Manage
 
 
 @router.post("/bundles/compile", tags=["Bundles"], dependencies=[require(Scope.bundles_write)])
-async def compile_endpoint(org_id: OrgDep, request: Request) -> Envelope[BundleOut]:
+async def compile_bundle(org_id: OrgDep, request: Request) -> Envelope[BundleOut]:
     settings = request.app.state.settings
     now = datetime.now(tz=UTC)
     try:
@@ -103,3 +104,9 @@ async def list_events(org_id: OrgDep, after: datetime | None = None, limit: int 
     else:
         events = await UsageEvent.find(UsageEvent.org_id == org_id, order_by=col(UsageEvent.occurred_at).desc(), limit=limit)
     return Envelope(data=[UsageEventOut.model_validate(e) for e in events])
+
+
+@router.get("/activity", tags=["Activity"], dependencies=[require(Scope.activity_read)])
+async def list_activity(org_id: OrgDep, limit: int = 50) -> Envelope[list[ActivityOut]]:
+    """What changed in this org, newest first: the audit trail the write triggers already record."""
+    return Envelope(data=[ActivityOut.model_validate(entry) for entry in await AuditLog.for_org(org_id, limit)])

@@ -1,0 +1,52 @@
+"""Fetching one resource by id, the read the detail views of a client need."""
+
+from __future__ import annotations
+
+from fastapi.testclient import TestClient
+from helpers import make_org, make_workspace, setup_control_plane
+
+from contract import uuid7
+
+
+def test_get_org_by_id(tmp_path):
+    cp = setup_control_plane(tmp_path)
+    root = cp.headers()
+    with TestClient(cp.app) as c:
+        org = make_org(c, root, "o1")
+
+        fetched = c.get(f"/v1/orgs/{org}", headers=root)
+        assert fetched.status_code == 200, fetched.text
+        assert fetched.json()["data"] == next(o for o in c.get("/v1/orgs", headers=root).json()["data"] if o["id"] == str(org))
+        assert c.get(f"/v1/orgs/{uuid7()}", headers=root).status_code == 404
+
+
+def test_get_user_by_id_carries_their_memberships(tmp_path):
+    cp = setup_control_plane(tmp_path)
+    root = cp.headers()
+    with TestClient(cp.app) as c:
+        org = make_org(c, root, "o1")
+        user = c.post("/v1/users", json={"email": "one@example.com"}, headers=root).json()["data"]
+        assert user["orgs"] == []
+
+        c.put(f"/v1/org/users/{user['id']}", headers=cp.headers(org))
+
+        fetched = c.get(f"/v1/users/{user['id']}", headers=root)
+        assert fetched.status_code == 200, fetched.text
+        assert fetched.json()["data"]["orgs"] == [str(org)]
+        assert c.get(f"/v1/users/{uuid7()}", headers=root).status_code == 404
+
+
+def test_get_workspace_by_id_stays_inside_the_org(tmp_path):
+    cp = setup_control_plane(tmp_path)
+    root = cp.headers()
+    with TestClient(cp.app) as c:
+        org = make_org(c, root, "o1")
+        other = make_org(c, root, "o2")
+        workspace = make_workspace(c, cp.headers(org), "staging")
+
+        fetched = c.get(f"/v1/org/workspaces/{workspace}", headers=cp.headers(org))
+        assert fetched.status_code == 200, fetched.text
+        assert fetched.json()["data"]["name"] == "staging"
+
+        assert c.get(f"/v1/org/workspaces/{workspace}", headers=cp.headers(other)).status_code == 404
+        assert c.get(f"/v1/org/workspaces/{uuid7()}", headers=cp.headers(org)).status_code == 404

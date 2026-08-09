@@ -29,6 +29,7 @@ class Scope(StrEnum):
     orgs_write = "orgs:write"
     users_read = "users:read"
     users_write = "users:write"
+    activity_read = "activity:read"
     management_keys_read = "management-keys:read"
     management_keys_write = "management-keys:write"
     instance_keys_read = "instance-keys:read"

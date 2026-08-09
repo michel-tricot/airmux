@@ -13,9 +13,10 @@ jobs:
       - run: uv sync --all-packages --frozen
       - run: uv run ruff format --check .
       - run: uv run ruff check .
-      - run: uv run ty check packages/contract apps/data-plane apps/cli apps/control-plane
+      - run: uv run ty check .
       - run: uv run lint-imports
-      - run: ./scripts/generate-api-models.sh && git diff --exit-code apps/cli/src/cli/api_models.py
+      - run: ./scripts/export-openapi.sh && git diff --exit-code lib/api-spec/openapi.yaml
+      - run: ./scripts/generate-api-models.sh && git diff --exit-code lib/api-models
       - run: uv run pytest -n auto
 
   acceptance:

@@ -10,6 +10,7 @@ resolution-markers = [
 members = [
     "acceptance",
     "airllm",
+    "api-models",
     "cli",
     "contract",
     "control-plane",
@@ -117,6 +118,17 @@ sdist = { url = "https://files.pythonhosted.org/packages/61/cc/a381afa6efea9f496
 wheels = [
     { url = "https://files.pythonhosted.org/packages/da/35/f2287558c17e29fafc8ef3daf819bb9834061cfa43bff8014f7df7f63bdc/anyio-4.14.2-py3-none-any.whl", hash = "sha256:9f505dda5ac9f0c8309b5e8bd445a8c2bf7246f3ce950121e45ea15bc41d1494", size = 125813, upload-time = "2026-07-12T20:29:05.763Z" },
 ]
+
+[[package]]
+name = "api-models"
+version = "0.1.0"
+source = { editable = "lib/api-models" }
+dependencies = [
+    { name = "pydantic" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "pydantic", specifier = ">=2" }]
 
 [[package]]
 name = "argcomplete"
@@ -373,6 +385,7 @@ name = "cli"
 version = "0.1.0"
 source = { editable = "apps/cli" }
 dependencies = [
+    { name = "api-models" },
     { name = "contract" },
     { name = "httpx" },
     { name = "python-dotenv" },
@@ -384,7 +397,8 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "contract", editable = "packages/contract" },
+    { name = "api-models", editable = "lib/api-models" },
+    { name = "contract", editable = "lib/contract" },
     { name = "httpx" },
     { name = "python-dotenv" },
     { name = "pyyaml" },
@@ -417,7 +431,7 @@ wheels = [
 [[package]]
 name = "contract"
 version = "0.1.0"
-source = { editable = "packages/contract" }
+source = { editable = "lib/contract" }
 dependencies = [
     { name = "cryptography" },
     { name = "pydantic" },
@@ -457,7 +471,7 @@ requires-dist = [
     { name = "alembic" },
     { name = "argon2-cffi", specifier = ">=23.1" },
     { name = "asyncpg" },
-    { name = "contract", editable = "packages/contract" },
+    { name = "contract", editable = "lib/contract" },
     { name = "fastapi" },
     { name = "httpx" },
     { name = "python-dotenv" },
@@ -537,7 +551,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "contract", editable = "packages/contract" },
+    { name = "contract", editable = "lib/contract" },
     { name = "cryptography" },
     { name = "httpx", extras = ["http2"] },
     { name = "pydantic", specifier = ">=2" },

@@ -220,6 +220,7 @@ def upgrade() -> None:
         sa.Column("id", sa.Uuid(), server_default=sa.text("uuidv7()"), nullable=False),
         sa.Column("user_id", sa.Uuid(), nullable=False),
         sa.Column("token_hash", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+        sa.Column("prefix", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("revoked", sa.Boolean(), nullable=False),
         sa.Column("scopes", sa.JSON(), nullable=True),
         sa.Column("label", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
@@ -242,6 +243,7 @@ def upgrade() -> None:
         sa.Column("id", sa.Uuid(), server_default=sa.text("uuidv7()"), nullable=False),
         sa.Column("user_id", sa.Uuid(), nullable=False),
         sa.Column("token_hash", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+        sa.Column("prefix", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("revoked", sa.Boolean(), nullable=False),
         sa.Column("scopes", sa.JSON(), nullable=True),
         sa.Column("label", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
@@ -360,6 +362,7 @@ def upgrade() -> None:
         sa.Column("workspace_id", sa.Uuid(), nullable=False),
         sa.Column("user_id", sa.Uuid(), nullable=False),
         sa.Column("token_hash", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+        sa.Column("prefix", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("revoked", sa.Boolean(), nullable=False),
         sa.Column("label", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.ForeignKeyConstraint(

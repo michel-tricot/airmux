@@ -57,10 +57,11 @@ API_TAGS = [
     {"name": "Bundles", "description": "Signed policy bundles compiled per org and polled by data planes"},
     {"name": "Events", "description": "Usage events reported by data planes"},
     {"name": "Taxonomy", "description": "The models catalog: providers and models compiled into bundles"},
+    {"name": "Activity", "description": "The audit trail of writes, per org and instance-wide"},
 ]
 
 TAG_GROUPS = [
-    {"name": "Org Management", "tags": ["Org Users", "Management Keys", "Workspaces", "Inference Keys", "Bundles", "Events"]},
+    {"name": "Org Management", "tags": ["Org Users", "Management Keys", "Workspaces", "Inference Keys", "Bundles", "Events", "Activity"]},
     {"name": "Account", "tags": ["Auth", "Enrollment"]},
     {"name": "Catalog", "tags": ["Taxonomy"]},
     {"name": "Instance Admin", "tags": ["Orgs", "Users", "Instance Keys", "Instance Management Keys", "Data Plane", "OSS"]},
@@ -145,8 +146,14 @@ async def healthz(request: Request) -> JSONResponse:
     return JSONResponse({"status": "ok"})
 
 
+def _operation_id(route: APIRoute) -> str:
+    """The handler name is the operation id, so generated clients read useListOrgs rather than FastAPI's
+    useListOrgsV1OrgsGet. Handler names are unique across the routers; test_api_hygiene holds that."""
+    return route.name
+
+
 def create_app(settings: Settings | None = None) -> FastAPI:
-    app = ControlPlaneApp(title="airllm control plane", lifespan=lifespan, openapi_tags=API_TAGS)
+    app = ControlPlaneApp(title="airllm control plane", lifespan=lifespan, openapi_tags=API_TAGS, generate_unique_id_function=_operation_id)
     app.state.settings = settings if settings is not None else load_settings()
     app.add_exception_handler(NotOwnedError, not_owned_handler)
     app.add_route("/healthz", healthz)

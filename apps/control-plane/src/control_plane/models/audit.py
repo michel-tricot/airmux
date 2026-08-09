@@ -1,17 +1,16 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import TYPE_CHECKING, Any
+from typing import Any, ClassVar, Self
+from uuid import UUID  # noqa: TC003 pydantic resolves the model annotations at runtime
 
 from sqlalchemy import JSON, Table, inspect, text
-from sqlmodel import Field
+from sqlmodel import Field, col, or_
 
 from control_plane.db import current_session
 from control_plane.models.common.base import Record
 from control_plane.models.common.column_types import UTCDateTime
-
-if TYPE_CHECKING:
-    from uuid import UUID
+from control_plane.models.common.wire import RecordOut
 
 _AUDITED: set[type[Record]] = set()
 
@@ -31,6 +30,9 @@ def audited[T: Record](cls: type[T]) -> type[T]:
 
 
 class AuditLog(Record, table=True):
+    """The trail the triggers write. The row snapshots never cross the wire: they hold whole rows,
+    including the columns their own table hides, so a reader of the trail would read token hashes."""
+
     id: int | None = Field(default=None, primary_key=True)
     table_name: str
     record_id: str
@@ -39,6 +41,46 @@ class AuditLog(Record, table=True):
     before: dict[str, Any] | None = Field(default=None, sa_type=JSON)
     after: dict[str, Any] | None = Field(default=None, sa_type=JSON)
     occurred_at: datetime = Field(sa_type=UTCDateTime)
+
+    api_hidden: ClassVar[frozenset[str]] = frozenset({"before", "after"})
+    api_readonly: ClassVar[frozenset[str]] = frozenset({"id", "table_name", "record_id", "action", "user_id", "occurred_at"})
+
+    @classmethod
+    async def recent(cls, limit: int) -> list[Self]:
+        """The instance-wide trail, newest first. The integer sequence is the only total order the
+        rows have: uuid7 cannot separate two writes inside one millisecond."""
+        return await cls.find(order_by=col(cls.id).desc(), limit=limit)
+
+    @classmethod
+    async def for_org(cls, org_id: UUID, limit: int) -> list[Self]:
+        """The trail of one org: rows that carry its org_id in either snapshot, plus the org row itself.
+
+        The snapshots stay in the database as a json filter rather than being read back and sifted
+        in Python, which is what would leak them into the process at all.
+        """
+        return await cls.find(
+            or_(
+                col(cls.before)["org_id"].as_string() == str(org_id),
+                col(cls.after)["org_id"].as_string() == str(org_id),
+                (col(cls.table_name) == "org") & (col(cls.record_id) == str(org_id)),
+            ),
+            order_by=col(cls.id).desc(),
+            limit=limit,
+        )
+
+
+class ActivityOut(RecordOut[AuditLog]):
+    """One entry in the feed: what changed, who changed it, when. Never the snapshots themselves.
+
+    id mirrors the column, which the sequence fills: nullable in the table, never null once read.
+    """
+
+    id: int | None
+    table_name: str
+    record_id: str
+    action: str
+    user_id: str
+    occurred_at: datetime
 
 
 def audit_trigger_ddl_v1(table: str, pk_columns: tuple[str, ...]) -> tuple[str, str]:

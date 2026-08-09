@@ -5,7 +5,8 @@ ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy
 # Dependency layer: only the manifests, so it stays cached until the lock or a pyproject changes.
 # --no-install-workspace installs the third-party deps but not our own packages.
 COPY pyproject.toml uv.lock ./
-COPY packages/contract/pyproject.toml packages/contract/
+COPY lib/api-models/pyproject.toml lib/api-models/
+COPY lib/contract/pyproject.toml lib/contract/
 COPY apps/cli/pyproject.toml apps/cli/
 COPY apps/control-plane/pyproject.toml apps/control-plane/
 COPY apps/data-plane/pyproject.toml apps/data-plane/

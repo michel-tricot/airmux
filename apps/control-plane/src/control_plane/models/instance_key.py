@@ -21,12 +21,13 @@ class InstanceKey(Record, Identified, Tombstonable, table=True):
 
     user_id: UUID = Field(foreign_key="user.id")
     token_hash: str = Field(unique=True)
+    prefix: str
     revoked: bool = False
     scopes: list[str] | None = Field(default=None, sa_type=JSON)
     label: str
 
     api_hidden: ClassVar[frozenset[str]] = frozenset({"token_hash"})
-    api_readonly: ClassVar[frozenset[str]] = frozenset({"scopes", "label"})
+    api_readonly: ClassVar[frozenset[str]] = frozenset({"scopes", "label", "prefix"})
 
 
 class InstanceKeyOut(RecordOut[InstanceKey]):
@@ -35,6 +36,7 @@ class InstanceKeyOut(RecordOut[InstanceKey]):
     revoked: bool
     scopes: list[str] | None
     label: str
+    prefix: str
     created_at: datetime
     updated_at: datetime
     deleted_at: datetime | None

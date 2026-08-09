@@ -25,11 +25,12 @@ class InferenceKey(Record, Identified, OrgOwned, Tombstonable, table=True):
     workspace_id: UUID
     user_id: UUID = Field(foreign_key="user.id")
     token_hash: str = Field(unique=True)
+    prefix: str
     revoked: bool = False
     label: str
 
     api_hidden: ClassVar[frozenset[str]] = frozenset({"token_hash"})
-    api_readonly: ClassVar[frozenset[str]] = frozenset({"workspace_id", "user_id", "revoked", "label"})
+    api_readonly: ClassVar[frozenset[str]] = frozenset({"workspace_id", "user_id", "revoked", "label", "prefix"})
 
 
 class InferenceKeyIn(BaseModel):
@@ -43,6 +44,7 @@ class InferenceKeyOut(RecordOut[InferenceKey]):
     user_id: UUID
     revoked: bool
     label: str
+    prefix: str
     created_at: datetime
     updated_at: datetime
     deleted_at: datetime | None

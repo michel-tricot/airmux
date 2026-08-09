@@ -9,7 +9,8 @@ from sqlmodel import col
 from control_plane.authz import Scope
 from control_plane.deps import MgmtDep, instance_scope, require
 from control_plane.keys import mint_instance_key
-from control_plane.models import DataPlaneInstance, InstanceKey, ManagementKey, User
+from control_plane.models import AuditLog, DataPlaneInstance, InstanceKey, ManagementKey, User
+from control_plane.models.audit import ActivityOut
 from control_plane.models.common.wire import Envelope
 from control_plane.models.data_plane_instance import DataPlaneInstanceOut
 from control_plane.models.instance_key import InstanceKeyIn, InstanceKeyMintedOut, InstanceKeyOut, InstanceKeyRevokedOut
@@ -35,7 +36,7 @@ async def list_instance_keys() -> Envelope[list[InstanceKeyOut]]:
 
 
 @router.post("/instance-keys", tags=["Instance Keys"], dependencies=[require(Scope.instance_keys_write)])
-async def mint_instance_key_endpoint(body: InstanceKeyIn, claims: MgmtDep) -> Envelope[InstanceKeyMintedOut]:
+async def create_instance_key(body: InstanceKeyIn, claims: MgmtDep) -> Envelope[InstanceKeyMintedOut]:
     """Mint an instance key for the acting admin, or for another instance admin when user_id names one."""
     user_id = body.user_id or claims.user_id
     user = await User.find_by_id(user_id)
@@ -74,3 +75,9 @@ async def revoke_any_management_key(key_id: UUID) -> Envelope[ManagementKeyRevok
     key.revoked = True
     await key.save()
     return Envelope(data=ManagementKeyRevokedOut(id=key_id, status="revoked"))
+
+
+@router.get("/activity", tags=["Activity"], dependencies=[require(Scope.activity_read)])
+async def list_instance_activity(limit: int = 50) -> Envelope[list[ActivityOut]]:
+    """What changed anywhere on the instance, newest first; the org-scoped view of the same trail is /org/activity."""
+    return Envelope(data=[ActivityOut.model_validate(entry) for entry in await AuditLog.recent(limit)])

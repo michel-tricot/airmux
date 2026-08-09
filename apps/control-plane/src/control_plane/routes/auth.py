@@ -94,10 +94,17 @@ async def login(body: LoginIn, request: Request, response: Response, _session: S
 
 @router.post("/signup", tags=["Auth"], dependencies=[public()])
 async def signup(body: SignupIn, request: Request, response: Response, _session: SessionDep) -> Envelope[MeOut]:
-    """Open self-signup: a fresh account holds no memberships and no admin bit, so it can see nothing until granted."""
+    """Open self-signup: an account holds no memberships, so it can see nothing until granted or until it founds an org.
+
+    The exception is the first human on a deployment, who claims it and becomes its instance admin: a
+    fresh install has no other way to reach the instance endpoints, and /instance/oss/claim exists to
+    route that first visitor here. Every signup after the claim is an ordinary account. Anyone who can
+    reach an unclaimed deployment can therefore take it, which is the same trapdoor the quickstart
+    endpoint opens; claim the deployment before exposing it, or provision the admin with airllmcp admin.
+    """
     if await User.first(User.email == body.email) is not None:
         raise HTTPException(status_code=409)
-    user = User(email=body.email, name=body.name or body.email, instance_admin=False, service_account=False)
+    user = User(email=body.email, name=body.name or body.email, instance_admin=await User.claims_the_instance(), service_account=False)
     await set_actor(user.id)
     await user.save()
     await AuthIdentity.set_password(user, body.password)

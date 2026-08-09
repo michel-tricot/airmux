@@ -1,790 +1,5585 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
-  title: Api
+  title: airllm control plane
   version: 0.1.0
-  description: LLM Gateway management API (placeholder contract, swap for the real backend spec later)
-servers:
-  - url: /api
-    description: Base API path
-tags:
-  - name: health
-  - name: organizations
-  - name: users
-  - name: workspaces
-  - name: keys
-  - name: dashboard
 paths:
-  /healthz:
-    get:
-      operationId: healthCheck
-      tags: [health]
-      summary: Health check
-      responses:
-        "200":
-          description: Healthy
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/HealthStatus"
-  /dashboard/summary:
-    get:
-      operationId: getDashboardSummary
-      tags: [dashboard]
-      summary: Aggregate counts across the gateway
-      responses:
-        "200":
-          description: Summary
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/DashboardSummary"
-  /dashboard/activity:
-    get:
-      operationId: getRecentActivity
-      tags: [dashboard]
-      summary: Recent activity feed
-      responses:
-        "200":
-          description: Activity events, newest first
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/ActivityEvent"
-  /organizations:
-    get:
-      operationId: listOrganizations
-      tags: [organizations]
-      responses:
-        "200":
-          description: Organizations
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/Organization"
+  /v1/auth/login:
     post:
-      operationId: createOrganization
-      tags: [organizations]
+      tags:
+      - Auth
+      summary: Login
+      operationId: login
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginIn'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_MeOut_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+      security: []
+      description: No authentication required.
+  /v1/auth/signup:
+    post:
+      tags:
+      - Auth
+      summary: Signup
+      description: 'Open self-signup: an account holds no memberships, so it can see nothing until granted or until it founds
+        an org.
+
+
+        The exception is the first human on a deployment, who claims it and becomes its instance admin: a
+
+        fresh install has no other way to reach the instance endpoints, and /instance/oss/claim exists to
+
+        route that first visitor here. Every signup after the claim is an ordinary account. Anyone who can
+
+        reach an unclaimed deployment can therefore take it, which is the same trapdoor the quickstart
+
+        endpoint opens; claim the deployment before exposing it, or provision the admin with airllmcp admin.
+
+
+        No authentication required.'
+      operationId: signup
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignupIn'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_MeOut_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+      security: []
+  /v1/auth/logout:
+    post:
+      tags:
+      - Auth
+      summary: Logout
+      operationId: logout
+      parameters:
+      - name: X-Requested-With
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Requested-With
+      - name: Sec-Fetch-Site
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Sec-Fetch-Site
+      - name: airllm_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Airllm Session
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_DeletedOut_UUID__'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+      description: Requires an authenticated user; not org-scoped.
+  /v1/auth/me:
+    get:
+      tags:
+      - Auth
+      summary: Me
+      operationId: me
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: X-Requested-With
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Requested-With
+      - name: Sec-Fetch-Site
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Sec-Fetch-Site
+      - name: airllm_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Airllm Session
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_MeOut_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+      description: Requires an authenticated user; not org-scoped.
+  /v1/auth/password:
+    post:
+      tags:
+      - Auth
+      summary: Change Password
+      operationId: change_password
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: X-Requested-With
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Requested-With
+      - name: Sec-Fetch-Site
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Sec-Fetch-Site
+      - name: airllm_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Airllm Session
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/OrganizationInput"
+              $ref: '#/components/schemas/PasswordChangeIn'
       responses:
-        "201":
-          description: Created
+        '200':
+          description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Organization"
-  /organizations/{orgId}:
+                $ref: '#/components/schemas/Envelope_PasswordChangedOut_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+      description: Requires an authenticated user; not org-scoped.
+  /v1/auth/cli/start:
+    post:
+      tags:
+      - Auth
+      summary: Cli Auth Start
+      description: 'Open a device authorization: unauthenticated like signup, it grants nothing by itself.
+
+
+        No authentication required.'
+      operationId: cli_auth_start
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CliAuthStartIn'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_CliAuthStartOut_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+      security: []
+  /v1/auth/cli/request:
     get:
-      operationId: getOrganization
-      tags: [organizations]
+      tags:
+      - Auth
+      summary: Cli Auth Request Details
+      description: 'Context for the approve page: who is asking, from where, until when.
+
+
+        Requires an authenticated user; not org-scoped.'
+      operationId: cli_auth_request_details
       parameters:
-        - $ref: "#/components/parameters/OrgId"
+      - name: code
+        in: query
+        required: true
+        schema:
+          type: string
+          title: Code
+      - name: X-Requested-With
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Requested-With
+      - name: Sec-Fetch-Site
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Sec-Fetch-Site
+      - name: airllm_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Airllm Session
       responses:
-        "200":
-          description: Organization
+        '200':
+          description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Organization"
-        "404":
-          description: Not found
+                $ref: '#/components/schemas/Envelope_CliAuthRequestOut_'
+        '422':
+          description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiErrorMessage"
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/auth/cli/approve:
+    post:
+      tags:
+      - Auth
+      summary: Cli Auth Approve
+      description: 'The human confirms the code and picks the org; membership backs the pick like key minting.
+
+
+        Requires an authenticated user; not org-scoped.'
+      operationId: cli_auth_approve
+      parameters:
+      - name: X-Requested-With
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Requested-With
+      - name: Sec-Fetch-Site
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Sec-Fetch-Site
+      - name: airllm_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Airllm Session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CliAuthApproveIn'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_CliAuthApprovedOut_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/auth/cli/poll:
+    post:
+      tags:
+      - Auth
+      summary: Cli Auth Poll
+      description: 'The CLI''s side of the flow: pending until approved, then the key exactly once.
+
+
+        The key is minted here, not at approve, so its plaintext never rests in the pending request;
+
+        deleting the request in the same transaction makes delivery one-time. Route-level actor stamp
+
+        like signup: the poller is anonymous, the audited key write is attributed to the human who
+
+        approved. Re-approving from the same client replaces that client''s previous key for the org
+
+        instead of accumulating.
+
+
+        No authentication required.'
+      operationId: cli_auth_poll
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CliAuthPollIn'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_CliAuthPollOut_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+      security: []
+  /v1/enroll:
+    get:
+      tags:
+      - Enrollment
+      summary: Enrollment
+      description: 'The acting user''s standing: their orgs by name, and whether their one personal org exists.
+
+
+        Requires an authenticated user; not org-scoped.'
+      operationId: enrollment
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: X-Requested-With
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Requested-With
+      - name: Sec-Fetch-Site
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Sec-Fetch-Site
+      - name: airllm_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Airllm Session
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_EnrollOut_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/enroll/org:
+    post:
+      tags:
+      - Enrollment
+      summary: Create Personal Org
+      description: 'Found the acting user''s one personal org, with the creator as its first member.
+
+
+        The unique personal_for column is the cap: the database refuses a second personal org
+
+        however hard a credential races, so no scope or guard code is involved. Further orgs
+
+        are admin-provisioned. The slot survives losing the membership; only deleting the
+
+        personal org frees it.
+
+
+        Requires an authenticated user; not org-scoped.'
+      operationId: create_personal_org
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: X-Requested-With
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Requested-With
+      - name: Sec-Fetch-Site
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Sec-Fetch-Site
+      - name: airllm_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Airllm Session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrgCreate'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_OrgOut_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/instance/oss/claim:
+    get:
+      tags:
+      - OSS
+      summary: Claim
+      description: 'Whether any human holds an account yet: public so a fresh deployment can route its first visitor to signup.
+
+
+        Service accounts do not claim an instance; it leaks nothing beyond set-up-or-not, like healthz.
+
+
+        No authentication required.'
+      operationId: claim
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_ClaimOut_'
+      security: []
+  /v1/instance/oss/quickstart:
+    post:
+      tags:
+      - OSS
+      summary: Quickstart
+      description: 'Drop the data plane''s sync credential onto the shared volume so the first data plane can boot.
+
+
+        A single-use bootstrap trapdoor: public, but it only fires while no data plane has ever
+
+        registered, and it closes the moment one heartbeats. The caller already holds the token it
+
+        writes, so nothing is minted or leaked here; the endpoint only bridges a token the operator
+
+        has into the file the co-mounted data plane container waits for.
+
+
+        Either control-plane key type can drive a data plane: a management key pins it to one org''s
+
+        bundles, an instance key leaves the org to its config. The prefix check only catches a token
+
+        that could never work at all, an inference key or a paste accident.
+
+
+        No authentication required.'
+      operationId: quickstart
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QuickstartIn'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_QuickstartOut_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+      security: []
+  /v1/instance/data-planes:
+    get:
+      tags:
+      - Data Plane
+      summary: List Data Planes
+      description: 'Every data plane known to the instance; offline ones are kept as history and shown only with include_offline.
+
+
+        Requires the `data-planes:read` scope.'
+      operationId: list_data_planes
+      security:
+      - HTTPBearer:
+        - data-planes:read
+      parameters:
+      - name: include_offline
+        in: query
+        required: false
+        schema:
+          type: boolean
+          default: false
+          title: Include Offline
+      - name: X-Org-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Org-Id
+      - name: X-Requested-With
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Requested-With
+      - name: Sec-Fetch-Site
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Sec-Fetch-Site
+      - name: airllm_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Airllm Session
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_list_DataPlaneInstanceOut__'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/instance/instance-keys:
+    get:
+      tags:
+      - Instance Keys
+      summary: List Instance Keys
+      description: 'Every instance key on the deployment; there is no org axis to filter on.
+
+
+        Requires the `instance-keys:read` scope.'
+      operationId: list_instance_keys
+      security:
+      - HTTPBearer:
+        - instance-keys:read
+      parameters:
+      - name: X-Org-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Org-Id
+      - name: X-Requested-With
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Requested-With
+      - name: Sec-Fetch-Site
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Sec-Fetch-Site
+      - name: airllm_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Airllm Session
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_list_InstanceKeyOut__'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    post:
+      tags:
+      - Instance Keys
+      summary: Create Instance Key
+      description: 'Mint an instance key for the acting admin, or for another instance admin when user_id names one.
+
+
+        Requires the `instance-keys:write` scope.'
+      operationId: create_instance_key
+      security:
+      - HTTPBearer:
+        - instance-keys:write
+      parameters:
+      - name: X-Org-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Org-Id
+      - name: X-Requested-With
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Requested-With
+      - name: Sec-Fetch-Site
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Sec-Fetch-Site
+      - name: airllm_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Airllm Session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InstanceKeyIn'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_InstanceKeyMintedOut_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/instance/instance-keys/{key_id}:
+    delete:
+      tags:
+      - Instance Keys
+      summary: Revoke Instance Key
+      operationId: revoke_instance_key
+      security:
+      - HTTPBearer:
+        - instance-keys:write
+      parameters:
+      - name: key_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Key Id
+      - name: X-Org-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Org-Id
+      - name: X-Requested-With
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Requested-With
+      - name: Sec-Fetch-Site
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Sec-Fetch-Site
+      - name: airllm_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Airllm Session
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_InstanceKeyRevokedOut_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+      description: Requires the `instance-keys:write` scope.
+  /v1/instance/management-keys:
+    get:
+      tags:
+      - Instance Management Keys
+      summary: List All Management Keys
+      description: 'Instance-wide oversight: every org''s management keys, optionally filtered to one org.
+
+
+        Requires the `management-keys:read` scope.'
+      operationId: list_all_management_keys
+      security:
+      - HTTPBearer:
+        - management-keys:read
+      parameters:
+      - name: org_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Org Id
+      - name: X-Org-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Org-Id
+      - name: X-Requested-With
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Requested-With
+      - name: Sec-Fetch-Site
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Sec-Fetch-Site
+      - name: airllm_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Airllm Session
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_list_ManagementKeyOut__'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/instance/management-keys/{key_id}:
+    delete:
+      tags:
+      - Instance Management Keys
+      summary: Revoke Any Management Key
+      description: 'Revoke any org''s management key; the org-scoped route reaches only its own.
+
+
+        Requires the `management-keys:write` scope.'
+      operationId: revoke_any_management_key
+      security:
+      - HTTPBearer:
+        - management-keys:write
+      parameters:
+      - name: key_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Key Id
+      - name: X-Org-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Org-Id
+      - name: X-Requested-With
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Requested-With
+      - name: Sec-Fetch-Site
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Sec-Fetch-Site
+      - name: airllm_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Airllm Session
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_ManagementKeyRevokedOut_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/instance/activity:
+    get:
+      tags:
+      - Activity
+      summary: List Instance Activity
+      description: 'What changed anywhere on the instance, newest first; the org-scoped view of the same trail is /org/activity.
+
+
+        Requires the `activity:read` scope.'
+      operationId: list_instance_activity
+      security:
+      - HTTPBearer:
+        - activity:read
+      parameters:
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 50
+          title: Limit
+      - name: X-Org-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Org-Id
+      - name: X-Requested-With
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Requested-With
+      - name: Sec-Fetch-Site
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Sec-Fetch-Site
+      - name: airllm_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Airllm Session
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_list_ActivityOut__'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/users:
+    post:
+      tags:
+      - Users
+      summary: Create User
+      operationId: create_user
+      security:
+      - HTTPBearer:
+        - users:write
+      parameters:
+      - name: X-Org-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Org-Id
+      - name: X-Requested-With
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Requested-With
+      - name: Sec-Fetch-Site
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Sec-Fetch-Site
+      - name: airllm_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Airllm Session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserCreate'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_UserOut_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+      description: Requires the `users:write` scope.
+    get:
+      tags:
+      - Users
+      summary: List Users
+      operationId: list_users
+      security:
+      - HTTPBearer:
+        - users:read
+      parameters:
+      - name: X-Org-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Org-Id
+      - name: X-Requested-With
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Requested-With
+      - name: Sec-Fetch-Site
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Sec-Fetch-Site
+      - name: airllm_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Airllm Session
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_list_UserOut__'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+      description: Requires the `users:read` scope.
+  /v1/service-accounts:
+    post:
+      tags:
+      - Users
+      summary: Create Service Account
+      operationId: create_service_account
+      security:
+      - HTTPBearer:
+        - users:write
+      parameters:
+      - name: X-Org-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Org-Id
+      - name: X-Requested-With
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Requested-With
+      - name: Sec-Fetch-Site
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Sec-Fetch-Site
+      - name: airllm_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Airllm Session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ServiceAccountIn'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_UserOut_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+      description: Requires the `users:write` scope.
+  /v1/users/{user_id}:
+    get:
+      tags:
+      - Users
+      summary: Get User
+      operationId: get_user
+      security:
+      - HTTPBearer:
+        - users:read
+      parameters:
+      - name: user_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: User Id
+      - name: X-Org-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Org-Id
+      - name: X-Requested-With
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Requested-With
+      - name: Sec-Fetch-Site
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Sec-Fetch-Site
+      - name: airllm_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Airllm Session
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_UserOut_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+      description: Requires the `users:read` scope.
+    delete:
+      tags:
+      - Users
+      summary: Delete User
+      description: 'Delete a user with the credentials that are theirs alone: identities, sessions, management and instance
+        keys.
+
+
+        Everything else a user touches outlives them, so it blocks the delete instead of following it:
+
+        a membership is the org''s decision to revisit, a personal org is a tenant, and an inference key
+
+        belongs to its workspace and merely records who minted it.
+
+
+        Requires the `users:write` scope.'
+      operationId: delete_user
+      security:
+      - HTTPBearer:
+        - users:write
+      parameters:
+      - name: user_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: User Id
+      - name: X-Org-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Org-Id
+      - name: X-Requested-With
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Requested-With
+      - name: Sec-Fetch-Site
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Sec-Fetch-Site
+      - name: airllm_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Airllm Session
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_DeletedOut_UUID__'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/orgs:
+    post:
+      tags:
+      - Orgs
+      summary: Create Org
+      operationId: create_org
+      security:
+      - HTTPBearer:
+        - orgs:write
+      parameters:
+      - name: X-Org-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Org-Id
+      - name: X-Requested-With
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Requested-With
+      - name: Sec-Fetch-Site
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Sec-Fetch-Site
+      - name: airllm_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Airllm Session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrgCreate'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_OrgOut_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+      description: Requires the `orgs:write` scope.
+    get:
+      tags:
+      - Orgs
+      summary: List Orgs
+      operationId: list_orgs
+      security:
+      - HTTPBearer:
+        - orgs:read
+      parameters:
+      - name: X-Org-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Org-Id
+      - name: X-Requested-With
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Requested-With
+      - name: Sec-Fetch-Site
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Sec-Fetch-Site
+      - name: airllm_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Airllm Session
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_list_OrgOut__'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+      description: Requires the `orgs:read` scope.
+  /v1/orgs/{org_id}:
     patch:
-      operationId: updateOrganization
-      tags: [organizations]
+      tags:
+      - Orgs
+      summary: Update Org
+      operationId: update_org
+      security:
+      - HTTPBearer:
+        - orgs:write
       parameters:
-        - $ref: "#/components/parameters/OrgId"
+      - name: org_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Org Id
+      - name: X-Org-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Org-Id
+      - name: X-Requested-With
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Requested-With
+      - name: Sec-Fetch-Site
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Sec-Fetch-Site
+      - name: airllm_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Airllm Session
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/OrganizationUpdate"
+              $ref: '#/components/schemas/OrgUpdate'
       responses:
-        "200":
-          description: Updated
+        '200':
+          description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Organization"
-    delete:
-      operationId: deleteOrganization
-      tags: [organizations]
-      parameters:
-        - $ref: "#/components/parameters/OrgId"
-      responses:
-        "204":
-          description: Deleted
-  /organizations/{orgId}/members:
+                $ref: '#/components/schemas/Envelope_OrgOut_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+      description: Requires the `orgs:write` scope.
     get:
-      operationId: listOrgMembers
-      tags: [organizations]
+      tags:
+      - Orgs
+      summary: Get Org
+      operationId: get_org
+      security:
+      - HTTPBearer:
+        - orgs:read
       parameters:
-        - $ref: "#/components/parameters/OrgId"
+      - name: org_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Org Id
+      - name: X-Org-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Org-Id
+      - name: X-Requested-With
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Requested-With
+      - name: Sec-Fetch-Site
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Sec-Fetch-Site
+      - name: airllm_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Airllm Session
       responses:
-        "200":
-          description: Members of the organization
+        '200':
+          description: Successful Response
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/OrgMember"
-    post:
-      operationId: addOrgMember
-      tags: [organizations]
+                $ref: '#/components/schemas/Envelope_OrgOut_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+      description: Requires the `orgs:read` scope.
+    delete:
+      tags:
+      - Orgs
+      summary: Delete Org
+      description: 'Delete an org with everything scoped to it: its workspaces and their keys, its own keys, its memberships,
+        its bundles.
+
+
+        Its usage events stay. They are history keyed by ids, not rows belonging to the org, so they
+
+        outlive it the way the audit trail does rather than standing in the way of the delete.
+
+
+        Requires the `orgs:write` scope.'
+      operationId: delete_org
+      security:
+      - HTTPBearer:
+        - orgs:write
       parameters:
-        - $ref: "#/components/parameters/OrgId"
+      - name: org_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Org Id
+      - name: X-Org-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Org-Id
+      - name: X-Requested-With
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Requested-With
+      - name: Sec-Fetch-Site
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Sec-Fetch-Site
+      - name: airllm_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Airllm Session
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_DeletedOut_UUID__'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/org/workspaces:
+    post:
+      tags:
+      - Workspaces
+      summary: Create Workspace
+      description: 'The creator becomes the first member when they hold an org membership; an instance admin
+
+        acting on an org they never joined creates it member-less and relies on their bypass.
+
+
+        Requires the `workspaces:write` scope.'
+      operationId: create_workspace
+      security:
+      - HTTPBearer:
+        - workspaces:write
+      parameters:
+      - name: X-Org-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Org-Id
+      - name: X-Requested-With
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Requested-With
+      - name: Sec-Fetch-Site
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Sec-Fetch-Site
+      - name: airllm_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Airllm Session
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/OrgMemberInput"
+              $ref: '#/components/schemas/WorkspaceCreate'
       responses:
-        "201":
-          description: Added
+        '200':
+          description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/OrgMember"
-  /organizations/{orgId}/members/{userId}:
+                $ref: '#/components/schemas/Envelope_WorkspaceOut_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    get:
+      tags:
+      - Workspaces
+      summary: List Workspaces
+      operationId: list_workspaces
+      security:
+      - HTTPBearer:
+        - workspaces:read
+      parameters:
+      - name: X-Org-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Org-Id
+      - name: X-Requested-With
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Requested-With
+      - name: Sec-Fetch-Site
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Sec-Fetch-Site
+      - name: airllm_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Airllm Session
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_list_WorkspaceOut__'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+      description: Requires the `workspaces:read` scope.
+  /v1/org/workspaces/{workspace_id}:
+    get:
+      tags:
+      - Workspaces
+      summary: Get Workspace
+      operationId: get_workspace
+      security:
+      - HTTPBearer:
+        - workspaces:read
+      parameters:
+      - name: workspace_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Workspace Id
+      - name: X-Org-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Org-Id
+      - name: X-Requested-With
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Requested-With
+      - name: Sec-Fetch-Site
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Sec-Fetch-Site
+      - name: airllm_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Airllm Session
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_WorkspaceOut_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+      description: Requires the `workspaces:read` scope.
+    delete:
+      tags:
+      - Workspaces
+      summary: Delete Workspace
+      description: 'Delete a workspace with its inference keys and its members; the usage it recorded stays, as it does for
+        an org.
+
+
+        Requires the `workspaces:write` scope.'
+      operationId: delete_workspace
+      security:
+      - HTTPBearer:
+        - workspaces:write
+      parameters:
+      - name: workspace_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Workspace Id
+      - name: X-Org-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Org-Id
+      - name: X-Requested-With
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Requested-With
+      - name: Sec-Fetch-Site
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Sec-Fetch-Site
+      - name: airllm_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Airllm Session
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_DeletedOut_UUID__'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
     patch:
-      operationId: updateOrgMember
-      tags: [organizations]
+      tags:
+      - Workspaces
+      summary: Update Workspace
+      operationId: update_workspace
+      security:
+      - HTTPBearer:
+        - workspaces:write
       parameters:
-        - $ref: "#/components/parameters/OrgId"
-        - $ref: "#/components/parameters/UserId"
+      - name: workspace_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Workspace Id
+      - name: X-Org-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Org-Id
+      - name: X-Requested-With
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Requested-With
+      - name: Sec-Fetch-Site
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Sec-Fetch-Site
+      - name: airllm_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Airllm Session
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/OrgMemberUpdate"
+              $ref: '#/components/schemas/WorkspaceUpdate'
       responses:
-        "200":
-          description: Updated
+        '200':
+          description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/OrgMember"
-    delete:
-      operationId: removeOrgMember
-      tags: [organizations]
-      parameters:
-        - $ref: "#/components/parameters/OrgId"
-        - $ref: "#/components/parameters/UserId"
-      responses:
-        "204":
-          description: Removed
-  /organizations/{orgId}/management-keys:
+                $ref: '#/components/schemas/Envelope_WorkspaceOut_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+      description: Requires the `workspaces:write` scope.
+  /v1/org/workspaces/{workspace_id}/members:
     get:
-      operationId: listManagementKeys
-      tags: [keys]
+      tags:
+      - Workspaces
+      summary: List Members
+      operationId: list_members
+      security:
+      - HTTPBearer:
+        - workspaces:read
       parameters:
-        - $ref: "#/components/parameters/OrgId"
+      - name: workspace_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Workspace Id
+      - name: X-Org-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Org-Id
+      - name: X-Requested-With
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Requested-With
+      - name: Sec-Fetch-Site
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Sec-Fetch-Site
+      - name: airllm_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Airllm Session
       responses:
-        "200":
-          description: Management keys for the organization
+        '200':
+          description: Successful Response
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/ManagementKey"
+                $ref: '#/components/schemas/Envelope_list_WorkspaceMembershipOut__'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+      description: Requires the `workspaces:read` scope.
+  /v1/org/workspaces/{workspace_id}/members/{user_id}:
+    put:
+      tags:
+      - Workspaces
+      summary: Add Member
+      description: 'The composite foreign keys are the enforcement; the 409 turns what they would reject into a client error.
+
+
+        Requires the `workspaces:write` scope.'
+      operationId: add_member
+      security:
+      - HTTPBearer:
+        - workspaces:write
+      parameters:
+      - name: workspace_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Workspace Id
+      - name: user_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: User Id
+      - name: X-Org-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Org-Id
+      - name: X-Requested-With
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Requested-With
+      - name: Sec-Fetch-Site
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Sec-Fetch-Site
+      - name: airllm_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Airllm Session
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_WorkspaceMembershipOut_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    delete:
+      tags:
+      - Workspaces
+      summary: Remove Member
+      operationId: remove_member
+      security:
+      - HTTPBearer:
+        - workspaces:write
+      parameters:
+      - name: workspace_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Workspace Id
+      - name: user_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: User Id
+      - name: X-Org-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Org-Id
+      - name: X-Requested-With
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Requested-With
+      - name: Sec-Fetch-Site
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Sec-Fetch-Site
+      - name: airllm_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Airllm Session
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_DeletedOut_str__'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+      description: Requires the `workspaces:write` scope.
+  /v1/org/workspaces/{workspace_id}/inference-keys:
     post:
-      operationId: createManagementKey
-      tags: [keys]
+      tags:
+      - Inference Keys
+      summary: Create Inference Key
+      operationId: create_inference_key
+      security:
+      - HTTPBearer:
+        - inference-keys:write
       parameters:
-        - $ref: "#/components/parameters/OrgId"
+      - name: workspace_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Workspace Id
+      - name: X-Org-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Org-Id
+      - name: X-Requested-With
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Requested-With
+      - name: Sec-Fetch-Site
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Sec-Fetch-Site
+      - name: airllm_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Airllm Session
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/ManagementKeyInput"
+              $ref: '#/components/schemas/InferenceKeyIn'
       responses:
-        "201":
-          description: Created key. The secret is only returned once.
+        '200':
+          description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CreatedKey"
-  /organizations/{orgId}/management-keys/{keyId}:
-    patch:
-      operationId: updateManagementKey
-      tags: [keys]
-      parameters:
-        - $ref: "#/components/parameters/OrgId"
-        - $ref: "#/components/parameters/KeyId"
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/KeyUpdate"
-      responses:
-        "200":
-          description: Updated
+                $ref: '#/components/schemas/Envelope_InferenceKeyMintedOut_'
+        '422':
+          description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ManagementKey"
-    delete:
-      operationId: revokeManagementKey
-      tags: [keys]
-      parameters:
-        - $ref: "#/components/parameters/OrgId"
-        - $ref: "#/components/parameters/KeyId"
-      responses:
-        "204":
-          description: Revoked
-  /organizations/{orgId}/workspaces:
+                $ref: '#/components/schemas/HTTPValidationError'
+      description: Requires the `inference-keys:write` scope.
     get:
-      operationId: listWorkspaces
-      tags: [workspaces]
+      tags:
+      - Inference Keys
+      summary: List Inference Keys
+      operationId: list_inference_keys
+      security:
+      - HTTPBearer:
+        - inference-keys:read
       parameters:
-        - $ref: "#/components/parameters/OrgId"
+      - name: workspace_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Workspace Id
+      - name: X-Org-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Org-Id
+      - name: X-Requested-With
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Requested-With
+      - name: Sec-Fetch-Site
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Sec-Fetch-Site
+      - name: airllm_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Airllm Session
       responses:
-        "200":
-          description: Workspaces in the organization
+        '200':
+          description: Successful Response
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/Workspace"
+                $ref: '#/components/schemas/Envelope_list_InferenceKeyOut__'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+      description: Requires the `inference-keys:read` scope.
+  /v1/org/workspaces/{workspace_id}/inference-keys/{key_id}:
+    delete:
+      tags:
+      - Inference Keys
+      summary: Revoke Inference Key
+      operationId: revoke_inference_key
+      security:
+      - HTTPBearer:
+        - inference-keys:write
+      parameters:
+      - name: key_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Key Id
+      - name: workspace_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Workspace Id
+      - name: X-Org-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Org-Id
+      - name: X-Requested-With
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Requested-With
+      - name: Sec-Fetch-Site
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Sec-Fetch-Site
+      - name: airllm_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Airllm Session
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_InferenceKeyRevokedOut_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+      description: Requires the `inference-keys:write` scope.
+  /v1/org/users:
+    get:
+      tags:
+      - Org Users
+      summary: List Org Users
+      description: 'The acting org''s members; an org credential sees its own roster, never the instance''s.
+
+
+        Requires the `users:read` scope.'
+      operationId: list_org_users
+      security:
+      - HTTPBearer:
+        - users:read
+      parameters:
+      - name: X-Org-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Org-Id
+      - name: X-Requested-With
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Requested-With
+      - name: Sec-Fetch-Site
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Sec-Fetch-Site
+      - name: airllm_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Airllm Session
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_list_OrgMemberOut__'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/org/users/{user_id}:
+    put:
+      tags:
+      - Org Users
+      summary: Add Org User
+      description: 'Idempotent: the org comes from the credential, so membership can only ever be granted in scope.
+
+
+        Requires the `users:write` scope.'
+      operationId: add_org_user
+      security:
+      - HTTPBearer:
+        - users:write
+      parameters:
+      - name: user_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: User Id
+      - name: X-Org-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Org-Id
+      - name: X-Requested-With
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Requested-With
+      - name: Sec-Fetch-Site
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Sec-Fetch-Site
+      - name: airllm_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Airllm Session
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_MembershipOut_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    delete:
+      tags:
+      - Org Users
+      summary: Remove Org User
+      description: 'Removing the membership cascades the user out of the org''s workspaces.
+
+
+        Requires the `users:write` scope.'
+      operationId: remove_org_user
+      security:
+      - HTTPBearer:
+        - users:write
+      parameters:
+      - name: user_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: User Id
+      - name: X-Org-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Org-Id
+      - name: X-Requested-With
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Requested-With
+      - name: Sec-Fetch-Site
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Sec-Fetch-Site
+      - name: airllm_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Airllm Session
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_DeletedOut_str__'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/org/management-keys:
+    get:
+      tags:
+      - Management Keys
+      summary: List Management Keys
+      operationId: list_management_keys
+      security:
+      - HTTPBearer:
+        - management-keys:read
+      parameters:
+      - name: X-Org-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Org-Id
+      - name: X-Requested-With
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Requested-With
+      - name: Sec-Fetch-Site
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Sec-Fetch-Site
+      - name: airllm_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Airllm Session
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_list_ManagementKeyOut__'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+      description: Requires the `management-keys:read` scope.
     post:
-      operationId: createWorkspace
-      tags: [workspaces]
+      tags:
+      - Management Keys
+      summary: Mint Org Management Key
+      description: 'Mint an org-scoped key for the acting user, or for another org member when user_id names one.
+
+
+        Requires the `management-keys:write` scope.'
+      operationId: mint_org_management_key
+      security:
+      - HTTPBearer:
+        - management-keys:write
       parameters:
-        - $ref: "#/components/parameters/OrgId"
+      - name: X-Org-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Org-Id
+      - name: X-Requested-With
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Requested-With
+      - name: Sec-Fetch-Site
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Sec-Fetch-Site
+      - name: airllm_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Airllm Session
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/WorkspaceInput"
+              $ref: '#/components/schemas/ManagementKeyIn'
       responses:
-        "201":
-          description: Created
+        '200':
+          description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Workspace"
-  /workspaces/{workspaceId}:
-    get:
-      operationId: getWorkspace
-      tags: [workspaces]
-      parameters:
-        - $ref: "#/components/parameters/WorkspaceId"
-      responses:
-        "200":
-          description: Workspace
+                $ref: '#/components/schemas/Envelope_ManagementKeyMintedOut_'
+        '422':
+          description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Workspace"
-        "404":
-          description: Not found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ApiErrorMessage"
-    patch:
-      operationId: updateWorkspace
-      tags: [workspaces]
-      parameters:
-        - $ref: "#/components/parameters/WorkspaceId"
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/WorkspaceUpdate"
-      responses:
-        "200":
-          description: Updated
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Workspace"
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/org/management-keys/{key_id}:
     delete:
-      operationId: deleteWorkspace
-      tags: [workspaces]
+      tags:
+      - Management Keys
+      summary: Revoke Management Key
+      operationId: revoke_management_key
+      security:
+      - HTTPBearer:
+        - management-keys:write
       parameters:
-        - $ref: "#/components/parameters/WorkspaceId"
+      - name: key_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Key Id
+      - name: X-Org-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Org-Id
+      - name: X-Requested-With
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Requested-With
+      - name: Sec-Fetch-Site
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Sec-Fetch-Site
+      - name: airllm_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Airllm Session
       responses:
-        "204":
-          description: Deleted
-  /workspaces/{workspaceId}/members:
-    get:
-      operationId: listWorkspaceMembers
-      tags: [workspaces]
-      parameters:
-        - $ref: "#/components/parameters/WorkspaceId"
-      responses:
-        "200":
-          description: Members of the workspace
+        '200':
+          description: Successful Response
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/WorkspaceMember"
+                $ref: '#/components/schemas/Envelope_ManagementKeyRevokedOut_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+      description: Requires the `management-keys:write` scope.
+  /v1/org/bundles/compile:
     post:
-      operationId: addWorkspaceMember
-      tags: [workspaces]
+      tags:
+      - Bundles
+      summary: Compile Bundle
+      operationId: compile_bundle
+      security:
+      - HTTPBearer:
+        - bundles:write
       parameters:
-        - $ref: "#/components/parameters/WorkspaceId"
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/WorkspaceMemberInput"
+      - name: X-Org-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Org-Id
+      - name: X-Requested-With
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Requested-With
+      - name: Sec-Fetch-Site
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Sec-Fetch-Site
+      - name: airllm_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Airllm Session
       responses:
-        "201":
-          description: Added
+        '200':
+          description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/WorkspaceMember"
-  /workspaces/{workspaceId}/members/{userId}:
-    delete:
-      operationId: removeWorkspaceMember
-      tags: [workspaces]
-      parameters:
-        - $ref: "#/components/parameters/WorkspaceId"
-        - $ref: "#/components/parameters/UserId"
-      responses:
-        "204":
-          description: Removed
-  /workspaces/{workspaceId}/inference-keys:
+                $ref: '#/components/schemas/Envelope_BundleOut_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+      description: Requires the `bundles:write` scope.
+  /v1/org/bundles:
     get:
-      operationId: listInferenceKeys
-      tags: [keys]
+      tags:
+      - Bundles
+      summary: List Bundles
+      operationId: list_bundles
+      security:
+      - HTTPBearer:
+        - bundles:read
       parameters:
-        - $ref: "#/components/parameters/WorkspaceId"
+      - name: X-Org-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Org-Id
+      - name: X-Requested-With
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Requested-With
+      - name: Sec-Fetch-Site
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Sec-Fetch-Site
+      - name: airllm_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Airllm Session
       responses:
-        "200":
-          description: Inference keys for the workspace
+        '200':
+          description: Successful Response
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/InferenceKey"
+                $ref: '#/components/schemas/Envelope_list_BundleOut__'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+      description: Requires the `bundles:read` scope.
+  /v1/org/events:
+    get:
+      tags:
+      - Events
+      summary: List Events
+      operationId: list_events
+      security:
+      - HTTPBearer:
+        - events:read
+      parameters:
+      - name: after
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: After
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 50
+          title: Limit
+      - name: X-Org-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Org-Id
+      - name: X-Requested-With
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Requested-With
+      - name: Sec-Fetch-Site
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Sec-Fetch-Site
+      - name: airllm_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Airllm Session
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_list_UsageEventOut__'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+      description: Requires the `events:read` scope.
+  /v1/org/activity:
+    get:
+      tags:
+      - Activity
+      summary: List Activity
+      description: 'What changed in this org, newest first: the audit trail the write triggers already record.
+
+
+        Requires the `activity:read` scope.'
+      operationId: list_activity
+      security:
+      - HTTPBearer:
+        - activity:read
+      parameters:
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 50
+          title: Limit
+      - name: X-Org-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Org-Id
+      - name: X-Requested-With
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Requested-With
+      - name: Sec-Fetch-Site
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Sec-Fetch-Site
+      - name: airllm_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Airllm Session
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_list_ActivityOut__'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/bundle/latest:
+    get:
+      tags:
+      - Data Plane
+      summary: Bundle Latest
+      operationId: bundle_latest
+      security:
+      - HTTPBearer:
+        - sync
+      parameters:
+      - name: org_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Org Id
+      - name: X-Org-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Org-Id
+      - name: X-Requested-With
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Requested-With
+      - name: Sec-Fetch-Site
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Sec-Fetch-Site
+      - name: airllm_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Airllm Session
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_SignedBundle_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+      description: Requires the `sync` scope.
+  /v1/events:
     post:
-      operationId: createInferenceKey
-      tags: [keys]
+      tags:
+      - Data Plane
+      summary: Ingest Events
+      description: 'Idempotent on event_id: at-least-once delivery lands exactly once, and a failed batch lands nothing.
+
+
+        One atomic upsert rather than a read per event. Reading first would also be racy: two flushes
+
+        carrying the same event_id would both see it missing and collide on the primary key, failing
+
+        both batches, and at-least-once delivery makes that overlap ordinary rather than exotic. The
+
+        outbox drains up to a thousand events at a time, so the per-event round trip cost was real too.
+
+        ingested counts what RETURNING hands back, which under DO NOTHING is exactly the rows written,
+
+        so a replay reports zero.
+
+
+        Requires the `sync` scope.'
+      operationId: ingest_events
+      security:
+      - HTTPBearer:
+        - sync
       parameters:
-        - $ref: "#/components/parameters/WorkspaceId"
+      - name: X-Org-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Org-Id
+      - name: X-Requested-With
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Requested-With
+      - name: Sec-Fetch-Site
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Sec-Fetch-Site
+      - name: airllm_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Airllm Session
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/InferenceKeyInput"
+              type: array
+              items:
+                $ref: '#/components/schemas/UsageEventV1'
+              title: Events
       responses:
-        "201":
-          description: Created key. The secret is only returned once.
+        '200':
+          description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CreatedKey"
-  /workspaces/{workspaceId}/inference-keys/{keyId}:
-    patch:
-      operationId: updateInferenceKey
-      tags: [keys]
-      parameters:
-        - $ref: "#/components/parameters/WorkspaceId"
-        - $ref: "#/components/parameters/KeyId"
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/KeyUpdate"
-      responses:
-        "200":
-          description: Updated
+                $ref: '#/components/schemas/Envelope_EventsIngestedOut_'
+        '422':
+          description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/InferenceKey"
-    delete:
-      operationId: revokeInferenceKey
-      tags: [keys]
-      parameters:
-        - $ref: "#/components/parameters/WorkspaceId"
-        - $ref: "#/components/parameters/KeyId"
-      responses:
-        "204":
-          description: Revoked
-  /users:
-    get:
-      operationId: listUsers
-      tags: [users]
-      responses:
-        "200":
-          description: All users
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/User"
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/heartbeat:
     post:
-      operationId: createUser
-      tags: [users]
+      tags:
+      - Data Plane
+      summary: Heartbeat
+      description: 'Upsert the instance record; the row persists as history, last_seen drives liveness.
+
+
+        Every worker of a multi-worker data plane heartbeats with the same instance_id, so the first
+
+        insert can race; do it as one atomic upsert instead of read-then-write.
+
+
+        Requires the `sync` scope.'
+      operationId: heartbeat
+      security:
+      - HTTPBearer:
+        - sync
+      parameters:
+      - name: X-Org-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Org-Id
+      - name: X-Requested-With
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Requested-With
+      - name: Sec-Fetch-Site
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Sec-Fetch-Site
+      - name: airllm_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Airllm Session
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/UserInput"
+              $ref: '#/components/schemas/HeartbeatV1'
       responses:
-        "201":
-          description: Created
+        '200':
+          description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/User"
-  /users/{userId}:
+                $ref: '#/components/schemas/Envelope_HeartbeatOut_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/taxonomy:
     get:
-      operationId: getUser
-      tags: [users]
+      tags:
+      - Taxonomy
+      summary: Get Taxonomy
+      description: 'The instance-wide catalog, readable by any management token.
+
+
+        Requires the `taxonomy:read` scope.'
+      operationId: get_taxonomy
+      security:
+      - HTTPBearer:
+        - taxonomy:read
       parameters:
-        - $ref: "#/components/parameters/UserId"
+      - name: X-Org-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Org-Id
+      - name: X-Requested-With
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Requested-With
+      - name: Sec-Fetch-Site
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Sec-Fetch-Site
+      - name: airllm_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Airllm Session
       responses:
-        "200":
-          description: User
+        '200':
+          description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/User"
-        "404":
-          description: Not found
+                $ref: '#/components/schemas/Envelope_TaxonomyOut_'
+        '422':
+          description: Validation Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiErrorMessage"
-    patch:
-      operationId: updateUser
-      tags: [users]
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/taxonomy/providers:
+    post:
+      tags:
+      - Taxonomy
+      summary: Create Provider
+      description: 'Create or update: reapplying a taxonomy converges the catalog.
+
+
+        Requires the `taxonomy:write` scope.'
+      operationId: create_provider
+      security:
+      - HTTPBearer:
+        - taxonomy:write
       parameters:
-        - $ref: "#/components/parameters/UserId"
+      - name: X-Org-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Org-Id
+      - name: X-Requested-With
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Requested-With
+      - name: Sec-Fetch-Site
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Sec-Fetch-Site
+      - name: airllm_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Airllm Session
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/UserUpdate"
+              $ref: '#/components/schemas/ProviderIn'
       responses:
-        "200":
-          description: Updated
+        '200':
+          description: Successful Response
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/User"
-    delete:
-      operationId: deleteUser
-      tags: [users]
-      parameters:
-        - $ref: "#/components/parameters/UserId"
-      responses:
-        "204":
-          description: Deleted
-  /users/{userId}/organizations:
-    get:
-      operationId: listUserOrganizations
-      tags: [users]
-      parameters:
-        - $ref: "#/components/parameters/UserId"
-      responses:
-        "200":
-          description: Organizations the user belongs to, with their role
+                $ref: '#/components/schemas/Envelope_ProviderOut_'
+        '422':
+          description: Validation Error
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/UserOrgMembership"
-  /users/{userId}/workspaces:
-    get:
-      operationId: listUserWorkspaces
-      tags: [users]
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/taxonomy/models:
+    post:
+      tags:
+      - Taxonomy
+      summary: Create Model
+      description: 'Create or update: reapplying a taxonomy converges the catalog.
+
+
+        Requires the `taxonomy:write` scope.'
+      operationId: create_model
+      security:
+      - HTTPBearer:
+        - taxonomy:write
       parameters:
-        - $ref: "#/components/parameters/UserId"
+      - name: X-Org-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Org-Id
+      - name: X-Requested-With
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Requested-With
+      - name: Sec-Fetch-Site
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Sec-Fetch-Site
+      - name: airllm_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Airllm Session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModelIn'
       responses:
-        "200":
-          description: Workspaces the user is a member of, across all their organizations
+        '200':
+          description: Successful Response
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/Workspace"
+                $ref: '#/components/schemas/Envelope_ModelOut_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
 components:
-  parameters:
-    OrgId:
-      name: orgId
-      in: path
-      required: true
-      schema:
-        type: integer
-    UserId:
-      name: userId
-      in: path
-      required: true
-      schema:
-        type: integer
-    WorkspaceId:
-      name: workspaceId
-      in: path
-      required: true
-      schema:
-        type: integer
-    KeyId:
-      name: keyId
-      in: path
-      required: true
-      schema:
-        type: integer
   schemas:
-    HealthStatus:
-      type: object
+    ActivityOut:
       properties:
-        status:
+        id:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Id
+        table_name:
           type: string
-      required: [status]
-    ApiErrorMessage:
-      type: object
-      properties:
-        error:
+          title: Table Name
+        record_id:
           type: string
-      required: [error]
-    DashboardSummary:
+          title: Record Id
+        action:
+          type: string
+          title: Action
+        user_id:
+          type: string
+          title: User Id
+        occurred_at:
+          type: string
+          format: date-time
+          title: Occurred At
       type: object
       required:
-        [
-          organizationCount,
-          userCount,
-          workspaceCount,
-          managementKeyCount,
-          inferenceKeyCount,
-          activeInferenceKeyCount,
-        ]
+      - id
+      - table_name
+      - record_id
+      - action
+      - user_id
+      - occurred_at
+      title: ActivityOut
+      description: 'One entry in the feed: what changed, who changed it, when. Never the snapshots themselves.
+
+
+        id mirrors the column, which the sequence fills: nullable in the table, never null once read.'
+    BundleOut:
       properties:
-        organizationCount: { type: integer }
-        userCount: { type: integer }
-        workspaceCount: { type: integer }
-        managementKeyCount: { type: integer }
-        inferenceKeyCount: { type: integer }
-        activeInferenceKeyCount: { type: integer }
-    ActivityEvent:
+        id:
+          type: string
+          format: uuid
+          title: Id
+        org_id:
+          type: string
+          format: uuid
+          title: Org Id
+        version:
+          type: integer
+          title: Version
+        issued_at:
+          type: string
+          format: date-time
+          title: Issued At
+        expires_at:
+          type: string
+          format: date-time
+          title: Expires At
+        signing_key_id:
+          type: string
+          title: Signing Key Id
       type: object
-      required: [id, type, message, createdAt]
+      required:
+      - id
+      - org_id
+      - version
+      - issued_at
+      - expires_at
+      - signing_key_id
+      title: BundleOut
+    BundleV1:
       properties:
-        id: { type: integer }
+        schema_version:
+          type: integer
+          const: 1
+          title: Schema Version
+          default: 1
+        bundle_id:
+          type: string
+          format: uuid
+          title: Bundle Id
+        org_id:
+          type: string
+          format: uuid
+          title: Org Id
+        issued_at:
+          type: string
+          format: date-time
+          title: Issued At
+        expires_at:
+          type: string
+          format: date-time
+          title: Expires At
+        keys:
+          items:
+            $ref: '#/components/schemas/KeyEntry'
+          type: array
+          title: Keys
+        catalog:
+          $ref: '#/components/schemas/Catalog'
+      type: object
+      required:
+      - bundle_id
+      - org_id
+      - issued_at
+      - expires_at
+      - keys
+      - catalog
+      title: BundleV1
+      description: 'The complete policy snapshot one data plane needs to serve requests with no database.
+
+
+        Compiled by the control plane as a pure function of database state, signed, and polled
+
+        by the data plane. If a feature seems to need a DB read on the request path, the bundle
+
+        is missing a field; add the field here instead.'
+    Catalog:
+      properties:
+        providers:
+          items:
+            $ref: '#/components/schemas/ProviderEntry'
+          type: array
+          title: Providers
+        models:
+          items:
+            $ref: '#/components/schemas/ModelEntry'
+          type: array
+          title: Models
+      type: object
+      required:
+      - providers
+      - models
+      title: Catalog
+      description: 'Everything routable in one org: providers and the models that point at them.'
+    ClaimOut:
+      properties:
+        claimed:
+          type: boolean
+          title: Claimed
+      type: object
+      required:
+      - claimed
+      title: ClaimOut
+    CliAuthApproveIn:
+      properties:
+        user_code:
+          type: string
+          title: User Code
+        org_id:
+          type: string
+          format: uuid
+          title: Org Id
+      type: object
+      required:
+      - user_code
+      - org_id
+      title: CliAuthApproveIn
+    CliAuthApprovedOut:
+      properties:
+        status:
+          type: string
+          const: approved
+          title: Status
+        client_name:
+          type: string
+          title: Client Name
+      type: object
+      required:
+      - status
+      - client_name
+      title: CliAuthApprovedOut
+    CliAuthPollIn:
+      properties:
+        poll_secret:
+          type: string
+          title: Poll Secret
+      type: object
+      required:
+      - poll_secret
+      title: CliAuthPollIn
+    CliAuthPollOut:
+      properties:
+        status:
+          type: string
+          enum:
+          - pending
+          - complete
+          title: Status
+        interval_seconds:
+          type: integer
+          title: Interval Seconds
+        token:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Token
+        org_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Org Id
+        org_name:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Org Name
+      type: object
+      required:
+      - status
+      - interval_seconds
+      title: CliAuthPollOut
+    CliAuthRequestOut:
+      properties:
+        client_name:
+          type: string
+          title: Client Name
+        requester:
+          type: string
+          title: Requester
+        expires_at:
+          type: string
+          format: date-time
+          title: Expires At
+      type: object
+      required:
+      - client_name
+      - requester
+      - expires_at
+      title: CliAuthRequestOut
+    CliAuthStartIn:
+      properties:
+        client_name:
+          type: string
+          maxLength: 80
+          minLength: 1
+          title: Client Name
+          description: Where the CLI runs, e.g. the hostname; becomes the minted key's label
+      type: object
+      required:
+      - client_name
+      title: CliAuthStartIn
+    CliAuthStartOut:
+      properties:
+        user_code:
+          type: string
+          title: User Code
+        verification_url:
+          type: string
+          title: Verification Url
+        poll_secret:
+          type: string
+          title: Poll Secret
+        interval_seconds:
+          type: integer
+          title: Interval Seconds
+        expires_in_seconds:
+          type: integer
+          title: Expires In Seconds
+      type: object
+      required:
+      - user_code
+      - verification_url
+      - poll_secret
+      - interval_seconds
+      - expires_in_seconds
+      title: CliAuthStartOut
+    DataPlaneInstanceOut:
+      properties:
+        instance_id:
+          type: string
+          format: uuid
+          title: Instance Id
+        version:
+          type: string
+          title: Version
+        bundle_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Bundle Id
+        address:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Address
+        status:
+          type: string
+          enum:
+          - online
+          - offline
+          title: Status
+        first_seen:
+          type: string
+          format: date-time
+          title: First Seen
+        last_seen:
+          type: string
+          format: date-time
+          title: Last Seen
+      type: object
+      required:
+      - instance_id
+      - version
+      - bundle_id
+      - address
+      - status
+      - first_seen
+      - last_seen
+      title: DataPlaneInstanceOut
+    DeletedOut_UUID_:
+      properties:
+        id:
+          type: string
+          format: uuid
+          title: Id
+        deleted_at:
+          type: string
+          format: date-time
+          title: Deleted At
+      type: object
+      required:
+      - id
+      - deleted_at
+      title: DeletedOut[UUID]
+    DeletedOut_str_:
+      properties:
+        id:
+          type: string
+          title: Id
+        deleted_at:
+          type: string
+          format: date-time
+          title: Deleted At
+      type: object
+      required:
+      - id
+      - deleted_at
+      title: DeletedOut[str]
+    EnrollOut:
+      properties:
+        orgs:
+          items:
+            $ref: '#/components/schemas/OrgOut'
+          type: array
+          title: Orgs
+        personal_org_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Personal Org Id
+      type: object
+      required:
+      - orgs
+      - personal_org_id
+      title: EnrollOut
+    Envelope_BundleOut_:
+      properties:
+        data:
+          $ref: '#/components/schemas/BundleOut'
+      type: object
+      required:
+      - data
+      title: Envelope[BundleOut]
+    Envelope_ClaimOut_:
+      properties:
+        data:
+          $ref: '#/components/schemas/ClaimOut'
+      type: object
+      required:
+      - data
+      title: Envelope[ClaimOut]
+    Envelope_CliAuthApprovedOut_:
+      properties:
+        data:
+          $ref: '#/components/schemas/CliAuthApprovedOut'
+      type: object
+      required:
+      - data
+      title: Envelope[CliAuthApprovedOut]
+    Envelope_CliAuthPollOut_:
+      properties:
+        data:
+          $ref: '#/components/schemas/CliAuthPollOut'
+      type: object
+      required:
+      - data
+      title: Envelope[CliAuthPollOut]
+    Envelope_CliAuthRequestOut_:
+      properties:
+        data:
+          $ref: '#/components/schemas/CliAuthRequestOut'
+      type: object
+      required:
+      - data
+      title: Envelope[CliAuthRequestOut]
+    Envelope_CliAuthStartOut_:
+      properties:
+        data:
+          $ref: '#/components/schemas/CliAuthStartOut'
+      type: object
+      required:
+      - data
+      title: Envelope[CliAuthStartOut]
+    Envelope_DeletedOut_UUID__:
+      properties:
+        data:
+          $ref: '#/components/schemas/DeletedOut_UUID_'
+      type: object
+      required:
+      - data
+      title: Envelope[DeletedOut[UUID]]
+    Envelope_DeletedOut_str__:
+      properties:
+        data:
+          $ref: '#/components/schemas/DeletedOut_str_'
+      type: object
+      required:
+      - data
+      title: Envelope[DeletedOut[str]]
+    Envelope_EnrollOut_:
+      properties:
+        data:
+          $ref: '#/components/schemas/EnrollOut'
+      type: object
+      required:
+      - data
+      title: Envelope[EnrollOut]
+    Envelope_EventsIngestedOut_:
+      properties:
+        data:
+          $ref: '#/components/schemas/EventsIngestedOut'
+      type: object
+      required:
+      - data
+      title: Envelope[EventsIngestedOut]
+    Envelope_HeartbeatOut_:
+      properties:
+        data:
+          $ref: '#/components/schemas/HeartbeatOut'
+      type: object
+      required:
+      - data
+      title: Envelope[HeartbeatOut]
+    Envelope_InferenceKeyMintedOut_:
+      properties:
+        data:
+          $ref: '#/components/schemas/InferenceKeyMintedOut'
+      type: object
+      required:
+      - data
+      title: Envelope[InferenceKeyMintedOut]
+    Envelope_InferenceKeyRevokedOut_:
+      properties:
+        data:
+          $ref: '#/components/schemas/InferenceKeyRevokedOut'
+      type: object
+      required:
+      - data
+      title: Envelope[InferenceKeyRevokedOut]
+    Envelope_InstanceKeyMintedOut_:
+      properties:
+        data:
+          $ref: '#/components/schemas/InstanceKeyMintedOut'
+      type: object
+      required:
+      - data
+      title: Envelope[InstanceKeyMintedOut]
+    Envelope_InstanceKeyRevokedOut_:
+      properties:
+        data:
+          $ref: '#/components/schemas/InstanceKeyRevokedOut'
+      type: object
+      required:
+      - data
+      title: Envelope[InstanceKeyRevokedOut]
+    Envelope_ManagementKeyMintedOut_:
+      properties:
+        data:
+          $ref: '#/components/schemas/ManagementKeyMintedOut'
+      type: object
+      required:
+      - data
+      title: Envelope[ManagementKeyMintedOut]
+    Envelope_ManagementKeyRevokedOut_:
+      properties:
+        data:
+          $ref: '#/components/schemas/ManagementKeyRevokedOut'
+      type: object
+      required:
+      - data
+      title: Envelope[ManagementKeyRevokedOut]
+    Envelope_MeOut_:
+      properties:
+        data:
+          $ref: '#/components/schemas/MeOut'
+      type: object
+      required:
+      - data
+      title: Envelope[MeOut]
+    Envelope_MembershipOut_:
+      properties:
+        data:
+          $ref: '#/components/schemas/MembershipOut'
+      type: object
+      required:
+      - data
+      title: Envelope[MembershipOut]
+    Envelope_ModelOut_:
+      properties:
+        data:
+          $ref: '#/components/schemas/ModelOut'
+      type: object
+      required:
+      - data
+      title: Envelope[ModelOut]
+    Envelope_OrgOut_:
+      properties:
+        data:
+          $ref: '#/components/schemas/OrgOut'
+      type: object
+      required:
+      - data
+      title: Envelope[OrgOut]
+    Envelope_PasswordChangedOut_:
+      properties:
+        data:
+          $ref: '#/components/schemas/PasswordChangedOut'
+      type: object
+      required:
+      - data
+      title: Envelope[PasswordChangedOut]
+    Envelope_ProviderOut_:
+      properties:
+        data:
+          $ref: '#/components/schemas/ProviderOut'
+      type: object
+      required:
+      - data
+      title: Envelope[ProviderOut]
+    Envelope_QuickstartOut_:
+      properties:
+        data:
+          $ref: '#/components/schemas/QuickstartOut'
+      type: object
+      required:
+      - data
+      title: Envelope[QuickstartOut]
+    Envelope_SignedBundle_:
+      properties:
+        data:
+          $ref: '#/components/schemas/SignedBundle'
+      type: object
+      required:
+      - data
+      title: Envelope[SignedBundle]
+    Envelope_TaxonomyOut_:
+      properties:
+        data:
+          $ref: '#/components/schemas/TaxonomyOut'
+      type: object
+      required:
+      - data
+      title: Envelope[TaxonomyOut]
+    Envelope_UserOut_:
+      properties:
+        data:
+          $ref: '#/components/schemas/UserOut'
+      type: object
+      required:
+      - data
+      title: Envelope[UserOut]
+    Envelope_WorkspaceMembershipOut_:
+      properties:
+        data:
+          $ref: '#/components/schemas/WorkspaceMembershipOut'
+      type: object
+      required:
+      - data
+      title: Envelope[WorkspaceMembershipOut]
+    Envelope_WorkspaceOut_:
+      properties:
+        data:
+          $ref: '#/components/schemas/WorkspaceOut'
+      type: object
+      required:
+      - data
+      title: Envelope[WorkspaceOut]
+    Envelope_list_ActivityOut__:
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/ActivityOut'
+          type: array
+          title: Data
+      type: object
+      required:
+      - data
+      title: Envelope[list[ActivityOut]]
+    Envelope_list_BundleOut__:
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/BundleOut'
+          type: array
+          title: Data
+      type: object
+      required:
+      - data
+      title: Envelope[list[BundleOut]]
+    Envelope_list_DataPlaneInstanceOut__:
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/DataPlaneInstanceOut'
+          type: array
+          title: Data
+      type: object
+      required:
+      - data
+      title: Envelope[list[DataPlaneInstanceOut]]
+    Envelope_list_InferenceKeyOut__:
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/InferenceKeyOut'
+          type: array
+          title: Data
+      type: object
+      required:
+      - data
+      title: Envelope[list[InferenceKeyOut]]
+    Envelope_list_InstanceKeyOut__:
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/InstanceKeyOut'
+          type: array
+          title: Data
+      type: object
+      required:
+      - data
+      title: Envelope[list[InstanceKeyOut]]
+    Envelope_list_ManagementKeyOut__:
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/ManagementKeyOut'
+          type: array
+          title: Data
+      type: object
+      required:
+      - data
+      title: Envelope[list[ManagementKeyOut]]
+    Envelope_list_OrgMemberOut__:
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/OrgMemberOut'
+          type: array
+          title: Data
+      type: object
+      required:
+      - data
+      title: Envelope[list[OrgMemberOut]]
+    Envelope_list_OrgOut__:
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/OrgOut'
+          type: array
+          title: Data
+      type: object
+      required:
+      - data
+      title: Envelope[list[OrgOut]]
+    Envelope_list_UsageEventOut__:
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/UsageEventOut'
+          type: array
+          title: Data
+      type: object
+      required:
+      - data
+      title: Envelope[list[UsageEventOut]]
+    Envelope_list_UserOut__:
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/UserOut'
+          type: array
+          title: Data
+      type: object
+      required:
+      - data
+      title: Envelope[list[UserOut]]
+    Envelope_list_WorkspaceMembershipOut__:
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/WorkspaceMembershipOut'
+          type: array
+          title: Data
+      type: object
+      required:
+      - data
+      title: Envelope[list[WorkspaceMembershipOut]]
+    Envelope_list_WorkspaceOut__:
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/WorkspaceOut'
+          type: array
+          title: Data
+      type: object
+      required:
+      - data
+      title: Envelope[list[WorkspaceOut]]
+    EventsIngestedOut:
+      properties:
+        received:
+          type: integer
+          title: Received
+        ingested:
+          type: integer
+          title: Ingested
+      type: object
+      required:
+      - received
+      - ingested
+      title: EventsIngestedOut
+    HTTPValidationError:
+      properties:
+        detail:
+          items:
+            $ref: '#/components/schemas/ValidationError'
+          type: array
+          title: Detail
+      type: object
+      title: HTTPValidationError
+    HeartbeatOut:
+      properties:
+        instance_id:
+          type: string
+          format: uuid
+          title: Instance Id
+      type: object
+      required:
+      - instance_id
+      title: HeartbeatOut
+    HeartbeatV1:
+      properties:
+        instance_id:
+          type: string
+          format: uuid
+          title: Instance Id
+        version:
+          type: string
+          title: Version
+        bundle_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Bundle Id
+      type: object
+      required:
+      - instance_id
+      - version
+      title: HeartbeatV1
+      description: 'A data plane announcing itself to the control plane; the record survives, liveness is derived from last_seen.
+
+
+        A data plane registers against the instance: which bundle it happens to serve is
+
+        config, and bundle_id already says which one that is.'
+    InferenceKeyIn:
+      properties:
+        label:
+          type: string
+          maxLength: 80
+          minLength: 1
+          title: Label
+          description: What this key is for, e.g. staging or the calling app; shown in listings
+      type: object
+      required:
+      - label
+      title: InferenceKeyIn
+    InferenceKeyMintedOut:
+      properties:
+        id:
+          type: string
+          format: uuid
+          title: Id
+        token:
+          type: string
+          title: Token
+      type: object
+      required:
+      - id
+      - token
+      title: InferenceKeyMintedOut
+      description: 'The mint result: the id plus the one-time plaintext token, which is not a column and never returns again.'
+    InferenceKeyOut:
+      properties:
+        id:
+          type: string
+          format: uuid
+          title: Id
+        org_id:
+          type: string
+          format: uuid
+          title: Org Id
+        workspace_id:
+          type: string
+          format: uuid
+          title: Workspace Id
+        user_id:
+          type: string
+          format: uuid
+          title: User Id
+        revoked:
+          type: boolean
+          title: Revoked
+        label:
+          type: string
+          title: Label
+        prefix:
+          type: string
+          title: Prefix
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        updated_at:
+          type: string
+          format: date-time
+          title: Updated At
+        deleted_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Deleted At
+      type: object
+      required:
+      - id
+      - org_id
+      - workspace_id
+      - user_id
+      - revoked
+      - label
+      - prefix
+      - created_at
+      - updated_at
+      - deleted_at
+      title: InferenceKeyOut
+    InferenceKeyRevokedOut:
+      properties:
+        id:
+          type: string
+          format: uuid
+          title: Id
+        status:
+          type: string
+          const: revoked
+          title: Status
+      type: object
+      required:
+      - id
+      - status
+      title: InferenceKeyRevokedOut
+    InstanceKeyIn:
+      properties:
+        label:
+          type: string
+          maxLength: 80
+          minLength: 1
+          title: Label
+          description: Where this key lives, e.g. ci or a data plane; shown in listings
+        user_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: User Id
+          description: Instance admin the key is minted for; defaults to the acting user
+        scopes:
+          anyOf:
+          - items:
+              $ref: '#/components/schemas/Scope'
+            type: array
+          - type: 'null'
+          title: Scopes
+          description: Restrict the key to these scopes; omit for the user's full authority
+      type: object
+      required:
+      - label
+      title: InstanceKeyIn
+    InstanceKeyMintedOut:
+      properties:
+        id:
+          type: string
+          format: uuid
+          title: Id
+        user_id:
+          type: string
+          format: uuid
+          title: User Id
+        scopes:
+          anyOf:
+          - items:
+              type: string
+            type: array
+          - type: 'null'
+          title: Scopes
+        label:
+          type: string
+          title: Label
+        token:
+          type: string
+          title: Token
+      type: object
+      required:
+      - id
+      - user_id
+      - scopes
+      - label
+      - token
+      title: InstanceKeyMintedOut
+    InstanceKeyOut:
+      properties:
+        id:
+          type: string
+          format: uuid
+          title: Id
+        user_id:
+          type: string
+          format: uuid
+          title: User Id
+        revoked:
+          type: boolean
+          title: Revoked
+        scopes:
+          anyOf:
+          - items:
+              type: string
+            type: array
+          - type: 'null'
+          title: Scopes
+        label:
+          type: string
+          title: Label
+        prefix:
+          type: string
+          title: Prefix
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        updated_at:
+          type: string
+          format: date-time
+          title: Updated At
+        deleted_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Deleted At
+      type: object
+      required:
+      - id
+      - user_id
+      - revoked
+      - scopes
+      - label
+      - prefix
+      - created_at
+      - updated_at
+      - deleted_at
+      title: InstanceKeyOut
+    InstanceKeyRevokedOut:
+      properties:
+        id:
+          type: string
+          format: uuid
+          title: Id
+        status:
+          type: string
+          const: revoked
+          title: Status
+      type: object
+      required:
+      - id
+      - status
+      title: InstanceKeyRevokedOut
+    KeyEntry:
+      properties:
+        key_id:
+          type: string
+          title: Key Id
+        org_id:
+          type: string
+          format: uuid
+          title: Org Id
+        workspace_id:
+          type: string
+          format: uuid
+          title: Workspace Id
+        token_hash:
+          type: string
+          title: Token Hash
+      type: object
+      required:
+      - key_id
+      - org_id
+      - workspace_id
+      - token_hash
+      title: KeyEntry
+      description: 'An API key as the data plane sees it: enough to authorize with zero I/O.
+
+
+        The caller''s bearer is an opaque secret; the data plane hashes it (see
+
+        credentials.py) and looks the hash up here. Absence is invalidity, so
+
+        revocation is simply dropping out of the next bundle. key_id exists for
+
+        event attribution only. The bundle carries hashes of live secrets and
+
+        stays org-sensitive even though the hashes are not reversible.'
+    LoginIn:
+      properties:
+        email:
+          type: string
+          title: Email
+        password:
+          type: string
+          title: Password
+      type: object
+      required:
+      - email
+      - password
+      title: LoginIn
+    ManagementKeyIn:
+      properties:
+        label:
+          type: string
+          maxLength: 80
+          minLength: 1
+          title: Label
+          description: Where this key lives, e.g. ci or laptop; shown in listings
+        user_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: User Id
+          description: User the key is minted for; defaults to the acting user
+        scopes:
+          anyOf:
+          - items:
+              $ref: '#/components/schemas/Scope'
+            type: array
+          - type: 'null'
+          title: Scopes
+          description: Restrict the key to these scopes; omit for the user's full authority
+      type: object
+      required:
+      - label
+      title: ManagementKeyIn
+    ManagementKeyMintedOut:
+      properties:
+        id:
+          type: string
+          format: uuid
+          title: Id
+        org_id:
+          type: string
+          format: uuid
+          title: Org Id
+        user_id:
+          type: string
+          format: uuid
+          title: User Id
+        scopes:
+          anyOf:
+          - items:
+              type: string
+            type: array
+          - type: 'null'
+          title: Scopes
+        label:
+          type: string
+          title: Label
+        token:
+          type: string
+          title: Token
+      type: object
+      required:
+      - id
+      - org_id
+      - user_id
+      - scopes
+      - label
+      - token
+      title: ManagementKeyMintedOut
+    ManagementKeyOut:
+      properties:
+        id:
+          type: string
+          format: uuid
+          title: Id
+        org_id:
+          type: string
+          format: uuid
+          title: Org Id
+        user_id:
+          type: string
+          format: uuid
+          title: User Id
+        revoked:
+          type: boolean
+          title: Revoked
+        scopes:
+          anyOf:
+          - items:
+              type: string
+            type: array
+          - type: 'null'
+          title: Scopes
+        label:
+          type: string
+          title: Label
+        prefix:
+          type: string
+          title: Prefix
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        updated_at:
+          type: string
+          format: date-time
+          title: Updated At
+        deleted_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Deleted At
+      type: object
+      required:
+      - id
+      - org_id
+      - user_id
+      - revoked
+      - scopes
+      - label
+      - prefix
+      - created_at
+      - updated_at
+      - deleted_at
+      title: ManagementKeyOut
+    ManagementKeyRevokedOut:
+      properties:
+        id:
+          type: string
+          format: uuid
+          title: Id
+        status:
+          type: string
+          const: revoked
+          title: Status
+      type: object
+      required:
+      - id
+      - status
+      title: ManagementKeyRevokedOut
+    MeOut:
+      properties:
+        user_id:
+          type: string
+          format: uuid
+          title: User Id
+        email:
+          type: string
+          title: Email
+        name:
+          type: string
+          title: Name
+        instance_admin:
+          type: boolean
+          title: Instance Admin
+        orgs:
+          items:
+            type: string
+            format: uuid
+          type: array
+          title: Orgs
+      type: object
+      required:
+      - user_id
+      - email
+      - name
+      - instance_admin
+      - orgs
+      title: MeOut
+    MembershipOut:
+      properties:
+        user_id:
+          type: string
+          format: uuid
+          title: User Id
+        org_id:
+          type: string
+          format: uuid
+          title: Org Id
+        status:
+          type: string
+          const: member
+          title: Status
+      type: object
+      required:
+      - user_id
+      - org_id
+      - status
+      title: MembershipOut
+    ModelEntry:
+      properties:
+        model_id:
+          type: string
+          title: Model Id
+        provider_id:
+          type: string
+          title: Provider Id
+        upstream_model:
+          type: string
+          title: Upstream Model
+        input_price_per_mtok:
+          type: number
+          title: Input Price Per Mtok
+        output_price_per_mtok:
+          type: number
+          title: Output Price Per Mtok
+        context_window:
+          type: integer
+          title: Context Window
+        max_output_tokens:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Max Output Tokens
+        capabilities:
+          items:
+            type: string
+          type: array
+          title: Capabilities
+      type: object
+      required:
+      - model_id
+      - provider_id
+      - upstream_model
+      - input_price_per_mtok
+      - output_price_per_mtok
+      - context_window
+      - capabilities
+      title: ModelEntry
+      description: 'A routable model: the caller-facing id plus how to reach and bill it.'
+    ModelIn:
+      properties:
+        model_id:
+          type: string
+          title: Model Id
+          description: Caller-facing model name
+        provider_id:
+          type: string
+          title: Provider Id
+          description: Provider id the model routes to
+        upstream_model:
+          type: string
+          title: Upstream Model
+          description: Model name sent to the provider, lets model_id be an alias; defaults to model_id
+          default: ''
+        input_price_per_mtok:
+          type: number
+          title: Input Price Per Mtok
+          description: USD per million input tokens
+          default: 0.0
+        output_price_per_mtok:
+          type: number
+          title: Output Price Per Mtok
+          description: USD per million output tokens
+          default: 0.0
+        context_window:
+          type: integer
+          title: Context Window
+          description: Context window in tokens
+          default: 128000
+        max_output_tokens:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Max Output Tokens
+          description: Max completion tokens; requests are clamped to it
+        capabilities:
+          items:
+            type: string
+          type: array
+          title: Capabilities
+          description: Capabilities, comma separated
+          default:
+          - streaming
+          - tools
+      type: object
+      required:
+      - model_id
+      - provider_id
+      title: ModelIn
+    ModelOut:
+      properties:
+        id:
+          type: string
+          format: uuid
+          title: Id
+        name:
+          type: string
+          title: Name
+        provider_id:
+          type: string
+          format: uuid
+          title: Provider Id
+        upstream_model:
+          type: string
+          title: Upstream Model
+        input_price_per_mtok:
+          type: number
+          title: Input Price Per Mtok
+        output_price_per_mtok:
+          type: number
+          title: Output Price Per Mtok
+        context_window:
+          type: integer
+          title: Context Window
+        max_output_tokens:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Max Output Tokens
+        capabilities:
+          items:
+            type: string
+          type: array
+          title: Capabilities
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        updated_at:
+          type: string
+          format: date-time
+          title: Updated At
+        deleted_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Deleted At
+      type: object
+      required:
+      - id
+      - name
+      - provider_id
+      - upstream_model
+      - input_price_per_mtok
+      - output_price_per_mtok
+      - context_window
+      - max_output_tokens
+      - capabilities
+      - created_at
+      - updated_at
+      - deleted_at
+      title: ModelOut
+    OrgCreate:
+      properties:
+        name:
+          type: string
+          title: Name
+          description: Org name, e.g. My Org
+      type: object
+      required:
+      - name
+      title: OrgCreate
+    OrgMemberOut:
+      properties:
+        user_id:
+          type: string
+          format: uuid
+          title: User Id
+        email:
+          type: string
+          title: Email
+        name:
+          type: string
+          title: Name
+        service_account:
+          type: boolean
+          title: Service Account
+        status:
+          type: string
+          const: member
+          title: Status
+      type: object
+      required:
+      - user_id
+      - email
+      - name
+      - service_account
+      - status
+      title: OrgMemberOut
+      description: 'A member of the acting org: who they are and that they belong.
+
+
+        Deliberately not UserOut: that carries the user''s every membership, which would let one org''s
+
+        credential read the shape of the orgs it has no scope over.'
+    OrgOut:
+      properties:
+        id:
+          type: string
+          format: uuid
+          title: Id
+        name:
+          type: string
+          title: Name
+        personal_for:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Personal For
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        updated_at:
+          type: string
+          format: date-time
+          title: Updated At
+        deleted_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Deleted At
+      type: object
+      required:
+      - id
+      - name
+      - personal_for
+      - created_at
+      - updated_at
+      - deleted_at
+      title: OrgOut
+    OrgUpdate:
+      properties:
+        name:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Name
+      type: object
+      title: OrgUpdate
+    PasswordChangeIn:
+      properties:
+        current_password:
+          type: string
+          title: Current Password
+        new_password:
+          type: string
+          minLength: 8
+          title: New Password
+      type: object
+      required:
+      - current_password
+      - new_password
+      title: PasswordChangeIn
+    PasswordChangedOut:
+      properties:
+        user_id:
+          type: string
+          format: uuid
+          title: User Id
+        status:
+          type: string
+          const: changed
+          title: Status
+      type: object
+      required:
+      - user_id
+      - status
+      title: PasswordChangedOut
+    ProviderEntry:
+      properties:
+        provider_id:
+          type: string
+          title: Provider Id
+        kind:
+          type: string
+          enum:
+          - openai_compatible
+          - anthropic
+          title: Kind
+        base_url:
+          type: string
+          maxLength: 2083
+          minLength: 1
+          format: uri
+          title: Base Url
+        credential_ref:
+          type: string
+          title: Credential Ref
+        cache_read_multiplier:
+          type: number
+          title: Cache Read Multiplier
+          default: 1.0
+        cache_write_multiplier:
+          type: number
+          title: Cache Write Multiplier
+          default: 1.0
+      type: object
+      required:
+      - provider_id
+      - kind
+      - base_url
+      - credential_ref
+      title: ProviderEntry
+      description: An upstream LLM provider endpoint.
+    ProviderIn:
+      properties:
+        provider_id:
+          type: string
+          title: Provider Id
+          description: Provider name, e.g. openai
+        kind:
+          type: string
+          enum:
+          - openai_compatible
+          - anthropic
+          title: Kind
+          description: Adapter kind
+          default: openai_compatible
+        base_url:
+          type: string
+          title: Base Url
+          description: OpenAI-compatible endpoint, e.g. https://api.groq.com/openai/v1
+        credential_ref:
+          type: string
+          title: Credential Ref
+          description: 'env: or file: reference resolved by the data plane, never a raw secret'
+        cache_read_multiplier:
+          type: number
+          title: Cache Read Multiplier
+          description: Input price factor for prompt-cache hits
+          default: 1.0
+        cache_write_multiplier:
+          type: number
+          title: Cache Write Multiplier
+          description: Input price factor for cache writes
+          default: 1.0
+      type: object
+      required:
+      - provider_id
+      - base_url
+      - credential_ref
+      title: ProviderIn
+    ProviderOut:
+      properties:
+        id:
+          type: string
+          format: uuid
+          title: Id
+        name:
+          type: string
+          title: Name
+        kind:
+          type: string
+          title: Kind
+        base_url:
+          type: string
+          title: Base Url
+        credential_ref:
+          type: string
+          title: Credential Ref
+        cache_read_multiplier:
+          type: number
+          title: Cache Read Multiplier
+        cache_write_multiplier:
+          type: number
+          title: Cache Write Multiplier
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        updated_at:
+          type: string
+          format: date-time
+          title: Updated At
+        deleted_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Deleted At
+      type: object
+      required:
+      - id
+      - name
+      - kind
+      - base_url
+      - credential_ref
+      - cache_read_multiplier
+      - cache_write_multiplier
+      - created_at
+      - updated_at
+      - deleted_at
+      title: ProviderOut
+    QuickstartIn:
+      properties:
+        token:
+          type: string
+          title: Token
+      type: object
+      required:
+      - token
+      title: QuickstartIn
+    QuickstartOut:
+      properties:
+        path:
+          type: string
+          title: Path
+      type: object
+      required:
+      - path
+      title: QuickstartOut
+    Scope:
+      type: string
+      enum:
+      - inference-keys:read
+      - inference-keys:write
+      - workspaces:read
+      - workspaces:write
+      - bundles:read
+      - bundles:write
+      - events:read
+      - data-planes:read
+      - taxonomy:read
+      - taxonomy:write
+      - orgs:read
+      - orgs:write
+      - users:read
+      - users:write
+      - activity:read
+      - management-keys:read
+      - management-keys:write
+      - instance-keys:read
+      - instance-keys:write
+      - sync
+      title: Scope
+      description: 'What a management credential may do; org and instance row-scoping are a separate axis.
+
+
+        A scope restricts the credential, never expands it: a token minted without scopes carries the
+
+        owning user''s full authority, an explicit list is a restriction that also excludes scopes
+
+        invented later. Roles arrive later as named bundles over these same values.'
+    ServiceAccountIn:
+      properties:
+        name:
+          type: string
+          title: Name
+          description: Service account name; the email is derived as name-<id>@airbytesvcaccount.ai
+      type: object
+      required:
+      - name
+      title: ServiceAccountIn
+    SignedBundle:
+      properties:
+        payload:
+          $ref: '#/components/schemas/BundleV1'
+        signature:
+          type: string
+          title: Signature
+        signing_key_id:
+          type: string
+          title: Signing Key Id
+      type: object
+      required:
+      - payload
+      - signature
+      - signing_key_id
+      title: SignedBundle
+      description: 'A BundleV1 as it crosses the wire and rests on disk.
+
+
+        A bundle that fails verification is rejected and the previous one keeps serving.'
+    SignupIn:
+      properties:
+        email:
+          type: string
+          title: Email
+        name:
+          type: string
+          title: Name
+          default: ''
+        password:
+          type: string
+          minLength: 8
+          title: Password
+      type: object
+      required:
+      - email
+      - password
+      title: SignupIn
+    TaxonomyOut:
+      properties:
+        providers:
+          items:
+            $ref: '#/components/schemas/ProviderOut'
+          type: array
+          title: Providers
+        models:
+          items:
+            $ref: '#/components/schemas/ModelOut'
+          type: array
+          title: Models
+      type: object
+      required:
+      - providers
+      - models
+      title: TaxonomyOut
+    UsageEventOut:
+      properties:
+        event_id:
+          type: string
+          format: uuid
+          title: Event Id
+        request_id:
+          type: string
+          format: uuid
+          title: Request Id
+        occurred_at:
+          type: string
+          format: date-time
+          title: Occurred At
+        org_id:
+          type: string
+          format: uuid
+          title: Org Id
+        workspace_id:
+          type: string
+          format: uuid
+          title: Workspace Id
+        key_id:
+          type: string
+          title: Key Id
+        model_id:
+          type: string
+          title: Model Id
+        provider_id:
+          type: string
+          title: Provider Id
+        bundle_id:
+          type: string
+          format: uuid
+          title: Bundle Id
+        input_tokens:
+          type: integer
+          title: Input Tokens
+        output_tokens:
+          type: integer
+          title: Output Tokens
+        cost_usd:
+          type: number
+          title: Cost Usd
+        cost_input_usd:
+          type: number
+          title: Cost Input Usd
+        cost_output_usd:
+          type: number
+          title: Cost Output Usd
+        cache_read_tokens:
+          type: integer
+          title: Cache Read Tokens
+        cache_write_tokens:
+          type: integer
+          title: Cache Write Tokens
+        latency_ms:
+          type: integer
+          title: Latency Ms
+        status:
+          type: string
+          title: Status
+        stream:
+          type: boolean
+          title: Stream
+      type: object
+      required:
+      - event_id
+      - request_id
+      - occurred_at
+      - org_id
+      - workspace_id
+      - key_id
+      - model_id
+      - provider_id
+      - bundle_id
+      - input_tokens
+      - output_tokens
+      - cost_usd
+      - cost_input_usd
+      - cost_output_usd
+      - cache_read_tokens
+      - cache_write_tokens
+      - latency_ms
+      - status
+      - stream
+      title: UsageEventOut
+    UsageEventV1:
+      properties:
+        schema_version:
+          type: integer
+          const: 1
+          title: Schema Version
+          default: 1
+        event_id:
+          type: string
+          format: uuid
+          title: Event Id
+        request_id:
+          type: string
+          format: uuid
+          title: Request Id
+        occurred_at:
+          type: string
+          format: date-time
+          title: Occurred At
+        org_id:
+          type: string
+          format: uuid
+          title: Org Id
+        workspace_id:
+          type: string
+          format: uuid
+          title: Workspace Id
+        key_id:
+          type: string
+          title: Key Id
+        model_id:
+          type: string
+          title: Model Id
+        provider_id:
+          type: string
+          title: Provider Id
+        bundle_id:
+          type: string
+          format: uuid
+          title: Bundle Id
+        input_tokens:
+          type: integer
+          title: Input Tokens
+        output_tokens:
+          type: integer
+          title: Output Tokens
+        cost_usd:
+          type: number
+          title: Cost Usd
+        cost_input_usd:
+          type: number
+          title: Cost Input Usd
+          default: 0.0
+        cost_output_usd:
+          type: number
+          title: Cost Output Usd
+          default: 0.0
+        cache_read_tokens:
+          type: integer
+          title: Cache Read Tokens
+          default: 0
+        cache_write_tokens:
+          type: integer
+          title: Cache Write Tokens
+          default: 0
+        latency_ms:
+          type: integer
+          title: Latency Ms
+        status:
+          type: string
+          enum:
+          - ok
+          - upstream_error
+          - denied
+          - timeout
+          - cancelled
+          title: Status
+        stream:
+          type: boolean
+          title: Stream
+      type: object
+      required:
+      - event_id
+      - request_id
+      - occurred_at
+      - org_id
+      - workspace_id
+      - key_id
+      - model_id
+      - provider_id
+      - bundle_id
+      - input_tokens
+      - output_tokens
+      - cost_usd
+      - latency_ms
+      - status
+      - stream
+      title: UsageEventV1
+      description: 'One metered request, emitted by the data plane and ingested by the control plane.
+
+
+        Delivery is at-least-once from a local disk buffer; the control plane upserts on
+
+        event_id, so replays after an outage land exactly once.'
+    UserCreate:
+      properties:
+        email:
+          type: string
+          title: Email
+          description: Unique email identifying the user
+        name:
+          type: string
+          title: Name
+          description: Display name, defaults to the email
+          default: ''
+      type: object
+      required:
+      - email
+      title: UserCreate
+    UserOut:
+      properties:
+        id:
+          type: string
+          format: uuid
+          title: Id
+        email:
+          type: string
+          title: Email
+        name:
+          type: string
+          title: Name
+        service_account:
+          type: boolean
+          title: Service Account
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        updated_at:
+          type: string
+          format: date-time
+          title: Updated At
+        deleted_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Deleted At
+        orgs:
+          items:
+            type: string
+            format: uuid
+          type: array
+          title: Orgs
+      type: object
+      required:
+      - id
+      - email
+      - name
+      - service_account
+      - created_at
+      - updated_at
+      - deleted_at
+      - orgs
+      title: UserOut
+    ValidationError:
+      properties:
+        loc:
+          items:
+            anyOf:
+            - type: string
+            - type: integer
+          type: array
+          title: Location
+        msg:
+          type: string
+          title: Message
         type:
           type: string
-          description: e.g. org.created, user.added, key.created, key.revoked, workspace.created
-        message: { type: string }
-        createdAt: { type: string }
-    Organization:
+          title: Error Type
+        input:
+          title: Input
+        ctx:
+          type: object
+          title: Context
       type: object
-      required: [id, name, slug, createdAt, memberCount, workspaceCount]
+      required:
+      - loc
+      - msg
+      - type
+      title: ValidationError
+    WorkspaceCreate:
       properties:
-        id: { type: integer }
-        name: { type: string }
-        slug: { type: string }
-        description: { type: ["string", "null"] }
-        createdAt: { type: string }
-        memberCount: { type: integer }
-        workspaceCount: { type: integer }
-    OrganizationInput:
-      type: object
-      required: [name, slug]
-      properties:
-        name: { type: string, minLength: 1 }
-        slug: { type: string, minLength: 1 }
-        description: { type: string }
-    OrganizationUpdate:
-      type: object
-      properties:
-        name: { type: string, minLength: 1 }
-        slug: { type: string, minLength: 1 }
-        description: { type: ["string", "null"] }
-    User:
-      type: object
-      required: [id, name, email, createdAt, orgCount]
-      properties:
-        id: { type: integer }
-        name: { type: string }
-        email: { type: string }
-        createdAt: { type: string }
-        orgCount: { type: integer }
-    UserInput:
-      type: object
-      required: [name, email]
-      properties:
-        name: { type: string, minLength: 1 }
-        email: { type: string, minLength: 3 }
-    UserUpdate:
-      type: object
-      properties:
-        name: { type: string, minLength: 1 }
-        email: { type: string, minLength: 3 }
-    OrgMember:
-      type: object
-      required: [userId, orgId, name, email, role, joinedAt]
-      properties:
-        userId: { type: integer }
-        orgId: { type: integer }
-        name: { type: string }
-        email: { type: string }
-        role:
+        name:
           type: string
-          enum: [owner, admin, member]
-        joinedAt: { type: string }
-    OrgMemberInput:
+          title: Name
+          description: Workspace name, e.g. staging
       type: object
-      required: [userId, role]
+      required:
+      - name
+      title: WorkspaceCreate
+    WorkspaceMembershipOut:
       properties:
-        userId: { type: integer }
-        role:
+        user_id:
           type: string
-          enum: [owner, admin, member]
-    OrgMemberUpdate:
-      type: object
-      required: [role]
-      properties:
-        role:
+          format: uuid
+          title: User Id
+        workspace_id:
           type: string
-          enum: [owner, admin, member]
-    UserOrgMembership:
-      type: object
-      required: [orgId, orgName, orgSlug, role, joinedAt]
-      properties:
-        orgId: { type: integer }
-        orgName: { type: string }
-        orgSlug: { type: string }
-        role:
+          format: uuid
+          title: Workspace Id
+        status:
           type: string
-          enum: [owner, admin, member]
-        joinedAt: { type: string }
-    Workspace:
+          const: member
+          title: Status
       type: object
-      required: [id, orgId, name, slug, createdAt, memberCount, inferenceKeyCount]
+      required:
+      - user_id
+      - workspace_id
+      - status
+      title: WorkspaceMembershipOut
+    WorkspaceOut:
       properties:
-        id: { type: integer }
-        orgId: { type: integer }
-        orgName: { type: ["string", "null"] }
-        name: { type: string }
-        slug: { type: string }
-        description: { type: ["string", "null"] }
-        createdAt: { type: string }
-        memberCount: { type: integer }
-        inferenceKeyCount: { type: integer }
-    WorkspaceInput:
+        id:
+          type: string
+          format: uuid
+          title: Id
+        org_id:
+          type: string
+          format: uuid
+          title: Org Id
+        name:
+          type: string
+          title: Name
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        updated_at:
+          type: string
+          format: date-time
+          title: Updated At
+        deleted_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Deleted At
       type: object
-      required: [name, slug]
-      properties:
-        name: { type: string, minLength: 1 }
-        slug: { type: string, minLength: 1 }
-        description: { type: string }
+      required:
+      - id
+      - org_id
+      - name
+      - created_at
+      - updated_at
+      - deleted_at
+      title: WorkspaceOut
     WorkspaceUpdate:
-      type: object
       properties:
-        name: { type: string, minLength: 1 }
-        slug: { type: string, minLength: 1 }
-        description: { type: ["string", "null"] }
-    WorkspaceMember:
+        name:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Name
       type: object
-      required: [userId, workspaceId, name, email, addedAt]
-      properties:
-        userId: { type: integer }
-        workspaceId: { type: integer }
-        name: { type: string }
-        email: { type: string }
-        addedAt: { type: string }
-    WorkspaceMemberInput:
-      type: object
-      required: [userId]
-      properties:
-        userId: { type: integer }
-    ManagementKey:
-      type: object
-      required: [id, orgId, name, prefix, status, createdAt]
-      properties:
-        id: { type: integer }
-        orgId: { type: integer }
-        name: { type: string }
-        prefix:
-          type: string
-          description: First characters of the key for display, e.g. "mk_live_a1b2"
-        status:
-          type: string
-          enum: [active, revoked]
-        createdAt: { type: string }
-        lastUsedAt: { type: ["string", "null"] }
-    ManagementKeyInput:
-      type: object
-      required: [name]
-      properties:
-        name: { type: string, minLength: 1 }
-    InferenceKey:
-      type: object
-      required: [id, workspaceId, name, prefix, status, createdAt]
-      properties:
-        id: { type: integer }
-        workspaceId: { type: integer }
-        name: { type: string }
-        prefix:
-          type: string
-          description: First characters of the key for display, e.g. "ik_live_a1b2"
-        status:
-          type: string
-          enum: [active, revoked]
-        createdAt: { type: string }
-        lastUsedAt: { type: ["string", "null"] }
-    InferenceKeyInput:
-      type: object
-      required: [name]
-      properties:
-        name: { type: string, minLength: 1 }
-    KeyUpdate:
-      type: object
-      properties:
-        name: { type: string, minLength: 1 }
-        status:
-          type: string
-          enum: [active, revoked]
-    CreatedKey:
-      type: object
-      required: [id, name, prefix, status, createdAt, secret]
-      properties:
-        id: { type: integer }
-        name: { type: string }
-        prefix: { type: string }
-        status:
-          type: string
-          enum: [active, revoked]
-        createdAt: { type: string }
-        secret:
-          type: string
-          description: Full key secret, shown only once at creation time
+      title: WorkspaceUpdate
+  securitySchemes:
+    HTTPBearer:
+      type: http
+      scheme: bearer
+tags:
+- name: Orgs
+  description: Tenants of the instance; every key, bundle and event belongs to one org
+- name: Users
+  description: Instance admins, org members and service accounts, with their org memberships
+- name: Instance Management Keys
+  description: Instance-wide oversight of every org's management keys
+  x-displayName: Org Management Keys
+- name: Instance Keys
+  description: Admin-held bearer keys for the instance endpoints, and the credential a data plane carries
+- name: Data Plane
+  description: 'Data-plane-facing endpoints: bundle polling, event ingestion, heartbeats'
+- name: OSS
+  description: 'Self-hosted bootstrap: whether this deployment has a claimed account yet, and the quickstart trapdoor'
+- name: Management Keys
+  description: User-bound bearer keys for one org; instance reach is a separate key type
+- name: Org Users
+  description: 'Membership in the acting org: who belongs to it, and adding or removing them'
+  x-displayName: Users
+- name: Workspaces
+  description: Scopes inside an org where inference keys live; members are drawn from the org
+- name: Inference Keys
+  description: 'Caller credentials for the gateway: opaque keys whose hashes reach data planes through bundles'
+- name: Auth
+  description: 'Human login: password, cookie sessions, account endpoints, CLI device authorization'
+- name: Enrollment
+  description: 'A user''s path into orgs: their standing and their one self-serve personal org'
+- name: Bundles
+  description: Signed policy bundles compiled per org and polled by data planes
+- name: Events
+  description: Usage events reported by data planes
+- name: Taxonomy
+  description: 'The models catalog: providers and models compiled into bundles'
+- name: Activity
+  description: The audit trail of writes, per org and instance-wide
+x-tagGroups:
+- name: Org Management
+  tags:
+  - Org Users
+  - Management Keys
+  - Workspaces
+  - Inference Keys
+  - Bundles
+  - Events
+  - Activity
+- name: Account
+  tags:
+  - Auth
+  - Enrollment
+- name: Catalog
+  tags:
+  - Taxonomy
+- name: Instance Admin
+  tags:
+  - Orgs
+  - Users
+  - Instance Keys
+  - Instance Management Keys
+  - Data Plane
+  - OSS
