@@ -8,7 +8,7 @@ control_plane:
 data_plane:
   control_plane:
     url: http://127.0.0.1:8000
-    token: ${env:GW_DATAPLANE_TOKEN}
+    token: ${file:.airllm/dataplane.key}
   bundle:
     public_key: ${file:.airllm/signing.pub}
     cache_dir: .airllm
