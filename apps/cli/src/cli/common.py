@@ -18,6 +18,8 @@ RESOURCES = "Resources"
 TESTING = "Testing"
 
 orgs_app = typer.Typer(help="Orgs")
+org_members_app = typer.Typer(help="Org members, the users a management key's org is made of")
+orgs_app.add_typer(org_members_app, name="members", no_args_is_help=True)
 workspaces_app = typer.Typer(help="Workspaces, the org scopes inference keys live in")
 workspace_members_app = typer.Typer(help="Workspace members, drawn from the org")
 workspaces_app.add_typer(workspace_members_app, name="members", no_args_is_help=True)

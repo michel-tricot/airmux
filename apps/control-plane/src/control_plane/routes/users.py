@@ -1,6 +1,11 @@
+"""The instance roster: creating principals and reading every user across the deployment.
+
+Membership lives on the org router instead, because granting it is an org decision; taking the
+org from the credential is what keeps a grant inside the scope the caller already holds.
+"""
+
 from __future__ import annotations
 
-from datetime import UTC, datetime
 from uuid import UUID  # noqa: TC003 fastapi resolves path param annotations at runtime
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -8,9 +13,8 @@ from sqlmodel import col
 
 from control_plane.authz import Scope
 from control_plane.deps import instance_scope, require
-from control_plane.models import Org, OrgMembership, User
-from control_plane.models.common.wire import DeletedOut, Envelope
-from control_plane.models.org_membership import MembershipOut
+from control_plane.models import OrgMembership, User
+from control_plane.models.common.wire import Envelope
 from control_plane.models.user import ServiceAccountIn, UserCreate, UserOut
 
 router = APIRouter(dependencies=[Depends(instance_scope)])
@@ -42,21 +46,3 @@ async def list_users() -> Envelope[list[UserOut]]:
     for m in memberships:
         orgs_by_user.setdefault(m.user_id, []).append(m.org_id)
     return Envelope(data=[_user_out(u, orgs_by_user.get(u.id, [])) for u in users])
-
-
-@router.put("/users/{user_id}/orgs/{org_id}", tags=["Users"], dependencies=[require(Scope.users_write)])
-async def add_membership(user_id: UUID, org_id: UUID) -> Envelope[MembershipOut]:
-    if await User.find_by_id(user_id) is None or await Org.find_by_id(org_id) is None:
-        raise HTTPException(status_code=404)
-    if await OrgMembership.get((user_id, org_id)) is None:
-        await OrgMembership(user_id=user_id, org_id=org_id).save()
-    return Envelope(data=MembershipOut(user_id=user_id, org_id=org_id, status="member"))
-
-
-@router.delete("/users/{user_id}/orgs/{org_id}", tags=["Users"], dependencies=[require(Scope.users_write)])
-async def remove_membership(user_id: UUID, org_id: UUID) -> Envelope[DeletedOut[str]]:
-    membership = await OrgMembership.get((user_id, org_id))
-    if membership is None:
-        raise HTTPException(status_code=404)
-    await membership.delete()
-    return Envelope(data=DeletedOut(id=f"{user_id}/{org_id}", deleted_at=datetime.now(tz=UTC)))

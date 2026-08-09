@@ -290,6 +290,7 @@ def upgrade() -> None:
         ),
         sa.PrimaryKeyConstraint("user_id", "org_id"),
     )
+    op.create_index(op.f("ix_org_membership_org_id"), "org_membership", ["org_id"], unique=False)
     op.create_table(
         "cli_auth_request",
         sa.Column("created_at", UTCDateTime(), server_default=sa.text("now()"), nullable=False),
@@ -395,6 +396,7 @@ def downgrade() -> None:
     op.drop_table("workspace_membership")
     op.drop_table("workspace")
     op.drop_table("cli_auth_request")
+    op.drop_index(op.f("ix_org_membership_org_id"), table_name="org_membership")
     op.drop_table("org_membership")
     op.drop_table("model")
     op.drop_table("instance_key")

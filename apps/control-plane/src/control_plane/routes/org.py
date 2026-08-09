@@ -13,11 +13,41 @@ from control_plane.deps import MgmtDep, OrgDep, require
 from control_plane.keys import mint_management_key
 from control_plane.models import Bundle, ManagementKey, OrgMembership, UsageEvent, User
 from control_plane.models.bundle import BundleOut
-from control_plane.models.common.wire import Envelope
+from control_plane.models.common.wire import DeletedOut, Envelope
 from control_plane.models.management_key import ManagementKeyIn, ManagementKeyMintedOut, ManagementKeyOut, ManagementKeyRevokedOut
+from control_plane.models.org_membership import MembershipOut, OrgMemberOut
 from control_plane.models.usage_event import UsageEventOut
 
 router = APIRouter(prefix="/org")
+
+
+@router.get("/users", tags=["Org Users"], dependencies=[require(Scope.users_read)])
+async def list_org_users(org_id: OrgDep) -> Envelope[list[OrgMemberOut]]:
+    """The acting org's members; an org credential sees its own roster, never the instance's."""
+    members = await User.members_of(org_id)
+    return Envelope(
+        data=[OrgMemberOut(user_id=u.id, email=u.email, name=u.name, service_account=u.service_account, status="member") for u in members]
+    )
+
+
+@router.put("/users/{user_id}", tags=["Org Users"], dependencies=[require(Scope.users_write)])
+async def add_org_user(user_id: UUID, org_id: OrgDep) -> Envelope[MembershipOut]:
+    """Idempotent: the org comes from the credential, so membership can only ever be granted in scope."""
+    if await User.find_by_id(user_id) is None:
+        raise HTTPException(status_code=404)
+    if await OrgMembership.get((user_id, org_id)) is None:
+        await OrgMembership(user_id=user_id, org_id=org_id).save()
+    return Envelope(data=MembershipOut(user_id=user_id, org_id=org_id, status="member"))
+
+
+@router.delete("/users/{user_id}", tags=["Org Users"], dependencies=[require(Scope.users_write)])
+async def remove_org_user(user_id: UUID, org_id: OrgDep) -> Envelope[DeletedOut[str]]:
+    """Removing the membership cascades the user out of the org's workspaces."""
+    membership = await OrgMembership.get((user_id, org_id))
+    if membership is None:
+        raise HTTPException(status_code=404)
+    await membership.delete()
+    return Envelope(data=DeletedOut(id=f"{user_id}/{org_id}", deleted_at=datetime.now(tz=UTC)))
 
 
 @router.get("/management-keys", tags=["Management Keys"], dependencies=[require(Scope.management_keys_read)])

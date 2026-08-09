@@ -143,7 +143,7 @@ def test_mint_accepts_scopes_and_rejects_unknown_ones(tmp_path):
         root = cp.headers()
         o1 = _seed_org(client, root)
         user = client.post("/v1/users", json={"email": "dev@example.com"}, headers=root).json()["data"]
-        assert client.put(f"/v1/users/{user['id']}/orgs/{o1}", headers=root).status_code == 200
+        assert client.put(f"/v1/org/users/{user['id']}", headers=cp.headers(o1)).status_code == 200
         bad = client.post("/v1/org/management-keys", json={"user_id": user["id"], "scopes": ["nope"], "label": "t"}, headers=cp.headers(org_id=o1))
         assert bad.status_code == 422
         minted = client.post(

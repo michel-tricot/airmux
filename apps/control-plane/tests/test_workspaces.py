@@ -14,7 +14,7 @@ def _member(c, cp, org_id, email):
     """A real org member with an org-scoped management key: the non-admin path through every dep."""
     root = cp.headers()
     uid = c.post("/v1/users", json={"email": email}, headers=root).json()["data"]["id"]
-    assert c.put(f"/v1/users/{uid}/orgs/{org_id}", headers=root).status_code == 200
+    assert c.put(f"/v1/org/users/{uid}", headers=cp.headers(org_id)).status_code == 200
     minted = c.post("/v1/org/management-keys", json={"user_id": uid, "label": "t"}, headers=cp.headers(org_id)).json()["data"]
     return uid, {"authorization": f"Bearer {minted['token']}"}
 
@@ -111,7 +111,7 @@ def test_org_membership_removal_cascades_out_of_workspaces(tmp_path):
         ws = make_workspace(c, member)
         assert [m["user_id"] for m in c.get(f"/v1/org/workspaces/{ws}/members", headers=cp.headers(o1)).json()["data"]] == [uid]
 
-        assert c.delete(f"/v1/users/{uid}/orgs/{o1}", headers=root).status_code == 200
+        assert c.delete(f"/v1/org/users/{uid}", headers=cp.headers(o1)).status_code == 200
         assert c.get(f"/v1/org/workspaces/{ws}/members", headers=cp.headers(o1)).json()["data"] == []
 
         async def cascade_audit_rows():

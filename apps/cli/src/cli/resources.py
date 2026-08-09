@@ -19,6 +19,7 @@ from cli.common import (
     instance_keys_app,
     management_keys_app,
     models_app,
+    org_members_app,
     orgs_app,
     providers_app,
     service_accounts_app,
@@ -206,6 +207,14 @@ USER_COLS = [
     Col("created_at", "Created", no_wrap=True, fmt=fmt_when),
 ]
 
+ORG_MEMBER_COLS = [
+    Col("user_id", "ID", style="dim", no_wrap=True),
+    Col("email", "Email"),
+    Col("name", "Name", max_width=30),
+    Col("service_account", "Kind", fmt=lambda v: "service" if v else "human"),
+    Col("status", "Status", style="yellow"),
+]
+
 
 @users_app.command("create")
 def users_create(
@@ -213,7 +222,7 @@ def users_create(
     name: str = "",
     control_plane_url: str = "",
 ) -> None:
-    """Create a user; add org memberships with `airllm users join`. Needs the instance management key."""
+    """Create a user; add org memberships with `airllm orgs members add`. Needs the instance key."""
     body = {"email": email, "name": name}
     with instance_client(control_plane_url) as c:
         resp = payload(post_expecting(c, "/v1/users", body, ok=(200,)))
@@ -231,7 +240,7 @@ def service_accounts_create(
     with instance_client(control_plane_url) as c:
         resp = payload(post_expecting(c, "/v1/service-accounts", {"name": name}, ok=(200,)))
     console.print(f"service account [bold]{resp['id']}[/bold] created as {resp['email']}")
-    console.print(f"[dim]add it to an org with `airllm users join {resp['id']} <org>`[/dim]")
+    console.print(f"[dim]add it to your active org with `airllm orgs members add {resp['id']}`[/dim]")
 
 
 @service_accounts_app.command("list")
@@ -247,22 +256,28 @@ def users_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat.tab
     print_rows("users", instance_get("/v1/users", control_plane_url), USER_COLS, fmt)
 
 
-@users_app.command("join")
-def users_join(user_id: str, org: str, control_plane_url: str = "") -> None:
-    """Add a user to an org; their org management keys start working immediately."""
-    with instance_client(control_plane_url) as c:
-        resp = c.put(f"/v1/users/{user_id}/orgs/{org}")
-        resp.raise_for_status()
-    console.print(f"user [bold]{user_id}[/bold] is now a member of [bold]{org}[/bold]")
+@org_members_app.command("list")
+def org_members_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
+    """List the active org's members."""
+    print_rows("members", org_get("/v1/org/users", control_plane_url), ORG_MEMBER_COLS, fmt)
 
 
-@users_app.command("leave")
-def users_leave(user_id: str, org: str, control_plane_url: str = "") -> None:
-    """Remove a user from an org; their management keys for that org stop working immediately."""
-    with instance_client(control_plane_url) as c:
-        resp = c.delete(f"/v1/users/{user_id}/orgs/{org}")
+@org_members_app.command("add")
+def org_members_add(user_id: str, control_plane_url: str = "") -> None:
+    """Add a user to the active org; their org management keys start working immediately."""
+    with org_client(control_plane_url) as c:
+        resp = c.put(f"/v1/org/users/{user_id}")
         resp.raise_for_status()
-    console.print(f"user [bold]{user_id}[/bold] removed from [bold]{org}[/bold]")
+    console.print(f"user [bold]{user_id}[/bold] is now a member of the active org")
+
+
+@org_members_app.command("remove")
+def org_members_remove(user_id: str, control_plane_url: str = "") -> None:
+    """Remove a user from the active org; their management keys for it stop working immediately."""
+    with org_client(control_plane_url) as c:
+        resp = c.delete(f"/v1/org/users/{user_id}")
+        resp.raise_for_status()
+    console.print(f"user [bold]{user_id}[/bold] removed from the active org")
 
 
 @management_keys_app.command("list")
@@ -454,7 +469,7 @@ register_create(
     OrgCreate,
     "/v1/orgs",
     "Create an org; keys and bundles hang off it. Needs the instance management key.",
-    lambda resp: console.print(f"org [bold]{resp['id']}[/bold] created, add members with `airllm users join <user> {resp['id']}`"),
+    lambda resp: console.print(f"org [bold]{resp['id']}[/bold] created, add members with `airllm orgs members add <user>` in its scope"),
     client=instance_client,
 )
 

@@ -345,6 +345,21 @@ class OrgCreate(BaseModel):
     name: Annotated[str, Field(description="Org name, e.g. My Org", title="Name")]
 
 
+class OrgMemberOut(BaseModel):
+    """
+    A member of the acting org: who they are and that they belong.
+
+    Deliberately not UserOut: that carries the user's every membership, which would let one org's
+    credential read the shape of the orgs it has no scope over.
+    """
+
+    user_id: Annotated[UUID, Field(title="User Id")]
+    email: Annotated[str, Field(title="Email")]
+    name: Annotated[str, Field(title="Name")]
+    service_account: Annotated[bool, Field(title="Service Account")]
+    status: Annotated[Literal["member"], Field(title="Status")]
+
+
 class OrgOut(BaseModel):
     id: Annotated[UUID, Field(title="Id")]
     name: Annotated[str, Field(title="Name")]
@@ -722,6 +737,10 @@ class EnvelopeListInstanceKeyOut(BaseModel):
 
 class EnvelopeListManagementKeyOut(BaseModel):
     data: Annotated[list[ManagementKeyOut], Field(title="Data")]
+
+
+class EnvelopeListOrgMemberOut(BaseModel):
+    data: Annotated[list[OrgMemberOut], Field(title="Data")]
 
 
 class EnvelopeListOrgOut(BaseModel):
