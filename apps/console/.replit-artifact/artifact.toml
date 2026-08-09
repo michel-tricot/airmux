@@ -17,7 +17,7 @@ run = "bun run --filter @workspace/gateway-console dev"
 [services.production]
 build = [ "bun", "run", "--filter", "@workspace/gateway-console", "build" ]
 serve = "static"
-publicDir = "artifacts/gateway-console/dist/public"
+publicDir = "apps/console/dist/public"
 
 [[services.production.rewrites]]
 from = "/*"

@@ -4,7 +4,7 @@
   "license": "MIT",
   "workspaces": {
     "packages": [
-      "artifacts/*",
+      "apps/console",
       "lib/*",
       "lib/integrations/*"
     ],
@@ -36,7 +36,7 @@
     "preinstall": "sh -c 'rm -f package-lock.json yarn.lock pnpm-lock.yaml; case \"$npm_config_user_agent\" in bun/*) ;; *) echo \"Use bun instead\" >&2; exit 1 ;; esac'",
     "build": "bun run typecheck && bun run --filter '@workspace/gateway-console' build",
     "typecheck:libs": "tsc --build",
-    "typecheck": "bun run typecheck:libs && bun run --filter './artifacts/**' typecheck"
+    "typecheck": "bun run typecheck:libs && bun run --filter '@workspace/gateway-console' typecheck"
   },
   "private": true,
   "overrides": {

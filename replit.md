@@ -54,8 +54,7 @@ apps/
   webapp/        # older React/Vite console (port 3000)
 packages/
   contract/      # shared bundle/event schemas, signing, tokens
-artifacts/       # Bun workspace apps (Replit only manages the webapp)
-  gateway-console/  # React/Vite admin console ("Precision Control Room")
+apps/console/    # React/Vite admin console ("Precision Control Room") — the only Replit-managed app
 lib/             # Bun workspace libs
   api-spec/         # openapi.yaml — API contract (codegen via orval)
   api-zod/          # generated zod schemas
@@ -70,7 +69,7 @@ scripts/         # shell helpers + Bun workspace scripts package
 
 Tenancy model: organizations → (members, management keys, workspaces); workspaces → (workspace members, inference keys); users are top-level and can belong to multiple orgs.
 
-Replit only manages the webapp (`artifacts/gateway-console`). The backend/API/proxy (control plane, data plane) are the Python apps under `apps/`, managed externally with uv — do not scaffold or run backends from Replit. To wire the console to the real backend, replace `lib/api-spec/openapi.yaml` with the control plane's OpenAPI spec and re-run codegen.
+Replit only manages the webapp (`apps/console`, workspace package `@workspace/gateway-console`). The backend/API/proxy (control plane, data plane) are the Python apps under `apps/`, managed externally with uv — do not scaffold or run backends from Replit. To wire the console to the real backend, replace `lib/api-spec/openapi.yaml` with the control plane's OpenAPI spec and re-run codegen.
 
 ```bash
 bun install

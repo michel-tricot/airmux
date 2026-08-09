@@ -12,7 +12,7 @@
         "typescript": "~5.9.3",
       },
     },
-    "artifacts/gateway-console": {
+    "apps/console": {
       "name": "@workspace/gateway-console",
       "version": "0.0.0",
       "devDependencies": {
@@ -557,7 +557,7 @@
 
     "@workspace/api-zod": ["@workspace/api-zod@workspace:lib/api-zod"],
 
-    "@workspace/gateway-console": ["@workspace/gateway-console@workspace:artifacts/gateway-console"],
+    "@workspace/gateway-console": ["@workspace/gateway-console@workspace:apps/console"],
 
     "acorn": ["acorn@8.18.0", "http://package-firewall.replit.local/npm/acorn/-/acorn-8.18.0.tgz", { "bin": { "acorn": "bin/acorn" } }, "sha512-lGq+9yr1/GuAWaVYIHRjvvySG5/4VfKIvC8EWxStPdcDh/Ka7FG3twP6v4d5BkravUilhIAsG4Qj83t02LWUPQ=="],
 
