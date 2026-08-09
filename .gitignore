@@ -13,3 +13,15 @@ dist/
 .secrets
 notes/model-metadata/
 
+
+# Node / pnpm workspace
+node_modules
+dist
+tmp
+out-tsc
+*.tsbuildinfo
+.DS_Store
+npm-debug.log
+yarn-error.log
+.cache/
+.local/
