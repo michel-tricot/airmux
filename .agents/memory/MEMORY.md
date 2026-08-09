@@ -1,0 +1,1 @@
+- [Orval zod v4 import](orval-zod-v4.md) — codegen script rewrites generated zod import to 'zod/v4' after orval; keep that step when touching codegen.
