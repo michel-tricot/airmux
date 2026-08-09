@@ -38,6 +38,11 @@ reset_database() {
 
 require_database_vars
 
+# airllm.yml reads DATABASE_URL and falls back to the local compose database, which would be the
+# wrong server here. Compose it from the variables checked above rather than trusting the host to
+# export it too; the asyncpg driver is named on load.
+export DATABASE_URL="postgresql://${PGUSER}:${PGPASSWORD}@${PGHOST}:${PGPORT}/${PGDATABASE}"
+
 if [[ ! -f .airllm/signing.key || ! -f .airllm/signing.pub ]]; then
   uv run airllmcp keygen
 fi
@@ -51,10 +56,9 @@ uv run airllmcp taxonomy
 
 # Fixtures are intentionally fresh-database-only. Keep the workflow restartable
 # after the first successful seed without hiding real fixture errors.
-database_url="postgresql://${PGUSER}:${PGPASSWORD}@${PGHOST}:${PGPORT}/${PGDATABASE}"
-if [[ "$(PGPASSWORD="$PGPASSWORD" psql "$database_url" -tAc \
+if [[ "$(PGPASSWORD="$PGPASSWORD" psql "$DATABASE_URL" -tAc \
   "SELECT to_regclass('public.user') IS NOT NULL;" | tr -d '[:space:]')" == "t" ]] &&
-  [[ "$(PGPASSWORD="$PGPASSWORD" psql "$database_url" -tAc \
+  [[ "$(PGPASSWORD="$PGPASSWORD" psql "$DATABASE_URL" -tAc \
   "SELECT EXISTS (SELECT 1 FROM public.\"user\" LIMIT 1);" | tr -d '[:space:]')" == "t" ]]; then
   printf '%s\n' 'fixtures already loaded; skipping fresh-database seed.'
 else
