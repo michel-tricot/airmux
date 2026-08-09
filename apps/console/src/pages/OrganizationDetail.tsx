@@ -78,7 +78,7 @@ export default function OrganizationDetail() {
   });
   const deleteOrg = useDeleteOrg({
     mutation: {
-      onSuccess: () => { queryClient.invalidateQueries({ queryKey: getListOrgsQueryKey() }); setLocation('/organizations'); },
+      onSuccess: () => { queryClient.invalidateQueries({ queryKey: getListOrgsQueryKey() }); setLocation('/instance/organizations'); },
       onError: (error) => setDeleteError(error.message),
     },
   });
@@ -89,7 +89,7 @@ export default function OrganizationDetail() {
   return (
     <div className="flex-1 p-8 max-w-6xl mx-auto w-full space-y-6 animate-in fade-in duration-300">
       <div className="flex items-center gap-4 text-sm text-muted-foreground mb-4">
-        <Link href="/organizations" className="hover:text-foreground flex items-center gap-1"><ArrowLeft className="w-4 h-4" /> Back to Organizations</Link>
+        <Link href="/instance/organizations" className="hover:text-foreground flex items-center gap-1"><ArrowLeft className="w-4 h-4" /> Back to Organizations</Link>
       </div>
 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -139,7 +139,7 @@ export default function OrganizationDetail() {
                   {workspaces.map(ws => (
                     <TableRow key={ws.id}>
                       <TableCell className="font-medium">
-                        <Link href={`/organizations/${org.id}/workspaces/${ws.id}`} className="hover:text-primary transition-colors">{ws.name}</Link>
+                        <Link href={`/instance/organizations/${org.id}/workspaces/${ws.id}`} className="hover:text-primary transition-colors">{ws.name}</Link>
                       </TableCell>
                       <TableCell className="font-mono text-xs text-muted-foreground">{ws.id}</TableCell>
                       <TableCell className="text-right text-muted-foreground text-sm">{formatDate(ws.created_at)}</TableCell>
@@ -217,7 +217,7 @@ export default function OrganizationDetail() {
                   {members.map(member => (
                     <TableRow key={member.user_id}>
                       <TableCell className="font-medium">
-                        <Link href={`/users/${member.user_id}`} className="hover:text-primary">{member.name}</Link>
+                        <Link href={`/instance/users/${member.user_id}`} className="hover:text-primary">{member.name}</Link>
                       </TableCell>
                       <TableCell className="text-muted-foreground">{member.email}</TableCell>
                       <TableCell className="text-right">

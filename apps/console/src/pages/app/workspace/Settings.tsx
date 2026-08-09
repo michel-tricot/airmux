@@ -42,7 +42,7 @@ export default function WorkspaceSettings() {
   });
   const remove = useDeleteWorkspace({
     mutation: {
-      onSuccess: () => { queryClient.invalidateQueries({ queryKey: workspacesKey }); setLocation('/app'); },
+      onSuccess: () => { queryClient.invalidateQueries({ queryKey: workspacesKey }); setLocation('/org'); },
       onError: (error) => setDeleteError(error.message),
     },
     request: scope,

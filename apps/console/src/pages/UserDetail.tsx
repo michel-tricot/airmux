@@ -47,7 +47,7 @@ export default function UserDetail() {
 
   const deleteUser = useDeleteUser({
     mutation: {
-      onSuccess: () => { queryClient.invalidateQueries({ queryKey: getListUsersQueryKey() }); setLocation('/users'); },
+      onSuccess: () => { queryClient.invalidateQueries({ queryKey: getListUsersQueryKey() }); setLocation('/instance/users'); },
       onError: (error) => setDeleteError(error.message),
     },
   });
@@ -61,7 +61,7 @@ export default function UserDetail() {
   return (
     <div className="flex-1 p-8 max-w-6xl mx-auto w-full space-y-6 animate-in fade-in duration-300">
       <div className="flex items-center gap-4 text-sm text-muted-foreground mb-4">
-        <Link href="/users" className="hover:text-foreground flex items-center gap-1"><ArrowLeft className="w-4 h-4" /> Back to Users</Link>
+        <Link href="/instance/users" className="hover:text-foreground flex items-center gap-1"><ArrowLeft className="w-4 h-4" /> Back to Users</Link>
       </div>
 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -109,7 +109,7 @@ export default function UserDetail() {
                 {memberships.map(org => (
                   <TableRow key={org.id}>
                     <TableCell className="font-medium">
-                      <Link href={`/organizations/${org.id}`} className="hover:text-primary">{org.name}</Link>
+                      <Link href={`/instance/organizations/${org.id}`} className="hover:text-primary">{org.name}</Link>
                     </TableCell>
                     <TableCell className="font-mono text-xs text-muted-foreground">{org.id}</TableCell>
                     <TableCell className="text-muted-foreground text-sm">{formatDate(org.created_at)}</TableCell>

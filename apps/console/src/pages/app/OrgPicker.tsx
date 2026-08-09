@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useLocation } from 'wouter';
 import { useQueryClient } from '@tanstack/react-query';
 import { useEnrollment, useCreatePersonalOrg, getEnrollmentQueryKey } from '@workspace/api-client-react';
 import { useSession } from '@/lib/session';
@@ -7,7 +8,12 @@ import { Building2 } from 'lucide-react';
 
 export default function AppOrgPicker() {
   const { setOrgId, logout } = useSession();
+  const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
+  const pickOrg = (id: string) => {
+    setOrgId(id);
+    setLocation('/org');
+  };
   const { data: enrollment, isLoading } = useEnrollment();
   const [name, setName] = useState('');
 
@@ -15,14 +21,17 @@ export default function AppOrgPicker() {
   const single = orgs?.length === 1 ? orgs[0].id : null;
 
   useEffect(() => {
-    if (single) setOrgId(single);
-  }, [single, setOrgId]);
+    if (single) {
+      setOrgId(single);
+      setLocation('/org', { replace: true });
+    }
+  }, [single, setOrgId, setLocation]);
 
   const createPersonalOrg = useCreatePersonalOrg({
     mutation: {
       onSuccess: (org) => {
         queryClient.invalidateQueries({ queryKey: getEnrollmentQueryKey() });
-        setOrgId(org.id);
+        pickOrg(org.id);
       },
     },
   });
@@ -47,7 +56,7 @@ export default function AppOrgPicker() {
               key={org.id}
               variant="outline"
               className="w-full justify-start h-16 text-left hover:border-primary hover:bg-primary/5 group"
-              onClick={() => setOrgId(org.id)}
+              onClick={() => pickOrg(org.id)}
             >
               <div className="w-8 h-8 rounded bg-primary/10 flex items-center justify-center mr-4 group-hover:bg-primary/20 transition-colors">
                 <Building2 className="w-4 h-4 text-primary" />

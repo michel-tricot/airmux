@@ -66,7 +66,7 @@ export default function Organizations() {
               {filteredOrgs.map((org) => (
                 <TableRow key={org.id} className="group">
                   <TableCell className="font-medium">
-                    <Link href={`/organizations/${org.id}`} className="flex items-center gap-2 hover:text-primary transition-colors">
+                    <Link href={`/instance/organizations/${org.id}`} className="flex items-center gap-2 hover:text-primary transition-colors">
                       <Building2 className="w-4 h-4 text-muted-foreground group-hover:text-primary" />
                       {org.name}
                     </Link>

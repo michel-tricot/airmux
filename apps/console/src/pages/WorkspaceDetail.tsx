@@ -8,7 +8,7 @@ export default function WorkspaceDetail() {
     <WorkspacePanel
       orgId={orgId!}
       workspaceId={workspaceId!}
-      backHref={`/organizations/${orgId}`}
+      backHref={`/instance/organizations/${orgId}`}
       backLabel="Organization"
     />
   );

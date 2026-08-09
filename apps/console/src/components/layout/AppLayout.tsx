@@ -33,14 +33,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [createOpen, setCreateOpen] = useState(false);
   const [wsName, setWsName] = useState('');
 
-  // /app/workspaces/<id>[/section] — the id selects the workspace, the tail names the section.
-  const match = location.match(/^\/app\/workspaces\/([^/]+)(\/[^/]+)?/);
+  // /org/workspaces/<id>[/section] — the id selects the workspace, the tail names the section.
+  const match = location.match(/^\/org\/workspaces\/([^/]+)(\/[^/]+)?/);
   const activeWorkspaceId = match?.[1] ?? '';
   const activeSuffix = match?.[2] ?? '';
 
   const switchWorkspace = (id: string) => {
     // Keep the section when hopping between workspaces so the context survives the switch.
-    setLocation(`/app/workspaces/${id}${activeSuffix}`);
+    setLocation(`/org/workspaces/${id}${activeSuffix}`);
   };
 
   // Remember the last-selected workspace per org so returning users land where they left off.
@@ -49,16 +49,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     if (activeWorkspaceId) localStorage.setItem(lastWsKey, activeWorkspaceId);
   }, [activeWorkspaceId, lastWsKey]);
 
-  // On first entry at /app, jump to the last-selected (or first) workspace by default.
+  // On first entry at /org, jump to the last-selected (or first) workspace by default.
   // Only once per layout mount, so the "Organization → Overview" nav link stays reachable.
   const autoPicked = useRef(false);
   useEffect(() => {
     if (autoPicked.current || !workspaces) return;
     autoPicked.current = true;
-    if (location !== '/app' || workspaces.length === 0) return;
+    if (location !== '/org' || workspaces.length === 0) return;
     const last = localStorage.getItem(lastWsKey);
     const target = workspaces.find(ws => ws.id === last) ?? workspaces[0];
-    setLocation(`/app/workspaces/${target.id}`, { replace: true });
+    setLocation(`/org/workspaces/${target.id}`, { replace: true });
   }, [workspaces, location, lastWsKey, setLocation]);
 
   const createWorkspace = useCreateWorkspace({
@@ -67,7 +67,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         queryClient.invalidateQueries({ queryKey: workspacesKey });
         setCreateOpen(false);
         setWsName('');
-        setLocation(`/app/workspaces/${created.id}`);
+        setLocation(`/org/workspaces/${created.id}`);
       },
     },
     request: orgScope(orgId!),
@@ -78,7 +78,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       {/* Sidebar */}
       <aside className="w-64 flex-col bg-card text-card-foreground flex border-r border-border shadow-sm shrink-0">
         <div className="h-14 flex items-center justify-between gap-2 px-4 border-b border-border/50 shrink-0">
-          <Link href="/app" className="flex min-w-0 items-center gap-2 font-mono font-bold tracking-tight text-foreground hover:text-primary transition-colors">
+          <Link href="/org" className="flex min-w-0 items-center gap-2 font-mono font-bold tracking-tight text-foreground hover:text-primary transition-colors">
             <div className="w-6 h-6 rounded bg-primary flex items-center justify-center shadow-[0_0_8px_rgba(255,255,255,0.1)] shrink-0">
               <TerminalSquare className="w-4 h-4 text-primary-foreground" />
             </div>
@@ -91,7 +91,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             aria-label="Switch organization"
             onClick={() => {
               setOrgId(null);
-              setLocation('/app');
+              setLocation('/orgs');
             }}
             className="h-8 w-8 shrink-0 text-muted-foreground hover:text-foreground"
           >
@@ -114,7 +114,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
           {activeWorkspaceId ? (
             SECTIONS.map(({ label, suffix, icon: Icon, soon }) => {
-              const href = `/app/workspaces/${activeWorkspaceId}${suffix}`;
+              const href = `/org/workspaces/${activeWorkspaceId}${suffix}`;
               const isActive = location === href;
               return (
                 <Link key={suffix} href={href} className={cn(
@@ -141,18 +141,18 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
           <div className="mt-8">
             <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-3 mt-6">Organization</div>
-            <Link href="/app" className={cn(
+            <Link href="/org" className={cn(
               "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-all duration-200",
-              location === '/app'
+              location === '/org'
                 ? "bg-primary/10 text-primary"
                 : "text-muted-foreground hover:bg-muted hover:text-foreground"
             )}>
               <Building2 className="w-4 h-4 shrink-0" />
               Overview
             </Link>
-            <Link href="/app/settings" className={cn(
+            <Link href="/org/settings" className={cn(
               "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-all duration-200",
-              location === '/app/settings'
+              location === '/org/settings'
                 ? "bg-primary/10 text-primary"
                 : "text-muted-foreground hover:bg-muted hover:text-foreground"
             )}>
@@ -178,7 +178,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               Sign out
             </Button>
             {user?.instance_admin && (
-              <Link href="/">
+              <Link href="/instance">
                 <Button variant="ghost" size="icon" title="Instance Admin" className="text-muted-foreground hover:text-primary h-8 w-8 shrink-0">
                   <Shield className="w-4 h-4" />
                 </Button>

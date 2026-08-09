@@ -9,9 +9,9 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const { user, logout } = useSession();
 
   const navItems = [
-    { href: '/', label: 'Overview', icon: LayoutDashboard },
-    { href: '/organizations', label: 'Organizations', icon: Building2 },
-    { href: '/users', label: 'Users', icon: Users },
+    { href: '/instance', label: 'Overview', icon: LayoutDashboard },
+    { href: '/instance/organizations', label: 'Organizations', icon: Building2 },
+    { href: '/instance/users', label: 'Users', icon: Users },
   ];
 
   return (
@@ -28,7 +28,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
         <div className="flex-1 py-6 px-4 space-y-1">
           <div className="text-xs font-semibold text-sidebar-foreground/50 uppercase tracking-wider mb-4 px-2">Control Plane</div>
           {navItems.map((item) => {
-            const isActive = location === item.href || (item.href !== '/' && location.startsWith(item.href));
+            const isActive = location === item.href || (item.href !== '/instance' && location.startsWith(item.href));
             return (
               <Link key={item.href} href={item.href} className={cn(
                 "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-all duration-200",
@@ -52,7 +52,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
               <span className="text-xs text-sidebar-foreground/50">Instance admin</span>
             </div>
           </div>
-          <Link href="/app" className="flex flex-1 items-center gap-2 px-2 py-2 mb-2 rounded-md text-sm font-medium text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-all duration-200">
+          <Link href="/org" className="flex flex-1 items-center gap-2 px-2 py-2 mb-2 rounded-md text-sm font-medium text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-all duration-200">
             <Users className="w-4 h-4" />
             User console
           </Link>

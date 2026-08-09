@@ -43,6 +43,15 @@ function withTwoOrgs() {
       }
       return new HttpResponse(null, { status: 403 });
     }),
+    // /org now defaults into a workspace, so its detail endpoint must resolve too.
+    http.get('/v1/org/workspaces/:workspaceId', ({ params }) => {
+      const rows = {
+        'ws-acme': { id: 'ws-acme', org_id: ORG.id, name: 'Acme Production', created_at: now, updated_at: now, deleted_at: null },
+        'ws-beta': { id: 'ws-beta', org_id: ORG2.id, name: 'Beta Staging', created_at: now, updated_at: now, deleted_at: null },
+      } as const;
+      const ws = rows[params.workspaceId as keyof typeof rows];
+      return ws ? HttpResponse.json(ws) : new HttpResponse(null, { status: 404 });
+    }),
   );
 }
 
@@ -52,9 +61,19 @@ describe('sign-in gate', () => {
       http.get('/v1/auth/me', () => new HttpResponse(null, { status: 401 })),
       http.get('/v1/instance/oss/claim', () => HttpResponse.json({ claimed: true })),
     );
-    renderAt('/app');
+    renderAt('/org');
     expect(await screen.findByRole('heading', { name: 'Sign in to Gateway' })).toBeInTheDocument();
     expect(screen.queryByText('Organization Overview')).not.toBeInTheDocument();
+  });
+});
+
+describe('instance admin gate', () => {
+  it('redirects non-admin users from /instance to the org console', async () => {
+    localStorage.setItem('airllm_org_id', ORG.id);
+    renderAt('/instance');
+    // Default handlers: instance_admin is false, so the org console renders instead.
+    expect(await screen.findByRole('heading', { level: 1, name: 'Production' })).toBeInTheDocument();
+    expect(window.location.pathname).not.toBe('/instance');
   });
 });
 
@@ -62,26 +81,27 @@ describe('organization picker', () => {
   it('falls back to the picker when the stored org is no longer a membership', async () => {
     withTwoOrgs();
     localStorage.setItem('airllm_org_id', 'org-gone');
-    renderAt('/app');
+    renderAt('/org');
     expect(await screen.findByRole('heading', { name: 'Select Organization' })).toBeInTheDocument();
     expect(screen.getByText(ORG.name)).toBeInTheDocument();
     expect(screen.getByText(ORG2.name)).toBeInTheDocument();
   });
 
-  it('lands on the org dashboard after picking an org', async () => {
+  it('lands in the org after picking one, defaulting to its first workspace', async () => {
     withTwoOrgs();
     const user = userEvent.setup();
-    renderAt('/app');
+    renderAt('/org');
     await user.click(await screen.findByRole('button', { name: new RegExp(ORG.name) }));
-    expect(await screen.findByRole('heading', { level: 1, name: 'Organization Overview' })).toBeInTheDocument();
-    expect(await screen.findByText('Acme Production')).toBeInTheDocument();
+    // /org auto-picks a default workspace, so the workspace overview renders.
+    expect(await screen.findByRole('heading', { level: 1, name: 'Acme Production' })).toBeInTheDocument();
     expect(localStorage.getItem('airllm_org_id')).toBe(ORG.id);
   });
 
   it('auto-selects the org when the user belongs to exactly one', async () => {
     // Default handlers: single ORG membership, no stored selection.
-    renderAt('/app');
-    expect(await screen.findByRole('heading', { level: 1, name: 'Organization Overview' })).toBeInTheDocument();
+    renderAt('/org');
+    // The single org is auto-picked, then /org defaults to its first workspace.
+    expect(await screen.findByRole('heading', { level: 1, name: 'Production' })).toBeInTheDocument();
     expect(localStorage.getItem('airllm_org_id')).toBe(ORG.id);
   });
 });
@@ -91,20 +111,19 @@ describe('switching organizations', () => {
     withTwoOrgs();
     localStorage.setItem('airllm_org_id', ORG.id);
     const user = userEvent.setup();
-    renderAt('/app');
+    renderAt('/org');
 
-    // Signed in to org-1: its workspaces are on screen (and in the query cache).
-    expect(await screen.findByText('Acme Production')).toBeInTheDocument();
+    // Signed in to org-1: its workspace is on screen (and in the query cache).
+    expect(await screen.findByRole('heading', { level: 1, name: 'Acme Production' })).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Switch organization' }));
     expect(await screen.findByRole('heading', { name: 'Select Organization' })).toBeInTheDocument();
     expect(localStorage.getItem('airllm_org_id')).toBeNull();
 
     await user.click(screen.getByRole('button', { name: new RegExp(ORG2.name) }));
-    expect(await screen.findByRole('heading', { level: 1, name: 'Organization Overview' })).toBeInTheDocument();
 
-    // The dashboard shows org-2's data and none of org-1's stale rows.
-    expect(await screen.findByText('Beta Staging')).toBeInTheDocument();
+    // Org-2's default workspace renders and none of org-1's stale rows remain.
+    expect(await screen.findByRole('heading', { level: 1, name: 'Beta Staging' })).toBeInTheDocument();
     await waitFor(() => {
       expect(screen.queryByText('Acme Production')).not.toBeInTheDocument();
     });
