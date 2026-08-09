@@ -44,6 +44,21 @@ def _step(done: str) -> None:
     console.print(f"  [green]✓[/green] {done}")
 
 
+DEV_CONTROL_PLANE_URL = "http://127.0.0.1:8000"
+DEV_CONSOLE_URL = "http://localhost:5000"
+DEFAULT_CONSOLE_URL = "http://localhost:3000"
+
+
+def resolve_urls(control_plane_url: str, console_url: str, *, dev: bool) -> tuple[str, str]:
+    """The control plane and console this run talks to.
+
+    An explicit flag always wins. --dev then names the local pair, ahead of the environment,
+    the active profile and airllm.yml, so a stale profile cannot redirect a development run.
+    """
+    resolved = resolve_control_plane_url(control_plane_url or (DEV_CONTROL_PLANE_URL if dev else ""))
+    return resolved, console_url or (DEV_CONSOLE_URL if dev else DEFAULT_CONSOLE_URL)
+
+
 @app.command(rich_help_panel=SETUP)
 def quickstart(  # noqa: PLR0913, PLR0917 flags are the command's interface
     control_plane_url: str = "",
@@ -51,12 +66,13 @@ def quickstart(  # noqa: PLR0913, PLR0917 flags are the command's interface
     password: str = typer.Option(..., prompt="Password", hide_input=True, confirmation_prompt=True, help="At least 8 characters"),
     org: str = typer.Option("", help="Org name to create; defaults to the email local part"),
     gateway_url: str = typer.Option("http://localhost:8080", help="Where the data plane serves, for the printed example"),
-    console_url: str = typer.Option("http://localhost:3000", help="Where the console is served, printed at the end"),
+    console_url: str = typer.Option("", help="Where the console is served, printed at the end; defaults to http://localhost:3000"),
+    dev: bool = typer.Option(False, "--dev", help="Target a local development stack: control plane on 127.0.0.1:8000, console on localhost:5000"),
 ) -> None:
     """Bootstrap a fresh instance end to end: account, org, keys, data plane, and a ready-to-use inference key."""
     import httpx  # noqa: PLC0415 lazy import keeps CLI startup fast
 
-    url = resolve_control_plane_url(control_plane_url)
+    url, console_url = resolve_urls(control_plane_url, console_url, dev=dev)
     console.print("[bold]airllm quickstart[/bold]")
     with httpx.Client(base_url=url, timeout=10.0, headers=CSRF) as c:
         if _payload_or_die(c.get("/v1/instance/oss/claim"), "claim check")["claimed"]:
