@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useSession } from '@/lib/session';
 import { orgScope } from '@/lib/api';
 import { useQueryClient } from '@tanstack/react-query';
@@ -42,6 +42,24 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     // Keep the section when hopping between workspaces so the context survives the switch.
     setLocation(`/app/workspaces/${id}${activeSuffix}`);
   };
+
+  // Remember the last-selected workspace per org so returning users land where they left off.
+  const lastWsKey = `airllm_last_ws_${orgId}`;
+  useEffect(() => {
+    if (activeWorkspaceId) localStorage.setItem(lastWsKey, activeWorkspaceId);
+  }, [activeWorkspaceId, lastWsKey]);
+
+  // On first entry at /app, jump to the last-selected (or first) workspace by default.
+  // Only once per layout mount, so the "Organization → Overview" nav link stays reachable.
+  const autoPicked = useRef(false);
+  useEffect(() => {
+    if (autoPicked.current || !workspaces) return;
+    autoPicked.current = true;
+    if (location !== '/app' || workspaces.length === 0) return;
+    const last = localStorage.getItem(lastWsKey);
+    const target = workspaces.find(ws => ws.id === last) ?? workspaces[0];
+    setLocation(`/app/workspaces/${target.id}`, { replace: true });
+  }, [workspaces, location, lastWsKey, setLocation]);
 
   const createWorkspace = useCreateWorkspace({
     mutation: {
