@@ -81,10 +81,6 @@ bun install                                      # once, at the repo root
 bun run --filter '@workspace/gateway-console' dev   # http://localhost:5000
 ```
 
-`apps/webapp` is the previous console, kept only until anything still pointing at
-it is moved over. Nothing builds or serves it: compose serves `apps/console`, and
-the docs describe that one.
-
 `PORT` and `BASE_PATH` override the port and the base path. `bun run build`
 typechecks the whole workspace and emits `apps/console/dist/public`, which
 `bun run --filter '@workspace/gateway-console' serve` previews.
@@ -204,7 +200,6 @@ Repo layout: `lib/contract` is the only code both planes share (bundle and
 event schemas, signing, tokens). `apps/control-plane`, `apps/data-plane`,
 `apps/cli`, `lib/contract` and `lib/api-models` are uv workspace members.
 `apps/console` and the other `lib/*` packages are the bun workspace holding the
-console and its generated clients; `apps/webapp` is the deprecated previous
-console and is not built by anything.
+console and its generated clients.
 The full design spec lives in `notes/PROTOTYPE.md`, and the working rules in
 `CLAUDE.md`.

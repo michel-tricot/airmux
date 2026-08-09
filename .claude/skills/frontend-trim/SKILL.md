@@ -1,6 +1,6 @@
 ---
 name: frontend-trim
-description: Behavior-preserving simplification of frontend React/TypeScript code already in your diff. Use when removing useMemo/useCallback, collapsing conditional spreads, passing optional fields as undefined, deleting unused-looking props, or reconstructing objects — and for any cleanup or simplify pass over touched webapp files. Encodes which frontend redundancies are load-bearing so a trim does not silently change behavior.
+description: Behavior-preserving simplification of frontend React/TypeScript code already in your diff. Use when removing useMemo/useCallback, collapsing conditional spreads, passing optional fields as undefined, deleting unused-looking props, or reconstructing objects — and for any cleanup or simplify pass over touched console files. Encodes which frontend redundancies are load-bearing so a trim does not silently change behavior.
 user-invocable: true
 ---
 
@@ -21,8 +21,8 @@ even when they render identically. Before collapsing them, check how the value i
 
 - Request bodies: a present key can mean "set this field", an absent one "leave it unchanged".
   `JSON.stringify` drops `undefined`, which may be exactly the behavior the spread was protecting
-- Query strings: the `api.ts` helpers build URLs by hand; an empty param and an absent param can hit
-  different control plane filters (`org_id=` vs no filter)
+- Query strings: the generated hooks serialize params for you; an empty param and an absent param can
+  hit different control plane filters (`org_id=` vs no filter)
 - Empty array vs absent: `allowed_models: []` and omitting the field are different requests
 
 Pass an optional field as `undefined` only when the consumer provably strips nullish values.
@@ -51,13 +51,13 @@ Confirm which case you are in before touching either.
 - Prefer handing a callback the original object over reconstructing a field subset like
   `{ id: item.id }`; reconstruction silently narrows the shape, and the day the callback needs
   another field it gets `undefined` with no error. Reconstruct only when narrowing is the intent
-- The interfaces in `src/api.ts` mirror control plane response shapes. Do not trim fields from them
-  because no component reads them yet; the interface documents the wire contract
+- The types in `@workspace/api-client-react` are generated from the OpenAPI spec. Never edit them, and
+  never narrow a local type to the subset a component reads today; the generated shape is the wire contract
 
 ## Defaults: confirm whose default it is
 
 A value is redundant only when it equals the default its direct consumer applies, and that is not
-always the library's default. `main.tsx` sets `retry: 1` and `refetchOnWindowFocus: false` app-wide,
+always the library's default. `App.tsx` sets `retry: 1` and `refetchOnWindowFocus: false` app-wide,
 so a per-query `retry: 1` is redundant, but a per-query `retry: 3` or `refetchOnWindowFocus: true`
 is an override and load-bearing. Anything computed is always load-bearing: `enabled: foo ?? true`
 is a guard, not a restatement, because `foo === false` disables the query. Do not add restatements

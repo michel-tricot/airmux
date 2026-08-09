@@ -54,7 +54,6 @@ apps/
   cli/           # airllm / airllmcp CLI
   control-plane/ # FastAPI admin + compile API
   data-plane/    # Starlette inference gateway
-  webapp/        # deprecated previous console; nothing builds it
 packages/
   contract/      # shared bundle/event schemas, signing, tokens
 apps/console/    # React/Vite admin console ("Precision Control Room") — the only Replit-managed app

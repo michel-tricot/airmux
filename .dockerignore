@@ -3,7 +3,6 @@
 !uv.lock
 !lib
 !apps
-apps/webapp
 !package.json
 !bun.lock
 !bunfig.toml
