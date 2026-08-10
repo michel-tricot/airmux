@@ -17,7 +17,7 @@ from control_plane.models.workspace_membership import WorkspaceMembershipOut
 router = APIRouter(prefix="/org/workspaces")
 
 
-@router.post("", tags=["Workspaces"], dependencies=[require(Scope.workspaces_write)])
+@router.post("", tags=["Workspaces"], dependencies=[require(Scope.workspaces_create)])
 async def create_workspace(body: WorkspaceCreate, org_id: OrgDep, claims: MgmtDep) -> Envelope[WorkspaceOut]:
     """The creator becomes the first member when they hold an org membership; an instance admin
     acting on an org they never joined creates it member-less and relies on their bypass.
@@ -46,7 +46,7 @@ async def get_workspace(workspace_ref: str, org_id: OrgDep) -> Envelope[Workspac
     return Envelope(data=WorkspaceOut.model_validate(await Workspace.by_ref(org_id, workspace_ref)))
 
 
-@router.delete("/{workspace_ref}", tags=["Workspaces"], dependencies=[require(Scope.workspaces_write)])
+@router.delete("/{workspace_ref}", tags=["Workspaces"], dependencies=[require(Scope.workspaces_delete)])
 async def delete_workspace(workspace_ref: str, org_id: OrgDep) -> Envelope[DeletedOut[UUID]]:
     """Delete a workspace with its inference keys and its members; the usage it recorded stays, as it does for an org."""
     workspace = await Workspace.by_ref(org_id, workspace_ref)

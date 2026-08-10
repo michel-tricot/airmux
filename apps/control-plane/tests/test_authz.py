@@ -125,6 +125,47 @@ def test_unscoped_token_keeps_full_authority(tmp_path):
         assert client.get(f"/v1/org/workspaces/{ws}/inference-keys", headers=org).status_code == 200
 
 
+def test_the_org_lifecycle_verbs_are_three_separate_scopes(tmp_path):
+    """orgs:create founds an org, orgs:write governs one that exists, orgs:delete destroys it with
+    everything inside. A credential trusted to rename the orgs it was given is not thereby trusted
+    to provision new ones, and neither one may call delete_with_contents."""
+    cp = setup_control_plane(tmp_path)
+    with TestClient(cp.app) as client:
+        existing = _seed_org(client, cp.headers())
+        curator = cp.headers(scopes=["orgs:write"])
+        assert client.post("/v1/orgs", json={"name": "o-curator"}, headers=curator).status_code == 403
+        assert client.patch(f"/v1/orgs/{existing}", json={"name": "renamed"}, headers=curator).status_code == 200
+        assert client.delete(f"/v1/orgs/{existing}", headers=curator).status_code == 403
+        provisioner = cp.headers(scopes=["orgs:create"])
+        founded = client.post("/v1/orgs", json={"name": "o-provisioner"}, headers=provisioner)
+        assert founded.status_code == 200
+        assert client.patch(f"/v1/orgs/{existing}", json={"name": "nope"}, headers=provisioner).status_code == 403
+        assert client.delete(f"/v1/orgs/{existing}", headers=provisioner).status_code == 403
+        remover = cp.headers(scopes=["orgs:delete"])
+        assert client.post("/v1/orgs", json={"name": "o-remover"}, headers=remover).status_code == 403
+        assert client.patch(f"/v1/orgs/{existing}", json={"name": "nope"}, headers=remover).status_code == 403
+        assert client.delete(f"/v1/orgs/{founded.json()['data']['id']}", headers=remover).status_code == 200
+
+
+def test_the_workspace_lifecycle_verbs_are_three_separate_scopes(tmp_path):
+    cp = setup_control_plane(tmp_path)
+    with TestClient(cp.app) as client:
+        o1 = _seed_org(client, cp.headers())
+        ws = make_workspace(client, cp.headers(org_id=o1))
+        curator = cp.headers(org_id=o1, scopes=["workspaces:write"])
+        assert client.post("/v1/org/workspaces", json={"name": "ws-curator"}, headers=curator).status_code == 403
+        assert client.patch(f"/v1/org/workspaces/{ws}", json={"name": "renamed"}, headers=curator).status_code == 200
+        assert client.delete(f"/v1/org/workspaces/{ws}", headers=curator).status_code == 403
+        provisioner = cp.headers(org_id=o1, scopes=["workspaces:create"])
+        founded = client.post("/v1/org/workspaces", json={"name": "ws-provisioner"}, headers=provisioner)
+        assert founded.status_code == 200
+        assert client.patch(f"/v1/org/workspaces/{ws}", json={"name": "nope"}, headers=provisioner).status_code == 403
+        assert client.delete(f"/v1/org/workspaces/{ws}", headers=provisioner).status_code == 403
+        remover = cp.headers(org_id=o1, scopes=["workspaces:delete"])
+        assert client.post("/v1/org/workspaces", json={"name": "ws-remover"}, headers=remover).status_code == 403
+        assert client.delete(f"/v1/org/workspaces/{founded.json()['data']['id']}", headers=remover).status_code == 200
+
+
 def test_sync_scope_covers_the_data_plane_surface_and_nothing_else(tmp_path):
     cp = setup_control_plane(tmp_path)
     with TestClient(cp.app) as client:
@@ -164,6 +205,6 @@ def test_restricted_instance_credential(tmp_path):
         assert client.get("/v1/orgs", headers=auditor).status_code == 403
         assert client.post("/v1/users", json={"email": "x@example.com"}, headers=auditor).status_code == 403
         assert client.post("/v1/taxonomy/providers", json={}, headers=auditor).status_code == 403
-        provisioner = cp.headers(scopes=["orgs:write", "users:write"])
+        provisioner = cp.headers(scopes=["orgs:create", "users:write"])
         assert client.post("/v1/orgs", json={"name": "o2"}, headers=provisioner).status_code == 200
         assert client.get("/v1/orgs", headers=provisioner).status_code == 403

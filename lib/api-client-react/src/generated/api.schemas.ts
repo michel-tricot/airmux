@@ -281,6 +281,10 @@ export interface InferenceKeyRevokedOut {
  * A scope restricts the credential, never expands it: a token minted without scopes carries the
  * owning user's full authority, an explicit list is a restriction that also excludes scopes
  * invented later. Roles arrive later as named bundles over these same values.
+ *
+ * Orgs and workspaces split their lifecycle three ways because founding a tenant and destroying
+ * one with everything inside it are each a different privilege from governing one day to day:
+ * :create founds, :write governs, :delete destroys. Elsewhere :write still covers all three.
  */
 export type Scope = typeof Scope[keyof typeof Scope];
 
@@ -289,7 +293,9 @@ export const Scope = {
   'inference-keys:read': 'inference-keys:read',
   'inference-keys:write': 'inference-keys:write',
   'workspaces:read': 'workspaces:read',
+  'workspaces:create': 'workspaces:create',
   'workspaces:write': 'workspaces:write',
+  'workspaces:delete': 'workspaces:delete',
   'bundles:read': 'bundles:read',
   'bundles:write': 'bundles:write',
   'events:read': 'events:read',
@@ -297,7 +303,9 @@ export const Scope = {
   'taxonomy:read': 'taxonomy:read',
   'taxonomy:write': 'taxonomy:write',
   'orgs:read': 'orgs:read',
+  'orgs:create': 'orgs:create',
   'orgs:write': 'orgs:write',
+  'orgs:delete': 'orgs:delete',
   'users:read': 'users:read',
   'users:write': 'users:write',
   'activity:read': 'activity:read',
