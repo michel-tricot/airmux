@@ -2,4 +2,5 @@
 - [Replit workflow host binding](replit-workflow-host-binding.md) — monitored backend services must bind to 0.0.0.0, not loopback-only.
 - [Preview port routing pinning](preview-port-routing.md) — .replit [[ports]] pins console→80 and backend 8000 local-only; without it the backend can steal the preview on simultaneous restarts.
 - [Replit DATABASE_URL and asyncpg](database-url-asyncpg.md) — normalize managed sslmode URL parameters for asyncpg while keeping DATABASE_URL as the sole source.
+- [Managed Postgres reset](managed-postgres-reset.md) — dropdb/createdb silently no-op on managed Postgres; reset via DROP SCHEMA public CASCADE instead.
 - [zod vitest interop](zod-vitest-interop.md) — use `import * as z from 'zod'` in console; named `z` export vanishes under vitest when the generated api client loads first.
