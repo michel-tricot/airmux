@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import * as z from 'zod';
 import { useParams } from 'wouter';
-import { Plus, KeyRound, RotateCw } from 'lucide-react';
+import { Plus, KeyRound, RefreshCw, Power, Trash2 } from 'lucide-react';
 import type { ProviderCredentialOut } from '@workspace/api-client-react';
 import { useSession } from '@/lib/session';
 import {
@@ -16,6 +16,8 @@ import { Button, Card, Badge, Input, ConfirmButton } from '@/components/ui/eleme
 import { DataTable, type Column } from '@/components/shared/data-table';
 import { FormDialog } from '@/components/shared/form-dialog';
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { cn } from '@/lib/utils';
 
 const addSchema = z.object({
   provider: z.string().min(1, 'Pick a provider'),
@@ -63,10 +65,10 @@ export default function WorkspaceByok() {
       cellClassName: 'font-mono text-xs text-muted-foreground',
       cell: c => <>…{c.fingerprint}</>,
     },
-    { key: 'priority', header: 'Try order', cellClassName: 'text-muted-foreground text-sm', cell: c => c.priority },
+    { key: 'priority', header: 'Priority', cellClassName: 'text-muted-foreground text-sm', cell: c => c.priority },
     {
       key: 'health',
-      header: 'Health',
+      header: 'Status',
       cell: c => {
         const { label, variant } = health(c);
         return <Badge variant={variant}>{label}</Badge>;
@@ -74,30 +76,51 @@ export default function WorkspaceByok() {
     },
     {
       key: 'actions',
-      header: 'Actions',
-      headClassName: 'text-right',
-      cellClassName: 'text-right space-x-2',
+      header: '',
+      headClassName: 'w-px',
+      cellClassName: 'w-px',
       cell: c => (
-        <>
-          <Button size="sm" variant="ghost" onClick={() => setRotating(c)}>
-            <RotateCw className="w-3.5 h-3.5 mr-1" /> Rotate
-          </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={() => updateCredential.mutate({ credentialId: c.id, data: { enabled: !c.enabled } })}>
-            {c.enabled ? 'Disable' : 'Enable'}
-          </Button>
-          <ConfirmButton
-            size="sm"
-            title={`Delete "${c.name}"?`}
-            description="The key is removed from the secret store and requests using it stop at the next bundle. This cannot be undone."
-            confirmLabel="Delete"
-            pending={deleteCredential.isPending}
-            onConfirm={() => deleteCredential.mutate({ credentialId: c.id })}>
-            Delete
-          </ConfirmButton>
-        </>
+        <TooltipProvider delayDuration={300}>
+          <div className="flex items-center gap-1">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button size="icon" variant="ghost" onClick={() => setRotating(c)}>
+                  <RefreshCw className="w-4 h-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Rotate key</TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className={c.enabled ? '' : 'text-muted-foreground'}
+                  onClick={() => updateCredential.mutate({ credentialId: c.id, data: { enabled: !c.enabled } })}>
+                  <Power className="w-4 h-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{c.enabled ? 'Disable' : 'Enable'}</TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span>
+                  <ConfirmButton
+                    title={`Delete "${c.name}"?`}
+                    description="Permanently removes this key. Traffic will fall back to the next available key in priority order. This cannot be undone."
+                    confirmLabel="Delete"
+                    pending={deleteCredential.isPending}
+                    onConfirm={() => deleteCredential.mutate({ credentialId: c.id })}>
+                    <Trash2 className="w-4 h-4" />
+                  </ConfirmButton>
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>Delete</TooltipContent>
+            </Tooltip>
+          </div>
+        </TooltipProvider>
       ),
     },
   ];
@@ -108,7 +131,7 @@ export default function WorkspaceByok() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Provider Keys</h1>
           <p className="text-muted-foreground mt-1 text-sm">
-            Bring your own provider keys. Requests from this workspace are billed to whichever key answers first.
+            Use your own API keys for this workspace. Keys are tried in priority order. If one fails, the next takes over automatically.
           </p>
         </div>
         <Button onClick={() => setAddOpen(true)}>
@@ -124,7 +147,7 @@ export default function WorkspaceByok() {
           isLoading={credentialsQuery.isLoading}
           isError={credentialsQuery.isError}
           onRetry={() => credentialsQuery.refetch()}
-          empty="No provider keys yet. Without one, this workspace uses the keys the operator configured."
+          empty="No keys yet. Add one to route this workspace's traffic through your own provider accounts."
           emptyIcon={KeyRound}
         />
       </Card>
@@ -133,7 +156,7 @@ export default function WorkspaceByok() {
         open={addOpen}
         onOpenChange={setAddOpen}
         title="Add Provider Key"
-        description="The key goes straight to the secret store. It is never shown again and never stored in the database."
+        description="Your key is stored encrypted and never exposed again. Paste it once, and we handle the rest."
         schema={addSchema}
         defaultValues={{ provider: providers[0]?.name ?? '', name: 'default', value: '', priority: 100 }}
         onSubmit={values => addCredential.mutateAsync({ data: { ...values, workspace: workspaceRef! } })}
@@ -148,15 +171,31 @@ export default function WorkspaceByok() {
                 <FormItem>
                   <FormLabel>Provider</FormLabel>
                   <FormControl>
-                    <select
-                      className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                      {...field}>
-                      {providers.map(p => (
-                        <option key={p.id} value={p.name}>
-                          {p.name}
-                        </option>
-                      ))}
-                    </select>
+                    <div className="flex flex-wrap gap-2">
+                      {providers.map(p => {
+                        const selected = field.value === p.name;
+                        return (
+                          <button
+                            key={p.id}
+                            type="button"
+                            onClick={() => field.onChange(p.name)}
+                            className={cn(
+                              'inline-flex items-center gap-2 rounded border px-3 py-1.5 text-[11px] font-mono font-bold uppercase tracking-wider transition-all',
+                              selected
+                                ? 'border-primary bg-primary/10 text-primary'
+                                : 'border-border bg-background/50 text-muted-foreground hover:border-primary/50 hover:text-foreground'
+                            )}>
+                            {p.icon ? (
+                              <span
+                                className="w-4 h-4 shrink-0 [&_svg]:w-full [&_svg]:h-full"
+                                dangerouslySetInnerHTML={{ __html: p.icon }}
+                              />
+                            ) : null}
+                            {p.name}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -193,7 +232,7 @@ export default function WorkspaceByok() {
               name="priority"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Try order</FormLabel>
+                  <FormLabel>Priority</FormLabel>
                   <FormControl>
                     <Input type="number" min={1} {...field} />
                   </FormControl>
@@ -209,7 +248,7 @@ export default function WorkspaceByok() {
         open={!!rotating}
         onOpenChange={v => !v && setRotating(null)}
         title={rotating ? `Rotate "${rotating.name}"` : 'Rotate'}
-        description="The new key replaces the old one everywhere. Data planes pick it up at the next bundle."
+        description="Replaces the existing key immediately. Any in-flight requests will finish with the old key."
         schema={rotateSchema}
         defaultValues={{ value: '' }}
         onSubmit={async values => {
