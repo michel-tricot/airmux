@@ -7,6 +7,7 @@ import {
   TerminalSquare, Settings, LogOut, Shield, ArrowLeftRight,
   LayoutGrid, KeyRound, Database, Route as RouteIcon, ShieldCheck, Building2,
 } from 'lucide-react';
+import { useEnrollment } from '@workspace/api-client-react';
 import { Button, Input, Dropdown } from '@/components/ui/elements';
 import { cn } from '@/lib/utils';
 import { Plus } from 'lucide-react';
@@ -27,6 +28,10 @@ const SECTIONS = [
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, orgId, setOrgId, logout } = useSession();
   const { data: workspaces } = useWorkspaces(orgId!);
+  // With one org the picker auto-selects it and bounces straight back, so the
+  // switch button would only flash the screen; show it only when there is a choice.
+  const { data: enrollment } = useEnrollment();
+  const canSwitchOrg = (enrollment?.orgs.length ?? 0) > 1;
   const [location, setLocation] = useLocation();
   const [createOpen, setCreateOpen] = useState(false);
 
@@ -80,19 +85,21 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             </div>
             <span>GATEWAY</span>
           </Link>
-          <Button
-            variant="ghost"
-            size="icon"
-            title="Switch organization"
-            aria-label="Switch organization"
-            onClick={() => {
-              setOrgId(null);
-              setLocation('/orgs');
-            }}
-            className="h-8 w-8 shrink-0 text-muted-foreground hover:text-foreground"
-          >
-            <ArrowLeftRight className="w-4 h-4" />
-          </Button>
+          {canSwitchOrg && (
+            <Button
+              variant="ghost"
+              size="icon"
+              title="Switch organization"
+              aria-label="Switch organization"
+              onClick={() => {
+                setOrgId(null);
+                setLocation('/orgs');
+              }}
+              className="h-8 w-8 shrink-0 text-muted-foreground hover:text-foreground"
+            >
+              <ArrowLeftRight className="w-4 h-4" />
+            </Button>
+          )}
         </div>
 
         <div className="p-3 border-b border-border/50 shrink-0">
