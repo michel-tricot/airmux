@@ -1,5 +1,6 @@
-import { useQueryClient } from '@tanstack/react-query';
+import { useQueries, useQueryClient } from '@tanstack/react-query';
 import {
+  getListInferenceKeysQueryOptions,
   useListAllManagementKeys,
   useListManagementKeys,
   useMintOrgManagementKey,
@@ -89,6 +90,17 @@ export function useInferenceKeys(orgId: string, workspaceRef: string) {
   return useListInferenceKeys(workspaceRef, {
     query: { queryKey: orgScopedKey(orgId, getListInferenceKeysQueryKey(workspaceRef)) },
     request: orgScope(orgId),
+  });
+}
+
+/** Inference keys across the given workspaces, one query per workspace. */
+export function useInferenceKeysForWorkspaces(orgId: string, workspaceRefs: string[]) {
+  return useQueries({
+    queries: workspaceRefs.map(workspaceRef =>
+      getListInferenceKeysQueryOptions(workspaceRef, {
+        query: { queryKey: orgScopedKey(orgId, getListInferenceKeysQueryKey(workspaceRef)) },
+        request: orgScope(orgId),
+      })),
   });
 }
 
