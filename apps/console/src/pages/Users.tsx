@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import * as z from 'zod';
 import { Card, Button, Input, Badge } from '@/components/ui/elements';
-import { Users, Plus, Search } from 'lucide-react';
+import { Users, Plus, Search, Bot } from 'lucide-react';
 import { formatDate } from '@/lib/format';
 import { Link } from 'wouter';
-import { useUsers, useCreateUserMutation } from '@/features/users/hooks';
+import { useUsers, useCreateUserMutation, useCreateServiceAccountMutation } from '@/features/users/hooks';
 import { DataTable } from '@/components/shared/data-table';
 import { FormDialog } from '@/components/shared/form-dialog';
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -14,11 +14,19 @@ const createUserSchema = z.object({
   email: z.string().email('Enter a valid email address'),
 });
 
+const createServiceAccountSchema = z.object({
+  name: z.string()
+    .min(1, 'Name is required')
+    .refine(value => /[a-zA-Z0-9]/.test(value), 'Use at least one letter or number'),
+});
+
 export default function UsersList() {
   const { data: users, isLoading, isError, refetch } = useUsers();
   const [search, setSearch] = useState('');
   const [createOpen, setCreateOpen] = useState(false);
+  const [serviceAccountOpen, setServiceAccountOpen] = useState(false);
   const createUser = useCreateUserMutation();
+  const createServiceAccount = useCreateServiceAccountMutation();
 
   const filteredUsers = users?.filter(u =>
     u.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -32,9 +40,14 @@ export default function UsersList() {
           <h1 className="text-3xl font-bold tracking-tight">Global Users</h1>
           <p className="text-muted-foreground mt-1 text-sm">Every account on the instance, with the orgs it belongs to.</p>
         </div>
-        <Button onClick={() => setCreateOpen(true)} className="gap-2">
-          <Plus className="w-4 h-4" /> Add User
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button onClick={() => setServiceAccountOpen(true)} variant="outline" className="gap-2">
+            <Bot className="w-4 h-4" /> Create Service Account
+          </Button>
+          <Button onClick={() => setCreateOpen(true)} className="gap-2">
+            <Plus className="w-4 h-4" /> Add User
+          </Button>
+        </div>
       </div>
 
       <Card>
@@ -142,6 +155,34 @@ export default function UsersList() {
               )}
             />
           </>
+        )}
+      </FormDialog>
+
+      <FormDialog
+        open={serviceAccountOpen}
+        onOpenChange={setServiceAccountOpen}
+        title="Create Service Account"
+        description="Service accounts cannot sign in. Use them for automation and machine access."
+        schema={createServiceAccountSchema}
+        defaultValues={{ name: '' }}
+        onSubmit={values => createServiceAccount.mutateAsync({ data: values })}
+        submitLabel="Create Account"
+        pendingLabel="Creating..."
+        pending={createServiceAccount.isPending}>
+        {form => (
+          <FormField
+            control={form.control}
+            name="name"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Name</FormLabel>
+                <FormControl>
+                  <Input autoFocus placeholder="e.g. Production Worker" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
         )}
       </FormDialog>
     </div>

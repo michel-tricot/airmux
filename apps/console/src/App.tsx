@@ -23,6 +23,7 @@ import OrganizationDetail from '@/pages/OrganizationDetail';
 import WorkspaceDetail from '@/pages/WorkspaceDetail';
 import Users from '@/pages/Users';
 import UserDetail from '@/pages/UserDetail';
+import InstanceKeys from '@/pages/InstanceKeys';
 
 // Org Pages (Any Member)
 import { useEnrollment } from '@workspace/api-client-react';
@@ -119,6 +120,7 @@ function AdminSection() {
           <Route path="/instance/organizations/:orgId/workspaces/:workspaceRef" component={WorkspaceDetail} />
           <Route path="/instance/users" component={Users} />
           <Route path="/instance/users/:userId" component={UserDetail} />
+          <Route path="/instance/keys" component={InstanceKeys} />
           <Route component={NotFound} />
         </Switch>
       </RoutedErrorBoundary>
