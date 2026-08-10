@@ -62,7 +62,8 @@ export function FormDialog<T extends FieldValues>({
   return (
     <Modal open={open} onOpenChange={onOpenChange} title={title} description={description}>
       <Form {...form}>
-        <form onSubmit={handleSubmit} className="space-y-4 pt-4">
+        {/* noValidate: zod owns validation; native bubbles would otherwise swallow inline messages (e.g. email). */}
+        <form onSubmit={handleSubmit} noValidate className="space-y-4 pt-4">
           {children(form)}
           <div className="flex justify-end gap-2 pt-4">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
