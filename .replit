@@ -27,7 +27,6 @@ author = "agent"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "./scripts/replit-backend.sh"
-waitForPort = 8001
 
 [workflows.workflow.metadata]
 outputType = "console"
