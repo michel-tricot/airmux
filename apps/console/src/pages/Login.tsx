@@ -29,13 +29,13 @@ export default function Login() {
     <div className="min-h-[100dvh] flex items-center justify-center bg-muted/30 p-4">
       <Card className="w-full max-w-md p-8 shadow-xl border-border/50">
         <div className="flex flex-col items-center mb-8">
-          <div className="w-12 h-12 rounded bg-primary text-primary-foreground flex items-center justify-center mb-4">
+          <div className="w-12 h-12 rounded bg-primary text-primary-foreground flex items-center justify-center mb-4 shadow-[0_0_20px_rgba(97,94,255,0.4)]">
             <TerminalSquare className="w-6 h-6" />
           </div>
-          <h1 className="text-2xl font-bold tracking-tight">
-            {mode === 'login' ? 'Sign in to Gateway' : 'Create an account'}
+          <h1 className="text-xl font-mono font-bold tracking-widest uppercase">
+            {mode === 'login' ? <><span aria-hidden="true" className="text-primary/80 mr-2">$</span>Sign in to Gateway</> : <><span aria-hidden="true" className="text-primary/80 mr-2">$</span>Create an account</>}
           </h1>
-          <p className="text-muted-foreground text-sm mt-1">
+          <p className="text-muted-foreground text-sm mt-2 text-center max-w-sm">
             {mode === 'login'
               ? 'Use your control plane credentials.'
               : claim?.claimed === false

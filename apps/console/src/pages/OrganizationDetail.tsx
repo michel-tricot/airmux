@@ -17,8 +17,8 @@ import {
   getListManagementKeysQueryKey,
   getListOrgUsersQueryKey,
 } from '@workspace/api-client-react';
-import { Card, Button, Input, Label, Dropdown, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Modal, Badge, Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/elements';
-import { Building2, Plus, ArrowLeft, Key, TerminalSquare, Users, X, Pencil, Trash2, ShieldAlert } from 'lucide-react';
+import { Card, Button, Input, Label, Dropdown, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Modal, Badge, Tabs, TabsList, TabsTrigger, TabsContent, ConfirmButton } from '@/components/ui/elements';
+import { Building2, Plus, ArrowLeft, Key, TerminalSquare, Users, UserMinus, Ban, Pencil, Trash2, ShieldAlert } from 'lucide-react';
 import { formatDate } from '@/lib/format';
 import { Link, useParams, useLocation } from 'wouter';
 import { useQueryClient } from '@tanstack/react-query';
@@ -182,10 +182,14 @@ export default function OrganizationDetail() {
                       <TableCell className="text-muted-foreground text-sm">{formatDate(key.created_at)}</TableCell>
                       <TableCell className="text-right">
                         {!key.revoked && (
-                          <Button variant="ghost" size="sm" className="text-destructive hover:bg-destructive/10"
-                            onClick={() => revokeKey.mutate({ keyId: key.id })}>
-                            Revoke
-                          </Button>
+                          <ConfirmButton size="sm"
+                            title={`Revoke "${key.label}"?`}
+                            description="Requests signed with this management key will stop working immediately. This cannot be undone."
+                            confirmLabel="Revoke key"
+                            pending={revokeKey.isPending}
+                            onConfirm={() => revokeKey.mutate({ keyId: key.id })}>
+                            <Ban className="w-4 h-4 mr-1" /> Revoke
+                          </ConfirmButton>
                         )}
                       </TableCell>
                     </TableRow>
@@ -221,10 +225,15 @@ export default function OrganizationDetail() {
                       </TableCell>
                       <TableCell className="text-muted-foreground">{member.email}</TableCell>
                       <TableCell className="text-right">
-                        <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10"
-                          onClick={() => removeMember.mutate({ userId: member.user_id })}>
-                          <X className="w-4 h-4" />
-                        </Button>
+                        <ConfirmButton
+                          title={`Remove ${member.name} from the organization?`}
+                          description="They lose access to this organization and all of its workspaces."
+                          confirmLabel="Remove member"
+                          pending={removeMember.isPending}
+                          aria-label="Remove member"
+                          onConfirm={() => removeMember.mutate({ userId: member.user_id })}>
+                          <UserMinus className="w-4 h-4" />
+                        </ConfirmButton>
                       </TableCell>
                     </TableRow>
                   ))}

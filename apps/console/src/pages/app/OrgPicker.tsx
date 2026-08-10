@@ -46,8 +46,8 @@ export default function AppOrgPicker() {
 
   return (
     <div className="min-h-[100dvh] flex items-center justify-center bg-muted/30 p-4">
-      <Card className="w-full max-w-lg p-8 shadow-xl border-border/50">
-        <h1 className="text-2xl font-bold tracking-tight mb-2">Select Organization</h1>
+      <Card className="w-full max-w-lg p-8 shadow-xl shadow-black/40 border-border/50">
+        <h1 className="text-xl font-mono font-bold tracking-widest uppercase mb-2"><span aria-hidden="true" className="text-primary opacity-80 mr-2">$</span>Select Organization</h1>
         <p className="text-muted-foreground text-sm mb-6">Choose an organization to continue.</p>
 
         <div className="space-y-3 mb-8">
@@ -55,15 +55,15 @@ export default function AppOrgPicker() {
             <Button
               key={org.id}
               variant="outline"
-              className="w-full justify-start h-16 text-left hover:border-primary hover:bg-primary/5 group"
+              className="w-full justify-start h-16 text-left hover:border-primary/50 hover:bg-primary/10 group"
               onClick={() => pickOrg(org.id)}
             >
-              <div className="w-8 h-8 rounded bg-primary/10 flex items-center justify-center mr-4 group-hover:bg-primary/20 transition-colors">
+              <div className="w-8 h-8 rounded bg-primary/10 flex items-center justify-center mr-4 group-hover:bg-primary/20 transition-colors group-hover:shadow-[0_0_12px_rgba(97,94,255,0.3)]">
                 <Building2 className="w-4 h-4 text-primary" />
               </div>
               <div className="flex-1">
-                <div className="font-medium text-base">{org.name}</div>
-                <div className="text-xs text-muted-foreground font-mono">
+                <div className="font-medium text-base tracking-tight">{org.name}</div>
+                <div className="text-[10px] uppercase tracking-wider text-muted-foreground/70 font-mono mt-1">
                   {org.id}{org.id === enrollment?.personal_org_id ? ' • PERSONAL' : ''}
                 </div>
               </div>

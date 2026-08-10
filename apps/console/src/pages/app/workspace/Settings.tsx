@@ -7,11 +7,17 @@ import {
   useGetWorkspace,
   useUpdateWorkspace,
   useDeleteWorkspace,
+  useListMembers,
+  useAddMember,
+  useRemoveMember,
+  useListOrgUsers,
   getGetWorkspaceQueryKey,
   getListWorkspacesQueryKey,
+  getListMembersQueryKey,
+  getListOrgUsersQueryKey,
 } from '@workspace/api-client-react';
-import { Card, Button, Input, Label } from '@/components/ui/elements';
-import { Trash2 } from 'lucide-react';
+import { Card, Button, Input, Label, Dropdown, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Modal, ConfirmButton } from '@/components/ui/elements';
+import { Trash2, Plus, Users, UserMinus } from 'lucide-react';
 
 export default function WorkspaceSettings() {
   const { workspaceId } = useParams();
@@ -29,6 +35,21 @@ export default function WorkspaceSettings() {
   const [name, setName] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
+  const [memberOpen, setMemberOpen] = useState(false);
+  const [memberId, setMemberId] = useState('');
+
+  const membersKey = [...getListMembersQueryKey(workspaceId!), orgId];
+  const orgUsersKey = [...getListOrgUsersQueryKey(), orgId];
+  const { data: members } = useListMembers(workspaceId!, { query: { queryKey: membersKey }, request: scope });
+  const { data: orgUsers } = useListOrgUsers({ query: { queryKey: orgUsersKey }, request: scope });
+  const candidates = orgUsers?.filter(u => !members?.some(m => m.user_id === u.user_id));
+
+  const invalidateMembers = () => queryClient.invalidateQueries({ queryKey: membersKey });
+  const addMember = useAddMember({
+    mutation: { onSuccess: () => { invalidateMembers(); setMemberOpen(false); setMemberId(''); } },
+    request: scope,
+  });
+  const removeMember = useRemoveMember({ mutation: { onSuccess: invalidateMembers }, request: scope });
 
   const rename = useUpdateWorkspace({
     mutation: {
@@ -74,6 +95,52 @@ export default function WorkspaceSettings() {
         </form>
       </Card>
 
+      <div className="space-y-3">
+        <div className="flex justify-between items-center">
+          <h2 className="text-lg font-semibold flex items-center gap-2">
+            <Users className="w-5 h-5 text-muted-foreground" /> Members
+          </h2>
+          <Button onClick={() => setMemberOpen(true)} size="sm"><Plus className="w-4 h-4 mr-1" /> Add Member</Button>
+        </div>
+        <Card>
+          {members && members.length > 0 ? (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>User</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {members.map(member => {
+                  const described = orgUsers?.find(u => u.user_id === member.user_id);
+                  return (
+                    <TableRow key={member.user_id}>
+                      <TableCell className="font-medium">{described?.name ?? 'Member'}</TableCell>
+                      <TableCell className="text-muted-foreground">{described?.email ?? member.user_id}</TableCell>
+                      <TableCell className="text-right">
+                        <ConfirmButton
+                          title={`Remove ${described?.name ?? 'this member'} from the workspace?`}
+                          description="They lose access to this workspace but stay in the organization."
+                          confirmLabel="Remove member"
+                          pending={removeMember.isPending}
+                          aria-label="Remove member"
+                          onConfirm={() => removeMember.mutate({ workspaceId: workspaceId!, userId: member.user_id })}>
+                          <UserMinus className="w-4 h-4" />
+                        </ConfirmButton>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          ) : (
+            <div className="p-8 text-center text-muted-foreground">No members in this workspace.</div>
+          )}
+        </Card>
+      </div>
+
       <Card className="p-6 space-y-4 border-destructive/30">
         <h2 className="text-lg font-semibold text-destructive">Danger zone</h2>
         <p className="text-sm text-muted-foreground">
@@ -95,6 +162,25 @@ export default function WorkspaceSettings() {
           </Button>
         )}
       </Card>
+
+      <Modal open={memberOpen} onOpenChange={setMemberOpen} title="Add Member" description="Members are drawn from the org; the user must already belong to it.">
+        <form onSubmit={e => { e.preventDefault(); addMember.mutate({ workspaceId: workspaceId!, userId: memberId }); }} className="space-y-4 pt-4">
+          <div className="space-y-2">
+            <Label htmlFor="workspace-member">User</Label>
+            <Dropdown
+              aria-label="User"
+              value={memberId}
+              onValueChange={setMemberId}
+              placeholder="Select an org member"
+              options={(candidates ?? []).map(user => ({ value: user.user_id, label: `${user.name} (${user.email})` }))}
+            />
+          </div>
+          <div className="flex justify-end gap-2 pt-4">
+            <Button type="button" variant="outline" onClick={() => setMemberOpen(false)}>Cancel</Button>
+            <Button type="submit" disabled={!memberId || addMember.isPending}>Add</Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }

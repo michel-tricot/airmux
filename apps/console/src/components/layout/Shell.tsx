@@ -18,23 +18,23 @@ export function Shell({ children }: { children: React.ReactNode }) {
     <div className="flex h-[100dvh] w-full overflow-hidden bg-background font-sans">
       <aside className="w-64 flex-col bg-sidebar text-sidebar-foreground flex border-r border-sidebar-border shadow-2xl">
         <div className="h-16 flex items-center px-6 border-b border-sidebar-border/50">
-          <div className="flex items-center gap-2 font-mono font-bold tracking-tight text-foreground text-lg">
-            <div className="w-6 h-6 rounded bg-primary flex items-center justify-center shadow-[0_0_10px_rgba(255,255,255,0.1)]">
+          <div className="flex items-center gap-3 font-mono font-bold tracking-widest text-foreground text-lg">
+            <div className="w-6 h-6 rounded bg-primary flex items-center justify-center shadow-[0_0_12px_rgba(97,94,255,0.4)]">
               <TerminalSquare className="w-4 h-4 text-primary-foreground" />
             </div>
-            GATEWAY
+            <span><span className="text-primary opacity-70 mr-1">$</span>GATEWAY</span>
           </div>
         </div>
         <div className="flex-1 py-6 px-4 space-y-1">
-          <div className="text-xs font-semibold text-sidebar-foreground/50 uppercase tracking-wider mb-4 px-2">Control Plane</div>
+          <div className="text-[10px] font-mono font-bold text-sidebar-foreground/50 uppercase tracking-widest mb-4 px-2">Control Plane</div>
           {navItems.map((item) => {
             const isActive = location === item.href || (item.href !== '/instance' && location.startsWith(item.href));
             return (
               <Link key={item.href} href={item.href} className={cn(
-                "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-all duration-200",
+                "flex items-center gap-3 px-3 py-2 rounded-md text-[11px] font-mono font-bold uppercase tracking-wider transition-all duration-200",
                 isActive
-                  ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-sm"
-                  : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                  ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-[inset_3px_0_0_0_rgba(97,94,255,1)]"
+                  : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
               )}>
                 <item.icon className="w-4 h-4" />
                 {item.label}
@@ -52,7 +52,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
               <span className="text-xs text-sidebar-foreground/50">Instance admin</span>
             </div>
           </div>
-          <Link href="/org" className="flex flex-1 items-center gap-2 px-2 py-2 mb-2 rounded-md text-sm font-medium text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-all duration-200">
+          <Link href="/org" className="flex flex-1 items-center gap-3 px-2 py-2 mb-2 rounded-md text-[11px] font-mono font-bold uppercase tracking-wider text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground transition-all duration-200">
             <Users className="w-4 h-4" />
             User console
           </Link>
