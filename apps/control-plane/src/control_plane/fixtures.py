@@ -25,6 +25,8 @@ from random import Random
 from typing import TYPE_CHECKING
 from uuid import UUID, uuid5
 
+from sqlmodel import col
+
 from contract import INFERENCE_TOKEN_PREFIX, Secret, SecretStore, token_hash
 from control_plane.keys import INSTANCE_KEY_PREFIX, MANAGEMENT_KEY_PREFIX, key_prefix
 from control_plane.models import (
@@ -59,10 +61,9 @@ INSTANCE_TOKEN = f"{INSTANCE_KEY_PREFIX}fixture-admin"
 
 MODELS = [("gpt-4o-mini", "openai"), ("gpt-4o", "openai"), ("claude-opus-4-5", "anthropic")]
 
-PROVIDERS = [
-    ("openai", "openai_compatible", "https://api.openai.com/v1"),
-    ("anthropic", "anthropic", "https://api.anthropic.com/v1"),
-]
+ROUTED_PROVIDERS = sorted({provider for _, provider in MODELS})
+"""The providers the fixture traffic and credentials name. Taxonomy owns whether they exist; these
+are looked up, never created, so a fixture instance cannot drift from the catalog an operator has."""
 
 FIXTURE_PROVIDER_KEY = "sk-fixture-not-a-real-key-0000"
 
@@ -75,6 +76,18 @@ def env_variable(provider: str) -> str:
 STATUSES = ["ok"] * 9 + ["error"]
 
 USAGE_DAYS = 30
+
+
+class MissingProvidersError(ValueError):
+    """The catalog does not hold the providers the fixtures route to.
+
+    Seeding around the gap would produce usage rows and credentials naming providers nothing routes
+    to: an instance that looks populated and serves nothing. A ValueError for the same reason the
+    empty-database refusal is one, so the command reports it without importing this module.
+    """
+
+    def __init__(self, missing: list[str]) -> None:
+        super().__init__(f"the catalog has no {', '.join(missing)}; run `airllmcp taxonomy` to fill it before seeding")
 
 
 class NotAnEmptyDatabaseError(ValueError):
@@ -197,6 +210,9 @@ async def apply_fixtures(now: datetime, store: SecretStore) -> Fixtures:
     always written; whether a value is written beside them is the store's business, and on the env
     store the answer is that the ref already resolves to a variable the operator owns.
 
+    The catalog is a precondition rather than something seeded here: taxonomy owns which providers
+    exist, so this reads them and refuses when the ones its traffic names are absent.
+
     Read it as the list of what exists. Every row is written on the line that declares it, so there
     is no second pass to keep in step, and dependency order is ordinary data flow: nothing can name
     an org before the line that creates it.
@@ -211,6 +227,10 @@ async def apply_fixtures(now: datetime, store: SecretStore) -> Fixtures:
     if await User.first() is not None:
         msg = "this is not an empty database; fixtures seed a fresh one, so drop and recreate it first"
         raise NotAnEmptyDatabaseError(msg)
+
+    catalog = {provider.name: provider for provider in await Provider.find(col(Provider.name).in_(ROUTED_PROVIDERS))}
+    if missing := [name for name in ROUTED_PROVIDERS if name not in catalog]:
+        raise MissingProvidersError(missing)
 
     await set_actor("root")
 
@@ -257,11 +277,7 @@ async def apply_fixtures(now: datetime, store: SecretStore) -> Fixtures:
         label="fixture-admin",
     ).save()
 
-    providers = {
-        name: await Provider(id=fixture_id(f"provider:{name}"), name=name, kind=kind, base_url=base_url).save() for name, kind, base_url in PROVIDERS
-    }
-
-    openai, anthropic = providers["openai"], providers["anthropic"]
+    openai, anthropic = catalog["openai"], catalog["anthropic"]
     await provider_credential(store, openai, acme, workspace=production, name="primary", priority=10, status="live")
     await provider_credential(store, openai, acme, workspace=production, name="backup", priority=50, status="rate_limited")
     await provider_credential(store, openai, acme, workspace=production, name="retired", priority=90, enabled=False)
@@ -280,5 +296,5 @@ async def apply_fixtures(now: datetime, store: SecretStore) -> Fixtures:
         inference_token=ACME_PROD_TOKEN,
         management_token=ACME_MANAGEMENT_TOKEN,
         instance_token=INSTANCE_TOKEN,
-        provider_key_variables=[] if store.writable else sorted({env_variable(name) for name, _, _ in PROVIDERS}),
+        provider_key_variables=[] if store.writable else [env_variable(name) for name in ROUTED_PROVIDERS],
     )
