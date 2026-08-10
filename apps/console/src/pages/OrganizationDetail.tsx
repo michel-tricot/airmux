@@ -130,7 +130,16 @@ export default function OrganizationDetail() {
                 key: 'user',
                 header: 'User',
                 cellClassName: 'text-muted-foreground text-sm',
-                cell: key => members?.find(m => m.user_id === key.user_id)?.email ?? key.user_id,
+                 cell: key => {
+                   const user = users?.find(candidate => candidate.id === key.user_id);
+                   return user ? (
+                     <Link href={`/instance/users/${user.id}`} className="hover:text-primary transition-colors">
+                       {user.name}
+                     </Link>
+                   ) : (
+                     key.user_id
+                   );
+                 },
               },
             ]}
             revokeDescription="Requests signed with this management key will stop working immediately. This cannot be undone."

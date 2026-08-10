@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import * as z from 'zod';
 import { Card, Button, Dropdown, Modal, Badge, ConfirmButton } from '@/components/ui/elements';
-import { ArrowLeft, Building2, Plus, UserMinus, Trash2 } from 'lucide-react';
+import { ArrowLeft, Building2, KeyRound, Plus, UserMinus, Trash2 } from 'lucide-react';
 import { formatDate } from '@/lib/format';
 import { Link, useParams, useLocation } from 'wouter';
 import { useOrgs } from '@/features/orgs/hooks';
+import { useAllManagementKeys, useInstanceKeys } from '@/features/keys/hooks';
 import {
   useUser,
   useDeleteUserMutation,
@@ -25,6 +26,8 @@ export default function UserDetail() {
   const { data: user, isLoading } = useUser(userId!);
   const orgsQuery = useOrgs();
   const orgs = orgsQuery.data;
+  const instanceKeysQuery = useInstanceKeys();
+  const managementKeysQuery = useAllManagementKeys();
 
   const [addOpen, setAddOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -38,6 +41,8 @@ export default function UserDetail() {
 
   const memberships = orgs?.filter(o => user.orgs.includes(o.id));
   const available = orgs?.filter(o => !user.orgs.includes(o.id));
+  const instanceKeys = instanceKeysQuery.data?.filter(key => key.user_id === user.id);
+  const managementKeys = managementKeysQuery.data?.filter(key => key.user_id === user.id);
 
   return (
     <div className="flex-1 p-8 max-w-6xl mx-auto w-full space-y-6 animate-in fade-in duration-300">
@@ -112,6 +117,59 @@ export default function UserDetail() {
             ]}
           />
         </Card>
+      </div>
+
+      <div className="mt-8">
+        <h2 className="text-lg font-semibold flex items-center gap-2 mb-4">
+          <KeyRound className="w-5 h-5 text-muted-foreground" />
+          Keys owned by this user
+        </h2>
+
+        <div className="space-y-6">
+          <Card>
+            <DataTable
+              rows={instanceKeys}
+              rowKey={key => key.id}
+              isLoading={instanceKeysQuery.isLoading}
+              isError={instanceKeysQuery.isError}
+              onRetry={() => instanceKeysQuery.refetch()}
+              empty="This user does not own any instance keys."
+              columns={[
+                { key: 'type', header: 'Type', cell: () => <Badge variant="secondary">INSTANCE</Badge> },
+                { key: 'label', header: 'Label', cellClassName: 'font-medium', cell: key => key.label },
+                { key: 'key', header: 'Key', cellClassName: 'font-mono text-xs text-muted-foreground', cell: key => <>{key.prefix}…</> },
+                {
+                  key: 'status',
+                  header: 'Status',
+                  cell: key => <Badge variant={key.revoked ? 'outline' : 'success'}>{key.revoked ? 'REVOKED' : 'ACTIVE'}</Badge>,
+                },
+                { key: 'created', header: 'Created', cellClassName: 'text-muted-foreground text-sm', cell: key => formatDate(key.created_at) },
+              ]}
+            />
+          </Card>
+
+          <Card>
+            <DataTable
+              rows={managementKeys}
+              rowKey={key => key.id}
+              isLoading={managementKeysQuery.isLoading}
+              isError={managementKeysQuery.isError}
+              onRetry={() => managementKeysQuery.refetch()}
+              empty="This user does not own any management keys."
+              columns={[
+                { key: 'type', header: 'Type', cell: () => <Badge variant="secondary">MANAGEMENT</Badge> },
+                { key: 'label', header: 'Label', cellClassName: 'font-medium', cell: key => key.label },
+                { key: 'key', header: 'Key', cellClassName: 'font-mono text-xs text-muted-foreground', cell: key => <>{key.prefix}…</> },
+                {
+                  key: 'status',
+                  header: 'Status',
+                  cell: key => <Badge variant={key.revoked ? 'outline' : 'success'}>{key.revoked ? 'REVOKED' : 'ACTIVE'}</Badge>,
+                },
+                { key: 'created', header: 'Created', cellClassName: 'text-muted-foreground text-sm', cell: key => formatDate(key.created_at) },
+              ]}
+            />
+          </Card>
+        </div>
       </div>
 
       <Modal open={deleteOpen} onOpenChange={setDeleteOpen} title="Delete User"

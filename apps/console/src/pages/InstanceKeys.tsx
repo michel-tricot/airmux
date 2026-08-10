@@ -3,11 +3,13 @@ import * as z from 'zod';
 import { Card, Button, Badge } from '@/components/ui/elements';
 import { KeyRound, Plus } from 'lucide-react';
 import { formatDate } from '@/lib/format';
+import { Link } from 'wouter';
 import {
   useInstanceKeys,
   useMintInstanceKeyMutation,
   useRevokeInstanceKeyMutation,
 } from '@/features/keys/hooks';
+import { useUsers } from '@/features/users/hooks';
 import { KeyRevealDialog } from '@/components/KeyRevealDialog';
 import { DataTable } from '@/components/shared/data-table';
 import { FormDialog } from '@/components/shared/form-dialog';
@@ -21,6 +23,7 @@ const instanceKeySchema = z.object({
 
 export default function InstanceKeys() {
   const keysQuery = useInstanceKeys();
+  const usersQuery = useUsers();
   const mintKey = useMintInstanceKeyMutation();
   const revokeKey = useRevokeInstanceKeyMutation();
   const [mintOpen, setMintOpen] = useState(false);
@@ -65,6 +68,21 @@ export default function InstanceKeys() {
               header: 'Key',
               cellClassName: 'font-mono text-xs text-muted-foreground',
               cell: key => <>{key.prefix}…</>,
+            },
+            {
+              key: 'user',
+              header: 'User',
+              cellClassName: 'text-sm',
+              cell: key => {
+                const user = usersQuery.data?.find(candidate => candidate.id === key.user_id);
+                return user ? (
+                  <Link href={`/instance/users/${user.id}`} className="hover:text-primary transition-colors">
+                    {user.name}
+                  </Link>
+                ) : (
+                  <span className="font-mono text-xs text-muted-foreground">{key.user_id}</span>
+                );
+              },
             },
             {
               key: 'scopes',
