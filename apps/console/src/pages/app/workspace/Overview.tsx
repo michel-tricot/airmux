@@ -102,7 +102,7 @@ export default function WorkspaceOverview() {
               onRetry={() => eventsQuery.refetch()}
               empty="No usage recorded yet."
               columns={[
-                { key: 'model', header: 'Model', cellClassName: 'font-mono text-xs', cell: row => row.model },
+                { key: 'model', header: 'Model', cell: row => <Badge variant="outline" className="font-mono">{row.model}</Badge> },
                 { key: 'requests', header: 'Requests', headClassName: 'text-right', cellClassName: 'text-right tabular-nums', cell: row => row.requests },
                 { key: 'tokens', header: 'Tokens', headClassName: 'text-right', cellClassName: 'text-right tabular-nums', cell: row => formatTokens(row.tokens) },
                 { key: 'cost', header: 'Cost', headClassName: 'text-right', cellClassName: 'text-right tabular-nums', cell: row => `$${row.cost.toFixed(row.cost >= 1 ? 2 : 4)}` },

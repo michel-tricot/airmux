@@ -78,7 +78,7 @@ export default function AppDashboard() {
           onRetry={() => eventsQuery.refetch()}
           empty="No requests through the gateway yet."
           columns={[
-            { key: 'model', header: 'Model', cellClassName: 'font-mono text-xs', cell: event => event.model_id },
+            { key: 'model', header: 'Model', cell: event => <Badge variant="outline" className="font-mono">{event.model_id}</Badge> },
             {
               key: 'status',
               header: 'Status',
