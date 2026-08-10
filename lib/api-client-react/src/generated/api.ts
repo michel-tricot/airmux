@@ -52,6 +52,7 @@ import type {
   ListDataPlanesParams,
   ListEventsParams,
   ListInstanceActivityParams,
+  ListUsersParams,
   LoginIn,
   ManagementKeyIn,
   ManagementKeyMintedOut,
@@ -1758,21 +1759,30 @@ export const useCreateUser = <TError = ErrorType<HTTPValidationError>,
       return useMutation(getCreateUserMutationOptions(options));
     }
 
-export const getListUsersUrl = () => {
+export const getListUsersUrl = (params?: ListUsersParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/v1/users`
+  return stringifiedParams.length > 0 ? `/v1/users?${stringifiedParams}` : `/v1/users`
 }
 
 /**
+ * Every principal on the instance, or one kind of them: service_account splits the machines from the humans.
+ *
  * Requires the `users:read` scope.
  * @summary List Users
  */
-export const listUsers = async ( options?: Parameters<typeof customFetch>[1]): Promise<UserOut[]> => {
+export const listUsers = async (params?: ListUsersParams, options?: Parameters<typeof customFetch>[1]): Promise<UserOut[]> => {
 
-  return customFetch<UserOut[]>(getListUsersUrl(),
+  return customFetch<UserOut[]>(getListUsersUrl(params),
   {
     ...options,
     method: 'GET'
@@ -1785,23 +1795,23 @@ export const listUsers = async ( options?: Parameters<typeof customFetch>[1]): P
 
 
 
-export const getListUsersQueryKey = () => {
+export const getListUsersQueryKey = (params?: ListUsersParams,) => {
     return [
-    `/v1/users`
+    `/v1/users`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getListUsersQueryOptions = <TData = Awaited<ReturnType<typeof listUsers>>, TError = ErrorType<HTTPValidationError>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listUsers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getListUsersQueryOptions = <TData = Awaited<ReturnType<typeof listUsers>>, TError = ErrorType<HTTPValidationError>>(params?: ListUsersParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listUsers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getListUsersQueryKey();
+  const queryKey =  queryOptions?.queryKey ?? getListUsersQueryKey(params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listUsers>>> = ({ signal }) => listUsers({ signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listUsers>>> = ({ signal }) => listUsers(params, { signal, ...requestOptions });
 
 
 
@@ -1819,11 +1829,11 @@ export type ListUsersQueryError = ErrorType<HTTPValidationError>
  */
 
 export function useListUsers<TData = Awaited<ReturnType<typeof listUsers>>, TError = ErrorType<HTTPValidationError>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listUsers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+ params?: ListUsersParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listUsers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getListUsersQueryOptions(options)
+  const queryOptions = getListUsersQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
@@ -2454,6 +2464,9 @@ export const getCreateWorkspaceUrl = () => {
  * The creator becomes the first member when they hold an org membership; an instance admin
  * acting on an org they never joined creates it member-less and relies on their bypass.
  *
+ * A caller who names no slug gets one derived from the name; one who does gets a 409 when the
+ * org already holds it, rather than a silently numbered variant of what they asked for.
+ *
  * Requires the `workspaces:write` scope.
  * @summary Create Workspace
  */
@@ -2595,21 +2608,21 @@ export function useListWorkspaces<TData = Awaited<ReturnType<typeof listWorkspac
 
 
 
-export const getGetWorkspaceUrl = (workspaceId: string,) => {
+export const getGetWorkspaceUrl = (workspaceRef: string,) => {
 
 
 
 
-  return `/v1/org/workspaces/${workspaceId}`
+  return `/v1/org/workspaces/${workspaceRef}`
 }
 
 /**
  * Requires the `workspaces:read` scope.
  * @summary Get Workspace
  */
-export const getWorkspace = async (workspaceId: string, options?: Parameters<typeof customFetch>[1]): Promise<WorkspaceOut> => {
+export const getWorkspace = async (workspaceRef: string, options?: Parameters<typeof customFetch>[1]): Promise<WorkspaceOut> => {
 
-  return customFetch<WorkspaceOut>(getGetWorkspaceUrl(workspaceId),
+  return customFetch<WorkspaceOut>(getGetWorkspaceUrl(workspaceRef),
   {
     ...options,
     method: 'GET'
@@ -2622,29 +2635,29 @@ export const getWorkspace = async (workspaceId: string, options?: Parameters<typ
 
 
 
-export const getGetWorkspaceQueryKey = (workspaceId: string,) => {
+export const getGetWorkspaceQueryKey = (workspaceRef: string,) => {
     return [
-    `/v1/org/workspaces/${workspaceId}`
+    `/v1/org/workspaces/${workspaceRef}`
     ] as const;
     }
 
 
-export const getGetWorkspaceQueryOptions = <TData = Awaited<ReturnType<typeof getWorkspace>>, TError = ErrorType<HTTPValidationError>>(workspaceId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getWorkspace>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getGetWorkspaceQueryOptions = <TData = Awaited<ReturnType<typeof getWorkspace>>, TError = ErrorType<HTTPValidationError>>(workspaceRef: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getWorkspace>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getGetWorkspaceQueryKey(workspaceId);
+  const queryKey =  queryOptions?.queryKey ?? getGetWorkspaceQueryKey(workspaceRef);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getWorkspace>>> = ({ signal }) => getWorkspace(workspaceId, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getWorkspace>>> = ({ signal }) => getWorkspace(workspaceRef, { signal, ...requestOptions });
 
 
 
 
 
-   return  { queryKey, queryFn, enabled: workspaceId !== null && workspaceId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getWorkspace>>, TError, TData> & { queryKey: QueryKey }
+   return  { queryKey, queryFn, enabled: workspaceRef !== null && workspaceRef !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getWorkspace>>, TError, TData> & { queryKey: QueryKey }
 }
 
 export type GetWorkspaceQueryResult = NonNullable<Awaited<ReturnType<typeof getWorkspace>>>
@@ -2656,11 +2669,11 @@ export type GetWorkspaceQueryError = ErrorType<HTTPValidationError>
  */
 
 export function useGetWorkspace<TData = Awaited<ReturnType<typeof getWorkspace>>, TError = ErrorType<HTTPValidationError>>(
- workspaceId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getWorkspace>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+ workspaceRef: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getWorkspace>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getGetWorkspaceQueryOptions(workspaceId,options)
+  const queryOptions = getGetWorkspaceQueryOptions(workspaceRef,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
@@ -2673,12 +2686,12 @@ export function useGetWorkspace<TData = Awaited<ReturnType<typeof getWorkspace>>
 
 
 
-export const getDeleteWorkspaceUrl = (workspaceId: string,) => {
+export const getDeleteWorkspaceUrl = (workspaceRef: string,) => {
 
 
 
 
-  return `/v1/org/workspaces/${workspaceId}`
+  return `/v1/org/workspaces/${workspaceRef}`
 }
 
 /**
@@ -2687,9 +2700,9 @@ export const getDeleteWorkspaceUrl = (workspaceId: string,) => {
  * Requires the `workspaces:write` scope.
  * @summary Delete Workspace
  */
-export const deleteWorkspace = async (workspaceId: string, options?: Parameters<typeof customFetch>[1]): Promise<DeletedOutUUID> => {
+export const deleteWorkspace = async (workspaceRef: string, options?: Parameters<typeof customFetch>[1]): Promise<DeletedOutUUID> => {
 
-  return customFetch<DeletedOutUUID>(getDeleteWorkspaceUrl(workspaceId),
+  return customFetch<DeletedOutUUID>(getDeleteWorkspaceUrl(workspaceRef),
   {
     ...options,
     method: 'DELETE'
@@ -2703,8 +2716,8 @@ export const deleteWorkspace = async (workspaceId: string, options?: Parameters<
 
 
 export const getDeleteWorkspaceMutationOptions = <TError = ErrorType<HTTPValidationError>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteWorkspace>>, TError,{workspaceId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof deleteWorkspace>>, TError,{workspaceId: string}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteWorkspace>>, TError,{workspaceRef: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteWorkspace>>, TError,{workspaceRef: string}, TContext> => {
 
 const mutationKey = ['deleteWorkspace'];
 const {mutation: mutationOptions, request: requestOptions} = options ?
@@ -2716,10 +2729,10 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteWorkspace>>, {workspaceId: string}> = (props) => {
-          const {workspaceId} = props ?? {};
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteWorkspace>>, {workspaceRef: string}> = (props) => {
+          const {workspaceRef} = props ?? {};
 
-          return  deleteWorkspace(workspaceId,requestOptions)
+          return  deleteWorkspace(workspaceRef,requestOptions)
         }
 
 
@@ -2737,32 +2750,32 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
  * @summary Delete Workspace
  */
 export const useDeleteWorkspace = <TError = ErrorType<HTTPValidationError>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteWorkspace>>, TError,{workspaceId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteWorkspace>>, TError,{workspaceRef: string}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof deleteWorkspace>>,
         TError,
-        {workspaceId: string},
+        {workspaceRef: string},
         TContext
       > => {
       return useMutation(getDeleteWorkspaceMutationOptions(options));
     }
 
-export const getUpdateWorkspaceUrl = (workspaceId: string,) => {
+export const getUpdateWorkspaceUrl = (workspaceRef: string,) => {
 
 
 
 
-  return `/v1/org/workspaces/${workspaceId}`
+  return `/v1/org/workspaces/${workspaceRef}`
 }
 
 /**
  * Requires the `workspaces:write` scope.
  * @summary Update Workspace
  */
-export const updateWorkspace = async (workspaceId: string,
+export const updateWorkspace = async (workspaceRef: string,
     workspaceUpdate: WorkspaceUpdate, options?: Parameters<typeof customFetch>[1]): Promise<WorkspaceOut> => {
 
-  return customFetch<WorkspaceOut>(getUpdateWorkspaceUrl(workspaceId),
+  return customFetch<WorkspaceOut>(getUpdateWorkspaceUrl(workspaceRef),
   {
     ...options,
     method: 'PATCH',
@@ -2776,8 +2789,8 @@ export const updateWorkspace = async (workspaceId: string,
 
 
 export const getUpdateWorkspaceMutationOptions = <TError = ErrorType<HTTPValidationError>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateWorkspace>>, TError,{workspaceId: string;data: BodyType<WorkspaceUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof updateWorkspace>>, TError,{workspaceId: string;data: BodyType<WorkspaceUpdate>}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateWorkspace>>, TError,{workspaceRef: string;data: BodyType<WorkspaceUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateWorkspace>>, TError,{workspaceRef: string;data: BodyType<WorkspaceUpdate>}, TContext> => {
 
 const mutationKey = ['updateWorkspace'];
 const {mutation: mutationOptions, request: requestOptions} = options ?
@@ -2789,10 +2802,10 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateWorkspace>>, {workspaceId: string;data: BodyType<WorkspaceUpdate>}> = (props) => {
-          const {workspaceId,data} = props ?? {};
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateWorkspace>>, {workspaceRef: string;data: BodyType<WorkspaceUpdate>}> = (props) => {
+          const {workspaceRef,data} = props ?? {};
 
-          return  updateWorkspace(workspaceId,data,requestOptions)
+          return  updateWorkspace(workspaceRef,data,requestOptions)
         }
 
 
@@ -2810,31 +2823,31 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
  * @summary Update Workspace
  */
 export const useUpdateWorkspace = <TError = ErrorType<HTTPValidationError>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateWorkspace>>, TError,{workspaceId: string;data: BodyType<WorkspaceUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateWorkspace>>, TError,{workspaceRef: string;data: BodyType<WorkspaceUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof updateWorkspace>>,
         TError,
-        {workspaceId: string;data: BodyType<WorkspaceUpdate>},
+        {workspaceRef: string;data: BodyType<WorkspaceUpdate>},
         TContext
       > => {
       return useMutation(getUpdateWorkspaceMutationOptions(options));
     }
 
-export const getListMembersUrl = (workspaceId: string,) => {
+export const getListMembersUrl = (workspaceRef: string,) => {
 
 
 
 
-  return `/v1/org/workspaces/${workspaceId}/members`
+  return `/v1/org/workspaces/${workspaceRef}/members`
 }
 
 /**
  * Requires the `workspaces:read` scope.
  * @summary List Members
  */
-export const listMembers = async (workspaceId: string, options?: Parameters<typeof customFetch>[1]): Promise<WorkspaceMembershipOut[]> => {
+export const listMembers = async (workspaceRef: string, options?: Parameters<typeof customFetch>[1]): Promise<WorkspaceMembershipOut[]> => {
 
-  return customFetch<WorkspaceMembershipOut[]>(getListMembersUrl(workspaceId),
+  return customFetch<WorkspaceMembershipOut[]>(getListMembersUrl(workspaceRef),
   {
     ...options,
     method: 'GET'
@@ -2847,29 +2860,29 @@ export const listMembers = async (workspaceId: string, options?: Parameters<type
 
 
 
-export const getListMembersQueryKey = (workspaceId: string,) => {
+export const getListMembersQueryKey = (workspaceRef: string,) => {
     return [
-    `/v1/org/workspaces/${workspaceId}/members`
+    `/v1/org/workspaces/${workspaceRef}/members`
     ] as const;
     }
 
 
-export const getListMembersQueryOptions = <TData = Awaited<ReturnType<typeof listMembers>>, TError = ErrorType<HTTPValidationError>>(workspaceId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMembers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getListMembersQueryOptions = <TData = Awaited<ReturnType<typeof listMembers>>, TError = ErrorType<HTTPValidationError>>(workspaceRef: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMembers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getListMembersQueryKey(workspaceId);
+  const queryKey =  queryOptions?.queryKey ?? getListMembersQueryKey(workspaceRef);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listMembers>>> = ({ signal }) => listMembers(workspaceId, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listMembers>>> = ({ signal }) => listMembers(workspaceRef, { signal, ...requestOptions });
 
 
 
 
 
-   return  { queryKey, queryFn, enabled: workspaceId !== null && workspaceId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listMembers>>, TError, TData> & { queryKey: QueryKey }
+   return  { queryKey, queryFn, enabled: workspaceRef !== null && workspaceRef !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listMembers>>, TError, TData> & { queryKey: QueryKey }
 }
 
 export type ListMembersQueryResult = NonNullable<Awaited<ReturnType<typeof listMembers>>>
@@ -2881,11 +2894,11 @@ export type ListMembersQueryError = ErrorType<HTTPValidationError>
  */
 
 export function useListMembers<TData = Awaited<ReturnType<typeof listMembers>>, TError = ErrorType<HTTPValidationError>>(
- workspaceId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMembers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+ workspaceRef: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMembers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getListMembersQueryOptions(workspaceId,options)
+  const queryOptions = getListMembersQueryOptions(workspaceRef,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
@@ -2898,13 +2911,13 @@ export function useListMembers<TData = Awaited<ReturnType<typeof listMembers>>, 
 
 
 
-export const getAddMemberUrl = (workspaceId: string,
+export const getAddMemberUrl = (workspaceRef: string,
     userId: string,) => {
 
 
 
 
-  return `/v1/org/workspaces/${workspaceId}/members/${userId}`
+  return `/v1/org/workspaces/${workspaceRef}/members/${userId}`
 }
 
 /**
@@ -2913,10 +2926,10 @@ export const getAddMemberUrl = (workspaceId: string,
  * Requires the `workspaces:write` scope.
  * @summary Add Member
  */
-export const addMember = async (workspaceId: string,
+export const addMember = async (workspaceRef: string,
     userId: string, options?: Parameters<typeof customFetch>[1]): Promise<WorkspaceMembershipOut> => {
 
-  return customFetch<WorkspaceMembershipOut>(getAddMemberUrl(workspaceId,userId),
+  return customFetch<WorkspaceMembershipOut>(getAddMemberUrl(workspaceRef,userId),
   {
     ...options,
     method: 'PUT'
@@ -2930,8 +2943,8 @@ export const addMember = async (workspaceId: string,
 
 
 export const getAddMemberMutationOptions = <TError = ErrorType<HTTPValidationError>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addMember>>, TError,{workspaceId: string;userId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof addMember>>, TError,{workspaceId: string;userId: string}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addMember>>, TError,{workspaceRef: string;userId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof addMember>>, TError,{workspaceRef: string;userId: string}, TContext> => {
 
 const mutationKey = ['addMember'];
 const {mutation: mutationOptions, request: requestOptions} = options ?
@@ -2943,10 +2956,10 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof addMember>>, {workspaceId: string;userId: string}> = (props) => {
-          const {workspaceId,userId} = props ?? {};
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof addMember>>, {workspaceRef: string;userId: string}> = (props) => {
+          const {workspaceRef,userId} = props ?? {};
 
-          return  addMember(workspaceId,userId,requestOptions)
+          return  addMember(workspaceRef,userId,requestOptions)
         }
 
 
@@ -2964,33 +2977,33 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
  * @summary Add Member
  */
 export const useAddMember = <TError = ErrorType<HTTPValidationError>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addMember>>, TError,{workspaceId: string;userId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addMember>>, TError,{workspaceRef: string;userId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof addMember>>,
         TError,
-        {workspaceId: string;userId: string},
+        {workspaceRef: string;userId: string},
         TContext
       > => {
       return useMutation(getAddMemberMutationOptions(options));
     }
 
-export const getRemoveMemberUrl = (workspaceId: string,
+export const getRemoveMemberUrl = (workspaceRef: string,
     userId: string,) => {
 
 
 
 
-  return `/v1/org/workspaces/${workspaceId}/members/${userId}`
+  return `/v1/org/workspaces/${workspaceRef}/members/${userId}`
 }
 
 /**
  * Requires the `workspaces:write` scope.
  * @summary Remove Member
  */
-export const removeMember = async (workspaceId: string,
+export const removeMember = async (workspaceRef: string,
     userId: string, options?: Parameters<typeof customFetch>[1]): Promise<DeletedOutStr> => {
 
-  return customFetch<DeletedOutStr>(getRemoveMemberUrl(workspaceId,userId),
+  return customFetch<DeletedOutStr>(getRemoveMemberUrl(workspaceRef,userId),
   {
     ...options,
     method: 'DELETE'
@@ -3004,8 +3017,8 @@ export const removeMember = async (workspaceId: string,
 
 
 export const getRemoveMemberMutationOptions = <TError = ErrorType<HTTPValidationError>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof removeMember>>, TError,{workspaceId: string;userId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof removeMember>>, TError,{workspaceId: string;userId: string}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof removeMember>>, TError,{workspaceRef: string;userId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof removeMember>>, TError,{workspaceRef: string;userId: string}, TContext> => {
 
 const mutationKey = ['removeMember'];
 const {mutation: mutationOptions, request: requestOptions} = options ?
@@ -3017,10 +3030,10 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof removeMember>>, {workspaceId: string;userId: string}> = (props) => {
-          const {workspaceId,userId} = props ?? {};
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof removeMember>>, {workspaceRef: string;userId: string}> = (props) => {
+          const {workspaceRef,userId} = props ?? {};
 
-          return  removeMember(workspaceId,userId,requestOptions)
+          return  removeMember(workspaceRef,userId,requestOptions)
         }
 
 
@@ -3038,32 +3051,32 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
  * @summary Remove Member
  */
 export const useRemoveMember = <TError = ErrorType<HTTPValidationError>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof removeMember>>, TError,{workspaceId: string;userId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof removeMember>>, TError,{workspaceRef: string;userId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof removeMember>>,
         TError,
-        {workspaceId: string;userId: string},
+        {workspaceRef: string;userId: string},
         TContext
       > => {
       return useMutation(getRemoveMemberMutationOptions(options));
     }
 
-export const getCreateInferenceKeyUrl = (workspaceId: string,) => {
+export const getCreateInferenceKeyUrl = (workspaceRef: string,) => {
 
 
 
 
-  return `/v1/org/workspaces/${workspaceId}/inference-keys`
+  return `/v1/org/workspaces/${workspaceRef}/inference-keys`
 }
 
 /**
  * Requires the `inference-keys:write` scope.
  * @summary Create Inference Key
  */
-export const createInferenceKey = async (workspaceId: string,
+export const createInferenceKey = async (workspaceRef: string,
     inferenceKeyIn: InferenceKeyIn, options?: Parameters<typeof customFetch>[1]): Promise<InferenceKeyMintedOut> => {
 
-  return customFetch<InferenceKeyMintedOut>(getCreateInferenceKeyUrl(workspaceId),
+  return customFetch<InferenceKeyMintedOut>(getCreateInferenceKeyUrl(workspaceRef),
   {
     ...options,
     method: 'POST',
@@ -3077,8 +3090,8 @@ export const createInferenceKey = async (workspaceId: string,
 
 
 export const getCreateInferenceKeyMutationOptions = <TError = ErrorType<HTTPValidationError>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createInferenceKey>>, TError,{workspaceId: string;data: BodyType<InferenceKeyIn>}, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof createInferenceKey>>, TError,{workspaceId: string;data: BodyType<InferenceKeyIn>}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createInferenceKey>>, TError,{workspaceRef: string;data: BodyType<InferenceKeyIn>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createInferenceKey>>, TError,{workspaceRef: string;data: BodyType<InferenceKeyIn>}, TContext> => {
 
 const mutationKey = ['createInferenceKey'];
 const {mutation: mutationOptions, request: requestOptions} = options ?
@@ -3090,10 +3103,10 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createInferenceKey>>, {workspaceId: string;data: BodyType<InferenceKeyIn>}> = (props) => {
-          const {workspaceId,data} = props ?? {};
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createInferenceKey>>, {workspaceRef: string;data: BodyType<InferenceKeyIn>}> = (props) => {
+          const {workspaceRef,data} = props ?? {};
 
-          return  createInferenceKey(workspaceId,data,requestOptions)
+          return  createInferenceKey(workspaceRef,data,requestOptions)
         }
 
 
@@ -3111,31 +3124,31 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
  * @summary Create Inference Key
  */
 export const useCreateInferenceKey = <TError = ErrorType<HTTPValidationError>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createInferenceKey>>, TError,{workspaceId: string;data: BodyType<InferenceKeyIn>}, TContext>, request?: SecondParameter<typeof customFetch>}
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createInferenceKey>>, TError,{workspaceRef: string;data: BodyType<InferenceKeyIn>}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof createInferenceKey>>,
         TError,
-        {workspaceId: string;data: BodyType<InferenceKeyIn>},
+        {workspaceRef: string;data: BodyType<InferenceKeyIn>},
         TContext
       > => {
       return useMutation(getCreateInferenceKeyMutationOptions(options));
     }
 
-export const getListInferenceKeysUrl = (workspaceId: string,) => {
+export const getListInferenceKeysUrl = (workspaceRef: string,) => {
 
 
 
 
-  return `/v1/org/workspaces/${workspaceId}/inference-keys`
+  return `/v1/org/workspaces/${workspaceRef}/inference-keys`
 }
 
 /**
  * Requires the `inference-keys:read` scope.
  * @summary List Inference Keys
  */
-export const listInferenceKeys = async (workspaceId: string, options?: Parameters<typeof customFetch>[1]): Promise<InferenceKeyOut[]> => {
+export const listInferenceKeys = async (workspaceRef: string, options?: Parameters<typeof customFetch>[1]): Promise<InferenceKeyOut[]> => {
 
-  return customFetch<InferenceKeyOut[]>(getListInferenceKeysUrl(workspaceId),
+  return customFetch<InferenceKeyOut[]>(getListInferenceKeysUrl(workspaceRef),
   {
     ...options,
     method: 'GET'
@@ -3148,29 +3161,29 @@ export const listInferenceKeys = async (workspaceId: string, options?: Parameter
 
 
 
-export const getListInferenceKeysQueryKey = (workspaceId: string,) => {
+export const getListInferenceKeysQueryKey = (workspaceRef: string,) => {
     return [
-    `/v1/org/workspaces/${workspaceId}/inference-keys`
+    `/v1/org/workspaces/${workspaceRef}/inference-keys`
     ] as const;
     }
 
 
-export const getListInferenceKeysQueryOptions = <TData = Awaited<ReturnType<typeof listInferenceKeys>>, TError = ErrorType<HTTPValidationError>>(workspaceId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listInferenceKeys>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getListInferenceKeysQueryOptions = <TData = Awaited<ReturnType<typeof listInferenceKeys>>, TError = ErrorType<HTTPValidationError>>(workspaceRef: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listInferenceKeys>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getListInferenceKeysQueryKey(workspaceId);
+  const queryKey =  queryOptions?.queryKey ?? getListInferenceKeysQueryKey(workspaceRef);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listInferenceKeys>>> = ({ signal }) => listInferenceKeys(workspaceId, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listInferenceKeys>>> = ({ signal }) => listInferenceKeys(workspaceRef, { signal, ...requestOptions });
 
 
 
 
 
-   return  { queryKey, queryFn, enabled: workspaceId !== null && workspaceId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listInferenceKeys>>, TError, TData> & { queryKey: QueryKey }
+   return  { queryKey, queryFn, enabled: workspaceRef !== null && workspaceRef !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listInferenceKeys>>, TError, TData> & { queryKey: QueryKey }
 }
 
 export type ListInferenceKeysQueryResult = NonNullable<Awaited<ReturnType<typeof listInferenceKeys>>>
@@ -3182,11 +3195,11 @@ export type ListInferenceKeysQueryError = ErrorType<HTTPValidationError>
  */
 
 export function useListInferenceKeys<TData = Awaited<ReturnType<typeof listInferenceKeys>>, TError = ErrorType<HTTPValidationError>>(
- workspaceId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listInferenceKeys>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+ workspaceRef: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listInferenceKeys>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getListInferenceKeysQueryOptions(workspaceId,options)
+  const queryOptions = getListInferenceKeysQueryOptions(workspaceRef,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
@@ -3199,23 +3212,23 @@ export function useListInferenceKeys<TData = Awaited<ReturnType<typeof listInfer
 
 
 
-export const getRevokeInferenceKeyUrl = (workspaceId: string,
+export const getRevokeInferenceKeyUrl = (workspaceRef: string,
     keyId: string,) => {
 
 
 
 
-  return `/v1/org/workspaces/${workspaceId}/inference-keys/${keyId}`
+  return `/v1/org/workspaces/${workspaceRef}/inference-keys/${keyId}`
 }
 
 /**
  * Requires the `inference-keys:write` scope.
  * @summary Revoke Inference Key
  */
-export const revokeInferenceKey = async (workspaceId: string,
+export const revokeInferenceKey = async (workspaceRef: string,
     keyId: string, options?: Parameters<typeof customFetch>[1]): Promise<InferenceKeyRevokedOut> => {
 
-  return customFetch<InferenceKeyRevokedOut>(getRevokeInferenceKeyUrl(workspaceId,keyId),
+  return customFetch<InferenceKeyRevokedOut>(getRevokeInferenceKeyUrl(workspaceRef,keyId),
   {
     ...options,
     method: 'DELETE'
@@ -3229,8 +3242,8 @@ export const revokeInferenceKey = async (workspaceId: string,
 
 
 export const getRevokeInferenceKeyMutationOptions = <TError = ErrorType<HTTPValidationError>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof revokeInferenceKey>>, TError,{workspaceId: string;keyId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof revokeInferenceKey>>, TError,{workspaceId: string;keyId: string}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof revokeInferenceKey>>, TError,{workspaceRef: string;keyId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof revokeInferenceKey>>, TError,{workspaceRef: string;keyId: string}, TContext> => {
 
 const mutationKey = ['revokeInferenceKey'];
 const {mutation: mutationOptions, request: requestOptions} = options ?
@@ -3242,10 +3255,10 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof revokeInferenceKey>>, {workspaceId: string;keyId: string}> = (props) => {
-          const {workspaceId,keyId} = props ?? {};
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof revokeInferenceKey>>, {workspaceRef: string;keyId: string}> = (props) => {
+          const {workspaceRef,keyId} = props ?? {};
 
-          return  revokeInferenceKey(workspaceId,keyId,requestOptions)
+          return  revokeInferenceKey(workspaceRef,keyId,requestOptions)
         }
 
 
@@ -3263,11 +3276,11 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
  * @summary Revoke Inference Key
  */
 export const useRevokeInferenceKey = <TError = ErrorType<HTTPValidationError>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof revokeInferenceKey>>, TError,{workspaceId: string;keyId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof revokeInferenceKey>>, TError,{workspaceRef: string;keyId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof revokeInferenceKey>>,
         TError,
-        {workspaceId: string;keyId: string},
+        {workspaceRef: string;keyId: string},
         TContext
       > => {
       return useMutation(getRevokeInferenceKeyMutationOptions(options));

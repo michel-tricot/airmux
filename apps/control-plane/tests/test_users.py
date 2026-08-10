@@ -78,6 +78,22 @@ def test_service_account_is_a_full_principal(tmp_path):
         assert by_email == {created["email"]: True, "m@example.com": False}
 
 
+def test_listing_filters_by_principal_kind(tmp_path):
+    """The filter is a server-side one so a caller after service accounts does not read every human."""
+    cp = setup_control_plane(tmp_path)
+    root = cp.headers()
+    with TestClient(cp.app) as c:
+        account = c.post("/v1/service-accounts", json={"name": "dp"}, headers=root).json()["data"]
+        c.post("/v1/users", json={"email": "m@example.com"}, headers=root)
+
+        def emails(params):
+            return [u["email"] for u in c.get("/v1/users", params=params, headers=root).json()["data"] if u["email"] != FIXTURE_ADMIN_EMAIL]
+
+        assert emails({"service_account": True}) == [account["email"]]
+        assert emails({"service_account": False}) == ["m@example.com"]
+        assert sorted(emails({})) == sorted([account["email"], "m@example.com"])
+
+
 def test_membership_lifecycle_and_listing(tmp_path):
     cp = setup_control_plane(tmp_path)
     root = cp.headers()

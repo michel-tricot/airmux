@@ -629,8 +629,14 @@ export interface UserOut {
 }
 
 export interface WorkspaceCreate {
-  /** Workspace name, e.g. staging */
+  /** Workspace name, e.g. Staging */
   name: string;
+  /**
+     * Workspace handle, unique in the org and usable in place of the id; derived from the name when omitted
+     * @maxLength 63
+     * @pattern ^[a-z0-9]+(?:-[a-z0-9]+)*$
+     */
+  slug?: string;
 }
 
 export interface WorkspaceMembershipOut {
@@ -643,6 +649,7 @@ export interface WorkspaceOut {
   id: string;
   org_id: string;
   name: string;
+  slug: string;
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
@@ -666,6 +673,10 @@ org_id?: string | null;
 
 export type ListInstanceActivityParams = {
 limit?: number;
+};
+
+export type ListUsersParams = {
+service_account?: boolean | null;
 };
 
 export type ListEventsParams = {

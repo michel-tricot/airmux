@@ -1,11 +1,11 @@
 """initial schema
 
-Consolidated on 2026-08-08 from the pre-release chain (initial schema, enrollment and cli auth,
-workspaces); nothing had deployed, so the chain had no consumers. From first deployment on the
-chain is append-only: never squash again or edit a shipped revision.
+Consolidated on 2026-08-09 from the pre-release chain (initial schema, enrollment and cli auth,
+workspaces, workspace slugs); nothing had deployed, so the chain had no consumers. From first
+deployment on the chain is append-only: never squash again or edit a shipped revision.
 
 The tenancy model: users and orgs are instance-level, org_membership ties them, workspaces live
-under an org, workspace_membership's composite foreign keys make cross-org membership
+under an org and are named within it by an org-unique slug, workspace_membership's composite foreign keys make cross-org membership
 structurally impossible (with a cascade evicting users whose org membership goes), and
 inference keys live in workspaces with org_id kept consistent by a composite foreign key.
 
@@ -326,12 +326,14 @@ def upgrade() -> None:
         sa.Column("id", sa.Uuid(), server_default=sa.text("uuidv7()"), nullable=False),
         sa.Column("org_id", sa.Uuid(), nullable=False),
         sa.Column("name", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+        sa.Column("slug", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.ForeignKeyConstraint(
             ["org_id"],
             ["org.id"],
         ),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("id", "org_id", name="workspace_id_org_id_key"),
+        sa.UniqueConstraint("org_id", "slug", name="workspace_org_id_slug_key"),
     )
     op.create_table(
         "workspace_membership",

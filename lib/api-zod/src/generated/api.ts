@@ -516,9 +516,15 @@ export const CreateUserResponse = zod.object({
 
 
 /**
+ * Every principal on the instance, or one kind of them: service_account splits the machines from the humans.
+ *
  * Requires the `users:read` scope.
  * @summary List Users
  */
+export const ListUsersQueryParams = zod.object({
+  "service_account": zod.union([zod.coerce.boolean(),zod.null()]).optional()
+})
+
 export const ListUsersHeader = zod.object({
   "X-Org-Id": zod.union([zod.string(),zod.null()]).optional(),
   "X-Requested-With": zod.union([zod.string(),zod.null()]).optional(),
@@ -742,6 +748,9 @@ export const DeleteOrgResponse = zod.object({
  * The creator becomes the first member when they hold an org membership; an instance admin
  * acting on an org they never joined creates it member-less and relies on their bypass.
  *
+ * A caller who names no slug gets one derived from the name; one who does gets a 409 when the
+ * org already holds it, rather than a silently numbered variant of what they asked for.
+ *
  * Requires the `workspaces:write` scope.
  * @summary Create Workspace
  */
@@ -751,14 +760,23 @@ export const CreateWorkspaceHeader = zod.object({
   "Sec-Fetch-Site": zod.union([zod.string(),zod.null()]).optional()
 })
 
+export const createWorkspaceBodySlugDefault = ``;
+export const createWorkspaceBodySlugMax = 63;
+
+
+export const createWorkspaceBodySlugRegExp = new RegExp('^[a-z0-9]+(?:-[a-z0-9]+)*$');
+
+
 export const CreateWorkspaceBody = zod.object({
-  "name": zod.string().describe('Workspace name, e.g. staging')
+  "name": zod.string().describe('Workspace name, e.g. Staging'),
+  "slug": zod.string().max(createWorkspaceBodySlugMax).regex(createWorkspaceBodySlugRegExp).default(createWorkspaceBodySlugDefault).describe('Workspace handle, unique in the org and usable in place of the id; derived from the name when omitted')
 })
 
 export const CreateWorkspaceResponse = zod.object({
   "id": zod.uuid(),
   "org_id": zod.uuid(),
   "name": zod.string(),
+  "slug": zod.string(),
   "created_at": zod.coerce.date(),
   "updated_at": zod.coerce.date(),
   "deleted_at": zod.union([zod.coerce.date(),zod.null()])
@@ -779,6 +797,7 @@ export const ListWorkspacesResponseItem = zod.object({
   "id": zod.uuid(),
   "org_id": zod.uuid(),
   "name": zod.string(),
+  "slug": zod.string(),
   "created_at": zod.coerce.date(),
   "updated_at": zod.coerce.date(),
   "deleted_at": zod.union([zod.coerce.date(),zod.null()])
@@ -791,7 +810,7 @@ export const ListWorkspacesResponse = zod.array(ListWorkspacesResponseItem)
  * @summary Get Workspace
  */
 export const GetWorkspaceParams = zod.object({
-  "workspace_id": zod.uuid()
+  "workspace_ref": zod.coerce.string()
 })
 
 export const GetWorkspaceHeader = zod.object({
@@ -804,6 +823,7 @@ export const GetWorkspaceResponse = zod.object({
   "id": zod.uuid(),
   "org_id": zod.uuid(),
   "name": zod.string(),
+  "slug": zod.string(),
   "created_at": zod.coerce.date(),
   "updated_at": zod.coerce.date(),
   "deleted_at": zod.union([zod.coerce.date(),zod.null()])
@@ -817,7 +837,7 @@ export const GetWorkspaceResponse = zod.object({
  * @summary Delete Workspace
  */
 export const DeleteWorkspaceParams = zod.object({
-  "workspace_id": zod.uuid()
+  "workspace_ref": zod.coerce.string()
 })
 
 export const DeleteWorkspaceHeader = zod.object({
@@ -837,7 +857,7 @@ export const DeleteWorkspaceResponse = zod.object({
  * @summary Update Workspace
  */
 export const UpdateWorkspaceParams = zod.object({
-  "workspace_id": zod.uuid()
+  "workspace_ref": zod.coerce.string()
 })
 
 export const UpdateWorkspaceHeader = zod.object({
@@ -854,6 +874,7 @@ export const UpdateWorkspaceResponse = zod.object({
   "id": zod.uuid(),
   "org_id": zod.uuid(),
   "name": zod.string(),
+  "slug": zod.string(),
   "created_at": zod.coerce.date(),
   "updated_at": zod.coerce.date(),
   "deleted_at": zod.union([zod.coerce.date(),zod.null()])
@@ -865,7 +886,7 @@ export const UpdateWorkspaceResponse = zod.object({
  * @summary List Members
  */
 export const ListMembersParams = zod.object({
-  "workspace_id": zod.uuid()
+  "workspace_ref": zod.coerce.string()
 })
 
 export const ListMembersHeader = zod.object({
@@ -889,7 +910,7 @@ export const ListMembersResponse = zod.array(ListMembersResponseItem)
  * @summary Add Member
  */
 export const AddMemberParams = zod.object({
-  "workspace_id": zod.uuid(),
+  "workspace_ref": zod.coerce.string(),
   "user_id": zod.uuid()
 })
 
@@ -911,7 +932,7 @@ export const AddMemberResponse = zod.object({
  * @summary Remove Member
  */
 export const RemoveMemberParams = zod.object({
-  "workspace_id": zod.uuid(),
+  "workspace_ref": zod.coerce.string(),
   "user_id": zod.uuid()
 })
 
@@ -932,7 +953,7 @@ export const RemoveMemberResponse = zod.object({
  * @summary Create Inference Key
  */
 export const CreateInferenceKeyParams = zod.object({
-  "workspace_id": zod.uuid()
+  "workspace_ref": zod.coerce.string()
 })
 
 export const CreateInferenceKeyHeader = zod.object({
@@ -960,7 +981,7 @@ export const CreateInferenceKeyResponse = zod.object({
  * @summary List Inference Keys
  */
 export const ListInferenceKeysParams = zod.object({
-  "workspace_id": zod.uuid()
+  "workspace_ref": zod.coerce.string()
 })
 
 export const ListInferenceKeysHeader = zod.object({
@@ -990,7 +1011,7 @@ export const ListInferenceKeysResponse = zod.array(ListInferenceKeysResponseItem
  */
 export const RevokeInferenceKeyParams = zod.object({
   "key_id": zod.uuid(),
-  "workspace_id": zod.uuid()
+  "workspace_ref": zod.coerce.string()
 })
 
 export const RevokeInferenceKeyHeader = zod.object({

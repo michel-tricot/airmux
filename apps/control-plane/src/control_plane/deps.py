@@ -151,13 +151,13 @@ InstanceDep = Annotated[ManagementClaims, Depends(instance_scope)]
 OrgDep = Annotated[UUID, Depends(org_scope)]
 
 
-async def workspace_member(workspace_id: UUID, org_id: OrgDep, claims: MgmtDep) -> Workspace:
+async def workspace_member(workspace_ref: str, org_id: OrgDep, claims: MgmtDep) -> Workspace:
     """Key operations require membership in the workspace, not just the org; instance admins bypass.
 
-    Ownership resolves first, so a workspace outside the org scope is a 404 before it is a 403.
+    The reference resolves first, so a workspace outside the org scope is a 404 before it is a 403.
     """
-    workspace = await Workspace.owned_by(org_id, workspace_id)
-    if await WorkspaceMembership.get((claims.user_id, workspace_id)) is None:
+    workspace = await Workspace.by_ref(org_id, workspace_ref)
+    if await WorkspaceMembership.get((claims.user_id, workspace.id)) is None:
         user = await User.find_by_id(claims.user_id)
         if user is None or not user.instance_admin:
             raise HTTPException(status_code=403, detail="not a member of this workspace")

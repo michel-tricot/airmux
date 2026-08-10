@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import re
 from datetime import datetime
 from typing import ClassVar, Self
 from uuid import UUID, uuid4
@@ -11,7 +10,7 @@ from sqlmodel import Field, col, select
 
 from control_plane.db import current_session
 from control_plane.models.audit import audited
-from control_plane.models.common import Identified, Tombstonable
+from control_plane.models.common import Identified, Tombstonable, slugify
 from control_plane.models.common.base import Record
 from control_plane.models.common.wire import RecordCreate, RecordOut
 from control_plane.models.org_membership import OrgMembership
@@ -20,10 +19,6 @@ SERVICE_ACCOUNT_EMAIL_DOMAIN = "airbytesvcaccount.ai"
 
 # Advisory lock key for the instance claim. Arbitrary and constant: it names the claim, nothing else.
 _CLAIM_LOCK = 0x41524C4C
-
-
-def slug(name: str) -> str:
-    return re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
 
 
 @audited
@@ -92,7 +87,7 @@ class User(Record, Identified, Tombstonable, table=True):
     def new_service_account(cls, name: str) -> Self:
         """Machine principal with a derived unique email; the caller saves it and adds memberships."""
         return cls(
-            email=f"{slug(name)}-{uuid4().hex[:8]}@{SERVICE_ACCOUNT_EMAIL_DOMAIN}",
+            email=f"{slugify(name)}-{uuid4().hex[:8]}@{SERVICE_ACCOUNT_EMAIL_DOMAIN}",
             name=name,
             service_account=True,
         )
@@ -109,7 +104,7 @@ class ServiceAccountIn(BaseModel):
     @field_validator("name")
     @classmethod
     def name_yields_an_email_local_part(cls, v: str) -> str:
-        if not slug(v):
+        if not slugify(v):
             msg = "name must contain at least one letter or digit"
             raise ValueError(msg)
         return v
