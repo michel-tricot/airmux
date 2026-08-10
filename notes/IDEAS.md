@@ -445,3 +445,27 @@ deployments and self-hosted vLLM instances still need an instance-wide Provider 
 base_url per workspace means Provider stops being instance-global (it is `name`-unique with no
 org_id today) and the bundle's provider list becomes workspace-scoped like the credential list.
 Deliberately out of scope of BYOK, which keeps the change to one new table and one new bundle field.
+
+## A new scope should not grant itself to keys that already exist
+
+Found while adding `provider-credentials:write` (see [BYOK](design/BYOK.md)). Scopes restrict rather
+than grant: a management key minted with no explicit scope list carries its user's full authority
+and picks up scopes invented later. So every key that existed before the scope was added silently
+gained it, and no operator was asked.
+
+That is tolerable for a scope that reads, and not for one that spends money: whoever holds
+`provider-credentials:write` can attach a provider key, which owns the upstream account the org's
+traffic is billed to and whose dashboard shows every request made with it.
+
+Two ways out, both authorization-model changes rather than per-feature ones: mark a scope as
+opt-in so unscoped keys never receive it, or require an explicit re-mint when a scope of that
+class is introduced. Pairs with [roles](#roles-between-org-member-and-org-admin), because a named
+role is the natural place to say which scopes a bundle carries.
+
+## Roles between org member and org admin
+
+Also found while adding provider credentials. Any org member holding `management-keys:write` can
+mint themselves a key, and an unscoped one carries every scope, so org membership is the whole gate
+on operations that differ enormously in privilege. `authz.py` already anticipates the fix in its
+docstring: roles as named bundles over the existing scopes. Until they exist, an operator who cares
+mints org keys with explicit scope lists and treats unscoped keys as admin credentials.

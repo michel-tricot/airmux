@@ -62,6 +62,17 @@ class ControlPlane:
 
         return {"authorization": f"Bearer {asyncio.run(mint())}"}
 
+    def headers_for(self, org_id: UUID, user_id: UUID | str) -> dict[str, str]:
+        """An org key bound to a named user, for the checks an instance admin bypasses."""
+
+        async def mint() -> str:
+            async with standalone_transaction(self.db_url):
+                await set_actor(UUID(str(user_id)))
+                _, token = await mint_management_key(org_id, UUID(str(user_id)), label="member")
+                return token
+
+        return {"authorization": f"Bearer {asyncio.run(mint())}"}
+
 
 def make_org(client, headers: dict[str, str], name: str = "org-test") -> UUID:
     """Create an org through the API and return its server-minted id."""

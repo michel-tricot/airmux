@@ -151,10 +151,14 @@ InstanceDep = Annotated[ManagementClaims, Depends(instance_scope)]
 OrgDep = Annotated[UUID, Depends(org_scope)]
 
 
-async def workspace_member(workspace_ref: str, org_id: OrgDep, claims: MgmtDep) -> Workspace:
+async def joined_workspace(org_id: UUID, workspace_ref: str, claims: ManagementClaims) -> Workspace:
     """Key operations require membership in the workspace, not just the org; instance admins bypass.
 
     The reference resolves first, so a workspace outside the org scope is a 404 before it is a 403.
+
+    Callable rather than only a dependency, because the routes that name a workspace in a body or a
+    query string need the same rule as the ones that name it in the path, and a second copy of it
+    is how one of them ends up without it.
     """
     workspace = await Workspace.by_ref(org_id, workspace_ref)
     if await WorkspaceMembership.get((claims.user_id, workspace.id)) is None:
@@ -162,6 +166,11 @@ async def workspace_member(workspace_ref: str, org_id: OrgDep, claims: MgmtDep) 
         if user is None or not user.instance_admin:
             raise HTTPException(status_code=403, detail="not a member of this workspace")
     return workspace
+
+
+async def workspace_member(workspace_ref: str, org_id: OrgDep, claims: MgmtDep) -> Workspace:
+    """The path-parameter form of joined_workspace."""
+    return await joined_workspace(org_id, workspace_ref, claims)
 
 
 WorkspaceDep = Annotated[Workspace, Depends(workspace_member)]

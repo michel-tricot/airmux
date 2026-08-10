@@ -3304,6 +3304,10 @@ export const getCreateProviderCredentialUrl = () => {
 /**
  * Bring a provider key for this org, or for one workspace in it.
  *
+ * A workspace-scoped key needs membership in that workspace, the way minting an inference key
+ * there does: whoever supplies the key owns the account its traffic is billed to, and that
+ * account's dashboard shows every request made with it.
+ *
  * The row is written before the value so a crash between the two leaves a credential with nothing
  * behind it, which the request path already handles by skipping the candidate. The other order
  * would leave a value in the store with no row to delete it by.
