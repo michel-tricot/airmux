@@ -33,6 +33,14 @@ class ProviderIn(BaseModel):
     provider_id: str = Field(description="Provider name, e.g. openai")
     kind: Literal["openai_compatible", "anthropic"] = Field("openai_compatible", description="Adapter kind")
     base_url: str = Field(description="OpenAI-compatible endpoint, e.g. https://api.groq.com/openai/v1")
+    icon: str = Field(
+        "",
+        description=(
+            "Provider mark as a standalone 24x24 SVG document, empty when the provider has none. "
+            "Carried as markup so adding a provider needs no client change to make it recognisable, "
+            "which makes it untrusted markup to whatever renders it; sanitize at the render site"
+        ),
+    )
     cache_read_multiplier: float = Field(1.0, description="Input price factor for prompt-cache hits")
     cache_write_multiplier: float = Field(1.0, description="Input price factor for cache writes")
 
@@ -70,6 +78,7 @@ async def upsert_provider(p: ProviderIn) -> Provider:
     else:
         provider.kind = p.kind
         provider.base_url = p.base_url
+    provider.icon = p.icon
     provider.cache_read_multiplier = p.cache_read_multiplier
     provider.cache_write_multiplier = p.cache_write_multiplier
     return await provider.save()

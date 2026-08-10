@@ -1,13 +1,16 @@
 from __future__ import annotations
 
 import asyncio
+from datetime import UTC, datetime, timedelta
+from typing import NamedTuple
+from uuid import UUID  # noqa: TC003 NamedTuple resolves its annotations at runtime
 
 import pytest
 from fastapi.testclient import TestClient
 from helpers import MODEL, PROVIDER, make_org, make_workspace, run_in_db, setup_control_plane
 from sqlalchemy.exc import IntegrityError
 
-from contract import EnvStoreConfig, SecretNotFoundError, SecretPurpose, SecretRef
+from contract import EnvStoreConfig, SecretNotFoundError, SecretPurpose, SecretRef, uuid7
 from control_plane.models import Provider, ProviderCredential
 
 KEY = "sk-provider-abcd1234"
@@ -219,3 +222,106 @@ def test_a_workspace_credential_cannot_exist_without_an_org(tmp_path):
 
     with pytest.raises(IntegrityError, match="provider_credential_workspace_needs_org"):
         run_in_db(tmp_path, orphan)
+
+
+def _usage_event(metered, status, occurred_at):
+    """One event as the data plane would send it, attributed to the credential that paid."""
+    return {
+        "event_id": str(uuid7()),
+        "request_id": str(uuid7()),
+        "occurred_at": occurred_at.isoformat(),
+        "org_id": str(metered.org_id),
+        "workspace_id": str(metered.workspace_id),
+        "key_id": "k1",
+        "model_id": "gpt-test",
+        "provider_id": "openai",
+        "bundle_id": str(uuid7()),
+        "input_tokens": 1,
+        "output_tokens": 1,
+        "cost_usd": 0.0,
+        "latency_ms": 1,
+        "status": status,
+        "stream": False,
+        "credential_id": metered.credential["id"],
+        "credential_scope": "workspace",
+    }
+
+
+class Metered(NamedTuple):
+    """An org holding one workspace credential, and the headers to meter and read it back with."""
+
+    root: dict
+    org: dict
+    org_id: UUID
+    workspace_id: UUID
+    credential: dict
+
+
+def _with_credential(cp, c) -> Metered:
+    root = cp.headers()
+    _catalog(c, root)
+    org_id = make_org(c, root)
+    org = cp.headers(org_id)
+    workspace_id = make_workspace(c, org)
+    body = {"provider": "openai", "value": KEY, "workspace": str(workspace_id)}
+    credential = c.post("/v1/org/provider-credentials", json=body, headers=org).json()["data"]
+    return Metered(root=root, org=org, org_id=org_id, workspace_id=workspace_id, credential=credential)
+
+
+def _status_of(c, m: Metered) -> str:
+    return c.get(f"/v1/org/provider-credentials/{m.credential['id']}", headers=m.org).json()["data"]["status"]
+
+
+def test_a_rejected_key_shows_up_as_invalid(tmp_path):
+    """The data plane never talks to the control plane about credentials; the usage events it already
+    sends are what carry a key's health back."""
+    cp = setup_control_plane(tmp_path)
+    with TestClient(cp.app) as c:
+        m = _with_credential(cp, c)
+        assert m.credential["status"] == "unknown"
+        event = _usage_event(m, "credential_rejected", datetime.now(tz=UTC))
+        assert c.post("/v1/events", json=[event], headers=m.root).status_code == 200
+        assert _status_of(c, m) == "invalid"
+
+
+def test_a_working_key_shows_up_as_live(tmp_path):
+    cp = setup_control_plane(tmp_path)
+    with TestClient(cp.app) as c:
+        m = _with_credential(cp, c)
+        event = _usage_event(m, "ok", datetime.now(tz=UTC))
+        c.post("/v1/events", json=[event], headers=m.root)
+        assert _status_of(c, m) == "live"
+
+
+def test_a_replayed_event_cannot_undo_a_newer_one(tmp_path):
+    """Delivery is at-least-once, so events replay after an outage and arrive out of order. An older
+    observation must never flip a working key back to invalid."""
+    cp = setup_control_plane(tmp_path)
+    with TestClient(cp.app) as c:
+        m = _with_credential(cp, c)
+        now = datetime.now(tz=UTC)
+        c.post("/v1/events", json=[_usage_event(m, "ok", now)], headers=m.root)
+        stale = _usage_event(m, "credential_rejected", now - timedelta(hours=1))
+        c.post("/v1/events", json=[stale], headers=m.root)
+        assert _status_of(c, m) == "live"
+
+
+def test_a_provider_outage_says_nothing_about_the_key(tmp_path):
+    """upstream_error and timeout are facts about the provider, so they leave the status alone."""
+    cp = setup_control_plane(tmp_path)
+    with TestClient(cp.app) as c:
+        m = _with_credential(cp, c)
+        c.post("/v1/events", json=[_usage_event(m, "ok", datetime.now(tz=UTC))], headers=m.root)
+        outage = _usage_event(m, "upstream_error", datetime.now(tz=UTC) + timedelta(minutes=1))
+        c.post("/v1/events", json=[outage], headers=m.root)
+        assert _status_of(c, m) == "live"
+
+
+def test_events_for_a_deleted_credential_are_not_an_error(tmp_path):
+    """A credential can be deleted while its events are still in flight."""
+    cp = setup_control_plane(tmp_path)
+    with TestClient(cp.app) as c:
+        m = _with_credential(cp, c)
+        c.delete(f"/v1/org/provider-credentials/{m.credential['id']}", headers=m.org)
+        event = _usage_event(m, "ok", datetime.now(tz=UTC))
+        assert c.post("/v1/events", json=[event], headers=m.root).status_code == 200

@@ -14,4 +14,6 @@ export const UsageEventV1Status = {
   denied: 'denied',
   timeout: 'timeout',
   cancelled: 'cancelled',
+  credential_rejected: 'credential_rejected',
+  rate_limited: 'rate_limited',
 } as const;

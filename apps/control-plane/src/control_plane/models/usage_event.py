@@ -31,6 +31,8 @@ class UsageEvent(Record, table=True):
     latency_ms: int
     status: str
     stream: bool
+    credential_id: UUID | None = None
+    credential_scope: str | None = None
 
 
 class UsageEventOut(RecordOut[UsageEvent]):
@@ -53,6 +55,8 @@ class UsageEventOut(RecordOut[UsageEvent]):
     latency_ms: int
     status: str
     stream: bool
+    credential_id: UUID | None
+    credential_scope: str | None
 
 
 class EventsIngestedOut(BaseModel):

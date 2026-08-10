@@ -1,16 +1,21 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 import yaml
 from fastapi.testclient import TestClient
 from helpers import run_in_db, setup_control_plane, setup_db, write_config
 from typer.testing import CliRunner
 
+import control_plane
 from control_plane.main import app
 from control_plane.models import AuditLog, Bundle, Model, Org, Provider, set_actor
 from control_plane.taxonomy import TaxonomySpec, UnknownProviderError, apply_taxonomy
 
 runner = CliRunner()
+
+REPO_ROOT = Path(control_plane.__file__).resolve().parents[4]
 
 TAXONOMY = """
 providers:
@@ -19,6 +24,15 @@ providers:
 models:
   - model_id: echo
     provider_id: stub
+"""
+
+STUB_ICON = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M0 0h24v24H0z"/></svg>'
+
+TAXONOMY_WITH_ICON = f"""
+providers:
+  - provider_id: stub
+    base_url: https://stub.example/v1
+    icon: '{STUB_ICON}'
 """
 
 
@@ -40,6 +54,42 @@ def test_apply_taxonomy_upserts(tmp_path):
     providers = run_in_db(tmp_path, Provider.find)
     assert [p.base_url for p in providers] == ["https://stub2.example/v1"]
     assert len(run_in_db(tmp_path, Model.find)) == 1
+
+
+def test_apply_taxonomy_carries_the_provider_icon(tmp_path):
+    setup_db(tmp_path)
+
+    async def apply(doc: str):
+        await set_actor("u-test")
+        return await apply_taxonomy(TaxonomySpec.model_validate(yaml.safe_load(doc)))
+
+    run_in_db(tmp_path, lambda: apply(TAXONOMY_WITH_ICON))
+    assert [p.icon for p in run_in_db(tmp_path, Provider.find)] == [STUB_ICON]
+
+    replaced = STUB_ICON.replace("M0 0h24v24H0z", "M1 1h22v22H1z")
+    run_in_db(tmp_path, lambda: apply(TAXONOMY_WITH_ICON.replace(STUB_ICON, replaced)))
+    assert [p.icon for p in run_in_db(tmp_path, Provider.find)] == [replaced]
+
+
+def test_a_provider_declaring_no_icon_has_none(tmp_path):
+    setup_db(tmp_path)
+
+    async def apply():
+        await set_actor("u-test")
+        return await apply_taxonomy(TaxonomySpec.model_validate(yaml.safe_load(TAXONOMY)))
+
+    run_in_db(tmp_path, apply)
+    assert [p.icon for p in run_in_db(tmp_path, Provider.find)] == [""]
+
+
+def test_every_shipped_provider_carries_a_square_icon():
+    """The icons are data, so the guard is on the file the instance actually applies."""
+    spec = TaxonomySpec.model_validate(yaml.safe_load((REPO_ROOT / "taxonomy.yml").read_text(encoding="utf-8")))
+    assert spec.providers != []
+    for provider in spec.providers:
+        assert provider.icon.startswith("<svg "), provider.provider_id
+        assert provider.icon.endswith("</svg>"), provider.provider_id
+        assert 'viewBox="0 0 24 24"' in provider.icon, provider.provider_id
 
 
 def test_apply_taxonomy_rejects_a_model_with_an_unknown_provider(tmp_path):

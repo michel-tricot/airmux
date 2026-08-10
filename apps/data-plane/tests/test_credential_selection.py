@@ -16,9 +16,18 @@ from data_plane.canonical import CanonicalRequest
 from data_plane.config import BundleConfig, Config
 from data_plane.credentials import CredentialResolver, index_credentials
 from data_plane.holder import BundleSnapshot
+from data_plane.outbox import SqliteOutbox
 from data_plane.policy import Allow, Deny, evaluate
 
 OTHER_WORKSPACE = uuid7()
+
+
+def _recorded(tmp_path):
+    """The events the data plane buffered, read straight from its outbox."""
+    outbox = SqliteOutbox(cache_dir=tmp_path, control_plane_url=None, control_plane_token=None, flush_interval_s=5.0)
+    events = outbox._read_batch(10)
+    outbox.close()
+    return events
 
 
 async def value_of(resolver, entry) -> str:
@@ -212,3 +221,36 @@ def test_a_credential_with_no_value_fails_the_request(tmp_path):
 def test_a_request_with_no_credential_anywhere_is_denied(tmp_path):
     app, caller_token, _ = _byok_app(tmp_path, [])
     assert _complete(app, caller_token).status_code == 402
+
+
+@respx.mock
+def test_the_usage_event_names_the_credential_that_paid(tmp_path):
+    """Per-key attribution is what lets an operator separate a tenant's spend from the platform's,
+    and it is the only channel a credential's health travels back on."""
+    workspace_key = make_credential(workspace=WORKSPACE, name="mine")
+    app, caller_token, store = _byok_app(tmp_path, [workspace_key])
+    asyncio.run(store.put(workspace_key.ref, Secret("sk-workspace")))
+    respx.post("https://api.openai.com/v1/chat/completions").mock(return_value=httpx.Response(200, json=BYOK_RESPONSE))
+
+    assert _complete(app, caller_token).status_code == 200
+    event = _recorded(tmp_path)[0]
+    assert event.credential_id == workspace_key.ref.secret_id
+    assert event.credential_scope == "workspace"
+    assert event.status == "ok"
+
+
+@respx.mock
+@pytest.mark.parametrize(
+    ("upstream_status", "metered"),
+    [(401, "credential_rejected"), (403, "credential_rejected"), (429, "rate_limited"), (500, "upstream_error")],
+)
+def test_the_event_says_whether_the_key_or_the_provider_failed(tmp_path, upstream_status, metered):
+    """A provider outage says nothing about whether the key is good, so only the statuses that are
+    facts about the credential are split out."""
+    workspace_key = make_credential(workspace=WORKSPACE, name="mine")
+    app, caller_token, store = _byok_app(tmp_path, [workspace_key])
+    asyncio.run(store.put(workspace_key.ref, Secret("sk-workspace")))
+    respx.post("https://api.openai.com/v1/chat/completions").mock(return_value=httpx.Response(upstream_status, json={"error": "no"}))
+
+    assert _complete(app, caller_token).status_code == upstream_status
+    assert _recorded(tmp_path)[0].status == metered

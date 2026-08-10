@@ -4,6 +4,7 @@
  * Api
  * OpenAPI spec version: 0.1.0
  */
+import type { UsageEventV1CredentialScope } from './usageEventV1CredentialScope';
 import type { UsageEventV1Status } from './usageEventV1Status';
 
 /**
@@ -33,4 +34,6 @@ export interface UsageEventV1 {
   latency_ms: number;
   status: UsageEventV1Status;
   stream: boolean;
+  credential_id?: string | null;
+  credential_scope?: UsageEventV1CredentialScope;
 }

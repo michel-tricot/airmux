@@ -19,6 +19,8 @@ export interface ProviderIn {
   kind?: ProviderInKind;
   /** OpenAI-compatible endpoint, e.g. https://api.groq.com/openai/v1 */
   base_url: string;
+  /** Provider mark as a standalone 24x24 SVG document, empty when the provider has none. Carried as markup so adding a provider needs no client change to make it recognisable, which makes it untrusted markup to whatever renders it; sanitize at the render site */
+  icon?: string;
   /** Input price factor for prompt-cache hits */
   cache_read_multiplier?: number;
   /** Input price factor for cache writes */

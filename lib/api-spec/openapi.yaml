@@ -5486,6 +5486,12 @@ components:
         status:
           type: string
           title: Status
+        status_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Status At
         fingerprint:
           type: string
           title: Fingerprint
@@ -5521,6 +5527,7 @@ components:
       - enabled
       - version
       - status
+      - status_at
       - fingerprint
       - created_at
       - updated_at
@@ -5604,6 +5611,13 @@ components:
           type: string
           title: Base Url
           description: OpenAI-compatible endpoint, e.g. https://api.groq.com/openai/v1
+        icon:
+          type: string
+          title: Icon
+          description: Provider mark as a standalone 24x24 SVG document, empty when the provider has none. Carried as markup
+            so adding a provider needs no client change to make it recognisable, which makes it untrusted markup to whatever
+            renders it; sanitize at the render site
+          default: ''
         cache_read_multiplier:
           type: number
           title: Cache Read Multiplier
@@ -5641,6 +5655,9 @@ components:
         base_url:
           type: string
           title: Base Url
+        icon:
+          type: string
+          title: Icon
         cache_read_multiplier:
           type: number
           title: Cache Read Multiplier
@@ -5667,6 +5684,7 @@ components:
       - name
       - kind
       - base_url
+      - icon
       - cache_read_multiplier
       - cache_write_multiplier
       - created_at
@@ -5923,6 +5941,17 @@ components:
         stream:
           type: boolean
           title: Stream
+        credential_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Credential Id
+        credential_scope:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Credential Scope
       type: object
       required:
       - event_id
@@ -5944,6 +5973,8 @@ components:
       - latency_ms
       - status
       - stream
+      - credential_id
+      - credential_scope
       title: UsageEventOut
     UsageEventV1:
       properties:
@@ -6021,10 +6052,27 @@ components:
           - denied
           - timeout
           - cancelled
+          - credential_rejected
+          - rate_limited
           title: Status
         stream:
           type: boolean
           title: Stream
+        credential_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Credential Id
+        credential_scope:
+          anyOf:
+          - type: string
+            enum:
+            - platform
+            - org
+            - workspace
+          - type: 'null'
+          title: Credential Scope
       type: object
       required:
       - event_id

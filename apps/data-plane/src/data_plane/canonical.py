@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import time
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
@@ -76,6 +76,8 @@ class Ctx:
     org_id: UUID = NIL_ORG
     workspace_id: UUID = NIL_WORKSPACE
     key_id: str = ""
+    credential_id: UUID | None = None  # which provider key paid, stamped onto the usage event
+    credential_scope: Literal["platform", "org", "workspace"] | None = None
     bundle_id: UUID | None = None
     started_at: float = field(default_factory=time.monotonic)
 

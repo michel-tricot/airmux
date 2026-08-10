@@ -10,12 +10,15 @@ from sqlmodel import col
 from contract import BundleV1, HeartbeatV1, SignedBundle, UsageEventV1
 from control_plane.authz import Scope
 from control_plane.deps import MgmtDep, SessionDep, require
-from control_plane.models import Bundle, DataPlaneInstance, UsageEvent
+from control_plane.models import Bundle, DataPlaneInstance, ProviderCredential, UsageEvent
 from control_plane.models.common.wire import Envelope
 from control_plane.models.data_plane_instance import HeartbeatOut
 from control_plane.models.usage_event import EventsIngestedOut
 
 router = APIRouter(tags=["Data Plane"])
+
+CREDENTIAL_HEALTH = {"ok": "live", "credential_rejected": "invalid", "rate_limited": "rate_limited"}
+"""Usage statuses that say something about the credential; everything else is about the provider."""
 
 
 def _sync_org(claims_org_id: UUID | None, org_id: UUID | None) -> UUID | None:
@@ -59,7 +62,26 @@ async def ingest_events(claims: MgmtDep, events: list[UsageEventV1], session: Se
     rows = list({event.event_id: event.model_dump(exclude={"schema_version"}) for event in events}.values())
     stmt = pg_insert(UsageEvent).values(rows).on_conflict_do_nothing(index_elements=["event_id"]).returning(col(UsageEvent.event_id))
     inserted = (await session.execute(stmt)).scalars().all()
+    await ProviderCredential.observe(_credential_health(events))
     return Envelope(data=EventsIngestedOut(received=len(events), ingested=len(inserted)))
+
+
+def _credential_health(events: list[UsageEventV1]) -> dict[UUID, tuple[datetime, str]]:
+    """The newest thing each credential's events say about it.
+
+    Only the outcomes that are facts about the key are worth recording: a provider outage says
+    nothing about whether the key is good. A replay carries old events, so the batch is reduced by
+    occurred_at rather than by arrival order.
+    """
+    health: dict[UUID, tuple[datetime, str]] = {}
+    for event in events:
+        status = CREDENTIAL_HEALTH.get(event.status)
+        if event.credential_id is None or status is None:
+            continue
+        seen = health.get(event.credential_id)
+        if seen is None or event.occurred_at > seen[0]:
+            health[event.credential_id] = (event.occurred_at, status)
+    return health
 
 
 @router.post("/heartbeat", dependencies=[require(Scope.sync)])

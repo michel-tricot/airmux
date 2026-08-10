@@ -7,12 +7,14 @@ from uuid import UUID
 from pydantic import BaseModel, SecretStr
 from pydantic import Field as PydanticField
 from sqlalchemy import CheckConstraint, ForeignKeyConstraint, UniqueConstraint
-from sqlmodel import Field
+from sqlmodel import Field, col
 
 from contract import SecretPurpose, SecretRef
+from control_plane.db import current_session
 from control_plane.models.audit import audited
 from control_plane.models.common import Identified, Tombstonable
 from control_plane.models.common.base import Record
+from control_plane.models.common.column_types import UTCDateTime
 from control_plane.models.common.org_owned import NotOwnedError
 from control_plane.models.common.wire import RecordOut, RecordUpdate
 
@@ -55,9 +57,12 @@ class ProviderCredential(Record, Identified, Tombstonable, table=True):
     enabled: bool = True
     version: int = 1
     status: str = "unknown"
+    status_at: datetime | None = Field(default=None, sa_type=UTCDateTime)
     fingerprint: str = ""
 
-    api_readonly: ClassVar[frozenset[str]] = frozenset({"org_id", "workspace_id", "provider_id", "name", "version", "status", "fingerprint"})
+    api_readonly: ClassVar[frozenset[str]] = frozenset(
+        {"org_id", "workspace_id", "provider_id", "name", "version", "status", "status_at", "fingerprint"}
+    )
 
     @property
     def scope(self) -> CredentialScope:
@@ -91,6 +96,37 @@ class ProviderCredential(Record, Identified, Tombstonable, table=True):
         """An org's credentials, or one workspace's within it, in the order the data plane tries them."""
         scoped = (cls.workspace_id == workspace_id,) if workspace_id is not None else ()
         return await cls.find(cls.org_id == org_id, *scoped, order_by=(cls.priority, cls.name))  # ty: ignore[invalid-argument-type] sqlmodel columns type as their python values
+
+    @classmethod
+    async def observe(cls, observations: dict[UUID, tuple[datetime, str]]) -> None:
+        """Record what the data plane saw of each credential, from the usage events just ingested.
+
+        Advisory and best effort: the status tells an operator which key to look at, and nothing on
+        the request path reads it. A credential the events name but the table does not is skipped
+        rather than treated as an error, because a deleted credential can still have events in
+        flight.
+
+        status_at is what makes this safe under at-least-once delivery: events replay after an
+        outage and arrive out of order, so an older observation must never overwrite a newer one and
+        flip a working key back to invalid.
+
+        One select and one flush however many credentials a batch names: the outbox drains up to a
+        thousand events at a time, so a query per credential would put the ingest path's cost on the
+        number of keys an org happens to hold.
+        """
+        if not observations:
+            return
+        credentials = await cls.find(col(cls.id).in_(observations))
+        touched = False
+        for credential in credentials:
+            observed_at, status = observations[credential.id]
+            if credential.status_at is not None and credential.status_at >= observed_at:
+                continue
+            credential.status = status
+            credential.status_at = observed_at
+            touched = True
+        if touched:
+            await current_session().flush()
 
     @classmethod
     async def named(cls, org_id: UUID | None, workspace_id: UUID | None, provider_id: UUID, name: str) -> Self | None:
@@ -137,6 +173,7 @@ class ProviderCredentialOut(RecordOut[ProviderCredential]):
     enabled: bool
     version: int
     status: str
+    status_at: datetime | None
     fingerprint: str
     created_at: datetime
     updated_at: datetime

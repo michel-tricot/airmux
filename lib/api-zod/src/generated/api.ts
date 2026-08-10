@@ -1065,6 +1065,7 @@ export const CreateProviderCredentialResponse = zod.object({
   "enabled": zod.boolean(),
   "version": zod.int(),
   "status": zod.string(),
+  "status_at": zod.union([zod.coerce.date(),zod.null()]),
   "fingerprint": zod.string(),
   "created_at": zod.coerce.date(),
   "updated_at": zod.coerce.date(),
@@ -1099,6 +1100,7 @@ export const ListProviderCredentialsResponseItem = zod.object({
   "enabled": zod.boolean(),
   "version": zod.int(),
   "status": zod.string(),
+  "status_at": zod.union([zod.coerce.date(),zod.null()]),
   "fingerprint": zod.string(),
   "created_at": zod.coerce.date(),
   "updated_at": zod.coerce.date(),
@@ -1132,6 +1134,7 @@ export const GetProviderCredentialResponse = zod.object({
   "enabled": zod.boolean(),
   "version": zod.int(),
   "status": zod.string(),
+  "status_at": zod.union([zod.coerce.date(),zod.null()]),
   "fingerprint": zod.string(),
   "created_at": zod.coerce.date(),
   "updated_at": zod.coerce.date(),
@@ -1172,6 +1175,7 @@ export const UpdateProviderCredentialResponse = zod.object({
   "enabled": zod.boolean(),
   "version": zod.int(),
   "status": zod.string(),
+  "status_at": zod.union([zod.coerce.date(),zod.null()]),
   "fingerprint": zod.string(),
   "created_at": zod.coerce.date(),
   "updated_at": zod.coerce.date(),
@@ -1234,6 +1238,7 @@ export const RotateProviderCredentialResponse = zod.object({
   "enabled": zod.boolean(),
   "version": zod.int(),
   "status": zod.string(),
+  "status_at": zod.union([zod.coerce.date(),zod.null()]),
   "fingerprint": zod.string(),
   "created_at": zod.coerce.date(),
   "updated_at": zod.coerce.date(),
@@ -1463,7 +1468,9 @@ export const ListEventsResponseItem = zod.object({
   "cache_write_tokens": zod.int(),
   "latency_ms": zod.int(),
   "status": zod.string(),
-  "stream": zod.boolean()
+  "stream": zod.boolean(),
+  "credential_id": zod.union([zod.uuid(),zod.null()]),
+  "credential_scope": zod.union([zod.string(),zod.null()])
 })
 export const ListEventsResponse = zod.array(ListEventsResponseItem)
 
@@ -1612,8 +1619,10 @@ export const IngestEventsBodyItem = zod.object({
   "cache_read_tokens": zod.int().default(ingestEventsBodyCacheReadTokensDefault),
   "cache_write_tokens": zod.int().default(ingestEventsBodyCacheWriteTokensDefault),
   "latency_ms": zod.int(),
-  "status": zod.enum(['ok', 'upstream_error', 'denied', 'timeout', 'cancelled']),
-  "stream": zod.boolean()
+  "status": zod.enum(['ok', 'upstream_error', 'denied', 'timeout', 'cancelled', 'credential_rejected', 'rate_limited']),
+  "stream": zod.boolean(),
+  "credential_id": zod.union([zod.uuid(),zod.null()]).optional(),
+  "credential_scope": zod.union([zod.enum(['platform', 'org', 'workspace']),zod.null()]).optional()
 }).describe('One metered request, emitted by the data plane and ingested by the control plane.\n\nDelivery is at-least-once from a local disk buffer; the control plane upserts on\nevent_id, so replays after an outage land exactly once.')
 export const IngestEventsBody = zod.array(IngestEventsBodyItem)
 
@@ -1667,6 +1676,7 @@ export const GetTaxonomyResponse = zod.object({
   "name": zod.string(),
   "kind": zod.string(),
   "base_url": zod.string(),
+  "icon": zod.string(),
   "cache_read_multiplier": zod.number(),
   "cache_write_multiplier": zod.number(),
   "created_at": zod.coerce.date(),
@@ -1703,6 +1713,7 @@ export const CreateProviderHeader = zod.object({
 })
 
 export const createProviderBodyKindDefault = `openai_compatible`;
+export const createProviderBodyIconDefault = ``;
 export const createProviderBodyCacheReadMultiplierDefault = 1;
 export const createProviderBodyCacheWriteMultiplierDefault = 1;
 
@@ -1710,6 +1721,7 @@ export const CreateProviderBody = zod.object({
   "provider_id": zod.string().describe('Provider name, e.g. openai'),
   "kind": zod.enum(['openai_compatible', 'anthropic']).default(createProviderBodyKindDefault).describe('Adapter kind'),
   "base_url": zod.string().describe('OpenAI-compatible endpoint, e.g. https:\/\/api.groq.com\/openai\/v1'),
+  "icon": zod.string().default(createProviderBodyIconDefault).describe('Provider mark as a standalone 24x24 SVG document, empty when the provider has none. Carried as markup so adding a provider needs no client change to make it recognisable, which makes it untrusted markup to whatever renders it; sanitize at the render site'),
   "cache_read_multiplier": zod.number().default(createProviderBodyCacheReadMultiplierDefault).describe('Input price factor for prompt-cache hits'),
   "cache_write_multiplier": zod.number().default(createProviderBodyCacheWriteMultiplierDefault).describe('Input price factor for cache writes')
 }).describe('How to reach a provider, not how to authenticate to it: credentials are their own resource.\n\nExtra keys are refused so a taxonomy still carrying credential_ref fails loudly. Ignoring it\nwould leave the operator believing they configured a credential when the provider has none.')
@@ -1719,6 +1731,7 @@ export const CreateProviderResponse = zod.object({
   "name": zod.string(),
   "kind": zod.string(),
   "base_url": zod.string(),
+  "icon": zod.string(),
   "cache_read_multiplier": zod.number(),
   "cache_write_multiplier": zod.number(),
   "created_at": zod.coerce.date(),

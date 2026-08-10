@@ -83,6 +83,7 @@ export * from './signupIn';
 export * from './taxonomyOut';
 export * from './usageEventOut';
 export * from './usageEventV1';
+export * from './usageEventV1CredentialScope';
 export * from './usageEventV1Status';
 export * from './userCreate';
 export * from './userOut';

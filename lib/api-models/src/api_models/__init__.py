@@ -466,6 +466,7 @@ class ProviderCredentialOut(BaseModel):
     enabled: Annotated[bool, Field(title="Enabled")]
     version: Annotated[int, Field(title="Version")]
     status: Annotated[str, Field(title="Status")]
+    status_at: Annotated[AwareDatetime | None, Field(title="Status At")]
     fingerprint: Annotated[str, Field(title="Fingerprint")]
     created_at: Annotated[AwareDatetime, Field(title="Created At")]
     updated_at: Annotated[AwareDatetime, Field(title="Updated At")]
@@ -521,6 +522,13 @@ class ProviderIn(BaseModel):
             title="Base Url",
         ),
     ]
+    icon: Annotated[
+        str | None,
+        Field(
+            description="Provider mark as a standalone 24x24 SVG document, empty when the provider has none. Carried as markup",
+            title="Icon",
+        ),
+    ] = ""
     cache_read_multiplier: Annotated[
         float | None,
         Field(
@@ -542,6 +550,7 @@ class ProviderOut(BaseModel):
     name: Annotated[str, Field(title="Name")]
     kind: Annotated[str, Field(title="Kind")]
     base_url: Annotated[str, Field(title="Base Url")]
+    icon: Annotated[str, Field(title="Icon")]
     cache_read_multiplier: Annotated[float, Field(title="Cache Read Multiplier")]
     cache_write_multiplier: Annotated[float, Field(title="Cache Write Multiplier")]
     created_at: Annotated[AwareDatetime, Field(title="Created At")]
@@ -697,6 +706,8 @@ class UsageEventOut(BaseModel):
     latency_ms: Annotated[int, Field(title="Latency Ms")]
     status: Annotated[str, Field(title="Status")]
     stream: Annotated[bool, Field(title="Stream")]
+    credential_id: Annotated[UUID | None, Field(title="Credential Id")]
+    credential_scope: Annotated[str | None, Field(title="Credential Scope")]
 
 
 class UsageEventV1(BaseModel):
@@ -726,10 +737,20 @@ class UsageEventV1(BaseModel):
     cache_write_tokens: Annotated[int | None, Field(title="Cache Write Tokens")] = 0
     latency_ms: Annotated[int, Field(title="Latency Ms")]
     status: Annotated[
-        Literal["ok", "upstream_error", "denied", "timeout", "cancelled"],
+        Literal[
+            "ok",
+            "upstream_error",
+            "denied",
+            "timeout",
+            "cancelled",
+            "credential_rejected",
+            "rate_limited",
+        ],
         Field(title="Status"),
     ]
     stream: Annotated[bool, Field(title="Stream")]
+    credential_id: Annotated[UUID | None, Field(title="Credential Id")] = None
+    credential_scope: Annotated[Literal["platform", "org", "workspace"] | None, Field(title="Credential Scope")] = None
 
 
 class UserCreate(BaseModel):

@@ -6,7 +6,13 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
 
-UsageStatus = Literal["ok", "upstream_error", "denied", "timeout", "cancelled"]
+UsageStatus = Literal["ok", "upstream_error", "denied", "timeout", "cancelled", "credential_rejected", "rate_limited"]
+"""How a metered request ended.
+
+credential_rejected and rate_limited are split out of upstream_error because they are facts
+about the credential rather than about the provider, and the control plane rolls them up into
+the credential's status. Everything else upstream stays undifferentiated.
+"""
 
 
 class UsageEventV1(BaseModel):
@@ -38,6 +44,8 @@ class UsageEventV1(BaseModel):
     latency_ms: int
     status: UsageStatus  # cancelled still carries partial counts
     stream: bool
+    credential_id: UUID | None = None  # which provider key paid for this, so spend and health attribute per key
+    credential_scope: Literal["platform", "org", "workspace"] | None = None  # separates a tenant's own spend from the platform's
 
 
 class HeartbeatV1(BaseModel):
