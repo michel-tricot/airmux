@@ -10,8 +10,8 @@ import {
 } from '@workspace/api-client-react';
 import { useMutation } from '@tanstack/react-query';
 import { orgScope } from '@/lib/api';
-import { Card, Button, Label, Dropdown, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Modal, Badge } from '@/components/ui/elements';
-import { ArrowLeft, Building2, Plus, X, Trash2 } from 'lucide-react';
+import { Card, Button, Label, Dropdown, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Modal, Badge, ConfirmButton } from '@/components/ui/elements';
+import { ArrowLeft, Building2, Plus, UserMinus, Trash2 } from 'lucide-react';
 import { formatDate } from '@/lib/format';
 import { Link, useParams, useLocation } from 'wouter';
 import { useQueryClient } from '@tanstack/react-query';
@@ -114,10 +114,15 @@ export default function UserDetail() {
                     <TableCell className="font-mono text-xs text-muted-foreground">{org.id}</TableCell>
                     <TableCell className="text-muted-foreground text-sm">{formatDate(org.created_at)}</TableCell>
                     <TableCell className="text-right">
-                      <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10"
-                        onClick={() => removeMember.mutate({ userId: user.id, orgId: org.id })}>
-                        <X className="w-4 h-4" />
-                      </Button>
+                      <ConfirmButton
+                        title={`Remove ${user.name} from ${org.name}?`}
+                        description="They lose access to this organization and all of its workspaces."
+                        confirmLabel="Remove membership"
+                        pending={removeMember.isPending}
+                        aria-label="Remove membership"
+                        onConfirm={() => removeMember.mutate({ userId: user.id, orgId: org.id })}>
+                        <UserMinus className="w-4 h-4" />
+                      </ConfirmButton>
                     </TableCell>
                   </TableRow>
                 ))}

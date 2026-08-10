@@ -8,23 +8,23 @@ import { X, Check, ChevronsUpDown } from 'lucide-react';
 export const Button = forwardRef<HTMLButtonElement, React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'default' | 'outline' | 'ghost' | 'destructive' | 'secondary', size?: 'default' | 'sm' | 'lg' | 'icon' }>(
   ({ className, variant = 'default', size = 'default', ...props }, ref) => {
     const variants = {
-      default: 'bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm',
-      secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/80 shadow-sm',
-      outline: 'border border-input bg-background hover:bg-muted hover:text-foreground',
-      ghost: 'hover:bg-muted hover:text-foreground',
-      destructive: 'bg-destructive text-destructive-foreground hover:bg-destructive/90 shadow-sm',
+      default: 'bg-primary text-primary-foreground hover:bg-primary/90 shadow-[0_0_15px_rgba(97,94,255,0.4)]',
+      secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/80 shadow-sm border border-border/50',
+      outline: 'border border-input bg-background/50 hover:border-primary/50 hover:bg-primary/10 hover:text-primary transition-all duration-200',
+      ghost: 'hover:bg-primary/10 hover:text-primary',
+      destructive: 'bg-destructive/10 text-destructive border border-destructive/20 hover:bg-destructive/20',
     };
     const sizes = {
-      default: 'h-9 px-4 py-2',
-      sm: 'h-8 rounded-md px-3 text-xs',
-      lg: 'h-10 rounded-md px-8',
+      default: 'h-9 px-4 py-2 text-[12px]',
+      sm: 'h-8 rounded px-3 text-[11px]',
+      lg: 'h-10 rounded px-8 text-[13px]',
       icon: 'h-9 w-9',
     };
     return (
       <button
         ref={ref}
         className={cn(
-          'inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50',
+          'inline-flex items-center justify-center whitespace-nowrap rounded font-mono font-bold uppercase tracking-wider transition-all focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary disabled:pointer-events-none disabled:opacity-50',
           variants[variant],
           sizes[size],
           className
@@ -42,7 +42,7 @@ export const Input = forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTML
       <input
         type={type}
         className={cn(
-          'flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50',
+          'flex h-9 w-full rounded border border-input bg-background/50 px-3 py-1 text-sm font-mono shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground/50 focus-visible:outline-none focus-visible:border-primary focus-visible:ring-1 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-50',
           className
         )}
         ref={ref}
@@ -57,7 +57,7 @@ export const Label = forwardRef<HTMLLabelElement, React.LabelHTMLAttributes<HTML
   ({ className, ...props }, ref) => (
     <label
       ref={ref}
-      className={cn('text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70', className)}
+      className={cn('text-[11px] font-mono font-bold uppercase tracking-wider leading-none text-muted-foreground peer-disabled:cursor-not-allowed peer-disabled:opacity-70', className)}
       {...props}
     />
   )
@@ -102,7 +102,7 @@ export const Dropdown = ({
     <SelectPrimitive.Trigger
       aria-label={ariaLabel}
       className={cn(
-        'flex h-9 w-full items-center justify-between gap-2 rounded-md border border-input bg-background px-3 text-sm shadow-sm transition-colors hover:border-border focus:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 data-[placeholder]:text-muted-foreground',
+        'flex h-9 w-full items-center justify-between gap-2 rounded border border-input bg-background/50 px-3 text-[13px] font-mono shadow-sm transition-colors hover:border-primary/50 hover:bg-primary/5 focus:outline-none focus-visible:border-primary focus-visible:ring-1 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-50 data-[placeholder]:text-muted-foreground',
         className
       )}
     >
@@ -110,21 +110,21 @@ export const Dropdown = ({
         <SelectPrimitive.Value placeholder={placeholder} />
       </span>
       <SelectPrimitive.Icon asChild>
-        <ChevronsUpDown className="h-4 w-4 shrink-0 text-muted-foreground" />
+        <ChevronsUpDown className="h-4 w-4 shrink-0 text-muted-foreground/70" />
       </SelectPrimitive.Icon>
     </SelectPrimitive.Trigger>
     <SelectPrimitive.Portal>
       <SelectPrimitive.Content
         position="popper"
         sideOffset={6}
-        className="z-50 min-w-[var(--radix-select-trigger-width)] overflow-hidden rounded-lg border border-border bg-card text-card-foreground shadow-xl animate-in fade-in-0 zoom-in-95"
+        className="z-50 min-w-[var(--radix-select-trigger-width)] overflow-hidden rounded-md border border-border bg-card text-card-foreground shadow-xl shadow-black/50 animate-in fade-in-0 zoom-in-95"
       >
         <SelectPrimitive.Viewport className="p-1 max-h-72">
           {options.map(option => (
             <SelectPrimitive.Item
               key={option.value}
               value={option.value}
-              className="relative flex cursor-pointer select-none items-center rounded-md px-3 py-2.5 pr-9 text-sm outline-none transition-colors data-[highlighted]:bg-muted data-[state=checked]:text-primary"
+              className="relative flex cursor-pointer select-none items-center rounded-sm px-3 py-2 pr-9 text-sm font-mono outline-none transition-colors data-[highlighted]:bg-primary/10 data-[highlighted]:text-primary data-[state=checked]:text-primary"
             >
               <SelectPrimitive.ItemText>{option.label}</SelectPrimitive.ItemText>
               <SelectPrimitive.ItemIndicator className="absolute right-3">
@@ -139,10 +139,10 @@ export const Dropdown = ({
                 <SelectPrimitive.Item
                   key={i}
                   value={`${ACTION_PREFIX}${i}`}
-                  className="flex cursor-pointer select-none items-center justify-between gap-3 rounded-md px-3 py-2.5 text-sm outline-none transition-colors data-[highlighted]:bg-muted"
+                  className="flex cursor-pointer select-none items-center justify-between gap-3 rounded-sm px-3 py-2 text-sm font-mono outline-none transition-colors data-[highlighted]:bg-primary/10 data-[highlighted]:text-primary"
                 >
                   <SelectPrimitive.ItemText>{action.label}</SelectPrimitive.ItemText>
-                  {action.icon && <span className="shrink-0 text-muted-foreground">{action.icon}</span>}
+                  {action.icon && <span className="shrink-0 opacity-70">{action.icon}</span>}
                 </SelectPrimitive.Item>
               ))}
             </>
@@ -155,29 +155,29 @@ export const Dropdown = ({
 
 export const Badge = ({ className, variant = 'default', ...props }: React.HTMLAttributes<HTMLDivElement> & { variant?: 'default' | 'secondary' | 'destructive' | 'outline' | 'success' | 'mono' }) => {
   const variants = {
-    default: 'border-border bg-primary text-primary-foreground',
+    default: 'border-primary/30 bg-primary/10 text-primary shadow-[0_0_8px_rgba(97,94,255,0.15)]',
     secondary: 'border-border bg-secondary text-secondary-foreground',
     destructive: 'border-destructive/30 bg-destructive/10 text-destructive',
     success: 'border-green-500/30 bg-green-500/10 text-green-400',
     outline: 'border-border text-foreground',
-    mono: 'border-border bg-muted text-muted-foreground font-mono font-normal',
+    mono: 'border-border bg-muted/50 text-muted-foreground',
   };
   return (
-    <div className={cn('inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors', variants[variant], className)} {...props} />
+    <div className={cn('inline-flex items-center rounded border px-2 py-0.5 text-[10px] font-mono font-bold uppercase tracking-wider transition-colors', variants[variant], className)} {...props} />
   );
 };
 
 export const Card = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
-  <div className={cn('rounded-lg border border-card-border bg-card text-card-foreground shadow-sm', className)} {...props} />
+  <div className={cn('rounded-lg border border-card-border bg-card/80 backdrop-blur-sm text-card-foreground shadow-lg shadow-black/20', className)} {...props} />
 );
 export const CardHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
   <div className={cn('flex flex-col space-y-1.5 p-6', className)} {...props} />
 );
 export const CardTitle = ({ className, ...props }: React.HTMLAttributes<HTMLHeadingElement>) => (
-  <h3 className={cn('font-semibold leading-none tracking-tight text-lg', className)} {...props} />
+  <h3 className={cn('font-semibold leading-none tracking-tight text-lg text-foreground', className)} {...props} />
 );
 export const CardDescription = ({ className, ...props }: React.HTMLAttributes<HTMLParagraphElement>) => (
-  <p className={cn('text-sm text-muted-foreground', className)} {...props} />
+  <p className={cn('text-sm text-muted-foreground mt-2', className)} {...props} />
 );
 export const CardContent = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
   <div className={cn('p-6 pt-0', className)} {...props} />
@@ -189,14 +189,14 @@ export const CardFooter = ({ className, ...props }: React.HTMLAttributes<HTMLDiv
 export const Modal = ({ open, onOpenChange, title, description, children }: { open: boolean, onOpenChange: (open: boolean) => void, title: string, description?: string, children: React.ReactNode }) => (
   <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
     <DialogPrimitive.Portal>
-      <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
-      <DialogPrimitive.Content className="fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-6 border bg-background p-6 shadow-xl duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[50%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[50%] sm:rounded-lg">
+      <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
+      <DialogPrimitive.Content className="fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-6 border border-border bg-card p-6 shadow-2xl shadow-black/50 duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[50%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[50%] sm:rounded-lg">
         <div className="flex flex-col space-y-2">
           <DialogPrimitive.Title className="text-xl font-semibold leading-none tracking-tight">{title}</DialogPrimitive.Title>
           {description && <DialogPrimitive.Description className="text-sm text-muted-foreground">{description}</DialogPrimitive.Description>}
         </div>
         {children}
-        <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none">
+        <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 hover:text-primary hover:bg-primary/10 p-1 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:pointer-events-none">
           <X className="h-4 w-4" />
           <span className="sr-only">Close</span>
         </DialogPrimitive.Close>
@@ -205,13 +205,61 @@ export const Modal = ({ open, onOpenChange, title, description, children }: { op
   </DialogPrimitive.Root>
 );
 
+// Destructive action button that always asks for confirmation in a dialog before firing.
+export const ConfirmButton = ({
+  title,
+  description,
+  confirmLabel = 'Delete',
+  onConfirm,
+  pending,
+  variant = 'ghost',
+  size = 'icon',
+  className,
+  children,
+  ...props
+}: {
+  title: string;
+  description?: string;
+  confirmLabel?: string;
+  onConfirm: () => void;
+  pending?: boolean;
+  children: React.ReactNode;
+} & Omit<React.ComponentProps<typeof Button>, 'onClick' | 'title'>) => {
+  const [open, setOpen] = React.useState(false);
+  return (
+    <>
+      <Button
+        variant={variant}
+        size={size}
+        className={cn('text-destructive hover:bg-destructive/10 hover:text-destructive', className)}
+        onClick={() => setOpen(true)}
+        {...props}
+      >
+        {children}
+      </Button>
+      <Modal open={open} onOpenChange={setOpen} title={title} description={description}>
+        <div className="flex justify-end gap-2 pt-2">
+          <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
+          <Button
+            variant="destructive"
+            disabled={pending}
+            onClick={() => { onConfirm(); setOpen(false); }}
+          >
+            {confirmLabel}
+          </Button>
+        </div>
+      </Modal>
+    </>
+  );
+};
+
 export const Table = ({ className, ...props }: React.HTMLAttributes<HTMLTableElement>) => (
-  <div className="relative w-full overflow-auto rounded-md border border-border bg-card">
+  <div className="relative w-full overflow-auto rounded-md border border-border bg-card/50">
     <table className={cn('w-full caption-bottom text-sm', className)} {...props} />
   </div>
 );
 export const TableHeader = ({ className, ...props }: React.HTMLAttributes<HTMLTableSectionElement>) => (
-  <thead className={cn('[&_tr]:border-b border-border bg-muted/40', className)} {...props} />
+  <thead className={cn('[&_tr]:border-b border-border bg-muted/30', className)} {...props} />
 );
 export const TableBody = ({ className, ...props }: React.HTMLAttributes<HTMLTableSectionElement>) => (
   <tbody className={cn('[&_tr:last-child]:border-0', className)} {...props} />
@@ -220,7 +268,7 @@ export const TableRow = ({ className, ...props }: React.HTMLAttributes<HTMLTable
   <tr className={cn('border-b border-border transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted', className)} {...props} />
 );
 export const TableHead = ({ className, ...props }: React.HTMLAttributes<HTMLTableCellElement>) => (
-  <th className={cn('h-10 px-3 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0', className)} {...props} />
+  <th className={cn('h-10 px-3 text-left align-middle font-mono text-[11px] font-bold uppercase tracking-wider text-muted-foreground [&:has([role=checkbox])]:pr-0', className)} {...props} />
 );
 export const TableCell = ({ className, ...props }: React.HTMLAttributes<HTMLTableCellElement>) => (
   <td className={cn('p-3 align-middle [&:has([role=checkbox])]:pr-0', className)} {...props} />
@@ -236,7 +284,7 @@ export const TabsList = React.forwardRef<
   <TabsPrimitive.List
     ref={ref}
     className={cn(
-      "inline-flex h-10 items-center justify-center rounded-md bg-muted p-1 text-muted-foreground",
+      "inline-flex h-10 items-center justify-center rounded bg-muted/50 p-1 text-muted-foreground",
       className
     )}
     {...props}
@@ -251,7 +299,7 @@ export const TabsTrigger = React.forwardRef<
   <TabsPrimitive.Trigger
     ref={ref}
     className={cn(
-      "inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm",
+      "inline-flex items-center justify-center whitespace-nowrap rounded-sm px-4 py-1.5 text-[12px] font-mono font-bold uppercase tracking-wider ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm",
       className
     )}
     {...props}
@@ -266,7 +314,7 @@ export const TabsContent = React.forwardRef<
   <TabsPrimitive.Content
     ref={ref}
     className={cn(
-      "mt-2 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+      "mt-4 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
       className
     )}
     {...props}

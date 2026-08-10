@@ -17,8 +17,8 @@ import {
   getListOrgUsersQueryKey,
   getGetWorkspaceQueryKey,
 } from '@workspace/api-client-react';
-import { Card, Button, Input, Label, Dropdown, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Modal, Badge, Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/elements';
-import { TerminalSquare, Plus, ArrowLeft, Key, Users, X, Pencil, Trash2 } from 'lucide-react';
+import { Card, Button, Input, Label, Dropdown, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Modal, Badge, Tabs, TabsList, TabsTrigger, TabsContent, ConfirmButton } from '@/components/ui/elements';
+import { TerminalSquare, Plus, ArrowLeft, Key, Users, UserMinus, Ban, Pencil, Trash2 } from 'lucide-react';
 import { formatDate } from '@/lib/format';
 import { Link, useLocation } from 'wouter';
 import { orgScope } from '@/lib/api';
@@ -158,10 +158,14 @@ export function WorkspacePanel({ orgId, workspaceId, backHref, backLabel }: Work
                       <TableCell className="text-muted-foreground text-sm">{formatDate(key.created_at)}</TableCell>
                       <TableCell className="text-right">
                         {!key.revoked && (
-                          <Button variant="ghost" size="sm" className="text-destructive hover:bg-destructive/10"
-                            onClick={() => revokeKey.mutate({ workspaceId, keyId: key.id })}>
-                            Revoke
-                          </Button>
+                          <ConfirmButton size="sm"
+                            title={`Revoke "${key.label}"?`}
+                            description="Requests using this inference key will stop working immediately. This cannot be undone."
+                            confirmLabel="Revoke key"
+                            pending={revokeKey.isPending}
+                            onConfirm={() => revokeKey.mutate({ workspaceId, keyId: key.id })}>
+                            <Ban className="w-4 h-4 mr-1" /> Revoke
+                          </ConfirmButton>
                         )}
                       </TableCell>
                     </TableRow>
@@ -197,10 +201,15 @@ export function WorkspacePanel({ orgId, workspaceId, backHref, backLabel }: Work
                         <TableCell className="font-medium">{described?.name ?? 'Member'}</TableCell>
                         <TableCell className="text-muted-foreground">{described?.email ?? member.user_id}</TableCell>
                         <TableCell className="text-right">
-                          <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10"
-                            onClick={() => removeMember.mutate({ workspaceId, userId: member.user_id })}>
-                            <X className="w-4 h-4" />
-                          </Button>
+                          <ConfirmButton
+                            title={`Remove ${described?.name ?? 'this member'} from the workspace?`}
+                            description="They lose access to this workspace but stay in the organization."
+                            confirmLabel="Remove member"
+                            pending={removeMember.isPending}
+                            aria-label="Remove member"
+                            onConfirm={() => removeMember.mutate({ workspaceId, userId: member.user_id })}>
+                            <UserMinus className="w-4 h-4" />
+                          </ConfirmButton>
                         </TableCell>
                       </TableRow>
                     );

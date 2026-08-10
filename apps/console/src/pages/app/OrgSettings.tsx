@@ -15,8 +15,8 @@ import {
 } from '@workspace/api-client-react';
 import { useSession } from '@/lib/session';
 import { orgScope } from '@/lib/api';
-import { Card, Button, Input, Label, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Modal, Badge, Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/elements';
-import { Plus, Key, Settings, Package, RefreshCw, Users, Activity } from 'lucide-react';
+import { Card, Button, Input, Label, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Modal, Badge, Tabs, TabsList, TabsTrigger, TabsContent, ConfirmButton } from '@/components/ui/elements';
+import { Plus, Key, Settings, Package, RefreshCw, Users, Activity, Ban } from 'lucide-react';
 import { formatDate, formatRelative } from '@/lib/format';
 import { KeyRevealDialog } from '@/components/KeyRevealDialog';
 
@@ -109,10 +109,14 @@ export default function AppOrgSettings() {
                       <TableCell className="text-muted-foreground text-sm">{formatDate(key.created_at)}</TableCell>
                       <TableCell className="text-right">
                         {!key.revoked && (
-                          <Button variant="ghost" size="sm" className="text-destructive hover:bg-destructive/10"
-                            onClick={() => revokeKey.mutate({ keyId: key.id })}>
-                            Revoke
-                          </Button>
+                          <ConfirmButton size="sm"
+                            title={`Revoke "${key.label}"?`}
+                            description="Requests signed with this management key will stop working immediately. This cannot be undone."
+                            confirmLabel="Revoke key"
+                            pending={revokeKey.isPending}
+                            onConfirm={() => revokeKey.mutate({ keyId: key.id })}>
+                            <Ban className="w-4 h-4 mr-1" /> Revoke
+                          </ConfirmButton>
                         )}
                       </TableCell>
                     </TableRow>
