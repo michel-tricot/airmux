@@ -132,3 +132,4 @@ uv run ty check .                # type checking
 ## User preferences
 
 - Use Bun (not pnpm) as the JS package manager and workspace runner for this project.
+- "Reset the db" always means: drop the schema (`DROP SCHEMA public CASCADE; CREATE SCHEMA public;`), run migrations, then install fixtures — in that order.
