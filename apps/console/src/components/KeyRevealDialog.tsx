@@ -1,9 +1,12 @@
 import { Modal, Button, Input } from '@/components/ui/elements';
 import { Copy, CheckCircle2, AlertTriangle } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 export function KeyRevealDialog({ open, onOpenChange, token }: { open: boolean, onOpenChange: (open: boolean) => void, token: string | null }) {
   const [copied, setCopied] = useState(false);
+  const copyTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+  useEffect(() => () => clearTimeout(copyTimer.current), []);
 
   if (!token) return null;
 
@@ -11,7 +14,8 @@ export function KeyRevealDialog({ open, onOpenChange, token }: { open: boolean, 
     try {
       await navigator.clipboard.writeText(token);
       setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      clearTimeout(copyTimer.current);
+      copyTimer.current = setTimeout(() => setCopied(false), 2000);
     } catch (err) {
       console.error('Failed to copy', err);
     }
@@ -31,8 +35,10 @@ export function KeyRevealDialog({ open, onOpenChange, token }: { open: boolean, 
           <div className="text-sm font-medium">Key Secret</div>
           <div className="flex gap-2">
             <Input readOnly value={token} className="font-mono bg-muted text-muted-foreground" />
-            <Button onClick={copyToClipboard} variant="secondary" className="w-24">
-              {copied ? <CheckCircle2 className="w-4 h-4 text-green-600" /> : <><Copy className="w-4 h-4 mr-2" /> Copy</>}
+            <Button onClick={copyToClipboard} variant="secondary" className="w-28" aria-label={copied ? 'Copied' : 'Copy key'}>
+              {copied
+                ? <><CheckCircle2 className="w-4 h-4 mr-2 text-green-600" /> Copied</>
+                : <><Copy className="w-4 h-4 mr-2" /> Copy</>}
             </Button>
           </div>
         </div>

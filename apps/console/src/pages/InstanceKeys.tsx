@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import * as z from 'zod';
-import { Card, Button, Badge } from '@/components/ui/elements';
+import { Button, Input } from '@/components/ui/elements';
 import { KeyRound, Plus } from 'lucide-react';
-import { formatDate } from '@/lib/format';
 import { Link } from 'wouter';
 import {
   useInstanceKeys,
@@ -11,11 +10,9 @@ import {
 } from '@/features/keys/hooks';
 import { useUsers } from '@/features/users/hooks';
 import { KeyRevealDialog } from '@/components/KeyRevealDialog';
-import { DataTable } from '@/components/shared/data-table';
+import { ApiKeysTable } from '@/components/shared/api-keys-table';
 import { FormDialog } from '@/components/shared/form-dialog';
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Input } from '@/components/ui/elements';
-import { ConfirmButton } from '@/components/ui/elements';
 
 const instanceKeySchema = z.object({
   label: z.string().min(1, 'Label is required').max(80, 'Label must be 80 characters or fewer'),
@@ -23,7 +20,8 @@ const instanceKeySchema = z.object({
 
 export default function InstanceKeys() {
   const keysQuery = useInstanceKeys();
-  const usersQuery = useUsers();
+  const { data: users } = useUsers();
+  const usersById = new Map(users?.map(user => [user.id, user]));
   const mintKey = useMintInstanceKeyMutation();
   const revokeKey = useRevokeInstanceKeyMutation();
   const [mintOpen, setMintOpen] = useState(false);
@@ -46,87 +44,39 @@ export default function InstanceKeys() {
         </Button>
       </div>
 
-      <Card>
-        <DataTable
-          rows={keysQuery.data}
-          rowKey={key => key.id}
-          isLoading={keysQuery.isLoading}
-          isError={keysQuery.isError}
-          onRetry={() => keysQuery.refetch()}
-          loadingLabel="Loading instance keys..."
-          empty="No instance keys have been minted."
-          emptyIcon={KeyRound}
-          columns={[
-            {
-              key: 'label',
-              header: 'Label',
-              cellClassName: 'font-medium',
-              cell: key => key.label,
+      <ApiKeysTable
+        keys={keysQuery.data}
+        isLoading={keysQuery.isLoading}
+        isError={keysQuery.isError}
+        onRetry={() => keysQuery.refetch()}
+        emptyText="No instance keys have been minted."
+        extraColumns={[
+          {
+            key: 'user',
+            header: 'User',
+            cellClassName: 'text-sm',
+            cell: key => {
+              const user = usersById.get(key.user_id);
+              return user ? (
+                <Link href={`/instance/users/${user.id}`} className="hover:text-primary transition-colors">
+                  {user.name}
+                </Link>
+              ) : (
+                <span className="font-mono text-xs text-muted-foreground">{key.user_id}</span>
+              );
             },
-            {
-              key: 'key',
-              header: 'Key',
-              cellClassName: 'font-mono text-xs text-muted-foreground',
-              cell: key => <>{key.prefix}…</>,
-            },
-            {
-              key: 'user',
-              header: 'User',
-              cellClassName: 'text-sm',
-              cell: key => {
-                const user = usersQuery.data?.find(candidate => candidate.id === key.user_id);
-                return user ? (
-                  <Link href={`/instance/users/${user.id}`} className="hover:text-primary transition-colors">
-                    {user.name}
-                  </Link>
-                ) : (
-                  <span className="font-mono text-xs text-muted-foreground">{key.user_id}</span>
-                );
-              },
-            },
-            {
-              key: 'scopes',
-              header: 'Scopes',
-              cellClassName: 'text-muted-foreground text-sm',
-              cell: key => key.scopes?.join(', ') ?? 'Full authority',
-            },
-            {
-              key: 'status',
-              header: 'Status',
-              cell: key => (
-                <Badge variant={key.revoked ? 'outline' : 'success'}>
-                  {key.revoked ? 'REVOKED' : 'ACTIVE'}
-                </Badge>
-              ),
-            },
-            {
-              key: 'created',
-              header: 'Created',
-              cellClassName: 'text-muted-foreground text-sm',
-              cell: key => formatDate(key.created_at),
-            },
-            {
-              key: 'actions',
-              header: 'Actions',
-              headClassName: 'text-right',
-              cellClassName: 'text-right',
-              cell: key =>
-                key.revoked ? null : (
-                  <ConfirmButton
-                    size="sm"
-                    title={`Revoke "${key.label}"?`}
-                    description="Services using this key will lose access immediately. This cannot be undone."
-                    confirmLabel="Revoke key"
-                    pending={revokeKey.isPending}
-                    onConfirm={() => revokeKey.mutate({ keyId: key.id })}
-                  >
-                    Revoke
-                  </ConfirmButton>
-                ),
-            },
-          ]}
-        />
-      </Card>
+          },
+          {
+            key: 'scopes',
+            header: 'Scopes',
+            cellClassName: 'text-muted-foreground text-sm',
+            cell: key => key.scopes?.join(', ') ?? 'Full authority',
+          },
+        ]}
+        revokeDescription="Services using this key will lose access immediately. This cannot be undone."
+        onRevoke={key => revokeKey.mutate({ keyId: key.id })}
+        revokePending={revokeKey.isPending}
+      />
 
       <FormDialog
         open={mintOpen}

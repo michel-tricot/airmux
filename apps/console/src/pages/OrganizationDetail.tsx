@@ -28,6 +28,7 @@ export default function OrganizationDetail() {
   const keysQuery = useManagementKeys(orgId!);
   const membersQuery = useOrgMembers(orgId!);
   const { data: users } = useUsers();
+  const usersById = new Map(users?.map(user => [user.id, user]));
   const members = membersQuery.data;
   const outsiders = users?.filter(u => !members?.some(m => m.user_id === u.id));
 
@@ -130,16 +131,16 @@ export default function OrganizationDetail() {
                 key: 'user',
                 header: 'User',
                 cellClassName: 'text-muted-foreground text-sm',
-                 cell: key => {
-                   const user = users?.find(candidate => candidate.id === key.user_id);
-                   return user ? (
-                     <Link href={`/instance/users/${user.id}`} className="hover:text-primary transition-colors">
-                       {user.name}
-                     </Link>
-                   ) : (
-                     key.user_id
-                   );
-                 },
+                cell: key => {
+                  const user = usersById.get(key.user_id);
+                  return user ? (
+                    <Link href={`/instance/users/${user.id}`} className="hover:text-primary transition-colors">
+                      {user.name}
+                    </Link>
+                  ) : (
+                    key.user_id
+                  );
+                },
               },
             ]}
             revokeDescription="Requests signed with this management key will stop working immediately. This cannot be undone."

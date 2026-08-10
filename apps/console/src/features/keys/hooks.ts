@@ -11,6 +11,7 @@ import {
   useCreateInferenceKey,
   useRevokeInferenceKey,
   getListManagementKeysQueryKey,
+  getListAllManagementKeysQueryKey,
   getListInstanceKeysQueryKey,
   getListInferenceKeysQueryKey,
 } from '@workspace/api-client-react';
@@ -59,8 +60,10 @@ export function useMintManagementKeyMutation(orgId: string) {
   const queryClient = useQueryClient();
   return useMintOrgManagementKey({
     mutation: {
-      onSuccess: () =>
-        queryClient.invalidateQueries({ queryKey: orgScopedKey(orgId, getListManagementKeysQueryKey()) }),
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: orgScopedKey(orgId, getListManagementKeysQueryKey()) });
+        queryClient.invalidateQueries({ queryKey: getListAllManagementKeysQueryKey() });
+      },
       meta: { errorMessage: 'We couldn’t generate the key. Please try again.' },
     },
     request: orgScope(orgId),
@@ -71,8 +74,10 @@ export function useRevokeManagementKeyMutation(orgId: string) {
   const queryClient = useQueryClient();
   return useRevokeManagementKey({
     mutation: {
-      onSuccess: () =>
-        queryClient.invalidateQueries({ queryKey: orgScopedKey(orgId, getListManagementKeysQueryKey()) }),
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: orgScopedKey(orgId, getListManagementKeysQueryKey()) });
+        queryClient.invalidateQueries({ queryKey: getListAllManagementKeysQueryKey() });
+      },
       meta: { errorMessage: 'We couldn’t revoke the key. Please try again.' },
     },
     request: orgScope(orgId),
