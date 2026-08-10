@@ -55,21 +55,13 @@ PY
 reset_database() {
   printf '%s\n' 'Migration failed; resetting the Replit development database.'
 
-  # DATABASE_URL carries the host, credentials, and target database. Connect
-  # to the default maintenance database so the target is not active while it
-  # is being dropped.
-  local libpq_url maintenance_url
+  # dropdb/createdb silently no-op against Replit's managed Postgres proxy,
+  # so reset at the schema level instead of the database level.
+  local libpq_url
   libpq_url="$(libpq_database_url)"
-  maintenance_url="${libpq_url%/*}/postgres"
 
-  dropdb \
-    --if-exists \
-    --force \
-    --maintenance-db="$maintenance_url" \
-    "$libpq_url"
-  createdb \
-    --maintenance-db="$maintenance_url" \
-    "$libpq_url"
+  psql "$libpq_url" -v ON_ERROR_STOP=1 \
+    -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
 }
 
 require_database_url
