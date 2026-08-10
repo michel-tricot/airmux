@@ -15,6 +15,9 @@ if TYPE_CHECKING:
 DEFAULT_DATABASE_URL = "postgresql+asyncpg://airllm:airllm@127.0.0.1:5432/airllm"
 """The local database, for a checkout where the host sets no DATABASE_URL."""
 
+DEFAULT_CONSOLE_URL = "http://127.0.0.1:5000"
+"""Where the console is served in a checkout; compose sets GW_CONSOLE_URL to the port nginx publishes."""
+
 
 class DatabaseConfig(BaseModel):
     model_config = ConfigDict(frozen=True)
@@ -50,7 +53,7 @@ class Settings(BaseModel):
     bundle: BundlePolicy
     secrets: SecretsConfig = Field(default_factory=EnvStoreConfig)  # where provider keys live; the data plane must name the same store
 
-    console_url: str = "http://127.0.0.1:5000"  # where the console is served; device-flow verification URLs are built from it
+    console_url: str = DEFAULT_CONSOLE_URL  # where the console is served; device-flow verification URLs are built from it
     dev: bool = False  # set by the --dev flag on the entry point, gate dev-only behavior on this
 
 

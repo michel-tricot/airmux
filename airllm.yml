@@ -1,17 +1,19 @@
 control_plane:
   database:
-    # DATABASE_URL when the host sets one, as Replit's managed PostgreSQL does;
-    # otherwise the docker-compose.dev.yml database named after :-. A managed
-    # postgresql:// url gains the asyncpg driver on load and can be used as handed over.
+    # DATABASE_URL when the host sets one, as Replit's managed PostgreSQL and docker-compose.yml do;
+    # otherwise the docker-compose.dev.yml database named after :-. A managed postgresql:// url gains
+    # the asyncpg driver on load and can be used as handed over.
     url: ${env:DATABASE_URL:-postgresql+asyncpg://airllm:airllm@127.0.0.1:5432/airllm}
   bundle:
     # Generate these files with: uv run airllmcp keygen
     signing_key: ${file:.airllm/signing.key}
     staleness_bound_hours: 24
+  console_url: ${env:GW_CONSOLE_URL:-http://127.0.0.1:5000}
 
 data_plane:
   control_plane:
-    url: http://127.0.0.1:8000
+    url: ${env:GW_DATAPLANE_CONTROL_PLANE_URL:-http://127.0.0.1:8000}
+    # Written by `airllm quickstart`, which posts the token the operator holds to the control plane
     token: ${file:.airllm/dataplane.key}
   bundle:
     # signing.pub is generated alongside signing.key by: uv run airllmcp keygen

@@ -15,7 +15,7 @@ PUBLIC_KEY_B64 = public_key_to_b64(Ed25519PrivateKey.generate().public_key())
 @pytest.fixture
 def clean_env(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
-    for var in ("GW_CONFIG", "GW_DEV"):
+    for var in ("GW_CONFIG", "GW_DEV", "GW_DATAPLANE_CONTROL_PLANE_URL"):
         monkeypatch.delenv(var, raising=False)
     return tmp_path
 
@@ -38,6 +38,18 @@ def test_repo_config_parses_through_the_data_plane_loader(clean_env, monkeypatch
     assert config.control_plane.url == "http://127.0.0.1:8000"
     assert config.control_plane.token == "dp-token"
     assert public_key_to_b64(config.bundle.public_key) == public_key_to_b64(key.public_key())
+
+
+def test_repo_config_takes_the_stack_control_plane_from_the_environment(clean_env, monkeypatch):
+    """The same file serves a checkout and compose, so the address of the control plane moves with the environment."""
+    repo_config = Path(__file__).resolve().parents[3] / "airllm.yml"
+    (clean_env / "airllm.yml").write_text(repo_config.read_text(encoding="utf-8"), encoding="utf-8")
+    (clean_env / ".airllm").mkdir()
+    (clean_env / ".airllm" / "signing.pub").write_text(PUBLIC_KEY_B64, encoding="utf-8")
+    (clean_env / ".airllm" / "dataplane.key").write_text("dp-token", encoding="utf-8")
+    monkeypatch.setenv("GW_DATAPLANE_CONTROL_PLANE_URL", "http://control-plane:8000")
+
+    assert load_config().control_plane.url == "http://control-plane:8000"
 
 
 def test_malformed_public_key_fails_at_load(clean_env):

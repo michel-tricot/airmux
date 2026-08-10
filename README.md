@@ -53,8 +53,11 @@ plane starts with `migrate && taxonomy && serve` (schema to head, catalog applie
 attributed to `root`), then the data plane, then the console on
 `localhost:3000`, which nginx serves and which proxies `/v1` to the control
 plane. There is no init service and no account provisioning at startup: claim the
-instance by signing up in the console. The stack config is the checked-in
-`docker/airllm.yml`.
+instance by signing up in the console. The stack shares the one checked-in
+`airllm.yml`: the containers work out of the shared `/state` volume, so its
+relative refs resolve there, and compose passes the few values that differ from a
+checkout (`DATABASE_URL`, `GW_CONSOLE_URL`, `GW_DATAPLANE_CONTROL_PLANE_URL`) as
+environment variables the file reads through its `:-` defaults.
 
 ```bash
 # .env at the repo root: compose reads it for interpolation
