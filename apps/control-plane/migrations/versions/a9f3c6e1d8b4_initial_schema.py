@@ -402,6 +402,7 @@ def upgrade() -> None:
         sa.Column("org_id", sa.Uuid(), nullable=True),
         sa.Column("workspace_id", sa.Uuid(), nullable=True),
         sa.Column("provider_id", sa.Uuid(), nullable=False),
+        sa.Column("provider_name", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("name", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("priority", sa.Integer(), nullable=False),
         sa.Column("enabled", sa.Boolean(), nullable=False),

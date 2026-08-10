@@ -1608,8 +1608,9 @@ paths:
       tags:
       - Orgs
       summary: Delete Org
-      description: 'Delete an org with everything scoped to it: its workspaces and their keys, its own keys, its memberships,
-        its bundles.
+      description: 'Delete an org with everything scoped to it: its workspaces and their keys, the provider
+
+        credentials it brought, its own keys, its memberships, its bundles.
 
 
         Its usage events stay. They are history keyed by ids, not rows belonging to the org, so they
@@ -1868,8 +1869,9 @@ paths:
       tags:
       - Workspaces
       summary: Delete Workspace
-      description: 'Delete a workspace with its inference keys and its members; the usage it recorded stays, as it does for
-        an org.
+      description: 'Delete a workspace with its inference keys, its members, and the provider credentials it brought;
+
+        the usage it recorded stays, as it does for an org.
 
 
         Requires the `workspaces:delete` scope.'
@@ -2674,9 +2676,9 @@ paths:
       tags:
       - Provider Credentials
       summary: Delete Provider Credential
-      description: 'The value goes first: a row with no value is a candidate the request path skips, while a
+      description: 'Deleting one credential is the same operation a workspace or org delete performs in bulk, so
 
-        value with no row is a secret nothing knows how to reach or remove.
+        it runs through the same method rather than a second copy of the ordering rule.
 
 
         Requires the `provider-credentials:write` scope.'
@@ -5471,6 +5473,9 @@ components:
           type: string
           format: uuid
           title: Provider Id
+        provider_name:
+          type: string
+          title: Provider Name
         name:
           type: string
           title: Name
@@ -5522,6 +5527,7 @@ components:
       - org_id
       - workspace_id
       - provider_id
+      - provider_name
       - name
       - priority
       - enabled

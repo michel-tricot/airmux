@@ -24,7 +24,7 @@ const WS = WORKSPACES[0];
 const SECTIONS: Array<{ suffix: string; heading: string | RegExp }> = [
   { suffix: '', heading: WS.name }, // Overview shows the workspace name
   { suffix: '/keys', heading: 'API Keys' },
-  { suffix: '/byok', heading: 'BYOK' },
+  { suffix: '/byok', heading: 'Provider Keys' },
   { suffix: '/routing', heading: 'Routing' },
   { suffix: '/policies', heading: 'Policies' },
   { suffix: '/settings', heading: 'Workspace Settings' },

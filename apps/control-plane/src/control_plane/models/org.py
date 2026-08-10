@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import ClassVar, Self
+from typing import TYPE_CHECKING, ClassVar, Self
 from uuid import UUID
 
 from sqlmodel import Field, col, select
@@ -13,7 +13,11 @@ from control_plane.models.common.base import Record
 from control_plane.models.common.wire import RecordCreate, RecordOut, RecordUpdate
 from control_plane.models.management_key import ManagementKey
 from control_plane.models.org_membership import OrgMembership
+from control_plane.models.provider_credential import ProviderCredential
 from control_plane.models.workspace import Workspace
+
+if TYPE_CHECKING:
+    from contract import SecretStore
 
 
 @audited
@@ -40,16 +44,17 @@ class Org(Record, Identified, Tombstonable, table=True):
             order_by=col(cls.name),
         )
 
-    async def delete_with_contents(self) -> None:
-        """Delete the org and everything scoped to it: workspaces with their keys and members,
-        management keys, memberships, bundles.
+    async def delete_with_contents(self, store: SecretStore) -> None:
+        """Delete the org and everything scoped to it: workspaces with their keys, members and
+        provider credentials, then its own credentials, management keys, memberships, bundles.
 
         Everything removed here exists only to serve the org. What is history rather than structure
         stays: usage events keep the ids they were written with, and the audit trail keeps its rows,
         neither holding a foreign key into what it records.
         """
         for workspace in await Workspace.find(Workspace.org_id == self.id):
-            await workspace.delete_with_contents()
+            await workspace.delete_with_contents(store)
+        await ProviderCredential.delete_scoped(store, ProviderCredential.org_id == self.id)
         for key in await ManagementKey.find(ManagementKey.org_id == self.id):
             await key.delete()
         for membership in await OrgMembership.find(OrgMembership.org_id == self.id):

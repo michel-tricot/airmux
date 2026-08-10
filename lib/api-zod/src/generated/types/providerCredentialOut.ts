@@ -11,6 +11,7 @@ export interface ProviderCredentialOut {
   org_id: string | null;
   workspace_id: string | null;
   provider_id: string;
+  provider_name: string;
   name: string;
   priority: number;
   enabled: boolean;

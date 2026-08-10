@@ -1,15 +1,16 @@
 from __future__ import annotations
 
+import contextlib
 from datetime import datetime
 from typing import ClassVar, Literal, Self
 from uuid import UUID
 
 from pydantic import BaseModel, SecretStr
 from pydantic import Field as PydanticField
-from sqlalchemy import CheckConstraint, ForeignKeyConstraint, UniqueConstraint
+from sqlalchemy import CheckConstraint, ColumnElement, ForeignKeyConstraint, UniqueConstraint
 from sqlmodel import Field, col
 
-from contract import SecretPurpose, SecretRef
+from contract import SecretNotFoundError, SecretPurpose, SecretRef, SecretStore, SecretStoreReadOnlyError
 from control_plane.db import current_session
 from control_plane.models.audit import audited
 from control_plane.models.common import Identified, Tombstonable
@@ -37,10 +38,16 @@ class ProviderCredential(Record, Identified, Tombstonable, table=True):
     a workspace credential with no org would otherwise pass.
 
     There is no value column and there is no location column. The value lives in the secret store,
-    addressed by secret_ref, which is built from fields this row already has. That is deliberate
+    addressed by secret_ref, which the row builds from its own fields alone. That is deliberate
     twice over: the audit trigger copies before and after of every column, so a value column would
     write secrets into a second table, and a location column would be something a tenant, an
     operator, or a migration could point somewhere it should not go.
+
+    provider_name is the one field that looks redundant beside provider_id and is not. The value was
+    written under that name, so it is where the secret actually is rather than a copy of the
+    catalog: a provider renamed later must not move every credential's secret out from under it.
+    Keeping it here is also what lets secret_ref take no arguments, so no caller can pass the name
+    of a provider this credential does not belong to and address somebody else's secret.
     """
 
     __table_args__: ClassVar = (
@@ -52,6 +59,7 @@ class ProviderCredential(Record, Identified, Tombstonable, table=True):
     org_id: UUID | None = Field(default=None, foreign_key="org.id")
     workspace_id: UUID | None = None
     provider_id: UUID = Field(foreign_key="provider.id")
+    provider_name: str
     name: str
     priority: int = DEFAULT_PRIORITY
     enabled: bool = True
@@ -61,7 +69,7 @@ class ProviderCredential(Record, Identified, Tombstonable, table=True):
     fingerprint: str = ""
 
     api_readonly: ClassVar[frozenset[str]] = frozenset(
-        {"org_id", "workspace_id", "provider_id", "name", "version", "status", "status_at", "fingerprint"}
+        {"org_id", "workspace_id", "provider_id", "provider_name", "name", "version", "status", "status_at", "fingerprint"}
     )
 
     @property
@@ -70,12 +78,15 @@ class ProviderCredential(Record, Identified, Tombstonable, table=True):
             return "platform"
         return "workspace" if self.workspace_id is not None else "org"
 
-    def secret_ref(self, provider_name: str) -> SecretRef:
-        """Where the value is, said in domain terms. The one place a row becomes a ref, so the write
-        path and the compiler cannot disagree about which secret a row names."""
+    def secret_ref(self) -> SecretRef:
+        """Where the value is, said in domain terms and derived from this row alone.
+
+        The one place a row becomes a ref, so the write path, the compiler and the delete path
+        cannot disagree about which secret a row names.
+        """
         return SecretRef(
             purpose=SecretPurpose.provider,
-            service=provider_name,
+            service=self.provider_name,
             name=self.name,
             secret_id=self.id,
             org_id=self.org_id,
@@ -96,6 +107,29 @@ class ProviderCredential(Record, Identified, Tombstonable, table=True):
         """An org's credentials, or one workspace's within it, in the order the data plane tries them."""
         scoped = (cls.workspace_id == workspace_id,) if workspace_id is not None else ()
         return await cls.find(cls.org_id == org_id, *scoped, order_by=(cls.priority, cls.name))  # ty: ignore[invalid-argument-type] sqlmodel columns type as their python values
+
+    async def delete_with_value(self, store: SecretStore) -> None:
+        """Delete the credential and the value behind it.
+
+        The value goes first, for the same reason the create path writes the row first: a row whose
+        value is gone is a candidate the request path skips, while a value whose row is gone is a
+        secret nothing knows how to reach or remove. A read-only store cannot have been written to
+        in the first place, so its refusal is not a failure here.
+        """
+        with contextlib.suppress(SecretStoreReadOnlyError, SecretNotFoundError):
+            await store.delete(self.secret_ref())
+        await self.delete()
+
+    @classmethod
+    async def delete_scoped(cls, store: SecretStore, *conditions: ColumnElement[bool] | bool) -> None:
+        """Delete every credential matching the conditions, values included.
+
+        This is what a workspace or an org delete calls. It exists because a credential holds a
+        foreign key into both, so leaving one behind does not orphan a row, it makes the workspace
+        or the org undeletable.
+        """
+        for credential in await cls.find(*conditions):
+            await credential.delete_with_value(store)
 
     @classmethod
     async def observe(cls, observations: dict[UUID, tuple[datetime, str]]) -> None:
@@ -168,6 +202,7 @@ class ProviderCredentialOut(RecordOut[ProviderCredential]):
     org_id: UUID | None
     workspace_id: UUID | None
     provider_id: UUID
+    provider_name: str
     name: str
     priority: int
     enabled: bool

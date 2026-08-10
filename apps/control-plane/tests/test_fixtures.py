@@ -13,6 +13,7 @@ from fastapi.testclient import TestClient
 from helpers import run_in_db, setup_control_plane, write_config
 from typer.testing import CliRunner
 
+from contract import MemoryStoreConfig
 from control_plane.fixtures import NotAnEmptyDatabaseError, apply_fixtures
 from control_plane.main import app as cli_app
 from control_plane.models import Org
@@ -29,7 +30,7 @@ def test_apply_refuses_a_database_that_already_holds_accounts(tmp_path):
         c.post("/v1/auth/signup", json={"email": "real@example.com", "password": "hunter2hunter2", "name": "Real"}, headers=CSRF)
 
     with pytest.raises(NotAnEmptyDatabaseError):
-        run_in_db(tmp_path, lambda: apply_fixtures(NOW))
+        run_in_db(tmp_path, lambda: apply_fixtures(NOW, MemoryStoreConfig().build()))
 
     assert run_in_db(tmp_path, Org.find) == []
 

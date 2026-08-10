@@ -133,7 +133,7 @@ def fixtures(config: str = "airllm.yml") -> None:
 
     async def run() -> tuple[Fixtures, list[tuple[str, int]], int]:
         async with standalone_transaction(settings.database.url):
-            seeded = await apply_fixtures(datetime.now(tz=UTC))
+            seeded = await apply_fixtures(datetime.now(tz=UTC), settings.secrets.build())
             now = datetime.now(tz=UTC)
             versions = [
                 (org.name, (await compile_and_store(org.id, uuid7(), now, settings.bundle.staleness_bound, settings.bundle.signing_key)).version)

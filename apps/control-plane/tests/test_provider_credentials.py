@@ -21,11 +21,11 @@ def _catalog(client, root):
     client.post("/v1/taxonomy/models", json=MODEL, headers=root)
 
 
-def _stored(cp, credential: dict, provider_name: str = "openai") -> str:
+def _stored(cp, credential: dict) -> str:
     """Read the value back the way a data plane would: from the store, by the ref the row names."""
     ref = SecretRef(
         purpose=SecretPurpose.provider,
-        service=provider_name,
+        service=credential["provider_name"],
         name=credential["name"],
         secret_id=credential["id"],
         org_id=credential["org_id"],
@@ -218,7 +218,7 @@ def test_a_workspace_credential_cannot_exist_without_an_org(tmp_path):
     async def orphan():
         provider = await Provider.first(Provider.name == "openai")
         assert provider is not None
-        await ProviderCredential(org_id=None, workspace_id=workspace_id, provider_id=provider.id, name="orphan").save()
+        await ProviderCredential(org_id=None, workspace_id=workspace_id, provider_id=provider.id, provider_name=provider.name, name="orphan").save()
 
     with pytest.raises(IntegrityError, match="provider_credential_workspace_needs_org"):
         run_in_db(tmp_path, orphan)
@@ -325,3 +325,31 @@ def test_events_for_a_deleted_credential_are_not_an_error(tmp_path):
         c.delete(f"/v1/org/provider-credentials/{m.credential['id']}", headers=m.org)
         event = _usage_event(m, "ok", datetime.now(tz=UTC))
         assert c.post("/v1/events", json=[event], headers=m.root).status_code == 200
+
+
+def test_deleting_a_workspace_takes_its_credentials(tmp_path):
+    """The credential has a foreign key into the workspace, so leaving it behind does not orphan a
+    row, it makes the workspace undeletable."""
+    cp = setup_control_plane(tmp_path)
+    with TestClient(cp.app) as c:
+        m = _with_credential(cp, c)
+        deleted = c.delete(f"/v1/org/workspaces/{m.workspace_id}", headers=m.org)
+        assert deleted.status_code == 200, deleted.text
+        assert c.get(f"/v1/org/provider-credentials/{m.credential['id']}", headers=m.org).status_code == 404
+        with pytest.raises(SecretNotFoundError):
+            _stored(cp, m.credential)
+
+
+def test_deleting_an_org_takes_its_credentials(tmp_path):
+    """Both scopes: the workspace's credentials go with the workspace, and the org's own go with the org."""
+    cp = setup_control_plane(tmp_path)
+    with TestClient(cp.app) as c:
+        m = _with_credential(cp, c)
+        org_scoped = c.post("/v1/org/provider-credentials", json={"provider": "openai", "name": "shared", "value": KEY}, headers=m.org)
+        assert org_scoped.status_code == 200, org_scoped.text
+        shared = org_scoped.json()["data"]
+        deleted = c.delete(f"/v1/orgs/{m.org_id}", headers=m.root)
+        assert deleted.status_code == 200, deleted.text
+        for credential in (m.credential, shared):
+            with pytest.raises(SecretNotFoundError):
+                _stored(cp, credential)

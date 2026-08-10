@@ -461,6 +461,7 @@ class ProviderCredentialOut(BaseModel):
     org_id: Annotated[UUID | None, Field(title="Org Id")]
     workspace_id: Annotated[UUID | None, Field(title="Workspace Id")]
     provider_id: Annotated[UUID, Field(title="Provider Id")]
+    provider_name: Annotated[str, Field(title="Provider Name")]
     name: Annotated[str, Field(title="Name")]
     priority: Annotated[int, Field(title="Priority")]
     enabled: Annotated[bool, Field(title="Enabled")]
@@ -525,7 +526,7 @@ class ProviderIn(BaseModel):
     icon: Annotated[
         str | None,
         Field(
-            description="Provider mark as a standalone 24x24 SVG document, empty when the provider has none. Carried as markup",
+            description="Provider mark as a standalone 24x24 SVG document, empty when the provider has none. Carried as markup.",
             title="Icon",
         ),
     ] = ""

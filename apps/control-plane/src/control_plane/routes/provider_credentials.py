@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-import contextlib
 from uuid import UUID  # noqa: TC003 fastapi resolves path param annotations at runtime
 
 from fastapi import APIRouter, HTTPException, Request
 
-from contract import Secret, SecretStore, SecretStoreReadOnlyError
+from contract import Secret, SecretStore
 from control_plane.authz import Scope
 from control_plane.deps import OrgDep, require
 from control_plane.models import Provider, ProviderCredential, Workspace
@@ -60,11 +59,12 @@ async def create_provider_credential(body: ProviderCredentialIn, org_id: OrgDep,
         org_id=org_id,
         workspace_id=workspace_id,
         provider_id=provider.id,
+        provider_name=provider.name,
         name=body.name,
         priority=body.priority,
         fingerprint=secret.fingerprint,
     ).save()
-    await store.put(credential.secret_ref(provider.name), secret)
+    await store.put(credential.secret_ref(), secret)
     return Envelope(data=ProviderCredentialOut.model_validate(credential))
 
 
@@ -97,11 +97,8 @@ async def rotate_provider_credential(
     integer and every data plane refetches within a poll instead of waiting out a cache TTL."""
     store = writable_store(request)
     credential = await ProviderCredential.in_org(org_id, credential_id)
-    provider = await Provider.find_by_id(credential.provider_id)
-    if provider is None:
-        raise HTTPException(status_code=404, detail="Provider not found")
     secret = Secret(body.value.get_secret_value())
-    await store.put(credential.secret_ref(provider.name), secret)
+    await store.put(credential.secret_ref(), secret)
     credential.version += 1
     credential.fingerprint = secret.fingerprint
     credential.status = "unknown"
@@ -110,12 +107,8 @@ async def rotate_provider_credential(
 
 @router.delete("/{credential_id}", tags=["Provider Credentials"], dependencies=[require(Scope.provider_credentials_write)])
 async def delete_provider_credential(credential_id: UUID, org_id: OrgDep, request: Request) -> Envelope[DeletedOut[UUID]]:
-    """The value goes first: a row with no value is a candidate the request path skips, while a
-    value with no row is a secret nothing knows how to reach or remove."""
+    """Deleting one credential is the same operation a workspace or org delete performs in bulk, so
+    it runs through the same method rather than a second copy of the ordering rule."""
     credential = await ProviderCredential.in_org(org_id, credential_id)
-    provider = await Provider.find_by_id(credential.provider_id)
-    if provider is not None:
-        with contextlib.suppress(SecretStoreReadOnlyError):
-            await secret_store(request).delete(credential.secret_ref(provider.name))
-    await credential.delete()
+    await ProviderCredential.delete_scoped(secret_store(request), ProviderCredential.id == credential.id)
     return Envelope(data=DeletedOut.of(credential_id))

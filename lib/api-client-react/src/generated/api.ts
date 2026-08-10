@@ -2389,7 +2389,8 @@ export const getDeleteOrgUrl = (orgId: string,) => {
 }
 
 /**
- * Delete an org with everything scoped to it: its workspaces and their keys, its own keys, its memberships, its bundles.
+ * Delete an org with everything scoped to it: its workspaces and their keys, the provider
+ * credentials it brought, its own keys, its memberships, its bundles.
  *
  * Its usage events stay. They are history keyed by ids, not rows belonging to the org, so they
  * outlive it the way the audit trail does rather than standing in the way of the delete.
@@ -2700,7 +2701,8 @@ export const getDeleteWorkspaceUrl = (workspaceRef: string,) => {
 }
 
 /**
- * Delete a workspace with its inference keys and its members; the usage it recorded stays, as it does for an org.
+ * Delete a workspace with its inference keys, its members, and the provider credentials it brought;
+ * the usage it recorded stays, as it does for an org.
  *
  * Requires the `workspaces:delete` scope.
  * @summary Delete Workspace
@@ -3619,8 +3621,8 @@ export const getDeleteProviderCredentialUrl = (credentialId: string,) => {
 }
 
 /**
- * The value goes first: a row with no value is a candidate the request path skips, while a
- * value with no row is a secret nothing knows how to reach or remove.
+ * Deleting one credential is the same operation a workspace or org delete performs in bulk, so
+ * it runs through the same method rather than a second copy of the ordering rule.
  *
  * Requires the `provider-credentials:write` scope.
  * @summary Delete Provider Credential

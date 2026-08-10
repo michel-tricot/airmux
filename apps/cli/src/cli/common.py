@@ -29,6 +29,7 @@ inference_keys_app = typer.Typer(help="Inference API keys, the caller credential
 management_keys_app = typer.Typer(help="Management API keys, user-bound credentials for one org")
 instance_keys_app = typer.Typer(help="Instance API keys, admin credentials for the instance endpoints")
 providers_app = typer.Typer(help="Upstream providers")
+provider_credentials_app = typer.Typer(help="Provider API keys this org brings; values go to the secret store, never to the database")
 models_app = typer.Typer(help="Routable models")
 bundles_app = typer.Typer(help="Signed policy bundles")
 events_app = typer.Typer(help="Usage events ingested from data planes")
@@ -44,6 +45,7 @@ for name, sub in (
     ("management-keys", management_keys_app),
     ("instance-keys", instance_keys_app),
     ("providers", providers_app),
+    ("provider-credentials", provider_credentials_app),
     ("models", models_app),
     ("bundles", bundles_app),
     ("events", events_app),
