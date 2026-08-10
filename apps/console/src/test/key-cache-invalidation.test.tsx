@@ -6,8 +6,11 @@ import type { ReactNode } from 'react';
 import { queryClient } from '@/App';
 import {
   useAllManagementKeys,
+  useCreateInferenceKeyMutation,
+  useInferenceKeys,
   useInstanceKeys,
   useMintInstanceKeyMutation,
+  useRevokeInferenceKeyMutation,
   useRevokeInstanceKeyMutation,
   useRevokeManagementKeyMutation,
 } from '@/features/keys/hooks';
@@ -28,6 +31,23 @@ function managementKey(status: string) {
     created_at: now,
     updated_at: now,
     revoked_at: status === 'revoked' ? now : null,
+  };
+}
+
+const WORKSPACE_REF = 'production';
+
+function inferenceKey(id: string, revoked: boolean) {
+  return {
+    id,
+    org_id: ORG.id,
+    workspace_id: 'ws-1',
+    user_id: 'user-1',
+    revoked,
+    label: 'app',
+    prefix: 'llm_abc',
+    created_at: now,
+    updated_at: now,
+    deleted_at: null,
   };
 }
 
@@ -125,6 +145,59 @@ describe('key cache invalidation across pages', () => {
     await waitFor(() => expect(listFetches).toBe(2));
     await waitFor(() =>
       expect(list.result.current.data).toEqual([expect.objectContaining({ status: 'revoked' })]),
+    );
+  });
+
+  it('minting an inference key refetches the workspace inference key list', async () => {
+    const keys = [inferenceKey('ifk-1', false)];
+    let listFetches = 0;
+    server.use(
+      http.get(`/v1/org/workspaces/${WORKSPACE_REF}/inference-keys`, () => {
+        listFetches += 1;
+        return HttpResponse.json(keys);
+      }),
+      http.post(`/v1/org/workspaces/${WORKSPACE_REF}/inference-keys`, () => {
+        keys.push(inferenceKey('ifk-2', false));
+        return HttpResponse.json({ id: 'ifk-2', token: 'tok-once' });
+      }),
+    );
+
+    const list = renderHook(() => useInferenceKeys(ORG.id, WORKSPACE_REF), { wrapper });
+    await waitFor(() => expect(list.result.current.isSuccess).toBe(true));
+    expect(list.result.current.data).toHaveLength(1);
+    expect(listFetches).toBe(1);
+
+    const mint = renderHook(() => useCreateInferenceKeyMutation(ORG.id, WORKSPACE_REF), { wrapper });
+    await mint.result.current.mutateAsync({ workspaceRef: WORKSPACE_REF, data: { label: 'app' } });
+
+    await waitFor(() => expect(listFetches).toBe(2));
+    await waitFor(() => expect(list.result.current.data).toHaveLength(2));
+  });
+
+  it('revoking an inference key refetches the workspace inference key list with fresh status', async () => {
+    let revoked = false;
+    let listFetches = 0;
+    server.use(
+      http.get(`/v1/org/workspaces/${WORKSPACE_REF}/inference-keys`, () => {
+        listFetches += 1;
+        return HttpResponse.json([inferenceKey('ifk-1', revoked)]);
+      }),
+      http.delete(`/v1/org/workspaces/${WORKSPACE_REF}/inference-keys/:keyId`, () => {
+        revoked = true;
+        return HttpResponse.json({ id: 'ifk-1', status: 'revoked' });
+      }),
+    );
+
+    const list = renderHook(() => useInferenceKeys(ORG.id, WORKSPACE_REF), { wrapper });
+    await waitFor(() => expect(list.result.current.isSuccess).toBe(true));
+    expect(list.result.current.data).toEqual([expect.objectContaining({ revoked: false })]);
+
+    const revoke = renderHook(() => useRevokeInferenceKeyMutation(ORG.id, WORKSPACE_REF), { wrapper });
+    await revoke.result.current.mutateAsync({ workspaceRef: WORKSPACE_REF, keyId: 'ifk-1' });
+
+    await waitFor(() => expect(listFetches).toBe(2));
+    await waitFor(() =>
+      expect(list.result.current.data).toEqual([expect.objectContaining({ revoked: true })]),
     );
   });
 });
