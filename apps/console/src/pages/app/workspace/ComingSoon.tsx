@@ -1,7 +1,6 @@
 import { useParams } from 'wouter';
 import { useSession } from '@/lib/session';
-import { orgScope } from '@/lib/api';
-import { useGetWorkspace, getGetWorkspaceQueryKey } from '@workspace/api-client-react';
+import { useWorkspace } from '@/features/workspaces/hooks';
 import { Card } from '@/components/ui/elements';
 import { type LucideIcon } from 'lucide-react';
 
@@ -16,10 +15,7 @@ export function ComingSoonPill() {
 export default function WorkspaceComingSoon({ title, description, icon: Icon }: { title: string; description: string; icon: LucideIcon }) {
   const { workspaceRef } = useParams();
   const { orgId } = useSession();
-  const { data: workspace } = useGetWorkspace(workspaceRef!, {
-    query: { queryKey: [...getGetWorkspaceQueryKey(workspaceRef!), orgId] },
-    request: orgScope(orgId!),
-  });
+  const { data: workspace } = useWorkspace(orgId!, workspaceRef!);
 
   return (
     <div className="flex-1 p-8 max-w-6xl mx-auto w-full space-y-6 animate-in fade-in duration-300">

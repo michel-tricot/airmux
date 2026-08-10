@@ -1,90 +1,49 @@
 import { useState } from 'react';
-import {
-  useGetOrg,
-  useDeleteOrg,
-  useUpdateOrg,
-  useListWorkspaces,
-  useCreateWorkspace,
-  useListManagementKeys,
-  useRevokeManagementKey,
-  useListUsers,
-  useListOrgUsers,
-  useAddOrgUser,
-  useRemoveOrgUser,
-  getListOrgsQueryKey,
-  getGetOrgQueryKey,
-  getListWorkspacesQueryKey,
-  getListManagementKeysQueryKey,
-  getListOrgUsersQueryKey,
-} from '@workspace/api-client-react';
-import { Card, Button, Input, Label, Dropdown, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Modal, Badge, Tabs, TabsList, TabsTrigger, TabsContent, ConfirmButton } from '@/components/ui/elements';
-import { Building2, Plus, ArrowLeft, Key, TerminalSquare, Users, UserMinus, Ban, Pencil, Trash2, ShieldAlert } from 'lucide-react';
+import * as z from 'zod';
+import { Card, Button, Input, Modal, Badge, Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/elements';
+import { Building2, Plus, ArrowLeft, Key, TerminalSquare, Users, Pencil, Trash2, ShieldAlert } from 'lucide-react';
 import { formatDate } from '@/lib/format';
 import { Link, useParams, useLocation } from 'wouter';
-import { useQueryClient } from '@tanstack/react-query';
-import { orgScope } from '@/lib/api';
+import { useOrg, useRenameOrgMutation, useDeleteOrgMutation } from '@/features/orgs/hooks';
+import { useUsers, useAddUserToOrgMutation, useRemoveUserFromOrgMutation } from '@/features/users/hooks';
+import { useWorkspaces, useCreateWorkspaceMutation } from '@/features/workspaces/hooks';
+import { useManagementKeys, useRevokeManagementKeyMutation } from '@/features/keys/hooks';
+import { useOrgMembers } from '@/features/members/hooks';
+import { LoadingState, ErrorState } from '@/components/shared/states';
+import { DataTable } from '@/components/shared/data-table';
+import { FormDialog } from '@/components/shared/form-dialog';
+import { MembersPanel } from '@/components/shared/members-panel';
+import { ApiKeysTable } from '@/components/shared/api-keys-table';
+import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+
+const nameSchema = z.object({ name: z.string().min(1, 'Name is required') });
 
 export default function OrganizationDetail() {
   const { orgId } = useParams();
   const [, setLocation] = useLocation();
-  const queryClient = useQueryClient();
-  const scope = orgScope(orgId!);
 
-  const workspacesKey = [...getListWorkspacesQueryKey(), orgId];
-  const keysKey = [...getListManagementKeysQueryKey(), orgId];
-  const membersKey = [...getListOrgUsersQueryKey(), orgId];
+  const { data: org, isLoading } = useOrg(orgId!);
 
-  const { data: org, isLoading } = useGetOrg(orgId!, { query: { queryKey: [...getGetOrgQueryKey(orgId!)] } });
-
-  const { data: workspaces } = useListWorkspaces({ query: { queryKey: workspacesKey }, request: scope });
-  const { data: keys } = useListManagementKeys({ query: { queryKey: keysKey }, request: scope });
-  const { data: members } = useListOrgUsers({ query: { queryKey: membersKey }, request: scope });
-  const { data: users } = useListUsers();
+  const workspacesQuery = useWorkspaces(orgId!);
+  const keysQuery = useManagementKeys(orgId!);
+  const membersQuery = useOrgMembers(orgId!);
+  const { data: users } = useUsers();
+  const members = membersQuery.data;
   const outsiders = users?.filter(u => !members?.some(m => m.user_id === u.id));
 
   const [wsOpen, setWsOpen] = useState(false);
-  const [memberOpen, setMemberOpen] = useState(false);
   const [renameOpen, setRenameOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
-  const [wsName, setWsName] = useState('');
-  const [memberId, setMemberId] = useState('');
-  const [name, setName] = useState('');
 
-  const createWorkspace = useCreateWorkspace({
-    mutation: { onSuccess: () => { queryClient.invalidateQueries({ queryKey: workspacesKey }); setWsOpen(false); setWsName(''); } },
-    request: scope,
-  });
-  const revokeKey = useRevokeManagementKey({
-    mutation: { onSuccess: () => queryClient.invalidateQueries({ queryKey: keysKey }) },
-    request: scope,
-  });
-  const addMember = useAddOrgUser({
-    mutation: { onSuccess: () => { queryClient.invalidateQueries({ queryKey: membersKey }); setMemberOpen(false); setMemberId(''); } },
-    request: scope,
-  });
-  const removeMember = useRemoveOrgUser({
-    mutation: { onSuccess: () => queryClient.invalidateQueries({ queryKey: membersKey }) },
-    request: scope,
-  });
-  const rename = useUpdateOrg({
-    mutation: {
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: getListOrgsQueryKey() });
-        queryClient.invalidateQueries({ queryKey: getGetOrgQueryKey(orgId!) });
-        setRenameOpen(false);
-      },
-    },
-  });
-  const deleteOrg = useDeleteOrg({
-    mutation: {
-      onSuccess: () => { queryClient.invalidateQueries({ queryKey: getListOrgsQueryKey() }); setLocation('/instance/organizations'); },
-      onError: () => setDeleteError('We couldn’t delete this organization. Please try again.'),
-    },
-  });
+  const createWorkspace = useCreateWorkspaceMutation(orgId!);
+  const revokeKey = useRevokeManagementKeyMutation(orgId!);
+  const addMember = useAddUserToOrgMutation();
+  const removeMember = useRemoveUserFromOrgMutation();
+  const rename = useRenameOrgMutation();
+  const deleteOrg = useDeleteOrgMutation();
 
-  if (isLoading) return <div className="p-8 text-center text-muted-foreground font-mono text-sm">LOADING...</div>;
-  if (!org) return <div className="p-8 text-center text-destructive">Organization not found</div>;
+  if (isLoading) return <LoadingState label="LOADING..." />;
+  if (!org) return <ErrorState message="Organization not found" />;
 
   return (
     <div className="flex-1 p-8 max-w-6xl mx-auto w-full space-y-6 animate-in fade-in duration-300">
@@ -103,11 +62,11 @@ export default function OrganizationDetail() {
           </div>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => { setName(org.name); setRenameOpen(true); }}>
+          <Button variant="outline" onClick={() => setRenameOpen(true)}>
             <Pencil className="w-4 h-4 mr-2" /> Rename
           </Button>
           <Button variant="outline" className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
-            onClick={() => { setDeleteError(null); setDeleteOpen(true); }}>
+            onClick={() => setDeleteOpen(true)}>
             <Trash2 className="w-4 h-4 mr-2" /> Delete
           </Button>
         </div>
@@ -126,32 +85,33 @@ export default function OrganizationDetail() {
             <Button onClick={() => setWsOpen(true)} size="sm"><Plus className="w-4 h-4 mr-1" /> New Workspace</Button>
           </div>
           <Card>
-            {workspaces && workspaces.length > 0 ? (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Slug</TableHead>
-                    <TableHead>Technical ID</TableHead>
-                    <TableHead className="text-right">Created</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {workspaces.map(ws => (
-                    <TableRow key={ws.id}>
-                      <TableCell className="font-medium">
-                        <Link href={`/instance/organizations/${org.id}/workspaces/${ws.slug}`} className="hover:text-primary transition-colors">{ws.name}</Link>
-                      </TableCell>
-                      <TableCell><Badge variant="mono">{ws.slug}</Badge></TableCell>
-                      <TableCell className="font-mono text-xs text-muted-foreground">{ws.id}</TableCell>
-                      <TableCell className="text-right text-muted-foreground text-sm">{formatDate(ws.created_at)}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            ) : (
-              <div className="p-8 text-center text-muted-foreground">No workspaces yet.</div>
-            )}
+            <DataTable
+              rows={workspacesQuery.data}
+              rowKey={ws => ws.id}
+              isLoading={workspacesQuery.isLoading}
+              isError={workspacesQuery.isError}
+              onRetry={() => workspacesQuery.refetch()}
+              empty="No workspaces yet."
+              columns={[
+                {
+                  key: 'name',
+                  header: 'Name',
+                  cellClassName: 'font-medium',
+                  cell: ws => (
+                    <Link href={`/instance/organizations/${org.id}/workspaces/${ws.slug}`} className="hover:text-primary transition-colors">{ws.name}</Link>
+                  ),
+                },
+                { key: 'slug', header: 'Slug', cell: ws => <Badge variant="mono">{ws.slug}</Badge> },
+                { key: 'id', header: 'Technical ID', cellClassName: 'font-mono text-xs text-muted-foreground', cell: ws => ws.id },
+                {
+                  key: 'created',
+                  header: 'Created',
+                  headClassName: 'text-right',
+                  cellClassName: 'text-right text-muted-foreground text-sm',
+                  cell: ws => formatDate(ws.created_at),
+                },
+              ]}
+            />
           </Card>
         </TabsContent>
 
@@ -159,126 +119,79 @@ export default function OrganizationDetail() {
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-lg font-semibold">Automation Keys</h2>
           </div>
-          <Card>
-            {keys && keys.length > 0 ? (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Label</TableHead>
-                    <TableHead>Key</TableHead>
-                    <TableHead>User</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Created</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {keys.map(key => (
-                    <TableRow key={key.id}>
-                      <TableCell className="font-medium">{key.label}</TableCell>
-                      <TableCell className="font-mono text-xs text-muted-foreground">{key.prefix}…</TableCell>
-                      <TableCell className="text-muted-foreground text-sm">
-                        {members?.find(m => m.user_id === key.user_id)?.email ?? key.user_id}
-                      </TableCell>
-                      <TableCell><Badge variant={key.revoked ? 'outline' : 'success'}>{key.revoked ? 'REVOKED' : 'ACTIVE'}</Badge></TableCell>
-                      <TableCell className="text-muted-foreground text-sm">{formatDate(key.created_at)}</TableCell>
-                      <TableCell className="text-right">
-                        {!key.revoked && (
-                          <ConfirmButton size="sm"
-                            title={`Revoke "${key.label}"?`}
-                            description="Requests signed with this management key will stop working immediately. This cannot be undone."
-                            confirmLabel="Revoke key"
-                            pending={revokeKey.isPending}
-                            onConfirm={() => revokeKey.mutate({ keyId: key.id })}>
-                            <Ban className="w-4 h-4 mr-1" /> Revoke
-                          </ConfirmButton>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            ) : (
-              <div className="p-8 text-center text-muted-foreground">No management keys for this org.</div>
-            )}
-          </Card>
+          <ApiKeysTable
+            keys={keysQuery.data}
+            isLoading={keysQuery.isLoading}
+            isError={keysQuery.isError}
+            onRetry={() => keysQuery.refetch()}
+            emptyText="No management keys for this org."
+            extraColumns={[
+              {
+                key: 'user',
+                header: 'User',
+                cellClassName: 'text-muted-foreground text-sm',
+                cell: key => members?.find(m => m.user_id === key.user_id)?.email ?? key.user_id,
+              },
+            ]}
+            revokeDescription="Requests signed with this management key will stop working immediately. This cannot be undone."
+            onRevoke={key => revokeKey.mutate({ keyId: key.id })}
+            revokePending={revokeKey.isPending}
+          />
         </TabsContent>
 
         <TabsContent value="members" className="space-y-4 mt-0">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold">Organization Members</h2>
-            <Button onClick={() => setMemberOpen(true)} size="sm"><Plus className="w-4 h-4 mr-1" /> Add Member</Button>
-          </div>
-          <Card>
-            {members && members.length > 0 ? (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>User</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {members.map(member => (
-                    <TableRow key={member.user_id}>
-                      <TableCell className="font-medium">
-                        <Link href={`/instance/users/${member.user_id}`} className="hover:text-primary">{member.name}</Link>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">{member.email}</TableCell>
-                      <TableCell className="text-right">
-                        <ConfirmButton
-                          title={`Remove ${member.name} from the organization?`}
-                          description="They lose access to this organization and all of its workspaces."
-                          confirmLabel="Remove member"
-                          pending={removeMember.isPending}
-                          aria-label="Remove member"
-                          onConfirm={() => removeMember.mutate({ userId: member.user_id })}>
-                          <UserMinus className="w-4 h-4" />
-                        </ConfirmButton>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            ) : (
-              <div className="p-8 text-center text-muted-foreground">No members yet.</div>
+          <MembersPanel
+            heading="Organization Members"
+            members={members}
+            isLoading={membersQuery.isLoading}
+            isError={membersQuery.isError}
+            onRetry={() => membersQuery.refetch()}
+            emptyText="No members yet."
+            renderName={member => (
+              <Link href={`/instance/users/${member.user_id}`} className="hover:text-primary">{member.name}</Link>
             )}
-          </Card>
+            add={{
+              candidates: (outsiders ?? []).map(user => ({ value: user.id, label: `${user.name} (${user.email})` })),
+              dialogTitle: 'Add Member',
+              placeholder: 'Select a user',
+              onAdd: userId => addMember.mutateAsync({ userId, orgId: org.id }),
+              pending: addMember.isPending,
+            }}
+            remove={{
+              title: member => `Remove ${member.name} from the organization?`,
+              description: 'They lose access to this organization and all of its workspaces.',
+              onRemove: member => removeMember.mutate({ userId: member.user_id, orgId: org.id }),
+              pending: removeMember.isPending,
+            }}
+          />
         </TabsContent>
       </Tabs>
 
-      <Modal open={wsOpen} onOpenChange={setWsOpen} title="New Workspace">
-        <form onSubmit={e => { e.preventDefault(); createWorkspace.mutate({ data: { name: wsName } }); }} className="space-y-4 pt-4">
-          <div className="space-y-2">
-            <Label>Name</Label>
-            <Input required value={wsName} placeholder="staging" onChange={e => setWsName(e.target.value)} />
-          </div>
-          <div className="flex justify-end gap-2 pt-4">
-            <Button type="button" variant="outline" onClick={() => setWsOpen(false)}>Cancel</Button>
-            <Button type="submit" disabled={createWorkspace.isPending}>Create</Button>
-          </div>
-        </form>
-      </Modal>
-
-      <Modal open={memberOpen} onOpenChange={setMemberOpen} title="Add Member">
-        <form onSubmit={e => { e.preventDefault(); addMember.mutate({ userId: memberId }); }} className="space-y-4 pt-4">
-          <div className="space-y-2">
-            <Label htmlFor="member">User</Label>
-            <Dropdown
-              aria-label="User"
-              value={memberId}
-              onValueChange={setMemberId}
-              placeholder="Select a user"
-              options={(outsiders ?? []).map(user => ({ value: user.id, label: `${user.name} (${user.email})` }))}
-            />
-          </div>
-          <div className="flex justify-end gap-2 pt-4">
-            <Button type="button" variant="outline" onClick={() => setMemberOpen(false)}>Cancel</Button>
-            <Button type="submit" disabled={!memberId || addMember.isPending}>Add</Button>
-          </div>
-        </form>
-      </Modal>
+      <FormDialog
+        open={wsOpen}
+        onOpenChange={setWsOpen}
+        title="New Workspace"
+        schema={nameSchema}
+        defaultValues={{ name: '' }}
+        onSubmit={values => createWorkspace.mutateAsync({ data: values })}
+        submitLabel="Create"
+        pending={createWorkspace.isPending}>
+        {form => (
+          <FormField
+            control={form.control}
+            name="name"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Name</FormLabel>
+                <FormControl>
+                  <Input placeholder="staging" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
+      </FormDialog>
 
       <Modal open={deleteOpen} onOpenChange={setDeleteOpen} title="Delete Organization"
         description="This permanently deletes the organization, its workspaces, keys, members, policies, and usage records.">
@@ -287,28 +200,41 @@ export default function OrganizationDetail() {
             <ShieldAlert className="w-5 h-5 flex-shrink-0 mt-0.5" />
             <p className="text-sm font-medium">Deleting <strong>{org.name}</strong> cannot be undone. Usage already recorded remains on the organization’s bill.</p>
           </div>
-          {deleteError && <p className="text-sm text-destructive">{deleteError}</p>}
           <div className="flex justify-end gap-2 pt-4">
             <Button type="button" variant="outline" onClick={() => setDeleteOpen(false)}>Cancel</Button>
-            <Button variant="destructive" disabled={deleteOrg.isPending} onClick={() => deleteOrg.mutate({ orgId: org.id })}>
+            <Button variant="destructive" disabled={deleteOrg.isPending}
+              onClick={() => deleteOrg.mutate({ orgId: org.id }, { onSuccess: () => setLocation('/instance/organizations') })}>
               Delete Organization
             </Button>
           </div>
         </div>
       </Modal>
 
-      <Modal open={renameOpen} onOpenChange={setRenameOpen} title="Rename Organization">
-        <form onSubmit={e => { e.preventDefault(); rename.mutate({ orgId: org.id, data: { name } }); }} className="space-y-4 pt-4">
-          <div className="space-y-2">
-            <Label>Name</Label>
-            <Input required value={name} onChange={e => setName(e.target.value)} />
-          </div>
-          <div className="flex justify-end gap-2 pt-4">
-            <Button type="button" variant="outline" onClick={() => setRenameOpen(false)}>Cancel</Button>
-            <Button type="submit" disabled={rename.isPending}>Save</Button>
-          </div>
-        </form>
-      </Modal>
+      <FormDialog
+        open={renameOpen}
+        onOpenChange={setRenameOpen}
+        title="Rename Organization"
+        schema={nameSchema}
+        defaultValues={{ name: org.name }}
+        onSubmit={values => rename.mutateAsync({ orgId: org.id, data: values })}
+        submitLabel="Save"
+        pending={rename.isPending}>
+        {form => (
+          <FormField
+            control={form.control}
+            name="name"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Name</FormLabel>
+                <FormControl>
+                  <Input {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
+      </FormDialog>
     </div>
   );
 }

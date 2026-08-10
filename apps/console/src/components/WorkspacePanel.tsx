@@ -1,28 +1,25 @@
 import { useState } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
-import {
-  useGetWorkspace,
-  useDeleteWorkspace,
-  useUpdateWorkspace,
-  useListInferenceKeys,
-  useCreateInferenceKey,
-  useRevokeInferenceKey,
-  useListMembers,
-  useAddMember,
-  useRemoveMember,
-  useListOrgUsers,
-  getListWorkspacesQueryKey,
-  getListInferenceKeysQueryKey,
-  getListMembersQueryKey,
-  getListOrgUsersQueryKey,
-  getGetWorkspaceQueryKey,
-} from '@workspace/api-client-react';
-import { Card, Button, Input, Label, Dropdown, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Modal, Badge, Tabs, TabsList, TabsTrigger, TabsContent, ConfirmButton } from '@/components/ui/elements';
-import { TerminalSquare, Plus, ArrowLeft, Key, Users, UserMinus, Ban, Pencil, Trash2 } from 'lucide-react';
-import { formatDate } from '@/lib/format';
+import * as z from 'zod';
+import { Button, Input, Modal, Badge, Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/elements';
+import { TerminalSquare, Plus, ArrowLeft, Key, Users, Pencil, Trash2 } from 'lucide-react';
 import { Link, useLocation } from 'wouter';
-import { orgScope } from '@/lib/api';
+import { useWorkspace, useRenameWorkspaceMutation, useDeleteWorkspaceMutation } from '@/features/workspaces/hooks';
+import { useInferenceKeys, useCreateInferenceKeyMutation, useRevokeInferenceKeyMutation } from '@/features/keys/hooks';
+import {
+  useOrgMembers,
+  useWorkspaceMembers,
+  useAddWorkspaceMemberMutation,
+  useRemoveWorkspaceMemberMutation,
+} from '@/features/members/hooks';
+import { LoadingState, ErrorState } from '@/components/shared/states';
+import { FormDialog } from '@/components/shared/form-dialog';
+import { MembersPanel } from '@/components/shared/members-panel';
+import { ApiKeysTable } from '@/components/shared/api-keys-table';
+import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { KeyRevealDialog } from '@/components/KeyRevealDialog';
+
+const nameSchema = z.object({ name: z.string().min(1, 'Name is required') });
+const keyLabelSchema = z.object({ label: z.string().min(1, 'Label is required') });
 
 interface WorkspacePanelProps {
   orgId: string;
@@ -32,70 +29,33 @@ interface WorkspacePanelProps {
 }
 
 export function WorkspacePanel({ orgId, workspaceRef, backHref, backLabel }: WorkspacePanelProps) {
-  const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
-  const scope = orgScope(orgId);
 
-  const workspacesKey = [...getListWorkspacesQueryKey(), orgId];
-  const keysKey = [...getListInferenceKeysQueryKey(workspaceRef), orgId];
-  const membersKey = [...getListMembersQueryKey(workspaceRef), orgId];
-  const orgUsersKey = [...getListOrgUsersQueryKey(), orgId];
-
-  const { data: workspace, isLoading } = useGetWorkspace(workspaceRef, {
-    query: { queryKey: [...getGetWorkspaceQueryKey(workspaceRef), orgId], retry: false },
-    request: scope,
-  });
-
-  const { data: keys } = useListInferenceKeys(workspaceRef, { query: { queryKey: keysKey }, request: scope });
-  const { data: members } = useListMembers(workspaceRef, { query: { queryKey: membersKey }, request: scope });
+  const { data: workspace, isLoading } = useWorkspace(orgId, workspaceRef);
+  const keysQuery = useInferenceKeys(orgId, workspaceRef);
+  const membersQuery = useWorkspaceMembers(orgId, workspaceRef);
 
   // Workspace members are user ids alone, and members are drawn from the org, so the org roster
   // both names them and supplies the candidates.
-  const { data: orgUsers } = useListOrgUsers({ query: { queryKey: orgUsersKey }, request: scope });
+  const { data: orgUsers } = useOrgMembers(orgId);
+  const members = membersQuery.data;
   const candidates = orgUsers?.filter(u => !members?.some(m => m.user_id === u.user_id));
+  const describe = (userId: string) => orgUsers?.find(u => u.user_id === userId);
 
   const [keyOpen, setKeyOpen] = useState(false);
-  const [memberOpen, setMemberOpen] = useState(false);
   const [renameOpen, setRenameOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
-  const [keyLabel, setKeyLabel] = useState('');
-  const [memberId, setMemberId] = useState('');
-  const [name, setName] = useState('');
   const [token, setToken] = useState<string | null>(null);
 
-  const invalidate = (queryKey: unknown[]) => queryClient.invalidateQueries({ queryKey });
+  const createKey = useCreateInferenceKeyMutation(orgId, workspaceRef);
+  const revokeKey = useRevokeInferenceKeyMutation(orgId, workspaceRef);
+  const addMember = useAddWorkspaceMemberMutation(orgId, workspaceRef);
+  const removeMember = useRemoveWorkspaceMemberMutation(orgId, workspaceRef);
+  const rename = useRenameWorkspaceMutation(orgId, workspaceRef);
+  const remove = useDeleteWorkspaceMutation(orgId);
 
-  const createKey = useCreateInferenceKey({
-    mutation: { onSuccess: (minted) => { invalidate(keysKey); setKeyOpen(false); setKeyLabel(''); setToken(minted.token); } },
-    request: scope,
-  });
-  const revokeKey = useRevokeInferenceKey({ mutation: { onSuccess: () => invalidate(keysKey) }, request: scope });
-  const addMember = useAddMember({
-    mutation: { onSuccess: () => { invalidate(membersKey); setMemberOpen(false); setMemberId(''); } },
-    request: scope,
-  });
-  const removeMember = useRemoveMember({ mutation: { onSuccess: () => invalidate(membersKey) }, request: scope });
-  const rename = useUpdateWorkspace({
-    mutation: {
-      onSuccess: () => {
-        invalidate(workspacesKey);
-        invalidate([...getGetWorkspaceQueryKey(workspaceRef), orgId]);
-        setRenameOpen(false);
-      },
-    },
-    request: scope,
-  });
-  const remove = useDeleteWorkspace({
-    mutation: {
-      onSuccess: () => { invalidate(workspacesKey); setLocation(backHref); },
-      onError: () => setDeleteError('We couldn’t delete this workspace. Please try again.'),
-    },
-    request: scope,
-  });
-
-  if (isLoading) return <div className="p-8 text-center text-muted-foreground font-mono text-sm">Loading workspace...</div>;
-  if (!workspace) return <div className="p-8 text-center text-destructive">Workspace not found</div>;
+  if (isLoading) return <LoadingState label="Loading workspace..." />;
+  if (!workspace) return <ErrorState message="Workspace not found" />;
 
   return (
     <div className="flex-1 p-8 max-w-6xl mx-auto w-full space-y-6 animate-in fade-in duration-300">
@@ -119,11 +79,11 @@ export function WorkspacePanel({ orgId, workspaceRef, backHref, backLabel }: Wor
           </div>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => { setName(workspace.name); setRenameOpen(true); }}>
+          <Button variant="outline" onClick={() => setRenameOpen(true)}>
             <Pencil className="w-4 h-4 mr-2" /> Rename
           </Button>
           <Button variant="outline" className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
-            onClick={() => { setDeleteError(null); setDeleteOpen(true); }}>
+            onClick={() => setDeleteOpen(true)}>
             <Trash2 className="w-4 h-4 mr-2" /> Delete
           </Button>
         </div>
@@ -140,123 +100,75 @@ export function WorkspacePanel({ orgId, workspaceRef, backHref, backLabel }: Wor
             <h2 className="text-lg font-semibold">Inference Keys</h2>
             <Button onClick={() => setKeyOpen(true)} size="sm"><Plus className="w-4 h-4 mr-1" /> Generate Key</Button>
           </div>
-          <Card>
-            {keys && keys.length > 0 ? (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Label</TableHead>
-                    <TableHead>Key</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Created</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {keys.map(key => (
-                    <TableRow key={key.id}>
-                      <TableCell className="font-medium">{key.label}</TableCell>
-                      <TableCell className="font-mono text-xs text-muted-foreground">{key.prefix}…</TableCell>
-                      <TableCell><Badge variant={key.revoked ? 'outline' : 'success'}>{key.revoked ? 'REVOKED' : 'ACTIVE'}</Badge></TableCell>
-                      <TableCell className="text-muted-foreground text-sm">{formatDate(key.created_at)}</TableCell>
-                      <TableCell className="text-right">
-                        {!key.revoked && (
-                          <ConfirmButton size="sm"
-                            title={`Revoke "${key.label}"?`}
-                            description="Requests using this inference key will stop working immediately. This cannot be undone."
-                            confirmLabel="Revoke key"
-                            pending={revokeKey.isPending}
-                            onConfirm={() => revokeKey.mutate({ workspaceRef, keyId: key.id })}>
-                            <Ban className="w-4 h-4 mr-1" /> Revoke
-                          </ConfirmButton>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            ) : (
-              <div className="p-8 text-center text-muted-foreground">No inference keys generated.</div>
-            )}
-          </Card>
+          <ApiKeysTable
+            keys={keysQuery.data}
+            isLoading={keysQuery.isLoading}
+            isError={keysQuery.isError}
+            onRetry={() => keysQuery.refetch()}
+            emptyText="No inference keys generated."
+            revokeDescription="Requests using this inference key will stop working immediately. This cannot be undone."
+            onRevoke={key => revokeKey.mutate({ workspaceRef, keyId: key.id })}
+            revokePending={revokeKey.isPending}
+          />
         </TabsContent>
 
         <TabsContent value="members" className="space-y-4 mt-0">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold">Workspace Members</h2>
-            <Button onClick={() => setMemberOpen(true)} size="sm"><Plus className="w-4 h-4 mr-1" /> Add Member</Button>
-          </div>
-          <Card>
-            {members && members.length > 0 ? (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>User</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {members.map(member => {
-                    const described = orgUsers?.find(u => u.user_id === member.user_id);
-                    return (
-                      <TableRow key={member.user_id}>
-                        <TableCell className="font-medium">{described?.name ?? 'Member'}</TableCell>
-                        <TableCell className="text-muted-foreground">{described?.email ?? member.user_id}</TableCell>
-                        <TableCell className="text-right">
-                          <ConfirmButton
-                            title={`Remove ${described?.name ?? 'this member'} from the workspace?`}
-                            description="They lose access to this workspace but stay in the organization."
-                            confirmLabel="Remove member"
-                            pending={removeMember.isPending}
-                            aria-label="Remove member"
-                            onConfirm={() => removeMember.mutate({ workspaceRef, userId: member.user_id })}>
-                            <UserMinus className="w-4 h-4" />
-                          </ConfirmButton>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            ) : (
-              <div className="p-8 text-center text-muted-foreground">No members in this workspace.</div>
-            )}
-          </Card>
+          <MembersPanel
+            heading="Workspace Members"
+            members={members}
+            isLoading={membersQuery.isLoading}
+            isError={membersQuery.isError}
+            onRetry={() => membersQuery.refetch()}
+            emptyText="No members in this workspace."
+            renderName={member => describe(member.user_id)?.name ?? 'Member'}
+            renderEmail={member => describe(member.user_id)?.email ?? member.user_id}
+            add={{
+              candidates: (candidates ?? []).map(user => ({ value: user.user_id, label: `${user.name} (${user.email})` })),
+              dialogTitle: 'Add Member',
+              dialogDescription: 'Members are drawn from the org; the user must already belong to it.',
+              placeholder: 'Select an org member',
+              onAdd: userId => addMember.mutateAsync({ workspaceRef, userId }),
+              pending: addMember.isPending,
+            }}
+            remove={{
+              title: member => `Remove ${describe(member.user_id)?.name ?? 'this member'} from the workspace?`,
+              description: 'They lose access to this workspace but stay in the organization.',
+              onRemove: member => removeMember.mutate({ workspaceRef, userId: member.user_id }),
+              pending: removeMember.isPending,
+            }}
+          />
         </TabsContent>
       </Tabs>
 
-      <Modal open={keyOpen} onOpenChange={setKeyOpen} title="Generate Inference Key" description="Keys let applications send requests to the models available to this workspace.">
-        <form onSubmit={e => { e.preventDefault(); createKey.mutate({ workspaceRef, data: { label: keyLabel } }); }} className="space-y-4 pt-4">
-          <div className="space-y-2">
-            <Label>Label</Label>
-            <Input required value={keyLabel} placeholder="e.g. chatbot-prod" onChange={e => setKeyLabel(e.target.value)} />
-          </div>
-          <div className="flex justify-end gap-2 pt-4">
-            <Button type="button" variant="outline" onClick={() => setKeyOpen(false)}>Cancel</Button>
-            <Button type="submit" disabled={createKey.isPending}>Generate</Button>
-          </div>
-        </form>
-      </Modal>
-
-      <Modal open={memberOpen} onOpenChange={setMemberOpen} title="Add Member" description="Members are drawn from the org; the user must already belong to it.">
-        <form onSubmit={e => { e.preventDefault(); addMember.mutate({ workspaceRef, userId: memberId }); }} className="space-y-4 pt-4">
-          <div className="space-y-2">
-            <Label htmlFor="workspace-member">User</Label>
-            <Dropdown
-              aria-label="User"
-              value={memberId}
-              onValueChange={setMemberId}
-              placeholder="Select an org member"
-              options={(candidates ?? []).map(user => ({ value: user.user_id, label: `${user.name} (${user.email})` }))}
-            />
-          </div>
-          <div className="flex justify-end gap-2 pt-4">
-            <Button type="button" variant="outline" onClick={() => setMemberOpen(false)}>Cancel</Button>
-            <Button type="submit" disabled={!memberId || addMember.isPending}>Add</Button>
-          </div>
-        </form>
-      </Modal>
+      <FormDialog
+        open={keyOpen}
+        onOpenChange={setKeyOpen}
+        title="Generate Inference Key"
+        description="Keys let applications send requests to the models available to this workspace."
+        schema={keyLabelSchema}
+        defaultValues={{ label: '' }}
+        onSubmit={async values => {
+          const minted = await createKey.mutateAsync({ workspaceRef, data: values });
+          setToken(minted.token);
+        }}
+        submitLabel="Generate"
+        pending={createKey.isPending}>
+        {form => (
+          <FormField
+            control={form.control}
+            name="label"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Label</FormLabel>
+                <FormControl>
+                  <Input placeholder="e.g. chatbot-prod" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
+      </FormDialog>
 
       <Modal open={deleteOpen} onOpenChange={setDeleteOpen} title="Delete Workspace"
         description="Its inference keys and its members go with it.">
@@ -264,28 +176,41 @@ export function WorkspacePanel({ orgId, workspaceRef, backHref, backLabel }: Wor
           <p className="text-sm text-muted-foreground">
             Deleting <strong>{workspace.name}</strong> cannot be undone. Usage already recorded remains on the organization’s bill.
           </p>
-          {deleteError && <p className="text-sm text-destructive">{deleteError}</p>}
           <div className="flex justify-end gap-2 pt-4">
             <Button type="button" variant="outline" onClick={() => setDeleteOpen(false)}>Cancel</Button>
-            <Button variant="destructive" disabled={remove.isPending} onClick={() => remove.mutate({ workspaceRef })}>
+            <Button variant="destructive" disabled={remove.isPending}
+              onClick={() => remove.mutate({ workspaceRef }, { onSuccess: () => setLocation(backHref) })}>
               Delete Workspace
             </Button>
           </div>
         </div>
       </Modal>
 
-      <Modal open={renameOpen} onOpenChange={setRenameOpen} title="Rename Workspace">
-        <form onSubmit={e => { e.preventDefault(); rename.mutate({ workspaceRef, data: { name } }); }} className="space-y-4 pt-4">
-          <div className="space-y-2">
-            <Label>Name</Label>
-            <Input required value={name} onChange={e => setName(e.target.value)} />
-          </div>
-          <div className="flex justify-end gap-2 pt-4">
-            <Button type="button" variant="outline" onClick={() => setRenameOpen(false)}>Cancel</Button>
-            <Button type="submit" disabled={rename.isPending}>Save</Button>
-          </div>
-        </form>
-      </Modal>
+      <FormDialog
+        open={renameOpen}
+        onOpenChange={setRenameOpen}
+        title="Rename Workspace"
+        schema={nameSchema}
+        defaultValues={{ name: workspace.name }}
+        onSubmit={values => rename.mutateAsync({ workspaceRef, data: values })}
+        submitLabel="Save"
+        pending={rename.isPending}>
+        {form => (
+          <FormField
+            control={form.control}
+            name="name"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Name</FormLabel>
+                <FormControl>
+                  <Input {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
+      </FormDialog>
 
       <KeyRevealDialog open={!!token} onOpenChange={(v) => !v && setToken(null)} token={token} />
     </div>

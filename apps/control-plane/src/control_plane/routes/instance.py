@@ -41,7 +41,7 @@ async def create_instance_key(body: InstanceKeyIn, claims: MgmtDep) -> Envelope[
     user_id = body.user_id or claims.user_id
     user = await User.find_by_id(user_id)
     if user is None:
-        raise HTTPException(status_code=404)
+        raise HTTPException(status_code=404, detail="User not found")
     if not user.instance_admin:
         raise HTTPException(status_code=403, detail="instance keys are only minted for instance admins")
     scopes = [s.value for s in body.scopes] if body.scopes is not None else None
@@ -53,7 +53,7 @@ async def create_instance_key(body: InstanceKeyIn, claims: MgmtDep) -> Envelope[
 async def revoke_instance_key(key_id: UUID) -> Envelope[InstanceKeyRevokedOut]:
     key = await InstanceKey.find_by_id(key_id)
     if key is None:
-        raise HTTPException(status_code=404)
+        raise HTTPException(status_code=404, detail="Instance key not found")
     key.revoked = True
     await key.save()
     return Envelope(data=InstanceKeyRevokedOut(id=key_id, status="revoked"))
@@ -71,7 +71,7 @@ async def revoke_any_management_key(key_id: UUID) -> Envelope[ManagementKeyRevok
     """Revoke any org's management key; the org-scoped route reaches only its own."""
     key = await ManagementKey.find_by_id(key_id)
     if key is None:
-        raise HTTPException(status_code=404)
+        raise HTTPException(status_code=404, detail="Management key not found")
     key.revoked = True
     await key.save()
     return Envelope(data=ManagementKeyRevokedOut(id=key_id, status="revoked"))

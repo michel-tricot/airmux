@@ -1,21 +1,28 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useLocation } from 'wouter';
-import { useQueryClient } from '@tanstack/react-query';
-import { useEnrollment, useCreatePersonalOrg, getEnrollmentQueryKey } from '@workspace/api-client-react';
+import * as z from 'zod';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useEnrollment } from '@workspace/api-client-react';
+import { useCreatePersonalOrgMutation } from '@/features/orgs/hooks';
 import { useSession } from '@/lib/session';
 import { Card, Button, Input, Label } from '@/components/ui/elements';
 import { Building2 } from 'lucide-react';
 
+const personalOrgSchema = z.object({ name: z.string().min(1, 'Name is required') });
+
 export default function AppOrgPicker() {
   const { setOrgId, logout } = useSession();
   const [, setLocation] = useLocation();
-  const queryClient = useQueryClient();
   const pickOrg = (id: string) => {
     setOrgId(id);
     setLocation('/org');
   };
   const { data: enrollment, isLoading } = useEnrollment();
-  const [name, setName] = useState('');
+  const form = useForm<z.infer<typeof personalOrgSchema>>({
+    resolver: zodResolver(personalOrgSchema),
+    defaultValues: { name: '' },
+  });
 
   const orgs = enrollment?.orgs;
   const single = orgs?.length === 1 ? orgs[0].id : null;
@@ -27,13 +34,10 @@ export default function AppOrgPicker() {
     }
   }, [single, setOrgId, setLocation]);
 
-  const createPersonalOrg = useCreatePersonalOrg({
-    mutation: {
-      onSuccess: (org) => {
-        queryClient.invalidateQueries({ queryKey: getEnrollmentQueryKey() });
-        pickOrg(org.id);
-      },
-    },
+  const createPersonalOrg = useCreatePersonalOrgMutation();
+  const submitPersonalOrg = form.handleSubmit(async values => {
+    const org = await createPersonalOrg.mutateAsync({ data: values }).catch(() => null);
+    if (org) pickOrg(org.id);
   });
 
   if (isLoading || single) {
@@ -77,15 +81,15 @@ export default function AppOrgPicker() {
         </div>
 
         {enrollment && enrollment.personal_org_id === null && (
-          <form
-            onSubmit={e => { e.preventDefault(); createPersonalOrg.mutate({ data: { name } }); }}
-            className="space-y-2 border-t border-border pt-6 mb-6"
-          >
+          <form onSubmit={submitPersonalOrg} className="space-y-2 border-t border-border pt-6 mb-6">
             <Label htmlFor="personal-org">Create your personal organization</Label>
             <div className="flex gap-2">
-              <Input id="personal-org" required value={name} placeholder="Jane's org" onChange={e => setName(e.target.value)} />
+              <Input id="personal-org" placeholder="Jane's org" {...form.register('name')} />
               <Button type="submit" disabled={createPersonalOrg.isPending}>Create</Button>
             </div>
+            {form.formState.errors.name && (
+              <p className="text-xs text-destructive">{form.formState.errors.name.message}</p>
+            )}
             <p className="text-xs text-muted-foreground">Every account may found one; further orgs are provisioned by an admin.</p>
           </form>
         )}

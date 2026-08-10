@@ -1,28 +1,17 @@
 import { useSession } from '@/lib/session';
-import { orgScope } from '@/lib/api';
-import {
-  useListWorkspaces,
-  useListEvents,
-  getListWorkspacesQueryKey,
-  getListEventsQueryKey,
-} from '@workspace/api-client-react';
-import { Card, Badge, Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/elements';
+import { useWorkspaces } from '@/features/workspaces/hooks';
+import { useOrgEvents } from '@/features/telemetry/hooks';
+import { Card, Badge } from '@/components/ui/elements';
 import { TerminalSquare, FolderGit2, Activity } from 'lucide-react';
 import { Link } from 'wouter';
 import { formatDate, formatRelative } from '@/lib/format';
+import { DataTable } from '@/components/shared/data-table';
 
 export default function AppDashboard() {
   const { orgId } = useSession();
-  const scope = orgScope(orgId!);
 
-  const { data: workspaces, isLoading } = useListWorkspaces({
-    query: { queryKey: [...getListWorkspacesQueryKey(), orgId] },
-    request: scope,
-  });
-  const { data: events } = useListEvents({ limit: 10 }, {
-    query: { queryKey: [...getListEventsQueryKey({ limit: 10 }), orgId] },
-    request: scope,
-  });
+  const workspacesQuery = useWorkspaces(orgId!);
+  const eventsQuery = useOrgEvents(orgId!, { limit: 10 });
 
   return (
     <div className="flex-1 p-8 max-w-5xl mx-auto w-full space-y-6 animate-in fade-in duration-500">
@@ -39,38 +28,38 @@ export default function AppDashboard() {
           </h2>
         </div>
 
-        {isLoading ? (
-          <div className="py-12 text-center text-muted-foreground font-mono text-sm">Loading workspaces...</div>
-        ) : workspaces && workspaces.length > 0 ? (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Workspace</TableHead>
-                <TableHead>Slug</TableHead>
-                <TableHead className="text-right">Created</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {workspaces.map(ws => (
-                <TableRow key={ws.id} className="group">
-                  <TableCell className="font-medium">
-                    <Link href={`/org/workspaces/${ws.slug}`} className="flex items-center gap-2 hover:text-primary transition-colors">
-                      <FolderGit2 className="w-4 h-4 text-muted-foreground group-hover:text-primary" />
-                      {ws.name}
-                    </Link>
-                  </TableCell>
-                  <TableCell><Badge variant="mono">{ws.slug}</Badge></TableCell>
-                  <TableCell className="text-right text-muted-foreground text-sm">{formatDate(ws.created_at)}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        ) : (
-          <div className="text-center p-12 text-muted-foreground">
-            <TerminalSquare className="w-12 h-12 mx-auto mb-4 opacity-20" />
-            <p>No workspaces in this organization yet.</p>
-          </div>
-        )}
+        <DataTable
+          rows={workspacesQuery.data}
+          rowKey={ws => ws.id}
+          rowClassName="group"
+          isLoading={workspacesQuery.isLoading}
+          isError={workspacesQuery.isError}
+          onRetry={() => workspacesQuery.refetch()}
+          loadingLabel="Loading workspaces..."
+          empty="No workspaces in this organization yet."
+          emptyIcon={TerminalSquare}
+          columns={[
+            {
+              key: 'workspace',
+              header: 'Workspace',
+              cellClassName: 'font-medium',
+              cell: ws => (
+                <Link href={`/org/workspaces/${ws.slug}`} className="flex items-center gap-2 hover:text-primary transition-colors">
+                  <FolderGit2 className="w-4 h-4 text-muted-foreground group-hover:text-primary" />
+                  {ws.name}
+                </Link>
+              ),
+            },
+            { key: 'slug', header: 'Slug', cell: ws => <Badge variant="mono">{ws.slug}</Badge> },
+            {
+              key: 'created',
+              header: 'Created',
+              headClassName: 'text-right',
+              cellClassName: 'text-right text-muted-foreground text-sm',
+              cell: ws => formatDate(ws.created_at),
+            },
+          ]}
+        />
       </Card>
 
       <Card>
@@ -81,34 +70,45 @@ export default function AppDashboard() {
           </h2>
         </div>
 
-        {events && events.length > 0 ? (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Model</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Tokens</TableHead>
-                <TableHead className="text-right">Cost</TableHead>
-                <TableHead className="text-right">When</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {events.map(event => (
-                <TableRow key={event.event_id}>
-                  <TableCell className="font-mono text-xs">{event.model_id}</TableCell>
-                  <TableCell>
-                    <Badge variant={event.status === 'ok' ? 'success' : 'destructive'} className="font-mono">{event.status}</Badge>
-                  </TableCell>
-                  <TableCell className="text-right font-mono text-sm">{event.input_tokens + event.output_tokens}</TableCell>
-                  <TableCell className="text-right font-mono text-sm">${event.cost_usd.toFixed(4)}</TableCell>
-                  <TableCell className="text-right text-muted-foreground text-sm">{formatRelative(event.occurred_at)}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        ) : (
-          <div className="p-8 text-center text-muted-foreground text-sm">No requests through the gateway yet.</div>
-        )}
+        <DataTable
+          rows={eventsQuery.data}
+          rowKey={event => event.event_id}
+          isLoading={eventsQuery.isLoading}
+          isError={eventsQuery.isError}
+          onRetry={() => eventsQuery.refetch()}
+          empty="No requests through the gateway yet."
+          columns={[
+            { key: 'model', header: 'Model', cellClassName: 'font-mono text-xs', cell: event => event.model_id },
+            {
+              key: 'status',
+              header: 'Status',
+              cell: event => (
+                <Badge variant={event.status === 'ok' ? 'success' : 'destructive'} className="font-mono">{event.status}</Badge>
+              ),
+            },
+            {
+              key: 'tokens',
+              header: 'Tokens',
+              headClassName: 'text-right',
+              cellClassName: 'text-right font-mono text-sm',
+              cell: event => event.input_tokens + event.output_tokens,
+            },
+            {
+              key: 'cost',
+              header: 'Cost',
+              headClassName: 'text-right',
+              cellClassName: 'text-right font-mono text-sm',
+              cell: event => `$${event.cost_usd.toFixed(4)}`,
+            },
+            {
+              key: 'when',
+              header: 'When',
+              headClassName: 'text-right',
+              cellClassName: 'text-right text-muted-foreground text-sm',
+              cell: event => formatRelative(event.occurred_at),
+            },
+          ]}
+        />
       </Card>
     </div>
   );

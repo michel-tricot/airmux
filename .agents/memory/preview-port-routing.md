@@ -1,10 +1,10 @@
 ---
 name: Preview port routing pinning
-description: Why the console owns the external preview port and the backend stays on a separate local port
+description: What actually keeps the dev preview on the console instead of the FastAPI backend
 ---
 
-The console (Vite, PORT 20383) and the Python control plane (Uvicorn, 0.0.0.0:8001) both open ports. Without explicit `[[ports]]` mappings, the platform guessed which port owns the public preview route; when both workflows restarted, the backend sometimes won and the preview served the API's `{"detail":"Not Found"}`.
+The dev preview routes to the FastAPI backend instead of the console whenever `.replit` loses its `[[ports]]` block (`localPort = 20383`, `externalPort = 80`). Loopback-only backend binding does NOT prevent this: Replit's port detector sees loopback listeners too and follows the backend across port changes (verified — moving the backend 8001→8101 changed nothing while the block was missing). The `[[ports]]` pin is the mechanism that works; the backend also binds `127.0.0.1` with no `waitForPort`, which is still correct but is defense-in-depth only.
 
-**Why:** happened in practice after restarting both workflows in one batch (Aug 2026).
+**Why:** task merges and workflow restarts repeatedly stripped the block; each time, the domain served `{"detail":"Not Found"}` from the API. Re-adding the block immediately restored the console — no restarts needed. `scripts/post-merge.sh` now re-appends the block after merges if missing.
 
-**How to apply:** keep the `[[ports]]` block in `.replit` — console 20383 → externalPort 80, backend 8001 with `exposeLocalhost = true` (local-only). The Vite proxy must target 8001, and the backend workflow must wait for 8001. If any artifact port changes, update the mapping: once any `[[ports]]` entries exist, every artifact port must be represented. `.replit` can only be edited via `verifyAndReplaceDotReplit` with a temp file.
+**How to apply:** apply the `[[ports]]` block AFTER any workflow restarts (restarts can strip it; re-adding it takes effect without restarting anything). `.replit` may only be edited via `verifyAndReplaceDotReplit` with `tempFilePath` an ABSOLUTE path INSIDE the workspace. If the preview shows backend JSON, check `tail .replit` for the block first — that has always been the cause.

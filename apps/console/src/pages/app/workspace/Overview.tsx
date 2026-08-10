@@ -1,19 +1,15 @@
 import { useParams } from 'wouter';
 import { useSession } from '@/lib/session';
-import { orgScope } from '@/lib/api';
-import {
-  useGetWorkspace,
-  useListMembers,
-  useListInferenceKeys,
-  useListEvents,
-  getGetWorkspaceQueryKey,
-  getListMembersQueryKey,
-  getListInferenceKeysQueryKey,
-  getListEventsQueryKey,
-} from '@workspace/api-client-react';
-import { Card, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Badge } from '@/components/ui/elements';
+import { useWorkspace } from '@/features/workspaces/hooks';
+import { useWorkspaceMembers } from '@/features/members/hooks';
+import { useInferenceKeys } from '@/features/keys/hooks';
+import { useOrgEvents } from '@/features/telemetry/hooks';
+import { Card } from '@/components/ui/elements';
+import { Badge } from '@/components/ui/elements';
 import { TerminalSquare, KeyRound, Users, Database, Activity, Coins, ArrowDownToLine, ArrowUpFromLine } from 'lucide-react';
 import { formatRelative } from '@/lib/format';
+import { LoadingState, ErrorState } from '@/components/shared/states';
+import { DataTable } from '@/components/shared/data-table';
 
 const EVENTS_WINDOW = 200;
 
@@ -38,27 +34,15 @@ const formatTokens = (n: number) =>
 export default function WorkspaceOverview() {
   const { workspaceRef } = useParams();
   const { orgId } = useSession();
-  const scope = orgScope(orgId!);
 
-  const { data: workspace, isLoading } = useGetWorkspace(workspaceRef!, {
-    query: { queryKey: [...getGetWorkspaceQueryKey(workspaceRef!), orgId], retry: false },
-    request: scope,
-  });
-  const { data: members } = useListMembers(workspaceRef!, {
-    query: { queryKey: [...getListMembersQueryKey(workspaceRef!), orgId] },
-    request: scope,
-  });
-  const { data: keys } = useListInferenceKeys(workspaceRef!, {
-    query: { queryKey: [...getListInferenceKeysQueryKey(workspaceRef!), orgId] },
-    request: scope,
-  });
-  const { data: events } = useListEvents(
-    { limit: EVENTS_WINDOW },
-    { query: { queryKey: [...getListEventsQueryKey({ limit: EVENTS_WINDOW }), orgId] }, request: scope },
-  );
+  const { data: workspace, isLoading } = useWorkspace(orgId!, workspaceRef!);
+  const { data: members } = useWorkspaceMembers(orgId!, workspaceRef!);
+  const { data: keys } = useInferenceKeys(orgId!, workspaceRef!);
+  const eventsQuery = useOrgEvents(orgId!, { limit: EVENTS_WINDOW });
+  const events = eventsQuery.data;
 
-  if (isLoading) return <div className="p-8 text-center text-muted-foreground font-mono text-sm">Loading workspace...</div>;
-  if (!workspace) return <div className="p-8 text-center text-destructive">Workspace not found</div>;
+  if (isLoading) return <LoadingState label="Loading workspace..." />;
+  if (!workspace) return <ErrorState message="Workspace not found" />;
 
   const activeKeys = keys?.filter(k => !k.revoked).length;
   const wsEvents = events?.filter(e => e.workspace_id === workspace.id) ?? [];
@@ -76,7 +60,8 @@ export default function WorkspaceOverview() {
     row.cost += e.cost_usd;
     byModel.set(e.model_id, row);
   }
-  const topModels = [...byModel.entries()].sort((a, b) => b[1].requests - a[1].requests).slice(0, 5);
+  const topModels = [...byModel.entries()].map(([model, row]) => ({ model, ...row }))
+    .sort((a, b) => b.requests - a.requests).slice(0, 5);
 
   return (
     <div className="flex-1 p-8 max-w-6xl mx-auto w-full space-y-6 animate-in fade-in duration-300">
@@ -107,60 +92,42 @@ export default function WorkspaceOverview() {
         <div className="space-y-3">
           <h2 className="text-lg font-semibold">Top Models</h2>
           <Card>
-            {topModels.length > 0 ? (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Model</TableHead>
-                    <TableHead className="text-right">Requests</TableHead>
-                    <TableHead className="text-right">Tokens</TableHead>
-                    <TableHead className="text-right">Cost</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {topModels.map(([model, row]) => (
-                    <TableRow key={model}>
-                      <TableCell className="font-mono text-xs">{model}</TableCell>
-                      <TableCell className="text-right tabular-nums">{row.requests}</TableCell>
-                      <TableCell className="text-right tabular-nums">{formatTokens(row.tokens)}</TableCell>
-                      <TableCell className="text-right tabular-nums">${row.cost.toFixed(row.cost >= 1 ? 2 : 4)}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            ) : (
-              <div className="p-8 text-center text-muted-foreground">No usage recorded yet.</div>
-            )}
+            <DataTable
+              rows={topModels}
+              rowKey={row => row.model}
+              isError={eventsQuery.isError}
+              onRetry={() => eventsQuery.refetch()}
+              empty="No usage recorded yet."
+              columns={[
+                { key: 'model', header: 'Model', cellClassName: 'font-mono text-xs', cell: row => row.model },
+                { key: 'requests', header: 'Requests', headClassName: 'text-right', cellClassName: 'text-right tabular-nums', cell: row => row.requests },
+                { key: 'tokens', header: 'Tokens', headClassName: 'text-right', cellClassName: 'text-right tabular-nums', cell: row => formatTokens(row.tokens) },
+                { key: 'cost', header: 'Cost', headClassName: 'text-right', cellClassName: 'text-right tabular-nums', cell: row => `$${row.cost.toFixed(row.cost >= 1 ? 2 : 4)}` },
+              ]}
+            />
           </Card>
         </div>
 
         <div className="space-y-3">
           <h2 className="text-lg font-semibold">Recent Activity</h2>
           <Card>
-            {recent.length > 0 ? (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Model</TableHead>
-                    <TableHead className="text-right">Tokens</TableHead>
-                    <TableHead className="text-right">When</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {recent.map(e => (
-                    <TableRow key={e.event_id}>
-                      <TableCell className="font-mono text-xs">
-                        <Badge variant="outline" className="font-mono">{e.model_id}</Badge>
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums">{formatTokens(e.input_tokens + e.output_tokens)}</TableCell>
-                      <TableCell className="text-right text-muted-foreground text-xs">{formatRelative(e.occurred_at)}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            ) : (
-              <div className="p-8 text-center text-muted-foreground">No events for this workspace yet.</div>
-            )}
+            <DataTable
+              rows={recent}
+              rowKey={e => e.event_id}
+              isError={eventsQuery.isError}
+              onRetry={() => eventsQuery.refetch()}
+              empty="No events for this workspace yet."
+              columns={[
+                {
+                  key: 'model',
+                  header: 'Model',
+                  cellClassName: 'font-mono text-xs',
+                  cell: e => <Badge variant="outline" className="font-mono">{e.model_id}</Badge>,
+                },
+                { key: 'tokens', header: 'Tokens', headClassName: 'text-right', cellClassName: 'text-right tabular-nums', cell: e => formatTokens(e.input_tokens + e.output_tokens) },
+                { key: 'when', header: 'When', headClassName: 'text-right', cellClassName: 'text-right text-muted-foreground text-xs', cell: e => formatRelative(e.occurred_at) },
+              ]}
+            />
           </Card>
         </div>
       </div>

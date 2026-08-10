@@ -1,14 +1,13 @@
 import { useState } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
 import {
   useCliAuthRequestDetails,
   useCliAuthApprove,
   useEnrollment,
-  useCreatePersonalOrg,
   getCliAuthRequestDetailsQueryKey,
   getEnrollmentQueryKey,
   ApiError,
 } from '@workspace/api-client-react';
+import { useCreatePersonalOrgMutation } from '@/features/orgs/hooks';
 import { Card, Button, Input, Label, Dropdown } from '@/components/ui/elements';
 import { TerminalSquare, CheckCircle2 } from 'lucide-react';
 import { formatRelative } from '@/lib/format';
@@ -23,7 +22,6 @@ function lookupError(error: unknown): string {
 }
 
 export default function CliApprove() {
-  const queryClient = useQueryClient();
   const [code, setCode] = useState(new URLSearchParams(window.location.search).get('code') ?? '');
   const [submitted, setSubmitted] = useState<string | null>(() => new URLSearchParams(window.location.search).get('code'));
   const [orgId, setOrgId] = useState('');
@@ -35,14 +33,9 @@ export default function CliApprove() {
   );
   const { data: enrollment } = useEnrollment({ query: { queryKey: getEnrollmentQueryKey(), enabled: submitted !== null } });
   const approve = useCliAuthApprove();
-  const createPersonalOrg = useCreatePersonalOrg({
-    mutation: {
-      onSuccess: (org) => {
-        queryClient.invalidateQueries({ queryKey: getEnrollmentQueryKey() });
-        setOrgId(org.id);
-      },
-    },
-  });
+  const createPersonalOrg = useCreatePersonalOrgMutation();
+  const submitPersonalOrg = (name: string) =>
+    createPersonalOrg.mutate({ data: { name } }, { onSuccess: (org) => setOrgId(org.id) });
 
   const orgs = enrollment?.orgs ?? [];
   const selected = orgId || orgs[0]?.id || '';
@@ -103,7 +96,7 @@ export default function CliApprove() {
                 />
               </div>
             ) : (
-              <form className="space-y-2" onSubmit={e => { e.preventDefault(); createPersonalOrg.mutate({ data: { name } }); }}>
+              <form className="space-y-2" onSubmit={e => { e.preventDefault(); submitPersonalOrg(name); }}>
                 <Label htmlFor="org-name">You are not in an organization yet. Create yours to continue.</Label>
                 <div className="flex gap-2">
                   <Input id="org-name" required value={name} placeholder="organization name" onChange={e => setName(e.target.value)} />

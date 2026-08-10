@@ -72,12 +72,12 @@ async def _login_user(email: str, password: str) -> User:
     identity = await AuthIdentity.password_for(email)
     if identity is None or identity.secret_hash is None:
         verify_password(DUMMY_HASH, password)
-        raise HTTPException(status_code=401)
+        raise HTTPException(status_code=401, detail="Incorrect email or password")
     if not verify_password(identity.secret_hash, password):
-        raise HTTPException(status_code=401)
+        raise HTTPException(status_code=401, detail="Incorrect email or password")
     user = await User.find_by_id(identity.user_id)
     if user is None or user.service_account:
-        raise HTTPException(status_code=401)
+        raise HTTPException(status_code=401, detail="Incorrect email or password")
     if needs_rehash(identity.secret_hash):
         identity.secret_hash = hash_password(password)
         await identity.save()
@@ -103,7 +103,7 @@ async def signup(body: SignupIn, request: Request, response: Response, _session:
     endpoint opens; claim the deployment before exposing it, or provision the admin with airllmcp admin.
     """
     if await User.first(User.email == body.email) is not None:
-        raise HTTPException(status_code=409)
+        raise HTTPException(status_code=409, detail="An account with this email already exists")
     user = User(email=body.email, name=body.name or body.email, instance_admin=await User.claims_the_instance(), service_account=False)
     await set_actor(user.id)
     await user.save()
@@ -122,11 +122,11 @@ async def logout(
     sec_fetch_site: FetchSite = None,
 ) -> Envelope[DeletedOut[UUID]]:
     if session_cookie is None:
-        raise HTTPException(status_code=401)
+        raise HTTPException(status_code=401, detail="You are not signed in")
     require_csrf(x_requested_with, sec_fetch_site)
     auth_session = await verify_session(session_cookie)
     if auth_session is None:
-        raise HTTPException(status_code=401)
+        raise HTTPException(status_code=401, detail="Your session has expired; sign in again")
     await auth_session.delete()
     response.delete_cookie(SESSION_COOKIE, path="/")
     return Envelope(data=DeletedOut.of(auth_session.id))
@@ -141,7 +141,7 @@ async def me(user: ActingUserDep) -> Envelope[MeOut]:
 async def change_password(body: PasswordChangeIn, user: ActingUserDep) -> Envelope[PasswordChangedOut]:
     identity = await AuthIdentity.password_for(user.email)
     if identity is None or identity.secret_hash is None or not verify_password(identity.secret_hash, body.current_password):
-        raise HTTPException(status_code=403)
+        raise HTTPException(status_code=403, detail="Current password is incorrect")
     await AuthIdentity.set_password(user, body.new_password)
     return Envelope(data=PasswordChangedOut(user_id=user.id, status="changed"))
 
@@ -191,9 +191,9 @@ class CliAuthPollOut(BaseModel):
 
 def _live(auth_request: CliAuthRequest | None) -> CliAuthRequest:
     if auth_request is None:
-        raise HTTPException(status_code=404)
+        raise HTTPException(status_code=404, detail="No sign-in request matches this code; check it and try again")
     if auth_request.expired:
-        raise HTTPException(status_code=410)
+        raise HTTPException(status_code=410, detail="This sign-in request has expired; start again from the CLI")
     return auth_request
 
 
@@ -218,7 +218,7 @@ async def cli_auth_request_details(code: str, _user: CookieUserDep) -> Envelope[
     """Context for the approve page: who is asking, from where, until when."""
     auth_request = _live(await CliAuthRequest.by_user_code(code))
     if auth_request.approved_user_id is not None:
-        raise HTTPException(status_code=409)
+        raise HTTPException(status_code=409, detail="This sign-in request was already approved")
     return Envelope(
         data=CliAuthRequestOut(client_name=auth_request.client_name, requester=auth_request.requester, expires_at=auth_request.expires_at)
     )
@@ -229,11 +229,11 @@ async def cli_auth_approve(body: CliAuthApproveIn, user: CookieUserDep) -> Envel
     """The human confirms the code and picks the org; membership backs the pick like key minting."""
     auth_request = _live(await CliAuthRequest.by_user_code(body.user_code))
     if auth_request.approved_user_id is not None:
-        raise HTTPException(status_code=409)
+        raise HTTPException(status_code=409, detail="This sign-in request was already approved")
     if await Org.find_by_id(body.org_id) is None:
-        raise HTTPException(status_code=403)
+        raise HTTPException(status_code=403, detail="That organization no longer exists")
     if not await user.backs_org(body.org_id):
-        raise HTTPException(status_code=403)
+        raise HTTPException(status_code=403, detail="You are not a member of that organization")
     auth_request.approved_user_id = user.id
     auth_request.approved_org_id = body.org_id
     await auth_request.save()
@@ -255,7 +255,7 @@ async def cli_auth_poll(body: CliAuthPollIn, _session: SessionDep) -> Envelope[C
         return Envelope(data=CliAuthPollOut(status="pending", interval_seconds=CLI_POLL_INTERVAL_SECONDS))
     org = await Org.find_by_id(auth_request.approved_org_id)
     if org is None:
-        raise HTTPException(status_code=410)
+        raise HTTPException(status_code=410, detail="The approved organization was deleted before sign-in completed; start again")
     await set_actor(auth_request.approved_user_id)
     await ManagementKey.retire_for_client(auth_request.approved_user_id, auth_request.approved_org_id, auth_request.client_name)
     _, token = await mint_management_key(auth_request.approved_org_id, auth_request.approved_user_id, label=auth_request.client_name)
