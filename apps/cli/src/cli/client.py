@@ -81,19 +81,18 @@ def org_get(path: str, control_plane_url: str, params: dict | None = None) -> li
         return payload_rows(resp)
 
 
-def resolve_workspace(workspace: str, control_plane_url: str) -> str:
-    """The workspace for key commands: an explicit name or id wins, then the profile's stored default."""
+def resolve_workspace(workspace: str) -> str:
+    """The workspace for key commands: the slug or id the caller passed, then the profile's stored default.
+
+    Every workspace path resolves either, so nothing is looked up here; a workspace that does not
+    exist is a 404 from the command itself.
+    """
     if workspace:
-        rows = org_get("/v1/org/workspaces", control_plane_url)
-        match = next((r for r in rows if workspace in (r["id"], r["name"])), None)
-        if match is None:
-            names = ", ".join(r["name"] for r in rows) or "none yet, run `airllm workspaces create`"
-            console.print(f"[red]no workspace [bold]{workspace}[/bold] in this org; available: {names}[/red]")
-            raise typer.Exit(1)
-        return str(match["id"])
-    profile = active_profile()
-    if profile and profile.get("workspace_id"):
-        return str(profile["workspace_id"])
+        return workspace
+    profile = active_profile() or {}
+    default = profile.get("workspace") or profile.get("workspace_id")
+    if default:
+        return str(default)
     console.print("[red]no workspace: pass --workspace or run `airllm workspaces use <name>`[/red]")
     raise typer.Exit(1)
 

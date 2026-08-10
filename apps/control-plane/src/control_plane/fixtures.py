@@ -171,9 +171,9 @@ async def apply_fixtures(now: datetime) -> Fixtures:
     await OrgMembership(user_id=dana.id, org_id=acme.id).save()
     await OrgMembership(user_id=dana.id, org_id=solo.id).save()
 
-    production = await Workspace(id=fixture_id("workspace:acme:production"), org_id=acme.id, name="production").save()
-    staging = await Workspace(id=fixture_id("workspace:acme:staging"), org_id=acme.id, name="staging").save()
-    default = await Workspace(id=fixture_id("workspace:solo:default"), org_id=solo.id, name="default").save()
+    production = await Workspace(id=fixture_id("workspace:acme:production"), org_id=acme.id, name="Production", slug="production").save()
+    staging = await Workspace(id=fixture_id("workspace:acme:staging"), org_id=acme.id, name="Staging", slug="staging").save()
+    default = await Workspace(id=fixture_id("workspace:solo:default"), org_id=solo.id, name="Default", slug="default").save()
 
     await WorkspaceMembership(user_id=michel.id, workspace_id=production.id, org_id=acme.id).save()
     await WorkspaceMembership(user_id=dana.id, workspace_id=production.id, org_id=acme.id).save()

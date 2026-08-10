@@ -69,8 +69,10 @@ async def delete_user(user_id: UUID) -> Envelope[DeletedOut[UUID]]:
 
 
 @router.get("/users", tags=["Users"], dependencies=[require(Scope.users_read)])
-async def list_users() -> Envelope[list[UserOut]]:
-    users = await User.find(order_by=col(User.email))
+async def list_users(service_account: bool | None = None) -> Envelope[list[UserOut]]:
+    """Every principal on the instance, or one kind of them: service_account splits the machines from the humans."""
+    kind = [] if service_account is None else [User.service_account == service_account]
+    users = await User.find(*kind, order_by=col(User.email))
     memberships = await OrgMembership.find(order_by=col(OrgMembership.org_id))
     orgs_by_user: dict[UUID, list[UUID]] = {}
     for m in memberships:

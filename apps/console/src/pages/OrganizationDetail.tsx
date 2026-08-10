@@ -131,6 +131,7 @@ export default function OrganizationDetail() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Name</TableHead>
+                    <TableHead>Slug</TableHead>
                     <TableHead>ID</TableHead>
                     <TableHead className="text-right">Created</TableHead>
                   </TableRow>
@@ -141,6 +142,7 @@ export default function OrganizationDetail() {
                       <TableCell className="font-medium">
                         <Link href={`/instance/organizations/${org.id}/workspaces/${ws.id}`} className="hover:text-primary transition-colors">{ws.name}</Link>
                       </TableCell>
+                      <TableCell><Badge variant="mono">{ws.slug}</Badge></TableCell>
                       <TableCell className="font-mono text-xs text-muted-foreground">{ws.id}</TableCell>
                       <TableCell className="text-right text-muted-foreground text-sm">{formatDate(ws.created_at)}</TableCell>
                     </TableRow>

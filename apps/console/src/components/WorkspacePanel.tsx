@@ -111,7 +111,10 @@ export function WorkspacePanel({ orgId, workspaceId, backHref, backLabel }: Work
             <TerminalSquare className="w-6 h-6 text-primary" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">{workspace.name}</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-3xl font-bold tracking-tight">{workspace.name}</h1>
+              <Badge variant="mono">{workspace.slug}</Badge>
+            </div>
             <p className="text-muted-foreground font-mono text-sm">{workspace.id}</p>
           </div>
         </div>
@@ -163,7 +166,7 @@ export function WorkspacePanel({ orgId, workspaceId, backHref, backLabel }: Work
                             description="Requests using this inference key will stop working immediately. This cannot be undone."
                             confirmLabel="Revoke key"
                             pending={revokeKey.isPending}
-                            onConfirm={() => revokeKey.mutate({ workspaceId, keyId: key.id })}>
+                            onConfirm={() => revokeKey.mutate({ workspaceRef: workspaceId, keyId: key.id })}>
                             <Ban className="w-4 h-4 mr-1" /> Revoke
                           </ConfirmButton>
                         )}
@@ -207,7 +210,7 @@ export function WorkspacePanel({ orgId, workspaceId, backHref, backLabel }: Work
                             confirmLabel="Remove member"
                             pending={removeMember.isPending}
                             aria-label="Remove member"
-                            onConfirm={() => removeMember.mutate({ workspaceId, userId: member.user_id })}>
+                            onConfirm={() => removeMember.mutate({ workspaceRef: workspaceId, userId: member.user_id })}>
                             <UserMinus className="w-4 h-4" />
                           </ConfirmButton>
                         </TableCell>
@@ -224,7 +227,7 @@ export function WorkspacePanel({ orgId, workspaceId, backHref, backLabel }: Work
       </Tabs>
 
       <Modal open={keyOpen} onOpenChange={setKeyOpen} title="Generate Inference Key" description="This key calls the gateway with the models this workspace's org is entitled to.">
-        <form onSubmit={e => { e.preventDefault(); createKey.mutate({ workspaceId, data: { label: keyLabel } }); }} className="space-y-4 pt-4">
+        <form onSubmit={e => { e.preventDefault(); createKey.mutate({ workspaceRef: workspaceId, data: { label: keyLabel } }); }} className="space-y-4 pt-4">
           <div className="space-y-2">
             <Label>Label</Label>
             <Input required value={keyLabel} placeholder="e.g. chatbot-prod" onChange={e => setKeyLabel(e.target.value)} />
@@ -237,7 +240,7 @@ export function WorkspacePanel({ orgId, workspaceId, backHref, backLabel }: Work
       </Modal>
 
       <Modal open={memberOpen} onOpenChange={setMemberOpen} title="Add Member" description="Members are drawn from the org; the user must already belong to it.">
-        <form onSubmit={e => { e.preventDefault(); addMember.mutate({ workspaceId, userId: memberId }); }} className="space-y-4 pt-4">
+        <form onSubmit={e => { e.preventDefault(); addMember.mutate({ workspaceRef: workspaceId, userId: memberId }); }} className="space-y-4 pt-4">
           <div className="space-y-2">
             <Label htmlFor="workspace-member">User</Label>
             <Dropdown
@@ -264,7 +267,7 @@ export function WorkspacePanel({ orgId, workspaceId, backHref, backLabel }: Work
           {deleteError && <p className="text-sm text-destructive">{deleteError}</p>}
           <div className="flex justify-end gap-2 pt-4">
             <Button type="button" variant="outline" onClick={() => setDeleteOpen(false)}>Cancel</Button>
-            <Button variant="destructive" disabled={remove.isPending} onClick={() => remove.mutate({ workspaceId })}>
+            <Button variant="destructive" disabled={remove.isPending} onClick={() => remove.mutate({ workspaceRef: workspaceId })}>
               Delete Workspace
             </Button>
           </div>
@@ -272,7 +275,7 @@ export function WorkspacePanel({ orgId, workspaceId, backHref, backLabel }: Work
       </Modal>
 
       <Modal open={renameOpen} onOpenChange={setRenameOpen} title="Rename Workspace">
-        <form onSubmit={e => { e.preventDefault(); rename.mutate({ workspaceId, data: { name } }); }} className="space-y-4 pt-4">
+        <form onSubmit={e => { e.preventDefault(); rename.mutate({ workspaceRef: workspaceId, data: { name } }); }} className="space-y-4 pt-4">
           <div className="space-y-2">
             <Label>Name</Label>
             <Input required value={name} onChange={e => setName(e.target.value)} />

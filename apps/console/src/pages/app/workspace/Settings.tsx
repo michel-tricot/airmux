@@ -78,13 +78,13 @@ export default function WorkspaceSettings() {
     <div className="flex-1 p-8 max-w-4xl mx-auto w-full space-y-6 animate-in fade-in duration-300">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Workspace Settings</h1>
-        <p className="text-muted-foreground mt-1 text-sm font-mono">{workspace.id}</p>
+        <p className="text-muted-foreground mt-1 text-sm font-mono">{workspace.slug}</p>
       </div>
 
       <Card className="p-6 space-y-4">
         <h2 className="text-lg font-semibold">General</h2>
         <form
-          onSubmit={e => { e.preventDefault(); rename.mutate({ workspaceId: workspaceId!, data: { name: draft } }); }}
+          onSubmit={e => { e.preventDefault(); rename.mutate({ workspaceRef: workspaceId!, data: { name: draft } }); }}
           className="flex items-end gap-3 max-w-md"
         >
           <div className="flex-1 space-y-2">
@@ -93,6 +93,14 @@ export default function WorkspaceSettings() {
           </div>
           <Button type="submit" disabled={rename.isPending || draft === workspace.name}>Save</Button>
         </form>
+        <div className="space-y-2 max-w-md">
+          <Label htmlFor="ws-slug">Slug</Label>
+          <Input id="ws-slug" readOnly disabled value={workspace.slug} className="font-mono" />
+          <p className="text-xs text-muted-foreground">
+            The workspace's handle in URLs and the CLI. Set once at creation, and never changes; the id below works everywhere it does.
+          </p>
+          <p className="font-mono text-xs text-muted-foreground">{workspace.id}</p>
+        </div>
       </Card>
 
       <div className="space-y-3">
@@ -126,7 +134,7 @@ export default function WorkspaceSettings() {
                           confirmLabel="Remove member"
                           pending={removeMember.isPending}
                           aria-label="Remove member"
-                          onConfirm={() => removeMember.mutate({ workspaceId: workspaceId!, userId: member.user_id })}>
+                          onConfirm={() => removeMember.mutate({ workspaceRef: workspaceId!, userId: member.user_id })}>
                           <UserMinus className="w-4 h-4" />
                         </ConfirmButton>
                       </TableCell>
@@ -150,7 +158,7 @@ export default function WorkspaceSettings() {
         {deleteError && <p className="text-sm text-destructive">{deleteError}</p>}
         {confirming ? (
           <div className="flex items-center gap-2">
-            <Button variant="destructive" disabled={remove.isPending} onClick={() => remove.mutate({ workspaceId: workspaceId! })}>
+            <Button variant="destructive" disabled={remove.isPending} onClick={() => remove.mutate({ workspaceRef: workspaceId! })}>
               Confirm delete
             </Button>
             <Button variant="outline" onClick={() => setConfirming(false)}>Cancel</Button>
@@ -164,7 +172,7 @@ export default function WorkspaceSettings() {
       </Card>
 
       <Modal open={memberOpen} onOpenChange={setMemberOpen} title="Add Member" description="Members are drawn from the org; the user must already belong to it.">
-        <form onSubmit={e => { e.preventDefault(); addMember.mutate({ workspaceId: workspaceId!, userId: memberId }); }} className="space-y-4 pt-4">
+        <form onSubmit={e => { e.preventDefault(); addMember.mutate({ workspaceRef: workspaceId!, userId: memberId }); }} className="space-y-4 pt-4">
           <div className="space-y-2">
             <Label htmlFor="workspace-member">User</Label>
             <Dropdown

@@ -1096,11 +1096,23 @@ paths:
       tags:
       - Users
       summary: List Users
+      description: 'Every principal on the instance, or one kind of them: service_account splits the machines from the humans.
+
+
+        Requires the `users:read` scope.'
       operationId: list_users
       security:
       - HTTPBearer:
         - users:read
       parameters:
+      - name: service_account
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Service Account
       - name: X-Org-Id
         in: header
         required: false
@@ -1146,7 +1158,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
-      description: Requires the `users:read` scope.
   /v1/service-accounts:
     post:
       tags:
@@ -1674,6 +1685,11 @@ paths:
         acting on an org they never joined creates it member-less and relies on their bypass.
 
 
+        A caller who names no slug gets one derived from the name; one who does gets a 409 when the
+
+        org already holds it, rather than a silently numbered variant of what they asked for.
+
+
         Requires the `workspaces:write` scope.'
       operationId: create_workspace
       security:
@@ -1786,7 +1802,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
       description: Requires the `workspaces:read` scope.
-  /v1/org/workspaces/{workspace_id}:
+  /v1/org/workspaces/{workspace_ref}:
     get:
       tags:
       - Workspaces
@@ -1796,13 +1812,12 @@ paths:
       - HTTPBearer:
         - workspaces:read
       parameters:
-      - name: workspace_id
+      - name: workspace_ref
         in: path
         required: true
         schema:
           type: string
-          format: uuid
-          title: Workspace Id
+          title: Workspace Ref
       - name: X-Org-Id
         in: header
         required: false
@@ -1863,13 +1878,12 @@ paths:
       - HTTPBearer:
         - workspaces:write
       parameters:
-      - name: workspace_id
+      - name: workspace_ref
         in: path
         required: true
         schema:
           type: string
-          format: uuid
-          title: Workspace Id
+          title: Workspace Ref
       - name: X-Org-Id
         in: header
         required: false
@@ -1924,13 +1938,12 @@ paths:
       - HTTPBearer:
         - workspaces:write
       parameters:
-      - name: workspace_id
+      - name: workspace_ref
         in: path
         required: true
         schema:
           type: string
-          format: uuid
-          title: Workspace Id
+          title: Workspace Ref
       - name: X-Org-Id
         in: header
         required: false
@@ -1983,7 +1996,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
       description: Requires the `workspaces:write` scope.
-  /v1/org/workspaces/{workspace_id}/members:
+  /v1/org/workspaces/{workspace_ref}/members:
     get:
       tags:
       - Workspaces
@@ -1993,13 +2006,12 @@ paths:
       - HTTPBearer:
         - workspaces:read
       parameters:
-      - name: workspace_id
+      - name: workspace_ref
         in: path
         required: true
         schema:
           type: string
-          format: uuid
-          title: Workspace Id
+          title: Workspace Ref
       - name: X-Org-Id
         in: header
         required: false
@@ -2046,7 +2058,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
       description: Requires the `workspaces:read` scope.
-  /v1/org/workspaces/{workspace_id}/members/{user_id}:
+  /v1/org/workspaces/{workspace_ref}/members/{user_id}:
     put:
       tags:
       - Workspaces
@@ -2060,13 +2072,12 @@ paths:
       - HTTPBearer:
         - workspaces:write
       parameters:
-      - name: workspace_id
+      - name: workspace_ref
         in: path
         required: true
         schema:
           type: string
-          format: uuid
-          title: Workspace Id
+          title: Workspace Ref
       - name: user_id
         in: path
         required: true
@@ -2128,13 +2139,12 @@ paths:
       - HTTPBearer:
         - workspaces:write
       parameters:
-      - name: workspace_id
+      - name: workspace_ref
         in: path
         required: true
         schema:
           type: string
-          format: uuid
-          title: Workspace Id
+          title: Workspace Ref
       - name: user_id
         in: path
         required: true
@@ -2188,7 +2198,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
       description: Requires the `workspaces:write` scope.
-  /v1/org/workspaces/{workspace_id}/inference-keys:
+  /v1/org/workspaces/{workspace_ref}/inference-keys:
     post:
       tags:
       - Inference Keys
@@ -2198,13 +2208,12 @@ paths:
       - HTTPBearer:
         - inference-keys:write
       parameters:
-      - name: workspace_id
+      - name: workspace_ref
         in: path
         required: true
         schema:
           type: string
-          format: uuid
-          title: Workspace Id
+          title: Workspace Ref
       - name: X-Org-Id
         in: header
         required: false
@@ -2266,13 +2275,12 @@ paths:
       - HTTPBearer:
         - inference-keys:read
       parameters:
-      - name: workspace_id
+      - name: workspace_ref
         in: path
         required: true
         schema:
           type: string
-          format: uuid
-          title: Workspace Id
+          title: Workspace Ref
       - name: X-Org-Id
         in: header
         required: false
@@ -2319,7 +2327,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
       description: Requires the `inference-keys:read` scope.
-  /v1/org/workspaces/{workspace_id}/inference-keys/{key_id}:
+  /v1/org/workspaces/{workspace_ref}/inference-keys/{key_id}:
     delete:
       tags:
       - Inference Keys
@@ -2336,13 +2344,12 @@ paths:
           type: string
           format: uuid
           title: Key Id
-      - name: workspace_id
+      - name: workspace_ref
         in: path
         required: true
         schema:
           type: string
-          format: uuid
-          title: Workspace Id
+          title: Workspace Ref
       - name: X-Org-Id
         in: header
         required: false
@@ -5449,7 +5456,14 @@ components:
         name:
           type: string
           title: Name
-          description: Workspace name, e.g. staging
+          description: Workspace name, e.g. Staging
+        slug:
+          type: string
+          maxLength: 63
+          pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
+          title: Slug
+          description: Workspace handle, unique in the org and usable in place of the id; derived from the name when omitted
+          default: ''
       type: object
       required:
       - name
@@ -5487,6 +5501,9 @@ components:
         name:
           type: string
           title: Name
+        slug:
+          type: string
+          title: Slug
         created_at:
           type: string
           format: date-time
@@ -5506,6 +5523,7 @@ components:
       - id
       - org_id
       - name
+      - slug
       - created_at
       - updated_at
       - deleted_at

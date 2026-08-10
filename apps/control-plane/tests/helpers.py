@@ -70,7 +70,7 @@ def make_org(client, headers: dict[str, str], name: str = "org-test") -> UUID:
 
 
 def make_workspace(client, headers: dict[str, str], name: str = "ws-test") -> UUID:
-    """Create a workspace in the caller's org scope and return its server-minted id."""
+    """Create a workspace in the caller's org scope and return its server-minted id; the slug derives from the name."""
     response = client.post("/v1/org/workspaces", json={"name": name}, headers=headers)
     assert response.status_code == 200, response.text
     return UUID(response.json()["data"]["id"])

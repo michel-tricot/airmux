@@ -50,6 +50,7 @@ KEY_COLS = [
 ]
 WORKSPACE_COLS = [
     Col("id", "ID", style="dim", no_wrap=True),
+    Col("slug", "Slug", max_width=40),
     Col("name", "Name", max_width=40),
     Col("created_at", "Created", no_wrap=True, fmt=fmt_when),
 ]
@@ -110,7 +111,7 @@ def orgs_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat.tabl
     print_rows("orgs", instance_get("/v1/orgs", control_plane_url), ORG_COLS, fmt)
 
 
-WorkspaceOption = Annotated[str, typer.Option("--workspace", "-w", help="Workspace name or id; defaults to the profile's workspace")]
+WorkspaceOption = Annotated[str, typer.Option("--workspace", "-w", help="Workspace slug, name, or id; defaults to the profile's workspace")]
 
 
 @workspaces_app.command("list")
@@ -121,57 +122,66 @@ def workspaces_list(control_plane_url: str = "", fmt: FormatOption = OutputForma
 
 @workspaces_app.command("use")
 def workspaces_use(workspace: str, control_plane_url: str = "") -> None:
-    """Make a workspace the default for key commands, stored in the active profile."""
+    """Make a workspace the default for key commands, stored in the active profile.
+
+    The one workspace command that reads before it writes: a default typed wrong here would 404
+    from every later command instead of this one.
+    """
     profile = active_profile()
     if profile is None:
         console.print("[red]no active profile: run `airllm login` first[/red]")
         raise typer.Exit(1)
-    workspace_id = resolve_workspace(workspace, control_plane_url)
+    with org_client(control_plane_url) as c:
+        resp = c.get(f"/v1/org/workspaces/{workspace}")
+    if not resp.is_success:
+        console.print(f"[red]no workspace [bold]{workspace}[/bold] in this org; run `airllm workspaces list` to see them[/red]")
+        raise typer.Exit(1)
+    chosen = payload(resp)
     name = str(profile.pop("name"))
-    upsert_profile(name, {**profile, "workspace_id": workspace_id, "workspace_name": workspace})
-    console.print(f"workspace [bold]{workspace}[/bold] is now the default for [bold]{name}[/bold]")
+    upsert_profile(name, {**profile, "workspace": chosen["slug"], "workspace_name": chosen["name"]})
+    console.print(f"workspace [bold]{chosen['slug']}[/bold] is now the default for [bold]{name}[/bold]")
 
 
 @workspace_members_app.command("list")
 def workspace_members_list(workspace: WorkspaceOption = "", control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
     """List a workspace's members."""
-    workspace_id = resolve_workspace(workspace, control_plane_url)
-    print_rows("members", org_get(f"/v1/org/workspaces/{workspace_id}/members", control_plane_url), MEMBER_COLS, fmt)
+    workspace_ref = resolve_workspace(workspace)
+    print_rows("members", org_get(f"/v1/org/workspaces/{workspace_ref}/members", control_plane_url), MEMBER_COLS, fmt)
 
 
 @workspace_members_app.command("add")
 def workspace_members_add(user_id: str, workspace: WorkspaceOption = "", control_plane_url: str = "") -> None:
     """Add an org member to a workspace; key operations there start working immediately."""
-    workspace_id = resolve_workspace(workspace, control_plane_url)
+    workspace_ref = resolve_workspace(workspace)
     with org_client(control_plane_url) as c:
-        resp = c.put(f"/v1/org/workspaces/{workspace_id}/members/{user_id}")
+        resp = c.put(f"/v1/org/workspaces/{workspace_ref}/members/{user_id}")
         resp.raise_for_status()
-    console.print(f"user [bold]{user_id}[/bold] is now a member of workspace [bold]{workspace_id}[/bold]")
+    console.print(f"user [bold]{user_id}[/bold] is now a member of workspace [bold]{workspace_ref}[/bold]")
 
 
 @workspace_members_app.command("remove")
 def workspace_members_remove(user_id: str, workspace: WorkspaceOption = "", control_plane_url: str = "") -> None:
     """Remove a member from a workspace; their keys there keep working until revoked."""
-    workspace_id = resolve_workspace(workspace, control_plane_url)
+    workspace_ref = resolve_workspace(workspace)
     with org_client(control_plane_url) as c:
-        resp = c.delete(f"/v1/org/workspaces/{workspace_id}/members/{user_id}")
+        resp = c.delete(f"/v1/org/workspaces/{workspace_ref}/members/{user_id}")
         resp.raise_for_status()
-    console.print(f"user [bold]{user_id}[/bold] removed from workspace [bold]{workspace_id}[/bold]")
+    console.print(f"user [bold]{user_id}[/bold] removed from workspace [bold]{workspace_ref}[/bold]")
 
 
 @inference_keys_app.command("list")
 def inference_keys_list(workspace: WorkspaceOption = "", control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
     """List the workspace's inference keys with their status."""
-    workspace_id = resolve_workspace(workspace, control_plane_url)
-    print_rows("inference keys", org_get(f"/v1/org/workspaces/{workspace_id}/inference-keys", control_plane_url), KEY_COLS, fmt)
+    workspace_ref = resolve_workspace(workspace)
+    print_rows("inference keys", org_get(f"/v1/org/workspaces/{workspace_ref}/inference-keys", control_plane_url), KEY_COLS, fmt)
 
 
 @inference_keys_app.command("revoke")
 def inference_keys_revoke(key_id: str, workspace: WorkspaceOption = "", control_plane_url: str = "") -> None:
     """Disable a key; drops out of the bundle at the next compile."""
-    workspace_id = resolve_workspace(workspace, control_plane_url)
+    workspace_ref = resolve_workspace(workspace)
     with org_client(control_plane_url) as c:
-        resp = c.delete(f"/v1/org/workspaces/{workspace_id}/inference-keys/{key_id}")
+        resp = c.delete(f"/v1/org/workspaces/{workspace_ref}/inference-keys/{key_id}")
         resp.raise_for_status()
     console.print(f"key [bold]{key_id}[/bold] revoked, run `airllm bundles compile` to propagate")
 
@@ -246,7 +256,7 @@ def service_accounts_create(
 @service_accounts_app.command("list")
 def service_accounts_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
     """List service accounts; needs the instance management key."""
-    rows = [u for u in instance_get("/v1/users", control_plane_url) if u["service_account"]]
+    rows = instance_get("/v1/users", control_plane_url, {"service_account": True})
     print_rows("service accounts", rows, USER_COLS, fmt)
 
 
@@ -479,20 +489,22 @@ def inference_keys_create(
     control_plane_url: str = "",
 ) -> None:
     """Mint an inference key in a workspace; the token is shown once and never stored."""
-    workspace_id = resolve_workspace(workspace, control_plane_url)
+    workspace_ref = resolve_workspace(workspace)
     with org_client(control_plane_url) as c:
-        _key_created(payload(post_expecting(c, f"/v1/org/workspaces/{workspace_id}/inference-keys", {"label": label}, ok=(200,))))
+        _key_created(payload(post_expecting(c, f"/v1/org/workspaces/{workspace_ref}/inference-keys", {"label": label}, ok=(200,))))
 
 
 @workspaces_app.command("create")
 def workspaces_create(
-    name: str = typer.Argument(..., help="Workspace name, e.g. staging"),
+    name: str = typer.Argument(..., help="Workspace name, e.g. Staging"),
+    slug: str = typer.Option("", "--slug", help="Handle usable in place of the id, unique in the org; derived from the name when omitted"),
     control_plane_url: str = "",
 ) -> None:
     """Create a workspace in the active org; you become its first member."""
     with org_client(control_plane_url) as c:
-        created = payload(post_expecting(c, "/v1/org/workspaces", {"name": name}, ok=(200,)))
-    console.print(f"workspace [bold]{created['id']}[/bold] created, run `airllm workspaces use {created['name']}` to make it the default")
+        body = {"name": name, "slug": slug} if slug else {"name": name}
+        created = payload(post_expecting(c, "/v1/org/workspaces", body, ok=(200,)))
+    console.print(f"workspace [bold]{created['slug']}[/bold] created, run `airllm workspaces use {created['slug']}` to make it the default")
 
 
 register_create(

@@ -70,7 +70,7 @@ export default function WorkspaceApiKeys() {
                         description="Requests using this inference key will stop working immediately. This cannot be undone."
                         confirmLabel="Revoke key"
                         pending={revokeKey.isPending}
-                        onConfirm={() => revokeKey.mutate({ workspaceId: workspaceId!, keyId: key.id })}>
+                        onConfirm={() => revokeKey.mutate({ workspaceRef: workspaceId!, keyId: key.id })}>
                         <Ban className="w-4 h-4 mr-1" /> Revoke
                       </ConfirmButton>
                     )}
@@ -85,7 +85,7 @@ export default function WorkspaceApiKeys() {
       </Card>
 
       <Modal open={keyOpen} onOpenChange={setKeyOpen} title="Generate Inference Key" description="This key calls the gateway with the models this workspace's org is entitled to.">
-        <form onSubmit={e => { e.preventDefault(); createKey.mutate({ workspaceId: workspaceId!, data: { label: keyLabel } }); }} className="space-y-4 pt-4">
+        <form onSubmit={e => { e.preventDefault(); createKey.mutate({ workspaceRef: workspaceId!, data: { label: keyLabel } }); }} className="space-y-4 pt-4">
           <div className="space-y-2">
             <Label>Label</Label>
             <Input required value={keyLabel} placeholder="e.g. chatbot-prod" onChange={e => setKeyLabel(e.target.value)} />

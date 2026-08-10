@@ -6,6 +6,12 @@
  */
 
 export interface WorkspaceCreate {
-  /** Workspace name, e.g. staging */
+  /** Workspace name, e.g. Staging */
   name: string;
+  /**
+     * Workspace handle, unique in the org and usable in place of the id; derived from the name when omitted
+     * @maxLength 63
+     * @pattern ^[a-z0-9]+(?:-[a-z0-9]+)*$
+     */
+  slug?: string;
 }

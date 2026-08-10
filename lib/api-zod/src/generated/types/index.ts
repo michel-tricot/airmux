@@ -43,6 +43,7 @@ export * from './listAllManagementKeysParams';
 export * from './listDataPlanesParams';
 export * from './listEventsParams';
 export * from './listInstanceActivityParams';
+export * from './listUsersParams';
 export * from './loginIn';
 export * from './managementKeyIn';
 export * from './managementKeyMintedOut';

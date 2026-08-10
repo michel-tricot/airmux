@@ -103,7 +103,7 @@ def quickstart(  # noqa: PLR0913, PLR0917 flags are the command's interface
                 "org_id": org_id,
                 "org_name": org_name,
                 "token": token,
-                "workspace_id": workspace["id"],
+                "workspace": workspace["slug"],
                 "workspace_name": workspace["name"],
             },
         )

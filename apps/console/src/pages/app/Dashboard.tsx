@@ -46,6 +46,7 @@ export default function AppDashboard() {
             <TableHeader>
               <TableRow>
                 <TableHead>Workspace</TableHead>
+                <TableHead>Slug</TableHead>
                 <TableHead>ID</TableHead>
                 <TableHead className="text-right">Created</TableHead>
               </TableRow>
@@ -59,6 +60,7 @@ export default function AppDashboard() {
                       {ws.name}
                     </Link>
                   </TableCell>
+                  <TableCell><Badge variant="mono">{ws.slug}</Badge></TableCell>
                   <TableCell className="font-mono text-xs text-muted-foreground">{ws.id}</TableCell>
                   <TableCell className="text-right text-muted-foreground text-sm">{formatDate(ws.created_at)}</TableCell>
                 </TableRow>
