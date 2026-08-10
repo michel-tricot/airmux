@@ -35,7 +35,7 @@ async def list_org_users(org_id: OrgDep) -> Envelope[list[OrgMemberOut]]:
 async def add_org_user(user_id: UUID, org_id: OrgDep) -> Envelope[MembershipOut]:
     """Idempotent: the org comes from the credential, so membership can only ever be granted in scope."""
     if await User.find_by_id(user_id) is None:
-        raise HTTPException(status_code=404)
+        raise HTTPException(status_code=404, detail="User not found")
     if await OrgMembership.get((user_id, org_id)) is None:
         await OrgMembership(user_id=user_id, org_id=org_id).save()
     return Envelope(data=MembershipOut(user_id=user_id, org_id=org_id, status="member"))
@@ -46,7 +46,7 @@ async def remove_org_user(user_id: UUID, org_id: OrgDep) -> Envelope[DeletedOut[
     """Removing the membership cascades the user out of the org's workspaces."""
     membership = await OrgMembership.get((user_id, org_id))
     if membership is None:
-        raise HTTPException(status_code=404)
+        raise HTTPException(status_code=404, detail="User is not a member of this org")
     await membership.delete()
     return Envelope(data=DeletedOut.of(f"{user_id}/{org_id}"))
 
@@ -63,9 +63,9 @@ async def mint_org_management_key(body: ManagementKeyIn, org_id: OrgDep, claims:
     user_id = body.user_id or claims.user_id
     user = await User.find_by_id(user_id)
     if user is None:
-        raise HTTPException(status_code=404)
+        raise HTTPException(status_code=404, detail="User not found")
     if not user.instance_admin and await OrgMembership.get((user_id, org_id)) is None:
-        raise HTTPException(status_code=403)
+        raise HTTPException(status_code=403, detail="User is not a member of this org, so a key cannot be minted for them")
     scopes = [s.value for s in body.scopes] if body.scopes is not None else None
     key_id, token = await mint_management_key(org_id, user_id, label=body.label, scopes=scopes)
     return Envelope(data=ManagementKeyMintedOut(id=key_id, org_id=org_id, user_id=user_id, scopes=scopes, label=body.label, token=token))
@@ -86,7 +86,7 @@ async def compile_bundle(org_id: OrgDep, request: Request) -> Envelope[BundleOut
     try:
         bundle = await compile_and_store(org_id, uuid7(), now, settings.bundle.staleness_bound, settings.bundle.signing_key)
     except UnknownOrgError as e:
-        raise HTTPException(status_code=404) from e
+        raise HTTPException(status_code=404, detail="Organization not found") from e
     return Envelope(data=BundleOut.model_validate(bundle))
 
 

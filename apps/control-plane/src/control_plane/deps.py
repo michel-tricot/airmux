@@ -42,10 +42,10 @@ async def _session_user(session_cookie: str, x_requested_with: str | None, sec_f
     require_csrf(x_requested_with, sec_fetch_site)
     auth_session = await verify_session(session_cookie)
     if auth_session is None:
-        raise HTTPException(status_code=401)
+        raise HTTPException(status_code=401, detail="Your session has expired; sign in again")
     user = await User.find_by_id(auth_session.user_id)
     if user is None or user.service_account:
-        raise HTTPException(status_code=401)
+        raise HTTPException(status_code=401, detail="This account no longer exists; sign in again")
     return auth_session, user
 
 
@@ -59,11 +59,11 @@ async def _cookie_claims(auth_session: AuthSession, user: User, x_org_id: str | 
     try:
         org_id = UUID(x_org_id)
     except ValueError:
-        raise HTTPException(status_code=403) from None
+        raise HTTPException(status_code=403, detail="X-Org-Id is not a valid organization id") from None
     if await Org.find_by_id(org_id) is None:
-        raise HTTPException(status_code=403)
+        raise HTTPException(status_code=403, detail="The selected organization no longer exists")
     if not await user.backs_org(org_id):
-        raise HTTPException(status_code=403)
+        raise HTTPException(status_code=403, detail="You are not a member of the selected organization")
     return ManagementClaims(token_id=auth_session.id, org_id=org_id, user_id=user.id, scopes=ALL_SCOPES)
 
 
@@ -78,12 +78,12 @@ async def management_claims(
     if credentials is not None:
         claims = await verify_bearer(credentials.credentials)
         if claims is None:
-            raise HTTPException(status_code=401)
+            raise HTTPException(status_code=401, detail="Invalid or revoked credential")
     elif session_cookie is not None:
         auth_session, user = await _session_user(session_cookie, x_requested_with, sec_fetch_site)
         claims = await _cookie_claims(auth_session, user, x_org_id)
     else:
-        raise HTTPException(status_code=401)
+        raise HTTPException(status_code=401, detail="Authentication required; sign in or provide a credential")
     await set_actor(claims.user_id)
     return claims
 
@@ -102,14 +102,14 @@ async def acting_user(
     if credentials is not None:
         claims = await verify_bearer(credentials.credentials)
         if claims is None:
-            raise HTTPException(status_code=401)
+            raise HTTPException(status_code=401, detail="Invalid or revoked credential")
         user = await User.find_by_id(claims.user_id)
         if user is None or user.service_account:
-            raise HTTPException(status_code=401)
+            raise HTTPException(status_code=401, detail="This credential's account no longer exists")
     elif session_cookie is not None:
         _, user = await _session_user(session_cookie, x_requested_with, sec_fetch_site)
     else:
-        raise HTTPException(status_code=401)
+        raise HTTPException(status_code=401, detail="Authentication required; sign in or provide a credential")
     await set_actor(user.id)
     return user
 
@@ -126,7 +126,7 @@ async def cookie_user(
     """The cookie door only, for endpoints a bearer key must never reach (device approval): a
     delegated credential can never approve its own successor."""
     if session_cookie is None:
-        raise HTTPException(status_code=401)
+        raise HTTPException(status_code=401, detail="Sign in to approve this request; a key cannot be used here")
     _, user = await _session_user(session_cookie, x_requested_with, sec_fetch_site)
     await set_actor(user.id)
     return user
@@ -137,13 +137,13 @@ CookieUserDep = Annotated[User, Depends(cookie_user)]
 
 async def instance_scope(claims: MgmtDep) -> ManagementClaims:
     if claims.org_id is not None:
-        raise HTTPException(status_code=403)
+        raise HTTPException(status_code=403, detail="This action requires instance scope; the credential is scoped to an org")
     return claims
 
 
 async def org_scope(claims: MgmtDep) -> UUID:
     if claims.org_id is None:
-        raise HTTPException(status_code=403)
+        raise HTTPException(status_code=403, detail="This action requires an org scope; select an organization first")
     return claims.org_id
 
 

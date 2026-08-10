@@ -14,6 +14,7 @@ import {
 } from 'wouter';
 import { Shell } from '@/components/layout/Shell';
 import '@/lib/api';
+import { ApiError } from '@workspace/api-client-react';
 
 // Instance Admin Pages
 import Dashboard from '@/pages/Dashboard';
@@ -38,17 +39,30 @@ import WorkspaceSettings from '@/pages/app/workspace/Settings';
 import WorkspaceComingSoon from '@/pages/app/workspace/ComingSoon';
 import { Database, Route as RouteIcon, ShieldCheck } from 'lucide-react';
 
+/**
+ * The control plane refuses some actions with a specific reason (e.g. "User still
+ * belongs to 2 organizations") in the response's `detail`. Surface that string for
+ * client errors so the toast is actionable; validation errors put an array there
+ * and server errors carry nothing useful, so those fall back to the generic copy.
+ */
+function apiErrorDetail(error: unknown): string | undefined {
+  if (!(error instanceof ApiError)) return undefined;
+  if (error.status < 400 || error.status >= 500) return undefined;
+  const detail = (error.data as { detail?: unknown } | null)?.detail;
+  return typeof detail === 'string' && detail.trim() !== '' ? detail : undefined;
+}
+
 export const queryClient = new QueryClient({
   // Every mutation surfaces its failure as a toast unless it opts out
   // (meta.silentError) to render the error inline, e.g. the login form.
   mutationCache: new MutationCache({
-    onError: (_error, _variables, _context, mutation) => {
+    onError: (error, _variables, _context, mutation) => {
       const meta = mutation.meta as { silentError?: boolean; errorMessage?: string } | undefined;
       if (meta?.silentError) return;
       toast({
         variant: 'destructive',
         title: 'Something went wrong',
-        description: meta?.errorMessage ?? 'Please try again.',
+        description: apiErrorDetail(error) ?? meta?.errorMessage ?? 'Please try again.',
       });
     },
   }),

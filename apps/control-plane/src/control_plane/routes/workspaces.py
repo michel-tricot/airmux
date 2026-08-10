@@ -25,7 +25,7 @@ async def create_workspace(body: WorkspaceCreate, org_id: OrgDep, claims: MgmtDe
     A caller who names no slug gets one derived from the name; one who does gets a 409 when the
     org already holds it, rather than a silently numbered variant of what they asked for."""
     if await Org.find_by_id(org_id) is None:
-        raise HTTPException(status_code=404)
+        raise HTTPException(status_code=404, detail="Organization not found")
     if body.slug and await Workspace.slug_taken(org_id, body.slug):
         raise HTTPException(status_code=409, detail="slug is already taken in this org")
     slug = body.slug or await Workspace.free_slug(org_id, body.name)
@@ -72,7 +72,7 @@ async def add_member(workspace_ref: str, user_id: UUID, org_id: OrgDep) -> Envel
     """The composite foreign keys are the enforcement; the 409 turns what they would reject into a client error."""
     workspace = await Workspace.by_ref(org_id, workspace_ref)
     if await User.find_by_id(user_id) is None:
-        raise HTTPException(status_code=404)
+        raise HTTPException(status_code=404, detail="User not found")
     if await OrgMembership.get((user_id, org_id)) is None:
         raise HTTPException(status_code=409, detail="user is not a member of the org")
     if await WorkspaceMembership.get((user_id, workspace.id)) is None:
@@ -85,7 +85,7 @@ async def remove_member(workspace_ref: str, user_id: UUID, org_id: OrgDep) -> En
     workspace = await Workspace.by_ref(org_id, workspace_ref)
     membership = await WorkspaceMembership.get((user_id, workspace.id))
     if membership is None:
-        raise HTTPException(status_code=404)
+        raise HTTPException(status_code=404, detail="User is not a member of this workspace")
     await membership.delete()
     return Envelope(data=DeletedOut.of(f"{user_id}/{workspace.id}"))
 
@@ -106,7 +106,7 @@ async def list_inference_keys(workspace: WorkspaceDep) -> Envelope[list[Inferenc
 async def revoke_inference_key(workspace: WorkspaceDep, key_id: UUID) -> Envelope[InferenceKeyRevokedOut]:
     key = await InferenceKey.owned_by(workspace.org_id, key_id)
     if key.workspace_id != workspace.id:
-        raise HTTPException(status_code=404)
+        raise HTTPException(status_code=404, detail="Inference key not found in this workspace")
     key.revoked = True
     await key.save()
     return Envelope(data=InferenceKeyRevokedOut(id=key_id, status="revoked"))

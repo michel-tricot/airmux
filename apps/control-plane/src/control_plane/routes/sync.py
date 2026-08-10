@@ -25,7 +25,7 @@ def _sync_org(claims_org_id: UUID | None, org_id: UUID | None) -> UUID | None:
     if claims_org_id is None:
         return org_id
     if org_id is not None and org_id != claims_org_id:
-        raise HTTPException(status_code=403)
+        raise HTTPException(status_code=403, detail="This key is scoped to a different org than the one requested")
     return claims_org_id
 
 
@@ -35,7 +35,7 @@ async def bundle_latest(claims: MgmtDep, org_id: UUID | None = None) -> Envelope
     conditions = (Bundle.org_id == org_id,) if org_id else ()
     bundle = await Bundle.first(*conditions, order_by=(col(Bundle.issued_at).desc(), col(Bundle.version).desc()))
     if bundle is None:
-        raise HTTPException(status_code=404)
+        raise HTTPException(status_code=404, detail="No bundle has been compiled yet for this org")
     signed = SignedBundle(payload=BundleV1.model_validate_json(bundle.payload), signature=bundle.signature, signing_key_id=bundle.signing_key_id)
     return Envelope(data=signed)
 
@@ -52,7 +52,7 @@ async def ingest_events(claims: MgmtDep, events: list[UsageEventV1], session: Se
     so a replay reports zero.
     """
     if claims.org_id is not None and any(event.org_id != claims.org_id for event in events):
-        raise HTTPException(status_code=403)
+        raise HTTPException(status_code=403, detail="Events may only be ingested for the org this key is scoped to")
     if not events:
         return Envelope(data=EventsIngestedOut(received=0, ingested=0))
     # A batch may repeat an event_id; keep the first so the statement has one row per key
