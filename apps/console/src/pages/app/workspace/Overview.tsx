@@ -3,6 +3,7 @@ import { useSession } from '@/lib/session';
 import { useWorkspace } from '@/features/workspaces/hooks';
 import { useWorkspaceMembers } from '@/features/members/hooks';
 import { useInferenceKeys } from '@/features/keys/hooks';
+import { useProviderCredentials } from '@/features/credentials/hooks';
 import { useOrgEvents } from '@/features/telemetry/hooks';
 import { Card } from '@/components/ui/elements';
 import { Badge } from '@/components/ui/elements';
@@ -38,6 +39,7 @@ export default function WorkspaceOverview() {
   const { data: workspace, isLoading } = useWorkspace(orgId!, workspaceRef!);
   const { data: members } = useWorkspaceMembers(orgId!, workspaceRef!);
   const { data: keys } = useInferenceKeys(orgId!, workspaceRef!);
+  const { data: providerCredentials } = useProviderCredentials(orgId!, workspaceRef!);
   const eventsQuery = useOrgEvents(orgId!, { limit: EVENTS_WINDOW });
   const events = eventsQuery.data;
 
@@ -78,7 +80,7 @@ export default function WorkspaceOverview() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <MetricCard icon={KeyRound} label="API Keys" value={activeKeys ?? '—'} hint="active inference keys" />
         <MetricCard icon={Users} label="Members" value={members?.length ?? '—'} hint="with workspace access" />
-        <MetricCard icon={Database} label="BYOK" value={0} hint="Provider keys — coming soon" />
+        <MetricCard icon={Database} label="BYOK" value={providerCredentials?.length ?? '—'} hint="provider keys configured" />
         <MetricCard icon={Activity} label="Requests" value={requests} hint="in recent activity" />
       </div>
 
