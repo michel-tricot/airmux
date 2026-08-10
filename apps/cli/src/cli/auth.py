@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 from cli.client import payload, resolve_control_plane_url
 from cli.common import SETUP, app, console, orgs_app
 from cli.output import Col, FormatOption, OutputFormat, print_rows
-from cli.profiles import config_path, load_config, set_active, upsert_profile
+from cli.profiles import DEFAULT_CONSOLE_URL, config_path, load_config, set_active, upsert_profile
 
 MINE_COLS = [
     Col("id", "ID", style="dim", no_wrap=True),
@@ -36,7 +36,7 @@ def _client_name() -> str:
 
 def _payload_or_die(resp: httpx.Response, what: str) -> dict:
     if not resp.is_success:
-        console.print(f"[red]{what} failed: {resp.status_code} {resp.text}[/red]")
+        console.print(f"[red]{what} failed ({resp.status_code}): {resp.text}[/red]")
         raise typer.Exit(1)
     return payload(resp)
 
@@ -47,7 +47,6 @@ def _step(done: str) -> None:
 
 DEV_CONTROL_PLANE_URL = "http://127.0.0.1:8000"
 DEV_CONSOLE_URL = "http://localhost:5000"
-DEFAULT_CONSOLE_URL = "http://localhost:3000"
 
 
 def resolve_cp_url(control_plane_url: str, *, dev: bool) -> str:
@@ -97,13 +96,18 @@ def _provider_key(name: str, overrides: dict[str, str]) -> tuple[str, str]:
     return (exported, f"found in {variable}") if exported else ("", "")
 
 
-def seed_provider_credentials(client: httpx.Client, bearer: dict[str, str], overrides: dict[str, str]) -> list[ProviderKey]:
-    """Give the org a key for every catalog provider one can be found for, and say what happened.
+def seed_provider_credentials(client: httpx.Client, bearer: dict[str, str], workspace: str, overrides: dict[str, str]) -> list[ProviderKey]:
+    """Give the workspace a key for every catalog provider one can be found for, and say what happened.
 
     A fresh install has a catalog and no credentials, which is a gateway that routes nothing, so
     this is what decides whether the command ends with something that serves. It reports per
     provider rather than in total, because which key came from where is what an operator needs to
     check, and a store that would not hold one has something to say about why.
+
+    Scoped to the workspace the command just made, which is where the inference key it prints lives.
+    The org tier is what a workspace falls back to when it brought nothing, so putting the first key
+    there would make the fallback the only path and leave the tier the caller resolves through
+    empty. A second workspace starts without a key, which is the question BYOK exists to ask.
 
     Seeds what it can: a deployment using only openai should not have to supply an anthropic key to
     finish setting up, and a provider without a key is skipped in silence rather than reported as a
@@ -118,7 +122,8 @@ def seed_provider_credentials(client: httpx.Client, bearer: dict[str, str], over
         value, source = _provider_key(name, overrides)
         if not value:
             continue
-        created = client.post("/v1/org/provider-credentials", json={"provider": name, "value": value}, headers=bearer)
+        body = {"provider": name, "value": value, "workspace": workspace}
+        created = client.post("/v1/org/provider-credentials", json=body, headers=bearer)
         error = "" if created.is_success else payload_error(created)
         results.append(ProviderKey(name, source, error))
     return results
@@ -137,29 +142,29 @@ def quickstart(  # noqa: PLR0913, PLR0917 flags are the command's interface
     control_plane_url: str = "",
     email: str = typer.Option(..., prompt="Email", help="Email for the first account"),
     password: str = typer.Option(..., prompt="Password", hide_input=True, confirmation_prompt=True, help="At least 8 characters"),
-    org: str = typer.Option("", help="Org name to create; defaults to the email local part"),
-    gateway_url: str = typer.Option("http://localhost:8080", help="Where the data plane serves, for the printed example"),
-    openai_key: str = typer.Option("", help="OpenAI key for the new org; defaults to OPENAI_API_KEY in the environment"),
-    anthropic_key: str = typer.Option("", help="Anthropic key for the new org; defaults to ANTHROPIC_API_KEY in the environment"),
-    console_url: str = typer.Option("", help="Where the console is served, printed at the end; defaults to http://localhost:3000"),
-    dev: bool = typer.Option(False, "--dev", help="Target a local development stack: control plane on 127.0.0.1:8000, console on localhost:5000"),
+    org: str = typer.Option("", help="Organization name; defaults to your email name"),
+    gateway_url: str = typer.Option("http://localhost:8080", help="Gateway URL, used in the example at the end"),
+    openai_key: str = typer.Option("", help="OpenAI key; otherwise read from OPENAI_API_KEY or prompted for"),
+    anthropic_key: str = typer.Option("", help="Anthropic key; otherwise read from ANTHROPIC_API_KEY or prompted for"),
+    console_url: str = typer.Option("", help="Web console URL, printed at the end"),
+    dev: bool = typer.Option(False, "--dev", help="Use a local development stack"),
 ) -> None:
-    """Bootstrap a fresh instance end to end: account, org, keys, data plane, and a ready-to-use inference key."""
+    """Set up a new instance: account, organization, workspace, provider keys, and an API key you can call."""
     import httpx  # noqa: PLC0415 lazy import keeps CLI startup fast
 
     url, console_url = resolve_urls(control_plane_url, console_url, dev=dev)
     console.print("[bold]airllm quickstart[/bold]")
     with httpx.Client(base_url=url, timeout=10.0, headers=CSRF) as c:
         if _payload_or_die(c.get("/v1/instance/oss/claim"), "claim check")["claimed"]:
-            console.print(f"[red]this instance is already set up; run [bold]airllm login[/bold] against {url} instead[/red]")
+            console.print(f"[red]{url} is already set up. Run [bold]airllm login[/bold] instead.[/red]")
             raise typer.Exit(1)
 
         _payload_or_die(c.post("/v1/auth/signup", json={"email": email, "name": email, "password": password}), "sign up")
-        _step(f"created account [bold]{email}[/bold]")
+        _step(f"Account [bold]{email}[/bold]")
 
         created = _payload_or_die(c.post("/v1/enroll/org", json={"name": org or email.split("@", maxsplit=1)[0]}), "org creation")
         org_id, org_name = created["id"], created["name"]
-        _step(f"created org [bold]{org_name}[/bold]")
+        _step(f"Organization [bold]{org_name}[/bold]")
 
         started = _payload_or_die(c.post("/v1/auth/cli/start", json={"client_name": _client_name()}), "management key request")
         _payload_or_die(c.post("/v1/auth/cli/approve", json={"user_code": started["user_code"], "org_id": org_id}), "management key approval")
@@ -171,6 +176,7 @@ def quickstart(  # noqa: PLR0913, PLR0917 flags are the command's interface
             org_name,
             {
                 "control_plane_url": url,
+                "console_url": console_url,
                 "org_id": org_id,
                 "org_name": org_name,
                 "token": token,
@@ -178,30 +184,30 @@ def quickstart(  # noqa: PLR0913, PLR0917 flags are the command's interface
                 "workspace_name": workspace["name"],
             },
         )
-        _step(f"minted management key and created workspace [bold]{workspace['name']}[/bold], saved to {config_path()}")
+        _step(f"Workspace [bold]{workspace['name']}[/bold], signed in and saved to {config_path()}")
 
         quick = c.post("/v1/instance/oss/quickstart", json={"token": token})
         if quick.is_success:
-            _step("dropped the data plane token; it will come online shortly")
+            _step("Connected your gateway")
         else:
-            console.print(f"  [yellow]![/yellow] could not drop the data plane token ({quick.status_code}); set GW_DATAPLANE_TOKEN yourself")
+            console.print(f"  [yellow]![/yellow] Could not connect your gateway ({quick.status_code}). Set GW_DATAPLANE_TOKEN yourself.")
 
         key = _payload_or_die(
             c.post(f"/v1/org/workspaces/{workspace['id']}/inference-keys", json={"label": "quickstart"}, headers=bearer), "key mint"
         )
         overrides = {name: value for name, value in (("openai", openai_key), ("anthropic", anthropic_key)) if value}
-        console.print("[dim]provider keys, so the gateway has something to spend[/dim]")
-        results = seed_provider_credentials(c, bearer, overrides)
+        console.print("\n[dim]Provider keys. Press enter to skip a provider.[/dim]")
+        results = seed_provider_credentials(c, bearer, workspace["slug"], overrides)
         for result in results:
             if result.error:
                 console.print(f"  [yellow]![/yellow] {result.provider}: {result.error}")
             else:
                 _step(f"[bold]{result.provider}[/bold] key {result.source}")
         if not any(not result.error for result in results):
-            console.print("  [yellow]![/yellow] no provider key yet; add one with `airllm provider-credentials add <provider>`")
+            console.print("  [yellow]![/yellow] No provider key set. Add one with [bold]airllm provider-credentials add <provider>[/bold].")
 
-        compiled = _payload_or_die(c.post("/v1/org/bundles/compile", json={}, headers=bearer), "bundle compile")
-        _step(f"minted an inference key and compiled bundle v{compiled['version']}")
+        _payload_or_die(c.post("/v1/org/bundles/compile", json={}, headers=bearer), "publishing configuration")
+        _step("API key created and published")
 
     curl = (
         f"curl {gateway_url}/v1/chat/completions \\\n"
@@ -209,29 +215,30 @@ def quickstart(  # noqa: PLR0913, PLR0917 flags are the command's interface
         f"  -H 'Content-Type: application/json' \\\n"
         f'  -d \'{{"model": "gpt-4o", "messages": [{{"role": "user", "content": "hi"}}]}}\''
     )
-    console.print(f"\n[green]ready[/green]  org [bold]{org_name}[/bold], management key saved to {config_path()}")
+    console.print(f"\n[green]Ready.[/green] Your API key for [bold]{org_name}[/bold]:")
     console.print(Panel(key["token"], title="AIRLLM_API_KEY", border_style="cyan", expand=False))
-    console.print("[dim]try it once the data plane is online[/dim]")
+    console.print("\n[dim]Try it:[/dim]")
     print(curl)
-    console.print(f"\n[dim]console[/dim] {console_url}")
+    console.print(f"\n[dim]Console:[/dim] {console_url}")
 
 
 @app.command(rich_help_panel=SETUP)
 def login(
     control_plane_url: str = "",
     no_browser: bool = typer.Option(False, "--no-browser", help="Print the URL instead of opening a browser"),
-    dev: bool = typer.Option(False, "--dev", help="Target a local development control plane on 127.0.0.1:8000"),
+    console_url: str = typer.Option("", help="Web console URL"),
+    dev: bool = typer.Option(False, "--dev", help="Use a local development stack"),
 ) -> None:
-    """Log in through the browser and store this machine's org management key; signup and org setup happen there too."""
+    """Sign in through your browser. Creates an account and organization if you do not have one."""
     import httpx  # noqa: PLC0415 lazy import keeps CLI startup fast
 
-    url = resolve_cp_url(control_plane_url, dev=dev)
+    url, console_url = resolve_urls(control_plane_url, console_url, dev=dev)
     client_name = _client_name()
     with httpx.Client(base_url=url, timeout=10.0) as c:
         resp = c.post("/v1/auth/cli/start", json={"client_name": client_name})
         resp.raise_for_status()
         started = payload(resp)
-        console.print(f"Confirm code [bold]{started['user_code']}[/bold] in your browser: {started['verification_url']}")
+        console.print(f"Confirm code [bold]{started['user_code']}[/bold] at {started['verification_url']}")
         if not no_browser:
             webbrowser.open(started["verification_url"])
         deadline = time.monotonic() + started["expires_in_seconds"]
@@ -239,41 +246,47 @@ def login(
             time.sleep(started["interval_seconds"])
             poll = c.post("/v1/auth/cli/poll", json={"poll_secret": started["poll_secret"]})
             if poll.status_code == HTTP_GONE:
-                console.print("[red]the login request expired before it was approved, run `airllm login` again[/red]")
+                console.print("[red]Login expired before it was approved. Run [bold]airllm login[/bold] again.[/red]")
                 raise typer.Exit(1)
             poll.raise_for_status()
             done = payload(poll)
             if done["status"] == "complete":
                 upsert_profile(
                     done["org_name"],
-                    {"control_plane_url": url, "org_id": done["org_id"], "org_name": done["org_name"], "token": done["token"]},
+                    {
+                        "control_plane_url": url,
+                        "console_url": console_url,
+                        "org_id": done["org_id"],
+                        "org_name": done["org_name"],
+                        "token": done["token"],
+                    },
                 )
-                console.print(f"Logged in to [bold]{done['org_name']}[/bold]; management key stored in {config_path()} as the active profile.")
+                console.print(f"Signed in to [bold]{done['org_name']}[/bold]. Saved to {config_path()}.")
                 return
-    console.print("[red]login timed out, run `airllm login` again[/red]")
+    console.print("[red]Login timed out. Run [bold]airllm login[/bold] again.[/red]")
     raise typer.Exit(1)
 
 
 @orgs_app.command("switch")
 def orgs_switch(name: str, control_plane_url: str = "") -> None:
-    """Make an org's stored management key the active one; runs the browser login when none is stored."""
+    """Switch to another organization."""
     if os.environ.get("GW_ORG_MGMT_TOKEN"):
-        console.print("[yellow]GW_ORG_MGMT_TOKEN is set and overrides stored profiles; unset it for the switch to take effect[/yellow]")
+        console.print("[yellow]GW_ORG_MGMT_TOKEN is set and takes precedence. Unset it for this to take effect.[/yellow]")
     config = load_config()
     if name in (config.get("profiles") or {}):
         set_active(name)
-        console.print(f"switched to [bold]{name}[/bold]")
+        console.print(f"Switched to [bold]{name}[/bold]")
         return
-    console.print(f"no stored management key for [bold]{name}[/bold], starting browser login; pick [bold]{name}[/bold] on the approve page")
+    console.print(f"Not signed in to [bold]{name}[/bold]. Opening browser login, pick [bold]{name}[/bold] to approve.")
     login(control_plane_url=control_plane_url)
     active = load_config().get("active")
     if active != name:
-        console.print(f"[yellow]you approved [bold]{active}[/bold], not {name}; it is now the active profile[/yellow]")
+        console.print(f"[yellow]You approved [bold]{active}[/bold], not {name}. It is now active.[/yellow]")
 
 
 @orgs_app.command("mine")
 def orgs_mine(control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
-    """List the orgs you belong to, via the stored login."""
+    """List the organizations you belong to."""
     from cli.client import org_client  # noqa: PLC0415 lazy import keeps CLI startup fast
 
     with org_client(control_plane_url) as c:
