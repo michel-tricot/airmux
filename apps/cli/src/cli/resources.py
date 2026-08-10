@@ -62,7 +62,6 @@ PROVIDER_COLS = [
     Col("id", "ID", style="dim", no_wrap=True),
     Col("kind", "Kind"),
     Col("base_url", "Base URL", max_width=45),
-    Col("credential_ref", "Credential", style="cyan", max_width=30),
 ]
 MODEL_COLS = [
     Col("id", "ID", style="dim", no_wrap=True),

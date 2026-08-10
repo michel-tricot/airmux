@@ -16,20 +16,21 @@ from starlette.applications import Starlette
 from starlette.responses import JSONResponse, Response, StreamingResponse
 from starlette.routing import Route
 
-from contract import UsageEventV1, UsageStatus, uuid7, verify_bundle
+from contract import SecretStoreUnavailableError, UsageEventV1, UsageStatus, uuid7, verify_bundle
 from data_plane.adapters import REGISTRY, ProviderAdapter
 from data_plane.auth import authenticate
 from data_plane.cache import instance_id as cache_instance_id
 from data_plane.cache import read_cached_bundle
 from data_plane.canonical import CanonicalRequest, CanonicalResponse, Ctx, StreamState, UpstreamRequest, UpstreamStreamError, Usage
 from data_plane.config import Config, load_config
+from data_plane.credentials import CredentialResolver
 from data_plane.heartbeat import run_heartbeat
 from data_plane.holder import BundleHolder, BundleSnapshot
 from data_plane.ingress import ANTHROPIC, CANONICAL, EgressStream, Ingress
 from data_plane.metering import cost_breakdown, estimate_tokens
 from data_plane.normalize import normalize_request
 from data_plane.outbox import build_outbox
-from data_plane.policy import Deny, evaluate
+from data_plane.policy import Allow, Deny, evaluate
 from data_plane.poller import run_poller
 from data_plane.transport import client
 
@@ -39,7 +40,7 @@ if TYPE_CHECKING:
     from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
     from starlette.requests import Request
 
-    from contract import KeyEntry
+    from contract import KeyEntry, Secret
     from data_plane.outbox import EventOutbox
 
 logger = logging.getLogger("data_plane")
@@ -52,6 +53,7 @@ class AppState:
     config: Config | None = None
     bundle_public_key: Ed25519PublicKey | None = None
     outbox: EventOutbox | None = None
+    credentials: CredentialResolver | None = None
 
 
 state = AppState()
@@ -102,12 +104,13 @@ async def _authorize(request: Request, ingress: Ingress) -> tuple[CanonicalReque
 
 async def _handle(request: Request, ingress: Ingress) -> Response:
     req, key, snap = await _authorize(request, ingress)
-    decision = evaluate(req, key, snap.bundle, datetime.now(tz=UTC))
+    decision = evaluate(req, key, snap, datetime.now(tz=UTC))
     if isinstance(decision, Deny):
         _record_denied(key, snap, req)
         raise RequestRejectedError(decision.status, decision.reason)
 
-    adapter = REGISTRY[decision.provider.kind](decision.provider)
+    credential = await _resolve_credential(decision)
+    adapter = REGISTRY[decision.provider.kind](decision.provider, credential)
     ctx = Ctx(
         request_id=str(uuid7()),
         model=decision.model,
@@ -131,6 +134,27 @@ async def _handle(request: Request, ingress: Ingress) -> Response:
     final = adapter.transform_response(resp.content, ctx)
     _record_usage(ctx, final, status="ok", req=req)
     return ingress.render_response(final)
+
+
+async def _resolve_credential(decision: Allow) -> Secret:
+    """The value behind the first candidate the tier offers.
+
+    Failover across candidates is not here yet, so a broken first key fails the request rather than
+    falling through to the second. What it never does is widen to a broader tier: a key that is
+    missing or a store that is down must not silently move an org's spend onto the platform account.
+    """
+    resolver = state.credentials
+    if resolver is None:
+        raise RequestRejectedError(500, "credentials_unavailable")
+    entry = decision.candidates[0]
+    try:
+        secret = await resolver.fetch(entry)
+    except SecretStoreUnavailableError as e:
+        logger.exception("secret store unavailable for credential %s", entry.ref.secret_id)
+        raise RequestRejectedError(503, "credential_backend_unavailable") from e
+    if secret is None:
+        raise RequestRejectedError(502, "credential_missing")
+    return secret
 
 
 def _status_for_error(e: Exception) -> UsageStatus:
@@ -346,6 +370,7 @@ def create_app(config_override: Config | None = None) -> Starlette:
             _configure_dev_logging()
         state.config = config
         state.outbox = build_outbox(config)
+        state.credentials = CredentialResolver(config.secrets.build())
         try:
             state.bundle_public_key = config.bundle.public_key
             _load_cached_bundle(config, state.bundle_public_key)

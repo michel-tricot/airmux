@@ -4,7 +4,6 @@ import json
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
-from contract import resolve_ref
 from data_plane.adapters.base import ProviderAdapter
 from data_plane.adapters.shape import content_blocks
 from data_plane.canonical import CanonicalChunk, CanonicalResponse, RawEvent, StreamState, UpstreamRequest, UpstreamStreamError, Usage
@@ -12,7 +11,7 @@ from data_plane.canonical import CanonicalChunk, CanonicalResponse, RawEvent, St
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
-    from contract import ModelEntry, ProviderEntry
+    from contract import ModelEntry
     from data_plane.canonical import CanonicalRequest, Ctx
 
 
@@ -86,9 +85,6 @@ def _fold_choice(state: OpenAIStreamState, choice: dict[str, Any]) -> list[Canon
 class OpenAICompatibleAdapter(ProviderAdapter):
     kind = "openai_compatible"
 
-    def validate_environment(self, p: ProviderEntry) -> None:
-        resolve_ref(p.credential_ref)
-
     def transform_request(self, req: CanonicalRequest, m: ModelEntry) -> UpstreamRequest:
         tools = [_strip_cache_control(t) for t in req.tools] if req.tools else None
         optional = {"max_tokens": req.max_tokens, "temperature": req.temperature, "tools": tools}
@@ -100,7 +96,7 @@ class OpenAICompatibleAdapter(ProviderAdapter):
             **stream_fields,
         }
         headers = {
-            "authorization": f"Bearer {resolve_ref(self.provider.credential_ref)}",
+            "authorization": f"Bearer {self.credential.reveal()}",
             "content-type": "application/json",
         }
         url = str(self.provider.base_url).rstrip("/") + "/chat/completions"

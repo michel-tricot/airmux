@@ -17,7 +17,6 @@ export interface ProviderEntry {
      * @maxLength 2083
      */
   base_url: string;
-  credential_ref: string;
   cache_read_multiplier?: number;
   cache_write_multiplier?: number;
 }

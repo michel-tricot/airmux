@@ -16,7 +16,6 @@ TAXONOMY = """
 providers:
   - provider_id: stub
     base_url: https://stub.example/v1
-    credential_ref: env:STUB_KEY
 models:
   - model_id: echo
     provider_id: stub

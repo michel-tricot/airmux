@@ -67,7 +67,6 @@ async def compile_bundle(org_id: UUID, bundle_id: UUID, now: datetime, staleness
                         "provider_id": r.name,
                         "kind": r.kind,
                         "base_url": r.base_url,
-                        "credential_ref": r.credential_ref,
                         "cache_read_multiplier": r.cache_read_multiplier,
                         "cache_write_multiplier": r.cache_write_multiplier,
                     }

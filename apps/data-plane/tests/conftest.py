@@ -9,7 +9,21 @@ from uuid import uuid4
 import pytest
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
-from contract import INFERENCE_TOKEN_PREFIX, BundleV1, Catalog, KeyEntry, ModelEntry, ProviderEntry, sign_bundle, token_hash, uuid7
+from contract import (
+    INFERENCE_TOKEN_PREFIX,
+    BundleV1,
+    Catalog,
+    CredentialEntry,
+    KeyEntry,
+    ModelEntry,
+    ProviderEntry,
+    Secret,
+    SecretPurpose,
+    SecretRef,
+    sign_bundle,
+    token_hash,
+    uuid7,
+)
 from data_plane.adapters import REGISTRY
 from data_plane.app import create_app
 from data_plane.canonical import Ctx
@@ -24,7 +38,7 @@ WORKSPACE = uuid7()
 
 UNUSED_PUBLIC_KEY = Ed25519PrivateKey.generate().public_key()
 
-PROVIDER = ProviderEntry(provider_id="p1", kind="openai_compatible", base_url="https://api.openai.com/v1", credential_ref="env:OPENAI_API_KEY")
+PROVIDER = ProviderEntry(provider_id="p1", kind="openai_compatible", base_url="https://api.openai.com/v1")
 MODEL = ModelEntry(
     model_id="gpt-test",
     provider_id="p1",
@@ -35,11 +49,31 @@ MODEL = ModelEntry(
     capabilities=["streaming"],
 )
 CTX = Ctx(request_id="req-1", model=MODEL, provider=PROVIDER, stream=True)
+
+
+def make_credential(service="p1", name="default", org=ORG, **scope) -> CredentialEntry:
+    """A credential entry naming a secret.
+
+    scope takes workspace, priority, version and secret_id. Passing secret_id describes the same
+    credential twice, which is what a rotation looks like from the data plane.
+    """
+    ref = SecretRef(
+        purpose=SecretPurpose.provider,
+        service=service,
+        name=name,
+        secret_id=scope.get("secret_id") or uuid7(),
+        org_id=org,
+        workspace_id=scope.get("workspace"),
+    )
+    return CredentialEntry(ref=ref, priority=scope.get("priority", 100), version=scope.get("version", 1))
+
+
+PLATFORM_CREDENTIAL = make_credential(org=None)
 USAGE = {"prompt_tokens": 5, "completion_tokens": 7, "total_tokens": 12}
 
 
 def make_adapter():
-    return REGISTRY["openai_compatible"](PROVIDER)
+    return REGISTRY["openai_compatible"](PROVIDER, Secret("sk-test"))
 
 
 def make_key(key_id="k-dev", org=ORG, workspace=WORKSPACE):
@@ -113,10 +147,11 @@ def booted(tmp_path, monkeypatch) -> BootedApp:
     """
     bundle_key = Ed25519PrivateKey.generate()
     caller_token, entry = make_key()
-    bundle = make_bundle(keys=[entry], catalog=Catalog(providers=[PROVIDER], models=[MODEL]))
+    catalog = Catalog(providers=[PROVIDER], models=[MODEL], credentials=[PLATFORM_CREDENTIAL])
+    bundle = make_bundle(keys=[entry], catalog=catalog)
     (tmp_path / "bundle.json").write_text(sign_bundle(bundle, bundle_key, "k1").model_dump_json(), encoding="utf-8")
     config = Config(bundle=BundleConfig(public_key=bundle_key.public_key(), cache_dir=tmp_path))
-    monkeypatch.setenv("OPENAI_API_KEY", "sk-test-not-real")
+    monkeypatch.setenv("P1_API_KEY", "sk-test-not-real")  # the conventional name the env store falls back to for a platform provider key
     return BootedApp(app=create_app(config), token=caller_token)
 
 

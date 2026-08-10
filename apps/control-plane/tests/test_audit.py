@@ -24,7 +24,7 @@ def _audit_rows(tmp_path) -> list[AuditLog]:
 def _create_provider(tmp_path, base_url: str = "https://api.openai.com/v1"):
     async def create():
         await set_actor(ACTOR)
-        provider = Provider(name="openai", kind="openai_compatible", base_url=base_url, credential_ref="env:OPENAI_API_KEY")
+        provider = Provider(name="openai", kind="openai_compatible", base_url=base_url)
         await provider.save()
         return provider.id
 

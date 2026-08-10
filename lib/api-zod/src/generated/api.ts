@@ -1536,7 +1536,6 @@ export const BundleLatestResponse = zod.object({
   "provider_id": zod.string(),
   "kind": zod.enum(['openai_compatible', 'anthropic']),
   "base_url": zod.url().min(1).max(bundleLatestResponsePayloadCatalogProvidersItemBaseUrlMax),
-  "credential_ref": zod.string(),
   "cache_read_multiplier": zod.number().default(bundleLatestResponsePayloadCatalogProvidersItemCacheReadMultiplierDefault),
   "cache_write_multiplier": zod.number().default(bundleLatestResponsePayloadCatalogProvidersItemCacheWriteMultiplierDefault)
 }).describe('An upstream LLM provider endpoint.')),
@@ -1668,7 +1667,6 @@ export const GetTaxonomyResponse = zod.object({
   "name": zod.string(),
   "kind": zod.string(),
   "base_url": zod.string(),
-  "credential_ref": zod.string(),
   "cache_read_multiplier": zod.number(),
   "cache_write_multiplier": zod.number(),
   "created_at": zod.coerce.date(),
@@ -1712,17 +1710,15 @@ export const CreateProviderBody = zod.object({
   "provider_id": zod.string().describe('Provider name, e.g. openai'),
   "kind": zod.enum(['openai_compatible', 'anthropic']).default(createProviderBodyKindDefault).describe('Adapter kind'),
   "base_url": zod.string().describe('OpenAI-compatible endpoint, e.g. https:\/\/api.groq.com\/openai\/v1'),
-  "credential_ref": zod.string().describe('env: or file: reference resolved by the data plane, never a raw secret'),
   "cache_read_multiplier": zod.number().default(createProviderBodyCacheReadMultiplierDefault).describe('Input price factor for prompt-cache hits'),
   "cache_write_multiplier": zod.number().default(createProviderBodyCacheWriteMultiplierDefault).describe('Input price factor for cache writes')
-})
+}).describe('How to reach a provider, not how to authenticate to it: credentials are their own resource.\n\nExtra keys are refused so a taxonomy still carrying credential_ref fails loudly. Ignoring it\nwould leave the operator believing they configured a credential when the provider has none.')
 
 export const CreateProviderResponse = zod.object({
   "id": zod.uuid(),
   "name": zod.string(),
   "kind": zod.string(),
   "base_url": zod.string(),
-  "credential_ref": zod.string(),
   "cache_read_multiplier": zod.number(),
   "cache_write_multiplier": zod.number(),
   "created_at": zod.coerce.date(),

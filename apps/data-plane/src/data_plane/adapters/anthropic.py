@@ -4,7 +4,6 @@ import json
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
-from contract import resolve_ref
 from data_plane.adapters.base import ProviderAdapter
 from data_plane.adapters.shape import content_blocks
 from data_plane.canonical import CanonicalChunk, CanonicalResponse, RawEvent, StreamState, UpstreamRequest, UpstreamStreamError, Usage
@@ -12,7 +11,7 @@ from data_plane.canonical import CanonicalChunk, CanonicalResponse, RawEvent, St
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
-    from contract import ModelEntry, ProviderEntry
+    from contract import ModelEntry
     from data_plane.canonical import CanonicalRequest, Ctx
 
 ANTHROPIC_VERSION = "2023-06-01"
@@ -133,9 +132,6 @@ def _block_delta(state: AnthropicStreamState, data: dict[str, Any]) -> list[Cano
 class AnthropicAdapter(ProviderAdapter):
     kind = "anthropic"
 
-    def validate_environment(self, p: ProviderEntry) -> None:
-        resolve_ref(p.credential_ref)
-
     def transform_request(self, req: CanonicalRequest, m: ModelEntry) -> UpstreamRequest:
         system = _system_field([msg for msg in req.messages if msg.get("role") == "system"])
         body: dict[str, Any] = {
@@ -152,7 +148,7 @@ class AnthropicAdapter(ProviderAdapter):
         if req.stream:
             body["stream"] = True
         headers = {
-            "x-api-key": resolve_ref(self.provider.credential_ref),
+            "x-api-key": self.credential.reveal(),
             "anthropic-version": ANTHROPIC_VERSION,
             "content-type": "application/json",
         }

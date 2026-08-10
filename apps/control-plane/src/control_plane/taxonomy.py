@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Literal
 
 import yaml
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field
 
 from control_plane.models import Model, Provider
 from control_plane.models.model import ModelOut
@@ -11,8 +11,6 @@ from control_plane.models.provider import ProviderOut
 
 if TYPE_CHECKING:
     from pathlib import Path
-
-ALLOWED_CREDENTIAL_SCHEMES = ("env:", "file:")
 
 
 class TaxonomyError(Exception):
@@ -24,20 +22,19 @@ class UnknownProviderError(TaxonomyError):
 
 
 class ProviderIn(BaseModel):
+    """How to reach a provider, not how to authenticate to it: credentials are their own resource.
+
+    Extra keys are refused so a taxonomy still carrying credential_ref fails loudly. Ignoring it
+    would leave the operator believing they configured a credential when the provider has none.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
     provider_id: str = Field(description="Provider name, e.g. openai")
     kind: Literal["openai_compatible", "anthropic"] = Field("openai_compatible", description="Adapter kind")
     base_url: str = Field(description="OpenAI-compatible endpoint, e.g. https://api.groq.com/openai/v1")
-    credential_ref: str = Field(description="env: or file: reference resolved by the data plane, never a raw secret")
     cache_read_multiplier: float = Field(1.0, description="Input price factor for prompt-cache hits")
     cache_write_multiplier: float = Field(1.0, description="Input price factor for cache writes")
-
-    @field_validator("credential_ref")
-    @classmethod
-    def credential_ref_is_a_reference(cls, v: str) -> str:
-        if not v.startswith(ALLOWED_CREDENTIAL_SCHEMES):
-            msg = "credential_ref must be an env: or file: reference resolved by the data plane, never a raw secret"
-            raise ValueError(msg)
-        return v
 
 
 class ModelIn(BaseModel):
@@ -69,11 +66,10 @@ async def upsert_provider(p: ProviderIn) -> Provider:
     """Create or update by name; the single upsert shared by the API route and taxonomy application."""
     provider = await Provider.first(Provider.name == p.provider_id)
     if provider is None:
-        provider = Provider(name=p.provider_id, kind=p.kind, base_url=p.base_url, credential_ref=p.credential_ref)
+        provider = Provider(name=p.provider_id, kind=p.kind, base_url=p.base_url)
     else:
         provider.kind = p.kind
         provider.base_url = p.base_url
-        provider.credential_ref = p.credential_ref
     provider.cache_read_multiplier = p.cache_read_multiplier
     provider.cache_write_multiplier = p.cache_write_multiplier
     return await provider.save()

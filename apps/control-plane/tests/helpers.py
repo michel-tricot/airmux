@@ -24,7 +24,6 @@ PROVIDER = {
     "provider_id": "openai",
     "kind": "openai_compatible",
     "base_url": "https://api.openai.com/v1",
-    "credential_ref": "env:OPENAI_API_KEY",
 }
 MODEL = {"model_id": "gpt-test", "provider_id": "openai", "upstream_model": "gpt-real"}
 

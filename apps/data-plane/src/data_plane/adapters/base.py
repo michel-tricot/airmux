@@ -10,7 +10,7 @@ from data_plane.canonical import CanonicalError, UpstreamStreamError
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
-    from contract import ModelEntry, ProviderEntry
+    from contract import ModelEntry, ProviderEntry, Secret
     from data_plane.canonical import (
         CanonicalChunk,
         CanonicalRequest,
@@ -25,11 +25,12 @@ if TYPE_CHECKING:
 class ProviderAdapter(ABC):
     kind: ClassVar[str]
 
-    def __init__(self, provider: ProviderEntry) -> None:
+    def __init__(self, provider: ProviderEntry, credential: Secret) -> None:
+        """The credential is injected because which key this request spends is decided per request:
+        it depends on the caller's workspace and on which candidates are currently healthy, neither
+        of which an adapter can see."""
         self.provider = provider
-
-    @abstractmethod
-    def validate_environment(self, p: ProviderEntry) -> None: ...
+        self.credential = credential
 
     @abstractmethod
     def transform_request(self, req: CanonicalRequest, m: ModelEntry) -> UpstreamRequest: ...

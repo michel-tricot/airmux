@@ -7,7 +7,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from contract import Ed25519PublicKeyB64, load_config_section
+from contract import Ed25519PublicKeyB64, EnvStoreConfig, SecretsConfig, load_config_section
 
 
 class ControlPlaneLink(BaseModel):
@@ -40,6 +40,7 @@ class Config(BaseModel):
 
     control_plane: ControlPlaneLink = Field(default_factory=ControlPlaneLink)
     bundle: BundleConfig
+    secrets: SecretsConfig = Field(default_factory=EnvStoreConfig)  # where provider keys live; must name the store the control plane writes
     events: EventsConfig = Field(default_factory=EventsConfig)
     dev: bool = False  # set by the --dev flag on the entry point, gate dev-only behavior on this
 

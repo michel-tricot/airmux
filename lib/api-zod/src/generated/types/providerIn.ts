@@ -6,6 +6,12 @@
  */
 import type { ProviderInKind } from './providerInKind';
 
+/**
+ * How to reach a provider, not how to authenticate to it: credentials are their own resource.
+ *
+ * Extra keys are refused so a taxonomy still carrying credential_ref fails loudly. Ignoring it
+ * would leave the operator believing they configured a credential when the provider has none.
+ */
 export interface ProviderIn {
   /** Provider name, e.g. openai */
   provider_id: string;
@@ -13,8 +19,6 @@ export interface ProviderIn {
   kind?: ProviderInKind;
   /** OpenAI-compatible endpoint, e.g. https://api.groq.com/openai/v1 */
   base_url: string;
-  /** env: or file: reference resolved by the data plane, never a raw secret */
-  credential_ref: string;
   /** Input price factor for prompt-cache hits */
   cache_read_multiplier?: number;
   /** Input price factor for cache writes */
