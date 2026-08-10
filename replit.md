@@ -81,8 +81,9 @@ bun run typecheck
 
 ## Replit development workflow
 
-Replit changes should be limited to the console in `apps/console`. Do not
-rewrite, migrate, or scaffold the Python backend as part of console work.
+When working in Replit, changes are limited to Replit-specific configuration
+and the console in `apps/console`. Do not modify, rewrite, migrate, scaffold,
+or add schema changes to the Python backend or its migrations.
 The registered Replit artifact is the console and its managed workflow runs:
 
 ```bash
