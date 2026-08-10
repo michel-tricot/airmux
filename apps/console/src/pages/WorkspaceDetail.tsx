@@ -2,12 +2,12 @@ import { useParams } from 'wouter';
 import { WorkspacePanel } from '@/components/WorkspacePanel';
 
 export default function WorkspaceDetail() {
-  const { orgId, workspaceId } = useParams();
+  const { orgId, workspaceRef } = useParams();
 
   return (
     <WorkspacePanel
       orgId={orgId!}
-      workspaceId={workspaceId!}
+      workspaceRef={workspaceRef!}
       backHref={`/instance/organizations/${orgId}`}
       backLabel="Organization"
     />

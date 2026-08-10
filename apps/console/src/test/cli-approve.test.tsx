@@ -33,7 +33,7 @@ describe('CLI device sign-in approval', () => {
       http.get('/v1/instance/oss/claim', () => HttpResponse.json({ claimed: true })),
     );
     renderAt('/cli?code=ABCD-1234');
-    expect(await screen.findByRole('heading', { name: 'Sign in to Gateway' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument();
     expect(screen.queryByText('Authorize CLI login')).not.toBeInTheDocument();
   });
 

@@ -14,8 +14,8 @@ export default function Dashboard() {
   const statCards = [
     { label: 'Organizations', value: orgs?.length ?? '-', icon: Building2 },
     { label: 'Users', value: users?.length ?? '-', icon: Users },
-    { label: 'Management Keys', value: keys?.filter(k => !k.revoked).length ?? '-', icon: Key },
-    { label: 'Data Planes Online', value: dataPlanes?.filter(d => d.status === 'online').length ?? '-', icon: Server, active: true },
+    { label: 'Automation Keys', value: keys?.filter(k => !k.revoked).length ?? '-', icon: Key },
+    { label: 'Connected Services', value: dataPlanes?.filter(d => d.status === 'online').length ?? '-', icon: Server, active: true },
   ];
 
   return (
@@ -55,7 +55,7 @@ export default function Dashboard() {
         </CardHeader>
         <CardContent>
           {loadingDataPlanes ? (
-            <div className="py-8 text-center text-muted-foreground font-mono text-sm">LOADING INSTANCES...</div>
+            <div className="py-8 text-center text-muted-foreground font-mono text-sm">Loading connected services...</div>
           ) : dataPlanes && dataPlanes.length > 0 ? (
             <Table>
               <TableHeader>
@@ -100,7 +100,7 @@ export default function Dashboard() {
         </CardHeader>
         <CardContent>
           {loadingActivity ? (
-            <div className="py-8 text-center text-muted-foreground font-mono text-sm">LOADING ACTIVITY...</div>
+            <div className="py-8 text-center text-muted-foreground font-mono text-sm">Loading activity...</div>
           ) : activity && activity.length > 0 ? (
             <Table>
               <TableHeader>

@@ -33,14 +33,14 @@ export default function Login() {
             <TerminalSquare className="w-6 h-6" />
           </div>
           <h1 className="text-xl font-mono font-bold tracking-widest uppercase">
-            {mode === 'login' ? <><span aria-hidden="true" className="text-primary/80 mr-2">$</span>Sign in to Gateway</> : <><span aria-hidden="true" className="text-primary/80 mr-2">$</span>Create an account</>}
+            {mode === 'login' ? <><span aria-hidden="true" className="text-primary/80 mr-2">$</span>Sign in</> : <><span aria-hidden="true" className="text-primary/80 mr-2">$</span>Create an account</>}
           </h1>
           <p className="text-muted-foreground text-sm mt-2 text-center max-w-sm">
             {mode === 'login'
-              ? 'Use your control plane credentials.'
+              ? 'Sign in with your account credentials.'
               : claim?.claimed === false
-                ? 'This deployment has no account yet: the first one becomes its instance admin.'
-                : 'A new account starts with no orgs and no admin rights.'}
+                ? 'The first account becomes the administrator.'
+                : 'You can join or create an organization after signing up.'}
           </p>
         </div>
 
@@ -67,12 +67,12 @@ export default function Login() {
 
           {error && (
             <div className="p-3 rounded-md bg-destructive/10 border border-destructive/20 text-destructive text-sm">
-              {mode === 'login' ? 'Sign in failed. Check your email and password.' : error.message}
+              {mode === 'login' ? 'Sign in failed. Check your email and password.' : 'We couldn’t create your account. Please check your details and try again.'}
             </div>
           )}
 
           <Button type="submit" className="w-full" disabled={pending}>
-            {pending ? 'Working...' : mode === 'login' ? 'Sign in' : 'Create account'}
+            {pending ? (mode === 'login' ? 'Signing in...' : 'Creating account...') : mode === 'login' ? 'Sign in' : 'Create account'}
           </Button>
         </form>
 

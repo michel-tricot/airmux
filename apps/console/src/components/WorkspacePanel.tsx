@@ -26,28 +26,28 @@ import { KeyRevealDialog } from '@/components/KeyRevealDialog';
 
 interface WorkspacePanelProps {
   orgId: string;
-  workspaceId: string;
+  workspaceRef: string;
   backHref: string;
   backLabel: string;
 }
 
-export function WorkspacePanel({ orgId, workspaceId, backHref, backLabel }: WorkspacePanelProps) {
+export function WorkspacePanel({ orgId, workspaceRef, backHref, backLabel }: WorkspacePanelProps) {
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
   const scope = orgScope(orgId);
 
   const workspacesKey = [...getListWorkspacesQueryKey(), orgId];
-  const keysKey = [...getListInferenceKeysQueryKey(workspaceId), orgId];
-  const membersKey = [...getListMembersQueryKey(workspaceId), orgId];
+  const keysKey = [...getListInferenceKeysQueryKey(workspaceRef), orgId];
+  const membersKey = [...getListMembersQueryKey(workspaceRef), orgId];
   const orgUsersKey = [...getListOrgUsersQueryKey(), orgId];
 
-  const { data: workspace, isLoading } = useGetWorkspace(workspaceId, {
-    query: { queryKey: [...getGetWorkspaceQueryKey(workspaceId), orgId], retry: false },
+  const { data: workspace, isLoading } = useGetWorkspace(workspaceRef, {
+    query: { queryKey: [...getGetWorkspaceQueryKey(workspaceRef), orgId], retry: false },
     request: scope,
   });
 
-  const { data: keys } = useListInferenceKeys(workspaceId, { query: { queryKey: keysKey }, request: scope });
-  const { data: members } = useListMembers(workspaceId, { query: { queryKey: membersKey }, request: scope });
+  const { data: keys } = useListInferenceKeys(workspaceRef, { query: { queryKey: keysKey }, request: scope });
+  const { data: members } = useListMembers(workspaceRef, { query: { queryKey: membersKey }, request: scope });
 
   // Workspace members are user ids alone, and members are drawn from the org, so the org roster
   // both names them and supplies the candidates.
@@ -80,7 +80,7 @@ export function WorkspacePanel({ orgId, workspaceId, backHref, backLabel }: Work
     mutation: {
       onSuccess: () => {
         invalidate(workspacesKey);
-        invalidate([...getGetWorkspaceQueryKey(workspaceId), orgId]);
+        invalidate([...getGetWorkspaceQueryKey(workspaceRef), orgId]);
         setRenameOpen(false);
       },
     },
@@ -89,12 +89,12 @@ export function WorkspacePanel({ orgId, workspaceId, backHref, backLabel }: Work
   const remove = useDeleteWorkspace({
     mutation: {
       onSuccess: () => { invalidate(workspacesKey); setLocation(backHref); },
-      onError: (error) => setDeleteError(error.message),
+      onError: () => setDeleteError('We couldn’t delete this workspace. Please try again.'),
     },
     request: scope,
   });
 
-  if (isLoading) return <div className="p-8 text-center text-muted-foreground font-mono text-sm">LOADING WORKSPACE...</div>;
+  if (isLoading) return <div className="p-8 text-center text-muted-foreground font-mono text-sm">Loading workspace...</div>;
   if (!workspace) return <div className="p-8 text-center text-destructive">Workspace not found</div>;
 
   return (
@@ -115,7 +115,7 @@ export function WorkspacePanel({ orgId, workspaceId, backHref, backLabel }: Work
               <h1 className="text-3xl font-bold tracking-tight">{workspace.name}</h1>
               <Badge variant="mono">{workspace.slug}</Badge>
             </div>
-            <p className="text-muted-foreground font-mono text-sm">{workspace.id}</p>
+            <p className="text-muted-foreground font-mono text-sm">{workspace.slug}</p>
           </div>
         </div>
         <div className="flex gap-2">
@@ -166,7 +166,7 @@ export function WorkspacePanel({ orgId, workspaceId, backHref, backLabel }: Work
                             description="Requests using this inference key will stop working immediately. This cannot be undone."
                             confirmLabel="Revoke key"
                             pending={revokeKey.isPending}
-                            onConfirm={() => revokeKey.mutate({ workspaceRef: workspaceId, keyId: key.id })}>
+                            onConfirm={() => revokeKey.mutate({ workspaceRef, keyId: key.id })}>
                             <Ban className="w-4 h-4 mr-1" /> Revoke
                           </ConfirmButton>
                         )}
@@ -210,7 +210,7 @@ export function WorkspacePanel({ orgId, workspaceId, backHref, backLabel }: Work
                             confirmLabel="Remove member"
                             pending={removeMember.isPending}
                             aria-label="Remove member"
-                            onConfirm={() => removeMember.mutate({ workspaceRef: workspaceId, userId: member.user_id })}>
+                            onConfirm={() => removeMember.mutate({ workspaceRef, userId: member.user_id })}>
                             <UserMinus className="w-4 h-4" />
                           </ConfirmButton>
                         </TableCell>
@@ -226,8 +226,8 @@ export function WorkspacePanel({ orgId, workspaceId, backHref, backLabel }: Work
         </TabsContent>
       </Tabs>
 
-      <Modal open={keyOpen} onOpenChange={setKeyOpen} title="Generate Inference Key" description="This key calls the gateway with the models this workspace's org is entitled to.">
-        <form onSubmit={e => { e.preventDefault(); createKey.mutate({ workspaceRef: workspaceId, data: { label: keyLabel } }); }} className="space-y-4 pt-4">
+      <Modal open={keyOpen} onOpenChange={setKeyOpen} title="Generate Inference Key" description="Keys let applications send requests to the models available to this workspace.">
+        <form onSubmit={e => { e.preventDefault(); createKey.mutate({ workspaceRef, data: { label: keyLabel } }); }} className="space-y-4 pt-4">
           <div className="space-y-2">
             <Label>Label</Label>
             <Input required value={keyLabel} placeholder="e.g. chatbot-prod" onChange={e => setKeyLabel(e.target.value)} />
@@ -240,7 +240,7 @@ export function WorkspacePanel({ orgId, workspaceId, backHref, backLabel }: Work
       </Modal>
 
       <Modal open={memberOpen} onOpenChange={setMemberOpen} title="Add Member" description="Members are drawn from the org; the user must already belong to it.">
-        <form onSubmit={e => { e.preventDefault(); addMember.mutate({ workspaceRef: workspaceId, userId: memberId }); }} className="space-y-4 pt-4">
+        <form onSubmit={e => { e.preventDefault(); addMember.mutate({ workspaceRef, userId: memberId }); }} className="space-y-4 pt-4">
           <div className="space-y-2">
             <Label htmlFor="workspace-member">User</Label>
             <Dropdown
@@ -262,12 +262,12 @@ export function WorkspacePanel({ orgId, workspaceId, backHref, backLabel }: Work
         description="Its inference keys and its members go with it.">
         <div className="space-y-4 pt-4">
           <p className="text-sm text-muted-foreground">
-            Deleting <strong>{workspace.name}</strong> cannot be undone. The usage it recorded stays on the org's bill.
+            Deleting <strong>{workspace.name}</strong> cannot be undone. Usage already recorded remains on the organization’s bill.
           </p>
           {deleteError && <p className="text-sm text-destructive">{deleteError}</p>}
           <div className="flex justify-end gap-2 pt-4">
             <Button type="button" variant="outline" onClick={() => setDeleteOpen(false)}>Cancel</Button>
-            <Button variant="destructive" disabled={remove.isPending} onClick={() => remove.mutate({ workspaceRef: workspaceId })}>
+            <Button variant="destructive" disabled={remove.isPending} onClick={() => remove.mutate({ workspaceRef })}>
               Delete Workspace
             </Button>
           </div>
@@ -275,7 +275,7 @@ export function WorkspacePanel({ orgId, workspaceId, backHref, backLabel }: Work
       </Modal>
 
       <Modal open={renameOpen} onOpenChange={setRenameOpen} title="Rename Workspace">
-        <form onSubmit={e => { e.preventDefault(); rename.mutate({ workspaceRef: workspaceId, data: { name } }); }} className="space-y-4 pt-4">
+        <form onSubmit={e => { e.preventDefault(); rename.mutate({ workspaceRef, data: { name } }); }} className="space-y-4 pt-4">
           <div className="space-y-2">
             <Label>Name</Label>
             <Input required value={name} onChange={e => setName(e.target.value)} />

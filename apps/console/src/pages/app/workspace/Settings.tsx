@@ -20,15 +20,15 @@ import { Card, Button, Input, Label, Dropdown, Table, TableBody, TableCell, Tabl
 import { Trash2, Plus, Users, UserMinus } from 'lucide-react';
 
 export default function WorkspaceSettings() {
-  const { workspaceId } = useParams();
+  const { workspaceRef } = useParams();
   const { orgId } = useSession();
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
   const scope = orgScope(orgId!);
 
   const workspacesKey = [...getListWorkspacesQueryKey(), orgId];
-  const { data: workspace, isLoading } = useGetWorkspace(workspaceId!, {
-    query: { queryKey: [...getGetWorkspaceQueryKey(workspaceId!), orgId], retry: false },
+  const { data: workspace, isLoading } = useGetWorkspace(workspaceRef!, {
+    query: { queryKey: [...getGetWorkspaceQueryKey(workspaceRef!), orgId], retry: false },
     request: scope,
   });
 
@@ -38,9 +38,9 @@ export default function WorkspaceSettings() {
   const [memberOpen, setMemberOpen] = useState(false);
   const [memberId, setMemberId] = useState('');
 
-  const membersKey = [...getListMembersQueryKey(workspaceId!), orgId];
+  const membersKey = [...getListMembersQueryKey(workspaceRef!), orgId];
   const orgUsersKey = [...getListOrgUsersQueryKey(), orgId];
-  const { data: members } = useListMembers(workspaceId!, { query: { queryKey: membersKey }, request: scope });
+  const { data: members } = useListMembers(workspaceRef!, { query: { queryKey: membersKey }, request: scope });
   const { data: orgUsers } = useListOrgUsers({ query: { queryKey: orgUsersKey }, request: scope });
   const candidates = orgUsers?.filter(u => !members?.some(m => m.user_id === u.user_id));
 
@@ -55,7 +55,7 @@ export default function WorkspaceSettings() {
     mutation: {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: workspacesKey });
-        queryClient.invalidateQueries({ queryKey: [...getGetWorkspaceQueryKey(workspaceId!), orgId] });
+        queryClient.invalidateQueries({ queryKey: [...getGetWorkspaceQueryKey(workspaceRef!), orgId] });
         setName(null);
       },
     },
@@ -64,12 +64,12 @@ export default function WorkspaceSettings() {
   const remove = useDeleteWorkspace({
     mutation: {
       onSuccess: () => { queryClient.invalidateQueries({ queryKey: workspacesKey }); setLocation('/org'); },
-      onError: (error) => setDeleteError(error.message),
+      onError: () => setDeleteError('We couldn’t delete this workspace. Please try again.'),
     },
     request: scope,
   });
 
-  if (isLoading) return <div className="p-8 text-center text-muted-foreground font-mono text-sm">LOADING WORKSPACE...</div>;
+  if (isLoading) return <div className="p-8 text-center text-muted-foreground font-mono text-sm">Loading workspace...</div>;
   if (!workspace) return <div className="p-8 text-center text-destructive">Workspace not found</div>;
 
   const draft = name ?? workspace.name;
@@ -84,7 +84,7 @@ export default function WorkspaceSettings() {
       <Card className="p-6 space-y-4">
         <h2 className="text-lg font-semibold">General</h2>
         <form
-          onSubmit={e => { e.preventDefault(); rename.mutate({ workspaceRef: workspaceId!, data: { name: draft } }); }}
+          onSubmit={e => { e.preventDefault(); rename.mutate({ workspaceRef: workspaceRef!, data: { name: draft } }); }}
           className="flex items-end gap-3 max-w-md"
         >
           <div className="flex-1 space-y-2">
@@ -97,9 +97,8 @@ export default function WorkspaceSettings() {
           <Label htmlFor="ws-slug">Slug</Label>
           <Input id="ws-slug" readOnly disabled value={workspace.slug} className="font-mono" />
           <p className="text-xs text-muted-foreground">
-            The workspace's handle in URLs and the CLI. Set once at creation, and never changes; the id below works everywhere it does.
+             The workspace slug is used in links and command-line tools and cannot be changed.
           </p>
-          <p className="font-mono text-xs text-muted-foreground">{workspace.id}</p>
         </div>
       </Card>
 
@@ -134,7 +133,7 @@ export default function WorkspaceSettings() {
                           confirmLabel="Remove member"
                           pending={removeMember.isPending}
                           aria-label="Remove member"
-                          onConfirm={() => removeMember.mutate({ workspaceRef: workspaceId!, userId: member.user_id })}>
+                          onConfirm={() => removeMember.mutate({ workspaceRef: workspaceRef!, userId: member.user_id })}>
                           <UserMinus className="w-4 h-4" />
                         </ConfirmButton>
                       </TableCell>
@@ -152,13 +151,12 @@ export default function WorkspaceSettings() {
       <Card className="p-6 space-y-4 border-destructive/30">
         <h2 className="text-lg font-semibold text-destructive">Danger zone</h2>
         <p className="text-sm text-muted-foreground">
-          Deleting <strong>{workspace.name}</strong> cannot be undone. Its inference keys and its members go with it;
-          the usage it recorded stays on the org's bill.
+            Deleting <strong>{workspace.name}</strong> cannot be undone. Usage already recorded remains on the organization’s bill.
         </p>
         {deleteError && <p className="text-sm text-destructive">{deleteError}</p>}
         {confirming ? (
           <div className="flex items-center gap-2">
-            <Button variant="destructive" disabled={remove.isPending} onClick={() => remove.mutate({ workspaceRef: workspaceId! })}>
+            <Button variant="destructive" disabled={remove.isPending} onClick={() => remove.mutate({ workspaceRef: workspaceRef! })}>
               Confirm delete
             </Button>
             <Button variant="outline" onClick={() => setConfirming(false)}>Cancel</Button>
@@ -171,8 +169,8 @@ export default function WorkspaceSettings() {
         )}
       </Card>
 
-      <Modal open={memberOpen} onOpenChange={setMemberOpen} title="Add Member" description="Members are drawn from the org; the user must already belong to it.">
-        <form onSubmit={e => { e.preventDefault(); addMember.mutate({ workspaceRef: workspaceId!, userId: memberId }); }} className="space-y-4 pt-4">
+      <Modal open={memberOpen} onOpenChange={setMemberOpen} title="Add Member" description="Choose someone who already belongs to this organization.">
+        <form onSubmit={e => { e.preventDefault(); addMember.mutate({ workspaceRef: workspaceRef!, userId: memberId }); }} className="space-y-4 pt-4">
           <div className="space-y-2">
             <Label htmlFor="workspace-member">User</Label>
             <Dropdown

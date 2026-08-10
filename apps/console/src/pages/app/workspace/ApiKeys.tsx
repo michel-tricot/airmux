@@ -15,13 +15,13 @@ import { formatDate } from '@/lib/format';
 import { KeyRevealDialog } from '@/components/KeyRevealDialog';
 
 export default function WorkspaceApiKeys() {
-  const { workspaceId } = useParams();
+  const { workspaceRef } = useParams();
   const { orgId } = useSession();
   const queryClient = useQueryClient();
   const scope = orgScope(orgId!);
 
-  const keysKey = [...getListInferenceKeysQueryKey(workspaceId!), orgId];
-  const { data: keys } = useListInferenceKeys(workspaceId!, { query: { queryKey: keysKey }, request: scope });
+  const keysKey = [...getListInferenceKeysQueryKey(workspaceRef!), orgId];
+  const { data: keys } = useListInferenceKeys(workspaceRef!, { query: { queryKey: keysKey }, request: scope });
 
   const [keyOpen, setKeyOpen] = useState(false);
   const [keyLabel, setKeyLabel] = useState('');
@@ -39,7 +39,7 @@ export default function WorkspaceApiKeys() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">API Keys</h1>
-          <p className="text-muted-foreground mt-1 text-sm">Inference keys call the gateway with the models this workspace's org is entitled to.</p>
+          <p className="text-muted-foreground mt-1 text-sm">Keys let applications send requests to the models available to this workspace.</p>
         </div>
         <Button onClick={() => setKeyOpen(true)}><Plus className="w-4 h-4 mr-1" /> Generate Key</Button>
       </div>
@@ -70,7 +70,7 @@ export default function WorkspaceApiKeys() {
                         description="Requests using this inference key will stop working immediately. This cannot be undone."
                         confirmLabel="Revoke key"
                         pending={revokeKey.isPending}
-                        onConfirm={() => revokeKey.mutate({ workspaceRef: workspaceId!, keyId: key.id })}>
+                        onConfirm={() => revokeKey.mutate({ workspaceRef: workspaceRef!, keyId: key.id })}>
                         <Ban className="w-4 h-4 mr-1" /> Revoke
                       </ConfirmButton>
                     )}
@@ -84,8 +84,8 @@ export default function WorkspaceApiKeys() {
         )}
       </Card>
 
-      <Modal open={keyOpen} onOpenChange={setKeyOpen} title="Generate Inference Key" description="This key calls the gateway with the models this workspace's org is entitled to.">
-        <form onSubmit={e => { e.preventDefault(); createKey.mutate({ workspaceRef: workspaceId!, data: { label: keyLabel } }); }} className="space-y-4 pt-4">
+      <Modal open={keyOpen} onOpenChange={setKeyOpen} title="Generate Inference Key" description="Keys let applications send requests to the models available to this workspace.">
+        <form onSubmit={e => { e.preventDefault(); createKey.mutate({ workspaceRef: workspaceRef!, data: { label: keyLabel } }); }} className="space-y-4 pt-4">
           <div className="space-y-2">
             <Label>Label</Label>
             <Input required value={keyLabel} placeholder="e.g. chatbot-prod" onChange={e => setKeyLabel(e.target.value)} />

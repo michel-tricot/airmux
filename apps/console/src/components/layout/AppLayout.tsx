@@ -33,21 +33,30 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [createOpen, setCreateOpen] = useState(false);
   const [wsName, setWsName] = useState('');
 
-  // /org/workspaces/<id>[/section] — the id selects the workspace, the tail names the section.
+  // /org/workspaces/<slug>[/section] — the slug selects the workspace, the tail names the section.
   const match = location.match(/^\/org\/workspaces\/([^/]+)(\/[^/]+)?/);
-  const activeWorkspaceId = match?.[1] ?? '';
+  const activeWorkspaceRef = match?.[1] ?? '';
   const activeSuffix = match?.[2] ?? '';
+  const activeWorkspace = workspaces?.find(ws => ws.slug === activeWorkspaceRef || ws.id === activeWorkspaceRef);
+  const activeWorkspaceSlug = activeWorkspace?.slug ?? activeWorkspaceRef;
 
-  const switchWorkspace = (id: string) => {
+  const switchWorkspace = (slug: string) => {
     // Keep the section when hopping between workspaces so the context survives the switch.
-    setLocation(`/org/workspaces/${id}${activeSuffix}`);
+    setLocation(`/org/workspaces/${slug}${activeSuffix}`);
   };
 
   // Remember the last-selected workspace per org so returning users land where they left off.
   const lastWsKey = `airllm_last_ws_${orgId}`;
   useEffect(() => {
-    if (activeWorkspaceId) localStorage.setItem(lastWsKey, activeWorkspaceId);
-  }, [activeWorkspaceId, lastWsKey]);
+    if (activeWorkspaceSlug) localStorage.setItem(lastWsKey, activeWorkspaceSlug);
+  }, [activeWorkspaceSlug, lastWsKey]);
+
+  // Normalize old UUID-based links to the canonical slug URL.
+  useEffect(() => {
+    if (activeWorkspace && activeWorkspaceRef !== activeWorkspace.slug) {
+      setLocation(`/org/workspaces/${activeWorkspace.slug}${activeSuffix}`, { replace: true });
+    }
+  }, [activeWorkspace, activeWorkspaceRef, activeSuffix, setLocation]);
 
   // On first entry at /org, jump to the last-selected (or first) workspace by default.
   // Only once per layout mount, so the "Organization → Overview" nav link stays reachable.
@@ -57,8 +66,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     autoPicked.current = true;
     if (location !== '/org' || workspaces.length === 0) return;
     const last = localStorage.getItem(lastWsKey);
-    const target = workspaces.find(ws => ws.id === last) ?? workspaces[0];
-    setLocation(`/org/workspaces/${target.id}`, { replace: true });
+    const target = workspaces.find(ws => ws.slug === last || ws.id === last) ?? workspaces[0];
+    setLocation(`/org/workspaces/${target.slug}`, { replace: true });
   }, [workspaces, location, lastWsKey, setLocation]);
 
   const createWorkspace = useCreateWorkspace({
@@ -67,7 +76,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         queryClient.invalidateQueries({ queryKey: workspacesKey });
         setCreateOpen(false);
         setWsName('');
-        setLocation(`/org/workspaces/${created.id}`);
+        setLocation(`/org/workspaces/${created.slug}`);
       },
     },
     request: orgScope(orgId!),
@@ -101,20 +110,20 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
         <div className="p-3 border-b border-border/50 shrink-0">
           <Dropdown
-            value={activeWorkspaceId}
+            value={activeWorkspaceSlug}
             onValueChange={switchWorkspace}
             aria-label="Workspace"
             placeholder="Select a workspace"
             className="bg-muted font-medium"
-            options={(workspaces ?? []).map(ws => ({ value: ws.id, label: ws.name }))}
+            options={(workspaces ?? []).map(ws => ({ value: ws.slug, label: ws.name }))}
             actions={[{ label: 'Create Workspace', icon: <Plus className="h-4 w-4" />, onSelect: () => setCreateOpen(true) }]}
           />
         </div>
 
         <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
-          {activeWorkspaceId ? (
+          {activeWorkspaceSlug ? (
             SECTIONS.map(({ label, suffix, icon: Icon, soon }) => {
-              const href = `/org/workspaces/${activeWorkspaceId}${suffix}`;
+              const href = `/org/workspaces/${activeWorkspaceSlug}${suffix}`;
               const isActive = location === href;
               return (
                 <Link key={suffix} href={href} className={cn(

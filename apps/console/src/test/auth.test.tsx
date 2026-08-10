@@ -33,23 +33,25 @@ function withTwoOrgs() {
       const org = request.headers.get('X-Org-Id');
       if (org === ORG.id) {
         return HttpResponse.json([
-          { id: 'ws-acme', org_id: ORG.id, name: 'Acme Production', created_at: now, updated_at: now, deleted_at: null },
+           { id: 'ws-acme', org_id: ORG.id, name: 'Acme Production', slug: 'acme-production', created_at: now, updated_at: now, deleted_at: null },
         ]);
       }
       if (org === ORG2.id) {
         return HttpResponse.json([
-          { id: 'ws-beta', org_id: ORG2.id, name: 'Beta Staging', created_at: now, updated_at: now, deleted_at: null },
+           { id: 'ws-beta', org_id: ORG2.id, name: 'Beta Staging', slug: 'beta-staging', created_at: now, updated_at: now, deleted_at: null },
         ]);
       }
       return new HttpResponse(null, { status: 403 });
     }),
     // /org now defaults into a workspace, so its detail endpoint must resolve too.
-    http.get('/v1/org/workspaces/:workspaceId', ({ params }) => {
+    http.get('/v1/org/workspaces/:workspaceRef', ({ params }) => {
       const rows = {
-        'ws-acme': { id: 'ws-acme', org_id: ORG.id, name: 'Acme Production', created_at: now, updated_at: now, deleted_at: null },
-        'ws-beta': { id: 'ws-beta', org_id: ORG2.id, name: 'Beta Staging', created_at: now, updated_at: now, deleted_at: null },
+        'ws-acme': { id: 'ws-acme', org_id: ORG.id, name: 'Acme Production', slug: 'acme-production', created_at: now, updated_at: now, deleted_at: null },
+        'ws-beta': { id: 'ws-beta', org_id: ORG2.id, name: 'Beta Staging', slug: 'beta-staging', created_at: now, updated_at: now, deleted_at: null },
+        'acme-production': { id: 'ws-acme', org_id: ORG.id, name: 'Acme Production', slug: 'acme-production', created_at: now, updated_at: now, deleted_at: null },
+        'beta-staging': { id: 'ws-beta', org_id: ORG2.id, name: 'Beta Staging', slug: 'beta-staging', created_at: now, updated_at: now, deleted_at: null },
       } as const;
-      const ws = rows[params.workspaceId as keyof typeof rows];
+      const ws = rows[params.workspaceRef as keyof typeof rows];
       return ws ? HttpResponse.json(ws) : new HttpResponse(null, { status: 404 });
     }),
   );
@@ -62,7 +64,7 @@ describe('sign-in gate', () => {
       http.get('/v1/instance/oss/claim', () => HttpResponse.json({ claimed: true })),
     );
     renderAt('/org');
-    expect(await screen.findByRole('heading', { name: 'Sign in to Gateway' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument();
     expect(screen.queryByText('Organization Overview')).not.toBeInTheDocument();
   });
 });

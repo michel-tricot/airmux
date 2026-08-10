@@ -30,7 +30,7 @@ export default function Organizations() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Organizations</h1>
-          <p className="text-muted-foreground mt-1 text-sm">Tenants of the instance; every key, bundle and event belongs to one.</p>
+          <p className="text-muted-foreground mt-1 text-sm">Organizations group your keys, policies, and usage.</p>
         </div>
         <Button onClick={() => setCreateOpen(true)} className="gap-2">
           <Plus className="w-4 h-4" /> New Organization
@@ -90,7 +90,7 @@ export default function Organizations() {
         )}
       </Card>
 
-      <Modal open={createOpen} onOpenChange={setCreateOpen} title="Create Organization" description="Set up a new tenant.">
+      <Modal open={createOpen} onOpenChange={setCreateOpen} title="Create Organization" description="Set up a new organization.">
         <form onSubmit={(e) => { e.preventDefault(); createOrg.mutate({ data: { name } }); }} className="space-y-4 pt-4">
           <div className="space-y-2">
             <Label htmlFor="name">Name</Label>

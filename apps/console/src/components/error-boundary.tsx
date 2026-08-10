@@ -43,17 +43,12 @@ function DefaultFallback({ error, resetError }: ErrorFallbackProps) {
           Something went wrong
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          This part of the app hit an error. The rest of the app is still
-          running.
+          We couldn’t load this page. Other parts of the app are still
+          available.
         </p>
-        {/* Dev only: messages can carry API responses and other internals. */}
-        {import.meta.env.DEV ? (
-          <div className="mt-4 border border-border bg-card p-4 rounded text-left">
-            <pre className="overflow-x-auto text-xs text-card-foreground">
-              {error.message || String(error)}
-            </pre>
-          </div>
-        ) : null}
+        <p className="mt-3 text-sm text-muted-foreground">
+          Try again or contact support if the problem continues.
+        </p>
         <button
           type="button"
           onClick={resetError}

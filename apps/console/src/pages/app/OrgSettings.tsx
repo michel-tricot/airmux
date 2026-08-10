@@ -69,21 +69,21 @@ export default function AppOrgSettings() {
         </div>
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Organization Settings</h1>
-          <p className="text-muted-foreground mt-1 text-sm">Management keys for this API, and the signed bundles data planes poll.</p>
+          <p className="text-muted-foreground mt-1 text-sm">Manage automation credentials and published organization policies.</p>
         </div>
       </div>
 
       <Tabs defaultValue="keys" className="w-full">
         <TabsList className="mb-4">
-          <TabsTrigger value="keys" className="gap-2"><Key className="w-4 h-4" /> Management Keys</TabsTrigger>
-          <TabsTrigger value="bundles" className="gap-2"><Package className="w-4 h-4" /> Bundles</TabsTrigger>
+          <TabsTrigger value="keys" className="gap-2"><Key className="w-4 h-4" /> Automation Keys</TabsTrigger>
+          <TabsTrigger value="bundles" className="gap-2"><Package className="w-4 h-4" /> Policies</TabsTrigger>
           <TabsTrigger value="members" className="gap-2"><Users className="w-4 h-4" /> Members</TabsTrigger>
           <TabsTrigger value="activity" className="gap-2"><Activity className="w-4 h-4" /> Activity</TabsTrigger>
         </TabsList>
 
         <TabsContent value="keys" className="space-y-4 mt-0">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold">Management Keys</h2>
+            <h2 className="text-lg font-semibold">Automation Keys</h2>
             <Button onClick={() => setKeyOpen(true)} size="sm" className="shadow-sm"><Plus className="w-4 h-4 mr-1" /> Generate Key</Button>
           </div>
           <Card>
@@ -93,7 +93,7 @@ export default function AppOrgSettings() {
                   <TableRow>
                     <TableHead>Label</TableHead>
                     <TableHead>Key</TableHead>
-                    <TableHead>Scopes</TableHead>
+                    <TableHead>Permissions</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Created</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
@@ -104,7 +104,7 @@ export default function AppOrgSettings() {
                     <TableRow key={key.id}>
                       <TableCell className="font-medium">{key.label}</TableCell>
                       <TableCell className="font-mono text-xs text-muted-foreground">{key.prefix}…</TableCell>
-                      <TableCell className="font-mono text-xs text-muted-foreground">{key.scopes?.join(', ') ?? 'all'}</TableCell>
+                        <TableCell className="font-mono text-xs text-muted-foreground">{key.scopes?.join(', ') ?? 'All permissions'}</TableCell>
                       <TableCell><Badge variant={key.revoked ? 'outline' : 'success'}>{key.revoked ? 'REVOKED' : 'ACTIVE'}</Badge></TableCell>
                       <TableCell className="text-muted-foreground text-sm">{formatDate(key.created_at)}</TableCell>
                       <TableCell className="text-right">
@@ -131,9 +131,9 @@ export default function AppOrgSettings() {
 
         <TabsContent value="bundles" className="space-y-4 mt-0">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold">Policy Bundles</h2>
+            <h2 className="text-lg font-semibold">Access Policies</h2>
             <Button onClick={() => compile.mutate()} size="sm" disabled={compile.isPending}>
-              <RefreshCw className="w-4 h-4 mr-1" /> {compile.isPending ? 'Compiling...' : 'Compile Now'}
+              <RefreshCw className="w-4 h-4 mr-1" /> {compile.isPending ? 'Publishing...' : 'Publish policy'}
             </Button>
           </div>
           <Card>
@@ -142,8 +142,8 @@ export default function AppOrgSettings() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Version</TableHead>
-                    <TableHead>Bundle ID</TableHead>
-                    <TableHead>Issued</TableHead>
+                    <TableHead>Policy ID</TableHead>
+                    <TableHead>Published</TableHead>
                     <TableHead className="text-right">Expires</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -159,7 +159,7 @@ export default function AppOrgSettings() {
                 </TableBody>
               </Table>
             ) : (
-              <div className="p-8 text-center text-muted-foreground">No bundles compiled for this org yet.</div>
+              <div className="p-8 text-center text-muted-foreground">No policies have been published yet.</div>
             )}
           </Card>
         </TabsContent>
@@ -174,7 +174,7 @@ export default function AppOrgSettings() {
                   <TableRow>
                     <TableHead>Name</TableHead>
                     <TableHead>Email</TableHead>
-                    <TableHead className="text-right">Kind</TableHead>
+                    <TableHead className="text-right">Account type</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -189,7 +189,7 @@ export default function AppOrgSettings() {
                       <TableCell className="text-muted-foreground">{member.email}</TableCell>
                       <TableCell className="text-right">
                         <Badge variant={member.service_account ? 'secondary' : 'outline'}>
-                          {member.service_account ? 'SERVICE' : 'HUMAN'}
+                          {member.service_account ? 'Service account' : 'User'}
                         </Badge>
                       </TableCell>
                     </TableRow>
@@ -203,16 +203,16 @@ export default function AppOrgSettings() {
         </TabsContent>
         <TabsContent value="activity" className="space-y-4 mt-0">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold">Recent Changes</h2>
+            <h2 className="text-lg font-semibold">Recent activity</h2>
           </div>
           <Card>
             {activity && activity.length > 0 ? (
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Action</TableHead>
-                    <TableHead>Resource</TableHead>
-                    <TableHead>Actor</TableHead>
+                    <TableHead>Change</TableHead>
+                    <TableHead>Item</TableHead>
+                    <TableHead>Changed by</TableHead>
                     <TableHead className="text-right">When</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -244,7 +244,7 @@ export default function AppOrgSettings() {
         </TabsContent>
       </Tabs>
 
-      <Modal open={keyOpen} onOpenChange={setKeyOpen} title="Generate Management Key" description="Keys carry the acting user's access to this API for scripts and the CLI.">
+      <Modal open={keyOpen} onOpenChange={setKeyOpen} title="Create an automation key" description="Use this key to authenticate automation tools.">
         <form onSubmit={e => { e.preventDefault(); mintKey.mutate({ data: { label } }); }} className="space-y-4 pt-4">
           <div className="space-y-2">
             <Label>Label</Label>
