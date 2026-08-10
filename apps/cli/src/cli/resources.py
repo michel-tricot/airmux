@@ -12,6 +12,7 @@ from rich.live import Live
 
 from cli.client import instance_client, instance_get, org_client, org_get, payload, payload_rows, post_expecting, resolve_workspace
 from cli.common import (
+    ADMIN,
     bundles_app,
     console,
     data_planes_app,
@@ -116,58 +117,54 @@ BUNDLE_COLS = [
 ]
 
 
-@orgs_app.command("list")
+@orgs_app.command("list", rich_help_panel=ADMIN)
 def orgs_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
-    """List orgs; needs the instance management key."""
+    """List every organization on this instance."""
     print_rows("orgs", instance_get("/v1/orgs", control_plane_url), ORG_COLS, fmt)
 
 
-WorkspaceOption = Annotated[str, typer.Option("--workspace", "-w", help="Workspace slug, name, or id; defaults to the profile's workspace")]
+WorkspaceOption = Annotated[str, typer.Option("--workspace", "-w", help="Workspace name or id; defaults to your selected workspace")]
 
 
 @workspaces_app.command("list")
 def workspaces_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
-    """List the org's workspaces."""
+    """List your workspaces."""
     print_rows("workspaces", org_get("/v1/org/workspaces", control_plane_url), WORKSPACE_COLS, fmt)
 
 
 @workspaces_app.command("use")
 def workspaces_use(workspace: str, control_plane_url: str = "") -> None:
-    """Make a workspace the default for key commands, stored in the active profile.
-
-    The one workspace command that reads before it writes: a default typed wrong here would 404
-    from every later command instead of this one.
-    """
+    """Select the workspace that key commands use by default."""
     profile = active_profile()
     if profile is None:
-        console.print("[red]no active profile: run `airllm login` first[/red]")
+        console.print("[red]Not signed in. Run [bold]airllm login[/bold].[/red]")
         raise typer.Exit(1)
     with org_client(control_plane_url) as c:
         resp = c.get(f"/v1/org/workspaces/{workspace}")
     if not resp.is_success:
-        console.print(f"[red]no workspace [bold]{workspace}[/bold] in this org; run `airllm workspaces list` to see them[/red]")
+        console.print(f"[red]No workspace [bold]{workspace}[/bold]. See [bold]airllm workspaces list[/bold].[/red]")
         raise typer.Exit(1)
     chosen = payload(resp)
     name = str(profile.pop("name"))
     upsert_profile(name, {**profile, "workspace": chosen["slug"], "workspace_name": chosen["name"]})
-    console.print(f"workspace [bold]{chosen['slug']}[/bold] is now the default for [bold]{name}[/bold]")
+    console.print(f"Using workspace [bold]{chosen['slug']}[/bold]")
 
 
 @workspace_members_app.command("list")
 def workspace_members_list(workspace: WorkspaceOption = "", control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
-    """List a workspace's members."""
+    """List who can use this workspace."""
     workspace_ref = resolve_workspace(workspace)
     print_rows("members", org_get(f"/v1/org/workspaces/{workspace_ref}/members", control_plane_url), MEMBER_COLS, fmt)
 
 
 @workspace_members_app.command("add")
 def workspace_members_add(user_id: str, workspace: WorkspaceOption = "", control_plane_url: str = "") -> None:
-    """Add an org member to a workspace; key operations there start working immediately."""
+    """Give someone access to this workspace."""
     workspace_ref = resolve_workspace(workspace)
     with org_client(control_plane_url) as c:
         resp = c.put(f"/v1/org/workspaces/{workspace_ref}/members/{user_id}")
         resp.raise_for_status()
-    console.print(f"user [bold]{user_id}[/bold] is now a member of workspace [bold]{workspace_ref}[/bold]")
+    console.print(f"Added [bold]{user_id}[/bold] to [bold]{workspace_ref}[/bold]")
 
 
 @workspace_members_app.command("remove")
@@ -177,24 +174,24 @@ def workspace_members_remove(user_id: str, workspace: WorkspaceOption = "", cont
     with org_client(control_plane_url) as c:
         resp = c.delete(f"/v1/org/workspaces/{workspace_ref}/members/{user_id}")
         resp.raise_for_status()
-    console.print(f"user [bold]{user_id}[/bold] removed from workspace [bold]{workspace_ref}[/bold]")
+    console.print(f"Removed [bold]{user_id}[/bold] from [bold]{workspace_ref}[/bold]")
 
 
 @inference_keys_app.command("list")
 def inference_keys_list(workspace: WorkspaceOption = "", control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
-    """List the workspace's inference keys with their status."""
+    """List this workspace's API keys."""
     workspace_ref = resolve_workspace(workspace)
     print_rows("inference keys", org_get(f"/v1/org/workspaces/{workspace_ref}/inference-keys", control_plane_url), KEY_COLS, fmt)
 
 
 @inference_keys_app.command("revoke")
 def inference_keys_revoke(key_id: str, workspace: WorkspaceOption = "", control_plane_url: str = "") -> None:
-    """Disable a key; drops out of the bundle at the next compile."""
+    """Revoke an API key."""
     workspace_ref = resolve_workspace(workspace)
     with org_client(control_plane_url) as c:
         resp = c.delete(f"/v1/org/workspaces/{workspace_ref}/inference-keys/{key_id}")
         resp.raise_for_status()
-    console.print(f"key [bold]{key_id}[/bold] revoked, run `airllm bundles compile` to propagate")
+    console.print(f"Revoked [bold]{key_id}[/bold]")
 
 
 _SCOPES_COL = Col("scopes", "Scopes", style="cyan", max_width=40, fmt=lambda v: ", ".join(map(str, v)) if isinstance(v, list) else "all")
@@ -243,11 +240,11 @@ def users_create(
     name: str = "",
     control_plane_url: str = "",
 ) -> None:
-    """Create a user; add org memberships with `airllm orgs members add`. Needs the instance key."""
+    """Create an account. Add it to an organization with airllm orgs members add."""
     body = {"email": email, "name": name}
     with instance_client(control_plane_url) as c:
         resp = payload(post_expecting(c, "/v1/users", body, ok=(200,)))
-    console.print(f"user [bold]{resp['id']}[/bold] created for {resp['email']}")
+    console.print(f"Created [bold]{resp['email']}[/bold]")
 
 
 @service_accounts_app.command("create")
@@ -255,25 +252,25 @@ def service_accounts_create(
     name: str | None = typer.Argument(None, help="Service account name; prompted for when omitted"),
     control_plane_url: str = "",
 ) -> None:
-    """Create a service account; its email is derived as name-<id>@airbytesvcaccount.ai. Needs the instance management key."""
+    """Create a machine account for CI or automation."""
     if not name:
         name = typer.prompt("name")
     with instance_client(control_plane_url) as c:
         resp = payload(post_expecting(c, "/v1/service-accounts", {"name": name}, ok=(200,)))
-    console.print(f"service account [bold]{resp['id']}[/bold] created as {resp['email']}")
-    console.print(f"[dim]add it to your active org with `airllm orgs members add {resp['id']}`[/dim]")
+    console.print(f"Created service account [bold]{resp['email']}[/bold]")
+    console.print(f"[dim]Add it to your organization: airllm orgs members add {resp['id']}[/dim]")
 
 
 @service_accounts_app.command("list")
 def service_accounts_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
-    """List service accounts; needs the instance management key."""
+    """List machine accounts."""
     rows = instance_get("/v1/users", control_plane_url, {"service_account": True})
     print_rows("service accounts", rows, USER_COLS, fmt)
 
 
 @users_app.command("list")
 def users_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
-    """List users with their org memberships; needs the instance management key."""
+    """List every account and the organizations it belongs to."""
     print_rows("users", instance_get("/v1/users", control_plane_url), USER_COLS, fmt)
 
 
@@ -289,7 +286,7 @@ def org_members_add(user_id: str, control_plane_url: str = "") -> None:
     with org_client(control_plane_url) as c:
         resp = c.put(f"/v1/org/users/{user_id}")
         resp.raise_for_status()
-    console.print(f"user [bold]{user_id}[/bold] is now a member of the active org")
+    console.print(f"Added [bold]{user_id}[/bold] to your organization")
 
 
 @org_members_app.command("remove")
@@ -298,25 +295,23 @@ def org_members_remove(user_id: str, control_plane_url: str = "") -> None:
     with org_client(control_plane_url) as c:
         resp = c.delete(f"/v1/org/users/{user_id}")
         resp.raise_for_status()
-    console.print(f"user [bold]{user_id}[/bold] removed from the active org")
+    console.print(f"Removed [bold]{user_id}[/bold] from your organization")
 
 
 @management_keys_app.command("list")
 def management_keys_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
-    """List the org's management keys."""
+    """List your automation keys."""
     print_rows("management keys", org_get("/v1/org/management-keys", control_plane_url), MANAGEMENT_KEY_COLS, fmt)
 
 
 @management_keys_app.command("mint")
 def management_keys_mint(
-    label: str = typer.Option(..., "--label", help="Where the key will live, e.g. ci; shown in listings"),
-    user: str = typer.Option("", "--user", help="Org member the key is minted for; defaults to you"),
-    scope: Annotated[
-        list[str] | None, typer.Option("--scope", help="Restrict the key to a scope, repeatable (e.g. inference-keys:read); omit for full authority")
-    ] = None,
+    label: str = typer.Option(..., "--label", help="What this key is for, e.g. ci"),
+    user: str = typer.Option("", "--user", help="Who the key belongs to; defaults to you"),
+    scope: Annotated[list[str] | None, typer.Option("--scope", help="Limit what the key can do, repeatable (e.g. inference-keys:read)")] = None,
     control_plane_url: str = "",
 ) -> None:
-    """Mint a management key in the active org; the secret is shown once and never stored."""
+    """Create an automation key. Shown once, never stored."""
     body = {"user_id": user or None, "scopes": scope or None, "label": label}
     with org_client(control_plane_url) as c:
         resp = payload(post_expecting(c, "/v1/org/management-keys", body, ok=(200,)))
@@ -330,44 +325,42 @@ def management_keys_mint(
 
 @management_keys_app.command("revoke")
 def management_keys_revoke(key_id: str, control_plane_url: str = "") -> None:
-    """Revoke one of the org's management keys; takes effect on the next request."""
+    """Revoke an automation key."""
     with org_client(control_plane_url) as c:
         resp = c.delete(f"/v1/org/management-keys/{key_id}")
         resp.raise_for_status()
-    console.print(f"management key [bold]{key_id}[/bold] revoked")
+    console.print(f"Revoked [bold]{key_id}[/bold]")
 
 
 @instance_keys_app.command("list")
 def instance_keys_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
-    """List the instance keys; there is no org axis to filter on."""
+    """List admin keys."""
     print_rows("instance keys", instance_get("/v1/instance/instance-keys", control_plane_url), INSTANCE_KEY_COLS, fmt)
 
 
 @instance_keys_app.command("mint")
 def instance_keys_mint(
-    label: str = typer.Option(..., "--label", help="Where the key will live, e.g. ci or a data plane; shown in listings"),
-    user: str = typer.Option("", "--user", help="Instance admin the key is minted for; defaults to you"),
-    scope: Annotated[
-        list[str] | None, typer.Option("--scope", help="Restrict the key to a scope, repeatable (e.g. sync); omit for full authority")
-    ] = None,
+    label: str = typer.Option(..., "--label", help="What this key is for, e.g. ci"),
+    user: str = typer.Option("", "--user", help="Who the key belongs to; defaults to you"),
+    scope: Annotated[list[str] | None, typer.Option("--scope", help="Limit what the key can do, repeatable (e.g. sync)")] = None,
     control_plane_url: str = "",
 ) -> None:
-    """Mint an instance key; the secret is shown once and never stored."""
+    """Create an admin key. Shown once, never stored."""
     body = {"user_id": user or None, "scopes": scope or None, "label": label}
     with instance_client(control_plane_url) as c:
         resp = payload(post_expecting(c, "/v1/instance/instance-keys", body, ok=(200,)))
     restriction = f" restricted to {', '.join(resp['scopes'])}" if resp.get("scopes") else ""
-    console.print(f"instance key [bold]{resp['id']}[/bold] minted for user [bold]{resp['user_id']}[/bold]{restriction}, secret (shown once):")
+    console.print(f"New admin key for [bold]{resp['user_id']}[/bold]{restriction}, shown once:")
     console.print(resp["token"])
 
 
 @instance_keys_app.command("revoke")
 def instance_keys_revoke(key_id: str, control_plane_url: str = "") -> None:
-    """Revoke an instance key; takes effect on the next request."""
+    """Revoke an admin key."""
     with instance_client(control_plane_url) as c:
         resp = c.delete(f"/v1/instance/instance-keys/{key_id}")
         resp.raise_for_status()
-    console.print(f"instance key [bold]{key_id}[/bold] revoked")
+    console.print(f"Revoked [bold]{key_id}[/bold]")
 
 
 def _taxonomy(control_plane_url: str) -> dict:
@@ -379,28 +372,28 @@ def _taxonomy(control_plane_url: str) -> dict:
 
 @providers_app.command("list")
 def providers_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
-    """List the instance's upstream providers and their credential references."""
+    """List the providers you can route to."""
     print_rows("providers", _taxonomy(control_plane_url)["providers"], PROVIDER_COLS, fmt)
 
 
 @models_app.command("list")
 def models_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
-    """List the instance's routable models with pricing and capabilities."""
+    """List the models you can route to, with pricing."""
     print_rows("models", _taxonomy(control_plane_url)["models"], MODEL_COLS, fmt)
 
 
 @bundles_app.command("list")
 def bundles_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
-    """List the org's compiled bundle versions and their validity windows."""
+    """List published configuration versions."""
     print_rows("bundles", org_get("/v1/org/bundles", control_plane_url), BUNDLE_COLS, fmt)
 
 
 @bundles_app.command("compile")
 def bundles_compile(control_plane_url: str = "") -> None:
-    """Recompile and sign the org's bundle."""
+    """Publish your current configuration to your gateways."""
     with org_client(control_plane_url) as c:
         compiled = payload(post_expecting(c, "/v1/org/bundles/compile", {}, ok=(200,)))
-    console.print(f"bundle [bold]{compiled['id']}[/bold] v{compiled['version']} compiled")
+    console.print(f"Published v{compiled['version']}")
 
 
 INSTANCE_COLS = [
@@ -415,11 +408,11 @@ INSTANCE_COLS = [
 
 @data_planes_app.command("list")
 def data_planes_list(
-    all_: bool = typer.Option(False, "--all", help="Include offline data planes (kept as history)"),
+    all_: bool = typer.Option(False, "--all", help="Include gateways that are offline"),
     control_plane_url: str = "",
     fmt: FormatOption = OutputFormat.table,
 ) -> None:
-    """List the instance's data planes; offline ones are shown only with --all. Needs the instance management key."""
+    """List connected gateways."""
     load_dotenv(find_dotenv(usecwd=True))
     with instance_client(control_plane_url) as c:
         resp = c.get("/v1/instance/data-planes", params={"include_offline": all_})
@@ -429,13 +422,13 @@ def data_planes_list(
 
 @events_app.command("list")
 def events_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
-    """List the org's most recent usage events, newest first."""
+    """List recent requests, newest first."""
     print_rows("events", org_get("/v1/org/events", control_plane_url), EVENT_COLS, fmt)
 
 
 @events_app.command("tail")
 def events_tail(interval: float = 2.0, keep: int = 30, control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
-    """Follow the org's usage events; a live table by default, one json or text line per event otherwise."""
+    """Follow requests as they happen."""
     rows: deque[dict] = deque(maxlen=keep)
     fresh_ids: set[str] = set()
 
@@ -478,28 +471,29 @@ def events_tail(interval: float = 2.0, keep: int = 30, control_plane_url: str = 
 
 
 def _key_created(resp: dict) -> None:
-    console.print(f"key [bold]{resp['id']}[/bold] minted, token (shown once):")
+    console.print("Your new key, shown once:")
     console.print(resp["token"])
-    console.print("[dim]run `airllm bundles compile` to include it in the next bundle[/dim]")
+    console.print("[dim]Run airllm bundles compile to apply.[/dim]")
 
 
 register_create(
     orgs_app,
     OrgCreate,
     "/v1/orgs",
-    "Create an org; keys and bundles hang off it. Needs the instance management key.",
-    lambda resp: console.print(f"org [bold]{resp['id']}[/bold] created, add members with `airllm orgs members add <user>` in its scope"),
+    "Create an organization.",
+    lambda resp: console.print(f"Created [bold]{resp['name']}[/bold]. Add people with airllm orgs members add <user>."),
     client=instance_client,
+    panel=ADMIN,
 )
 
 
 @inference_keys_app.command("create")
 def inference_keys_create(
-    label: str = typer.Argument(..., help="What the key is for, e.g. staging; shown in listings"),
+    label: str = typer.Argument(..., help="What this key is for, e.g. staging"),
     workspace: WorkspaceOption = "",
     control_plane_url: str = "",
 ) -> None:
-    """Mint an inference key in a workspace; the token is shown once and never stored."""
+    """Create an API key. Shown once, never stored."""
     workspace_ref = resolve_workspace(workspace)
     with org_client(control_plane_url) as c:
         _key_created(payload(post_expecting(c, f"/v1/org/workspaces/{workspace_ref}/inference-keys", {"label": label}, ok=(200,))))
@@ -508,31 +502,33 @@ def inference_keys_create(
 @workspaces_app.command("create")
 def workspaces_create(
     name: str = typer.Argument(..., help="Workspace name, e.g. Staging"),
-    slug: str = typer.Option("", "--slug", help="Handle usable in place of the id, unique in the org; derived from the name when omitted"),
+    slug: str = typer.Option("", "--slug", help="Short handle to use instead of the id; derived from the name when omitted"),
     control_plane_url: str = "",
 ) -> None:
-    """Create a workspace in the active org; you become its first member."""
+    """Create a workspace. You become its first member."""
     with org_client(control_plane_url) as c:
         body = {"name": name, "slug": slug} if slug else {"name": name}
         created = payload(post_expecting(c, "/v1/org/workspaces", body, ok=(200,)))
-    console.print(f"workspace [bold]{created['slug']}[/bold] created, run `airllm workspaces use {created['slug']}` to make it the default")
+    console.print(f"Created [bold]{created['slug']}[/bold]. Select it with airllm workspaces use {created['slug']}.")
 
 
 register_create(
     providers_app,
     ProviderCreate,
     "/v1/taxonomy/providers",
-    "Register an upstream provider for the whole instance. Needs the instance management key.",
-    lambda resp: console.print(f"provider [bold]{resp['id']}[/bold] created, add models then `airllm bundles compile`"),
+    "Add an upstream provider for every organization on this instance.",
+    lambda resp: console.print(f"Added [bold]{resp['name']}[/bold]. Add models, then airllm bundles compile."),
     client=instance_client,
+    panel=ADMIN,
 )
 register_create(
     models_app,
     ModelCreate,
     "/v1/taxonomy/models",
-    "Add a routable model for the whole instance. Needs the instance management key.",
-    lambda resp: console.print(f"model [bold]{resp['id']}[/bold] created, run `airllm bundles compile` to serve it"),
+    "Add a routable model for every organization on this instance.",
+    lambda resp: console.print(f"Added [bold]{resp['name']}[/bold]. Run airllm bundles compile to apply."),
     client=instance_client,
+    panel=ADMIN,
 )
 
 
@@ -558,25 +554,23 @@ def _read_secret(prompt: str) -> str:
         return typer.prompt(prompt, hide_input=True)
     secret = sys.stdin.read().strip()
     if not secret:
-        console.print("[red]no key on stdin: pipe it in, or run this from a terminal to be prompted[/red]")
+        console.print("[red]No key on stdin. Pipe one in, or run this from a terminal.[/red]")
         raise typer.Exit(1)
     return secret
 
 
 @provider_credentials_app.command("add")
 def provider_credentials_add(  # noqa: PLR0913, PLR0917 flags are the command's interface
-    provider: str = typer.Argument(..., help="Provider name from the catalog, e.g. openai"),
-    name: str = typer.Option("default", "--name", help="Handle for this key within the provider and scope, e.g. prod or backup"),
+    provider: str = typer.Argument(..., help="Provider name, e.g. openai"),
+    name: str = typer.Option("default", "--name", help="Name for this key, e.g. prod or backup"),
     workspace: WorkspaceOption = "",
-    priority: int = typer.Option(100, "--priority", help="Lower is tried first; ties break by name"),
-    org_wide: bool = typer.Option(False, "--org", help="Attach to the org rather than to one workspace"),
+    priority: int = typer.Option(100, "--priority", help="Lower is tried first"),
+    org_wide: bool = typer.Option(False, "--org", help="Share across every workspace instead of one"),
     control_plane_url: str = "",
 ) -> None:
-    """Bring a provider key for a workspace, or for the whole org with --org.
+    """Add your own provider key. Read from stdin when piped, prompted for otherwise.
 
-    The key is read from stdin when this is not a terminal and prompted for when it is, so it never
-    reaches the shell history. It goes straight to the secret store; the control plane keeps the
-    last four characters for display and nothing else.
+    Only the last four characters are kept for display.
     """
     secret = _read_secret(f"{provider} API key")
     body = {"provider": provider, "name": name, "value": secret, "priority": priority}
@@ -585,8 +579,8 @@ def provider_credentials_add(  # noqa: PLR0913, PLR0917 flags are the command's 
     with org_client(control_plane_url) as c:
         credential = payload(post_expecting(c, "/v1/org/provider-credentials", body, ok=(200,)))
     scope = credential["scope"]
-    console.print(f"{scope} credential [bold]{credential['name']}[/bold] for [bold]{provider}[/bold] stored (...{credential['fingerprint']})")
-    console.print("run `airllm bundles compile` to propagate")
+    console.print(f"Added [bold]{provider}[/bold] key [bold]{credential['name']}[/bold] to this {scope} (...{credential['fingerprint']})")
+    console.print("[dim]Run airllm bundles compile to apply.[/dim]")
 
 
 @provider_credentials_app.command("list")
@@ -596,7 +590,7 @@ def provider_credentials_list(
     control_plane_url: str = "",
     fmt: FormatOption = OutputFormat.table,
 ) -> None:
-    """List provider credentials in the order the data plane tries them."""
+    """List provider keys, in the order they are tried."""
     params = {} if org_wide else {"workspace": resolve_workspace(workspace)}
     with org_client(control_plane_url) as c:
         resp = c.get("/v1/org/provider-credentials", params=params)
@@ -610,16 +604,14 @@ def provider_credentials_rotate(
     credential_id: str = typer.Argument(..., help="Credential id from `airllm provider-credentials list`"),
     control_plane_url: str = "",
 ) -> None:
-    """Replace a credential's value, keeping its name, priority, and place in the order.
-
-    Read the same way as `add`: piped in, or prompted for."""
+    """Replace a provider key, keeping its name and position."""
     secret = _read_secret("replacement API key")
     with org_client(control_plane_url) as c:
         resp = c.put(f"/v1/org/provider-credentials/{credential_id}/value", json={"value": secret})
         resp.raise_for_status()
         credential = payload(resp)
-    console.print(f"credential [bold]{credential['name']}[/bold] rotated to ...{credential['fingerprint']} (version {credential['version']})")
-    console.print("run `airllm bundles compile` to propagate")
+    console.print(f"Rotated [bold]{credential['name']}[/bold] to ...{credential['fingerprint']}")
+    console.print("[dim]Run airllm bundles compile to apply.[/dim]")
 
 
 @provider_credentials_app.command("rm")
@@ -627,11 +619,11 @@ def provider_credentials_rm(
     credential_id: str = typer.Argument(..., help="Credential id from `airllm provider-credentials list`"),
     control_plane_url: str = "",
 ) -> None:
-    """Delete a credential and the value behind it."""
+    """Delete a provider key."""
     with org_client(control_plane_url) as c:
         resp = c.delete(f"/v1/org/provider-credentials/{credential_id}")
         resp.raise_for_status()
-    console.print(f"credential [bold]{credential_id}[/bold] deleted, run `airllm bundles compile` to propagate")
+    console.print(f"Deleted [bold]{credential_id}[/bold]. Run [bold]airllm bundles compile[/bold] to apply.")
 
 
 @provider_credentials_app.command("disable")
@@ -640,13 +632,10 @@ def provider_credentials_disable(
     enable: bool = typer.Option(False, "--enable", help="Put it back in the pool instead"),
     control_plane_url: str = "",
 ) -> None:
-    """Take a credential out of the pool without deleting its value.
-
-    Same shape as revoking an inference key: it drops out of the next bundle but stays visible.
-    """
+    """Stop using a provider key without deleting it. Use --enable to put it back."""
     with org_client(control_plane_url) as c:
         resp = c.patch(f"/v1/org/provider-credentials/{credential_id}", json={"enabled": enable})
         resp.raise_for_status()
         credential = payload(resp)
-    state = "enabled" if credential["enabled"] else "disabled"
-    console.print(f"credential [bold]{credential['name']}[/bold] {state}, run `airllm bundles compile` to propagate")
+    state = "Enabled" if credential["enabled"] else "Disabled"
+    console.print(f"{state} [bold]{credential['name']}[/bold]. Run [bold]airllm bundles compile[/bold] to apply.")

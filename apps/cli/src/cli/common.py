@@ -14,42 +14,49 @@ def _main() -> None:
 
 
 SETUP = "Setup"
-RESOURCES = "Resources"
+ORG = "Your organization"
+ADMIN = "Instance admin"
 TESTING = "Testing"
+"""The two audiences the commands split across, and the credential each carries.
 
-orgs_app = typer.Typer(help="Orgs")
-org_members_app = typer.Typer(help="Org members, the users a management key's org is made of")
+Everything under ORG works with the key `airllm login` stores. Everything under ADMIN needs an
+instance key, which is a different credential with instance-wide reach; the console mints the first
+one. A few groups serve both, and their admin commands carry ADMIN individually.
+"""
+
+orgs_app = typer.Typer(help="Organizations you belong to")
+org_members_app = typer.Typer(help="People in your organization")
 orgs_app.add_typer(org_members_app, name="members", no_args_is_help=True)
-workspaces_app = typer.Typer(help="Workspaces, the org scopes inference keys live in")
-workspace_members_app = typer.Typer(help="Workspace members, drawn from the org")
+workspaces_app = typer.Typer(help="Isolated environments for keys, credentials and usage")
+workspace_members_app = typer.Typer(help="Who can use a workspace")
 workspaces_app.add_typer(workspace_members_app, name="members", no_args_is_help=True)
-users_app = typer.Typer(help="Users and org memberships")
-service_accounts_app = typer.Typer(help="Service accounts, machine principals with derived emails")
-inference_keys_app = typer.Typer(help="Inference API keys, the caller credentials the gateway verifies")
-management_keys_app = typer.Typer(help="Management API keys, user-bound credentials for one org")
-instance_keys_app = typer.Typer(help="Instance API keys, admin credentials for the instance endpoints")
-providers_app = typer.Typer(help="Upstream providers")
-provider_credentials_app = typer.Typer(help="Provider API keys this org brings; values go to the secret store, never to the database")
-models_app = typer.Typer(help="Routable models")
-bundles_app = typer.Typer(help="Signed policy bundles")
-events_app = typer.Typer(help="Usage events ingested from data planes")
-data_planes_app = typer.Typer(help="Data planes registered with the instance through their heartbeats")
-test_app = typer.Typer(help="Acceptance and load testing", no_args_is_help=True)
+users_app = typer.Typer(help="Accounts across the instance")
+service_accounts_app = typer.Typer(help="Machine accounts for CI and automation")
+inference_keys_app = typer.Typer(help="API keys your apps send requests with")
+management_keys_app = typer.Typer(help="API keys for automating this CLI")
+instance_keys_app = typer.Typer(help="Admin keys for instance-wide operations")
+providers_app = typer.Typer(help="Upstream LLM providers")
+provider_credentials_app = typer.Typer(help="Your own provider API keys")
+models_app = typer.Typer(help="Models you can route to")
+bundles_app = typer.Typer(help="Publish configuration changes to your gateways")
+events_app = typer.Typer(help="Requests, tokens and spend")
+data_planes_app = typer.Typer(help="Gateways connected to this instance")
+test_app = typer.Typer(help="Send test traffic through a gateway", no_args_is_help=True)
 
-for name, sub in (
-    ("orgs", orgs_app),
-    ("workspaces", workspaces_app),
-    ("users", users_app),
-    ("service-accounts", service_accounts_app),
-    ("inference-keys", inference_keys_app),
-    ("management-keys", management_keys_app),
-    ("instance-keys", instance_keys_app),
-    ("providers", providers_app),
-    ("provider-credentials", provider_credentials_app),
-    ("models", models_app),
-    ("bundles", bundles_app),
-    ("events", events_app),
-    ("data-planes", data_planes_app),
+for name, sub, panel in (
+    ("orgs", orgs_app, ORG),
+    ("workspaces", workspaces_app, ORG),
+    ("inference-keys", inference_keys_app, ORG),
+    ("provider-credentials", provider_credentials_app, ORG),
+    ("management-keys", management_keys_app, ORG),
+    ("models", models_app, ORG),
+    ("providers", providers_app, ORG),
+    ("bundles", bundles_app, ORG),
+    ("events", events_app, ORG),
+    ("users", users_app, ADMIN),
+    ("service-accounts", service_accounts_app, ADMIN),
+    ("instance-keys", instance_keys_app, ADMIN),
+    ("data-planes", data_planes_app, ADMIN),
 ):
-    app.add_typer(sub, name=name, rich_help_panel=RESOURCES, no_args_is_help=True)
+    app.add_typer(sub, name=name, rich_help_panel=panel, no_args_is_help=True)
 app.add_typer(test_app, name="test", rich_help_panel=TESTING)

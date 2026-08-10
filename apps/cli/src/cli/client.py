@@ -8,7 +8,7 @@ import typer
 import yaml
 
 from cli.common import console
-from cli.profiles import active_profile
+from cli.profiles import active_profile, admin_keys_url
 
 if TYPE_CHECKING:
     import httpx
@@ -41,7 +41,7 @@ def instance_client(control_plane_url: str = "") -> httpx.Client:
     """Instance-scoped client for /instance routes; takes the raw --control-plane-url override and resolves it itself."""
     token = os.environ.get("GW_INSTANCE_KEY")
     if not token:
-        console.print("[red]GW_INSTANCE_KEY is not set; this command needs an instance key (`airllm instance-keys mint`)[/red]")
+        console.print(f"[red]This needs an admin key. Create one at {admin_keys_url()}, then set GW_INSTANCE_KEY.[/red]")
         raise typer.Exit(1)
     return _bearer_client(token, control_plane_url)
 
@@ -53,7 +53,7 @@ def org_client(control_plane_url: str = "", token: str | None = None) -> httpx.C
         profile = active_profile()
         token = str(profile["token"]) if profile and profile.get("token") else None
     if not token:
-        console.print("[red]no org management key: run `airllm login`[/red]")
+        console.print("[red]Not signed in. Run [bold]airllm login[/bold].[/red]")
         raise typer.Exit(1)
     return _bearer_client(token, control_plane_url)
 
@@ -93,13 +93,13 @@ def resolve_workspace(workspace: str) -> str:
     default = profile.get("workspace") or profile.get("workspace_id")
     if default:
         return str(default)
-    console.print("[red]no workspace: pass --workspace or run `airllm workspaces use <name>`[/red]")
+    console.print("[red]No workspace selected. Pass --workspace, or set a default with [bold]airllm workspaces use <name>[/bold].[/red]")
     raise typer.Exit(1)
 
 
 def post_expecting(client: httpx.Client, path: str, body: dict | None, ok: tuple[int, ...]) -> httpx.Response:
     resp = client.post(path, json=body)
     if resp.status_code not in ok:
-        console.print(f"[red]POST {path} failed: {resp.status_code} {resp.text}[/red]")
+        console.print(f"[red]Request failed ({resp.status_code}): {resp.text}[/red]")
         raise typer.Exit(1)
     return resp

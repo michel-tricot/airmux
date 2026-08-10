@@ -50,7 +50,7 @@ def fill_spec[M: BaseModel](spec_cls: type[M], provided: dict) -> M:
         if not sys.stdin.isatty():
             if has_default:
                 continue
-            console.print(f"[red]missing --{name.replace('_', '-')} and no terminal to prompt for it[/red]")
+            console.print(f"[red]Missing --{name.replace('_', '-')}.[/red]")
             raise typer.Exit(1)
         label = field.description or name.replace("_", " ")
         default = field.get_default(call_default_factory=True) if has_default else None
@@ -71,6 +71,7 @@ def register_create(  # noqa: PLR0913, PLR0917 the six registration facts are th
     help_text: str,
     done: Callable[[dict], None],
     client: Callable[[str], httpx.Client] = org_client,
+    panel: str | None = None,
 ) -> None:
     """Derive a create command from a spec model: one flag and one prompt per field, never hardcoded."""
 
@@ -93,4 +94,4 @@ def register_create(  # noqa: PLR0913, PLR0917 the six registration facts are th
     params.append(inspect.Parameter("control_plane_url", inspect.Parameter.POSITIONAL_OR_KEYWORD, default=typer.Option(""), annotation=str))
     setattr(run, "__signature__", inspect.Signature(params))  # noqa: B010 typer reads the dynamic signature
     run.__doc__ = help_text
-    sub_app.command("create")(run)
+    sub_app.command("create", rich_help_panel=panel)(run)
