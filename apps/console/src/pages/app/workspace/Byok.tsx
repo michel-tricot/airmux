@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import * as z from 'zod';
 import { useParams } from 'wouter';
-import { Plus, KeyRound, RotateCw } from 'lucide-react';
+import { Plus, KeyRound, RefreshCw, Power, Trash2 } from 'lucide-react';
 import type { ProviderCredentialOut } from '@workspace/api-client-react';
 import { useSession } from '@/lib/session';
 import {
@@ -16,6 +16,7 @@ import { Button, Card, Badge, Input, ConfirmButton } from '@/components/ui/eleme
 import { DataTable, type Column } from '@/components/shared/data-table';
 import { FormDialog } from '@/components/shared/form-dialog';
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 const addSchema = z.object({
   provider: z.string().min(1, 'Pick a provider'),
@@ -74,30 +75,51 @@ export default function WorkspaceByok() {
     },
     {
       key: 'actions',
-      header: 'Actions',
-      headClassName: 'text-right',
-      cellClassName: 'text-right space-x-2',
+      header: '',
+      headClassName: 'w-px',
+      cellClassName: 'w-px',
       cell: c => (
-        <>
-          <Button size="sm" variant="ghost" onClick={() => setRotating(c)}>
-            <RotateCw className="w-3.5 h-3.5 mr-1" /> Rotate
-          </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={() => updateCredential.mutate({ credentialId: c.id, data: { enabled: !c.enabled } })}>
-            {c.enabled ? 'Disable' : 'Enable'}
-          </Button>
-          <ConfirmButton
-            size="sm"
-            title={`Delete "${c.name}"?`}
-            description="The key is removed from the secret store and requests using it stop at the next bundle. This cannot be undone."
-            confirmLabel="Delete"
-            pending={deleteCredential.isPending}
-            onConfirm={() => deleteCredential.mutate({ credentialId: c.id })}>
-            Delete
-          </ConfirmButton>
-        </>
+        <TooltipProvider delayDuration={300}>
+          <div className="flex items-center gap-1">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button size="icon" variant="ghost" onClick={() => setRotating(c)}>
+                  <RefreshCw className="w-4 h-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Rotate key</TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className={c.enabled ? '' : 'text-muted-foreground'}
+                  onClick={() => updateCredential.mutate({ credentialId: c.id, data: { enabled: !c.enabled } })}>
+                  <Power className="w-4 h-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{c.enabled ? 'Disable' : 'Enable'}</TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span>
+                  <ConfirmButton
+                    title={`Delete "${c.name}"?`}
+                    description="The key is removed from the secret store and requests using it stop at the next bundle. This cannot be undone."
+                    confirmLabel="Delete"
+                    pending={deleteCredential.isPending}
+                    onConfirm={() => deleteCredential.mutate({ credentialId: c.id })}>
+                    <Trash2 className="w-4 h-4" />
+                  </ConfirmButton>
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>Delete</TooltipContent>
+            </Tooltip>
+          </div>
+        </TooltipProvider>
       ),
     },
   ];
