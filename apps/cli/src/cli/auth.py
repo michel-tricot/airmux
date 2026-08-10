@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import os
 import socket
+import sys
 import time
 import webbrowser
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, NamedTuple
 
 import typer
 from rich.panel import Panel
@@ -63,6 +64,74 @@ def resolve_urls(control_plane_url: str, console_url: str, *, dev: bool) -> tupl
     return resolve_cp_url(control_plane_url, dev=dev), console_url or (DEV_CONSOLE_URL if dev else DEFAULT_CONSOLE_URL)
 
 
+class ProviderKey(NamedTuple):
+    """What happened to one provider's key, so the command can say rather than summarise."""
+
+    provider: str
+    source: str
+    error: str = ""
+
+
+def _provider_key(name: str, overrides: dict[str, str]) -> tuple[str, str]:
+    """The key for one provider and where it came from.
+
+    Every provider is asked about, because the operator is the one who decides which of them this
+    org spends against and an exported variable is a convenience rather than that decision. What is
+    typed wins; blank falls back to the variable, so the common case is one keystroke and the
+    prompt says which one it will take. Blank with nothing exported means no credential: a provider
+    the org does not use should not have a key it cannot resolve.
+
+    A flag answers ahead of the prompt, and without a terminal there is nobody to ask, so the
+    variable stands on its own in scripts and containers.
+    """
+    if value := overrides.get(name):
+        return value, "given on the command line"
+    variable = f"{name.upper()}_API_KEY"
+    exported = os.environ.get(variable, "")
+    if not sys.stdin.isatty():
+        return (exported, f"found in {variable}") if exported else ("", "")
+    hint = f"blank to use {variable}" if exported else "blank to skip"
+    typed = typer.prompt(f"  {name} API key ({hint})", default="", hide_input=True, show_default=False)
+    if typed:
+        return typed, "entered"
+    return (exported, f"found in {variable}") if exported else ("", "")
+
+
+def seed_provider_credentials(client: httpx.Client, bearer: dict[str, str], overrides: dict[str, str]) -> list[ProviderKey]:
+    """Give the org a key for every catalog provider one can be found for, and say what happened.
+
+    A fresh install has a catalog and no credentials, which is a gateway that routes nothing, so
+    this is what decides whether the command ends with something that serves. It reports per
+    provider rather than in total, because which key came from where is what an operator needs to
+    check, and a store that would not hold one has something to say about why.
+
+    Seeds what it can: a deployment using only openai should not have to supply an anthropic key to
+    finish setting up, and a provider without a key is skipped in silence rather than reported as a
+    failure. Nothing here aborts the command, which has already created the account and the org.
+    """
+    catalog = client.get("/v1/taxonomy", headers=bearer)
+    if not catalog.is_success:
+        return []
+    results = []
+    for provider in catalog.json()["data"]["providers"]:
+        name = provider["name"]
+        value, source = _provider_key(name, overrides)
+        if not value:
+            continue
+        created = client.post("/v1/org/provider-credentials", json={"provider": name, "value": value}, headers=bearer)
+        error = "" if created.is_success else payload_error(created)
+        results.append(ProviderKey(name, source, error))
+    return results
+
+
+def payload_error(resp: httpx.Response) -> str:
+    """The control plane's own explanation where it gave one, since it knows why better than we do."""
+    try:
+        return str(resp.json()["detail"])
+    except (ValueError, KeyError, TypeError):
+        return f"{resp.status_code}"
+
+
 @app.command(rich_help_panel=SETUP)
 def quickstart(  # noqa: PLR0913, PLR0917 flags are the command's interface
     control_plane_url: str = "",
@@ -70,6 +139,8 @@ def quickstart(  # noqa: PLR0913, PLR0917 flags are the command's interface
     password: str = typer.Option(..., prompt="Password", hide_input=True, confirmation_prompt=True, help="At least 8 characters"),
     org: str = typer.Option("", help="Org name to create; defaults to the email local part"),
     gateway_url: str = typer.Option("http://localhost:8080", help="Where the data plane serves, for the printed example"),
+    openai_key: str = typer.Option("", help="OpenAI key for the new org; defaults to OPENAI_API_KEY in the environment"),
+    anthropic_key: str = typer.Option("", help="Anthropic key for the new org; defaults to ANTHROPIC_API_KEY in the environment"),
     console_url: str = typer.Option("", help="Where the console is served, printed at the end; defaults to http://localhost:3000"),
     dev: bool = typer.Option(False, "--dev", help="Target a local development stack: control plane on 127.0.0.1:8000, console on localhost:5000"),
 ) -> None:
@@ -118,6 +189,17 @@ def quickstart(  # noqa: PLR0913, PLR0917 flags are the command's interface
         key = _payload_or_die(
             c.post(f"/v1/org/workspaces/{workspace['id']}/inference-keys", json={"label": "quickstart"}, headers=bearer), "key mint"
         )
+        overrides = {name: value for name, value in (("openai", openai_key), ("anthropic", anthropic_key)) if value}
+        console.print("[dim]provider keys, so the gateway has something to spend[/dim]")
+        results = seed_provider_credentials(c, bearer, overrides)
+        for result in results:
+            if result.error:
+                console.print(f"  [yellow]![/yellow] {result.provider}: {result.error}")
+            else:
+                _step(f"[bold]{result.provider}[/bold] key {result.source}")
+        if not any(not result.error for result in results):
+            console.print("  [yellow]![/yellow] no provider key yet; add one with `airllm provider-credentials add <provider>`")
+
         compiled = _payload_or_die(c.post("/v1/org/bundles/compile", json={}, headers=bearer), "bundle compile")
         _step(f"minted an inference key and compiled bundle v{compiled['version']}")
 

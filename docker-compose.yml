@@ -1,3 +1,15 @@
+# The provider keys both planes resolve credentials from, named once so they cannot drift apart:
+# the control plane accepts a credential only for a key it can already see, and the data plane
+# spends it. One entry per provider in taxonomy.yml; unset ones simply have no credential.
+x-provider-keys: &provider-keys
+  OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+  ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+  GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+  XAI_API_KEY: ${XAI_API_KEY:-}
+  DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+  MISTRAL_API_KEY: ${MISTRAL_API_KEY:-}
+  GROQ_API_KEY: ${GROQ_API_KEY:-}
+
 services:
   postgres:
     image: postgres:16
@@ -5,8 +17,8 @@ services:
       POSTGRES_USER: airllm
       POSTGRES_PASSWORD: airllm
       POSTGRES_DB: airllm
-#    ports:
-#      - "5432:5432"
+    ports:
+      - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -30,6 +42,7 @@ services:
         fi;
         airllmcp migrate && airllmcp taxonomy && airllmcp serve --host 0.0.0.0 --port 8000'
     environment:
+      <<: *provider-keys
       DATABASE_URL: postgresql+asyncpg://airllm:airllm@postgres:5432/airllm
       GW_CONSOLE_URL: http://localhost:3000
       GW_BUNDLE_SIGNING_KEY: ${GW_BUNDLE_SIGNING_KEY:-}
@@ -66,10 +79,10 @@ services:
       fi;
       exec airllmdp --host 0.0.0.0 --port 8080'
     environment:
+      <<: *provider-keys
       GW_DATAPLANE_CONTROL_PLANE_URL: http://control-plane:8000
       GW_DATAPLANE_TOKEN: ${GW_DATAPLANE_TOKEN:-}
       GW_BUNDLE_PUBLIC_KEY: ${GW_BUNDLE_PUBLIC_KEY:-}
-      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
     volumes:
