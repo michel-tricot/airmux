@@ -17,7 +17,7 @@ const basePath = process.env.BASE_PATH ?? '/'; // default for local/root builds;
 
 // The session cookie is same-site, so the API has to answer on this origin: dev proxies /v1 to
 // the control plane, and a deployment serves the console behind the same host.
-const controlPlaneUrl = process.env.CONTROL_PLANE_URL ?? 'http://127.0.0.1:8001';
+const controlPlaneUrl = process.env.CONTROL_PLANE_URL ?? 'http://127.0.0.1:8101';
 
 export default defineConfig({
   base: basePath,

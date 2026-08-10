@@ -1,10 +1,10 @@
 ---
 name: Preview port routing pinning
-description: Why the backend must stay loopback-only so the console keeps the dev preview
+description: What actually keeps the dev preview on the console instead of the FastAPI backend
 ---
 
-The dev preview must always route to the console (Vite), never the FastAPI backend. The one durable mechanism: the backend serves loopback-only (`--host 127.0.0.1` in `scripts/replit-backend.sh`) with NO `waitForPort` in its workflow. That keeps the backend invisible to Replit's port detector, so the console's port is the only preview candidate. The console's Vite proxy reaches the backend over loopback, so nothing else is needed.
+The dev preview routes to the FastAPI backend instead of the console whenever `.replit` loses its `[[ports]]` block (`localPort = 20383`, `externalPort = 80`). Loopback-only backend binding does NOT prevent this: Replit's port detector sees loopback listeners too and follows the backend across port changes (verified — moving the backend 8001→8101 changed nothing while the block was missing). The `[[ports]]` pin is the mechanism that works; the backend also binds `127.0.0.1` with no `waitForPort`, which is still correct but is defense-in-depth only.
 
-**Why:** a `[[ports]]` pin in `.replit` was tried repeatedly, but task merges and workflow-manager rewrites keep stripping it — every time it vanished while the backend bound 0.0.0.0, the preview showed the API's `{"detail":"Not Found"}`. Do not rely on `[[ports]]` surviving; do not re-add `waitForPort` to the backend workflow (a loopback port would make it time out); do not switch the backend back to 0.0.0.0.
+**Why:** task merges and workflow restarts repeatedly stripped the block; each time, the domain served `{"detail":"Not Found"}` from the API. Re-adding the block immediately restored the console — no restarts needed. `scripts/post-merge.sh` now re-appends the block after merges if missing.
 
-**How to apply:** if the preview ever shows backend JSON again, check the backend host binding first, then restart `apps/console: web` so its port re-registers (stale routing can persist until it re-announces). `.replit` may only be edited via `verifyAndReplaceDotReplit` with `tempFilePath` set to an ABSOLUTE path INSIDE the workspace.
+**How to apply:** apply the `[[ports]]` block AFTER any workflow restarts (restarts can strip it; re-adding it takes effect without restarting anything). `.replit` may only be edited via `verifyAndReplaceDotReplit` with `tempFilePath` an ABSOLUTE path INSIDE the workspace. If the preview shows backend JSON, check `tail .replit` for the block first — that has always been the cause.
