@@ -35,9 +35,10 @@ import AppDashboard from '@/pages/app/Dashboard';
 import AppOrgSettings from '@/pages/app/OrgSettings';
 import WorkspaceOverview from '@/pages/app/workspace/Overview';
 import WorkspaceApiKeys from '@/pages/app/workspace/ApiKeys';
+import WorkspaceByok from '@/pages/app/workspace/Byok';
 import WorkspaceSettings from '@/pages/app/workspace/Settings';
 import WorkspaceComingSoon from '@/pages/app/workspace/ComingSoon';
-import { Database, Route as RouteIcon, ShieldCheck } from 'lucide-react';
+import { Route as RouteIcon, ShieldCheck } from 'lucide-react';
 
 /**
  * The control plane refuses some actions with a specific reason (e.g. "User still
@@ -89,10 +90,7 @@ function AppSection() {
       <Switch>
         <Route path="/org" component={AppDashboard} />
         <Route path="/org/workspaces/:workspaceRef/keys" component={WorkspaceApiKeys} />
-        <Route path="/org/workspaces/:workspaceRef/byok">
-          <WorkspaceComingSoon title="BYOK" icon={Database}
-            description="Bring your own provider keys and route traffic through them." />
-        </Route>
+        <Route path="/org/workspaces/:workspaceRef/byok" component={WorkspaceByok} />
         <Route path="/org/workspaces/:workspaceRef/routing">
           <WorkspaceComingSoon title="Routing" icon={RouteIcon}
             description="Model routing rules, fallbacks, and load balancing." />

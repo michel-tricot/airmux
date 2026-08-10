@@ -25,7 +25,7 @@ from random import Random
 from typing import TYPE_CHECKING
 from uuid import UUID, uuid5
 
-from contract import INFERENCE_TOKEN_PREFIX, token_hash
+from contract import INFERENCE_TOKEN_PREFIX, Secret, SecretStore, token_hash
 from control_plane.keys import INSTANCE_KEY_PREFIX, MANAGEMENT_KEY_PREFIX, key_prefix
 from control_plane.models import (
     AuthIdentity,
@@ -34,6 +34,8 @@ from control_plane.models import (
     ManagementKey,
     Org,
     OrgMembership,
+    Provider,
+    ProviderCredential,
     UsageEvent,
     User,
     Workspace,
@@ -56,6 +58,13 @@ ACME_MANAGEMENT_TOKEN = f"{MANAGEMENT_KEY_PREFIX}fixture-acme"
 INSTANCE_TOKEN = f"{INSTANCE_KEY_PREFIX}fixture-admin"
 
 MODELS = [("gpt-4o-mini", "openai"), ("gpt-4o", "openai"), ("claude-opus-4-5", "anthropic")]
+
+PROVIDERS = [
+    ("openai", "openai_compatible", "https://api.openai.com/v1"),
+    ("anthropic", "anthropic", "https://api.anthropic.com/v1"),
+]
+
+FIXTURE_PROVIDER_KEY = "sk-fixture-not-a-real-key-0000"
 
 STATUSES = ["ok"] * 9 + ["error"]
 
@@ -106,6 +115,38 @@ def inference_key(token: str, workspace: Workspace, user: User, *, label: str, r
     )
 
 
+async def provider_credential(  # noqa: PLR0913 the row's own fields are the arguments
+    store: SecretStore,
+    provider: Provider,
+    org: Org,
+    *,
+    workspace: Workspace | None = None,
+    name: str = "default",
+    priority: int = 100,
+    status: str = "unknown",
+    enabled: bool = True,
+) -> ProviderCredential:
+    """A credential row and the value behind it, the way the create route writes the pair.
+
+    The value is a placeholder no provider will accept: these exist so the console has pools to
+    render and the data plane has refs to resolve, not so a fixture instance can bill anyone.
+    """
+    credential = await ProviderCredential(
+        id=fixture_id(f"provider-credential:{org.name}:{workspace.name if workspace else 'org'}:{provider.name}:{name}"),
+        org_id=org.id,
+        workspace_id=workspace.id if workspace else None,
+        provider_id=provider.id,
+        provider_name=provider.name,
+        name=name,
+        priority=priority,
+        enabled=enabled,
+        status=status,
+        fingerprint=FIXTURE_PROVIDER_KEY[-4:],
+    ).save()
+    await store.put(credential.secret_ref(), Secret(FIXTURE_PROVIDER_KEY))
+    return credential
+
+
 async def record_usage(workspace: Workspace, key: InferenceKey, count: int, now: datetime) -> None:
     """Recorded traffic for one workspace: random numbers spread over the last USAGE_DAYS.
 
@@ -138,7 +179,7 @@ async def record_usage(workspace: Workspace, key: InferenceKey, count: int, now:
         ).save()
 
 
-async def apply_fixtures(now: datetime) -> Fixtures:
+async def apply_fixtures(now: datetime, store: SecretStore) -> Fixtures:
     """The fixture instance, declared top to bottom and saved as it is declared.
 
     Read it as the list of what exists. Every row is written on the line that declares it, so there
@@ -200,6 +241,18 @@ async def apply_fixtures(now: datetime) -> Fixtures:
         prefix=key_prefix(INSTANCE_TOKEN, INSTANCE_KEY_PREFIX),
         label="fixture-admin",
     ).save()
+
+    providers = {
+        name: await Provider(id=fixture_id(f"provider:{name}"), name=name, kind=kind, base_url=base_url).save() for name, kind, base_url in PROVIDERS
+    }
+
+    openai, anthropic = providers["openai"], providers["anthropic"]
+    await provider_credential(store, openai, acme, workspace=production, name="primary", priority=10, status="live")
+    await provider_credential(store, openai, acme, workspace=production, name="backup", priority=50, status="rate_limited")
+    await provider_credential(store, openai, acme, workspace=production, name="retired", priority=90, enabled=False)
+    await provider_credential(store, anthropic, acme, workspace=production, status="invalid")
+    await provider_credential(store, openai, acme, name="org-wide", priority=100, status="live")
+    await provider_credential(store, openai, solo, workspace=default)
 
     await record_usage(production, checkout, 1200, now)
     await record_usage(staging, ci, 360, now)

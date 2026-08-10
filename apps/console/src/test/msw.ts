@@ -37,6 +37,8 @@ export const server = setupServer(
   }),
   http.get('/v1/org/workspaces/:workspaceId/inference-keys', () => HttpResponse.json([])),
   http.get('/v1/org/workspaces/:workspaceId/members', () => HttpResponse.json([])),
+  http.get('/v1/org/provider-credentials', () => HttpResponse.json([])),
+  http.get('/v1/taxonomy', () => HttpResponse.json({ providers: [], models: [] })),
   http.get('/v1/org/users', () => HttpResponse.json([])),
   http.get('/v1/org/events', () => HttpResponse.json([])),
 );

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import ClassVar, Self
+from typing import TYPE_CHECKING, ClassVar, Self
 from uuid import UUID
 
 from pydantic import field_validator
@@ -15,7 +15,11 @@ from control_plane.models.common.org_owned import NotOwnedError
 from control_plane.models.common.slugs import SLUG_MAX_LENGTH, Slug, slugify
 from control_plane.models.common.wire import RecordCreate, RecordOut, RecordUpdate
 from control_plane.models.inference_key import InferenceKey
+from control_plane.models.provider_credential import ProviderCredential
 from control_plane.models.workspace_membership import WorkspaceMembership
+
+if TYPE_CHECKING:
+    from contract import SecretStore
 
 DERIVED_SLUG_FALLBACK = "workspace"
 
@@ -84,12 +88,16 @@ class Workspace(Record, Identified, OrgOwned, Tombstonable, table=True):
             suffix += 1
         return f"{stem}-{suffix}"
 
-    async def delete_with_contents(self) -> None:
-        """Delete the workspace with the rows scoped to it: its inference keys and its members.
+    async def delete_with_contents(self, store: SecretStore) -> None:
+        """Delete the workspace with the rows scoped to it: its inference keys, its members, and the
+        provider credentials it brought.
 
-        A workspace's keys cannot outlive it, so revoked and live ones go together. The usage it
-        recorded is history rather than a scoped row, and stays.
+        A workspace's keys cannot outlive it, so revoked and live ones go together. The provider
+        credentials take their values with them: the store is passed in because a model cannot reach
+        the instance's, and a value left behind is a secret with no row to reach or remove it by.
+        The usage it recorded is history rather than a scoped row, and stays.
         """
+        await ProviderCredential.delete_scoped(store, ProviderCredential.workspace_id == self.id)
         for key in await InferenceKey.find(InferenceKey.workspace_id == self.id):
             await key.delete()
         for membership in await WorkspaceMembership.find(WorkspaceMembership.workspace_id == self.id):

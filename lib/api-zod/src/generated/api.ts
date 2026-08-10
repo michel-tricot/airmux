@@ -720,7 +720,8 @@ export const GetOrgResponse = zod.object({
 
 
 /**
- * Delete an org with everything scoped to it: its workspaces and their keys, its own keys, its memberships, its bundles.
+ * Delete an org with everything scoped to it: its workspaces and their keys, the provider
+ * credentials it brought, its own keys, its memberships, its bundles.
  *
  * Its usage events stay. They are history keyed by ids, not rows belonging to the org, so they
  * outlive it the way the audit trail does rather than standing in the way of the delete.
@@ -831,7 +832,8 @@ export const GetWorkspaceResponse = zod.object({
 
 
 /**
- * Delete a workspace with its inference keys and its members; the usage it recorded stays, as it does for an org.
+ * Delete a workspace with its inference keys, its members, and the provider credentials it brought;
+ * the usage it recorded stays, as it does for an org.
  *
  * Requires the `workspaces:delete` scope.
  * @summary Delete Workspace
@@ -1060,6 +1062,7 @@ export const CreateProviderCredentialResponse = zod.object({
   "org_id": zod.union([zod.uuid(),zod.null()]),
   "workspace_id": zod.union([zod.uuid(),zod.null()]),
   "provider_id": zod.uuid(),
+  "provider_name": zod.string(),
   "name": zod.string(),
   "priority": zod.int(),
   "enabled": zod.boolean(),
@@ -1095,6 +1098,7 @@ export const ListProviderCredentialsResponseItem = zod.object({
   "org_id": zod.union([zod.uuid(),zod.null()]),
   "workspace_id": zod.union([zod.uuid(),zod.null()]),
   "provider_id": zod.uuid(),
+  "provider_name": zod.string(),
   "name": zod.string(),
   "priority": zod.int(),
   "enabled": zod.boolean(),
@@ -1129,6 +1133,7 @@ export const GetProviderCredentialResponse = zod.object({
   "org_id": zod.union([zod.uuid(),zod.null()]),
   "workspace_id": zod.union([zod.uuid(),zod.null()]),
   "provider_id": zod.uuid(),
+  "provider_name": zod.string(),
   "name": zod.string(),
   "priority": zod.int(),
   "enabled": zod.boolean(),
@@ -1170,6 +1175,7 @@ export const UpdateProviderCredentialResponse = zod.object({
   "org_id": zod.union([zod.uuid(),zod.null()]),
   "workspace_id": zod.union([zod.uuid(),zod.null()]),
   "provider_id": zod.uuid(),
+  "provider_name": zod.string(),
   "name": zod.string(),
   "priority": zod.int(),
   "enabled": zod.boolean(),
@@ -1185,8 +1191,8 @@ export const UpdateProviderCredentialResponse = zod.object({
 
 
 /**
- * The value goes first: a row with no value is a candidate the request path skips, while a
- * value with no row is a secret nothing knows how to reach or remove.
+ * Deleting one credential is the same operation a workspace or org delete performs in bulk, so
+ * it runs through the same method rather than a second copy of the ordering rule.
  *
  * Requires the `provider-credentials:write` scope.
  * @summary Delete Provider Credential
@@ -1233,6 +1239,7 @@ export const RotateProviderCredentialResponse = zod.object({
   "org_id": zod.union([zod.uuid(),zod.null()]),
   "workspace_id": zod.union([zod.uuid(),zod.null()]),
   "provider_id": zod.uuid(),
+  "provider_name": zod.string(),
   "name": zod.string(),
   "priority": zod.int(),
   "enabled": zod.boolean(),

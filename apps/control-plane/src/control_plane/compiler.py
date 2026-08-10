@@ -73,11 +73,7 @@ async def compile_bundle(org_id: UUID, bundle_id: UUID, now: datetime, staleness
                 )
                 for r in provider_rows
             ],
-            credentials=[
-                CredentialEntry(ref=r.secret_ref(provider_names[r.provider_id]), priority=r.priority, version=r.version)
-                for r in credential_rows
-                if r.enabled and r.provider_id in provider_names
-            ],
+            credentials=[CredentialEntry(ref=r.secret_ref(), priority=r.priority, version=r.version) for r in credential_rows if r.enabled],
             models=[
                 ModelEntry(
                     model_id=r.name,

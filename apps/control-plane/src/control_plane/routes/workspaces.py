@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from uuid import UUID  # noqa: TC003 fastapi resolves path param annotations at runtime
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from sqlmodel import col
 
 from control_plane.authz import Scope
@@ -13,6 +13,7 @@ from control_plane.models.common.wire import DeletedOut, Envelope
 from control_plane.models.inference_key import InferenceKeyIn, InferenceKeyMintedOut, InferenceKeyOut, InferenceKeyRevokedOut
 from control_plane.models.workspace import WorkspaceCreate, WorkspaceOut, WorkspaceUpdate
 from control_plane.models.workspace_membership import WorkspaceMembershipOut
+from control_plane.routes.provider_credentials import secret_store
 
 router = APIRouter(prefix="/org/workspaces")
 
@@ -47,10 +48,11 @@ async def get_workspace(workspace_ref: str, org_id: OrgDep) -> Envelope[Workspac
 
 
 @router.delete("/{workspace_ref}", tags=["Workspaces"], dependencies=[require(Scope.workspaces_delete)])
-async def delete_workspace(workspace_ref: str, org_id: OrgDep) -> Envelope[DeletedOut[UUID]]:
-    """Delete a workspace with its inference keys and its members; the usage it recorded stays, as it does for an org."""
+async def delete_workspace(workspace_ref: str, org_id: OrgDep, request: Request) -> Envelope[DeletedOut[UUID]]:
+    """Delete a workspace with its inference keys, its members, and the provider credentials it brought;
+    the usage it recorded stays, as it does for an org."""
     workspace = await Workspace.by_ref(org_id, workspace_ref)
-    await workspace.delete_with_contents()
+    await workspace.delete_with_contents(secret_store(request))
     return Envelope(data=DeletedOut.of(workspace.id))
 
 

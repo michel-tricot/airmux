@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import sys
 import time
 from collections import deque
 from typing import TYPE_CHECKING, Annotated
@@ -21,6 +22,7 @@ from cli.common import (
     models_app,
     org_members_app,
     orgs_app,
+    provider_credentials_app,
     providers_app,
     service_accounts_app,
     users_app,
@@ -73,6 +75,16 @@ MODEL_COLS = [
     Col("max_output_tokens", "Max out"),
     Col("capabilities", "Capabilities", style="cyan", max_width=30),
 ]
+
+
+CREDENTIAL_HEALTH_LABELS = {"unknown": "unused", "live": "working", "invalid": "rejected", "rate_limited": "throttled"}
+"""What the data plane last saw of a key, said the way an operator would say it."""
+
+
+def _credential_rows(rows: list[dict]) -> list[dict]:
+    """Fold enabled into health: a disabled key is out of the pool whatever its last request said,
+    so that is the one fact worth a column."""
+    return [{**row, "health": "disabled" if not row["enabled"] else CREDENTIAL_HEALTH_LABELS.get(row["status"], row["status"])} for row in rows]
 
 
 def _money(value: object) -> str:
@@ -522,3 +534,119 @@ register_create(
     lambda resp: console.print(f"model [bold]{resp['id']}[/bold] created, run `airllm bundles compile` to serve it"),
     client=instance_client,
 )
+
+
+PROVIDER_CREDENTIAL_COLS = [
+    Col("id", "ID", style="dim", no_wrap=True),
+    Col("provider_name", "Provider"),
+    Col("name", "Name", max_width=20),
+    Col("scope", "Scope"),
+    Col("priority", "Try", no_wrap=True),
+    Col("health", "Health", style="yellow"),
+    Col("fingerprint", "Key", style="cyan", fmt=lambda v: f"...{v}" if v else ""),
+]
+
+
+def _read_secret(prompt: str) -> str:
+    """The key, from stdin when there is no terminal and a hidden prompt when there is.
+
+    There is deliberately no --value flag: a key passed as an argument lands in the shell history
+    and in the process list of every other user on the machine for as long as the command runs.
+    Piping is the automated path, `echo $KEY | airllm provider-credentials add openai`.
+    """
+    if sys.stdin.isatty():
+        return typer.prompt(prompt, hide_input=True)
+    secret = sys.stdin.read().strip()
+    if not secret:
+        console.print("[red]no key on stdin: pipe it in, or run this from a terminal to be prompted[/red]")
+        raise typer.Exit(1)
+    return secret
+
+
+@provider_credentials_app.command("add")
+def provider_credentials_add(  # noqa: PLR0913, PLR0917 flags are the command's interface
+    provider: str = typer.Argument(..., help="Provider name from the catalog, e.g. openai"),
+    name: str = typer.Option("default", "--name", help="Handle for this key within the provider and scope, e.g. prod or backup"),
+    workspace: WorkspaceOption = "",
+    priority: int = typer.Option(100, "--priority", help="Lower is tried first; ties break by name"),
+    org_wide: bool = typer.Option(False, "--org", help="Attach to the org rather than to one workspace"),
+    control_plane_url: str = "",
+) -> None:
+    """Bring a provider key for a workspace, or for the whole org with --org.
+
+    The key is read from stdin when this is not a terminal and prompted for when it is, so it never
+    reaches the shell history. It goes straight to the secret store; the control plane keeps the
+    last four characters for display and nothing else.
+    """
+    secret = _read_secret(f"{provider} API key")
+    body = {"provider": provider, "name": name, "value": secret, "priority": priority}
+    if not org_wide:
+        body["workspace"] = resolve_workspace(workspace)
+    with org_client(control_plane_url) as c:
+        credential = payload(post_expecting(c, "/v1/org/provider-credentials", body, ok=(200,)))
+    scope = credential["scope"]
+    console.print(f"{scope} credential [bold]{credential['name']}[/bold] for [bold]{provider}[/bold] stored (...{credential['fingerprint']})")
+    console.print("run `airllm bundles compile` to propagate")
+
+
+@provider_credentials_app.command("list")
+def provider_credentials_list(
+    workspace: WorkspaceOption = "",
+    org_wide: bool = typer.Option(False, "--org", help="List every credential in the org rather than one workspace's"),
+    control_plane_url: str = "",
+    fmt: FormatOption = OutputFormat.table,
+) -> None:
+    """List provider credentials in the order the data plane tries them."""
+    params = {} if org_wide else {"workspace": resolve_workspace(workspace)}
+    with org_client(control_plane_url) as c:
+        resp = c.get("/v1/org/provider-credentials", params=params)
+        resp.raise_for_status()
+        rows = payload_rows(resp)
+    print_rows("provider credentials", _credential_rows(rows), PROVIDER_CREDENTIAL_COLS, fmt)
+
+
+@provider_credentials_app.command("rotate")
+def provider_credentials_rotate(
+    credential_id: str = typer.Argument(..., help="Credential id from `airllm provider-credentials list`"),
+    control_plane_url: str = "",
+) -> None:
+    """Replace a credential's value, keeping its name, priority, and place in the order.
+
+    Read the same way as `add`: piped in, or prompted for."""
+    secret = _read_secret("replacement API key")
+    with org_client(control_plane_url) as c:
+        resp = c.put(f"/v1/org/provider-credentials/{credential_id}/value", json={"value": secret})
+        resp.raise_for_status()
+        credential = payload(resp)
+    console.print(f"credential [bold]{credential['name']}[/bold] rotated to ...{credential['fingerprint']} (version {credential['version']})")
+    console.print("run `airllm bundles compile` to propagate")
+
+
+@provider_credentials_app.command("rm")
+def provider_credentials_rm(
+    credential_id: str = typer.Argument(..., help="Credential id from `airllm provider-credentials list`"),
+    control_plane_url: str = "",
+) -> None:
+    """Delete a credential and the value behind it."""
+    with org_client(control_plane_url) as c:
+        resp = c.delete(f"/v1/org/provider-credentials/{credential_id}")
+        resp.raise_for_status()
+    console.print(f"credential [bold]{credential_id}[/bold] deleted, run `airllm bundles compile` to propagate")
+
+
+@provider_credentials_app.command("disable")
+def provider_credentials_disable(
+    credential_id: str = typer.Argument(..., help="Credential id from `airllm provider-credentials list`"),
+    enable: bool = typer.Option(False, "--enable", help="Put it back in the pool instead"),
+    control_plane_url: str = "",
+) -> None:
+    """Take a credential out of the pool without deleting its value.
+
+    Same shape as revoking an inference key: it drops out of the next bundle but stays visible.
+    """
+    with org_client(control_plane_url) as c:
+        resp = c.patch(f"/v1/org/provider-credentials/{credential_id}", json={"enabled": enable})
+        resp.raise_for_status()
+        credential = payload(resp)
+    state = "enabled" if credential["enabled"] else "disabled"
+    console.print(f"credential [bold]{credential['name']}[/bold] {state}, run `airllm bundles compile` to propagate")

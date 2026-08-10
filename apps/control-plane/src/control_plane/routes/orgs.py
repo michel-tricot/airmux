@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from uuid import UUID  # noqa: TC003 fastapi resolves path param annotations at runtime
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlmodel import col
 
 from control_plane.authz import Scope
@@ -10,6 +10,7 @@ from control_plane.deps import instance_scope, require
 from control_plane.models import Org
 from control_plane.models.common.wire import DeletedOut, Envelope
 from control_plane.models.org import OrgCreate, OrgOut, OrgUpdate
+from control_plane.routes.provider_credentials import secret_store
 
 router = APIRouter(prefix="/orgs", dependencies=[Depends(instance_scope)])
 
@@ -42,8 +43,9 @@ async def get_org(org_id: UUID) -> Envelope[OrgOut]:
 
 
 @router.delete("/{org_id}", tags=["Orgs"], dependencies=[require(Scope.orgs_delete)])
-async def delete_org(org_id: UUID) -> Envelope[DeletedOut[UUID]]:
-    """Delete an org with everything scoped to it: its workspaces and their keys, its own keys, its memberships, its bundles.
+async def delete_org(org_id: UUID, request: Request) -> Envelope[DeletedOut[UUID]]:
+    """Delete an org with everything scoped to it: its workspaces and their keys, the provider
+    credentials it brought, its own keys, its memberships, its bundles.
 
     Its usage events stay. They are history keyed by ids, not rows belonging to the org, so they
     outlive it the way the audit trail does rather than standing in the way of the delete.
@@ -51,5 +53,5 @@ async def delete_org(org_id: UUID) -> Envelope[DeletedOut[UUID]]:
     org = await Org.find_by_id(org_id)
     if org is None:
         raise HTTPException(status_code=404, detail="Organization not found")
-    await org.delete_with_contents()
+    await org.delete_with_contents(secret_store(request))
     return Envelope(data=DeletedOut.of(org_id))
