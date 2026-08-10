@@ -8,7 +8,7 @@ whose failure surfaces as an error, never as a phantom success.
 from __future__ import annotations
 
 from fastapi.testclient import TestClient
-from helpers import make_admin, run_in_db, setup_control_plane
+from helpers import make_admin, make_org, run_in_db, setup_control_plane
 from sqlalchemy import event
 from sqlalchemy.orm import Session
 from sqlmodel import col
@@ -49,3 +49,38 @@ def test_failed_commit_is_not_reported_as_success(tmp_path):
     finally:
         event.remove(Session, "before_commit", refuse_commit)
     assert run_in_db(tmp_path, Org.find) == []
+
+
+def test_refused_requests_explain_themselves(tmp_path):
+    """Every dependency-level refusal carries a human-readable detail, so the console toast is actionable."""
+    cp = setup_control_plane(tmp_path)
+    root = cp.headers()
+    with TestClient(cp.app) as c:
+        org_id = make_org(c, root)
+        org_headers = cp.headers(org_id=org_id)
+
+        # Invalid bearer credential
+        resp = c.get("/v1/orgs", headers={"authorization": "Bearer mk_bogus"})
+        assert resp.status_code == 401
+        assert resp.json()["detail"] == "Invalid or revoked credential"
+
+        # No credential at all
+        resp = c.get("/v1/orgs")
+        assert resp.status_code == 401
+        assert resp.json()["detail"] == "Authentication required; sign in or provide a credential"
+
+        # Org-scoped credential on an instance route
+        resp = c.get("/v1/orgs", headers=org_headers)
+        assert resp.status_code == 403
+        assert "instance scope" in resp.json()["detail"]
+
+        # Instance credential on an org route
+        resp = c.get("/v1/org/workspaces", headers=root)
+        assert resp.status_code == 403
+        assert "org scope" in resp.json()["detail"]
+
+        # Expired/invalid session cookie through the cookie door
+        c.cookies.set("airllm_session", "bogus")
+        resp = c.get("/v1/auth/me", headers={"X-Requested-With": "fetch"})
+        assert resp.status_code == 401
+        assert resp.json()["detail"] == "Your session has expired; sign in again"
