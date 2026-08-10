@@ -6,6 +6,7 @@ reseed, drop the database and recreate it.
 
 from __future__ import annotations
 
+import asyncio
 from datetime import UTC, datetime
 
 import pytest
@@ -13,10 +14,10 @@ from fastapi.testclient import TestClient
 from helpers import run_in_db, setup_control_plane, write_config
 from typer.testing import CliRunner
 
-from contract import MemoryStoreConfig
-from control_plane.fixtures import NotAnEmptyDatabaseError, apply_fixtures
+from contract import EnvStoreConfig, MemoryStoreConfig
+from control_plane.fixtures import FIXTURE_PROVIDER_KEY, NotAnEmptyDatabaseError, apply_fixtures
 from control_plane.main import app as cli_app
-from control_plane.models import Org
+from control_plane.models import Org, ProviderCredential
 
 runner = CliRunner()
 
@@ -46,3 +47,45 @@ def test_cli_refuses_a_database_that_is_not_empty(tmp_path):
     assert refused.exit_code == 1
     assert "not an empty database" in refused.output
     assert run_in_db(tmp_path, Org.find) == []
+
+
+def test_the_keys_are_seeded_whatever_the_store_can_hold(tmp_path, monkeypatch):
+    """The env store is the default, so `airllmcp fixtures` on an unconfigured instance hits it.
+
+    The rows are the fixture; the value beside them is the store's business. On the env store there
+    is nothing to write because the ref already resolves to a variable the operator owns, so a
+    developer with their own key set gets a pool that genuinely works.
+    """
+    setup_control_plane(tmp_path)
+    seeded = run_in_db(tmp_path, lambda: apply_fixtures(NOW, EnvStoreConfig().build()))
+    credentials = run_in_db(tmp_path, ProviderCredential.find)
+
+    assert credentials != []
+    assert seeded.provider_key_variables == ["ANTHROPIC_API_KEY", "OPENAI_API_KEY"]
+
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-the-operators-own")
+    openai_key = next(c for c in credentials if c.provider_name == "openai")
+    assert asyncio.run(EnvStoreConfig().build().get(openai_key.secret_ref())).reveal() == "sk-the-operators-own"
+
+
+def test_a_writable_store_gets_placeholder_values(tmp_path):
+    """A placeholder no provider accepts, so a fixture instance cannot bill anyone by accident."""
+    store = MemoryStoreConfig().build()
+    setup_control_plane(tmp_path)
+    seeded = run_in_db(tmp_path, lambda: apply_fixtures(NOW, store))
+    credentials = run_in_db(tmp_path, ProviderCredential.find)
+
+    assert seeded.provider_key_variables == []
+    for credential in credentials:
+        assert asyncio.run(store.get(credential.secret_ref())).reveal() == FIXTURE_PROVIDER_KEY
+
+
+def test_the_cli_names_the_variables_the_keys_resolve_from(tmp_path):
+    """Silent success reads as failure: the command already names an empty catalog, and a pool that
+    reaches nothing until two variables are set is the same kind of thing to say out loud."""
+    cp = setup_control_plane(tmp_path)
+    cfg = write_config(tmp_path, cp)
+    seeded = runner.invoke(cli_app, ["fixtures", "--config", cfg])
+
+    assert seeded.exit_code == 0, seeded.output
+    assert "OPENAI_API_KEY" in seeded.output

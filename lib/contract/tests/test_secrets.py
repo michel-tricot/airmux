@@ -190,50 +190,37 @@ def a_platform_ref(service="openai", name="default"):
     return SecretRef(purpose=SecretPurpose.provider, service=service, name=name, secret_id=uuid4())
 
 
-async def test_an_env_store_reads_a_platform_secret(monkeypatch):
-    """The name an operator has to type stays typeable."""
-    store = EnvSecretStore(prefix="AIRLLM_SECRET")
-    ref = a_platform_ref()
-    monkeypatch.setenv("AIRLLM_SECRET_PROVIDER_OPENAI_DEFAULT", "sk-from-env")
-    assert store.variables_for(ref)[0] == "AIRLLM_SECRET_PROVIDER_OPENAI_DEFAULT"
-    assert (await store.get(ref)).reveal() == "sk-from-env"
-
-
-async def test_an_env_store_answers_to_the_conventional_provider_variable(monkeypatch):
+async def test_an_env_store_resolves_a_provider_by_its_conventional_variable(monkeypatch):
     """OPENAI_API_KEY is the name every provider SDK documents and the one taxonomy.yml already
-    uses, so an existing deployment keeps working and quickstart asks for nothing new."""
+    used, so an operator running on the environment configures nothing new."""
     store = EnvSecretStore(prefix="AIRLLM_SECRET")
-    monkeypatch.delenv("AIRLLM_SECRET_PROVIDER_OPENAI_DEFAULT", raising=False)
-    monkeypatch.setenv("OPENAI_API_KEY", "sk-conventional")
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-openai")
     monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-anthropic")
-    assert (await store.get(a_platform_ref())).reveal() == "sk-conventional"
+    assert (await store.get(a_platform_ref())).reveal() == "sk-openai"
     assert (await store.get(a_platform_ref(service="anthropic"))).reveal() == "sk-anthropic"
 
 
-async def test_the_derived_variable_wins_over_the_conventional_one(monkeypatch):
+async def test_every_credential_for_one_provider_resolves_to_the_same_variable(monkeypatch):
+    """The environment holds one key per provider and cannot hold more, so scope and name do not
+    enter the lookup. An instance on this store has one upstream account per provider, whatever its
+    credential rows say."""
     store = EnvSecretStore(prefix="AIRLLM_SECRET")
-    monkeypatch.setenv("AIRLLM_SECRET_PROVIDER_OPENAI_DEFAULT", "sk-explicit")
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-the-only-one")
+    workspace_key = a_ref(name="primary")
+    other_workspace_key = a_ref(name="backup", workspace_id=uuid4())
+    platform_key = a_platform_ref()
+    for ref in (workspace_key, other_workspace_key, platform_key):
+        assert (await store.get(ref)).reveal() == "sk-the-only-one"
+
+
+async def test_a_prefixed_variable_overrides_the_conventional_one(monkeypatch):
+    """The escape hatch for an operator whose environment already means something else by
+    OPENAI_API_KEY, and the only name a non-provider purpose would ever answer to."""
+    store = EnvSecretStore(prefix="AIRLLM_SECRET")
+    monkeypatch.setenv("AIRLLM_SECRET_PROVIDER_OPENAI", "sk-explicit")
     monkeypatch.setenv("OPENAI_API_KEY", "sk-conventional")
     assert (await store.get(a_platform_ref())).reveal() == "sk-explicit"
-
-
-async def test_a_scoped_secret_never_reads_the_conventional_variable(monkeypatch):
-    """A workspace bringing its own key must not silently pick up the platform's environment."""
-    store = EnvSecretStore(prefix="AIRLLM_SECRET")
-    monkeypatch.setenv("OPENAI_API_KEY", "sk-platform")
-    with pytest.raises(SecretNotFoundError):
-        await store.get(a_ref())
-
-
-async def test_an_env_store_keeps_scoped_secrets_apart(monkeypatch):
-    """The environment is flat, so service and name alone would collide across workspaces."""
-    store = EnvSecretStore(prefix="AIRLLM_SECRET")
-    first, second = a_ref(), a_ref()
-    assert store.variables_for(first) != store.variables_for(second)
-    monkeypatch.setenv(store.variables_for(first)[0], "first-value")
-    assert (await store.get(first)).reveal() == "first-value"
-    with pytest.raises(SecretNotFoundError):
-        await store.get(second)
+    assert (await store.get(a_ref())).reveal() == "sk-explicit"
 
 
 async def test_an_env_store_refuses_writes():
@@ -249,7 +236,7 @@ async def test_an_env_store_refuses_writes():
 
 async def test_a_missing_env_secret_is_not_found(monkeypatch):
     store = EnvSecretStore(prefix="AIRLLM_SECRET")
-    ref = a_platform_ref(name="absent")
+    ref = a_platform_ref(service="nowhere")
     for variable in store.variables_for(ref):
         monkeypatch.delenv(variable, raising=False)
     with pytest.raises(SecretNotFoundError):
