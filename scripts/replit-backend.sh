@@ -93,4 +93,4 @@ fi
 # Loopback-only on purpose: the console's Vite proxy reaches the backend at
 # 127.0.0.1:8001, and keeping the port invisible to Replit's port detector
 # guarantees the preview can never route to the API instead of the console.
-exec uv run airllmcp serve --dev --host 127.0.0.1 --port 8001
+exec uv run airllmcp serve --dev --host 127.0.0.1 --port 8101

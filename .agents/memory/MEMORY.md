@@ -1,6 +1,6 @@
 - [Orval zod v4 import](orval-zod-v4.md) — codegen script rewrites generated zod import to 'zod/v4' after orval; keep that step when touching codegen.
 - [Replit workflow host binding](replit-workflow-host-binding.md) — waitForPort needs 0.0.0.0; internal services should bind loopback with no waitForPort.
-- [Preview port routing pinning](preview-port-routing.md) — backend must stay loopback-only with no waitForPort so it can never steal the preview; don't rely on [[ports]] surviving merges.
+- [Preview port routing pinning](preview-port-routing.md) — only the .replit [[ports]] pin (20383→80) keeps the preview on the console; loopback binding alone doesn't; post-merge.sh restores it.
 - [Replit DATABASE_URL and asyncpg](database-url-asyncpg.md) — normalize managed sslmode URL parameters for asyncpg while keeping DATABASE_URL as the sole source.
 - [Managed Postgres reset](managed-postgres-reset.md) — dropdb/createdb silently no-op on managed Postgres; reset via DROP SCHEMA public CASCADE instead.
 - [Browser e2e harness](browser-e2e-harness.md) — puppeteer-core + Nix-store chromium for console browser passes; uppercase labels and Radix tab quirks.
