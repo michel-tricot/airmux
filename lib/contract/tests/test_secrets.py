@@ -1,0 +1,256 @@
+from __future__ import annotations
+
+import json
+import logging
+import stat
+from uuid import uuid4
+
+import pytest
+from pydantic import BaseModel, ValidationError
+
+from contract import (
+    EnvSecretStore,
+    EnvStoreConfig,
+    FileSecretStore,
+    FileStoreConfig,
+    MemorySecretStore,
+    MemoryStoreConfig,
+    Secret,
+    SecretNotFoundError,
+    SecretPurpose,
+    SecretRef,
+    SecretsConfig,
+    SecretStoreReadOnlyError,
+    SecretStoreUnavailableError,
+)
+
+ORG = uuid4()
+WORKSPACE = uuid4()
+
+
+class Configured(BaseModel):
+    """A stand-in for a plane's config, which is where the union is actually parsed."""
+
+    secrets: SecretsConfig
+
+
+def a_ref(service="openai", name="default", org_id=ORG, workspace_id=WORKSPACE, purpose=SecretPurpose.provider):
+    return SecretRef(purpose=purpose, service=service, name=name, secret_id=uuid4(), org_id=org_id, workspace_id=workspace_id)
+
+
+@pytest.fixture(params=["memory", "file"])
+def store(request, tmp_path):
+    """Every writable store, so the facade is proved once rather than per backend."""
+    configs = {"memory": MemoryStoreConfig(), "file": FileStoreConfig(root=tmp_path / "secrets")}
+    return configs[request.param].build()
+
+
+async def test_a_written_secret_reads_back(store):
+    ref = a_ref()
+    await store.put(ref, Secret("sk-provider-value"))
+    assert (await store.get(ref)).reveal() == "sk-provider-value"
+
+
+async def test_a_rotation_replaces_the_value_under_the_same_ref(store):
+    ref = a_ref()
+    await store.put(ref, Secret("first"))
+    await store.put(ref, Secret("second"))
+    assert (await store.get(ref)).reveal() == "second"
+
+
+async def test_a_deleted_secret_is_gone(store):
+    ref = a_ref()
+    await store.put(ref, Secret("doomed"))
+    await store.delete(ref)
+    with pytest.raises(SecretNotFoundError):
+        await store.get(ref)
+
+
+async def test_deleting_an_absent_secret_is_quiet(store):
+    """Delete runs against credentials whose value may already be gone; that is not an error."""
+    await store.delete(a_ref())
+
+
+async def test_reading_an_unwritten_secret_is_not_found(store):
+    with pytest.raises(SecretNotFoundError):
+        await store.get(a_ref())
+
+
+async def test_two_secrets_for_one_service_coexist(store):
+    """The whole point of BYOK: a workspace holds several keys against the same provider."""
+    primary = a_ref(name="primary")
+    backup = a_ref(name="backup")
+    await store.put(primary, Secret("primary-value"))
+    await store.put(backup, Secret("backup-value"))
+    assert (await store.get(primary)).reveal() == "primary-value"
+    assert (await store.get(backup)).reveal() == "backup-value"
+
+
+async def test_secrets_do_not_collide_across_services(store):
+    openai = a_ref(service="openai")
+    anthropic = a_ref(service="anthropic")
+    await store.put(openai, Secret("one"))
+    await store.put(anthropic, Secret("two"))
+    assert (await store.get(openai)).reveal() == "one"
+    assert (await store.get(anthropic)).reveal() == "two"
+
+
+async def test_scopes_do_not_read_as_one_another(store):
+    """A workspace secret and the org secret it shares an id with are different secrets."""
+    secret_id = uuid4()
+
+    def scoped(org_id=None, workspace_id=None):
+        return SecretRef(
+            purpose=SecretPurpose.provider, service="openai", name="default", secret_id=secret_id, org_id=org_id, workspace_id=workspace_id
+        )
+
+    workspace_scoped = scoped(org_id=ORG, workspace_id=WORKSPACE)
+    org_scoped = scoped(org_id=ORG)
+    platform_scoped = scoped()
+    await store.put(workspace_scoped, Secret("workspace-value"))
+    await store.put(org_scoped, Secret("org-value"))
+    await store.put(platform_scoped, Secret("platform-value"))
+    assert (await store.get(workspace_scoped)).reveal() == "workspace-value"
+    assert (await store.get(org_scoped)).reveal() == "org-value"
+    assert (await store.get(platform_scoped)).reveal() == "platform-value"
+
+
+async def test_every_writable_store_says_so(store):
+    assert store.writable
+
+
+def test_a_config_builds_its_own_store(tmp_path):
+    assert isinstance(MemoryStoreConfig().build(), MemorySecretStore)
+    assert isinstance(FileStoreConfig(root=tmp_path).build(), FileSecretStore)
+    assert isinstance(EnvStoreConfig().build(), EnvSecretStore)
+
+
+def test_the_kind_selects_which_backend_parses_the_settings(tmp_path):
+    configured = Configured.model_validate({"secrets": {"kind": "file", "root": str(tmp_path)}})
+    assert configured.secrets == FileStoreConfig(root=tmp_path)
+    assert Configured.model_validate({"secrets": {"kind": "env", "prefix": "ACME"}}).secrets == EnvStoreConfig(prefix="ACME")
+
+
+def test_a_backend_does_not_accept_another_backend_settings():
+    """The point of splitting config per backend: `root` is a file store's business and nobody
+    else's, so a typo lands as a validation error rather than as a silently ignored key."""
+    with pytest.raises(ValidationError):
+        Configured.model_validate({"secrets": {"kind": "env", "root": "somewhere/secrets"}})
+
+
+def test_an_unknown_backend_is_refused():
+    with pytest.raises(ValidationError):
+        Configured.model_validate({"secrets": {"kind": "s3"}})
+
+
+def test_secret_repr_and_str_are_redacted():
+    secret = Secret("sk-do-not-print-me")
+    assert "do-not-print-me" not in repr(secret)
+    assert "do-not-print-me" not in str(secret)
+    assert "do-not-print-me" not in f"{secret}"
+
+
+def test_secret_does_not_serialize():
+    with pytest.raises(TypeError):
+        json.dumps({"credential": Secret("sk-do-not-print-me")})
+
+
+def test_secret_does_not_reach_the_log(caplog):
+    with caplog.at_level(logging.INFO):
+        logging.getLogger("test").info("using %s", Secret("sk-do-not-print-me"))
+    assert "do-not-print-me" not in caplog.text
+
+
+def test_secret_fingerprint_is_the_tail():
+    assert Secret("sk-proj-abcd1234").fingerprint == "1234"
+
+
+def test_reveal_is_the_only_way_out():
+    assert Secret("sk-value").reveal() == "sk-value"
+
+
+async def test_a_file_store_keeps_secrets_owner_readable(tmp_path):
+    store = FileSecretStore(root=tmp_path / "secrets")
+    ref = a_ref()
+    await store.put(ref, Secret("sk-value"))
+    written = next(path for path in (tmp_path / "secrets").rglob("*") if path.is_file())
+    assert stat.S_IMODE(written.stat().st_mode) == 0o600
+
+
+async def test_a_file_store_reports_an_unusable_root_as_unavailable(tmp_path):
+    """A root that cannot be written is infrastructure failing, not a credential that is absent."""
+    blocker = tmp_path / "not-a-directory"
+    blocker.write_text("", encoding="utf-8")
+    store = FileSecretStore(root=blocker)
+    with pytest.raises(SecretStoreUnavailableError):
+        await store.put(a_ref(), Secret("sk-value"))
+
+
+def a_platform_ref(service="openai", name="default"):
+    return SecretRef(purpose=SecretPurpose.provider, service=service, name=name, secret_id=uuid4())
+
+
+async def test_an_env_store_reads_a_platform_secret(monkeypatch):
+    """The name an operator has to type stays typeable."""
+    store = EnvSecretStore(prefix="AIRLLM_SECRET")
+    ref = a_platform_ref()
+    monkeypatch.setenv("AIRLLM_SECRET_PROVIDER_OPENAI_DEFAULT", "sk-from-env")
+    assert store.variables_for(ref)[0] == "AIRLLM_SECRET_PROVIDER_OPENAI_DEFAULT"
+    assert (await store.get(ref)).reveal() == "sk-from-env"
+
+
+async def test_an_env_store_answers_to_the_conventional_provider_variable(monkeypatch):
+    """OPENAI_API_KEY is the name every provider SDK documents and the one taxonomy.yml already
+    uses, so an existing deployment keeps working and quickstart asks for nothing new."""
+    store = EnvSecretStore(prefix="AIRLLM_SECRET")
+    monkeypatch.delenv("AIRLLM_SECRET_PROVIDER_OPENAI_DEFAULT", raising=False)
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-conventional")
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-anthropic")
+    assert (await store.get(a_platform_ref())).reveal() == "sk-conventional"
+    assert (await store.get(a_platform_ref(service="anthropic"))).reveal() == "sk-anthropic"
+
+
+async def test_the_derived_variable_wins_over_the_conventional_one(monkeypatch):
+    store = EnvSecretStore(prefix="AIRLLM_SECRET")
+    monkeypatch.setenv("AIRLLM_SECRET_PROVIDER_OPENAI_DEFAULT", "sk-explicit")
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-conventional")
+    assert (await store.get(a_platform_ref())).reveal() == "sk-explicit"
+
+
+async def test_a_scoped_secret_never_reads_the_conventional_variable(monkeypatch):
+    """A workspace bringing its own key must not silently pick up the platform's environment."""
+    store = EnvSecretStore(prefix="AIRLLM_SECRET")
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-platform")
+    with pytest.raises(SecretNotFoundError):
+        await store.get(a_ref())
+
+
+async def test_an_env_store_keeps_scoped_secrets_apart(monkeypatch):
+    """The environment is flat, so service and name alone would collide across workspaces."""
+    store = EnvSecretStore(prefix="AIRLLM_SECRET")
+    first, second = a_ref(), a_ref()
+    assert store.variables_for(first) != store.variables_for(second)
+    monkeypatch.setenv(store.variables_for(first)[0], "first-value")
+    assert (await store.get(first)).reveal() == "first-value"
+    with pytest.raises(SecretNotFoundError):
+        await store.get(second)
+
+
+async def test_an_env_store_refuses_writes():
+    """An instance configured this way serves platform credentials and cannot accept BYOK, which the
+    control plane checks through `writable` at startup rather than discovering here."""
+    store = EnvSecretStore(prefix="AIRLLM_SECRET")
+    assert not store.writable
+    with pytest.raises(SecretStoreReadOnlyError):
+        await store.put(a_ref(), Secret("sk-value"))
+    with pytest.raises(SecretStoreReadOnlyError):
+        await store.delete(a_ref())
+
+
+async def test_a_missing_env_secret_is_not_found(monkeypatch):
+    store = EnvSecretStore(prefix="AIRLLM_SECRET")
+    ref = a_platform_ref(name="absent")
+    for variable in store.variables_for(ref):
+        monkeypatch.delenv(variable, raising=False)
+    with pytest.raises(SecretNotFoundError):
+        await store.get(ref)

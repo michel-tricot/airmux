@@ -403,3 +403,45 @@ plane config (`data_plane.bundle.org`), and usage events, so the switch needs ei
 references in config or a resolve step at data-plane sync. Pairs with the surrogate-key bullet of
 [soft delete](#soft-delete-on-postgres), which wants the same id/identity split for partial unique
 indexes.
+
+## Credential policy
+
+Deferred from [BYOK](design/BYOK.md), which ships fixed behavior instead: failover in priority
+order, empty tier cascades to the next broader scope, exhausted tier never does. Policy would make
+those configurable as a typed record scoped org, workspace, or (workspace, provider), resolved
+most-specific-wins:
+
+- `selection`: failover or round_robin, the latter an in-memory counter per (workspace, provider)
+  and therefore per data plane instance, not globally fair
+- `on_empty`: deny or cascade. `deny` at org scope is what "this org must bring its own keys" means,
+  which v1 cannot express
+- `on_exhausted`: deny or cascade
+- `cooldown_unauthorized_s`, `cooldown_rate_limited_s`: today constants in the data plane
+
+The precedence resolution belongs in the compiler, not the data plane: the bundle carries one
+already-merged `CredentialPolicyEntry` per pairing so the request path never merges anything and
+`evaluate()` stays a pure lookup. Same reason the credential index is built at bundle admission
+rather than per request.
+
+## Binding an inference key to a subset of credentials
+
+The natural follow-on to [credential policy](#credential-policy): a caller's key selects which
+provider credentials it may spend against, so one workspace can hold a cheap pool and an expensive
+pool and hand out inference keys against each. Mechanically it is a filter over the candidate tuple
+`evaluate()` already returns, either an allowlist of credential names on the policy record or a
+binding column on InferenceKey. No new machinery, which is why it waits.
+
+## Caller-chosen provider credential by header
+
+A request header naming a credential, gated per workspace, so a caller can pin traffic to a specific
+upstream account for a single call. Wants [binding](#binding-an-inference-key-to-a-subset-of-credentials)
+first so the header narrows an allowlist rather than selecting freely, and it is ingress-specific
+surface (the Anthropic and canonical ingresses would each need it), which is most of the cost.
+
+## Per-workspace provider endpoints
+
+BYOK gives a workspace its own credential for a provider but not its own endpoint, so Azure OpenAI
+deployments and self-hosted vLLM instances still need an instance-wide Provider row. Making
+base_url per workspace means Provider stops being instance-global (it is `name`-unique with no
+org_id today) and the bundle's provider list becomes workspace-scoped like the credential list.
+Deliberately out of scope of BYOK, which keeps the change to one new table and one new bundle field.
