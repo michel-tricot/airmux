@@ -1,59 +1,40 @@
 import { useState } from 'react';
-import {
-  useGetUser,
-  useDeleteUser,
-  useListOrgs,
-  addOrgUser,
-  removeOrgUser,
-  getGetUserQueryKey,
-  getListUsersQueryKey,
-} from '@workspace/api-client-react';
-import { useMutation } from '@tanstack/react-query';
-import { orgScope } from '@/lib/api';
-import { Card, Button, Label, Dropdown, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Modal, Badge, ConfirmButton } from '@/components/ui/elements';
+import * as z from 'zod';
+import { Card, Button, Dropdown, Modal, Badge, ConfirmButton } from '@/components/ui/elements';
 import { ArrowLeft, Building2, Plus, UserMinus, Trash2 } from 'lucide-react';
 import { formatDate } from '@/lib/format';
 import { Link, useParams, useLocation } from 'wouter';
-import { useQueryClient } from '@tanstack/react-query';
+import { useOrgs } from '@/features/orgs/hooks';
+import {
+  useUser,
+  useDeleteUserMutation,
+  useAddUserToOrgMutation,
+  useRemoveUserFromOrgMutation,
+} from '@/features/users/hooks';
+import { LoadingState, ErrorState } from '@/components/shared/states';
+import { DataTable } from '@/components/shared/data-table';
+import { FormDialog } from '@/components/shared/form-dialog';
+import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+
+const addToOrgSchema = z.object({ orgId: z.string().min(1, 'Select an organization') });
 
 export default function UserDetail() {
   const { userId } = useParams();
   const [, setLocation] = useLocation();
-  const queryClient = useQueryClient();
 
-  const { data: user, isLoading } = useGetUser(userId!, { query: { queryKey: getGetUserQueryKey(userId!), retry: false } });
-  const { data: orgs } = useListOrgs();
+  const { data: user, isLoading } = useUser(userId!);
+  const orgsQuery = useOrgs();
+  const orgs = orgsQuery.data;
 
   const [addOpen, setAddOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
-  const [orgId, setOrgId] = useState('');
 
-  // Membership is org-scoped: the org arrives in the header, and this page grants across orgs,
-  // so the calls go through the generated functions where the scope is per call rather than
-  // through the hooks, which fix their headers once.
-  const invalidate = () => {
-    queryClient.invalidateQueries({ queryKey: getListUsersQueryKey() });
-    queryClient.invalidateQueries({ queryKey: getGetUserQueryKey(userId!) });
-  };
-  const addMember = useMutation({
-    mutationFn: (target: { userId: string; orgId: string }) => addOrgUser(target.userId, orgScope(target.orgId)),
-    onSuccess: () => { invalidate(); setAddOpen(false); setOrgId(''); },
-  });
-  const removeMember = useMutation({
-    mutationFn: (target: { userId: string; orgId: string }) => removeOrgUser(target.userId, orgScope(target.orgId)),
-    onSuccess: invalidate,
-  });
+  const addMember = useAddUserToOrgMutation();
+  const removeMember = useRemoveUserFromOrgMutation();
+  const deleteUser = useDeleteUserMutation();
 
-  const deleteUser = useDeleteUser({
-    mutation: {
-      onSuccess: () => { queryClient.invalidateQueries({ queryKey: getListUsersQueryKey() }); setLocation('/instance/users'); },
-      onError: () => setDeleteError('We couldn’t delete this user. Please try again.'),
-    },
-  });
-
-  if (isLoading) return <div className="p-8 text-center text-muted-foreground font-mono text-sm">LOADING...</div>;
-  if (!user) return <div className="p-8 text-center text-destructive">User not found</div>;
+  if (isLoading) return <LoadingState label="LOADING..." />;
+  if (!user) return <ErrorState message="User not found" />;
 
   const memberships = orgs?.filter(o => user.orgs.includes(o.id));
   const available = orgs?.filter(o => !user.orgs.includes(o.id));
@@ -80,7 +61,7 @@ export default function UserDetail() {
             {user.service_account ? 'SERVICE ACCOUNT' : 'HUMAN'}
           </Badge>
           <Button variant="outline" className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
-            onClick={() => { setDeleteError(null); setDeleteOpen(true); }}>
+            onClick={() => setDeleteOpen(true)}>
             <Trash2 className="w-4 h-4 mr-2" /> Delete
           </Button>
         </div>
@@ -95,42 +76,41 @@ export default function UserDetail() {
           <Button onClick={() => setAddOpen(true)} size="sm"><Plus className="w-4 h-4 mr-1" /> Add to Organization</Button>
         </div>
         <Card>
-          {memberships && memberships.length > 0 ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Organization</TableHead>
-                  <TableHead>ID</TableHead>
-                  <TableHead>Created</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {memberships.map(org => (
-                  <TableRow key={org.id}>
-                    <TableCell className="font-medium">
-                      <Link href={`/instance/organizations/${org.id}`} className="hover:text-primary">{org.name}</Link>
-                    </TableCell>
-                    <TableCell className="font-mono text-xs text-muted-foreground">{org.id}</TableCell>
-                    <TableCell className="text-muted-foreground text-sm">{formatDate(org.created_at)}</TableCell>
-                    <TableCell className="text-right">
-                      <ConfirmButton
-                        title={`Remove ${user.name} from ${org.name}?`}
-                        description="They lose access to this organization and all of its workspaces."
-                        confirmLabel="Remove membership"
-                        pending={removeMember.isPending}
-                        aria-label="Remove membership"
-                        onConfirm={() => removeMember.mutate({ userId: user.id, orgId: org.id })}>
-                        <UserMinus className="w-4 h-4" />
-                      </ConfirmButton>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          ) : (
-            <div className="p-8 text-center text-muted-foreground">User does not belong to any organizations.</div>
-          )}
+          <DataTable
+            rows={memberships}
+            rowKey={org => org.id}
+            isLoading={orgsQuery.isLoading}
+            isError={orgsQuery.isError}
+            onRetry={() => orgsQuery.refetch()}
+            empty="User does not belong to any organizations."
+            columns={[
+              {
+                key: 'org',
+                header: 'Organization',
+                cellClassName: 'font-medium',
+                cell: org => <Link href={`/instance/organizations/${org.id}`} className="hover:text-primary">{org.name}</Link>,
+              },
+              { key: 'id', header: 'ID', cellClassName: 'font-mono text-xs text-muted-foreground', cell: org => org.id },
+              { key: 'created', header: 'Created', cellClassName: 'text-muted-foreground text-sm', cell: org => formatDate(org.created_at) },
+              {
+                key: 'actions',
+                header: 'Actions',
+                headClassName: 'text-right',
+                cellClassName: 'text-right',
+                cell: org => (
+                  <ConfirmButton
+                    title={`Remove ${user.name} from ${org.name}?`}
+                    description="They lose access to this organization and all of its workspaces."
+                    confirmLabel="Remove membership"
+                    pending={removeMember.isPending}
+                    aria-label="Remove membership"
+                    onConfirm={() => removeMember.mutate({ userId: user.id, orgId: org.id })}>
+                    <UserMinus className="w-4 h-4" />
+                  </ConfirmButton>
+                ),
+              },
+            ]}
+          />
         </Card>
       </div>
 
@@ -140,34 +120,47 @@ export default function UserDetail() {
           <p className="text-sm text-muted-foreground">
             A user who still holds memberships, owns a personal org, or minted inference keys is refused; clear those first.
           </p>
-          {deleteError && <p className="text-sm text-destructive">{deleteError}</p>}
           <div className="flex justify-end gap-2 pt-4">
             <Button type="button" variant="outline" onClick={() => setDeleteOpen(false)}>Cancel</Button>
-            <Button variant="destructive" disabled={deleteUser.isPending} onClick={() => deleteUser.mutate({ userId: user.id })}>
+            <Button variant="destructive" disabled={deleteUser.isPending}
+              onClick={() => deleteUser.mutate({ userId: user.id }, { onSuccess: () => setLocation('/instance/users') })}>
               Delete User
             </Button>
           </div>
         </div>
       </Modal>
 
-      <Modal open={addOpen} onOpenChange={setAddOpen} title="Add to Organization">
-        <form onSubmit={e => { e.preventDefault(); addMember.mutate({ userId: user.id, orgId }); }} className="space-y-4 pt-4">
-          <div className="space-y-2">
-            <Label htmlFor="org">Organization</Label>
-            <Dropdown
-              aria-label="Organization"
-              value={orgId}
-              onValueChange={setOrgId}
-              placeholder="Select an organization"
-              options={(available ?? []).map(org => ({ value: org.id, label: org.name }))}
-            />
-          </div>
-          <div className="flex justify-end gap-2 pt-4">
-            <Button type="button" variant="outline" onClick={() => setAddOpen(false)}>Cancel</Button>
-            <Button type="submit" disabled={!orgId || addMember.isPending}>Add</Button>
-          </div>
-        </form>
-      </Modal>
+      <FormDialog
+        open={addOpen}
+        onOpenChange={setAddOpen}
+        title="Add to Organization"
+        schema={addToOrgSchema}
+        defaultValues={{ orgId: '' }}
+        onSubmit={values => addMember.mutateAsync({ userId: user.id, orgId: values.orgId })}
+        submitLabel="Add"
+        pending={addMember.isPending}>
+        {form => (
+          <FormField
+            control={form.control}
+            name="orgId"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Organization</FormLabel>
+                <FormControl>
+                  <Dropdown
+                    aria-label="Organization"
+                    value={field.value}
+                    onValueChange={field.onChange}
+                    placeholder="Select an organization"
+                    options={(available ?? []).map(org => ({ value: org.id, label: org.name }))}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
+      </FormDialog>
     </div>
   );
 }

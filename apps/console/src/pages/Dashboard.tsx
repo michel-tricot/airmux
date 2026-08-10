@@ -1,21 +1,25 @@
-import { useListOrgs, useListUsers, useListDataPlanes, useListAllManagementKeys, useListInstanceActivity } from '@workspace/api-client-react';
-import { Card, CardContent, CardHeader, CardTitle, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Badge } from '@/components/ui/elements';
+import { Card, CardContent, CardHeader, CardTitle, Badge } from '@/components/ui/elements';
 import { Building2, Users, Key, Server, Activity } from 'lucide-react';
 import { formatRelative } from '@/lib/format';
+import { useOrgs } from '@/features/orgs/hooks';
+import { useUsers } from '@/features/users/hooks';
+import { useAllManagementKeys } from '@/features/keys/hooks';
+import { useDataPlanes, useInstanceActivity } from '@/features/telemetry/hooks';
+import { DataTable } from '@/components/shared/data-table';
 
 export default function Dashboard() {
-  const { data: orgs, isLoading: loadingOrgs } = useListOrgs();
-  const { data: users } = useListUsers();
-  const { data: dataPlanes, isLoading: loadingDataPlanes } = useListDataPlanes();
-  const { data: keys } = useListAllManagementKeys();
-  const { data: activity, isLoading: loadingActivity } = useListInstanceActivity({ limit: 25 });
+  const { data: orgs, isLoading: loadingOrgs } = useOrgs();
+  const { data: users } = useUsers();
+  const dataPlanesQuery = useDataPlanes();
+  const { data: keys } = useAllManagementKeys();
+  const activityQuery = useInstanceActivity({ limit: 25 });
   const actor = (userId: string) => users?.find(u => u.id === userId)?.email ?? userId;
 
   const statCards = [
     { label: 'Organizations', value: orgs?.length ?? '-', icon: Building2 },
     { label: 'Users', value: users?.length ?? '-', icon: Users },
     { label: 'Automation Keys', value: keys?.filter(k => !k.revoked).length ?? '-', icon: Key },
-    { label: 'Connected Services', value: dataPlanes?.filter(d => d.status === 'online').length ?? '-', icon: Server, active: true },
+    { label: 'Connected Services', value: dataPlanesQuery.data?.filter(d => d.status === 'online').length ?? '-', icon: Server, active: true },
   ];
 
   return (
@@ -54,40 +58,40 @@ export default function Dashboard() {
           </div>
         </CardHeader>
         <CardContent>
-          {loadingDataPlanes ? (
-            <div className="py-8 text-center text-muted-foreground font-mono text-sm">Loading connected services...</div>
-          ) : dataPlanes && dataPlanes.length > 0 ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Instance</TableHead>
-                  <TableHead>Bundle</TableHead>
-                  <TableHead>Version</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Last Seen</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {dataPlanes.map((instance) => (
-                  <TableRow key={instance.instance_id}>
-                    <TableCell className="font-mono text-xs">{instance.address ?? instance.instance_id}</TableCell>
-                    <TableCell className="font-mono text-xs text-muted-foreground">{instance.bundle_id ?? 'none'}</TableCell>
-                    <TableCell className="font-mono text-xs text-muted-foreground">{instance.version}</TableCell>
-                    <TableCell>
-                      <Badge variant={instance.status === 'online' ? 'success' : 'outline'} className="font-mono">
-                        {instance.status.toUpperCase()}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right text-muted-foreground text-sm">{formatRelative(instance.last_seen)}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          ) : (
-            <div className="py-8 text-center text-muted-foreground text-sm border-dashed border-2 rounded-md border-border">
-              No data plane has reported in yet.
-            </div>
-          )}
+          <DataTable
+            rows={dataPlanesQuery.data}
+            rowKey={instance => instance.instance_id}
+            isLoading={dataPlanesQuery.isLoading}
+            isError={dataPlanesQuery.isError}
+            onRetry={() => dataPlanesQuery.refetch()}
+            loadingLabel="Loading connected services..."
+            empty={
+              <div className="py-8 text-center text-muted-foreground text-sm border-dashed border-2 rounded-md border-border">
+                No data plane has reported in yet.
+              </div>
+            }
+            columns={[
+              { key: 'instance', header: 'Instance', cellClassName: 'font-mono text-xs', cell: i => i.address ?? i.instance_id },
+              { key: 'bundle', header: 'Bundle', cellClassName: 'font-mono text-xs text-muted-foreground', cell: i => i.bundle_id ?? 'none' },
+              { key: 'version', header: 'Version', cellClassName: 'font-mono text-xs text-muted-foreground', cell: i => i.version },
+              {
+                key: 'status',
+                header: 'Status',
+                cell: i => (
+                  <Badge variant={i.status === 'online' ? 'success' : 'outline'} className="font-mono">
+                    {i.status.toUpperCase()}
+                  </Badge>
+                ),
+              },
+              {
+                key: 'last-seen',
+                header: 'Last Seen',
+                headClassName: 'text-right',
+                cellClassName: 'text-right text-muted-foreground text-sm',
+                cell: i => formatRelative(i.last_seen),
+              },
+            ]}
+          />
         </CardContent>
       </Card>
 
@@ -99,42 +103,51 @@ export default function Dashboard() {
           </div>
         </CardHeader>
         <CardContent>
-          {loadingActivity ? (
-            <div className="py-8 text-center text-muted-foreground font-mono text-sm">Loading activity...</div>
-          ) : activity && activity.length > 0 ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[120px]">Action</TableHead>
-                  <TableHead>Resource</TableHead>
-                  <TableHead>Actor</TableHead>
-                  <TableHead className="text-right">When</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {activity.map((entry) => (
-                  <TableRow key={entry.id}>
-                    <TableCell>
-                      <Badge variant={entry.action === 'delete' ? 'destructive' : entry.action === 'create' ? 'success' : 'secondary'}
-                        className="font-mono">
-                        {entry.action}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="font-medium">
-                      {entry.table_name}
-                      <div className="text-xs text-muted-foreground font-mono">{entry.record_id}</div>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-sm">{actor(entry.user_id)}</TableCell>
-                    <TableCell className="text-right text-muted-foreground text-sm">{formatRelative(entry.occurred_at)}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          ) : (
-            <div className="py-8 text-center text-muted-foreground text-sm border-dashed border-2 rounded-md border-border">
-              Nothing has changed on this instance yet.
-            </div>
-          )}
+          <DataTable
+            rows={activityQuery.data}
+            rowKey={entry => String(entry.id)}
+            isLoading={activityQuery.isLoading}
+            isError={activityQuery.isError}
+            onRetry={() => activityQuery.refetch()}
+            loadingLabel="Loading activity..."
+            empty={
+              <div className="py-8 text-center text-muted-foreground text-sm border-dashed border-2 rounded-md border-border">
+                Nothing has changed on this instance yet.
+              </div>
+            }
+            columns={[
+              {
+                key: 'action',
+                header: 'Action',
+                headClassName: 'w-[120px]',
+                cell: entry => (
+                  <Badge variant={entry.action === 'delete' ? 'destructive' : entry.action === 'create' ? 'success' : 'secondary'}
+                    className="font-mono">
+                    {entry.action}
+                  </Badge>
+                ),
+              },
+              {
+                key: 'resource',
+                header: 'Resource',
+                cellClassName: 'font-medium',
+                cell: entry => (
+                  <>
+                    {entry.table_name}
+                    <div className="text-xs text-muted-foreground font-mono">{entry.record_id}</div>
+                  </>
+                ),
+              },
+              { key: 'actor', header: 'Actor', cellClassName: 'text-muted-foreground text-sm', cell: entry => actor(entry.user_id) },
+              {
+                key: 'when',
+                header: 'When',
+                headClassName: 'text-right',
+                cellClassName: 'text-right text-muted-foreground text-sm',
+                cell: entry => formatRelative(entry.occurred_at),
+              },
+            ]}
+          />
         </CardContent>
       </Card>
     </div>

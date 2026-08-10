@@ -1,5 +1,6 @@
 import { type ReactNode } from 'react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { MutationCache, QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { toast } from '@/hooks/use-toast';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -38,6 +39,19 @@ import WorkspaceComingSoon from '@/pages/app/workspace/ComingSoon';
 import { Database, Route as RouteIcon, ShieldCheck } from 'lucide-react';
 
 export const queryClient = new QueryClient({
+  // Every mutation surfaces its failure as a toast unless it opts out
+  // (meta.silentError) to render the error inline, e.g. the login form.
+  mutationCache: new MutationCache({
+    onError: (_error, _variables, _context, mutation) => {
+      const meta = mutation.meta as { silentError?: boolean; errorMessage?: string } | undefined;
+      if (meta?.silentError) return;
+      toast({
+        variant: 'destructive',
+        title: 'Something went wrong',
+        description: meta?.errorMessage ?? 'Please try again.',
+      });
+    },
+  }),
   defaultOptions: {
     queries: {
       retry: 1,
