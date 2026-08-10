@@ -30,6 +30,8 @@ export const Scope = {
   'bundles:write': 'bundles:write',
   'events:read': 'events:read',
   'data-planes:read': 'data-planes:read',
+  'provider-credentials:read': 'provider-credentials:read',
+  'provider-credentials:write': 'provider-credentials:write',
   'taxonomy:read': 'taxonomy:read',
   'taxonomy:write': 'taxonomy:write',
   'orgs:read': 'orgs:read',

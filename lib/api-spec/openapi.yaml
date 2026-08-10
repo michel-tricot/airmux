@@ -2396,6 +2396,421 @@ paths:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
       description: Requires the `inference-keys:write` scope.
+  /v1/org/provider-credentials:
+    post:
+      tags:
+      - Provider Credentials
+      summary: Create Provider Credential
+      description: 'Bring a provider key for this org, or for one workspace in it.
+
+
+        The row is written before the value so a crash between the two leaves a credential with nothing
+
+        behind it, which the request path already handles by skipping the candidate. The other order
+
+        would leave a value in the store with no row to delete it by.
+
+
+        Requires the `provider-credentials:write` scope.'
+      operationId: create_provider_credential
+      security:
+      - HTTPBearer:
+        - provider-credentials:write
+      parameters:
+      - name: X-Org-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Org-Id
+      - name: X-Requested-With
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Requested-With
+      - name: Sec-Fetch-Site
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Sec-Fetch-Site
+      - name: airllm_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Airllm Session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProviderCredentialIn'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_ProviderCredentialOut_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    get:
+      tags:
+      - Provider Credentials
+      summary: List Provider Credentials
+      description: 'The org''s credentials in the order the data plane tries them, optionally narrowed to one workspace.
+
+
+        Requires the `provider-credentials:read` scope.'
+      operationId: list_provider_credentials
+      security:
+      - HTTPBearer:
+        - provider-credentials:read
+      parameters:
+      - name: workspace
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Workspace
+      - name: X-Org-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Org-Id
+      - name: X-Requested-With
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Requested-With
+      - name: Sec-Fetch-Site
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Sec-Fetch-Site
+      - name: airllm_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Airllm Session
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_list_ProviderCredentialOut__'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/org/provider-credentials/{credential_id}:
+    get:
+      tags:
+      - Provider Credentials
+      summary: Get Provider Credential
+      operationId: get_provider_credential
+      security:
+      - HTTPBearer:
+        - provider-credentials:read
+      parameters:
+      - name: credential_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Credential Id
+      - name: X-Org-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Org-Id
+      - name: X-Requested-With
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Requested-With
+      - name: Sec-Fetch-Site
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Sec-Fetch-Site
+      - name: airllm_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Airllm Session
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_ProviderCredentialOut_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+      description: Requires the `provider-credentials:read` scope.
+    patch:
+      tags:
+      - Provider Credentials
+      summary: Update Provider Credential
+      description: 'Priority and enabled are the whole mutable surface: everything else names the secret, so
+
+        changing it would orphan the value rather than move it.
+
+
+        Requires the `provider-credentials:write` scope.'
+      operationId: update_provider_credential
+      security:
+      - HTTPBearer:
+        - provider-credentials:write
+      parameters:
+      - name: credential_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Credential Id
+      - name: X-Org-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Org-Id
+      - name: X-Requested-With
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Requested-With
+      - name: Sec-Fetch-Site
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Sec-Fetch-Site
+      - name: airllm_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Airllm Session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProviderCredentialUpdate'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_ProviderCredentialOut_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    delete:
+      tags:
+      - Provider Credentials
+      summary: Delete Provider Credential
+      description: 'The value goes first: a row with no value is a candidate the request path skips, while a
+
+        value with no row is a secret nothing knows how to reach or remove.
+
+
+        Requires the `provider-credentials:write` scope.'
+      operationId: delete_provider_credential
+      security:
+      - HTTPBearer:
+        - provider-credentials:write
+      parameters:
+      - name: credential_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Credential Id
+      - name: X-Org-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Org-Id
+      - name: X-Requested-With
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Requested-With
+      - name: Sec-Fetch-Site
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Sec-Fetch-Site
+      - name: airllm_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Airllm Session
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_DeletedOut_UUID__'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/org/provider-credentials/{credential_id}/value:
+    put:
+      tags:
+      - Provider Credentials
+      summary: Rotate Provider Credential
+      description: 'A rotation is the same row and the same ref with a new value, so the bundle diff is one
+
+        integer and every data plane refetches within a poll instead of waiting out a cache TTL.
+
+
+        Requires the `provider-credentials:write` scope.'
+      operationId: rotate_provider_credential
+      security:
+      - HTTPBearer:
+        - provider-credentials:write
+      parameters:
+      - name: credential_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Credential Id
+      - name: X-Org-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Org-Id
+      - name: X-Requested-With
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Requested-With
+      - name: Sec-Fetch-Site
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Sec-Fetch-Site
+      - name: airllm_session
+        in: cookie
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Airllm Session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProviderCredentialValueIn'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_ProviderCredentialOut_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
   /v1/org/users:
     get:
       tags:
@@ -3554,12 +3969,20 @@ components:
             $ref: '#/components/schemas/ModelEntry'
           type: array
           title: Models
+        credentials:
+          items:
+            $ref: '#/components/schemas/CredentialEntry'
+          type: array
+          title: Credentials
+          default: []
       type: object
       required:
       - providers
       - models
       title: Catalog
-      description: 'Everything routable in one org: providers and the models that point at them.'
+      description: 'Everything routable in one org: providers, the models that point at them, and the credentials
+
+        they are reached with.'
     ClaimOut:
       properties:
         claimed:
@@ -3693,6 +4116,35 @@ components:
       - interval_seconds
       - expires_in_seconds
       title: CliAuthStartOut
+    CredentialEntry:
+      properties:
+        ref:
+          $ref: '#/components/schemas/SecretRef'
+        priority:
+          type: integer
+          title: Priority
+        version:
+          type: integer
+          title: Version
+      type: object
+      required:
+      - ref
+      - priority
+      - version
+      title: CredentialEntry
+      description: 'One provider key the data plane may spend against, named but not carried.
+
+
+        The ref says which secret; the data plane fetches the value from the store it is configured
+
+        with. Nothing here is a secret and nothing here is a location, so a bundle at rest and a bundle
+
+        on the wire are both safe to read.
+
+
+        version is the cache key: a rotation keeps the ref and bumps this, so a data plane refetches
+
+        within one poll rather than waiting out a TTL.'
     DataPlaneInstanceOut:
       properties:
         instance_id:
@@ -3960,6 +4412,14 @@ components:
       required:
       - data
       title: Envelope[PasswordChangedOut]
+    Envelope_ProviderCredentialOut_:
+      properties:
+        data:
+          $ref: '#/components/schemas/ProviderCredentialOut'
+      type: object
+      required:
+      - data
+      title: Envelope[ProviderCredentialOut]
     Envelope_ProviderOut_:
       properties:
         data:
@@ -4104,6 +4564,17 @@ components:
       required:
       - data
       title: Envelope[list[OrgOut]]
+    Envelope_list_ProviderCredentialOut__:
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/ProviderCredentialOut'
+          type: array
+          title: Data
+      type: object
+      required:
+      - data
+      title: Envelope[list[ProviderCredentialOut]]
     Envelope_list_UsageEventOut__:
       properties:
         data:
@@ -4933,6 +5404,156 @@ components:
       - user_id
       - status
       title: PasswordChangedOut
+    ProviderCredentialIn:
+      properties:
+        provider:
+          type: string
+          title: Provider
+          description: Provider name from the catalog, e.g. openai
+        name:
+          type: string
+          maxLength: 80
+          minLength: 1
+          title: Name
+          description: Handle for this key within the provider and scope, e.g. prod or backup
+          default: default
+        value:
+          type: string
+          format: password
+          title: Value
+          description: The provider API key. Written to the secret store and never persisted anywhere else
+          writeOnly: true
+        priority:
+          type: integer
+          title: Priority
+          description: Lower is tried first; ties break by name
+          default: 100
+        workspace:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Workspace
+          description: Workspace id or slug for a workspace-scoped key; omitted makes it org-scoped
+      type: object
+      required:
+      - provider
+      - value
+      title: ProviderCredentialIn
+      description: 'Creating a credential is an action, not a plain row insert: the value crosses the wire once
+
+        and is never a column, so this is not a RecordCreate and is exempt from parity by that choice.
+
+
+        The value is a SecretStr so nothing that renders this model can print it. That is not enough on
+
+        its own: the validation error handler in app.py drops the offending input, or a body that fails
+
+        validation for some other reason comes back to the caller with the key still in it.'
+    ProviderCredentialOut:
+      properties:
+        id:
+          type: string
+          format: uuid
+          title: Id
+        org_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Org Id
+        workspace_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Workspace Id
+        provider_id:
+          type: string
+          format: uuid
+          title: Provider Id
+        name:
+          type: string
+          title: Name
+        priority:
+          type: integer
+          title: Priority
+        enabled:
+          type: boolean
+          title: Enabled
+        version:
+          type: integer
+          title: Version
+        status:
+          type: string
+          title: Status
+        fingerprint:
+          type: string
+          title: Fingerprint
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        updated_at:
+          type: string
+          format: date-time
+          title: Updated At
+        deleted_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Deleted At
+        scope:
+          type: string
+          enum:
+          - platform
+          - org
+          - workspace
+          title: Scope
+      type: object
+      required:
+      - id
+      - org_id
+      - workspace_id
+      - provider_id
+      - name
+      - priority
+      - enabled
+      - version
+      - status
+      - fingerprint
+      - created_at
+      - updated_at
+      - deleted_at
+      - scope
+      title: ProviderCredentialOut
+    ProviderCredentialUpdate:
+      properties:
+        priority:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Priority
+        enabled:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Enabled
+      type: object
+      title: ProviderCredentialUpdate
+    ProviderCredentialValueIn:
+      properties:
+        value:
+          type: string
+          format: password
+          title: Value
+          description: The replacement provider API key
+          writeOnly: true
+      type: object
+      required:
+      - value
+      title: ProviderCredentialValueIn
+      description: 'A rotation: the same credential, a new value.'
     ProviderEntry:
       properties:
         provider_id:
@@ -5089,6 +5710,8 @@ components:
       - bundles:write
       - events:read
       - data-planes:read
+      - provider-credentials:read
+      - provider-credentials:write
       - taxonomy:read
       - taxonomy:write
       - orgs:read
@@ -5119,6 +5742,63 @@ components:
         one with everything inside it are each a different privilege from governing one day to day:
 
         :create founds, :write governs, :delete destroys. Elsewhere :write still covers all three.'
+    SecretPurpose:
+      type: string
+      enum:
+      - provider
+      title: SecretPurpose
+      description: 'What family a secret belongs to. Both planes must agree, which is why it lives here.
+
+
+        A new purpose is one member, and every store keeps it apart from the others without changing.'
+    SecretRef:
+      properties:
+        purpose:
+          $ref: '#/components/schemas/SecretPurpose'
+        service:
+          type: string
+          title: Service
+        name:
+          type: string
+          title: Name
+        secret_id:
+          type: string
+          format: uuid
+          title: Secret Id
+        org_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Org Id
+        workspace_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Workspace Id
+      type: object
+      required:
+      - purpose
+      - service
+      - name
+      - secret_id
+      title: SecretRef
+      description: 'Which secret, said in terms of the domain rather than of any store''s layout.
+
+
+        purpose is the family, service is what inside that family the secret authenticates to (a
+
+        provider name today), and name is the caller-facing handle that lets one service hold several.
+
+        secret_id is what actually makes a ref unique; the rest is carried so a store with somewhere
+
+        legible to put it can.
+
+
+        org_id and workspace_id are absent for a platform secret and org_id alone is present for an org
+
+        one, so the same two fields express all three scopes.'
     ServiceAccountIn:
       properties:
         name:
@@ -5585,6 +6265,8 @@ tags:
   description: Usage events reported by data planes
 - name: Taxonomy
   description: 'The models catalog: providers and models compiled into bundles'
+- name: Provider Credentials
+  description: Provider API keys an org or workspace brings; values live in the secret store, never here
 - name: Activity
   description: The audit trail of writes, per org and instance-wide
 x-tagGroups:
@@ -5594,6 +6276,7 @@ x-tagGroups:
   - Management Keys
   - Workspaces
   - Inference Keys
+  - Provider Credentials
   - Bundles
   - Events
   - Activity

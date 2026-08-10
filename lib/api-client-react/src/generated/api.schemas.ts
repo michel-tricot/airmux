@@ -82,11 +82,61 @@ export interface ModelEntry {
 }
 
 /**
- * Everything routable in one org: providers and the models that point at them.
+ * What family a secret belongs to. Both planes must agree, which is why it lives here.
+ *
+ * A new purpose is one member, and every store keeps it apart from the others without changing.
+ */
+export type SecretPurpose = typeof SecretPurpose[keyof typeof SecretPurpose];
+
+
+export const SecretPurpose = {
+  provider: 'provider',
+} as const;
+
+/**
+ * Which secret, said in terms of the domain rather than of any store's layout.
+ *
+ * purpose is the family, service is what inside that family the secret authenticates to (a
+ * provider name today), and name is the caller-facing handle that lets one service hold several.
+ * secret_id is what actually makes a ref unique; the rest is carried so a store with somewhere
+ * legible to put it can.
+ *
+ * org_id and workspace_id are absent for a platform secret and org_id alone is present for an org
+ * one, so the same two fields express all three scopes.
+ */
+export interface SecretRef {
+  purpose: SecretPurpose;
+  service: string;
+  name: string;
+  secret_id: string;
+  org_id?: string | null;
+  workspace_id?: string | null;
+}
+
+/**
+ * One provider key the data plane may spend against, named but not carried.
+ *
+ * The ref says which secret; the data plane fetches the value from the store it is configured
+ * with. Nothing here is a secret and nothing here is a location, so a bundle at rest and a bundle
+ * on the wire are both safe to read.
+ *
+ * version is the cache key: a rotation keeps the ref and bumps this, so a data plane refetches
+ * within one poll rather than waiting out a TTL.
+ */
+export interface CredentialEntry {
+  ref: SecretRef;
+  priority: number;
+  version: number;
+}
+
+/**
+ * Everything routable in one org: providers, the models that point at them, and the credentials
+ * they are reached with.
  */
 export interface Catalog {
   providers: ProviderEntry[];
   models: ModelEntry[];
+  credentials?: CredentialEntry[];
 }
 
 /**
@@ -300,6 +350,8 @@ export const Scope = {
   'bundles:write': 'bundles:write',
   'events:read': 'events:read',
   'data-planes:read': 'data-planes:read',
+  'provider-credentials:read': 'provider-credentials:read',
+  'provider-credentials:write': 'provider-credentials:write',
   'taxonomy:read': 'taxonomy:read',
   'taxonomy:write': 'taxonomy:write',
   'orgs:read': 'orgs:read',
@@ -479,6 +531,70 @@ export interface PasswordChangeIn {
 export interface PasswordChangedOut {
   user_id: string;
   status: 'changed';
+}
+
+/**
+ * Creating a credential is an action, not a plain row insert: the value crosses the wire once
+ * and is never a column, so this is not a RecordCreate and is exempt from parity by that choice.
+ *
+ * The value is a SecretStr so nothing that renders this model can print it. That is not enough on
+ * its own: the validation error handler in app.py drops the offending input, or a body that fails
+ * validation for some other reason comes back to the caller with the key still in it.
+ */
+export interface ProviderCredentialIn {
+  /** Provider name from the catalog, e.g. openai */
+  provider: string;
+  /**
+     * Handle for this key within the provider and scope, e.g. prod or backup
+     * @minLength 1
+     * @maxLength 80
+     */
+  name?: string;
+  /** The provider API key. Written to the secret store and never persisted anywhere else */
+  value: string;
+  /** Lower is tried first; ties break by name */
+  priority?: number;
+  /** Workspace id or slug for a workspace-scoped key; omitted makes it org-scoped */
+  workspace?: string | null;
+}
+
+export type ProviderCredentialOutScope = typeof ProviderCredentialOutScope[keyof typeof ProviderCredentialOutScope];
+
+
+export const ProviderCredentialOutScope = {
+  platform: 'platform',
+  org: 'org',
+  workspace: 'workspace',
+} as const;
+
+export interface ProviderCredentialOut {
+  id: string;
+  org_id: string | null;
+  workspace_id: string | null;
+  provider_id: string;
+  name: string;
+  priority: number;
+  enabled: boolean;
+  version: number;
+  status: string;
+  fingerprint: string;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+  scope: ProviderCredentialOutScope;
+}
+
+export interface ProviderCredentialUpdate {
+  priority?: number | null;
+  enabled?: boolean | null;
+}
+
+/**
+ * A rotation: the same credential, a new value.
+ */
+export interface ProviderCredentialValueIn {
+  /** The replacement provider API key */
+  value: string;
 }
 
 /**
@@ -685,6 +801,10 @@ limit?: number;
 
 export type ListUsersParams = {
 service_account?: boolean | null;
+};
+
+export type ListProviderCredentialsParams = {
+workspace?: string | null;
 };
 
 export type ListEventsParams = {

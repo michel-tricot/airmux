@@ -16,12 +16,10 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import StrEnum
-from typing import TYPE_CHECKING, ClassVar, Final
+from typing import ClassVar, Final
+from uuid import UUID  # noqa: TC003 SecretRef crosses the wire inside the bundle, so pydantic resolves this at runtime
 
 from pydantic import BaseModel, ConfigDict
-
-if TYPE_CHECKING:
-    from uuid import UUID
 
 FINGERPRINT_LENGTH: Final = 4
 REDACTED: Final = "Secret(***)"

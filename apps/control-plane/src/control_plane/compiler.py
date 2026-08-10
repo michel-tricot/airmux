@@ -5,9 +5,9 @@ from typing import TYPE_CHECKING
 from sqlalchemy import func
 from sqlmodel import col, select
 
-from contract import BundleV1, Catalog, KeyEntry, ModelEntry, ProviderEntry, canonical_json, sign_bundle
+from contract import BundleV1, Catalog, CredentialEntry, KeyEntry, ModelEntry, ProviderEntry, canonical_json, sign_bundle
 from control_plane.db import current_session
-from control_plane.models import Bundle, InferenceKey, Model, Org, Provider
+from control_plane.models import Bundle, InferenceKey, Model, Org, Provider, ProviderCredential
 
 if TYPE_CHECKING:
     from datetime import datetime, timedelta
@@ -52,6 +52,8 @@ async def compile_bundle(org_id: UUID, bundle_id: UUID, now: datetime, staleness
     provider_rows = await Provider.find(order_by=col(Provider.name))
     model_rows = await Model.find(order_by=col(Model.name))
     provider_names = {p.id: p.name for p in provider_rows}
+    credential_order = (col(ProviderCredential.priority), col(ProviderCredential.name))
+    credential_rows = await ProviderCredential.find(ProviderCredential.org_id == org_id, order_by=credential_order)
     return BundleV1(
         bundle_id=bundle_id,
         org_id=org_id,
@@ -71,6 +73,11 @@ async def compile_bundle(org_id: UUID, bundle_id: UUID, now: datetime, staleness
                     }
                 )
                 for r in provider_rows
+            ],
+            credentials=[
+                CredentialEntry(ref=r.secret_ref(provider_names[r.provider_id]), priority=r.priority, version=r.version)
+                for r in credential_rows
+                if r.enabled and r.provider_id in provider_names
             ],
             models=[
                 ModelEntry(

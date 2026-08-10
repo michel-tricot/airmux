@@ -1,0 +1,146 @@
+from __future__ import annotations
+
+from datetime import datetime
+from typing import ClassVar, Literal, Self
+from uuid import UUID
+
+from pydantic import BaseModel, SecretStr
+from pydantic import Field as PydanticField
+from sqlalchemy import CheckConstraint, ForeignKeyConstraint, UniqueConstraint
+from sqlmodel import Field
+
+from contract import SecretPurpose, SecretRef
+from control_plane.models.audit import audited
+from control_plane.models.common import Identified, Tombstonable
+from control_plane.models.common.base import Record
+from control_plane.models.common.org_owned import NotOwnedError
+from control_plane.models.common.wire import RecordOut, RecordUpdate
+
+DEFAULT_PRIORITY = 100
+CredentialScope = Literal["platform", "org", "workspace"]
+CredentialStatus = Literal["unknown", "live", "invalid", "rate_limited"]
+
+
+@audited
+class ProviderCredential(Record, Identified, Tombstonable, table=True):
+    """One provider API key the platform holds on someone's behalf. The value is not here.
+
+    Deliberately not OrgOwned: a platform credential belongs to the instance rather than to a
+    tenant, so org_id is nullable and owned_by cannot apply. Org-scoped reads go through in_org()
+    and for_org(), which carry the same NotOwnedError contract.
+
+    Scope is derived from which owner fields are set rather than stored, so a row cannot claim one
+    scope while carrying another's ownership. The check constraint covers the one combination the
+    composite foreign key does not: a MATCH SIMPLE key with a null column is not checked at all, so
+    a workspace credential with no org would otherwise pass.
+
+    There is no value column and there is no location column. The value lives in the secret store,
+    addressed by secret_ref, which is built from fields this row already has. That is deliberate
+    twice over: the audit trigger copies before and after of every column, so a value column would
+    write secrets into a second table, and a location column would be something a tenant, an
+    operator, or a migration could point somewhere it should not go.
+    """
+
+    __table_args__: ClassVar = (
+        ForeignKeyConstraint(["workspace_id", "org_id"], ["workspace.id", "workspace.org_id"]),
+        UniqueConstraint("org_id", "workspace_id", "provider_id", "name", name="provider_credential_scope_name_key"),
+        CheckConstraint("workspace_id IS NULL OR org_id IS NOT NULL", name="provider_credential_workspace_needs_org"),
+    )
+
+    org_id: UUID | None = Field(default=None, foreign_key="org.id")
+    workspace_id: UUID | None = None
+    provider_id: UUID = Field(foreign_key="provider.id")
+    name: str
+    priority: int = DEFAULT_PRIORITY
+    enabled: bool = True
+    version: int = 1
+    status: str = "unknown"
+    fingerprint: str = ""
+
+    api_readonly: ClassVar[frozenset[str]] = frozenset({"org_id", "workspace_id", "provider_id", "name", "version", "status", "fingerprint"})
+
+    @property
+    def scope(self) -> CredentialScope:
+        if self.org_id is None:
+            return "platform"
+        return "workspace" if self.workspace_id is not None else "org"
+
+    def secret_ref(self, provider_name: str) -> SecretRef:
+        """Where the value is, said in domain terms. The one place a row becomes a ref, so the write
+        path and the compiler cannot disagree about which secret a row names."""
+        return SecretRef(
+            purpose=SecretPurpose.provider,
+            service=provider_name,
+            name=self.name,
+            secret_id=self.id,
+            org_id=self.org_id,
+            workspace_id=self.workspace_id,
+        )
+
+    @classmethod
+    async def in_org(cls, org_id: UUID, ident: UUID) -> Self:
+        """One credential the org owns. The owned_by contract for a table that is not OrgOwned:
+        a platform credential is never reachable through an org, so it raises rather than leaking."""
+        credential = await cls.find_by_id(ident)
+        if credential is None or credential.org_id != org_id:
+            raise NotOwnedError
+        return credential
+
+    @classmethod
+    async def for_org(cls, org_id: UUID, workspace_id: UUID | None = None) -> list[Self]:
+        """An org's credentials, or one workspace's within it, in the order the data plane tries them."""
+        scoped = (cls.workspace_id == workspace_id,) if workspace_id is not None else ()
+        return await cls.find(cls.org_id == org_id, *scoped, order_by=(cls.priority, cls.name))  # ty: ignore[invalid-argument-type] sqlmodel columns type as their python values
+
+    @classmethod
+    async def named(cls, org_id: UUID | None, workspace_id: UUID | None, provider_id: UUID, name: str) -> Self | None:
+        """The row the uniqueness constraint describes, which is what a rotation addresses."""
+        return await cls.first(cls.org_id == org_id, cls.workspace_id == workspace_id, cls.provider_id == provider_id, cls.name == name)
+
+
+class ProviderCredentialIn(BaseModel):
+    """Creating a credential is an action, not a plain row insert: the value crosses the wire once
+    and is never a column, so this is not a RecordCreate and is exempt from parity by that choice.
+
+    The value is a SecretStr so nothing that renders this model can print it. That is not enough on
+    its own: the validation error handler in app.py drops the offending input, or a body that fails
+    validation for some other reason comes back to the caller with the key still in it.
+    """
+
+    provider: str = PydanticField(description="Provider name from the catalog, e.g. openai")
+    name: str = PydanticField(
+        default="default", description="Handle for this key within the provider and scope, e.g. prod or backup", min_length=1, max_length=80
+    )
+    value: SecretStr = PydanticField(description="The provider API key. Written to the secret store and never persisted anywhere else")
+    priority: int = PydanticField(default=DEFAULT_PRIORITY, description="Lower is tried first; ties break by name")
+    workspace: str | None = PydanticField(default=None, description="Workspace id or slug for a workspace-scoped key; omitted makes it org-scoped")
+
+
+class ProviderCredentialValueIn(BaseModel):
+    """A rotation: the same credential, a new value."""
+
+    value: SecretStr = PydanticField(description="The replacement provider API key")
+
+
+class ProviderCredentialUpdate(RecordUpdate[ProviderCredential]):
+    priority: int | None = None
+    enabled: bool | None = None
+
+
+class ProviderCredentialOut(RecordOut[ProviderCredential]):
+    id: UUID
+    org_id: UUID | None
+    workspace_id: UUID | None
+    provider_id: UUID
+    name: str
+    priority: int
+    enabled: bool
+    version: int
+    status: str
+    fingerprint: str
+    created_at: datetime
+    updated_at: datetime
+    deleted_at: datetime | None
+    scope: CredentialScope
+
+    api_extra: ClassVar[frozenset[str]] = frozenset({"scope"})

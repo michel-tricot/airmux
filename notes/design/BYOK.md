@@ -192,6 +192,52 @@ it, the usage event carries the failure, ingestion flips `status` to `invalid`, 
 red key. Slower than a probe, but no adapter knowledge leaks into the control plane and there is no
 outbound call on the write path.
 
+## Security: who can write a credential today
+
+Writing a credential is a higher privilege than the current authorization model can express, and as
+shipped it is held more widely than it should be. Nothing below is theoretical; all three are true
+of the code in the repo right now.
+
+**Why it matters more than a normal write.** Whoever supplies a key owns the upstream account the
+org's traffic is billed to, and that account's dashboard shows every request made with it. A member
+who attaches their own key does not only move spend, they gain a copy of the org's prompt and
+completion traffic at the provider. The tier rules make the blast radius wider than the write looks:
+an org-scoped credential is what every workspace with no credential of its own falls back to,
+including workspaces the writer cannot otherwise reach.
+
+**1. Every unscoped org management key already has it.** Scopes restrict rather than grant: a key
+minted with no explicit scope list carries its user's full authority and picks up scopes invented
+later. So every management key that existed before `provider-credentials:write` gained it the moment
+the scope was added, and no operator was asked. That is a general property of adding a scope to this
+model rather than something specific to BYOK, but BYOK is the first scope where the retroactive
+grant is worth real money.
+
+**2. There is no role between org member and org admin.** Any org member holding
+`management-keys:write` can mint themselves a key, and an unscoped one carries provider-credentials
+write with it. Membership in the org is the whole gate.
+
+**3. Workspace-scoped writes skip workspace membership.** `create_provider_credential` and
+`list_provider_credentials` resolve the workspace with `Workspace.by_ref(org_id, ...)` rather than
+through the `workspace_member` dependency, which exists precisely because key operations require
+membership in the workspace and not just in the org. An org member who is not a member of a
+workspace can therefore attach a credential to it and list what it already holds. Inference keys,
+the closest analogue, do go through `WorkspaceDep`. This one is an inconsistency with the rest of
+the API rather than a gap in the model, and is the cheapest of the three to close.
+
+### What closing this looks like
+
+- Route the workspace-scoped paths through `WorkspaceDep` and keep `OrgDep` for the org-scoped ones.
+  Small, self-contained, and closes 3
+- For 1, decide whether a new scope should be exempt from the unscoped-means-everything rule, or
+  whether adding a money-spending scope requires re-minting existing keys. Either is a change to the
+  authorization model and belongs with roles rather than here
+- For 2, roles: named bundles over the existing scopes, which `authz.py` already anticipates. Until
+  they exist, an operator who cares mints org keys with explicit scope lists and treats unscoped
+  keys as admin credentials
+
+Until then `provider-credentials:write` is an org-admin privilege that the code does not enforce as
+one, and the deployment notes should say so rather than implying the scope is a boundary.
+
 ## Bundle contract
 
 ```python
@@ -314,21 +360,22 @@ Each lands its failing test in the same commit.
 
 1. **Done.** `contract/secrets/`: `Secret`, `SecretRef`, `SecretPurpose`, the `SecretStore` facade, the
    per-backend config union, the `memory`, `file` and `env` backends, conformance suite. No wiring
-2. `ProviderCredential` model and migration. `Provider.credential_ref` deleted and existing operator
-   keys migrated to `scope=platform` rows in the same migration. Scopes, CRUD, bundle emits
-   `credentials`
+2. **Done.** Control plane end to end: `ProviderCredential` model and migration, scopes, CRUD with
+   store writes, and the bundle emitting `catalog.credentials`. Merged with what was milestone 4,
+   because a credential resource without its value is not a resource: the create route has to write
+   the store or there is nothing to test
 3. Data plane read path: `credential_index` on the snapshot, `evaluate()` returns candidates,
    resolver with cache and single-flight, adapters take an injected credential. First candidate
-   only, all existing tests pass
-4. Control plane write path: add, rotate, delete, store writes, fingerprint, `writable` checked at
-   startup. CLI only
-5. Failover and cooldown, `credential_id` on usage events, `status` rolled up from event ingestion.
+   only. **This is where `Provider.credential_ref` dies**, together with `ProviderEntry.credential_ref`
+   and the migration converting operator keys to platform rows, because deleting it before the data
+   plane stops reading it would break every request
+4. Failover and cooldown, `credential_id` on usage events, `status` rolled up from event ingestion.
    Proof is a real request against a running data plane where the first key is revoked mid-test and
    the request still succeeds on the second
-6. Console and CLI: `airllm credentials add/list/rotate/rm --workspace --provider --name` with
+5. Console and CLI: `airllm credentials add/list/rotate/rm --workspace --provider --name` with
    `--from-stdin` so keys never enter shell history, status and fingerprint columns, console panel
    with per-key health
-7. The Vault KV v2 store: one module behind the facade, its own config fields, and its auth method
+6. The Vault KV v2 store: one module behind the facade, its own config fields, and its auth method
    in both plane configs
 
 ## Deferred to the next version

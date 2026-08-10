@@ -4,6 +4,8 @@ import contextlib
 from typing import TYPE_CHECKING
 
 from fastapi import APIRouter, FastAPI
+from fastapi.encoders import jsonable_encoder
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.routing import APIRoute
 from sqlalchemy import text
@@ -19,6 +21,7 @@ from control_plane.routes.instance import router as instance_router
 from control_plane.routes.org import router as org_router
 from control_plane.routes.orgs import router as orgs_router
 from control_plane.routes.oss import router as oss_router
+from control_plane.routes.provider_credentials import router as provider_credentials_router
 from control_plane.routes.sync import router as sync_router
 from control_plane.routes.taxonomy import router as taxonomy_router
 from control_plane.routes.users import router as users_router
@@ -57,11 +60,15 @@ API_TAGS = [
     {"name": "Bundles", "description": "Signed policy bundles compiled per org and polled by data planes"},
     {"name": "Events", "description": "Usage events reported by data planes"},
     {"name": "Taxonomy", "description": "The models catalog: providers and models compiled into bundles"},
+    {"name": "Provider Credentials", "description": "Provider API keys an org or workspace brings; values live in the secret store, never here"},
     {"name": "Activity", "description": "The audit trail of writes, per org and instance-wide"},
 ]
 
 TAG_GROUPS = [
-    {"name": "Org Management", "tags": ["Org Users", "Management Keys", "Workspaces", "Inference Keys", "Bundles", "Events", "Activity"]},
+    {
+        "name": "Org Management",
+        "tags": ["Org Users", "Management Keys", "Workspaces", "Inference Keys", "Provider Credentials", "Bundles", "Events", "Activity"],
+    },
     {"name": "Account", "tags": ["Auth", "Enrollment"]},
     {"name": "Catalog", "tags": ["Taxonomy"]},
     {"name": "Instance Admin", "tags": ["Orgs", "Users", "Instance Keys", "Instance Management Keys", "Data Plane", "OSS"]},
@@ -136,6 +143,17 @@ async def not_owned_handler(_request: Request, _exc: Exception) -> JSONResponse:
     return JSONResponse(status_code=404, content={"detail": "Not Found"})
 
 
+async def validation_handler(_request: Request, exc: Exception) -> JSONResponse:
+    """FastAPI's default handler echoes the offending input back to the caller, which would
+    return a provider API key in the response and write it to every access log along the way.
+
+    Dropping `input` and `ctx` leaves the caller everything they need to fix the request, and
+    makes the guarantee hold for every body rather than for the ones we remembered to redact."""
+    errors = getattr(exc, "errors", list)()
+    detail = [{key: value for key, value in error.items() if key not in {"input", "ctx"}} for error in errors]
+    return JSONResponse(status_code=422, content={"detail": jsonable_encoder(detail)})
+
+
 async def healthz(request: Request) -> JSONResponse:
     """Unauthenticated probe for container orchestration; touches the database because process-up alone cannot serve a bundle poll."""
     try:
@@ -155,7 +173,9 @@ def _operation_id(route: APIRoute) -> str:
 def create_app(settings: Settings | None = None) -> FastAPI:
     app = ControlPlaneApp(title="airllm control plane", lifespan=lifespan, openapi_tags=API_TAGS, generate_unique_id_function=_operation_id)
     app.state.settings = settings if settings is not None else load_settings()
+    app.state.secret_store = app.state.settings.secrets.build()
     app.add_exception_handler(NotOwnedError, not_owned_handler)
+    app.add_exception_handler(RequestValidationError, validation_handler)
     app.add_route("/healthz", healthz)
     v1 = APIRouter(prefix="/v1")
     for router in (
@@ -166,6 +186,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         users_router,
         orgs_router,
         workspaces_router,
+        provider_credentials_router,
         org_router,
         sync_router,
         taxonomy_router,
