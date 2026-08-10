@@ -40,14 +40,13 @@ export default function AppDashboard() {
         </div>
 
         {isLoading ? (
-          <div className="py-12 text-center text-muted-foreground font-mono text-sm">LOADING WORKSPACES...</div>
+          <div className="py-12 text-center text-muted-foreground font-mono text-sm">Loading workspaces...</div>
         ) : workspaces && workspaces.length > 0 ? (
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Workspace</TableHead>
                 <TableHead>Slug</TableHead>
-                <TableHead>ID</TableHead>
                 <TableHead className="text-right">Created</TableHead>
               </TableRow>
             </TableHeader>
@@ -55,13 +54,12 @@ export default function AppDashboard() {
               {workspaces.map(ws => (
                 <TableRow key={ws.id} className="group">
                   <TableCell className="font-medium">
-                    <Link href={`/org/workspaces/${ws.id}`} className="flex items-center gap-2 hover:text-primary transition-colors">
+                    <Link href={`/org/workspaces/${ws.slug}`} className="flex items-center gap-2 hover:text-primary transition-colors">
                       <FolderGit2 className="w-4 h-4 text-muted-foreground group-hover:text-primary" />
                       {ws.name}
                     </Link>
                   </TableCell>
                   <TableCell><Badge variant="mono">{ws.slug}</Badge></TableCell>
-                  <TableCell className="font-mono text-xs text-muted-foreground">{ws.id}</TableCell>
                   <TableCell className="text-right text-muted-foreground text-sm">{formatDate(ws.created_at)}</TableCell>
                 </TableRow>
               ))}

@@ -39,7 +39,7 @@ export default function AppOrgPicker() {
   if (isLoading || single) {
     return (
       <div className="min-h-[100dvh] flex items-center justify-center bg-muted/30">
-        <div className="text-muted-foreground font-mono text-sm">LOADING ORGANIZATIONS...</div>
+        <div className="text-muted-foreground font-mono text-sm">Loading organizations...</div>
       </div>
     );
   }

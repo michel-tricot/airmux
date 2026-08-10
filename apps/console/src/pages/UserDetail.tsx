@@ -48,7 +48,7 @@ export default function UserDetail() {
   const deleteUser = useDeleteUser({
     mutation: {
       onSuccess: () => { queryClient.invalidateQueries({ queryKey: getListUsersQueryKey() }); setLocation('/instance/users'); },
-      onError: (error) => setDeleteError(error.message),
+      onError: () => setDeleteError('We couldn’t delete this user. Please try again.'),
     },
   });
 

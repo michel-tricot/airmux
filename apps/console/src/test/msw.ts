@@ -13,8 +13,8 @@ export const ORG = {
 };
 
 export const WORKSPACES = [
-  { id: 'ws-1', org_id: ORG.id, name: 'Production', created_at: now, updated_at: now, deleted_at: null },
-  { id: 'ws-2', org_id: ORG.id, name: 'Staging', created_at: now, updated_at: now, deleted_at: null },
+  { id: 'ws-1', org_id: ORG.id, name: 'Production', slug: 'production', created_at: now, updated_at: now, deleted_at: null },
+  { id: 'ws-2', org_id: ORG.id, name: 'Staging', slug: 'staging', created_at: now, updated_at: now, deleted_at: null },
 ];
 
 export const server = setupServer(
@@ -31,8 +31,8 @@ export const server = setupServer(
     HttpResponse.json({ orgs: [ORG], personal_org_id: null }),
   ),
   http.get('/v1/org/workspaces', () => HttpResponse.json(WORKSPACES)),
-  http.get('/v1/org/workspaces/:workspaceId', ({ params }) => {
-    const ws = WORKSPACES.find(w => w.id === params.workspaceId);
+  http.get('/v1/org/workspaces/:workspaceRef', ({ params }) => {
+    const ws = WORKSPACES.find(w => w.id === params.workspaceRef || w.slug === params.workspaceRef);
     return ws ? HttpResponse.json(ws) : new HttpResponse(null, { status: 404 });
   }),
   http.get('/v1/org/workspaces/:workspaceId/inference-keys', () => HttpResponse.json([])),

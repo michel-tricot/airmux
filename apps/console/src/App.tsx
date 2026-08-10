@@ -50,7 +50,7 @@ function AppSection() {
   const { orgId } = useSession();
   const { data: enrollment, isLoading } = useEnrollment();
 
-  if (isLoading) return <Splash>LOADING ORGANIZATIONS...</Splash>;
+  if (isLoading) return <Splash>Loading organizations...</Splash>;
 
   // A stored org the user no longer holds would send every org-scoped query on the page to a 403
   // before anything could correct it, so the selection is checked against enrollment first.
@@ -60,21 +60,21 @@ function AppSection() {
     <AppLayout>
       <Switch>
         <Route path="/org" component={AppDashboard} />
-        <Route path="/org/workspaces/:workspaceId/keys" component={WorkspaceApiKeys} />
-        <Route path="/org/workspaces/:workspaceId/byok">
+        <Route path="/org/workspaces/:workspaceRef/keys" component={WorkspaceApiKeys} />
+        <Route path="/org/workspaces/:workspaceRef/byok">
           <WorkspaceComingSoon title="BYOK" icon={Database}
             description="Bring your own provider keys and route traffic through them." />
         </Route>
-        <Route path="/org/workspaces/:workspaceId/routing">
+        <Route path="/org/workspaces/:workspaceRef/routing">
           <WorkspaceComingSoon title="Routing" icon={RouteIcon}
             description="Model routing rules, fallbacks, and load balancing." />
         </Route>
-        <Route path="/org/workspaces/:workspaceId/policies">
+        <Route path="/org/workspaces/:workspaceRef/policies">
           <WorkspaceComingSoon title="Policies" icon={ShieldCheck}
             description="Guardrails, rate limits, and usage policies for this workspace." />
         </Route>
-        <Route path="/org/workspaces/:workspaceId/settings" component={WorkspaceSettings} />
-        <Route path="/org/workspaces/:workspaceId" component={WorkspaceOverview} />
+        <Route path="/org/workspaces/:workspaceRef/settings" component={WorkspaceSettings} />
+        <Route path="/org/workspaces/:workspaceRef" component={WorkspaceOverview} />
         <Route path="/org/settings" component={AppOrgSettings} />
         <Route component={NotFound} />
       </Switch>
@@ -90,7 +90,7 @@ function AdminSection() {
           <Route path="/instance" component={Dashboard} />
           <Route path="/instance/organizations" component={Organizations} />
           <Route path="/instance/organizations/:orgId" component={OrganizationDetail} />
-          <Route path="/instance/organizations/:orgId/workspaces/:workspaceId" component={WorkspaceDetail} />
+          <Route path="/instance/organizations/:orgId/workspaces/:workspaceRef" component={WorkspaceDetail} />
           <Route path="/instance/users" component={Users} />
           <Route path="/instance/users/:userId" component={UserDetail} />
           <Route component={NotFound} />
@@ -104,7 +104,7 @@ function Router() {
   const [location] = useLocation();
   const { user, isLoading, orgId } = useSession();
 
-  if (isLoading) return <Splash>LOADING SESSION...</Splash>;
+  if (isLoading) return <Splash>Loading your session...</Splash>;
 
   if (!user) return <Login />;
 
