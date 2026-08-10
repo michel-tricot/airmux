@@ -1,3 +1,4 @@
 - [Orval zod v4 import](orval-zod-v4.md) — codegen script rewrites generated zod import to 'zod/v4' after orval; keep that step when touching codegen.
 - [Replit workflow host binding](replit-workflow-host-binding.md) — monitored backend services must bind to 0.0.0.0, not loopback-only.
+- [Preview port routing pinning](preview-port-routing.md) — .replit [[ports]] pins console→80 and backend 8000 local-only; without it the backend can steal the preview on simultaneous restarts.
 - [Replit DATABASE_URL and asyncpg](database-url-asyncpg.md) — normalize managed sslmode URL parameters for asyncpg while keeping DATABASE_URL as the sole source.
