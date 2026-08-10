@@ -481,7 +481,9 @@ class Scope(
             "inference-keys:read",
             "inference-keys:write",
             "workspaces:read",
+            "workspaces:create",
             "workspaces:write",
+            "workspaces:delete",
             "bundles:read",
             "bundles:write",
             "events:read",
@@ -489,7 +491,9 @@ class Scope(
             "taxonomy:read",
             "taxonomy:write",
             "orgs:read",
+            "orgs:create",
             "orgs:write",
+            "orgs:delete",
             "users:read",
             "users:write",
             "activity:read",
@@ -506,7 +510,9 @@ class Scope(
             "inference-keys:read",
             "inference-keys:write",
             "workspaces:read",
+            "workspaces:create",
             "workspaces:write",
+            "workspaces:delete",
             "bundles:read",
             "bundles:write",
             "events:read",
@@ -514,7 +520,9 @@ class Scope(
             "taxonomy:read",
             "taxonomy:write",
             "orgs:read",
+            "orgs:create",
             "orgs:write",
+            "orgs:delete",
             "users:read",
             "users:write",
             "activity:read",
@@ -525,7 +533,7 @@ class Scope(
             "sync",
         ],
         Field(
-            description="What a management credential may do; org and instance row-scoping are a separate axis.\n\nA scope restricts the credential, never expands it: a token minted without scopes carries the\nowning user's full authority, an explicit list is a restriction that also excludes scopes\ninvented later. Roles arrive later as named bundles over these same values.",
+            description="What a management credential may do; org and instance row-scoping are a separate axis.\n\nA scope restricts the credential, never expands it: a token minted without scopes carries the\nowning user's full authority, an explicit list is a restriction that also excludes scopes\ninvented later. Roles arrive later as named bundles over these same values.\n\nOrgs and workspaces split their lifecycle three ways because founding a tenant and destroying\none with everything inside it are each a different privilege from governing one day to day:\n:create founds, :write governs, :delete destroys. Elsewhere :write still covers all three.",
             title="Scope",
         ),
     ]
@@ -635,7 +643,16 @@ class ValidationError(BaseModel):
 
 
 class WorkspaceCreate(BaseModel):
-    name: Annotated[str, Field(description="Workspace name, e.g. staging", title="Name")]
+    name: Annotated[str, Field(description="Workspace name, e.g. Staging", title="Name")]
+    slug: Annotated[
+        str | None,
+        Field(
+            description="Workspace handle, unique in the org and usable in place of the id; derived from the name when omitted",
+            max_length=63,
+            pattern="^[a-z0-9]+(?:-[a-z0-9]+)*$",
+            title="Slug",
+        ),
+    ] = ""
 
 
 class WorkspaceMembershipOut(BaseModel):
@@ -648,6 +665,7 @@ class WorkspaceOut(BaseModel):
     id: Annotated[UUID, Field(title="Id")]
     org_id: Annotated[UUID, Field(title="Org Id")]
     name: Annotated[str, Field(title="Name")]
+    slug: Annotated[str, Field(title="Slug")]
     created_at: Annotated[AwareDatetime, Field(title="Created At")]
     updated_at: Annotated[AwareDatetime, Field(title="Updated At")]
     deleted_at: Annotated[AwareDatetime | None, Field(title="Deleted At")]

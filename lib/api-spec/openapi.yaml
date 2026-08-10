@@ -1364,7 +1364,7 @@ paths:
       operationId: create_org
       security:
       - HTTPBearer:
-        - orgs:write
+        - orgs:create
       parameters:
       - name: X-Org-Id
         in: header
@@ -1417,7 +1417,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
-      description: Requires the `orgs:write` scope.
+      description: Requires the `orgs:create` scope.
     get:
       tags:
       - Orgs
@@ -1617,11 +1617,11 @@ paths:
         outlive it the way the audit trail does rather than standing in the way of the delete.
 
 
-        Requires the `orgs:write` scope.'
+        Requires the `orgs:delete` scope.'
       operationId: delete_org
       security:
       - HTTPBearer:
-        - orgs:write
+        - orgs:delete
       parameters:
       - name: org_id
         in: path
@@ -1690,11 +1690,11 @@ paths:
         org already holds it, rather than a silently numbered variant of what they asked for.
 
 
-        Requires the `workspaces:write` scope.'
+        Requires the `workspaces:create` scope.'
       operationId: create_workspace
       security:
       - HTTPBearer:
-        - workspaces:write
+        - workspaces:create
       parameters:
       - name: X-Org-Id
         in: header
@@ -1872,11 +1872,11 @@ paths:
         an org.
 
 
-        Requires the `workspaces:write` scope.'
+        Requires the `workspaces:delete` scope.'
       operationId: delete_workspace
       security:
       - HTTPBearer:
-        - workspaces:write
+        - workspaces:delete
       parameters:
       - name: workspace_ref
         in: path
@@ -5082,7 +5082,9 @@ components:
       - inference-keys:read
       - inference-keys:write
       - workspaces:read
+      - workspaces:create
       - workspaces:write
+      - workspaces:delete
       - bundles:read
       - bundles:write
       - events:read
@@ -5090,7 +5092,9 @@ components:
       - taxonomy:read
       - taxonomy:write
       - orgs:read
+      - orgs:create
       - orgs:write
+      - orgs:delete
       - users:read
       - users:write
       - activity:read
@@ -5107,7 +5111,14 @@ components:
 
         owning user''s full authority, an explicit list is a restriction that also excludes scopes
 
-        invented later. Roles arrive later as named bundles over these same values.'
+        invented later. Roles arrive later as named bundles over these same values.
+
+
+        Orgs and workspaces split their lifecycle three ways because founding a tenant and destroying
+
+        one with everything inside it are each a different privilege from governing one day to day:
+
+        :create founds, :write governs, :delete destroys. Elsewhere :write still covers all three.'
     ServiceAccountIn:
       properties:
         name:

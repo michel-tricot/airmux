@@ -372,7 +372,7 @@ export const createInstanceKeyBodyLabelMax = 80;
 export const CreateInstanceKeyBody = zod.object({
   "label": zod.string().min(1).max(createInstanceKeyBodyLabelMax).describe('Where this key lives, e.g. ci or a data plane; shown in listings'),
   "user_id": zod.union([zod.uuid(),zod.null()]).optional().describe('Instance admin the key is minted for; defaults to the acting user'),
-  "scopes": zod.union([zod.array(zod.enum(['inference-keys:read', 'inference-keys:write', 'workspaces:read', 'workspaces:write', 'bundles:read', 'bundles:write', 'events:read', 'data-planes:read', 'taxonomy:read', 'taxonomy:write', 'orgs:read', 'orgs:write', 'users:read', 'users:write', 'activity:read', 'management-keys:read', 'management-keys:write', 'instance-keys:read', 'instance-keys:write', 'sync']).describe('What a management credential may do; org and instance row-scoping are a separate axis.\n\nA scope restricts the credential, never expands it: a token minted without scopes carries the\nowning user\'s full authority, an explicit list is a restriction that also excludes scopes\ninvented later. Roles arrive later as named bundles over these same values.')),zod.null()]).optional().describe('Restrict the key to these scopes; omit for the user\'s full authority')
+  "scopes": zod.union([zod.array(zod.enum(['inference-keys:read', 'inference-keys:write', 'workspaces:read', 'workspaces:create', 'workspaces:write', 'workspaces:delete', 'bundles:read', 'bundles:write', 'events:read', 'data-planes:read', 'taxonomy:read', 'taxonomy:write', 'orgs:read', 'orgs:create', 'orgs:write', 'orgs:delete', 'users:read', 'users:write', 'activity:read', 'management-keys:read', 'management-keys:write', 'instance-keys:read', 'instance-keys:write', 'sync']).describe('What a management credential may do; org and instance row-scoping are a separate axis.\n\nA scope restricts the credential, never expands it: a token minted without scopes carries the\nowning user\'s full authority, an explicit list is a restriction that also excludes scopes\ninvented later. Roles arrive later as named bundles over these same values.\n\nOrgs and workspaces split their lifecycle three ways because founding a tenant and destroying\none with everything inside it are each a different privilege from governing one day to day:\n:create founds, :write governs, :delete destroys. Elsewhere :write still covers all three.')),zod.null()]).optional().describe('Restrict the key to these scopes; omit for the user\'s full authority')
 })
 
 export const CreateInstanceKeyResponse = zod.object({
@@ -623,7 +623,7 @@ export const DeleteUserResponse = zod.object({
 
 
 /**
- * Requires the `orgs:write` scope.
+ * Requires the `orgs:create` scope.
  * @summary Create Org
  */
 export const CreateOrgHeader = zod.object({
@@ -725,7 +725,7 @@ export const GetOrgResponse = zod.object({
  * Its usage events stay. They are history keyed by ids, not rows belonging to the org, so they
  * outlive it the way the audit trail does rather than standing in the way of the delete.
  *
- * Requires the `orgs:write` scope.
+ * Requires the `orgs:delete` scope.
  * @summary Delete Org
  */
 export const DeleteOrgParams = zod.object({
@@ -751,7 +751,7 @@ export const DeleteOrgResponse = zod.object({
  * A caller who names no slug gets one derived from the name; one who does gets a 409 when the
  * org already holds it, rather than a silently numbered variant of what they asked for.
  *
- * Requires the `workspaces:write` scope.
+ * Requires the `workspaces:create` scope.
  * @summary Create Workspace
  */
 export const CreateWorkspaceHeader = zod.object({
@@ -833,7 +833,7 @@ export const GetWorkspaceResponse = zod.object({
 /**
  * Delete a workspace with its inference keys and its members; the usage it recorded stays, as it does for an org.
  *
- * Requires the `workspaces:write` scope.
+ * Requires the `workspaces:delete` scope.
  * @summary Delete Workspace
  */
 export const DeleteWorkspaceParams = zod.object({
@@ -1137,7 +1137,7 @@ export const mintOrgManagementKeyBodyLabelMax = 80;
 export const MintOrgManagementKeyBody = zod.object({
   "label": zod.string().min(1).max(mintOrgManagementKeyBodyLabelMax).describe('Where this key lives, e.g. ci or laptop; shown in listings'),
   "user_id": zod.union([zod.uuid(),zod.null()]).optional().describe('User the key is minted for; defaults to the acting user'),
-  "scopes": zod.union([zod.array(zod.enum(['inference-keys:read', 'inference-keys:write', 'workspaces:read', 'workspaces:write', 'bundles:read', 'bundles:write', 'events:read', 'data-planes:read', 'taxonomy:read', 'taxonomy:write', 'orgs:read', 'orgs:write', 'users:read', 'users:write', 'activity:read', 'management-keys:read', 'management-keys:write', 'instance-keys:read', 'instance-keys:write', 'sync']).describe('What a management credential may do; org and instance row-scoping are a separate axis.\n\nA scope restricts the credential, never expands it: a token minted without scopes carries the\nowning user\'s full authority, an explicit list is a restriction that also excludes scopes\ninvented later. Roles arrive later as named bundles over these same values.')),zod.null()]).optional().describe('Restrict the key to these scopes; omit for the user\'s full authority')
+  "scopes": zod.union([zod.array(zod.enum(['inference-keys:read', 'inference-keys:write', 'workspaces:read', 'workspaces:create', 'workspaces:write', 'workspaces:delete', 'bundles:read', 'bundles:write', 'events:read', 'data-planes:read', 'taxonomy:read', 'taxonomy:write', 'orgs:read', 'orgs:create', 'orgs:write', 'orgs:delete', 'users:read', 'users:write', 'activity:read', 'management-keys:read', 'management-keys:write', 'instance-keys:read', 'instance-keys:write', 'sync']).describe('What a management credential may do; org and instance row-scoping are a separate axis.\n\nA scope restricts the credential, never expands it: a token minted without scopes carries the\nowning user\'s full authority, an explicit list is a restriction that also excludes scopes\ninvented later. Roles arrive later as named bundles over these same values.\n\nOrgs and workspaces split their lifecycle three ways because founding a tenant and destroying\none with everything inside it are each a different privilege from governing one day to day:\n:create founds, :write governs, :delete destroys. Elsewhere :write still covers all three.')),zod.null()]).optional().describe('Restrict the key to these scopes; omit for the user\'s full authority')
 })
 
 export const MintOrgManagementKeyResponse = zod.object({

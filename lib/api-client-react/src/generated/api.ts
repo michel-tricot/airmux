@@ -2083,7 +2083,7 @@ export const getCreateOrgUrl = () => {
 }
 
 /**
- * Requires the `orgs:write` scope.
+ * Requires the `orgs:create` scope.
  * @summary Create Org
  */
 export const createOrg = async (orgCreate: OrgCreate, options?: Parameters<typeof customFetch>[1]): Promise<OrgOut> => {
@@ -2389,7 +2389,7 @@ export const getDeleteOrgUrl = (orgId: string,) => {
  * Its usage events stay. They are history keyed by ids, not rows belonging to the org, so they
  * outlive it the way the audit trail does rather than standing in the way of the delete.
  *
- * Requires the `orgs:write` scope.
+ * Requires the `orgs:delete` scope.
  * @summary Delete Org
  */
 export const deleteOrg = async (orgId: string, options?: Parameters<typeof customFetch>[1]): Promise<DeletedOutUUID> => {
@@ -2467,7 +2467,7 @@ export const getCreateWorkspaceUrl = () => {
  * A caller who names no slug gets one derived from the name; one who does gets a 409 when the
  * org already holds it, rather than a silently numbered variant of what they asked for.
  *
- * Requires the `workspaces:write` scope.
+ * Requires the `workspaces:create` scope.
  * @summary Create Workspace
  */
 export const createWorkspace = async (workspaceCreate: WorkspaceCreate, options?: Parameters<typeof customFetch>[1]): Promise<WorkspaceOut> => {
@@ -2697,7 +2697,7 @@ export const getDeleteWorkspaceUrl = (workspaceRef: string,) => {
 /**
  * Delete a workspace with its inference keys and its members; the usage it recorded stays, as it does for an org.
  *
- * Requires the `workspaces:write` scope.
+ * Requires the `workspaces:delete` scope.
  * @summary Delete Workspace
  */
 export const deleteWorkspace = async (workspaceRef: string, options?: Parameters<typeof customFetch>[1]): Promise<DeletedOutUUID> => {

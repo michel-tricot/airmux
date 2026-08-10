@@ -14,7 +14,7 @@ from control_plane.models.org import OrgCreate, OrgOut, OrgUpdate
 router = APIRouter(prefix="/orgs", dependencies=[Depends(instance_scope)])
 
 
-@router.post("", tags=["Orgs"], dependencies=[require(Scope.orgs_write)])
+@router.post("", tags=["Orgs"], dependencies=[require(Scope.orgs_create)])
 async def create_org(body: OrgCreate) -> Envelope[OrgOut]:
     org = await Org(name=body.name).save()
     return Envelope(data=OrgOut.model_validate(org))
@@ -41,7 +41,7 @@ async def get_org(org_id: UUID) -> Envelope[OrgOut]:
     return Envelope(data=OrgOut.model_validate(org))
 
 
-@router.delete("/{org_id}", tags=["Orgs"], dependencies=[require(Scope.orgs_write)])
+@router.delete("/{org_id}", tags=["Orgs"], dependencies=[require(Scope.orgs_delete)])
 async def delete_org(org_id: UUID) -> Envelope[DeletedOut[UUID]]:
     """Delete an org with everything scoped to it: its workspaces and their keys, its own keys, its memberships, its bundles.
 
