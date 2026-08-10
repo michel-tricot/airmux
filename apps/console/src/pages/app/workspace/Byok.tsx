@@ -131,7 +131,7 @@ export default function WorkspaceByok() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Provider Keys</h1>
           <p className="text-muted-foreground mt-1 text-sm">
-            Use your own API keys for this workspace. Keys are tried in priority order — if one fails, the next takes over automatically.
+            Use your own API keys for this workspace. Keys are tried in priority order. If one fails, the next takes over automatically.
           </p>
         </div>
         <Button onClick={() => setAddOpen(true)}>
@@ -156,7 +156,7 @@ export default function WorkspaceByok() {
         open={addOpen}
         onOpenChange={setAddOpen}
         title="Add Provider Key"
-        description="Your key is stored encrypted and never exposed again. Paste it once — we handle the rest."
+        description="Your key is stored encrypted and never exposed again. Paste it once, and we handle the rest."
         schema={addSchema}
         defaultValues={{ provider: providers[0]?.name ?? '', name: 'default', value: '', priority: 100 }}
         onSubmit={values => addCredential.mutateAsync({ data: { ...values, workspace: workspaceRef! } })}
