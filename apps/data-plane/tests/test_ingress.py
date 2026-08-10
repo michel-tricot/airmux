@@ -8,6 +8,7 @@ from conformance import make_ctx
 from conftest import MODEL
 from starlette.testclient import TestClient
 
+from contract import Secret
 from data_plane.adapters import REGISTRY
 from data_plane.canonical import CanonicalChunk, CanonicalRequest, CanonicalResponse, Usage
 from data_plane.ingress import ANTHROPIC
@@ -149,7 +150,7 @@ def test_cache_control_survives_ingress_to_anthropic_upstream(monkeypatch):
         }
     ).encode()
     req = ANTHROPIC.parse(body)
-    adapter = REGISTRY["anthropic"](make_ctx("anthropic").provider)
+    adapter = REGISTRY["anthropic"](make_ctx("anthropic").provider, Secret("sk-test"))
     up = json.loads(adapter.transform_request(req, make_ctx("anthropic").model).body)
     assert up["system"] == [{"type": "text", "text": "big prompt", "cache_control": {"type": "ephemeral"}}]
     assert up["tools"][0]["cache_control"] == {"type": "ephemeral"}
@@ -167,13 +168,13 @@ def test_cache_control_stripped_for_openai_upstream(monkeypatch):
         }
     ).encode()
     req = ANTHROPIC.parse(body)
-    adapter = REGISTRY["openai_compatible"](make_ctx("openai_compatible").provider)
+    adapter = REGISTRY["openai_compatible"](make_ctx("openai_compatible").provider, Secret("sk-test"))
     up = json.loads(adapter.transform_request(req, make_ctx("openai_compatible").model).body)
     assert "cache_control" not in json.dumps(up)
 
 
 def test_anthropic_usage_counts_cache_tokens():
-    adapter = REGISTRY["anthropic"](make_ctx("anthropic").provider)
+    adapter = REGISTRY["anthropic"](make_ctx("anthropic").provider, Secret("sk-test"))
     reply = json.dumps(
         {
             "id": "msg",

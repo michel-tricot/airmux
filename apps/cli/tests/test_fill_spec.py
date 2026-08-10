@@ -11,7 +11,7 @@ def test_flags_only_no_prompting(monkeypatch):
     monkeypatch.setattr("sys.stdin.isatty", lambda: False)
     spec = fill_spec(
         ProviderCreate,
-        {"provider_id": "groq", "base_url": "https://api.groq.com/openai/v1", "credential_ref": "env:GROQ_API_KEY"},
+        {"provider_id": "groq", "base_url": "https://api.groq.com/openai/v1"},
     )
     assert spec.kind == "openai_compatible"
 
@@ -39,5 +39,5 @@ def test_invalid_value_exits_with_message(monkeypatch):
     with pytest.raises(typer.Exit):
         fill_spec(
             ProviderCreate,
-            {"provider_id": "x", "base_url": "u", "credential_ref": "c", "kind": "not-a-kind"},
+            {"provider_id": "x", "base_url": "u", "kind": "not-a-kind"},
         )

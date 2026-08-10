@@ -119,11 +119,13 @@ def test_cross_org_key_revocation_is_not_found(tmp_path):
         assert [k.key_id for k in bundle.keys] == [key["id"]]
 
 
-def test_secret_shaped_credential_ref_rejected(tmp_path):
+def test_the_catalog_refuses_a_credential(tmp_path):
+    """Credentials are their own resource now. A taxonomy still carrying credential_ref has to fail
+    rather than be ignored, or the operator believes they configured a key the provider does not have."""
     cp = setup_control_plane(tmp_path)
     root = cp.headers()
     with TestClient(cp.app) as c:
-        bad = {**PROVIDER, "credential_ref": "sk-live-abc123"}
+        bad = {**PROVIDER, "credential_ref": "env:OPENAI_API_KEY"}
         assert c.post("/v1/taxonomy/providers", json=bad, headers=root).status_code == 422
 
 

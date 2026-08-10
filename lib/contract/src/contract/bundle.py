@@ -35,7 +35,6 @@ class ProviderEntry(BaseModel):
     provider_id: str
     kind: Literal["openai_compatible", "anthropic"]  # selects the adapter
     base_url: HttpUrl
-    credential_ref: str  # NOT a secret: a URI (env:VAR, file:/path) resolved locally by the data plane
     cache_read_multiplier: float = 1.0  # input price factor for prompt-cache hits (OpenAI 0.5, Anthropic 0.1)
     cache_write_multiplier: float = 1.0  # input price factor for cache writes (Anthropic 1.25)
 

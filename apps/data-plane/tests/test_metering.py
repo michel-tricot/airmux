@@ -12,7 +12,6 @@ def _provider(read_mult: float, write_mult: float = 1.0) -> ProviderEntry:
         provider_id="p",
         kind="openai_compatible",
         base_url="https://x/v1",
-        credential_ref="env:K",
         cache_read_multiplier=read_mult,
         cache_write_multiplier=write_mult,
     )

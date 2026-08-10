@@ -5571,9 +5571,6 @@ components:
           minLength: 1
           format: uri
           title: Base Url
-        credential_ref:
-          type: string
-          title: Credential Ref
         cache_read_multiplier:
           type: number
           title: Cache Read Multiplier
@@ -5587,7 +5584,6 @@ components:
       - provider_id
       - kind
       - base_url
-      - credential_ref
       title: ProviderEntry
       description: An upstream LLM provider endpoint.
     ProviderIn:
@@ -5608,10 +5604,6 @@ components:
           type: string
           title: Base Url
           description: OpenAI-compatible endpoint, e.g. https://api.groq.com/openai/v1
-        credential_ref:
-          type: string
-          title: Credential Ref
-          description: 'env: or file: reference resolved by the data plane, never a raw secret'
         cache_read_multiplier:
           type: number
           title: Cache Read Multiplier
@@ -5622,12 +5614,18 @@ components:
           title: Cache Write Multiplier
           description: Input price factor for cache writes
           default: 1.0
+      additionalProperties: false
       type: object
       required:
       - provider_id
       - base_url
-      - credential_ref
       title: ProviderIn
+      description: 'How to reach a provider, not how to authenticate to it: credentials are their own resource.
+
+
+        Extra keys are refused so a taxonomy still carrying credential_ref fails loudly. Ignoring it
+
+        would leave the operator believing they configured a credential when the provider has none.'
     ProviderOut:
       properties:
         id:
@@ -5643,9 +5641,6 @@ components:
         base_url:
           type: string
           title: Base Url
-        credential_ref:
-          type: string
-          title: Credential Ref
         cache_read_multiplier:
           type: number
           title: Cache Read Multiplier
@@ -5672,7 +5667,6 @@ components:
       - name
       - kind
       - base_url
-      - credential_ref
       - cache_read_multiplier
       - cache_write_multiplier
       - created_at

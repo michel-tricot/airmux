@@ -9,7 +9,7 @@ import json
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from contract import ModelEntry, ProviderEntry
+from contract import ModelEntry, ProviderEntry, Secret
 from data_plane.adapters import REGISTRY
 from data_plane.canonical import Ctx
 
@@ -36,7 +36,7 @@ class Case:
     error_log: bytes  # a partial stream that ends in a provider error event
 
     def adapter(self) -> ProviderAdapter:
-        return REGISTRY[self.kind](_PROVIDERS[self.kind])
+        return REGISTRY[self.kind](_PROVIDERS[self.kind], Secret("sk-test"))
 
 
 def expected_text(nonstream_content: list[dict]) -> str:
@@ -44,10 +44,8 @@ def expected_text(nonstream_content: list[dict]) -> str:
 
 
 _PROVIDERS = {
-    "openai_compatible": ProviderEntry(
-        provider_id="openai", kind="openai_compatible", base_url="https://api.openai.com/v1", credential_ref="env:OPENAI_API_KEY"
-    ),
-    "anthropic": ProviderEntry(provider_id="anthropic", kind="anthropic", base_url="https://api.anthropic.com/v1", credential_ref="env:K"),
+    "openai_compatible": ProviderEntry(provider_id="openai", kind="openai_compatible", base_url="https://api.openai.com/v1"),
+    "anthropic": ProviderEntry(provider_id="anthropic", kind="anthropic", base_url="https://api.anthropic.com/v1"),
 }
 
 

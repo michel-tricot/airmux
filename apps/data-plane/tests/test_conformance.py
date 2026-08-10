@@ -5,6 +5,7 @@ import json
 import pytest
 from conformance import CASES, Case, Modality, expected_text, make_ctx
 
+from contract import Secret
 from data_plane.adapters import REGISTRY
 from data_plane.canonical import CanonicalRequest, UpstreamStreamError
 
@@ -88,9 +89,8 @@ def test_tool_arguments_are_valid_json(case: Case):
     assert json.loads(tool["function"]["arguments"]) == {"city": "Paris"}
 
 
-def test_anthropic_request_uses_native_shape(monkeypatch):
-    monkeypatch.setenv("K", "sk-ant-test")
-    adapter = REGISTRY["anthropic"](make_ctx("anthropic").provider)
+def test_anthropic_request_uses_native_shape():
+    adapter = REGISTRY["anthropic"](make_ctx("anthropic").provider, Secret("sk-ant-test"))
     req = CanonicalRequest(
         model="claude",
         messages=[{"role": "system", "content": "be terse"}, {"role": "user", "content": "hi"}],
@@ -111,7 +111,7 @@ def test_anthropic_request_uses_native_shape(monkeypatch):
 
 
 def test_openai_usage_captures_cached_tokens():
-    adapter = REGISTRY["openai_compatible"](make_ctx("openai_compatible").provider)
+    adapter = REGISTRY["openai_compatible"](make_ctx("openai_compatible").provider, Secret("sk-test"))
     reply = json.dumps(
         {
             "id": "c",

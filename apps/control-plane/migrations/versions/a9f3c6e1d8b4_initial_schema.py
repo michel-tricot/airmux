@@ -1,8 +1,9 @@
 """initial schema
 
 Consolidated on 2026-08-09 from the pre-release chain (initial schema, enrollment and cli auth,
-workspaces, workspace slugs); nothing had deployed, so the chain had no consumers. From first
-deployment on the chain is append-only: never squash again or edit a shipped revision.
+workspaces, workspace slugs, provider credentials); nothing had deployed, so the chain had no
+consumers. From first deployment on the chain is append-only: never squash again or edit a shipped
+revision.
 
 The tenancy model: users and orgs are instance-level, org_membership ties them, workspaces live
 under an org and are named within it by an org-unique slug, workspace_membership's composite foreign keys make cross-org membership
@@ -12,6 +13,12 @@ inference keys live in workspaces with org_id kept consistent by a composite for
 Credentials split by reach: management_key names its org and cannot omit it, instance_key carries
 instance-wide authority for admins, and data_plane_instance registers against the instance with no
 org of its own.
+
+Provider credentials are the keys the gateway spends upstream, and provider_credential holds
+everything about one except its value, which lives in the secret store. Scope is derived from which
+owner columns are set rather than stored: both null is a platform key, org alone is an org key, and
+both is a workspace key. org_id is therefore nullable, and the check constraint covers what the
+composite foreign key cannot, since a MATCH SIMPLE key with a null column is not checked at all.
 
 Server-minted ids default to uuidv7(), native on Postgres 18; on 16 and 17 the migration
 detects the version and installs a pure-SQL equivalent (millisecond timestamp overlaid on
@@ -53,6 +60,7 @@ TOMBSTONED = (
     "cli_auth_request",
     "workspace",
     "workspace_membership",
+    "provider_credential",
 )
 
 AUDITED = (
@@ -63,6 +71,7 @@ AUDITED = (
     ("org", ("id",)),
     ("org_membership", ("user_id", "org_id")),
     ("provider", ("id",)),
+    ("provider_credential", ("id",)),
     ("user", ("id",)),
     ("workspace", ("id",)),
     ("workspace_membership", ("user_id", "workspace_id")),
@@ -132,7 +141,6 @@ def upgrade() -> None:
         sa.Column("name", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("kind", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("base_url", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
-        sa.Column("credential_ref", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("cache_read_multiplier", sa.Float(), nullable=False),
         sa.Column("cache_write_multiplier", sa.Float(), nullable=False),
         sa.PrimaryKeyConstraint("id"),
@@ -382,6 +390,37 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("token_hash"),
     )
+    op.create_table(
+        "provider_credential",
+        sa.Column("created_at", UTCDateTime(), server_default=sa.text("now()"), nullable=False),
+        sa.Column("updated_at", UTCDateTime(), server_default=sa.text("now()"), nullable=False),
+        sa.Column("deleted_at", UTCDateTime(), nullable=True),
+        sa.Column("id", sa.Uuid(), server_default=sa.text("uuidv7()"), nullable=False),
+        sa.Column("org_id", sa.Uuid(), nullable=True),
+        sa.Column("workspace_id", sa.Uuid(), nullable=True),
+        sa.Column("provider_id", sa.Uuid(), nullable=False),
+        sa.Column("name", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+        sa.Column("priority", sa.Integer(), nullable=False),
+        sa.Column("enabled", sa.Boolean(), nullable=False),
+        sa.Column("version", sa.Integer(), nullable=False),
+        sa.Column("status", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+        sa.Column("fingerprint", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+        sa.CheckConstraint("workspace_id IS NULL OR org_id IS NOT NULL", name="provider_credential_workspace_needs_org"),
+        sa.ForeignKeyConstraint(
+            ["org_id"],
+            ["org.id"],
+        ),
+        sa.ForeignKeyConstraint(
+            ["provider_id"],
+            ["provider.id"],
+        ),
+        sa.ForeignKeyConstraint(
+            ["workspace_id", "org_id"],
+            ["workspace.id", "workspace.org_id"],
+        ),
+        sa.PrimaryKeyConstraint("id"),
+        sa.UniqueConstraint("org_id", "workspace_id", "provider_id", "name", name="provider_credential_scope_name_key"),
+    )
     for table in TOMBSTONED:
         for statement in touch_trigger_ddl_v1(table):
             op.execute(statement)
@@ -397,6 +436,7 @@ def downgrade() -> None:
     for table in TOMBSTONED:
         for statement in touch_trigger_drop_ddl_v1(table):
             op.execute(statement)
+    op.drop_table("provider_credential")
     op.drop_table("inference_key")
     op.drop_table("workspace_membership")
     op.drop_table("workspace")

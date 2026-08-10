@@ -6,7 +6,15 @@ from __future__ import annotations
 from typing import Annotated, Any, Literal
 from uuid import UUID
 
-from pydantic import AnyUrl, AwareDatetime, BaseModel, Field, RootModel, SecretStr
+from pydantic import (
+    AnyUrl,
+    AwareDatetime,
+    BaseModel,
+    ConfigDict,
+    Field,
+    RootModel,
+    SecretStr,
+)
 
 
 class ActivityOut(BaseModel):
@@ -486,12 +494,21 @@ class ProviderEntry(BaseModel):
     provider_id: Annotated[str, Field(title="Provider Id")]
     kind: Annotated[Literal["openai_compatible", "anthropic"], Field(title="Kind")]
     base_url: Annotated[AnyUrl, Field(title="Base Url")]
-    credential_ref: Annotated[str, Field(title="Credential Ref")]
     cache_read_multiplier: Annotated[float | None, Field(title="Cache Read Multiplier")] = 1.0
     cache_write_multiplier: Annotated[float | None, Field(title="Cache Write Multiplier")] = 1.0
 
 
 class ProviderIn(BaseModel):
+    """
+    How to reach a provider, not how to authenticate to it: credentials are their own resource.
+
+    Extra keys are refused so a taxonomy still carrying credential_ref fails loudly. Ignoring it
+    would leave the operator believing they configured a credential when the provider has none.
+    """
+
+    model_config = ConfigDict(
+        extra="forbid",
+    )
     provider_id: Annotated[str, Field(description="Provider name, e.g. openai", title="Provider Id")]
     kind: Annotated[
         Literal["openai_compatible", "anthropic"] | None,
@@ -502,13 +519,6 @@ class ProviderIn(BaseModel):
         Field(
             description="OpenAI-compatible endpoint, e.g. https://api.groq.com/openai/v1",
             title="Base Url",
-        ),
-    ]
-    credential_ref: Annotated[
-        str,
-        Field(
-            description="env: or file: reference resolved by the data plane, never a raw secret",
-            title="Credential Ref",
         ),
     ]
     cache_read_multiplier: Annotated[
@@ -532,7 +542,6 @@ class ProviderOut(BaseModel):
     name: Annotated[str, Field(title="Name")]
     kind: Annotated[str, Field(title="Kind")]
     base_url: Annotated[str, Field(title="Base Url")]
-    credential_ref: Annotated[str, Field(title="Credential Ref")]
     cache_read_multiplier: Annotated[float, Field(title="Cache Read Multiplier")]
     cache_write_multiplier: Annotated[float, Field(title="Cache Write Multiplier")]
     created_at: Annotated[AwareDatetime, Field(title="Created At")]

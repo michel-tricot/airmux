@@ -253,7 +253,8 @@ class Catalog:
     credentials: list[CredentialEntry]
 ```
 
-`ProviderEntry.credential_ref` is removed. `UsageEventV1` gains `credential_id: str | None` and
+`ProviderEntry.credential_ref` is removed, so the catalog says how to reach a provider and the
+credentials say how to authenticate to it. `UsageEventV1` gains `credential_id: str | None` and
 `credential_scope`, which buys per-key attribution, rate-limit visibility, and the BYOK versus
 platform billing split in one field.
 
@@ -364,11 +365,10 @@ Each lands its failing test in the same commit.
    store writes, and the bundle emitting `catalog.credentials`. Merged with what was milestone 4,
    because a credential resource without its value is not a resource: the create route has to write
    the store or there is nothing to test
-3. Data plane read path: `credential_index` on the snapshot, `evaluate()` returns candidates,
-   resolver with cache and single-flight, adapters take an injected credential. First candidate
-   only. **This is where `Provider.credential_ref` dies**, together with `ProviderEntry.credential_ref`
-   and the migration converting operator keys to platform rows, because deleting it before the data
-   plane stops reading it would break every request
+3. **Done.** Data plane read path: `credential_index` on the snapshot, `evaluate()` returns
+   candidates, resolver with cache and single-flight, adapters take an injected credential, first
+   candidate only. `Provider.credential_ref` and `ProviderEntry.credential_ref` are gone, and the
+   catalog refuses a body still carrying one rather than ignoring it
 4. Failover and cooldown, `credential_id` on usage events, `status` rolled up from event ingestion.
    Proof is a real request against a running data plane where the first key is revoked mid-test and
    the request still succeeds on the second

@@ -211,7 +211,6 @@ class Stack:
                     "provider_id": "stub",
                     "kind": "openai_compatible",
                     "base_url": f"http://127.0.0.1:{self.stub_port}",
-                    "credential_ref": "env:OPENAI_API_KEY",
                 }
             ],
             "models": [{"model_id": MODEL, "provider_id": "stub", "upstream_model": MODEL}],
