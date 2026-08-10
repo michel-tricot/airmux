@@ -9,9 +9,9 @@ from contract.secrets.base import (
     SecretNotFoundError,
     SecretPurpose,
     SecretRef,
+    SecretRejectedError,
     SecretStore,
     SecretStoreConfig,
-    SecretStoreReadOnlyError,
     SecretStoreUnavailableError,
 )
 from contract.secrets.env import EnvSecretStore, EnvStoreConfig
@@ -37,9 +37,9 @@ __all__ = [
     "SecretNotFoundError",
     "SecretPurpose",
     "SecretRef",
+    "SecretRejectedError",
     "SecretStore",
     "SecretStoreConfig",
-    "SecretStoreReadOnlyError",
     "SecretStoreUnavailableError",
     "SecretsConfig",
 ]

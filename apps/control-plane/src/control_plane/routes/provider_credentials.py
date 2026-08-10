@@ -4,7 +4,7 @@ from uuid import UUID  # noqa: TC003 fastapi resolves path param annotations at 
 
 from fastapi import APIRouter, HTTPException, Request
 
-from contract import Secret, SecretStore
+from contract import Secret, SecretRejectedError, SecretStore
 from control_plane.authz import Scope
 from control_plane.deps import MgmtDep, OrgDep, joined_workspace, require
 from control_plane.models import Provider, ProviderCredential
@@ -21,16 +21,6 @@ router = APIRouter(prefix="/org/provider-credentials")
 
 def secret_store(request: Request) -> SecretStore:
     return request.app.state.secret_store
-
-
-def writable_store(request: Request) -> SecretStore:
-    """A store that cannot be written is a deployment choice, not a request failure, so it reads as
-    501 rather than as something the caller could fix by trying again."""
-    store = secret_store(request)
-    if not store.writable:
-        detail = f"this instance is configured with the {store.kind} secret store, which cannot hold credentials"
-        raise HTTPException(status_code=501, detail=detail)
-    return store
 
 
 async def _provider(name: str) -> Provider:
@@ -54,7 +44,7 @@ async def create_provider_credential(
     behind it, which the request path already handles by skipping the candidate. The other order
     would leave a value in the store with no row to delete it by.
     """
-    store = writable_store(request)
+    store = secret_store(request)
     provider = await _provider(body.provider)
     workspace = await joined_workspace(org_id, body.workspace, claims) if body.workspace else None
     workspace_id = workspace.id if workspace else None
@@ -68,10 +58,23 @@ async def create_provider_credential(
         provider_name=provider.name,
         name=body.name,
         priority=body.priority,
-        fingerprint=secret.fingerprint,
     ).save()
-    await store.put(credential.secret_ref(), secret)
-    return Envelope(data=ProviderCredentialOut.model_validate(credential))
+    credential.fingerprint = await _hold(store, credential, secret)
+    return Envelope(data=ProviderCredentialOut.model_validate(await credential.save()))
+
+
+async def _hold(store: SecretStore, credential: ProviderCredential, secret: Secret) -> str:
+    """Store the value and report the fingerprint of what the store now holds.
+
+    Taken from what put hands back rather than from the input, because a store that keeps values it
+    does not own can accept a put without the result being the argument, and a fingerprint of what
+    was sent would then describe a key the request path will never spend.
+    """
+    try:
+        held = await store.put(credential.secret_ref(), secret)
+    except SecretRejectedError as e:
+        raise HTTPException(status_code=501, detail=str(e)) from e
+    return held.fingerprint
 
 
 @router.get("", tags=["Provider Credentials"], dependencies=[require(Scope.provider_credentials_read)])
@@ -101,12 +104,11 @@ async def rotate_provider_credential(
 ) -> Envelope[ProviderCredentialOut]:
     """A rotation is the same row and the same ref with a new value, so the bundle diff is one
     integer and every data plane refetches within a poll instead of waiting out a cache TTL."""
-    store = writable_store(request)
+    store = secret_store(request)
     credential = await ProviderCredential.in_org(org_id, credential_id)
     secret = Secret(body.value.get_secret_value())
-    await store.put(credential.secret_ref(), secret)
+    credential.fingerprint = await _hold(store, credential, secret)
     credential.version += 1
-    credential.fingerprint = secret.fingerprint
     credential.status = "unknown"
     return Envelope(data=ProviderCredentialOut.model_validate(await credential.save()))
 

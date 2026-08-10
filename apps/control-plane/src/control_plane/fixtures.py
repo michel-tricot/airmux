@@ -19,6 +19,7 @@ bottom and saved as it is declared.
 
 from __future__ import annotations
 
+import contextlib
 from dataclasses import dataclass
 from datetime import timedelta
 from random import Random
@@ -27,7 +28,7 @@ from uuid import UUID, uuid5
 
 from sqlmodel import col
 
-from contract import INFERENCE_TOKEN_PREFIX, Secret, SecretStore, token_hash
+from contract import INFERENCE_TOKEN_PREFIX, Secret, SecretRejectedError, SecretStore, token_hash
 from control_plane.keys import INSTANCE_KEY_PREFIX, MANAGEMENT_KEY_PREFIX, key_prefix
 from control_plane.models import (
     AuthIdentity,
@@ -68,11 +69,6 @@ are looked up, never created, so a fixture instance cannot drift from the catalo
 FIXTURE_PROVIDER_KEY = "sk-fixture-not-a-real-key-0000"
 
 
-def env_variable(provider: str) -> str:
-    """What the env store resolves a provider credential to, for the command to name in its output."""
-    return f"{provider.upper()}_API_KEY"
-
-
 STATUSES = ["ok"] * 9 + ["error"]
 
 USAGE_DAYS = 30
@@ -108,7 +104,7 @@ class Fixtures:
     inference_token: str
     management_token: str
     instance_token: str
-    provider_key_variables: list[str]  # what the seeded credentials resolve to when the store reads the environment
+    unresolved_providers: list[str]  # seeded credentials whose store holds no value, so nothing routes through them yet
 
 
 def fixture_id(name: str) -> UUID:
@@ -146,14 +142,7 @@ async def provider_credential(  # noqa: PLR0913 the row's own fields are the arg
     status: str = "unknown",
     enabled: bool = True,
 ) -> ProviderCredential:
-    """A credential row, and the value behind it when the store can hold one.
-
-    The row is the part that matters here: it is what gives the console a pool to render and the
-    data plane a ref to resolve. On a writable store the value is a placeholder no provider will
-    accept, so a fixture instance cannot bill anyone by accident. On the env store there is nothing
-    to write and nothing to place: the ref already resolves to {PROVIDER}_API_KEY, so a developer
-    with their own key set gets a pool that genuinely works.
-    """
+    """A credential row, and the value behind it when the store can hold one."""
     credential = await ProviderCredential(
         id=fixture_id(f"provider-credential:{org.name}:{workspace.name if workspace else 'org'}:{provider.name}:{name}"),
         org_id=org.id,
@@ -164,11 +153,10 @@ async def provider_credential(  # noqa: PLR0913 the row's own fields are the arg
         priority=priority,
         enabled=enabled,
         status=status,
-        fingerprint=FIXTURE_PROVIDER_KEY[-4:] if store.writable else "",
     ).save()
-    if store.writable:
-        await store.put(credential.secret_ref(), Secret(FIXTURE_PROVIDER_KEY))
-    return credential
+    with contextlib.suppress(SecretRejectedError):
+        credential.fingerprint = (await store.put(credential.secret_ref(), Secret(FIXTURE_PROVIDER_KEY))).fingerprint
+    return await credential.save()
 
 
 async def record_usage(workspace: Workspace, key: InferenceKey, count: int, now: datetime) -> None:
@@ -278,12 +266,14 @@ async def apply_fixtures(now: datetime, store: SecretStore) -> Fixtures:
     ).save()
 
     openai, anthropic = catalog["openai"], catalog["anthropic"]
-    await provider_credential(store, openai, acme, workspace=production, name="primary", priority=10, status="live")
-    await provider_credential(store, openai, acme, workspace=production, name="backup", priority=50, status="rate_limited")
-    await provider_credential(store, openai, acme, workspace=production, name="retired", priority=90, enabled=False)
-    await provider_credential(store, anthropic, acme, workspace=production, status="invalid")
-    await provider_credential(store, openai, acme, name="org-wide", priority=100, status="live")
-    await provider_credential(store, openai, solo, workspace=default)
+    keys = [
+        await provider_credential(store, openai, acme, workspace=production, name="primary", priority=10, status="live"),
+        await provider_credential(store, openai, acme, workspace=production, name="backup", priority=50, status="rate_limited"),
+        await provider_credential(store, openai, acme, workspace=production, name="retired", priority=90, enabled=False),
+        await provider_credential(store, anthropic, acme, workspace=production, status="invalid"),
+        await provider_credential(store, openai, acme, name="org-wide", priority=100, status="live"),
+        await provider_credential(store, openai, solo, workspace=default),
+    ]
 
     await record_usage(production, checkout, 1200, now)
     await record_usage(staging, ci, 360, now)
@@ -296,5 +286,5 @@ async def apply_fixtures(now: datetime, store: SecretStore) -> Fixtures:
         inference_token=ACME_PROD_TOKEN,
         management_token=ACME_MANAGEMENT_TOKEN,
         instance_token=INSTANCE_TOKEN,
-        provider_key_variables=[] if store.writable else [env_variable(name) for name in ROUTED_PROVIDERS],
+        unresolved_providers=sorted({key.provider_name for key in keys if not key.fingerprint}),
     )

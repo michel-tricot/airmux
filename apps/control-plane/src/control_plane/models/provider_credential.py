@@ -10,7 +10,7 @@ from pydantic import Field as PydanticField
 from sqlalchemy import CheckConstraint, ColumnElement, ForeignKeyConstraint, UniqueConstraint
 from sqlmodel import Field, col
 
-from contract import SecretNotFoundError, SecretPurpose, SecretRef, SecretStore, SecretStoreReadOnlyError
+from contract import SecretNotFoundError, SecretPurpose, SecretRef, SecretRejectedError, SecretStore
 from control_plane.db import current_session
 from control_plane.models.audit import audited
 from control_plane.models.common import Identified, Tombstonable
@@ -113,10 +113,10 @@ class ProviderCredential(Record, Identified, Tombstonable, table=True):
 
         The value goes first, for the same reason the create path writes the row first: a row whose
         value is gone is a candidate the request path skips, while a value whose row is gone is a
-        secret nothing knows how to reach or remove. A read-only store cannot have been written to
-        in the first place, so its refusal is not a failure here.
+        secret nothing knows how to reach or remove. A store that never held the value has nothing
+        to remove, so its refusal is not a failure here.
         """
-        with contextlib.suppress(SecretStoreReadOnlyError, SecretNotFoundError):
+        with contextlib.suppress(SecretRejectedError, SecretNotFoundError):
             await store.delete(self.secret_ref())
         await self.delete()
 

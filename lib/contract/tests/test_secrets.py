@@ -19,8 +19,8 @@ from contract import (
     SecretNotFoundError,
     SecretPurpose,
     SecretRef,
+    SecretRejectedError,
     SecretsConfig,
-    SecretStoreReadOnlyError,
     SecretStoreUnavailableError,
 )
 
@@ -113,10 +113,6 @@ async def test_scopes_do_not_read_as_one_another(store):
     assert (await store.get(workspace_scoped)).reveal() == "workspace-value"
     assert (await store.get(org_scoped)).reveal() == "org-value"
     assert (await store.get(platform_scoped)).reveal() == "platform-value"
-
-
-async def test_every_writable_store_says_so(store):
-    assert store.writable
 
 
 def test_a_config_builds_its_own_store(tmp_path):
@@ -223,17 +219,6 @@ async def test_a_prefixed_variable_overrides_the_conventional_one(monkeypatch):
     assert (await store.get(a_ref())).reveal() == "sk-explicit"
 
 
-async def test_an_env_store_refuses_writes():
-    """An instance configured this way serves platform credentials and cannot accept BYOK, which the
-    control plane checks through `writable` at startup rather than discovering here."""
-    store = EnvSecretStore(prefix="AIRLLM_SECRET")
-    assert not store.writable
-    with pytest.raises(SecretStoreReadOnlyError):
-        await store.put(a_ref(), Secret("sk-value"))
-    with pytest.raises(SecretStoreReadOnlyError):
-        await store.delete(a_ref())
-
-
 async def test_a_missing_env_secret_is_not_found(monkeypatch):
     store = EnvSecretStore(prefix="AIRLLM_SECRET")
     ref = a_platform_ref(service="nowhere")
@@ -241,3 +226,58 @@ async def test_a_missing_env_secret_is_not_found(monkeypatch):
         monkeypatch.delenv(variable, raising=False)
     with pytest.raises(SecretNotFoundError):
         await store.get(ref)
+
+
+async def test_the_env_store_accepts_a_key_it_already_holds(monkeypatch):
+    """In env mode a value is not written, it already exists: the operator exported it and the ref
+    resolves to it. Storing one is therefore a declaration that it is in use, not a write, and
+    refusing it would leave an instance that cannot record a key it can already read."""
+    store = EnvSecretStore(prefix="AIRLLM_SECRET")
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-the-operators-own")
+    ref = a_platform_ref()
+
+    await store.put(ref, Secret("sk-the-operators-own"))
+
+    assert (await store.get(ref)).reveal() == "sk-the-operators-own"
+
+
+async def test_the_env_store_says_which_variable_is_missing(monkeypatch):
+    """The one case it cannot accept: nothing to declare. A row whose value resolves to nothing is
+    one the data plane answers 502 for, so the refusal names the variable that would fix it."""
+    store = EnvSecretStore(prefix="AIRLLM_SECRET")
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.delenv("AIRLLM_SECRET_PROVIDER_OPENAI", raising=False)
+
+    with pytest.raises(SecretRejectedError, match="OPENAI_API_KEY"):
+        await store.put(a_platform_ref(), Secret("sk-anything"))
+
+
+async def test_the_env_store_refuses_to_diverge_from_the_environment(monkeypatch):
+    """Accepting a different value silently would mean the credential the operator thinks they
+    stored is not the one their traffic spends."""
+    store = EnvSecretStore(prefix="AIRLLM_SECRET")
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-the-operators-own")
+
+    with pytest.raises(SecretRejectedError, match="environment"):
+        await store.put(a_platform_ref(), Secret("sk-something-else"))
+
+
+async def test_deleting_an_env_credential_leaves_the_variable(monkeypatch):
+    """The store does not own the variable, so removing a credential removes the row that named it.
+    Nothing resolves it afterwards because nothing names it."""
+    store = EnvSecretStore(prefix="AIRLLM_SECRET")
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-the-operators-own")
+
+    await store.delete(a_platform_ref())
+
+    assert (await store.get(a_platform_ref())).reveal() == "sk-the-operators-own"
+
+
+async def test_put_hands_back_what_the_store_now_holds(store):
+    """So a caller describing the credential it just stored never has to read it back to do it."""
+    ref = a_ref()
+
+    held = await store.put(ref, Secret("sk-provider-value"))
+
+    assert held.reveal() == (await store.get(ref)).reveal()
+    assert held.fingerprint == "alue"

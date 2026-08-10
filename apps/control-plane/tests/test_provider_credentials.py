@@ -11,7 +11,7 @@ from helpers import MODEL, PROVIDER, make_org, make_workspace, run_in_db, setup_
 from sqlalchemy.exc import IntegrityError
 
 from contract import EnvStoreConfig, SecretNotFoundError, SecretPurpose, SecretRef, uuid7
-from control_plane.models import Provider, ProviderCredential
+from control_plane.models import Provider, ProviderCredential, set_actor
 
 KEY = "sk-provider-abcd1234"
 CSRF = {"X-Requested-With": "fetch"}
@@ -380,3 +380,28 @@ def test_a_workspace_credential_needs_workspace_membership(tmp_path):
         body = {"provider": "openai", "value": KEY, "workspace": workspace["slug"]}
         assert c.post("/v1/org/provider-credentials", json=body, headers=theirs).status_code == 403
         assert c.get("/v1/org/provider-credentials", params={"workspace": workspace["slug"]}, headers=theirs).status_code == 403
+
+
+def test_a_platform_credential_reaches_every_org(tmp_path):
+    """The platform tier is the fallback every org shares, so it belongs in every org's bundle.
+
+    org_id == org_id never matches a null, so a platform credential compiled into nothing and the
+    tier the data plane falls back to was empty for every deployment that had one.
+    """
+    cp = setup_control_plane(tmp_path)
+    with TestClient(cp.app) as c:
+        root = cp.headers()
+        _catalog(c, root)
+        provider_id = c.get("/v1/taxonomy", headers=root).json()["data"]["providers"][0]["id"]
+
+        async def declare():
+            await set_actor("root")
+            await ProviderCredential(provider_id=provider_id, provider_name="openai", name="platform").save()
+
+        run_in_db(tmp_path, declare)
+
+        org = cp.headers(make_org(c, root))
+        c.post("/v1/org/bundles/compile", headers=org)
+        entries = c.get("/v1/bundle/latest", headers=root).json()["data"]["payload"]["catalog"]["credentials"]
+        assert [e["ref"]["name"] for e in entries] == ["platform"]
+        assert entries[0]["ref"]["org_id"] is None

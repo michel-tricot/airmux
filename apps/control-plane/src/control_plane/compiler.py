@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from sqlalchemy import func
-from sqlmodel import col, select
+from sqlmodel import col, or_, select
 
 from contract import BundleV1, Catalog, CredentialEntry, KeyEntry, ModelEntry, ProviderEntry, canonical_json, sign_bundle
 from control_plane.db import current_session
@@ -53,7 +53,9 @@ async def compile_bundle(org_id: UUID, bundle_id: UUID, now: datetime, staleness
     model_rows = await Model.find(order_by=col(Model.name))
     provider_names = {p.id: p.name for p in provider_rows}
     credential_order = (col(ProviderCredential.priority), col(ProviderCredential.name))
-    credential_rows = await ProviderCredential.find(ProviderCredential.org_id == org_id, order_by=credential_order)
+    credential_rows = await ProviderCredential.find(
+        or_(ProviderCredential.org_id == org_id, col(ProviderCredential.org_id).is_(None)), order_by=credential_order
+    )
     return BundleV1(
         bundle_id=bundle_id,
         org_id=org_id,

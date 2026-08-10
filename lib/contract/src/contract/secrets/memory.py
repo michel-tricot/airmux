@@ -21,7 +21,6 @@ class MemorySecretStore(SecretStore):
     """
 
     kind: ClassVar[str] = "memory"
-    writable: ClassVar[bool] = True
 
     def __init__(self) -> None:
         self._values: dict[tuple[str, ...], str] = {}
@@ -32,8 +31,9 @@ class MemorySecretStore(SecretStore):
             raise SecretNotFoundError(ref)
         return Secret(value)
 
-    async def put(self, ref: SecretRef, secret: Secret) -> None:
+    async def put(self, ref: SecretRef, secret: Secret) -> Secret:
         self._values[path_segments(ref)] = secret.reveal()
+        return secret
 
     async def delete(self, ref: SecretRef) -> None:
         self._values.pop(path_segments(ref), None)

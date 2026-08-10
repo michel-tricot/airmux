@@ -150,9 +150,9 @@ def fixtures(config: str = "airllm.yml") -> None:
     typer.echo(f"seeded; bundles: {', '.join(f'{name} v{version}' for name, version in versions)}")
     if models == 0:
         typer.echo("catalog is empty, so the bundles route nothing; run `airllmcp taxonomy` to fill it")
-    if seeded.provider_key_variables:
-        names = ", ".join(seeded.provider_key_variables)
-        typer.echo(f"provider keys resolve from the environment; set {names} for the seeded credentials to reach a real provider")
+    if seeded.unresolved_providers:
+        names = ", ".join(seeded.unresolved_providers)
+        typer.echo(f"no key behind the seeded {names} credentials; supply one with `airllm provider-credentials add <provider>`")
 
     logins = [(email, seeded.password, "instance admin" if email == seeded.admin_email else "member") for email in seeded.emails]
     keys = [

@@ -16,10 +16,10 @@ from contract.secrets import (
     SecretNotFoundError,
     SecretPurpose,
     SecretRef,
+    SecretRejectedError,
     SecretsConfig,
     SecretStore,
     SecretStoreConfig,
-    SecretStoreReadOnlyError,
     SecretStoreUnavailableError,
 )
 from contract.signing import (
@@ -55,9 +55,9 @@ __all__ = [
     "SecretNotFoundError",
     "SecretPurpose",
     "SecretRef",
+    "SecretRejectedError",
     "SecretStore",
     "SecretStoreConfig",
-    "SecretStoreReadOnlyError",
     "SecretStoreUnavailableError",
     "SecretsConfig",
     "SignedBundle",
