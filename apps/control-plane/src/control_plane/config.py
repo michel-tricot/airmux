@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from contract import Ed25519PrivateKeyB64, load_config_section
+from contract import Ed25519PrivateKeyB64, EnvStoreConfig, SecretsConfig, load_config_section
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -48,6 +48,8 @@ class Settings(BaseModel):
 
     database: DatabaseConfig = Field(default_factory=DatabaseConfig)
     bundle: BundlePolicy
+    secrets: SecretsConfig = Field(default_factory=EnvStoreConfig)  # where provider keys live; the data plane must name the same store
+
     console_url: str = "http://127.0.0.1:5000"  # where the console is served; device-flow verification URLs are built from it
     dev: bool = False  # set by the --dev flag on the entry point, gate dev-only behavior on this
 

@@ -6,6 +6,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, HttpUrl
 
+from contract.secrets import SecretRef
+
 
 class KeyEntry(BaseModel):
     """An API key as the data plane sees it: enough to authorize with zero I/O.
@@ -53,13 +55,33 @@ class ModelEntry(BaseModel):
     capabilities: list[str]  # "streaming", "tools", "vision"
 
 
+class CredentialEntry(BaseModel):
+    """One provider key the data plane may spend against, named but not carried.
+
+    The ref says which secret; the data plane fetches the value from the store it is configured
+    with. Nothing here is a secret and nothing here is a location, so a bundle at rest and a bundle
+    on the wire are both safe to read.
+
+    version is the cache key: a rotation keeps the ref and bumps this, so a data plane refetches
+    within one poll rather than waiting out a TTL.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    ref: SecretRef
+    priority: int  # lower is tried first, ties break by the ref's name
+    version: int
+
+
 class Catalog(BaseModel):
-    """Everything routable in one org: providers and the models that point at them."""
+    """Everything routable in one org: providers, the models that point at them, and the credentials
+    they are reached with."""
 
     model_config = ConfigDict(frozen=True)
 
     providers: list[ProviderEntry]
     models: list[ModelEntry]
+    credentials: list[CredentialEntry] = []
 
 
 class BundleV1(BaseModel):

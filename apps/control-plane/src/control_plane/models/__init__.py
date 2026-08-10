@@ -15,6 +15,7 @@ from control_plane.models.model import Model
 from control_plane.models.org import Org
 from control_plane.models.org_membership import OrgMembership
 from control_plane.models.provider import Provider
+from control_plane.models.provider_credential import ProviderCredential
 from control_plane.models.usage_event import UsageEvent
 from control_plane.models.user import User
 from control_plane.models.workspace import Workspace
@@ -37,6 +38,7 @@ __all__ = [
     "OrgMembership",
     "OrgOwned",
     "Provider",
+    "ProviderCredential",
     "Record",
     "Tombstonable",
     "UsageEvent",

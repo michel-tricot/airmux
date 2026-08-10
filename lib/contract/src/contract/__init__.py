@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from contract.bundle import BundleV1, Catalog, KeyEntry, ModelEntry, ProviderEntry, SignedBundle
+from contract.bundle import BundleV1, Catalog, CredentialEntry, KeyEntry, ModelEntry, ProviderEntry, SignedBundle
 from contract.credentials import INFERENCE_TOKEN_PREFIX, token_hash
 from contract.events import HeartbeatV1, UsageEventV1, UsageStatus
 from contract.ids import uuid7
@@ -38,6 +38,7 @@ __all__ = [
     "INFERENCE_TOKEN_PREFIX",
     "BundleV1",
     "Catalog",
+    "CredentialEntry",
     "Ed25519PrivateKeyB64",
     "Ed25519PublicKeyB64",
     "EnvSecretStore",

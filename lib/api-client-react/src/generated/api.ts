@@ -52,6 +52,7 @@ import type {
   ListDataPlanesParams,
   ListEventsParams,
   ListInstanceActivityParams,
+  ListProviderCredentialsParams,
   ListUsersParams,
   LoginIn,
   ManagementKeyIn,
@@ -68,6 +69,10 @@ import type {
   OrgUpdate,
   PasswordChangeIn,
   PasswordChangedOut,
+  ProviderCredentialIn,
+  ProviderCredentialOut,
+  ProviderCredentialUpdate,
+  ProviderCredentialValueIn,
   ProviderIn,
   ProviderOut,
   QuickstartIn,
@@ -3284,6 +3289,476 @@ export const useRevokeInferenceKey = <TError = ErrorType<HTTPValidationError>,
         TContext
       > => {
       return useMutation(getRevokeInferenceKeyMutationOptions(options));
+    }
+
+export const getCreateProviderCredentialUrl = () => {
+
+
+
+
+  return `/v1/org/provider-credentials`
+}
+
+/**
+ * Bring a provider key for this org, or for one workspace in it.
+ *
+ * The row is written before the value so a crash between the two leaves a credential with nothing
+ * behind it, which the request path already handles by skipping the candidate. The other order
+ * would leave a value in the store with no row to delete it by.
+ *
+ * Requires the `provider-credentials:write` scope.
+ * @summary Create Provider Credential
+ */
+export const createProviderCredential = async (providerCredentialIn: ProviderCredentialIn, options?: Parameters<typeof customFetch>[1]): Promise<ProviderCredentialOut> => {
+
+  return customFetch<ProviderCredentialOut>(getCreateProviderCredentialUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(providerCredentialIn)
+  }
+);}
+
+
+
+
+
+export const getCreateProviderCredentialMutationOptions = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createProviderCredential>>, TError,{data: BodyType<ProviderCredentialIn>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createProviderCredential>>, TError,{data: BodyType<ProviderCredentialIn>}, TContext> => {
+
+const mutationKey = ['createProviderCredential'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createProviderCredential>>, {data: BodyType<ProviderCredentialIn>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createProviderCredential(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateProviderCredentialMutationResult = NonNullable<Awaited<ReturnType<typeof createProviderCredential>>>
+    export type CreateProviderCredentialMutationBody = BodyType<ProviderCredentialIn>
+    export type CreateProviderCredentialMutationError = ErrorType<HTTPValidationError>
+
+    /**
+ * @summary Create Provider Credential
+ */
+export const useCreateProviderCredential = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createProviderCredential>>, TError,{data: BodyType<ProviderCredentialIn>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createProviderCredential>>,
+        TError,
+        {data: BodyType<ProviderCredentialIn>},
+        TContext
+      > => {
+      return useMutation(getCreateProviderCredentialMutationOptions(options));
+    }
+
+export const getListProviderCredentialsUrl = (params?: ListProviderCredentialsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/v1/org/provider-credentials?${stringifiedParams}` : `/v1/org/provider-credentials`
+}
+
+/**
+ * The org's credentials in the order the data plane tries them, optionally narrowed to one workspace.
+ *
+ * Requires the `provider-credentials:read` scope.
+ * @summary List Provider Credentials
+ */
+export const listProviderCredentials = async (params?: ListProviderCredentialsParams, options?: Parameters<typeof customFetch>[1]): Promise<ProviderCredentialOut[]> => {
+
+  return customFetch<ProviderCredentialOut[]>(getListProviderCredentialsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListProviderCredentialsQueryKey = (params?: ListProviderCredentialsParams,) => {
+    return [
+    `/v1/org/provider-credentials`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListProviderCredentialsQueryOptions = <TData = Awaited<ReturnType<typeof listProviderCredentials>>, TError = ErrorType<HTTPValidationError>>(params?: ListProviderCredentialsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listProviderCredentials>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListProviderCredentialsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listProviderCredentials>>> = ({ signal }) => listProviderCredentials(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listProviderCredentials>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListProviderCredentialsQueryResult = NonNullable<Awaited<ReturnType<typeof listProviderCredentials>>>
+export type ListProviderCredentialsQueryError = ErrorType<HTTPValidationError>
+
+
+/**
+ * @summary List Provider Credentials
+ */
+
+export function useListProviderCredentials<TData = Awaited<ReturnType<typeof listProviderCredentials>>, TError = ErrorType<HTTPValidationError>>(
+ params?: ListProviderCredentialsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listProviderCredentials>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListProviderCredentialsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetProviderCredentialUrl = (credentialId: string,) => {
+
+
+
+
+  return `/v1/org/provider-credentials/${credentialId}`
+}
+
+/**
+ * Requires the `provider-credentials:read` scope.
+ * @summary Get Provider Credential
+ */
+export const getProviderCredential = async (credentialId: string, options?: Parameters<typeof customFetch>[1]): Promise<ProviderCredentialOut> => {
+
+  return customFetch<ProviderCredentialOut>(getGetProviderCredentialUrl(credentialId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetProviderCredentialQueryKey = (credentialId: string,) => {
+    return [
+    `/v1/org/provider-credentials/${credentialId}`
+    ] as const;
+    }
+
+
+export const getGetProviderCredentialQueryOptions = <TData = Awaited<ReturnType<typeof getProviderCredential>>, TError = ErrorType<HTTPValidationError>>(credentialId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getProviderCredential>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetProviderCredentialQueryKey(credentialId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getProviderCredential>>> = ({ signal }) => getProviderCredential(credentialId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: credentialId !== null && credentialId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getProviderCredential>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetProviderCredentialQueryResult = NonNullable<Awaited<ReturnType<typeof getProviderCredential>>>
+export type GetProviderCredentialQueryError = ErrorType<HTTPValidationError>
+
+
+/**
+ * @summary Get Provider Credential
+ */
+
+export function useGetProviderCredential<TData = Awaited<ReturnType<typeof getProviderCredential>>, TError = ErrorType<HTTPValidationError>>(
+ credentialId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getProviderCredential>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetProviderCredentialQueryOptions(credentialId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUpdateProviderCredentialUrl = (credentialId: string,) => {
+
+
+
+
+  return `/v1/org/provider-credentials/${credentialId}`
+}
+
+/**
+ * Priority and enabled are the whole mutable surface: everything else names the secret, so
+ * changing it would orphan the value rather than move it.
+ *
+ * Requires the `provider-credentials:write` scope.
+ * @summary Update Provider Credential
+ */
+export const updateProviderCredential = async (credentialId: string,
+    providerCredentialUpdate: ProviderCredentialUpdate, options?: Parameters<typeof customFetch>[1]): Promise<ProviderCredentialOut> => {
+
+  return customFetch<ProviderCredentialOut>(getUpdateProviderCredentialUrl(credentialId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(providerCredentialUpdate)
+  }
+);}
+
+
+
+
+
+export const getUpdateProviderCredentialMutationOptions = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateProviderCredential>>, TError,{credentialId: string;data: BodyType<ProviderCredentialUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateProviderCredential>>, TError,{credentialId: string;data: BodyType<ProviderCredentialUpdate>}, TContext> => {
+
+const mutationKey = ['updateProviderCredential'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateProviderCredential>>, {credentialId: string;data: BodyType<ProviderCredentialUpdate>}> = (props) => {
+          const {credentialId,data} = props ?? {};
+
+          return  updateProviderCredential(credentialId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateProviderCredentialMutationResult = NonNullable<Awaited<ReturnType<typeof updateProviderCredential>>>
+    export type UpdateProviderCredentialMutationBody = BodyType<ProviderCredentialUpdate>
+    export type UpdateProviderCredentialMutationError = ErrorType<HTTPValidationError>
+
+    /**
+ * @summary Update Provider Credential
+ */
+export const useUpdateProviderCredential = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateProviderCredential>>, TError,{credentialId: string;data: BodyType<ProviderCredentialUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateProviderCredential>>,
+        TError,
+        {credentialId: string;data: BodyType<ProviderCredentialUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateProviderCredentialMutationOptions(options));
+    }
+
+export const getDeleteProviderCredentialUrl = (credentialId: string,) => {
+
+
+
+
+  return `/v1/org/provider-credentials/${credentialId}`
+}
+
+/**
+ * The value goes first: a row with no value is a candidate the request path skips, while a
+ * value with no row is a secret nothing knows how to reach or remove.
+ *
+ * Requires the `provider-credentials:write` scope.
+ * @summary Delete Provider Credential
+ */
+export const deleteProviderCredential = async (credentialId: string, options?: Parameters<typeof customFetch>[1]): Promise<DeletedOutUUID> => {
+
+  return customFetch<DeletedOutUUID>(getDeleteProviderCredentialUrl(credentialId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteProviderCredentialMutationOptions = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteProviderCredential>>, TError,{credentialId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteProviderCredential>>, TError,{credentialId: string}, TContext> => {
+
+const mutationKey = ['deleteProviderCredential'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteProviderCredential>>, {credentialId: string}> = (props) => {
+          const {credentialId} = props ?? {};
+
+          return  deleteProviderCredential(credentialId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteProviderCredentialMutationResult = NonNullable<Awaited<ReturnType<typeof deleteProviderCredential>>>
+
+    export type DeleteProviderCredentialMutationError = ErrorType<HTTPValidationError>
+
+    /**
+ * @summary Delete Provider Credential
+ */
+export const useDeleteProviderCredential = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteProviderCredential>>, TError,{credentialId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteProviderCredential>>,
+        TError,
+        {credentialId: string},
+        TContext
+      > => {
+      return useMutation(getDeleteProviderCredentialMutationOptions(options));
+    }
+
+export const getRotateProviderCredentialUrl = (credentialId: string,) => {
+
+
+
+
+  return `/v1/org/provider-credentials/${credentialId}/value`
+}
+
+/**
+ * A rotation is the same row and the same ref with a new value, so the bundle diff is one
+ * integer and every data plane refetches within a poll instead of waiting out a cache TTL.
+ *
+ * Requires the `provider-credentials:write` scope.
+ * @summary Rotate Provider Credential
+ */
+export const rotateProviderCredential = async (credentialId: string,
+    providerCredentialValueIn: ProviderCredentialValueIn, options?: Parameters<typeof customFetch>[1]): Promise<ProviderCredentialOut> => {
+
+  return customFetch<ProviderCredentialOut>(getRotateProviderCredentialUrl(credentialId),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(providerCredentialValueIn)
+  }
+);}
+
+
+
+
+
+export const getRotateProviderCredentialMutationOptions = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof rotateProviderCredential>>, TError,{credentialId: string;data: BodyType<ProviderCredentialValueIn>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof rotateProviderCredential>>, TError,{credentialId: string;data: BodyType<ProviderCredentialValueIn>}, TContext> => {
+
+const mutationKey = ['rotateProviderCredential'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof rotateProviderCredential>>, {credentialId: string;data: BodyType<ProviderCredentialValueIn>}> = (props) => {
+          const {credentialId,data} = props ?? {};
+
+          return  rotateProviderCredential(credentialId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RotateProviderCredentialMutationResult = NonNullable<Awaited<ReturnType<typeof rotateProviderCredential>>>
+    export type RotateProviderCredentialMutationBody = BodyType<ProviderCredentialValueIn>
+    export type RotateProviderCredentialMutationError = ErrorType<HTTPValidationError>
+
+    /**
+ * @summary Rotate Provider Credential
+ */
+export const useRotateProviderCredential = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof rotateProviderCredential>>, TError,{credentialId: string;data: BodyType<ProviderCredentialValueIn>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof rotateProviderCredential>>,
+        TError,
+        {credentialId: string;data: BodyType<ProviderCredentialValueIn>},
+        TContext
+      > => {
+      return useMutation(getRotateProviderCredentialMutationOptions(options));
     }
 
 export const getListOrgUsersUrl = () => {

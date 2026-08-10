@@ -372,7 +372,7 @@ export const createInstanceKeyBodyLabelMax = 80;
 export const CreateInstanceKeyBody = zod.object({
   "label": zod.string().min(1).max(createInstanceKeyBodyLabelMax).describe('Where this key lives, e.g. ci or a data plane; shown in listings'),
   "user_id": zod.union([zod.uuid(),zod.null()]).optional().describe('Instance admin the key is minted for; defaults to the acting user'),
-  "scopes": zod.union([zod.array(zod.enum(['inference-keys:read', 'inference-keys:write', 'workspaces:read', 'workspaces:create', 'workspaces:write', 'workspaces:delete', 'bundles:read', 'bundles:write', 'events:read', 'data-planes:read', 'taxonomy:read', 'taxonomy:write', 'orgs:read', 'orgs:create', 'orgs:write', 'orgs:delete', 'users:read', 'users:write', 'activity:read', 'management-keys:read', 'management-keys:write', 'instance-keys:read', 'instance-keys:write', 'sync']).describe('What a management credential may do; org and instance row-scoping are a separate axis.\n\nA scope restricts the credential, never expands it: a token minted without scopes carries the\nowning user\'s full authority, an explicit list is a restriction that also excludes scopes\ninvented later. Roles arrive later as named bundles over these same values.\n\nOrgs and workspaces split their lifecycle three ways because founding a tenant and destroying\none with everything inside it are each a different privilege from governing one day to day:\n:create founds, :write governs, :delete destroys. Elsewhere :write still covers all three.')),zod.null()]).optional().describe('Restrict the key to these scopes; omit for the user\'s full authority')
+  "scopes": zod.union([zod.array(zod.enum(['inference-keys:read', 'inference-keys:write', 'workspaces:read', 'workspaces:create', 'workspaces:write', 'workspaces:delete', 'bundles:read', 'bundles:write', 'events:read', 'data-planes:read', 'provider-credentials:read', 'provider-credentials:write', 'taxonomy:read', 'taxonomy:write', 'orgs:read', 'orgs:create', 'orgs:write', 'orgs:delete', 'users:read', 'users:write', 'activity:read', 'management-keys:read', 'management-keys:write', 'instance-keys:read', 'instance-keys:write', 'sync']).describe('What a management credential may do; org and instance row-scoping are a separate axis.\n\nA scope restricts the credential, never expands it: a token minted without scopes carries the\nowning user\'s full authority, an explicit list is a restriction that also excludes scopes\ninvented later. Roles arrive later as named bundles over these same values.\n\nOrgs and workspaces split their lifecycle three ways because founding a tenant and destroying\none with everything inside it are each a different privilege from governing one day to day:\n:create founds, :write governs, :delete destroys. Elsewhere :write still covers all three.')),zod.null()]).optional().describe('Restrict the key to these scopes; omit for the user\'s full authority')
 })
 
 export const CreateInstanceKeyResponse = zod.object({
@@ -1027,6 +1027,222 @@ export const RevokeInferenceKeyResponse = zod.object({
 
 
 /**
+ * Bring a provider key for this org, or for one workspace in it.
+ *
+ * The row is written before the value so a crash between the two leaves a credential with nothing
+ * behind it, which the request path already handles by skipping the candidate. The other order
+ * would leave a value in the store with no row to delete it by.
+ *
+ * Requires the `provider-credentials:write` scope.
+ * @summary Create Provider Credential
+ */
+export const CreateProviderCredentialHeader = zod.object({
+  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional(),
+  "X-Requested-With": zod.union([zod.string(),zod.null()]).optional(),
+  "Sec-Fetch-Site": zod.union([zod.string(),zod.null()]).optional()
+})
+
+export const createProviderCredentialBodyNameDefault = `default`;
+export const createProviderCredentialBodyNameMax = 80;
+
+export const createProviderCredentialBodyPriorityDefault = 100;
+
+export const CreateProviderCredentialBody = zod.object({
+  "provider": zod.string().describe('Provider name from the catalog, e.g. openai'),
+  "name": zod.string().min(1).max(createProviderCredentialBodyNameMax).default(createProviderCredentialBodyNameDefault).describe('Handle for this key within the provider and scope, e.g. prod or backup'),
+  "value": zod.string().describe('The provider API key. Written to the secret store and never persisted anywhere else'),
+  "priority": zod.int().default(createProviderCredentialBodyPriorityDefault).describe('Lower is tried first; ties break by name'),
+  "workspace": zod.union([zod.string(),zod.null()]).optional().describe('Workspace id or slug for a workspace-scoped key; omitted makes it org-scoped')
+}).describe('Creating a credential is an action, not a plain row insert: the value crosses the wire once\nand is never a column, so this is not a RecordCreate and is exempt from parity by that choice.\n\nThe value is a SecretStr so nothing that renders this model can print it. That is not enough on\nits own: the validation error handler in app.py drops the offending input, or a body that fails\nvalidation for some other reason comes back to the caller with the key still in it.')
+
+export const CreateProviderCredentialResponse = zod.object({
+  "id": zod.uuid(),
+  "org_id": zod.union([zod.uuid(),zod.null()]),
+  "workspace_id": zod.union([zod.uuid(),zod.null()]),
+  "provider_id": zod.uuid(),
+  "name": zod.string(),
+  "priority": zod.int(),
+  "enabled": zod.boolean(),
+  "version": zod.int(),
+  "status": zod.string(),
+  "fingerprint": zod.string(),
+  "created_at": zod.coerce.date(),
+  "updated_at": zod.coerce.date(),
+  "deleted_at": zod.union([zod.coerce.date(),zod.null()]),
+  "scope": zod.enum(['platform', 'org', 'workspace'])
+})
+
+
+/**
+ * The org's credentials in the order the data plane tries them, optionally narrowed to one workspace.
+ *
+ * Requires the `provider-credentials:read` scope.
+ * @summary List Provider Credentials
+ */
+export const ListProviderCredentialsQueryParams = zod.object({
+  "workspace": zod.union([zod.coerce.string(),zod.null()]).optional()
+})
+
+export const ListProviderCredentialsHeader = zod.object({
+  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional(),
+  "X-Requested-With": zod.union([zod.string(),zod.null()]).optional(),
+  "Sec-Fetch-Site": zod.union([zod.string(),zod.null()]).optional()
+})
+
+export const ListProviderCredentialsResponseItem = zod.object({
+  "id": zod.uuid(),
+  "org_id": zod.union([zod.uuid(),zod.null()]),
+  "workspace_id": zod.union([zod.uuid(),zod.null()]),
+  "provider_id": zod.uuid(),
+  "name": zod.string(),
+  "priority": zod.int(),
+  "enabled": zod.boolean(),
+  "version": zod.int(),
+  "status": zod.string(),
+  "fingerprint": zod.string(),
+  "created_at": zod.coerce.date(),
+  "updated_at": zod.coerce.date(),
+  "deleted_at": zod.union([zod.coerce.date(),zod.null()]),
+  "scope": zod.enum(['platform', 'org', 'workspace'])
+})
+export const ListProviderCredentialsResponse = zod.array(ListProviderCredentialsResponseItem)
+
+
+/**
+ * Requires the `provider-credentials:read` scope.
+ * @summary Get Provider Credential
+ */
+export const GetProviderCredentialParams = zod.object({
+  "credential_id": zod.uuid()
+})
+
+export const GetProviderCredentialHeader = zod.object({
+  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional(),
+  "X-Requested-With": zod.union([zod.string(),zod.null()]).optional(),
+  "Sec-Fetch-Site": zod.union([zod.string(),zod.null()]).optional()
+})
+
+export const GetProviderCredentialResponse = zod.object({
+  "id": zod.uuid(),
+  "org_id": zod.union([zod.uuid(),zod.null()]),
+  "workspace_id": zod.union([zod.uuid(),zod.null()]),
+  "provider_id": zod.uuid(),
+  "name": zod.string(),
+  "priority": zod.int(),
+  "enabled": zod.boolean(),
+  "version": zod.int(),
+  "status": zod.string(),
+  "fingerprint": zod.string(),
+  "created_at": zod.coerce.date(),
+  "updated_at": zod.coerce.date(),
+  "deleted_at": zod.union([zod.coerce.date(),zod.null()]),
+  "scope": zod.enum(['platform', 'org', 'workspace'])
+})
+
+
+/**
+ * Priority and enabled are the whole mutable surface: everything else names the secret, so
+ * changing it would orphan the value rather than move it.
+ *
+ * Requires the `provider-credentials:write` scope.
+ * @summary Update Provider Credential
+ */
+export const UpdateProviderCredentialParams = zod.object({
+  "credential_id": zod.uuid()
+})
+
+export const UpdateProviderCredentialHeader = zod.object({
+  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional(),
+  "X-Requested-With": zod.union([zod.string(),zod.null()]).optional(),
+  "Sec-Fetch-Site": zod.union([zod.string(),zod.null()]).optional()
+})
+
+export const UpdateProviderCredentialBody = zod.object({
+  "priority": zod.union([zod.int(),zod.null()]).optional(),
+  "enabled": zod.union([zod.boolean(),zod.null()]).optional()
+})
+
+export const UpdateProviderCredentialResponse = zod.object({
+  "id": zod.uuid(),
+  "org_id": zod.union([zod.uuid(),zod.null()]),
+  "workspace_id": zod.union([zod.uuid(),zod.null()]),
+  "provider_id": zod.uuid(),
+  "name": zod.string(),
+  "priority": zod.int(),
+  "enabled": zod.boolean(),
+  "version": zod.int(),
+  "status": zod.string(),
+  "fingerprint": zod.string(),
+  "created_at": zod.coerce.date(),
+  "updated_at": zod.coerce.date(),
+  "deleted_at": zod.union([zod.coerce.date(),zod.null()]),
+  "scope": zod.enum(['platform', 'org', 'workspace'])
+})
+
+
+/**
+ * The value goes first: a row with no value is a candidate the request path skips, while a
+ * value with no row is a secret nothing knows how to reach or remove.
+ *
+ * Requires the `provider-credentials:write` scope.
+ * @summary Delete Provider Credential
+ */
+export const DeleteProviderCredentialParams = zod.object({
+  "credential_id": zod.uuid()
+})
+
+export const DeleteProviderCredentialHeader = zod.object({
+  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional(),
+  "X-Requested-With": zod.union([zod.string(),zod.null()]).optional(),
+  "Sec-Fetch-Site": zod.union([zod.string(),zod.null()]).optional()
+})
+
+export const DeleteProviderCredentialResponse = zod.object({
+  "id": zod.uuid(),
+  "deleted_at": zod.coerce.date()
+})
+
+
+/**
+ * A rotation is the same row and the same ref with a new value, so the bundle diff is one
+ * integer and every data plane refetches within a poll instead of waiting out a cache TTL.
+ *
+ * Requires the `provider-credentials:write` scope.
+ * @summary Rotate Provider Credential
+ */
+export const RotateProviderCredentialParams = zod.object({
+  "credential_id": zod.uuid()
+})
+
+export const RotateProviderCredentialHeader = zod.object({
+  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional(),
+  "X-Requested-With": zod.union([zod.string(),zod.null()]).optional(),
+  "Sec-Fetch-Site": zod.union([zod.string(),zod.null()]).optional()
+})
+
+export const RotateProviderCredentialBody = zod.object({
+  "value": zod.string().describe('The replacement provider API key')
+}).describe('A rotation: the same credential, a new value.')
+
+export const RotateProviderCredentialResponse = zod.object({
+  "id": zod.uuid(),
+  "org_id": zod.union([zod.uuid(),zod.null()]),
+  "workspace_id": zod.union([zod.uuid(),zod.null()]),
+  "provider_id": zod.uuid(),
+  "name": zod.string(),
+  "priority": zod.int(),
+  "enabled": zod.boolean(),
+  "version": zod.int(),
+  "status": zod.string(),
+  "fingerprint": zod.string(),
+  "created_at": zod.coerce.date(),
+  "updated_at": zod.coerce.date(),
+  "deleted_at": zod.union([zod.coerce.date(),zod.null()]),
+  "scope": zod.enum(['platform', 'org', 'workspace'])
+})
+
+
+/**
  * The acting org's members; an org credential sees its own roster, never the instance's.
  *
  * Requires the `users:read` scope.
@@ -1137,7 +1353,7 @@ export const mintOrgManagementKeyBodyLabelMax = 80;
 export const MintOrgManagementKeyBody = zod.object({
   "label": zod.string().min(1).max(mintOrgManagementKeyBodyLabelMax).describe('Where this key lives, e.g. ci or laptop; shown in listings'),
   "user_id": zod.union([zod.uuid(),zod.null()]).optional().describe('User the key is minted for; defaults to the acting user'),
-  "scopes": zod.union([zod.array(zod.enum(['inference-keys:read', 'inference-keys:write', 'workspaces:read', 'workspaces:create', 'workspaces:write', 'workspaces:delete', 'bundles:read', 'bundles:write', 'events:read', 'data-planes:read', 'taxonomy:read', 'taxonomy:write', 'orgs:read', 'orgs:create', 'orgs:write', 'orgs:delete', 'users:read', 'users:write', 'activity:read', 'management-keys:read', 'management-keys:write', 'instance-keys:read', 'instance-keys:write', 'sync']).describe('What a management credential may do; org and instance row-scoping are a separate axis.\n\nA scope restricts the credential, never expands it: a token minted without scopes carries the\nowning user\'s full authority, an explicit list is a restriction that also excludes scopes\ninvented later. Roles arrive later as named bundles over these same values.\n\nOrgs and workspaces split their lifecycle three ways because founding a tenant and destroying\none with everything inside it are each a different privilege from governing one day to day:\n:create founds, :write governs, :delete destroys. Elsewhere :write still covers all three.')),zod.null()]).optional().describe('Restrict the key to these scopes; omit for the user\'s full authority')
+  "scopes": zod.union([zod.array(zod.enum(['inference-keys:read', 'inference-keys:write', 'workspaces:read', 'workspaces:create', 'workspaces:write', 'workspaces:delete', 'bundles:read', 'bundles:write', 'events:read', 'data-planes:read', 'provider-credentials:read', 'provider-credentials:write', 'taxonomy:read', 'taxonomy:write', 'orgs:read', 'orgs:create', 'orgs:write', 'orgs:delete', 'users:read', 'users:write', 'activity:read', 'management-keys:read', 'management-keys:write', 'instance-keys:read', 'instance-keys:write', 'sync']).describe('What a management credential may do; org and instance row-scoping are a separate axis.\n\nA scope restricts the credential, never expands it: a token minted without scopes carries the\nowning user\'s full authority, an explicit list is a restriction that also excludes scopes\ninvented later. Roles arrive later as named bundles over these same values.\n\nOrgs and workspaces split their lifecycle three ways because founding a tenant and destroying\none with everything inside it are each a different privilege from governing one day to day:\n:create founds, :write governs, :delete destroys. Elsewhere :write still covers all three.')),zod.null()]).optional().describe('Restrict the key to these scopes; omit for the user\'s full authority')
 })
 
 export const MintOrgManagementKeyResponse = zod.object({
@@ -1300,6 +1516,7 @@ export const bundleLatestResponsePayloadCatalogProvidersItemBaseUrlMax = 2083;
 
 export const bundleLatestResponsePayloadCatalogProvidersItemCacheReadMultiplierDefault = 1;
 export const bundleLatestResponsePayloadCatalogProvidersItemCacheWriteMultiplierDefault = 1;
+export const bundleLatestResponsePayloadCatalogCredentialsDefault = [];
 
 export const BundleLatestResponse = zod.object({
   "payload": zod.object({
@@ -1332,8 +1549,20 @@ export const BundleLatestResponse = zod.object({
   "context_window": zod.int(),
   "max_output_tokens": zod.union([zod.int(),zod.null()]).optional(),
   "capabilities": zod.array(zod.string())
-}).describe('A routable model: the caller-facing id plus how to reach and bill it.'))
-}).describe('Everything routable in one org: providers and the models that point at them.')
+}).describe('A routable model: the caller-facing id plus how to reach and bill it.')),
+  "credentials": zod.array(zod.object({
+  "ref": zod.object({
+  "purpose": zod.enum(['provider']).describe('What family a secret belongs to. Both planes must agree, which is why it lives here.\n\nA new purpose is one member, and every store keeps it apart from the others without changing.'),
+  "service": zod.string(),
+  "name": zod.string(),
+  "secret_id": zod.uuid(),
+  "org_id": zod.union([zod.uuid(),zod.null()]).optional(),
+  "workspace_id": zod.union([zod.uuid(),zod.null()]).optional()
+}).describe('Which secret, said in terms of the domain rather than of any store\'s layout.\n\npurpose is the family, service is what inside that family the secret authenticates to (a\nprovider name today), and name is the caller-facing handle that lets one service hold several.\nsecret_id is what actually makes a ref unique; the rest is carried so a store with somewhere\nlegible to put it can.\n\norg_id and workspace_id are absent for a platform secret and org_id alone is present for an org\none, so the same two fields express all three scopes.'),
+  "priority": zod.int(),
+  "version": zod.int()
+}).describe('One provider key the data plane may spend against, named but not carried.\n\nThe ref says which secret; the data plane fetches the value from the store it is configured\nwith. Nothing here is a secret and nothing here is a location, so a bundle at rest and a bundle\non the wire are both safe to read.\n\nversion is the cache key: a rotation keeps the ref and bumps this, so a data plane refetches\nwithin one poll rather than waiting out a TTL.')).default(bundleLatestResponsePayloadCatalogCredentialsDefault)
+}).describe('Everything routable in one org: providers, the models that point at them, and the credentials\nthey are reached with.')
 }).describe('The complete policy snapshot one data plane needs to serve requests with no database.\n\nCompiled by the control plane as a pure function of database state, signed, and polled\nby the data plane. If a feature seems to need a DB read on the request path, the bundle\nis missing a field; add the field here instead.'),
   "signature": zod.string(),
   "signing_key_id": zod.string()

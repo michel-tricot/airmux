@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 
 from pg import TEMPLATE_DB, db_name_for, db_url_for, ensure_database
 
-from contract import private_key_to_b64
+from contract import MemoryStoreConfig, private_key_to_b64
 from control_plane.app import create_app
 from control_plane.config import BundlePolicy, DatabaseConfig, Settings
 from control_plane.db import standalone_transaction
@@ -116,13 +116,18 @@ def make_app() -> FastAPI:
     return create_app(settings)
 
 
-def setup_control_plane(tmp_path) -> ControlPlane:
-    """Database plus a real app over it, for tests that drive the API."""
+def setup_control_plane(tmp_path, secrets=None) -> ControlPlane:
+    """Database plus a real app over it, for tests that drive the API.
+
+    The secret store is in-process by default so credential writes work and a test can read the
+    value back the way a data plane would; pass secrets= to prove a differently configured instance.
+    """
     url = setup_db(tmp_path)
     bundle_key = Ed25519PrivateKey.generate()
     settings = Settings(
         database=DatabaseConfig(url=url),
         bundle=BundlePolicy(signing_key=private_key_to_b64(bundle_key)),
+        secrets=secrets if secrets is not None else MemoryStoreConfig(),
     )
     return ControlPlane(bundle_key=bundle_key, app=create_app(settings), db_url=url)
 

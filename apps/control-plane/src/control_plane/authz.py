@@ -29,6 +29,8 @@ class Scope(StrEnum):
     bundles_write = "bundles:write"
     events_read = "events:read"
     data_planes_read = "data-planes:read"
+    provider_credentials_read = "provider-credentials:read"
+    provider_credentials_write = "provider-credentials:write"
     taxonomy_read = "taxonomy:read"
     taxonomy_write = "taxonomy:write"
     orgs_read = "orgs:read"

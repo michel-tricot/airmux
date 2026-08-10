@@ -6,7 +6,7 @@ from __future__ import annotations
 from typing import Annotated, Any, Literal
 from uuid import UUID
 
-from pydantic import AnyUrl, AwareDatetime, BaseModel, Field, RootModel
+from pydantic import AnyUrl, AwareDatetime, BaseModel, Field, RootModel, SecretStr
 
 
 class ActivityOut(BaseModel):
@@ -405,6 +405,79 @@ class PasswordChangedOut(BaseModel):
     status: Annotated[Literal["changed"], Field(title="Status")]
 
 
+class ProviderCredentialIn(BaseModel):
+    """
+    Creating a credential is an action, not a plain row insert: the value crosses the wire once
+    and is never a column, so this is not a RecordCreate and is exempt from parity by that choice.
+
+    The value is a SecretStr so nothing that renders this model can print it. That is not enough on
+    its own: the validation error handler in app.py drops the offending input, or a body that fails
+    validation for some other reason comes back to the caller with the key still in it.
+    """
+
+    provider: Annotated[
+        str,
+        Field(description="Provider name from the catalog, e.g. openai", title="Provider"),
+    ]
+    name: Annotated[
+        str | None,
+        Field(
+            description="Handle for this key within the provider and scope, e.g. prod or backup",
+            max_length=80,
+            min_length=1,
+            title="Name",
+        ),
+    ] = "default"
+    value: Annotated[
+        SecretStr,
+        Field(
+            description="The provider API key. Written to the secret store and never persisted anywhere else",
+            title="Value",
+        ),
+    ]
+    priority: Annotated[
+        int | None,
+        Field(description="Lower is tried first; ties break by name", title="Priority"),
+    ] = 100
+    workspace: Annotated[
+        str | None,
+        Field(
+            description="Workspace id or slug for a workspace-scoped key; omitted makes it org-scoped",
+            title="Workspace",
+        ),
+    ] = None
+
+
+class ProviderCredentialOut(BaseModel):
+    id: Annotated[UUID, Field(title="Id")]
+    org_id: Annotated[UUID | None, Field(title="Org Id")]
+    workspace_id: Annotated[UUID | None, Field(title="Workspace Id")]
+    provider_id: Annotated[UUID, Field(title="Provider Id")]
+    name: Annotated[str, Field(title="Name")]
+    priority: Annotated[int, Field(title="Priority")]
+    enabled: Annotated[bool, Field(title="Enabled")]
+    version: Annotated[int, Field(title="Version")]
+    status: Annotated[str, Field(title="Status")]
+    fingerprint: Annotated[str, Field(title="Fingerprint")]
+    created_at: Annotated[AwareDatetime, Field(title="Created At")]
+    updated_at: Annotated[AwareDatetime, Field(title="Updated At")]
+    deleted_at: Annotated[AwareDatetime | None, Field(title="Deleted At")]
+    scope: Annotated[Literal["platform", "org", "workspace"], Field(title="Scope")]
+
+
+class ProviderCredentialUpdate(BaseModel):
+    priority: Annotated[int | None, Field(title="Priority")] = None
+    enabled: Annotated[bool | None, Field(title="Enabled")] = None
+
+
+class ProviderCredentialValueIn(BaseModel):
+    """
+    A rotation: the same credential, a new value.
+    """
+
+    value: Annotated[SecretStr, Field(description="The replacement provider API key", title="Value")]
+
+
 class ProviderEntry(BaseModel):
     """
     An upstream LLM provider endpoint.
@@ -488,6 +561,8 @@ class Scope(
             "bundles:write",
             "events:read",
             "data-planes:read",
+            "provider-credentials:read",
+            "provider-credentials:write",
             "taxonomy:read",
             "taxonomy:write",
             "orgs:read",
@@ -517,6 +592,8 @@ class Scope(
             "bundles:write",
             "events:read",
             "data-planes:read",
+            "provider-credentials:read",
+            "provider-credentials:write",
             "taxonomy:read",
             "taxonomy:write",
             "orgs:read",
@@ -537,6 +614,37 @@ class Scope(
             title="Scope",
         ),
     ]
+
+
+class SecretPurpose(RootModel[Literal["provider"]]):
+    root: Annotated[
+        Literal["provider"],
+        Field(
+            description="What family a secret belongs to. Both planes must agree, which is why it lives here.\n\nA new purpose is one member, and every store keeps it apart from the others without changing.",
+            title="SecretPurpose",
+        ),
+    ]
+
+
+class SecretRef(BaseModel):
+    """
+    Which secret, said in terms of the domain rather than of any store's layout.
+
+    purpose is the family, service is what inside that family the secret authenticates to (a
+    provider name today), and name is the caller-facing handle that lets one service hold several.
+    secret_id is what actually makes a ref unique; the rest is carried so a store with somewhere
+    legible to put it can.
+
+    org_id and workspace_id are absent for a platform secret and org_id alone is present for an org
+    one, so the same two fields express all three scopes.
+    """
+
+    purpose: SecretPurpose
+    service: Annotated[str, Field(title="Service")]
+    name: Annotated[str, Field(title="Name")]
+    secret_id: Annotated[UUID, Field(title="Secret Id")]
+    org_id: Annotated[UUID | None, Field(title="Org Id")] = None
+    workspace_id: Annotated[UUID | None, Field(title="Workspace Id")] = None
 
 
 class ServiceAccountIn(BaseModel):
@@ -675,13 +783,21 @@ class WorkspaceUpdate(BaseModel):
     name: Annotated[str | None, Field(title="Name")] = None
 
 
-class Catalog(BaseModel):
+class CredentialEntry(BaseModel):
     """
-    Everything routable in one org: providers and the models that point at them.
+    One provider key the data plane may spend against, named but not carried.
+
+    The ref says which secret; the data plane fetches the value from the store it is configured
+    with. Nothing here is a secret and nothing here is a location, so a bundle at rest and a bundle
+    on the wire are both safe to read.
+
+    version is the cache key: a rotation keeps the ref and bumps this, so a data plane refetches
+    within one poll rather than waiting out a TTL.
     """
 
-    providers: Annotated[list[ProviderEntry], Field(title="Providers")]
-    models: Annotated[list[ModelEntry], Field(title="Models")]
+    ref: SecretRef
+    priority: Annotated[int, Field(title="Priority")]
+    version: Annotated[int, Field(title="Version")]
 
 
 class EnrollOut(BaseModel):
@@ -745,6 +861,10 @@ class EnvelopePasswordChangedOut(BaseModel):
     data: PasswordChangedOut
 
 
+class EnvelopeProviderCredentialOut(BaseModel):
+    data: ProviderCredentialOut
+
+
 class EnvelopeProviderOut(BaseModel):
     data: ProviderOut
 
@@ -787,6 +907,10 @@ class EnvelopeListOrgMemberOut(BaseModel):
 
 class EnvelopeListOrgOut(BaseModel):
     data: Annotated[list[OrgOut], Field(title="Data")]
+
+
+class EnvelopeListProviderCredentialOut(BaseModel):
+    data: Annotated[list[ProviderCredentialOut], Field(title="Data")]
 
 
 class EnvelopeListUsageEventOut(BaseModel):
@@ -859,6 +983,17 @@ class ManagementKeyIn(BaseModel):
             title="Scopes",
         ),
     ] = None
+
+
+class Catalog(BaseModel):
+    """
+    Everything routable in one org: providers, the models that point at them, and the credentials
+    they are reached with.
+    """
+
+    providers: Annotated[list[ProviderEntry], Field(title="Providers")]
+    models: Annotated[list[ModelEntry], Field(title="Models")]
+    credentials: Annotated[list[CredentialEntry] | None, Field(title="Credentials", validate_default=True)] = []
 
 
 class BundleV1(BaseModel):
