@@ -5,3 +5,4 @@
 - [Managed Postgres reset](managed-postgres-reset.md) — dropdb/createdb silently no-op on managed Postgres; reset via DROP SCHEMA public CASCADE instead.
 - [Browser e2e harness](browser-e2e-harness.md) — puppeteer-core + Nix-store chromium for console browser passes; uppercase labels and Radix tab quirks.
 - [zod vitest interop](zod-vitest-interop.md) — use `import * as z from 'zod'` in console; named `z` export vanishes under vitest when the generated api client loads first.
+- [Bun lockfile validation](bun-lockfile-validation.md) — Bun lockfiles allow trailing commas; validate with Bun's frozen install instead of a strict JSON parser.
