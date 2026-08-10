@@ -125,12 +125,11 @@ class SecretStoreUnavailableError(RuntimeError):
         self.ref = ref
 
 
-class SecretStoreReadOnlyError(RuntimeError):
-    """A write against a store that only reads. The control plane checks `writable` at startup so
-    this surfaces as a misconfiguration rather than as a failed credential creation."""
+class SecretRejectedError(RuntimeError):
+    """The store will not hold this value."""
 
-    def __init__(self, kind: str, ref: SecretRef) -> None:
-        super().__init__(f"the {kind} secret store is read only, refusing {ref.purpose.value} secret {ref.secret_id}")
+    def __init__(self, kind: str, ref: SecretRef, detail: str = "") -> None:
+        super().__init__(detail or f"the {kind} secret store will not hold {ref.purpose.value} secret {ref.secret_id}")
         self.kind = kind
         self.ref = ref
 
@@ -138,26 +137,29 @@ class SecretStoreReadOnlyError(RuntimeError):
 class SecretStore(ABC):
     """The only way either plane touches a secret value.
 
-    Read-only stores implement get() and inherit the refusals, so a backend declares what it can do
-    by what it overrides.
+    A store that only reads implements get() and inherits the refusals, so a backend declares what
+    it can do by what it overrides rather than by advertising a capability nobody can act on until
+    the value arrives.
     """
 
     kind: ClassVar[str]
-    writable: ClassVar[bool] = False
 
     @abstractmethod
     async def get(self, ref: SecretRef) -> Secret:
         """The value, or SecretNotFoundError if there is none, or SecretStoreUnavailableError if the
         store could not say."""
 
-    async def put(self, ref: SecretRef, secret: Secret) -> None:  # noqa: ARG002 refusing a write never touches the value
-        """Write the value, replacing any previous one. A rotation is a put against the same ref."""
-        raise SecretStoreReadOnlyError(self.kind, ref)
+    async def put(self, ref: SecretRef, secret: Secret) -> Secret:  # noqa: ARG002 a refusal never touches the value
+        """Store the value, replacing any previous one, and return what the store now holds.
+
+        A rotation is a put against the same ref.
+        """
+        raise SecretRejectedError(self.kind, ref)
 
     async def delete(self, ref: SecretRef) -> None:
         """Remove the value for good, history included. Deleting what is not there is not an error,
         because delete is called on records whose value may already be gone."""
-        raise SecretStoreReadOnlyError(self.kind, ref)
+        raise SecretRejectedError(self.kind, ref)
 
 
 class SecretStoreConfig(BaseModel, ABC):

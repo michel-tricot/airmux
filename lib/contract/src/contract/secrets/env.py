@@ -4,7 +4,7 @@ import os
 import re
 from typing import TYPE_CHECKING, ClassVar, Literal
 
-from contract.secrets.base import Secret, SecretNotFoundError, SecretPurpose, SecretStore, SecretStoreConfig
+from contract.secrets.base import Secret, SecretNotFoundError, SecretPurpose, SecretRejectedError, SecretStore, SecretStoreConfig
 
 if TYPE_CHECKING:
     from contract.secrets.base import SecretRef
@@ -40,8 +40,11 @@ class EnvSecretStore(SecretStore):
     development, and BYOK on it is nominal. Per-tenant keys need a store that can hold more than one
     value per provider.
 
-    Read only, because a value written here would live for one process and vanish. The control plane
-    checks `writable` before offering to store a key.
+    Storing is a declaration rather than a write. The value already exists, because the operator
+    exported it, so put() records nothing and only checks that what it is asked to hold is what the
+    environment already resolves. It refuses the two cases that would otherwise mislead: a variable
+    that is not set, which would leave a credential resolving to nothing, and a different value,
+    which would mean the key the operator thinks they stored is not the one their traffic spends.
     """
 
     kind: ClassVar[str] = "env"
@@ -62,3 +65,24 @@ class EnvSecretStore(SecretStore):
             if value is not None:
                 return Secret(value)
         raise SecretNotFoundError(ref)
+
+    async def put(self, ref: SecretRef, secret: Secret) -> Secret:
+        """Accept a value the environment already holds; refuse to pretend about one it does not.
+
+        Returns what the environment holds rather than the argument, which is the same value by the
+        time this returns and stays true if that ever stops being enforced here.
+        """
+        try:
+            held = await self.get(ref)
+        except SecretNotFoundError as e:
+            names = " or ".join(self.variables_for(ref))
+            msg = f"this instance reads provider keys from the environment; set {names} instead"
+            raise SecretRejectedError(self.kind, ref, msg) from e
+        if held.reveal() != secret.reveal():
+            msg = f"the environment already holds a different key for {ref.service}; change it there instead"
+            raise SecretRejectedError(self.kind, ref, msg)
+        return held
+
+    async def delete(self, ref: SecretRef) -> None:
+        """A no-op: the store does not own the variable. Removing the row that named it is what
+        stops it being spent, because nothing resolves a ref no credential carries."""

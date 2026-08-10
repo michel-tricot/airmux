@@ -32,7 +32,6 @@ class FileSecretStore(SecretStore):
     """
 
     kind: ClassVar[str] = "file"
-    writable: ClassVar[bool] = True
 
     def __init__(self, root: Path) -> None:
         self.root = Path(root)
@@ -49,7 +48,7 @@ class FileSecretStore(SecretStore):
         except OSError as e:
             raise SecretStoreUnavailableError(ref, str(e)) from e
 
-    async def put(self, ref: SecretRef, secret: Secret) -> None:
+    async def put(self, ref: SecretRef, secret: Secret) -> Secret:
         path = self._path(ref)
         try:
             path.parent.mkdir(parents=True, exist_ok=True, mode=DIRECTORY_MODE)
@@ -59,6 +58,7 @@ class FileSecretStore(SecretStore):
         with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
             os.fchmod(descriptor, FILE_MODE)  # O_CREAT's mode applies only to a file this call created
             handle.write(secret.reveal())
+        return secret
 
     async def delete(self, ref: SecretRef) -> None:
         with contextlib.suppress(FileNotFoundError, NotADirectoryError):

@@ -49,6 +49,15 @@ def test_cli_refuses_a_database_that_is_not_empty(tmp_path):
     assert run_in_db(tmp_path, Org.find) == []
 
 
+@pytest.fixture(autouse=True)
+def _no_ambient_provider_keys(monkeypatch):
+    """The env store reads the process environment, so a developer with OPENAI_API_KEY exported
+    would otherwise get different results from these tests than CI does."""
+    for provider in ("OPENAI", "ANTHROPIC"):
+        monkeypatch.delenv(f"{provider}_API_KEY", raising=False)
+        monkeypatch.delenv(f"AIRLLM_SECRET_PROVIDER_{provider}", raising=False)
+
+
 def seed_catalog(tmp_path):
     """The providers the fixtures route traffic to, as `airllmcp taxonomy` would leave them."""
 
@@ -96,7 +105,7 @@ def test_the_keys_are_seeded_whatever_the_store_can_hold(tmp_path, monkeypatch):
     credentials = run_in_db(tmp_path, ProviderCredential.find)
 
     assert credentials != []
-    assert seeded.provider_key_variables == ["ANTHROPIC_API_KEY", "OPENAI_API_KEY"]
+    assert seeded.unresolved_providers == ["anthropic", "openai"]
 
     monkeypatch.setenv("OPENAI_API_KEY", "sk-the-operators-own")
     openai_key = next(c for c in credentials if c.provider_name == "openai")
@@ -111,18 +120,23 @@ def test_a_writable_store_gets_placeholder_values(tmp_path):
     seeded = run_in_db(tmp_path, lambda: apply_fixtures(NOW, store))
     credentials = run_in_db(tmp_path, ProviderCredential.find)
 
-    assert seeded.provider_key_variables == []
+    assert seeded.unresolved_providers == []
     for credential in credentials:
         assert asyncio.run(store.get(credential.secret_ref())).reveal() == FIXTURE_PROVIDER_KEY
 
 
-def test_the_cli_names_the_variables_the_keys_resolve_from(tmp_path):
+def test_the_cli_names_the_credentials_with_no_key_behind_them(tmp_path, monkeypatch):
     """Silent success reads as failure: the command already names an empty catalog, and a pool that
-    reaches nothing until two variables are set is the same kind of thing to say out loud."""
+    reaches nothing until a key is supplied is the same kind of thing to say out loud.
+
+    Run from a directory with no .env, because the command loads one from its working directory and
+    a developer's would put a real key behind the credentials this is about.
+    """
     cp = setup_control_plane(tmp_path)
     cfg = write_config(tmp_path, cp)
     seed_catalog(tmp_path)
+    monkeypatch.chdir(tmp_path)
     seeded = runner.invoke(cli_app, ["fixtures", "--config", cfg])
 
     assert seeded.exit_code == 0, seeded.output
-    assert "OPENAI_API_KEY" in seeded.output
+    assert "openai" in seeded.output
