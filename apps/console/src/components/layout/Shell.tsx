@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'wouter';
-import { LayoutDashboard, Building2, Users, TerminalSquare, LogOut } from 'lucide-react';
+import { LayoutDashboard, Building2, Users, KeyRound, TerminalSquare, LogOut } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/elements';
 import { useSession } from '@/lib/session';
@@ -12,6 +12,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
     { href: '/instance', label: 'Overview', icon: LayoutDashboard },
     { href: '/instance/organizations', label: 'Organizations', icon: Building2 },
     { href: '/instance/users', label: 'Users', icon: Users },
+    { href: '/instance/keys', label: 'Instance Keys', icon: KeyRound },
   ];
 
   return (

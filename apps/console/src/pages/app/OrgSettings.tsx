@@ -27,6 +27,9 @@ export default function AppOrgSettings() {
   const [keyOpen, setKeyOpen] = useState(false);
   const [token, setToken] = useState<string | null>(null);
 
+  const keyLabels = new Map(keysQuery.data?.map(key => [key.id, key.label] as const) ?? []);
+  const describeRecord = (entry: { record_id: string }) => keyLabels.get(entry.record_id) ?? null;
+
   const mintKey = useMintManagementKeyMutation(orgId!);
   const revokeKey = useRevokeManagementKeyMutation(orgId!);
   const compile = useCompileBundleMutation(orgId!);
@@ -177,12 +180,16 @@ export default function AppOrgSettings() {
                   key: 'item',
                   header: 'Item',
                   cellClassName: 'font-medium',
-                  cell: entry => (
-                    <>
-                      {entry.table_name}
-                      <div className="text-xs text-muted-foreground font-mono">{entry.record_id}</div>
-                    </>
-                  ),
+                  cell: entry => {
+                    const label = describeRecord(entry);
+                    return (
+                      <>
+                        {entry.table_name}
+                        {label && <span className="ml-2 text-muted-foreground">“{label}”</span>}
+                        <div className="text-xs text-muted-foreground font-mono">{entry.record_id}</div>
+                      </>
+                    );
+                  },
                 },
                 {
                   key: 'actor',

@@ -3,7 +3,7 @@ import { Building2, Users, Key, Server, Activity } from 'lucide-react';
 import { formatRelative } from '@/lib/format';
 import { useOrgs } from '@/features/orgs/hooks';
 import { useUsers } from '@/features/users/hooks';
-import { useAllManagementKeys } from '@/features/keys/hooks';
+import { useAllManagementKeys, useInstanceKeys } from '@/features/keys/hooks';
 import { useDataPlanes, useInstanceActivity } from '@/features/telemetry/hooks';
 import { DataTable } from '@/components/shared/data-table';
 
@@ -12,8 +12,19 @@ export default function Dashboard() {
   const { data: users } = useUsers();
   const dataPlanesQuery = useDataPlanes();
   const { data: keys } = useAllManagementKeys();
+  const { data: instanceKeys } = useInstanceKeys();
   const activityQuery = useInstanceActivity({ limit: 25 });
-  const actor = (userId: string) => users?.find(u => u.id === userId)?.email ?? userId;
+  const usersById = new Map(users?.map(u => [u.id, u]));
+  const actor = (userId: string) => usersById.get(userId)?.email ?? userId;
+
+  // The audit trail records key rows by id; label them from the admin-visible key lists.
+  // Inference keys are workspace-scoped and not globally listable, so those fall back to the id.
+  const keyLabels = new Map([
+    ...(instanceKeys?.map(key => [key.id, key.label] as const) ?? []),
+    ...(keys?.map(key => [key.id, key.label] as const) ?? []),
+  ]);
+  const describeRecord = (entry: { table_name: string; record_id: string }) =>
+    keyLabels.get(entry.record_id) ?? null;
 
   const statCards = [
     { label: 'Organizations', value: orgs?.length ?? '-', icon: Building2 },
@@ -131,12 +142,16 @@ export default function Dashboard() {
                 key: 'resource',
                 header: 'Resource',
                 cellClassName: 'font-medium',
-                cell: entry => (
-                  <>
-                    {entry.table_name}
-                    <div className="text-xs text-muted-foreground font-mono">{entry.record_id}</div>
-                  </>
-                ),
+                cell: entry => {
+                  const label = describeRecord(entry);
+                  return (
+                    <>
+                      {entry.table_name}
+                      {label && <span className="ml-2 text-muted-foreground">“{label}”</span>}
+                      <div className="text-xs text-muted-foreground font-mono">{entry.record_id}</div>
+                    </>
+                  );
+                },
               },
               { key: 'actor', header: 'Actor', cellClassName: 'text-muted-foreground text-sm', cell: entry => actor(entry.user_id) },
               {
