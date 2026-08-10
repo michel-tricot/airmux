@@ -78,7 +78,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <div className="w-6 h-6 rounded bg-primary flex items-center justify-center shadow-[0_0_12px_rgba(97,94,255,0.4)] shrink-0">
               <TerminalSquare className="w-4 h-4 text-primary-foreground" />
             </div>
-            <span><span aria-hidden="true" className="text-primary opacity-70 mr-1">$</span>GATEWAY</span>
+            <span>GATEWAY</span>
           </Link>
           <Button
             variant="ghost"

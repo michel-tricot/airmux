@@ -51,7 +51,7 @@ export default function AppOrgPicker() {
   return (
     <div className="min-h-[100dvh] flex items-center justify-center bg-muted/30 p-4">
       <Card className="w-full max-w-lg p-8 shadow-xl shadow-black/40 border-border/50">
-        <h1 className="text-xl font-mono font-bold tracking-widest uppercase mb-2"><span aria-hidden="true" className="text-primary opacity-80 mr-2">$</span>Select Organization</h1>
+        <h1 className="text-xl font-mono font-bold tracking-widest uppercase mb-2">Select Organization</h1>
         <p className="text-muted-foreground text-sm mb-6">Choose an organization to continue.</p>
 
         <div className="space-y-3 mb-8">

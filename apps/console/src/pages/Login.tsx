@@ -59,7 +59,7 @@ export default function Login() {
             <TerminalSquare className="w-6 h-6" />
           </div>
           <h1 className="text-xl font-mono font-bold tracking-widest uppercase">
-            {mode === 'login' ? <><span aria-hidden="true" className="text-primary/80 mr-2">$</span>Sign in</> : <><span aria-hidden="true" className="text-primary/80 mr-2">$</span>Create an account</>}
+            {mode === 'login' ? 'Sign in' : 'Create an account'}
           </h1>
           <p className="text-muted-foreground text-sm mt-2 text-center max-w-sm">
             {mode === 'login'
