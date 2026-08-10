@@ -1,27 +1,21 @@
 import { useState } from 'react';
-import { useListOrgs, useCreateOrg, getListOrgsQueryKey } from '@workspace/api-client-react';
-import { Card, Button, Input, Label, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Modal, Badge } from '@/components/ui/elements';
+import * as z from 'zod';
+import { Card, Button, Input, Badge } from '@/components/ui/elements';
 import { Building2, Plus, Search } from 'lucide-react';
 import { formatDate } from '@/lib/format';
 import { Link } from 'wouter';
-import { useQueryClient } from '@tanstack/react-query';
+import { useOrgs, useCreateOrgMutation } from '@/features/orgs/hooks';
+import { DataTable } from '@/components/shared/data-table';
+import { FormDialog } from '@/components/shared/form-dialog';
+import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+
+const createOrgSchema = z.object({ name: z.string().min(1, 'Name is required') });
 
 export default function Organizations() {
-  const { data: orgs, isLoading } = useListOrgs();
+  const { data: orgs, isLoading, isError, refetch } = useOrgs();
   const [search, setSearch] = useState('');
   const [createOpen, setCreateOpen] = useState(false);
-  const [name, setName] = useState('');
-
-  const queryClient = useQueryClient();
-  const createOrg = useCreateOrg({
-    mutation: {
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: getListOrgsQueryKey() });
-        setCreateOpen(false);
-        setName('');
-      },
-    },
-  });
+  const createOrg = useCreateOrgMutation();
 
   const filteredOrgs = orgs?.filter(o => o.name.toLowerCase().includes(search.toLowerCase()));
 
@@ -50,60 +44,72 @@ export default function Organizations() {
           </div>
         </div>
 
-        {isLoading ? (
-          <div className="p-8 text-center text-muted-foreground font-mono text-sm">LOADING...</div>
-        ) : filteredOrgs && filteredOrgs.length > 0 ? (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Organization Name</TableHead>
-                <TableHead>ID</TableHead>
-                <TableHead>Kind</TableHead>
-                <TableHead className="text-right">Created</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredOrgs.map((org) => (
-                <TableRow key={org.id} className="group">
-                  <TableCell className="font-medium">
-                    <Link href={`/instance/organizations/${org.id}`} className="flex items-center gap-2 hover:text-primary transition-colors">
-                      <Building2 className="w-4 h-4 text-muted-foreground group-hover:text-primary" />
-                      {org.name}
-                    </Link>
-                  </TableCell>
-                  <TableCell className="font-mono text-xs text-muted-foreground">{org.id}</TableCell>
-                  <TableCell>
-                    <Badge variant={org.personal_for ? 'secondary' : 'outline'}>{org.personal_for ? 'PERSONAL' : 'SHARED'}</Badge>
-                  </TableCell>
-                  <TableCell className="text-right text-muted-foreground text-sm">
-                    {formatDate(org.created_at)}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        ) : (
-          <div className="p-12 text-center text-muted-foreground">
-            <Building2 className="w-12 h-12 mx-auto mb-4 opacity-20" />
-            <p>No organizations found.</p>
-          </div>
-        )}
+        <DataTable
+          rows={filteredOrgs}
+          rowKey={org => org.id}
+          rowClassName="group"
+          isLoading={isLoading}
+          isError={isError}
+          onRetry={() => refetch()}
+          loadingLabel="LOADING..."
+          empty="No organizations found."
+          emptyIcon={Building2}
+          columns={[
+            {
+              key: 'name',
+              header: 'Organization Name',
+              cellClassName: 'font-medium',
+              cell: org => (
+                <Link href={`/instance/organizations/${org.id}`} className="flex items-center gap-2 hover:text-primary transition-colors">
+                  <Building2 className="w-4 h-4 text-muted-foreground group-hover:text-primary" />
+                  {org.name}
+                </Link>
+              ),
+            },
+            { key: 'id', header: 'ID', cellClassName: 'font-mono text-xs text-muted-foreground', cell: org => org.id },
+            {
+              key: 'kind',
+              header: 'Kind',
+              cell: org => <Badge variant={org.personal_for ? 'secondary' : 'outline'}>{org.personal_for ? 'PERSONAL' : 'SHARED'}</Badge>,
+            },
+            {
+              key: 'created',
+              header: 'Created',
+              headClassName: 'text-right',
+              cellClassName: 'text-right text-muted-foreground text-sm',
+              cell: org => formatDate(org.created_at),
+            },
+          ]}
+        />
       </Card>
 
-      <Modal open={createOpen} onOpenChange={setCreateOpen} title="Create Organization" description="Set up a new organization.">
-        <form onSubmit={(e) => { e.preventDefault(); createOrg.mutate({ data: { name } }); }} className="space-y-4 pt-4">
-          <div className="space-y-2">
-            <Label htmlFor="name">Name</Label>
-            <Input id="name" required value={name} onChange={e => setName(e.target.value)} placeholder="Acme Corp" />
-          </div>
-          <div className="flex justify-end gap-2 pt-4">
-            <Button type="button" variant="outline" onClick={() => setCreateOpen(false)}>Cancel</Button>
-            <Button type="submit" disabled={createOrg.isPending}>
-              {createOrg.isPending ? 'Creating...' : 'Create Organization'}
-            </Button>
-          </div>
-        </form>
-      </Modal>
+      <FormDialog
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        title="Create Organization"
+        description="Set up a new organization."
+        schema={createOrgSchema}
+        defaultValues={{ name: '' }}
+        onSubmit={values => createOrg.mutateAsync({ data: values })}
+        submitLabel="Create Organization"
+        pendingLabel="Creating..."
+        pending={createOrg.isPending}>
+        {form => (
+          <FormField
+            control={form.control}
+            name="name"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Name</FormLabel>
+                <FormControl>
+                  <Input placeholder="Acme Corp" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
+      </FormDialog>
     </div>
   );
 }

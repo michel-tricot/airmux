@@ -23,7 +23,7 @@ router = APIRouter(dependencies=[Depends(instance_scope)])
 @router.post("/users", tags=["Users"], dependencies=[require(Scope.users_write)])
 async def create_user(body: UserCreate) -> Envelope[UserOut]:
     if await User.first(User.email == body.email) is not None:
-        raise HTTPException(status_code=409)
+        raise HTTPException(status_code=409, detail="A user with this email already exists")
     user = User(email=body.email, name=body.name or body.email, service_account=False)
     return Envelope(data=_user_out(await user.save(), []))
 
@@ -42,7 +42,7 @@ def _user_out(u: User, orgs: list[UUID]) -> UserOut:
 async def get_user(user_id: UUID) -> Envelope[UserOut]:
     user = await User.find_by_id(user_id)
     if user is None:
-        raise HTTPException(status_code=404)
+        raise HTTPException(status_code=404, detail="User not found")
     memberships = await OrgMembership.find(OrgMembership.user_id == user_id, order_by=col(OrgMembership.org_id))
     return Envelope(data=_user_out(user, [m.org_id for m in memberships]))
 
@@ -57,7 +57,7 @@ async def delete_user(user_id: UUID) -> Envelope[DeletedOut[UUID]]:
     """
     user = await User.find_by_id(user_id)
     if user is None:
-        raise HTTPException(status_code=404)
+        raise HTTPException(status_code=404, detail="User not found")
     if await OrgMembership.first(OrgMembership.user_id == user_id) is not None:
         raise HTTPException(status_code=409, detail="user is still a member of an org; remove the memberships first")
     if await Org.personal_of(user_id) is not None:

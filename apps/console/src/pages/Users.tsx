@@ -1,27 +1,24 @@
 import { useState } from 'react';
-import { useListUsers, useCreateUser, getListUsersQueryKey } from '@workspace/api-client-react';
-import { Card, Button, Input, Label, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Modal, Badge } from '@/components/ui/elements';
+import * as z from 'zod';
+import { Card, Button, Input, Badge } from '@/components/ui/elements';
 import { Users, Plus, Search } from 'lucide-react';
 import { formatDate } from '@/lib/format';
 import { Link } from 'wouter';
-import { useQueryClient } from '@tanstack/react-query';
+import { useUsers, useCreateUserMutation } from '@/features/users/hooks';
+import { DataTable } from '@/components/shared/data-table';
+import { FormDialog } from '@/components/shared/form-dialog';
+import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+
+const createUserSchema = z.object({
+  name: z.string(),
+  email: z.string().email('Enter a valid email address'),
+});
 
 export default function UsersList() {
-  const { data: users, isLoading } = useListUsers();
+  const { data: users, isLoading, isError, refetch } = useUsers();
   const [search, setSearch] = useState('');
   const [createOpen, setCreateOpen] = useState(false);
-  const [form, setForm] = useState({ name: '', email: '' });
-
-  const queryClient = useQueryClient();
-  const createUser = useCreateUser({
-    mutation: {
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: getListUsersQueryKey() });
-        setCreateOpen(false);
-        setForm({ name: '', email: '' });
-      },
-    },
-  });
+  const createUser = useCreateUserMutation();
 
   const filteredUsers = users?.filter(u =>
     u.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -53,72 +50,100 @@ export default function UsersList() {
           </div>
         </div>
 
-        {isLoading ? (
-          <div className="p-8 text-center text-muted-foreground font-mono text-sm">LOADING...</div>
-        ) : filteredUsers && filteredUsers.length > 0 ? (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>User</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Kind</TableHead>
-                <TableHead className="text-right">Organizations</TableHead>
-                <TableHead className="text-right">Created</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredUsers.map((user) => (
-                <TableRow key={user.id} className="group">
-                  <TableCell className="font-medium">
-                    <Link href={`/instance/users/${user.id}`} className="flex items-center gap-2 hover:text-primary transition-colors">
-                      <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center text-xs font-bold text-muted-foreground">
-                        {user.name.charAt(0)}
-                      </div>
-                      {user.name}
-                    </Link>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground text-sm">{user.email}</TableCell>
-                  <TableCell>
-                    <Badge variant={user.service_account ? 'secondary' : 'outline'}>
-                      {user.service_account ? 'SERVICE' : 'HUMAN'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Badge variant="secondary" className="font-mono">{user.orgs.length}</Badge>
-                  </TableCell>
-                  <TableCell className="text-right text-muted-foreground text-sm">
-                    {formatDate(user.created_at)}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        ) : (
-          <div className="p-12 text-center text-muted-foreground">
-            <Users className="w-12 h-12 mx-auto mb-4 opacity-20" />
-            <p>No users found.</p>
-          </div>
-        )}
+        <DataTable
+          rows={filteredUsers}
+          rowKey={user => user.id}
+          rowClassName="group"
+          isLoading={isLoading}
+          isError={isError}
+          onRetry={() => refetch()}
+          loadingLabel="LOADING..."
+          empty="No users found."
+          emptyIcon={Users}
+          columns={[
+            {
+              key: 'user',
+              header: 'User',
+              cellClassName: 'font-medium',
+              cell: user => (
+                <Link href={`/instance/users/${user.id}`} className="flex items-center gap-2 hover:text-primary transition-colors">
+                  <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center text-xs font-bold text-muted-foreground">
+                    {user.name.charAt(0)}
+                  </div>
+                  {user.name}
+                </Link>
+              ),
+            },
+            { key: 'email', header: 'Email', cellClassName: 'text-muted-foreground text-sm', cell: user => user.email },
+            {
+              key: 'kind',
+              header: 'Kind',
+              cell: user => (
+                <Badge variant={user.service_account ? 'secondary' : 'outline'}>
+                  {user.service_account ? 'SERVICE' : 'HUMAN'}
+                </Badge>
+              ),
+            },
+            {
+              key: 'orgs',
+              header: 'Organizations',
+              headClassName: 'text-right',
+              cellClassName: 'text-right',
+              cell: user => <Badge variant="secondary" className="font-mono">{user.orgs.length}</Badge>,
+            },
+            {
+              key: 'created',
+              header: 'Created',
+              headClassName: 'text-right',
+              cellClassName: 'text-right text-muted-foreground text-sm',
+              cell: user => formatDate(user.created_at),
+            },
+          ]}
+        />
       </Card>
 
-      <Modal open={createOpen} onOpenChange={setCreateOpen} title="Add User" description="The account starts with no password; the user signs in once one is set.">
-        <form onSubmit={(e) => { e.preventDefault(); createUser.mutate({ data: form }); }} className="space-y-4 pt-4">
-          <div className="space-y-2">
-            <Label htmlFor="name">Full Name</Label>
-            <Input id="name" value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} placeholder="Jane Doe" />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input id="email" type="email" required value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))} placeholder="jane@example.com" />
-          </div>
-          <div className="flex justify-end gap-2 pt-4">
-            <Button type="button" variant="outline" onClick={() => setCreateOpen(false)}>Cancel</Button>
-            <Button type="submit" disabled={createUser.isPending}>
-              {createUser.isPending ? 'Adding...' : 'Add User'}
-            </Button>
-          </div>
-        </form>
-      </Modal>
+      <FormDialog
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        title="Add User"
+        description="The account starts with no password; the user signs in once one is set."
+        schema={createUserSchema}
+        defaultValues={{ name: '', email: '' }}
+        onSubmit={values => createUser.mutateAsync({ data: values })}
+        submitLabel="Add User"
+        pendingLabel="Adding..."
+        pending={createUser.isPending}>
+        {form => (
+          <>
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Full Name</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Jane Doe" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Email</FormLabel>
+                  <FormControl>
+                    <Input type="email" placeholder="jane@example.com" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </>
+        )}
+      </FormDialog>
     </div>
   );
 }

@@ -27,7 +27,6 @@ author = "agent"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "./scripts/replit-backend.sh"
-waitForPort = 8001
 
 [workflows.workflow.metadata]
 outputType = "console"
@@ -51,14 +50,9 @@ expertMode = true
 path = "scripts/post-merge.sh"
 timeoutMs = 20000
 
+[nix]
+channel = "stable-25_05"
+
 [[ports]]
 localPort = 20383
 externalPort = 80
-
-[[ports]]
-localPort = 8001
-externalPort = 8001
-exposeLocalhost = true
-
-[nix]
-channel = "stable-25_05"

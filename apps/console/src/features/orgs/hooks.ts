@@ -1,0 +1,67 @@
+import { useQueryClient } from '@tanstack/react-query';
+import {
+  useListOrgs,
+  useGetOrg,
+  useCreateOrg,
+  useUpdateOrg,
+  useDeleteOrg,
+  useCreatePersonalOrg,
+  getListOrgsQueryKey,
+  getGetOrgQueryKey,
+  getEnrollmentQueryKey,
+  type OrgOut,
+} from '@workspace/api-client-react';
+
+/** Every organization on the instance (admin scope). */
+export function useOrgs() {
+  return useListOrgs();
+}
+
+/** One organization by id (admin scope). */
+export function useOrg(orgId: string) {
+  return useGetOrg(orgId, { query: { queryKey: getGetOrgQueryKey(orgId) } });
+}
+
+export function useCreateOrgMutation() {
+  const queryClient = useQueryClient();
+  return useCreateOrg({
+    mutation: {
+      onSuccess: () => queryClient.invalidateQueries({ queryKey: getListOrgsQueryKey() }),
+      meta: { errorMessage: 'We couldn’t create the organization. Please try again.' },
+    },
+  });
+}
+
+export function useRenameOrgMutation() {
+  const queryClient = useQueryClient();
+  return useUpdateOrg({
+    mutation: {
+      onSuccess: (org: OrgOut) => {
+        queryClient.invalidateQueries({ queryKey: getListOrgsQueryKey() });
+        queryClient.invalidateQueries({ queryKey: getGetOrgQueryKey(org.id) });
+      },
+      meta: { errorMessage: 'We couldn’t rename the organization. Please try again.' },
+    },
+  });
+}
+
+export function useDeleteOrgMutation() {
+  const queryClient = useQueryClient();
+  return useDeleteOrg({
+    mutation: {
+      onSuccess: () => queryClient.invalidateQueries({ queryKey: getListOrgsQueryKey() }),
+      meta: { errorMessage: 'We couldn’t delete this organization. Please try again.' },
+    },
+  });
+}
+
+/** Founds the signed-in account's personal org and refreshes enrollment. */
+export function useCreatePersonalOrgMutation() {
+  const queryClient = useQueryClient();
+  return useCreatePersonalOrg({
+    mutation: {
+      onSuccess: () => queryClient.invalidateQueries({ queryKey: getEnrollmentQueryKey() }),
+      meta: { errorMessage: 'We couldn’t create your organization. Please try again.' },
+    },
+  });
+}

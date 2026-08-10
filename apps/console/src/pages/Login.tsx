@@ -1,28 +1,54 @@
 import { useState } from 'react';
+import * as z from 'zod';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { useQueryClient } from '@tanstack/react-query';
 import { useLogin, useSignup, useClaim, getMeQueryKey, type MeOut } from '@workspace/api-client-react';
-import { Card, Button, Input, Label } from '@/components/ui/elements';
+import { Card, Button, Input } from '@/components/ui/elements';
 import { TerminalSquare } from 'lucide-react';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+
+const loginSchema = z.object({
+  email: z.string().email('Enter a valid email address'),
+  name: z.string(),
+  password: z.string().min(1, 'Password is required'),
+});
+
+const signupSchema = loginSchema.extend({
+  password: z.string().min(8, 'Password must be at least 8 characters'),
+});
+
+type Credentials = z.infer<typeof loginSchema>;
 
 export default function Login() {
   const queryClient = useQueryClient();
   const [mode, setMode] = useState<'login' | 'signup'>('login');
   // An unclaimed deployment hands the first account its instance, which is worth saying out loud.
   const { data: claim } = useClaim();
-  const [form, setForm] = useState({ email: '', name: '', password: '' });
+
+  const form = useForm<Credentials>({
+    resolver: zodResolver(mode === 'login' ? loginSchema : signupSchema),
+    defaultValues: { email: '', name: '', password: '' },
+  });
 
   // The response is the same MeOut the session reads, so seeding the cache signs the user in
-  // without a second round trip.
+  // without a second round trip. Auth failures render inline, so the global toast is silenced.
   const onSuccess = (me: MeOut) => queryClient.setQueryData(getMeQueryKey(), me);
-  const login = useLogin({ mutation: { onSuccess } });
-  const signup = useSignup({ mutation: { onSuccess } });
+  const login = useLogin({ mutation: { onSuccess, meta: { silentError: true } } });
+  const signup = useSignup({ mutation: { onSuccess, meta: { silentError: true } } });
   const pending = login.isPending || signup.isPending;
-  const error = login.error ?? signup.error;
+  const error = mode === 'login' ? login.error : signup.error;
 
-  const submit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (mode === 'login') login.mutate({ data: { email: form.email, password: form.password } });
-    else signup.mutate({ data: { email: form.email, name: form.name, password: form.password } });
+  const submit = form.handleSubmit(values => {
+    if (mode === 'login') login.mutate({ data: { email: values.email, password: values.password } });
+    else signup.mutate({ data: { email: values.email, name: values.name, password: values.password } });
+  });
+
+  const switchMode = () => {
+    setMode(m => (m === 'login' ? 'signup' : 'login'));
+    form.clearErrors();
+    login.reset();
+    signup.reset();
   };
 
   return (
@@ -44,40 +70,65 @@ export default function Login() {
           </p>
         </div>
 
-        <form onSubmit={submit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input id="email" type="email" required autoComplete="username" value={form.email}
-              onChange={e => setForm(p => ({ ...p, email: e.target.value }))} placeholder="you@example.com" />
-          </div>
+        <Form {...form}>
+          <form onSubmit={submit} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Email</FormLabel>
+                  <FormControl>
+                    <Input type="email" autoComplete="username" placeholder="you@example.com" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-          {mode === 'signup' && (
-            <div className="space-y-2">
-              <Label htmlFor="name">Name</Label>
-              <Input id="name" value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} placeholder="Jane Doe" />
-            </div>
-          )}
+            {mode === 'signup' && (
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Jane Doe" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
 
-          <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
-            <Input id="password" type="password" required minLength={mode === 'signup' ? 8 : undefined}
-              autoComplete={mode === 'login' ? 'current-password' : 'new-password'} value={form.password}
-              onChange={e => setForm(p => ({ ...p, password: e.target.value }))} />
-          </div>
+            <FormField
+              control={form.control}
+              name="password"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Password</FormLabel>
+                  <FormControl>
+                    <Input type="password" autoComplete={mode === 'login' ? 'current-password' : 'new-password'} {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-          {error && (
-            <div className="p-3 rounded-md bg-destructive/10 border border-destructive/20 text-destructive text-sm">
-              {mode === 'login' ? 'Sign in failed. Check your email and password.' : 'We couldn’t create your account. Please check your details and try again.'}
-            </div>
-          )}
+            {error && (
+              <div className="p-3 rounded-md bg-destructive/10 border border-destructive/20 text-destructive text-sm">
+                {mode === 'login' ? 'Sign in failed. Check your email and password.' : 'We couldn’t create your account. Please check your details and try again.'}
+              </div>
+            )}
 
-          <Button type="submit" className="w-full" disabled={pending}>
-            {pending ? (mode === 'login' ? 'Signing in...' : 'Creating account...') : mode === 'login' ? 'Sign in' : 'Create account'}
-          </Button>
-        </form>
+            <Button type="submit" className="w-full" disabled={pending}>
+              {pending ? (mode === 'login' ? 'Signing in...' : 'Creating account...') : mode === 'login' ? 'Sign in' : 'Create account'}
+            </Button>
+          </form>
+        </Form>
 
-        <Button variant="ghost" className="w-full mt-4 text-muted-foreground hover:text-foreground"
-          onClick={() => setMode(m => (m === 'login' ? 'signup' : 'login'))}>
+        <Button variant="ghost" className="w-full mt-4 text-muted-foreground hover:text-foreground" onClick={switchMode}>
           {mode === 'login' ? 'No account? Sign up' : 'Already have an account? Sign in'}
         </Button>
       </Card>

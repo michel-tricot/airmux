@@ -1,38 +1,28 @@
 import { useState } from 'react';
+import * as z from 'zod';
 import { useParams } from 'wouter';
-import { useQueryClient } from '@tanstack/react-query';
 import { useSession } from '@/lib/session';
-import { orgScope } from '@/lib/api';
-import {
-  useListInferenceKeys,
-  useCreateInferenceKey,
-  useRevokeInferenceKey,
-  getListInferenceKeysQueryKey,
-} from '@workspace/api-client-react';
-import { Card, Button, Input, Label, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Modal, Badge, ConfirmButton } from '@/components/ui/elements';
-import { Plus, Ban } from 'lucide-react';
-import { formatDate } from '@/lib/format';
+import { useInferenceKeys, useCreateInferenceKeyMutation, useRevokeInferenceKeyMutation } from '@/features/keys/hooks';
+import { Button, Input } from '@/components/ui/elements';
+import { Plus } from 'lucide-react';
 import { KeyRevealDialog } from '@/components/KeyRevealDialog';
+import { FormDialog } from '@/components/shared/form-dialog';
+import { ApiKeysTable } from '@/components/shared/api-keys-table';
+import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+
+const keyLabelSchema = z.object({ label: z.string().min(1, 'Label is required') });
 
 export default function WorkspaceApiKeys() {
   const { workspaceRef } = useParams();
   const { orgId } = useSession();
-  const queryClient = useQueryClient();
-  const scope = orgScope(orgId!);
 
-  const keysKey = [...getListInferenceKeysQueryKey(workspaceRef!), orgId];
-  const { data: keys } = useListInferenceKeys(workspaceRef!, { query: { queryKey: keysKey }, request: scope });
+  const keysQuery = useInferenceKeys(orgId!, workspaceRef!);
 
   const [keyOpen, setKeyOpen] = useState(false);
-  const [keyLabel, setKeyLabel] = useState('');
   const [token, setToken] = useState<string | null>(null);
 
-  const invalidate = () => queryClient.invalidateQueries({ queryKey: keysKey });
-  const createKey = useCreateInferenceKey({
-    mutation: { onSuccess: (minted) => { invalidate(); setKeyOpen(false); setKeyLabel(''); setToken(minted.token); } },
-    request: scope,
-  });
-  const revokeKey = useRevokeInferenceKey({ mutation: { onSuccess: invalidate }, request: scope });
+  const createKey = useCreateInferenceKeyMutation(orgId!, workspaceRef!);
+  const revokeKey = useRevokeInferenceKeyMutation(orgId!, workspaceRef!);
 
   return (
     <div className="flex-1 p-8 max-w-6xl mx-auto w-full space-y-6 animate-in fade-in duration-300">
@@ -44,58 +34,46 @@ export default function WorkspaceApiKeys() {
         <Button onClick={() => setKeyOpen(true)}><Plus className="w-4 h-4 mr-1" /> Generate Key</Button>
       </div>
 
-      <Card>
-        {keys && keys.length > 0 ? (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Label</TableHead>
-                <TableHead>Key</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Created</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {keys.map(key => (
-                <TableRow key={key.id}>
-                  <TableCell className="font-medium">{key.label}</TableCell>
-                  <TableCell className="font-mono text-xs text-muted-foreground">{key.prefix}…</TableCell>
-                  <TableCell><Badge variant={key.revoked ? 'outline' : 'success'}>{key.revoked ? 'REVOKED' : 'ACTIVE'}</Badge></TableCell>
-                  <TableCell className="text-muted-foreground text-sm">{formatDate(key.created_at)}</TableCell>
-                  <TableCell className="text-right">
-                    {!key.revoked && (
-                      <ConfirmButton size="sm"
-                        title={`Revoke "${key.label}"?`}
-                        description="Requests using this inference key will stop working immediately. This cannot be undone."
-                        confirmLabel="Revoke key"
-                        pending={revokeKey.isPending}
-                        onConfirm={() => revokeKey.mutate({ workspaceRef: workspaceRef!, keyId: key.id })}>
-                        <Ban className="w-4 h-4 mr-1" /> Revoke
-                      </ConfirmButton>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        ) : (
-          <div className="p-8 text-center text-muted-foreground">No inference keys generated.</div>
-        )}
-      </Card>
+      <ApiKeysTable
+        keys={keysQuery.data}
+        isLoading={keysQuery.isLoading}
+        isError={keysQuery.isError}
+        onRetry={() => keysQuery.refetch()}
+        emptyText="No inference keys generated."
+        revokeDescription="Requests using this inference key will stop working immediately. This cannot be undone."
+        onRevoke={key => revokeKey.mutate({ workspaceRef: workspaceRef!, keyId: key.id })}
+        revokePending={revokeKey.isPending}
+      />
 
-      <Modal open={keyOpen} onOpenChange={setKeyOpen} title="Generate Inference Key" description="Keys let applications send requests to the models available to this workspace.">
-        <form onSubmit={e => { e.preventDefault(); createKey.mutate({ workspaceRef: workspaceRef!, data: { label: keyLabel } }); }} className="space-y-4 pt-4">
-          <div className="space-y-2">
-            <Label>Label</Label>
-            <Input required value={keyLabel} placeholder="e.g. chatbot-prod" onChange={e => setKeyLabel(e.target.value)} />
-          </div>
-          <div className="flex justify-end gap-2 pt-4">
-            <Button type="button" variant="outline" onClick={() => setKeyOpen(false)}>Cancel</Button>
-            <Button type="submit" disabled={createKey.isPending}>Generate</Button>
-          </div>
-        </form>
-      </Modal>
+      <FormDialog
+        open={keyOpen}
+        onOpenChange={setKeyOpen}
+        title="Generate Inference Key"
+        description="Keys let applications send requests to the models available to this workspace."
+        schema={keyLabelSchema}
+        defaultValues={{ label: '' }}
+        onSubmit={async values => {
+          const minted = await createKey.mutateAsync({ workspaceRef: workspaceRef!, data: values });
+          setToken(minted.token);
+        }}
+        submitLabel="Generate"
+        pending={createKey.isPending}>
+        {form => (
+          <FormField
+            control={form.control}
+            name="label"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Label</FormLabel>
+                <FormControl>
+                  <Input placeholder="e.g. chatbot-prod" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
+      </FormDialog>
 
       <KeyRevealDialog open={!!token} onOpenChange={(v) => !v && setToken(null)} token={token} />
     </div>

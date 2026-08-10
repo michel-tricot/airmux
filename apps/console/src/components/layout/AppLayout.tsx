@@ -1,16 +1,19 @@
 import { useEffect, useRef, useState } from 'react';
+import * as z from 'zod';
 import { useSession } from '@/lib/session';
-import { orgScope } from '@/lib/api';
-import { useQueryClient } from '@tanstack/react-query';
-import { useListWorkspaces, useCreateWorkspace, getListWorkspacesQueryKey } from '@workspace/api-client-react';
+import { useWorkspaces, useCreateWorkspaceMutation } from '@/features/workspaces/hooks';
 import { Link, useLocation } from 'wouter';
 import {
   TerminalSquare, Settings, LogOut, Shield, ArrowLeftRight,
   LayoutGrid, KeyRound, Database, Route as RouteIcon, ShieldCheck, Building2,
 } from 'lucide-react';
-import { Button, Input, Label, Modal, Dropdown } from '@/components/ui/elements';
+import { Button, Input, Dropdown } from '@/components/ui/elements';
 import { cn } from '@/lib/utils';
 import { Plus } from 'lucide-react';
+import { FormDialog } from '@/components/shared/form-dialog';
+import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+
+const workspaceNameSchema = z.object({ name: z.string().min(1, 'Name is required') });
 
 const SECTIONS = [
   { label: 'Overview', suffix: '', icon: LayoutGrid },
@@ -23,15 +26,9 @@ const SECTIONS = [
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, orgId, setOrgId, logout } = useSession();
-  const queryClient = useQueryClient();
-  const workspacesKey = [...getListWorkspacesQueryKey(), orgId];
-  const { data: workspaces } = useListWorkspaces({
-    query: { queryKey: workspacesKey },
-    request: orgScope(orgId!),
-  });
+  const { data: workspaces } = useWorkspaces(orgId!);
   const [location, setLocation] = useLocation();
   const [createOpen, setCreateOpen] = useState(false);
-  const [wsName, setWsName] = useState('');
 
   // /org/workspaces/<slug>[/section] — the slug selects the workspace, the tail names the section.
   const match = location.match(/^\/org\/workspaces\/([^/]+)(\/[^/]+)?/);
@@ -70,17 +67,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     setLocation(`/org/workspaces/${target.slug}`, { replace: true });
   }, [workspaces, location, lastWsKey, setLocation]);
 
-  const createWorkspace = useCreateWorkspace({
-    mutation: {
-      onSuccess: (created) => {
-        queryClient.invalidateQueries({ queryKey: workspacesKey });
-        setCreateOpen(false);
-        setWsName('');
-        setLocation(`/org/workspaces/${created.slug}`);
-      },
-    },
-    request: orgScope(orgId!),
-  });
+  const createWorkspace = useCreateWorkspaceMutation(orgId!);
 
   return (
     <div className="h-[100dvh] flex w-full overflow-hidden bg-background font-sans">
@@ -201,18 +188,35 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         {children}
       </main>
 
-      <Modal open={createOpen} onOpenChange={setCreateOpen} title="New Workspace" description="Workspaces group inference keys and members within your organization.">
-        <form onSubmit={e => { e.preventDefault(); createWorkspace.mutate({ data: { name: wsName } }); }} className="space-y-4 pt-4">
-          <div className="space-y-2">
-            <Label htmlFor="new-ws-name">Name</Label>
-            <Input id="new-ws-name" required autoFocus value={wsName} placeholder="e.g. production" onChange={e => setWsName(e.target.value)} />
-          </div>
-          <div className="flex justify-end gap-2 pt-4">
-            <Button type="button" variant="outline" onClick={() => setCreateOpen(false)}>Cancel</Button>
-            <Button type="submit" disabled={createWorkspace.isPending}>Create</Button>
-          </div>
-        </form>
-      </Modal>
+      <FormDialog
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        title="New Workspace"
+        description="Workspaces group inference keys and members within your organization."
+        schema={workspaceNameSchema}
+        defaultValues={{ name: '' }}
+        onSubmit={async values => {
+          const created = await createWorkspace.mutateAsync({ data: values });
+          setLocation(`/org/workspaces/${created.slug}`);
+        }}
+        submitLabel="Create"
+        pending={createWorkspace.isPending}>
+        {form => (
+          <FormField
+            control={form.control}
+            name="name"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Name</FormLabel>
+                <FormControl>
+                  <Input autoFocus placeholder="e.g. production" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
+      </FormDialog>
     </div>
   );
 }

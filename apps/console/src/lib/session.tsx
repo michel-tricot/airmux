@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useState, ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useMe, useLogout, getMeQueryKey, type MeOut } from '@workspace/api-client-react';
+import { ORG_SCOPE_ROOT } from '@/lib/query-keys';
 
 const ORG_STORAGE_KEY = 'airllm_org_id';
 
@@ -19,13 +20,13 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const { data: user, isLoading } = useMe({ query: { queryKey: getMeQueryKey(), retry: false } });
   const [orgId, setOrgIdState] = useState<string | null>(() => localStorage.getItem(ORG_STORAGE_KEY));
 
-  // The org travels in the X-Org-Id header, and the generated query keys are paths alone, so
-  // everything already cached from /v1/org belongs to the org being left.
+  // Org-scoped queries all live under ORG_SCOPE_ROOT (see lib/query-keys.ts), so leaving an
+  // org drops that whole subtree in one key-based call rather than a predicate scan.
   const setOrgId = useCallback((id: string | null) => {
     setOrgIdState(id);
     if (id) localStorage.setItem(ORG_STORAGE_KEY, id);
     else localStorage.removeItem(ORG_STORAGE_KEY);
-    queryClient.removeQueries({ predicate: query => String(query.queryKey[0]).startsWith('/v1/org') });
+    queryClient.removeQueries({ queryKey: ORG_SCOPE_ROOT });
   }, [queryClient]);
 
   const logoutMutation = useLogout();

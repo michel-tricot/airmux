@@ -37,5 +37,5 @@ async def create_model(_claims: InstanceDep, body: ModelIn) -> Envelope[ModelOut
     try:
         model = await upsert_model(body)
     except UnknownProviderError:
-        raise HTTPException(status_code=404) from None
+        raise HTTPException(status_code=404, detail="Provider not found; create it before its models") from None
     return Envelope(data=ModelOut.model_validate(model))
