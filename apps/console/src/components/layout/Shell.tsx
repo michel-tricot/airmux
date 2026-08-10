@@ -26,7 +26,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
           </div>
         </div>
         <div className="flex-1 py-6 px-4 space-y-1">
-          <div className="text-[10px] font-mono font-bold text-sidebar-foreground/50 uppercase tracking-widest mb-4 px-2">Control Plane</div>
+            <div className="text-[10px] font-mono font-bold text-sidebar-foreground/50 uppercase tracking-widest mb-4 px-2">Administration</div>
           {navItems.map((item) => {
             const isActive = location === item.href || (item.href !== '/instance' && location.startsWith(item.href));
             return (
@@ -49,12 +49,12 @@ export function Shell({ children }: { children: React.ReactNode }) {
             </div>
             <div className="flex flex-col min-w-0">
               <span className="text-sm font-medium text-foreground truncate">{user?.name}</span>
-              <span className="text-xs text-sidebar-foreground/50">Instance admin</span>
+              <span className="text-xs text-sidebar-foreground/50">Administrator</span>
             </div>
           </div>
           <Link href="/org" className="flex flex-1 items-center gap-3 px-2 py-2 mb-2 rounded-md text-[11px] font-mono font-bold uppercase tracking-wider text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground transition-all duration-200">
             <Users className="w-4 h-4" />
-            User console
+            Workspace console
           </Link>
           <Button variant="ghost" size="sm" onClick={logout} className="w-full justify-start text-sidebar-foreground/70 hover:text-destructive h-8 px-2">
             <LogOut className="w-4 h-4 mr-2" />

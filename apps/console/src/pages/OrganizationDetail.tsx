@@ -79,7 +79,7 @@ export default function OrganizationDetail() {
   const deleteOrg = useDeleteOrg({
     mutation: {
       onSuccess: () => { queryClient.invalidateQueries({ queryKey: getListOrgsQueryKey() }); setLocation('/instance/organizations'); },
-      onError: (error) => setDeleteError(error.message),
+      onError: () => setDeleteError('We couldn’t delete this organization. Please try again.'),
     },
   });
 
@@ -116,7 +116,7 @@ export default function OrganizationDetail() {
       <Tabs defaultValue="workspaces" className="w-full">
         <TabsList className="mb-4">
           <TabsTrigger value="workspaces" className="gap-2"><TerminalSquare className="w-4 h-4" /> Workspaces</TabsTrigger>
-          <TabsTrigger value="keys" className="gap-2"><Key className="w-4 h-4" /> Management Keys</TabsTrigger>
+          <TabsTrigger value="keys" className="gap-2"><Key className="w-4 h-4" /> Automation Keys</TabsTrigger>
           <TabsTrigger value="members" className="gap-2"><Users className="w-4 h-4" /> Members</TabsTrigger>
         </TabsList>
 
@@ -132,7 +132,7 @@ export default function OrganizationDetail() {
                   <TableRow>
                     <TableHead>Name</TableHead>
                     <TableHead>Slug</TableHead>
-                    <TableHead>ID</TableHead>
+                    <TableHead>Technical ID</TableHead>
                     <TableHead className="text-right">Created</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -140,7 +140,7 @@ export default function OrganizationDetail() {
                   {workspaces.map(ws => (
                     <TableRow key={ws.id}>
                       <TableCell className="font-medium">
-                        <Link href={`/instance/organizations/${org.id}/workspaces/${ws.id}`} className="hover:text-primary transition-colors">{ws.name}</Link>
+                        <Link href={`/instance/organizations/${org.id}/workspaces/${ws.slug}`} className="hover:text-primary transition-colors">{ws.name}</Link>
                       </TableCell>
                       <TableCell><Badge variant="mono">{ws.slug}</Badge></TableCell>
                       <TableCell className="font-mono text-xs text-muted-foreground">{ws.id}</TableCell>
@@ -157,7 +157,7 @@ export default function OrganizationDetail() {
 
         <TabsContent value="keys" className="space-y-4 mt-0">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold">Management Keys</h2>
+            <h2 className="text-lg font-semibold">Automation Keys</h2>
           </div>
           <Card>
             {keys && keys.length > 0 ? (
@@ -281,11 +281,11 @@ export default function OrganizationDetail() {
       </Modal>
 
       <Modal open={deleteOpen} onOpenChange={setDeleteOpen} title="Delete Organization"
-        description="The org goes with its workspaces, their inference keys, its management keys, memberships and bundles.">
+        description="This permanently deletes the organization, its workspaces, keys, members, policies, and usage records.">
         <div className="space-y-4 pt-4">
           <div className="p-4 bg-destructive/10 text-destructive rounded-md flex items-start gap-3 border border-destructive/20">
             <ShieldAlert className="w-5 h-5 flex-shrink-0 mt-0.5" />
-            <p className="text-sm font-medium">Deleting <strong>{org.name}</strong> cannot be undone. The usage it recorded stays.</p>
+            <p className="text-sm font-medium">Deleting <strong>{org.name}</strong> cannot be undone. Usage already recorded remains on the organization’s bill.</p>
           </div>
           {deleteError && <p className="text-sm text-destructive">{deleteError}</p>}
           <div className="flex justify-end gap-2 pt-4">

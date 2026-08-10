@@ -14,10 +14,10 @@ export function ComingSoonPill() {
 }
 
 export default function WorkspaceComingSoon({ title, description, icon: Icon }: { title: string; description: string; icon: LucideIcon }) {
-  const { workspaceId } = useParams();
+  const { workspaceRef } = useParams();
   const { orgId } = useSession();
-  const { data: workspace } = useGetWorkspace(workspaceId!, {
-    query: { queryKey: [...getGetWorkspaceQueryKey(workspaceId!), orgId] },
+  const { data: workspace } = useGetWorkspace(workspaceRef!, {
+    query: { queryKey: [...getGetWorkspaceQueryKey(workspaceRef!), orgId] },
     request: orgScope(orgId!),
   });
 

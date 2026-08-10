@@ -100,4 +100,4 @@ fi
 
 # Replit's workflow monitor needs the service reachable on the workspace
 # network; the CLI defaults to loopback for local-only development.
-exec uv run airllmcp serve --dev --host 0.0.0.0
+exec uv run airllmcp serve --dev --host 0.0.0.0 --port 8001

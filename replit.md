@@ -81,8 +81,9 @@ bun run typecheck
 
 ## Replit development workflow
 
-Replit changes should be limited to the console in `apps/console`. Do not
-rewrite, migrate, or scaffold the Python backend as part of console work.
+When working in Replit, changes are limited to Replit-specific configuration
+and the console in `apps/console`. Do not modify, rewrite, migrate, scaffold,
+or add schema changes to the Python backend or its migrations.
 The registered Replit artifact is the console and its managed workflow runs:
 
 ```bash
@@ -111,10 +112,12 @@ That script runs the required sequence:
 4. `uv run airllmcp fixtures`
 5. `uv run airllmcp serve --dev` (the helper adds `--host 0.0.0.0` for Replit)
 
-If migration fails, the script drops and recreates the development database,
-then repeats the full sequence. This reset is intentionally destructive and
-is only for the Replit development database. The backend support workflow is
-separate from the console artifact; Replit code changes remain console-only.
+If there is any migration incompatibility, the script must start the Replit
+development database from scratch: drop and recreate it, then run the full
+sequence again (`migrate`, `taxonomy`, and `fixtures`). This reset is
+intentionally destructive and is only for the Replit development database. The
+backend support workflow is separate from the console artifact; Replit code
+changes remain console-only.
 
 ## Development commands
 

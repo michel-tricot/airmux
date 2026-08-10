@@ -36,20 +36,20 @@ const formatTokens = (n: number) =>
   n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)}M` : n >= 1_000 ? `${(n / 1_000).toFixed(1)}k` : String(n);
 
 export default function WorkspaceOverview() {
-  const { workspaceId } = useParams();
+  const { workspaceRef } = useParams();
   const { orgId } = useSession();
   const scope = orgScope(orgId!);
 
-  const { data: workspace, isLoading } = useGetWorkspace(workspaceId!, {
-    query: { queryKey: [...getGetWorkspaceQueryKey(workspaceId!), orgId], retry: false },
+  const { data: workspace, isLoading } = useGetWorkspace(workspaceRef!, {
+    query: { queryKey: [...getGetWorkspaceQueryKey(workspaceRef!), orgId], retry: false },
     request: scope,
   });
-  const { data: members } = useListMembers(workspaceId!, {
-    query: { queryKey: [...getListMembersQueryKey(workspaceId!), orgId] },
+  const { data: members } = useListMembers(workspaceRef!, {
+    query: { queryKey: [...getListMembersQueryKey(workspaceRef!), orgId] },
     request: scope,
   });
-  const { data: keys } = useListInferenceKeys(workspaceId!, {
-    query: { queryKey: [...getListInferenceKeysQueryKey(workspaceId!), orgId] },
+  const { data: keys } = useListInferenceKeys(workspaceRef!, {
+    query: { queryKey: [...getListInferenceKeysQueryKey(workspaceRef!), orgId] },
     request: scope,
   });
   const { data: events } = useListEvents(
@@ -57,11 +57,11 @@ export default function WorkspaceOverview() {
     { query: { queryKey: [...getListEventsQueryKey({ limit: EVENTS_WINDOW }), orgId] }, request: scope },
   );
 
-  if (isLoading) return <div className="p-8 text-center text-muted-foreground font-mono text-sm">LOADING WORKSPACE...</div>;
+  if (isLoading) return <div className="p-8 text-center text-muted-foreground font-mono text-sm">Loading workspace...</div>;
   if (!workspace) return <div className="p-8 text-center text-destructive">Workspace not found</div>;
 
   const activeKeys = keys?.filter(k => !k.revoked).length;
-  const wsEvents = events?.filter(e => e.workspace_id === workspaceId) ?? [];
+  const wsEvents = events?.filter(e => e.workspace_id === workspace.id) ?? [];
   const requests = wsEvents.length;
   const inputTokens = wsEvents.reduce((sum, e) => sum + e.input_tokens, 0);
   const outputTokens = wsEvents.reduce((sum, e) => sum + e.output_tokens, 0);
@@ -86,15 +86,15 @@ export default function WorkspaceOverview() {
         </div>
         <div>
           <h1 className="text-3xl font-bold tracking-tight">{workspace.name}</h1>
-          <p className="text-muted-foreground font-mono text-sm">{workspace.id}</p>
+          <p className="text-muted-foreground font-mono text-sm">{workspace.slug}</p>
         </div>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <MetricCard icon={KeyRound} label="API Keys" value={activeKeys ?? '—'} hint="active inference keys" />
         <MetricCard icon={Users} label="Members" value={members?.length ?? '—'} hint="with workspace access" />
-        <MetricCard icon={Database} label="BYOK" value={0} hint="provider keys — coming soon" />
-        <MetricCard icon={Activity} label="Requests" value={requests} hint={`in the last ${EVENTS_WINDOW} org events`} />
+        <MetricCard icon={Database} label="BYOK" value={0} hint="Provider keys — coming soon" />
+        <MetricCard icon={Activity} label="Requests" value={requests} hint="in recent activity" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">

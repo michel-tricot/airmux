@@ -55,7 +55,7 @@ export default function CliApprove() {
             <TerminalSquare className="w-6 h-6" />
           </div>
           <h1 className="text-2xl font-bold tracking-tight">Authorize CLI login</h1>
-          <p className="text-muted-foreground text-sm mt-1 text-center">Only continue if you just ran airllm login yourself.</p>
+          <p className="text-muted-foreground text-sm mt-1 text-center">Continue only if you just ran <code>airllm login</code>.</p>
         </div>
 
         {approve.isSuccess ? (
@@ -94,7 +94,7 @@ export default function CliApprove() {
 
             {orgs.length > 0 ? (
               <div className="space-y-2">
-                <Label htmlFor="org">Organization the CLI will act in</Label>
+                <Label htmlFor="org">Organization for CLI access</Label>
                 <Dropdown
                   aria-label="Organization"
                   value={selected}
@@ -123,7 +123,7 @@ export default function CliApprove() {
             </Button>
           </div>
         ) : (
-          <p className="text-center text-muted-foreground font-mono text-sm">LOADING REQUEST...</p>
+          <p className="text-center text-muted-foreground font-mono text-sm">Loading request...</p>
         )}
       </Card>
     </div>
