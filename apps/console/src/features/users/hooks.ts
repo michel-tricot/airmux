@@ -3,6 +3,7 @@ import {
   useListUsers,
   useGetUser,
   useCreateUser,
+  useCreateServiceAccount,
   useDeleteUser,
   addOrgUser,
   removeOrgUser,
@@ -29,6 +30,16 @@ export function useCreateUserMutation() {
     mutation: {
       onSuccess: () => queryClient.invalidateQueries({ queryKey: getListUsersQueryKey() }),
       meta: { errorMessage: 'We couldn’t add the user. Please try again.' },
+    },
+  });
+}
+
+export function useCreateServiceAccountMutation() {
+  const queryClient = useQueryClient();
+  return useCreateServiceAccount({
+    mutation: {
+      onSuccess: () => queryClient.invalidateQueries({ queryKey: getListUsersQueryKey() }),
+      meta: { errorMessage: 'We couldn’t create the service account. Please try again.' },
     },
   });
 }
