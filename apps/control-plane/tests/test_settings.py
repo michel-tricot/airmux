@@ -7,7 +7,7 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from pydantic import ValidationError
 
 from contract import private_key_to_b64
-from control_plane.config import DEFAULT_DATABASE_URL, database_url, load_settings
+from control_plane.config import DEFAULT_CONSOLE_URL, DEFAULT_DATABASE_URL, database_url, load_settings
 
 
 def test_malformed_signing_key_fails_at_load(tmp_path, monkeypatch):
@@ -88,3 +88,29 @@ def test_the_shipped_config_loads_with_and_without_a_database_url(tmp_path, monk
 
     monkeypatch.setenv("DATABASE_URL", "postgresql://someone:secret@db.example:5432/app")
     assert database_url() == "postgresql+asyncpg://someone:secret@db.example:5432/app"
+
+
+def test_the_shipped_config_serves_the_checkout_and_the_stack(tmp_path, monkeypatch):
+    """One config file covers both deployments, so the values that differ have to move with the environment.
+
+    A checkout gets the local console and the key pair keygen wrote; compose sets the variables and
+    gets the containerized ones, from the same file.
+    """
+    repo_config = Path(__file__).resolve().parents[3] / "airllm.yml"
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "airllm.yml").write_text(repo_config.read_text(encoding="utf-8"), encoding="utf-8")
+    (tmp_path / ".airllm").mkdir()
+    (tmp_path / ".airllm" / "signing.key").write_text(private_key_to_b64(Ed25519PrivateKey.generate()), encoding="utf-8")
+    monkeypatch.delenv("GW_CONFIG", raising=False)
+
+    for var in ("DATABASE_URL", "GW_CONSOLE_URL"):
+        monkeypatch.delenv(var, raising=False)
+    checkout = load_settings()
+    assert checkout.console_url == DEFAULT_CONSOLE_URL
+    assert checkout.database.url == DEFAULT_DATABASE_URL
+
+    monkeypatch.setenv("GW_CONSOLE_URL", "http://localhost:3000")
+    monkeypatch.setenv("DATABASE_URL", "postgresql+asyncpg://airllm:airllm@postgres:5432/airllm")
+    stack = load_settings()
+    assert stack.console_url == "http://localhost:3000"
+    assert stack.database.url == "postgresql+asyncpg://airllm:airllm@postgres:5432/airllm"

@@ -16,10 +16,13 @@ TOKEN = INSTANCE_KEY_PREFIX + "quickstart-token"
 
 @pytest.fixture
 def key_path(tmp_path, monkeypatch):
-    state = tmp_path / "state"
-    state.mkdir()
-    monkeypatch.setattr(oss, "DATA_PLANE_KEY_DIRS", (state,))
-    return state / "dataplane.key"
+    """The token lands at the one relative path the shipped config names, resolved from the working directory.
+
+    In the container that working directory is the shared /state volume, so the same
+    .airllm/dataplane.key reaches the co-mounted data plane there and in a checkout.
+    """
+    monkeypatch.chdir(tmp_path)
+    return tmp_path / oss.DATA_PLANE_KEY_DIR / oss.DATA_PLANE_KEY_FILE
 
 
 def _register_instance(tmp_path) -> None:
@@ -73,23 +76,10 @@ def test_oss_quickstart_accepts_a_management_key_too(tmp_path, key_path):
         assert key_path.read_text(encoding="utf-8") == management_token
 
 
-def test_oss_quickstart_prefers_the_first_existing_directory(tmp_path, monkeypatch):
-    primary = tmp_path / "state"
-    fallback = tmp_path / "airllm"
-    fallback.mkdir()  # only the fallback exists
-    monkeypatch.setattr(oss, "DATA_PLANE_KEY_DIRS", (primary, fallback))
+def test_oss_quickstart_creates_the_cache_directory(tmp_path, key_path):
+    """A deployment that brought its own signing key never ran keygen, so nothing made .airllm first."""
     cp = setup_control_plane(tmp_path)
+    assert not key_path.parent.exists()
     with TestClient(cp.app) as c:
-        resp = c.post("/v1/instance/oss/quickstart", json={"token": TOKEN})
-        assert resp.status_code == 200, resp.text
-        assert resp.json()["data"]["path"] == str(fallback / "dataplane.key")
-        assert (fallback / "dataplane.key").read_text(encoding="utf-8") == TOKEN
-        assert not (primary / "dataplane.key").exists()
-
-
-def test_oss_quickstart_errors_when_no_state_directory_exists(tmp_path, monkeypatch):
-    monkeypatch.setattr(oss, "DATA_PLANE_KEY_DIRS", (tmp_path / "state", tmp_path / "airllm"))
-    cp = setup_control_plane(tmp_path)
-    with TestClient(cp.app) as c:
-        resp = c.post("/v1/instance/oss/quickstart", json={"token": TOKEN})
-        assert resp.status_code == 503
+        assert c.post("/v1/instance/oss/quickstart", json={"token": TOKEN}).status_code == 200
+        assert key_path.read_text(encoding="utf-8") == TOKEN

@@ -14,8 +14,9 @@ from control_plane.models.common.wire import Envelope
 router = APIRouter(prefix="/instance/oss", tags=["OSS"])
 
 DATA_PLANE_KEY_FILE = "dataplane.key"
-# Where the data plane looks for its token: the docker shared volume first, then the local cache dir.
-DATA_PLANE_KEY_DIRS = (Path("/state"), Path(".airllm"))
+# Where the data plane looks for its token, relative to the working directory: the checkout's cache dir,
+# and the same path inside the container, whose working directory is the shared /state volume.
+DATA_PLANE_KEY_DIR = Path(".airllm")
 
 
 class ClaimOut(BaseModel):
@@ -61,10 +62,7 @@ async def quickstart(body: QuickstartIn, _session: SessionDep) -> Envelope[Quick
 
 
 def _write_data_plane_key(token: str) -> str:
-    directory = next((d for d in DATA_PLANE_KEY_DIRS if d.is_dir()), None)
-    if directory is None:
-        joined = " or ".join(str(d) for d in DATA_PLANE_KEY_DIRS)
-        raise HTTPException(status_code=503, detail=f"no data plane state directory to write to ({joined})")
-    destination = directory / DATA_PLANE_KEY_FILE
+    DATA_PLANE_KEY_DIR.mkdir(parents=True, exist_ok=True)
+    destination = DATA_PLANE_KEY_DIR / DATA_PLANE_KEY_FILE
     destination.write_text(token, encoding="utf-8")
-    return str(destination)
+    return str(destination.resolve())  # the operator reading it has no reason to know the server's working directory

@@ -16,20 +16,26 @@ services:
 
   control-plane:
     build: .
-    # Bring your own GW_BUNDLE_SIGNING_KEY (then also pass the matching GW_BUNDLE_PUBLIC_KEY to the data plane),
-    # or leave it unset and keygen writes signing.key and its matching signing.pub together.
+    # The one checked-in airllm.yml serves the checkout and this stack: the working directory is the shared
+    # /state volume, so its relative refs land here, and the values that differ come in as variables below.
+    # Bring your own GW_BUNDLE_SIGNING_KEY (then also pass the matching GW_BUNDLE_PUBLIC_KEY to the data
+    # plane), or leave it unset and keygen writes signing.key and its matching signing.pub together.
     command: >
       sh -c '
-        if [ -z "$$GW_BUNDLE_SIGNING_KEY" ]; then
-          [ -f /state/signing.key ] || airllmcp keygen --out /state/signing.key;
-          export GW_BUNDLE_SIGNING_KEY=$$(cat /state/signing.key);
+        mkdir -p /state/.airllm;
+        if [ -n "$$GW_BUNDLE_SIGNING_KEY" ]; then
+          printf %s "$$GW_BUNDLE_SIGNING_KEY" > /state/.airllm/signing.key;
+        else
+          [ -f /state/.airllm/signing.key ] || airllmcp keygen;
         fi;
         airllmcp migrate && airllmcp taxonomy && airllmcp serve --host 0.0.0.0 --port 8000'
     environment:
+      DATABASE_URL: postgresql+asyncpg://airllm:airllm@postgres:5432/airllm
+      GW_CONSOLE_URL: http://localhost:3000
       GW_BUNDLE_SIGNING_KEY: ${GW_BUNDLE_SIGNING_KEY:-}
     volumes:
       - state:/state
-      - ./docker/airllm.yml:/state/airllm.yml:ro
+      - ./airllm.yml:/state/airllm.yml:ro
       - ./taxonomy.yml:/state/taxonomy.yml:ro
     ports:
       - "8000:8000"
@@ -47,16 +53,20 @@ services:
     # and wait for the key keygen wrote to the shared volume. Then wait for the token airllm quickstart drops.
     command: >
       sh -c '
-      if [ -z "$$GW_BUNDLE_PUBLIC_KEY" ]; then
-        until [ -f /state/signing.pub ]; do echo "waiting for /state/signing.pub (control plane starting)"; sleep 2; done;
-        export GW_BUNDLE_PUBLIC_KEY=$$(cat /state/signing.pub);
+      mkdir -p /state/.airllm;
+      if [ -n "$$GW_BUNDLE_PUBLIC_KEY" ]; then
+        printf %s "$$GW_BUNDLE_PUBLIC_KEY" > /state/.airllm/signing.pub;
+      else
+        until [ -f /state/.airllm/signing.pub ]; do echo "waiting for /state/.airllm/signing.pub (control plane starting)"; sleep 2; done;
       fi;
-      if [ -z "$$GW_DATAPLANE_TOKEN" ]; then
-        until [ -f /state/dataplane.key ]; do echo "waiting for /state/dataplane.key (run airllm quickstart)"; sleep 2; done;
-        export GW_DATAPLANE_TOKEN=$$(cat /state/dataplane.key);
+      if [ -n "$$GW_DATAPLANE_TOKEN" ]; then
+        printf %s "$$GW_DATAPLANE_TOKEN" > /state/.airllm/dataplane.key;
+      else
+        until [ -f /state/.airllm/dataplane.key ]; do echo "waiting for /state/.airllm/dataplane.key (run airllm quickstart)"; sleep 2; done;
       fi;
       exec airllmdp --host 0.0.0.0 --port 8080'
     environment:
+      GW_DATAPLANE_CONTROL_PLANE_URL: http://control-plane:8000
       GW_DATAPLANE_TOKEN: ${GW_DATAPLANE_TOKEN:-}
       GW_BUNDLE_PUBLIC_KEY: ${GW_BUNDLE_PUBLIC_KEY:-}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
@@ -64,7 +74,7 @@ services:
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
     volumes:
       - state:/state
-      - ./docker/airllm.yml:/state/airllm.yml:ro
+      - ./airllm.yml:/state/airllm.yml:ro
     ports:
       - "8080:8080"
     depends_on:
