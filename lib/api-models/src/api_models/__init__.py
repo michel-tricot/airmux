@@ -526,7 +526,7 @@ class ProviderIn(BaseModel):
     icon: Annotated[
         str | None,
         Field(
-            description="Provider mark as a standalone 24x24 SVG document, empty when the provider has none. Carried as markup.",
+            description="Provider mark as a standalone 24x24 SVG document, empty when the provider has none. Carried as markup so adding a provider needs no client change to make it recognisable, which makes it untrusted markup to whatever renders it; sanitize at the render site",
             title="Icon",
         ),
     ] = ""

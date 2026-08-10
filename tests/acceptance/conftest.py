@@ -37,6 +37,7 @@ ORG = "org-acc"
 ADMIN_EMAIL = "admin@acceptance.test"
 ADMIN_PASSWORD = "acceptance-admin-password"
 MODEL = "echo"
+STUB_API_KEY = "sk-acceptance-stub"
 READY_TIMEOUT = 30.0
 
 PG_IMAGE = "postgres:16"
@@ -177,8 +178,13 @@ class Stack:
         """Provision the deployment the way an operator does, over the public surfaces only.
 
         The first signup claims the instance, which is what makes the rest reachable: the org, a
-        workspace, the caller's inference key and the two management keys. The taxonomy runs last so
-        the catalog and the keys land in the same bundle v1.
+        workspace, the caller's inference key and the two management keys.
+
+        The taxonomy runs in the middle rather than last, because a provider credential names a
+        provider that has to exist first. The credential is what a workspace brings, so the deployment
+        is not provisioned until it has one: without it every request is denied for having no key to
+        spend, which is the shape of the failure this ordering exists to prevent. The explicit compile
+        afterwards is what lands the catalog and the credential in the same bundle v1.
         """
         with httpx.Client(base_url=self.cp_url, headers={"X-Requested-With": "XMLHttpRequest"}, timeout=10.0) as session:
             me = _payload(session.post("/v1/auth/signup", json={"email": ADMIN_EMAIL, "name": "Acceptance Admin", "password": ADMIN_PASSWORD}))
@@ -191,7 +197,9 @@ class Stack:
             org_key = _payload(session.post("/v1/org/management-keys", json={"label": "acceptance"}, headers=scope))
             data_plane_key = _payload(session.post("/v1/org/management-keys", json={"label": "data-plane"}, headers=scope))
 
-        self._run([_bin("airllmcp"), "taxonomy", "--config", str(self.config_path)], self.env)
+            self._run([_bin("airllmcp"), "taxonomy", "--config", str(self.config_path)], self.env)
+            _payload(session.post("/v1/org/provider-credentials", json={"provider": "stub", "value": STUB_API_KEY}, headers=scope))
+            _payload(session.post("/v1/org/bundles/compile", headers=scope))
 
         secrets = {
             "AIRLLM_TOKEN": caller["token"],
@@ -226,12 +234,17 @@ class Stack:
         flush_interval_s: int = 1,
         backend: str = "sqlite",
     ) -> None:
+        secrets_store = {"kind": "file", "root": str(self.tmp / "secrets")}
+        """Both planes name the same store, because one writes what the other reads. The file store
+        is the smallest one that can hold a value the data plane will read back in another process."""
         cfg = {
             "control_plane": {
                 "database": {"url": self.db_url},
                 "bundle": {"signing_key": "env:GW_BUNDLE_SIGNING_KEY", "staleness_bound_hours": staleness_bound_hours},
+                "secrets": secrets_store,
             },
             "data_plane": {
+                "secrets": secrets_store,
                 "control_plane": {"url": self.cp_url, "token": "env:GW_DATAPLANE_TOKEN", "heartbeat_interval_s": 2},
                 "bundle": {
                     "public_key": "env:GW_BUNDLE_PUBLIC_KEY",

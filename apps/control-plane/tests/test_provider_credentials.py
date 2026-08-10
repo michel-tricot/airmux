@@ -14,6 +14,7 @@ from contract import EnvStoreConfig, SecretNotFoundError, SecretPurpose, SecretR
 from control_plane.models import Provider, ProviderCredential
 
 KEY = "sk-provider-abcd1234"
+CSRF = {"X-Requested-With": "fetch"}
 
 
 def _catalog(client, root):
@@ -353,3 +354,29 @@ def test_deleting_an_org_takes_its_credentials(tmp_path):
         for credential in (m.credential, shared):
             with pytest.raises(SecretNotFoundError):
                 _stored(cp, credential)
+
+
+def test_a_workspace_credential_needs_workspace_membership(tmp_path):
+    """Key operations require membership in the workspace, not just in the org, the way every
+    inference key route already does.
+
+    Whoever supplies a provider key owns the account the workspace's traffic is billed to, and that
+    account's dashboard shows every request made with it, so attaching one is at least as privileged
+    as minting an inference key.
+    """
+    cp = setup_control_plane(tmp_path)
+    with TestClient(cp.app) as c:
+        root = cp.headers()
+        _catalog(c, root)
+        org_id = make_org(c, root)
+        org = cp.headers(org_id)
+        workspace = c.post("/v1/org/workspaces", json={"name": "Theirs"}, headers=org).json()["data"]
+        outsider = c.post("/v1/auth/signup", json={"email": "out@example.com", "password": "hunter2hunter2", "name": "Out"}, headers=CSRF)
+        assert outsider.status_code == 200, outsider.text
+        user_id = outsider.json()["data"]["user_id"]
+        c.put(f"/v1/org/users/{user_id}", headers=org)
+        theirs = cp.headers_for(org_id, user_id)
+
+        body = {"provider": "openai", "value": KEY, "workspace": workspace["slug"]}
+        assert c.post("/v1/org/provider-credentials", json=body, headers=theirs).status_code == 403
+        assert c.get("/v1/org/provider-credentials", params={"workspace": workspace["slug"]}, headers=theirs).status_code == 403

@@ -224,27 +224,19 @@ grant is worth real money.
 `management-keys:write` can mint themselves a key, and an unscoped one carries provider-credentials
 write with it. Membership in the org is the whole gate.
 
-**3. Workspace-scoped writes skip workspace membership.** `create_provider_credential` and
-`list_provider_credentials` resolve the workspace with `Workspace.by_ref(org_id, ...)` rather than
-through the `workspace_member` dependency, which exists precisely because key operations require
-membership in the workspace and not just in the org. An org member who is not a member of a
-workspace can therefore attach a credential to it and list what it already holds. Inference keys,
-the closest analogue, do go through `WorkspaceDep`. This one is an inconsistency with the rest of
-the API rather than a gap in the model, and is the cheapest of the three to close.
+**3. Workspace-scoped writes skipped workspace membership. Fixed.** The routes resolved the
+workspace with `Workspace.by_ref` rather than through the membership check every inference key route
+makes, so an org member outside a workspace could attach a credential to it. Both now go through
+`joined_workspace`, which is `workspace_member` with the ref as an argument instead of a path
+parameter, so the routes that name a workspace in a body or a query string run the same rule as the
+ones that name it in the path.
 
-### What closing this looks like
+### What is left
 
-- Route the workspace-scoped paths through `WorkspaceDep` and keep `OrgDep` for the org-scoped ones.
-  Small, self-contained, and closes 3
-- For 1, decide whether a new scope should be exempt from the unscoped-means-everything rule, or
-  whether adding a money-spending scope requires re-minting existing keys. Either is a change to the
-  authorization model and belongs with roles rather than here
-- For 2, roles: named bundles over the existing scopes, which `authz.py` already anticipates. Until
-  they exist, an operator who cares mints org keys with explicit scope lists and treats unscoped
-  keys as admin credentials
-
-Until then `provider-credentials:write` is an org-admin privilege that the code does not enforce as
-one, and the deployment notes should say so rather than implying the scope is a boundary.
+1 and 2 are changes to the authorization model rather than to this feature, and are parked in
+[notes/IDEAS.md](../IDEAS.md). Until they land, `provider-credentials:write` is an org-admin
+privilege that the code does not enforce as one, and deployment notes should say so rather than
+implying the scope is a boundary.
 
 ## Bundle contract
 

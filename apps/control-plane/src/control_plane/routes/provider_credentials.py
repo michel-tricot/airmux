@@ -6,8 +6,8 @@ from fastapi import APIRouter, HTTPException, Request
 
 from contract import Secret, SecretStore
 from control_plane.authz import Scope
-from control_plane.deps import OrgDep, require
-from control_plane.models import Provider, ProviderCredential, Workspace
+from control_plane.deps import MgmtDep, OrgDep, joined_workspace, require
+from control_plane.models import Provider, ProviderCredential
 from control_plane.models.common.wire import DeletedOut, Envelope
 from control_plane.models.provider_credential import (
     ProviderCredentialIn,
@@ -41,8 +41,14 @@ async def _provider(name: str) -> Provider:
 
 
 @router.post("", tags=["Provider Credentials"], dependencies=[require(Scope.provider_credentials_write)])
-async def create_provider_credential(body: ProviderCredentialIn, org_id: OrgDep, request: Request) -> Envelope[ProviderCredentialOut]:
+async def create_provider_credential(
+    body: ProviderCredentialIn, org_id: OrgDep, claims: MgmtDep, request: Request
+) -> Envelope[ProviderCredentialOut]:
     """Bring a provider key for this org, or for one workspace in it.
+
+    A workspace-scoped key needs membership in that workspace, the way minting an inference key
+    there does: whoever supplies the key owns the account its traffic is billed to, and that
+    account's dashboard shows every request made with it.
 
     The row is written before the value so a crash between the two leaves a credential with nothing
     behind it, which the request path already handles by skipping the candidate. The other order
@@ -50,7 +56,7 @@ async def create_provider_credential(body: ProviderCredentialIn, org_id: OrgDep,
     """
     store = writable_store(request)
     provider = await _provider(body.provider)
-    workspace = await Workspace.by_ref(org_id, body.workspace) if body.workspace else None
+    workspace = await joined_workspace(org_id, body.workspace, claims) if body.workspace else None
     workspace_id = workspace.id if workspace else None
     if await ProviderCredential.named(org_id, workspace_id, provider.id, body.name) is not None:
         raise HTTPException(status_code=409, detail="a credential with this name already exists for this provider and scope")
@@ -69,9 +75,9 @@ async def create_provider_credential(body: ProviderCredentialIn, org_id: OrgDep,
 
 
 @router.get("", tags=["Provider Credentials"], dependencies=[require(Scope.provider_credentials_read)])
-async def list_provider_credentials(org_id: OrgDep, workspace: str | None = None) -> Envelope[list[ProviderCredentialOut]]:
+async def list_provider_credentials(org_id: OrgDep, claims: MgmtDep, workspace: str | None = None) -> Envelope[list[ProviderCredentialOut]]:
     """The org's credentials in the order the data plane tries them, optionally narrowed to one workspace."""
-    workspace_id = (await Workspace.by_ref(org_id, workspace)).id if workspace else None
+    workspace_id = (await joined_workspace(org_id, workspace, claims)).id if workspace else None
     credentials = await ProviderCredential.for_org(org_id, workspace_id)
     return Envelope(data=[ProviderCredentialOut.model_validate(credential) for credential in credentials])
 
