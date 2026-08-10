@@ -27,13 +27,21 @@ class EnvStoreConfig(SecretStoreConfig):
 
 
 class EnvSecretStore(SecretStore):
-    """Secrets from the process environment, read only.
+    """Secrets from the process environment, keyed by what they authenticate to.
 
-    This is the store an operator points at for a single-tenant deployment whose provider keys
-    already arrive as environment variables, and the one `airllm quickstart` uses so a first run
-    needs no infrastructure. It cannot be written, so an instance configured this way serves
-    platform secrets and refuses workspace BYOK as a startup-time misconfiguration rather than a
-    runtime surprise.
+    A provider secret resolves to {SERVICE}_API_KEY, the name every provider SDK documents.
+    {prefix}_{PURPOSE}_{SERVICE} takes precedence, for an environment that already means
+    something else by OPENAI_API_KEY and as the only name a non-provider purpose answers to.
+
+    Scope and name are deliberately not part of the lookup. The environment holds one value per
+    provider and cannot hold more, so every credential for a provider resolves to the same variable
+    whatever its row says. The consequence is worth stating plainly: an instance on this store bills
+    every workspace to one upstream account per provider, so it serves single-tenant deployments and
+    development, and BYOK on it is nominal. Per-tenant keys need a store that can hold more than one
+    value per provider.
+
+    Read only, because a value written here would live for one process and vanish. The control plane
+    checks `writable` before offering to store a key.
     """
 
     kind: ClassVar[str] = "env"
@@ -42,22 +50,11 @@ class EnvSecretStore(SecretStore):
         self.prefix = prefix
 
     def variables_for(self, ref: SecretRef) -> tuple[str, ...]:
-        """The names tried in order, most specific first.
-
-        The derived name is {prefix}_{PURPOSE}_{SERVICE}_{NAME}, with the secret id appended for
-        anything scoped, because service and name alone are only unique inside one workspace and the
-        environment is flat.
-
-        A platform provider credential also answers to {SERVICE}_API_KEY, the name every provider
-        SDK already documents and the one taxonomy.yml has always used. That fallback is what lets
-        an existing deployment keep its OPENAI_API_KEY and lets quickstart ask for nothing new.
-        """
-        derived = _variable(self.prefix, ref.purpose.value, ref.service, ref.name)
-        if not ref.is_platform:
-            return (_variable(derived, ref.secret_id.hex),)
+        """The names tried in order, most specific first."""
+        prefixed = _variable(self.prefix, ref.purpose.value, ref.service)
         if ref.purpose is SecretPurpose.provider:
-            return (derived, _variable(ref.service, CONVENTIONAL_SUFFIX))
-        return (derived,)
+            return (prefixed, _variable(ref.service, CONVENTIONAL_SUFFIX))
+        return (prefixed,)
 
     async def get(self, ref: SecretRef) -> Secret:
         for variable in self.variables_for(ref):

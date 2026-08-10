@@ -109,13 +109,21 @@ Shipped: `memory` (tests and single-process dev), `file` (one 0600 file per secr
 which is a real single-host deployment), `env` (read only, quickstart and single-tenant instances
 whose provider keys already arrive as environment variables).
 
-The env store's derived name is `{prefix}_{PURPOSE}_{SERVICE}_{NAME}`, with the secret id appended
-for anything scoped, because the environment is flat and service plus name are only unique inside
-one workspace. A **platform provider credential also answers to `{SERVICE}_API_KEY`**, so
-`OPENAI_API_KEY` keeps working: that is the name every provider SDK documents and the one
-`taxonomy.yml` has always used. The derived name wins when both are set, and a scoped secret never
-reads the conventional variable, so a workspace bringing its own key cannot silently pick up the
-platform's environment.
+The env store resolves a provider credential to **`{SERVICE}_API_KEY`**, the name every provider SDK
+documents and the one `taxonomy.yml` used before credentials became a resource, so an operator
+running on the environment configures nothing new. `{prefix}_{PURPOSE}_{SERVICE}` takes precedence,
+for an environment that already means something else by `OPENAI_API_KEY` and as the only name a
+non-provider purpose answers to.
+
+**Scope and name are deliberately not part of the lookup**, so every credential for a provider
+resolves to the same variable whatever its row says. That is not a compromise, it is what the
+environment is: it holds one value per provider and cannot hold more. Trying to key it per
+credential would only produce variable names nobody can set.
+
+The consequence is worth stating plainly rather than discovering: an instance on this store bills
+every workspace to one upstream account per provider, so **BYOK on it is nominal**. It serves
+single-tenant deployments and development. Per-tenant keys need a store that can hold more than one
+value per provider, which is what `file` and the vault backends are for.
 
 Next, once the design has been exercised through the planes: **HashiCorp Vault KV v2**, chosen over
 the cloud secret managers because hierarchical paths map onto `path_segments` directly while

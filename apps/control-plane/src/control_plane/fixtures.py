@@ -66,6 +66,12 @@ PROVIDERS = [
 
 FIXTURE_PROVIDER_KEY = "sk-fixture-not-a-real-key-0000"
 
+
+def env_variable(provider: str) -> str:
+    """What the env store resolves a provider credential to, for the command to name in its output."""
+    return f"{provider.upper()}_API_KEY"
+
+
 STATUSES = ["ok"] * 9 + ["error"]
 
 USAGE_DAYS = 30
@@ -89,6 +95,7 @@ class Fixtures:
     inference_token: str
     management_token: str
     instance_token: str
+    provider_key_variables: list[str]  # what the seeded credentials resolve to when the store reads the environment
 
 
 def fixture_id(name: str) -> UUID:
@@ -126,10 +133,13 @@ async def provider_credential(  # noqa: PLR0913 the row's own fields are the arg
     status: str = "unknown",
     enabled: bool = True,
 ) -> ProviderCredential:
-    """A credential row and the value behind it, the way the create route writes the pair.
+    """A credential row, and the value behind it when the store can hold one.
 
-    The value is a placeholder no provider will accept: these exist so the console has pools to
-    render and the data plane has refs to resolve, not so a fixture instance can bill anyone.
+    The row is the part that matters here: it is what gives the console a pool to render and the
+    data plane a ref to resolve. On a writable store the value is a placeholder no provider will
+    accept, so a fixture instance cannot bill anyone by accident. On the env store there is nothing
+    to write and nothing to place: the ref already resolves to {PROVIDER}_API_KEY, so a developer
+    with their own key set gets a pool that genuinely works.
     """
     credential = await ProviderCredential(
         id=fixture_id(f"provider-credential:{org.name}:{workspace.name if workspace else 'org'}:{provider.name}:{name}"),
@@ -141,9 +151,10 @@ async def provider_credential(  # noqa: PLR0913 the row's own fields are the arg
         priority=priority,
         enabled=enabled,
         status=status,
-        fingerprint=FIXTURE_PROVIDER_KEY[-4:],
+        fingerprint=FIXTURE_PROVIDER_KEY[-4:] if store.writable else "",
     ).save()
-    await store.put(credential.secret_ref(), Secret(FIXTURE_PROVIDER_KEY))
+    if store.writable:
+        await store.put(credential.secret_ref(), Secret(FIXTURE_PROVIDER_KEY))
     return credential
 
 
@@ -181,6 +192,10 @@ async def record_usage(workspace: Workspace, key: InferenceKey, count: int, now:
 
 async def apply_fixtures(now: datetime, store: SecretStore) -> Fixtures:
     """The fixture instance, declared top to bottom and saved as it is declared.
+
+    Provider credentials are the one part whose value lives outside the database. The rows are
+    always written; whether a value is written beside them is the store's business, and on the env
+    store the answer is that the ref already resolves to a variable the operator owns.
 
     Read it as the list of what exists. Every row is written on the line that declares it, so there
     is no second pass to keep in step, and dependency order is ordinary data flow: nothing can name
@@ -265,4 +280,5 @@ async def apply_fixtures(now: datetime, store: SecretStore) -> Fixtures:
         inference_token=ACME_PROD_TOKEN,
         management_token=ACME_MANAGEMENT_TOKEN,
         instance_token=INSTANCE_TOKEN,
+        provider_key_variables=[] if store.writable else sorted({env_variable(name) for name, _, _ in PROVIDERS}),
     )
