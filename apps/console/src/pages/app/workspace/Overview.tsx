@@ -53,6 +53,7 @@ export default function WorkspaceOverview() {
   const outputTokens = wsEvents.reduce((sum, e) => sum + e.output_tokens, 0);
   const costUsd = wsEvents.reduce((sum, e) => sum + e.cost_usd, 0);
   const recent = wsEvents.slice(0, 8);
+  const keyLabels = new Map(keys?.map(k => [k.id, k.label] as const) ?? []);
 
   const byModel = new Map<string, { requests: number, tokens: number, cost: number }>();
   for (const e of wsEvents) {
@@ -125,6 +126,12 @@ export default function WorkspaceOverview() {
                   header: 'Model',
                   cellClassName: 'font-mono text-xs',
                   cell: e => <Badge variant="outline" className="font-mono">{e.model_id}</Badge>,
+                },
+                {
+                  key: 'key',
+                  header: 'Key',
+                  cellClassName: 'text-xs',
+                  cell: e => keyLabels.get(e.key_id) ?? <span className="font-mono text-muted-foreground">{e.key_id}</span>,
                 },
                 { key: 'tokens', header: 'Tokens', headClassName: 'text-right', cellClassName: 'text-right tabular-nums', cell: e => formatTokens(e.input_tokens + e.output_tokens) },
                 { key: 'when', header: 'When', headClassName: 'text-right', cellClassName: 'text-right text-muted-foreground text-xs', cell: e => formatRelative(e.occurred_at) },

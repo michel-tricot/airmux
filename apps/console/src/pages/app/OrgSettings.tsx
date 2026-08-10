@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import * as z from 'zod';
 import { useSession } from '@/lib/session';
-import { useManagementKeys, useInferenceKeysForWorkspaces, useMintManagementKeyMutation, useRevokeManagementKeyMutation } from '@/features/keys/hooks';
-import { useWorkspaces } from '@/features/workspaces/hooks';
+import { useManagementKeys, useMintManagementKeyMutation, useRevokeManagementKeyMutation } from '@/features/keys/hooks';
 import { useOrgMembers } from '@/features/members/hooks';
 import { useBundles, useCompileBundleMutation, useOrgActivity } from '@/features/telemetry/hooks';
 import { Card, Button, Input, Badge, Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/elements';
@@ -28,13 +27,7 @@ export default function AppOrgSettings() {
   const [keyOpen, setKeyOpen] = useState(false);
   const [token, setToken] = useState<string | null>(null);
 
-  const workspacesQuery = useWorkspaces(orgId!);
-  const inferenceKeyQueries = useInferenceKeysForWorkspaces(orgId!, workspacesQuery.data?.map(ws => ws.id) ?? []);
-
-  const keyLabels = new Map([
-    ...(keysQuery.data?.map(key => [key.id, key.label] as const) ?? []),
-    ...inferenceKeyQueries.flatMap(q => q.data?.map(key => [key.id, key.label] as const) ?? []),
-  ]);
+  const keyLabels = new Map(keysQuery.data?.map(key => [key.id, key.label] as const) ?? []);
   const describeRecord = (entry: { record_id: string }) => keyLabels.get(entry.record_id) ?? null;
 
   const mintKey = useMintManagementKeyMutation(orgId!);
