@@ -18,7 +18,7 @@ const workspaceNameSchema = z.object({ name: z.string().min(1, 'Name is required
 const SECTIONS = [
   { label: 'Overview', suffix: '', icon: LayoutGrid },
   { label: 'API Keys', suffix: '/keys', icon: KeyRound },
-  { label: 'BYOK', suffix: '/byok', icon: Database, soon: true },
+  { label: 'BYOK', suffix: '/byok', icon: Database },
   { label: 'Routing', suffix: '/routing', icon: RouteIcon, soon: true },
   { label: 'Policies', suffix: '/policies', icon: ShieldCheck, soon: true },
   { label: 'Settings', suffix: '/settings', icon: Settings },
