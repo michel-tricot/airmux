@@ -16,6 +16,7 @@ class Provider(Record, Identified, Tombstonable, table=True):
     name: str = Field(unique=True)
     kind: str
     base_url: str
+    icon: str = ""
     cache_read_multiplier: float = 1.0
     cache_write_multiplier: float = 1.0
 
@@ -25,6 +26,7 @@ class ProviderOut(RecordOut[Provider]):
     name: str
     kind: str
     base_url: str
+    icon: str
     cache_read_multiplier: float
     cache_write_multiplier: float
     created_at: datetime

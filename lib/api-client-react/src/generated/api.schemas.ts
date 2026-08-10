@@ -576,6 +576,7 @@ export interface ProviderCredentialOut {
   enabled: boolean;
   version: number;
   status: string;
+  status_at: string | null;
   fingerprint: string;
   created_at: string;
   updated_at: string;
@@ -620,6 +621,8 @@ export interface ProviderIn {
   kind?: ProviderInKind;
   /** OpenAI-compatible endpoint, e.g. https://api.groq.com/openai/v1 */
   base_url: string;
+  /** Provider mark as a standalone 24x24 SVG document, empty when the provider has none. Carried as markup so adding a provider needs no client change to make it recognisable, which makes it untrusted markup to whatever renders it; sanitize at the render site */
+  icon?: string;
   /** Input price factor for prompt-cache hits */
   cache_read_multiplier?: number;
   /** Input price factor for cache writes */
@@ -631,6 +634,7 @@ export interface ProviderOut {
   name: string;
   kind: string;
   base_url: string;
+  icon: string;
   cache_read_multiplier: number;
   cache_write_multiplier: number;
   created_at: string;
@@ -694,6 +698,8 @@ export interface UsageEventOut {
   latency_ms: number;
   status: string;
   stream: boolean;
+  credential_id: string | null;
+  credential_scope: string | null;
 }
 
 export type UsageEventV1Status = typeof UsageEventV1Status[keyof typeof UsageEventV1Status];
@@ -705,6 +711,17 @@ export const UsageEventV1Status = {
   denied: 'denied',
   timeout: 'timeout',
   cancelled: 'cancelled',
+  credential_rejected: 'credential_rejected',
+  rate_limited: 'rate_limited',
+} as const;
+
+export type UsageEventV1CredentialScope = typeof UsageEventV1CredentialScope[keyof typeof UsageEventV1CredentialScope] | null;
+
+
+export const UsageEventV1CredentialScope = {
+  platform: 'platform',
+  org: 'org',
+  workspace: 'workspace',
 } as const;
 
 /**
@@ -734,6 +751,8 @@ export interface UsageEventV1 {
   latency_ms: number;
   status: UsageEventV1Status;
   stream: boolean;
+  credential_id?: string | null;
+  credential_scope?: UsageEventV1CredentialScope;
 }
 
 export interface UserCreate {

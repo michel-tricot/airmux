@@ -16,6 +16,7 @@ export interface ProviderCredentialOut {
   enabled: boolean;
   version: number;
   status: string;
+  status_at: Date | null;
   fingerprint: string;
   created_at: Date;
   updated_at: Date;

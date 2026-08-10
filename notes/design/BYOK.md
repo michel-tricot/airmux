@@ -254,9 +254,17 @@ class Catalog:
 ```
 
 `ProviderEntry.credential_ref` is removed, so the catalog says how to reach a provider and the
-credentials say how to authenticate to it. `UsageEventV1` gains `credential_id: str | None` and
+credentials say how to authenticate to it. `UsageEventV1` gains `credential_id: UUID | None` and
 `credential_scope`, which buys per-key attribution, rate-limit visibility, and the BYOK versus
-platform billing split in one field.
+platform billing split. `UsageStatus` gains `credential_rejected` and `rate_limited`, split out of
+`upstream_error` because they are facts about the credential rather than about the provider.
+
+That split is the whole feedback channel. The data plane never tells the control plane anything
+about a credential; the usage events it already sends carry a key's health home, and ingestion
+rolls them into `ProviderCredential.status`. `status_at` is what makes it safe: delivery is
+at-least-once, so events replay after an outage and arrive out of order, and an older observation
+must never flip a working key back to invalid. A provider outage leaves the status alone, and events
+naming a credential that has since been deleted are skipped rather than treated as an error.
 
 The deploy is lockstep. Add a `contract_version` check so a mismatch logs loudly at bundle admission
 instead of manifesting as a data plane silently serving a week-old bundle forever: `verify_bundle`
@@ -369,9 +377,10 @@ Each lands its failing test in the same commit.
    candidates, resolver with cache and single-flight, adapters take an injected credential, first
    candidate only. `Provider.credential_ref` and `ProviderEntry.credential_ref` are gone, and the
    catalog refuses a body still carrying one rather than ignoring it
-4. Failover and cooldown, `credential_id` on usage events, `status` rolled up from event ingestion.
-   Proof is a real request against a running data plane where the first key is revoked mid-test and
-   the request still succeeds on the second
+4. **Partly done.** `credential_id` and `credential_scope` on usage events, and `status` rolled up
+   from event ingestion. Failover and cooldown are deferred, with them the live proof: a real
+   request against a running data plane where the first key is revoked mid-test and the request
+   still succeeds on the second
 5. Console and CLI: `airllm credentials add/list/rotate/rm --workspace --provider --name` with
    `--from-stdin` so keys never enter shell history, status and fingerprint columns, console panel
    with per-key health

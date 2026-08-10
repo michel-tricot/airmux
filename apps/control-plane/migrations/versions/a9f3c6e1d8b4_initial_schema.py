@@ -1,9 +1,9 @@
 """initial schema
 
 Consolidated on 2026-08-09 from the pre-release chain (initial schema, enrollment and cli auth,
-workspaces, workspace slugs, provider credentials); nothing had deployed, so the chain had no
-consumers. From first deployment on the chain is append-only: never squash again or edit a shipped
-revision.
+workspaces, workspace slugs, provider credentials, provider icons); nothing had deployed, so the
+chain had no consumers. From first deployment on the chain is append-only: never squash again or
+edit a shipped revision.
 
 The tenancy model: users and orgs are instance-level, org_membership ties them, workspaces live
 under an org and are named within it by an org-unique slug, workspace_membership's composite foreign keys make cross-org membership
@@ -141,6 +141,7 @@ def upgrade() -> None:
         sa.Column("name", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("kind", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("base_url", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+        sa.Column("icon", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("cache_read_multiplier", sa.Float(), nullable=False),
         sa.Column("cache_write_multiplier", sa.Float(), nullable=False),
         sa.PrimaryKeyConstraint("id"),
@@ -167,6 +168,8 @@ def upgrade() -> None:
         sa.Column("latency_ms", sa.Integer(), nullable=False),
         sa.Column("status", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("stream", sa.Boolean(), nullable=False),
+        sa.Column("credential_id", sa.Uuid(), nullable=True),
+        sa.Column("credential_scope", sqlmodel.sql.sqltypes.AutoString(), nullable=True),
         sa.PrimaryKeyConstraint("event_id"),
     )
     op.create_table(
@@ -404,6 +407,7 @@ def upgrade() -> None:
         sa.Column("enabled", sa.Boolean(), nullable=False),
         sa.Column("version", sa.Integer(), nullable=False),
         sa.Column("status", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+        sa.Column("status_at", UTCDateTime(), nullable=True),
         sa.Column("fingerprint", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.CheckConstraint("workspace_id IS NULL OR org_id IS NOT NULL", name="provider_credential_workspace_needs_org"),
         sa.ForeignKeyConstraint(

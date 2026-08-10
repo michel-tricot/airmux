@@ -6,7 +6,7 @@ import logging
 import time
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 import anyio
 import httpx
@@ -40,10 +40,12 @@ if TYPE_CHECKING:
     from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
     from starlette.requests import Request
 
-    from contract import KeyEntry, Secret
+    from contract import CredentialEntry, KeyEntry, Secret
     from data_plane.outbox import EventOutbox
 
 logger = logging.getLogger("data_plane")
+
+REJECTS_CREDENTIAL = frozenset({httpx.codes.UNAUTHORIZED, httpx.codes.FORBIDDEN})
 
 holder = BundleHolder()
 
@@ -109,6 +111,7 @@ async def _handle(request: Request, ingress: Ingress) -> Response:
         _record_denied(key, snap, req)
         raise RequestRejectedError(decision.status, decision.reason)
 
+    entry = decision.candidates[0]
     credential = await _resolve_credential(decision)
     adapter = REGISTRY[decision.provider.kind](decision.provider, credential)
     ctx = Ctx(
@@ -119,6 +122,8 @@ async def _handle(request: Request, ingress: Ingress) -> Response:
         org_id=key.org_id,
         workspace_id=key.workspace_id,
         key_id=key.key_id,
+        credential_id=entry.ref.secret_id,
+        credential_scope=_scope_of(entry),
         bundle_id=snap.bundle.bundle_id,
     )
     req = normalize_request(req, decision.model, decision.provider)
@@ -168,8 +173,22 @@ def _upstream_exception(adapter: ProviderAdapter, ctx: Ctx, e: Exception, req: C
     return ingress.render_error(err)
 
 
+def _scope_of(entry: CredentialEntry) -> Literal["platform", "org", "workspace"]:
+    if entry.ref.org_id is None:
+        return "platform"
+    return "workspace" if entry.ref.workspace_id is not None else "org"
+
+
+def _credential_status(status_code: int) -> UsageStatus:
+    """A rejected or throttled key is a fact about the credential, which the control plane rolls
+    up into its status. Everything else upstream stays undifferentiated."""
+    if status_code in REJECTS_CREDENTIAL:
+        return "credential_rejected"
+    return "rate_limited" if status_code == httpx.codes.TOO_MANY_REQUESTS else "upstream_error"
+
+
 def _upstream_error_body(ctx: Ctx, body: bytes, status_code: int, req: CanonicalRequest | None, ingress: Ingress) -> Response:
-    _record_usage(ctx, _empty_response(ctx), status="upstream_error", req=req)
+    _record_usage(ctx, _empty_response(ctx), status=_credential_status(status_code), req=req)
     return ingress.render_upstream_error(status_code, body)
 
 
@@ -250,6 +269,8 @@ def _record_usage(ctx: Ctx, final: CanonicalResponse, status: UsageStatus, req: 
                 latency_ms=latency_ms,
                 status=status,
                 stream=ctx.stream,
+                credential_id=ctx.credential_id,
+                credential_scope=ctx.credential_scope,
             ),
         )
     logger.info(

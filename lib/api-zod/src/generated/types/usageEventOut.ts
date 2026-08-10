@@ -25,4 +25,6 @@ export interface UsageEventOut {
   latency_ms: number;
   status: string;
   stream: boolean;
+  credential_id: string | null;
+  credential_scope: string | null;
 }

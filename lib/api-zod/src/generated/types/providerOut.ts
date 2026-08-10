@@ -10,6 +10,7 @@ export interface ProviderOut {
   name: string;
   kind: string;
   base_url: string;
+  icon: string;
   cache_read_multiplier: number;
   cache_write_multiplier: number;
   created_at: Date;
