@@ -17,6 +17,7 @@ import { DataTable, type Column } from '@/components/shared/data-table';
 import { FormDialog } from '@/components/shared/form-dialog';
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { cn } from '@/lib/utils';
 
 const addSchema = z.object({
   provider: z.string().min(1, 'Pick a provider'),
@@ -170,15 +171,31 @@ export default function WorkspaceByok() {
                 <FormItem>
                   <FormLabel>Provider</FormLabel>
                   <FormControl>
-                    <select
-                      className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                      {...field}>
-                      {providers.map(p => (
-                        <option key={p.id} value={p.name}>
-                          {p.name}
-                        </option>
-                      ))}
-                    </select>
+                    <div className="flex flex-wrap gap-2">
+                      {providers.map(p => {
+                        const selected = field.value === p.name;
+                        return (
+                          <button
+                            key={p.id}
+                            type="button"
+                            onClick={() => field.onChange(p.name)}
+                            className={cn(
+                              'inline-flex items-center gap-2 rounded border px-3 py-1.5 text-[11px] font-mono font-bold uppercase tracking-wider transition-all',
+                              selected
+                                ? 'border-primary bg-primary/10 text-primary'
+                                : 'border-border bg-background/50 text-muted-foreground hover:border-primary/50 hover:text-foreground'
+                            )}>
+                            {p.icon ? (
+                              <span
+                                className="w-4 h-4 shrink-0 [&_svg]:w-full [&_svg]:h-full"
+                                dangerouslySetInnerHTML={{ __html: p.icon }}
+                              />
+                            ) : null}
+                            {p.name}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
