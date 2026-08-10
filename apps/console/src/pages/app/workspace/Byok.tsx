@@ -65,10 +65,10 @@ export default function WorkspaceByok() {
       cellClassName: 'font-mono text-xs text-muted-foreground',
       cell: c => <>…{c.fingerprint}</>,
     },
-    { key: 'priority', header: 'Try order', cellClassName: 'text-muted-foreground text-sm', cell: c => c.priority },
+    { key: 'priority', header: 'Priority', cellClassName: 'text-muted-foreground text-sm', cell: c => c.priority },
     {
       key: 'health',
-      header: 'Health',
+      header: 'Status',
       cell: c => {
         const { label, variant } = health(c);
         return <Badge variant={variant}>{label}</Badge>;
@@ -109,7 +109,7 @@ export default function WorkspaceByok() {
                 <span>
                   <ConfirmButton
                     title={`Delete "${c.name}"?`}
-                    description="The key is removed from the secret store and requests using it stop at the next bundle. This cannot be undone."
+                    description="Permanently removes this key. Traffic will fall back to the next available key in priority order. This cannot be undone."
                     confirmLabel="Delete"
                     pending={deleteCredential.isPending}
                     onConfirm={() => deleteCredential.mutate({ credentialId: c.id })}>
@@ -131,7 +131,7 @@ export default function WorkspaceByok() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Provider Keys</h1>
           <p className="text-muted-foreground mt-1 text-sm">
-            Bring your own provider keys. Requests from this workspace are billed to whichever key answers first.
+            Use your own API keys for this workspace. Keys are tried in priority order — if one fails, the next takes over automatically.
           </p>
         </div>
         <Button onClick={() => setAddOpen(true)}>
@@ -147,7 +147,7 @@ export default function WorkspaceByok() {
           isLoading={credentialsQuery.isLoading}
           isError={credentialsQuery.isError}
           onRetry={() => credentialsQuery.refetch()}
-          empty="No provider keys yet. Without one, this workspace uses the keys the operator configured."
+          empty="No keys yet. Add one to route this workspace's traffic through your own provider accounts."
           emptyIcon={KeyRound}
         />
       </Card>
@@ -156,7 +156,7 @@ export default function WorkspaceByok() {
         open={addOpen}
         onOpenChange={setAddOpen}
         title="Add Provider Key"
-        description="The key goes straight to the secret store. It is never shown again and never stored in the database."
+        description="Your key is stored encrypted and never exposed again. Paste it once — we handle the rest."
         schema={addSchema}
         defaultValues={{ provider: providers[0]?.name ?? '', name: 'default', value: '', priority: 100 }}
         onSubmit={values => addCredential.mutateAsync({ data: { ...values, workspace: workspaceRef! } })}
@@ -232,7 +232,7 @@ export default function WorkspaceByok() {
               name="priority"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Try order</FormLabel>
+                  <FormLabel>Priority</FormLabel>
                   <FormControl>
                     <Input type="number" min={1} {...field} />
                   </FormControl>
@@ -248,7 +248,7 @@ export default function WorkspaceByok() {
         open={!!rotating}
         onOpenChange={v => !v && setRotating(null)}
         title={rotating ? `Rotate "${rotating.name}"` : 'Rotate'}
-        description="The new key replaces the old one everywhere. Data planes pick it up at the next bundle."
+        description="Replaces the existing key immediately. Any in-flight requests will finish with the old key."
         schema={rotateSchema}
         defaultValues={{ value: '' }}
         onSubmit={async values => {
