@@ -1,0 +1,259 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$ref": "#/$defs/components_schemas_ChatCompletionStream",
+  "$defs": {
+    "components_schemas_ChatCompletionChunk": {
+      "type": "object",
+      "required": [
+        "id",
+        "object",
+        "created",
+        "choices",
+        "model"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "object": {
+          "description": "The object type, which is always `chat.completion.chunk`.",
+          "const": "chat.completion.chunk"
+        },
+        "created": {
+          "type": "integer"
+        },
+        "system_fingerprint": {
+          "type": "string"
+        },
+        "model": {
+          "type": "string",
+          "example": "mistralai/Mixtral-8x7B-Instruct-v0.1"
+        },
+        "choices": {
+          "title": "ChatCompletionChoices",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "index",
+              "delta",
+              "finish_reason"
+            ],
+            "properties": {
+              "index": {
+                "type": "integer"
+              },
+              "finish_reason": {
+                "$ref": "#/$defs/components_schemas_FinishReason",
+                "nullable": true
+              },
+              "logprobs": {
+                "type": "number",
+                "nullable": true
+              },
+              "top_logprobs": {
+                "$ref": "#/$defs/components_schemas_TopLogprobs"
+              },
+              "seed": {
+                "type": "integer",
+                "nullable": true
+              },
+              "delta": {
+                "title": "ChatCompletionChoiceDelta",
+                "type": "object",
+                "required": [
+                  "role"
+                ],
+                "properties": {
+                  "token_id": {
+                    "type": "integer"
+                  },
+                  "role": {
+                    "type": "string",
+                    "enum": [
+                      "system",
+                      "user",
+                      "assistant",
+                      "function",
+                      "tool"
+                    ]
+                  },
+                  "content": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "reasoning": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "tool_calls": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/$defs/components_schemas_ToolChoice"
+                    }
+                  },
+                  "function_call": {
+                    "type": "object",
+                    "deprecated": true,
+                    "nullable": true,
+                    "properties": {
+                      "arguments": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "arguments",
+                      "name"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "usage": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/components_schemas_UsageData"
+            },
+            {
+              "nullable": true
+            }
+          ]
+        },
+        "warnings": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/components_schemas_InferenceWarning"
+          }
+        }
+      }
+    },
+    "components_schemas_ChatCompletionEvent": {
+      "type": "object",
+      "required": [
+        "data"
+      ],
+      "properties": {
+        "data": {
+          "$ref": "#/$defs/components_schemas_ChatCompletionChunk"
+        }
+      }
+    },
+    "components_schemas_ChatCompletionStream": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/components_schemas_ChatCompletionEvent"
+        },
+        {
+          "$ref": "#/$defs/components_schemas_StreamSentinel"
+        }
+      ]
+    },
+    "components_schemas_FinishReason": {
+      "type": "string",
+      "enum": [
+        "stop",
+        "eos",
+        "length",
+        "tool_calls",
+        "function_call"
+      ]
+    },
+    "components_schemas_InferenceWarning": {
+      "type": "object",
+      "required": [
+        "message"
+      ],
+      "properties": {
+        "message": {
+          "type": "string"
+        }
+      }
+    },
+    "components_schemas_StreamSentinel": {
+      "type": "object",
+      "required": [
+        "data"
+      ],
+      "properties": {
+        "data": {
+          "title": "stream_signal",
+          "type": "string",
+          "enum": [
+            "[DONE]"
+          ]
+        }
+      }
+    },
+    "components_schemas_ToolChoice": {
+      "type": "object",
+      "required": [
+        "id",
+        "type",
+        "function",
+        "index"
+      ],
+      "properties": {
+        "index": {
+          "type": "number"
+        },
+        "id": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "function"
+          ]
+        },
+        "function": {
+          "type": "object",
+          "required": [
+            "name",
+            "arguments"
+          ],
+          "properties": {
+            "name": {
+              "type": "string",
+              "example": "function_name"
+            },
+            "arguments": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "components_schemas_TopLogprobs": {
+      "description": "Top log probabilities for the tokens.",
+      "type": "object",
+      "additionalProperties": {
+        "type": "number"
+      }
+    },
+    "components_schemas_UsageData": {
+      "type": "object",
+      "properties": {
+        "prompt_tokens": {
+          "type": "integer"
+        },
+        "completion_tokens": {
+          "type": "integer"
+        },
+        "total_tokens": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "prompt_tokens",
+        "completion_tokens",
+        "total_tokens"
+      ],
+      "nullable": true
+    }
+  }
+}

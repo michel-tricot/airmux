@@ -1,0 +1,2300 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$ref": "#/$defs/components_schemas_Message",
+  "$defs": {
+    "components_schemas_Base64PDFSource": {
+      "additionalProperties": false,
+      "properties": {
+        "data": {
+          "format": "byte",
+          "title": "Data",
+          "type": "string"
+        },
+        "media_type": {
+          "const": "application/pdf",
+          "title": "Media Type",
+          "type": "string"
+        },
+        "type": {
+          "const": "base64",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "data",
+        "media_type",
+        "type"
+      ],
+      "title": "Base64PDFSource",
+      "type": "object"
+    },
+    "components_schemas_BashCodeExecutionToolResultErrorCode": {
+      "enum": [
+        "invalid_tool_input",
+        "unavailable",
+        "too_many_requests",
+        "execution_time_exceeded",
+        "output_file_too_large"
+      ],
+      "title": "BashCodeExecutionToolResultErrorCode",
+      "type": "string"
+    },
+    "components_schemas_CacheCreation": {
+      "properties": {
+        "ephemeral_1h_input_tokens": {
+          "default": 0,
+          "description": "The number of input tokens used to create the 1 hour cache entry.",
+          "minimum": 0,
+          "title": "Ephemeral 1H Input Tokens",
+          "type": "integer"
+        },
+        "ephemeral_5m_input_tokens": {
+          "default": 0,
+          "description": "The number of input tokens used to create the 5 minute cache entry.",
+          "minimum": 0,
+          "title": "Ephemeral 5M Input Tokens",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "ephemeral_1h_input_tokens",
+        "ephemeral_5m_input_tokens"
+      ],
+      "title": "CacheCreation",
+      "type": "object"
+    },
+    "components_schemas_CodeExecutionToolResultErrorCode": {
+      "enum": [
+        "invalid_tool_input",
+        "unavailable",
+        "too_many_requests",
+        "execution_time_exceeded"
+      ],
+      "title": "CodeExecutionToolResultErrorCode",
+      "type": "string"
+    },
+    "components_schemas_Container": {
+      "description": "Information about the container used in the request (for the code execution tool)",
+      "properties": {
+        "expires_at": {
+          "description": "The time at which the container will expire.",
+          "format": "date-time",
+          "title": "Expires At",
+          "type": "string"
+        },
+        "id": {
+          "description": "Identifier for the container used in this request",
+          "examples": [
+            "container_011CpZohnwH4vuy7gazohgSP"
+          ],
+          "title": "Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "expires_at",
+        "id"
+      ],
+      "title": "Container",
+      "type": "object"
+    },
+    "components_schemas_ContentBlock": {
+      "discriminator": {
+        "mapping": {
+          "bash_code_execution_tool_result": "#/components/schemas/ResponseBashCodeExecutionToolResultBlock",
+          "code_execution_tool_result": "#/components/schemas/ResponseCodeExecutionToolResultBlock",
+          "container_upload": "#/components/schemas/ResponseContainerUploadBlock",
+          "redacted_thinking": "#/components/schemas/ResponseRedactedThinkingBlock",
+          "server_tool_use": "#/components/schemas/ResponseServerToolUseBlock",
+          "text": "#/components/schemas/ResponseTextBlock",
+          "text_editor_code_execution_tool_result": "#/components/schemas/ResponseTextEditorCodeExecutionToolResultBlock",
+          "thinking": "#/components/schemas/ResponseThinkingBlock",
+          "tool_search_tool_result": "#/components/schemas/ResponseToolSearchToolResultBlock",
+          "tool_use": "#/components/schemas/ResponseToolUseBlock",
+          "web_fetch_tool_result": "#/components/schemas/ResponseWebFetchToolResultBlock",
+          "web_search_tool_result": "#/components/schemas/ResponseWebSearchToolResultBlock"
+        },
+        "propertyName": "type"
+      },
+      "oneOf": [
+        {
+          "$ref": "#/$defs/components_schemas_ResponseTextBlock"
+        },
+        {
+          "$ref": "#/$defs/components_schemas_ResponseThinkingBlock"
+        },
+        {
+          "$ref": "#/$defs/components_schemas_ResponseRedactedThinkingBlock"
+        },
+        {
+          "$ref": "#/$defs/components_schemas_ResponseToolUseBlock"
+        },
+        {
+          "$ref": "#/$defs/components_schemas_ResponseServerToolUseBlock"
+        },
+        {
+          "$ref": "#/$defs/components_schemas_ResponseWebSearchToolResultBlock"
+        },
+        {
+          "$ref": "#/$defs/components_schemas_ResponseWebFetchToolResultBlock"
+        },
+        {
+          "$ref": "#/$defs/components_schemas_ResponseCodeExecutionToolResultBlock"
+        },
+        {
+          "$ref": "#/$defs/components_schemas_ResponseBashCodeExecutionToolResultBlock"
+        },
+        {
+          "$ref": "#/$defs/components_schemas_ResponseTextEditorCodeExecutionToolResultBlock"
+        },
+        {
+          "$ref": "#/$defs/components_schemas_ResponseToolSearchToolResultBlock"
+        },
+        {
+          "$ref": "#/$defs/components_schemas_ResponseContainerUploadBlock"
+        }
+      ]
+    },
+    "components_schemas_DirectCaller": {
+      "additionalProperties": false,
+      "description": "Tool invocation directly from the model.",
+      "properties": {
+        "type": {
+          "const": "direct",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "title": "DirectCaller",
+      "type": "object"
+    },
+    "components_schemas_Message": {
+      "examples": [
+        {
+          "content": [
+            {
+              "citations": null,
+              "text": "Hi! My name is Claude.",
+              "type": "text"
+            }
+          ],
+          "id": "msg_013Zva2CMHLNnXjNJJKqJ2EF",
+          "model": "claude-opus-4-6",
+          "role": "assistant",
+          "stop_details": null,
+          "stop_reason": "end_turn",
+          "stop_sequence": null,
+          "type": "message",
+          "usage": {
+            "input_tokens": 2095,
+            "output_tokens": 503
+          }
+        }
+      ],
+      "properties": {
+        "id": {
+          "description": "Unique object identifier.\n\nThe format and length of IDs may change over time.",
+          "examples": [
+            "msg_013Zva2CMHLNnXjNJJKqJ2EF"
+          ],
+          "title": "Id",
+          "type": "string"
+        },
+        "type": {
+          "const": "message",
+          "default": "message",
+          "description": "Object type.\n\nFor Messages, this is always `\"message\"`.",
+          "title": "Type",
+          "type": "string"
+        },
+        "role": {
+          "const": "assistant",
+          "default": "assistant",
+          "description": "Conversational role of the generated message.\n\nThis will always be `\"assistant\"`.",
+          "title": "Role",
+          "type": "string"
+        },
+        "content": {
+          "description": "Content generated by the model.\n\nThis is an array of content blocks, each of which has a `type` that determines its shape.\n\nExample:\n\n```json\n[{\"type\": \"text\", \"text\": \"Hi, I'm Claude.\"}]\n```\n\nIf the request input `messages` ended with an `assistant` turn, then the response `content` will continue directly from that last turn. You can use this to constrain the model's output.\n\nFor example, if the input `messages` were:\n```json\n[\n  {\"role\": \"user\", \"content\": \"What's the Greek name for Sun? (A) Sol (B) Helios (C) Sun\"},\n  {\"role\": \"assistant\", \"content\": \"The best answer is (\"}\n]\n```\n\nThen the response `content` might be:\n\n```json\n[{\"type\": \"text\", \"text\": \"B)\"}]\n```",
+          "examples": [
+            [
+              {
+                "citations": null,
+                "text": "Hi! My name is Claude.",
+                "type": "text"
+              }
+            ]
+          ],
+          "items": {
+            "$ref": "#/$defs/components_schemas_ContentBlock"
+          },
+          "title": "Content",
+          "type": "array"
+        },
+        "model": {
+          "$ref": "#/$defs/components_schemas_Model"
+        },
+        "stop_reason": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/components_schemas_StopReason"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The reason that we stopped.\n\nThis may be one the following values:\n* `\"end_turn\"`: the model reached a natural stopping point\n* `\"max_tokens\"`: we exceeded the requested `max_tokens` or the model's maximum\n* `\"stop_sequence\"`: one of your provided custom `stop_sequences` was generated\n* `\"tool_use\"`: the model invoked one or more tools\n* `\"pause_turn\"`: we paused a long-running turn. You may provide the response back as-is in a subsequent request to let the model continue.\n* `\"refusal\"`: when streaming classifiers intervene to handle potential policy violations\n* `\"model_context_window_exceeded\"`: we exceeded the model's context window\n\nIn non-streaming mode this value is always non-null. In streaming mode, it is null in the `message_start` event and non-null otherwise.",
+          "title": "Stop Reason"
+        },
+        "stop_sequence": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Which custom stop sequence was generated, if any.\n\nThis value will be a non-null string if one of your custom stop sequences was generated.",
+          "title": "Stop Sequence"
+        },
+        "stop_details": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/components_schemas_RefusalStopDetails"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Structured information about why model output stopped.\n\nThis is `null` when the `stop_reason` has no additional detail to report."
+        },
+        "usage": {
+          "$ref": "#/$defs/components_schemas_Usage",
+          "description": "Billing and rate-limit usage.\n\nAnthropic's API bills and rate-limits by token counts, as tokens represent the underlying cost to our systems.\n\nUnder the hood, the API transforms requests into a format suitable for the model. The model's output then goes through a parsing stage before becoming an API response. As a result, the token counts in `usage` will not match one-to-one with the exact visible content of an API request or response.\n\nFor example, `output_tokens` will be non-zero, even for an empty string response from Claude.\n\nTotal input tokens in a request is the summation of `input_tokens`, `cache_creation_input_tokens`, and `cache_read_input_tokens`.",
+          "examples": [
+            {
+              "input_tokens": 2095,
+              "output_tokens": 503
+            }
+          ]
+        },
+        "container": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/components_schemas_Container"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Information about the container used in this request.\n\nThis will be non-null if a container tool (e.g. code execution) was used."
+        }
+      },
+      "required": [
+        "id",
+        "type",
+        "role",
+        "content",
+        "model",
+        "stop_reason",
+        "stop_sequence",
+        "stop_details",
+        "usage",
+        "container"
+      ],
+      "title": "Message",
+      "type": "object",
+      "x-stainless-python-custom-imports": [
+        "from .content_block import ContentBlock as ContentBlock"
+      ]
+    },
+    "components_schemas_Model": {
+      "title": "Model",
+      "description": "The model that will complete your prompt.\n\nSee [models](https://docs.anthropic.com/en/docs/models-overview) for additional details and options.",
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "const": "claude-sonnet-5",
+          "description": "High-performance model for coding and agents",
+          "x-stainless-nominal": false
+        },
+        {
+          "const": "claude-fable-5",
+          "description": "Next generation of intelligence for the hardest knowledge work and coding problems",
+          "x-stainless-nominal": false
+        },
+        {
+          "const": "claude-mythos-5",
+          "description": "Most capable model for cybersecurity and biology research",
+          "x-stainless-nominal": false
+        },
+        {
+          "const": "claude-opus-5",
+          "description": "Powerful intelligence for long-running agents and coding",
+          "x-stainless-nominal": false
+        },
+        {
+          "const": "claude-opus-4-8",
+          "description": "Powerful intelligence for long-running agents and coding",
+          "x-stainless-nominal": false
+        },
+        {
+          "const": "claude-opus-4-7",
+          "description": "Powerful intelligence for long-running agents and coding",
+          "x-stainless-nominal": false
+        },
+        {
+          "const": "claude-mythos-preview",
+          "description": "New class of intelligence, strongest in coding and cybersecurity",
+          "x-stainless-nominal": false,
+          "deprecated": true,
+          "x-stainless-deprecation-message": "Will reach end-of-life on June 30, 2026. Please migrate to claude-mythos-5. Visit https://docs.anthropic.com/en/docs/resources/model-deprecations for more information."
+        },
+        {
+          "const": "claude-opus-4-6",
+          "description": "Powerful intelligence for long-running agents and coding",
+          "x-stainless-nominal": false
+        },
+        {
+          "const": "claude-sonnet-4-6",
+          "description": "Best combination of speed and intelligence",
+          "x-stainless-nominal": false
+        },
+        {
+          "const": "claude-haiku-4-5",
+          "description": "Fastest model with near-frontier intelligence",
+          "x-stainless-nominal": false
+        },
+        {
+          "const": "claude-haiku-4-5-20251001",
+          "description": "Fastest model with near-frontier intelligence",
+          "x-stainless-nominal": false
+        },
+        {
+          "const": "claude-opus-4-5",
+          "description": "Powerful intelligence for long-running agents and coding",
+          "x-stainless-nominal": false
+        },
+        {
+          "const": "claude-opus-4-5-20251101",
+          "description": "Powerful intelligence for long-running agents and coding",
+          "x-stainless-nominal": false
+        },
+        {
+          "const": "claude-sonnet-4-5",
+          "description": "High-performance model for agents and coding",
+          "x-stainless-nominal": false
+        },
+        {
+          "const": "claude-sonnet-4-5-20250929",
+          "description": "High-performance model for agents and coding",
+          "x-stainless-nominal": false
+        }
+      ]
+    },
+    "components_schemas_OutputTokensDetails": {
+      "properties": {
+        "thinking_tokens": {
+          "default": 0,
+          "description": "Number of output tokens the model generated as internal reasoning, including\nthe thinking-block delimiter tokens.\n\nReflects the raw reasoning the model produced, not the (possibly shorter)\nsummarized thinking text returned in the response body. Computed by\nre-tokenizing the raw reasoning text, so it may differ from the model's exact\ngeneration count by a small number of tokens. Always ≤ `output_tokens`;\n`output_tokens - thinking_tokens` approximates the non-reasoning output.",
+          "minimum": 0,
+          "title": "Thinking Tokens",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "thinking_tokens"
+      ],
+      "title": "OutputTokensDetails",
+      "type": "object"
+    },
+    "components_schemas_PlainTextSource": {
+      "additionalProperties": false,
+      "properties": {
+        "data": {
+          "title": "Data",
+          "type": "string"
+        },
+        "media_type": {
+          "const": "text/plain",
+          "title": "Media Type",
+          "type": "string"
+        },
+        "type": {
+          "const": "text",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "data",
+        "media_type",
+        "type"
+      ],
+      "title": "PlainTextSource",
+      "type": "object"
+    },
+    "components_schemas_RefusalCategory": {
+      "description": "The policy category that triggered a refusal.",
+      "enum": [
+        "cyber",
+        "bio",
+        "frontier_llm",
+        "reasoning_extraction",
+        "general_harms"
+      ],
+      "title": "RefusalCategory",
+      "type": "string",
+      "x-enum-descriptions": [
+        "The request could enable cyber harm, such as malware or exploit development. Benign cybersecurity work can also trigger this category.",
+        "The request could enable biological harm, such as dangerous lab methods. Beneficial life sciences work can also trigger this category.",
+        "The request could assist the development of competing AI models, which is restricted under [Anthropic's commercial terms](https://www.anthropic.com/legal/commercial-terms). Benign machine learning work can also trigger this category.",
+        "The request asks the model to reproduce its internal reasoning in the response text. To get reasoning in a structured form instead, use [adaptive thinking](https://platform.claude.com/docs/en/build-with-claude/adaptive-thinking).",
+        "The request could be related to an area that was determined as harmful. Benign work might sometimes trigger this category."
+      ]
+    },
+    "components_schemas_RefusalStopDetails": {
+      "description": "Structured information about a refusal.",
+      "properties": {
+        "category": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/components_schemas_RefusalCategory"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The policy category that triggered the refusal.\n\n`null` when the refusal doesn't map to a named category."
+        },
+        "explanation": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Human-readable explanation of the refusal.\n\nThis text is not guaranteed to be stable. `null` when no explanation is available for the category.",
+          "examples": [
+            "This request was declined because it conflicts with Anthropic's Usage Policy."
+          ],
+          "title": "Explanation"
+        },
+        "type": {
+          "const": "refusal",
+          "default": "refusal",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "category",
+        "explanation",
+        "type"
+      ],
+      "title": "RefusalStopDetails",
+      "type": "object"
+    },
+    "components_schemas_ResponseBashCodeExecutionOutputBlock": {
+      "properties": {
+        "file_id": {
+          "title": "File Id",
+          "type": "string"
+        },
+        "type": {
+          "const": "bash_code_execution_output",
+          "default": "bash_code_execution_output",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "file_id",
+        "type"
+      ],
+      "title": "ResponseBashCodeExecutionOutputBlock",
+      "type": "object"
+    },
+    "components_schemas_ResponseBashCodeExecutionResultBlock": {
+      "properties": {
+        "content": {
+          "items": {
+            "$ref": "#/$defs/components_schemas_ResponseBashCodeExecutionOutputBlock"
+          },
+          "title": "Content",
+          "type": "array"
+        },
+        "return_code": {
+          "title": "Return Code",
+          "type": "integer"
+        },
+        "stderr": {
+          "title": "Stderr",
+          "type": "string"
+        },
+        "stdout": {
+          "title": "Stdout",
+          "type": "string"
+        },
+        "type": {
+          "const": "bash_code_execution_result",
+          "default": "bash_code_execution_result",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "content",
+        "return_code",
+        "stderr",
+        "stdout",
+        "type"
+      ],
+      "title": "ResponseBashCodeExecutionResultBlock",
+      "type": "object"
+    },
+    "components_schemas_ResponseBashCodeExecutionToolResultBlock": {
+      "properties": {
+        "content": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/components_schemas_ResponseBashCodeExecutionToolResultError"
+            },
+            {
+              "$ref": "#/$defs/components_schemas_ResponseBashCodeExecutionResultBlock"
+            }
+          ],
+          "title": "Content"
+        },
+        "tool_use_id": {
+          "pattern": "^srvtoolu_[a-zA-Z0-9_]+$",
+          "title": "Tool Use Id",
+          "type": "string"
+        },
+        "type": {
+          "const": "bash_code_execution_tool_result",
+          "default": "bash_code_execution_tool_result",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "content",
+        "tool_use_id",
+        "type"
+      ],
+      "title": "ResponseBashCodeExecutionToolResultBlock",
+      "type": "object"
+    },
+    "components_schemas_ResponseBashCodeExecutionToolResultError": {
+      "properties": {
+        "error_code": {
+          "$ref": "#/$defs/components_schemas_BashCodeExecutionToolResultErrorCode"
+        },
+        "type": {
+          "const": "bash_code_execution_tool_result_error",
+          "default": "bash_code_execution_tool_result_error",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "error_code",
+        "type"
+      ],
+      "title": "ResponseBashCodeExecutionToolResultError",
+      "type": "object"
+    },
+    "components_schemas_ResponseCharLocationCitation": {
+      "properties": {
+        "cited_text": {
+          "examples": [
+            "The grass is green. The sky is blue."
+          ],
+          "title": "Cited Text",
+          "type": "string"
+        },
+        "document_index": {
+          "minimum": 0,
+          "title": "Document Index",
+          "type": "integer"
+        },
+        "document_title": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "examples": [
+            "My Document"
+          ],
+          "title": "Document Title"
+        },
+        "end_char_index": {
+          "title": "End Char Index",
+          "type": "integer"
+        },
+        "file_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "examples": [
+            "file_011CNha8iCJcU1wXNR6q4V8w"
+          ],
+          "title": "File Id"
+        },
+        "start_char_index": {
+          "minimum": 0,
+          "title": "Start Char Index",
+          "type": "integer"
+        },
+        "type": {
+          "const": "char_location",
+          "default": "char_location",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "cited_text",
+        "document_index",
+        "document_title",
+        "end_char_index",
+        "file_id",
+        "start_char_index",
+        "type"
+      ],
+      "title": "ResponseCharLocationCitation",
+      "type": "object"
+    },
+    "components_schemas_ResponseCitationsConfig": {
+      "properties": {
+        "enabled": {
+          "default": false,
+          "title": "Enabled",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "enabled"
+      ],
+      "title": "ResponseCitationsConfig",
+      "type": "object"
+    },
+    "components_schemas_ResponseCodeExecutionOutputBlock": {
+      "properties": {
+        "file_id": {
+          "title": "File Id",
+          "type": "string"
+        },
+        "type": {
+          "const": "code_execution_output",
+          "default": "code_execution_output",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "file_id",
+        "type"
+      ],
+      "title": "ResponseCodeExecutionOutputBlock",
+      "type": "object"
+    },
+    "components_schemas_ResponseCodeExecutionResultBlock": {
+      "properties": {
+        "content": {
+          "items": {
+            "$ref": "#/$defs/components_schemas_ResponseCodeExecutionOutputBlock"
+          },
+          "title": "Content",
+          "type": "array"
+        },
+        "return_code": {
+          "title": "Return Code",
+          "type": "integer"
+        },
+        "stderr": {
+          "title": "Stderr",
+          "type": "string"
+        },
+        "stdout": {
+          "title": "Stdout",
+          "type": "string"
+        },
+        "type": {
+          "const": "code_execution_result",
+          "default": "code_execution_result",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "content",
+        "return_code",
+        "stderr",
+        "stdout",
+        "type"
+      ],
+      "title": "ResponseCodeExecutionResultBlock",
+      "type": "object"
+    },
+    "components_schemas_ResponseCodeExecutionToolResultBlock": {
+      "properties": {
+        "content": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/components_schemas_ResponseCodeExecutionToolResultError"
+            },
+            {
+              "$ref": "#/$defs/components_schemas_ResponseCodeExecutionResultBlock"
+            },
+            {
+              "$ref": "#/$defs/components_schemas_ResponseEncryptedCodeExecutionResultBlock"
+            }
+          ],
+          "title": "Content"
+        },
+        "tool_use_id": {
+          "pattern": "^srvtoolu_[a-zA-Z0-9_]+$",
+          "title": "Tool Use Id",
+          "type": "string"
+        },
+        "type": {
+          "const": "code_execution_tool_result",
+          "default": "code_execution_tool_result",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "content",
+        "tool_use_id",
+        "type"
+      ],
+      "title": "ResponseCodeExecutionToolResultBlock",
+      "type": "object"
+    },
+    "components_schemas_ResponseCodeExecutionToolResultError": {
+      "properties": {
+        "error_code": {
+          "$ref": "#/$defs/components_schemas_CodeExecutionToolResultErrorCode"
+        },
+        "type": {
+          "const": "code_execution_tool_result_error",
+          "default": "code_execution_tool_result_error",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "error_code",
+        "type"
+      ],
+      "title": "ResponseCodeExecutionToolResultError",
+      "type": "object"
+    },
+    "components_schemas_ResponseContainerUploadBlock": {
+      "description": "Response model for a file uploaded to the container.",
+      "properties": {
+        "file_id": {
+          "title": "File Id",
+          "type": "string"
+        },
+        "type": {
+          "const": "container_upload",
+          "default": "container_upload",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "file_id",
+        "type"
+      ],
+      "title": "ResponseContainerUploadBlock",
+      "type": "object"
+    },
+    "components_schemas_ResponseContentBlockLocationCitation": {
+      "properties": {
+        "cited_text": {
+          "description": "The full text of the cited block range, concatenated.\n\nAlways equals the contents of `content[start_block_index:end_block_index]` joined together. The text block is the minimal citable unit; this field is never a substring of a single block. Not counted toward output tokens, and not counted toward input tokens when sent back in subsequent turns.",
+          "examples": [
+            "The grass is green. The sky is blue."
+          ],
+          "title": "Cited Text",
+          "type": "string"
+        },
+        "document_index": {
+          "minimum": 0,
+          "title": "Document Index",
+          "type": "integer"
+        },
+        "document_title": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "examples": [
+            "My Document"
+          ],
+          "title": "Document Title"
+        },
+        "end_block_index": {
+          "description": "Exclusive 0-based end index of the cited block range in the source's `content` array.\n\nAlways greater than `start_block_index`; a single-block citation has `end_block_index = start_block_index + 1`.",
+          "title": "End Block Index",
+          "type": "integer"
+        },
+        "file_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "examples": [
+            "file_011CNha8iCJcU1wXNR6q4V8w"
+          ],
+          "title": "File Id"
+        },
+        "start_block_index": {
+          "description": "0-based index of the first cited block in the source's `content` array.",
+          "minimum": 0,
+          "title": "Start Block Index",
+          "type": "integer"
+        },
+        "type": {
+          "const": "content_block_location",
+          "default": "content_block_location",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "cited_text",
+        "document_index",
+        "document_title",
+        "end_block_index",
+        "file_id",
+        "start_block_index",
+        "type"
+      ],
+      "title": "ResponseContentBlockLocationCitation",
+      "type": "object"
+    },
+    "components_schemas_ResponseDocumentBlock": {
+      "properties": {
+        "citations": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/components_schemas_ResponseCitationsConfig"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Citation configuration for the document"
+        },
+        "source": {
+          "discriminator": {
+            "mapping": {
+              "base64": "#/components/schemas/Base64PDFSource",
+              "text": "#/components/schemas/PlainTextSource"
+            },
+            "propertyName": "type"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/components_schemas_Base64PDFSource"
+            },
+            {
+              "$ref": "#/$defs/components_schemas_PlainTextSource"
+            }
+          ],
+          "title": "Source"
+        },
+        "title": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The title of the document",
+          "title": "Title"
+        },
+        "type": {
+          "const": "document",
+          "default": "document",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "citations",
+        "source",
+        "title",
+        "type"
+      ],
+      "title": "ResponseDocumentBlock",
+      "type": "object"
+    },
+    "components_schemas_ResponseEncryptedCodeExecutionResultBlock": {
+      "description": "Code execution result with encrypted stdout for PFC + web_search results.",
+      "properties": {
+        "content": {
+          "items": {
+            "$ref": "#/$defs/components_schemas_ResponseCodeExecutionOutputBlock"
+          },
+          "title": "Content",
+          "type": "array"
+        },
+        "encrypted_stdout": {
+          "title": "Encrypted Stdout",
+          "type": "string"
+        },
+        "return_code": {
+          "title": "Return Code",
+          "type": "integer"
+        },
+        "stderr": {
+          "title": "Stderr",
+          "type": "string"
+        },
+        "type": {
+          "const": "encrypted_code_execution_result",
+          "default": "encrypted_code_execution_result",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "content",
+        "encrypted_stdout",
+        "return_code",
+        "stderr",
+        "type"
+      ],
+      "title": "ResponseEncryptedCodeExecutionResultBlock",
+      "type": "object"
+    },
+    "components_schemas_ResponsePageLocationCitation": {
+      "properties": {
+        "cited_text": {
+          "examples": [
+            "The grass is green. The sky is blue."
+          ],
+          "title": "Cited Text",
+          "type": "string"
+        },
+        "document_index": {
+          "minimum": 0,
+          "title": "Document Index",
+          "type": "integer"
+        },
+        "document_title": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "examples": [
+            "My Document"
+          ],
+          "title": "Document Title"
+        },
+        "end_page_number": {
+          "title": "End Page Number",
+          "type": "integer"
+        },
+        "file_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "examples": [
+            "file_011CNha8iCJcU1wXNR6q4V8w"
+          ],
+          "title": "File Id"
+        },
+        "start_page_number": {
+          "minimum": 1,
+          "title": "Start Page Number",
+          "type": "integer"
+        },
+        "type": {
+          "const": "page_location",
+          "default": "page_location",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "cited_text",
+        "document_index",
+        "document_title",
+        "end_page_number",
+        "file_id",
+        "start_page_number",
+        "type"
+      ],
+      "title": "ResponsePageLocationCitation",
+      "type": "object"
+    },
+    "components_schemas_ResponseRedactedThinkingBlock": {
+      "properties": {
+        "data": {
+          "description": "The contents of this redacted thinking block, returned when portions of the model's thinking were safety-redacted. This field is opaque and encrypted, with no readable content.\n\nPass `redacted_thinking` blocks back to the API unchanged when continuing a multi-turn conversation.\n\nSee [extended thinking](https://platform.claude.com/docs/en/build-with-claude/extended-thinking#redacted-thinking-blocks) for details.",
+          "title": "Data",
+          "type": "string"
+        },
+        "type": {
+          "const": "redacted_thinking",
+          "default": "redacted_thinking",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "data",
+        "type"
+      ],
+      "title": "ResponseRedactedThinkingBlock",
+      "type": "object"
+    },
+    "components_schemas_ResponseSearchResultLocationCitation": {
+      "properties": {
+        "cited_text": {
+          "description": "The full text of the cited block range, concatenated.\n\nAlways equals the contents of `content[start_block_index:end_block_index]` joined together. The text block is the minimal citable unit; this field is never a substring of a single block. Not counted toward output tokens, and not counted toward input tokens when sent back in subsequent turns.",
+          "examples": [
+            "The grass is green. The sky is blue."
+          ],
+          "title": "Cited Text",
+          "type": "string"
+        },
+        "end_block_index": {
+          "description": "Exclusive 0-based end index of the cited block range in the source's `content` array.\n\nAlways greater than `start_block_index`; a single-block citation has `end_block_index = start_block_index + 1`.",
+          "title": "End Block Index",
+          "type": "integer"
+        },
+        "search_result_index": {
+          "description": "0-based index of the cited search result among all `search_result` content blocks in the request, in the order they appear across messages and tool results.\n\nCounted separately from `document_index`; server-side web search results are not included in this count.",
+          "minimum": 0,
+          "title": "Search Result Index",
+          "type": "integer"
+        },
+        "source": {
+          "title": "Source",
+          "type": "string"
+        },
+        "start_block_index": {
+          "description": "0-based index of the first cited block in the source's `content` array.",
+          "minimum": 0,
+          "title": "Start Block Index",
+          "type": "integer"
+        },
+        "title": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Title"
+        },
+        "type": {
+          "const": "search_result_location",
+          "default": "search_result_location",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "cited_text",
+        "end_block_index",
+        "search_result_index",
+        "source",
+        "start_block_index",
+        "title",
+        "type"
+      ],
+      "title": "ResponseSearchResultLocationCitation",
+      "type": "object"
+    },
+    "components_schemas_ResponseServerToolUseBlock": {
+      "properties": {
+        "caller": {
+          "default": {
+            "type": "direct"
+          },
+          "discriminator": {
+            "mapping": {
+              "code_execution_20250825": "#/components/schemas/ServerToolCaller",
+              "code_execution_20260120": "#/components/schemas/ServerToolCaller_20260120",
+              "direct": "#/components/schemas/DirectCaller"
+            },
+            "propertyName": "type"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/components_schemas_DirectCaller"
+            },
+            {
+              "$ref": "#/$defs/components_schemas_ServerToolCaller"
+            },
+            {
+              "$ref": "#/$defs/components_schemas_ServerToolCaller_20260120"
+            }
+          ],
+          "title": "Caller"
+        },
+        "id": {
+          "pattern": "^srvtoolu_[a-zA-Z0-9_]+$",
+          "title": "Id",
+          "type": "string"
+        },
+        "input": {
+          "additionalProperties": true,
+          "title": "Input",
+          "type": "object"
+        },
+        "name": {
+          "enum": [
+            "web_search",
+            "web_fetch",
+            "code_execution",
+            "bash_code_execution",
+            "text_editor_code_execution",
+            "tool_search_tool_regex",
+            "tool_search_tool_bm25"
+          ],
+          "title": "Name",
+          "type": "string"
+        },
+        "type": {
+          "const": "server_tool_use",
+          "default": "server_tool_use",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "caller",
+        "id",
+        "input",
+        "name",
+        "type"
+      ],
+      "title": "ResponseServerToolUseBlock",
+      "type": "object"
+    },
+    "components_schemas_ResponseTextBlock": {
+      "properties": {
+        "citations": {
+          "anyOf": [
+            {
+              "items": {
+                "discriminator": {
+                  "mapping": {
+                    "char_location": "#/components/schemas/ResponseCharLocationCitation",
+                    "content_block_location": "#/components/schemas/ResponseContentBlockLocationCitation",
+                    "page_location": "#/components/schemas/ResponsePageLocationCitation",
+                    "search_result_location": "#/components/schemas/ResponseSearchResultLocationCitation",
+                    "web_search_result_location": "#/components/schemas/ResponseWebSearchResultLocationCitation"
+                  },
+                  "propertyName": "type"
+                },
+                "oneOf": [
+                  {
+                    "$ref": "#/$defs/components_schemas_ResponseCharLocationCitation"
+                  },
+                  {
+                    "$ref": "#/$defs/components_schemas_ResponsePageLocationCitation"
+                  },
+                  {
+                    "$ref": "#/$defs/components_schemas_ResponseContentBlockLocationCitation"
+                  },
+                  {
+                    "$ref": "#/$defs/components_schemas_ResponseWebSearchResultLocationCitation"
+                  },
+                  {
+                    "$ref": "#/$defs/components_schemas_ResponseSearchResultLocationCitation"
+                  }
+                ]
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Citations supporting the text block.\n\nThe type of citation returned will depend on the type of document being cited. Citing a PDF results in `page_location`, plain text results in `char_location`, and content document results in `content_block_location`.",
+          "title": "Citations"
+        },
+        "text": {
+          "maxLength": 5000000,
+          "minLength": 0,
+          "title": "Text",
+          "type": "string"
+        },
+        "type": {
+          "const": "text",
+          "default": "text",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "citations",
+        "text",
+        "type"
+      ],
+      "title": "ResponseTextBlock",
+      "type": "object"
+    },
+    "components_schemas_ResponseTextEditorCodeExecutionCreateResultBlock": {
+      "properties": {
+        "is_file_update": {
+          "title": "Is File Update",
+          "type": "boolean"
+        },
+        "type": {
+          "const": "text_editor_code_execution_create_result",
+          "default": "text_editor_code_execution_create_result",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "is_file_update",
+        "type"
+      ],
+      "title": "ResponseTextEditorCodeExecutionCreateResultBlock",
+      "type": "object"
+    },
+    "components_schemas_ResponseTextEditorCodeExecutionStrReplaceResultBlock": {
+      "properties": {
+        "lines": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Lines"
+        },
+        "new_lines": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "New Lines"
+        },
+        "new_start": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "New Start"
+        },
+        "old_lines": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Old Lines"
+        },
+        "old_start": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Old Start"
+        },
+        "type": {
+          "const": "text_editor_code_execution_str_replace_result",
+          "default": "text_editor_code_execution_str_replace_result",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "lines",
+        "new_lines",
+        "new_start",
+        "old_lines",
+        "old_start",
+        "type"
+      ],
+      "title": "ResponseTextEditorCodeExecutionStrReplaceResultBlock",
+      "type": "object"
+    },
+    "components_schemas_ResponseTextEditorCodeExecutionToolResultBlock": {
+      "properties": {
+        "content": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/components_schemas_ResponseTextEditorCodeExecutionToolResultError"
+            },
+            {
+              "$ref": "#/$defs/components_schemas_ResponseTextEditorCodeExecutionViewResultBlock"
+            },
+            {
+              "$ref": "#/$defs/components_schemas_ResponseTextEditorCodeExecutionCreateResultBlock"
+            },
+            {
+              "$ref": "#/$defs/components_schemas_ResponseTextEditorCodeExecutionStrReplaceResultBlock"
+            }
+          ],
+          "title": "Content"
+        },
+        "tool_use_id": {
+          "pattern": "^srvtoolu_[a-zA-Z0-9_]+$",
+          "title": "Tool Use Id",
+          "type": "string"
+        },
+        "type": {
+          "const": "text_editor_code_execution_tool_result",
+          "default": "text_editor_code_execution_tool_result",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "content",
+        "tool_use_id",
+        "type"
+      ],
+      "title": "ResponseTextEditorCodeExecutionToolResultBlock",
+      "type": "object"
+    },
+    "components_schemas_ResponseTextEditorCodeExecutionToolResultError": {
+      "properties": {
+        "error_code": {
+          "$ref": "#/$defs/components_schemas_TextEditorCodeExecutionToolResultErrorCode"
+        },
+        "error_message": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Error Message"
+        },
+        "type": {
+          "const": "text_editor_code_execution_tool_result_error",
+          "default": "text_editor_code_execution_tool_result_error",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "error_code",
+        "error_message",
+        "type"
+      ],
+      "title": "ResponseTextEditorCodeExecutionToolResultError",
+      "type": "object"
+    },
+    "components_schemas_ResponseTextEditorCodeExecutionViewResultBlock": {
+      "properties": {
+        "content": {
+          "title": "Content",
+          "type": "string"
+        },
+        "file_type": {
+          "enum": [
+            "text",
+            "image",
+            "pdf"
+          ],
+          "title": "File Type",
+          "type": "string"
+        },
+        "num_lines": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Num Lines"
+        },
+        "start_line": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Start Line"
+        },
+        "total_lines": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Total Lines"
+        },
+        "type": {
+          "const": "text_editor_code_execution_view_result",
+          "default": "text_editor_code_execution_view_result",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "content",
+        "file_type",
+        "num_lines",
+        "start_line",
+        "total_lines",
+        "type"
+      ],
+      "title": "ResponseTextEditorCodeExecutionViewResultBlock",
+      "type": "object"
+    },
+    "components_schemas_ResponseThinkingBlock": {
+      "properties": {
+        "signature": {
+          "description": "A value used to verify that this thinking block was generated by Claude when it is passed back to the API.\n\nThis is an opaque field and should not be interpreted or parsed. When passing thinking blocks back to the API (required when using tools with extended thinking), pass them back exactly as received, with this field intact.\n\nSee [extended thinking](https://platform.claude.com/docs/en/build-with-claude/extended-thinking) for details.",
+          "title": "Signature",
+          "type": "string"
+        },
+        "thinking": {
+          "description": "The text of Claude's thinking process for this block.",
+          "title": "Thinking",
+          "type": "string"
+        },
+        "type": {
+          "const": "thinking",
+          "default": "thinking",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "signature",
+        "thinking",
+        "type"
+      ],
+      "title": "ResponseThinkingBlock",
+      "type": "object"
+    },
+    "components_schemas_ResponseToolReferenceBlock": {
+      "properties": {
+        "tool_name": {
+          "maxLength": 256,
+          "minLength": 1,
+          "pattern": "^[a-zA-Z0-9_-]{1,256}$",
+          "title": "Tool Name",
+          "type": "string"
+        },
+        "type": {
+          "const": "tool_reference",
+          "default": "tool_reference",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "tool_name",
+        "type"
+      ],
+      "title": "ResponseToolReferenceBlock",
+      "type": "object"
+    },
+    "components_schemas_ResponseToolSearchToolResultBlock": {
+      "properties": {
+        "content": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/components_schemas_ResponseToolSearchToolResultError"
+            },
+            {
+              "$ref": "#/$defs/components_schemas_ResponseToolSearchToolSearchResultBlock"
+            }
+          ],
+          "title": "Content"
+        },
+        "tool_use_id": {
+          "pattern": "^srvtoolu_[a-zA-Z0-9_]+$",
+          "title": "Tool Use Id",
+          "type": "string"
+        },
+        "type": {
+          "const": "tool_search_tool_result",
+          "default": "tool_search_tool_result",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "content",
+        "tool_use_id",
+        "type"
+      ],
+      "title": "ResponseToolSearchToolResultBlock",
+      "type": "object"
+    },
+    "components_schemas_ResponseToolSearchToolResultError": {
+      "properties": {
+        "error_code": {
+          "$ref": "#/$defs/components_schemas_ToolSearchToolResultErrorCode"
+        },
+        "error_message": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Error Message"
+        },
+        "type": {
+          "const": "tool_search_tool_result_error",
+          "default": "tool_search_tool_result_error",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "error_code",
+        "error_message",
+        "type"
+      ],
+      "title": "ResponseToolSearchToolResultError",
+      "type": "object"
+    },
+    "components_schemas_ResponseToolSearchToolSearchResultBlock": {
+      "properties": {
+        "tool_references": {
+          "items": {
+            "$ref": "#/$defs/components_schemas_ResponseToolReferenceBlock"
+          },
+          "title": "Tool References",
+          "type": "array"
+        },
+        "type": {
+          "const": "tool_search_tool_search_result",
+          "default": "tool_search_tool_search_result",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "tool_references",
+        "type"
+      ],
+      "title": "ResponseToolSearchToolSearchResultBlock",
+      "type": "object"
+    },
+    "components_schemas_ResponseToolUseBlock": {
+      "properties": {
+        "caller": {
+          "default": {
+            "type": "direct"
+          },
+          "discriminator": {
+            "mapping": {
+              "code_execution_20250825": "#/components/schemas/ServerToolCaller",
+              "code_execution_20260120": "#/components/schemas/ServerToolCaller_20260120",
+              "direct": "#/components/schemas/DirectCaller"
+            },
+            "propertyName": "type"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/components_schemas_DirectCaller"
+            },
+            {
+              "$ref": "#/$defs/components_schemas_ServerToolCaller"
+            },
+            {
+              "$ref": "#/$defs/components_schemas_ServerToolCaller_20260120"
+            }
+          ],
+          "title": "Caller"
+        },
+        "id": {
+          "pattern": "^[a-zA-Z0-9_-]+$",
+          "title": "Id",
+          "type": "string"
+        },
+        "input": {
+          "additionalProperties": true,
+          "title": "Input",
+          "type": "object"
+        },
+        "name": {
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "type": {
+          "const": "tool_use",
+          "default": "tool_use",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "caller",
+        "id",
+        "input",
+        "name",
+        "type"
+      ],
+      "title": "ResponseToolUseBlock",
+      "type": "object"
+    },
+    "components_schemas_ResponseWebFetchResultBlock": {
+      "properties": {
+        "content": {
+          "$ref": "#/$defs/components_schemas_ResponseDocumentBlock"
+        },
+        "retrieved_at": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "ISO 8601 timestamp when the content was retrieved",
+          "title": "Retrieved At"
+        },
+        "type": {
+          "const": "web_fetch_result",
+          "default": "web_fetch_result",
+          "title": "Type",
+          "type": "string"
+        },
+        "url": {
+          "description": "Fetched content URL",
+          "title": "Url",
+          "type": "string"
+        }
+      },
+      "required": [
+        "content",
+        "retrieved_at",
+        "type",
+        "url"
+      ],
+      "title": "ResponseWebFetchResultBlock",
+      "type": "object"
+    },
+    "components_schemas_ResponseWebFetchToolResultBlock": {
+      "properties": {
+        "caller": {
+          "default": {
+            "type": "direct"
+          },
+          "discriminator": {
+            "mapping": {
+              "code_execution_20250825": "#/components/schemas/ServerToolCaller",
+              "code_execution_20260120": "#/components/schemas/ServerToolCaller_20260120",
+              "direct": "#/components/schemas/DirectCaller"
+            },
+            "propertyName": "type"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/components_schemas_DirectCaller"
+            },
+            {
+              "$ref": "#/$defs/components_schemas_ServerToolCaller"
+            },
+            {
+              "$ref": "#/$defs/components_schemas_ServerToolCaller_20260120"
+            }
+          ],
+          "title": "Caller"
+        },
+        "content": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/components_schemas_ResponseWebFetchToolResultError"
+            },
+            {
+              "$ref": "#/$defs/components_schemas_ResponseWebFetchResultBlock"
+            }
+          ],
+          "title": "Content"
+        },
+        "tool_use_id": {
+          "pattern": "^srvtoolu_[a-zA-Z0-9_]+$",
+          "title": "Tool Use Id",
+          "type": "string"
+        },
+        "type": {
+          "const": "web_fetch_tool_result",
+          "default": "web_fetch_tool_result",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "caller",
+        "content",
+        "tool_use_id",
+        "type"
+      ],
+      "title": "ResponseWebFetchToolResultBlock",
+      "type": "object"
+    },
+    "components_schemas_ResponseWebFetchToolResultError": {
+      "properties": {
+        "error_code": {
+          "$ref": "#/$defs/components_schemas_WebFetchToolResultErrorCode"
+        },
+        "type": {
+          "const": "web_fetch_tool_result_error",
+          "default": "web_fetch_tool_result_error",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "error_code",
+        "type"
+      ],
+      "title": "ResponseWebFetchToolResultError",
+      "type": "object"
+    },
+    "components_schemas_ResponseWebSearchResultBlock": {
+      "properties": {
+        "encrypted_content": {
+          "title": "Encrypted Content",
+          "type": "string"
+        },
+        "page_age": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Page Age"
+        },
+        "title": {
+          "title": "Title",
+          "type": "string"
+        },
+        "type": {
+          "const": "web_search_result",
+          "default": "web_search_result",
+          "title": "Type",
+          "type": "string"
+        },
+        "url": {
+          "title": "Url",
+          "type": "string"
+        }
+      },
+      "required": [
+        "encrypted_content",
+        "page_age",
+        "title",
+        "type",
+        "url"
+      ],
+      "title": "ResponseWebSearchResultBlock",
+      "type": "object"
+    },
+    "components_schemas_ResponseWebSearchResultLocationCitation": {
+      "properties": {
+        "cited_text": {
+          "examples": [
+            "The grass is green. The sky is blue."
+          ],
+          "title": "Cited Text",
+          "type": "string"
+        },
+        "encrypted_index": {
+          "title": "Encrypted Index",
+          "type": "string"
+        },
+        "title": {
+          "anyOf": [
+            {
+              "maxLength": 512,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Title"
+        },
+        "type": {
+          "const": "web_search_result_location",
+          "default": "web_search_result_location",
+          "title": "Type",
+          "type": "string"
+        },
+        "url": {
+          "title": "Url",
+          "type": "string"
+        }
+      },
+      "required": [
+        "cited_text",
+        "encrypted_index",
+        "title",
+        "type",
+        "url"
+      ],
+      "title": "ResponseWebSearchResultLocationCitation",
+      "type": "object"
+    },
+    "components_schemas_ResponseWebSearchToolResultBlock": {
+      "properties": {
+        "caller": {
+          "default": {
+            "type": "direct"
+          },
+          "discriminator": {
+            "mapping": {
+              "code_execution_20250825": "#/components/schemas/ServerToolCaller",
+              "code_execution_20260120": "#/components/schemas/ServerToolCaller_20260120",
+              "direct": "#/components/schemas/DirectCaller"
+            },
+            "propertyName": "type"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/components_schemas_DirectCaller"
+            },
+            {
+              "$ref": "#/$defs/components_schemas_ServerToolCaller"
+            },
+            {
+              "$ref": "#/$defs/components_schemas_ServerToolCaller_20260120"
+            }
+          ],
+          "title": "Caller"
+        },
+        "content": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/components_schemas_ResponseWebSearchToolResultError"
+            },
+            {
+              "items": {
+                "$ref": "#/$defs/components_schemas_ResponseWebSearchResultBlock"
+              },
+              "type": "array"
+            }
+          ],
+          "title": "Content"
+        },
+        "tool_use_id": {
+          "pattern": "^srvtoolu_[a-zA-Z0-9_]+$",
+          "title": "Tool Use Id",
+          "type": "string"
+        },
+        "type": {
+          "const": "web_search_tool_result",
+          "default": "web_search_tool_result",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "caller",
+        "content",
+        "tool_use_id",
+        "type"
+      ],
+      "title": "ResponseWebSearchToolResultBlock",
+      "type": "object"
+    },
+    "components_schemas_ResponseWebSearchToolResultError": {
+      "properties": {
+        "error_code": {
+          "$ref": "#/$defs/components_schemas_WebSearchToolResultErrorCode"
+        },
+        "type": {
+          "const": "web_search_tool_result_error",
+          "default": "web_search_tool_result_error",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "error_code",
+        "type"
+      ],
+      "title": "ResponseWebSearchToolResultError",
+      "type": "object"
+    },
+    "components_schemas_ServerToolCaller": {
+      "additionalProperties": false,
+      "description": "Tool invocation generated by a server-side tool.",
+      "properties": {
+        "tool_id": {
+          "pattern": "^srvtoolu_[a-zA-Z0-9_]+$",
+          "title": "Tool Id",
+          "type": "string"
+        },
+        "type": {
+          "const": "code_execution_20250825",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "tool_id",
+        "type"
+      ],
+      "title": "ServerToolCaller",
+      "type": "object"
+    },
+    "components_schemas_ServerToolCaller_20260120": {
+      "additionalProperties": false,
+      "properties": {
+        "tool_id": {
+          "pattern": "^srvtoolu_[a-zA-Z0-9_]+$",
+          "title": "Tool Id",
+          "type": "string"
+        },
+        "type": {
+          "const": "code_execution_20260120",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "tool_id",
+        "type"
+      ],
+      "title": "ServerToolCaller_20260120",
+      "type": "object"
+    },
+    "components_schemas_ServerToolUsage": {
+      "properties": {
+        "web_fetch_requests": {
+          "default": 0,
+          "description": "The number of web fetch tool requests.",
+          "examples": [
+            2
+          ],
+          "minimum": 0,
+          "title": "Web Fetch Requests",
+          "type": "integer"
+        },
+        "web_search_requests": {
+          "default": 0,
+          "description": "The number of web search tool requests.",
+          "examples": [
+            0
+          ],
+          "minimum": 0,
+          "title": "Web Search Requests",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "web_fetch_requests",
+        "web_search_requests"
+      ],
+      "title": "ServerToolUsage",
+      "type": "object"
+    },
+    "components_schemas_StopReason": {
+      "enum": [
+        "end_turn",
+        "max_tokens",
+        "stop_sequence",
+        "tool_use",
+        "pause_turn",
+        "refusal",
+        "model_context_window_exceeded"
+      ],
+      "type": "string"
+    },
+    "components_schemas_TextEditorCodeExecutionToolResultErrorCode": {
+      "enum": [
+        "invalid_tool_input",
+        "unavailable",
+        "too_many_requests",
+        "execution_time_exceeded",
+        "file_not_found"
+      ],
+      "title": "TextEditorCodeExecutionToolResultErrorCode",
+      "type": "string"
+    },
+    "components_schemas_ToolSearchToolResultErrorCode": {
+      "enum": [
+        "invalid_tool_input",
+        "unavailable",
+        "too_many_requests",
+        "execution_time_exceeded"
+      ],
+      "title": "ToolSearchToolResultErrorCode",
+      "type": "string"
+    },
+    "components_schemas_Usage": {
+      "properties": {
+        "cache_creation": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/components_schemas_CacheCreation"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Breakdown of cached tokens by TTL"
+        },
+        "cache_creation_input_tokens": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The number of input tokens used to create the cache entry.",
+          "examples": [
+            2051
+          ],
+          "title": "Cache Creation Input Tokens"
+        },
+        "cache_read_input_tokens": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The number of input tokens read from the cache.",
+          "examples": [
+            2051
+          ],
+          "title": "Cache Read Input Tokens"
+        },
+        "inference_geo": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The geographic region where inference was performed for this request.",
+          "examples": [
+            "global"
+          ],
+          "title": "Inference Geo"
+        },
+        "input_tokens": {
+          "description": "The number of input tokens which were used.",
+          "examples": [
+            2095
+          ],
+          "minimum": 0,
+          "title": "Input Tokens",
+          "type": "integer"
+        },
+        "output_tokens": {
+          "description": "The number of output tokens which were used.",
+          "examples": [
+            503
+          ],
+          "minimum": 0,
+          "title": "Output Tokens",
+          "type": "integer"
+        },
+        "output_tokens_details": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/components_schemas_OutputTokensDetails"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Breakdown of output tokens by category.\n\n`output_tokens` remains the inclusive, authoritative total used for billing.\nThis object provides a read-only decomposition for observability — for example,\nhow many of the billed output tokens were spent on internal reasoning that may\nhave been summarized before being returned to you."
+        },
+        "server_tool_use": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/components_schemas_ServerToolUsage"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "The number of server tool requests."
+        },
+        "service_tier": {
+          "anyOf": [
+            {
+              "enum": [
+                "standard",
+                "priority",
+                "batch"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "If the request used the priority, standard, or batch tier.",
+          "title": "Service Tier"
+        }
+      },
+      "required": [
+        "cache_creation",
+        "cache_creation_input_tokens",
+        "cache_read_input_tokens",
+        "inference_geo",
+        "input_tokens",
+        "output_tokens",
+        "output_tokens_details",
+        "server_tool_use",
+        "service_tier"
+      ],
+      "title": "Usage",
+      "type": "object"
+    },
+    "components_schemas_WebFetchToolResultErrorCode": {
+      "enum": [
+        "invalid_tool_input",
+        "url_too_long",
+        "url_not_allowed",
+        "url_not_in_prior_context",
+        "url_not_accessible",
+        "unsupported_content_type",
+        "too_many_requests",
+        "max_uses_exceeded",
+        "unavailable"
+      ],
+      "title": "WebFetchToolResultErrorCode",
+      "type": "string"
+    },
+    "components_schemas_WebSearchToolResultErrorCode": {
+      "enum": [
+        "invalid_tool_input",
+        "unavailable",
+        "max_uses_exceeded",
+        "too_many_requests",
+        "query_too_long",
+        "request_too_large"
+      ],
+      "title": "WebSearchToolResultErrorCode",
+      "type": "string"
+    }
+  }
+}

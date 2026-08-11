@@ -1,0 +1,33 @@
+# Provider catalog. Data only; every field is defined in the provider-catalog
+# skill, see .agents/skills/provider-catalog/references/fields.md
+
+routers:
+- id: openrouter
+  name: OpenRouter
+  icon_mono: openrouter
+  icon_color: openrouter-color
+  homepage: https://openrouter.ai
+  docs: https://openrouter.ai/docs
+  openapi: https://openrouter.ai/openapi.json
+  models_url: https://openrouter.ai/api/v1/models
+  ingress:
+  - oai
+  - oai_responses
+  - anthropic
+  auth:
+  - bearer
+  env_var: OPENROUTER_API_KEY
+  schema:
+    completion:
+      oai:
+        request: schemas/completion/oai.openrouter.request.json
+        response: schemas/completion/oai.openrouter.response.json
+        stream: schemas/completion/oai.openrouter.stream.json
+      oai_responses:
+        request: schemas/completion/oai_responses.openrouter.request.json
+        response: schemas/completion/oai_responses.openrouter.response.json
+        stream: schemas/completion/oai_responses.openrouter.stream.json
+      anthropic:
+        request: schemas/completion/anthropic.openrouter.request.json
+        response: schemas/completion/anthropic.openrouter.response.json
+        stream: schemas/completion/anthropic.openrouter.stream.json

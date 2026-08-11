@@ -1,0 +1,284 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$ref": "#/$defs/components_schemas_AnthropicMessagesIn",
+  "$defs": {
+    "components_schemas_AnthropicMessagesIn": {
+      "properties": {
+        "service_tier": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/components_schemas_ServiceTier"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The service tier used for processing the request. 'priority' processes the request with higher priority (premium rate); 'flex' processes it at lower priority for a discount, served only when spare capacity exists and may be retried/timed out under load. Both apply only to models that support the respective tier. For compatibility, 'auto' is treated as 'priority' and 'standard_only' as 'default'."
+        },
+        "fail_fast": {
+          "type": "boolean",
+          "title": "Fail Fast",
+          "description": "If true, the request is rejected immediately with HTTP 429 when the model has no spare capacity, instead of waiting in the queue. Opt-in; the default (false) keeps standard queueing behavior.",
+          "default": false
+        },
+        "model": {
+          "type": "string",
+          "title": "Model"
+        },
+        "max_tokens": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Max Tokens"
+        },
+        "messages": {
+          "items": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "type": "array",
+          "title": "Messages"
+        },
+        "system": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "items": {
+                "$ref": "#/$defs/components_schemas_AnthropicSystemContent"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "System"
+        },
+        "stop_sequences": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Stop Sequences"
+        },
+        "stream": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Stream",
+          "default": false
+        },
+        "temperature": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Temperature",
+          "default": 1.0
+        },
+        "top_p": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Top P"
+        },
+        "top_k": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Top K"
+        },
+        "metadata": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Metadata"
+        },
+        "tools": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/components_schemas_AnthropicTool"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Tools"
+        },
+        "tool_choice": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Tool Choice"
+        },
+        "thinking": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/components_schemas_AnthropicThinkingConfig"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "type": "object",
+      "required": [
+        "model",
+        "messages"
+      ],
+      "title": "AnthropicMessagesIn"
+    },
+    "components_schemas_AnthropicSystemContent": {
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "text",
+          "title": "Type"
+        },
+        "text": {
+          "type": "string",
+          "title": "Text"
+        }
+      },
+      "type": "object",
+      "required": [
+        "type",
+        "text"
+      ],
+      "title": "AnthropicSystemContent"
+    },
+    "components_schemas_AnthropicThinkingConfig": {
+      "properties": {
+        "type": {
+          "anyOf": [
+            {
+              "type": "string",
+              "enum": [
+                "enabled",
+                "disabled",
+                "adaptive"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Type"
+        },
+        "budget_tokens": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Budget Tokens"
+        },
+        "enabled": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Enabled"
+        }
+      },
+      "type": "object",
+      "title": "AnthropicThinkingConfig",
+      "description": "Anthropic `thinking` config: {type: enabled|disabled|adaptive, budget_tokens}.\n\n`enabled` is a legacy pre-spec field this endpoint used to accept; it only\napplies when `type` is absent."
+    },
+    "components_schemas_AnthropicTool": {
+      "properties": {
+        "name": {
+          "type": "string",
+          "title": "Name"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Description"
+        },
+        "input_schema": {
+          "additionalProperties": true,
+          "type": "object",
+          "title": "Input Schema"
+        }
+      },
+      "type": "object",
+      "required": [
+        "name",
+        "input_schema"
+      ],
+      "title": "AnthropicTool"
+    },
+    "components_schemas_ServiceTier": {
+      "type": "string",
+      "enum": [
+        "default",
+        "priority",
+        "flex"
+      ],
+      "title": "ServiceTier"
+    }
+  }
+}

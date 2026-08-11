@@ -1,0 +1,853 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$ref": "#/$defs/components_schemas_CreateChatCompletionResponse",
+  "$defs": {
+    "components_schemas_Annotation": {
+      "type": "object",
+      "description": "An annotation that provides citations or references for content in a message.",
+      "properties": {
+        "type": {
+          "type": "string",
+          "description": "The type of annotation.",
+          "enum": [
+            "document_citation",
+            "function_citation"
+          ]
+        },
+        "document_citation": {
+          "$ref": "#/$defs/components_schemas_DocumentCitation"
+        },
+        "function_citation": {
+          "$ref": "#/$defs/components_schemas_FunctionCitation"
+        }
+      },
+      "required": [
+        "type"
+      ]
+    },
+    "components_schemas_BrowserResult": {
+      "type": "object",
+      "properties": {
+        "url": {
+          "type": "string",
+          "description": "The URL of the browser window"
+        },
+        "title": {
+          "type": "string",
+          "description": "The title of the browser window"
+        },
+        "live_view_url": {
+          "type": "string",
+          "description": "The live view URL for the browser window"
+        },
+        "content": {
+          "type": "string",
+          "description": "The content of the browser result"
+        }
+      },
+      "required": [
+        "url",
+        "title"
+      ],
+      "additionalProperties": false
+    },
+    "components_schemas_Chart": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "description": "The type of chart",
+          "enum": [
+            "bar",
+            "box_and_whisker",
+            "line",
+            "pie",
+            "scatter",
+            "superchart",
+            "unknown"
+          ]
+        },
+        "title": {
+          "type": "string",
+          "description": "The title of the chart"
+        },
+        "x_label": {
+          "type": "string",
+          "description": "The label for the x-axis"
+        },
+        "y_label": {
+          "type": "string",
+          "description": "The label for the y-axis"
+        },
+        "x_unit": {
+          "type": "string",
+          "description": "The unit for the x-axis"
+        },
+        "y_unit": {
+          "type": "string",
+          "description": "The unit for the y-axis"
+        },
+        "x_ticks": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "description": "The tick values for the x-axis"
+        },
+        "y_ticks": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "description": "The tick values for the y-axis"
+        },
+        "x_tick_labels": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "The labels for the x-axis ticks"
+        },
+        "y_tick_labels": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "The labels for the y-axis ticks"
+        },
+        "x_scale": {
+          "type": "string",
+          "description": "The scale type for the x-axis"
+        },
+        "y_scale": {
+          "type": "string",
+          "description": "The scale type for the y-axis"
+        },
+        "elements": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/components_schemas_ChartElement"
+          },
+          "description": "The chart elements (data series, points, etc.)"
+        }
+      },
+      "required": [
+        "type",
+        "elements"
+      ]
+    },
+    "components_schemas_ChartElement": {
+      "type": "object",
+      "properties": {
+        "label": {
+          "type": "string",
+          "description": "The label for this chart element"
+        },
+        "group": {
+          "type": "string",
+          "description": "The group this element belongs to"
+        },
+        "value": {
+          "type": "number",
+          "description": "The value for this element"
+        },
+        "points": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          },
+          "description": "The points for this element"
+        },
+        "angle": {
+          "type": "number",
+          "description": "The angle for this element"
+        },
+        "radius": {
+          "type": "number",
+          "description": "The radius for this element"
+        },
+        "min": {
+          "type": "number",
+          "description": "The minimum value for this element"
+        },
+        "first_quartile": {
+          "type": "number",
+          "description": "The first quartile value for this element"
+        },
+        "median": {
+          "type": "number",
+          "description": "The median value for this element"
+        },
+        "third_quartile": {
+          "type": "number",
+          "description": "The third quartile value for this element"
+        },
+        "max": {
+          "type": "number"
+        },
+        "outliers": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "description": "The outliers for this element"
+        }
+      },
+      "required": [
+        "label"
+      ]
+    },
+    "components_schemas_ChatCompletionMessageExecutedTools": {
+      "type": "array",
+      "description": "A list of tools that were executed during the chat completion for compound AI systems.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "index": {
+            "type": "integer",
+            "description": "The index of the executed tool."
+          },
+          "type": {
+            "type": "string",
+            "description": "The type of tool that was executed."
+          },
+          "arguments": {
+            "type": "string",
+            "description": "The arguments passed to the tool in JSON format."
+          },
+          "output": {
+            "type": "string",
+            "nullable": true,
+            "description": "The output returned by the tool."
+          },
+          "search_results": {
+            "type": "object",
+            "nullable": true,
+            "description": "The search results returned by the tool, if applicable.",
+            "properties": {
+              "results": {
+                "type": "array",
+                "description": "List of search results",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "title": {
+                      "type": "string",
+                      "description": "The title of the search result"
+                    },
+                    "url": {
+                      "type": "string",
+                      "description": "The URL of the search result"
+                    },
+                    "content": {
+                      "type": "string",
+                      "description": "The content of the search result"
+                    },
+                    "score": {
+                      "type": "number",
+                      "format": "float",
+                      "description": "The relevance score of the search result"
+                    }
+                  }
+                }
+              },
+              "images": {
+                "type": "array",
+                "description": "List of image URLs returned by the search",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "code_results": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/components_schemas_CodeExecutionResult"
+            },
+            "description": "Array of code execution results"
+          },
+          "browser_results": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/components_schemas_BrowserResult"
+            },
+            "description": "Array of browser results"
+          }
+        },
+        "required": [
+          "index",
+          "type",
+          "arguments"
+        ]
+      }
+    },
+    "components_schemas_ChatCompletionMessageToolCall": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "The ID of the tool call."
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "function"
+          ],
+          "description": "The type of the tool. Currently, only `function` is supported."
+        },
+        "function": {
+          "type": "object",
+          "description": "The function that the model called.",
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "The name of the function to call."
+            },
+            "arguments": {
+              "type": "string",
+              "description": "The arguments to call the function with, as generated by the model in JSON format. Note that the model does not always generate valid JSON, and may hallucinate parameters not defined by your function schema. Validate the arguments in your code before calling your function."
+            }
+          },
+          "required": [
+            "name",
+            "arguments"
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "type",
+        "function"
+      ]
+    },
+    "components_schemas_ChatCompletionMessageToolCalls": {
+      "type": "array",
+      "description": "The tool calls generated by the model, such as function calls.",
+      "items": {
+        "$ref": "#/$defs/components_schemas_ChatCompletionMessageToolCall"
+      }
+    },
+    "components_schemas_ChatCompletionResponseMessage": {
+      "type": "object",
+      "description": "A chat completion message generated by the model.",
+      "properties": {
+        "content": {
+          "type": "string",
+          "description": "The contents of the message.",
+          "nullable": true
+        },
+        "reasoning": {
+          "type": "string",
+          "description": "The model's reasoning for a response. Only available for [models that support reasoning](https://console.groq.com/docs/reasoning) when request parameter reasoning_format has value `parsed`.",
+          "nullable": true
+        },
+        "tool_calls": {
+          "$ref": "#/$defs/components_schemas_ChatCompletionMessageToolCalls"
+        },
+        "executed_tools": {
+          "$ref": "#/$defs/components_schemas_ChatCompletionMessageExecutedTools"
+        },
+        "role": {
+          "type": "string",
+          "enum": [
+            "assistant"
+          ],
+          "description": "The role of the author of this message."
+        },
+        "function_call": {
+          "type": "object",
+          "deprecated": true,
+          "description": "Deprecated and replaced by `tool_calls`. The name and arguments of a function that should be called, as generated by the model.",
+          "properties": {
+            "arguments": {
+              "type": "string",
+              "description": "The arguments to call the function with, as generated by the model in JSON format. Note that the model does not always generate valid JSON, and may hallucinate parameters not defined by your function schema. Validate the arguments in your code before calling your function."
+            },
+            "name": {
+              "type": "string",
+              "description": "The name of the function to call."
+            }
+          },
+          "required": [
+            "name",
+            "arguments"
+          ]
+        },
+        "annotations": {
+          "type": "array",
+          "description": "A list of annotations providing citations and references for the content in the message.",
+          "items": {
+            "$ref": "#/$defs/components_schemas_Annotation"
+          }
+        }
+      },
+      "required": [
+        "role",
+        "content"
+      ]
+    },
+    "components_schemas_ChatCompletionTokenLogprob": {
+      "type": "object",
+      "properties": {
+        "token": {
+          "description": "The token.",
+          "type": "string"
+        },
+        "logprob": {
+          "description": "The log probability of this token, if it is within the top 20 most likely tokens. Otherwise, the value `-9999.0` is used to signify that the token is very unlikely.",
+          "type": "number"
+        },
+        "bytes": {
+          "description": "A list of integers representing the UTF-8 bytes representation of the token. Useful in instances where characters are represented by multiple tokens and their byte representations must be combined to generate the correct text representation. Can be `null` if there is no bytes representation for the token.",
+          "type": "array",
+          "items": {
+            "type": "integer"
+          },
+          "nullable": true
+        },
+        "top_logprobs": {
+          "description": "List of the most likely tokens and their log probability, at this token position. In rare cases, there may be fewer than the number of requested `top_logprobs` returned.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "token": {
+                "description": "The token.",
+                "type": "string"
+              },
+              "logprob": {
+                "description": "The log probability of this token, if it is within the top 20 most likely tokens. Otherwise, the value `-9999.0` is used to signify that the token is very unlikely.",
+                "type": "number"
+              },
+              "bytes": {
+                "description": "A list of integers representing the UTF-8 bytes representation of the token. Useful in instances where characters are represented by multiple tokens and their byte representations must be combined to generate the correct text representation. Can be `null` if there is no bytes representation for the token.",
+                "type": "array",
+                "items": {
+                  "type": "integer"
+                },
+                "nullable": true
+              }
+            },
+            "required": [
+              "token",
+              "logprob",
+              "bytes"
+            ]
+          }
+        }
+      },
+      "required": [
+        "token",
+        "logprob",
+        "bytes",
+        "top_logprobs"
+      ]
+    },
+    "components_schemas_ChatCompletionUsageBreakdown": {
+      "type": "object",
+      "description": "Usage statistics for compound AI completion requests.",
+      "properties": {
+        "models": {
+          "type": "array",
+          "description": "List of models used in the request and their individual usage statistics",
+          "items": {
+            "type": "object",
+            "properties": {
+              "model": {
+                "type": "string",
+                "description": "The name/identifier of the model used"
+              },
+              "usage": {
+                "$ref": "#/$defs/components_schemas_CompletionUsage"
+              }
+            },
+            "required": [
+              "model",
+              "usage"
+            ]
+          }
+        }
+      },
+      "required": [
+        "models"
+      ]
+    },
+    "components_schemas_CodeExecutionResult": {
+      "type": "object",
+      "properties": {
+        "text": {
+          "type": "string",
+          "description": "The text version of the code execution result"
+        },
+        "png": {
+          "type": "string",
+          "description": "Base64 encoded PNG image output from code execution"
+        },
+        "chart": {
+          "$ref": "#/$defs/components_schemas_Chart"
+        },
+        "charts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/components_schemas_Chart"
+          },
+          "description": "Array of charts from a superchart"
+        }
+      },
+      "additionalProperties": false
+    },
+    "components_schemas_CompletionUsage": {
+      "type": "object",
+      "description": "Usage statistics for the completion request.",
+      "properties": {
+        "queue_time": {
+          "type": "number",
+          "description": "Time the requests was spent queued"
+        },
+        "completion_time": {
+          "type": "number",
+          "description": "Time spent generating tokens"
+        },
+        "completion_tokens": {
+          "type": "integer",
+          "description": "Number of tokens in the generated completion."
+        },
+        "prompt_time": {
+          "type": "number",
+          "description": "Time spent processing input tokens"
+        },
+        "prompt_tokens": {
+          "type": "integer",
+          "description": "Number of tokens in the prompt."
+        },
+        "total_time": {
+          "type": "number",
+          "description": "completion time and prompt time combined"
+        },
+        "total_tokens": {
+          "type": "integer",
+          "description": "Total number of tokens used in the request (prompt + completion)."
+        },
+        "prompt_tokens_details": {
+          "type": "object",
+          "nullable": true,
+          "description": "Breakdown of tokens in the prompt.",
+          "properties": {
+            "cached_tokens": {
+              "type": "integer",
+              "description": "Number of tokens that were cached and reused."
+            }
+          },
+          "required": [
+            "cached_tokens"
+          ]
+        },
+        "completion_tokens_details": {
+          "type": "object",
+          "nullable": true,
+          "description": "Breakdown of tokens in the completion.",
+          "properties": {
+            "reasoning_tokens": {
+              "type": "integer",
+              "description": "Number of tokens used for reasoning (for reasoning models)."
+            }
+          },
+          "required": [
+            "reasoning_tokens"
+          ]
+        }
+      },
+      "required": [
+        "prompt_tokens",
+        "completion_tokens",
+        "total_tokens"
+      ]
+    },
+    "components_schemas_CreateChatCompletionResponse": {
+      "type": "object",
+      "description": "Represents a chat completion response returned by model, based on the provided input.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "A unique identifier for the chat completion."
+        },
+        "choices": {
+          "type": "array",
+          "description": "A list of chat completion choices. Can be more than one if `n` is greater than 1.",
+          "items": {
+            "type": "object",
+            "required": [
+              "finish_reason",
+              "index",
+              "message",
+              "logprobs"
+            ],
+            "properties": {
+              "finish_reason": {
+                "type": "string",
+                "description": "The reason the model stopped generating tokens. This will be `stop` if the model hit a natural stop point or a provided stop sequence,\n`length` if the maximum number of tokens specified in the request was reached,\n`tool_calls` if the model called a tool, or `function_call` (deprecated) if the model called a function.\n",
+                "enum": [
+                  "stop",
+                  "length",
+                  "tool_calls",
+                  "function_call"
+                ]
+              },
+              "index": {
+                "type": "integer",
+                "description": "The index of the choice in the list of choices."
+              },
+              "message": {
+                "$ref": "#/$defs/components_schemas_ChatCompletionResponseMessage"
+              },
+              "logprobs": {
+                "description": "Log probability information for the choice.",
+                "type": "object",
+                "nullable": true,
+                "properties": {
+                  "content": {
+                    "description": "A list of message content tokens with log probability information.",
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/$defs/components_schemas_ChatCompletionTokenLogprob"
+                    },
+                    "nullable": true
+                  }
+                },
+                "required": [
+                  "content"
+                ]
+              }
+            }
+          }
+        },
+        "created": {
+          "type": "integer",
+          "description": "The Unix timestamp (in seconds) of when the chat completion was created."
+        },
+        "model": {
+          "type": "string",
+          "description": "The model used for the chat completion."
+        },
+        "system_fingerprint": {
+          "type": "string",
+          "description": "This fingerprint represents the backend configuration that the model runs with.\n\nCan be used in conjunction with the `seed` request parameter to understand when backend changes have been made that might impact determinism.\n"
+        },
+        "object": {
+          "type": "string",
+          "description": "The object type, which is always `chat.completion`.",
+          "enum": [
+            "chat.completion"
+          ]
+        },
+        "usage": {
+          "$ref": "#/$defs/components_schemas_CompletionUsage"
+        },
+        "usage_breakdown": {
+          "description": "Detailed usage breakdown by model when multiple models are used in the request for compound AI systems.",
+          "allOf": [
+            {
+              "$ref": "#/$defs/components_schemas_ChatCompletionUsageBreakdown"
+            }
+          ]
+        },
+        "service_tier": {
+          "type": "string",
+          "nullable": true,
+          "description": "The service tier used for the request.",
+          "enum": [
+            "auto",
+            "on_demand",
+            "flex",
+            "performance",
+            null
+          ]
+        },
+        "mcp_list_tools": {
+          "type": "array",
+          "nullable": true,
+          "description": "List of discovered MCP tools from connected servers.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "Unique identifier for this tool list response."
+              },
+              "type": {
+                "type": "string",
+                "description": "The type identifier."
+              },
+              "server_label": {
+                "type": "string",
+                "description": "Human-readable label for the MCP server."
+              },
+              "tools": {
+                "type": "array",
+                "description": "Array of discovered tools from the server.",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "annotations": {
+                      "description": "Additional metadata for the tool."
+                    },
+                    "description": {
+                      "type": "string",
+                      "description": "Description of what the tool does."
+                    },
+                    "input_schema": {
+                      "type": "object",
+                      "additionalProperties": true,
+                      "description": "JSON Schema describing the tool's input parameters."
+                    },
+                    "name": {
+                      "type": "string",
+                      "description": "The name of the tool."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "x_groq": {
+          "$ref": "#/$defs/components_schemas_XGroqNonStreaming"
+        }
+      },
+      "required": [
+        "choices",
+        "created",
+        "id",
+        "model",
+        "object"
+      ]
+    },
+    "components_schemas_DebugData": {
+      "type": "object",
+      "description": "Debug information including input and output token IDs and strings. Only present when debug=true in the request.",
+      "properties": {
+        "input_token_ids": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          },
+          "description": "Token IDs for the input."
+        },
+        "input_tokens": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Token strings for the input."
+        },
+        "output_token_ids": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          },
+          "description": "Token IDs for the output."
+        },
+        "output_tokens": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Token strings for the output."
+        }
+      }
+    },
+    "components_schemas_DocumentCitation": {
+      "type": "object",
+      "description": "A citation referencing a specific document that was provided in the request.",
+      "properties": {
+        "start_index": {
+          "type": "integer",
+          "description": "The character index in the message content where this citation begins."
+        },
+        "end_index": {
+          "type": "integer",
+          "description": "The character index in the message content where this citation ends."
+        },
+        "document_id": {
+          "type": "string",
+          "description": "The ID of the document being cited, corresponding to a document provided in the request."
+        }
+      },
+      "required": [
+        "start_index",
+        "end_index",
+        "document_id"
+      ],
+      "additionalProperties": false
+    },
+    "components_schemas_FunctionCitation": {
+      "type": "object",
+      "description": "A citation referencing the result of a function or tool call.",
+      "properties": {
+        "start_index": {
+          "type": "integer",
+          "description": "The character index in the message content where this citation begins."
+        },
+        "end_index": {
+          "type": "integer",
+          "description": "The character index in the message content where this citation ends."
+        },
+        "tool_call_id": {
+          "type": "string",
+          "description": "The ID of the tool call being cited, corresponding to a tool call made during the conversation."
+        }
+      },
+      "required": [
+        "start_index",
+        "end_index",
+        "tool_call_id"
+      ],
+      "additionalProperties": false
+    },
+    "components_schemas_XGroqNonStreaming": {
+      "type": "object",
+      "description": "Groq-specific metadata for non-streaming chat completion responses.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "A groq request ID which can be used to refer to a specific request to groq support."
+        },
+        "seed": {
+          "type": "integer",
+          "nullable": true,
+          "description": "The seed used for the request. See the seed property on CreateChatCompletionRequest for more details."
+        },
+        "usage": {
+          "type": "object",
+          "nullable": true,
+          "description": "Additional Groq-specific usage metrics (hardware cache statistics).",
+          "properties": {
+            "sram_cached_tokens": {
+              "type": "integer",
+              "description": "Number of tokens served from SRAM cache."
+            },
+            "dram_cached_tokens": {
+              "type": "integer",
+              "description": "Number of tokens served from DRAM cache."
+            }
+          }
+        },
+        "debug": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/components_schemas_DebugData"
+            }
+          ],
+          "nullable": true
+        }
+      },
+      "required": [
+        "id"
+      ]
+    }
+  }
+}

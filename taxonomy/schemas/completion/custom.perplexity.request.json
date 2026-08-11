@@ -1,0 +1,797 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$ref": "#/$defs/components_schemas_ApiChatCompletionsRequest",
+  "$defs": {
+    "components_schemas_ApiChatCompletionsRequest": {
+      "properties": {
+        "max_tokens": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "maximum": 128000,
+              "exclusiveMinimum": 0
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Max Tokens",
+          "description": "Maximum number of completion tokens to generate"
+        },
+        "model": {
+          "type": "string",
+          "title": "Model",
+          "description": "Model to use, for example, sonar-pro",
+          "enum": [
+            "sonar",
+            "sonar-pro",
+            "sonar-deep-research",
+            "sonar-reasoning-pro"
+          ]
+        },
+        "stream": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Stream",
+          "description": "If true, returns streaming SSE response",
+          "default": false
+        },
+        "stop": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Stop",
+          "description": "Stop sequences. Generation stops when one of these strings is produced"
+        },
+        "temperature": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 2
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Temperature",
+          "description": "Controls randomness in the response. Higher values make output more random. Range: 0-2"
+        },
+        "top_p": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Top P",
+          "description": "Nucleus sampling parameter. Controls diversity via nucleus sampling"
+        },
+        "response_format": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/components_schemas_ResponseFormatText"
+            },
+            {
+              "$ref": "#/$defs/components_schemas_ResponseFormatJSONSchema"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Response Format",
+          "description": "Optional. Controls the output format. Omit for default text output. Set `type` to `json_schema` for structured output.",
+          "discriminator": {
+            "propertyName": "type",
+            "mapping": {
+              "text": "#/components/schemas/ResponseFormatText",
+              "json_schema": "#/components/schemas/ResponseFormatJSONSchema"
+            }
+          }
+        },
+        "messages": {
+          "items": {
+            "$ref": "#/$defs/components_schemas_ChatMessage-Input"
+          },
+          "type": "array",
+          "title": "Messages",
+          "description": "Array of messages forming the conversation history"
+        },
+        "web_search_options": {
+          "$ref": "#/$defs/components_schemas_WebSearchOptions"
+        },
+        "search_mode": {
+          "anyOf": [
+            {
+              "type": "string",
+              "enum": [
+                "web",
+                "academic",
+                "sec"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Search Mode",
+          "description": "Source of search results (web, academic, or sec)"
+        },
+        "return_images": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Return Images",
+          "description": "When true, include image results in the response"
+        },
+        "return_related_questions": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Return Related Questions",
+          "description": "When true, generates suggested follow-up queries based on the search results"
+        },
+        "enable_search_classifier": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Enable Search Classifier",
+          "description": "When true, uses a classifier to determine if web search is needed for the query"
+        },
+        "disable_search": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Disable Search",
+          "description": "When true, disables all web search capabilities. The model responds based solely on its training data"
+        },
+        "search_domain_filter": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Search Domain Filter",
+          "description": "Limit search results to specific domains (e.g. github.com, wikipedia.org)"
+        },
+        "search_language_filter": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Search Language Filter",
+          "description": "Filter results by language using ISO 639-1 codes (e.g. en, fr, de)"
+        },
+        "search_recency_filter": {
+          "anyOf": [
+            {
+              "type": "string",
+              "enum": [
+                "hour",
+                "day",
+                "week",
+                "month",
+                "year"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Search Recency Filter",
+          "description": "Filter by publication recency (hour, day, week, month, or year)"
+        },
+        "search_after_date_filter": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Search After Date Filter",
+          "description": "Return results published after this date (MM/DD/YYYY)"
+        },
+        "search_before_date_filter": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Search Before Date Filter",
+          "description": "Return results published before this date (MM/DD/YYYY)"
+        },
+        "last_updated_before_filter": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Last Updated Before Filter",
+          "description": "Return results last updated before this date (MM/DD/YYYY)"
+        },
+        "last_updated_after_filter": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Last Updated After Filter",
+          "description": "Return results last updated after this date (MM/DD/YYYY)"
+        },
+        "image_format_filter": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Image Format Filter",
+          "description": "Filter image results by format (e.g. png, jpg)"
+        },
+        "image_domain_filter": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Image Domain Filter",
+          "description": "Limit image results to specific domains"
+        },
+        "stream_mode": {
+          "type": "string",
+          "enum": [
+            "full",
+            "concise"
+          ],
+          "title": "Stream Mode",
+          "description": "Controls the format of streaming events. 'full' suppresses reasoning events and includes metadata inline; 'concise' emits reasoning events separately",
+          "default": "full"
+        },
+        "reasoning_effort": {
+          "anyOf": [
+            {
+              "type": "string",
+              "enum": [
+                "minimal",
+                "low",
+                "medium",
+                "high"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Reasoning Effort",
+          "description": "Controls how much effort the model spends on reasoning"
+        },
+        "language_preference": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Language Preference",
+          "description": "ISO 639-1 language code for preferred response language"
+        }
+      },
+      "type": "object",
+      "required": [
+        "model",
+        "messages"
+      ],
+      "title": "ApiChatCompletionsRequest"
+    },
+    "components_schemas_ChatMessage-Input": {
+      "properties": {
+        "role": {
+          "$ref": "#/$defs/components_schemas_ChatMessageRole"
+        },
+        "content": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "items": {
+                "anyOf": [
+                  {
+                    "$ref": "#/$defs/components_schemas_ChatMessageContentTextChunk"
+                  },
+                  {
+                    "$ref": "#/$defs/components_schemas_ChatMessageContentImageChunk"
+                  },
+                  {
+                    "$ref": "#/$defs/components_schemas_ChatMessageContentFileChunk"
+                  },
+                  {
+                    "$ref": "#/$defs/components_schemas_ChatMessageContentPDFChunk"
+                  },
+                  {
+                    "$ref": "#/$defs/components_schemas_ChatMessageContentVideoChunk"
+                  }
+                ]
+              },
+              "type": "array",
+              "title": "Structured Content"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Content"
+        }
+      },
+      "type": "object",
+      "required": [
+        "role",
+        "content"
+      ],
+      "title": "ChatMessage"
+    },
+    "components_schemas_ChatMessageContentFileChunk": {
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "file_url",
+          "title": "Type"
+        },
+        "file_url": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/components_schemas_URL"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "title": "File Url"
+        },
+        "file_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "File Name"
+        }
+      },
+      "type": "object",
+      "required": [
+        "type",
+        "file_url"
+      ],
+      "title": "ChatMessageContentFileChunk"
+    },
+    "components_schemas_ChatMessageContentImageChunk": {
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "image_url",
+          "title": "Type"
+        },
+        "image_url": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/components_schemas_URL"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "title": "Image Url"
+        }
+      },
+      "type": "object",
+      "required": [
+        "type",
+        "image_url"
+      ],
+      "title": "ChatMessageContentImageChunk"
+    },
+    "components_schemas_ChatMessageContentPDFChunk": {
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "pdf_url",
+          "title": "Type"
+        },
+        "pdf_url": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/components_schemas_URL"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "title": "Pdf Url"
+        }
+      },
+      "type": "object",
+      "required": [
+        "type",
+        "pdf_url"
+      ],
+      "title": "ChatMessageContentPDFChunk"
+    },
+    "components_schemas_ChatMessageContentTextChunk": {
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "text",
+          "title": "Type"
+        },
+        "text": {
+          "type": "string",
+          "title": "Text"
+        }
+      },
+      "type": "object",
+      "required": [
+        "type",
+        "text"
+      ],
+      "title": "ChatMessageContentTextChunk"
+    },
+    "components_schemas_ChatMessageContentVideoChunk": {
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "video_url",
+          "title": "Type"
+        },
+        "video_url": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/components_schemas_VideoURL"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "title": "Video Url"
+        }
+      },
+      "type": "object",
+      "required": [
+        "type",
+        "video_url"
+      ],
+      "title": "ChatMessageContentVideoChunk"
+    },
+    "components_schemas_ChatMessageRole": {
+      "type": "string",
+      "enum": [
+        "system",
+        "user",
+        "assistant",
+        "tool"
+      ],
+      "title": "ChatMessageRole",
+      "description": "Chat roles enum"
+    },
+    "components_schemas_JSONSchema": {
+      "properties": {
+        "schema": {
+          "additionalProperties": true,
+          "type": "object",
+          "title": "Schema"
+        },
+        "name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Name",
+          "default": "schema"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Description"
+        },
+        "strict": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Strict",
+          "default": true
+        }
+      },
+      "type": "object",
+      "required": [
+        "schema"
+      ],
+      "title": "JSONSchema"
+    },
+    "components_schemas_ResponseFormatJSONSchema": {
+      "description": "Constrains the model output to match the provided JSON schema.",
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "json_schema",
+          "title": "Type",
+          "description": "Must be `json_schema`."
+        },
+        "json_schema": {
+          "$ref": "#/$defs/components_schemas_JSONSchema"
+        }
+      },
+      "type": "object",
+      "required": [
+        "type",
+        "json_schema"
+      ],
+      "title": "ResponseFormatJSONSchema"
+    },
+    "components_schemas_ResponseFormatText": {
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "text",
+          "title": "Type",
+          "description": "Must be `text`."
+        }
+      },
+      "type": "object",
+      "required": [
+        "type"
+      ],
+      "title": "ResponseFormatText"
+    },
+    "components_schemas_URL": {
+      "properties": {
+        "url": {
+          "type": "string",
+          "title": "Url"
+        }
+      },
+      "type": "object",
+      "required": [
+        "url"
+      ],
+      "title": "URL"
+    },
+    "components_schemas_UserLocation": {
+      "description": "User's geographic location for search personalization",
+      "properties": {
+        "latitude": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Latitude",
+          "description": "Latitude coordinate"
+        },
+        "longitude": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Longitude",
+          "description": "Longitude coordinate"
+        },
+        "country": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Country",
+          "description": "ISO 3166-1 alpha-2 country code"
+        },
+        "city": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "City",
+          "description": "City name"
+        },
+        "region": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Region",
+          "description": "State or region name"
+        }
+      },
+      "type": "object",
+      "title": "UserLocation"
+    },
+    "components_schemas_VideoURL": {
+      "properties": {
+        "url": {
+          "type": "string",
+          "title": "Url"
+        },
+        "frame_interval": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "integer"
+            }
+          ],
+          "title": "Frame Interval",
+          "default": 25
+        }
+      },
+      "type": "object",
+      "required": [
+        "url"
+      ],
+      "title": "VideoURL"
+    },
+    "components_schemas_WebSearchOptions": {
+      "description": "Configuration options for web search behavior",
+      "properties": {
+        "search_context_size": {
+          "type": "string",
+          "enum": [
+            "low",
+            "medium",
+            "high"
+          ],
+          "title": "Search Context Size",
+          "description": "Amount of search context to include (low, medium, or high)",
+          "default": "low"
+        },
+        "search_type": {
+          "anyOf": [
+            {
+              "type": "string",
+              "enum": [
+                "fast",
+                "pro",
+                "auto"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Search Type",
+          "description": "Search type (fast for speed, pro for quality, auto to let the model decide)"
+        },
+        "user_location": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/components_schemas_UserLocation"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "image_results_enhanced_relevance": {
+          "type": "boolean",
+          "title": "Image Results Enhanced Relevance",
+          "description": "When true, applies enhanced relevance filtering to image results",
+          "default": false
+        }
+      },
+      "type": "object",
+      "title": "WebSearchOptions"
+    }
+  }
+}

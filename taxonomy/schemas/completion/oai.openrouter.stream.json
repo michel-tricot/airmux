@@ -1,0 +1,1166 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$ref": "#/$defs/components_schemas_ChatStreamingResponse",
+  "$defs": {
+    "components_schemas_ApiErrorType": {
+      "description": "Canonical OpenRouter error type, stable across all API formats",
+      "enum": [
+        "context_length_exceeded",
+        "max_tokens_exceeded",
+        "token_limit_exceeded",
+        "string_too_long",
+        "authentication",
+        "permission_denied",
+        "payment_required",
+        "rate_limit_exceeded",
+        "provider_overloaded",
+        "provider_unavailable",
+        "invalid_request",
+        "invalid_prompt",
+        "not_found",
+        "precondition_failed",
+        "payload_too_large",
+        "unprocessable",
+        "content_policy_violation",
+        "refusal",
+        "invalid_image",
+        "image_too_large",
+        "image_too_small",
+        "unsupported_image_format",
+        "image_not_found",
+        "image_download_failed",
+        "server",
+        "timeout",
+        "unmapped"
+      ],
+      "example": "rate_limit_exceeded",
+      "type": "string",
+      "x-speakeasy-unknown-values": "allow"
+    },
+    "components_schemas_ChatAudioOutput": {
+      "description": "Audio output data or reference",
+      "example": {
+        "data": "UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1f",
+        "expires_at": 1677652400,
+        "id": "audio_abc123",
+        "transcript": "Hello! How can I help you today?"
+      },
+      "properties": {
+        "data": {
+          "description": "Base64 encoded audio data",
+          "type": "string"
+        },
+        "expires_at": {
+          "description": "Audio expiration timestamp",
+          "type": "integer"
+        },
+        "id": {
+          "description": "Audio output identifier",
+          "type": "string"
+        },
+        "transcript": {
+          "description": "Audio transcript",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "components_schemas_ChatFinishReasonEnum": {
+      "enum": [
+        "tool_calls",
+        "stop",
+        "length",
+        "content_filter",
+        "error",
+        null
+      ],
+      "example": "stop",
+      "type": [
+        "string",
+        "null"
+      ],
+      "x-speakeasy-unknown-values": "allow"
+    },
+    "components_schemas_ChatStreamChoice": {
+      "description": "Streaming completion choice chunk",
+      "example": {
+        "delta": {
+          "content": "Hello",
+          "role": "assistant"
+        },
+        "finish_reason": null,
+        "index": 0
+      },
+      "properties": {
+        "delta": {
+          "$ref": "#/$defs/components_schemas_ChatStreamDelta"
+        },
+        "finish_reason": {
+          "$ref": "#/$defs/components_schemas_ChatFinishReasonEnum"
+        },
+        "index": {
+          "description": "Choice index",
+          "example": 0,
+          "type": "integer"
+        },
+        "logprobs": {
+          "$ref": "#/$defs/components_schemas_ChatTokenLogprobs"
+        }
+      },
+      "required": [
+        "delta",
+        "finish_reason",
+        "index"
+      ],
+      "type": "object"
+    },
+    "components_schemas_ChatStreamChunk": {
+      "description": "Streaming chat completion chunk",
+      "example": {
+        "choices": [
+          {
+            "delta": {
+              "content": "Hello",
+              "role": "assistant"
+            },
+            "finish_reason": null,
+            "index": 0
+          }
+        ],
+        "created": 1677652288,
+        "id": "chatcmpl-123",
+        "model": "openai/gpt-4",
+        "object": "chat.completion.chunk"
+      },
+      "properties": {
+        "choices": {
+          "description": "List of streaming chunk choices",
+          "items": {
+            "$ref": "#/$defs/components_schemas_ChatStreamChoice"
+          },
+          "type": "array"
+        },
+        "created": {
+          "description": "Unix timestamp of creation",
+          "example": 1677652288,
+          "type": "integer"
+        },
+        "error": {
+          "description": "Error information",
+          "example": {
+            "code": 429,
+            "message": "Rate limit exceeded",
+            "metadata": {
+              "error_type": "rate_limit_exceeded"
+            }
+          },
+          "properties": {
+            "code": {
+              "description": "Error code",
+              "example": 429,
+              "format": "int32",
+              "type": "integer"
+            },
+            "message": {
+              "description": "Error message",
+              "example": "Rate limit exceeded",
+              "type": "string"
+            },
+            "metadata": {
+              "description": "Structured error metadata",
+              "properties": {
+                "error_type": {
+                  "$ref": "#/$defs/components_schemas_ApiErrorType"
+                },
+                "provider_code": {
+                  "description": "Upstream provider-specific error code, when available",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "error_type"
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "message",
+            "code"
+          ],
+          "type": "object"
+        },
+        "id": {
+          "description": "Unique chunk identifier",
+          "example": "chatcmpl-123",
+          "type": "string"
+        },
+        "model": {
+          "description": "Model used for completion",
+          "example": "openai/gpt-4",
+          "type": "string"
+        },
+        "object": {
+          "enum": [
+            "chat.completion.chunk"
+          ],
+          "type": "string"
+        },
+        "openrouter_metadata": {
+          "$ref": "#/$defs/components_schemas_OpenRouterMetadata"
+        },
+        "service_tier": {
+          "description": "The service tier used by the upstream provider for this request",
+          "example": "default",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "system_fingerprint": {
+          "description": "System fingerprint",
+          "example": "fp_44709d6fcb",
+          "type": "string"
+        },
+        "usage": {
+          "$ref": "#/$defs/components_schemas_ChatUsage"
+        }
+      },
+      "required": [
+        "id",
+        "choices",
+        "created",
+        "model",
+        "object"
+      ],
+      "type": "object",
+      "x-speakeasy-entity": "ChatStreamChunk"
+    },
+    "components_schemas_ChatStreamDelta": {
+      "description": "Delta changes in streaming response",
+      "example": {
+        "content": "Hello",
+        "role": "assistant"
+      },
+      "properties": {
+        "audio": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/components_schemas_ChatAudioOutput"
+            },
+            {
+              "description": "Audio output data"
+            }
+          ]
+        },
+        "content": {
+          "description": "Message content delta",
+          "example": "Hello",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "reasoning": {
+          "description": "Reasoning content delta",
+          "example": "I need to",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "reasoning_details": {
+          "$ref": "#/$defs/components_schemas_ChatStreamReasoningDetails"
+        },
+        "refusal": {
+          "description": "Refusal message delta",
+          "example": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "role": {
+          "description": "The role of the message author",
+          "enum": [
+            "assistant"
+          ],
+          "example": "assistant",
+          "type": "string"
+        },
+        "tool_calls": {
+          "description": "Tool calls delta",
+          "items": {
+            "$ref": "#/$defs/components_schemas_ChatStreamToolCall"
+          },
+          "type": "array"
+        }
+      },
+      "type": "object"
+    },
+    "components_schemas_ChatStreamReasoningDetails": {
+      "description": "Reasoning details for extended thinking models",
+      "example": [
+        {
+          "text": "Let me think about this...",
+          "type": "reasoning.text"
+        }
+      ],
+      "items": {
+        "$ref": "#/$defs/components_schemas_ReasoningDetailUnion"
+      },
+      "type": "array"
+    },
+    "components_schemas_ChatStreamToolCall": {
+      "description": "Tool call delta for streaming responses",
+      "example": {
+        "function": {
+          "arguments": "{\"location\": \"...\"}",
+          "name": "get_weather"
+        },
+        "id": "call_abc123",
+        "index": 0,
+        "type": "function"
+      },
+      "properties": {
+        "function": {
+          "description": "Function call details",
+          "properties": {
+            "arguments": {
+              "description": "Function arguments as JSON string",
+              "example": "{\"location\": \"...\"}",
+              "type": "string"
+            },
+            "name": {
+              "description": "Function name",
+              "example": "get_weather",
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        "id": {
+          "description": "Tool call identifier",
+          "example": "call_abc123",
+          "type": "string"
+        },
+        "index": {
+          "description": "Tool call index in the array",
+          "example": 0,
+          "type": "integer"
+        },
+        "type": {
+          "description": "Tool call type",
+          "enum": [
+            "function"
+          ],
+          "example": "function",
+          "type": "string"
+        }
+      },
+      "required": [
+        "index"
+      ],
+      "type": "object"
+    },
+    "components_schemas_ChatStreamingResponse": {
+      "example": {
+        "data": {
+          "choices": [
+            {
+              "delta": {
+                "content": "Hello",
+                "role": "assistant"
+              },
+              "finish_reason": null,
+              "index": 0
+            }
+          ],
+          "created": 1677652288,
+          "id": "chatcmpl-123",
+          "model": "openai/gpt-4",
+          "object": "chat.completion.chunk"
+        }
+      },
+      "properties": {
+        "data": {
+          "$ref": "#/$defs/components_schemas_ChatStreamChunk"
+        }
+      },
+      "required": [
+        "data"
+      ],
+      "type": "object"
+    },
+    "components_schemas_ChatTokenLogprob": {
+      "description": "Token log probability information",
+      "example": {
+        "bytes": null,
+        "logprob": -0.612345,
+        "token": " Hello",
+        "top_logprobs": [
+          {
+            "bytes": null,
+            "logprob": -0.612345,
+            "token": " Hello"
+          }
+        ]
+      },
+      "properties": {
+        "bytes": {
+          "description": "UTF-8 bytes of the token",
+          "items": {
+            "type": "integer"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "logprob": {
+          "description": "Log probability of the token",
+          "format": "double",
+          "type": "number"
+        },
+        "token": {
+          "description": "The token",
+          "type": "string"
+        },
+        "top_logprobs": {
+          "description": "Top alternative tokens with probabilities",
+          "items": {
+            "properties": {
+              "bytes": {
+                "items": {
+                  "type": "integer"
+                },
+                "type": [
+                  "array",
+                  "null"
+                ]
+              },
+              "logprob": {
+                "format": "double",
+                "type": "number"
+              },
+              "token": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "token",
+              "logprob",
+              "bytes"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "token",
+        "logprob",
+        "bytes",
+        "top_logprobs"
+      ],
+      "type": "object"
+    },
+    "components_schemas_ChatTokenLogprobs": {
+      "description": "Log probabilities for the completion",
+      "example": {
+        "content": [
+          {
+            "bytes": null,
+            "logprob": -0.612345,
+            "token": " Hello",
+            "top_logprobs": []
+          }
+        ],
+        "refusal": null
+      },
+      "properties": {
+        "content": {
+          "description": "Log probabilities for content tokens",
+          "items": {
+            "$ref": "#/$defs/components_schemas_ChatTokenLogprob"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "refusal": {
+          "description": "Log probabilities for refusal tokens",
+          "items": {
+            "$ref": "#/$defs/components_schemas_ChatTokenLogprob"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "content"
+      ],
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "components_schemas_ChatUsage": {
+      "description": "Token usage statistics",
+      "example": {
+        "completion_tokens": 15,
+        "completion_tokens_details": {
+          "reasoning_tokens": 5
+        },
+        "cost": 0.0012,
+        "cost_details": {
+          "upstream_inference_completions_cost": 0.0004,
+          "upstream_inference_cost": null,
+          "upstream_inference_prompt_cost": 0.0008
+        },
+        "is_byok": false,
+        "prompt_tokens": 10,
+        "prompt_tokens_details": {
+          "cached_tokens": 2
+        },
+        "server_tool_use_details": {
+          "tool_calls_executed": 2,
+          "tool_calls_requested": 2
+        },
+        "total_tokens": 25
+      },
+      "properties": {
+        "completion_tokens": {
+          "description": "Number of tokens in the completion",
+          "type": "integer"
+        },
+        "completion_tokens_details": {
+          "description": "Detailed completion token usage",
+          "properties": {
+            "accepted_prediction_tokens": {
+              "description": "Accepted prediction tokens",
+              "type": [
+                "integer",
+                "null"
+              ]
+            },
+            "audio_tokens": {
+              "description": "Tokens used for audio output",
+              "type": [
+                "integer",
+                "null"
+              ]
+            },
+            "reasoning_tokens": {
+              "description": "Tokens used for reasoning",
+              "type": [
+                "integer",
+                "null"
+              ]
+            },
+            "rejected_prediction_tokens": {
+              "description": "Rejected prediction tokens",
+              "type": [
+                "integer",
+                "null"
+              ]
+            }
+          },
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "cost": {
+          "description": "Cost of the completion",
+          "format": "double",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "cost_details": {
+          "$ref": "#/$defs/components_schemas_CostDetails"
+        },
+        "is_byok": {
+          "description": "Whether a request was made using a Bring Your Own Key configuration",
+          "type": "boolean"
+        },
+        "prompt_tokens": {
+          "description": "Number of tokens in the prompt",
+          "type": "integer"
+        },
+        "prompt_tokens_details": {
+          "description": "Detailed prompt token usage",
+          "properties": {
+            "audio_tokens": {
+              "description": "Audio input tokens",
+              "type": "integer"
+            },
+            "cache_write_tokens": {
+              "description": "Tokens written to cache. Only returned for models with explicit caching and cache write pricing.",
+              "type": "integer"
+            },
+            "cached_tokens": {
+              "description": "Cached prompt tokens",
+              "type": "integer"
+            },
+            "video_tokens": {
+              "description": "Video input tokens",
+              "type": "integer"
+            }
+          },
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "server_tool_use_details": {
+          "$ref": "#/$defs/components_schemas_ServerToolUseDetails"
+        },
+        "total_tokens": {
+          "description": "Total number of tokens",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "completion_tokens",
+        "prompt_tokens",
+        "total_tokens"
+      ],
+      "type": "object"
+    },
+    "components_schemas_CostDetails": {
+      "description": "Breakdown of upstream inference costs",
+      "example": {
+        "upstream_inference_completions_cost": 0.0004,
+        "upstream_inference_cost": null,
+        "upstream_inference_prompt_cost": 0.0008
+      },
+      "properties": {
+        "upstream_inference_completions_cost": {
+          "format": "double",
+          "type": "number"
+        },
+        "upstream_inference_cost": {
+          "format": "double",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "upstream_inference_prompt_cost": {
+          "format": "double",
+          "type": "number"
+        }
+      },
+      "required": [
+        "upstream_inference_prompt_cost",
+        "upstream_inference_completions_cost"
+      ],
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "components_schemas_EndpointInfo": {
+      "example": {
+        "model": "openai/gpt-4o",
+        "provider": "OpenAI",
+        "selected": true
+      },
+      "properties": {
+        "model": {
+          "type": "string"
+        },
+        "provider": {
+          "type": "string"
+        },
+        "selected": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "provider",
+        "model",
+        "selected"
+      ],
+      "type": "object"
+    },
+    "components_schemas_EndpointsMetadata": {
+      "example": {
+        "available": [
+          {
+            "model": "openai/gpt-4o",
+            "provider": "OpenAI",
+            "selected": true
+          }
+        ],
+        "total": 3
+      },
+      "properties": {
+        "available": {
+          "items": {
+            "$ref": "#/$defs/components_schemas_EndpointInfo"
+          },
+          "type": "array"
+        },
+        "total": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "total",
+        "available"
+      ],
+      "type": "object"
+    },
+    "components_schemas_OpenRouterMetadata": {
+      "example": {
+        "attempt": 1,
+        "endpoints": {
+          "available": [
+            {
+              "model": "openai/gpt-4o",
+              "provider": "OpenAI",
+              "selected": true
+            }
+          ],
+          "total": 1
+        },
+        "is_byok": false,
+        "region": "iad",
+        "requested": "openai/gpt-4o",
+        "strategy": "direct",
+        "summary": "available=1, selected=OpenAI"
+      },
+      "properties": {
+        "attempt": {
+          "type": "integer"
+        },
+        "attempts": {
+          "items": {
+            "$ref": "#/$defs/components_schemas_RouterAttempt"
+          },
+          "type": "array"
+        },
+        "endpoints": {
+          "$ref": "#/$defs/components_schemas_EndpointsMetadata"
+        },
+        "is_byok": {
+          "type": "boolean"
+        },
+        "params": {
+          "$ref": "#/$defs/components_schemas_RouterParams"
+        },
+        "pipeline": {
+          "items": {
+            "$ref": "#/$defs/components_schemas_PipelineStage"
+          },
+          "type": "array"
+        },
+        "region": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "requested": {
+          "type": "string"
+        },
+        "strategy": {
+          "$ref": "#/$defs/components_schemas_RoutingStrategy"
+        },
+        "summary": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "requested",
+        "strategy",
+        "region",
+        "summary",
+        "attempt",
+        "is_byok",
+        "endpoints"
+      ],
+      "type": "object"
+    },
+    "components_schemas_PipelineStage": {
+      "example": {
+        "data": {
+          "action": "redacted",
+          "engines": [
+            "presidio"
+          ],
+          "flagged": true,
+          "matched_entity_types": [
+            "EMAIL",
+            "PHONE"
+          ]
+        },
+        "name": "content-filter",
+        "summary": "PII redacted via Presidio (EMAIL, PHONE)",
+        "type": "guardrail"
+      },
+      "properties": {
+        "cost_usd": {
+          "format": "double",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "data": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "guardrail_id": {
+          "type": "string"
+        },
+        "guardrail_scope": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "summary": {
+          "type": "string"
+        },
+        "type": {
+          "$ref": "#/$defs/components_schemas_PipelineStageType"
+        }
+      },
+      "required": [
+        "type",
+        "name"
+      ],
+      "type": "object"
+    },
+    "components_schemas_PipelineStageType": {
+      "description": "Categorical kind of a pipeline stage. Multiple plugins can share a type (e.g. all guardrail-level plugins emit `guardrail`); the `name` field disambiguates which plugin emitted it.",
+      "enum": [
+        "guardrail",
+        "plugin",
+        "server_tools",
+        "response_healing",
+        "context_compression"
+      ],
+      "example": "guardrail",
+      "type": "string",
+      "x-speakeasy-unknown-values": "allow"
+    },
+    "components_schemas_ReasoningDetailEncrypted": {
+      "description": "Reasoning detail encrypted schema",
+      "example": {
+        "data": "encrypted data",
+        "type": "reasoning.encrypted"
+      },
+      "properties": {
+        "data": {
+          "type": "string"
+        },
+        "format": {
+          "$ref": "#/$defs/components_schemas_ReasoningFormat"
+        },
+        "id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "index": {
+          "type": "integer"
+        },
+        "type": {
+          "enum": [
+            "reasoning.encrypted"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "data"
+      ],
+      "type": "object"
+    },
+    "components_schemas_ReasoningDetailServerToolCall": {
+      "description": "Record of an OpenRouter server-tool invocation (e.g. openrouter:fusion), carried in reasoning_details so a prior tool call can be rehydrated into a later turn of the same conversation.",
+      "example": {
+        "arguments": "{\"prompt\":\"Compare carbon tax proposals\"}",
+        "result": "{\"status\":\"ok\",\"models\":[\"openai/gpt-4o\"]}",
+        "tool_call_id": "call_abc123",
+        "tool_name": "openrouter:fusion",
+        "type": "reasoning.server_tool_call"
+      },
+      "properties": {
+        "arguments": {
+          "type": "string"
+        },
+        "format": {
+          "$ref": "#/$defs/components_schemas_ReasoningFormat"
+        },
+        "id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "index": {
+          "type": "integer"
+        },
+        "result": {
+          "type": "string"
+        },
+        "tool_call_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "tool_name": {
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "reasoning.server_tool_call"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "tool_name",
+        "arguments",
+        "result"
+      ],
+      "type": "object"
+    },
+    "components_schemas_ReasoningDetailSummary": {
+      "description": "Reasoning detail summary schema",
+      "example": {
+        "summary": "The model analyzed the problem by first identifying key constraints, then evaluating possible solutions...",
+        "type": "reasoning.summary"
+      },
+      "properties": {
+        "format": {
+          "$ref": "#/$defs/components_schemas_ReasoningFormat"
+        },
+        "id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "index": {
+          "type": "integer"
+        },
+        "summary": {
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "reasoning.summary"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "summary"
+      ],
+      "type": "object"
+    },
+    "components_schemas_ReasoningDetailText": {
+      "description": "Reasoning detail text schema",
+      "example": {
+        "signature": "signature",
+        "text": "The model analyzed the problem by first identifying key constraints, then evaluating possible solutions...",
+        "type": "reasoning.text"
+      },
+      "properties": {
+        "format": {
+          "$ref": "#/$defs/components_schemas_ReasoningFormat"
+        },
+        "id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "index": {
+          "type": "integer"
+        },
+        "signature": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "text": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "type": {
+          "enum": [
+            "reasoning.text"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "type": "object"
+    },
+    "components_schemas_ReasoningDetailUnion": {
+      "description": "Reasoning detail union schema",
+      "discriminator": {
+        "mapping": {
+          "reasoning.encrypted": "#/components/schemas/ReasoningDetailEncrypted",
+          "reasoning.server_tool_call": "#/components/schemas/ReasoningDetailServerToolCall",
+          "reasoning.summary": "#/components/schemas/ReasoningDetailSummary",
+          "reasoning.text": "#/components/schemas/ReasoningDetailText"
+        },
+        "propertyName": "type"
+      },
+      "example": {
+        "summary": "The model analyzed the problem by first identifying key constraints, then evaluating possible solutions...",
+        "type": "reasoning.summary"
+      },
+      "oneOf": [
+        {
+          "$ref": "#/$defs/components_schemas_ReasoningDetailSummary"
+        },
+        {
+          "$ref": "#/$defs/components_schemas_ReasoningDetailEncrypted"
+        },
+        {
+          "$ref": "#/$defs/components_schemas_ReasoningDetailText"
+        },
+        {
+          "$ref": "#/$defs/components_schemas_ReasoningDetailServerToolCall"
+        }
+      ]
+    },
+    "components_schemas_ReasoningFormat": {
+      "enum": [
+        "unknown",
+        "openai-responses-v1",
+        "azure-openai-responses-v1",
+        "bedrock-openai-responses-v1",
+        "xai-responses-v1",
+        "meta-responses-v1",
+        "anthropic-claude-v1",
+        "google-gemini-v1",
+        null
+      ],
+      "example": "unknown",
+      "type": [
+        "string",
+        "null"
+      ],
+      "x-speakeasy-unknown-values": "allow"
+    },
+    "components_schemas_RouterAttempt": {
+      "example": {
+        "model": "openai/gpt-4o",
+        "provider": "OpenAI",
+        "status": 200
+      },
+      "properties": {
+        "model": {
+          "type": "string"
+        },
+        "provider": {
+          "type": "string"
+        },
+        "status": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "provider",
+        "model",
+        "status"
+      ],
+      "type": "object"
+    },
+    "components_schemas_RouterParams": {
+      "additionalProperties": {},
+      "example": {
+        "version_group": "anthropic/claude-sonnet-4"
+      },
+      "properties": {
+        "quality_floor": {
+          "format": "double",
+          "type": "number"
+        },
+        "throughput_floor": {
+          "format": "double",
+          "type": "number"
+        },
+        "version_group": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "components_schemas_RoutingStrategy": {
+      "enum": [
+        "direct",
+        "auto",
+        "free",
+        "latest",
+        "alias",
+        "fallback",
+        "pareto",
+        "bodybuilder",
+        "fusion"
+      ],
+      "example": "direct",
+      "type": "string",
+      "x-speakeasy-unknown-values": "allow"
+    },
+    "components_schemas_ServerToolUseDetails": {
+      "description": "Usage for server-side tool execution (e.g., web search)",
+      "example": {
+        "tool_calls_executed": 2,
+        "tool_calls_requested": 2,
+        "web_search_requests": 2
+      },
+      "properties": {
+        "tool_calls_executed": {
+          "description": "Number of OpenRouter server tool calls that executed and produced a result.",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "tool_calls_requested": {
+          "description": "Total number of OpenRouter server-orchestrated tool calls the model requested, across all tool types. Provider-native tools (e.g. native web search) are not counted here.",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "web_search_requests": {
+          "description": "Number of web searches performed by server-side tools. For server-orchestrated tool calls a web search is also counted in tool_calls_requested; provider-native web search may report web_search_requests only. Do not sum the two.",
+          "type": [
+            "integer",
+            "null"
+          ]
+        }
+      },
+      "type": [
+        "object",
+        "null"
+      ]
+    }
+  }
+}

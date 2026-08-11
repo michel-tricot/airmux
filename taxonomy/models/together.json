@@ -1,0 +1,269 @@
+{
+  "provider": "together",
+  "source": "https://docs.together.ai/docs/serverless-models",
+  "source_type": "docs",
+  "updated": "2026-08-11",
+  "count": 24,
+  "models": [
+    {
+      "id": "deepcogito/cogito-v2-1-671b",
+      "kind": "text",
+      "context_length": 163840,
+      "max_output_tokens": 128000,
+      "input_modalities": null,
+      "output_modalities": null,
+      "supports_tools": null,
+      "supports_structured_output": null,
+      "limits_source": "openrouter-index"
+    },
+    {
+      "id": "deepseek-ai/DeepSeek-V4-Flash-0731",
+      "kind": "text",
+      "context_length": 1000000,
+      "max_output_tokens": 384000,
+      "input_modalities": null,
+      "output_modalities": null,
+      "supports_tools": null,
+      "supports_structured_output": null,
+      "limits_source": "openrouter-index"
+    },
+    {
+      "id": "deepseek-ai/DeepSeek-V4-Pro",
+      "kind": "text",
+      "context_length": 512000,
+      "max_output_tokens": 393216,
+      "input_modalities": null,
+      "output_modalities": null,
+      "supports_tools": null,
+      "supports_structured_output": null,
+      "limits_source": "openrouter-index"
+    },
+    {
+      "id": "google/gemma-3n-E4B-it",
+      "kind": "text",
+      "context_length": 32768,
+      "max_output_tokens": 32768,
+      "input_modalities": null,
+      "output_modalities": null,
+      "supports_tools": null,
+      "supports_structured_output": null,
+      "limits_source": "openrouter-index"
+    },
+    {
+      "id": "google/gemma-4-31B-it",
+      "kind": "text",
+      "context_length": 262144,
+      "max_output_tokens": 262144,
+      "input_modalities": null,
+      "output_modalities": null,
+      "supports_tools": null,
+      "supports_structured_output": null,
+      "limits_source": "openrouter-index"
+    },
+    {
+      "id": "LiquidAI/LFM2.5-8B-A1B",
+      "kind": "text",
+      "context_length": 32768,
+      "max_output_tokens": null,
+      "input_modalities": null,
+      "output_modalities": null,
+      "supports_tools": null,
+      "supports_structured_output": null
+    },
+    {
+      "id": "meta-llama/Llama-3.3-70B-Instruct-Turbo",
+      "kind": "text",
+      "context_length": 131072,
+      "max_output_tokens": null,
+      "input_modalities": null,
+      "output_modalities": null,
+      "supports_tools": null,
+      "supports_structured_output": null
+    },
+    {
+      "id": "MiniMaxAI/MiniMax-M3",
+      "kind": "text",
+      "context_length": 524288,
+      "max_output_tokens": 512000,
+      "input_modalities": null,
+      "output_modalities": null,
+      "supports_tools": null,
+      "supports_structured_output": null,
+      "limits_source": "openrouter-index"
+    },
+    {
+      "id": "moonshotai/Kimi-K2.6",
+      "kind": "text",
+      "context_length": 262144,
+      "max_output_tokens": 262144,
+      "input_modalities": null,
+      "output_modalities": null,
+      "supports_tools": null,
+      "supports_structured_output": null,
+      "limits_source": "openrouter-index"
+    },
+    {
+      "id": "moonshotai/Kimi-K2.7-Code",
+      "kind": "text",
+      "context_length": 262144,
+      "max_output_tokens": 262144,
+      "input_modalities": null,
+      "output_modalities": null,
+      "supports_tools": null,
+      "supports_structured_output": null,
+      "limits_source": "openrouter-index"
+    },
+    {
+      "id": "moonshotai/Kimi-K3",
+      "kind": "text",
+      "context_length": 1000000,
+      "max_output_tokens": 1048576,
+      "input_modalities": null,
+      "output_modalities": null,
+      "supports_tools": null,
+      "supports_structured_output": null,
+      "limits_source": "openrouter-index"
+    },
+    {
+      "id": "nvidia/nemotron-3-ultra-550b-a55b",
+      "kind": "text",
+      "context_length": 512300,
+      "max_output_tokens": 512288,
+      "input_modalities": null,
+      "output_modalities": null,
+      "supports_tools": null,
+      "supports_structured_output": null,
+      "limits_source": "openrouter-index"
+    },
+    {
+      "id": "openai/gpt-oss-120b",
+      "kind": "text",
+      "context_length": 128000,
+      "max_output_tokens": 131072,
+      "input_modalities": null,
+      "output_modalities": null,
+      "supports_tools": null,
+      "supports_structured_output": null,
+      "limits_source": "openrouter-index"
+    },
+    {
+      "id": "openai/gpt-oss-20b",
+      "kind": "text",
+      "context_length": 128000,
+      "max_output_tokens": 131072,
+      "input_modalities": null,
+      "output_modalities": null,
+      "supports_tools": null,
+      "supports_structured_output": null,
+      "limits_source": "openrouter-index"
+    },
+    {
+      "id": "pearl-ai/gemma-4-31b-it",
+      "kind": "text",
+      "context_length": 32000,
+      "max_output_tokens": 262144,
+      "input_modalities": null,
+      "output_modalities": null,
+      "supports_tools": null,
+      "supports_structured_output": null,
+      "limits_source": "openrouter-index"
+    },
+    {
+      "id": "Prism-ML/Ternary-Bonsai-27B",
+      "kind": "text",
+      "context_length": 262144,
+      "max_output_tokens": null,
+      "input_modalities": null,
+      "output_modalities": null,
+      "supports_tools": null,
+      "supports_structured_output": null
+    },
+    {
+      "id": "Qwen/Qwen2.5-7B-Instruct-Turbo",
+      "kind": "text",
+      "context_length": 32768,
+      "max_output_tokens": null,
+      "input_modalities": null,
+      "output_modalities": null,
+      "supports_tools": null,
+      "supports_structured_output": null
+    },
+    {
+      "id": "Qwen/Qwen3.5-9B",
+      "kind": "text",
+      "context_length": 262144,
+      "max_output_tokens": 262144,
+      "input_modalities": null,
+      "output_modalities": null,
+      "supports_tools": null,
+      "supports_structured_output": null,
+      "limits_source": "openrouter-index"
+    },
+    {
+      "id": "Qwen/Qwen3.6-Plus",
+      "kind": "text",
+      "context_length": 1000000,
+      "max_output_tokens": 65536,
+      "input_modalities": null,
+      "output_modalities": null,
+      "supports_tools": null,
+      "supports_structured_output": null,
+      "limits_source": "openrouter-index"
+    },
+    {
+      "id": "Qwen/Qwen3.7-Max",
+      "kind": "text",
+      "context_length": 1000000,
+      "max_output_tokens": 131072,
+      "input_modalities": null,
+      "output_modalities": null,
+      "supports_tools": null,
+      "supports_structured_output": null,
+      "limits_source": "openrouter-index"
+    },
+    {
+      "id": "Qwen/Qwen3.7-Plus",
+      "kind": "text",
+      "context_length": 1000000,
+      "max_output_tokens": 131072,
+      "input_modalities": null,
+      "output_modalities": null,
+      "supports_tools": null,
+      "supports_structured_output": null,
+      "limits_source": "openrouter-index"
+    },
+    {
+      "id": "thinkingmachines/Inkling",
+      "kind": "text",
+      "context_length": 524288,
+      "max_output_tokens": 262144,
+      "input_modalities": null,
+      "output_modalities": null,
+      "supports_tools": null,
+      "supports_structured_output": null,
+      "limits_source": "openrouter-index"
+    },
+    {
+      "id": "thinkingmachines/Inkling-Small",
+      "kind": "text",
+      "context_length": 524288,
+      "max_output_tokens": 262144,
+      "input_modalities": null,
+      "output_modalities": null,
+      "supports_tools": null,
+      "supports_structured_output": null,
+      "limits_source": "openrouter-index"
+    },
+    {
+      "id": "zai-org/GLM-5.2",
+      "kind": "text",
+      "context_length": 512000,
+      "max_output_tokens": 131072,
+      "input_modalities": null,
+      "output_modalities": null,
+      "supports_tools": null,
+      "supports_structured_output": null,
+      "limits_source": "openrouter-index"
+    }
+  ]
+}

@@ -1,0 +1,260 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$ref": "#/$defs/components_schemas_ChatCompletionResponse",
+  "$defs": {
+    "components_schemas_ChatCompletionChoicesData": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string"
+          },
+          "index": {
+            "type": "integer"
+          },
+          "seed": {
+            "type": "integer"
+          },
+          "finish_reason": {
+            "$ref": "#/$defs/components_schemas_FinishReason"
+          },
+          "message": {
+            "$ref": "#/$defs/components_schemas_ChatCompletionMessage"
+          },
+          "logprobs": {
+            "allOf": [
+              {
+                "nullable": true
+              },
+              {
+                "$ref": "#/$defs/components_schemas_LogprobsPart"
+              }
+            ]
+          },
+          "top_logprobs": {
+            "$ref": "#/$defs/components_schemas_TopLogprobs"
+          }
+        }
+      }
+    },
+    "components_schemas_ChatCompletionMessage": {
+      "type": "object",
+      "required": [
+        "role",
+        "content"
+      ],
+      "properties": {
+        "content": {
+          "type": "string",
+          "nullable": true
+        },
+        "role": {
+          "type": "string",
+          "enum": [
+            "assistant"
+          ]
+        },
+        "tool_calls": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/components_schemas_ToolChoice"
+          }
+        },
+        "function_call": {
+          "type": "object",
+          "deprecated": true,
+          "required": [
+            "arguments",
+            "name"
+          ],
+          "properties": {
+            "arguments": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            }
+          }
+        },
+        "reasoning": {
+          "type": "string",
+          "nullable": true
+        }
+      }
+    },
+    "components_schemas_ChatCompletionResponse": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "choices": {
+          "$ref": "#/$defs/components_schemas_ChatCompletionChoicesData"
+        },
+        "usage": {
+          "$ref": "#/$defs/components_schemas_UsageData"
+        },
+        "created": {
+          "type": "integer"
+        },
+        "model": {
+          "type": "string"
+        },
+        "prompt": {
+          "$ref": "#/$defs/components_schemas_PromptPart",
+          "description": "When `echo` is true, the prompt is included in the response. Additionally, when `logprobs` is also provided, log probability information is provided on the prompt."
+        },
+        "object": {
+          "description": "The object type, which is always `chat.completion`.",
+          "const": "chat.completion"
+        },
+        "warnings": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/components_schemas_InferenceWarning"
+          }
+        }
+      },
+      "required": [
+        "choices",
+        "id",
+        "created",
+        "model",
+        "object",
+        "prompt"
+      ]
+    },
+    "components_schemas_FinishReason": {
+      "type": "string",
+      "enum": [
+        "stop",
+        "eos",
+        "length",
+        "tool_calls",
+        "function_call"
+      ]
+    },
+    "components_schemas_InferenceWarning": {
+      "type": "object",
+      "required": [
+        "message"
+      ],
+      "properties": {
+        "message": {
+          "type": "string"
+        }
+      }
+    },
+    "components_schemas_LogprobsPart": {
+      "type": "object",
+      "properties": {
+        "token_ids": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "description": "List of token IDs corresponding to the logprobs"
+        },
+        "tokens": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "List of token strings"
+        },
+        "token_logprobs": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "description": "List of token log probabilities"
+        },
+        "top_logprobs": {
+          "$ref": "#/$defs/components_schemas_TopLogprobs"
+        }
+      }
+    },
+    "components_schemas_PromptPart": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string",
+            "example": "<s>[INST] What is the capital of France? [/INST]"
+          },
+          "logprobs": {
+            "$ref": "#/$defs/components_schemas_LogprobsPart"
+          }
+        }
+      }
+    },
+    "components_schemas_ToolChoice": {
+      "type": "object",
+      "required": [
+        "id",
+        "type",
+        "function",
+        "index"
+      ],
+      "properties": {
+        "index": {
+          "type": "number"
+        },
+        "id": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "function"
+          ]
+        },
+        "function": {
+          "type": "object",
+          "required": [
+            "name",
+            "arguments"
+          ],
+          "properties": {
+            "name": {
+              "type": "string",
+              "example": "function_name"
+            },
+            "arguments": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "components_schemas_TopLogprobs": {
+      "description": "Top log probabilities for the tokens.",
+      "type": "object",
+      "additionalProperties": {
+        "type": "number"
+      }
+    },
+    "components_schemas_UsageData": {
+      "type": "object",
+      "properties": {
+        "prompt_tokens": {
+          "type": "integer"
+        },
+        "completion_tokens": {
+          "type": "integer"
+        },
+        "total_tokens": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "prompt_tokens",
+        "completion_tokens",
+        "total_tokens"
+      ],
+      "nullable": true
+    }
+  }
+}

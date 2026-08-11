@@ -1,0 +1,53 @@
+{
+  "provider": "perplexity",
+  "source": "https://docs.perplexity.ai/api-reference/chat-completions-post",
+  "source_type": "docs",
+  "updated": "2026-08-11",
+  "count": 4,
+  "models": [
+    {
+      "id": "sonar",
+      "kind": "text",
+      "context_length": 127072,
+      "max_output_tokens": 127072,
+      "input_modalities": null,
+      "output_modalities": null,
+      "supports_tools": null,
+      "supports_structured_output": null,
+      "limits_source": "openrouter-index"
+    },
+    {
+      "id": "sonar-deep-research",
+      "kind": "text",
+      "context_length": 128000,
+      "max_output_tokens": 128000,
+      "input_modalities": null,
+      "output_modalities": null,
+      "supports_tools": null,
+      "supports_structured_output": null,
+      "limits_source": "openrouter-index"
+    },
+    {
+      "id": "sonar-pro",
+      "kind": "text",
+      "context_length": 200000,
+      "max_output_tokens": 8000,
+      "input_modalities": null,
+      "output_modalities": null,
+      "supports_tools": null,
+      "supports_structured_output": null,
+      "limits_source": "openrouter-index"
+    },
+    {
+      "id": "sonar-reasoning-pro",
+      "kind": "text",
+      "context_length": 128000,
+      "max_output_tokens": 128000,
+      "input_modalities": null,
+      "output_modalities": null,
+      "supports_tools": null,
+      "supports_structured_output": null,
+      "limits_source": "openrouter-index"
+    }
+  ]
+}
