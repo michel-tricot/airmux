@@ -44,7 +44,7 @@ services:
     environment:
       <<: *provider-keys
       DATABASE_URL: postgresql+asyncpg://airllm:airllm@postgres:5432/airllm
-      GW_CONSOLE_URL: http://localhost:3000
+      GW_CONSOLE_URL: http://localhost:5000
       GW_BUNDLE_SIGNING_KEY: ${GW_BUNDLE_SIGNING_KEY:-}
     volumes:
       - state:/state
@@ -103,7 +103,7 @@ services:
       context: .
       dockerfile: apps/console/Dockerfile
     ports:
-      - "3000:80"
+      - "5000:80"
     depends_on:
       control-plane:
         condition: service_healthy

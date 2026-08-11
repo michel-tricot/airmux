@@ -50,7 +50,7 @@ def set_active(name: str) -> None:
     save_config({**load_config(), "active": name})
 
 
-DEFAULT_CONSOLE_URL = "http://localhost:3000"
+DEFAULT_CONSOLE_URL = "http://localhost:5000"
 ADMIN_KEYS_PATH = "/instance/keys"
 
 

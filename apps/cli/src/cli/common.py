@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 import typer
 from dotenv import find_dotenv, load_dotenv
 from rich.console import Console
@@ -8,9 +10,24 @@ app = typer.Typer(name="airllm", no_args_is_help=True)
 console = Console()
 
 
+@dataclass
+class Invocation:
+    """What the run as a whole was told, as opposed to any one command.
+
+    --dev is the only such flag today. It lives here because the code that acts on it resolves a url
+    deep in the client, with no command in scope to ask.
+    """
+
+    dev: bool = False
+
+
+invocation = Invocation()
+
+
 @app.callback()
-def _main() -> None:
+def _main(dev: bool = typer.Option(False, "--dev", help="Talk to a local development stack")) -> None:
     load_dotenv(find_dotenv(usecwd=True))
+    invocation.dev = dev
 
 
 SETUP = "Setup"

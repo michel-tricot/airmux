@@ -1,48 +1,83 @@
-"""Which control plane and console quickstart and login talk to, and how --dev shortcuts them."""
+"""Which control plane and console the CLI talks to, and how --dev shortcuts them."""
 
 from __future__ import annotations
 
 import pytest
 
-from cli.auth import DEFAULT_CONSOLE_URL, DEV_CONSOLE_URL, DEV_CONTROL_PLANE_URL, resolve_cp_url, resolve_urls
+from cli.auth import DEFAULT_CONSOLE_URL, resolve_urls
+from cli.client import LOCAL_CONTROL_PLANE_URL, resolve_control_plane_url
+from cli.common import invocation
 
 
 @pytest.fixture(autouse=True)
-def _no_ambient_url(monkeypatch, tmp_path):
-    """Resolution reads the environment, the active profile and airllm.yml; this test is about the flags."""
+def _plain_invocation():
+    """--dev is state for the whole run, so a test that sets it has to put it back."""
+    invocation.dev = False
+    yield
+    invocation.dev = False
+
+
+@pytest.fixture
+def _no_ambient_config(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
     monkeypatch.delenv("GW_CONTROL_PLANE_URL", raising=False)
     monkeypatch.setenv("GW_CLI_CONFIG", str(tmp_path / "config.toml"))
-    monkeypatch.setenv("GW_CONFIG", str(tmp_path / "airllm.yml"))
+
+
+@pytest.mark.usefixtures("_no_ambient_config")
+def test_dev_names_the_local_control_plane():
+    invocation.dev = True
+
+    assert resolve_control_plane_url() == LOCAL_CONTROL_PLANE_URL
+
+
+@pytest.mark.usefixtures("_no_ambient_config")
+def test_an_explicit_url_beats_dev():
+    """The flag is a shortcut, not an override of what the caller actually asked for."""
+    invocation.dev = True
+
+    assert resolve_control_plane_url("https://cp.example.com") == "https://cp.example.com"
+
+
+def test_dev_beats_a_stored_profile(tmp_path, monkeypatch):
+    """A development run must not be redirected by whatever org the machine last logged into."""
     monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("GW_CONTROL_PLANE_URL", raising=False)
+    monkeypatch.setenv("GW_CLI_CONFIG", str(tmp_path / "config.toml"))
+    from cli.profiles import set_active, upsert_profile  # noqa: PLC0415 the profile has to be written under the patched path
+
+    upsert_profile("prod", {"control_plane_url": "https://prod.example.com", "token": "t"})
+    set_active("prod")
+
+    assert resolve_control_plane_url() == "https://prod.example.com"
+    invocation.dev = True
+    assert resolve_control_plane_url() == LOCAL_CONTROL_PLANE_URL
 
 
-def test_dev_points_at_the_local_pair():
-    assert resolve_urls("", "", dev=True) == (DEV_CONTROL_PLANE_URL, DEV_CONSOLE_URL)
+@pytest.mark.usefixtures("_no_ambient_config")
+def test_the_console_does_not_move_with_dev():
+    """One console port everywhere, so the flag has nothing to switch."""
+    invocation.dev = True
+
+    assert resolve_urls("", "") == (LOCAL_CONTROL_PLANE_URL, DEFAULT_CONSOLE_URL)
 
 
-def test_without_dev_the_console_default_is_the_served_one():
-    control_plane, console = resolve_urls("", "", dev=False)
-    assert console == DEFAULT_CONSOLE_URL
-    assert control_plane == "http://127.0.0.1:8000"
+@pytest.mark.usefixtures("_no_ambient_config")
+def test_explicit_urls_win_over_everything():
+    invocation.dev = True
 
-
-def test_explicit_flags_win_over_dev():
-    assert resolve_urls("https://cp.example.com", "https://console.example.com", dev=True) == (
+    assert resolve_urls("https://cp.example.com", "https://console.example.com") == (
         "https://cp.example.com",
         "https://console.example.com",
     )
 
 
-def test_dev_beats_an_ambient_control_plane_url(monkeypatch):
-    """A stale profile or env var is exactly what --dev is for; it does not get to win."""
-    monkeypatch.setenv("GW_CONTROL_PLANE_URL", "https://prod.example.com")
-    assert resolve_urls("", "", dev=True)[0] == DEV_CONTROL_PLANE_URL
-    assert resolve_urls("", "", dev=False)[0] == "https://prod.example.com"
+def test_a_checkout_config_is_not_a_source(tmp_path, monkeypatch):
+    """airllm.yml configures the servers, not the CLI. Reading it would point a run at whatever
+    checkout it happened to start in rather than at the deployment the user signed into."""
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("GW_CONTROL_PLANE_URL", raising=False)
+    monkeypatch.setenv("GW_CLI_CONFIG", str(tmp_path / "config.toml"))
+    (tmp_path / "airllm.yml").write_text("data_plane:\n  control_plane:\n    url: http://somewhere.else:9999\n", encoding="utf-8")
 
-
-def test_login_takes_the_same_dev_control_plane(monkeypatch):
-    """login has no console to print, so --dev only moves the control plane, by the same precedence."""
-    monkeypatch.setenv("GW_CONTROL_PLANE_URL", "https://prod.example.com")
-    assert resolve_cp_url("", dev=True) == DEV_CONTROL_PLANE_URL
-    assert resolve_cp_url("https://cp.example.com", dev=True) == "https://cp.example.com"
-    assert resolve_cp_url("", dev=False) == "https://prod.example.com"
+    assert resolve_control_plane_url() == LOCAL_CONTROL_PLANE_URL
