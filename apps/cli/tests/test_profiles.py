@@ -48,4 +48,4 @@ def test_admin_keys_url_points_at_the_console_you_signed_into(tmp_path, monkeypa
 def test_admin_keys_url_falls_back_when_nobody_signed_in(tmp_path, monkeypatch):
     monkeypatch.setenv("GW_CLI_CONFIG", str(tmp_path / "config.toml"))
 
-    assert admin_keys_url() == "http://localhost:3000/instance/keys"
+    assert admin_keys_url() == "http://localhost:5000/instance/keys"

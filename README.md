@@ -51,7 +51,7 @@ which is also how a second admin is granted: the bit never crosses the API.
 The same stack runs under compose: Postgres comes up first, then the control
 plane starts with `migrate && taxonomy && serve` (schema to head, catalog applied,
 attributed to `root`), then the data plane, then the console on
-`localhost:3000`, which nginx serves and which proxies `/v1` to the control
+`localhost:5000`, which nginx serves and which proxies `/v1` to the control
 plane. There is no init service and no account provisioning at startup: claim the
 instance by signing up in the console. The stack shares the one checked-in
 `airllm.yml`: the containers work out of the shared `/state` volume, so its
@@ -66,7 +66,7 @@ environment variables the file reads through its `:-` defaults.
 docker compose up -d --build --wait
 ```
 
-Accounts are self-serve: sign up on the console login page (`localhost:3000`),
+Accounts are self-serve: sign up on the console login page (`localhost:5000`),
 where the first account claims the instance, then create your organization and
 mint an inference key on a workspace; `airllm login` connects the CLI through the
 browser, which the console approves at `/cli`. The gateway

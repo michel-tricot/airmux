@@ -13,7 +13,7 @@ from rich.panel import Panel
 if TYPE_CHECKING:
     import httpx
 
-from cli.client import payload, resolve_control_plane_url
+from cli.client import api_error, ensure_ok, payload, resolve_control_plane_url
 from cli.common import SETUP, app, console, orgs_app
 from cli.output import Col, FormatOption, OutputFormat, print_rows
 from cli.profiles import DEFAULT_CONSOLE_URL, config_path, load_config, set_active, upsert_profile
@@ -36,7 +36,7 @@ def _client_name() -> str:
 
 def _payload_or_die(resp: httpx.Response, what: str) -> dict:
     if not resp.is_success:
-        console.print(f"[red]{what} failed ({resp.status_code}): {resp.text}[/red]")
+        console.print(f"[red]{what} failed ({resp.status_code}): {api_error(resp)}[/red]")
         raise typer.Exit(1)
     return payload(resp)
 
@@ -45,22 +45,9 @@ def _step(done: str) -> None:
     console.print(f"  [green]✓[/green] {done}")
 
 
-DEV_CONTROL_PLANE_URL = "http://127.0.0.1:8000"
-DEV_CONSOLE_URL = "http://localhost:5000"
-
-
-def resolve_cp_url(control_plane_url: str, *, dev: bool) -> str:
-    """The control plane this run talks to.
-
-    An explicit flag always wins. --dev then names the local one, ahead of the environment, the
-    active profile and airllm.yml, so a stale profile cannot redirect a development run.
-    """
-    return resolve_control_plane_url(control_plane_url or (DEV_CONTROL_PLANE_URL if dev else ""))
-
-
-def resolve_urls(control_plane_url: str, console_url: str, *, dev: bool) -> tuple[str, str]:
+def resolve_urls(control_plane_url: str, console_url: str) -> tuple[str, str]:
     """The control plane and the console, for the commands that print where the console lives."""
-    return resolve_cp_url(control_plane_url, dev=dev), console_url or (DEV_CONSOLE_URL if dev else DEFAULT_CONSOLE_URL)
+    return resolve_control_plane_url(control_plane_url), console_url or DEFAULT_CONSOLE_URL
 
 
 class ProviderKey(NamedTuple):
@@ -124,17 +111,9 @@ def seed_provider_credentials(client: httpx.Client, bearer: dict[str, str], work
             continue
         body = {"provider": name, "value": value, "workspace": workspace}
         created = client.post("/v1/org/provider-credentials", json=body, headers=bearer)
-        error = "" if created.is_success else payload_error(created)
+        error = "" if created.is_success else api_error(created)
         results.append(ProviderKey(name, source, error))
     return results
-
-
-def payload_error(resp: httpx.Response) -> str:
-    """The control plane's own explanation where it gave one, since it knows why better than we do."""
-    try:
-        return str(resp.json()["detail"])
-    except (ValueError, KeyError, TypeError):
-        return f"{resp.status_code}"
 
 
 @app.command(rich_help_panel=SETUP)
@@ -147,12 +126,11 @@ def quickstart(  # noqa: PLR0913, PLR0917 flags are the command's interface
     openai_key: str = typer.Option("", help="OpenAI key; otherwise read from OPENAI_API_KEY or prompted for"),
     anthropic_key: str = typer.Option("", help="Anthropic key; otherwise read from ANTHROPIC_API_KEY or prompted for"),
     console_url: str = typer.Option("", help="Web console URL, printed at the end"),
-    dev: bool = typer.Option(False, "--dev", help="Use a local development stack"),
 ) -> None:
     """Set up a new instance: account, organization, workspace, provider keys, and an API key you can call."""
     import httpx  # noqa: PLC0415 lazy import keeps CLI startup fast
 
-    url, console_url = resolve_urls(control_plane_url, console_url, dev=dev)
+    url, console_url = resolve_urls(control_plane_url, console_url)
     console.print("[bold]airllm quickstart[/bold]")
     with httpx.Client(base_url=url, timeout=10.0, headers=CSRF) as c:
         if _payload_or_die(c.get("/v1/instance/oss/claim"), "claim check")["claimed"]:
@@ -227,17 +205,14 @@ def login(
     control_plane_url: str = "",
     no_browser: bool = typer.Option(False, "--no-browser", help="Print the URL instead of opening a browser"),
     console_url: str = typer.Option("", help="Web console URL"),
-    dev: bool = typer.Option(False, "--dev", help="Use a local development stack"),
 ) -> None:
     """Sign in through your browser. Creates an account and organization if you do not have one."""
     import httpx  # noqa: PLC0415 lazy import keeps CLI startup fast
 
-    url, console_url = resolve_urls(control_plane_url, console_url, dev=dev)
+    url, console_url = resolve_urls(control_plane_url, console_url)
     client_name = _client_name()
     with httpx.Client(base_url=url, timeout=10.0) as c:
-        resp = c.post("/v1/auth/cli/start", json={"client_name": client_name})
-        resp.raise_for_status()
-        started = payload(resp)
+        started = _payload_or_die(c.post("/v1/auth/cli/start", json={"client_name": client_name}), "Starting sign-in")
         console.print(f"Confirm code [bold]{started['user_code']}[/bold] at {started['verification_url']}")
         if not no_browser:
             webbrowser.open(started["verification_url"])
@@ -248,8 +223,7 @@ def login(
             if poll.status_code == HTTP_GONE:
                 console.print("[red]Login expired before it was approved. Run [bold]airllm login[/bold] again.[/red]")
                 raise typer.Exit(1)
-            poll.raise_for_status()
-            done = payload(poll)
+            done = _payload_or_die(poll, "Sign-in")
             if done["status"] == "complete":
                 upsert_profile(
                     done["org_name"],
@@ -291,7 +265,7 @@ def orgs_mine(control_plane_url: str = "", fmt: FormatOption = OutputFormat.tabl
 
     with org_client(control_plane_url) as c:
         resp = c.get("/v1/enroll")
-        resp.raise_for_status()
+        ensure_ok(resp)
         standing = payload(resp)
         rows = [{**org, "kind": "personal" if org["id"] == standing["personal_org_id"] else "member"} for org in standing["orgs"]]
         print_rows("orgs", rows, MINE_COLS, fmt)

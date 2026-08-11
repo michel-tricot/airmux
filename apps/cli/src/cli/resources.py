@@ -10,7 +10,17 @@ import typer
 from dotenv import find_dotenv, load_dotenv
 from rich.live import Live
 
-from cli.client import instance_client, instance_get, org_client, org_get, payload, payload_rows, post_expecting, resolve_workspace
+from cli.client import (
+    ensure_ok,
+    instance_client,
+    instance_get,
+    org_client,
+    org_get,
+    payload,
+    payload_rows,
+    post_expecting,
+    resolve_workspace,
+)
 from cli.common import (
     ADMIN,
     bundles_app,
@@ -163,7 +173,7 @@ def workspace_members_add(user_id: str, workspace: WorkspaceOption = "", control
     workspace_ref = resolve_workspace(workspace)
     with org_client(control_plane_url) as c:
         resp = c.put(f"/v1/org/workspaces/{workspace_ref}/members/{user_id}")
-        resp.raise_for_status()
+        ensure_ok(resp)
     console.print(f"Added [bold]{user_id}[/bold] to [bold]{workspace_ref}[/bold]")
 
 
@@ -173,7 +183,7 @@ def workspace_members_remove(user_id: str, workspace: WorkspaceOption = "", cont
     workspace_ref = resolve_workspace(workspace)
     with org_client(control_plane_url) as c:
         resp = c.delete(f"/v1/org/workspaces/{workspace_ref}/members/{user_id}")
-        resp.raise_for_status()
+        ensure_ok(resp)
     console.print(f"Removed [bold]{user_id}[/bold] from [bold]{workspace_ref}[/bold]")
 
 
@@ -190,7 +200,7 @@ def inference_keys_revoke(key_id: str, workspace: WorkspaceOption = "", control_
     workspace_ref = resolve_workspace(workspace)
     with org_client(control_plane_url) as c:
         resp = c.delete(f"/v1/org/workspaces/{workspace_ref}/inference-keys/{key_id}")
-        resp.raise_for_status()
+        ensure_ok(resp)
     console.print(f"Revoked [bold]{key_id}[/bold]")
 
 
@@ -285,7 +295,7 @@ def org_members_add(user_id: str, control_plane_url: str = "") -> None:
     """Add a user to the active org; their org management keys start working immediately."""
     with org_client(control_plane_url) as c:
         resp = c.put(f"/v1/org/users/{user_id}")
-        resp.raise_for_status()
+        ensure_ok(resp)
     console.print(f"Added [bold]{user_id}[/bold] to your organization")
 
 
@@ -294,7 +304,7 @@ def org_members_remove(user_id: str, control_plane_url: str = "") -> None:
     """Remove a user from the active org; their management keys for it stop working immediately."""
     with org_client(control_plane_url) as c:
         resp = c.delete(f"/v1/org/users/{user_id}")
-        resp.raise_for_status()
+        ensure_ok(resp)
     console.print(f"Removed [bold]{user_id}[/bold] from your organization")
 
 
@@ -328,7 +338,7 @@ def management_keys_revoke(key_id: str, control_plane_url: str = "") -> None:
     """Revoke an automation key."""
     with org_client(control_plane_url) as c:
         resp = c.delete(f"/v1/org/management-keys/{key_id}")
-        resp.raise_for_status()
+        ensure_ok(resp)
     console.print(f"Revoked [bold]{key_id}[/bold]")
 
 
@@ -359,14 +369,14 @@ def instance_keys_revoke(key_id: str, control_plane_url: str = "") -> None:
     """Revoke an admin key."""
     with instance_client(control_plane_url) as c:
         resp = c.delete(f"/v1/instance/instance-keys/{key_id}")
-        resp.raise_for_status()
+        ensure_ok(resp)
     console.print(f"Revoked [bold]{key_id}[/bold]")
 
 
 def _taxonomy(control_plane_url: str) -> dict:
     with org_client(control_plane_url) as c:
         resp = c.get("/v1/taxonomy")
-        resp.raise_for_status()
+        ensure_ok(resp)
         return payload(resp)
 
 
@@ -416,7 +426,7 @@ def data_planes_list(
     load_dotenv(find_dotenv(usecwd=True))
     with instance_client(control_plane_url) as c:
         resp = c.get("/v1/instance/data-planes", params={"include_offline": all_})
-        resp.raise_for_status()
+        ensure_ok(resp)
         print_rows("data planes", payload_rows(resp), INSTANCE_COLS, fmt)
 
 
@@ -443,7 +453,7 @@ def events_tail(interval: float = 2.0, keep: int = 30, control_plane_url: str = 
 
     with org_client(control_plane_url) as c:
         resp = c.get("/v1/org/events", params={"limit": keep})
-        resp.raise_for_status()
+        ensure_ok(resp)
         rows.extend(reversed(payload_rows(resp)))
         cursor = rows[-1]["occurred_at"] if rows else "1970-01-01T00:00:00"
         try:
@@ -451,7 +461,7 @@ def events_tail(interval: float = 2.0, keep: int = 30, control_plane_url: str = 
                 while True:
                     time.sleep(interval)
                     resp = c.get("/v1/org/events", params={"after": cursor, "limit": 200})
-                    resp.raise_for_status()
+                    ensure_ok(resp)
                     for event in payload_rows(resp):
                         emit(event)
                         cursor = event["occurred_at"]
@@ -459,7 +469,7 @@ def events_tail(interval: float = 2.0, keep: int = 30, control_plane_url: str = 
                 while True:
                     time.sleep(interval)
                     resp = c.get("/v1/org/events", params={"after": cursor, "limit": 200})
-                    resp.raise_for_status()
+                    ensure_ok(resp)
                     batch = payload_rows(resp)
                     fresh_ids = {event["event_id"] for event in batch}
                     if batch:
@@ -594,7 +604,7 @@ def provider_credentials_list(
     params = {} if org_wide else {"workspace": resolve_workspace(workspace)}
     with org_client(control_plane_url) as c:
         resp = c.get("/v1/org/provider-credentials", params=params)
-        resp.raise_for_status()
+        ensure_ok(resp)
         rows = payload_rows(resp)
     print_rows("provider credentials", _credential_rows(rows), PROVIDER_CREDENTIAL_COLS, fmt)
 
@@ -608,7 +618,7 @@ def provider_credentials_rotate(
     secret = _read_secret("replacement API key")
     with org_client(control_plane_url) as c:
         resp = c.put(f"/v1/org/provider-credentials/{credential_id}/value", json={"value": secret})
-        resp.raise_for_status()
+        ensure_ok(resp)
         credential = payload(resp)
     console.print(f"Rotated [bold]{credential['name']}[/bold] to ...{credential['fingerprint']}")
     console.print("[dim]Run airllm bundles compile to apply.[/dim]")
@@ -622,7 +632,7 @@ def provider_credentials_rm(
     """Delete a provider key."""
     with org_client(control_plane_url) as c:
         resp = c.delete(f"/v1/org/provider-credentials/{credential_id}")
-        resp.raise_for_status()
+        ensure_ok(resp)
     console.print(f"Deleted [bold]{credential_id}[/bold]. Run [bold]airllm bundles compile[/bold] to apply.")
 
 
@@ -635,7 +645,7 @@ def provider_credentials_disable(
     """Stop using a provider key without deleting it. Use --enable to put it back."""
     with org_client(control_plane_url) as c:
         resp = c.patch(f"/v1/org/provider-credentials/{credential_id}", json={"enabled": enable})
-        resp.raise_for_status()
+        ensure_ok(resp)
         credential = payload(resp)
     state = "Enabled" if credential["enabled"] else "Disabled"
     console.print(f"{state} [bold]{credential['name']}[/bold]. Run [bold]airllm bundles compile[/bold] to apply.")
