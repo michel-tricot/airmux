@@ -1,0 +1,6119 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$ref": "#/$defs/components_schemas_OpenResponsesResult",
+  "$defs": {
+    "components_schemas_ApiErrorType": {
+      "description": "Canonical OpenRouter error type, stable across all API formats",
+      "enum": [
+        "context_length_exceeded",
+        "max_tokens_exceeded",
+        "token_limit_exceeded",
+        "string_too_long",
+        "authentication",
+        "permission_denied",
+        "payment_required",
+        "rate_limit_exceeded",
+        "provider_overloaded",
+        "provider_unavailable",
+        "invalid_request",
+        "invalid_prompt",
+        "not_found",
+        "precondition_failed",
+        "payload_too_large",
+        "unprocessable",
+        "content_policy_violation",
+        "refusal",
+        "invalid_image",
+        "image_too_large",
+        "image_too_small",
+        "unsupported_image_format",
+        "image_not_found",
+        "image_download_failed",
+        "server",
+        "timeout",
+        "unmapped"
+      ],
+      "example": "rate_limit_exceeded",
+      "type": "string",
+      "x-speakeasy-unknown-values": "allow"
+    },
+    "components_schemas_ApplyPatchCallItem": {
+      "description": "A tool call emitted by the model requesting a V4A patch operation. The client applies the patch and echoes an `apply_patch_call_output` on the next turn.",
+      "example": {
+        "call_id": "call_abc123",
+        "id": "apc_abc123",
+        "operation": {
+          "diff": "@@ function main() {\n+  console.log(\"hi\");\n }",
+          "path": "/src/main.ts",
+          "type": "update_file"
+        },
+        "status": "completed",
+        "type": "apply_patch_call"
+      },
+      "properties": {
+        "call_id": {
+          "type": "string"
+        },
+        "id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "operation": {
+          "$ref": "#/$defs/components_schemas_ApplyPatchCallOperation"
+        },
+        "status": {
+          "$ref": "#/$defs/components_schemas_ApplyPatchCallStatus"
+        },
+        "type": {
+          "enum": [
+            "apply_patch_call"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "call_id",
+        "status",
+        "operation"
+      ],
+      "type": "object"
+    },
+    "components_schemas_ApplyPatchCallOperation": {
+      "description": "The patch operation requested by an `apply_patch_call`. `create_file` and `update_file` carry a V4A diff; `delete_file` omits it.",
+      "discriminator": {
+        "mapping": {
+          "create_file": "#/components/schemas/ApplyPatchCreateFileOperation",
+          "delete_file": "#/components/schemas/ApplyPatchDeleteFileOperation",
+          "update_file": "#/components/schemas/ApplyPatchUpdateFileOperation"
+        },
+        "propertyName": "type"
+      },
+      "example": {
+        "diff": "@@ function main() {\n+  console.log(\"hi\");\n }",
+        "path": "/src/main.ts",
+        "type": "update_file"
+      },
+      "oneOf": [
+        {
+          "$ref": "#/$defs/components_schemas_ApplyPatchCreateFileOperation"
+        },
+        {
+          "$ref": "#/$defs/components_schemas_ApplyPatchUpdateFileOperation"
+        },
+        {
+          "$ref": "#/$defs/components_schemas_ApplyPatchDeleteFileOperation"
+        }
+      ]
+    },
+    "components_schemas_ApplyPatchCallOutputItem": {
+      "description": "The client's echo of an `apply_patch_call` after applying the patch. `output` is an optional human-readable log; `status` is `completed` when the patch was applied successfully, `failed` otherwise.",
+      "example": {
+        "call_id": "call_abc123",
+        "output": "Applied patch to /src/main.ts",
+        "status": "completed",
+        "type": "apply_patch_call_output"
+      },
+      "properties": {
+        "call_id": {
+          "type": "string"
+        },
+        "id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "output": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "status": {
+          "enum": [
+            "completed",
+            "failed"
+          ],
+          "type": "string",
+          "x-speakeasy-unknown-values": "allow"
+        },
+        "type": {
+          "enum": [
+            "apply_patch_call_output"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "call_id",
+        "status"
+      ],
+      "type": "object"
+    },
+    "components_schemas_ApplyPatchCallStatus": {
+      "description": "Lifecycle state of an `apply_patch_call` output item.",
+      "enum": [
+        "in_progress",
+        "completed"
+      ],
+      "example": "completed",
+      "type": "string",
+      "x-speakeasy-unknown-values": "allow"
+    },
+    "components_schemas_ApplyPatchCreateFileOperation": {
+      "description": "The `create_file` variant of an `apply_patch_call.operation`. Carries a V4A diff describing the new file contents.",
+      "example": {
+        "diff": "@@\n+console.log(\"hi\");\n",
+        "path": "/src/main.ts",
+        "type": "create_file"
+      },
+      "properties": {
+        "diff": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "create_file"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "path",
+        "diff"
+      ],
+      "type": "object"
+    },
+    "components_schemas_ApplyPatchDeleteFileOperation": {
+      "description": "The `delete_file` variant of an `apply_patch_call.operation`. Identifies the file to remove; no diff is required.",
+      "example": {
+        "path": "/src/main.ts",
+        "type": "delete_file"
+      },
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "delete_file"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "path"
+      ],
+      "type": "object"
+    },
+    "components_schemas_ApplyPatchServerTool": {
+      "description": "Apply patch tool configuration",
+      "example": {
+        "type": "apply_patch"
+      },
+      "properties": {
+        "type": {
+          "enum": [
+            "apply_patch"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "type": "object"
+    },
+    "components_schemas_ApplyPatchUpdateFileOperation": {
+      "description": "The `update_file` variant of an `apply_patch_call.operation`. Carries a V4A diff describing edits to an existing file.",
+      "example": {
+        "diff": "@@ function main() {\n+  console.log(\"hi\");\n }",
+        "path": "/src/main.ts",
+        "type": "update_file"
+      },
+      "properties": {
+        "diff": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "update_file"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "path",
+        "diff"
+      ],
+      "type": "object"
+    },
+    "components_schemas_BaseInputs": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "items": {
+            "anyOf": [
+              {
+                "properties": {
+                  "content": {
+                    "anyOf": [
+                      {
+                        "items": {
+                          "discriminator": {
+                            "mapping": {
+                              "input_audio": "#/components/schemas/InputAudio",
+                              "input_file": "#/components/schemas/InputFile",
+                              "input_image": "#/components/schemas/InputImage",
+                              "input_text": "#/components/schemas/InputText"
+                            },
+                            "propertyName": "type"
+                          },
+                          "oneOf": [
+                            {
+                              "$ref": "#/$defs/components_schemas_InputText"
+                            },
+                            {
+                              "$ref": "#/$defs/components_schemas_InputImage"
+                            },
+                            {
+                              "$ref": "#/$defs/components_schemas_InputFile"
+                            },
+                            {
+                              "$ref": "#/$defs/components_schemas_InputAudio"
+                            }
+                          ]
+                        },
+                        "type": "array"
+                      },
+                      {
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  "phase": {
+                    "anyOf": [
+                      {
+                        "enum": [
+                          "commentary"
+                        ],
+                        "type": "string"
+                      },
+                      {
+                        "enum": [
+                          "final_answer"
+                        ],
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "role": {
+                    "anyOf": [
+                      {
+                        "enum": [
+                          "user"
+                        ],
+                        "type": "string"
+                      },
+                      {
+                        "enum": [
+                          "system"
+                        ],
+                        "type": "string"
+                      },
+                      {
+                        "enum": [
+                          "assistant"
+                        ],
+                        "type": "string"
+                      },
+                      {
+                        "enum": [
+                          "developer"
+                        ],
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  "type": {
+                    "enum": [
+                      "message"
+                    ],
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "role",
+                  "content"
+                ],
+                "type": "object"
+              },
+              {
+                "$ref": "#/$defs/components_schemas_OpenAIResponseInputMessageItem"
+              },
+              {
+                "$ref": "#/$defs/components_schemas_OpenAIResponseFunctionToolCallOutput"
+              },
+              {
+                "$ref": "#/$defs/components_schemas_OpenAIResponseFunctionToolCall"
+              },
+              {
+                "$ref": "#/$defs/components_schemas_OutputItemImageGenerationCall"
+              },
+              {
+                "$ref": "#/$defs/components_schemas_OutputMessage"
+              },
+              {
+                "$ref": "#/$defs/components_schemas_OpenAIResponseCustomToolCall"
+              },
+              {
+                "$ref": "#/$defs/components_schemas_OpenAIResponseCustomToolCallOutput"
+              },
+              {
+                "$ref": "#/$defs/components_schemas_ApplyPatchCallItem"
+              },
+              {
+                "$ref": "#/$defs/components_schemas_ApplyPatchCallOutputItem"
+              }
+            ]
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "example": [
+        {
+          "content": "What is the weather today?",
+          "role": "user"
+        }
+      ]
+    },
+    "components_schemas_BaseReasoningConfig": {
+      "example": {
+        "effort": "medium",
+        "summary": "auto"
+      },
+      "properties": {
+        "context": {
+          "$ref": "#/$defs/components_schemas_ReasoningContext"
+        },
+        "effort": {
+          "$ref": "#/$defs/components_schemas_ReasoningEffort"
+        },
+        "mode": {
+          "$ref": "#/$defs/components_schemas_ReasoningMode"
+        },
+        "summary": {
+          "$ref": "#/$defs/components_schemas_ReasoningSummaryVerbosity"
+        }
+      },
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "components_schemas_BaseResponsesResult": {
+      "example": {
+        "completed_at": 1704067210,
+        "created_at": 1704067200,
+        "error": null,
+        "frequency_penalty": null,
+        "id": "resp-abc123",
+        "incomplete_details": null,
+        "instructions": null,
+        "max_output_tokens": null,
+        "metadata": null,
+        "model": "gpt-4",
+        "object": "response",
+        "output": [],
+        "parallel_tool_calls": true,
+        "presence_penalty": null,
+        "status": "completed",
+        "temperature": null,
+        "tool_choice": "auto",
+        "tools": [],
+        "top_p": null
+      },
+      "properties": {
+        "background": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "completed_at": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "created_at": {
+          "type": "integer"
+        },
+        "error": {
+          "$ref": "#/$defs/components_schemas_ResponsesErrorField",
+          "nullable": true
+        },
+        "frequency_penalty": {
+          "format": "double",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "id": {
+          "type": "string"
+        },
+        "incomplete_details": {
+          "$ref": "#/$defs/components_schemas_IncompleteDetails",
+          "nullable": true
+        },
+        "instructions": {
+          "$ref": "#/$defs/components_schemas_BaseInputs",
+          "nullable": true
+        },
+        "max_output_tokens": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "nullable": true
+        },
+        "max_tool_calls": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "nullable": true
+        },
+        "metadata": {
+          "$ref": "#/$defs/components_schemas_RequestMetadata"
+        },
+        "model": {
+          "type": "string"
+        },
+        "object": {
+          "enum": [
+            "response"
+          ],
+          "type": "string"
+        },
+        "output": {
+          "items": {
+            "discriminator": {
+              "mapping": {
+                "apply_patch_call": "#/components/schemas/OutputItemApplyPatchCall",
+                "code_interpreter_call": "#/components/schemas/OutputItemCodeInterpreterCall",
+                "custom_tool_call": "#/components/schemas/OutputItemCustomToolCall",
+                "file_search_call": "#/components/schemas/OutputItemFileSearchCall",
+                "function_call": "#/components/schemas/OutputItemFunctionCall",
+                "image_generation_call": "#/components/schemas/OutputItemImageGenerationCall",
+                "message": "#/components/schemas/OutputMessage",
+                "reasoning": "#/components/schemas/OutputItemReasoning",
+                "web_search_call": "#/components/schemas/OutputItemWebSearchCall"
+              },
+              "propertyName": "type"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/$defs/components_schemas_OutputMessage"
+              },
+              {
+                "$ref": "#/$defs/components_schemas_OutputItemReasoning"
+              },
+              {
+                "$ref": "#/$defs/components_schemas_OutputItemFunctionCall"
+              },
+              {
+                "$ref": "#/$defs/components_schemas_OutputItemCustomToolCall"
+              },
+              {
+                "$ref": "#/$defs/components_schemas_OutputItemWebSearchCall"
+              },
+              {
+                "$ref": "#/$defs/components_schemas_OutputItemFileSearchCall"
+              },
+              {
+                "$ref": "#/$defs/components_schemas_OutputItemImageGenerationCall"
+              },
+              {
+                "$ref": "#/$defs/components_schemas_OutputItemApplyPatchCall"
+              },
+              {
+                "$ref": "#/$defs/components_schemas_OutputItemCodeInterpreterCall"
+              }
+            ]
+          },
+          "type": "array"
+        },
+        "output_text": {
+          "type": "string"
+        },
+        "parallel_tool_calls": {
+          "type": "boolean"
+        },
+        "presence_penalty": {
+          "format": "double",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "previous_response_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "prompt": {
+          "$ref": "#/$defs/components_schemas_StoredPromptTemplate"
+        },
+        "prompt_cache_key": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "prompt_cache_options": {
+          "$ref": "#/$defs/components_schemas_PromptCacheOptions"
+        },
+        "reasoning": {
+          "$ref": "#/$defs/components_schemas_BaseReasoningConfig",
+          "nullable": true
+        },
+        "safety_identifier": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "service_tier": {
+          "$ref": "#/$defs/components_schemas_ServiceTier"
+        },
+        "status": {
+          "$ref": "#/$defs/components_schemas_OpenAIResponsesResponseStatus"
+        },
+        "store": {
+          "type": "boolean"
+        },
+        "temperature": {
+          "format": "double",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "text": {
+          "$ref": "#/$defs/components_schemas_TextConfig",
+          "nullable": true
+        },
+        "tool_choice": {
+          "$ref": "#/$defs/components_schemas_OpenAIResponsesToolChoice"
+        },
+        "tools": {
+          "items": {
+            "oneOf": [
+              {
+                "allOf": [
+                  {
+                    "$ref": "#/$defs/components_schemas_FunctionTool"
+                  },
+                  {
+                    "properties": {},
+                    "type": "object"
+                  }
+                ],
+                "description": "Function tool definition",
+                "example": {
+                  "description": "Get the current weather in a location",
+                  "name": "get_weather",
+                  "parameters": {
+                    "properties": {
+                      "location": {
+                        "description": "The city and state",
+                        "type": "string"
+                      },
+                      "unit": {
+                        "enum": [
+                          "celsius",
+                          "fahrenheit"
+                        ],
+                        "type": "string",
+                        "x-speakeasy-unknown-values": "allow"
+                      }
+                    },
+                    "required": [
+                      "location"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "function"
+                }
+              },
+              {
+                "$ref": "#/$defs/components_schemas_Preview_WebSearchServerTool"
+              },
+              {
+                "$ref": "#/$defs/components_schemas_Preview_20250311_WebSearchServerTool"
+              },
+              {
+                "$ref": "#/$defs/components_schemas_Legacy_WebSearchServerTool"
+              },
+              {
+                "$ref": "#/$defs/components_schemas_WebSearchServerTool"
+              },
+              {
+                "$ref": "#/$defs/components_schemas_FileSearchServerTool"
+              },
+              {
+                "$ref": "#/$defs/components_schemas_ComputerUseServerTool"
+              },
+              {
+                "$ref": "#/$defs/components_schemas_CodeInterpreterServerTool"
+              },
+              {
+                "$ref": "#/$defs/components_schemas_McpServerTool"
+              },
+              {
+                "$ref": "#/$defs/components_schemas_ImageGenerationServerTool"
+              },
+              {
+                "$ref": "#/$defs/components_schemas_CodexLocalShellTool"
+              },
+              {
+                "$ref": "#/$defs/components_schemas_ShellServerTool"
+              },
+              {
+                "$ref": "#/$defs/components_schemas_ApplyPatchServerTool"
+              },
+              {
+                "$ref": "#/$defs/components_schemas_CustomTool"
+              },
+              {
+                "$ref": "#/$defs/components_schemas_NamespaceTool"
+              }
+            ]
+          },
+          "type": "array"
+        },
+        "top_logprobs": {
+          "type": "integer",
+          "nullable": true
+        },
+        "top_p": {
+          "format": "double",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "truncation": {
+          "$ref": "#/$defs/components_schemas_Truncation",
+          "nullable": true
+        },
+        "usage": {
+          "$ref": "#/$defs/components_schemas_OpenAIResponsesUsage"
+        },
+        "user": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "object",
+        "created_at",
+        "model",
+        "status",
+        "completed_at",
+        "output",
+        "error",
+        "incomplete_details",
+        "temperature",
+        "top_p",
+        "presence_penalty",
+        "frequency_penalty",
+        "instructions",
+        "metadata",
+        "tools",
+        "tool_choice",
+        "parallel_tool_calls"
+      ],
+      "type": "object"
+    },
+    "components_schemas_CodeInterpreterCallItem": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/components_schemas_OutputItemCodeInterpreterCall"
+        },
+        {
+          "additionalProperties": {},
+          "properties": {},
+          "type": "object"
+        }
+      ],
+      "description": "A code interpreter execution call with outputs",
+      "example": {
+        "code": "print(\"Hello, World!\")",
+        "container_id": "container-xyz789",
+        "id": "code-abc123",
+        "outputs": [
+          {
+            "logs": "Hello, World!",
+            "type": "logs"
+          }
+        ],
+        "status": "completed",
+        "type": "code_interpreter_call"
+      }
+    },
+    "components_schemas_CodeInterpreterFileOutput": {
+      "example": {
+        "download_url": "https://example.com/download/file_abc123",
+        "filename": "summary.txt",
+        "id": "file_abc123",
+        "type": "file"
+      },
+      "properties": {
+        "download_url": {
+          "description": "Provider-issued download URL for the generated file. Typically signed and time-limited (see `expires_at`); fetch promptly rather than persisting the URL.",
+          "type": "string"
+        },
+        "error_code": {
+          "description": "Provider error code when generating or persisting the file failed; null or absent on success.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "expires_at": {
+          "description": "When the `download_url` stops working, as an ISO 8601 timestamp. After this time the file must be regenerated.",
+          "type": "string"
+        },
+        "filename": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "media_type": {
+          "type": "string"
+        },
+        "sha256": {
+          "type": "string"
+        },
+        "size_bytes": {
+          "type": "integer"
+        },
+        "status": {
+          "description": "Provider-reported readiness of the generated file (e.g. `ready`). Values other than `ready` indicate the artifact may not be downloadable.",
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "file"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "type": "object"
+    },
+    "components_schemas_CodeInterpreterImageOutput": {
+      "example": {
+        "type": "image",
+        "url": "https://example.com/plot.png"
+      },
+      "properties": {
+        "type": {
+          "enum": [
+            "image"
+          ],
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "url"
+      ],
+      "type": "object"
+    },
+    "components_schemas_CodeInterpreterLogsOutput": {
+      "example": {
+        "logs": "hello\n",
+        "type": "logs"
+      },
+      "properties": {
+        "logs": {
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "logs"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "logs"
+      ],
+      "type": "object"
+    },
+    "components_schemas_CodeInterpreterServerTool": {
+      "description": "Code interpreter tool configuration",
+      "example": {
+        "container": "auto",
+        "type": "code_interpreter"
+      },
+      "properties": {
+        "container": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "properties": {
+                "file_ids": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "memory_limit": {
+                  "enum": [
+                    "1g",
+                    "4g",
+                    "16g",
+                    "64g",
+                    null
+                  ],
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "x-speakeasy-unknown-values": "allow"
+                },
+                "type": {
+                  "enum": [
+                    "auto"
+                  ],
+                  "type": "string"
+                }
+              },
+              "required": [
+                "type"
+              ],
+              "type": "object"
+            }
+          ]
+        },
+        "type": {
+          "enum": [
+            "code_interpreter"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "container"
+      ],
+      "type": "object"
+    },
+    "components_schemas_CodexLocalShellTool": {
+      "description": "Local shell tool configuration",
+      "example": {
+        "type": "local_shell"
+      },
+      "properties": {
+        "type": {
+          "enum": [
+            "local_shell"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "type": "object"
+    },
+    "components_schemas_CompoundFilter": {
+      "description": "A compound filter that combines multiple comparison or compound filters",
+      "example": {
+        "filters": [
+          {
+            "key": "author",
+            "type": "eq",
+            "value": "Alice"
+          }
+        ],
+        "type": "and"
+      },
+      "properties": {
+        "filters": {
+          "items": {
+            "additionalProperties": {},
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "type": {
+          "enum": [
+            "and",
+            "or"
+          ],
+          "type": "string",
+          "x-speakeasy-unknown-values": "allow"
+        }
+      },
+      "required": [
+        "type",
+        "filters"
+      ],
+      "type": "object"
+    },
+    "components_schemas_ComputerUseServerTool": {
+      "description": "Computer use preview tool configuration",
+      "example": {
+        "display_height": 768,
+        "display_width": 1024,
+        "environment": "linux",
+        "type": "computer_use_preview"
+      },
+      "properties": {
+        "display_height": {
+          "type": "integer"
+        },
+        "display_width": {
+          "type": "integer"
+        },
+        "environment": {
+          "enum": [
+            "windows",
+            "mac",
+            "linux",
+            "ubuntu",
+            "browser"
+          ],
+          "type": "string",
+          "x-speakeasy-unknown-values": "allow"
+        },
+        "type": {
+          "enum": [
+            "computer_use_preview"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "display_height",
+        "display_width",
+        "environment"
+      ],
+      "type": "object"
+    },
+    "components_schemas_CustomTool": {
+      "description": "Custom tool configuration",
+      "example": {
+        "name": "my_tool",
+        "type": "custom"
+      },
+      "properties": {
+        "description": {
+          "type": "string"
+        },
+        "format": {
+          "anyOf": [
+            {
+              "properties": {
+                "type": {
+                  "enum": [
+                    "text"
+                  ],
+                  "type": "string"
+                }
+              },
+              "required": [
+                "type"
+              ],
+              "type": "object"
+            },
+            {
+              "properties": {
+                "definition": {
+                  "type": "string"
+                },
+                "syntax": {
+                  "enum": [
+                    "lark",
+                    "regex"
+                  ],
+                  "type": "string",
+                  "x-speakeasy-unknown-values": "allow"
+                },
+                "type": {
+                  "enum": [
+                    "grammar"
+                  ],
+                  "type": "string"
+                }
+              },
+              "required": [
+                "type",
+                "definition",
+                "syntax"
+              ],
+              "type": "object"
+            }
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "custom"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "name"
+      ],
+      "type": "object"
+    },
+    "components_schemas_EndpointInfo": {
+      "example": {
+        "model": "openai/gpt-4o",
+        "provider": "OpenAI",
+        "selected": true
+      },
+      "properties": {
+        "model": {
+          "type": "string"
+        },
+        "provider": {
+          "type": "string"
+        },
+        "selected": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "provider",
+        "model",
+        "selected"
+      ],
+      "type": "object"
+    },
+    "components_schemas_EndpointsMetadata": {
+      "example": {
+        "available": [
+          {
+            "model": "openai/gpt-4o",
+            "provider": "OpenAI",
+            "selected": true
+          }
+        ],
+        "total": 3
+      },
+      "properties": {
+        "available": {
+          "items": {
+            "$ref": "#/$defs/components_schemas_EndpointInfo"
+          },
+          "type": "array"
+        },
+        "total": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "total",
+        "available"
+      ],
+      "type": "object"
+    },
+    "components_schemas_FileCitation": {
+      "example": {
+        "file_id": "file-abc123",
+        "filename": "research_paper.pdf",
+        "index": 0,
+        "type": "file_citation"
+      },
+      "properties": {
+        "file_id": {
+          "type": "string"
+        },
+        "filename": {
+          "type": "string"
+        },
+        "index": {
+          "type": "integer"
+        },
+        "type": {
+          "enum": [
+            "file_citation"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "file_id",
+        "filename",
+        "index"
+      ],
+      "type": "object"
+    },
+    "components_schemas_FilePath": {
+      "example": {
+        "file_id": "file-xyz789",
+        "index": 0,
+        "type": "file_path"
+      },
+      "properties": {
+        "file_id": {
+          "type": "string"
+        },
+        "index": {
+          "type": "integer"
+        },
+        "type": {
+          "enum": [
+            "file_path"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "file_id",
+        "index"
+      ],
+      "type": "object"
+    },
+    "components_schemas_FileSearchServerTool": {
+      "description": "File search tool configuration",
+      "example": {
+        "type": "file_search",
+        "vector_store_ids": [
+          "vs_abc123"
+        ]
+      },
+      "properties": {
+        "filters": {
+          "anyOf": [
+            {
+              "properties": {
+                "key": {
+                  "type": "string"
+                },
+                "type": {
+                  "enum": [
+                    "eq",
+                    "ne",
+                    "gt",
+                    "gte",
+                    "lt",
+                    "lte"
+                  ],
+                  "type": "string",
+                  "x-speakeasy-unknown-values": "allow"
+                },
+                "value": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "items": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "format": "double",
+                            "type": "number"
+                          }
+                        ]
+                      },
+                      "type": "array"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "key",
+                "type",
+                "value"
+              ],
+              "type": "object"
+            },
+            {
+              "$ref": "#/$defs/components_schemas_CompoundFilter"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "max_num_results": {
+          "type": "integer"
+        },
+        "ranking_options": {
+          "properties": {
+            "ranker": {
+              "enum": [
+                "auto",
+                "default-2024-11-15"
+              ],
+              "type": "string",
+              "x-speakeasy-unknown-values": "allow"
+            },
+            "score_threshold": {
+              "format": "double",
+              "type": "number"
+            }
+          },
+          "type": "object"
+        },
+        "type": {
+          "enum": [
+            "file_search"
+          ],
+          "type": "string"
+        },
+        "vector_store_ids": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "type",
+        "vector_store_ids"
+      ],
+      "type": "object"
+    },
+    "components_schemas_FormatJsonObjectConfig": {
+      "description": "JSON object response format",
+      "example": {
+        "type": "json_object"
+      },
+      "properties": {
+        "type": {
+          "enum": [
+            "json_object"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "type": "object"
+    },
+    "components_schemas_FormatJsonSchemaConfig": {
+      "description": "JSON schema constrained response format",
+      "example": {
+        "description": "User information schema",
+        "name": "user_info",
+        "schema": {
+          "properties": {
+            "age": {
+              "type": "number"
+            },
+            "name": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "name"
+          ],
+          "type": "object"
+        },
+        "type": "json_schema"
+      },
+      "properties": {
+        "description": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "schema": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "strict": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "type": {
+          "enum": [
+            "json_schema"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "name",
+        "schema"
+      ],
+      "type": "object"
+    },
+    "components_schemas_FormatTextConfig": {
+      "description": "Plain text response format",
+      "example": {
+        "type": "text"
+      },
+      "properties": {
+        "type": {
+          "enum": [
+            "text"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "type": "object"
+    },
+    "components_schemas_Formats": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/components_schemas_FormatTextConfig"
+        },
+        {
+          "$ref": "#/$defs/components_schemas_FormatJsonObjectConfig"
+        },
+        {
+          "$ref": "#/$defs/components_schemas_FormatJsonSchemaConfig"
+        }
+      ],
+      "description": "Text response format configuration",
+      "example": {
+        "type": "text"
+      }
+    },
+    "components_schemas_FunctionTool": {
+      "description": "Function tool definition",
+      "example": {
+        "description": "Get the current weather in a location",
+        "name": "get_weather",
+        "parameters": {
+          "properties": {
+            "location": {
+              "description": "The city and state",
+              "type": "string"
+            },
+            "unit": {
+              "enum": [
+                "celsius",
+                "fahrenheit"
+              ],
+              "type": "string",
+              "x-speakeasy-unknown-values": "allow"
+            }
+          },
+          "required": [
+            "location"
+          ],
+          "type": "object"
+        },
+        "type": "function"
+      },
+      "properties": {
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "parameters": {
+          "additionalProperties": {},
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "strict": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "type": {
+          "enum": [
+            "function"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "name",
+        "parameters"
+      ],
+      "type": "object"
+    },
+    "components_schemas_FusionAnalysisResult": {
+      "description": "Structured analysis produced by the fusion analyst model.",
+      "example": {
+        "blind_spots": [
+          "No model considered the impact on existing API consumers."
+        ],
+        "consensus": [
+          "All panel models agree the request is asking for a concise summary."
+        ],
+        "contradictions": [
+          {
+            "stances": [
+              {
+                "model": "openai/gpt-5",
+                "stance": "Favors an incremental rollout."
+              },
+              {
+                "model": "anthropic/claude-sonnet-4.5",
+                "stance": "Favors a single coordinated migration."
+              }
+            ],
+            "topic": "Recommended approach"
+          }
+        ],
+        "partial_coverage": [
+          {
+            "models": [
+              "openai/gpt-5"
+            ],
+            "point": "Only one model addressed the rollback strategy."
+          }
+        ],
+        "unique_insights": [
+          {
+            "insight": "Highlighted a backwards-compatibility risk the other models missed.",
+            "model": "anthropic/claude-sonnet-4.5"
+          }
+        ]
+      },
+      "properties": {
+        "blind_spots": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "consensus": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "contradictions": {
+          "items": {
+            "properties": {
+              "stances": {
+                "items": {
+                  "properties": {
+                    "model": {
+                      "type": "string"
+                    },
+                    "stance": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "model",
+                    "stance"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "topic": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "topic",
+              "stances"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "partial_coverage": {
+          "items": {
+            "properties": {
+              "models": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "point": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "models",
+              "point"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "unique_insights": {
+          "items": {
+            "properties": {
+              "insight": {
+                "type": "string"
+              },
+              "model": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "model",
+              "insight"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "consensus",
+        "contradictions",
+        "partial_coverage",
+        "unique_insights",
+        "blind_spots"
+      ],
+      "type": "object"
+    },
+    "components_schemas_FusionSource": {
+      "description": "A web page retrieved via web search during a fusion run.",
+      "example": {
+        "title": "Example article title",
+        "url": "https://example.com/article"
+      },
+      "properties": {
+        "title": {
+          "description": "Title of the retrieved web page.",
+          "type": "string"
+        },
+        "url": {
+          "description": "URL of the web page a panel or the analyst retrieved during the run.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "url",
+        "title"
+      ],
+      "type": "object"
+    },
+    "components_schemas_ImageGenerationServerTool": {
+      "description": "Image generation tool configuration",
+      "example": {
+        "quality": "high",
+        "type": "image_generation"
+      },
+      "properties": {
+        "background": {
+          "enum": [
+            "transparent",
+            "opaque",
+            "auto"
+          ],
+          "type": "string",
+          "x-speakeasy-unknown-values": "allow"
+        },
+        "input_fidelity": {
+          "enum": [
+            "high",
+            "low",
+            null
+          ],
+          "type": [
+            "string",
+            "null"
+          ],
+          "x-speakeasy-unknown-values": "allow"
+        },
+        "input_image_mask": {
+          "properties": {
+            "file_id": {
+              "type": "string"
+            },
+            "image_url": {
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        "model": {
+          "type": "string"
+        },
+        "moderation": {
+          "enum": [
+            "auto",
+            "low"
+          ],
+          "type": "string",
+          "x-speakeasy-unknown-values": "allow"
+        },
+        "output_compression": {
+          "type": "integer"
+        },
+        "output_format": {
+          "enum": [
+            "png",
+            "webp",
+            "jpeg"
+          ],
+          "type": "string",
+          "x-speakeasy-unknown-values": "allow"
+        },
+        "partial_images": {
+          "type": "integer"
+        },
+        "quality": {
+          "enum": [
+            "low",
+            "medium",
+            "high",
+            "auto"
+          ],
+          "type": "string",
+          "x-speakeasy-unknown-values": "allow"
+        },
+        "size": {
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "image_generation"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "type": "object"
+    },
+    "components_schemas_ImageGenerationStatus": {
+      "enum": [
+        "in_progress",
+        "completed",
+        "generating",
+        "failed"
+      ],
+      "example": "completed",
+      "type": "string",
+      "x-speakeasy-unknown-values": "allow"
+    },
+    "components_schemas_IncompleteDetails": {
+      "example": {
+        "reason": "max_output_tokens"
+      },
+      "properties": {
+        "reason": {
+          "enum": [
+            "max_output_tokens",
+            "content_filter"
+          ],
+          "type": "string",
+          "x-speakeasy-unknown-values": "allow"
+        }
+      },
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "components_schemas_InputAudio": {
+      "description": "Audio input content item",
+      "example": {
+        "input_audio": {
+          "data": "SGVsbG8gV29ybGQ=",
+          "format": "mp3"
+        },
+        "type": "input_audio"
+      },
+      "properties": {
+        "input_audio": {
+          "properties": {
+            "data": {
+              "type": "string"
+            },
+            "format": {
+              "enum": [
+                "mp3",
+                "wav"
+              ],
+              "type": "string",
+              "x-speakeasy-unknown-values": "allow"
+            }
+          },
+          "required": [
+            "data",
+            "format"
+          ],
+          "type": "object"
+        },
+        "type": {
+          "enum": [
+            "input_audio"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "input_audio"
+      ],
+      "type": "object"
+    },
+    "components_schemas_InputFile": {
+      "description": "File input content item",
+      "example": {
+        "file_id": "file-abc123",
+        "filename": "document.pdf",
+        "type": "input_file"
+      },
+      "properties": {
+        "file_data": {
+          "type": "string"
+        },
+        "file_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "file_url": {
+          "type": "string"
+        },
+        "filename": {
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "input_file"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "type": "object"
+    },
+    "components_schemas_InputImage": {
+      "description": "Image input content item",
+      "example": {
+        "detail": "auto",
+        "image_url": "https://example.com/image.jpg",
+        "type": "input_image"
+      },
+      "properties": {
+        "detail": {
+          "enum": [
+            "auto",
+            "high",
+            "low",
+            "original"
+          ],
+          "type": "string",
+          "x-speakeasy-unknown-values": "allow"
+        },
+        "image_url": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "type": {
+          "enum": [
+            "input_image"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "detail"
+      ],
+      "type": "object"
+    },
+    "components_schemas_InputText": {
+      "description": "Text input content item",
+      "example": {
+        "text": "Hello, how can I help you?",
+        "type": "input_text"
+      },
+      "properties": {
+        "prompt_cache_breakpoint": {
+          "$ref": "#/$defs/components_schemas_PromptCacheBreakpoint"
+        },
+        "text": {
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "input_text"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "text"
+      ],
+      "type": "object"
+    },
+    "components_schemas_Legacy_WebSearchServerTool": {
+      "description": "Web search tool configuration",
+      "example": {
+        "engine": "auto",
+        "filters": {
+          "allowed_domains": [
+            "example.com"
+          ]
+        },
+        "type": "web_search"
+      },
+      "properties": {
+        "engine": {
+          "$ref": "#/$defs/components_schemas_WebSearchEngineEnum"
+        },
+        "filters": {
+          "$ref": "#/$defs/components_schemas_WebSearchDomainFilter"
+        },
+        "max_results": {
+          "description": "Maximum number of search results to return per search call. Defaults to 5. Applies to Exa, Firecrawl, Parallel, and Perplexity engines; ignored with native provider search. Perplexity supports a maximum of 20; values above 20 are clamped.",
+          "example": 5,
+          "type": "integer"
+        },
+        "max_uses": {
+          "description": "Maximum number of web searches the model may perform in a single request. Once reached, further search calls return an error result instead of executing. Applies to the Exa, Firecrawl, Parallel, and Perplexity engines. With native provider search, forwarded only to Anthropic (as `max_uses`); other native search providers have no equivalent parameter and ignore it.",
+          "example": 3,
+          "type": "integer"
+        },
+        "mode": {
+          "$ref": "#/$defs/components_schemas_WebSearchMode"
+        },
+        "search_context_size": {
+          "$ref": "#/$defs/components_schemas_SearchContextSizeEnum"
+        },
+        "type": {
+          "enum": [
+            "web_search"
+          ],
+          "type": "string"
+        },
+        "user_location": {
+          "$ref": "#/$defs/components_schemas_WebSearchUserLocation"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "type": "object"
+    },
+    "components_schemas_McpServerTool": {
+      "description": "MCP (Model Context Protocol) tool configuration",
+      "example": {
+        "server_label": "my-server",
+        "server_url": "https://example.com/mcp",
+        "type": "mcp"
+      },
+      "properties": {
+        "allowed_tools": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "properties": {
+                "read_only": {
+                  "type": "boolean"
+                },
+                "tool_names": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                }
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "authorization": {
+          "type": "string"
+        },
+        "connector_id": {
+          "enum": [
+            "connector_dropbox",
+            "connector_gmail",
+            "connector_googlecalendar",
+            "connector_googledrive",
+            "connector_microsoftteams",
+            "connector_outlookcalendar",
+            "connector_outlookemail",
+            "connector_sharepoint"
+          ],
+          "type": "string",
+          "x-speakeasy-unknown-values": "allow"
+        },
+        "headers": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "require_approval": {
+          "anyOf": [
+            {
+              "properties": {
+                "always": {
+                  "properties": {
+                    "tool_names": {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "type": "object"
+                },
+                "never": {
+                  "properties": {
+                    "tool_names": {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "type": "object"
+                }
+              },
+              "type": "object"
+            },
+            {
+              "enum": [
+                "always"
+              ],
+              "type": "string"
+            },
+            {
+              "enum": [
+                "never"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "server_description": {
+          "type": "string"
+        },
+        "server_label": {
+          "type": "string"
+        },
+        "server_url": {
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "mcp"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "server_label"
+      ],
+      "type": "object"
+    },
+    "components_schemas_NamespaceFunctionTool": {
+      "description": "A function tool grouped inside a namespace tool",
+      "example": {
+        "name": "spawn_agent",
+        "type": "function"
+      },
+      "properties": {
+        "allowed_callers": {
+          "items": {
+            "enum": [
+              "direct",
+              "programmatic"
+            ],
+            "type": "string",
+            "x-speakeasy-unknown-values": "allow"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "defer_loading": {
+          "type": "boolean"
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "output_schema": {
+          "additionalProperties": {},
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "parameters": {
+          "additionalProperties": {},
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "strict": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "type": {
+          "enum": [
+            "function"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "name"
+      ],
+      "type": "object"
+    },
+    "components_schemas_NamespaceTool": {
+      "description": "Groups function/custom tools under a shared namespace",
+      "example": {
+        "description": "Tools for spawning and managing sub-agents.",
+        "name": "multi_agent_v1",
+        "tools": [
+          {
+            "name": "spawn_agent",
+            "type": "function"
+          }
+        ],
+        "type": "namespace"
+      },
+      "properties": {
+        "description": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "tools": {
+          "items": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/components_schemas_NamespaceFunctionTool"
+              },
+              {
+                "$ref": "#/$defs/components_schemas_CustomTool"
+              }
+            ]
+          },
+          "type": "array"
+        },
+        "type": {
+          "enum": [
+            "namespace"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "name",
+        "description",
+        "tools"
+      ],
+      "type": "object"
+    },
+    "components_schemas_OpenAIResponseCustomToolCall": {
+      "example": {
+        "call_id": "call-abc123",
+        "id": "ctc-abc123",
+        "input": "*** Begin Patch\n*** End Patch",
+        "name": "apply_patch",
+        "type": "custom_tool_call"
+      },
+      "properties": {
+        "call_id": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "input": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "namespace": {
+          "description": "Namespace qualifier for tools registered as part of a namespace tool group (e.g. an MCP server)",
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "custom_tool_call"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "call_id",
+        "name",
+        "input"
+      ],
+      "type": "object"
+    },
+    "components_schemas_OpenAIResponseCustomToolCallOutput": {
+      "example": {
+        "call_id": "call-abc123",
+        "output": "patch applied successfully",
+        "type": "custom_tool_call_output"
+      },
+      "properties": {
+        "call_id": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "output": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "items": {
+                "discriminator": {
+                  "mapping": {
+                    "input_file": "#/components/schemas/InputFile",
+                    "input_image": "#/components/schemas/InputImage",
+                    "input_text": "#/components/schemas/InputText"
+                  },
+                  "propertyName": "type"
+                },
+                "oneOf": [
+                  {
+                    "$ref": "#/$defs/components_schemas_InputText"
+                  },
+                  {
+                    "$ref": "#/$defs/components_schemas_InputImage"
+                  },
+                  {
+                    "$ref": "#/$defs/components_schemas_InputFile"
+                  }
+                ]
+              },
+              "type": "array"
+            }
+          ]
+        },
+        "type": {
+          "enum": [
+            "custom_tool_call_output"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "call_id",
+        "output"
+      ],
+      "type": "object"
+    },
+    "components_schemas_OpenAIResponseFunctionToolCall": {
+      "example": {
+        "arguments": "{\"location\":\"San Francisco\"}",
+        "call_id": "call-abc123",
+        "id": "fc-abc123",
+        "name": "get_weather",
+        "status": "completed",
+        "type": "function_call"
+      },
+      "properties": {
+        "arguments": {
+          "type": "string"
+        },
+        "call_id": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "namespace": {
+          "description": "Namespace qualifier for tools registered as part of a namespace tool group (e.g. an MCP server)",
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/components_schemas_ToolCallStatus"
+        },
+        "type": {
+          "enum": [
+            "function_call"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "call_id",
+        "name",
+        "arguments"
+      ],
+      "type": "object"
+    },
+    "components_schemas_OpenAIResponseFunctionToolCallOutput": {
+      "example": {
+        "call_id": "call-abc123",
+        "output": "{\"temperature\":72,\"conditions\":\"sunny\"}",
+        "type": "function_call_output"
+      },
+      "properties": {
+        "call_id": {
+          "type": "string"
+        },
+        "id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "output": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "items": {
+                "discriminator": {
+                  "mapping": {
+                    "input_file": "#/components/schemas/InputFile",
+                    "input_image": "#/components/schemas/InputImage",
+                    "input_text": "#/components/schemas/InputText"
+                  },
+                  "propertyName": "type"
+                },
+                "oneOf": [
+                  {
+                    "$ref": "#/$defs/components_schemas_InputText"
+                  },
+                  {
+                    "$ref": "#/$defs/components_schemas_InputImage"
+                  },
+                  {
+                    "$ref": "#/$defs/components_schemas_InputFile"
+                  }
+                ]
+              },
+              "type": "array"
+            }
+          ]
+        },
+        "status": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/components_schemas_ToolCallStatus"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "type": {
+          "enum": [
+            "function_call_output"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "call_id",
+        "output"
+      ],
+      "type": "object"
+    },
+    "components_schemas_OpenAIResponseInputMessageItem": {
+      "example": {
+        "content": [
+          {
+            "text": "Hello, how are you?",
+            "type": "input_text"
+          }
+        ],
+        "id": "msg-abc123",
+        "role": "user",
+        "type": "message"
+      },
+      "properties": {
+        "content": {
+          "items": {
+            "discriminator": {
+              "mapping": {
+                "input_audio": "#/components/schemas/InputAudio",
+                "input_file": "#/components/schemas/InputFile",
+                "input_image": "#/components/schemas/InputImage",
+                "input_text": "#/components/schemas/InputText"
+              },
+              "propertyName": "type"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/$defs/components_schemas_InputText"
+              },
+              {
+                "$ref": "#/$defs/components_schemas_InputImage"
+              },
+              {
+                "$ref": "#/$defs/components_schemas_InputFile"
+              },
+              {
+                "$ref": "#/$defs/components_schemas_InputAudio"
+              }
+            ]
+          },
+          "type": "array"
+        },
+        "id": {
+          "type": "string"
+        },
+        "role": {
+          "anyOf": [
+            {
+              "enum": [
+                "user"
+              ],
+              "type": "string"
+            },
+            {
+              "enum": [
+                "system"
+              ],
+              "type": "string"
+            },
+            {
+              "enum": [
+                "developer"
+              ],
+              "type": "string"
+            }
+          ]
+        },
+        "type": {
+          "enum": [
+            "message"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "role",
+        "content"
+      ],
+      "type": "object"
+    },
+    "components_schemas_OpenAIResponsesAnnotation": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/components_schemas_FileCitation"
+        },
+        {
+          "$ref": "#/$defs/components_schemas_URLCitation"
+        },
+        {
+          "$ref": "#/$defs/components_schemas_FilePath"
+        }
+      ],
+      "example": {
+        "file_id": "file-abc123",
+        "filename": "research_paper.pdf",
+        "index": 0,
+        "type": "file_citation"
+      }
+    },
+    "components_schemas_OpenAIResponsesRefusalContent": {
+      "example": {
+        "refusal": "I'm sorry, I cannot assist with that request",
+        "type": "refusal"
+      },
+      "properties": {
+        "refusal": {
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "refusal"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "refusal"
+      ],
+      "type": "object"
+    },
+    "components_schemas_OpenAIResponsesResponseStatus": {
+      "enum": [
+        "completed",
+        "incomplete",
+        "in_progress",
+        "failed",
+        "cancelled",
+        "queued"
+      ],
+      "example": "completed",
+      "type": "string",
+      "x-speakeasy-unknown-values": "allow"
+    },
+    "components_schemas_OpenAIResponsesToolChoice": {
+      "anyOf": [
+        {
+          "enum": [
+            "auto"
+          ],
+          "type": "string"
+        },
+        {
+          "enum": [
+            "none"
+          ],
+          "type": "string"
+        },
+        {
+          "enum": [
+            "required"
+          ],
+          "type": "string"
+        },
+        {
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "type": {
+              "enum": [
+                "function"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "type",
+            "name"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "type": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "web_search_preview_2025_03_11"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "enum": [
+                    "web_search_preview"
+                  ],
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "required": [
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "$ref": "#/$defs/components_schemas_ToolChoiceAllowed"
+        },
+        {
+          "properties": {
+            "type": {
+              "enum": [
+                "apply_patch"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "type": {
+              "enum": [
+                "shell"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "type"
+          ],
+          "type": "object"
+        }
+      ],
+      "example": "auto"
+    },
+    "components_schemas_OpenAIResponsesUsage": {
+      "example": {
+        "input_tokens": 100,
+        "input_tokens_details": {
+          "cached_tokens": 0
+        },
+        "output_tokens": 50,
+        "output_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "total_tokens": 150
+      },
+      "properties": {
+        "input_tokens": {
+          "type": "integer"
+        },
+        "input_tokens_details": {
+          "properties": {
+            "cache_write_tokens": {
+              "type": [
+                "integer",
+                "null"
+              ]
+            },
+            "cached_tokens": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "cached_tokens"
+          ],
+          "type": "object"
+        },
+        "output_tokens": {
+          "type": "integer"
+        },
+        "output_tokens_details": {
+          "properties": {
+            "reasoning_tokens": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "reasoning_tokens"
+          ],
+          "type": "object"
+        },
+        "total_tokens": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "input_tokens",
+        "input_tokens_details",
+        "output_tokens",
+        "output_tokens_details",
+        "total_tokens"
+      ],
+      "type": "object"
+    },
+    "components_schemas_OpenResponsesResult": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/components_schemas_BaseResponsesResult"
+        },
+        {
+          "properties": {
+            "error_type": {
+              "$ref": "#/$defs/components_schemas_ApiErrorType"
+            },
+            "openrouter_metadata": {
+              "$ref": "#/$defs/components_schemas_OpenRouterMetadata"
+            },
+            "output": {
+              "items": {
+                "$ref": "#/$defs/components_schemas_OutputItems"
+              },
+              "type": "array"
+            },
+            "service_tier": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "text": {
+              "$ref": "#/$defs/components_schemas_TextExtendedConfig"
+            },
+            "usage": {
+              "$ref": "#/$defs/components_schemas_Usage"
+            }
+          },
+          "type": "object"
+        }
+      ],
+      "description": "Complete non-streaming response from the Responses API",
+      "example": {
+        "completed_at": 1704067210,
+        "created_at": 1704067200,
+        "error": null,
+        "frequency_penalty": null,
+        "id": "resp-abc123",
+        "incomplete_details": null,
+        "instructions": null,
+        "max_output_tokens": null,
+        "metadata": null,
+        "model": "gpt-4",
+        "object": "response",
+        "output": [
+          {
+            "content": [
+              {
+                "annotations": [],
+                "text": "Hello! How can I help you today?",
+                "type": "output_text"
+              }
+            ],
+            "id": "msg-abc123",
+            "role": "assistant",
+            "status": "completed",
+            "type": "message"
+          }
+        ],
+        "parallel_tool_calls": true,
+        "presence_penalty": null,
+        "status": "completed",
+        "temperature": null,
+        "tool_choice": "auto",
+        "tools": [],
+        "top_p": null,
+        "usage": {
+          "input_tokens": 10,
+          "input_tokens_details": {
+            "cached_tokens": 0
+          },
+          "output_tokens": 25,
+          "output_tokens_details": {
+            "reasoning_tokens": 0
+          },
+          "total_tokens": 35
+        }
+      }
+    },
+    "components_schemas_OpenRouterMetadata": {
+      "example": {
+        "attempt": 1,
+        "endpoints": {
+          "available": [
+            {
+              "model": "openai/gpt-4o",
+              "provider": "OpenAI",
+              "selected": true
+            }
+          ],
+          "total": 1
+        },
+        "is_byok": false,
+        "region": "iad",
+        "requested": "openai/gpt-4o",
+        "strategy": "direct",
+        "summary": "available=1, selected=OpenAI"
+      },
+      "properties": {
+        "attempt": {
+          "type": "integer"
+        },
+        "attempts": {
+          "items": {
+            "$ref": "#/$defs/components_schemas_RouterAttempt"
+          },
+          "type": "array"
+        },
+        "endpoints": {
+          "$ref": "#/$defs/components_schemas_EndpointsMetadata"
+        },
+        "is_byok": {
+          "type": "boolean"
+        },
+        "params": {
+          "$ref": "#/$defs/components_schemas_RouterParams"
+        },
+        "pipeline": {
+          "items": {
+            "$ref": "#/$defs/components_schemas_PipelineStage"
+          },
+          "type": "array"
+        },
+        "region": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "requested": {
+          "type": "string"
+        },
+        "strategy": {
+          "$ref": "#/$defs/components_schemas_RoutingStrategy"
+        },
+        "summary": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "requested",
+        "strategy",
+        "region",
+        "summary",
+        "attempt",
+        "is_byok",
+        "endpoints"
+      ],
+      "type": "object"
+    },
+    "components_schemas_OutputAdvisorServerToolItem": {
+      "description": "An openrouter:advisor server tool output item",
+      "example": {
+        "id": "st_tmp_abc123",
+        "status": "completed",
+        "type": "openrouter:advisor"
+      },
+      "properties": {
+        "advice": {
+          "description": "The advisor model's response (the advice text returned to the executor).",
+          "type": "string"
+        },
+        "error": {
+          "description": "Error message when the advisor call did not produce advice.",
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "instance_name": {
+          "description": "Provider-safe function name of the specific advisor instance that produced this item (e.g. `openrouter_advisor__1`). Present only when more than one advisor tool is configured; omitted for the default single advisor. Echo this field back unchanged so the advisor's cross-request memory stays namespaced to the correct instance. This identity is positional: it is derived from the index of the advisor entry in the request `tools` array, so clients must keep the order of advisor tool entries stable across requests in a conversation. Reordering or inserting advisor entries shifts these names and causes each advisor's cross-request memory to be attributed to the wrong instance.",
+          "example": "openrouter_advisor__1",
+          "type": "string"
+        },
+        "model": {
+          "description": "Slug of the advisor model that was consulted.",
+          "type": "string"
+        },
+        "prompt": {
+          "description": "The prompt the executor sent to the advisor.",
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/components_schemas_ToolCallStatus"
+        },
+        "type": {
+          "enum": [
+            "openrouter:advisor"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "status",
+        "type"
+      ],
+      "type": "object"
+    },
+    "components_schemas_OutputApplyPatchCallItem": {
+      "description": "A native `apply_patch_call` output item matching OpenAI's Responses API shape. Emitted when the client requested the `apply_patch` shorthand.",
+      "example": {
+        "call_id": "call_abc123",
+        "id": "apc_abc123",
+        "operation": {
+          "diff": "@@ function main() {\n+  console.log(\"hi\");\n }",
+          "path": "/src/main.ts",
+          "type": "update_file"
+        },
+        "status": "completed",
+        "type": "apply_patch_call"
+      },
+      "properties": {
+        "call_id": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "operation": {
+          "$ref": "#/$defs/components_schemas_ApplyPatchCallOperation"
+        },
+        "status": {
+          "$ref": "#/$defs/components_schemas_ApplyPatchCallStatus"
+        },
+        "type": {
+          "enum": [
+            "apply_patch_call"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "id",
+        "call_id",
+        "status",
+        "operation"
+      ],
+      "type": "object"
+    },
+    "components_schemas_OutputApplyPatchServerToolItem": {
+      "description": "An openrouter:apply_patch server tool output item. The turn halts when validation succeeds so the client can apply the patch and echo an `apply_patch_call_output` on the next turn.",
+      "example": {
+        "call_id": "call_abc123",
+        "id": "apc_abc123",
+        "operation": {
+          "diff": "@@ function main() {\n+  console.log(\"hi\");\n }",
+          "path": "/src/main.ts",
+          "type": "update_file"
+        },
+        "status": "completed",
+        "type": "openrouter:apply_patch"
+      },
+      "properties": {
+        "call_id": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "operation": {
+          "$ref": "#/$defs/components_schemas_ApplyPatchCallOperation"
+        },
+        "status": {
+          "$ref": "#/$defs/components_schemas_ToolCallStatus"
+        },
+        "type": {
+          "enum": [
+            "openrouter:apply_patch"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "status",
+        "type"
+      ],
+      "type": "object"
+    },
+    "components_schemas_OutputBashServerToolItem": {
+      "description": "An openrouter:bash server tool output item",
+      "example": {
+        "command": "ls -la",
+        "exitCode": 0,
+        "id": "bash_tmp_abc123",
+        "status": "completed",
+        "stdout": "total 0\n",
+        "type": "openrouter:bash"
+      },
+      "properties": {
+        "arguments": {
+          "description": "The raw tool-call arguments string as emitted by the model.",
+          "type": "string"
+        },
+        "call_id": {
+          "description": "The model-generated tool call id from the originating turn.",
+          "type": "string"
+        },
+        "command": {
+          "type": "string"
+        },
+        "exitCode": {
+          "type": "integer"
+        },
+        "id": {
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/components_schemas_ToolCallStatus"
+        },
+        "stderr": {
+          "type": "string"
+        },
+        "stdout": {
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "openrouter:bash"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "status",
+        "type"
+      ],
+      "type": "object"
+    },
+    "components_schemas_OutputBrowserUseServerToolItem": {
+      "description": "An openrouter:browser_use server tool output item",
+      "example": {
+        "action": "screenshot",
+        "id": "bu_tmp_abc123",
+        "status": "completed",
+        "type": "openrouter:browser_use"
+      },
+      "properties": {
+        "action": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "screenshotB64": {
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/components_schemas_ToolCallStatus"
+        },
+        "type": {
+          "enum": [
+            "openrouter:browser_use"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "status",
+        "type"
+      ],
+      "type": "object"
+    },
+    "components_schemas_OutputCodeInterpreterCallItem": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/components_schemas_CodeInterpreterCallItem"
+        },
+        {
+          "additionalProperties": {},
+          "properties": {},
+          "type": "object"
+        }
+      ],
+      "description": "A code interpreter execution call with outputs",
+      "example": {
+        "code": "print(\"hello\")",
+        "container_id": "ctr-xyz789",
+        "id": "ci-abc123",
+        "outputs": [
+          {
+            "logs": "hello\n",
+            "type": "logs"
+          }
+        ],
+        "status": "completed",
+        "type": "code_interpreter_call"
+      }
+    },
+    "components_schemas_OutputCodeInterpreterServerToolItem": {
+      "description": "An openrouter:code_interpreter server tool output item",
+      "example": {
+        "code": "print(\"hello\")",
+        "id": "ci_tmp_abc123",
+        "language": "python",
+        "status": "completed",
+        "stdout": "hello\n",
+        "type": "openrouter:code_interpreter"
+      },
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "exitCode": {
+          "type": "integer"
+        },
+        "id": {
+          "type": "string"
+        },
+        "language": {
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/components_schemas_ToolCallStatus"
+        },
+        "stderr": {
+          "type": "string"
+        },
+        "stdout": {
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "openrouter:code_interpreter"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "status",
+        "type"
+      ],
+      "type": "object"
+    },
+    "components_schemas_OutputComputerCallItem": {
+      "example": {
+        "action": {
+          "type": "screenshot"
+        },
+        "call_id": "call-abc123",
+        "id": "cu-abc123",
+        "pending_safety_checks": [],
+        "status": "completed",
+        "type": "computer_call"
+      },
+      "properties": {
+        "action": {},
+        "call_id": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "pending_safety_checks": {
+          "items": {
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "id": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "code",
+              "message"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "status": {
+          "enum": [
+            "completed",
+            "incomplete",
+            "in_progress"
+          ],
+          "type": "string",
+          "x-speakeasy-unknown-values": "allow"
+        },
+        "type": {
+          "enum": [
+            "computer_call"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "call_id",
+        "status",
+        "pending_safety_checks"
+      ],
+      "type": "object"
+    },
+    "components_schemas_OutputCustomToolCallItem": {
+      "description": "A call to a custom (freeform-grammar) tool created by the model — distinct from `function_call`. Used for tools like Codex CLI's `apply_patch` whose payload is opaque text rather than JSON arguments.",
+      "example": {
+        "call_id": "call-abc123",
+        "id": "ctc-abc123",
+        "input": "*** Begin Patch\n*** End Patch",
+        "name": "apply_patch",
+        "type": "custom_tool_call"
+      },
+      "properties": {
+        "call_id": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "input": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "namespace": {
+          "description": "Namespace qualifier for tools registered as part of a namespace tool group (e.g. an MCP server)",
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "custom_tool_call"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "name",
+        "input",
+        "call_id"
+      ],
+      "type": "object"
+    },
+    "components_schemas_OutputDatetimeItem": {
+      "description": "An openrouter:datetime server tool output item",
+      "example": {
+        "datetime": "2026-03-12T14:30:00.000Z",
+        "id": "dt_tmp_abc123",
+        "status": "completed",
+        "timezone": "UTC",
+        "type": "openrouter:datetime"
+      },
+      "properties": {
+        "datetime": {
+          "description": "ISO 8601 datetime string",
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/components_schemas_ToolCallStatus"
+        },
+        "timezone": {
+          "description": "IANA timezone name",
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "openrouter:datetime"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "status",
+        "type",
+        "datetime",
+        "timezone"
+      ],
+      "type": "object"
+    },
+    "components_schemas_OutputFileSearchCallItem": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/components_schemas_OutputItemFileSearchCall"
+        },
+        {
+          "properties": {},
+          "type": "object"
+        }
+      ],
+      "example": {
+        "id": "fs-abc123",
+        "queries": [
+          "search term"
+        ],
+        "results": [],
+        "status": "completed",
+        "type": "file_search_call"
+      }
+    },
+    "components_schemas_OutputFileSearchServerToolItem": {
+      "description": "An openrouter:file_search server tool output item",
+      "example": {
+        "id": "fs_tmp_abc123",
+        "queries": [
+          "search term"
+        ],
+        "status": "completed",
+        "type": "openrouter:file_search"
+      },
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "queries": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "status": {
+          "$ref": "#/$defs/components_schemas_ToolCallStatus"
+        },
+        "type": {
+          "enum": [
+            "openrouter:file_search"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "status",
+        "type"
+      ],
+      "type": "object"
+    },
+    "components_schemas_OutputFilesServerToolItem": {
+      "description": "An openrouter:files server tool output item",
+      "example": {
+        "filename": "notes.txt",
+        "id": "fl_tmp_abc123",
+        "operation": "read",
+        "result": "{\"id\":\"file_abc\",\"filename\":\"notes.txt\",\"content\":\"hello\"}",
+        "status": "completed",
+        "type": "openrouter:files"
+      },
+      "properties": {
+        "error": {
+          "description": "Error message when the file operation failed.",
+          "type": "string"
+        },
+        "file_id": {
+          "description": "The target file id supplied in the tool-call arguments.",
+          "type": "string"
+        },
+        "filename": {
+          "description": "The target filename supplied in the tool-call arguments.",
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "operation": {
+          "description": "The file operation performed (list, read, write, or edit).",
+          "type": "string"
+        },
+        "result": {
+          "description": "JSON-serialized result of the file operation.",
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/components_schemas_ToolCallStatus"
+        },
+        "type": {
+          "enum": [
+            "openrouter:files"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "status",
+        "type"
+      ],
+      "type": "object"
+    },
+    "components_schemas_OutputFunctionCallItem": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/components_schemas_OutputItemFunctionCall"
+        },
+        {
+          "properties": {},
+          "type": "object"
+        }
+      ],
+      "example": {
+        "arguments": "{\"location\":\"San Francisco\"}",
+        "call_id": "call-abc123",
+        "id": "fc-abc123",
+        "name": "get_weather",
+        "status": "completed",
+        "type": "function_call"
+      }
+    },
+    "components_schemas_OutputFusionServerToolItem": {
+      "description": "An openrouter:fusion server tool output item",
+      "example": {
+        "id": "st_tmp_abc123",
+        "status": "completed",
+        "type": "openrouter:fusion"
+      },
+      "properties": {
+        "analysis": {
+          "$ref": "#/$defs/components_schemas_FusionAnalysisResult"
+        },
+        "error": {
+          "description": "Error message when the fusion run did not produce an analysis result.",
+          "type": "string"
+        },
+        "failed_models": {
+          "description": "Models that were requested as part of the analysis panel but did not produce a response. Present when at least one requested analysis model failed. The fusion result is still usable but was produced from a degraded panel.",
+          "items": {
+            "properties": {
+              "error": {
+                "description": "Error message describing why the model failed.",
+                "type": "string"
+              },
+              "model": {
+                "description": "Slug of the analysis model that failed.",
+                "type": "string"
+              },
+              "status_code": {
+                "description": "HTTP status code from the upstream response, when available (e.g. 402, 429).",
+                "type": "integer"
+              }
+            },
+            "required": [
+              "model",
+              "error"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "failure_reason": {
+          "description": "Typed failure reason when the fusion run failed. Possible values include: all_panels_failed, insufficient_credits, rate_limited, invalid_model, judge_not_valid_json, judge_schema_mismatch, judge_upstream_error, judge_empty_completion. The four analysis-stage codes keep their pre-rename `judge_` spelling so existing consumers keep matching.",
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "responses": {
+          "description": "Analysis models that produced a response in this fusion run, with each model's full panel content.",
+          "items": {
+            "properties": {
+              "content": {
+                "type": "string"
+              },
+              "model": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "model"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "sources": {
+          "description": "Web pages the analysis panels and analyst retrieved via web search during this fusion run, deduplicated by URL across the whole run. Present when at least one model cited a source.",
+          "items": {
+            "$ref": "#/$defs/components_schemas_FusionSource"
+          },
+          "type": "array"
+        },
+        "status": {
+          "$ref": "#/$defs/components_schemas_ToolCallStatus"
+        },
+        "type": {
+          "enum": [
+            "openrouter:fusion"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "status",
+        "type"
+      ],
+      "type": "object"
+    },
+    "components_schemas_OutputImageGenerationCallItem": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/components_schemas_OutputItemImageGenerationCall"
+        },
+        {
+          "properties": {
+            "prompt": {
+              "description": "The prompt (possibly rewritten) that the image was generated from.",
+              "type": "string"
+            }
+          },
+          "type": "object"
+        }
+      ],
+      "example": {
+        "id": "img-abc123",
+        "result": null,
+        "status": "completed",
+        "type": "image_generation_call"
+      }
+    },
+    "components_schemas_OutputImageGenerationServerToolItem": {
+      "description": "An openrouter:image_generation server tool output item",
+      "example": {
+        "id": "ig_tmp_abc123",
+        "imageUrl": "https://example.com/image.png",
+        "result": "https://example.com/image.png",
+        "status": "completed",
+        "type": "openrouter:image_generation"
+      },
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "imageB64": {
+          "type": "string"
+        },
+        "imageUrl": {
+          "type": "string"
+        },
+        "prompt": {
+          "description": "The prompt (possibly rewritten) that the image was generated from.",
+          "type": "string"
+        },
+        "result": {
+          "description": "The generated image as a base64-encoded string or URL, matching OpenAI image_generation_call format",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "revisedPrompt": {
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/components_schemas_ToolCallStatus"
+        },
+        "type": {
+          "enum": [
+            "openrouter:image_generation"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "status",
+        "type"
+      ],
+      "type": "object"
+    },
+    "components_schemas_OutputItemApplyPatchCall": {
+      "example": {
+        "call_id": "call_abc123",
+        "id": "apc_abc123",
+        "operation": {
+          "diff": "@@ function main() {\n+  console.log(\"hi\");\n }",
+          "path": "/src/main.ts",
+          "type": "update_file"
+        },
+        "status": "completed",
+        "type": "apply_patch_call"
+      },
+      "properties": {
+        "call_id": {
+          "type": "string"
+        },
+        "created_by": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "operation": {
+          "discriminator": {
+            "mapping": {
+              "create_file": "#/components/schemas/ApplyPatchCreateFileOperation",
+              "delete_file": "#/components/schemas/ApplyPatchDeleteFileOperation",
+              "update_file": "#/components/schemas/ApplyPatchUpdateFileOperation"
+            },
+            "propertyName": "type"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/components_schemas_ApplyPatchCreateFileOperation"
+            },
+            {
+              "$ref": "#/$defs/components_schemas_ApplyPatchUpdateFileOperation"
+            },
+            {
+              "$ref": "#/$defs/components_schemas_ApplyPatchDeleteFileOperation"
+            }
+          ]
+        },
+        "status": {
+          "enum": [
+            "in_progress",
+            "completed"
+          ],
+          "type": "string",
+          "x-speakeasy-unknown-values": "allow"
+        },
+        "type": {
+          "enum": [
+            "apply_patch_call"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "id",
+        "call_id",
+        "operation",
+        "status"
+      ],
+      "type": "object"
+    },
+    "components_schemas_OutputItemCodeInterpreterCall": {
+      "additionalProperties": {},
+      "example": {
+        "code": "print(\"hello\")",
+        "id": "ci_abc123",
+        "outputs": [
+          {
+            "logs": "hello\n",
+            "type": "logs"
+          }
+        ],
+        "status": "completed",
+        "type": "code_interpreter_call"
+      },
+      "properties": {
+        "code": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "container_id": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "outputs": {
+          "items": {
+            "discriminator": {
+              "mapping": {
+                "file": "#/components/schemas/CodeInterpreterFileOutput",
+                "image": "#/components/schemas/CodeInterpreterImageOutput",
+                "logs": "#/components/schemas/CodeInterpreterLogsOutput"
+              },
+              "propertyName": "type"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/$defs/components_schemas_CodeInterpreterLogsOutput"
+              },
+              {
+                "$ref": "#/$defs/components_schemas_CodeInterpreterImageOutput"
+              },
+              {
+                "$ref": "#/$defs/components_schemas_CodeInterpreterFileOutput"
+              }
+            ]
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "status": {
+          "enum": [
+            "in_progress",
+            "completed",
+            "incomplete",
+            "interpreting",
+            "failed"
+          ],
+          "type": "string",
+          "x-speakeasy-unknown-values": "allow"
+        },
+        "type": {
+          "enum": [
+            "code_interpreter_call"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "id",
+        "status"
+      ],
+      "type": "object"
+    },
+    "components_schemas_OutputItemCustomToolCall": {
+      "example": {
+        "call_id": "call-abc123",
+        "id": "ctc-abc123",
+        "input": "*** Begin Patch\n*** End Patch",
+        "name": "apply_patch",
+        "type": "custom_tool_call"
+      },
+      "properties": {
+        "call_id": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "input": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "namespace": {
+          "description": "Namespace qualifier for tools registered as part of a namespace tool group (e.g. an MCP server)",
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "custom_tool_call"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "name",
+        "input",
+        "call_id"
+      ],
+      "type": "object"
+    },
+    "components_schemas_OutputItemFileSearchCall": {
+      "example": {
+        "id": "filesearch-abc123",
+        "queries": [
+          "machine learning algorithms",
+          "neural networks"
+        ],
+        "status": "completed",
+        "type": "file_search_call"
+      },
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "queries": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "status": {
+          "$ref": "#/$defs/components_schemas_WebSearchStatus"
+        },
+        "type": {
+          "enum": [
+            "file_search_call"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "id",
+        "queries",
+        "status"
+      ],
+      "type": "object"
+    },
+    "components_schemas_OutputItemFunctionCall": {
+      "example": {
+        "arguments": "{\"location\":\"San Francisco\",\"unit\":\"celsius\"}",
+        "call_id": "call-abc123",
+        "id": "call-abc123",
+        "name": "get_weather",
+        "type": "function_call"
+      },
+      "properties": {
+        "arguments": {
+          "type": "string"
+        },
+        "call_id": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "namespace": {
+          "description": "Namespace qualifier for tools registered as part of a namespace tool group (e.g. an MCP server)",
+          "type": "string"
+        },
+        "status": {
+          "anyOf": [
+            {
+              "enum": [
+                "completed"
+              ],
+              "type": "string"
+            },
+            {
+              "enum": [
+                "incomplete"
+              ],
+              "type": "string"
+            },
+            {
+              "enum": [
+                "in_progress"
+              ],
+              "type": "string"
+            }
+          ]
+        },
+        "type": {
+          "enum": [
+            "function_call"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "name",
+        "arguments",
+        "call_id"
+      ],
+      "type": "object"
+    },
+    "components_schemas_OutputItemImageGenerationCall": {
+      "example": {
+        "id": "imagegen-abc123",
+        "result": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+        "status": "completed",
+        "type": "image_generation_call"
+      },
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "result": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "status": {
+          "$ref": "#/$defs/components_schemas_ImageGenerationStatus"
+        },
+        "type": {
+          "enum": [
+            "image_generation_call"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "id",
+        "status"
+      ],
+      "type": "object"
+    },
+    "components_schemas_OutputItemReasoning": {
+      "example": {
+        "id": "reasoning-abc123",
+        "summary": [
+          {
+            "text": "Analyzed the problem using first principles",
+            "type": "summary_text"
+          }
+        ],
+        "type": "reasoning"
+      },
+      "properties": {
+        "content": {
+          "items": {
+            "$ref": "#/$defs/components_schemas_ReasoningTextContent"
+          },
+          "type": "array"
+        },
+        "encrypted_content": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "id": {
+          "type": "string"
+        },
+        "status": {
+          "anyOf": [
+            {
+              "enum": [
+                "completed"
+              ],
+              "type": "string"
+            },
+            {
+              "enum": [
+                "incomplete"
+              ],
+              "type": "string"
+            },
+            {
+              "enum": [
+                "in_progress"
+              ],
+              "type": "string"
+            }
+          ]
+        },
+        "summary": {
+          "items": {
+            "$ref": "#/$defs/components_schemas_ReasoningSummaryText"
+          },
+          "type": "array"
+        },
+        "type": {
+          "enum": [
+            "reasoning"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "id",
+        "summary"
+      ],
+      "type": "object"
+    },
+    "components_schemas_OutputItemWebSearchCall": {
+      "additionalProperties": {},
+      "example": {
+        "action": {
+          "query": "OpenAI API",
+          "type": "search"
+        },
+        "id": "search-abc123",
+        "status": "completed",
+        "type": "web_search_call"
+      },
+      "properties": {
+        "action": {
+          "oneOf": [
+            {
+              "properties": {
+                "queries": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "query": {
+                  "type": "string"
+                },
+                "sources": {
+                  "items": {
+                    "$ref": "#/$defs/components_schemas_WebSearchSource"
+                  },
+                  "type": "array"
+                },
+                "type": {
+                  "enum": [
+                    "search"
+                  ],
+                  "type": "string"
+                }
+              },
+              "required": [
+                "type",
+                "query"
+              ],
+              "type": "object"
+            },
+            {
+              "properties": {
+                "type": {
+                  "enum": [
+                    "open_page"
+                  ],
+                  "type": "string"
+                },
+                "url": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "type"
+              ],
+              "type": "object"
+            },
+            {
+              "properties": {
+                "pattern": {
+                  "type": "string"
+                },
+                "type": {
+                  "enum": [
+                    "find_in_page"
+                  ],
+                  "type": "string"
+                },
+                "url": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "type",
+                "pattern",
+                "url"
+              ],
+              "type": "object"
+            }
+          ]
+        },
+        "id": {
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/components_schemas_WebSearchStatus"
+        },
+        "type": {
+          "enum": [
+            "web_search_call"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "id",
+        "status"
+      ],
+      "type": "object"
+    },
+    "components_schemas_OutputItems": {
+      "description": "An output item from the response",
+      "discriminator": {
+        "mapping": {
+          "apply_patch_call": "#/components/schemas/OutputApplyPatchCallItem",
+          "code_interpreter_call": "#/components/schemas/OutputCodeInterpreterCallItem",
+          "computer_call": "#/components/schemas/OutputComputerCallItem",
+          "custom_tool_call": "#/components/schemas/OutputCustomToolCallItem",
+          "file_search_call": "#/components/schemas/OutputFileSearchCallItem",
+          "function_call": "#/components/schemas/OutputFunctionCallItem",
+          "image_generation_call": "#/components/schemas/OutputImageGenerationCallItem",
+          "message": "#/components/schemas/OutputMessageItem",
+          "openrouter:advisor": "#/components/schemas/OutputAdvisorServerToolItem",
+          "openrouter:apply_patch": "#/components/schemas/OutputApplyPatchServerToolItem",
+          "openrouter:bash": "#/components/schemas/OutputBashServerToolItem",
+          "openrouter:browser_use": "#/components/schemas/OutputBrowserUseServerToolItem",
+          "openrouter:code_interpreter": "#/components/schemas/OutputCodeInterpreterServerToolItem",
+          "openrouter:datetime": "#/components/schemas/OutputDatetimeItem",
+          "openrouter:experimental__search_models": "#/components/schemas/OutputSearchModelsServerToolItem",
+          "openrouter:file_search": "#/components/schemas/OutputFileSearchServerToolItem",
+          "openrouter:files": "#/components/schemas/OutputFilesServerToolItem",
+          "openrouter:fusion": "#/components/schemas/OutputFusionServerToolItem",
+          "openrouter:image_generation": "#/components/schemas/OutputImageGenerationServerToolItem",
+          "openrouter:mcp": "#/components/schemas/OutputMcpServerToolItem",
+          "openrouter:memory": "#/components/schemas/OutputMemoryServerToolItem",
+          "openrouter:subagent": "#/components/schemas/OutputSubagentServerToolItem",
+          "openrouter:text_editor": "#/components/schemas/OutputTextEditorServerToolItem",
+          "openrouter:tool_search": "#/components/schemas/OutputToolSearchServerToolItem",
+          "openrouter:web_fetch": "#/components/schemas/OutputWebFetchServerToolItem",
+          "openrouter:web_search": "#/components/schemas/OutputWebSearchServerToolItem",
+          "reasoning": "#/components/schemas/OutputReasoningItem",
+          "shell_call": "#/components/schemas/OutputShellCallItem",
+          "shell_call_output": "#/components/schemas/OutputShellCallOutputItem",
+          "web_search_call": "#/components/schemas/OutputWebSearchCallItem"
+        },
+        "propertyName": "type"
+      },
+      "example": {
+        "content": [
+          {
+            "text": "Hello! How can I help you today?",
+            "type": "output_text"
+          }
+        ],
+        "id": "msg-abc123",
+        "role": "assistant",
+        "status": "completed",
+        "type": "message"
+      },
+      "oneOf": [
+        {
+          "$ref": "#/$defs/components_schemas_OutputMessageItem"
+        },
+        {
+          "$ref": "#/$defs/components_schemas_OutputReasoningItem"
+        },
+        {
+          "$ref": "#/$defs/components_schemas_OutputFunctionCallItem"
+        },
+        {
+          "$ref": "#/$defs/components_schemas_OutputWebSearchCallItem"
+        },
+        {
+          "$ref": "#/$defs/components_schemas_OutputFileSearchCallItem"
+        },
+        {
+          "$ref": "#/$defs/components_schemas_OutputImageGenerationCallItem"
+        },
+        {
+          "$ref": "#/$defs/components_schemas_OutputCodeInterpreterCallItem"
+        },
+        {
+          "$ref": "#/$defs/components_schemas_OutputComputerCallItem"
+        },
+        {
+          "$ref": "#/$defs/components_schemas_OutputDatetimeItem"
+        },
+        {
+          "$ref": "#/$defs/components_schemas_OutputWebSearchServerToolItem"
+        },
+        {
+          "$ref": "#/$defs/components_schemas_OutputCodeInterpreterServerToolItem"
+        },
+        {
+          "$ref": "#/$defs/components_schemas_OutputFileSearchServerToolItem"
+        },
+        {
+          "$ref": "#/$defs/components_schemas_OutputImageGenerationServerToolItem"
+        },
+        {
+          "$ref": "#/$defs/components_schemas_OutputBrowserUseServerToolItem"
+        },
+        {
+          "$ref": "#/$defs/components_schemas_OutputBashServerToolItem"
+        },
+        {
+          "$ref": "#/$defs/components_schemas_OutputTextEditorServerToolItem"
+        },
+        {
+          "$ref": "#/$defs/components_schemas_OutputApplyPatchServerToolItem"
+        },
+        {
+          "$ref": "#/$defs/components_schemas_OutputApplyPatchCallItem"
+        },
+        {
+          "$ref": "#/$defs/components_schemas_OutputShellCallItem"
+        },
+        {
+          "$ref": "#/$defs/components_schemas_OutputShellCallOutputItem"
+        },
+        {
+          "$ref": "#/$defs/components_schemas_OutputWebFetchServerToolItem"
+        },
+        {
+          "$ref": "#/$defs/components_schemas_OutputToolSearchServerToolItem"
+        },
+        {
+          "$ref": "#/$defs/components_schemas_OutputMemoryServerToolItem"
+        },
+        {
+          "$ref": "#/$defs/components_schemas_OutputMcpServerToolItem"
+        },
+        {
+          "$ref": "#/$defs/components_schemas_OutputSearchModelsServerToolItem"
+        },
+        {
+          "$ref": "#/$defs/components_schemas_OutputFusionServerToolItem"
+        },
+        {
+          "$ref": "#/$defs/components_schemas_OutputAdvisorServerToolItem"
+        },
+        {
+          "$ref": "#/$defs/components_schemas_OutputSubagentServerToolItem"
+        },
+        {
+          "$ref": "#/$defs/components_schemas_OutputFilesServerToolItem"
+        },
+        {
+          "$ref": "#/$defs/components_schemas_OutputCustomToolCallItem"
+        }
+      ]
+    },
+    "components_schemas_OutputMcpServerToolItem": {
+      "description": "An openrouter:mcp server tool output item",
+      "example": {
+        "id": "mcp_tmp_abc123",
+        "serverLabel": "my-server",
+        "status": "completed",
+        "toolName": "get_data",
+        "type": "openrouter:mcp"
+      },
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "serverLabel": {
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/components_schemas_ToolCallStatus"
+        },
+        "toolName": {
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "openrouter:mcp"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "status",
+        "type"
+      ],
+      "type": "object"
+    },
+    "components_schemas_OutputMemoryServerToolItem": {
+      "description": "An openrouter:memory server tool output item",
+      "example": {
+        "action": "read",
+        "id": "mem_tmp_abc123",
+        "key": "user_preference",
+        "status": "completed",
+        "type": "openrouter:memory"
+      },
+      "properties": {
+        "action": {
+          "enum": [
+            "read",
+            "write",
+            "delete"
+          ],
+          "type": "string",
+          "x-speakeasy-unknown-values": "allow"
+        },
+        "id": {
+          "type": "string"
+        },
+        "key": {
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/components_schemas_ToolCallStatus"
+        },
+        "type": {
+          "enum": [
+            "openrouter:memory"
+          ],
+          "type": "string"
+        },
+        "value": {}
+      },
+      "required": [
+        "status",
+        "type"
+      ],
+      "type": "object"
+    },
+    "components_schemas_OutputMessage": {
+      "example": {
+        "content": [
+          {
+            "text": "Hello! How can I help you today?",
+            "type": "output_text"
+          }
+        ],
+        "id": "msg-abc123",
+        "role": "assistant",
+        "status": "completed",
+        "type": "message"
+      },
+      "properties": {
+        "content": {
+          "items": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/components_schemas_ResponseOutputText"
+              },
+              {
+                "$ref": "#/$defs/components_schemas_OpenAIResponsesRefusalContent"
+              }
+            ]
+          },
+          "type": "array"
+        },
+        "id": {
+          "type": "string"
+        },
+        "phase": {
+          "anyOf": [
+            {
+              "enum": [
+                "commentary"
+              ],
+              "type": "string"
+            },
+            {
+              "enum": [
+                "final_answer"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The phase of an assistant message. Use `commentary` for an intermediate assistant message and `final_answer` for the final assistant message. For follow-up requests with models like `gpt-5.3-codex` and later, preserve and resend phase on all assistant messages. Omitting it can degrade performance. Not used for user messages."
+        },
+        "role": {
+          "enum": [
+            "assistant"
+          ],
+          "type": "string"
+        },
+        "status": {
+          "anyOf": [
+            {
+              "enum": [
+                "completed"
+              ],
+              "type": "string"
+            },
+            {
+              "enum": [
+                "incomplete"
+              ],
+              "type": "string"
+            },
+            {
+              "enum": [
+                "in_progress"
+              ],
+              "type": "string"
+            }
+          ]
+        },
+        "type": {
+          "enum": [
+            "message"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "role",
+        "type",
+        "content"
+      ],
+      "type": "object"
+    },
+    "components_schemas_OutputMessageItem": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/components_schemas_OutputMessage"
+        },
+        {
+          "properties": {},
+          "type": "object"
+        }
+      ],
+      "description": "An output message item",
+      "example": {
+        "content": [
+          {
+            "annotations": [],
+            "text": "Hello! How can I help you?",
+            "type": "output_text"
+          }
+        ],
+        "id": "msg-123",
+        "role": "assistant",
+        "status": "completed",
+        "type": "message"
+      }
+    },
+    "components_schemas_OutputReasoningItem": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/components_schemas_OutputItemReasoning"
+        },
+        {
+          "properties": {
+            "content": {
+              "items": {
+                "$ref": "#/$defs/components_schemas_ReasoningTextContent"
+              },
+              "type": [
+                "array",
+                "null"
+              ]
+            },
+            "format": {
+              "$ref": "#/$defs/components_schemas_ReasoningFormat"
+            },
+            "signature": {
+              "description": "A signature for the reasoning content, used for verification",
+              "example": "EvcBCkgIChABGAIqQKkSDbRuVEQUk9qN1odC098l9SEj...",
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "type": "object"
+        }
+      ],
+      "description": "An output item containing reasoning",
+      "example": {
+        "content": [
+          {
+            "text": "First, we analyze the problem...",
+            "type": "reasoning_text"
+          }
+        ],
+        "format": "anthropic-claude-v1",
+        "id": "reasoning-123",
+        "signature": "EvcBCkgIChABGAIqQKkSDbRuVEQUk9qN1odC098l9SEj...",
+        "status": "completed",
+        "summary": [
+          {
+            "text": "Analyzed the problem and found the optimal solution.",
+            "type": "summary_text"
+          }
+        ],
+        "type": "reasoning"
+      }
+    },
+    "components_schemas_OutputSearchModelsServerToolItem": {
+      "description": "An openrouter:experimental__search_models server tool output item",
+      "example": {
+        "arguments": "{\"query\":\"Claude Opus\"}",
+        "id": "sm_tmp_abc123",
+        "query": "Claude Opus",
+        "status": "completed",
+        "type": "openrouter:experimental__search_models"
+      },
+      "properties": {
+        "arguments": {
+          "description": "The JSON arguments submitted to the search tool (e.g. {\"query\":\"Claude\"})",
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "query": {
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/components_schemas_ToolCallStatus"
+        },
+        "type": {
+          "enum": [
+            "openrouter:experimental__search_models"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "status",
+        "type"
+      ],
+      "type": "object"
+    },
+    "components_schemas_OutputShellCallItem": {
+      "description": "A native `shell_call` output item matching OpenAI's Responses API shape. Emitted for the sandbox-backed `shell` tool.",
+      "example": {
+        "action": {
+          "commands": [
+            "echo hello"
+          ],
+          "max_output_length": null,
+          "timeout_ms": null
+        },
+        "call_id": "call_abc123",
+        "id": "shc_abc123",
+        "status": "completed",
+        "type": "shell_call"
+      },
+      "properties": {
+        "action": {
+          "properties": {
+            "commands": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "max_output_length": {
+              "type": [
+                "integer",
+                "null"
+              ]
+            },
+            "timeout_ms": {
+              "type": [
+                "integer",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "commands",
+            "max_output_length",
+            "timeout_ms"
+          ],
+          "type": "object"
+        },
+        "call_id": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/components_schemas_ShellCallStatus"
+        },
+        "type": {
+          "enum": [
+            "shell_call"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "id",
+        "call_id",
+        "status"
+      ],
+      "type": "object"
+    },
+    "components_schemas_OutputShellCallOutputItem": {
+      "description": "A native `shell_call_output` item matching OpenAI's Responses API shape. Carries per-command stdout, stderr, and the exit/timeout outcome.",
+      "example": {
+        "call_id": "call_abc123",
+        "id": "sho_abc123",
+        "output": [
+          {
+            "outcome": {
+              "exit_code": 0,
+              "type": "exit"
+            },
+            "stderr": "",
+            "stdout": "hello\n"
+          }
+        ],
+        "status": "completed",
+        "type": "shell_call_output"
+      },
+      "properties": {
+        "call_id": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "max_output_length": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "output": {
+          "items": {
+            "properties": {
+              "outcome": {
+                "oneOf": [
+                  {
+                    "properties": {
+                      "exit_code": {
+                        "type": "integer"
+                      },
+                      "type": {
+                        "enum": [
+                          "exit"
+                        ],
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "type",
+                      "exit_code"
+                    ],
+                    "type": "object"
+                  },
+                  {
+                    "properties": {
+                      "type": {
+                        "enum": [
+                          "timeout"
+                        ],
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "type"
+                    ],
+                    "type": "object"
+                  }
+                ]
+              },
+              "stderr": {
+                "type": "string"
+              },
+              "stdout": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "stdout",
+              "stderr",
+              "outcome"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "status": {
+          "$ref": "#/$defs/components_schemas_ShellCallStatus"
+        },
+        "type": {
+          "enum": [
+            "shell_call_output"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "id",
+        "call_id",
+        "status",
+        "output"
+      ],
+      "type": "object"
+    },
+    "components_schemas_OutputSubagentServerToolItem": {
+      "description": "An openrouter:subagent server tool output item",
+      "example": {
+        "id": "st_tmp_abc123",
+        "status": "completed",
+        "type": "openrouter:subagent"
+      },
+      "properties": {
+        "error": {
+          "description": "Error message when the subagent task did not produce an outcome.",
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "instance_name": {
+          "description": "Provider-safe function name of the specific subagent instance that produced this item (e.g. `openrouter_subagent__1`). Present only on items from non-default instances — the second and later subagent entries in the request `tools` array. The first (default) instance omits it, even when multiple subagents are configured. When a replayed item echoes this field back, the transcript rehydrates the call under that instance's tool. This identity is positional: it is derived from the index of the subagent entry in the request `tools` array, so keep the order of subagent entries stable across requests in a conversation.",
+          "example": "openrouter_subagent__1",
+          "type": "string"
+        },
+        "model": {
+          "description": "Slug of the worker model that executed the task.",
+          "type": "string"
+        },
+        "name": {
+          "description": "Configured name of the subagent that executed the task (the `name` on its tool entry). Present only for named subagents; omitted for an unnamed (default) subagent.",
+          "example": "summarizer",
+          "type": "string"
+        },
+        "outcome": {
+          "description": "The worker model's result (the outcome text returned to the delegating model).",
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/components_schemas_ToolCallStatus"
+        },
+        "task_description": {
+          "description": "The task description the delegating model sent to the worker.",
+          "type": "string"
+        },
+        "task_name": {
+          "description": "The short task identifier the delegating model supplied.",
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "openrouter:subagent"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "status",
+        "type"
+      ],
+      "type": "object"
+    },
+    "components_schemas_OutputTextEditorServerToolItem": {
+      "description": "An openrouter:text_editor server tool output item",
+      "example": {
+        "command": "view",
+        "filePath": "/src/main.ts",
+        "id": "te_tmp_abc123",
+        "status": "completed",
+        "type": "openrouter:text_editor"
+      },
+      "properties": {
+        "command": {
+          "enum": [
+            "view",
+            "create",
+            "str_replace",
+            "insert"
+          ],
+          "type": "string",
+          "x-speakeasy-unknown-values": "allow"
+        },
+        "filePath": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/components_schemas_ToolCallStatus"
+        },
+        "type": {
+          "enum": [
+            "openrouter:text_editor"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "status",
+        "type"
+      ],
+      "type": "object"
+    },
+    "components_schemas_OutputToolSearchServerToolItem": {
+      "description": "An openrouter:tool_search server tool output item",
+      "example": {
+        "id": "ts_tmp_abc123",
+        "query": "weather tools",
+        "status": "completed",
+        "type": "openrouter:tool_search"
+      },
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "query": {
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/components_schemas_ToolCallStatus"
+        },
+        "type": {
+          "enum": [
+            "openrouter:tool_search"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "status",
+        "type"
+      ],
+      "type": "object"
+    },
+    "components_schemas_OutputWebFetchServerToolItem": {
+      "description": "An openrouter:web_fetch server tool output item",
+      "example": {
+        "httpStatus": 200,
+        "id": "wf_tmp_abc123",
+        "status": "completed",
+        "title": "Example Domain",
+        "type": "openrouter:web_fetch",
+        "url": "https://example.com"
+      },
+      "properties": {
+        "content": {
+          "type": "string"
+        },
+        "error": {
+          "description": "The error message if the fetch failed.",
+          "type": "string"
+        },
+        "httpStatus": {
+          "description": "The HTTP status code returned by the upstream URL fetch.",
+          "type": "integer"
+        },
+        "id": {
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/components_schemas_ToolCallStatus"
+        },
+        "title": {
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "openrouter:web_fetch"
+          ],
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "status",
+        "type"
+      ],
+      "type": "object"
+    },
+    "components_schemas_OutputWebSearchCallItem": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/components_schemas_OutputItemWebSearchCall"
+        },
+        {
+          "additionalProperties": {},
+          "properties": {},
+          "type": "object"
+        }
+      ],
+      "example": {
+        "id": "ws-abc123",
+        "status": "completed",
+        "type": "web_search_call"
+      }
+    },
+    "components_schemas_OutputWebSearchServerToolItem": {
+      "description": "An openrouter:web_search server tool output item",
+      "example": {
+        "action": {
+          "query": "latest AI news",
+          "type": "search"
+        },
+        "id": "ws_tmp_abc123",
+        "status": "completed",
+        "type": "openrouter:web_search"
+      },
+      "properties": {
+        "action": {
+          "description": "The search action performed, matching OpenAI web_search_call.action shape. Includes the query the model issued and optional source URLs returned by the search provider.",
+          "properties": {
+            "query": {
+              "type": "string"
+            },
+            "sources": {
+              "items": {
+                "properties": {
+                  "type": {
+                    "enum": [
+                      "url"
+                    ],
+                    "type": "string"
+                  },
+                  "url": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "type",
+                  "url"
+                ],
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "type": {
+              "enum": [
+                "search"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "type",
+            "query"
+          ],
+          "type": "object"
+        },
+        "id": {
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/components_schemas_ToolCallStatus"
+        },
+        "type": {
+          "enum": [
+            "openrouter:web_search"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "status",
+        "type"
+      ],
+      "type": "object"
+    },
+    "components_schemas_PipelineStage": {
+      "example": {
+        "data": {
+          "action": "redacted",
+          "engines": [
+            "presidio"
+          ],
+          "flagged": true,
+          "matched_entity_types": [
+            "EMAIL",
+            "PHONE"
+          ]
+        },
+        "name": "content-filter",
+        "summary": "PII redacted via Presidio (EMAIL, PHONE)",
+        "type": "guardrail"
+      },
+      "properties": {
+        "cost_usd": {
+          "format": "double",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "data": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "guardrail_id": {
+          "type": "string"
+        },
+        "guardrail_scope": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "summary": {
+          "type": "string"
+        },
+        "type": {
+          "$ref": "#/$defs/components_schemas_PipelineStageType"
+        }
+      },
+      "required": [
+        "type",
+        "name"
+      ],
+      "type": "object"
+    },
+    "components_schemas_PipelineStageType": {
+      "description": "Categorical kind of a pipeline stage. Multiple plugins can share a type (e.g. all guardrail-level plugins emit `guardrail`); the `name` field disambiguates which plugin emitted it.",
+      "enum": [
+        "guardrail",
+        "plugin",
+        "server_tools",
+        "response_healing",
+        "context_compression"
+      ],
+      "example": "guardrail",
+      "type": "string",
+      "x-speakeasy-unknown-values": "allow"
+    },
+    "components_schemas_Preview_20250311_WebSearchServerTool": {
+      "description": "Web search preview tool configuration (2025-03-11 version)",
+      "example": {
+        "type": "web_search_preview_2025_03_11"
+      },
+      "properties": {
+        "engine": {
+          "$ref": "#/$defs/components_schemas_WebSearchEngineEnum"
+        },
+        "filters": {
+          "$ref": "#/$defs/components_schemas_WebSearchDomainFilter"
+        },
+        "max_results": {
+          "description": "Maximum number of search results to return per search call. Defaults to 5. Applies to Exa, Firecrawl, Parallel, and Perplexity engines; ignored with native provider search. Perplexity supports a maximum of 20; values above 20 are clamped.",
+          "example": 5,
+          "type": "integer"
+        },
+        "max_uses": {
+          "description": "Maximum number of web searches the model may perform in a single request. Once reached, further search calls return an error result instead of executing. Applies to the Exa, Firecrawl, Parallel, and Perplexity engines. With native provider search, forwarded only to Anthropic (as `max_uses`); other native search providers have no equivalent parameter and ignore it.",
+          "example": 3,
+          "type": "integer"
+        },
+        "mode": {
+          "$ref": "#/$defs/components_schemas_WebSearchMode"
+        },
+        "search_context_size": {
+          "$ref": "#/$defs/components_schemas_SearchContextSizeEnum"
+        },
+        "type": {
+          "enum": [
+            "web_search_preview_2025_03_11"
+          ],
+          "type": "string"
+        },
+        "user_location": {
+          "$ref": "#/$defs/components_schemas_Preview_WebSearchUserLocation"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "type": "object"
+    },
+    "components_schemas_Preview_WebSearchServerTool": {
+      "description": "Web search preview tool configuration",
+      "example": {
+        "type": "web_search_preview"
+      },
+      "properties": {
+        "engine": {
+          "$ref": "#/$defs/components_schemas_WebSearchEngineEnum"
+        },
+        "filters": {
+          "$ref": "#/$defs/components_schemas_WebSearchDomainFilter"
+        },
+        "max_results": {
+          "description": "Maximum number of search results to return per search call. Defaults to 5. Applies to Exa, Firecrawl, Parallel, and Perplexity engines; ignored with native provider search. Perplexity supports a maximum of 20; values above 20 are clamped.",
+          "example": 5,
+          "type": "integer"
+        },
+        "max_uses": {
+          "description": "Maximum number of web searches the model may perform in a single request. Once reached, further search calls return an error result instead of executing. Applies to the Exa, Firecrawl, Parallel, and Perplexity engines. With native provider search, forwarded only to Anthropic (as `max_uses`); other native search providers have no equivalent parameter and ignore it.",
+          "example": 3,
+          "type": "integer"
+        },
+        "mode": {
+          "$ref": "#/$defs/components_schemas_WebSearchMode"
+        },
+        "search_context_size": {
+          "$ref": "#/$defs/components_schemas_SearchContextSizeEnum"
+        },
+        "type": {
+          "enum": [
+            "web_search_preview"
+          ],
+          "type": "string"
+        },
+        "user_location": {
+          "$ref": "#/$defs/components_schemas_Preview_WebSearchUserLocation"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "type": "object"
+    },
+    "components_schemas_Preview_WebSearchUserLocation": {
+      "example": {
+        "city": "San Francisco",
+        "country": "USA",
+        "region": "California",
+        "timezone": "America/Los_Angeles",
+        "type": "approximate"
+      },
+      "properties": {
+        "city": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "country": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "region": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "timezone": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "type": {
+          "enum": [
+            "approximate"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "components_schemas_PromptCacheBreakpoint": {
+      "description": "Marks an explicit prompt-cache boundary on this content block (OpenAI-style). Everything through the block carrying this marker is part of the candidate cached prefix. Supported natively by OpenAI GPT-5.6 and newer; on providers that use Anthropic-style `cache_control`, OpenRouter converts the marker to that format automatically.",
+      "example": {
+        "mode": "explicit"
+      },
+      "properties": {
+        "mode": {
+          "enum": [
+            "explicit"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "mode"
+      ],
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "components_schemas_PromptCacheOptions": {
+      "description": "Request-level prompt-cache controls. `mode: \"explicit\"` disables OpenAI-managed breakpoints so only blocks marked with `prompt_cache_breakpoint` are cached. Only supported by OpenAI GPT-5.6 and newer.",
+      "example": {
+        "mode": "explicit",
+        "ttl": "30m"
+      },
+      "properties": {
+        "mode": {
+          "enum": [
+            "explicit"
+          ],
+          "type": "string"
+        },
+        "ttl": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "mode"
+      ],
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "components_schemas_ReasoningContext": {
+      "description": "Controls which reasoning is available to the model. `auto` uses the model default (same as omitting); `all_turns` includes reasoning from earlier turns passed in input; `current_turn` limits to the current turn only. Only supported by OpenAI GPT-5.6 and newer.",
+      "enum": [
+        "auto",
+        "all_turns",
+        "current_turn",
+        null
+      ],
+      "example": "all_turns",
+      "type": [
+        "string",
+        "null"
+      ],
+      "x-speakeasy-unknown-values": "allow"
+    },
+    "components_schemas_ReasoningEffort": {
+      "enum": [
+        "max",
+        "xhigh",
+        "high",
+        "medium",
+        "low",
+        "minimal",
+        "none",
+        null
+      ],
+      "example": "medium",
+      "type": [
+        "string",
+        "null"
+      ],
+      "x-speakeasy-unknown-values": "allow"
+    },
+    "components_schemas_ReasoningFormat": {
+      "enum": [
+        "unknown",
+        "openai-responses-v1",
+        "azure-openai-responses-v1",
+        "bedrock-openai-responses-v1",
+        "xai-responses-v1",
+        "meta-responses-v1",
+        "anthropic-claude-v1",
+        "google-gemini-v1",
+        null
+      ],
+      "example": "unknown",
+      "type": [
+        "string",
+        "null"
+      ],
+      "x-speakeasy-unknown-values": "allow"
+    },
+    "components_schemas_ReasoningMode": {
+      "description": "Selects the reasoning mode. `standard` is the default; `pro` engages deeper reasoning on models that support it, billed at standard token rates. Only supported by OpenAI GPT-5.6 and newer.",
+      "enum": [
+        "standard",
+        "pro",
+        null
+      ],
+      "example": "standard",
+      "type": [
+        "string",
+        "null"
+      ],
+      "x-speakeasy-unknown-values": "allow"
+    },
+    "components_schemas_ReasoningSummaryText": {
+      "example": {
+        "text": "Analyzed the problem using first principles",
+        "type": "summary_text"
+      },
+      "properties": {
+        "text": {
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "summary_text"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "text"
+      ],
+      "type": "object"
+    },
+    "components_schemas_ReasoningSummaryVerbosity": {
+      "enum": [
+        "auto",
+        "concise",
+        "detailed",
+        null
+      ],
+      "example": "auto",
+      "type": [
+        "string",
+        "null"
+      ],
+      "x-speakeasy-unknown-values": "allow"
+    },
+    "components_schemas_ReasoningTextContent": {
+      "example": {
+        "text": "Let me think step by step about this problem...",
+        "type": "reasoning_text"
+      },
+      "properties": {
+        "text": {
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "reasoning_text"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "text"
+      ],
+      "type": "object"
+    },
+    "components_schemas_RequestMetadata": {
+      "additionalProperties": {
+        "maxLength": 512,
+        "type": "string"
+      },
+      "description": "Metadata key-value pairs for the request. Keys must be ≤64 characters and cannot contain brackets. Values must be ≤512 characters. Maximum 16 pairs allowed.",
+      "example": {
+        "session_id": "abc-def-ghi",
+        "user_id": "123"
+      },
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "components_schemas_ResponseOutputText": {
+      "example": {
+        "annotations": [
+          {
+            "end_index": 42,
+            "start_index": 0,
+            "title": "Paris - Wikipedia",
+            "type": "url_citation",
+            "url": "https://en.wikipedia.org/wiki/Paris"
+          }
+        ],
+        "text": "The capital of France is Paris.",
+        "type": "output_text"
+      },
+      "properties": {
+        "annotations": {
+          "items": {
+            "$ref": "#/$defs/components_schemas_OpenAIResponsesAnnotation"
+          },
+          "type": "array"
+        },
+        "logprobs": {
+          "items": {
+            "properties": {
+              "bytes": {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              "logprob": {
+                "format": "double",
+                "type": "number"
+              },
+              "token": {
+                "type": "string"
+              },
+              "top_logprobs": {
+                "items": {
+                  "properties": {
+                    "bytes": {
+                      "items": {
+                        "type": "integer"
+                      },
+                      "type": "array"
+                    },
+                    "logprob": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "token": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "token",
+                    "bytes",
+                    "logprob"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              }
+            },
+            "required": [
+              "token",
+              "bytes",
+              "logprob",
+              "top_logprobs"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "text": {
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "output_text"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "text"
+      ],
+      "type": "object"
+    },
+    "components_schemas_ResponsesErrorField": {
+      "description": "Error information returned from the API",
+      "example": {
+        "code": "rate_limit_exceeded",
+        "message": "Rate limit exceeded. Please try again later."
+      },
+      "properties": {
+        "code": {
+          "enum": [
+            "server_error",
+            "rate_limit_exceeded",
+            "invalid_prompt",
+            "vector_store_timeout",
+            "invalid_image",
+            "invalid_image_format",
+            "invalid_base64_image",
+            "invalid_image_url",
+            "image_too_large",
+            "image_too_small",
+            "image_parse_error",
+            "image_content_policy_violation",
+            "invalid_image_mode",
+            "image_file_too_large",
+            "unsupported_image_media_type",
+            "empty_image_file",
+            "failed_to_download_image",
+            "image_file_not_found",
+            "bio_policy",
+            "data_residency_mismatch"
+          ],
+          "type": "string",
+          "x-speakeasy-unknown-values": "allow"
+        },
+        "message": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "code",
+        "message"
+      ],
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "components_schemas_RouterAttempt": {
+      "example": {
+        "model": "openai/gpt-4o",
+        "provider": "OpenAI",
+        "status": 200
+      },
+      "properties": {
+        "model": {
+          "type": "string"
+        },
+        "provider": {
+          "type": "string"
+        },
+        "status": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "provider",
+        "model",
+        "status"
+      ],
+      "type": "object"
+    },
+    "components_schemas_RouterParams": {
+      "additionalProperties": {},
+      "example": {
+        "version_group": "anthropic/claude-sonnet-4"
+      },
+      "properties": {
+        "quality_floor": {
+          "format": "double",
+          "type": "number"
+        },
+        "throughput_floor": {
+          "format": "double",
+          "type": "number"
+        },
+        "version_group": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "components_schemas_RoutingStrategy": {
+      "enum": [
+        "direct",
+        "auto",
+        "free",
+        "latest",
+        "alias",
+        "fallback",
+        "pareto",
+        "bodybuilder",
+        "fusion"
+      ],
+      "example": "direct",
+      "type": "string",
+      "x-speakeasy-unknown-values": "allow"
+    },
+    "components_schemas_SearchContextSizeEnum": {
+      "description": "Size of the search context for web search tools",
+      "enum": [
+        "low",
+        "medium",
+        "high"
+      ],
+      "example": "medium",
+      "type": "string",
+      "x-speakeasy-unknown-values": "allow"
+    },
+    "components_schemas_ServerToolUseDetails": {
+      "description": "Usage for server-side tool execution (e.g., web search)",
+      "example": {
+        "tool_calls_executed": 2,
+        "tool_calls_requested": 2,
+        "web_search_requests": 2
+      },
+      "properties": {
+        "tool_calls_executed": {
+          "description": "Number of OpenRouter server tool calls that executed and produced a result.",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "tool_calls_requested": {
+          "description": "Total number of OpenRouter server-orchestrated tool calls the model requested, across all tool types. Provider-native tools (e.g. native web search) are not counted here.",
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "web_search_requests": {
+          "description": "Number of web searches performed by server-side tools. For server-orchestrated tool calls a web search is also counted in tool_calls_requested; provider-native web search may report web_search_requests only. Do not sum the two.",
+          "type": [
+            "integer",
+            "null"
+          ]
+        }
+      },
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "components_schemas_ServiceTier": {
+      "enum": [
+        "auto",
+        "default",
+        "flex",
+        "priority",
+        "scale",
+        null
+      ],
+      "example": "default",
+      "type": [
+        "string",
+        "null"
+      ],
+      "x-speakeasy-unknown-values": "allow"
+    },
+    "components_schemas_ShellCallStatus": {
+      "description": "Status of a shell call or its output.",
+      "enum": [
+        "in_progress",
+        "completed",
+        "incomplete"
+      ],
+      "example": "completed",
+      "type": "string",
+      "x-speakeasy-unknown-values": "allow"
+    },
+    "components_schemas_ShellServerTool": {
+      "description": "Shell tool configuration",
+      "example": {
+        "type": "shell"
+      },
+      "properties": {
+        "type": {
+          "enum": [
+            "shell"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "type": "object"
+    },
+    "components_schemas_StoredPromptTemplate": {
+      "example": {
+        "id": "prompt-abc123",
+        "variables": {
+          "name": "John"
+        }
+      },
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "variables": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/$defs/components_schemas_InputText"
+              },
+              {
+                "$ref": "#/$defs/components_schemas_InputImage"
+              },
+              {
+                "$ref": "#/$defs/components_schemas_InputFile"
+              }
+            ]
+          },
+          "type": [
+            "object",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "components_schemas_TextConfig": {
+      "description": "Text output configuration including format and verbosity",
+      "example": {
+        "format": {
+          "type": "text"
+        },
+        "verbosity": "medium"
+      },
+      "properties": {
+        "format": {
+          "$ref": "#/$defs/components_schemas_Formats"
+        },
+        "verbosity": {
+          "enum": [
+            "high",
+            "low",
+            "medium",
+            null
+          ],
+          "type": [
+            "string",
+            "null"
+          ],
+          "x-speakeasy-unknown-values": "allow"
+        }
+      },
+      "type": "object"
+    },
+    "components_schemas_TextExtendedConfig": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/components_schemas_TextConfig"
+        },
+        {
+          "properties": {
+            "verbosity": {
+              "enum": [
+                "low",
+                "medium",
+                "high",
+                "xhigh",
+                "max",
+                null
+              ],
+              "type": [
+                "string",
+                "null"
+              ],
+              "x-speakeasy-unknown-values": "allow"
+            }
+          },
+          "type": "object"
+        }
+      ],
+      "description": "Text output configuration including format and verbosity",
+      "example": {
+        "format": {
+          "type": "text"
+        }
+      }
+    },
+    "components_schemas_ToolCallStatus": {
+      "enum": [
+        "in_progress",
+        "completed",
+        "incomplete"
+      ],
+      "example": "completed",
+      "type": "string",
+      "x-speakeasy-unknown-values": "allow"
+    },
+    "components_schemas_ToolChoiceAllowed": {
+      "description": "Constrains the model to a pre-defined set of allowed tools",
+      "example": {
+        "mode": "auto",
+        "tools": [
+          {
+            "name": "get_weather",
+            "type": "function"
+          }
+        ],
+        "type": "allowed_tools"
+      },
+      "properties": {
+        "mode": {
+          "anyOf": [
+            {
+              "enum": [
+                "auto"
+              ],
+              "type": "string"
+            },
+            {
+              "enum": [
+                "required"
+              ],
+              "type": "string"
+            }
+          ]
+        },
+        "tools": {
+          "items": {
+            "additionalProperties": {},
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "type": {
+          "enum": [
+            "allowed_tools"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "mode",
+        "tools"
+      ],
+      "type": "object"
+    },
+    "components_schemas_Truncation": {
+      "enum": [
+        "auto",
+        "disabled",
+        null
+      ],
+      "example": "auto",
+      "type": [
+        "string",
+        "null"
+      ],
+      "x-speakeasy-unknown-values": "allow"
+    },
+    "components_schemas_URLCitation": {
+      "example": {
+        "content": "OpenRouter provides a unified API for accessing LLMs from multiple providers.",
+        "end_index": 42,
+        "start_index": 0,
+        "title": "OpenRouter Documentation",
+        "type": "url_citation",
+        "url": "https://openrouter.ai/docs"
+      },
+      "properties": {
+        "content": {
+          "type": "string"
+        },
+        "end_index": {
+          "type": "integer"
+        },
+        "start_index": {
+          "type": "integer"
+        },
+        "title": {
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "url_citation"
+          ],
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "url",
+        "title",
+        "start_index",
+        "end_index"
+      ],
+      "type": "object"
+    },
+    "components_schemas_Usage": {
+      "anyOf": [
+        {
+          "allOf": [
+            {
+              "$ref": "#/$defs/components_schemas_OpenAIResponsesUsage"
+            },
+            {
+              "properties": {
+                "cost": {
+                  "description": "Cost of the completion",
+                  "format": "double",
+                  "type": [
+                    "number",
+                    "null"
+                  ]
+                },
+                "cost_details": {
+                  "properties": {
+                    "upstream_inference_cost": {
+                      "format": "double",
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "upstream_inference_input_cost": {
+                      "format": "double",
+                      "type": "number"
+                    },
+                    "upstream_inference_output_cost": {
+                      "format": "double",
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "upstream_inference_input_cost",
+                    "upstream_inference_output_cost"
+                  ],
+                  "type": "object"
+                },
+                "is_byok": {
+                  "description": "Whether a request was made using a Bring Your Own Key configuration",
+                  "type": "boolean"
+                },
+                "server_tool_use_details": {
+                  "$ref": "#/$defs/components_schemas_ServerToolUseDetails"
+                }
+              },
+              "type": "object"
+            }
+          ]
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Token usage information for the response",
+      "example": {
+        "cost": 0.0012,
+        "cost_details": {
+          "upstream_inference_cost": null,
+          "upstream_inference_input_cost": 0.0008,
+          "upstream_inference_output_cost": 0.0004
+        },
+        "input_tokens": 10,
+        "input_tokens_details": {
+          "cached_tokens": 0
+        },
+        "output_tokens": 25,
+        "output_tokens_details": {
+          "reasoning_tokens": 0
+        },
+        "total_tokens": 35
+      }
+    },
+    "components_schemas_WebSearchDomainFilter": {
+      "example": {
+        "allowed_domains": [
+          "example.com"
+        ],
+        "blocked_domains": [
+          "spam.com"
+        ],
+        "excluded_domains": [
+          "spam.com"
+        ]
+      },
+      "properties": {
+        "allowed_domains": {
+          "items": {
+            "type": "string"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "blocked_domains": {
+          "items": {
+            "type": "string"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "excluded_domains": {
+          "items": {
+            "type": "string"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        }
+      },
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "components_schemas_WebSearchEngineEnum": {
+      "description": "Which search engine to use. \"auto\" (default) uses native if the provider supports it, otherwise Exa. \"native\" forces the provider's built-in search. \"exa\" forces the Exa search API. \"firecrawl\" uses Firecrawl (requires BYOK). \"parallel\" uses the Parallel search API. \"perplexity\" uses the Perplexity Search API (raw ranked results).",
+      "enum": [
+        "native",
+        "exa",
+        "parallel",
+        "firecrawl",
+        "perplexity",
+        "auto"
+      ],
+      "example": "auto",
+      "type": "string",
+      "x-speakeasy-unknown-values": "allow"
+    },
+    "components_schemas_WebSearchMode": {
+      "description": "Engine-native search mode. Exa supports instant, fast, auto (default), deep-lite, deep, and deep-reasoning. Parallel supports turbo, basic (default), and advanced. Modes unsupported by the selected engine are ignored.",
+      "enum": [
+        "instant",
+        "fast",
+        "auto",
+        "deep-lite",
+        "deep",
+        "deep-reasoning",
+        "turbo",
+        "basic",
+        "advanced"
+      ],
+      "example": "auto",
+      "type": "string",
+      "x-speakeasy-unknown-values": "allow"
+    },
+    "components_schemas_WebSearchServerTool": {
+      "description": "Web search tool configuration (2025-08-26 version)",
+      "example": {
+        "engine": "auto",
+        "filters": {
+          "allowed_domains": [
+            "example.com"
+          ]
+        },
+        "type": "web_search_2025_08_26"
+      },
+      "properties": {
+        "engine": {
+          "$ref": "#/$defs/components_schemas_WebSearchEngineEnum"
+        },
+        "filters": {
+          "$ref": "#/$defs/components_schemas_WebSearchDomainFilter"
+        },
+        "max_results": {
+          "description": "Maximum number of search results to return per search call. Defaults to 5. Applies to Exa, Firecrawl, Parallel, and Perplexity engines; ignored with native provider search. Perplexity supports a maximum of 20; values above 20 are clamped.",
+          "example": 5,
+          "type": "integer"
+        },
+        "max_uses": {
+          "description": "Maximum number of web searches the model may perform in a single request. Once reached, further search calls return an error result instead of executing. Applies to the Exa, Firecrawl, Parallel, and Perplexity engines. With native provider search, forwarded only to Anthropic (as `max_uses`); other native search providers have no equivalent parameter and ignore it.",
+          "example": 3,
+          "type": "integer"
+        },
+        "mode": {
+          "$ref": "#/$defs/components_schemas_WebSearchMode"
+        },
+        "search_context_size": {
+          "$ref": "#/$defs/components_schemas_SearchContextSizeEnum"
+        },
+        "type": {
+          "enum": [
+            "web_search_2025_08_26"
+          ],
+          "type": "string"
+        },
+        "user_location": {
+          "$ref": "#/$defs/components_schemas_WebSearchUserLocation"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "type": "object"
+    },
+    "components_schemas_WebSearchSource": {
+      "example": {
+        "type": "url",
+        "url": "https://example.com/article"
+      },
+      "properties": {
+        "type": {
+          "enum": [
+            "url"
+          ],
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "url"
+      ],
+      "type": "object"
+    },
+    "components_schemas_WebSearchStatus": {
+      "enum": [
+        "completed",
+        "searching",
+        "in_progress",
+        "failed"
+      ],
+      "example": "completed",
+      "type": "string",
+      "x-speakeasy-unknown-values": "allow"
+    },
+    "components_schemas_WebSearchUserLocation": {
+      "description": "User location information for web search",
+      "example": {
+        "city": "San Francisco",
+        "country": "USA",
+        "region": "California",
+        "timezone": "America/Los_Angeles",
+        "type": "approximate"
+      },
+      "properties": {
+        "city": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "country": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "region": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "timezone": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "type": {
+          "enum": [
+            "approximate"
+          ],
+          "type": "string"
+        }
+      },
+      "type": [
+        "object",
+        "null"
+      ]
+    }
+  }
+}

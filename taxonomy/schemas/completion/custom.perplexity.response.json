@@ -1,0 +1,642 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$ref": "#/$defs/components_schemas_CompletionResponse",
+  "$defs": {
+    "components_schemas_ApiPublicSearchResult": {
+      "description": "A single search result from the web",
+      "properties": {
+        "title": {
+          "type": "string",
+          "title": "Title",
+          "description": "Title of the search result page"
+        },
+        "url": {
+          "type": "string",
+          "title": "Url",
+          "description": "URL of the search result page"
+        },
+        "date": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Date",
+          "description": "Publication date of the result"
+        },
+        "last_updated": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Last Updated",
+          "description": "Date the result was last updated"
+        },
+        "snippet": {
+          "type": "string",
+          "title": "Snippet",
+          "description": "Text snippet from the search result",
+          "default": ""
+        },
+        "source": {
+          "type": "string",
+          "enum": [
+            "web",
+            "attachment"
+          ],
+          "title": "Source",
+          "description": "Source type of the result (web or attachment)",
+          "default": "web"
+        }
+      },
+      "type": "object",
+      "required": [
+        "title",
+        "url"
+      ],
+      "title": "ApiPublicSearchResult"
+    },
+    "components_schemas_ChatMessage-Output": {
+      "properties": {
+        "role": {
+          "$ref": "#/$defs/components_schemas_ChatMessageRole"
+        },
+        "content": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "items": {
+                "anyOf": [
+                  {
+                    "$ref": "#/$defs/components_schemas_ChatMessageContentTextChunk"
+                  },
+                  {
+                    "$ref": "#/$defs/components_schemas_ChatMessageContentImageChunk"
+                  },
+                  {
+                    "$ref": "#/$defs/components_schemas_ChatMessageContentFileChunk"
+                  },
+                  {
+                    "$ref": "#/$defs/components_schemas_ChatMessageContentPDFChunk"
+                  },
+                  {
+                    "$ref": "#/$defs/components_schemas_ChatMessageContentVideoChunk"
+                  }
+                ]
+              },
+              "type": "array",
+              "title": "Structured Content"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Content"
+        }
+      },
+      "type": "object",
+      "required": [
+        "role",
+        "content"
+      ],
+      "title": "ChatMessage"
+    },
+    "components_schemas_ChatMessageContentFileChunk": {
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "file_url",
+          "title": "Type"
+        },
+        "file_url": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/components_schemas_URL"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "title": "File Url"
+        },
+        "file_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "File Name"
+        }
+      },
+      "type": "object",
+      "required": [
+        "type",
+        "file_url"
+      ],
+      "title": "ChatMessageContentFileChunk"
+    },
+    "components_schemas_ChatMessageContentImageChunk": {
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "image_url",
+          "title": "Type"
+        },
+        "image_url": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/components_schemas_URL"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "title": "Image Url"
+        }
+      },
+      "type": "object",
+      "required": [
+        "type",
+        "image_url"
+      ],
+      "title": "ChatMessageContentImageChunk"
+    },
+    "components_schemas_ChatMessageContentPDFChunk": {
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "pdf_url",
+          "title": "Type"
+        },
+        "pdf_url": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/components_schemas_URL"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "title": "Pdf Url"
+        }
+      },
+      "type": "object",
+      "required": [
+        "type",
+        "pdf_url"
+      ],
+      "title": "ChatMessageContentPDFChunk"
+    },
+    "components_schemas_ChatMessageContentTextChunk": {
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "text",
+          "title": "Type"
+        },
+        "text": {
+          "type": "string",
+          "title": "Text"
+        }
+      },
+      "type": "object",
+      "required": [
+        "type",
+        "text"
+      ],
+      "title": "ChatMessageContentTextChunk"
+    },
+    "components_schemas_ChatMessageContentVideoChunk": {
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "video_url",
+          "title": "Type"
+        },
+        "video_url": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/components_schemas_VideoURL"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "title": "Video Url"
+        }
+      },
+      "type": "object",
+      "required": [
+        "type",
+        "video_url"
+      ],
+      "title": "ChatMessageContentVideoChunk"
+    },
+    "components_schemas_ChatMessageRole": {
+      "type": "string",
+      "enum": [
+        "system",
+        "user",
+        "assistant",
+        "tool"
+      ],
+      "title": "ChatMessageRole",
+      "description": "Chat roles enum"
+    },
+    "components_schemas_Choice": {
+      "description": "A single completion choice",
+      "properties": {
+        "index": {
+          "type": "integer",
+          "title": "Index",
+          "description": "Index of the choice in the array"
+        },
+        "finish_reason": {
+          "anyOf": [
+            {
+              "type": "string",
+              "enum": [
+                "stop",
+                "length"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Finish Reason",
+          "description": "Reason generation stopped (stop or length)"
+        },
+        "message": {
+          "$ref": "#/$defs/components_schemas_ChatMessage-Output",
+          "description": "Complete message (non-streaming)"
+        },
+        "delta": {
+          "$ref": "#/$defs/components_schemas_ChatMessage-Output",
+          "description": "Incremental message delta (streaming)"
+        }
+      },
+      "type": "object",
+      "required": [
+        "index",
+        "message",
+        "delta"
+      ],
+      "title": "Choice"
+    },
+    "components_schemas_CompletionResponse": {
+      "properties": {
+        "id": {
+          "type": "string",
+          "title": "Id",
+          "description": "Unique identifier for the completion"
+        },
+        "model": {
+          "type": "string",
+          "title": "Model",
+          "description": "Model used for generation"
+        },
+        "created": {
+          "type": "integer",
+          "title": "Created",
+          "description": "Unix timestamp when the completion was created"
+        },
+        "usage": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/components_schemas_UsageInfo"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "object": {
+          "type": "string",
+          "title": "Object",
+          "description": "Object type identifier",
+          "default": "chat.completion"
+        },
+        "choices": {
+          "items": {
+            "$ref": "#/$defs/components_schemas_Choice"
+          },
+          "type": "array",
+          "title": "Choices",
+          "description": "Array of completion choices"
+        },
+        "citations": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Citations",
+          "description": "URLs of sources used to generate the response"
+        },
+        "search_results": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/components_schemas_ApiPublicSearchResult"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Search Results",
+          "description": "Search results used for context in the response"
+        },
+        "images": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/components_schemas_ImageResult"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Images",
+          "description": "Array of images returned when return_images is true"
+        },
+        "related_questions": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Related Questions",
+          "description": "Array of related questions returned when return_related_questions is true"
+        }
+      },
+      "type": "object",
+      "required": [
+        "id",
+        "model",
+        "created",
+        "choices"
+      ],
+      "title": "CompletionResponse"
+    },
+    "components_schemas_Cost": {
+      "description": "Cost breakdown for a chat completion request",
+      "properties": {
+        "input_tokens_cost": {
+          "type": "number",
+          "title": "Input Tokens Cost",
+          "description": "Cost for input tokens in USD"
+        },
+        "output_tokens_cost": {
+          "type": "number",
+          "title": "Output Tokens Cost",
+          "description": "Cost for output tokens in USD"
+        },
+        "reasoning_tokens_cost": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Reasoning Tokens Cost",
+          "description": "Cost for reasoning tokens in USD"
+        },
+        "request_cost": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Request Cost",
+          "description": "Cost for web search requests in USD (includes pro search cost if applicable)"
+        },
+        "citation_tokens_cost": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Citation Tokens Cost",
+          "description": "Cost for citation tokens in USD"
+        },
+        "search_queries_cost": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Search Queries Cost",
+          "description": "Cost for search queries in USD"
+        },
+        "total_cost": {
+          "type": "number",
+          "title": "Total Cost",
+          "description": "Total cost for the request in USD"
+        }
+      },
+      "type": "object",
+      "required": [
+        "input_tokens_cost",
+        "output_tokens_cost",
+        "total_cost"
+      ],
+      "title": "Cost"
+    },
+    "components_schemas_ImageResult": {
+      "properties": {
+        "image_url": {
+          "type": "string",
+          "title": "Image Url",
+          "description": "URL of the image"
+        },
+        "origin_url": {
+          "type": "string",
+          "title": "Origin Url",
+          "description": "Original URL where the image was found"
+        },
+        "title": {
+          "type": "string",
+          "title": "Title",
+          "description": "Title or description of the image"
+        },
+        "width": {
+          "type": "integer",
+          "title": "Width",
+          "description": "Width of the image in pixels"
+        },
+        "height": {
+          "type": "integer",
+          "title": "Height",
+          "description": "Height of the image in pixels"
+        }
+      },
+      "type": "object",
+      "required": [
+        "image_url",
+        "origin_url",
+        "title",
+        "width",
+        "height"
+      ],
+      "title": "ImageResult"
+    },
+    "components_schemas_URL": {
+      "properties": {
+        "url": {
+          "type": "string",
+          "title": "Url"
+        }
+      },
+      "type": "object",
+      "required": [
+        "url"
+      ],
+      "title": "URL"
+    },
+    "components_schemas_UsageInfo": {
+      "description": "Token usage and cost information for a request",
+      "properties": {
+        "prompt_tokens": {
+          "type": "integer",
+          "title": "Prompt Tokens",
+          "description": "Number of tokens in the prompt/input"
+        },
+        "completion_tokens": {
+          "type": "integer",
+          "title": "Completion Tokens",
+          "description": "Number of tokens in the completion/output"
+        },
+        "total_tokens": {
+          "type": "integer",
+          "title": "Total Tokens",
+          "description": "Total tokens used (prompt + completion)"
+        },
+        "search_context_size": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Search Context Size",
+          "description": "Size of search context used"
+        },
+        "citation_tokens": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Citation Tokens",
+          "description": "Number of tokens used for citations"
+        },
+        "num_search_queries": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Num Search Queries",
+          "description": "Number of search queries executed"
+        },
+        "reasoning_tokens": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Reasoning Tokens",
+          "description": "Number of tokens used for reasoning"
+        },
+        "cost": {
+          "$ref": "#/$defs/components_schemas_Cost",
+          "description": "Cost breakdown for the request"
+        }
+      },
+      "type": "object",
+      "required": [
+        "prompt_tokens",
+        "completion_tokens",
+        "total_tokens",
+        "cost"
+      ],
+      "title": "UsageInfo"
+    },
+    "components_schemas_VideoURL": {
+      "properties": {
+        "url": {
+          "type": "string",
+          "title": "Url"
+        },
+        "frame_interval": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "integer"
+            }
+          ],
+          "title": "Frame Interval",
+          "default": 25
+        }
+      },
+      "type": "object",
+      "required": [
+        "url"
+      ],
+      "title": "VideoURL"
+    }
+  }
+}

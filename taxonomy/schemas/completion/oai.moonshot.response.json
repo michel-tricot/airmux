@@ -1,0 +1,124 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$ref": "#/$defs/components_schemas_ChatCompletionResponse",
+  "$defs": {
+    "components_schemas_ChatCompletionResponse": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the completion"
+        },
+        "object": {
+          "type": "string",
+          "description": "Object type",
+          "example": "chat.completion"
+        },
+        "created": {
+          "type": "integer",
+          "description": "Unix timestamp of when the completion was created"
+        },
+        "model": {
+          "type": "string",
+          "description": "Model used for the completion"
+        },
+        "choices": {
+          "type": "array",
+          "description": "List of completion choices",
+          "items": {
+            "type": "object",
+            "properties": {
+              "index": {
+                "type": "integer"
+              },
+              "message": {
+                "type": "object",
+                "properties": {
+                  "role": {
+                    "type": "string",
+                    "enum": [
+                      "assistant"
+                    ]
+                  },
+                  "content": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "description": "The assistant's message content"
+                  },
+                  "tool_calls": {
+                    "type": "array",
+                    "description": "Tool calls made by the model",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string"
+                        },
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "function"
+                          ]
+                        },
+                        "function": {
+                          "type": "object",
+                          "properties": {
+                            "name": {
+                              "type": "string"
+                            },
+                            "arguments": {
+                              "type": "string",
+                              "description": "JSON string of function arguments"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "reasoning_content": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "description": "Reasoning process (returned only when thinking mode is enabled)"
+                  }
+                }
+              },
+              "finish_reason": {
+                "type": "string",
+                "enum": [
+                  "stop",
+                  "length",
+                  "tool_calls"
+                ]
+              }
+            }
+          }
+        },
+        "usage": {
+          "type": "object",
+          "properties": {
+            "prompt_tokens": {
+              "type": "integer",
+              "description": "Number of tokens in the prompt"
+            },
+            "completion_tokens": {
+              "type": "integer",
+              "description": "Number of tokens in the completion"
+            },
+            "total_tokens": {
+              "type": "integer",
+              "description": "Total number of tokens used"
+            },
+            "cached_tokens": {
+              "type": "integer",
+              "description": "Number of tokens served from cache"
+            }
+          }
+        }
+      }
+    }
+  }
+}

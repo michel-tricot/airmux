@@ -1,0 +1,221 @@
+{
+  "provider": "zai",
+  "source": "https://docs.z.ai/openapi.json",
+  "source_type": "docs",
+  "updated": "2026-08-11",
+  "count": 20,
+  "models": [
+    {
+      "id": "autoglm-phone-multilingual",
+      "kind": "text",
+      "context_length": null,
+      "max_output_tokens": null,
+      "input_modalities": null,
+      "output_modalities": null,
+      "supports_tools": null,
+      "supports_structured_output": null
+    },
+    {
+      "id": "glm-4-32b-0414-128k",
+      "kind": "text",
+      "context_length": null,
+      "max_output_tokens": null,
+      "input_modalities": null,
+      "output_modalities": null,
+      "supports_tools": null,
+      "supports_structured_output": null
+    },
+    {
+      "id": "glm-4.5",
+      "kind": "text",
+      "context_length": 131072,
+      "max_output_tokens": 98304,
+      "input_modalities": null,
+      "output_modalities": null,
+      "supports_tools": null,
+      "supports_structured_output": null,
+      "limits_source": "openrouter-index"
+    },
+    {
+      "id": "glm-4.5-air",
+      "kind": "text",
+      "context_length": 131072,
+      "max_output_tokens": 98304,
+      "input_modalities": null,
+      "output_modalities": null,
+      "supports_tools": null,
+      "supports_structured_output": null,
+      "limits_source": "openrouter-index"
+    },
+    {
+      "id": "glm-4.5-airx",
+      "kind": "text",
+      "context_length": null,
+      "max_output_tokens": null,
+      "input_modalities": null,
+      "output_modalities": null,
+      "supports_tools": null,
+      "supports_structured_output": null
+    },
+    {
+      "id": "glm-4.5-flash",
+      "kind": "text",
+      "context_length": null,
+      "max_output_tokens": null,
+      "input_modalities": null,
+      "output_modalities": null,
+      "supports_tools": null,
+      "supports_structured_output": null
+    },
+    {
+      "id": "glm-4.5-x",
+      "kind": "text",
+      "context_length": null,
+      "max_output_tokens": null,
+      "input_modalities": null,
+      "output_modalities": null,
+      "supports_tools": null,
+      "supports_structured_output": null
+    },
+    {
+      "id": "glm-4.5v",
+      "kind": "text",
+      "context_length": 65536,
+      "max_output_tokens": 16384,
+      "input_modalities": null,
+      "output_modalities": null,
+      "supports_tools": null,
+      "supports_structured_output": null,
+      "limits_source": "openrouter-index"
+    },
+    {
+      "id": "glm-4.6",
+      "kind": "text",
+      "context_length": 131072,
+      "max_output_tokens": 32768,
+      "input_modalities": null,
+      "output_modalities": null,
+      "supports_tools": null,
+      "supports_structured_output": null,
+      "limits_source": "openrouter-index"
+    },
+    {
+      "id": "glm-4.6v",
+      "kind": "text",
+      "context_length": 131072,
+      "max_output_tokens": 32768,
+      "input_modalities": null,
+      "output_modalities": null,
+      "supports_tools": null,
+      "supports_structured_output": null,
+      "limits_source": "openrouter-index"
+    },
+    {
+      "id": "glm-4.6v-flash",
+      "kind": "text",
+      "context_length": null,
+      "max_output_tokens": null,
+      "input_modalities": null,
+      "output_modalities": null,
+      "supports_tools": null,
+      "supports_structured_output": null
+    },
+    {
+      "id": "glm-4.6v-flashx",
+      "kind": "text",
+      "context_length": null,
+      "max_output_tokens": null,
+      "input_modalities": null,
+      "output_modalities": null,
+      "supports_tools": null,
+      "supports_structured_output": null
+    },
+    {
+      "id": "glm-4.7",
+      "kind": "text",
+      "context_length": 204800,
+      "max_output_tokens": 131072,
+      "input_modalities": null,
+      "output_modalities": null,
+      "supports_tools": null,
+      "supports_structured_output": null,
+      "limits_source": "openrouter-index"
+    },
+    {
+      "id": "glm-4.7-flash",
+      "kind": "text",
+      "context_length": 202752,
+      "max_output_tokens": 16384,
+      "input_modalities": null,
+      "output_modalities": null,
+      "supports_tools": null,
+      "supports_structured_output": null,
+      "limits_source": "openrouter-index"
+    },
+    {
+      "id": "glm-4.7-flashx",
+      "kind": "text",
+      "context_length": null,
+      "max_output_tokens": null,
+      "input_modalities": null,
+      "output_modalities": null,
+      "supports_tools": null,
+      "supports_structured_output": null
+    },
+    {
+      "id": "glm-5",
+      "kind": "text",
+      "context_length": 202752,
+      "max_output_tokens": 131072,
+      "input_modalities": null,
+      "output_modalities": null,
+      "supports_tools": null,
+      "supports_structured_output": null,
+      "limits_source": "openrouter-index"
+    },
+    {
+      "id": "glm-5-turbo",
+      "kind": "text",
+      "context_length": 202752,
+      "max_output_tokens": 131072,
+      "input_modalities": null,
+      "output_modalities": null,
+      "supports_tools": null,
+      "supports_structured_output": null,
+      "limits_source": "openrouter-index"
+    },
+    {
+      "id": "glm-5.1",
+      "kind": "text",
+      "context_length": 204800,
+      "max_output_tokens": 131072,
+      "input_modalities": null,
+      "output_modalities": null,
+      "supports_tools": null,
+      "supports_structured_output": null,
+      "limits_source": "openrouter-index"
+    },
+    {
+      "id": "glm-5.2",
+      "kind": "text",
+      "context_length": 1048576,
+      "max_output_tokens": 131072,
+      "input_modalities": null,
+      "output_modalities": null,
+      "supports_tools": null,
+      "supports_structured_output": null,
+      "limits_source": "openrouter-index"
+    },
+    {
+      "id": "glm-5v-turbo",
+      "kind": "text",
+      "context_length": 202752,
+      "max_output_tokens": 131072,
+      "input_modalities": null,
+      "output_modalities": null,
+      "supports_tools": null,
+      "supports_structured_output": null,
+      "limits_source": "openrouter-index"
+    }
+  ]
+}

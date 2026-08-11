@@ -1,0 +1,129 @@
+{
+  "provider": "anthropic",
+  "source": "https://api.anthropic.com/v1/models",
+  "source_type": "api",
+  "updated": "2026-08-11",
+  "count": 10,
+  "models": [
+    {
+      "id": "claude-fable-5",
+      "kind": "text",
+      "context_length": 1000000,
+      "max_output_tokens": 128000,
+      "input_modalities": null,
+      "output_modalities": null,
+      "supports_tools": null,
+      "supports_structured_output": null,
+      "limits_source": "openrouter-index",
+      "display_name": "Claude Fable 5"
+    },
+    {
+      "id": "claude-haiku-4-5-20251001",
+      "kind": "text",
+      "context_length": 200000,
+      "max_output_tokens": 64000,
+      "input_modalities": null,
+      "output_modalities": null,
+      "supports_tools": null,
+      "supports_structured_output": null,
+      "limits_source": "openrouter-index",
+      "display_name": "Claude Haiku 4.5"
+    },
+    {
+      "id": "claude-opus-4-5-20251101",
+      "kind": "text",
+      "context_length": 200000,
+      "max_output_tokens": 64000,
+      "input_modalities": null,
+      "output_modalities": null,
+      "supports_tools": null,
+      "supports_structured_output": null,
+      "limits_source": "openrouter-index",
+      "display_name": "Claude Opus 4.5"
+    },
+    {
+      "id": "claude-opus-4-6",
+      "kind": "text",
+      "context_length": 1000000,
+      "max_output_tokens": 128000,
+      "input_modalities": null,
+      "output_modalities": null,
+      "supports_tools": null,
+      "supports_structured_output": null,
+      "limits_source": "openrouter-index",
+      "display_name": "Claude Opus 4.6"
+    },
+    {
+      "id": "claude-opus-4-7",
+      "kind": "text",
+      "context_length": 1000000,
+      "max_output_tokens": 128000,
+      "input_modalities": null,
+      "output_modalities": null,
+      "supports_tools": null,
+      "supports_structured_output": null,
+      "limits_source": "openrouter-index",
+      "display_name": "Claude Opus 4.7"
+    },
+    {
+      "id": "claude-opus-4-8",
+      "kind": "text",
+      "context_length": 1000000,
+      "max_output_tokens": 128000,
+      "input_modalities": null,
+      "output_modalities": null,
+      "supports_tools": null,
+      "supports_structured_output": null,
+      "limits_source": "openrouter-index",
+      "display_name": "Claude Opus 4.8"
+    },
+    {
+      "id": "claude-opus-5",
+      "kind": "text",
+      "context_length": 1000000,
+      "max_output_tokens": 128000,
+      "input_modalities": null,
+      "output_modalities": null,
+      "supports_tools": null,
+      "supports_structured_output": null,
+      "limits_source": "openrouter-index",
+      "display_name": "Claude Opus 5"
+    },
+    {
+      "id": "claude-sonnet-4-5-20250929",
+      "kind": "text",
+      "context_length": 1000000,
+      "max_output_tokens": 64000,
+      "input_modalities": null,
+      "output_modalities": null,
+      "supports_tools": null,
+      "supports_structured_output": null,
+      "limits_source": "openrouter-index",
+      "display_name": "Claude Sonnet 4.5"
+    },
+    {
+      "id": "claude-sonnet-4-6",
+      "kind": "text",
+      "context_length": 1000000,
+      "max_output_tokens": 128000,
+      "input_modalities": null,
+      "output_modalities": null,
+      "supports_tools": null,
+      "supports_structured_output": null,
+      "limits_source": "openrouter-index",
+      "display_name": "Claude Sonnet 4.6"
+    },
+    {
+      "id": "claude-sonnet-5",
+      "kind": "text",
+      "context_length": 1000000,
+      "max_output_tokens": 128000,
+      "input_modalities": null,
+      "output_modalities": null,
+      "supports_tools": null,
+      "supports_structured_output": null,
+      "limits_source": "openrouter-index",
+      "display_name": "Claude Sonnet 5"
+    }
+  ]
+}

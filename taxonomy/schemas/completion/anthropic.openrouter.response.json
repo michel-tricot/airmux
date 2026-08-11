@@ -1,0 +1,2980 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$ref": "#/$defs/components_schemas_MessagesResult",
+  "$defs": {
+    "components_schemas_AnthropicAdvisorMessageUsageIteration": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/components_schemas_AnthropicBaseUsageIteration"
+        },
+        {
+          "properties": {
+            "model": {
+              "type": "string"
+            },
+            "type": {
+              "enum": [
+                "advisor_message"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "type",
+            "model"
+          ],
+          "type": "object"
+        }
+      ],
+      "example": {
+        "cache_creation": null,
+        "cache_creation_input_tokens": 0,
+        "cache_read_input_tokens": 0,
+        "input_tokens": 823,
+        "model": "claude-opus-4-6",
+        "output_tokens": 1612,
+        "type": "advisor_message"
+      }
+    },
+    "components_schemas_AnthropicAdvisorToolResult": {
+      "example": {
+        "content": {
+          "text": "Advisor response text",
+          "type": "advisor_result"
+        },
+        "tool_use_id": "srvtoolu_01abc",
+        "type": "advisor_tool_result"
+      },
+      "properties": {
+        "content": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "tool_use_id": {
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "advisor_tool_result"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "tool_use_id",
+        "content"
+      ],
+      "type": "object"
+    },
+    "components_schemas_AnthropicBase64PdfSource": {
+      "example": {
+        "data": "JVBERi0x...",
+        "media_type": "application/pdf",
+        "type": "base64"
+      },
+      "properties": {
+        "data": {
+          "type": "string"
+        },
+        "media_type": {
+          "enum": [
+            "application/pdf"
+          ],
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "base64"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "media_type",
+        "data"
+      ],
+      "type": "object"
+    },
+    "components_schemas_AnthropicBaseUsageIteration": {
+      "example": {
+        "cache_creation": null,
+        "cache_creation_input_tokens": 0,
+        "cache_read_input_tokens": 0,
+        "input_tokens": 100,
+        "output_tokens": 50
+      },
+      "properties": {
+        "cache_creation": {
+          "$ref": "#/$defs/components_schemas_AnthropicIterationCacheCreation"
+        },
+        "cache_creation_input_tokens": {
+          "type": "integer"
+        },
+        "cache_read_input_tokens": {
+          "type": "integer"
+        },
+        "input_tokens": {
+          "type": "integer"
+        },
+        "output_tokens": {
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "components_schemas_AnthropicBashCodeExecutionContent": {
+      "discriminator": {
+        "mapping": {
+          "bash_code_execution_result": "#/components/schemas/AnthropicBashCodeExecutionResult",
+          "bash_code_execution_tool_result_error": "#/components/schemas/AnthropicBashCodeExecutionToolResultError"
+        },
+        "propertyName": "type"
+      },
+      "example": {
+        "content": [],
+        "return_code": 0,
+        "stderr": "",
+        "stdout": "Hello",
+        "type": "bash_code_execution_result"
+      },
+      "oneOf": [
+        {
+          "$ref": "#/$defs/components_schemas_AnthropicBashCodeExecutionToolResultError"
+        },
+        {
+          "$ref": "#/$defs/components_schemas_AnthropicBashCodeExecutionResult"
+        }
+      ]
+    },
+    "components_schemas_AnthropicBashCodeExecutionOutput": {
+      "example": {
+        "file_id": "file_01abc",
+        "type": "bash_code_execution_output"
+      },
+      "properties": {
+        "file_id": {
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "bash_code_execution_output"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "file_id",
+        "type"
+      ],
+      "type": "object"
+    },
+    "components_schemas_AnthropicBashCodeExecutionResult": {
+      "example": {
+        "content": [],
+        "return_code": 0,
+        "stderr": "",
+        "stdout": "Hello",
+        "type": "bash_code_execution_result"
+      },
+      "properties": {
+        "content": {
+          "items": {
+            "$ref": "#/$defs/components_schemas_AnthropicBashCodeExecutionOutput"
+          },
+          "type": "array"
+        },
+        "return_code": {
+          "type": "integer"
+        },
+        "stderr": {
+          "type": "string"
+        },
+        "stdout": {
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "bash_code_execution_result"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "content",
+        "return_code",
+        "stderr",
+        "stdout",
+        "type"
+      ],
+      "type": "object"
+    },
+    "components_schemas_AnthropicBashCodeExecutionToolResult": {
+      "example": {
+        "content": {
+          "content": [],
+          "return_code": 0,
+          "stderr": "",
+          "stdout": "Hello",
+          "type": "bash_code_execution_result"
+        },
+        "tool_use_id": "srvtoolu_01abc",
+        "type": "bash_code_execution_tool_result"
+      },
+      "properties": {
+        "content": {
+          "$ref": "#/$defs/components_schemas_AnthropicBashCodeExecutionContent"
+        },
+        "tool_use_id": {
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "bash_code_execution_tool_result"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "content",
+        "tool_use_id"
+      ],
+      "type": "object"
+    },
+    "components_schemas_AnthropicBashCodeExecutionToolResultError": {
+      "example": {
+        "error_code": "unavailable",
+        "type": "bash_code_execution_tool_result_error"
+      },
+      "properties": {
+        "error_code": {
+          "enum": [
+            "invalid_tool_input",
+            "unavailable",
+            "too_many_requests",
+            "execution_time_exceeded",
+            "output_file_too_large"
+          ],
+          "type": "string",
+          "x-speakeasy-unknown-values": "allow"
+        },
+        "type": {
+          "enum": [
+            "bash_code_execution_tool_result_error"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "error_code",
+        "type"
+      ],
+      "type": "object"
+    },
+    "components_schemas_AnthropicCacheCreation": {
+      "example": {
+        "ephemeral_1h_input_tokens": 0,
+        "ephemeral_5m_input_tokens": 100
+      },
+      "properties": {
+        "ephemeral_1h_input_tokens": {
+          "type": "integer"
+        },
+        "ephemeral_5m_input_tokens": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "ephemeral_5m_input_tokens",
+        "ephemeral_1h_input_tokens"
+      ],
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "components_schemas_AnthropicCaller": {
+      "discriminator": {
+        "mapping": {
+          "code_execution_20250825": "#/components/schemas/AnthropicCodeExecution20250825Caller",
+          "code_execution_20260120": "#/components/schemas/AnthropicCodeExecution20260120Caller",
+          "direct": "#/components/schemas/AnthropicDirectCaller"
+        },
+        "propertyName": "type"
+      },
+      "example": {
+        "type": "direct"
+      },
+      "oneOf": [
+        {
+          "$ref": "#/$defs/components_schemas_AnthropicDirectCaller"
+        },
+        {
+          "$ref": "#/$defs/components_schemas_AnthropicCodeExecution20250825Caller"
+        },
+        {
+          "$ref": "#/$defs/components_schemas_AnthropicCodeExecution20260120Caller"
+        }
+      ]
+    },
+    "components_schemas_AnthropicCitationCharLocation": {
+      "example": {
+        "cited_text": "Example cited text",
+        "document_index": 0,
+        "document_title": null,
+        "end_char_index": 18,
+        "file_id": null,
+        "start_char_index": 0,
+        "type": "char_location"
+      },
+      "properties": {
+        "cited_text": {
+          "type": "string"
+        },
+        "document_index": {
+          "type": "integer"
+        },
+        "document_title": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "end_char_index": {
+          "type": "integer"
+        },
+        "file_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "start_char_index": {
+          "type": "integer"
+        },
+        "type": {
+          "enum": [
+            "char_location"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "cited_text",
+        "document_index",
+        "document_title",
+        "start_char_index",
+        "end_char_index",
+        "file_id"
+      ],
+      "type": "object"
+    },
+    "components_schemas_AnthropicCitationContentBlockLocation": {
+      "example": {
+        "cited_text": "Example cited text",
+        "document_index": 0,
+        "document_title": null,
+        "end_block_index": 1,
+        "file_id": null,
+        "start_block_index": 0,
+        "type": "content_block_location"
+      },
+      "properties": {
+        "cited_text": {
+          "type": "string"
+        },
+        "document_index": {
+          "type": "integer"
+        },
+        "document_title": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "end_block_index": {
+          "type": "integer"
+        },
+        "file_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "start_block_index": {
+          "type": "integer"
+        },
+        "type": {
+          "enum": [
+            "content_block_location"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "cited_text",
+        "document_index",
+        "document_title",
+        "start_block_index",
+        "end_block_index",
+        "file_id"
+      ],
+      "type": "object"
+    },
+    "components_schemas_AnthropicCitationPageLocation": {
+      "example": {
+        "cited_text": "Example cited text",
+        "document_index": 0,
+        "document_title": null,
+        "end_page_number": 2,
+        "file_id": null,
+        "start_page_number": 1,
+        "type": "page_location"
+      },
+      "properties": {
+        "cited_text": {
+          "type": "string"
+        },
+        "document_index": {
+          "type": "integer"
+        },
+        "document_title": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "end_page_number": {
+          "type": "integer"
+        },
+        "file_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "start_page_number": {
+          "type": "integer"
+        },
+        "type": {
+          "enum": [
+            "page_location"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "cited_text",
+        "document_index",
+        "document_title",
+        "start_page_number",
+        "end_page_number",
+        "file_id"
+      ],
+      "type": "object"
+    },
+    "components_schemas_AnthropicCitationSearchResultLocation": {
+      "example": {
+        "cited_text": "Example cited text",
+        "end_block_index": 1,
+        "search_result_index": 0,
+        "source": "example_source",
+        "start_block_index": 0,
+        "title": "Example Result",
+        "type": "search_result_location"
+      },
+      "properties": {
+        "cited_text": {
+          "type": "string"
+        },
+        "end_block_index": {
+          "type": "integer"
+        },
+        "search_result_index": {
+          "type": "integer"
+        },
+        "source": {
+          "type": "string"
+        },
+        "start_block_index": {
+          "type": "integer"
+        },
+        "title": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "type": {
+          "enum": [
+            "search_result_location"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "cited_text",
+        "search_result_index",
+        "source",
+        "title",
+        "start_block_index",
+        "end_block_index"
+      ],
+      "type": "object"
+    },
+    "components_schemas_AnthropicCitationWebSearchResultLocation": {
+      "example": {
+        "cited_text": "Example cited text",
+        "encrypted_index": "enc_idx_0",
+        "title": "Example Page",
+        "type": "web_search_result_location",
+        "url": "https://example.com"
+      },
+      "properties": {
+        "cited_text": {
+          "type": "string"
+        },
+        "encrypted_index": {
+          "type": "string"
+        },
+        "title": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "type": {
+          "enum": [
+            "web_search_result_location"
+          ],
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "cited_text",
+        "encrypted_index",
+        "title",
+        "url"
+      ],
+      "type": "object"
+    },
+    "components_schemas_AnthropicCitationsConfig": {
+      "default": null,
+      "example": {
+        "enabled": true
+      },
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "enabled"
+      ],
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "components_schemas_AnthropicCodeExecution20250825Caller": {
+      "example": {
+        "tool_id": "toolu_01abc",
+        "type": "code_execution_20250825"
+      },
+      "properties": {
+        "tool_id": {
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "code_execution_20250825"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "tool_id"
+      ],
+      "type": "object"
+    },
+    "components_schemas_AnthropicCodeExecution20260120Caller": {
+      "example": {
+        "tool_id": "toolu_01abc",
+        "type": "code_execution_20260120"
+      },
+      "properties": {
+        "tool_id": {
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "code_execution_20260120"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "tool_id"
+      ],
+      "type": "object"
+    },
+    "components_schemas_AnthropicCodeExecutionContent": {
+      "discriminator": {
+        "mapping": {
+          "code_execution_result": "#/components/schemas/AnthropicCodeExecutionResult",
+          "code_execution_tool_result_error": "#/components/schemas/AnthropicCodeExecutionToolResultError",
+          "encrypted_code_execution_result": "#/components/schemas/AnthropicEncryptedCodeExecutionResult"
+        },
+        "propertyName": "type"
+      },
+      "example": {
+        "content": [],
+        "return_code": 0,
+        "stderr": "",
+        "stdout": "Hello",
+        "type": "code_execution_result"
+      },
+      "oneOf": [
+        {
+          "$ref": "#/$defs/components_schemas_AnthropicCodeExecutionToolResultError"
+        },
+        {
+          "$ref": "#/$defs/components_schemas_AnthropicCodeExecutionResult"
+        },
+        {
+          "$ref": "#/$defs/components_schemas_AnthropicEncryptedCodeExecutionResult"
+        }
+      ]
+    },
+    "components_schemas_AnthropicCodeExecutionOutput": {
+      "example": {
+        "file_id": "file_01abc",
+        "type": "code_execution_output"
+      },
+      "properties": {
+        "file_id": {
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "code_execution_output"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "file_id",
+        "type"
+      ],
+      "type": "object"
+    },
+    "components_schemas_AnthropicCodeExecutionResult": {
+      "example": {
+        "content": [],
+        "return_code": 0,
+        "stderr": "",
+        "stdout": "Hello",
+        "type": "code_execution_result"
+      },
+      "properties": {
+        "content": {
+          "items": {
+            "$ref": "#/$defs/components_schemas_AnthropicCodeExecutionOutput"
+          },
+          "type": "array"
+        },
+        "return_code": {
+          "type": "integer"
+        },
+        "stderr": {
+          "type": "string"
+        },
+        "stdout": {
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "code_execution_result"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "content",
+        "return_code",
+        "stderr",
+        "stdout",
+        "type"
+      ],
+      "type": "object"
+    },
+    "components_schemas_AnthropicCodeExecutionToolResult": {
+      "example": {
+        "content": {
+          "content": [],
+          "return_code": 0,
+          "stderr": "",
+          "stdout": "Hello",
+          "type": "code_execution_result"
+        },
+        "tool_use_id": "srvtoolu_01abc",
+        "type": "code_execution_tool_result"
+      },
+      "properties": {
+        "content": {
+          "$ref": "#/$defs/components_schemas_AnthropicCodeExecutionContent"
+        },
+        "tool_use_id": {
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "code_execution_tool_result"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "content",
+        "tool_use_id"
+      ],
+      "type": "object"
+    },
+    "components_schemas_AnthropicCodeExecutionToolResultError": {
+      "example": {
+        "error_code": "unavailable",
+        "type": "code_execution_tool_result_error"
+      },
+      "properties": {
+        "error_code": {
+          "$ref": "#/$defs/components_schemas_AnthropicServerToolErrorCode"
+        },
+        "type": {
+          "enum": [
+            "code_execution_tool_result_error"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "error_code",
+        "type"
+      ],
+      "type": "object"
+    },
+    "components_schemas_AnthropicCompactionBlock": {
+      "example": {
+        "content": "Compacted summary of conversation.",
+        "type": "compaction"
+      },
+      "properties": {
+        "content": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "encrypted_content": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "type": {
+          "enum": [
+            "compaction"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "content"
+      ],
+      "type": "object"
+    },
+    "components_schemas_AnthropicCompactionUsageIteration": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/components_schemas_AnthropicBaseUsageIteration"
+        },
+        {
+          "properties": {
+            "type": {
+              "enum": [
+                "compaction"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "type"
+          ],
+          "type": "object"
+        }
+      ],
+      "example": {
+        "cache_creation": null,
+        "cache_creation_input_tokens": 0,
+        "cache_read_input_tokens": 0,
+        "input_tokens": 50,
+        "output_tokens": 25,
+        "type": "compaction"
+      }
+    },
+    "components_schemas_AnthropicContainer": {
+      "example": {
+        "expires_at": "2026-04-08T00:00:00Z",
+        "id": "ctr_01abc"
+      },
+      "properties": {
+        "expires_at": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "expires_at"
+      ],
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "components_schemas_AnthropicContainerUpload": {
+      "example": {
+        "file_id": "file_01abc",
+        "type": "container_upload"
+      },
+      "properties": {
+        "file_id": {
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "container_upload"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "file_id"
+      ],
+      "type": "object"
+    },
+    "components_schemas_AnthropicDirectCaller": {
+      "example": {
+        "type": "direct"
+      },
+      "properties": {
+        "type": {
+          "enum": [
+            "direct"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "type": "object"
+    },
+    "components_schemas_AnthropicDocumentBlock": {
+      "example": {
+        "citations": null,
+        "source": {
+          "data": "Hello, world!",
+          "media_type": "text/plain",
+          "type": "text"
+        },
+        "title": null,
+        "type": "document"
+      },
+      "properties": {
+        "citations": {
+          "$ref": "#/$defs/components_schemas_AnthropicCitationsConfig"
+        },
+        "source": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/components_schemas_AnthropicBase64PdfSource"
+            },
+            {
+              "$ref": "#/$defs/components_schemas_AnthropicPlainTextSource"
+            }
+          ]
+        },
+        "title": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "type": {
+          "enum": [
+            "document"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "source",
+        "title",
+        "type"
+      ],
+      "type": "object"
+    },
+    "components_schemas_AnthropicEncryptedCodeExecutionResult": {
+      "example": {
+        "content": [],
+        "encrypted_stdout": "enc_stdout",
+        "return_code": 0,
+        "stderr": "",
+        "type": "encrypted_code_execution_result"
+      },
+      "properties": {
+        "content": {
+          "items": {
+            "$ref": "#/$defs/components_schemas_AnthropicCodeExecutionOutput"
+          },
+          "type": "array"
+        },
+        "encrypted_stdout": {
+          "type": "string"
+        },
+        "return_code": {
+          "type": "integer"
+        },
+        "stderr": {
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "encrypted_code_execution_result"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "content",
+        "encrypted_stdout",
+        "return_code",
+        "stderr",
+        "type"
+      ],
+      "type": "object"
+    },
+    "components_schemas_AnthropicIterationCacheCreation": {
+      "default": null,
+      "example": {
+        "ephemeral_1h_input_tokens": 0,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "properties": {
+        "ephemeral_1h_input_tokens": {
+          "type": "integer"
+        },
+        "ephemeral_5m_input_tokens": {
+          "type": "integer"
+        }
+      },
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "components_schemas_AnthropicMessageUsageIteration": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/components_schemas_AnthropicBaseUsageIteration"
+        },
+        {
+          "properties": {
+            "model": {
+              "type": "string"
+            },
+            "type": {
+              "enum": [
+                "message"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "type"
+          ],
+          "type": "object"
+        }
+      ],
+      "example": {
+        "cache_creation": null,
+        "cache_creation_input_tokens": 0,
+        "cache_read_input_tokens": 0,
+        "input_tokens": 100,
+        "output_tokens": 50,
+        "type": "message"
+      }
+    },
+    "components_schemas_AnthropicOutputTokensDetails": {
+      "example": {
+        "thinking_tokens": 0
+      },
+      "properties": {
+        "thinking_tokens": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "thinking_tokens"
+      ],
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "components_schemas_AnthropicPlainTextSource": {
+      "example": {
+        "data": "Hello, world!",
+        "media_type": "text/plain",
+        "type": "text"
+      },
+      "properties": {
+        "data": {
+          "type": "string"
+        },
+        "media_type": {
+          "enum": [
+            "text/plain"
+          ],
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "text"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "media_type",
+        "data"
+      ],
+      "type": "object"
+    },
+    "components_schemas_AnthropicRedactedThinkingBlock": {
+      "example": {
+        "data": "cmVkYWN0ZWQ=",
+        "type": "redacted_thinking"
+      },
+      "properties": {
+        "data": {
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "redacted_thinking"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "data"
+      ],
+      "type": "object"
+    },
+    "components_schemas_AnthropicRefusalStopDetails": {
+      "description": "Structured information about a refusal",
+      "example": {
+        "category": "cyber",
+        "explanation": "The request was refused due to policy.",
+        "type": "refusal"
+      },
+      "properties": {
+        "category": {
+          "enum": [
+            "cyber",
+            "bio",
+            null
+          ],
+          "type": [
+            "string",
+            "null"
+          ],
+          "x-speakeasy-unknown-values": "allow"
+        },
+        "explanation": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "type": {
+          "enum": [
+            "refusal"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "category",
+        "explanation"
+      ],
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "components_schemas_AnthropicServerToolErrorCode": {
+      "enum": [
+        "invalid_tool_input",
+        "unavailable",
+        "too_many_requests",
+        "execution_time_exceeded"
+      ],
+      "example": "unavailable",
+      "type": "string",
+      "x-speakeasy-unknown-values": "allow"
+    },
+    "components_schemas_AnthropicServerToolUsage": {
+      "example": {
+        "web_fetch_requests": 0,
+        "web_search_requests": 1
+      },
+      "properties": {
+        "web_fetch_requests": {
+          "type": "integer"
+        },
+        "web_search_requests": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "web_search_requests",
+        "web_fetch_requests"
+      ],
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "components_schemas_AnthropicServiceTier": {
+      "enum": [
+        "standard",
+        "priority",
+        "batch",
+        null
+      ],
+      "example": "standard",
+      "type": [
+        "string",
+        "null"
+      ],
+      "x-speakeasy-unknown-values": "allow"
+    },
+    "components_schemas_AnthropicSpeed": {
+      "enum": [
+        "fast",
+        "standard",
+        null
+      ],
+      "example": "standard",
+      "type": [
+        "string",
+        "null"
+      ],
+      "x-speakeasy-unknown-values": "allow"
+    },
+    "components_schemas_AnthropicTextBlock": {
+      "example": {
+        "citations": null,
+        "text": "Hello, world!",
+        "type": "text"
+      },
+      "properties": {
+        "citations": {
+          "items": {
+            "$ref": "#/$defs/components_schemas_AnthropicTextCitation"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "text": {
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "text"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "text",
+        "citations"
+      ],
+      "type": "object"
+    },
+    "components_schemas_AnthropicTextCitation": {
+      "discriminator": {
+        "mapping": {
+          "char_location": "#/components/schemas/AnthropicCitationCharLocation",
+          "content_block_location": "#/components/schemas/AnthropicCitationContentBlockLocation",
+          "page_location": "#/components/schemas/AnthropicCitationPageLocation",
+          "search_result_location": "#/components/schemas/AnthropicCitationSearchResultLocation",
+          "web_search_result_location": "#/components/schemas/AnthropicCitationWebSearchResultLocation"
+        },
+        "propertyName": "type"
+      },
+      "example": {
+        "cited_text": "Example text",
+        "document_index": 0,
+        "document_title": null,
+        "end_char_index": 10,
+        "file_id": null,
+        "start_char_index": 0,
+        "type": "char_location"
+      },
+      "oneOf": [
+        {
+          "$ref": "#/$defs/components_schemas_AnthropicCitationCharLocation"
+        },
+        {
+          "$ref": "#/$defs/components_schemas_AnthropicCitationPageLocation"
+        },
+        {
+          "$ref": "#/$defs/components_schemas_AnthropicCitationContentBlockLocation"
+        },
+        {
+          "$ref": "#/$defs/components_schemas_AnthropicCitationWebSearchResultLocation"
+        },
+        {
+          "$ref": "#/$defs/components_schemas_AnthropicCitationSearchResultLocation"
+        }
+      ]
+    },
+    "components_schemas_AnthropicTextEditorCodeExecutionContent": {
+      "discriminator": {
+        "mapping": {
+          "text_editor_code_execution_create_result": "#/components/schemas/AnthropicTextEditorCodeExecutionCreateResult",
+          "text_editor_code_execution_str_replace_result": "#/components/schemas/AnthropicTextEditorCodeExecutionStrReplaceResult",
+          "text_editor_code_execution_tool_result_error": "#/components/schemas/AnthropicTextEditorCodeExecutionToolResultError",
+          "text_editor_code_execution_view_result": "#/components/schemas/AnthropicTextEditorCodeExecutionViewResult"
+        },
+        "propertyName": "type"
+      },
+      "example": {
+        "content": "file content",
+        "file_type": "text",
+        "num_lines": 10,
+        "start_line": 1,
+        "total_lines": 10,
+        "type": "text_editor_code_execution_view_result"
+      },
+      "oneOf": [
+        {
+          "$ref": "#/$defs/components_schemas_AnthropicTextEditorCodeExecutionToolResultError"
+        },
+        {
+          "$ref": "#/$defs/components_schemas_AnthropicTextEditorCodeExecutionViewResult"
+        },
+        {
+          "$ref": "#/$defs/components_schemas_AnthropicTextEditorCodeExecutionCreateResult"
+        },
+        {
+          "$ref": "#/$defs/components_schemas_AnthropicTextEditorCodeExecutionStrReplaceResult"
+        }
+      ]
+    },
+    "components_schemas_AnthropicTextEditorCodeExecutionCreateResult": {
+      "example": {
+        "is_file_update": false,
+        "type": "text_editor_code_execution_create_result"
+      },
+      "properties": {
+        "is_file_update": {
+          "type": "boolean"
+        },
+        "type": {
+          "enum": [
+            "text_editor_code_execution_create_result"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "is_file_update",
+        "type"
+      ],
+      "type": "object"
+    },
+    "components_schemas_AnthropicTextEditorCodeExecutionStrReplaceResult": {
+      "example": {
+        "lines": null,
+        "new_lines": null,
+        "new_start": null,
+        "old_lines": null,
+        "old_start": null,
+        "type": "text_editor_code_execution_str_replace_result"
+      },
+      "properties": {
+        "lines": {
+          "items": {
+            "type": "string"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "new_lines": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "new_start": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "old_lines": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "old_start": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "type": {
+          "enum": [
+            "text_editor_code_execution_str_replace_result"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "lines",
+        "new_lines",
+        "new_start",
+        "old_lines",
+        "old_start",
+        "type"
+      ],
+      "type": "object"
+    },
+    "components_schemas_AnthropicTextEditorCodeExecutionToolResult": {
+      "example": {
+        "content": {
+          "content": "file content",
+          "file_type": "text",
+          "num_lines": 10,
+          "start_line": 1,
+          "total_lines": 10,
+          "type": "text_editor_code_execution_view_result"
+        },
+        "tool_use_id": "srvtoolu_01abc",
+        "type": "text_editor_code_execution_tool_result"
+      },
+      "properties": {
+        "content": {
+          "$ref": "#/$defs/components_schemas_AnthropicTextEditorCodeExecutionContent"
+        },
+        "tool_use_id": {
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "text_editor_code_execution_tool_result"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "content",
+        "tool_use_id"
+      ],
+      "type": "object"
+    },
+    "components_schemas_AnthropicTextEditorCodeExecutionToolResultError": {
+      "example": {
+        "error_code": "unavailable",
+        "error_message": null,
+        "type": "text_editor_code_execution_tool_result_error"
+      },
+      "properties": {
+        "error_code": {
+          "enum": [
+            "invalid_tool_input",
+            "unavailable",
+            "too_many_requests",
+            "execution_time_exceeded",
+            "file_not_found"
+          ],
+          "type": "string",
+          "x-speakeasy-unknown-values": "allow"
+        },
+        "error_message": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "type": {
+          "enum": [
+            "text_editor_code_execution_tool_result_error"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "error_code",
+        "error_message",
+        "type"
+      ],
+      "type": "object"
+    },
+    "components_schemas_AnthropicTextEditorCodeExecutionViewResult": {
+      "example": {
+        "content": "file content",
+        "file_type": "text",
+        "num_lines": 10,
+        "start_line": 1,
+        "total_lines": 10,
+        "type": "text_editor_code_execution_view_result"
+      },
+      "properties": {
+        "content": {
+          "type": "string"
+        },
+        "file_type": {
+          "enum": [
+            "text",
+            "image",
+            "pdf"
+          ],
+          "type": "string",
+          "x-speakeasy-unknown-values": "allow"
+        },
+        "num_lines": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "start_line": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "total_lines": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "type": {
+          "enum": [
+            "text_editor_code_execution_view_result"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "content",
+        "file_type",
+        "num_lines",
+        "start_line",
+        "total_lines",
+        "type"
+      ],
+      "type": "object"
+    },
+    "components_schemas_AnthropicThinkingBlock": {
+      "example": {
+        "signature": "sig_abc123",
+        "thinking": "Let me think about this...",
+        "type": "thinking"
+      },
+      "properties": {
+        "signature": {
+          "type": "string"
+        },
+        "thinking": {
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "thinking"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "thinking",
+        "signature"
+      ],
+      "type": "object"
+    },
+    "components_schemas_AnthropicToolReference": {
+      "example": {
+        "tool_name": "my_tool",
+        "type": "tool_reference"
+      },
+      "properties": {
+        "tool_name": {
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "tool_reference"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "tool_name",
+        "type"
+      ],
+      "type": "object"
+    },
+    "components_schemas_AnthropicToolSearchContent": {
+      "discriminator": {
+        "mapping": {
+          "tool_search_tool_result_error": "#/components/schemas/AnthropicToolSearchResultError",
+          "tool_search_tool_search_result": "#/components/schemas/AnthropicToolSearchResult"
+        },
+        "propertyName": "type"
+      },
+      "example": {
+        "tool_references": [
+          {
+            "tool_name": "my_tool",
+            "type": "tool_reference"
+          }
+        ],
+        "type": "tool_search_tool_search_result"
+      },
+      "oneOf": [
+        {
+          "$ref": "#/$defs/components_schemas_AnthropicToolSearchResultError"
+        },
+        {
+          "$ref": "#/$defs/components_schemas_AnthropicToolSearchResult"
+        }
+      ]
+    },
+    "components_schemas_AnthropicToolSearchResult": {
+      "example": {
+        "tool_references": [
+          {
+            "tool_name": "my_tool",
+            "type": "tool_reference"
+          }
+        ],
+        "type": "tool_search_tool_search_result"
+      },
+      "properties": {
+        "tool_references": {
+          "items": {
+            "$ref": "#/$defs/components_schemas_AnthropicToolReference"
+          },
+          "type": "array"
+        },
+        "type": {
+          "enum": [
+            "tool_search_tool_search_result"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "tool_references",
+        "type"
+      ],
+      "type": "object"
+    },
+    "components_schemas_AnthropicToolSearchResultError": {
+      "example": {
+        "error_code": "unavailable",
+        "error_message": null,
+        "type": "tool_search_tool_result_error"
+      },
+      "properties": {
+        "error_code": {
+          "$ref": "#/$defs/components_schemas_AnthropicServerToolErrorCode"
+        },
+        "error_message": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "type": {
+          "enum": [
+            "tool_search_tool_result_error"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "error_code",
+        "error_message",
+        "type"
+      ],
+      "type": "object"
+    },
+    "components_schemas_AnthropicToolSearchToolResult": {
+      "example": {
+        "content": {
+          "tool_references": [
+            {
+              "tool_name": "my_tool",
+              "type": "tool_reference"
+            }
+          ],
+          "type": "tool_search_tool_search_result"
+        },
+        "tool_use_id": "srvtoolu_01abc",
+        "type": "tool_search_tool_result"
+      },
+      "properties": {
+        "content": {
+          "$ref": "#/$defs/components_schemas_AnthropicToolSearchContent"
+        },
+        "tool_use_id": {
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "tool_search_tool_result"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "content",
+        "tool_use_id"
+      ],
+      "type": "object"
+    },
+    "components_schemas_AnthropicToolUseBlock": {
+      "example": {
+        "caller": {
+          "type": "direct"
+        },
+        "id": "toolu_01abc",
+        "input": {
+          "location": "San Francisco"
+        },
+        "name": "get_weather",
+        "type": "tool_use"
+      },
+      "properties": {
+        "caller": {
+          "$ref": "#/$defs/components_schemas_AnthropicCaller"
+        },
+        "id": {
+          "type": "string"
+        },
+        "input": {},
+        "name": {
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "tool_use"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "id",
+        "caller",
+        "name"
+      ],
+      "type": "object"
+    },
+    "components_schemas_AnthropicUnknownUsageIteration": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/components_schemas_AnthropicBaseUsageIteration"
+        },
+        {
+          "properties": {
+            "type": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "type"
+          ],
+          "type": "object"
+        }
+      ],
+      "example": {
+        "cache_creation": null,
+        "cache_creation_input_tokens": 0,
+        "cache_read_input_tokens": 0,
+        "input_tokens": 100,
+        "output_tokens": 50,
+        "type": "unknown"
+      }
+    },
+    "components_schemas_AnthropicUsage": {
+      "example": {
+        "cache_creation": null,
+        "cache_creation_input_tokens": null,
+        "cache_read_input_tokens": null,
+        "inference_geo": null,
+        "input_tokens": 100,
+        "output_tokens": 50,
+        "output_tokens_details": null,
+        "server_tool_use": null,
+        "service_tier": "standard"
+      },
+      "properties": {
+        "cache_creation": {
+          "$ref": "#/$defs/components_schemas_AnthropicCacheCreation"
+        },
+        "cache_creation_input_tokens": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "cache_read_input_tokens": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "inference_geo": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "input_tokens": {
+          "type": "integer"
+        },
+        "output_tokens": {
+          "type": "integer"
+        },
+        "output_tokens_details": {
+          "$ref": "#/$defs/components_schemas_AnthropicOutputTokensDetails"
+        },
+        "server_tool_use": {
+          "$ref": "#/$defs/components_schemas_AnthropicServerToolUsage"
+        },
+        "service_tier": {
+          "$ref": "#/$defs/components_schemas_AnthropicServiceTier"
+        }
+      },
+      "required": [
+        "input_tokens",
+        "output_tokens",
+        "output_tokens_details",
+        "cache_creation_input_tokens",
+        "cache_read_input_tokens",
+        "cache_creation",
+        "inference_geo",
+        "server_tool_use",
+        "service_tier"
+      ],
+      "type": "object"
+    },
+    "components_schemas_AnthropicUsageIteration": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/components_schemas_AnthropicCompactionUsageIteration"
+        },
+        {
+          "$ref": "#/$defs/components_schemas_AnthropicMessageUsageIteration"
+        },
+        {
+          "$ref": "#/$defs/components_schemas_AnthropicAdvisorMessageUsageIteration"
+        },
+        {
+          "$ref": "#/$defs/components_schemas_AnthropicUnknownUsageIteration"
+        }
+      ],
+      "example": {
+        "cache_creation": null,
+        "cache_creation_input_tokens": 0,
+        "cache_read_input_tokens": 0,
+        "input_tokens": 100,
+        "output_tokens": 50,
+        "type": "message"
+      }
+    },
+    "components_schemas_AnthropicWebFetchBlock": {
+      "example": {
+        "content": {
+          "citations": null,
+          "source": {
+            "data": "",
+            "media_type": "text/plain",
+            "type": "text"
+          },
+          "title": null,
+          "type": "document"
+        },
+        "retrieved_at": null,
+        "type": "web_fetch_result",
+        "url": "https://example.com"
+      },
+      "properties": {
+        "content": {
+          "$ref": "#/$defs/components_schemas_AnthropicDocumentBlock"
+        },
+        "retrieved_at": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "type": {
+          "enum": [
+            "web_fetch_result"
+          ],
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "content",
+        "retrieved_at",
+        "type",
+        "url"
+      ],
+      "type": "object"
+    },
+    "components_schemas_AnthropicWebFetchContent": {
+      "discriminator": {
+        "mapping": {
+          "web_fetch_result": "#/components/schemas/AnthropicWebFetchBlock",
+          "web_fetch_tool_result_error": "#/components/schemas/AnthropicWebFetchToolResultError"
+        },
+        "propertyName": "type"
+      },
+      "example": {
+        "content": {
+          "citations": null,
+          "source": {
+            "data": "",
+            "media_type": "text/plain",
+            "type": "text"
+          },
+          "title": null,
+          "type": "document"
+        },
+        "retrieved_at": null,
+        "type": "web_fetch_result",
+        "url": "https://example.com"
+      },
+      "oneOf": [
+        {
+          "$ref": "#/$defs/components_schemas_AnthropicWebFetchToolResultError"
+        },
+        {
+          "$ref": "#/$defs/components_schemas_AnthropicWebFetchBlock"
+        }
+      ]
+    },
+    "components_schemas_AnthropicWebFetchToolResult": {
+      "example": {
+        "caller": {
+          "type": "direct"
+        },
+        "content": {
+          "content": {
+            "citations": null,
+            "source": {
+              "data": "",
+              "media_type": "text/plain",
+              "type": "text"
+            },
+            "title": null,
+            "type": "document"
+          },
+          "retrieved_at": null,
+          "type": "web_fetch_result",
+          "url": "https://example.com"
+        },
+        "tool_use_id": "srvtoolu_01abc",
+        "type": "web_fetch_tool_result"
+      },
+      "properties": {
+        "caller": {
+          "$ref": "#/$defs/components_schemas_AnthropicCaller"
+        },
+        "content": {
+          "$ref": "#/$defs/components_schemas_AnthropicWebFetchContent"
+        },
+        "tool_use_id": {
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "web_fetch_tool_result"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "caller",
+        "content",
+        "tool_use_id"
+      ],
+      "type": "object"
+    },
+    "components_schemas_AnthropicWebFetchToolResultError": {
+      "example": {
+        "error_code": "unavailable",
+        "type": "web_fetch_tool_result_error"
+      },
+      "properties": {
+        "error_code": {
+          "enum": [
+            "invalid_tool_input",
+            "url_too_long",
+            "url_not_allowed",
+            "url_not_accessible",
+            "unsupported_content_type",
+            "too_many_requests",
+            "max_uses_exceeded",
+            "unavailable"
+          ],
+          "type": "string",
+          "x-speakeasy-unknown-values": "allow"
+        },
+        "type": {
+          "enum": [
+            "web_fetch_tool_result_error"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "error_code"
+      ],
+      "type": "object"
+    },
+    "components_schemas_AnthropicWebSearchResult": {
+      "example": {
+        "encrypted_content": "enc_content_0",
+        "page_age": null,
+        "title": "Example Page",
+        "type": "web_search_result",
+        "url": "https://example.com"
+      },
+      "properties": {
+        "encrypted_content": {
+          "type": "string"
+        },
+        "page_age": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "title": {
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "web_search_result"
+          ],
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "encrypted_content",
+        "page_age",
+        "title",
+        "url"
+      ],
+      "type": "object"
+    },
+    "components_schemas_AnthropicWebSearchToolResult": {
+      "example": {
+        "caller": {
+          "type": "direct"
+        },
+        "content": [],
+        "tool_use_id": "srvtoolu_01abc",
+        "type": "web_search_tool_result"
+      },
+      "properties": {
+        "caller": {
+          "$ref": "#/$defs/components_schemas_AnthropicCaller"
+        },
+        "content": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/components_schemas_AnthropicWebSearchResult"
+              },
+              "type": "array"
+            },
+            {
+              "$ref": "#/$defs/components_schemas_AnthropicWebSearchToolResultError"
+            }
+          ]
+        },
+        "tool_use_id": {
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "web_search_tool_result"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "caller",
+        "tool_use_id",
+        "content"
+      ],
+      "type": "object"
+    },
+    "components_schemas_AnthropicWebSearchToolResultError": {
+      "example": {
+        "error_code": "unavailable",
+        "type": "web_search_tool_result_error"
+      },
+      "properties": {
+        "error_code": {
+          "enum": [
+            "invalid_tool_input",
+            "unavailable",
+            "max_uses_exceeded",
+            "too_many_requests",
+            "query_too_long",
+            "request_too_large"
+          ],
+          "type": "string",
+          "x-speakeasy-unknown-values": "allow"
+        },
+        "type": {
+          "enum": [
+            "web_search_tool_result_error"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "error_code"
+      ],
+      "type": "object"
+    },
+    "components_schemas_BaseMessagesResult": {
+      "description": "Base Anthropic Messages API response before OpenRouter extensions",
+      "example": {
+        "container": null,
+        "content": [
+          {
+            "citations": [],
+            "text": "Hello!",
+            "type": "text"
+          }
+        ],
+        "id": "msg_01XFDUDYJgAACzvnptvVoYEL",
+        "model": "claude-sonnet-4-5-20250929",
+        "role": "assistant",
+        "stop_details": null,
+        "stop_reason": "end_turn",
+        "stop_sequence": null,
+        "type": "message",
+        "usage": {
+          "cache_creation": null,
+          "cache_creation_input_tokens": null,
+          "cache_read_input_tokens": null,
+          "inference_geo": null,
+          "input_tokens": 12,
+          "output_tokens": 8,
+          "output_tokens_details": null,
+          "server_tool_use": null,
+          "service_tier": "standard"
+        }
+      },
+      "properties": {
+        "container": {
+          "$ref": "#/$defs/components_schemas_AnthropicContainer"
+        },
+        "content": {
+          "items": {
+            "$ref": "#/$defs/components_schemas_ORAnthropicContentBlock"
+          },
+          "type": "array"
+        },
+        "id": {
+          "type": "string"
+        },
+        "model": {
+          "type": "string"
+        },
+        "role": {
+          "enum": [
+            "assistant"
+          ],
+          "type": "string"
+        },
+        "stop_details": {
+          "$ref": "#/$defs/components_schemas_AnthropicRefusalStopDetails"
+        },
+        "stop_reason": {
+          "$ref": "#/$defs/components_schemas_ORAnthropicStopReason"
+        },
+        "stop_sequence": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "type": {
+          "enum": [
+            "message"
+          ],
+          "type": "string"
+        },
+        "usage": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/components_schemas_AnthropicUsage"
+            },
+            {
+              "properties": {
+                "iterations": {
+                  "items": {
+                    "$ref": "#/$defs/components_schemas_AnthropicUsageIteration"
+                  },
+                  "type": "array"
+                },
+                "speed": {
+                  "$ref": "#/$defs/components_schemas_AnthropicSpeed"
+                }
+              },
+              "type": "object"
+            }
+          ],
+          "example": {
+            "cache_creation": null,
+            "cache_creation_input_tokens": null,
+            "cache_read_input_tokens": null,
+            "inference_geo": null,
+            "input_tokens": 100,
+            "output_tokens": 50,
+            "output_tokens_details": null,
+            "server_tool_use": null,
+            "service_tier": "standard"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "type",
+        "role",
+        "container",
+        "content",
+        "model",
+        "stop_reason",
+        "stop_details",
+        "stop_sequence",
+        "usage"
+      ],
+      "type": "object"
+    },
+    "components_schemas_CostDetails": {
+      "description": "Breakdown of upstream inference costs",
+      "example": {
+        "upstream_inference_completions_cost": 0.0004,
+        "upstream_inference_cost": null,
+        "upstream_inference_prompt_cost": 0.0008
+      },
+      "properties": {
+        "upstream_inference_completions_cost": {
+          "format": "double",
+          "type": "number"
+        },
+        "upstream_inference_cost": {
+          "format": "double",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "upstream_inference_prompt_cost": {
+          "format": "double",
+          "type": "number"
+        }
+      },
+      "required": [
+        "upstream_inference_prompt_cost",
+        "upstream_inference_completions_cost"
+      ],
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "components_schemas_EndpointInfo": {
+      "example": {
+        "model": "openai/gpt-4o",
+        "provider": "OpenAI",
+        "selected": true
+      },
+      "properties": {
+        "model": {
+          "type": "string"
+        },
+        "provider": {
+          "type": "string"
+        },
+        "selected": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "provider",
+        "model",
+        "selected"
+      ],
+      "type": "object"
+    },
+    "components_schemas_EndpointsMetadata": {
+      "example": {
+        "available": [
+          {
+            "model": "openai/gpt-4o",
+            "provider": "OpenAI",
+            "selected": true
+          }
+        ],
+        "total": 3
+      },
+      "properties": {
+        "available": {
+          "items": {
+            "$ref": "#/$defs/components_schemas_EndpointInfo"
+          },
+          "type": "array"
+        },
+        "total": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "total",
+        "available"
+      ],
+      "type": "object"
+    },
+    "components_schemas_MessagesResult": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/components_schemas_BaseMessagesResult"
+        },
+        {
+          "properties": {
+            "context_management": {
+              "properties": {
+                "applied_edits": {
+                  "items": {
+                    "additionalProperties": {},
+                    "properties": {
+                      "type": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "type"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                }
+              },
+              "required": [
+                "applied_edits"
+              ],
+              "type": [
+                "object",
+                "null"
+              ]
+            },
+            "openrouter_metadata": {
+              "$ref": "#/$defs/components_schemas_OpenRouterMetadata"
+            },
+            "provider": {
+              "$ref": "#/$defs/components_schemas_ProviderName"
+            },
+            "usage": {
+              "allOf": [
+                {
+                  "$ref": "#/$defs/components_schemas_AnthropicUsage"
+                },
+                {
+                  "properties": {
+                    "cost": {
+                      "format": "double",
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "cost_details": {
+                      "$ref": "#/$defs/components_schemas_CostDetails"
+                    },
+                    "is_byok": {
+                      "type": "boolean"
+                    },
+                    "iterations": {
+                      "items": {
+                        "$ref": "#/$defs/components_schemas_AnthropicUsageIteration"
+                      },
+                      "type": "array"
+                    },
+                    "service_tier": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "speed": {
+                      "$ref": "#/$defs/components_schemas_AnthropicSpeed"
+                    }
+                  },
+                  "type": "object"
+                }
+              ],
+              "example": {
+                "cache_creation": null,
+                "cache_creation_input_tokens": null,
+                "cache_read_input_tokens": null,
+                "inference_geo": null,
+                "input_tokens": 100,
+                "output_tokens": 50,
+                "output_tokens_details": null,
+                "server_tool_use": null,
+                "service_tier": "standard"
+              }
+            }
+          },
+          "type": "object"
+        }
+      ],
+      "description": "Non-streaming response from the Anthropic Messages API with OpenRouter extensions",
+      "example": {
+        "container": null,
+        "content": [
+          {
+            "citations": [],
+            "text": "Hello! I'm doing well, thank you for asking.",
+            "type": "text"
+          }
+        ],
+        "id": "msg_01XFDUDYJgAACzvnptvVoYEL",
+        "model": "claude-sonnet-4-5-20250929",
+        "role": "assistant",
+        "stop_details": null,
+        "stop_reason": "end_turn",
+        "stop_sequence": null,
+        "type": "message",
+        "usage": {
+          "cache_creation": null,
+          "cache_creation_input_tokens": null,
+          "cache_read_input_tokens": null,
+          "inference_geo": null,
+          "input_tokens": 12,
+          "output_tokens": 15,
+          "output_tokens_details": null,
+          "server_tool_use": null,
+          "service_tier": "standard"
+        }
+      }
+    },
+    "components_schemas_ORAnthropicBashToolResult": {
+      "description": "Output of an `openrouter:bash` call executed in the OpenRouter sandbox (`engine: 'openrouter'`)",
+      "example": {
+        "content": {
+          "command": "ls",
+          "exitCode": 0,
+          "stderr": "",
+          "stdout": "README.md\n"
+        },
+        "tool_use_id": "srvtoolu_01abc",
+        "type": "openrouter_bash_tool_result"
+      },
+      "properties": {
+        "content": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "tool_use_id": {
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "openrouter_bash_tool_result"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "tool_use_id",
+        "content"
+      ],
+      "type": "object"
+    },
+    "components_schemas_ORAnthropicContentBlock": {
+      "discriminator": {
+        "mapping": {
+          "advisor_tool_result": "#/components/schemas/AnthropicAdvisorToolResult",
+          "bash_code_execution_tool_result": "#/components/schemas/AnthropicBashCodeExecutionToolResult",
+          "code_execution_tool_result": "#/components/schemas/AnthropicCodeExecutionToolResult",
+          "compaction": "#/components/schemas/AnthropicCompactionBlock",
+          "container_upload": "#/components/schemas/AnthropicContainerUpload",
+          "openrouter_bash_tool_result": "#/components/schemas/ORAnthropicBashToolResult",
+          "openrouter_shell_tool_result": "#/components/schemas/ORAnthropicShellToolResult",
+          "redacted_thinking": "#/components/schemas/AnthropicRedactedThinkingBlock",
+          "server_tool_use": "#/components/schemas/ORAnthropicServerToolUseBlock",
+          "text": "#/components/schemas/AnthropicTextBlock",
+          "text_editor_code_execution_tool_result": "#/components/schemas/AnthropicTextEditorCodeExecutionToolResult",
+          "thinking": "#/components/schemas/AnthropicThinkingBlock",
+          "tool_search_tool_result": "#/components/schemas/AnthropicToolSearchToolResult",
+          "tool_use": "#/components/schemas/AnthropicToolUseBlock",
+          "web_fetch_tool_result": "#/components/schemas/AnthropicWebFetchToolResult",
+          "web_search_tool_result": "#/components/schemas/AnthropicWebSearchToolResult"
+        },
+        "propertyName": "type"
+      },
+      "example": {
+        "citations": null,
+        "text": "Hello, world!",
+        "type": "text"
+      },
+      "oneOf": [
+        {
+          "$ref": "#/$defs/components_schemas_AnthropicTextBlock"
+        },
+        {
+          "$ref": "#/$defs/components_schemas_AnthropicToolUseBlock"
+        },
+        {
+          "$ref": "#/$defs/components_schemas_AnthropicThinkingBlock"
+        },
+        {
+          "$ref": "#/$defs/components_schemas_AnthropicRedactedThinkingBlock"
+        },
+        {
+          "$ref": "#/$defs/components_schemas_ORAnthropicServerToolUseBlock"
+        },
+        {
+          "$ref": "#/$defs/components_schemas_AnthropicWebSearchToolResult"
+        },
+        {
+          "$ref": "#/$defs/components_schemas_AnthropicWebFetchToolResult"
+        },
+        {
+          "$ref": "#/$defs/components_schemas_AnthropicCodeExecutionToolResult"
+        },
+        {
+          "$ref": "#/$defs/components_schemas_AnthropicBashCodeExecutionToolResult"
+        },
+        {
+          "$ref": "#/$defs/components_schemas_AnthropicTextEditorCodeExecutionToolResult"
+        },
+        {
+          "$ref": "#/$defs/components_schemas_AnthropicToolSearchToolResult"
+        },
+        {
+          "$ref": "#/$defs/components_schemas_AnthropicContainerUpload"
+        },
+        {
+          "$ref": "#/$defs/components_schemas_AnthropicCompactionBlock"
+        },
+        {
+          "$ref": "#/$defs/components_schemas_AnthropicAdvisorToolResult"
+        },
+        {
+          "$ref": "#/$defs/components_schemas_ORAnthropicShellToolResult"
+        },
+        {
+          "$ref": "#/$defs/components_schemas_ORAnthropicBashToolResult"
+        }
+      ]
+    },
+    "components_schemas_ORAnthropicNullableCaller": {
+      "discriminator": {
+        "mapping": {
+          "code_execution_20250825": "#/components/schemas/AnthropicCodeExecution20250825Caller",
+          "code_execution_20260120": "#/components/schemas/AnthropicCodeExecution20260120Caller",
+          "direct": "#/components/schemas/AnthropicDirectCaller"
+        },
+        "propertyName": "type"
+      },
+      "example": {
+        "type": "direct"
+      },
+      "oneOf": [
+        {
+          "$ref": "#/$defs/components_schemas_AnthropicDirectCaller"
+        },
+        {
+          "$ref": "#/$defs/components_schemas_AnthropicCodeExecution20250825Caller"
+        },
+        {
+          "$ref": "#/$defs/components_schemas_AnthropicCodeExecution20260120Caller"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "components_schemas_ORAnthropicServerToolUseBlock": {
+      "example": {
+        "caller": {
+          "type": "direct"
+        },
+        "id": "srvtoolu_01abc",
+        "input": {},
+        "name": "advisor",
+        "type": "server_tool_use"
+      },
+      "properties": {
+        "caller": {
+          "$ref": "#/$defs/components_schemas_ORAnthropicNullableCaller"
+        },
+        "id": {
+          "type": "string"
+        },
+        "input": {},
+        "name": {
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "server_tool_use"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "id",
+        "name"
+      ],
+      "type": "object"
+    },
+    "components_schemas_ORAnthropicShellToolResult": {
+      "description": "Output of an `openrouter:shell` call executed in the OpenRouter sandbox",
+      "example": {
+        "content": {
+          "output": [
+            {
+              "outcome": {
+                "exit_code": 0,
+                "type": "exit"
+              },
+              "stderr": "",
+              "stdout": "README.md\n"
+            }
+          ]
+        },
+        "tool_use_id": "srvtoolu_01abc",
+        "type": "openrouter_shell_tool_result"
+      },
+      "properties": {
+        "content": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "tool_use_id": {
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "openrouter_shell_tool_result"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "tool_use_id",
+        "content"
+      ],
+      "type": "object"
+    },
+    "components_schemas_ORAnthropicStopReason": {
+      "enum": [
+        "end_turn",
+        "max_tokens",
+        "model_context_window_exceeded",
+        "stop_sequence",
+        "tool_use",
+        "pause_turn",
+        "refusal",
+        "compaction",
+        null
+      ],
+      "example": "end_turn",
+      "type": [
+        "string",
+        "null"
+      ],
+      "x-speakeasy-unknown-values": "allow"
+    },
+    "components_schemas_OpenRouterMetadata": {
+      "example": {
+        "attempt": 1,
+        "endpoints": {
+          "available": [
+            {
+              "model": "openai/gpt-4o",
+              "provider": "OpenAI",
+              "selected": true
+            }
+          ],
+          "total": 1
+        },
+        "is_byok": false,
+        "region": "iad",
+        "requested": "openai/gpt-4o",
+        "strategy": "direct",
+        "summary": "available=1, selected=OpenAI"
+      },
+      "properties": {
+        "attempt": {
+          "type": "integer"
+        },
+        "attempts": {
+          "items": {
+            "$ref": "#/$defs/components_schemas_RouterAttempt"
+          },
+          "type": "array"
+        },
+        "endpoints": {
+          "$ref": "#/$defs/components_schemas_EndpointsMetadata"
+        },
+        "is_byok": {
+          "type": "boolean"
+        },
+        "params": {
+          "$ref": "#/$defs/components_schemas_RouterParams"
+        },
+        "pipeline": {
+          "items": {
+            "$ref": "#/$defs/components_schemas_PipelineStage"
+          },
+          "type": "array"
+        },
+        "region": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "requested": {
+          "type": "string"
+        },
+        "strategy": {
+          "$ref": "#/$defs/components_schemas_RoutingStrategy"
+        },
+        "summary": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "requested",
+        "strategy",
+        "region",
+        "summary",
+        "attempt",
+        "is_byok",
+        "endpoints"
+      ],
+      "type": "object"
+    },
+    "components_schemas_PipelineStage": {
+      "example": {
+        "data": {
+          "action": "redacted",
+          "engines": [
+            "presidio"
+          ],
+          "flagged": true,
+          "matched_entity_types": [
+            "EMAIL",
+            "PHONE"
+          ]
+        },
+        "name": "content-filter",
+        "summary": "PII redacted via Presidio (EMAIL, PHONE)",
+        "type": "guardrail"
+      },
+      "properties": {
+        "cost_usd": {
+          "format": "double",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "data": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "guardrail_id": {
+          "type": "string"
+        },
+        "guardrail_scope": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "summary": {
+          "type": "string"
+        },
+        "type": {
+          "$ref": "#/$defs/components_schemas_PipelineStageType"
+        }
+      },
+      "required": [
+        "type",
+        "name"
+      ],
+      "type": "object"
+    },
+    "components_schemas_PipelineStageType": {
+      "description": "Categorical kind of a pipeline stage. Multiple plugins can share a type (e.g. all guardrail-level plugins emit `guardrail`); the `name` field disambiguates which plugin emitted it.",
+      "enum": [
+        "guardrail",
+        "plugin",
+        "server_tools",
+        "response_healing",
+        "context_compression"
+      ],
+      "example": "guardrail",
+      "type": "string",
+      "x-speakeasy-unknown-values": "allow"
+    },
+    "components_schemas_ProviderName": {
+      "enum": [
+        "Modal",
+        "AkashML",
+        "AI21",
+        "AionLabs",
+        "Alibaba",
+        "Ambient",
+        "Baidu",
+        "Amazon Bedrock",
+        "Amazon Nova",
+        "Anthropic",
+        "Arcee AI",
+        "AtlasCloud",
+        "Avian",
+        "Azure",
+        "BaseTen",
+        "BytePlus",
+        "Black Forest Labs",
+        "Cerebras",
+        "Chutes",
+        "Cirrascale",
+        "Claude Platform on AWS",
+        "Clarifai",
+        "Cloudflare",
+        "Cohere",
+        "CoreWeave",
+        "Crucible",
+        "Crusoe",
+        "Darkbloom",
+        "Decart",
+        "Deepgram",
+        "DeepInfra",
+        "DeepSeek",
+        "DekaLLM",
+        "DigitalOcean",
+        "Featherless",
+        "Fireworks",
+        "Fish Audio",
+        "Friendli",
+        "GMICloud",
+        "Google",
+        "Google AI Studio",
+        "Groq",
+        "HeyGen",
+        "Inception",
+        "Inceptron",
+        "InferenceNet",
+        "Ionstream",
+        "Infermatic",
+        "Io Net",
+        "Inferact vLLM",
+        "Inflection",
+        "Liquid",
+        "Mara",
+        "Mancer 2",
+        "Meta",
+        "Minimax",
+        "ModelRun",
+        "Mistral",
+        "Modular",
+        "Moonshot AI",
+        "Morph",
+        "VoyageAI by MongoDB",
+        "NCompass",
+        "Nebius",
+        "Nex AGI",
+        "NextBit",
+        "Novita",
+        "Nvidia",
+        "OpenAI",
+        "OpenInference",
+        "Parasail",
+        "Poolside",
+        "Perceptron",
+        "Perplexity",
+        "Phala",
+        "Recraft",
+        "Reka",
+        "Relace",
+        "Sail Research",
+        "Sakana AI",
+        "SambaNova",
+        "Seed",
+        "SiliconFlow",
+        "Sourceful",
+        "StepFun",
+        "Stealth",
+        "StreamLake",
+        "Switchpoint",
+        "Tencent",
+        "Tenstorrent",
+        "Thinking Machines",
+        "Together",
+        "Upstage",
+        "Venice",
+        "Wafer",
+        "WandB",
+        "Quiver",
+        "Krea",
+        "Runway",
+        "Xiaomi",
+        "xAI",
+        "Z.AI",
+        "FakeProvider"
+      ],
+      "example": "OpenAI",
+      "type": "string",
+      "x-speakeasy-unknown-values": "allow"
+    },
+    "components_schemas_RouterAttempt": {
+      "example": {
+        "model": "openai/gpt-4o",
+        "provider": "OpenAI",
+        "status": 200
+      },
+      "properties": {
+        "model": {
+          "type": "string"
+        },
+        "provider": {
+          "type": "string"
+        },
+        "status": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "provider",
+        "model",
+        "status"
+      ],
+      "type": "object"
+    },
+    "components_schemas_RouterParams": {
+      "additionalProperties": {},
+      "example": {
+        "version_group": "anthropic/claude-sonnet-4"
+      },
+      "properties": {
+        "quality_floor": {
+          "format": "double",
+          "type": "number"
+        },
+        "throughput_floor": {
+          "format": "double",
+          "type": "number"
+        },
+        "version_group": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "components_schemas_RoutingStrategy": {
+      "enum": [
+        "direct",
+        "auto",
+        "free",
+        "latest",
+        "alias",
+        "fallback",
+        "pareto",
+        "bodybuilder",
+        "fusion"
+      ],
+      "example": "direct",
+      "type": "string",
+      "x-speakeasy-unknown-values": "allow"
+    }
+  }
+}

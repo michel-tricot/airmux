@@ -1,0 +1,98 @@
+{
+  "provider": "groq",
+  "source": "https://console.groq.com/docs/models",
+  "source_type": "docs",
+  "updated": "2026-08-11",
+  "count": 8,
+  "models": [
+    {
+      "id": "groq/compound",
+      "kind": "text",
+      "context_length": 131072,
+      "max_output_tokens": 8192,
+      "input_modalities": null,
+      "output_modalities": null,
+      "supports_tools": null,
+      "supports_structured_output": null,
+      "limits_source": "provider"
+    },
+    {
+      "id": "groq/compound-mini",
+      "kind": "text",
+      "context_length": 131072,
+      "max_output_tokens": 8192,
+      "input_modalities": null,
+      "output_modalities": null,
+      "supports_tools": null,
+      "supports_structured_output": null,
+      "limits_source": "provider"
+    },
+    {
+      "id": "llama-3.1-8b-instant",
+      "kind": "text",
+      "context_length": 131072,
+      "max_output_tokens": 131072,
+      "input_modalities": null,
+      "output_modalities": null,
+      "supports_tools": null,
+      "supports_structured_output": null,
+      "limits_source": "provider"
+    },
+    {
+      "id": "llama-3.3-70b-versatile",
+      "kind": "text",
+      "context_length": 131072,
+      "max_output_tokens": 32768,
+      "input_modalities": null,
+      "output_modalities": null,
+      "supports_tools": null,
+      "supports_structured_output": null,
+      "limits_source": "provider"
+    },
+    {
+      "id": "minimaxai/minimax-m2.7",
+      "kind": "text",
+      "context_length": 196608,
+      "max_output_tokens": 131072,
+      "input_modalities": null,
+      "output_modalities": null,
+      "supports_tools": null,
+      "supports_structured_output": null,
+      "limits_source": "provider"
+    },
+    {
+      "id": "openai/gpt-oss-120b",
+      "kind": "text",
+      "context_length": 131072,
+      "max_output_tokens": 65536,
+      "input_modalities": null,
+      "output_modalities": null,
+      "supports_tools": null,
+      "supports_structured_output": null,
+      "limits_source": "provider"
+    },
+    {
+      "id": "openai/gpt-oss-20b",
+      "kind": "text",
+      "context_length": 131072,
+      "max_output_tokens": 65536,
+      "input_modalities": null,
+      "output_modalities": null,
+      "supports_tools": null,
+      "supports_structured_output": null,
+      "limits_source": "provider"
+    },
+    {
+      "id": "qwen/qwen3.6-27b",
+      "kind": "text",
+      "context_length": 131072,
+      "max_output_tokens": 16384,
+      "input_modalities": null,
+      "output_modalities": null,
+      "supports_tools": null,
+      "supports_structured_output": null,
+      "limits_source": "provider"
+    }
+  ],
+  "note": "the vendor OpenAPI spec carries an older, shorter enum; the docs page is newer and used here"
+}

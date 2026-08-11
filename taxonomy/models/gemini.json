@@ -1,0 +1,189 @@
+{
+  "provider": "gemini",
+  "source": "https://ai.google.dev/gemini-api/docs/models",
+  "source_type": "docs",
+  "updated": "2026-08-11",
+  "count": 17,
+  "models": [
+    {
+      "id": "antigravity-preview-05-2026",
+      "kind": "text",
+      "context_length": null,
+      "max_output_tokens": null,
+      "input_modalities": null,
+      "output_modalities": null,
+      "supports_tools": null,
+      "supports_structured_output": null
+    },
+    {
+      "id": "deep-research-max-preview-04-2026",
+      "kind": "text",
+      "context_length": null,
+      "max_output_tokens": null,
+      "input_modalities": null,
+      "output_modalities": null,
+      "supports_tools": null,
+      "supports_structured_output": null
+    },
+    {
+      "id": "deep-research-preview-04-2026",
+      "kind": "text",
+      "context_length": null,
+      "max_output_tokens": null,
+      "input_modalities": null,
+      "output_modalities": null,
+      "supports_tools": null,
+      "supports_structured_output": null
+    },
+    {
+      "id": "gemini-2.5-computer-use-preview-10-2025",
+      "kind": "text",
+      "context_length": null,
+      "max_output_tokens": null,
+      "input_modalities": null,
+      "output_modalities": null,
+      "supports_tools": null,
+      "supports_structured_output": null
+    },
+    {
+      "id": "gemini-2.5-flash",
+      "kind": "text",
+      "context_length": 1048576,
+      "max_output_tokens": 65535,
+      "input_modalities": null,
+      "output_modalities": null,
+      "supports_tools": null,
+      "supports_structured_output": null,
+      "limits_source": "openrouter-index"
+    },
+    {
+      "id": "gemini-2.5-flash-lite",
+      "kind": "text",
+      "context_length": 1048576,
+      "max_output_tokens": 65535,
+      "input_modalities": null,
+      "output_modalities": null,
+      "supports_tools": null,
+      "supports_structured_output": null,
+      "limits_source": "openrouter-index"
+    },
+    {
+      "id": "gemini-2.5-flash-native-audio-preview-12-2025",
+      "kind": "text",
+      "context_length": null,
+      "max_output_tokens": null,
+      "input_modalities": null,
+      "output_modalities": null,
+      "supports_tools": null,
+      "supports_structured_output": null
+    },
+    {
+      "id": "gemini-2.5-pro",
+      "kind": "text",
+      "context_length": 1048576,
+      "max_output_tokens": 65536,
+      "input_modalities": null,
+      "output_modalities": null,
+      "supports_tools": null,
+      "supports_structured_output": null,
+      "limits_source": "openrouter-index"
+    },
+    {
+      "id": "gemini-3-flash-preview",
+      "kind": "text",
+      "context_length": 1048576,
+      "max_output_tokens": 65536,
+      "input_modalities": null,
+      "output_modalities": null,
+      "supports_tools": null,
+      "supports_structured_output": null,
+      "limits_source": "openrouter-index"
+    },
+    {
+      "id": "gemini-3.1-flash-lite",
+      "kind": "text",
+      "context_length": 1048576,
+      "max_output_tokens": 65536,
+      "input_modalities": null,
+      "output_modalities": null,
+      "supports_tools": null,
+      "supports_structured_output": null,
+      "limits_source": "openrouter-index"
+    },
+    {
+      "id": "gemini-3.1-flash-live-preview",
+      "kind": "text",
+      "context_length": null,
+      "max_output_tokens": null,
+      "input_modalities": null,
+      "output_modalities": null,
+      "supports_tools": null,
+      "supports_structured_output": null
+    },
+    {
+      "id": "gemini-3.1-pro-preview",
+      "kind": "text",
+      "context_length": 1048576,
+      "max_output_tokens": 65536,
+      "input_modalities": null,
+      "output_modalities": null,
+      "supports_tools": null,
+      "supports_structured_output": null,
+      "limits_source": "openrouter-index"
+    },
+    {
+      "id": "gemini-3.5-flash",
+      "kind": "text",
+      "context_length": 1048576,
+      "max_output_tokens": 65536,
+      "input_modalities": null,
+      "output_modalities": null,
+      "supports_tools": null,
+      "supports_structured_output": null,
+      "limits_source": "openrouter-index"
+    },
+    {
+      "id": "gemini-3.5-flash-lite",
+      "kind": "text",
+      "context_length": 1048576,
+      "max_output_tokens": 65536,
+      "input_modalities": null,
+      "output_modalities": null,
+      "supports_tools": null,
+      "supports_structured_output": null,
+      "limits_source": "openrouter-index"
+    },
+    {
+      "id": "gemini-3.5-live-translate-preview",
+      "kind": "text",
+      "context_length": null,
+      "max_output_tokens": null,
+      "input_modalities": null,
+      "output_modalities": null,
+      "supports_tools": null,
+      "supports_structured_output": null
+    },
+    {
+      "id": "gemini-3.6-flash",
+      "kind": "text",
+      "context_length": 1048576,
+      "max_output_tokens": 65536,
+      "input_modalities": null,
+      "output_modalities": null,
+      "supports_tools": null,
+      "supports_structured_output": null,
+      "limits_source": "openrouter-index"
+    },
+    {
+      "id": "gemini-omni-flash",
+      "kind": "text",
+      "context_length": null,
+      "max_output_tokens": null,
+      "input_modalities": null,
+      "output_modalities": null,
+      "supports_tools": null,
+      "supports_structured_output": null
+    }
+  ],
+  "note": "the docs page does not publish token limits, so context is null throughout"
+}

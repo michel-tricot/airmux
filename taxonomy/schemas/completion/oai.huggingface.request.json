@@ -1,0 +1,175 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Hugging Face Inference Providers chat completion request",
+  "description": "Request body for the completion endpoint. Transcribed from https://huggingface.co/docs/inference-providers/tasks/chat-completion",
+  "type": "object",
+  "required": [
+    "messages"
+  ],
+  "properties": {
+    "model": {
+      "type": "string"
+    },
+    "messages": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "role"
+        ],
+        "properties": {
+          "role": {
+            "type": "string",
+            "enum": [
+              "system",
+              "developer",
+              "user",
+              "assistant",
+              "tool"
+            ]
+          },
+          "content": {
+            "type": [
+              "string",
+              "array",
+              "null"
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "tool_calls": {
+            "type": "array"
+          },
+          "tool_call_id": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "frequency_penalty": {
+      "type": "number",
+      "minimum": -2,
+      "maximum": 2
+    },
+    "presence_penalty": {
+      "type": "number",
+      "minimum": -2,
+      "maximum": 2
+    },
+    "logprobs": {
+      "type": "boolean"
+    },
+    "top_logprobs": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 5
+    },
+    "max_tokens": {
+      "type": "integer"
+    },
+    "reasoning_effort": {
+      "type": "string"
+    },
+    "response_format": {
+      "type": "object"
+    },
+    "seed": {
+      "type": "integer"
+    },
+    "stop": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 4
+    },
+    "stream": {
+      "type": "boolean"
+    },
+    "stream_options": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "properties": {
+        "include_usage": {
+          "type": "boolean"
+        }
+      }
+    },
+    "temperature": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 2
+    },
+    "top_p": {
+      "type": "number"
+    },
+    "tools": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "type",
+          "function"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "function"
+            ]
+          },
+          "function": {
+            "type": "object",
+            "required": [
+              "name"
+            ],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              },
+              "parameters": {
+                "type": "object"
+              },
+              "strict": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "tool_choice": {
+      "oneOf": [
+        {
+          "type": "string",
+          "enum": [
+            "none",
+            "auto",
+            "required"
+          ]
+        },
+        {
+          "type": "object"
+        }
+      ]
+    },
+    "tool_prompt": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": true,
+  "x-notes": [
+    "The model id carries a provider selection policy suffix: :fastest, :cheapest, :preferred, or an explicit provider name",
+    "reasoning_effort support and defaults are provider and model dependent"
+  ]
+}
