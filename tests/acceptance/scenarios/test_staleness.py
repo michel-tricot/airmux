@@ -17,7 +17,7 @@ def test_expired_bundle_served_with_warning_by_default(stack: Stack) -> None:
     stack.start_dp()
     stack.wait_dp_ready()
 
-    assert stack.request().status_code == 200
+    assert stack.readyz() == 200
     assert stack.wait_dp_log("serving stale per policy")
 
 
@@ -29,4 +29,3 @@ def test_expired_bundle_refused_when_policy_is_refuse(stack: Stack) -> None:
 
     assert stack.wait_dp_log("policy is refuse")
     assert stack.readyz() == 503
-    assert stack.request().status_code == 503

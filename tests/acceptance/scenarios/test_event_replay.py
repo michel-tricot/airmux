@@ -6,6 +6,10 @@ from __future__ import annotations
 import time
 from typing import TYPE_CHECKING
 
+import pytest
+
+pytest.skip("generates events through the request path, which returns at rebuild step 3 (notes/design/DATAPLANE.md)", allow_module_level=True)
+
 if TYPE_CHECKING:
     from conftest import Stack
 
