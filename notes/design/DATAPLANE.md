@@ -78,7 +78,23 @@ and finalize must be valid at every prefix.
 **Proof:** a real streamed request; disconnect mid-stream and show the cancelled event carrying
 partial usage.
 
-### 5. Second adapter: anthropic
+### 5. Unmodified SDKs on the same route
+
+Pulled forward from the later bucket: base-URL swap with an unmodified openai SDK is an adoption
+requirement, not a courtesy, and it cannot work against the canonical shape alone because the SDK
+deserializes a choices axis the canonical response deliberately does not have.
+
+Shape-detected interpretation on POST /v1/chat/completions. An OpenAI-shaped request is recognized
+by its unambiguous markers (a tool role, nested function wrappers, image_url blocks, OpenAI-only
+params), parsed through the same canonical middle (harvest the branch's from_messages, from_tools,
+from_tool_choice), and answered in the shape it spoke: choices axis, OpenAI chunk frames, [DONE].
+A canonical request keeps its canonical answer; detection never changes what a canonical caller
+sees, per INTERFACE.md.
+
+**Proof:** the official openai python SDK, unmodified, completes text, tool and streaming round
+trips against a running data plane.
+
+### 6. Second adapter: anthropic
 
 Proves the interface generalizes. Harvest the branch's wire conversion logic, split so no 457-line
 module returns. Adopt the branch's conformance idea wholesale: tests parameterized over the registry,
@@ -87,7 +103,7 @@ KNOWN_REJECTIONS pinning real incompatibilities.
 
 **Proof:** the same corpus of real requests against Anthropic, streamed and buffered.
 
-### 6. Adjustments as data, not branches
+### 7. Adjustments as data, not branches
 
 Provider profile in the bundle: auth scheme, endpoint path, field aliases, accepted fields, open or
 closed schema, derived from taxonomy. Request extras pass through with profile aliasing; anything
@@ -97,12 +113,15 @@ facts, never predicates; a provider that needs a predicate needs an adapter.
 **Proof:** a field absent from the typed core, such as seed or top_k, reaches a provider that accepts
 it; onboarding a quirky OpenAI-compatible provider is a config change with zero code.
 
-### 7. Later, explicitly out of scope
+### 8. Later, explicitly out of scope
 
-- Compat dialects (/v1/chat/completions, /v1/messages) as pure translators onto the native schema, if
-  drop-in client support is wanted
+- An Anthropic-shaped surface at /v1/messages, reserved in INTERFACE.md, if Anthropic SDK drop-in
+  becomes a requirement the way OpenAI's did
 - Routing proper: deployments, the unserviceable() filter, ranked candidates, failover. The sequencing
   in the canonical-content-types branch's ROUTER.md (steps 3 through 9) remains right from there
+
+Ordering notes: 5 needs 4, because answering an OpenAI-shaped stream means rendering OpenAI chunk
+frames over the canonical stream. 6 and 7 are independent of 5.
 
 ## Guardrails
 
