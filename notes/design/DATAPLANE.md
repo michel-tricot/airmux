@@ -44,6 +44,12 @@ the streaming seam untyped, and that hole is where the mess leaked back in.
 
 Harvest the branch's content.py design here, by copy with review.
 
+The request is open at the top level: swapping a provider's base URL for the gateway must keep
+working, so fields the core does not model are captured for forwarding rather than rejected.
+Nested shapes stay closed. The response and the closing chunk carry a gateway envelope, the one
+namespaced place data plane internals surface to the caller; its first member is adjustments,
+the audit trail of every field the gateway dropped or changed on the way upstream.
+
 The schema is exported as YAML into taxonomy/schemas/completion/ as airllm.request, airllm.response
 and airllm.stream: the definition we own, sitting as a column beside the providers it routes to.
 
@@ -55,9 +61,10 @@ images). Every later step reuses this fixture.
 ### 3. Proxy path, one adapter, buffered only
 
 The adapter interface (construction-injected credential, transform_request, transform_response,
-map_error) and the openai_compatible adapter. One native route: auth, evaluate(), credential resolve,
-transform, upstream call, canonical response, one metering point. policy and metering return here.
-The handler lives in its own module; app.py stays routes and lifespan.
+map_error) and the openai_compatible adapter. The native route is POST /v1/chat/completions in the
+canonical shape (the locked consumer surface, see INTERFACE.md): auth, evaluate(), credential
+resolve, transform, upstream call, canonical response, one metering point. policy and metering
+return here. The handler lives in its own module; app.py stays routes and lifespan.
 
 **Proof:** a real request through the running data plane to a real provider; the usage event with a
 real cost breakdown lands in the control plane.
@@ -84,7 +91,7 @@ KNOWN_REJECTIONS pinning real incompatibilities.
 
 Provider profile in the bundle: auth scheme, endpoint path, field aliases, accepted fields, open or
 closed schema, derived from taxonomy. Request extras pass through with profile aliasing; anything
-dropped or clamped is recorded as an Adjustment on the usage event. Profile fields are declarative
+dropped or clamped lands in the response's gateway.adjustments and on the usage event. Profile fields are declarative
 facts, never predicates; a provider that needs a predicate needs an adapter.
 
 **Proof:** a field absent from the typed core, such as seed or top_k, reaches a provider that accepts

@@ -20,6 +20,7 @@ jobs:
       - run: uv run lint-imports
       - run: ./scripts/export-openapi.sh && git diff --exit-code lib/api-spec/openapi.yaml
       - run: ./scripts/generate-api-models.sh && git diff --exit-code lib/api-models
+      - run: ./scripts/export-completion-schemas.sh && git diff --exit-code taxonomy/schemas/completion
       - run: uv run pytest -n auto
 
   acceptance:
