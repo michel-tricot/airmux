@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from data_plane.completion import (
+from data_plane.canonical import (
     CanonicalMessage,
     CanonicalRequest,
     ContentPart,

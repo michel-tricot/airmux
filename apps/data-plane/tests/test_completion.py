@@ -8,7 +8,7 @@ import yaml
 from corpus import CORPUS, request_of
 from pydantic import ValidationError
 
-from data_plane.completion import (
+from data_plane.canonical import (
     CanonicalChunk,
     CanonicalMessage,
     CanonicalRequest,

@@ -7,7 +7,7 @@ import typer
 import uvicorn
 import yaml
 
-from data_plane.completion import json_schemas
+from data_plane.canonical import json_schemas
 
 app = typer.Typer(name="airllmdp")
 
