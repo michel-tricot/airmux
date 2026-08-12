@@ -17,6 +17,7 @@ dev = [
   "ty>=0.0.50",
   "pytest", "pytest-asyncio", "pytest-xdist", "respx", "anyio",
   "jsonschema",
+  "openai",
   "testcontainers",
   "import-linter",
   "pre-commit",

@@ -11,10 +11,11 @@ One new module under apps/data-plane/src/data_plane/adapters/: the family's JSON
 transport assembly together. Subclass ProviderAdapter, set `kind`, implement the methods. Edit no
 existing file. If you think you need to edit a registry, the registry is wrong; fix the registry.
 
-- Canonical to provider body is one body_of per family, every field mapped by hand. Never map fields
-  reflectively; a name shared by two schemas is coincidence, not a rule. Spelling functions stay pure
-  (no url, auth, or I/O): the day a second consumer needs a family's spelling (an ingress dialect),
-  they split into a shared module unchanged.
+- A family's JSON spelling shared by both sides of the gateway lives in formats/<family>.py, pure
+  functions and parse models with no url, auth, or I/O; adapters and the ingress interpretation import
+  it, never each other. Canonical to provider body is one body_of per family, every field mapped by
+  hand. Never map fields reflectively; a name shared by two schemas is coincidence, not a rule. A
+  spelling with a single consumer may stay inline in its adapter until a second consumer exists.
 - The transport never parses SSE. frame() owns wire framing and the partial-line buffer.
 - StreamState is adapter-shaped. Construct it in new_stream_state(), never in the transport.
 - finalize(state) must return a valid CanonicalResponse at ANY point in the stream, including

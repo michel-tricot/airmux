@@ -7,7 +7,7 @@ to a default rather than failing the response."""
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -17,6 +17,7 @@ from data_plane.canonical import (
     CanonicalRequest,
     ContentPart,
     FinishReason,
+    GatewayInfo,
     ImagePart,
     NamedTool,
     Part,
@@ -270,3 +271,208 @@ def usage_of(reported: UpstreamUsage | None) -> Usage:
         output_tokens=reported.completion_tokens,
         cache_read_tokens=reported.prompt_tokens_details.cached_tokens,
     )
+
+
+# The ingress direction: OpenAI-shaped requests into canonical, canonical replies into the
+# shapes the official SDKs deserialize.
+
+
+def _mapping(value: object) -> dict[str, object]:
+    return {str(key): item for key, item in value.items()} if isinstance(value, dict) else {}
+
+
+def _str(value: object) -> str:
+    return value if isinstance(value, str) else ""
+
+
+def _image_from_url(url: str) -> ImagePart:
+    if not url.startswith(DATA_URL):
+        return ImagePart(url=url)
+    header, _, payload = url[len(DATA_URL) :].partition(",")
+    return ImagePart(media_type=header.removesuffix(";base64"), data=payload)
+
+
+def _text_of(content: object) -> str:
+    """OpenAI spells a message body as either a string or a block list; both reduce to their text."""
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        return "".join(_str(_mapping(block).get("text")) for block in content if _mapping(block).get("type") == "text")
+    return ""
+
+
+def _user_parts(content: object) -> list[ContentPart]:
+    if isinstance(content, str):
+        return [TextPart(text=content)] if content else []
+    if not isinstance(content, list):
+        return []
+    parts: list[ContentPart] = []
+    for raw in content:
+        block = _mapping(raw)
+        if block.get("type") == "text":
+            parts.append(TextPart(text=_str(block.get("text"))))
+        elif block.get("type") == "image_url":
+            parts.append(_image_from_url(_str(_mapping(block.get("image_url")).get("url"))))
+    return parts
+
+
+def _assistant_parts(message: dict[str, object]) -> list[ContentPart]:
+    parts: list[ContentPart] = []
+    if reasoning := _str(message.get("reasoning_content")):
+        parts.append(ReasoningPart(text=reasoning))
+    if text := _text_of(message.get("content")):
+        parts.append(TextPart(text=text))
+    calls = message.get("tool_calls")
+    for raw in calls if isinstance(calls, list) else []:
+        call = _mapping(raw)
+        function = _mapping(call.get("function"))
+        parts.append(ToolCallPart(id=_str(call.get("id")), name=_str(function.get("name")), arguments=_str(function.get("arguments"))))
+    return parts
+
+
+def from_messages(messages: object) -> list[CanonicalMessage]:
+    """OpenAI's wire messages into canonical. A tool message becomes a tool result part on a user
+    message, and consecutive tool messages merge into one so a parallel call's results stay one turn."""
+    out: list[CanonicalMessage] = []
+    pending: list[ContentPart] = []
+
+    def flush() -> None:
+        if pending:
+            out.append(CanonicalMessage(role="user", content=list(pending)))
+            pending.clear()
+
+    for raw in messages if isinstance(messages, list) else []:
+        message = _mapping(raw)
+        role = message.get("role")
+        if role == "tool":
+            pending.append(ToolResultPart(call_id=_str(message.get("tool_call_id")), content=[TextPart(text=_text_of(message.get("content")))]))
+            continue
+        flush()
+        if role in {"system", "developer"}:
+            out.append(CanonicalMessage(role="system", content=[TextPart(text=_text_of(message.get("content")))]))
+        elif role == "assistant":
+            out.append(CanonicalMessage(role="assistant", content=_assistant_parts(message)))
+        else:
+            out.append(CanonicalMessage(role="user", content=_user_parts(message.get("content"))))
+    flush()
+    return out
+
+
+def from_tools(tools: object) -> list[ToolDef] | None:
+    if not isinstance(tools, list) or not tools:
+        return None
+    defs: list[ToolDef] = []
+    for raw in tools:
+        function = _mapping(_mapping(raw).get("function"))
+        defs.append(
+            ToolDef(
+                name=_str(function.get("name")),
+                description=_str(function.get("description")) or None,
+                parameters=dict(_mapping(function.get("parameters"))),
+            )
+        )
+    return defs
+
+
+def from_tool_choice(choice: object) -> ToolChoice | None:
+    if choice == "auto":
+        return "auto"
+    if choice == "none":
+        return "none"
+    if choice == "required":
+        return "required"
+    name = _str(_mapping(_mapping(choice).get("function")).get("name"))
+    return NamedTool(name=name) if name else None
+
+
+class ToolCallOut(BaseModel):
+    id: str
+    type: Literal["function"] = "function"
+    function: dict[str, str]
+
+
+class MessageOut(BaseModel):
+    role: Literal["assistant"] = "assistant"
+    content: str | None
+    reasoning_content: str | None = None
+    tool_calls: list[ToolCallOut] | None = None
+
+
+class ChoiceOut(BaseModel):
+    index: int = 0
+    message: MessageOut
+    finish_reason: str | None
+
+
+class PromptTokensDetails(BaseModel):
+    cached_tokens: int = 0
+
+
+class UsageOut(BaseModel):
+    prompt_tokens: int
+    completion_tokens: int
+    total_tokens: int
+    prompt_tokens_details: PromptTokensDetails
+
+
+class ChatCompletionOut(BaseModel):
+    """What an OpenAI SDK deserializes; gateway rides along as an extra field SDKs ignore."""
+
+    id: str
+    object: Literal["chat.completion"] = "chat.completion"
+    created: int
+    model: str
+    choices: list[ChoiceOut]
+    usage: UsageOut
+    gateway: GatewayInfo | None = None
+
+
+class ToolCallDeltaOut(BaseModel):
+    index: int
+    id: str | None = None
+    type: Literal["function"] | None = None
+    function: dict[str, str] | None = None
+
+
+class DeltaOut(BaseModel):
+    role: Literal["assistant"] | None = None
+    content: str | None = None
+    reasoning_content: str | None = None
+    tool_calls: list[ToolCallDeltaOut] | None = None
+
+
+class ChunkChoiceOut(BaseModel):
+    index: int = 0
+    delta: DeltaOut
+    finish_reason: str | None = None
+
+
+class ChatCompletionChunkOut(BaseModel):
+    id: str
+    object: Literal["chat.completion.chunk"] = "chat.completion.chunk"
+    created: int
+    model: str
+    choices: list[ChunkChoiceOut]
+    usage: UsageOut | None = None
+    gateway: GatewayInfo | None = None
+
+    def sse(self) -> bytes:
+        return b"data: " + self.model_dump_json(exclude_none=True).encode() + b"\n\n"
+
+
+def usage_out(usage: Usage) -> UsageOut:
+    return UsageOut(
+        prompt_tokens=usage.input_tokens,
+        completion_tokens=usage.output_tokens,
+        total_tokens=usage.input_tokens + usage.output_tokens,
+        prompt_tokens_details=PromptTokensDetails(cached_tokens=usage.cache_read_tokens),
+    )
+
+
+def to_message(parts: Sequence[ContentPart]) -> MessageOut:
+    """Canonical response content as one assistant message. content is null rather than empty when the
+    turn is only tool calls, which is the shape OpenAI itself returns."""
+    text = _text_of_parts(parts)
+    reasoning = "".join(part.text for part in parts if isinstance(part, ReasoningPart))
+    calls = [ToolCallOut(id=part.id, function={"name": part.name, "arguments": part.arguments}) for part in parts if isinstance(part, ToolCallPart)]
+    return MessageOut(content=text or None, reasoning_content=reasoning or None, tool_calls=calls or None)

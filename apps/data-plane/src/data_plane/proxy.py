@@ -20,6 +20,7 @@ from pydantic import ValidationError
 from starlette.responses import JSONResponse, Response, StreamingResponse
 
 from contract import SecretStoreUnavailableError, UsageEventV1, uuid7
+from data_plane import compat
 from data_plane.adapters import REGISTRY
 from data_plane.adapters.base import Ctx, UpstreamStreamError
 from data_plane.auth import authenticate
@@ -31,12 +32,25 @@ from data_plane.transport import client
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Sequence
+    from typing import Protocol
 
     from starlette.requests import Request
 
     from contract import CredentialEntry, KeyEntry, ModelEntry, Secret, UsageStatus
-    from data_plane.adapters.base import ProviderAdapter, StreamState, UpstreamRequest
+    from data_plane.adapters.base import CanonicalError, ProviderAdapter, StreamState, UpstreamRequest
     from data_plane.holder import BundleSnapshot
+
+    class Egress(Protocol):
+        """How one dialect spells the canonical stream on the way out."""
+
+        def start(self, ctx: Ctx) -> list[bytes]: ...
+
+        def chunk(self, c: CanonicalChunk) -> list[bytes]: ...
+
+        def closing(self, final: CanonicalResponse, adjustments: list[Adjustment]) -> list[bytes]: ...
+
+        def error(self, err: CanonicalError) -> list[bytes]: ...
+
 
 logger = logging.getLogger("data_plane")
 
@@ -62,8 +76,8 @@ async def complete(request: Request) -> Response:
         return _error(e.status, e.code, e.message)
 
 
-async def _authorize(request: Request) -> tuple[CanonicalRequest, KeyEntry, BundleSnapshot]:
-    """Authentication and body validation; raises RequestRejectedError on every no."""
+async def _authorize(request: Request) -> tuple[CanonicalRequest, KeyEntry, BundleSnapshot, bool]:
+    """Authentication, dialect detection and body validation; raises RequestRejectedError on every no."""
     snap = holder.snapshot
     if snap is None:
         raise RequestRejectedError(503, "bundle_unavailable")
@@ -74,10 +88,16 @@ async def _authorize(request: Request) -> tuple[CanonicalRequest, KeyEntry, Bund
     if key is None:
         raise RequestRejectedError(401, "invalid_token")
     try:
-        req = CanonicalRequest.model_validate_json(await request.body())
+        body = json.loads(await request.body())
+        if not isinstance(body, dict):
+            raise RequestRejectedError(400, "invalid_request", "the request body must be a JSON object")
+        openai_shape = compat.wants_openai(request.headers, body)
+        req = compat.parse(body) if openai_shape else CanonicalRequest.model_validate(body)
     except ValidationError as e:
         raise RequestRejectedError(400, "invalid_request", str(e.errors(include_url=False)[:3])) from e
-    return req, key, snap
+    except (json.JSONDecodeError, ValueError) as e:
+        raise RequestRejectedError(400, "invalid_request", str(e)) from e
+    return req, key, snap, openai_shape
 
 
 def reconcile(req: CanonicalRequest, model: ModelEntry) -> tuple[CanonicalRequest, list[Adjustment]]:
@@ -96,7 +116,7 @@ def reconcile(req: CanonicalRequest, model: ModelEntry) -> tuple[CanonicalReques
 
 
 async def _handle(request: Request) -> Response:
-    req, key, snap = await _authorize(request)
+    req, key, snap, openai_shape = await _authorize(request)
     decision = evaluate(req, key, snap, datetime.now(tz=UTC))
     if isinstance(decision, Deny):
         _record_denied(key, snap, req)
@@ -120,7 +140,8 @@ async def _handle(request: Request) -> Response:
     req, adjustments = reconcile(req, decision.model)
     upstream = adapter.transform_request(req, decision.model)
     if req.stream:
-        return await _stream(adapter, ctx, upstream, req, adjustments)
+        egress: Egress = compat.OpenAIEgress() if openai_shape else CanonicalEgress()
+        return await _stream(adapter, ctx, upstream, req, adjustments, egress)
     try:
         resp = await client.request(upstream.method, upstream.url, headers=upstream.headers, content=upstream.body)
     except httpx.HTTPError as e:
@@ -129,6 +150,8 @@ async def _handle(request: Request) -> Response:
         return _upstream_error_body(ctx, resp.content, resp.status_code, req)
     final = adapter.transform_response(resp.content, ctx).model_copy(update={"gateway": GatewayInfo(adjustments=adjustments)})
     _record_usage(ctx, final, status="ok", req=req)
+    if openai_shape:
+        return compat.render_response(final)
     return JSONResponse(final.model_dump(mode="json", exclude_none=True))
 
 
@@ -139,8 +162,33 @@ def _sse(payload: bytes) -> bytes:
 DONE = b"data: [DONE]\n\n"
 
 
-async def _stream(
-    adapter: ProviderAdapter, ctx: Ctx, upstream: UpstreamRequest, req: CanonicalRequest | None = None, adjustments: Sequence[Adjustment] = ()
+class CanonicalEgress:
+    """The native stream, exactly as INTERFACE.md locks it: delta frames, one closing chunk
+    carrying finish_reason, usage and gateway with no delta, then [DONE]."""
+
+    def start(self, ctx: Ctx) -> list[bytes]:  # noqa: ARG002 uniform egress signature
+        return []
+
+    def chunk(self, c: CanonicalChunk) -> list[bytes]:
+        if c.delta is None:
+            return []
+        return [_sse(c.model_dump_json(exclude_none=True).encode())]
+
+    def closing(self, final: CanonicalResponse, adjustments: list[Adjustment]) -> list[bytes]:
+        closing = CanonicalChunk(id=final.id, finish_reason=final.finish_reason, usage=final.usage, gateway=GatewayInfo(adjustments=adjustments))
+        return [_sse(closing.model_dump_json(exclude_none=True).encode()), DONE]
+
+    def error(self, err: CanonicalError) -> list[bytes]:
+        return [_sse(json.dumps({"error": {"code": err.code, "message": err.message}}).encode()), DONE]
+
+
+async def _stream(  # noqa: PLR0913, PLR0917 the streaming lifecycle genuinely spans these six
+    adapter: ProviderAdapter,
+    ctx: Ctx,
+    upstream: UpstreamRequest,
+    req: CanonicalRequest | None = None,
+    adjustments: Sequence[Adjustment] = (),
+    egress: Egress | None = None,
 ) -> Response:
     """Open the upstream and peek at the status, then hand the socket to the response generator.
 
@@ -159,10 +207,11 @@ async def _stream(
         stream_state = adapter.new_stream_state(ctx)
         handoff = stack.pop_all()
 
-    return StreamingResponse(_events(adapter, ctx, resp, handoff, stream_state, req, list(adjustments)), media_type="text/event-stream")
+    out = egress if egress is not None else CanonicalEgress()
+    return StreamingResponse(_events(adapter, ctx, resp, handoff, stream_state, req, list(adjustments), out), media_type="text/event-stream")
 
 
-async def _events(  # noqa: PLR0913, PLR0917 the streaming lifecycle genuinely spans these seven
+async def _events(  # noqa: PLR0913, PLR0917 the streaming lifecycle genuinely spans these eight
     adapter: ProviderAdapter,
     ctx: Ctx,
     resp: httpx.Response,
@@ -170,25 +219,26 @@ async def _events(  # noqa: PLR0913, PLR0917 the streaming lifecycle genuinely s
     stream_state: StreamState,
     req: CanonicalRequest | None,
     adjustments: list[Adjustment],
+    egress: Egress,
 ) -> AsyncIterator[bytes]:
-    """The locked stream per INTERFACE.md: delta frames, one closing chunk carrying finish_reason,
-    usage and gateway with no delta, then [DONE]; an error after bytes flowed is a data frame."""
+    """One canonical stream, spelled by whichever egress the caller's dialect picked; an error
+    after bytes flowed is a data frame, since the status is already spent."""
     async with handoff:
         try:
+            for b in egress.start(ctx):
+                yield b
             async for chunk in resp.aiter_bytes():
                 for ev in adapter.frame(chunk, stream_state):
                     for c in adapter.transform_stream_event(ev, stream_state):
-                        if c.delta is not None:
-                            yield _sse(c.model_dump_json(exclude_none=True).encode())
+                        for b in egress.chunk(c):
+                            yield b
             final = adapter.finalize(stream_state)
-            closing = CanonicalChunk(id=final.id, finish_reason=final.finish_reason, usage=final.usage, gateway=GatewayInfo(adjustments=adjustments))
-            yield _sse(closing.model_dump_json(exclude_none=True).encode())
-            yield DONE
+            for b in egress.closing(final, adjustments):
+                yield b
             _record_usage(ctx, final, status="ok", req=req)
         except (UpstreamStreamError, httpx.HTTPError) as e:
-            err = adapter.map_error(e)
-            yield _sse(json.dumps({"error": {"code": err.code, "message": err.message}}).encode())
-            yield DONE
+            for b in egress.error(adapter.map_error(e)):
+                yield b
             _record_usage(ctx, adapter.finalize(stream_state), status=_status_for_error(e), req=req)
         except (asyncio.CancelledError, anyio.get_cancelled_exc_class()):
             _record_usage(ctx, adapter.finalize(stream_state), status="cancelled", req=req)
