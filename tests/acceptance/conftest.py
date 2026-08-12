@@ -7,6 +7,7 @@ only be written by reaching into internals, that is a gap in the product, not th
 
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import shutil
@@ -113,10 +114,20 @@ def _poll(predicate: Callable[[], bool], timeout: float) -> bool:
 
 
 class _StubHandler(BaseHTTPRequestHandler):
-    """A stand-in OpenAI-compatible upstream: fixed reply and usage, no dependencies."""
+    """A stand-in OpenAI-compatible upstream: fixed reply and usage, no dependencies.
+
+    A request with stream true gets a slow SSE stream, unhurried enough that a client can
+    disconnect mid-way; the disconnect scenario's cancellation accounting depends on that pace.
+    """
+
+    STREAM_CHUNKS = 30
+    STREAM_DELAY_S = 0.05
 
     def do_POST(self) -> None:
-        self.rfile.read(int(self.headers.get("content-length", 0)))
+        request = json.loads(self.rfile.read(int(self.headers.get("content-length", 0))) or b"{}")
+        if request.get("stream"):
+            self._stream_response()
+            return
         body = json.dumps(
             {
                 "id": "cmpl-stub",
@@ -129,6 +140,23 @@ class _StubHandler(BaseHTTPRequestHandler):
         self.send_header("content-length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
+
+    def _stream_response(self) -> None:
+        self.send_response(200)
+        self.send_header("content-type", "text/event-stream")
+        self.end_headers()
+        with contextlib.suppress(BrokenPipeError, ConnectionResetError):
+            for i in range(self.STREAM_CHUNKS):
+                event = {"id": "cmpl-stub", "choices": [{"index": 0, "delta": {"content": f"tick{i} "}, "finish_reason": None}]}
+                self.wfile.write(b"data: " + json.dumps(event).encode() + b"\n\n")
+                self.wfile.flush()
+                time.sleep(self.STREAM_DELAY_S)
+            finish = {"id": "cmpl-stub", "choices": [{"index": 0, "delta": {}, "finish_reason": "stop"}]}
+            usage = {"id": "cmpl-stub", "choices": [], "usage": {"prompt_tokens": 11, "completion_tokens": 60, "total_tokens": 71}}
+            for event in (finish, usage):
+                self.wfile.write(b"data: " + json.dumps(event).encode() + b"\n\n")
+            self.wfile.write(b"data: [DONE]\n\n")
+            self.wfile.flush()
 
     def log_message(self, format: str, *args: object) -> None:  # noqa: A002 name fixed by the BaseHTTPRequestHandler override; keeps the stub silent
         return

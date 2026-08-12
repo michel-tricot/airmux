@@ -6,32 +6,36 @@ answer in the canonical shape with the gateway envelope reporting what was recon
 
 from __future__ import annotations
 
+import asyncio
+import contextlib
+import json
 import logging
 import time
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Literal
 
+import anyio
 import httpx
 from pydantic import ValidationError
-from starlette.responses import JSONResponse, Response
+from starlette.responses import JSONResponse, Response, StreamingResponse
 
 from contract import SecretStoreUnavailableError, UsageEventV1, uuid7
 from data_plane.adapters import REGISTRY
-from data_plane.adapters.base import Ctx
+from data_plane.adapters.base import Ctx, UpstreamStreamError
 from data_plane.auth import authenticate
-from data_plane.canonical import Adjustment, CanonicalRequest, CanonicalResponse, GatewayInfo, TextPart, Usage
+from data_plane.canonical import Adjustment, CanonicalChunk, CanonicalRequest, CanonicalResponse, GatewayInfo, TextPart, Usage
 from data_plane.metering import cost_breakdown, estimate_tokens
 from data_plane.policy import Allow, Deny, evaluate
 from data_plane.runtime import holder, state
 from data_plane.transport import client
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import AsyncIterator, Sequence
 
     from starlette.requests import Request
 
     from contract import CredentialEntry, KeyEntry, ModelEntry, Secret, UsageStatus
-    from data_plane.adapters.base import ProviderAdapter
+    from data_plane.adapters.base import ProviderAdapter, StreamState, UpstreamRequest
     from data_plane.holder import BundleSnapshot
 
 logger = logging.getLogger("data_plane")
@@ -97,8 +101,6 @@ async def _handle(request: Request) -> Response:
     if isinstance(decision, Deny):
         _record_denied(key, snap, req)
         raise RequestRejectedError(decision.status, decision.reason)
-    if req.stream:
-        raise RequestRejectedError(501, "streaming_not_implemented", "the streaming path lands in the next step")
 
     entry = decision.candidates[0]
     credential = await _resolve_credential(decision)
@@ -117,6 +119,8 @@ async def _handle(request: Request) -> Response:
     )
     req, adjustments = reconcile(req, decision.model)
     upstream = adapter.transform_request(req, decision.model)
+    if req.stream:
+        return await _stream(adapter, ctx, upstream, req, adjustments)
     try:
         resp = await client.request(upstream.method, upstream.url, headers=upstream.headers, content=upstream.body)
     except httpx.HTTPError as e:
@@ -126,6 +130,69 @@ async def _handle(request: Request) -> Response:
     final = adapter.transform_response(resp.content, ctx).model_copy(update={"gateway": GatewayInfo(adjustments=adjustments)})
     _record_usage(ctx, final, status="ok", req=req)
     return JSONResponse(final.model_dump(mode="json", exclude_none=True))
+
+
+def _sse(payload: bytes) -> bytes:
+    return b"data: " + payload + b"\n\n"
+
+
+DONE = b"data: [DONE]\n\n"
+
+
+async def _stream(
+    adapter: ProviderAdapter, ctx: Ctx, upstream: UpstreamRequest, req: CanonicalRequest | None = None, adjustments: Sequence[Adjustment] = ()
+) -> Response:
+    """Open the upstream and peek at the status, then hand the socket to the response generator.
+
+    The stack owns the upstream connection: every early return or exception in
+    this function closes it, and pop_all transfers that obligation to the
+    generator once we commit to streaming.
+    """
+    async with contextlib.AsyncExitStack() as stack:
+        try:
+            resp = await stack.enter_async_context(client.stream(upstream.method, upstream.url, headers=upstream.headers, content=upstream.body))
+            if resp.is_error:
+                body = await resp.aread()
+                return _upstream_error_body(ctx, body, resp.status_code, req)
+        except httpx.HTTPError as e:
+            return _upstream_exception(adapter, ctx, e, req)
+        stream_state = adapter.new_stream_state(ctx)
+        handoff = stack.pop_all()
+
+    return StreamingResponse(_events(adapter, ctx, resp, handoff, stream_state, req, list(adjustments)), media_type="text/event-stream")
+
+
+async def _events(  # noqa: PLR0913, PLR0917 the streaming lifecycle genuinely spans these seven
+    adapter: ProviderAdapter,
+    ctx: Ctx,
+    resp: httpx.Response,
+    handoff: contextlib.AsyncExitStack,
+    stream_state: StreamState,
+    req: CanonicalRequest | None,
+    adjustments: list[Adjustment],
+) -> AsyncIterator[bytes]:
+    """The locked stream per INTERFACE.md: delta frames, one closing chunk carrying finish_reason,
+    usage and gateway with no delta, then [DONE]; an error after bytes flowed is a data frame."""
+    async with handoff:
+        try:
+            async for chunk in resp.aiter_bytes():
+                for ev in adapter.frame(chunk, stream_state):
+                    for c in adapter.transform_stream_event(ev, stream_state):
+                        if c.delta is not None:
+                            yield _sse(c.model_dump_json(exclude_none=True).encode())
+            final = adapter.finalize(stream_state)
+            closing = CanonicalChunk(id=final.id, finish_reason=final.finish_reason, usage=final.usage, gateway=GatewayInfo(adjustments=adjustments))
+            yield _sse(closing.model_dump_json(exclude_none=True).encode())
+            yield DONE
+            _record_usage(ctx, final, status="ok", req=req)
+        except (UpstreamStreamError, httpx.HTTPError) as e:
+            err = adapter.map_error(e)
+            yield _sse(json.dumps({"error": {"code": err.code, "message": err.message}}).encode())
+            yield DONE
+            _record_usage(ctx, adapter.finalize(stream_state), status=_status_for_error(e), req=req)
+        except (asyncio.CancelledError, anyio.get_cancelled_exc_class()):
+            _record_usage(ctx, adapter.finalize(stream_state), status="cancelled", req=req)
+            raise
 
 
 async def _resolve_credential(decision: Allow) -> Secret:
@@ -168,13 +235,13 @@ def _credential_status(status_code: int) -> UsageStatus:
     return "rate_limited" if status_code == httpx.codes.TOO_MANY_REQUESTS else "upstream_error"
 
 
-def _upstream_exception(adapter: ProviderAdapter, ctx: Ctx, e: Exception, req: CanonicalRequest) -> Response:
+def _upstream_exception(adapter: ProviderAdapter, ctx: Ctx, e: Exception, req: CanonicalRequest | None) -> Response:
     err = adapter.map_error(e)
     _record_usage(ctx, _empty_response(ctx), status=_status_for_error(e), req=req)
     return _error(err.status, err.code, err.message)
 
 
-def _upstream_error_body(ctx: Ctx, body: bytes, status_code: int, req: CanonicalRequest) -> Response:
+def _upstream_error_body(ctx: Ctx, body: bytes, status_code: int, req: CanonicalRequest | None) -> Response:
     """The provider's own error body passes through untouched; the status is what the gateway meters."""
     _record_usage(ctx, _empty_response(ctx), status=_credential_status(status_code), req=req)
     return Response(content=body, status_code=status_code, media_type="application/json")

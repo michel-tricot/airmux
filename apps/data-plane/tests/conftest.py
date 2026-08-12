@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
@@ -16,12 +17,15 @@ from contract import (
     KeyEntry,
     ModelEntry,
     ProviderEntry,
+    Secret,
     SecretPurpose,
     SecretRef,
     sign_bundle,
     token_hash,
     uuid7,
 )
+from data_plane.adapters import REGISTRY
+from data_plane.adapters.base import Ctx
 from data_plane.app import create_app
 from data_plane.config import BundleConfig, Config, ControlPlaneLink, EventsConfig
 
@@ -94,6 +98,38 @@ def make_config(tmp_path, backend="sqlite") -> Config:
 
 
 PLATFORM_CREDENTIAL = make_credential(org=None)
+USAGE = {"prompt_tokens": 5, "completion_tokens": 7, "total_tokens": 12}
+CTX = Ctx(request_id="req-1", model=MODEL, provider=PROVIDER, stream=True)
+
+
+def make_adapter():
+    return REGISTRY["openai_compatible"](PROVIDER, Secret("sk-test"))
+
+
+def sse(payload: dict) -> bytes:
+    return b"data: " + json.dumps(payload, ensure_ascii=False).encode() + b"\n\n"
+
+
+def delta_event(delta: dict, finish: str | None = None) -> dict:
+    return {"id": "chatcmpl-9", "model": "gpt-real", "choices": [{"index": 0, "delta": delta, "finish_reason": finish}]}
+
+
+TEXT_EVENTS = [
+    delta_event({"role": "assistant"}),
+    delta_event({"content": "héllo "}),
+    delta_event({"content": "\U0001f30d wor"}),
+    delta_event({"content": "ld"}),
+    delta_event({}, finish="stop"),
+    {"id": "chatcmpl-9", "model": "gpt-real", "choices": [], "usage": USAGE},
+]
+TEXT_LOG = b"".join(sse(e) for e in TEXT_EVENTS) + b"data: [DONE]\n\n"
+
+TEXT_NONSTREAM = {
+    "id": "chatcmpl-9",
+    "model": "gpt-real",
+    "choices": [{"index": 0, "message": {"role": "assistant", "content": "héllo \U0001f30d world"}, "finish_reason": "stop"}],
+    "usage": USAGE,
+}
 
 
 @dataclass(frozen=True)
