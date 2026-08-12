@@ -7,10 +7,14 @@
 - evaluate() must stay pure: no async, no network, no I/O, no datetime.now(). Under 100 lines.
 
 ## Adding an adapter
-One new module under apps/data-plane/src/data_plane/adapters/. Subclass ProviderAdapter, set `kind`,
-implement the eight methods. Touch no other file. If you think you need to edit a registry, the registry
-is wrong; fix the registry.
+One new module under apps/data-plane/src/data_plane/adapters/: the family's JSON spelling and its
+transport assembly together. Subclass ProviderAdapter, set `kind`, implement the methods. Edit no
+existing file. If you think you need to edit a registry, the registry is wrong; fix the registry.
 
+- Canonical to provider body is one body_of per family, every field mapped by hand. Never map fields
+  reflectively; a name shared by two schemas is coincidence, not a rule. Spelling functions stay pure
+  (no url, auth, or I/O): the day a second consumer needs a family's spelling (an ingress dialect),
+  they split into a shared module unchanged.
 - The transport never parses SSE. frame() owns wire framing and the partial-line buffer.
 - StreamState is adapter-shaped. Construct it in new_stream_state(), never in the transport.
 - finalize(state) must return a valid CanonicalResponse at ANY point in the stream, including
