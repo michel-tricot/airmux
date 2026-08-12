@@ -5,8 +5,11 @@ outward to whatever the upstream provider speaks. The three faces (request, resp
 are published as JSON Schema into taxonomy/schemas/completion via `airllmdp schema`, where they
 sit beside the provider schemas they are translated into.
 
-Unknown fields are rejected, not dropped: the definition is closed until passthrough of
-provider extras becomes an explicit, profile-driven feature.
+The request is open at the top level: a caller who swapped a provider's base URL for the
+gateway may carry fields the core does not model. Those are captured for forwarding, and every
+one the gateway drops or changes on the way upstream is reported as an adjustment on the
+response, never silently. Nested shapes (messages, parts, tools) stay closed: they are
+restructured in translation, so an unknown field there has nothing faithful to forward.
 """
 
 from __future__ import annotations
@@ -144,7 +147,7 @@ class ResponseFormat(BaseModel):
 
 
 class CanonicalRequest(BaseModel):
-    model_config = WIRE
+    model_config = ConfigDict(frozen=True, extra="allow")
 
     model: str
     messages: list[CanonicalMessage] = Field(min_length=1)
@@ -158,8 +161,23 @@ class CanonicalRequest(BaseModel):
     tool_choice: ToolChoice | None = None
     response_format: ResponseFormat | None = None
 
+    @property
+    def extra(self) -> dict[str, Any]:
+        """The fields the definition does not model, exactly as the caller sent them."""
+        return dict(self.__pydantic_extra__ or {})
+
 
 FinishReason = Literal["stop", "length", "tool_calls", "content_filter"]
+
+
+class Adjustment(BaseModel):
+    """One reconciliation the gateway made to a request, reported on the response rather than silent."""
+
+    model_config = WIRE
+
+    param: str
+    action: Literal["clamped", "emulated", "dropped"]
+    detail: str
 
 
 class Usage(BaseModel):
@@ -180,6 +198,7 @@ class CanonicalResponse(BaseModel):
     content: list[AssistantPart]
     finish_reason: FinishReason | None
     usage: Usage
+    adjustments: list[Adjustment] = Field(default_factory=list)
 
 
 class TextDelta(BaseModel):
@@ -216,7 +235,7 @@ Delta = Annotated[TextDelta | ReasoningDelta | ToolCallDelta, Field(discriminato
 
 
 class CanonicalChunk(BaseModel):
-    """One streamed increment. The closing chunk carries finish_reason and usage and no delta."""
+    """One streamed increment. The closing chunk carries finish_reason, usage and adjustments, and no delta."""
 
     model_config = WIRE
 
@@ -224,6 +243,7 @@ class CanonicalChunk(BaseModel):
     delta: Delta | None = None
     finish_reason: FinishReason | None = None
     usage: Usage | None = None
+    adjustments: list[Adjustment] | None = None
 
 
 def json_schemas() -> dict[str, dict[str, Any]]:

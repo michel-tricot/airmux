@@ -255,7 +255,7 @@ $defs:
     - content
     title: ToolResultPart
     type: object
-additionalProperties: false
+additionalProperties: true
 properties:
   model:
     title: Model

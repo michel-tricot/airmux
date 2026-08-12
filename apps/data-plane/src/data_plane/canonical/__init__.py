@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from data_plane.canonical.completion import (
     ALLOWED_PARTS,
+    Adjustment,
     AssistantPart,
     CanonicalChunk,
     CanonicalMessage,
@@ -32,6 +33,7 @@ from data_plane.canonical.completion import (
 
 __all__ = [
     "ALLOWED_PARTS",
+    "Adjustment",
     "AssistantPart",
     "CanonicalChunk",
     "CanonicalMessage",

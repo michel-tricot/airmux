@@ -9,6 +9,7 @@ from corpus import CORPUS, request_of
 from pydantic import ValidationError
 
 from data_plane.canonical import (
+    Adjustment,
     CanonicalChunk,
     CanonicalMessage,
     CanonicalRequest,
@@ -87,17 +88,37 @@ def test_a_response_carries_assistant_parts_only():
         )
 
 
-def test_an_unknown_field_is_rejected_not_dropped():
-    """The definition is closed: silently dropping a field the caller set is how a gateway loses trust."""
+def test_an_unknown_request_field_is_kept_for_forwarding():
+    """A caller who swapped a provider's base URL for the gateway may carry fields the core does not
+    model; rejecting them would break the swap, dropping them silently would break trust."""
     body = {"model": "m", "messages": [{"role": "user", "content": [{"type": "text", "text": "hi"}]}], "frequency_penalty": 0.5}
-    with pytest.raises(ValidationError, match="frequency_penalty"):
-        CanonicalRequest.model_validate(body)
+    request = CanonicalRequest.model_validate(body)
+    assert request.extra == {"frequency_penalty": 0.5}
+    assert CanonicalRequest.model_validate_json(request.model_dump_json()) == request
+
+
+def test_an_unknown_field_inside_a_part_is_rejected():
+    """Nested shapes are restructured in translation, so an unknown field there has nothing faithful to forward."""
+    with pytest.raises(ValidationError, match="glow"):
+        TextPart.model_validate({"type": "text", "text": "hi", "glow": True})
+
+
+def test_what_the_gateway_drops_is_reported_on_the_response():
+    response = CanonicalResponse(
+        id="r1",
+        model="m",
+        content=[TextPart(text="ok")],
+        finish_reason="stop",
+        usage=Usage(),
+        adjustments=[Adjustment(param="logit_bias", action="dropped", detail="upstream does not accept it")],
+    )
+    assert CanonicalResponse.model_validate_json(response.model_dump_json()) == response
 
 
 def test_the_definition_is_frozen():
     request = request_of(CORPUS[0])
     with pytest.raises(ValidationError):
-        request.model = "other"
+        setattr(request, "model", "other")  # noqa: B010 a static assignment would be rejected by the type checker, which is the point
 
 
 def test_a_stream_of_typed_deltas_reassembles_the_response():

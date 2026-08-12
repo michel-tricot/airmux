@@ -44,6 +44,11 @@ the streaming seam untyped, and that hole is where the mess leaked back in.
 
 Harvest the branch's content.py design here, by copy with review.
 
+The request is open at the top level: swapping a provider's base URL for the gateway must keep
+working, so fields the core does not model are captured for forwarding rather than rejected.
+Nested shapes stay closed. The response and the closing chunk carry adjustments, the audit
+trail of every field the gateway dropped or changed on the way upstream.
+
 The schema is exported as YAML into taxonomy/schemas/completion/ as airllm.request, airllm.response
 and airllm.stream: the definition we own, sitting as a column beside the providers it routes to.
 
@@ -84,7 +89,7 @@ KNOWN_REJECTIONS pinning real incompatibilities.
 
 Provider profile in the bundle: auth scheme, endpoint path, field aliases, accepted fields, open or
 closed schema, derived from taxonomy. Request extras pass through with profile aliasing; anything
-dropped or clamped is recorded as an Adjustment on the usage event. Profile fields are declarative
+dropped or clamped lands in the response's adjustments and on the usage event. Profile fields are declarative
 facts, never predicates; a provider that needs a predicate needs an adapter.
 
 **Proof:** a field absent from the typed core, such as seed or top_k, reaches a provider that accepts
