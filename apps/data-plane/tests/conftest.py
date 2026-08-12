@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
+from typing import TYPE_CHECKING
 from uuid import uuid4
 
+import pytest
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from contract import (
@@ -11,19 +14,36 @@ from contract import (
     Catalog,
     CredentialEntry,
     KeyEntry,
+    ModelEntry,
+    ProviderEntry,
     SecretPurpose,
     SecretRef,
     sign_bundle,
     token_hash,
     uuid7,
 )
+from data_plane.app import create_app
 from data_plane.config import BundleConfig, Config, ControlPlaneLink, EventsConfig
+
+if TYPE_CHECKING:
+    from starlette.applications import Starlette
 
 NOW = datetime.now(tz=UTC)
 ORG = uuid7()
 WORKSPACE = uuid7()
 
 UNUSED_PUBLIC_KEY = Ed25519PrivateKey.generate().public_key()
+
+PROVIDER = ProviderEntry(provider_id="p1", kind="openai_compatible", base_url="https://api.openai.com/v1")
+MODEL = ModelEntry(
+    model_id="gpt-test",
+    provider_id="p1",
+    upstream_model="gpt-real",
+    input_price_per_mtok=1.0,
+    output_price_per_mtok=2.0,
+    context_window=128000,
+    capabilities=["streaming"],
+)
 
 
 def make_credential(service="p1", name="default", org=ORG, **scope) -> CredentialEntry:
@@ -71,3 +91,39 @@ def make_config(tmp_path, backend="sqlite") -> Config:
         bundle=BundleConfig(public_key=UNUSED_PUBLIC_KEY, cache_dir=tmp_path),
         events=EventsConfig(backend=backend),
     )
+
+
+PLATFORM_CREDENTIAL = make_credential(org=None)
+
+
+@dataclass(frozen=True)
+class BootedApp:
+    app: Starlette
+    token: str
+
+
+@pytest.fixture
+def booted(tmp_path, monkeypatch) -> BootedApp:
+    """A booted-app environment: signed bundle on disk, an app built from a constructed Config, and a valid caller token.
+
+    The config is constructed and injected through create_app, never parsed; parsing the config
+    file is test_config.py's job.
+    """
+    bundle_key = Ed25519PrivateKey.generate()
+    caller_token, entry = make_key()
+    catalog = Catalog(providers=[PROVIDER], models=[MODEL], credentials=[PLATFORM_CREDENTIAL])
+    bundle = make_bundle(keys=[entry], catalog=catalog)
+    (tmp_path / "bundle.json").write_text(sign_bundle(bundle, bundle_key, "k1").model_dump_json(), encoding="utf-8")
+    config = Config(bundle=BundleConfig(public_key=bundle_key.public_key(), cache_dir=tmp_path))
+    monkeypatch.setenv("P1_API_KEY", "sk-test-not-real")  # the conventional name the env store falls back to for a platform provider key
+    return BootedApp(app=create_app(config), token=caller_token)
+
+
+@pytest.fixture
+def token(booted: BootedApp) -> str:
+    return booted.token
+
+
+@pytest.fixture
+def dp_app(booted: BootedApp) -> Starlette:
+    return booted.app

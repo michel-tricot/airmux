@@ -3,7 +3,6 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import logging
-from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from cryptography.exceptions import InvalidSignature
@@ -18,9 +17,10 @@ from data_plane.cache import read_cached_bundle
 from data_plane.config import Config, load_config
 from data_plane.credentials import CredentialResolver
 from data_plane.heartbeat import run_heartbeat
-from data_plane.holder import BundleHolder
 from data_plane.outbox import build_outbox
 from data_plane.poller import run_poller
+from data_plane.proxy import complete
+from data_plane.runtime import holder, state
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -28,22 +28,7 @@ if TYPE_CHECKING:
     from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
     from starlette.requests import Request
 
-    from data_plane.outbox import EventOutbox
-
 logger = logging.getLogger("data_plane")
-
-holder = BundleHolder()
-
-
-@dataclass
-class AppState:
-    config: Config | None = None
-    bundle_public_key: Ed25519PublicKey | None = None
-    outbox: EventOutbox | None = None
-    credentials: CredentialResolver | None = None
-
-
-state = AppState()
 
 
 async def healthz(_request: Request) -> JSONResponse:
@@ -117,6 +102,7 @@ def create_app(config_override: Config | None = None) -> Starlette:
 
     return Starlette(
         routes=[
+            Route("/v1/chat/completions", complete, methods=["POST"]),
             Route("/healthz", healthz),
             Route("/readyz", readyz),
         ],

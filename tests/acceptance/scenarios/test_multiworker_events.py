@@ -13,9 +13,6 @@ import time
 from typing import TYPE_CHECKING
 
 import httpx
-import pytest
-
-pytest.skip("drives /v1/chat/completions; the request path returns at rebuild step 3 (notes/design/DATAPLANE.md)", allow_module_level=True)
 
 if TYPE_CHECKING:
     from conftest import Stack

@@ -57,6 +57,7 @@ tool_calls, content_filter), usage, gateway.
   through as sent. Routing facts (attempts, timing and the like) will join it additively
 - The response is route-invariant: nothing provider-specific ever appears at the top level, and
   a caller cannot tell from the shape which deployment served them
+- Null-valued fields are omitted on the wire; absent and null read the same
 - Callers must ignore response fields they do not recognize; additions are not breaking
 
 ## Streaming
