@@ -11,23 +11,25 @@ $defs:
         title: Role
         type: string
       content:
-        items:
-          discriminator:
-            mapping:
-              image: '#/$defs/ImagePart'
-              reasoning: '#/$defs/ReasoningPart'
-              text: '#/$defs/TextPart'
-              tool_call: '#/$defs/ToolCallPart'
-              tool_result: '#/$defs/ToolResultPart'
-            propertyName: type
-          oneOf:
-          - $ref: '#/$defs/TextPart'
-          - $ref: '#/$defs/ImagePart'
-          - $ref: '#/$defs/ReasoningPart'
-          - $ref: '#/$defs/ToolCallPart'
-          - $ref: '#/$defs/ToolResultPart'
+        anyOf:
+        - items:
+            discriminator:
+              mapping:
+                image: '#/$defs/ImagePart'
+                reasoning: '#/$defs/ReasoningPart'
+                text: '#/$defs/TextPart'
+                tool_call: '#/$defs/ToolCallPart'
+                tool_result: '#/$defs/ToolResultPart'
+              propertyName: type
+            oneOf:
+            - $ref: '#/$defs/TextPart'
+            - $ref: '#/$defs/ImagePart'
+            - $ref: '#/$defs/ReasoningPart'
+            - $ref: '#/$defs/ToolCallPart'
+            - $ref: '#/$defs/ToolResultPart'
+          type: array
+        - type: string
         title: Content
-        type: array
     required:
     - role
     - content
@@ -235,17 +237,19 @@ $defs:
         title: Call Id
         type: string
       content:
-        items:
-          discriminator:
-            mapping:
-              image: '#/$defs/ImagePart'
-              text: '#/$defs/TextPart'
-            propertyName: type
-          oneOf:
-          - $ref: '#/$defs/TextPart'
-          - $ref: '#/$defs/ImagePart'
+        anyOf:
+        - items:
+            discriminator:
+              mapping:
+                image: '#/$defs/ImagePart'
+                text: '#/$defs/TextPart'
+              propertyName: type
+            oneOf:
+            - $ref: '#/$defs/TextPart'
+            - $ref: '#/$defs/ImagePart'
+          type: array
+        - type: string
         title: Content
-        type: array
       is_error:
         default: false
         title: Is Error

@@ -14,6 +14,7 @@ from data_plane.canonical import (
     CanonicalMessage,
     CanonicalRequest,
     CanonicalResponse,
+    GatewayInfo,
     ImagePart,
     ReasoningDelta,
     ReasoningPart,
@@ -97,22 +98,35 @@ def test_an_unknown_request_field_is_kept_for_forwarding():
     assert CanonicalRequest.model_validate_json(request.model_dump_json()) == request
 
 
+def test_string_content_is_shorthand_for_one_text_part():
+    """The wire accepts the shorthand; the model only ever holds the typed form."""
+    message = CanonicalMessage.model_validate({"role": "user", "content": "hi"})
+    assert message.content == [TextPart(text="hi")]
+    result = ToolResultPart.model_validate({"type": "tool_result", "call_id": "c1", "content": "18C, light rain"})
+    assert result.content == [TextPart(text="18C, light rain")]
+    assert '"content":[{' in message.model_dump_json(exclude_none=True)
+
+
 def test_an_unknown_field_inside_a_part_is_rejected():
     """Nested shapes are restructured in translation, so an unknown field there has nothing faithful to forward."""
     with pytest.raises(ValidationError, match="glow"):
         TextPart.model_validate({"type": "text", "text": "hi", "glow": True})
 
 
-def test_what_the_gateway_drops_is_reported_on_the_response():
+def test_what_the_gateway_did_is_reported_under_its_own_field():
+    """Data plane internals reach the caller through one namespaced envelope; the rest of the
+    response stays about the completion."""
     response = CanonicalResponse(
         id="r1",
         model="m",
         content=[TextPart(text="ok")],
         finish_reason="stop",
         usage=Usage(),
-        adjustments=[Adjustment(param="logit_bias", action="dropped", detail="upstream does not accept it")],
+        gateway=GatewayInfo(adjustments=[Adjustment(param="logit_bias", action="dropped", detail="upstream does not accept it")]),
     )
     assert CanonicalResponse.model_validate_json(response.model_dump_json()) == response
+    bare = CanonicalResponse(id="r2", model="m", content=[TextPart(text="ok")], finish_reason="stop", usage=Usage())
+    assert bare.gateway == GatewayInfo()
 
 
 def test_the_definition_is_frozen():

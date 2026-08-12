@@ -23,6 +23,21 @@ $defs:
     - detail
     title: Adjustment
     type: object
+  GatewayInfo:
+    additionalProperties: false
+    description: 'What the gateway did on the way to the provider: the one namespaced place data plane
+
+      internals surface to the caller, so the core response stays about the completion. Grows
+
+      additively as the router grows.'
+    properties:
+      adjustments:
+        items:
+          $ref: '#/$defs/Adjustment'
+        title: Adjustments
+        type: array
+    title: GatewayInfo
+    type: object
   ReasoningDelta:
     additionalProperties: false
     description: signature arrives on the closing fragment of a reasoning block, text on the ones before it.
@@ -120,7 +135,7 @@ $defs:
     title: Usage
     type: object
 additionalProperties: false
-description: One streamed increment. The closing chunk carries finish_reason, usage and adjustments, and no delta.
+description: One streamed increment. The closing chunk carries finish_reason, usage and gateway, and no delta.
 properties:
   id:
     title: Id
@@ -156,14 +171,11 @@ properties:
     - $ref: '#/$defs/Usage'
     - type: 'null'
     default: null
-  adjustments:
+  gateway:
     anyOf:
-    - items:
-        $ref: '#/$defs/Adjustment'
-      type: array
+    - $ref: '#/$defs/GatewayInfo'
     - type: 'null'
     default: null
-    title: Adjustments
 required:
 - id
 title: CanonicalChunk

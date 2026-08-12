@@ -23,6 +23,21 @@ $defs:
     - detail
     title: Adjustment
     type: object
+  GatewayInfo:
+    additionalProperties: false
+    description: 'What the gateway did on the way to the provider: the one namespaced place data plane
+
+      internals surface to the caller, so the core response stays about the completion. Grows
+
+      additively as the router grows.'
+    properties:
+      adjustments:
+        items:
+          $ref: '#/$defs/Adjustment'
+        title: Adjustments
+        type: array
+    title: GatewayInfo
+    type: object
   ReasoningPart:
     additionalProperties: false
     description: 'Model reasoning. signature is an opaque provider token: a provider that issues one rejects a
@@ -168,11 +183,8 @@ properties:
     title: Finish Reason
   usage:
     $ref: '#/$defs/Usage'
-  adjustments:
-    items:
-      $ref: '#/$defs/Adjustment'
-    title: Adjustments
-    type: array
+  gateway:
+    $ref: '#/$defs/GatewayInfo'
 required:
 - id
 - model

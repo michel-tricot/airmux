@@ -1,4 +1,5 @@
 """The definitions the gateway owns, one module per operation face."""
+
 from __future__ import annotations
 
 from data_plane.canonical.completion import (
@@ -12,6 +13,7 @@ from data_plane.canonical.completion import (
     ContentPart,
     Delta,
     FinishReason,
+    GatewayInfo,
     ImagePart,
     NamedTool,
     Part,
@@ -42,6 +44,7 @@ __all__ = [
     "ContentPart",
     "Delta",
     "FinishReason",
+    "GatewayInfo",
     "ImagePart",
     "NamedTool",
     "Part",

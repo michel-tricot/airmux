@@ -7,16 +7,19 @@ sit beside the provider schemas they are translated into.
 
 The request is open at the top level: a caller who swapped a provider's base URL for the
 gateway may carry fields the core does not model. Those are captured for forwarding, and every
-one the gateway drops or changes on the way upstream is reported as an adjustment on the
-response, never silently. Nested shapes (messages, parts, tools) stay closed: they are
+one the gateway drops or changes on the way upstream is reported under the response's gateway
+field, never silently. Nested shapes (messages, parts, tools) stay closed: they are
 restructured in translation, so an unknown field there has nothing faithful to forward.
+
+One input shorthand exists: a message's content may be a plain string, normalized to a single
+text part at the edge. Everything stored, translated or emitted is the typed form.
 """
 
 from __future__ import annotations
 
 from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, model_validator
 
 WIRE = ConfigDict(frozen=True, extra="forbid")
 
@@ -76,12 +79,17 @@ class ToolCallPart(Part):
 ToolResultContent = Annotated[TextPart | ImagePart, Field(discriminator="type")]
 
 
+def _text_shorthand(content: object) -> object:
+    """A plain string is shorthand for a single text part; the typed form is the only one stored or emitted."""
+    return [{"type": "text", "text": content}] if isinstance(content, str) else content
+
+
 class ToolResultPart(Part):
     """The outcome of a tool call, carried as a user part rather than as its own role."""
 
     type: Literal["tool_result"] = "tool_result"
     call_id: str
-    content: list[ToolResultContent]
+    content: Annotated[list[ToolResultContent], BeforeValidator(_text_shorthand, json_schema_input_type=list[ToolResultContent] | str)]
     is_error: bool = False
 
 
@@ -105,7 +113,7 @@ class CanonicalMessage(BaseModel):
     model_config = WIRE
 
     role: Role
-    content: list[ContentPart]
+    content: Annotated[list[ContentPart], BeforeValidator(_text_shorthand, json_schema_input_type=list[ContentPart] | str)]
 
     @model_validator(mode="after")
     def parts_fit_role(self) -> CanonicalMessage:
@@ -180,6 +188,16 @@ class Adjustment(BaseModel):
     detail: str
 
 
+class GatewayInfo(BaseModel):
+    """What the gateway did on the way to the provider: the one namespaced place data plane
+    internals surface to the caller, so the core response stays about the completion. Grows
+    additively as the router grows."""
+
+    model_config = WIRE
+
+    adjustments: list[Adjustment] = Field(default_factory=list)
+
+
 class Usage(BaseModel):
     model_config = WIRE
 
@@ -198,7 +216,7 @@ class CanonicalResponse(BaseModel):
     content: list[AssistantPart]
     finish_reason: FinishReason | None
     usage: Usage
-    adjustments: list[Adjustment] = Field(default_factory=list)
+    gateway: GatewayInfo = Field(default_factory=GatewayInfo)
 
 
 class TextDelta(BaseModel):
@@ -235,7 +253,7 @@ Delta = Annotated[TextDelta | ReasoningDelta | ToolCallDelta, Field(discriminato
 
 
 class CanonicalChunk(BaseModel):
-    """One streamed increment. The closing chunk carries finish_reason, usage and adjustments, and no delta."""
+    """One streamed increment. The closing chunk carries finish_reason, usage and gateway, and no delta."""
 
     model_config = WIRE
 
@@ -243,7 +261,7 @@ class CanonicalChunk(BaseModel):
     delta: Delta | None = None
     finish_reason: FinishReason | None = None
     usage: Usage | None = None
-    adjustments: list[Adjustment] | None = None
+    gateway: GatewayInfo | None = None
 
 
 def json_schemas() -> dict[str, dict[str, Any]]:
