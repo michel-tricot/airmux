@@ -23,7 +23,7 @@ from contract import SecretStoreUnavailableError, UsageEventV1, uuid7
 from data_plane.auth import authenticate
 from data_plane.canonical import Adjustment, CanonicalRequest, CanonicalResponse, GatewayInfo, TextPart, Usage
 from data_plane.egress import REGISTRY
-from data_plane.egress.base import Ctx, UpstreamStreamError
+from data_plane.egress.base import CanonicalError, Ctx, UpstreamStreamError
 from data_plane.ingress import resolve
 from data_plane.ingress.canonical import CanonicalEgress
 from data_plane.metering import cost_breakdown, estimate_tokens
@@ -39,7 +39,8 @@ if TYPE_CHECKING:
     from contract import CredentialEntry, KeyEntry, ModelEntry, Secret, UsageStatus
     from data_plane.egress.base import EgressAdapter, StreamState, UpstreamRequest
     from data_plane.holder import BundleSnapshot
-    from data_plane.ingress.base import Egress, IngressAdapter
+    from data_plane.ingress import IngressAdapter
+    from data_plane.ingress.base import Egress
 
 
 logger = logging.getLogger("data_plane")
@@ -52,6 +53,7 @@ class RequestRejectedError(Exception):
         self.status = status
         self.code = code
         self.message = message
+        self.ingress: IngressAdapter | None = None  # attached once the dialect is known, so the error speaks it
         super().__init__(code)
 
 
@@ -63,6 +65,8 @@ async def complete(request: Request) -> Response:
     try:
         return await _handle(request)
     except RequestRejectedError as e:
+        if e.ingress is not None:
+            return e.ingress.render_error(CanonicalError(status=e.status, code=e.code, message=e.message))
         return _error(e.status, e.code, e.message)
 
 
@@ -77,6 +81,7 @@ async def _authorize(request: Request) -> tuple[CanonicalRequest, KeyEntry, Bund
     key = authenticate(auth_header.removeprefix("Bearer "), snap.key_index)
     if key is None:
         raise RequestRejectedError(401, "invalid_token")
+    ingress: IngressAdapter | None = None
     try:
         body = json.loads(await request.body())
         if not isinstance(body, dict):
@@ -84,7 +89,9 @@ async def _authorize(request: Request) -> tuple[CanonicalRequest, KeyEntry, Bund
         ingress = resolve(request.headers, body)
         req = ingress.parse(body)
     except ValidationError as e:
-        raise RequestRejectedError(400, "invalid_request", str(e.errors(include_url=False)[:3])) from e
+        rejection = RequestRejectedError(400, "invalid_request", str(e.errors(include_url=False)[:3]))
+        rejection.ingress = ingress
+        raise rejection from e
     except (json.JSONDecodeError, ValueError) as e:
         raise RequestRejectedError(400, "invalid_request", str(e)) from e
     return req, key, snap, ingress
@@ -107,6 +114,14 @@ def reconcile(req: CanonicalRequest, model: ModelEntry) -> tuple[CanonicalReques
 
 async def _handle(request: Request) -> Response:
     req, key, snap, ingress = await _authorize(request)
+    try:
+        return await _serve(req, key, snap, ingress)
+    except RequestRejectedError as e:
+        e.ingress = ingress
+        raise
+
+
+async def _serve(req: CanonicalRequest, key: KeyEntry, snap: BundleSnapshot, ingress: IngressAdapter) -> Response:
     decision = evaluate(req, key, snap, datetime.now(tz=UTC))
     if isinstance(decision, Deny):
         _record_denied(key, snap, req)

@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 
 import httpx
+import openai
 import pytest
 import respx
 from conftest import TEXT_LOG, TEXT_NONSTREAM
@@ -155,6 +156,14 @@ def test_what_the_gateway_dropped_is_visible_to_the_sdk_caller(token, dp_app):
     gateway = (completion.model_extra or {}).get("gateway")
     assert gateway is not None
     assert [(a["param"], a["action"]) for a in gateway["adjustments"]] == [("n", "dropped")]
+
+
+def test_errors_come_back_in_the_callers_dialect(token, dp_app):
+    """An SDK caller's rejection is an OpenAI-shaped error, so the SDK raises its typed exception
+    with the gateway's code inside, instead of choking on a foreign envelope."""
+    with TestClient(dp_app) as client, pytest.raises(openai.NotFoundError) as err:
+        _sdk(client, token).chat.completions.create(model="ghost", messages=[{"role": "user", "content": "hi"}])
+    assert "unknown_model" in str(err.value)
 
 
 @respx.mock
