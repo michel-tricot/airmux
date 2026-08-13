@@ -80,8 +80,9 @@ shape it spoke. This is additive: detection can never change what a canonical ca
 Recognition, in order:
 
 1. An explicit `x-airllm-dialect: openai` or `x-airllm-dialect: canonical` header wins
-2. The client fingerprint: any `x-stainless-*` header or a `User-Agent` starting with
-   `OpenAI/`, which the official SDKs send on every request
+2. The client fingerprint: a `User-Agent` starting with `OpenAI/`, which the official SDKs send
+   on every request. Deliberately not the `x-stainless-*` headers: those mean "a
+   Stainless-generated SDK", which other vendors' clients also are
 3. Unambiguous body shapes: a `tool` or `developer` role, `tool_calls` on a message, a nested
    `function` wrapper in tools or tool_choice, an `image_url` content block, or
    `max_completion_tokens`

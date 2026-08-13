@@ -49,11 +49,11 @@ IMAGE_URL_BODY = {
         ({**TEXT_BODY, "tool_choice": {"type": "function", "function": {"name": "w"}}}, {}, True),
         (IMAGE_URL_BODY, {}, True),
         ({**TEXT_BODY, "max_completion_tokens": 5}, {}, True),
-        (TEXT_BODY, {"x-stainless-lang": "python"}, True),
+        (TEXT_BODY, {"x-stainless-lang": "python"}, False),  # every Stainless-built SDK sends these, not only OpenAI's
         (TEXT_BODY, {"user-agent": "OpenAI/Python 3.0.0"}, True),
         (TEXT_BODY, {"x-airllm-dialect": "openai"}, True),
         (TOOL_ROLE_BODY, {"x-airllm-dialect": "canonical"}, False),
-        (TEXT_BODY, {"x-stainless-lang": "python", "x-airllm-dialect": "canonical"}, False),
+        (TEXT_BODY, {"user-agent": "OpenAI/Python 3.0.0", "x-airllm-dialect": "canonical"}, False),
     ],
 )
 def test_detection(body, headers, expected):

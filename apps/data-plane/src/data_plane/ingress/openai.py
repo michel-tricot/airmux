@@ -23,12 +23,12 @@ if TYPE_CHECKING:
     from data_plane.canonical import Adjustment, CanonicalResponse
     from data_plane.egress.base import CanonicalError, Ctx
 
-# Body keys the dialect consumes; everything else rides through as canonical extras, so the
-# reconcile step reports or forwards them exactly as it does for a canonical caller.
-CONSUMED = frozenset(
-    {"model", "messages", "stream", "max_tokens", "max_completion_tokens", "temperature", "top_p", "stop", "seed"}
-    | {"tools", "tool_choice", "response_format", "stream_options"}
-)
+# Body keys the dialect consumes: every canonical core field by its own name, plus the spellings
+# that exist only in this dialect. Everything else rides through as canonical extras, so the
+# reconcile step reports or forwards them exactly as it does for a canonical caller. Deriving the
+# core from the definition means a field added to canonical is consumed here without an edit.
+DIALECT_ONLY = frozenset({"max_completion_tokens", "stream_options"})
+CONSUMED = frozenset(CanonicalRequest.model_fields) | DIALECT_ONLY
 
 
 def _openai_shaped(body: dict[str, Any]) -> bool:
@@ -108,8 +108,10 @@ class OpenAIIngress(IngressAdapter):
     def claims(self, headers: Headers, body: dict[str, Any]) -> bool:
         """The client fingerprint the official SDKs send on every request, or an unambiguous shape.
 
-        A text-only body is shape-identical in both dialects, which is why the fingerprint matters."""
-        if any(name.lower().startswith("x-stainless-") for name in headers) or headers.get("user-agent", "").startswith("OpenAI/"):
+        A text-only body is shape-identical in both dialects, which is why the fingerprint matters.
+        The User-Agent prefix and not the x-stainless-* family, deliberately: those headers mean
+        "a Stainless-generated SDK", which other vendors' clients also are."""
+        if headers.get("user-agent", "").startswith("OpenAI/"):
             return True
         return _openai_shaped(body)
 
