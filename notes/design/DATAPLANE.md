@@ -110,6 +110,13 @@ closed schema, derived from taxonomy. Request extras pass through with profile a
 dropped or clamped lands in the response's gateway.adjustments and on the usage event. Profile fields are declarative
 facts, never predicates; a provider that needs a predicate needs an adapter.
 
+Two carried-in items from the interpretation work. An unrecognized value in a consumed slot (a
+tool_choice variant the dialect parse does not know) currently vanishes as None; under the
+dropped-never-silent bargain it must become an adjustment. And once extras forward, pin the
+convergence property with a fixpoint test: for an OpenAI-shaped request, parse then render then
+parse again equals the first parse, so the aligned caller-and-provider path is provably the
+identity minus deliberate, reported edits.
+
 **Proof:** a field absent from the typed core, such as seed or top_k, reaches a provider that accepts
 it; onboarding a quirky OpenAI-compatible provider is a config change with zero code.
 

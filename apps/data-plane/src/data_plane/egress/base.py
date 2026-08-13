@@ -75,7 +75,7 @@ class Ctx:
     started_at: float = field(default_factory=time.monotonic)
 
 
-class ProviderAdapter(ABC):
+class EgressAdapter(ABC):
     kind: ClassVar[str]
 
     def __init__(self, provider: ProviderEntry, credential: Secret) -> None:

@@ -1,8 +1,8 @@
 """The request path behind POST /v1/chat/completions, per notes/design/INTERFACE.md.
 
-One pass: authenticate against the bundle, evaluate policy, resolve the credential, reconcile
-the request to the target model, translate through the adapter, call the provider, meter, and
-answer in the canonical shape with the gateway envelope reporting what was reconciled."""
+One dialect-blind pass: resolve the caller's ingress adapter, parse to canonical, evaluate
+policy, resolve the credential, reconcile to the target model, translate through the egress
+adapter, call the provider, meter, and answer in whatever dialect the request spoke."""
 
 from __future__ import annotations
 
@@ -20,10 +20,12 @@ from pydantic import ValidationError
 from starlette.responses import JSONResponse, Response, StreamingResponse
 
 from contract import SecretStoreUnavailableError, UsageEventV1, uuid7
-from data_plane.adapters import REGISTRY
-from data_plane.adapters.base import Ctx, UpstreamStreamError
 from data_plane.auth import authenticate
-from data_plane.canonical import Adjustment, CanonicalChunk, CanonicalRequest, CanonicalResponse, GatewayInfo, TextPart, Usage
+from data_plane.canonical import Adjustment, CanonicalRequest, CanonicalResponse, GatewayInfo, TextPart, Usage
+from data_plane.egress import REGISTRY
+from data_plane.egress.base import CanonicalError, Ctx, UpstreamStreamError
+from data_plane.ingress import resolve
+from data_plane.ingress.canonical import CanonicalResponseStream
 from data_plane.metering import cost_breakdown, estimate_tokens
 from data_plane.policy import Allow, Deny, evaluate
 from data_plane.runtime import holder, state
@@ -35,8 +37,11 @@ if TYPE_CHECKING:
     from starlette.requests import Request
 
     from contract import CredentialEntry, KeyEntry, ModelEntry, Secret, UsageStatus
-    from data_plane.adapters.base import ProviderAdapter, StreamState, UpstreamRequest
+    from data_plane.egress.base import EgressAdapter, StreamState, UpstreamRequest
     from data_plane.holder import BundleSnapshot
+    from data_plane.ingress import IngressAdapter
+    from data_plane.ingress.base import ResponseStream
+
 
 logger = logging.getLogger("data_plane")
 
@@ -48,6 +53,7 @@ class RequestRejectedError(Exception):
         self.status = status
         self.code = code
         self.message = message
+        self.ingress: IngressAdapter | None = None  # attached once the dialect is known, so the error speaks it
         super().__init__(code)
 
 
@@ -59,11 +65,13 @@ async def complete(request: Request) -> Response:
     try:
         return await _handle(request)
     except RequestRejectedError as e:
+        if e.ingress is not None:
+            return e.ingress.render_error(CanonicalError(status=e.status, code=e.code, message=e.message))
         return _error(e.status, e.code, e.message)
 
 
-async def _authorize(request: Request) -> tuple[CanonicalRequest, KeyEntry, BundleSnapshot]:
-    """Authentication and body validation; raises RequestRejectedError on every no."""
+def _authenticate(request: Request) -> tuple[KeyEntry, BundleSnapshot]:
+    """The caller against the bundle, before the body is even read; raises RequestRejectedError on every no."""
     snap = holder.snapshot
     if snap is None:
         raise RequestRejectedError(503, "bundle_unavailable")
@@ -73,11 +81,24 @@ async def _authorize(request: Request) -> tuple[CanonicalRequest, KeyEntry, Bund
     key = authenticate(auth_header.removeprefix("Bearer "), snap.key_index)
     if key is None:
         raise RequestRejectedError(401, "invalid_token")
+    return key, snap
+
+
+async def _parse(request: Request) -> tuple[CanonicalRequest, IngressAdapter]:
+    """The body into canonical through whichever dialect claims it; parse failures speak that dialect."""
+    ingress: IngressAdapter | None = None
     try:
-        req = CanonicalRequest.model_validate_json(await request.body())
+        body = json.loads(await request.body())
+        if not isinstance(body, dict):
+            raise RequestRejectedError(400, "invalid_request", "the request body must be a JSON object")
+        ingress = resolve(request.headers, body)
+        return ingress.parse(body), ingress
     except ValidationError as e:
-        raise RequestRejectedError(400, "invalid_request", str(e.errors(include_url=False)[:3])) from e
-    return req, key, snap
+        rejection = RequestRejectedError(400, "invalid_request", str(e.errors(include_url=False)[:3]))
+        rejection.ingress = ingress
+        raise rejection from e
+    except (json.JSONDecodeError, ValueError) as e:
+        raise RequestRejectedError(400, "invalid_request", str(e)) from e
 
 
 def reconcile(req: CanonicalRequest, model: ModelEntry) -> tuple[CanonicalRequest, list[Adjustment]]:
@@ -96,7 +117,16 @@ def reconcile(req: CanonicalRequest, model: ModelEntry) -> tuple[CanonicalReques
 
 
 async def _handle(request: Request) -> Response:
-    req, key, snap = await _authorize(request)
+    key, snap = _authenticate(request)
+    req, ingress = await _parse(request)
+    try:
+        return await _serve(req, key, snap, ingress)
+    except RequestRejectedError as e:
+        e.ingress = ingress
+        raise
+
+
+async def _serve(req: CanonicalRequest, key: KeyEntry, snap: BundleSnapshot, ingress: IngressAdapter) -> Response:
     decision = evaluate(req, key, snap, datetime.now(tz=UTC))
     if isinstance(decision, Deny):
         _record_denied(key, snap, req)
@@ -120,7 +150,7 @@ async def _handle(request: Request) -> Response:
     req, adjustments = reconcile(req, decision.model)
     upstream = adapter.transform_request(req, decision.model)
     if req.stream:
-        return await _stream(adapter, ctx, upstream, req, adjustments)
+        return await _stream(adapter, ctx, upstream, req, adjustments, ingress.new_stream())
     try:
         resp = await client.request(upstream.method, upstream.url, headers=upstream.headers, content=upstream.body)
     except httpx.HTTPError as e:
@@ -129,18 +159,16 @@ async def _handle(request: Request) -> Response:
         return _upstream_error_body(ctx, resp.content, resp.status_code, req)
     final = adapter.transform_response(resp.content, ctx).model_copy(update={"gateway": GatewayInfo(adjustments=adjustments)})
     _record_usage(ctx, final, status="ok", req=req)
-    return JSONResponse(final.model_dump(mode="json", exclude_none=True))
+    return ingress.render_response(final)
 
 
-def _sse(payload: bytes) -> bytes:
-    return b"data: " + payload + b"\n\n"
-
-
-DONE = b"data: [DONE]\n\n"
-
-
-async def _stream(
-    adapter: ProviderAdapter, ctx: Ctx, upstream: UpstreamRequest, req: CanonicalRequest | None = None, adjustments: Sequence[Adjustment] = ()
+async def _stream(  # noqa: PLR0913, PLR0917 the streaming lifecycle genuinely spans these six
+    adapter: EgressAdapter,
+    ctx: Ctx,
+    upstream: UpstreamRequest,
+    req: CanonicalRequest | None = None,
+    adjustments: Sequence[Adjustment] = (),
+    renderer: ResponseStream | None = None,
 ) -> Response:
     """Open the upstream and peek at the status, then hand the socket to the response generator.
 
@@ -159,36 +187,38 @@ async def _stream(
         stream_state = adapter.new_stream_state(ctx)
         handoff = stack.pop_all()
 
-    return StreamingResponse(_events(adapter, ctx, resp, handoff, stream_state, req, list(adjustments)), media_type="text/event-stream")
+    out = renderer if renderer is not None else CanonicalResponseStream()  # the default spelling, for callers outside the request path (tests)
+    return StreamingResponse(_events(adapter, ctx, resp, handoff, stream_state, req, list(adjustments), out), media_type="text/event-stream")
 
 
-async def _events(  # noqa: PLR0913, PLR0917 the streaming lifecycle genuinely spans these seven
-    adapter: ProviderAdapter,
+async def _events(  # noqa: PLR0913, PLR0917 the streaming lifecycle genuinely spans these eight
+    adapter: EgressAdapter,
     ctx: Ctx,
     resp: httpx.Response,
     handoff: contextlib.AsyncExitStack,
     stream_state: StreamState,
     req: CanonicalRequest | None,
     adjustments: list[Adjustment],
+    renderer: ResponseStream,
 ) -> AsyncIterator[bytes]:
-    """The locked stream per INTERFACE.md: delta frames, one closing chunk carrying finish_reason,
-    usage and gateway with no delta, then [DONE]; an error after bytes flowed is a data frame."""
+    """One canonical stream, spelled by whichever dialect the caller's ingress picked; an error
+    after bytes flowed is a data frame, since the status is already spent."""
     async with handoff:
         try:
+            for b in renderer.start(ctx):
+                yield b
             async for chunk in resp.aiter_bytes():
                 for ev in adapter.frame(chunk, stream_state):
                     for c in adapter.transform_stream_event(ev, stream_state):
-                        if c.delta is not None:
-                            yield _sse(c.model_dump_json(exclude_none=True).encode())
+                        for b in renderer.chunk(c):
+                            yield b
             final = adapter.finalize(stream_state)
-            closing = CanonicalChunk(id=final.id, finish_reason=final.finish_reason, usage=final.usage, gateway=GatewayInfo(adjustments=adjustments))
-            yield _sse(closing.model_dump_json(exclude_none=True).encode())
-            yield DONE
+            for b in renderer.closing(final, adjustments):
+                yield b
             _record_usage(ctx, final, status="ok", req=req)
         except (UpstreamStreamError, httpx.HTTPError) as e:
-            err = adapter.map_error(e)
-            yield _sse(json.dumps({"error": {"code": err.code, "message": err.message}}).encode())
-            yield DONE
+            for b in renderer.error(adapter.map_error(e)):
+                yield b
             _record_usage(ctx, adapter.finalize(stream_state), status=_status_for_error(e), req=req)
         except (asyncio.CancelledError, anyio.get_cancelled_exc_class()):
             _record_usage(ctx, adapter.finalize(stream_state), status="cancelled", req=req)
@@ -235,7 +265,7 @@ def _credential_status(status_code: int) -> UsageStatus:
     return "rate_limited" if status_code == httpx.codes.TOO_MANY_REQUESTS else "upstream_error"
 
 
-def _upstream_exception(adapter: ProviderAdapter, ctx: Ctx, e: Exception, req: CanonicalRequest | None) -> Response:
+def _upstream_exception(adapter: EgressAdapter, ctx: Ctx, e: Exception, req: CanonicalRequest | None) -> Response:
     err = adapter.map_error(e)
     _record_usage(ctx, _empty_response(ctx), status=_status_for_error(e), req=req)
     return _error(err.status, err.code, err.message)

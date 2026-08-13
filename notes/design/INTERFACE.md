@@ -9,7 +9,7 @@ document is the contract around them.
 
 | route | status |
 |---|---|
-| POST /v1/chat/completions | locked, the native completion route, canonical shape |
+| POST /v1/chat/completions | locked, the native completion route, canonical shape, with OpenAI interpretation (see below) |
 | GET /healthz | locked, liveness, always 200 |
 | GET /readyz | locked, 200 with a served bundle, 503 without |
 | POST /v1/messages | reserved for an Anthropic-shaped compat surface, additive |
@@ -71,6 +71,31 @@ tool_calls, content_filter), usage, gateway.
 - The stream ends with `data: [DONE]`
 - An error after streaming has begun is delivered as a `data: {"error": {"code", "message"}}`
   frame followed by `data: [DONE]`; the HTTP status is already spent by then
+
+## OpenAI interpretation on the native route
+
+An unmodified OpenAI client that swapped only its base URL is recognized and answered in the
+shape it spoke. This is additive: detection can never change what a canonical caller sees.
+
+Recognition, in order:
+
+1. An explicit `x-airllm-dialect: openai` or `x-airllm-dialect: canonical` header wins
+2. The client fingerprint: a `User-Agent` starting with `OpenAI/`, which the official SDKs send
+   on every request. Deliberately not the `x-stainless-*` headers: those mean "a
+   Stainless-generated SDK", which other vendors' clients also are
+3. Unambiguous body shapes: a `tool` or `developer` role, `tool_calls` on a message, a nested
+   `function` wrapper in tools or tool_choice, an `image_url` content block, or
+   `max_completion_tokens`
+
+A text-only body with none of those parses as canonical: the two dialects are shape-identical
+there, which is exactly what the fingerprint and the override exist for.
+
+An interpreted request is answered as OpenAI's shapes, buffered (`chat.completion`, choices
+axis) and streamed (`chat.completion.chunk` objects, a usage-bearing final chunk with no
+choices, `data: [DONE]`). The gateway envelope rides along as an additional field on the
+completion and on the usage-bearing chunk; SDKs ignore fields they do not know. Fields the
+interpretation does not consume follow the same open-top-level rules as canonical extras:
+captured, reported under gateway.adjustments, forwarded once provider profiles land.
 
 ## Errors
 

@@ -6,15 +6,22 @@
 - If a feature seems to need a DB read on the request path, add a field to the bundle instead. Say so before doing it.
 - evaluate() must stay pure: no async, no network, no I/O, no datetime.now(). Under 100 lines.
 
-## Adding an adapter
-One new module under apps/data-plane/src/data_plane/adapters/: the family's JSON spelling and its
-transport assembly together. Subclass ProviderAdapter, set `kind`, implement the methods. Edit no
-existing file. If you think you need to edit a registry, the registry is wrong; fix the registry.
+## The two-sided adapter model
+Canonical is the waist: N ingress dialects and M egress families all cross through it, so the cost is
+N+M translators, never N times M, and policy, metering and adjustments are written once against it.
+Adding an egress adapter (provider family) is one new module under egress/: subclass EgressAdapter,
+set `kind`, implement the methods. Adding an ingress adapter (caller dialect) is one new module under
+ingress/: subclass IngressAdapter, set `dialect`, implement claims, parse, render_response,
+render_error and new_stream. Either way, edit no existing file. If you think you need to edit a
+registry, the registry is wrong; fix the registry.
 
-- Canonical to provider body is one body_of per family, every field mapped by hand. Never map fields
-  reflectively; a name shared by two schemas is coincidence, not a rule. Spelling functions stay pure
-  (no url, auth, or I/O): the day a second consumer needs a family's spelling (an ingress dialect),
-  they split into a shared module unchanged.
+- A family's JSON spelling shared by both sides of the gateway lives in formats/<family>.py, pure
+  functions and parse models with no url, auth, or I/O; egress and ingress adapters import it, never
+  each other. Canonical to provider body is one body_of per family, every field mapped by hand. Never
+  map fields reflectively; a name shared by two schemas is coincidence, not a rule. A spelling with a
+  single consumer may stay inline in its adapter until a second consumer exists.
+- resolve() owns dialect discrimination end to end: override header, then claims() in registry order,
+  then canonical as the unclaimed default. An ingress adapter answers only "is this mine".
 - The transport never parses SSE. frame() owns wire framing and the partial-line buffer.
 - StreamState is adapter-shaped. Construct it in new_stream_state(), never in the transport.
 - finalize(state) must return a valid CanonicalResponse at ANY point in the stream, including
