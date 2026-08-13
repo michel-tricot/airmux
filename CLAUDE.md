@@ -12,7 +12,7 @@ N+M translators, never N times M, and policy, metering and adjustments are writt
 Adding an egress adapter (provider family) is one new module under egress/: subclass EgressAdapter,
 set `kind`, implement the methods. Adding an ingress adapter (caller dialect) is one new module under
 ingress/: subclass IngressAdapter, set `dialect`, implement claims, parse, render_response,
-render_error and new_egress. Either way, edit no existing file. If you think you need to edit a
+render_error and new_stream. Either way, edit no existing file. If you think you need to edit a
 registry, the registry is wrong; fix the registry.
 
 - A family's JSON spelling shared by both sides of the gateway lives in formats/<family>.py, pure

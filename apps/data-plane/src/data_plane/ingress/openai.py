@@ -53,7 +53,7 @@ def _error_body(status: int, code: str, message: str) -> dict[str, dict[str, str
     return {"error": {"type": kind, "code": code, "message": message}}
 
 
-class OpenAIEgress:
+class OpenAIResponseStream:
     """Renders the canonical stream as OpenAI chunk objects.
 
     Every chunk repeats id, model and created because each one is a standalone object in
@@ -146,5 +146,5 @@ class OpenAIIngress(IngressAdapter):
     def render_error(self, err: CanonicalError) -> Response:
         return JSONResponse(_error_body(err.status, err.code, err.message), status_code=err.status)
 
-    def new_egress(self) -> OpenAIEgress:
-        return OpenAIEgress()
+    def new_stream(self) -> OpenAIResponseStream:
+        return OpenAIResponseStream()

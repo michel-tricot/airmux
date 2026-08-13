@@ -21,11 +21,11 @@ if TYPE_CHECKING:
     from data_plane.egress.base import CanonicalError, Ctx
 
 
-class CanonicalEgress:
+class CanonicalResponseStream:
     """The native stream, exactly as INTERFACE.md locks it: delta frames, one closing chunk
     carrying finish_reason, usage and gateway with no delta, then [DONE]."""
 
-    def start(self, ctx: Ctx) -> list[bytes]:  # noqa: ARG002 uniform egress signature
+    def start(self, ctx: Ctx) -> list[bytes]:  # noqa: ARG002 uniform ResponseStream signature
         return []
 
     def chunk(self, c: CanonicalChunk) -> list[bytes]:
@@ -57,5 +57,5 @@ class CanonicalIngress(IngressAdapter):
     def render_error(self, err: CanonicalError) -> Response:
         return JSONResponse({"error": {"code": err.code, "message": err.message}}, status_code=err.status)
 
-    def new_egress(self) -> CanonicalEgress:
-        return CanonicalEgress()
+    def new_stream(self) -> CanonicalResponseStream:
+        return CanonicalResponseStream()

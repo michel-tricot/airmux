@@ -25,7 +25,7 @@ from data_plane.canonical import Adjustment, CanonicalRequest, CanonicalResponse
 from data_plane.egress import REGISTRY
 from data_plane.egress.base import CanonicalError, Ctx, UpstreamStreamError
 from data_plane.ingress import resolve
-from data_plane.ingress.canonical import CanonicalEgress
+from data_plane.ingress.canonical import CanonicalResponseStream
 from data_plane.metering import cost_breakdown, estimate_tokens
 from data_plane.policy import Allow, Deny, evaluate
 from data_plane.runtime import holder, state
@@ -40,7 +40,7 @@ if TYPE_CHECKING:
     from data_plane.egress.base import EgressAdapter, StreamState, UpstreamRequest
     from data_plane.holder import BundleSnapshot
     from data_plane.ingress import IngressAdapter
-    from data_plane.ingress.base import Egress
+    from data_plane.ingress.base import ResponseStream
 
 
 logger = logging.getLogger("data_plane")
@@ -145,7 +145,7 @@ async def _serve(req: CanonicalRequest, key: KeyEntry, snap: BundleSnapshot, ing
     req, adjustments = reconcile(req, decision.model)
     upstream = adapter.transform_request(req, decision.model)
     if req.stream:
-        return await _stream(adapter, ctx, upstream, req, adjustments, ingress.new_egress())
+        return await _stream(adapter, ctx, upstream, req, adjustments, ingress.new_stream())
     try:
         resp = await client.request(upstream.method, upstream.url, headers=upstream.headers, content=upstream.body)
     except httpx.HTTPError as e:
@@ -163,7 +163,7 @@ async def _stream(  # noqa: PLR0913, PLR0917 the streaming lifecycle genuinely s
     upstream: UpstreamRequest,
     req: CanonicalRequest | None = None,
     adjustments: Sequence[Adjustment] = (),
-    egress: Egress | None = None,
+    renderer: ResponseStream | None = None,
 ) -> Response:
     """Open the upstream and peek at the status, then hand the socket to the response generator.
 
@@ -182,7 +182,7 @@ async def _stream(  # noqa: PLR0913, PLR0917 the streaming lifecycle genuinely s
         stream_state = adapter.new_stream_state(ctx)
         handoff = stack.pop_all()
 
-    out = egress if egress is not None else CanonicalEgress()  # the default spelling, for callers outside the request path (tests)
+    out = renderer if renderer is not None else CanonicalResponseStream()  # the default spelling, for callers outside the request path (tests)
     return StreamingResponse(_events(adapter, ctx, resp, handoff, stream_state, req, list(adjustments), out), media_type="text/event-stream")
 
 
@@ -194,25 +194,25 @@ async def _events(  # noqa: PLR0913, PLR0917 the streaming lifecycle genuinely s
     stream_state: StreamState,
     req: CanonicalRequest | None,
     adjustments: list[Adjustment],
-    egress: Egress,
+    renderer: ResponseStream,
 ) -> AsyncIterator[bytes]:
-    """One canonical stream, spelled by whichever egress the caller's dialect picked; an error
+    """One canonical stream, spelled by whichever dialect the caller's ingress picked; an error
     after bytes flowed is a data frame, since the status is already spent."""
     async with handoff:
         try:
-            for b in egress.start(ctx):
+            for b in renderer.start(ctx):
                 yield b
             async for chunk in resp.aiter_bytes():
                 for ev in adapter.frame(chunk, stream_state):
                     for c in adapter.transform_stream_event(ev, stream_state):
-                        for b in egress.chunk(c):
+                        for b in renderer.chunk(c):
                             yield b
             final = adapter.finalize(stream_state)
-            for b in egress.closing(final, adjustments):
+            for b in renderer.closing(final, adjustments):
                 yield b
             _record_usage(ctx, final, status="ok", req=req)
         except (UpstreamStreamError, httpx.HTTPError) as e:
-            for b in egress.error(adapter.map_error(e)):
+            for b in renderer.error(adapter.map_error(e)):
                 yield b
             _record_usage(ctx, adapter.finalize(stream_state), status=_status_for_error(e), req=req)
         except (asyncio.CancelledError, anyio.get_cancelled_exc_class()):

@@ -12,7 +12,7 @@ if TYPE_CHECKING:
     from data_plane.canonical import Adjustment, CanonicalChunk, CanonicalRequest, CanonicalResponse
     from data_plane.egress.base import CanonicalError, Ctx
 
-    class Egress(Protocol):
+    class ResponseStream(Protocol):
         """How one dialect spells the canonical stream on the way out."""
 
         def start(self, ctx: Ctx) -> list[bytes]: ...
@@ -51,4 +51,4 @@ class IngressAdapter(ABC):
     def render_error(self, err: CanonicalError) -> Response: ...
 
     @abstractmethod
-    def new_egress(self) -> Egress: ...
+    def new_stream(self) -> ResponseStream: ...
