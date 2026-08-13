@@ -11,6 +11,7 @@ if TYPE_CHECKING:
     from contract import CredentialEntry, KeyEntry, ModelEntry, ProviderEntry
     from data_plane.canonical import CanonicalRequest
     from data_plane.holder import BundleSnapshot
+    from data_plane.profiles import CompiledProfile
 
 
 @dataclass(frozen=True)
@@ -18,6 +19,7 @@ class Allow:
     model: ModelEntry
     provider: ProviderEntry
     candidates: tuple[CredentialEntry, ...]
+    profile: CompiledProfile
 
 
 @dataclass(frozen=True)
@@ -44,4 +46,4 @@ def evaluate(req: CanonicalRequest, key: KeyEntry, snap: BundleSnapshot, now: da
     candidates = candidates_for(snap.credential_index, key.workspace_id, key.org_id, provider.provider_id)
     if not candidates:
         return Deny(reason="credential_unavailable", status=402)
-    return Allow(model=model, provider=provider, candidates=candidates)
+    return Allow(model=model, provider=provider, candidates=candidates, profile=snap.profile_index[provider.provider_id])

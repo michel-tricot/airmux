@@ -8,6 +8,7 @@ from data_plane.canonical import CanonicalRequest
 from data_plane.credentials import index_credentials
 from data_plane.holder import BundleSnapshot
 from data_plane.policy import Allow, Deny, evaluate
+from data_plane.profiles import index_profiles
 
 ORG_A = uuid7()
 
@@ -18,7 +19,9 @@ KEY = make_key("k1", org=ORG_A)[1]
 
 
 def snap(bundle):
-    return BundleSnapshot(bundle=bundle, key_index=index_keys(bundle), credential_index=index_credentials(bundle))
+    return BundleSnapshot(
+        bundle=bundle, key_index=index_keys(bundle), credential_index=index_credentials(bundle), profile_index=index_profiles(bundle)
+    )
 
 
 def make_request(model="gpt-test"):

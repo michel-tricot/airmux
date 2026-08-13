@@ -7,10 +7,12 @@ from typing import TYPE_CHECKING, Literal
 
 from data_plane.auth import index_keys
 from data_plane.credentials import index_credentials
+from data_plane.profiles import index_profiles
 
 if TYPE_CHECKING:
     from contract import BundleV1, KeyEntry
     from data_plane.credentials import CredentialIndex
+    from data_plane.profiles import CompiledProfile
 
 logger = logging.getLogger("data_plane")
 
@@ -27,6 +29,7 @@ class BundleSnapshot:
     bundle: BundleV1
     key_index: dict[str, KeyEntry]
     credential_index: CredentialIndex
+    profile_index: dict[str, CompiledProfile]
 
 
 class BundleHolder:
@@ -41,6 +44,8 @@ class BundleHolder:
             return False
         if expired:
             logger.warning("%s bundle %s expired at %s, serving stale per policy", source, bundle.bundle_id, bundle.expires_at)
-        self.snapshot = BundleSnapshot(bundle=bundle, key_index=index_keys(bundle), credential_index=index_credentials(bundle))
+        self.snapshot = BundleSnapshot(
+            bundle=bundle, key_index=index_keys(bundle), credential_index=index_credentials(bundle), profile_index=index_profiles(bundle)
+        )
         logger.info("adopted %s bundle %s issued %s", source, bundle.bundle_id, bundle.issued_at)
         return True

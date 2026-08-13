@@ -21,6 +21,7 @@ from starlette.testclient import TestClient
 
 from data_plane.ingress import resolve
 from data_plane.ingress.openai import OpenAIIngress
+from data_plane.profiles import compile_profile
 from data_plane.proxy import reconcile
 
 UPSTREAM = "https://api.openai.com/v1/chat/completions"
@@ -171,7 +172,7 @@ def test_the_aligned_path_is_a_fixpoint():
     }
     ingress = OpenAIIngress()
     parsed, _ = ingress.parse(body)
-    first, _ = reconcile(parsed, MODEL, PROVIDER)
+    first, _ = reconcile(parsed, MODEL, compile_profile(PROVIDER))
     upstream = make_adapter().transform_request(first, MODEL)
     again, _ = ingress.parse(json.loads(upstream.body))
     assert again.model_dump(exclude={"model"}) == first.model_dump(exclude={"model"})

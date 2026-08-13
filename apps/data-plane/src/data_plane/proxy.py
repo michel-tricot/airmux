@@ -36,11 +36,12 @@ if TYPE_CHECKING:
 
     from starlette.requests import Request
 
-    from contract import CredentialEntry, KeyEntry, ModelEntry, ProviderEntry, Secret, UsageStatus
+    from contract import CredentialEntry, KeyEntry, ModelEntry, Secret, UsageStatus
     from data_plane.egress.base import EgressAdapter, StreamState, UpstreamRequest
     from data_plane.holder import BundleSnapshot
     from data_plane.ingress import IngressAdapter
     from data_plane.ingress.base import ResponseStream
+    from data_plane.profiles import CompiledProfile
 
 
 logger = logging.getLogger("data_plane")
@@ -108,22 +109,22 @@ async def _parse(request: Request) -> tuple[CanonicalRequest, list[Adjustment], 
 GATEWAY_HELD = frozenset({"n"})
 
 
-def _holds(req: CanonicalRequest, provider: ProviderEntry, param: str) -> str | None:
-    """Why this extra cannot forward, or None when it can. Declarative profile facts only.
+def _drop_reason(req: CanonicalRequest, profile: CompiledProfile, param: str) -> str | None:
+    """Why this extra cannot forward, or None when it can. Lookups against the compiled profile only.
 
     An extra can never share a core field's name (validation consumes those as the field), so
     the only collision to guard is a provider alias respelling a set core field onto an extra's name."""
     if param in GATEWAY_HELD:
         return "the response carries one completion; a sampling fan-out cannot forward"
-    source = next((canonical for canonical, spelling in provider.param_aliases.items() if spelling == param), None)
+    source = profile.respelled.get(param)
     if source is not None and getattr(req, source, None) is not None:
         return f"collides with {source}, which this provider spells {param}"
-    if provider.params_closed and param not in (provider.accepted_params or ()):
-        return f"{provider.provider_id} accepts only its declared params"
+    if profile.params_closed and param not in profile.accepted:
+        return f"{profile.provider_id} accepts only its declared params"
     return None
 
 
-def reconcile(req: CanonicalRequest, model: ModelEntry, provider: ProviderEntry) -> tuple[CanonicalRequest, list[Adjustment]]:
+def reconcile(req: CanonicalRequest, model: ModelEntry, profile: CompiledProfile) -> tuple[CanonicalRequest, list[Adjustment]]:
     """What the gateway changes before the adapter runs, every change reported, never silent.
 
     Extras the profile allows stay on the request and merge after the typed body at the egress;
@@ -131,15 +132,18 @@ def reconcile(req: CanonicalRequest, model: ModelEntry, provider: ProviderEntry)
     of rejection (19 of 22 leave additionalProperties open), so open schemas forward."""
     adjustments = []
     forwarded: dict[str, object] = {}
-    for param, value in sorted(req.extra.items()):
-        held = _holds(req, provider, param)
-        if held is None:
+    extra = req.extra  # the property copies; read it once
+    for param, value in extra.items():
+        reason = _drop_reason(req, profile, param)
+        if reason is None:
             forwarded[param] = value
         else:
-            adjustments.append(Adjustment(param=param, action="dropped", detail=held))
+            adjustments.append(Adjustment(param=param, action="dropped", detail=reason))
     if req.max_tokens and model.max_output_tokens and req.max_tokens > model.max_output_tokens:
         adjustments.append(Adjustment(param="max_tokens", action="clamped", detail=f"model caps output at {model.max_output_tokens} tokens"))
         req = req.model_copy(update={"max_tokens": model.max_output_tokens})
+    if len(forwarded) == len(extra):
+        return req, adjustments
     core = {name: getattr(req, name) for name in CanonicalRequest.model_fields}
     return CanonicalRequest.model_validate({**forwarded, **core}), adjustments
 
@@ -177,7 +181,7 @@ async def _serve(
         credential_scope=_scope_of(entry),
         bundle_id=snap.bundle.bundle_id,
     )
-    req, reconcile_adjustments = reconcile(req, decision.model, decision.provider)
+    req, reconcile_adjustments = reconcile(req, decision.model, decision.profile)
     adjustments = [*parse_adjustments, *reconcile_adjustments]
     upstream = adapter.transform_request(req, decision.model)
     if req.stream:
@@ -218,7 +222,7 @@ async def _stream(  # noqa: PLR0913, PLR0917 the streaming lifecycle genuinely s
         stream_state = adapter.new_stream_state(ctx)
         handoff = stack.pop_all()
 
-    out = renderer if renderer is not None else CanonicalResponseStream()  # the default spelling, for callers outside the request path (tests)
+    out = renderer if renderer is not None else CanonicalResponseStream()
     return StreamingResponse(_events(adapter, ctx, resp, handoff, stream_state, req, list(adjustments), out), media_type="text/event-stream")
 
 

@@ -18,6 +18,7 @@ from data_plane.credentials import CredentialResolver, index_credentials
 from data_plane.holder import BundleSnapshot
 from data_plane.outbox import SqliteOutbox
 from data_plane.policy import Allow, Deny, evaluate
+from data_plane.profiles import index_profiles
 
 OTHER_WORKSPACE = uuid7()
 
@@ -39,7 +40,9 @@ async def value_of(resolver, entry) -> str:
 
 def snap(*credentials):
     bundle = make_bundle(catalog=Catalog(providers=[PROVIDER], models=[MODEL], credentials=list(credentials)), org=ORG)
-    return BundleSnapshot(bundle=bundle, key_index=index_keys(bundle), credential_index=index_credentials(bundle))
+    return BundleSnapshot(
+        bundle=bundle, key_index=index_keys(bundle), credential_index=index_credentials(bundle), profile_index=index_profiles(bundle)
+    )
 
 
 def decide(*credentials, workspace=WORKSPACE):
