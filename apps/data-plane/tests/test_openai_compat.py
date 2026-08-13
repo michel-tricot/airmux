@@ -13,7 +13,7 @@ import httpx
 import openai
 import pytest
 import respx
-from conftest import TEXT_LOG, TEXT_NONSTREAM
+from conftest import MODEL, PROVIDER, TEXT_LOG, TEXT_NONSTREAM, make_adapter
 from openai import OpenAI
 from openai.types.chat import ChatCompletionMessageFunctionToolCall
 from starlette.datastructures import Headers
@@ -21,6 +21,7 @@ from starlette.testclient import TestClient
 
 from data_plane.ingress import resolve
 from data_plane.ingress.openai import OpenAIIngress
+from data_plane.proxy import reconcile
 
 UPSTREAM = "https://api.openai.com/v1/chat/completions"
 
@@ -69,7 +70,7 @@ def test_parse_translates_the_openai_shapes_and_keeps_the_rest():
         "frequency_penalty": 0.5,
         "stream_options": {"include_usage": True},
     }
-    req = OpenAIIngress().parse(body)
+    req, _ = OpenAIIngress().parse(body)
     roles = [(m.role, [p.type for p in m.content]) for m in req.messages]
     assert roles == [("user", ["text"]), ("assistant", ["tool_call"]), ("user", ["tool_result"])]
     assert req.tools is not None
@@ -156,6 +157,44 @@ def test_what_the_gateway_dropped_is_visible_to_the_sdk_caller(token, dp_app):
     gateway = (completion.model_extra or {}).get("gateway")
     assert gateway is not None
     assert [(a["param"], a["action"]) for a in gateway["adjustments"]] == [("n", "dropped")]
+
+
+def test_the_aligned_path_is_a_fixpoint():
+    """OpenAI caller, OpenAI-family provider: parse, reconcile, render, parse again is the
+    identity minus deliberate edits (the upstream model name). The waist provably costs the
+    aligned path nothing, extras included."""
+    body = {
+        **TOOL_ROLE_BODY,
+        "tools": [{"type": "function", "function": {"name": "w", "description": "weather", "parameters": {"type": "object"}}}],
+        "temperature": 0.7,
+        "frequency_penalty": 0.5,
+    }
+    ingress = OpenAIIngress()
+    parsed, _ = ingress.parse(body)
+    first, _ = reconcile(parsed, MODEL, PROVIDER)
+    upstream = make_adapter().transform_request(first, MODEL)
+    again, _ = ingress.parse(json.loads(upstream.body))
+    assert again.model_dump(exclude={"model"}) == first.model_dump(exclude={"model"})
+
+
+def test_an_unknown_tool_choice_variant_is_never_silently_none():
+    """A consumed slot with an unrecognized value is a translation loss the caller hears about:
+    the typed tool_choice stays honestly unset and the parse reports the drop."""
+    req, carried = OpenAIIngress().parse({**TEXT_BODY, "tool_choice": {"type": "allowed_tools", "tools": []}})
+    assert req.tool_choice is None
+    assert [(a.param, a.action) for a in carried] == [("tool_choice", "dropped")]
+
+
+@respx.mock
+def test_a_forwardable_extra_reaches_the_provider_with_no_adjustment(token, dp_app):
+    route = respx.post(UPSTREAM).mock(return_value=httpx.Response(200, json=TEXT_NONSTREAM))
+    with TestClient(dp_app) as client:
+        completion = _sdk(client, token).chat.completions.create(
+            model="gpt-test", messages=[{"role": "user", "content": "hi"}], extra_body={"frequency_penalty": 0.5}
+        )
+    assert json.loads(route.calls.last.request.content)["frequency_penalty"] == 0.5
+    gateway = (completion.model_extra or {}).get("gateway")
+    assert gateway == {"adjustments": []}
 
 
 def test_errors_come_back_in_the_callers_dialect(token, dp_app):

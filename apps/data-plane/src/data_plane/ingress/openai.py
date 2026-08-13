@@ -13,14 +13,14 @@ from typing import TYPE_CHECKING, Any
 
 from starlette.responses import JSONResponse, Response
 
-from data_plane.canonical import CanonicalChunk, CanonicalRequest, GatewayInfo, ResponseFormat, ToolCallDelta
+from data_plane.canonical import Adjustment, CanonicalChunk, CanonicalRequest, GatewayInfo, ResponseFormat, ToolCallDelta
 from data_plane.formats import openai as fmt
 from data_plane.ingress.base import DONE, IngressAdapter
 
 if TYPE_CHECKING:
     from starlette.datastructures import Headers
 
-    from data_plane.canonical import Adjustment, CanonicalResponse
+    from data_plane.canonical import CanonicalResponse
     from data_plane.egress.base import CanonicalError, Ctx
 
 # This dialect's alternate spellings of canonical fields: parse folds each into its canonical
@@ -122,13 +122,20 @@ class OpenAIIngress(IngressAdapter):
             return True
         return _openai_shaped(body)
 
-    def parse(self, body: dict[str, Any]) -> CanonicalRequest:
+    def parse(self, body: dict[str, Any]) -> tuple[CanonicalRequest, list[Adjustment]]:
         """An OpenAI chat request into canonical. Unconsumed fields stay extras; stream_options is
-        consumed silently because the gateway's own stream always reports usage."""
+        consumed silently because the gateway's own stream always reports usage.
+
+        An unrecognized value in a consumed slot (a tool_choice variant this parse does not
+        know) is a translation loss: reported as an adjustment, never a silent None."""
         stop = body.get("stop")
         extras = {key: value for key, value in body.items() if key not in CONSUMED}
+        adjustments = []
+        tool_choice = fmt.from_tool_choice(body.get("tool_choice"))
+        if body.get("tool_choice") is not None and tool_choice is None:
+            adjustments.append(Adjustment(param="tool_choice", action="dropped", detail="a tool_choice variant this dialect does not interpret"))
         response_format = body.get("response_format")
-        return CanonicalRequest.model_validate(
+        request = CanonicalRequest.model_validate(
             {
                 **extras,
                 "model": body.get("model") or "",
@@ -140,10 +147,11 @@ class OpenAIIngress(IngressAdapter):
                 "stop": [stop] if isinstance(stop, str) else stop,
                 "seed": body.get("seed"),
                 "tools": fmt.from_tools(body.get("tools")),
-                "tool_choice": fmt.from_tool_choice(body.get("tool_choice")),
+                "tool_choice": tool_choice,
                 "response_format": ResponseFormat.model_validate(response_format) if response_format else None,
             }
         )
+        return request, adjustments
 
     def render_response(self, final: CanonicalResponse) -> Response:
         choice = fmt.ChoiceOut(message=fmt.to_message(final.content), finish_reason=final.finish_reason)

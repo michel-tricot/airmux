@@ -93,13 +93,17 @@ class OpenAICompatibleAdapter(EgressAdapter):
     kind = "openai_compatible"
 
     def transform_request(self, req: CanonicalRequest, m: ModelEntry) -> UpstreamRequest:
-        """Transport assembly only; every field mapping lives in formats.openai.body_of."""
+        """Transport assembly only; every field mapping lives in formats.openai.body_of.
+
+        Whatever survives reconcile as an extra merges after the typed body, spelled per the
+        provider's aliases, typed fields winning: the profile decided, this just renders."""
         headers = {
             "authorization": f"Bearer {self.credential.reveal()}",
             "content-type": "application/json",
         }
         url = str(self.provider.base_url).rstrip("/") + "/chat/completions"
-        return UpstreamRequest(method="POST", url=url, headers=headers, body=encode(body_of(req, m.upstream_model)))
+        body = encode(body_of(req, m.upstream_model), aliases=self.provider.param_aliases, extras=req.extra)
+        return UpstreamRequest(method="POST", url=url, headers=headers, body=body)
 
     def transform_response(self, raw: bytes, ctx: Ctx) -> CanonicalResponse:
         completion = UpstreamCompletion.model_validate_json(raw)

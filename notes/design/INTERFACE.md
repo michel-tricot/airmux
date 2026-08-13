@@ -95,7 +95,7 @@ axis) and streamed (`chat.completion.chunk` objects, a usage-bearing final chunk
 choices, `data: [DONE]`). The gateway envelope rides along as an additional field on the
 completion and on the usage-bearing chunk; SDKs ignore fields they do not know. Fields the
 interpretation does not consume follow the same open-top-level rules as canonical extras:
-captured, reported under gateway.adjustments, forwarded once provider profiles land.
+captured, forwarded when the provider profile allows, reported under gateway.adjustments when not.
 
 ## Errors
 

@@ -52,10 +52,22 @@ def test_the_upstream_request_names_the_upstream_model_and_spends_the_injected_c
 
 
 @pytest.mark.parametrize("kind", sorted(REGISTRY))
-def test_extra_fields_do_not_reach_the_upstream(kind):
-    """Until provider profiles land, an extra field is dropped and reported, never forwarded blind."""
+def test_surviving_extras_merge_after_the_typed_body(kind):
+    """The reconcile step upstream of the adapter decides what survives; the adapter renders
+    whatever extras remain, after the typed fields."""
     adapter, model = _adapter(kind)
     body = json.loads(request_of(CORPUS[0]).model_dump_json())
     request = CanonicalRequest.model_validate({**body, "frequency_penalty": 0.5})
     upstream = adapter.transform_request(request, model)
-    assert "frequency_penalty" not in json.loads(upstream.body)
+    assert json.loads(upstream.body)["frequency_penalty"] == 0.5
+
+
+def test_the_provider_spelling_wins_and_an_extra_never_overrides_it():
+    adapter, model = _adapter("openai_compatible")
+    provider = PROVIDER.model_copy(update={"param_aliases": {"max_tokens": "max_completion_tokens"}})
+    adapter.provider = provider
+    body = json.loads(request_of(CORPUS[0]).model_dump_json())
+    request = CanonicalRequest.model_validate({**body, "max_tokens": 64, "max_completion_tokens": 999})
+    sent = json.loads(adapter.transform_request(request, model).body)
+    assert sent["max_completion_tokens"] == 64  # the canonical value, in the provider's spelling
+    assert "max_tokens" not in sent

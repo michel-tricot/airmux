@@ -1,13 +1,17 @@
 from __future__ import annotations
 
+import json
 import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, ClassVar, Literal
+from typing import TYPE_CHECKING, Any, ClassVar, Literal
 from uuid import UUID
 
 import httpx
 from pydantic import BaseModel
+
+if TYPE_CHECKING:
+    from collections.abc import Mapping
 
 NIL_ORG = UUID(int=0)
 NIL_WORKSPACE = UUID(int=0)
@@ -25,9 +29,13 @@ class CanonicalError(BaseModel):
     message: str
 
 
-def encode(body: BaseModel) -> bytes:
-    """Wire bodies omit absent fields: a provider must never see a null it would reject."""
-    return body.model_dump_json(exclude_none=True).encode()
+def encode(body: BaseModel, aliases: Mapping[str, str] | None = None, extras: Mapping[str, Any] | None = None) -> bytes:
+    """The wire body: typed fields spelled per the provider's aliases, then the forwardable
+    extras merged after them, typed fields winning any collision. Absent fields are omitted:
+    a provider must never see a null it would reject."""
+    spelling = aliases or {}
+    rendered = {spelling.get(key, key): value for key, value in body.model_dump(mode="json", exclude_none=True).items()}
+    return json.dumps({**dict(extras or {}), **rendered}).encode()
 
 
 @dataclass(frozen=True)

@@ -36,7 +36,7 @@ if TYPE_CHECKING:
 
     from starlette.requests import Request
 
-    from contract import CredentialEntry, KeyEntry, ModelEntry, Secret, UsageStatus
+    from contract import CredentialEntry, KeyEntry, ModelEntry, ProviderEntry, Secret, UsageStatus
     from data_plane.egress.base import EgressAdapter, StreamState, UpstreamRequest
     from data_plane.holder import BundleSnapshot
     from data_plane.ingress import IngressAdapter
@@ -84,49 +84,79 @@ def _authenticate(request: Request) -> tuple[KeyEntry, BundleSnapshot]:
     return key, snap
 
 
-async def _parse(request: Request) -> tuple[CanonicalRequest, IngressAdapter]:
-    """The body into canonical through whichever dialect claims it; parse failures speak that dialect."""
+async def _parse(request: Request) -> tuple[CanonicalRequest, list[Adjustment], IngressAdapter]:
+    """The body into canonical through whichever dialect claims it, with the dialect's own
+    translation losses carried as adjustments; parse failures speak that dialect."""
     ingress: IngressAdapter | None = None
     try:
         body = json.loads(await request.body())
         if not isinstance(body, dict):
             raise RequestRejectedError(400, "invalid_request", "the request body must be a JSON object")
         ingress = resolve(request.headers, body)
-        return ingress.parse(body), ingress
+        req, adjustments = ingress.parse(body)
     except ValidationError as e:
         rejection = RequestRejectedError(400, "invalid_request", str(e.errors(include_url=False)[:3]))
         rejection.ingress = ingress
         raise rejection from e
     except (json.JSONDecodeError, ValueError) as e:
         raise RequestRejectedError(400, "invalid_request", str(e)) from e
+    return req, adjustments, ingress
 
 
-def reconcile(req: CanonicalRequest, model: ModelEntry) -> tuple[CanonicalRequest, list[Adjustment]]:
+# Params the gateway never forwards, whatever the provider accepts: n asks for a choices axis
+# the locked response deliberately does not have, so honoring it would silently discard output.
+GATEWAY_HELD = frozenset({"n"})
+
+
+def _holds(req: CanonicalRequest, provider: ProviderEntry, param: str) -> str | None:
+    """Why this extra cannot forward, or None when it can. Declarative profile facts only.
+
+    An extra can never share a core field's name (validation consumes those as the field), so
+    the only collision to guard is a provider alias respelling a set core field onto an extra's name."""
+    if param in GATEWAY_HELD:
+        return "the response carries one completion; a sampling fan-out cannot forward"
+    source = next((canonical for canonical, spelling in provider.param_aliases.items() if spelling == param), None)
+    if source is not None and getattr(req, source, None) is not None:
+        return f"collides with {source}, which this provider spells {param}"
+    if provider.params_closed and param not in (provider.accepted_params or ()):
+        return f"{provider.provider_id} accepts only its declared params"
+    return None
+
+
+def reconcile(req: CanonicalRequest, model: ModelEntry, provider: ProviderEntry) -> tuple[CanonicalRequest, list[Adjustment]]:
     """What the gateway changes before the adapter runs, every change reported, never silent.
 
-    Extra fields stay on the request but are not rendered by any adapter yet; forwarding the
-    compatible ones is profile work, so until then each one is reported as dropped."""
-    adjustments = [
-        Adjustment(param=param, action="dropped", detail="outside the completion core; forwarding by provider profile has not landed")
-        for param in sorted(req.extra)
-    ]
+    Extras the profile allows stay on the request and merge after the typed body at the egress;
+    the rest leave here, each with its reason. Absence from a provider's schema is not evidence
+    of rejection (19 of 22 leave additionalProperties open), so open schemas forward."""
+    adjustments = []
+    forwarded: dict[str, object] = {}
+    for param, value in sorted(req.extra.items()):
+        held = _holds(req, provider, param)
+        if held is None:
+            forwarded[param] = value
+        else:
+            adjustments.append(Adjustment(param=param, action="dropped", detail=held))
     if req.max_tokens and model.max_output_tokens and req.max_tokens > model.max_output_tokens:
         adjustments.append(Adjustment(param="max_tokens", action="clamped", detail=f"model caps output at {model.max_output_tokens} tokens"))
         req = req.model_copy(update={"max_tokens": model.max_output_tokens})
-    return req, adjustments
+    core = {name: getattr(req, name) for name in CanonicalRequest.model_fields}
+    return CanonicalRequest.model_validate({**forwarded, **core}), adjustments
 
 
 async def _handle(request: Request) -> Response:
     key, snap = _authenticate(request)
-    req, ingress = await _parse(request)
+    req, parse_adjustments, ingress = await _parse(request)
     try:
-        return await _serve(req, key, snap, ingress)
+        return await _serve(req, key, snap, ingress, parse_adjustments)
     except RequestRejectedError as e:
         e.ingress = ingress
         raise
 
 
-async def _serve(req: CanonicalRequest, key: KeyEntry, snap: BundleSnapshot, ingress: IngressAdapter) -> Response:
+async def _serve(
+    req: CanonicalRequest, key: KeyEntry, snap: BundleSnapshot, ingress: IngressAdapter, parse_adjustments: list[Adjustment]
+) -> Response:
     decision = evaluate(req, key, snap, datetime.now(tz=UTC))
     if isinstance(decision, Deny):
         _record_denied(key, snap, req)
@@ -147,7 +177,8 @@ async def _serve(req: CanonicalRequest, key: KeyEntry, snap: BundleSnapshot, ing
         credential_scope=_scope_of(entry),
         bundle_id=snap.bundle.bundle_id,
     )
-    req, adjustments = reconcile(req, decision.model)
+    req, reconcile_adjustments = reconcile(req, decision.model, decision.provider)
+    adjustments = [*parse_adjustments, *reconcile_adjustments]
     upstream = adapter.transform_request(req, decision.model)
     if req.stream:
         return await _stream(adapter, ctx, upstream, req, adjustments, ingress.new_stream())
