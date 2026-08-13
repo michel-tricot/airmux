@@ -23,12 +23,19 @@ if TYPE_CHECKING:
     from data_plane.canonical import Adjustment, CanonicalResponse
     from data_plane.egress.base import CanonicalError, Ctx
 
-# Body keys the dialect consumes: every canonical core field by its own name, plus the spellings
-# that exist only in this dialect. Everything else rides through as canonical extras, so the
-# reconcile step reports or forwards them exactly as it does for a canonical caller. Deriving the
-# core from the definition means a field added to canonical is consumed here without an edit.
-DIALECT_ONLY = frozenset({"max_completion_tokens", "stream_options"})
-CONSUMED = frozenset(CanonicalRequest.model_fields) | DIALECT_ONLY
+# This dialect's alternate spellings of canonical fields: parse folds each into its canonical
+# name, and the egress side re-spells the canonical value however the provider wants it.
+ALIASED = frozenset({"max_completion_tokens"})
+
+# Protocol plumbing with no canonical carrier because its meaning is constant under our
+# contract: the stream always reports usage, and body_of re-emits its own stream_options on
+# every streamed upstream request regardless of what the caller sent.
+CONSTANT = frozenset({"stream_options"})
+
+# Everything consumed here is spoken for; everything else rides through as canonical extras, so
+# the reconcile step reports or forwards it exactly as for a canonical caller. Deriving the core
+# from the definition means a field added to canonical is consumed here without an edit.
+CONSUMED = frozenset(CanonicalRequest.model_fields) | ALIASED | CONSTANT
 
 
 def _openai_shaped(body: dict[str, Any]) -> bool:
