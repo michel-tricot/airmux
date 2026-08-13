@@ -70,8 +70,8 @@ async def complete(request: Request) -> Response:
         return _error(e.status, e.code, e.message)
 
 
-async def _authorize(request: Request) -> tuple[CanonicalRequest, KeyEntry, BundleSnapshot, IngressAdapter]:
-    """Authentication, dialect resolution and body validation; raises RequestRejectedError on every no."""
+def _authenticate(request: Request) -> tuple[KeyEntry, BundleSnapshot]:
+    """The caller against the bundle, before the body is even read; raises RequestRejectedError on every no."""
     snap = holder.snapshot
     if snap is None:
         raise RequestRejectedError(503, "bundle_unavailable")
@@ -81,20 +81,24 @@ async def _authorize(request: Request) -> tuple[CanonicalRequest, KeyEntry, Bund
     key = authenticate(auth_header.removeprefix("Bearer "), snap.key_index)
     if key is None:
         raise RequestRejectedError(401, "invalid_token")
+    return key, snap
+
+
+async def _parse(request: Request) -> tuple[CanonicalRequest, IngressAdapter]:
+    """The body into canonical through whichever dialect claims it; parse failures speak that dialect."""
     ingress: IngressAdapter | None = None
     try:
         body = json.loads(await request.body())
         if not isinstance(body, dict):
             raise RequestRejectedError(400, "invalid_request", "the request body must be a JSON object")
         ingress = resolve(request.headers, body)
-        req = ingress.parse(body)
+        return ingress.parse(body), ingress
     except ValidationError as e:
         rejection = RequestRejectedError(400, "invalid_request", str(e.errors(include_url=False)[:3]))
         rejection.ingress = ingress
         raise rejection from e
     except (json.JSONDecodeError, ValueError) as e:
         raise RequestRejectedError(400, "invalid_request", str(e)) from e
-    return req, key, snap, ingress
 
 
 def reconcile(req: CanonicalRequest, model: ModelEntry) -> tuple[CanonicalRequest, list[Adjustment]]:
@@ -113,7 +117,8 @@ def reconcile(req: CanonicalRequest, model: ModelEntry) -> tuple[CanonicalReques
 
 
 async def _handle(request: Request) -> Response:
-    req, key, snap, ingress = await _authorize(request)
+    key, snap = _authenticate(request)
+    req, ingress = await _parse(request)
     try:
         return await _serve(req, key, snap, ingress)
     except RequestRejectedError as e:
