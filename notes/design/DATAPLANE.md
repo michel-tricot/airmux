@@ -94,16 +94,7 @@ sees, per INTERFACE.md.
 **Proof:** the official openai python SDK, unmodified, completes text, tool and streaming round
 trips against a running data plane.
 
-### 6. Second adapter: anthropic
-
-Proves the interface generalizes. Harvest the branch's wire conversion logic, split so no 457-line
-module returns. Adopt the branch's conformance idea wholesale: tests parameterized over the registry,
-rendered upstream bytes validated against the vendor schemas in taxonomy/schemas/completion/, with
-KNOWN_REJECTIONS pinning real incompatibilities.
-
-**Proof:** the same corpus of real requests against Anthropic, streamed and buffered.
-
-### 7. Adjustments as data, not branches
+### 6. Adjustments as data, not branches
 
 Provider profile in the bundle: auth scheme, endpoint path, field aliases, accepted fields, open or
 closed schema, derived from taxonomy. Request extras pass through with profile aliasing; anything
@@ -120,15 +111,23 @@ identity minus deliberate, reported edits.
 **Proof:** a field absent from the typed core, such as seed or top_k, reaches a provider that accepts
 it; onboarding a quirky OpenAI-compatible provider is a config change with zero code.
 
+### 7. Second adapter: anthropic (deferred)
+
+Deferred by choice, 2026-08-12: the OpenAI-family path is the adoption surface, so profiles come
+first. Proves the interface generalizes when it lands: harvest the branch's wire conversion logic
+into formats/anthropic.py and egress/anthropic.py, split so no 457-line module returns. The
+registry-parameterized suites (schema conformance, stream folds) pick the new kind up on their own.
+When the ingress side follows someday, its claims() must not lean on the x-stainless-* headers:
+every Stainless-generated SDK sends those, so the User-Agent prefix is the discriminating half.
+
+**Proof:** the same corpus of real requests against Anthropic, streamed and buffered.
+
 ### 8. Later, explicitly out of scope
 
 - An Anthropic-shaped surface at /v1/messages, reserved in INTERFACE.md, if Anthropic SDK drop-in
   becomes a requirement the way OpenAI's did
 - Routing proper: deployments, the unserviceable() filter, ranked candidates, failover. The sequencing
   in the canonical-content-types branch's ROUTER.md (steps 3 through 9) remains right from there
-
-Ordering notes: 5 needs 4, because answering an OpenAI-shaped stream means rendering OpenAI chunk
-frames over the canonical stream. 6 and 7 are independent of 5.
 
 ## Guardrails
 
