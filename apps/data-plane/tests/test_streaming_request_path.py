@@ -12,8 +12,8 @@ from conftest import CTX, TEXT_LOG, make_adapter, sse
 from starlette.responses import StreamingResponse
 from starlette.testclient import TestClient
 
-from data_plane.adapters.base import UpstreamRequest
 from data_plane.canonical import CanonicalRequest
+from data_plane.egress.base import UpstreamRequest
 from data_plane.proxy import _stream
 
 if TYPE_CHECKING:

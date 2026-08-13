@@ -24,10 +24,10 @@ from contract import (
     token_hash,
     uuid7,
 )
-from data_plane.adapters import REGISTRY
-from data_plane.adapters.base import Ctx
 from data_plane.app import create_app
 from data_plane.config import BundleConfig, Config, ControlPlaneLink, EventsConfig
+from data_plane.egress import REGISTRY
+from data_plane.egress.base import Ctx
 
 if TYPE_CHECKING:
     from starlette.applications import Starlette

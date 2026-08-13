@@ -10,8 +10,8 @@ from corpus import CORPUS, request_of
 from jsonschema import Draft202012Validator
 
 from contract import Secret
-from data_plane.adapters import REGISTRY
 from data_plane.canonical import CanonicalRequest
+from data_plane.egress import REGISTRY
 
 if TYPE_CHECKING:
     from jsonschema.protocols import Validator

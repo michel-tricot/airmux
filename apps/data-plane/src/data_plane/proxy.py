@@ -21,10 +21,10 @@ from starlette.responses import JSONResponse, Response, StreamingResponse
 
 from contract import SecretStoreUnavailableError, UsageEventV1, uuid7
 from data_plane import compat
-from data_plane.adapters import REGISTRY
-from data_plane.adapters.base import Ctx, UpstreamStreamError
 from data_plane.auth import authenticate
 from data_plane.canonical import Adjustment, CanonicalChunk, CanonicalRequest, CanonicalResponse, GatewayInfo, TextPart, Usage
+from data_plane.egress import REGISTRY
+from data_plane.egress.base import Ctx, UpstreamStreamError
 from data_plane.metering import cost_breakdown, estimate_tokens
 from data_plane.policy import Allow, Deny, evaluate
 from data_plane.runtime import holder, state
@@ -37,7 +37,7 @@ if TYPE_CHECKING:
     from starlette.requests import Request
 
     from contract import CredentialEntry, KeyEntry, ModelEntry, Secret, UsageStatus
-    from data_plane.adapters.base import CanonicalError, ProviderAdapter, StreamState, UpstreamRequest
+    from data_plane.egress.base import CanonicalError, EgressAdapter, StreamState, UpstreamRequest
     from data_plane.holder import BundleSnapshot
 
     class Egress(Protocol):
@@ -183,7 +183,7 @@ class CanonicalEgress:
 
 
 async def _stream(  # noqa: PLR0913, PLR0917 the streaming lifecycle genuinely spans these six
-    adapter: ProviderAdapter,
+    adapter: EgressAdapter,
     ctx: Ctx,
     upstream: UpstreamRequest,
     req: CanonicalRequest | None = None,
@@ -212,7 +212,7 @@ async def _stream(  # noqa: PLR0913, PLR0917 the streaming lifecycle genuinely s
 
 
 async def _events(  # noqa: PLR0913, PLR0917 the streaming lifecycle genuinely spans these eight
-    adapter: ProviderAdapter,
+    adapter: EgressAdapter,
     ctx: Ctx,
     resp: httpx.Response,
     handoff: contextlib.AsyncExitStack,
@@ -285,7 +285,7 @@ def _credential_status(status_code: int) -> UsageStatus:
     return "rate_limited" if status_code == httpx.codes.TOO_MANY_REQUESTS else "upstream_error"
 
 
-def _upstream_exception(adapter: ProviderAdapter, ctx: Ctx, e: Exception, req: CanonicalRequest | None) -> Response:
+def _upstream_exception(adapter: EgressAdapter, ctx: Ctx, e: Exception, req: CanonicalRequest | None) -> Response:
     err = adapter.map_error(e)
     _record_usage(ctx, _empty_response(ctx), status=_status_for_error(e), req=req)
     return _error(err.status, err.code, err.message)

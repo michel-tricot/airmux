@@ -8,8 +8,8 @@ import pytest
 from conftest import CTX, PROVIDER, TEXT_LOG, TEXT_NONSTREAM, delta_event, sse
 
 from contract import Secret
-from data_plane.adapters import REGISTRY
-from data_plane.adapters.base import UpstreamStreamError
+from data_plane.egress import REGISTRY
+from data_plane.egress.base import UpstreamStreamError
 
 if TYPE_CHECKING:
     from data_plane.canonical import CanonicalChunk, CanonicalResponse

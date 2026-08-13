@@ -10,7 +10,6 @@ import json
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
-from data_plane.adapters.base import ProviderAdapter, RawEvent, StreamState, UpstreamRequest, UpstreamStreamError, encode
 from data_plane.canonical import (
     AssistantPart,
     CanonicalChunk,
@@ -23,6 +22,7 @@ from data_plane.canonical import (
     ToolCallDelta,
     ToolCallPart,
 )
+from data_plane.egress.base import EgressAdapter, RawEvent, StreamState, UpstreamRequest, UpstreamStreamError, encode
 from data_plane.formats.openai import (
     UpstreamChoice,
     UpstreamChunk,
@@ -39,8 +39,8 @@ if TYPE_CHECKING:
     from collections.abc import Iterator
 
     from contract import ModelEntry
-    from data_plane.adapters.base import Ctx
     from data_plane.canonical import CanonicalRequest
+    from data_plane.egress.base import Ctx
 
 
 @dataclass
@@ -89,7 +89,7 @@ def _fold_choice(state: OpenAIStreamState, choice: UpstreamChunkChoice) -> list[
     return [CanonicalChunk(id=state.chunk_id, delta=delta) for delta in deltas]
 
 
-class OpenAICompatibleAdapter(ProviderAdapter):
+class OpenAICompatibleAdapter(EgressAdapter):
     kind = "openai_compatible"
 
     def transform_request(self, req: CanonicalRequest, m: ModelEntry) -> UpstreamRequest:

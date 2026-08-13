@@ -25,8 +25,8 @@ from data_plane.formats import openai as fmt
 if TYPE_CHECKING:
     from starlette.datastructures import Headers
 
-    from data_plane.adapters.base import CanonicalError, Ctx
     from data_plane.canonical import Adjustment, CanonicalResponse
+    from data_plane.egress.base import CanonicalError, Ctx
 
 DIALECT_HEADER = "x-airllm-dialect"
 
