@@ -18,7 +18,8 @@ from openai.types.chat import ChatCompletionMessageFunctionToolCall
 from starlette.datastructures import Headers
 from starlette.testclient import TestClient
 
-from data_plane import compat
+from data_plane.ingress import resolve
+from data_plane.ingress.openai import OpenAIIngress
 
 UPSTREAM = "https://api.openai.com/v1/chat/completions"
 
@@ -55,7 +56,7 @@ IMAGE_URL_BODY = {
     ],
 )
 def test_detection(body, headers, expected):
-    assert compat.wants_openai(Headers(headers), body) is expected
+    assert (resolve(Headers(headers), body).dialect == "openai") is expected
 
 
 def test_parse_translates_the_openai_shapes_and_keeps_the_rest():
@@ -67,7 +68,7 @@ def test_parse_translates_the_openai_shapes_and_keeps_the_rest():
         "frequency_penalty": 0.5,
         "stream_options": {"include_usage": True},
     }
-    req = compat.parse(body)
+    req = OpenAIIngress().parse(body)
     roles = [(m.role, [p.type for p in m.content]) for m in req.messages]
     assert roles == [("user", ["text"]), ("assistant", ["tool_call"]), ("user", ["tool_result"])]
     assert req.tools is not None

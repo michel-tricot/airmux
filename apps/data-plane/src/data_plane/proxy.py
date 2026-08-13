@@ -1,8 +1,8 @@
 """The request path behind POST /v1/chat/completions, per notes/design/INTERFACE.md.
 
-One pass: authenticate against the bundle, evaluate policy, resolve the credential, reconcile
-the request to the target model, translate through the adapter, call the provider, meter, and
-answer in the canonical shape with the gateway envelope reporting what was reconciled."""
+One dialect-blind pass: resolve the caller's ingress adapter, parse to canonical, evaluate
+policy, resolve the credential, reconcile to the target model, translate through the egress
+adapter, call the provider, meter, and answer in whatever dialect the request spoke."""
 
 from __future__ import annotations
 
@@ -20,11 +20,12 @@ from pydantic import ValidationError
 from starlette.responses import JSONResponse, Response, StreamingResponse
 
 from contract import SecretStoreUnavailableError, UsageEventV1, uuid7
-from data_plane import compat
 from data_plane.auth import authenticate
-from data_plane.canonical import Adjustment, CanonicalChunk, CanonicalRequest, CanonicalResponse, GatewayInfo, TextPart, Usage
+from data_plane.canonical import Adjustment, CanonicalRequest, CanonicalResponse, GatewayInfo, TextPart, Usage
 from data_plane.egress import REGISTRY
 from data_plane.egress.base import Ctx, UpstreamStreamError
+from data_plane.ingress import resolve
+from data_plane.ingress.canonical import CanonicalEgress
 from data_plane.metering import cost_breakdown, estimate_tokens
 from data_plane.policy import Allow, Deny, evaluate
 from data_plane.runtime import holder, state
@@ -32,24 +33,13 @@ from data_plane.transport import client
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Sequence
-    from typing import Protocol
 
     from starlette.requests import Request
 
     from contract import CredentialEntry, KeyEntry, ModelEntry, Secret, UsageStatus
-    from data_plane.egress.base import CanonicalError, EgressAdapter, StreamState, UpstreamRequest
+    from data_plane.egress.base import EgressAdapter, StreamState, UpstreamRequest
     from data_plane.holder import BundleSnapshot
-
-    class Egress(Protocol):
-        """How one dialect spells the canonical stream on the way out."""
-
-        def start(self, ctx: Ctx) -> list[bytes]: ...
-
-        def chunk(self, c: CanonicalChunk) -> list[bytes]: ...
-
-        def closing(self, final: CanonicalResponse, adjustments: list[Adjustment]) -> list[bytes]: ...
-
-        def error(self, err: CanonicalError) -> list[bytes]: ...
+    from data_plane.ingress.base import Egress, IngressAdapter
 
 
 logger = logging.getLogger("data_plane")
@@ -76,8 +66,8 @@ async def complete(request: Request) -> Response:
         return _error(e.status, e.code, e.message)
 
 
-async def _authorize(request: Request) -> tuple[CanonicalRequest, KeyEntry, BundleSnapshot, bool]:
-    """Authentication, dialect detection and body validation; raises RequestRejectedError on every no."""
+async def _authorize(request: Request) -> tuple[CanonicalRequest, KeyEntry, BundleSnapshot, IngressAdapter]:
+    """Authentication, dialect resolution and body validation; raises RequestRejectedError on every no."""
     snap = holder.snapshot
     if snap is None:
         raise RequestRejectedError(503, "bundle_unavailable")
@@ -91,13 +81,13 @@ async def _authorize(request: Request) -> tuple[CanonicalRequest, KeyEntry, Bund
         body = json.loads(await request.body())
         if not isinstance(body, dict):
             raise RequestRejectedError(400, "invalid_request", "the request body must be a JSON object")
-        openai_shape = compat.wants_openai(request.headers, body)
-        req = compat.parse(body) if openai_shape else CanonicalRequest.model_validate(body)
+        ingress = resolve(request.headers, body)
+        req = ingress.parse(body)
     except ValidationError as e:
         raise RequestRejectedError(400, "invalid_request", str(e.errors(include_url=False)[:3])) from e
     except (json.JSONDecodeError, ValueError) as e:
         raise RequestRejectedError(400, "invalid_request", str(e)) from e
-    return req, key, snap, openai_shape
+    return req, key, snap, ingress
 
 
 def reconcile(req: CanonicalRequest, model: ModelEntry) -> tuple[CanonicalRequest, list[Adjustment]]:
@@ -116,7 +106,7 @@ def reconcile(req: CanonicalRequest, model: ModelEntry) -> tuple[CanonicalReques
 
 
 async def _handle(request: Request) -> Response:
-    req, key, snap, openai_shape = await _authorize(request)
+    req, key, snap, ingress = await _authorize(request)
     decision = evaluate(req, key, snap, datetime.now(tz=UTC))
     if isinstance(decision, Deny):
         _record_denied(key, snap, req)
@@ -140,8 +130,7 @@ async def _handle(request: Request) -> Response:
     req, adjustments = reconcile(req, decision.model)
     upstream = adapter.transform_request(req, decision.model)
     if req.stream:
-        egress: Egress = compat.OpenAIEgress() if openai_shape else CanonicalEgress()
-        return await _stream(adapter, ctx, upstream, req, adjustments, egress)
+        return await _stream(adapter, ctx, upstream, req, adjustments, ingress.new_egress())
     try:
         resp = await client.request(upstream.method, upstream.url, headers=upstream.headers, content=upstream.body)
     except httpx.HTTPError as e:
@@ -150,36 +139,7 @@ async def _handle(request: Request) -> Response:
         return _upstream_error_body(ctx, resp.content, resp.status_code, req)
     final = adapter.transform_response(resp.content, ctx).model_copy(update={"gateway": GatewayInfo(adjustments=adjustments)})
     _record_usage(ctx, final, status="ok", req=req)
-    if openai_shape:
-        return compat.render_response(final)
-    return JSONResponse(final.model_dump(mode="json", exclude_none=True))
-
-
-def _sse(payload: bytes) -> bytes:
-    return b"data: " + payload + b"\n\n"
-
-
-DONE = b"data: [DONE]\n\n"
-
-
-class CanonicalEgress:
-    """The native stream, exactly as INTERFACE.md locks it: delta frames, one closing chunk
-    carrying finish_reason, usage and gateway with no delta, then [DONE]."""
-
-    def start(self, ctx: Ctx) -> list[bytes]:  # noqa: ARG002 uniform egress signature
-        return []
-
-    def chunk(self, c: CanonicalChunk) -> list[bytes]:
-        if c.delta is None:
-            return []
-        return [_sse(c.model_dump_json(exclude_none=True).encode())]
-
-    def closing(self, final: CanonicalResponse, adjustments: list[Adjustment]) -> list[bytes]:
-        closing = CanonicalChunk(id=final.id, finish_reason=final.finish_reason, usage=final.usage, gateway=GatewayInfo(adjustments=adjustments))
-        return [_sse(closing.model_dump_json(exclude_none=True).encode()), DONE]
-
-    def error(self, err: CanonicalError) -> list[bytes]:
-        return [_sse(json.dumps({"error": {"code": err.code, "message": err.message}}).encode()), DONE]
+    return ingress.render_response(final)
 
 
 async def _stream(  # noqa: PLR0913, PLR0917 the streaming lifecycle genuinely spans these six
@@ -207,7 +167,7 @@ async def _stream(  # noqa: PLR0913, PLR0917 the streaming lifecycle genuinely s
         stream_state = adapter.new_stream_state(ctx)
         handoff = stack.pop_all()
 
-    out = egress if egress is not None else CanonicalEgress()
+    out = egress if egress is not None else CanonicalEgress()  # the default spelling, for callers outside the request path (tests)
     return StreamingResponse(_events(adapter, ctx, resp, handoff, stream_state, req, list(adjustments), out), media_type="text/event-stream")
 
 
