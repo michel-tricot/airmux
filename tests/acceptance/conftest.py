@@ -125,6 +125,9 @@ class _StubHandler(BaseHTTPRequestHandler):
     STREAM_DELAY_S = 0.05
 
     def do_POST(self) -> None:
+        server = self.server
+        assert isinstance(server, _StubServer)
+        server.record_request()
         request = json.loads(self.rfile.read(int(self.headers.get("content-length", 0))) or b"{}")
         messages = request.get("messages")
         message = messages[-1] if isinstance(messages, list) and messages and isinstance(messages[-1], dict) else {}
@@ -181,6 +184,25 @@ class _StubHandler(BaseHTTPRequestHandler):
         return
 
 
+class _StubServer(ThreadingHTTPServer):
+    def __init__(self, address: tuple[str, int]) -> None:
+        super().__init__(address, _StubHandler)
+        self._request_count = 0
+        self._request_lock = threading.Lock()
+
+    def record_request(self) -> None:
+        with self._request_lock:
+            self._request_count += 1
+
+    def start(self) -> None:
+        threading.Thread(target=self.serve_forever, daemon=True).start()
+
+    @property
+    def request_count(self) -> int:
+        with self._request_lock:
+            return self._request_count
+
+
 class Stack:
     """One isolated deployment: cache dir, its own postgres database, config and three processes under a tmp cwd."""
 
@@ -198,8 +220,8 @@ class Stack:
         self.provisioned = False
         self.env: dict[str, str] = {}
         self._procs: dict[str, tuple[subprocess.Popen[bytes], TextIO]] = {}
-        self._stub = ThreadingHTTPServer(("127.0.0.1", self.stub_port), _StubHandler)
-        threading.Thread(target=self._stub.serve_forever, daemon=True).start()
+        self._stub = _StubServer(("127.0.0.1", self.stub_port))
+        self._stub.start()
 
     # setup ----------------------------------------------------------------
 
@@ -373,6 +395,10 @@ class Stack:
             json={"model": MODEL, "messages": [{"role": "user", "content": content}]},
             timeout=10.0,
         )
+
+    @property
+    def upstream_requests(self) -> int:
+        return self._stub.request_count
 
     def readyz(self) -> int:
         return httpx.get(f"{self.dp_url}/readyz", timeout=5.0).status_code

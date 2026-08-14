@@ -1,8 +1,7 @@
-"""Acceptance: many uvicorn workers share one cache dir and lose no events.
+"""Acceptance: many uvicorn workers share one cache dir without losing or duplicating events.
 
-Every successful request must land in the control plane exactly once: distinct event_id count
-equal to the number of 200s, with no duplicates and no loss. This is the proof the shared
-cache dir works.
+Every request received by the upstream must land exactly once in the control plane. The upstream
+count remains observable when the gateway served a request but its response was lost in transit.
 """
 
 from __future__ import annotations
@@ -23,25 +22,26 @@ PER_CLIENT = 30
 
 
 def _load(url: str, headers: dict[str, str], body: dict, clients: int, per_client: int) -> int:
-    oks: list[int] = []
+    successes: list[int] = []
     lock = threading.Lock()
 
     def worker() -> None:
         served = 0
         with httpx.Client(timeout=30.0) as client:
             for _ in range(per_client):
-                # a worker still booting can reset a connection before handling it, recording nothing
                 with contextlib.suppress(httpx.HTTPError):
-                    served += client.post(url, headers=headers, json=body).status_code == 200
+                    response = client.post(url, headers=headers, json=body)
+                    if response.status_code == 200:
+                        served += 1
         with lock:
-            oks.append(served)
+            successes.append(served)
 
     threads = [threading.Thread(target=worker) for _ in range(clients)]
     for t in threads:
         t.start()
     for t in threads:
         t.join()
-    return sum(oks)
+    return sum(successes)
 
 
 def test_multiworker_shared_cache_dir_loses_no_events(stack: Stack) -> None:
@@ -56,15 +56,19 @@ def test_multiworker_shared_cache_dir_loses_no_events(stack: Stack) -> None:
     headers = {"authorization": f"Bearer {stack.caller_api_key}"}
     body = {"model": "echo", "messages": [{"role": "user", "content": "hi"}]}
 
-    warmup = _load(url, headers, body, clients=WORKERS, per_client=5)
-    ok = warmup + _load(url, headers, body, clients=CONCURRENCY, per_client=PER_CLIENT)
-    assert ok > 400  # substantial concurrent load actually served across the workers
+    successful = _load(url, headers, body, clients=WORKERS, per_client=5)
+    successful += _load(url, headers, body, clients=CONCURRENCY, per_client=PER_CLIENT)
+    assert successful > 400
+
+    served = stack.upstream_requests
+    assert served >= successful
 
     deadline = time.monotonic() + 30
-    while time.monotonic() < deadline and len(stack.events()) < ok:
-        time.sleep(0.5)
-
     events = stack.events()
-    ids = {e["event_id"] for e in events}
-    assert len(ids) == ok  # no loss: every served request produced a distinct event
-    assert len(events) == ok  # exactly once: no duplicates
+    while time.monotonic() < deadline and len(events) < served:
+        time.sleep(0.5)
+        events = stack.events()
+
+    event_request_ids = [event["request_id"] for event in events]
+    assert len(events) == served
+    assert len(set(event_request_ids)) == served

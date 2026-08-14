@@ -10,12 +10,10 @@ import json
 import signal
 import sqlite3
 import subprocess
-import threading
-from http.server import ThreadingHTTPServer
 from typing import TYPE_CHECKING
 
 import httpx
-from conftest import _bin, _free_port, _poll, _StubHandler
+from conftest import _bin, _free_port, _poll, _StubServer
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -25,8 +23,8 @@ READY_TIMEOUT = 30.0
 
 def test_local_mode_serves_without_a_control_plane(tmp_path: Path) -> None:
     stub_port = _free_port()
-    stub = ThreadingHTTPServer(("127.0.0.1", stub_port), _StubHandler)
-    threading.Thread(target=stub.serve_forever, daemon=True).start()
+    stub = _StubServer(("127.0.0.1", stub_port))
+    stub.start()
 
     (tmp_path / "bundle.yml").write_text(
         f"""
