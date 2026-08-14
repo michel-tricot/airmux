@@ -4,7 +4,7 @@ from conftest import MODEL, PROVIDER
 
 from data_plane.canonical import CanonicalRequest
 from data_plane.profiles import compile_profile
-from data_plane.proxy import reconcile
+from data_plane.reconcile import reconcile
 
 
 def _request(**extras) -> CanonicalRequest:
@@ -16,7 +16,6 @@ def _closed(**overrides):
 
 
 def test_an_open_schema_forwards_extras_without_an_adjustment():
-    """Absence from a provider's schema is not evidence of rejection; 19 of 22 leave it open."""
     req, adjustments = reconcile(_request(frequency_penalty=0.5, top_k=40), MODEL, compile_profile(PROVIDER))
     assert req.extra == {"frequency_penalty": 0.5, "top_k": 40}
     assert adjustments == []
