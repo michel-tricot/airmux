@@ -56,8 +56,8 @@ model="${1:-}"
 [ -n "$model" ] || usage
 shift
 
-token="$(env_value AIRLLM_API_KEY)"
-[ -n "$token" ] || die "AIRLLM_API_KEY not in .env — run 'uv run airllm quickstart' first"
+api_key="$(env_value AIRLLM_API_KEY)"
+[ -n "$api_key" ] || die "AIRLLM_API_KEY not in .env — run 'uv run airllm quickstart' first"
 
 if models="$(list_models)" && [ -n "$models" ] && ! grep -qxF "$model" <<<"$models"; then
   echo "warning: '$model' is not in the catalog; starting anyway (requests may 404)" >&2
@@ -71,7 +71,7 @@ case "$agent" in
     # bearer, which is what the gateway's Messages surface expects. x-api-key auth is unset so
     # it does not shadow the bearer.
     export ANTHROPIC_BASE_URL="$gateway"
-    export ANTHROPIC_AUTH_TOKEN="$token"
+    export ANTHROPIC_AUTH_TOKEN="$api_key"
     export ANTHROPIC_MODEL="$model"
     export ANTHROPIC_SMALL_FAST_MODEL="$small"
     unset ANTHROPIC_API_KEY
@@ -83,7 +83,7 @@ case "$agent" in
     # Codex reaches custom providers through a model_providers entry; the -c overrides build it
     # per run, so no config file changes. Codex 0.147 dropped the chat wire, so this needs the
     # gateway's /v1/responses surface (the Responses dialect); until it lands, requests 404.
-    export AIRLLM_API_KEY="$token"
+    export AIRLLM_API_KEY="$api_key"
     echo "codex -> $gateway/v1/responses | model: $model" >&2
     exec codex \
       -c model_provider=airllm \
