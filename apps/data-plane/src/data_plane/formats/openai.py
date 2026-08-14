@@ -174,8 +174,8 @@ class UpstreamMessage(BaseModel):
 class UpstreamChoice(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
-    message: UpstreamMessage = Field(default_factory=UpstreamMessage)
-    finish_reason: str | None = None
+    message: UpstreamMessage
+    finish_reason: str
 
 
 class UpstreamTokenDetails(BaseModel):
@@ -196,7 +196,7 @@ class UpstreamCompletion(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
     id: str = ""
-    choices: list[UpstreamChoice] = Field(default_factory=list)
+    choices: list[UpstreamChoice] = Field(min_length=1)
     usage: UpstreamUsage | None = None
 
 

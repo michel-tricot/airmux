@@ -190,6 +190,11 @@ class UpstreamMessage(BaseModel):
     usage: UpstreamUsage | None = None
 
 
+class UpstreamCompletedMessage(UpstreamMessage):
+    content: list[UpstreamBlock]
+    stop_reason: str
+
+
 STOP_REASONS: dict[str, FinishReason] = {
     "end_turn": "stop",
     "stop_sequence": "stop",
@@ -253,7 +258,7 @@ class UpstreamBlockDelta(BaseModel):
 class UpstreamStreamEvent(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
-    type: str = ""
+    type: str
     index: int = 0
     message: UpstreamMessage | None = None
     content_block: UpstreamBlock | None = None

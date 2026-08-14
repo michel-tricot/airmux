@@ -126,8 +126,19 @@ class _StubHandler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:
         request = json.loads(self.rfile.read(int(self.headers.get("content-length", 0))) or b"{}")
+        messages = request.get("messages")
+        message = messages[-1] if isinstance(messages, list) and messages and isinstance(messages[-1], dict) else {}
+        prompt = message.get("content")
         if request.get("stream"):
-            self._stream_response()
+            self._stream_response(terminal=prompt != "truncated-stream")
+            return
+        if prompt == "malformed-buffered":
+            body = b"{}"
+            self.send_response(200)
+            self.send_header("content-type", "application/json")
+            self.send_header("content-length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
             return
         content = json.dumps(request) if request.get("model") == ECHO_MODEL else "ok"
         body = json.dumps(
@@ -143,7 +154,7 @@ class _StubHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
-    def _stream_response(self) -> None:
+    def _stream_response(self, terminal: bool = True) -> None:
         self.send_response(200)
         self.send_header("content-type", "text/event-stream")
         self.end_headers()
@@ -157,7 +168,8 @@ class _StubHandler(BaseHTTPRequestHandler):
             usage = {"id": "cmpl-stub", "choices": [], "usage": {"prompt_tokens": 11, "completion_tokens": 60, "total_tokens": 71}}
             for event in (finish, usage):
                 self.wfile.write(b"data: " + json.dumps(event).encode() + b"\n\n")
-            self.wfile.write(b"data: [DONE]\n\n")
+            if terminal:
+                self.wfile.write(b"data: [DONE]\n\n")
             self.wfile.flush()
 
     def log_message(self, format: str, *args: object) -> None:  # noqa: A002 name fixed by the BaseHTTPRequestHandler override; keeps the stub silent

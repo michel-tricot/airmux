@@ -11,6 +11,8 @@ import json
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
+from pydantic import ValidationError
+
 from data_plane.canonical import (
     AssistantPart,
     CanonicalChunk,
@@ -24,11 +26,20 @@ from data_plane.canonical import (
     ToolCallPart,
     Usage,
 )
-from data_plane.egress.base import EgressAdapter, RawEvent, StreamState, UpstreamRequest, UpstreamStreamError, encode, frame_sse
+from data_plane.egress.base import (
+    EgressAdapter,
+    RawEvent,
+    StreamState,
+    UpstreamProtocolError,
+    UpstreamRequest,
+    UpstreamStreamError,
+    encode,
+    frame_sse,
+)
 from data_plane.formats.anthropic import (
     MessagesBody,
     UpstreamBlockDelta,
-    UpstreamMessage,
+    UpstreamCompletedMessage,
     UpstreamStreamEvent,
     UpstreamUsage,
     finish_reason,
@@ -72,6 +83,8 @@ class AnthropicStreamState(StreamState):
     stop: str | None = None
     usage: UpstreamUsage | None = None
     usage_final: bool = False  # message_delta carries the real output count; before it, counts are estimates
+    started: bool = False
+    terminal_seen: bool = False
 
     @property
     def chunk_id(self) -> str:
@@ -149,7 +162,10 @@ class AnthropicAdapter(EgressAdapter):
         return UpstreamRequest(method="POST", url=url, headers=headers, body=encode(body, aliases=self.provider.param_aliases, extras=req.extra))
 
     def transform_response(self, raw: bytes, ctx: Ctx) -> CanonicalResponse:
-        message = UpstreamMessage.model_validate_json(raw)
+        try:
+            message = UpstreamCompletedMessage.model_validate_json(raw)
+        except ValidationError as error:
+            raise UpstreamProtocolError.buffered_response() from error
         return CanonicalResponse(
             id=message.id or ctx.request_id,
             model=ctx.model.model_id,
@@ -167,12 +183,23 @@ class AnthropicAdapter(EgressAdapter):
 
     def transform_stream_event(self, ev: RawEvent, state: StreamState) -> list[CanonicalChunk]:
         assert isinstance(state, AnthropicStreamState)  # noqa: S101 state comes from new_stream_state
-        data = json.loads(ev.data)
+        try:
+            data = json.loads(ev.data)
+        except (json.JSONDecodeError, UnicodeDecodeError) as error:
+            raise UpstreamProtocolError.stream_event() from error
+        if not isinstance(data, dict):
+            raise UpstreamProtocolError.stream_event()
         if data.get("type") == "error":
-            error = data.get("error") or {}
-            raise UpstreamStreamError(code=str(error.get("type") or "upstream_error"), message=str(error.get("message") or ""))
-        event = UpstreamStreamEvent.model_validate(data)
-        if event.type == "message_start" and event.message is not None:
+            payload = data.get("error") if isinstance(data.get("error"), dict) else {}
+            raise UpstreamStreamError(code=str(payload.get("type") or "upstream_error"), message=str(payload.get("message") or ""))
+        try:
+            event = UpstreamStreamEvent.model_validate(data)
+        except ValidationError as error:
+            raise UpstreamProtocolError.stream_event() from error
+        if event.type == "message_start":
+            if event.message is None:
+                raise UpstreamProtocolError.stream_event()
+            state.started = True
             state.response_id = event.message.id or None
             state.usage = event.message.usage
             return []
@@ -189,7 +216,14 @@ class AnthropicAdapter(EgressAdapter):
                 state.usage = opened.model_copy(update={"output_tokens": event.usage.output_tokens or opened.output_tokens})
                 state.usage_final = True
             return []
+        if event.type == "message_stop":
+            state.terminal_seen = True
         return []
+
+    def validate_stream(self, state: StreamState) -> None:
+        assert isinstance(state, AnthropicStreamState)  # noqa: S101 state comes from new_stream_state
+        if not state.started or not state.terminal_seen or state.stop is None:
+            raise UpstreamProtocolError.incomplete_stream()
 
     def finalize(self, state: StreamState) -> CanonicalResponse:
         assert isinstance(state, AnthropicStreamState)  # noqa: S101 state comes from new_stream_state

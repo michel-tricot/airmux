@@ -23,7 +23,7 @@ from contract import SecretStoreUnavailableError, UsageEventV1, uuid7
 from data_plane.auth import authenticate
 from data_plane.canonical import Adjustment, CanonicalRequest, CanonicalResponse, GatewayInfo, TextPart, Usage
 from data_plane.egress import REGISTRY
-from data_plane.egress.base import CanonicalError, Ctx, UpstreamStreamError
+from data_plane.egress.base import CanonicalError, Ctx, UpstreamProtocolError, UpstreamStreamError
 from data_plane.ingress import CANONICAL, resolve
 from data_plane.ingress import REGISTRY as INGRESS
 from data_plane.ingress.canonical import CanonicalResponseStream
@@ -211,7 +211,10 @@ async def _serve(
         return _upstream_exception(adapter, ctx, e, req)
     if resp.is_error:
         return _upstream_error_body(ctx, resp.content, resp.status_code, req)
-    final = adapter.transform_response(resp.content, ctx).model_copy(update={"gateway": GatewayInfo(adjustments=adjustments)})
+    try:
+        final = adapter.transform_response(resp.content, ctx).model_copy(update={"gateway": GatewayInfo(adjustments=adjustments)})
+    except UpstreamProtocolError as e:
+        return _upstream_exception(adapter, ctx, e, req)
     _record_usage(ctx, final, status="ok", req=req)
     return ingress.render_response(final)
 
@@ -266,11 +269,12 @@ async def _events(  # noqa: PLR0913, PLR0917 the streaming lifecycle genuinely s
                     for c in adapter.transform_stream_event(ev, stream_state):
                         for b in renderer.chunk(c):
                             yield b
+            adapter.validate_stream(stream_state)
             final = adapter.finalize(stream_state)
             for b in renderer.closing(final, adjustments):
                 yield b
             _record_usage(ctx, final, status="ok", req=req)
-        except (UpstreamStreamError, httpx.HTTPError) as e:
+        except (UpstreamProtocolError, UpstreamStreamError, httpx.HTTPError) as e:
             for b in renderer.error(adapter.map_error(e)):
                 yield b
             _record_usage(ctx, adapter.finalize(stream_state), status=_status_for_error(e), req=req)

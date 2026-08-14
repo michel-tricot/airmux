@@ -101,6 +101,20 @@ class UpstreamStreamError(Exception):
         super().__init__(message)
 
 
+class UpstreamProtocolError(ValueError):
+    @classmethod
+    def buffered_response(cls) -> UpstreamProtocolError:
+        return cls("invalid upstream response")
+
+    @classmethod
+    def stream_event(cls) -> UpstreamProtocolError:
+        return cls("invalid upstream stream event")
+
+    @classmethod
+    def incomplete_stream(cls) -> UpstreamProtocolError:
+        return cls("upstream stream ended before its terminal event")
+
+
 @dataclass(frozen=True)
 class Ctx:
     request_id: str
@@ -147,6 +161,9 @@ class EgressAdapter(ABC):
         """One wire event into canonical chunks, folding what finalize needs into the state. Synchronous, like frame."""
 
     @abstractmethod
+    def validate_stream(self, state: StreamState) -> None: ...
+
+    @abstractmethod
     def finalize(self, state: StreamState) -> CanonicalResponse:
         """Return a valid CanonicalResponse at ANY point in the stream.
 
@@ -158,6 +175,8 @@ class EgressAdapter(ABC):
 
     def map_error(self, e: Exception) -> CanonicalError:
         """Transport failures mapped to a canonical error; override only for provider-specific codes."""
+        if isinstance(e, UpstreamProtocolError):
+            return CanonicalError(status=502, code="invalid_upstream_response", message=str(e))
         if isinstance(e, UpstreamStreamError):
             return CanonicalError(status=502, code=e.code, message=e.message)
         if isinstance(e, httpx.TimeoutException):
