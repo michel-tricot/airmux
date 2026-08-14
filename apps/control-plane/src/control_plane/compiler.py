@@ -71,6 +71,9 @@ async def compile_bundle(org_id: UUID, bundle_id: UUID, now: datetime, staleness
                         "base_url": r.base_url,
                         "cache_read_multiplier": r.cache_read_multiplier,
                         "cache_write_multiplier": r.cache_write_multiplier,
+                        "param_aliases": r.param_aliases,
+                        "accepted_params": r.accepted_params,
+                        "params_closed": r.params_closed,
                     }
                 )
                 for r in provider_rows

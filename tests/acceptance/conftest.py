@@ -38,6 +38,7 @@ ORG = "org-acc"
 ADMIN_EMAIL = "admin@acceptance.test"
 ADMIN_PASSWORD = "acceptance-admin-password"
 MODEL = "echo"
+ECHO_MODEL = "quirk-upstream"  # the stub echoes the received body back for this model, so tests can see the wire
 STUB_API_KEY = "sk-acceptance-stub"
 READY_TIMEOUT = 30.0
 
@@ -128,10 +129,11 @@ class _StubHandler(BaseHTTPRequestHandler):
         if request.get("stream"):
             self._stream_response()
             return
+        content = json.dumps(request) if request.get("model") == ECHO_MODEL else "ok"
         body = json.dumps(
             {
                 "id": "cmpl-stub",
-                "choices": [{"index": 0, "message": {"role": "assistant", "content": "ok"}, "finish_reason": "stop"}],
+                "choices": [{"index": 0, "message": {"role": "assistant", "content": content}, "finish_reason": "stop"}],
                 "usage": {"prompt_tokens": 11, "completion_tokens": 3, "total_tokens": 14},
             }
         ).encode("utf-8")
@@ -227,6 +229,7 @@ class Stack:
 
             self._run([_bin("airllmcp"), "taxonomy", "--config", str(self.config_path)], self.env)
             _payload(session.post("/v1/org/provider-credentials", json={"provider": "stub", "value": STUB_API_KEY}, headers=scope))
+            _payload(session.post("/v1/org/provider-credentials", json={"provider": "quirk", "value": STUB_API_KEY}, headers=scope))
             _payload(session.post("/v1/org/bundles/compile", headers=scope))
 
         secrets = {
@@ -241,15 +244,28 @@ class Stack:
         self.provisioned = True
 
     def _write_taxonomy(self) -> None:
+        """The stub provider, plus a quirky one that exists to prove onboarding is config: it
+        respells max_tokens, closes its schema, and declares the one extra param it accepts."""
         spec = {
             "providers": [
                 {
                     "provider_id": "stub",
                     "kind": "openai_compatible",
                     "base_url": f"http://127.0.0.1:{self.stub_port}",
-                }
+                },
+                {
+                    "provider_id": "quirk",
+                    "kind": "openai_compatible",
+                    "base_url": f"http://127.0.0.1:{self.stub_port}",
+                    "param_aliases": {"max_tokens": "max_completion_tokens"},
+                    "accepted_params": ["top_k"],
+                    "params_closed": True,
+                },
             ],
-            "models": [{"model_id": MODEL, "provider_id": "stub", "upstream_model": MODEL}],
+            "models": [
+                {"model_id": MODEL, "provider_id": "stub", "upstream_model": MODEL},
+                {"model_id": "quirk", "provider_id": "quirk", "upstream_model": ECHO_MODEL},
+            ],
         }
         (self.tmp / "taxonomy.yml").write_text(yaml.safe_dump(spec), encoding="utf-8")
 

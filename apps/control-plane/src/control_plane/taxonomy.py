@@ -43,6 +43,9 @@ class ProviderIn(BaseModel):
     )
     cache_read_multiplier: float = Field(1.0, description="Input price factor for prompt-cache hits")
     cache_write_multiplier: float = Field(1.0, description="Input price factor for cache writes")
+    param_aliases: dict[str, str] = Field(default_factory=dict, description="Canonical param name to this provider's spelling")
+    accepted_params: list[str] | None = Field(None, description="Params known accepted beyond the core; consulted when params_closed")
+    params_closed: bool = Field(False, description="True when the provider's request schema rejects unknown params")
 
 
 class ModelIn(BaseModel):
@@ -81,6 +84,9 @@ async def upsert_provider(p: ProviderIn) -> Provider:
     provider.icon = p.icon
     provider.cache_read_multiplier = p.cache_read_multiplier
     provider.cache_write_multiplier = p.cache_write_multiplier
+    provider.param_aliases = p.param_aliases
+    provider.accepted_params = p.accepted_params
+    provider.params_closed = p.params_closed
     return await provider.save()
 
 
