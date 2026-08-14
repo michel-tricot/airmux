@@ -71,6 +71,39 @@ def test_apply_taxonomy_carries_the_provider_icon(tmp_path):
     assert [p.icon for p in run_in_db(tmp_path, Provider.find)] == [replaced]
 
 
+TAXONOMY_WITH_PROFILE = """
+providers:
+  - provider_id: stub
+    base_url: https://stub.example/v1
+    param_aliases:
+      max_tokens: max_completion_tokens
+    accepted_params: [top_k]
+    params_closed: true
+"""
+
+
+def test_apply_taxonomy_carries_the_provider_profile(tmp_path):
+    """The profile is what makes onboarding a quirky provider a config change; losing it on
+    upsert would silently reopen a closed schema."""
+    setup_db(tmp_path)
+
+    async def apply(doc: str):
+        await set_actor("u-test")
+        return await apply_taxonomy(TaxonomySpec.model_validate(yaml.safe_load(doc)))
+
+    run_in_db(tmp_path, lambda: apply(TAXONOMY_WITH_PROFILE))
+    (provider,) = run_in_db(tmp_path, Provider.find)
+    assert provider.param_aliases == {"max_tokens": "max_completion_tokens"}
+    assert provider.accepted_params == ["top_k"]
+    assert provider.params_closed is True
+
+    run_in_db(tmp_path, lambda: apply(TAXONOMY))
+    (provider,) = run_in_db(tmp_path, Provider.find)
+    assert provider.param_aliases == {}
+    assert provider.accepted_params is None
+    assert provider.params_closed is False
+
+
 def test_a_provider_declaring_no_icon_has_none(tmp_path):
     setup_db(tmp_path)
 
