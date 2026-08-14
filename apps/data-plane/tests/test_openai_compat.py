@@ -20,7 +20,7 @@ from starlette.datastructures import Headers
 from starlette.testclient import TestClient
 
 from data_plane.ingress import resolve
-from data_plane.ingress.openai import OpenAIIngress
+from data_plane.ingress.openai_native import OpenAINativeIngress
 from data_plane.profiles import compile_profile
 from data_plane.proxy import reconcile
 
@@ -53,13 +53,13 @@ IMAGE_URL_BODY = {
         ({**TEXT_BODY, "max_completion_tokens": 5}, {}, True),
         (TEXT_BODY, {"x-stainless-lang": "python"}, False),  # every Stainless-built SDK sends these, not only OpenAI's
         (TEXT_BODY, {"user-agent": "OpenAI/Python 3.0.0"}, True),
-        (TEXT_BODY, {"x-airllm-dialect": "openai"}, True),
+        (TEXT_BODY, {"x-airllm-dialect": "openai_native"}, True),
         (TOOL_ROLE_BODY, {"x-airllm-dialect": "canonical"}, False),
         (TEXT_BODY, {"user-agent": "OpenAI/Python 3.0.0", "x-airllm-dialect": "canonical"}, False),
     ],
 )
 def test_detection(body, headers, expected):
-    assert (resolve(Headers(headers), body).dialect == "openai") is expected
+    assert (resolve(Headers(headers), body).dialect == "openai_native") is expected
 
 
 def test_parse_translates_the_openai_shapes_and_keeps_the_rest():
@@ -71,7 +71,7 @@ def test_parse_translates_the_openai_shapes_and_keeps_the_rest():
         "frequency_penalty": 0.5,
         "stream_options": {"include_usage": True},
     }
-    req, _ = OpenAIIngress().parse(body)
+    req, _ = OpenAINativeIngress().parse(body)
     roles = [(m.role, [p.type for p in m.content]) for m in req.messages]
     assert roles == [("user", ["text"]), ("assistant", ["tool_call"]), ("user", ["tool_result"])]
     assert req.tools is not None
@@ -170,7 +170,7 @@ def test_the_aligned_path_is_a_fixpoint():
         "temperature": 0.7,
         "frequency_penalty": 0.5,
     }
-    ingress = OpenAIIngress()
+    ingress = OpenAINativeIngress()
     parsed, _ = ingress.parse(body)
     first, _ = reconcile(parsed, MODEL, compile_profile(PROVIDER))
     upstream = make_adapter().transform_request(first, MODEL)
@@ -181,7 +181,7 @@ def test_the_aligned_path_is_a_fixpoint():
 def test_an_unknown_tool_choice_variant_is_never_silently_none():
     """A consumed slot with an unrecognized value is a translation loss the caller hears about:
     the typed tool_choice stays honestly unset and the parse reports the drop."""
-    req, carried = OpenAIIngress().parse({**TEXT_BODY, "tool_choice": {"type": "allowed_tools", "tools": []}})
+    req, carried = OpenAINativeIngress().parse({**TEXT_BODY, "tool_choice": {"type": "allowed_tools", "tools": []}})
     assert req.tool_choice is None
     assert [(a.param, a.action) for a in carried] == [("tool_choice", "dropped")]
 

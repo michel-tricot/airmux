@@ -79,7 +79,7 @@ shape it spoke. This is additive: detection can never change what a canonical ca
 
 Recognition, in order:
 
-1. An explicit `x-airllm-dialect: openai` or `x-airllm-dialect: canonical` header wins
+1. An explicit `x-airllm-dialect: openai_native` or `x-airllm-dialect: canonical` header wins
 2. The client fingerprint: a `User-Agent` starting with `OpenAI/`, which the official SDKs send
    on every request. Deliberately not the `x-stainless-*` headers: those mean "a
    Stainless-generated SDK", which other vendors' clients also are

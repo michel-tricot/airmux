@@ -109,8 +109,8 @@ def _tool_call_delta(delta: ToolCallDelta) -> fmt.ToolCallDeltaOut:
     return fmt.ToolCallDeltaOut(index=delta.index, id=delta.id, type="function" if delta.id else None, function=function or None)
 
 
-class OpenAIIngress(IngressAdapter):
-    dialect = "openai"
+class OpenAINativeIngress(IngressAdapter):
+    dialect = "openai_native"
 
     def claims(self, headers: Headers, body: dict[str, Any]) -> bool:
         """The client fingerprint the official SDKs send on every request, or an unambiguous shape.
