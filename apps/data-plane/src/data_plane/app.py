@@ -5,6 +5,7 @@ import contextlib
 import logging
 from typing import TYPE_CHECKING
 
+import yaml
 from cryptography.exceptions import InvalidSignature
 from pydantic import ValidationError
 from starlette.applications import Starlette
@@ -12,13 +13,15 @@ from starlette.responses import JSONResponse
 from starlette.routing import Route
 
 from contract import verify_bundle
+from data_plane.bundle.config import LocalBundleConfig, RemoteBundleConfig
+from data_plane.bundle.local import admit_local, run_local_reload
+from data_plane.bundle.remote import run_poller
 from data_plane.cache import instance_id as cache_instance_id
 from data_plane.cache import read_cached_bundle
 from data_plane.config import Config, load_config
 from data_plane.credentials import CredentialResolver
 from data_plane.heartbeat import run_heartbeat
-from data_plane.outbox import build_outbox
-from data_plane.poller import run_poller
+from data_plane.outbox import EventOutbox, build_outbox
 from data_plane.proxy import complete
 from data_plane.runtime import holder, state
 
@@ -49,21 +52,45 @@ def _configure_dev_logging() -> None:
         logger.setLevel(logging.INFO)
 
 
-def _load_cached_bundle(config: Config, public_key: Ed25519PublicKey) -> None:
+def _load_cached_bundle(bundle_config: RemoteBundleConfig, public_key: Ed25519PublicKey) -> None:
     try:
-        signed = read_cached_bundle(config.bundle.cache_dir)
+        signed = read_cached_bundle(bundle_config.cache_dir)
     except ValidationError:
-        logger.exception("cached bundle in %s does not parse, ignoring it", config.bundle.cache_dir)
+        logger.exception("cached bundle in %s does not parse, ignoring it", bundle_config.cache_dir)
         return
     if signed is None:
-        logger.warning("no cached bundle in %s, serving 503 until one arrives", config.bundle.cache_dir)
+        logger.warning("no cached bundle in %s, serving 503 until one arrives", bundle_config.cache_dir)
         return
     try:
         bundle = verify_bundle(signed, public_key)
     except InvalidSignature:
         logger.exception("cached bundle failed signature verification, ignoring it")
         return
-    holder.admit(bundle, config.bundle.staleness_policy, source="cached")
+    holder.admit(bundle, bundle_config.staleness_policy, source="cached")
+
+
+def _start_bundle_source(config: Config, outbox: EventOutbox) -> list[asyncio.Task[None]]:
+    """Start whichever source feeds admit(): the file watcher, or the poller with its siblings.
+
+    A broken local file at boot logs and serves 503 until the reload sees a good one, the same
+    contract as a missing cached bundle."""
+    bundle_config = config.bundle
+    if isinstance(bundle_config, LocalBundleConfig):
+        try:
+            admit_local(bundle_config, holder)
+        except (OSError, ValidationError, ValueError, yaml.YAMLError):
+            logger.exception("local bundle %s did not load, serving 503 until it does", bundle_config.path)
+        return [asyncio.create_task(run_local_reload(bundle_config, holder))]
+    state.bundle_verify_key = bundle_config.verify_key
+    _load_cached_bundle(bundle_config, state.bundle_verify_key)
+    if not config.control_plane.url:
+        return []
+    instance_id = cache_instance_id(bundle_config.cache_dir)
+    return [
+        asyncio.create_task(run_poller(config.control_plane, bundle_config, holder, state.bundle_verify_key)),
+        asyncio.create_task(outbox.run()),
+        asyncio.create_task(run_heartbeat(config, holder, instance_id)),
+    ]
 
 
 def create_app(config_override: Config | None = None) -> Starlette:
@@ -75,21 +102,11 @@ def create_app(config_override: Config | None = None) -> Starlette:
         if config.dev:
             _configure_dev_logging()
         state.config = config
-        state.outbox = build_outbox(config)
+        outbox = build_outbox(config)
+        state.outbox = outbox
         state.credentials = CredentialResolver(config.secrets.build())
         try:
-            state.bundle_public_key = config.bundle.public_key
-            _load_cached_bundle(config, state.bundle_public_key)
-            instance_id = cache_instance_id(config.bundle.cache_dir)
-            tasks = (
-                [
-                    asyncio.create_task(run_poller(config, holder, state.bundle_public_key)),
-                    asyncio.create_task(state.outbox.run()),
-                    asyncio.create_task(run_heartbeat(config, holder, instance_id)),
-                ]
-                if config.control_plane.url
-                else []
-            )
+            tasks = _start_bundle_source(config, outbox)
             try:
                 yield
             finally:

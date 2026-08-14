@@ -37,8 +37,8 @@ if TYPE_CHECKING:
     from starlette.requests import Request
 
     from contract import CredentialEntry, KeyEntry, ModelEntry, Secret, UsageStatus
+    from data_plane.bundle.holder import BundleSnapshot
     from data_plane.egress.base import EgressAdapter, StreamState, UpstreamRequest
-    from data_plane.holder import BundleSnapshot
     from data_plane.ingress import IngressAdapter
     from data_plane.ingress.base import ResponseStream
     from data_plane.profiles import CompiledProfile

@@ -12,10 +12,10 @@ from starlette.testclient import TestClient
 from contract import Catalog, FileStoreConfig, MemoryStoreConfig, Secret, SecretStore, SecretStoreUnavailableError, sign_bundle, uuid7
 from data_plane.app import create_app
 from data_plane.auth import index_keys
+from data_plane.bundle import BundleSnapshot, RemoteBundleConfig
 from data_plane.canonical import CanonicalRequest
-from data_plane.config import BundleConfig, Config
+from data_plane.config import Config, EventsConfig
 from data_plane.credentials import CredentialResolver, index_credentials
-from data_plane.holder import BundleSnapshot
 from data_plane.outbox import SqliteOutbox
 from data_plane.policy import Allow, Deny, evaluate
 from data_plane.profiles import index_profiles
@@ -184,7 +184,11 @@ def _byok_app(tmp_path, credentials):
     bundle = make_bundle(keys=[entry], catalog=catalog, org=ORG)
     (tmp_path / "bundle.json").write_text(sign_bundle(bundle, bundle_key, "k1").model_dump_json(), encoding="utf-8")
     store_config = FileStoreConfig(root=tmp_path / "secrets")
-    config = Config(bundle=BundleConfig(public_key=bundle_key.public_key(), cache_dir=tmp_path), secrets=store_config)
+    config = Config(
+        bundle=RemoteBundleConfig(verify_key=bundle_key.public_key(), cache_dir=tmp_path),
+        secrets=store_config,
+        events=EventsConfig(cache_dir=tmp_path),
+    )
     return create_app(config), caller_token, store_config.build()
 
 

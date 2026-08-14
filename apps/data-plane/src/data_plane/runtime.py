@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from data_plane.holder import BundleHolder
+from data_plane.bundle.holder import BundleHolder
 
 if TYPE_CHECKING:
     from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 @dataclass
 class AppState:
     config: Config | None = None
-    bundle_public_key: Ed25519PublicKey | None = None
+    bundle_verify_key: Ed25519PublicKey | None = None
     outbox: EventOutbox | None = None
     credentials: CredentialResolver | None = None
 

@@ -5,9 +5,16 @@ import respx
 from conftest import make_config, make_key, make_signed
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
+from data_plane.bundle import BundleHolder, RemoteBundleConfig
+from data_plane.bundle.remote import poll_once
 from data_plane.cache import read_cached_bundle
-from data_plane.holder import BundleHolder
-from data_plane.poller import poll_once
+
+
+def _source(tmp_path):
+    """The poller's two arguments out of the test config, with the union narrowed for the type checker."""
+    config = make_config(tmp_path)
+    assert isinstance(config.bundle, RemoteBundleConfig)
+    return config.control_plane, config.bundle
 
 
 def enveloped(signed) -> str:
@@ -20,7 +27,8 @@ async def test_poll_swaps_and_persists(tmp_path):
     signed = make_signed(private_key)
     respx.get("http://cp.test/v1/bundle/latest").mock(return_value=httpx.Response(200, content=enveloped(signed)))
     holder = BundleHolder()
-    await poll_once(make_config(tmp_path), holder, private_key.public_key())
+    link, bundle_config = _source(tmp_path)
+    await poll_once(link, bundle_config, holder, private_key.public_key())
     assert holder.snapshot is not None
     assert holder.snapshot.bundle.bundle_id == signed.payload.bundle_id
     assert make_key("k1")[1].token_hash in holder.snapshot.key_index
@@ -35,10 +43,10 @@ async def test_poll_same_bundle_is_a_noop(tmp_path):
     signed = make_signed(private_key)
     respx.get("http://cp.test/v1/bundle/latest").mock(return_value=httpx.Response(200, content=enveloped(signed)))
     holder = BundleHolder()
-    config = make_config(tmp_path)
-    await poll_once(config, holder, private_key.public_key())
+    link, bundle_config = _source(tmp_path)
+    await poll_once(link, bundle_config, holder, private_key.public_key())
     (tmp_path / "bundle.json").unlink()
-    await poll_once(config, holder, private_key.public_key())
+    await poll_once(link, bundle_config, holder, private_key.public_key())
     assert not (tmp_path / "bundle.json").exists()
 
 
@@ -49,10 +57,10 @@ async def test_poll_revocation_updates_holder(tmp_path):
     second = make_signed(private_key, key_ids=())
     route = respx.get("http://cp.test/v1/bundle/latest").mock(return_value=httpx.Response(200, content=enveloped(first)))
     holder = BundleHolder()
-    config = make_config(tmp_path)
-    await poll_once(config, holder, private_key.public_key())
+    link, bundle_config = _source(tmp_path)
+    await poll_once(link, bundle_config, holder, private_key.public_key())
     assert holder.snapshot is not None
     assert make_key("k1")[1].token_hash in holder.snapshot.key_index
     route.mock(return_value=httpx.Response(200, content=enveloped(second)))
-    await poll_once(config, holder, private_key.public_key())
+    await poll_once(link, bundle_config, holder, private_key.public_key())
     assert holder.snapshot.key_index == {}

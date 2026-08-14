@@ -1,0 +1,26 @@
+# A standalone data plane: no control plane, no database, no signature.
+# The bundle is bundle.standalone.yml next to this file; edit it and the server reloads within seconds.
+#
+# Run from the repo root:
+#   export OPENAI_API_KEY=... ANTHROPIC_API_KEY=... GROQ_API_KEY=...
+#   uv run airllmdp serve --config airllm.standalone.yml
+#
+# Then:
+#   curl http://127.0.0.1:8080/v1/chat/completions \
+#     -H "Authorization: Bearer sk-inf-standalone-dev" \
+#     -H "Content-Type: application/json" \
+#     -d '{"model": "claude-sonnet-5", "messages": [{"role": "user", "content": "hi"}]}'
+
+vars:
+  dir: .airllm
+
+data_plane:
+  bundle:
+    kind: local
+    path: bundle.standalone.yml
+  events:
+    cache_dir: ${var:dir} # usage events queue here in sqlite; nothing ships them without a control plane
+  secrets:
+    # Explicit on purpose: provider keys resolve from the environment as {PROVIDER}_API_KEY,
+    # so the provider_id in the bundle decides the variable name.
+    kind: env

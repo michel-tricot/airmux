@@ -291,12 +291,13 @@ class Stack:
                 "secrets": secrets_store,
                 "control_plane": {"url": self.cp_url, "token": "env:GW_DATAPLANE_TOKEN", "heartbeat_interval_s": 2},
                 "bundle": {
-                    "public_key": "env:GW_BUNDLE_PUBLIC_KEY",
+                    "kind": "remote",
+                    "verify_key": "env:GW_BUNDLE_PUBLIC_KEY",
                     "cache_dir": str(self.cache_dir),
                     "staleness_policy": staleness_policy,
                     "poll_interval_s": poll_interval_s,
                 },
-                "events": {"flush_interval_s": flush_interval_s, "backend": backend},
+                "events": {"flush_interval_s": flush_interval_s, "backend": backend, "cache_dir": str(self.cache_dir)},
             },
         }
         self.config_path.write_text(yaml.safe_dump(cfg), encoding="utf-8")

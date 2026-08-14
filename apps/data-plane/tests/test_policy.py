@@ -4,9 +4,9 @@ from conftest import MODEL, NOW, PROVIDER, make_bundle, make_credential, make_ke
 
 from contract import Catalog, uuid7
 from data_plane.auth import index_keys
+from data_plane.bundle import BundleSnapshot
 from data_plane.canonical import CanonicalRequest
 from data_plane.credentials import index_credentials
-from data_plane.holder import BundleSnapshot
 from data_plane.policy import Allow, Deny, evaluate
 from data_plane.profiles import index_profiles
 

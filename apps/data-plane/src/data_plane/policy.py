@@ -9,8 +9,8 @@ if TYPE_CHECKING:
     from datetime import datetime
 
     from contract import CredentialEntry, KeyEntry, ModelEntry, ProviderEntry
+    from data_plane.bundle.holder import BundleSnapshot
     from data_plane.canonical import CanonicalRequest
-    from data_plane.holder import BundleSnapshot
     from data_plane.profiles import CompiledProfile
 
 

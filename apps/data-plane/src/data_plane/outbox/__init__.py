@@ -17,7 +17,7 @@ def build_outbox(config: Config) -> EventOutbox:
     if config.events.backend == "devnull":
         return DevNullOutbox()
     return SqliteOutbox(
-        cache_dir=config.bundle.cache_dir,
+        cache_dir=config.events.cache_dir,
         control_plane_url=config.control_plane.url,
         control_plane_token=config.control_plane.token,
         flush_interval_s=config.events.flush_interval_s,

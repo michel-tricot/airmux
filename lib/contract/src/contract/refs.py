@@ -9,11 +9,17 @@ import yaml
 from dotenv import find_dotenv, load_dotenv
 
 _REF = re.compile(r"\$\{(env|file):([^}]+)\}")
+_VAR = re.compile(r"\$\{var:([^}]+)\}")
 
 
 class UnsupportedRefSchemeError(Exception):
     def __init__(self, scheme: str) -> None:
         super().__init__(f"unsupported ref scheme: {scheme}")
+
+
+class UnknownVarError(Exception):
+    def __init__(self, name: str) -> None:
+        super().__init__(f"config references ${{var:{name}}} but the vars block does not define it")
 
 
 DEFAULT_SEPARATOR = ":-"
@@ -66,12 +72,28 @@ def _interpolate(value: str) -> str | None:
     return _REF.sub(lambda match: resolved[match.group(0)], value)
 
 
-def resolve_refs(node: object) -> object:
+def _substitute_vars(value: str, variables: dict[str, str]) -> str:
+    """The pass before ref resolution: ${var:NAME} is plain text substitution from the vars
+    block, so a var can sit inside a ref, as in ${file:${var:dir}/signing.key}. Vars hold
+    values, never logic; an unknown name fails loudly."""
+
+    def replace(match: re.Match[str]) -> str:
+        name = match.group(1)
+        if name not in variables:
+            raise UnknownVarError(name)
+        return variables[name]
+
+    return _VAR.sub(replace, value)
+
+
+def resolve_refs(node: object, variables: dict[str, str] | None = None) -> object:
     if isinstance(node, dict):
-        return {key: resolve_refs(value) for key, value in node.items()}
+        return {key: resolve_refs(value, variables) for key, value in node.items()}
     if isinstance(node, list):
-        return [resolve_refs(value) for value in node]
+        return [resolve_refs(value, variables) for value in node]
     if isinstance(node, str):
+        if variables is not None:
+            node = _substitute_vars(node, variables)
         if node.startswith(("env:", "file:")):
             return try_resolve_ref(node)
         return _interpolate(node)
@@ -85,7 +107,9 @@ def load_config_section(name: str, config_path: str | Path | None = None) -> dic
     if not path.exists():
         return {}
     doc = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    declared = doc.get("vars")
+    variables = {str(key): str(value) for key, value in declared.items()} if isinstance(declared, dict) else {}
     section = doc.get(name)
     if not isinstance(section, dict):
         return {}
-    return {str(key): resolve_refs(value) for key, value in section.items()}
+    return {str(key): resolve_refs(value, variables) for key, value in section.items()}
