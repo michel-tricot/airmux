@@ -12,7 +12,7 @@ import json
 import logging
 import time
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 import anyio
 import httpx
@@ -24,7 +24,8 @@ from data_plane.auth import authenticate
 from data_plane.canonical import Adjustment, CanonicalRequest, CanonicalResponse, GatewayInfo, TextPart, Usage
 from data_plane.egress import REGISTRY
 from data_plane.egress.base import CanonicalError, Ctx, UpstreamStreamError
-from data_plane.ingress import resolve
+from data_plane.ingress import CANONICAL, resolve
+from data_plane.ingress import REGISTRY as INGRESS
 from data_plane.ingress.canonical import CanonicalResponseStream
 from data_plane.metering import cost_breakdown, estimate_tokens
 from data_plane.policy import Allow, Deny, evaluate
@@ -54,7 +55,6 @@ class RequestRejectedError(Exception):
         self.status = status
         self.code = code
         self.message = message
-        self.ingress: IngressAdapter | None = None  # attached once the dialect is known, so the error speaks it
         super().__init__(code)
 
 
@@ -62,13 +62,51 @@ def _error(status: int, code: str, message: str = "") -> JSONResponse:
     return JSONResponse({"error": {"code": code, "message": message}}, status_code=status)
 
 
+def _rejection(e: RequestRejectedError) -> CanonicalError:
+    return CanonicalError(status=e.status, code=e.code, message=e.message)
+
+
 async def complete(request: Request) -> Response:
+    """The native route: the dialect is detected here, at the door, from the parsed body.
+
+    Failures before detection cannot speak a dialect, so they use the canonical envelope,
+    which is what the canonical ingress renders anyway."""
     try:
-        return await _handle(request)
+        key, snap = _authenticate(request)
+        body = await _body(request)
+        ingress = resolve(request.headers, body)
     except RequestRejectedError as e:
-        if e.ingress is not None:
-            return e.ingress.render_error(CanonicalError(status=e.status, code=e.code, message=e.message))
-        return _error(e.status, e.code, e.message)
+        return INGRESS[CANONICAL].render_error(_rejection(e))
+    return await _run(body, key, snap, ingress)
+
+
+async def messages(request: Request) -> Response:
+    """The Anthropic-shaped route: the dialect is the route, so every answer speaks it."""
+    ingress = INGRESS["anthropic"]
+    try:
+        key, snap = _authenticate(request)
+        body = await _body(request)
+    except RequestRejectedError as e:
+        return ingress.render_error(_rejection(e))
+    return await _run(body, key, snap, ingress)
+
+
+async def _body(request: Request) -> dict[str, Any]:
+    try:
+        body = json.loads(await request.body())
+    except json.JSONDecodeError as e:
+        raise RequestRejectedError(400, "invalid_request", str(e)) from e
+    if not isinstance(body, dict):
+        raise RequestRejectedError(400, "invalid_request", "the request body must be a JSON object")
+    return body
+
+
+async def _run(body: dict[str, Any], key: KeyEntry, snap: BundleSnapshot, ingress: IngressAdapter) -> Response:
+    try:
+        req, parse_adjustments = _parse(body, ingress)
+        return await _serve(req, key, snap, ingress, parse_adjustments)
+    except RequestRejectedError as e:
+        return ingress.render_error(_rejection(e))
 
 
 def _authenticate(request: Request) -> tuple[KeyEntry, BundleSnapshot]:
@@ -85,23 +123,14 @@ def _authenticate(request: Request) -> tuple[KeyEntry, BundleSnapshot]:
     return key, snap
 
 
-async def _parse(request: Request) -> tuple[CanonicalRequest, list[Adjustment], IngressAdapter]:
-    """The body into canonical through whichever dialect claims it, with the dialect's own
-    translation losses carried as adjustments; parse failures speak that dialect."""
-    ingress: IngressAdapter | None = None
+def _parse(body: dict[str, Any], ingress: IngressAdapter) -> tuple[CanonicalRequest, list[Adjustment]]:
+    """The body into canonical, with the dialect's own translation losses carried as adjustments."""
     try:
-        body = json.loads(await request.body())
-        if not isinstance(body, dict):
-            raise RequestRejectedError(400, "invalid_request", "the request body must be a JSON object")
-        ingress = resolve(request.headers, body)
-        req, adjustments = ingress.parse(body)
+        return ingress.parse(body)
     except ValidationError as e:
-        rejection = RequestRejectedError(400, "invalid_request", str(e.errors(include_url=False)[:3]))
-        rejection.ingress = ingress
-        raise rejection from e
-    except (json.JSONDecodeError, ValueError) as e:
+        raise RequestRejectedError(400, "invalid_request", str(e.errors(include_url=False)[:3])) from e
+    except ValueError as e:
         raise RequestRejectedError(400, "invalid_request", str(e)) from e
-    return req, adjustments, ingress
 
 
 # Params the gateway never forwards, whatever the provider accepts: n asks for a choices axis
@@ -146,16 +175,6 @@ def reconcile(req: CanonicalRequest, model: ModelEntry, profile: CompiledProfile
         return req, adjustments
     core = {name: getattr(req, name) for name in CanonicalRequest.model_fields}
     return CanonicalRequest.model_validate({**forwarded, **core}), adjustments
-
-
-async def _handle(request: Request) -> Response:
-    key, snap = _authenticate(request)
-    req, parse_adjustments, ingress = await _parse(request)
-    try:
-        return await _serve(req, key, snap, ingress, parse_adjustments)
-    except RequestRejectedError as e:
-        e.ingress = ingress
-        raise
 
 
 async def _serve(

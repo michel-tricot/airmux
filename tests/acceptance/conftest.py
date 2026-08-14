@@ -233,7 +233,7 @@ class Stack:
             _payload(session.post("/v1/org/bundles/compile", headers=scope))
 
         secrets = {
-            "AIRLLM_TOKEN": caller["token"],
+            "AIRLLM_API_KEY": caller["token"],
             "GW_ORG_MGMT_TOKEN": org_key["token"],
             "GW_DATAPLANE_TOKEN": data_plane_key["token"],
             "GW_BUNDLE_SIGNING_KEY": self.env["GW_BUNDLE_SIGNING_KEY"],
@@ -306,7 +306,7 @@ class Stack:
         """Collect the tokens the bootstrap minted into .env; a checkpoint that they all exist."""
         secrets = {k: v for k, v in dotenv_values(self.tmp / ".env").items() if v is not None}
         self.env = {**self.env, **secrets}
-        token = secrets.get("AIRLLM_TOKEN")
+        token = secrets.get("AIRLLM_API_KEY")
         assert token, "bootstrap did not mint a caller token"
         assert secrets.get("GW_ORG_MGMT_TOKEN"), "bootstrap did not mint an org token"
         assert secrets.get("GW_DATAPLANE_TOKEN"), "bootstrap did not mint a data plane token"

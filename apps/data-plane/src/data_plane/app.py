@@ -22,7 +22,7 @@ from data_plane.config import Config, load_config
 from data_plane.credentials import CredentialResolver
 from data_plane.heartbeat import run_heartbeat
 from data_plane.outbox import EventOutbox, build_outbox
-from data_plane.proxy import complete
+from data_plane.proxy import complete, messages
 from data_plane.runtime import holder, state
 
 if TYPE_CHECKING:
@@ -120,6 +120,7 @@ def create_app(config_override: Config | None = None) -> Starlette:
     return Starlette(
         routes=[
             Route("/v1/chat/completions", complete, methods=["POST"]),
+            Route("/v1/messages", messages, methods=["POST"]),
             Route("/healthz", healthz),
             Route("/readyz", readyz),
         ],

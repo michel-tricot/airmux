@@ -54,9 +54,42 @@ class RawEvent:
 
 @dataclass
 class StreamState:
-    """Adapter-shaped accumulation across one stream; construct in new_stream_state, never in the transport."""
+    """Adapter-shaped accumulation across one stream; construct in new_stream_state, never in the transport.
+
+    The base fields belong to frame_sse, the one SSE machine every adapter shares."""
 
     buffer: bytes = b""
+    pending_name: str | None = None
+    pending_data: list[bytes] = field(default_factory=list)
+
+
+def frame_sse(chunk: bytes, state: StreamState) -> Iterator[RawEvent]:
+    """The single source of truth for SSE framing: fix it here, every adapter is fixed.
+
+    A synchronous fold, per the streaming rules. Spec-shaped where it matters: lines end with
+    \\r\\n, \\n or \\r (a trailing \\r holds in the buffer until the next chunk says whether a
+    \\n follows); an event dispatches on the blank line; multiple data lines concatenate with
+    newlines; comment lines are ignored; the event name resets after dispatch. Adapters layer
+    only their dialect on top, like OpenAI's [DONE] sentinel."""
+    state.buffer += chunk
+    working = state.buffer
+    held = b""
+    if working.endswith(b"\r"):
+        working, held = working[:-1], b"\r"
+    *lines, state.buffer = working.replace(b"\r\n", b"\n").replace(b"\r", b"\n").split(b"\n")
+    state.buffer += held
+    for line in lines:
+        if not line:
+            if state.pending_data:
+                yield RawEvent(data=b"\n".join(state.pending_data), name=state.pending_name)
+            state.pending_data = []
+            state.pending_name = None
+        elif line.startswith(b":"):
+            continue
+        elif line.startswith(b"event:"):
+            state.pending_name = line[len(b"event:") :].strip().decode()
+        elif line.startswith(b"data:"):
+            state.pending_data.append(line[len(b"data:") :].strip())
 
 
 class UpstreamStreamError(Exception):

@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 SCHEMA_DIR = Path(__file__).resolve().parents[3] / "taxonomy" / "schemas" / "completion"
 
 # The reference vendor per wire family: its own extracted schema arbitrates what the adapter renders.
-REFERENCE_SCHEMA = {"openai_compatible": "oai.openai.request.json"}
+REFERENCE_SCHEMA = {"openai_compatible": "oai.openai.request.json", "anthropic": "anthropic.anthropic.request.json"}
 
 
 def _validator(kind: str) -> Validator:
