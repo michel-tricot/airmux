@@ -23,14 +23,14 @@ UPSTREAM = UpstreamRequest(method="POST", url="https://api.openai.com/v1/chat/co
 
 
 @respx.mock
-def test_streaming_end_to_end(token, dp_app):
+def test_streaming_end_to_end(api_key, dp_app):
     respx.post("https://api.openai.com/v1/chat/completions").mock(return_value=httpx.Response(200, content=TEXT_LOG))
     with (
         TestClient(dp_app) as client,
         client.stream(
             "POST",
             "/v1/chat/completions",
-            headers={"Authorization": f"Bearer {token}"},
+            headers={"Authorization": f"Bearer {api_key}"},
             json={"model": "gpt-test", "messages": [{"role": "user", "content": "hi"}], "stream": True},
         ) as r,
     ):
@@ -46,12 +46,12 @@ def test_streaming_end_to_end(token, dp_app):
 
 
 @respx.mock
-def test_streaming_upstream_error_status_passes_through(token, dp_app):
+def test_streaming_upstream_error_status_passes_through(api_key, dp_app):
     respx.post("https://api.openai.com/v1/chat/completions").mock(return_value=httpx.Response(429, json={"error": {"code": "rate_limited"}}))
     with TestClient(dp_app) as client:
         r = client.post(
             "/v1/chat/completions",
-            headers={"Authorization": f"Bearer {token}"},
+            headers={"Authorization": f"Bearer {api_key}"},
             json={"model": "gpt-test", "messages": [{"role": "user", "content": "hi"}], "stream": True},
         )
     assert r.status_code == 429

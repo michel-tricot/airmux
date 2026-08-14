@@ -81,15 +81,15 @@ def test_parse_translates_the_openai_shapes_and_keeps_the_rest():
     assert req.extra == {"frequency_penalty": 0.5}  # stream_options consumed silently, the rest kept for the reconcile step
 
 
-def _sdk(client: TestClient, token: str) -> OpenAI:
-    return OpenAI(base_url="http://testserver/v1", api_key=token, http_client=client)
+def _sdk(client: TestClient, api_key: str) -> OpenAI:
+    return OpenAI(base_url="http://testserver/v1", api_key=api_key, http_client=client)
 
 
 @respx.mock
-def test_the_sdk_completes_a_text_round_trip(token, dp_app):
+def test_the_sdk_completes_a_text_round_trip(api_key, dp_app):
     respx.post(UPSTREAM).mock(return_value=httpx.Response(200, json=TEXT_NONSTREAM))
     with TestClient(dp_app) as client:
-        completion = _sdk(client, token).chat.completions.create(model="gpt-test", messages=[{"role": "user", "content": "hi"}])
+        completion = _sdk(client, api_key).chat.completions.create(model="gpt-test", messages=[{"role": "user", "content": "hi"}])
     assert completion.choices[0].message.content == "héllo \U0001f30d world"
     assert completion.choices[0].finish_reason == "stop"
     assert completion.usage is not None
@@ -97,7 +97,7 @@ def test_the_sdk_completes_a_text_round_trip(token, dp_app):
 
 
 @respx.mock
-def test_the_sdk_completes_a_tool_round_trip(token, dp_app):
+def test_the_sdk_completes_a_tool_round_trip(api_key, dp_app):
     upstream_reply = {
         "id": "chatcmpl-9",
         "model": "gpt-real",
@@ -116,7 +116,7 @@ def test_the_sdk_completes_a_tool_round_trip(token, dp_app):
     }
     route = respx.post(UPSTREAM).mock(return_value=httpx.Response(200, json=upstream_reply))
     with TestClient(dp_app) as client:
-        completion = _sdk(client, token).chat.completions.create(
+        completion = _sdk(client, api_key).chat.completions.create(
             model="gpt-test",
             messages=[
                 {"role": "user", "content": "weather in Paris, then?"},
@@ -136,10 +136,10 @@ def test_the_sdk_completes_a_tool_round_trip(token, dp_app):
 
 
 @respx.mock
-def test_the_sdk_parses_the_stream(token, dp_app):
+def test_the_sdk_parses_the_stream(api_key, dp_app):
     respx.post(UPSTREAM).mock(return_value=httpx.Response(200, content=TEXT_LOG))
     with TestClient(dp_app) as client:
-        stream = _sdk(client, token).chat.completions.create(model="gpt-test", messages=[{"role": "user", "content": "hi"}], stream=True)
+        stream = _sdk(client, api_key).chat.completions.create(model="gpt-test", messages=[{"role": "user", "content": "hi"}], stream=True)
         chunks = list(stream)
     text = "".join(c.choices[0].delta.content or "" for c in chunks if c.choices and c.choices[0].delta)
     assert text == "héllo \U0001f30d world"
@@ -151,10 +151,12 @@ def test_the_sdk_parses_the_stream(token, dp_app):
 
 
 @respx.mock
-def test_what_the_gateway_dropped_is_visible_to_the_sdk_caller(token, dp_app):
+def test_what_the_gateway_dropped_is_visible_to_the_sdk_caller(api_key, dp_app):
     respx.post(UPSTREAM).mock(return_value=httpx.Response(200, json=TEXT_NONSTREAM))
     with TestClient(dp_app) as client:
-        completion = _sdk(client, token).chat.completions.create(model="gpt-test", messages=[{"role": "user", "content": "hi"}], extra_body={"n": 2})
+        completion = _sdk(client, api_key).chat.completions.create(
+            model="gpt-test", messages=[{"role": "user", "content": "hi"}], extra_body={"n": 2}
+        )
     gateway = (completion.model_extra or {}).get("gateway")
     assert gateway is not None
     assert [(a["param"], a["action"]) for a in gateway["adjustments"]] == [("n", "dropped")]
@@ -187,10 +189,10 @@ def test_an_unknown_tool_choice_variant_is_never_silently_none():
 
 
 @respx.mock
-def test_a_forwardable_extra_reaches_the_provider_with_no_adjustment(token, dp_app):
+def test_a_forwardable_extra_reaches_the_provider_with_no_adjustment(api_key, dp_app):
     route = respx.post(UPSTREAM).mock(return_value=httpx.Response(200, json=TEXT_NONSTREAM))
     with TestClient(dp_app) as client:
-        completion = _sdk(client, token).chat.completions.create(
+        completion = _sdk(client, api_key).chat.completions.create(
             model="gpt-test", messages=[{"role": "user", "content": "hi"}], extra_body={"frequency_penalty": 0.5}
         )
     assert json.loads(route.calls.last.request.content)["frequency_penalty"] == 0.5
@@ -198,22 +200,22 @@ def test_a_forwardable_extra_reaches_the_provider_with_no_adjustment(token, dp_a
     assert gateway == {"adjustments": []}
 
 
-def test_errors_come_back_in_the_callers_dialect(token, dp_app):
+def test_errors_come_back_in_the_callers_dialect(api_key, dp_app):
     """An SDK caller's rejection is an OpenAI-shaped error, so the SDK raises its typed exception
     with the gateway's code inside, instead of choking on a foreign envelope."""
     with TestClient(dp_app) as client, pytest.raises(openai.NotFoundError) as err:
-        _sdk(client, token).chat.completions.create(model="ghost", messages=[{"role": "user", "content": "hi"}])
+        _sdk(client, api_key).chat.completions.create(model="ghost", messages=[{"role": "user", "content": "hi"}])
     assert "unknown_model" in str(err.value)
 
 
 @respx.mock
-def test_a_canonical_caller_is_untouched_by_the_interpretation(token, dp_app):
+def test_a_canonical_caller_is_untouched_by_the_interpretation(api_key, dp_app):
     """The mirror invariant from INTERFACE.md: detection never changes a canonical answer."""
     respx.post(UPSTREAM).mock(return_value=httpx.Response(200, json=TEXT_NONSTREAM))
     with TestClient(dp_app) as client:
         r = client.post(
             "/v1/chat/completions",
-            headers={"Authorization": f"Bearer {token}"},
+            headers={"Authorization": f"Bearer {api_key}"},
             json={"model": "gpt-test", "messages": [{"role": "user", "content": "hi"}]},
         )
     body = r.json()

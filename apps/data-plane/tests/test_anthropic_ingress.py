@@ -24,8 +24,8 @@ UPSTREAM = "https://api.openai.com/v1/chat/completions"
 STREAM_EVENT: TypeAdapter[RawMessageStreamEvent] = TypeAdapter(RawMessageStreamEvent)
 
 
-def _post(client: TestClient, token: str, body: dict, **kwargs):
-    return client.request("POST", "/v1/messages", headers={"Authorization": f"Bearer {token}"}, json=body, **kwargs)
+def _post(client: TestClient, api_key: str, body: dict, **kwargs):
+    return client.request("POST", "/v1/messages", headers={"Authorization": f"Bearer {api_key}"}, json=body, **kwargs)
 
 
 def test_parse_hoists_system_and_keeps_the_rest_as_extras():
@@ -74,12 +74,12 @@ def test_the_sdk_reads_a_thinking_signature_back():
 
 
 @respx.mock
-def test_a_cross_provider_round_trip_parses_with_the_sdk_models(token, dp_app):
+def test_a_cross_provider_round_trip_parses_with_the_sdk_models(api_key, dp_app):
     """An Anthropic-speaking caller served by an OpenAI-family upstream: the route's reason to exist."""
     route = respx.post(UPSTREAM).mock(return_value=httpx.Response(200, json=TEXT_NONSTREAM))
     with TestClient(dp_app) as client:
         response = _post(
-            client, token, {"model": "gpt-test", "max_tokens": 64, "system": "You are terse.", "messages": [{"role": "user", "content": "hi"}]}
+            client, api_key, {"model": "gpt-test", "max_tokens": 64, "system": "You are terse.", "messages": [{"role": "user", "content": "hi"}]}
         )
     assert response.status_code == 200, response.text
     message = Message.model_validate_json(response.content)
@@ -93,10 +93,10 @@ def test_a_cross_provider_round_trip_parses_with_the_sdk_models(token, dp_app):
 
 
 @respx.mock
-def test_the_stream_parses_with_the_sdk_models(token, dp_app):
+def test_the_stream_parses_with_the_sdk_models(api_key, dp_app):
     respx.post(UPSTREAM).mock(return_value=httpx.Response(200, content=TEXT_LOG))
     with TestClient(dp_app) as client:
-        response = _post(client, token, {"model": "gpt-test", "max_tokens": 64, "messages": [{"role": "user", "content": "hi"}], "stream": True})
+        response = _post(client, api_key, {"model": "gpt-test", "max_tokens": 64, "messages": [{"role": "user", "content": "hi"}], "stream": True})
     payloads = [line[6:] for line in response.text.splitlines() if line.startswith("data: ")]
     events = [STREAM_EVENT.validate_json(payload) for payload in payloads if json.loads(payload)["type"] != "ping"]  # the SDK skips pings too
     kinds = [event.type for event in events]
@@ -111,7 +111,7 @@ def test_the_stream_parses_with_the_sdk_models(token, dp_app):
 
 
 @respx.mock
-def test_tools_translate_on_the_way_through(token, dp_app):
+def test_tools_translate_on_the_way_through(api_key, dp_app):
     reply = {
         "id": "chatcmpl-9",
         "model": "gpt-real",
@@ -132,7 +132,7 @@ def test_tools_translate_on_the_way_through(token, dp_app):
     with TestClient(dp_app) as client:
         response = _post(
             client,
-            token,
+            api_key,
             {
                 "model": "gpt-test",
                 "max_tokens": 64,
@@ -150,9 +150,9 @@ def test_tools_translate_on_the_way_through(token, dp_app):
     assert sent["tools"][0]["function"]["name"] == "get_weather"  # Anthropic tool shape respelled for OpenAI
 
 
-def test_errors_speak_this_dialect(token, dp_app):
+def test_errors_speak_this_dialect(api_key, dp_app):
     """The envelope the SDK maps to its typed exceptions: {type: error, error: {type, message}}."""
     with TestClient(dp_app) as client:
-        response = _post(client, token, {"model": "ghost", "max_tokens": 8, "messages": [{"role": "user", "content": "hi"}]})
+        response = _post(client, api_key, {"model": "ghost", "max_tokens": 8, "messages": [{"role": "user", "content": "hi"}]})
     assert response.status_code == 404
     assert response.json() == {"type": "error", "error": {"type": "unknown_model", "message": ""}}

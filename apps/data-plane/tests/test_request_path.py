@@ -26,12 +26,12 @@ OPENAI_RESPONSE = {
 
 
 @respx.mock
-def test_chat_completion_end_to_end(token, dp_app, tmp_path):
+def test_chat_completion_end_to_end(api_key, dp_app, tmp_path):
     route = respx.post("https://api.openai.com/v1/chat/completions").mock(return_value=httpx.Response(200, json=OPENAI_RESPONSE))
     with TestClient(dp_app) as client:
         r = client.post(
             "/v1/chat/completions",
-            headers={"Authorization": f"Bearer {token}"},
+            headers={"Authorization": f"Bearer {api_key}"},
             json={"model": "gpt-test", "messages": [{"role": "user", "content": "say hi"}]},
         )
     assert r.status_code == 200
@@ -46,30 +46,30 @@ def test_chat_completion_end_to_end(token, dp_app, tmp_path):
 
 
 @respx.mock
-def test_missing_token_rejected(token, dp_app):
+def test_missing_token_rejected(api_key, dp_app):
     with TestClient(dp_app) as client:
         r = client.post("/v1/chat/completions", json={"model": "gpt-test", "messages": []})
     assert r.status_code == 401
 
 
 @respx.mock
-def test_upstream_error_passed_through(token, dp_app):
+def test_upstream_error_passed_through(api_key, dp_app):
     respx.post("https://api.openai.com/v1/chat/completions").mock(return_value=httpx.Response(429, json={"error": {"code": "rate_limited"}}))
     with TestClient(dp_app) as client:
         r = client.post(
             "/v1/chat/completions",
-            headers={"Authorization": f"Bearer {token}"},
+            headers={"Authorization": f"Bearer {api_key}"},
             json={"model": "gpt-test", "messages": [{"role": "user", "content": "hi"}]},
         )
     assert r.status_code == 429
 
 
 @respx.mock
-def test_policy_denial_is_metered(token, dp_app, tmp_path):
+def test_policy_denial_is_metered(api_key, dp_app, tmp_path):
     with TestClient(dp_app) as client:
         r = client.post(
             "/v1/chat/completions",
-            headers={"Authorization": f"Bearer {token}"},
+            headers={"Authorization": f"Bearer {api_key}"},
             json={"model": "ghost", "messages": [{"role": "user", "content": "hi"}]},
         )
     assert r.status_code == 404  # unknown model
@@ -78,12 +78,12 @@ def test_policy_denial_is_metered(token, dp_app, tmp_path):
 
 
 @respx.mock
-def test_upstream_timeout_is_metered_as_timeout(token, dp_app, tmp_path):
+def test_upstream_timeout_is_metered_as_timeout(api_key, dp_app, tmp_path):
     respx.post("https://api.openai.com/v1/chat/completions").mock(side_effect=httpx.ReadTimeout("timed out"))
     with TestClient(dp_app) as client:
         r = client.post(
             "/v1/chat/completions",
-            headers={"Authorization": f"Bearer {token}"},
+            headers={"Authorization": f"Bearer {api_key}"},
             json={"model": "gpt-test", "messages": [{"role": "user", "content": "hi"}]},
         )
     assert r.status_code == 504

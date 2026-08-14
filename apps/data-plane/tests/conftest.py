@@ -136,7 +136,7 @@ TEXT_NONSTREAM = {
 @dataclass(frozen=True)
 class BootedApp:
     app: Starlette
-    token: str
+    api_key: str
 
 
 @pytest.fixture
@@ -153,12 +153,12 @@ def booted(tmp_path, monkeypatch) -> BootedApp:
     (tmp_path / "bundle.json").write_text(sign_bundle(bundle, bundle_key, "k1").model_dump_json(), encoding="utf-8")
     config = Config(bundle=RemoteBundleConfig(verify_key=bundle_key.public_key(), cache_dir=tmp_path), events=EventsConfig(cache_dir=tmp_path))
     monkeypatch.setenv("P1_API_KEY", "sk-test-not-real")  # the conventional name the env store falls back to for a platform provider key
-    return BootedApp(app=create_app(config), token=caller_token)
+    return BootedApp(app=create_app(config), api_key=caller_token)
 
 
 @pytest.fixture
-def token(booted: BootedApp) -> str:
-    return booted.token
+def api_key(booted: BootedApp) -> str:
+    return booted.api_key
 
 
 @pytest.fixture
