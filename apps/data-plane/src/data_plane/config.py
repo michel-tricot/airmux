@@ -24,7 +24,7 @@ class BundleConfig(BaseModel):
     kind: Literal["control_plane"] = "control_plane"
     public_key: Ed25519PublicKeyB64  # parsed once from base64 at load; verifies bundle signatures
     org: UUID | None = None  # which org's bundle this data plane serves; None takes the newest across orgs
-    cache_dir: Path = Path("/var/cache/gateway")
+    cache_dir: Path = Path(".airllm")
     staleness_policy: Literal["serve_and_warn", "refuse"] = "serve_and_warn"
     poll_interval_s: float = 30.0
 
@@ -39,7 +39,7 @@ class LocalBundleConfig(BaseModel):
     kind: Literal["local"]
     path: Path
     reload_interval_s: float = 2.0
-    cache_dir: Path = Path("/var/cache/gateway")
+    cache_dir: Path = Path(".airllm")
 
 
 class EventsConfig(BaseModel):
