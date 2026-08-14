@@ -29,6 +29,7 @@ from data_plane.ingress import REGISTRY as INGRESS
 from data_plane.ingress.canonical import CanonicalResponseStream
 from data_plane.metering import cost_breakdown, estimate_tokens
 from data_plane.policy import Allow, Deny, evaluate
+from data_plane.reconcile import reconcile
 from data_plane.runtime import holder, state
 from data_plane.transport import client
 
@@ -37,12 +38,11 @@ if TYPE_CHECKING:
 
     from starlette.requests import Request
 
-    from contract import CredentialEntry, KeyEntry, ModelEntry, Secret, UsageStatus
+    from contract import CredentialEntry, KeyEntry, Secret, UsageStatus
     from data_plane.bundle.holder import BundleSnapshot
     from data_plane.egress.base import EgressAdapter, StreamState, UpstreamRequest
     from data_plane.ingress import IngressAdapter
     from data_plane.ingress.base import ResponseStream
-    from data_plane.profiles import CompiledProfile
 
 
 logger = logging.getLogger("data_plane")
@@ -131,50 +131,6 @@ def _parse(body: dict[str, Any], ingress: IngressAdapter) -> tuple[CanonicalRequ
         raise RequestRejectedError(400, "invalid_request", str(e.errors(include_url=False)[:3])) from e
     except ValueError as e:
         raise RequestRejectedError(400, "invalid_request", str(e)) from e
-
-
-# Params the gateway never forwards, whatever the provider accepts: n asks for a choices axis
-# the locked response deliberately does not have, so honoring it would silently discard output.
-GATEWAY_HELD = frozenset({"n"})
-
-
-def _drop_reason(req: CanonicalRequest, profile: CompiledProfile, param: str) -> str | None:
-    """Why this extra cannot forward, or None when it can. Lookups against the compiled profile only.
-
-    An extra can never share a core field's name (validation consumes those as the field), so
-    the only collision to guard is a provider alias respelling a set core field onto an extra's name."""
-    if param in GATEWAY_HELD:
-        return "the response carries one completion; a sampling fan-out cannot forward"
-    source = profile.respelled.get(param)
-    if source is not None and getattr(req, source, None) is not None:
-        return f"collides with {source}, which this provider spells {param}"
-    if profile.params_closed and param not in profile.accepted:
-        return f"{profile.provider_id} accepts only its declared params"
-    return None
-
-
-def reconcile(req: CanonicalRequest, model: ModelEntry, profile: CompiledProfile) -> tuple[CanonicalRequest, list[Adjustment]]:
-    """What the gateway changes before the adapter runs, every change reported, never silent.
-
-    Extras the profile allows stay on the request and merge after the typed body at the egress;
-    the rest leave here, each with its reason. Absence from a provider's schema is not evidence
-    of rejection (19 of 22 leave additionalProperties open), so open schemas forward."""
-    adjustments = []
-    forwarded: dict[str, object] = {}
-    extra = req.extra  # the property copies; read it once
-    for param, value in extra.items():
-        reason = _drop_reason(req, profile, param)
-        if reason is None:
-            forwarded[param] = value
-        else:
-            adjustments.append(Adjustment(param=param, action="dropped", detail=reason))
-    if req.max_tokens and model.max_output_tokens and req.max_tokens > model.max_output_tokens:
-        adjustments.append(Adjustment(param="max_tokens", action="clamped", detail=f"model caps output at {model.max_output_tokens} tokens"))
-        req = req.model_copy(update={"max_tokens": model.max_output_tokens})
-    if len(forwarded) == len(extra):
-        return req, adjustments
-    core = {name: getattr(req, name) for name in CanonicalRequest.model_fields}
-    return CanonicalRequest.model_validate({**forwarded, **core}), adjustments
 
 
 async def _serve(

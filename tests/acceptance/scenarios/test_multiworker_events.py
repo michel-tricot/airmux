@@ -9,6 +9,7 @@ from __future__ import annotations
 import contextlib
 import threading
 import time
+from collections import Counter
 from typing import TYPE_CHECKING
 
 import httpx
@@ -65,10 +66,11 @@ def test_multiworker_shared_cache_dir_loses_no_events(stack: Stack) -> None:
 
     deadline = time.monotonic() + 30
     events = stack.events()
-    while time.monotonic() < deadline and len(events) < served:
+    while time.monotonic() < deadline and sum(event["status"] == "ok" for event in events) < served:
         time.sleep(0.5)
         events = stack.events()
 
     event_request_ids = [event["request_id"] for event in events]
-    assert len(events) == served
-    assert len(set(event_request_ids)) == served
+    statuses = Counter(str(event["status"]) for event in events)
+    assert len(set(event_request_ids)) == len(event_request_ids), f"duplicate request ids: {statuses}"
+    assert statuses["ok"] == served, f"upstream requests: {served}; usage events: {statuses}"

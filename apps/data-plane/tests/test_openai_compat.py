@@ -22,7 +22,7 @@ from starlette.testclient import TestClient
 from data_plane.ingress import resolve
 from data_plane.ingress.openai_native import OpenAINativeIngress
 from data_plane.profiles import compile_profile
-from data_plane.proxy import reconcile
+from data_plane.reconcile import reconcile
 
 UPSTREAM = "https://api.openai.com/v1/chat/completions"
 
