@@ -65,7 +65,7 @@ def _buffer_event(stack: Stack, event_id: str, body: str) -> None:
 def test_skeleton_syncs_bundle_heartbeat_and_events(stack: Stack) -> None:
     stack.write_config()
     stack.start_cp()
-    stack.collect_tokens()
+    stack.collect_credentials()
     stack.start_dp()
     stack.wait_dp_ready()  # readyz turns 200 only once a signed bundle is verified and admitted
 

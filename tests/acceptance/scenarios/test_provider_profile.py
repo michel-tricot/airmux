@@ -20,13 +20,13 @@ if TYPE_CHECKING:
 def test_a_quirky_provider_onboards_as_config(stack: Stack) -> None:
     stack.write_config()
     stack.start_cp()
-    stack.collect_tokens()
+    stack.collect_credentials()
     stack.start_dp()
     stack.wait_dp_ready()
 
     response = httpx.post(
         f"{stack.dp_url}/v1/chat/completions",
-        headers={"authorization": f"Bearer {stack.caller_token}"},
+        headers={"authorization": f"Bearer {stack.caller_api_key}"},
         json={
             "model": "quirk",
             "messages": [{"role": "user", "content": "hi"}],

@@ -177,7 +177,7 @@ class Stack:
         self.dp_url = f"http://127.0.0.1:{self.dp_port}"
         self.cache_dir = tmp / ".airllm"
         self.config_path = tmp / "config.yml"
-        self.caller_token = ""
+        self.caller_api_key = ""
         self.provisioned = False
         self.env: dict[str, str] = {}
         self._procs: dict[str, tuple[subprocess.Popen[bytes], TextIO]] = {}
@@ -302,15 +302,15 @@ class Stack:
         }
         self.config_path.write_text(yaml.safe_dump(cfg), encoding="utf-8")
 
-    def collect_tokens(self) -> None:
-        """Collect the tokens the bootstrap minted into .env; a checkpoint that they all exist."""
+    def collect_credentials(self) -> None:
+        """Collect the credentials the bootstrap minted into .env; a checkpoint that they all exist."""
         secrets = {k: v for k, v in dotenv_values(self.tmp / ".env").items() if v is not None}
         self.env = {**self.env, **secrets}
         token = secrets.get("AIRLLM_API_KEY")
-        assert token, "bootstrap did not mint a caller token"
+        assert token, "bootstrap did not mint a caller api key"
         assert secrets.get("GW_ORG_MGMT_TOKEN"), "bootstrap did not mint an org token"
         assert secrets.get("GW_DATAPLANE_TOKEN"), "bootstrap did not mint a data plane token"
-        self.caller_token = token
+        self.caller_api_key = token
 
     # processes ------------------------------------------------------------
 
@@ -352,7 +352,7 @@ class Stack:
     def request(self, content: str = "hi") -> httpx.Response:
         return httpx.post(
             f"{self.dp_url}/v1/chat/completions",
-            headers={"authorization": f"Bearer {self.caller_token}"},
+            headers={"authorization": f"Bearer {self.caller_api_key}"},
             json={"model": MODEL, "messages": [{"role": "user", "content": content}]},
             timeout=10.0,
         )
