@@ -21,11 +21,25 @@ class ControlPlaneLink(BaseModel):
 class BundleConfig(BaseModel):
     model_config = ConfigDict(frozen=True, arbitrary_types_allowed=True)
 
+    kind: Literal["control_plane"] = "control_plane"
     public_key: Ed25519PublicKeyB64  # parsed once from base64 at load; verifies bundle signatures
     org: UUID | None = None  # which org's bundle this data plane serves; None takes the newest across orgs
     cache_dir: Path = Path("/var/cache/gateway")
     staleness_policy: Literal["serve_and_warn", "refuse"] = "serve_and_warn"
     poll_interval_s: float = 30.0
+
+
+class LocalBundleConfig(BaseModel):
+    """The other mode: the bundle is a file the operator writes, no control plane anywhere.
+
+    cache_dir stays because the event outbox lives there."""
+
+    model_config = ConfigDict(frozen=True)
+
+    kind: Literal["local"]
+    path: Path
+    reload_interval_s: float = 2.0
+    cache_dir: Path = Path("/var/cache/gateway")
 
 
 class EventsConfig(BaseModel):
@@ -39,7 +53,7 @@ class Config(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     control_plane: ControlPlaneLink = Field(default_factory=ControlPlaneLink)
-    bundle: BundleConfig
+    bundle: BundleConfig | LocalBundleConfig
     secrets: SecretsConfig = Field(default_factory=EnvStoreConfig)  # where provider keys live; must name the store the control plane writes
     events: EventsConfig = Field(default_factory=EventsConfig)
     dev: bool = False  # set by the --dev flag on the entry point, gate dev-only behavior on this

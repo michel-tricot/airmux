@@ -15,17 +15,17 @@ from data_plane.transport import client
 if TYPE_CHECKING:
     from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 
-    from data_plane.config import Config
+    from data_plane.config import BundleConfig, ControlPlaneLink
     from data_plane.holder import BundleHolder
 
 logger = logging.getLogger("data_plane")
 
 
-async def poll_once(config: Config, holder: BundleHolder, public_key: Ed25519PublicKey) -> None:
+async def poll_once(link: ControlPlaneLink, bundle_config: BundleConfig, holder: BundleHolder, public_key: Ed25519PublicKey) -> None:
     resp = await client.get(
-        f"{config.control_plane.url}/v1/bundle/latest",
-        headers={"authorization": f"Bearer {config.control_plane.token}"},
-        params={"org_id": str(config.bundle.org)} if config.bundle.org else {},
+        f"{link.url}/v1/bundle/latest",
+        headers={"authorization": f"Bearer {link.token}"},
+        params={"org_id": str(bundle_config.org)} if bundle_config.org else {},
     )
     resp.raise_for_status()
     signed = SignedBundle.model_validate(resp.json()["data"])
@@ -43,14 +43,14 @@ async def poll_once(config: Config, holder: BundleHolder, public_key: Ed25519Pub
             signed.payload.org_id,
         )
         raise
-    if holder.admit(bundle, config.bundle.staleness_policy, source="polled"):
-        write_cached_bundle(config.bundle.cache_dir, signed)
+    if holder.admit(bundle, bundle_config.staleness_policy, source="polled"):
+        write_cached_bundle(bundle_config.cache_dir, signed)
 
 
-async def run_poller(config: Config, holder: BundleHolder, public_key: Ed25519PublicKey) -> None:
+async def run_poller(link: ControlPlaneLink, bundle_config: BundleConfig, holder: BundleHolder, public_key: Ed25519PublicKey) -> None:
     await run_periodic(
-        lambda: poll_once(config, holder, public_key),
-        config.bundle.poll_interval_s,
+        lambda: poll_once(link, bundle_config, holder, public_key),
+        bundle_config.poll_interval_s,
         (httpx.HTTPError, ValidationError, InvalidSignature, OSError),
         "bundle poll",
     )
