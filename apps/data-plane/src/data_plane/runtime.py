@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 @dataclass
 class AppState:
     config: Config | None = None
-    bundle_public_key: Ed25519PublicKey | None = None
+    bundle_verify_key: Ed25519PublicKey | None = None
     outbox: EventOutbox | None = None
     credentials: CredentialResolver | None = None
 

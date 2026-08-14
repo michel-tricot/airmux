@@ -81,13 +81,13 @@ def _start_bundle_source(config: Config, outbox: EventOutbox) -> list[asyncio.Ta
         except (OSError, ValidationError, ValueError, yaml.YAMLError):
             logger.exception("local bundle %s did not load, serving 503 until it does", bundle_config.path)
         return [asyncio.create_task(run_local_reload(bundle_config, holder))]
-    state.bundle_public_key = bundle_config.public_key
-    _load_cached_bundle(bundle_config, state.bundle_public_key)
+    state.bundle_verify_key = bundle_config.verify_key
+    _load_cached_bundle(bundle_config, state.bundle_verify_key)
     if not config.control_plane.url:
         return []
     instance_id = cache_instance_id(bundle_config.cache_dir)
     return [
-        asyncio.create_task(run_poller(config.control_plane, bundle_config, holder, state.bundle_public_key)),
+        asyncio.create_task(run_poller(config.control_plane, bundle_config, holder, state.bundle_verify_key)),
         asyncio.create_task(outbox.run()),
         asyncio.create_task(run_heartbeat(config, holder, instance_id)),
     ]

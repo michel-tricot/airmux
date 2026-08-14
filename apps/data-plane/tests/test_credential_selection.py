@@ -185,7 +185,7 @@ def _byok_app(tmp_path, credentials):
     (tmp_path / "bundle.json").write_text(sign_bundle(bundle, bundle_key, "k1").model_dump_json(), encoding="utf-8")
     store_config = FileStoreConfig(root=tmp_path / "secrets")
     config = Config(
-        bundle=RemoteBundleConfig(public_key=bundle_key.public_key(), cache_dir=tmp_path),
+        bundle=RemoteBundleConfig(verify_key=bundle_key.public_key(), cache_dir=tmp_path),
         secrets=store_config,
         events=EventsConfig(cache_dir=tmp_path),
     )
