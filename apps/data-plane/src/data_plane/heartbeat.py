@@ -12,8 +12,8 @@ from data_plane.transport import client
 if TYPE_CHECKING:
     from uuid import UUID
 
+    from data_plane.bundle.holder import BundleHolder
     from data_plane.config import Config
-    from data_plane.holder import BundleHolder
 
 try:
     VERSION = version("data-plane")

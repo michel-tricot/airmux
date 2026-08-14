@@ -131,10 +131,10 @@ every Stainless-generated SDK sends those, so the User-Agent prefix is the discr
 
 ## Two sources, one bundle
 
-The data plane has two modes, selected by `bundle.kind` in its config. `control_plane` polls
-and verifies signed bundles, as before. `local` compiles a hand-written file
-(data_plane/local.py) into the same BundleV1 and feeds the same admit(). The request path
-never learns the source. Local mode needs no signature, no Postgres and no control plane:
+The data plane has two modes, selected by `bundle.kind` in its config. `remote` polls the
+control plane and verifies signed bundles, as before. `local` compiles a hand-written file
+into the same BundleV1 and feeds the same admit(). Both live in data_plane/bundle, and the
+request path never learns the source. Local mode needs no signature, no Postgres and no control plane:
 keys are plaintext in the file and hashed at load, and one platform credential per provider
 resolves through the env store as {PROVIDER}_API_KEY. The file reloads on change; a broken
 edit keeps the last good bundle serving.

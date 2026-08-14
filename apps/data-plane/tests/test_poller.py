@@ -5,16 +5,15 @@ import respx
 from conftest import make_config, make_key, make_signed
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
+from data_plane.bundle import BundleHolder, RemoteBundleConfig
+from data_plane.bundle.remote import poll_once
 from data_plane.cache import read_cached_bundle
-from data_plane.config import BundleConfig
-from data_plane.holder import BundleHolder
-from data_plane.poller import poll_once
 
 
 def _source(tmp_path):
     """The poller's two arguments out of the test config, with the union narrowed for the type checker."""
     config = make_config(tmp_path)
-    assert isinstance(config.bundle, BundleConfig)
+    assert isinstance(config.bundle, RemoteBundleConfig)
     return config.control_plane, config.bundle
 
 

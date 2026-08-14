@@ -16,6 +16,7 @@ data_plane:
     # Written by `airllm quickstart`, which posts the token the operator holds to the control plane
     token: ${file:.airllm/dataplane.key}
   bundle:
+    kind: remote # or local, with path pointing at a hand-written bundle file
     # signing.pub is generated alongside signing.key by: uv run airllmcp keygen
     public_key: ${file:.airllm/signing.pub}
     cache_dir: .airllm

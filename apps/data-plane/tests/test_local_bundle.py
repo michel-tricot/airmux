@@ -10,9 +10,9 @@ from starlette.testclient import TestClient
 
 from data_plane.app import create_app
 from data_plane.auth import authenticate, index_keys
-from data_plane.config import Config, LocalBundleConfig
-from data_plane.holder import BundleHolder
-from data_plane.local import load_local, reload_if_changed
+from data_plane.bundle import BundleHolder, LocalBundleConfig
+from data_plane.bundle.local import load_local, reload_if_changed
+from data_plane.config import Config
 
 NOW = datetime.now(tz=UTC)
 

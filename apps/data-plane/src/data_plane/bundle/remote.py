@@ -15,13 +15,14 @@ from data_plane.transport import client
 if TYPE_CHECKING:
     from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 
-    from data_plane.config import BundleConfig, ControlPlaneLink
-    from data_plane.holder import BundleHolder
+    from data_plane.bundle.config import RemoteBundleConfig
+    from data_plane.bundle.holder import BundleHolder
+    from data_plane.config import ControlPlaneLink
 
 logger = logging.getLogger("data_plane")
 
 
-async def poll_once(link: ControlPlaneLink, bundle_config: BundleConfig, holder: BundleHolder, public_key: Ed25519PublicKey) -> None:
+async def poll_once(link: ControlPlaneLink, bundle_config: RemoteBundleConfig, holder: BundleHolder, public_key: Ed25519PublicKey) -> None:
     resp = await client.get(
         f"{link.url}/v1/bundle/latest",
         headers={"authorization": f"Bearer {link.token}"},
@@ -47,7 +48,7 @@ async def poll_once(link: ControlPlaneLink, bundle_config: BundleConfig, holder:
         write_cached_bundle(bundle_config.cache_dir, signed)
 
 
-async def run_poller(link: ControlPlaneLink, bundle_config: BundleConfig, holder: BundleHolder, public_key: Ed25519PublicKey) -> None:
+async def run_poller(link: ControlPlaneLink, bundle_config: RemoteBundleConfig, holder: BundleHolder, public_key: Ed25519PublicKey) -> None:
     await run_periodic(
         lambda: poll_once(link, bundle_config, holder, public_key),
         bundle_config.poll_interval_s,

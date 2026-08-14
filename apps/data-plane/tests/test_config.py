@@ -7,7 +7,8 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from pydantic import ValidationError
 
 from contract import public_key_to_b64
-from data_plane.config import BundleConfig, LocalBundleConfig, load_config
+from data_plane.bundle import LocalBundleConfig, RemoteBundleConfig
+from data_plane.config import load_config
 
 PUBLIC_KEY_B64 = public_key_to_b64(Ed25519PrivateKey.generate().public_key())
 
@@ -37,7 +38,7 @@ def test_repo_config_parses_through_the_data_plane_loader(clean_env, monkeypatch
     config = load_config()
     assert config.control_plane.url == "http://127.0.0.1:8000"
     assert config.control_plane.token == "dp-token"
-    assert isinstance(config.bundle, BundleConfig)
+    assert isinstance(config.bundle, RemoteBundleConfig)
     assert public_key_to_b64(config.bundle.public_key) == public_key_to_b64(key.public_key())
 
 
@@ -54,17 +55,17 @@ def test_repo_config_takes_the_stack_control_plane_from_the_environment(clean_en
 
 
 def test_malformed_public_key_fails_at_load(clean_env):
-    (clean_env / "airllm.yml").write_text("data_plane:\n  bundle:\n    public_key: not-a-key\n", encoding="utf-8")
+    (clean_env / "airllm.yml").write_text("data_plane:\n  bundle:\n    kind: remote\n    public_key: not-a-key\n", encoding="utf-8")
     with pytest.raises((ValidationError, ValueError)):
         load_config()
 
 
 def test_defaults_apply_for_missing_sections(clean_env):
-    config = f"data_plane:\n  bundle:\n    public_key: {PUBLIC_KEY_B64}\n"
+    config = f"data_plane:\n  bundle:\n    kind: remote\n    public_key: {PUBLIC_KEY_B64}\n"
     (clean_env / "airllm.yml").write_text(config, encoding="utf-8")
     config = load_config()
     assert config.control_plane.url is None
-    assert isinstance(config.bundle, BundleConfig)
+    assert isinstance(config.bundle, RemoteBundleConfig)
     assert config.bundle.poll_interval_s == 30.0
     assert config.events.flush_interval_s == 5.0
     assert config.bundle.staleness_policy == "serve_and_warn"

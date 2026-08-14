@@ -13,14 +13,15 @@ from starlette.responses import JSONResponse
 from starlette.routing import Route
 
 from contract import verify_bundle
+from data_plane.bundle.config import LocalBundleConfig, RemoteBundleConfig
+from data_plane.bundle.local import admit_local, run_local_reload
+from data_plane.bundle.remote import run_poller
 from data_plane.cache import instance_id as cache_instance_id
 from data_plane.cache import read_cached_bundle
-from data_plane.config import BundleConfig, Config, LocalBundleConfig, load_config
+from data_plane.config import Config, load_config
 from data_plane.credentials import CredentialResolver
 from data_plane.heartbeat import run_heartbeat
-from data_plane.local import admit_local, run_local_reload
 from data_plane.outbox import EventOutbox, build_outbox
-from data_plane.poller import run_poller
 from data_plane.proxy import complete
 from data_plane.runtime import holder, state
 
@@ -51,7 +52,7 @@ def _configure_dev_logging() -> None:
         logger.setLevel(logging.INFO)
 
 
-def _load_cached_bundle(bundle_config: BundleConfig, public_key: Ed25519PublicKey) -> None:
+def _load_cached_bundle(bundle_config: RemoteBundleConfig, public_key: Ed25519PublicKey) -> None:
     try:
         signed = read_cached_bundle(bundle_config.cache_dir)
     except ValidationError:

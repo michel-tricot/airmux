@@ -20,8 +20,8 @@ from data_plane.tasks import run_periodic
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from data_plane.config import LocalBundleConfig
-    from data_plane.holder import BundleHolder
+    from data_plane.bundle.config import LocalBundleConfig
+    from data_plane.bundle.holder import BundleHolder
 
 logger = logging.getLogger("data_plane")
 

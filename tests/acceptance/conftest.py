@@ -291,6 +291,7 @@ class Stack:
                 "secrets": secrets_store,
                 "control_plane": {"url": self.cp_url, "token": "env:GW_DATAPLANE_TOKEN", "heartbeat_interval_s": 2},
                 "bundle": {
+                    "kind": "remote",
                     "public_key": "env:GW_BUNDLE_PUBLIC_KEY",
                     "cache_dir": str(self.cache_dir),
                     "staleness_policy": staleness_policy,

@@ -25,7 +25,8 @@ from contract import (
     uuid7,
 )
 from data_plane.app import create_app
-from data_plane.config import BundleConfig, Config, ControlPlaneLink, EventsConfig
+from data_plane.bundle import RemoteBundleConfig
+from data_plane.config import Config, ControlPlaneLink, EventsConfig
 from data_plane.egress import REGISTRY
 from data_plane.egress.base import Ctx
 
@@ -92,7 +93,7 @@ def make_signed(private_key, key_ids=("k1",), org=ORG):
 def make_config(tmp_path, backend="sqlite") -> Config:
     return Config(
         control_plane=ControlPlaneLink(url="http://cp.test", token="dp-token"),
-        bundle=BundleConfig(public_key=UNUSED_PUBLIC_KEY, cache_dir=tmp_path),
+        bundle=RemoteBundleConfig(public_key=UNUSED_PUBLIC_KEY, cache_dir=tmp_path),
         events=EventsConfig(backend=backend),
     )
 
@@ -150,7 +151,7 @@ def booted(tmp_path, monkeypatch) -> BootedApp:
     catalog = Catalog(providers=[PROVIDER], models=[MODEL], credentials=[PLATFORM_CREDENTIAL])
     bundle = make_bundle(keys=[entry], catalog=catalog)
     (tmp_path / "bundle.json").write_text(sign_bundle(bundle, bundle_key, "k1").model_dump_json(), encoding="utf-8")
-    config = Config(bundle=BundleConfig(public_key=bundle_key.public_key(), cache_dir=tmp_path))
+    config = Config(bundle=RemoteBundleConfig(public_key=bundle_key.public_key(), cache_dir=tmp_path))
     monkeypatch.setenv("P1_API_KEY", "sk-test-not-real")  # the conventional name the env store falls back to for a platform provider key
     return BootedApp(app=create_app(config), token=caller_token)
 
