@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+from pathlib import Path
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -22,6 +23,7 @@ class EventsConfig(BaseModel):
 
     flush_interval_s: float = 5.0
     backend: Literal["sqlite", "devnull"] = "sqlite"  # how usage events are collected; devnull discards them
+    cache_dir: Path = Path(".airllm")  # where the sqlite outbox lives; workers sharing it share one queue
 
 
 class Config(BaseModel):

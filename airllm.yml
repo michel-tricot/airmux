@@ -1,3 +1,5 @@
+x-cache-dir: &cache-dir .airllm
+
 control_plane:
   database:
     # DATABASE_URL when the host sets one, as Replit's managed PostgreSQL and docker-compose.yml do;
@@ -19,8 +21,9 @@ data_plane:
     kind: remote # or local, with path pointing at a hand-written bundle file
     # signing.pub is generated alongside signing.key by: uv run airllmcp keygen
     public_key: ${file:.airllm/signing.pub}
-    cache_dir: .airllm
+    cache_dir: *cache-dir
     staleness_policy: serve_and_warn # or refuse
     poll_interval_s: 5
   events:
+    cache_dir: *cache-dir
     flush_interval_s: 5

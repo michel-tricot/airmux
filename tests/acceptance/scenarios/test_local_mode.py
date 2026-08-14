@@ -47,11 +47,13 @@ models:
     )
     (tmp_path / "config.yml").write_text(
         f"""
+x-cache-dir: &cache-dir {tmp_path / ".airllm"}
 data_plane:
   bundle:
     kind: local
     path: {tmp_path / "bundle.yml"}
-    cache_dir: {tmp_path / ".airllm"}
+  events:
+    cache_dir: *cache-dir
 """,
         encoding="utf-8",
     )

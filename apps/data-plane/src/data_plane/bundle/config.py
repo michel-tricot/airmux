@@ -23,16 +23,13 @@ class RemoteBundleConfig(BaseModel):
 
 
 class LocalBundleConfig(BaseModel):
-    """The bundle is a file the operator writes, no control plane anywhere.
-
-    cache_dir stays because the event outbox lives there."""
+    """The bundle is a file the operator writes, no control plane anywhere."""
 
     model_config = ConfigDict(frozen=True)
 
     kind: Literal["local"]
     path: Path
     reload_interval_s: float = 2.0
-    cache_dir: Path = Path(".airllm")
 
 
 BundleConfig = Annotated[RemoteBundleConfig | LocalBundleConfig, Field(discriminator="kind")]

@@ -12,7 +12,7 @@ from data_plane.app import create_app
 from data_plane.auth import authenticate, index_keys
 from data_plane.bundle import BundleHolder, LocalBundleConfig
 from data_plane.bundle.local import load_local, reload_if_changed
-from data_plane.config import Config
+from data_plane.config import Config, EventsConfig
 
 NOW = datetime.now(tz=UTC)
 
@@ -76,7 +76,7 @@ def test_the_bundle_id_follows_the_file_content(tmp_path):
 
 def test_a_reload_swaps_on_change_and_survives_a_broken_edit(tmp_path):
     path = _write(tmp_path)
-    config = LocalBundleConfig(kind="local", path=path, cache_dir=tmp_path)
+    config = LocalBundleConfig(kind="local", path=path)
     holder = BundleHolder()
     mtime = reload_if_changed(config, holder, 0.0)
     assert holder.snapshot is not None
@@ -94,7 +94,7 @@ def test_a_reload_swaps_on_change_and_survives_a_broken_edit(tmp_path):
 def test_local_mode_serves_end_to_end(tmp_path, monkeypatch):
     monkeypatch.setenv("P1_API_KEY", "sk-upstream")
     route = respx.post("https://api.openai.com/v1/chat/completions").mock(return_value=httpx.Response(200, json=UPSTREAM_REPLY))
-    config = Config(bundle=LocalBundleConfig(kind="local", path=_write(tmp_path), cache_dir=tmp_path))
+    config = Config(bundle=LocalBundleConfig(kind="local", path=_write(tmp_path)), events=EventsConfig(cache_dir=tmp_path))
     with TestClient(create_app(config)) as client:
         assert client.get("/readyz").status_code == 200
         response = client.post(
