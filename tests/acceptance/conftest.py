@@ -145,7 +145,12 @@ class _StubHandler(BaseHTTPRequestHandler):
             {
                 "id": "cmpl-stub",
                 "choices": [{"index": 0, "message": {"role": "assistant", "content": content}, "finish_reason": "stop"}],
-                "usage": {"prompt_tokens": 11, "completion_tokens": 3, "total_tokens": 14},
+                "usage": {
+                    "prompt_tokens": 11,
+                    "completion_tokens": 3,
+                    "total_tokens": 14,
+                    "prompt_tokens_details": {"cached_tokens": 4},
+                },
             }
         ).encode("utf-8")
         self.send_response(200)

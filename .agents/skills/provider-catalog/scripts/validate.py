@@ -13,16 +13,14 @@ from __future__ import annotations
 
 import json
 import sys
+from importlib.util import find_spec
 from pathlib import Path
 
 from paths import TAXONOMY
 
 import yaml
 
-try:
-    from jsonschema import Draft202012Validator
-except ImportError:
-    Draft202012Validator = None
+HAS_JSONSCHEMA = find_spec("jsonschema") is not None
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from canonical import MODEL_ORDER, sort_models
@@ -145,7 +143,9 @@ def check_schemas(all_entries: list[dict]) -> None:
                     continue
                 if not (ROOT_FORMS & set(doc)):
                     fail("schema", f"{rel} has no root schema form, so it constrains nothing")
-                if Draft202012Validator is not None:
+                if HAS_JSONSCHEMA:
+                    from jsonschema import Draft202012Validator
+
                     try:
                         Draft202012Validator.check_schema(doc)
                     except Exception as exc:
@@ -221,7 +221,7 @@ def main() -> int:
     check_models(all_entries)
     check_seed(all_entries)
 
-    if Draft202012Validator is None:
+    if not HAS_JSONSCHEMA:
         print("note: jsonschema is not installed, so schemas were not compiled")
 
     if failures:

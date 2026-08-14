@@ -5,6 +5,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { ProviderInKind } from './providerInKind';
+import type { ProviderInParamAliases } from './providerInParamAliases';
 
 /**
  * How to reach a provider, not how to authenticate to it: credentials are their own resource.
@@ -21,8 +22,10 @@ export interface ProviderIn {
   base_url: string;
   /** Provider mark as a standalone 24x24 SVG document, empty when the provider has none. Carried as markup so adding a provider needs no client change to make it recognisable, which makes it untrusted markup to whatever renders it; sanitize at the render site */
   icon?: string;
-  /** Input price factor for prompt-cache hits */
-  cache_read_multiplier?: number;
-  /** Input price factor for cache writes */
-  cache_write_multiplier?: number;
+  /** Canonical param name to this provider's spelling */
+  param_aliases?: ProviderInParamAliases;
+  /** Params known accepted beyond the core; consulted when params_closed */
+  accepted_params?: string[] | null;
+  /** True when the provider's request schema rejects unknown params */
+  params_closed?: boolean;
 }

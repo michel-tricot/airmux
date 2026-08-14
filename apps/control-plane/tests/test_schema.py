@@ -94,6 +94,45 @@ def test_migrations_produce_the_model_schema(pg_db):
     assert diff == []
 
 
+def test_direct_price_migration_preserves_existing_cache_rates(pg_db):
+    url = pg_db("direct_prices")
+    config = Config(str(CONTROL_PLANE_DIR / "alembic.ini"))
+    config.set_main_option("script_location", str(CONTROL_PLANE_DIR / "migrations"))
+    config.set_main_option("sqlalchemy.url", url)
+    command.upgrade(config, "a9f3c6e1d8b4")
+
+    def seed(conn):
+        conn.execute(text("SELECT set_config('app.user_id', 'schema-test', true)"))
+        provider_id = conn.execute(
+            text(
+                """
+                INSERT INTO provider (
+                    name, kind, base_url, icon, cache_read_multiplier, cache_write_multiplier,
+                    param_aliases, accepted_params, params_closed
+                ) VALUES ('p1', 'openai_compatible', 'https://p1.example/v1', '', 0.1, 1.25, '{}', NULL, false)
+                RETURNING id
+                """
+            )
+        ).scalar_one()
+        conn.execute(
+            text(
+                """
+                INSERT INTO model (
+                    name, provider_id, upstream_model, input_price_per_mtok, output_price_per_mtok,
+                    context_window, max_output_tokens, capabilities
+                ) VALUES ('m1', :provider_id, 'm1', 2.5, 7.5, 128000, NULL, '[]')
+                """
+            ),
+            {"provider_id": provider_id},
+        )
+        conn.commit()
+
+    _run_sync(url, seed)
+    command.upgrade(config, "head")
+    prices = _run_sync(url, lambda conn: conn.execute(text("SELECT cache_read_price_per_mtok, cache_write_price_per_mtok FROM model")).one())
+    assert tuple(prices) == pytest.approx((0.25, 3.125))
+
+
 def _triggers(conn) -> dict[str, str]:
     """Trigger and trigger-function definitions, keyed by name; our trigger names embed the table."""
     triggers = conn.execute(text("SELECT tgname, pg_get_triggerdef(oid) FROM pg_trigger WHERE NOT tgisinternal"))

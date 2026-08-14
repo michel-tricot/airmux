@@ -384,7 +384,7 @@ def _record_usage(ctx: Ctx, final: CanonicalResponse, status: UsageStatus, req: 
             output_tokens=estimate_tokens(_text_of(final.content), ctx.model),
             estimated=True,
         )
-    cost_in, cost_out = cost_breakdown(usage, ctx.model, ctx.provider)
+    cost_in, cost_out = cost_breakdown(usage, ctx.model)
     latency_ms = int((time.monotonic() - ctx.started_at) * 1000)
     if ctx.bundle_id is not None and state.outbox is not None:
         state.outbox.record(

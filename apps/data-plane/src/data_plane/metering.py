@@ -6,15 +6,18 @@ from typing import TYPE_CHECKING
 import tiktoken
 
 if TYPE_CHECKING:
-    from contract import ModelEntry, ProviderEntry
+    from contract import ModelEntry
     from data_plane.canonical import Usage
 
 
-def cost_breakdown(usage: Usage, model: ModelEntry, provider: ProviderEntry) -> tuple[float, float]:
-    """Cache reads and writes are billed at provider-specific fractions of the input price."""
-    fresh = usage.input_tokens - usage.cache_read_tokens - usage.cache_write_tokens
-    billable_in = fresh + usage.cache_write_tokens * provider.cache_write_multiplier + usage.cache_read_tokens * provider.cache_read_multiplier
-    return billable_in * model.input_price_per_mtok / 1_000_000, usage.output_tokens * model.output_price_per_mtok / 1_000_000
+def cost_breakdown(usage: Usage, model: ModelEntry) -> tuple[float, float]:
+    fresh_input_tokens = max(0, usage.input_tokens - usage.cache_read_tokens - usage.cache_write_tokens)
+    input_cost = (
+        fresh_input_tokens * model.input_price_per_mtok
+        + usage.cache_read_tokens * model.cache_read_price_per_mtok
+        + usage.cache_write_tokens * model.cache_write_price_per_mtok
+    ) / 1_000_000
+    return input_cost, usage.output_tokens * model.output_price_per_mtok / 1_000_000
 
 
 @functools.lru_cache(maxsize=64)

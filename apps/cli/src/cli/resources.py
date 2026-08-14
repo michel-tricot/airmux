@@ -82,6 +82,8 @@ MODEL_COLS = [
     Col("upstream_model", "Upstream model"),
     Col("input_price_per_mtok", "$/Mtok in"),
     Col("output_price_per_mtok", "$/Mtok out"),
+    Col("cache_read_price_per_mtok", "$/Mtok cache read"),
+    Col("cache_write_price_per_mtok", "$/Mtok cache write"),
     Col("context_window", "Context"),
     Col("max_output_tokens", "Max out"),
     Col("capabilities", "Capabilities", style="cyan", max_width=30),
