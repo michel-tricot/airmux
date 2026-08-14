@@ -11,14 +11,12 @@ from starlette.testclient import TestClient
 
 from contract import Catalog, FileStoreConfig, MemoryStoreConfig, Secret, SecretStore, SecretStoreUnavailableError, sign_bundle, uuid7
 from data_plane.app import create_app
-from data_plane.auth import index_keys
 from data_plane.bundle import BundleSnapshot, RemoteBundleConfig
 from data_plane.canonical import CanonicalRequest
 from data_plane.config import Config, EventsConfig
-from data_plane.credentials import CredentialResolver, index_credentials
+from data_plane.credentials import CredentialResolver
 from data_plane.outbox import SqliteOutbox
 from data_plane.policy import Allow, Deny, evaluate
-from data_plane.profiles import index_profiles
 
 OTHER_WORKSPACE = uuid7()
 
@@ -40,9 +38,7 @@ async def value_of(resolver, entry) -> str:
 
 def snap(*credentials):
     bundle = make_bundle(catalog=Catalog(providers=[PROVIDER], models=[MODEL], credentials=list(credentials)), org=ORG)
-    return BundleSnapshot(
-        bundle=bundle, key_index=index_keys(bundle), credential_index=index_credentials(bundle), profile_index=index_profiles(bundle)
-    )
+    return BundleSnapshot.from_bundle(bundle)
 
 
 def decide(*credentials, workspace=WORKSPACE):
