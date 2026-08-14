@@ -6,7 +6,9 @@ design: one BundleV1, one admit(), a different door."""
 
 from __future__ import annotations
 
+import json
 import signal
+import sqlite3
 import subprocess
 import threading
 from http.server import ThreadingHTTPServer
@@ -38,8 +40,10 @@ models:
   - model_id: echo
     provider_id: stub
     upstream_model: echo
-    input_price_per_mtok: 0.0
-    output_price_per_mtok: 0.0
+    input_price_per_mtok: 2.0
+    output_price_per_mtok: 5.0
+    cache_read_price_per_mtok: 0.25
+    cache_write_price_per_mtok: 2.5
     context_window: 128000
     capabilities: [streaming]
 """,
@@ -77,6 +81,11 @@ data_plane:
         )
         assert response.status_code == 200, response.text
         assert response.json()["content"] == [{"type": "text", "text": "ok"}]
+        with sqlite3.connect(tmp_path / ".airllm" / "events.db") as connection:
+            event = json.loads(connection.execute("SELECT body FROM outbox").fetchone()[0])
+        assert event["cache_read_tokens"] == 4
+        assert event["cost_input_usd"] == 15 / 1_000_000
+        assert event["cost_output_usd"] == 15 / 1_000_000
     finally:
         process.send_signal(signal.SIGTERM)
         process.wait(timeout=10)

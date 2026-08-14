@@ -5156,6 +5156,12 @@ components:
         output_price_per_mtok:
           type: number
           title: Output Price Per Mtok
+        cache_read_price_per_mtok:
+          type: number
+          title: Cache Read Price Per Mtok
+        cache_write_price_per_mtok:
+          type: number
+          title: Cache Write Price Per Mtok
         context_window:
           type: integer
           title: Context Window
@@ -5176,6 +5182,8 @@ components:
       - upstream_model
       - input_price_per_mtok
       - output_price_per_mtok
+      - cache_read_price_per_mtok
+      - cache_write_price_per_mtok
       - context_window
       - capabilities
       title: ModelEntry
@@ -5204,6 +5212,16 @@ components:
           type: number
           title: Output Price Per Mtok
           description: USD per million output tokens
+          default: 0.0
+        cache_read_price_per_mtok:
+          type: number
+          title: Cache Read Price Per Mtok
+          description: USD per million cache-read input tokens
+          default: 0.0
+        cache_write_price_per_mtok:
+          type: number
+          title: Cache Write Price Per Mtok
+          description: USD per million cache-write input tokens
           default: 0.0
         context_window:
           type: integer
@@ -5252,6 +5270,12 @@ components:
         output_price_per_mtok:
           type: number
           title: Output Price Per Mtok
+        cache_read_price_per_mtok:
+          type: number
+          title: Cache Read Price Per Mtok
+        cache_write_price_per_mtok:
+          type: number
+          title: Cache Write Price Per Mtok
         context_window:
           type: integer
           title: Context Window
@@ -5287,6 +5311,8 @@ components:
       - upstream_model
       - input_price_per_mtok
       - output_price_per_mtok
+      - cache_read_price_per_mtok
+      - cache_write_price_per_mtok
       - context_window
       - max_output_tokens
       - capabilities
@@ -5591,21 +5617,35 @@ components:
           minLength: 1
           format: uri
           title: Base Url
-        cache_read_multiplier:
-          type: number
-          title: Cache Read Multiplier
-          default: 1.0
-        cache_write_multiplier:
-          type: number
-          title: Cache Write Multiplier
-          default: 1.0
+        param_aliases:
+          additionalProperties:
+            type: string
+          type: object
+          title: Param Aliases
+        accepted_params:
+          anyOf:
+          - items:
+              type: string
+            type: array
+          - type: 'null'
+          title: Accepted Params
+        params_closed:
+          type: boolean
+          title: Params Closed
+          default: false
       type: object
       required:
       - provider_id
       - kind
       - base_url
       title: ProviderEntry
-      description: An upstream LLM provider endpoint.
+      description: 'An upstream LLM provider endpoint, plus its profile: declarative facts about what the
+
+        provider accepts, so onboarding quirks is a bundle edit rather than an adapter branch.
+
+        Profile fields are names, sets and flags, never predicates; a provider that needs a
+
+        predicate needs an adapter.'
     ProviderIn:
       properties:
         provider_id:
@@ -5631,16 +5671,25 @@ components:
             so adding a provider needs no client change to make it recognisable, which makes it untrusted markup to whatever
             renders it; sanitize at the render site
           default: ''
-        cache_read_multiplier:
-          type: number
-          title: Cache Read Multiplier
-          description: Input price factor for prompt-cache hits
-          default: 1.0
-        cache_write_multiplier:
-          type: number
-          title: Cache Write Multiplier
-          description: Input price factor for cache writes
-          default: 1.0
+        param_aliases:
+          additionalProperties:
+            type: string
+          type: object
+          title: Param Aliases
+          description: Canonical param name to this provider's spelling
+        accepted_params:
+          anyOf:
+          - items:
+              type: string
+            type: array
+          - type: 'null'
+          title: Accepted Params
+          description: Params known accepted beyond the core; consulted when params_closed
+        params_closed:
+          type: boolean
+          title: Params Closed
+          description: True when the provider's request schema rejects unknown params
+          default: false
       additionalProperties: false
       type: object
       required:
@@ -5671,12 +5720,21 @@ components:
         icon:
           type: string
           title: Icon
-        cache_read_multiplier:
-          type: number
-          title: Cache Read Multiplier
-        cache_write_multiplier:
-          type: number
-          title: Cache Write Multiplier
+        param_aliases:
+          additionalProperties:
+            type: string
+          type: object
+          title: Param Aliases
+        accepted_params:
+          anyOf:
+          - items:
+              type: string
+            type: array
+          - type: 'null'
+          title: Accepted Params
+        params_closed:
+          type: boolean
+          title: Params Closed
         created_at:
           type: string
           format: date-time
@@ -5698,8 +5756,9 @@ components:
       - kind
       - base_url
       - icon
-      - cache_read_multiplier
-      - cache_write_multiplier
+      - param_aliases
+      - accepted_params
+      - params_closed
       - created_at
       - updated_at
       - deleted_at

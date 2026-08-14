@@ -46,6 +46,8 @@ MODEL = ModelEntry(
     upstream_model="gpt-real",
     input_price_per_mtok=1.0,
     output_price_per_mtok=2.0,
+    cache_read_price_per_mtok=0.1,
+    cache_write_price_per_mtok=1.25,
     context_window=128000,
     capabilities=["streaming"],
 )

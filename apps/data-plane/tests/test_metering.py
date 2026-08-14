@@ -2,33 +2,29 @@ from __future__ import annotations
 
 from conftest import MODEL
 
-from contract import ProviderEntry
 from data_plane.canonical import Usage
 from data_plane.metering import cost_breakdown
 
 
-def _provider(read_mult: float, write_mult: float = 1.0) -> ProviderEntry:
-    return ProviderEntry(
-        provider_id="p",
-        kind="openai_compatible",
-        base_url="https://x/v1",
-        cache_read_multiplier=read_mult,
-        cache_write_multiplier=write_mult,
+def _model():
+    return MODEL.model_copy(
+        update={
+            "input_price_per_mtok": 2.0,
+            "output_price_per_mtok": 5.0,
+            "cache_read_price_per_mtok": 0.25,
+            "cache_write_price_per_mtok": 2.5,
+        },
     )
 
 
-def test_cache_read_discounted_by_provider_multiplier():
-    usage = Usage(input_tokens=1000, cache_read_tokens=800)  # 200 fresh + 800 cached, input price 1.0 / Mtok
-    full, _ = cost_breakdown(usage, MODEL, _provider(1.0))
-    half, _ = cost_breakdown(usage, MODEL, _provider(0.5))  # OpenAI-style
-    tenth, _ = cost_breakdown(usage, MODEL, _provider(0.1))  # Anthropic-style
-    # fresh 200 always billed; cached 800 scaled by the multiplier
-    assert full == 1000 / 1_000_000
-    assert half == (200 + 800 * 0.5) / 1_000_000
-    assert tenth == (200 + 800 * 0.1) / 1_000_000
+def test_each_usage_bucket_has_a_direct_model_price():
+    usage = Usage(input_tokens=1000, output_tokens=40, cache_read_tokens=300, cache_write_tokens=200)
+    cost_in, cost_out = cost_breakdown(usage, _model())
+    assert cost_in == (500 * 2.0 + 300 * 0.25 + 200 * 2.5) / 1_000_000
+    assert cost_out == 40 * 5.0 / 1_000_000
 
 
-def test_cache_write_premium():
-    usage = Usage(input_tokens=1000, cache_write_tokens=800)
-    cost, _ = cost_breakdown(usage, MODEL, _provider(0.1, 1.25))
-    assert cost == (200 + 800 * 1.25) / 1_000_000
+def test_cache_counts_cannot_make_fresh_input_negative():
+    usage = Usage(input_tokens=100, cache_read_tokens=80, cache_write_tokens=40)
+    cost_in, _ = cost_breakdown(usage, _model())
+    assert cost_in == (80 * 0.25 + 40 * 2.5) / 1_000_000

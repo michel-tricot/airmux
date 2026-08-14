@@ -5,9 +5,13 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { ProviderEntryKind } from './providerEntryKind';
+import type { ProviderEntryParamAliases } from './providerEntryParamAliases';
 
 /**
- * An upstream LLM provider endpoint.
+ * An upstream LLM provider endpoint, plus its profile: declarative facts about what the
+ * provider accepts, so onboarding quirks is a bundle edit rather than an adapter branch.
+ * Profile fields are names, sets and flags, never predicates; a provider that needs a
+ * predicate needs an adapter.
  */
 export interface ProviderEntry {
   provider_id: string;
@@ -17,6 +21,7 @@ export interface ProviderEntry {
      * @maxLength 2083
      */
   base_url: string;
-  cache_read_multiplier?: number;
-  cache_write_multiplier?: number;
+  param_aliases?: ProviderEntryParamAliases;
+  accepted_params?: string[] | null;
+  params_closed?: boolean;
 }

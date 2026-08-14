@@ -316,6 +316,8 @@ class ModelEntry(BaseModel):
     upstream_model: Annotated[str, Field(title="Upstream Model")]
     input_price_per_mtok: Annotated[float, Field(title="Input Price Per Mtok")]
     output_price_per_mtok: Annotated[float, Field(title="Output Price Per Mtok")]
+    cache_read_price_per_mtok: Annotated[float, Field(title="Cache Read Price Per Mtok")]
+    cache_write_price_per_mtok: Annotated[float, Field(title="Cache Write Price Per Mtok")]
     context_window: Annotated[int, Field(title="Context Window")]
     max_output_tokens: Annotated[int | None, Field(title="Max Output Tokens")] = None
     capabilities: Annotated[list[str], Field(title="Capabilities")]
@@ -338,6 +340,20 @@ class ModelIn(BaseModel):
     output_price_per_mtok: Annotated[
         float | None,
         Field(description="USD per million output tokens", title="Output Price Per Mtok"),
+    ] = 0.0
+    cache_read_price_per_mtok: Annotated[
+        float | None,
+        Field(
+            description="USD per million cache-read input tokens",
+            title="Cache Read Price Per Mtok",
+        ),
+    ] = 0.0
+    cache_write_price_per_mtok: Annotated[
+        float | None,
+        Field(
+            description="USD per million cache-write input tokens",
+            title="Cache Write Price Per Mtok",
+        ),
     ] = 0.0
     context_window: Annotated[
         int | None,
@@ -363,6 +379,8 @@ class ModelOut(BaseModel):
     upstream_model: Annotated[str, Field(title="Upstream Model")]
     input_price_per_mtok: Annotated[float, Field(title="Input Price Per Mtok")]
     output_price_per_mtok: Annotated[float, Field(title="Output Price Per Mtok")]
+    cache_read_price_per_mtok: Annotated[float, Field(title="Cache Read Price Per Mtok")]
+    cache_write_price_per_mtok: Annotated[float, Field(title="Cache Write Price Per Mtok")]
     context_window: Annotated[int, Field(title="Context Window")]
     max_output_tokens: Annotated[int | None, Field(title="Max Output Tokens")]
     capabilities: Annotated[list[str], Field(title="Capabilities")]
@@ -490,14 +508,18 @@ class ProviderCredentialValueIn(BaseModel):
 
 class ProviderEntry(BaseModel):
     """
-    An upstream LLM provider endpoint.
+    An upstream LLM provider endpoint, plus its profile: declarative facts about what the
+    provider accepts, so onboarding quirks is a bundle edit rather than an adapter branch.
+    Profile fields are names, sets and flags, never predicates; a provider that needs a
+    predicate needs an adapter.
     """
 
     provider_id: Annotated[str, Field(title="Provider Id")]
     kind: Annotated[Literal["openai_compatible", "anthropic"], Field(title="Kind")]
     base_url: Annotated[AnyUrl, Field(title="Base Url")]
-    cache_read_multiplier: Annotated[float | None, Field(title="Cache Read Multiplier")] = 1.0
-    cache_write_multiplier: Annotated[float | None, Field(title="Cache Write Multiplier")] = 1.0
+    param_aliases: Annotated[dict[str, str] | None, Field(title="Param Aliases")] = None
+    accepted_params: Annotated[list[str] | None, Field(title="Accepted Params")] = None
+    params_closed: Annotated[bool | None, Field(title="Params Closed")] = False
 
 
 class ProviderIn(BaseModel):
@@ -530,20 +552,27 @@ class ProviderIn(BaseModel):
             title="Icon",
         ),
     ] = ""
-    cache_read_multiplier: Annotated[
-        float | None,
+    param_aliases: Annotated[
+        dict[str, str] | None,
         Field(
-            description="Input price factor for prompt-cache hits",
-            title="Cache Read Multiplier",
+            description="Canonical param name to this provider's spelling",
+            title="Param Aliases",
         ),
-    ] = 1.0
-    cache_write_multiplier: Annotated[
-        float | None,
+    ] = None
+    accepted_params: Annotated[
+        list[str] | None,
         Field(
-            description="Input price factor for cache writes",
-            title="Cache Write Multiplier",
+            description="Params known accepted beyond the core; consulted when params_closed",
+            title="Accepted Params",
         ),
-    ] = 1.0
+    ] = None
+    params_closed: Annotated[
+        bool | None,
+        Field(
+            description="True when the provider's request schema rejects unknown params",
+            title="Params Closed",
+        ),
+    ] = False
 
 
 class ProviderOut(BaseModel):
@@ -552,8 +581,9 @@ class ProviderOut(BaseModel):
     kind: Annotated[str, Field(title="Kind")]
     base_url: Annotated[str, Field(title="Base Url")]
     icon: Annotated[str, Field(title="Icon")]
-    cache_read_multiplier: Annotated[float, Field(title="Cache Read Multiplier")]
-    cache_write_multiplier: Annotated[float, Field(title="Cache Write Multiplier")]
+    param_aliases: Annotated[dict[str, str], Field(title="Param Aliases")]
+    accepted_params: Annotated[list[str] | None, Field(title="Accepted Params")]
+    params_closed: Annotated[bool, Field(title="Params Closed")]
     created_at: Annotated[AwareDatetime, Field(title="Created At")]
     updated_at: Annotated[AwareDatetime, Field(title="Updated At")]
     deleted_at: Annotated[AwareDatetime | None, Field(title="Deleted At")]

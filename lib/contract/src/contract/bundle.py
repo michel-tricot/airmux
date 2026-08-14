@@ -38,8 +38,6 @@ class ProviderEntry(BaseModel):
     provider_id: str
     kind: Literal["openai_compatible", "anthropic"]  # selects the adapter
     base_url: HttpUrl
-    cache_read_multiplier: float = 1.0  # input price factor for prompt-cache hits (OpenAI 0.5, Anthropic 0.1)
-    cache_write_multiplier: float = 1.0  # input price factor for cache writes (Anthropic 1.25)
     param_aliases: dict[str, str] = Field(default_factory=dict)  # canonical param -> this provider's spelling
     accepted_params: list[str] | None = None  # params known accepted beyond the core; consulted when params_closed
     params_closed: bool = False  # True for the few providers whose schema rejects unknown params (3 of 22 in taxonomy)
@@ -55,6 +53,8 @@ class ModelEntry(BaseModel):
     upstream_model: str  # what the provider is sent
     input_price_per_mtok: float  # USD per million input tokens
     output_price_per_mtok: float  # USD per million output tokens
+    cache_read_price_per_mtok: float  # USD per million cache-read input tokens
+    cache_write_price_per_mtok: float  # USD per million cache-write input tokens
     context_window: int
     max_output_tokens: int | None = None  # completion cap; requests are clamped to it, distinct from context_window
     capabilities: list[str]  # "streaming", "tools", "vision"

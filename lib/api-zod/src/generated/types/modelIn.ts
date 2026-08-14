@@ -16,6 +16,10 @@ export interface ModelIn {
   input_price_per_mtok?: number;
   /** USD per million output tokens */
   output_price_per_mtok?: number;
+  /** USD per million cache-read input tokens */
+  cache_read_price_per_mtok?: number;
+  /** USD per million cache-write input tokens */
+  cache_write_price_per_mtok?: number;
   /** Context window in tokens */
   context_window?: number;
   /** Max completion tokens; requests are clamped to it */

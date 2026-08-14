@@ -4,6 +4,7 @@
  * Api
  * OpenAPI spec version: 0.1.0
  */
+import type { ProviderOutParamAliases } from './providerOutParamAliases';
 
 export interface ProviderOut {
   id: string;
@@ -11,8 +12,9 @@ export interface ProviderOut {
   kind: string;
   base_url: string;
   icon: string;
-  cache_read_multiplier: number;
-  cache_write_multiplier: number;
+  param_aliases: ProviderOutParamAliases;
+  accepted_params: string[] | null;
+  params_closed: boolean;
   created_at: Date;
   updated_at: Date;
   deleted_at: Date | null;

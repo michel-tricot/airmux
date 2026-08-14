@@ -203,8 +203,8 @@ class Usage(BaseModel):
 
     input_tokens: int = 0  # total prompt tokens, cache traffic included
     output_tokens: int = 0
-    cache_read_tokens: int = 0  # billed at a provider-specific discount, part of input_tokens
-    cache_write_tokens: int = 0  # billed at a provider-specific premium, part of input_tokens
+    cache_read_tokens: int = 0  # part of input_tokens
+    cache_write_tokens: int = 0  # part of input_tokens
     estimated: bool = False
 
 
