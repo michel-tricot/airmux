@@ -20,8 +20,8 @@ from dotenv import find_dotenv, load_dotenv
 
 def main() -> int:
     load_dotenv(find_dotenv(usecwd=True))
-    token = os.environ.get("AIRLLM_API_KEY")
-    if not token:
+    api_key = os.environ.get("AIRLLM_API_KEY")
+    if not api_key:
         print("AIRLLM_API_KEY is not set, run `uv run airllm quickstart` first")
         return 1
     gateway = os.environ.get("AIRLLM_URL", "http://127.0.0.1:8080")
@@ -30,7 +30,7 @@ def main() -> int:
 
     resp = httpx.post(
         f"{gateway}/v1/chat/completions",
-        headers={"authorization": f"Bearer {token}"},
+        headers={"authorization": f"Bearer {api_key}"},
         json={"model": model, "messages": [{"role": "user", "content": prompt}]},
         timeout=60.0,
     )
