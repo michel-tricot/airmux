@@ -37,10 +37,10 @@ def evaluate(req: CanonicalRequest, key: KeyEntry, snap: BundleSnapshot, now: da
     Returns the credentials that may be spent rather than a choice between them: picking one means
     knowing which are in cooldown, which is state, and state does not belong in a pure function.
     """
-    model = next((m for m in snap.bundle.catalog.models if m.model_id == req.model), None)
+    model = snap.model_index.get(req.model)
     if model is None:
         return Deny(reason="unknown_model", status=404)
-    provider = next((p for p in snap.bundle.catalog.providers if p.provider_id == model.provider_id), None)
+    provider = snap.provider_index.get(model.provider_id)
     if provider is None:
         return Deny(reason="provider_not_configured", status=502)
     candidates = candidates_for(snap.credential_index, key.workspace_id, key.org_id, provider.provider_id)

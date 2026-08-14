@@ -3,12 +3,9 @@ from __future__ import annotations
 from conftest import MODEL, NOW, PROVIDER, make_bundle, make_credential, make_key
 
 from contract import Catalog, uuid7
-from data_plane.auth import index_keys
 from data_plane.bundle import BundleSnapshot
 from data_plane.canonical import CanonicalRequest
-from data_plane.credentials import index_credentials
 from data_plane.policy import Allow, Deny, evaluate
-from data_plane.profiles import index_profiles
 
 ORG_A = uuid7()
 
@@ -19,13 +16,17 @@ KEY = make_key("k1", org=ORG_A)[1]
 
 
 def snap(bundle):
-    return BundleSnapshot(
-        bundle=bundle, key_index=index_keys(bundle), credential_index=index_credentials(bundle), profile_index=index_profiles(bundle)
-    )
+    return BundleSnapshot.from_bundle(bundle)
 
 
 def make_request(model="gpt-test"):
     return CanonicalRequest(model=model, messages=[{"role": "user", "content": "hi"}])
+
+
+def test_snapshot_indexes_catalog():
+    snapshot = snap(BUNDLE)
+    assert snapshot.model_index == {"gpt-test": MODEL}
+    assert snapshot.provider_index == {"p1": PROVIDER}
 
 
 def test_catalog_model_allowed():
