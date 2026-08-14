@@ -46,6 +46,20 @@ def test_chat_completion_end_to_end(api_key, dp_app, tmp_path):
 
 
 @respx.mock
+def test_malformed_buffered_provider_response_is_rejected(api_key, dp_app, tmp_path):
+    respx.post("https://api.openai.com/v1/chat/completions").mock(return_value=httpx.Response(200, json={}))
+    with TestClient(dp_app) as client:
+        response = client.post(
+            "/v1/chat/completions",
+            headers={"Authorization": f"Bearer {api_key}"},
+            json={"model": "gpt-test", "messages": [{"role": "user", "content": "say hi"}]},
+        )
+    assert response.status_code == 502
+    assert response.json()["error"]["code"] == "invalid_upstream_response"
+    assert [event.status for event in _recorded(tmp_path)] == ["upstream_error"]
+
+
+@respx.mock
 def test_missing_token_rejected(api_key, dp_app):
     with TestClient(dp_app) as client:
         r = client.post("/v1/chat/completions", json={"model": "gpt-test", "messages": []})

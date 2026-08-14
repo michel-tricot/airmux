@@ -104,6 +104,25 @@ async def test_mid_stream_error_event_becomes_sse_error(caplog):
     assert any("status=upstream_error" in r.message for r in caplog.records)
 
 
+@respx.mock
+async def test_stream_ending_before_the_provider_terminal_becomes_sse_error(caplog):
+    caplog.set_level(logging.INFO, logger="data_plane")
+    incomplete = TEXT_LOG.removesuffix(b"data: [DONE]\n\n")
+    respx.post("https://api.openai.com/v1/chat/completions").mock(return_value=httpx.Response(200, content=incomplete))
+    chunks = [chunk async for chunk in _body_gen(await _stream(make_adapter(), CTX, UPSTREAM))]
+    assert any(b'"code": "invalid_upstream_response"' in chunk for chunk in chunks)
+    assert any("status=upstream_error" in record.message for record in caplog.records)
+
+
+@respx.mock
+async def test_malformed_stream_event_becomes_sse_error(caplog):
+    caplog.set_level(logging.INFO, logger="data_plane")
+    respx.post("https://api.openai.com/v1/chat/completions").mock(return_value=httpx.Response(200, content=b"data: not-json\n\n"))
+    chunks = [chunk async for chunk in _body_gen(await _stream(make_adapter(), CTX, UPSTREAM))]
+    assert any(b'"code": "invalid_upstream_response"' in chunk for chunk in chunks)
+    assert any("status=upstream_error" in record.message for record in caplog.records)
+
+
 async def test_error_body_read_failure_closes_upstream_and_maps(monkeypatch, caplog):
     caplog.set_level(logging.INFO, logger="data_plane")
 

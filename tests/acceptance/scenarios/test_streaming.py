@@ -6,6 +6,7 @@ cancelled, partial output counted as an estimate. Step 4 of notes/design/DATAPLA
 
 from __future__ import annotations
 
+import contextlib
 import json
 import time
 from typing import TYPE_CHECKING
@@ -13,17 +14,23 @@ from typing import TYPE_CHECKING
 import httpx
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator
+
     from conftest import Stack
 
 
-def _stream_request(stack: Stack) -> httpx.Response:
-    client = httpx.Client(timeout=30.0)
-    return client.stream(
-        "POST",
-        f"{stack.dp_url}/v1/chat/completions",
-        headers={"authorization": f"Bearer {stack.caller_api_key}"},
-        json={"model": "echo", "messages": [{"role": "user", "content": "go"}], "stream": True},
-    )  # type: ignore[return-value]
+@contextlib.contextmanager
+def _stream_request(stack: Stack) -> Iterator[httpx.Response]:
+    with (
+        httpx.Client(timeout=30.0) as client,
+        client.stream(
+            "POST",
+            f"{stack.dp_url}/v1/chat/completions",
+            headers={"authorization": f"Bearer {stack.caller_api_key}"},
+            json={"model": "echo", "messages": [{"role": "user", "content": "go"}], "stream": True},
+        ) as response,
+    ):
+        yield response
 
 
 def _events_until(stack: Stack, predicate, timeout: float = 30.0) -> list[dict]:

@@ -184,6 +184,51 @@ def test_stream_and_buffered_agree(kind, modality):
 
 
 @pytest.mark.parametrize("kind", KINDS)
+def test_a_stream_truncated_before_its_terminal_event_is_rejected(kind):
+    adapter = _adapter(kind)
+    state = adapter.new_stream_state(CTX)
+    for event in adapter.frame(CASES[kind]["text"].log[:-1], state):
+        adapter.transform_stream_event(event, state)
+    with pytest.raises(ValueError, match="ended before"):
+        adapter.validate_stream(state)
+
+
+@pytest.mark.parametrize("kind", KINDS)
+def test_a_complete_stream_passes_validation(kind):
+    adapter = _adapter(kind)
+    state = adapter.new_stream_state(CTX)
+    for event in adapter.frame(CASES[kind]["text"].log, state):
+        adapter.transform_stream_event(event, state)
+    adapter.validate_stream(state)
+
+
+@pytest.mark.parametrize("kind", KINDS)
+def test_a_terminal_marker_without_a_completed_response_is_rejected(kind):
+    adapter = _adapter(kind)
+    state = adapter.new_stream_state(CTX)
+    events = list(adapter.frame(CASES[kind]["text"].log, state))
+    for event in events[-1:]:
+        adapter.transform_stream_event(event, state)
+    with pytest.raises(ValueError, match="ended before"):
+        adapter.validate_stream(state)
+
+
+@pytest.mark.parametrize("kind", KINDS)
+def test_a_malformed_stream_event_is_rejected(kind):
+    adapter = _adapter(kind)
+    state = adapter.new_stream_state(CTX)
+    (event,) = list(adapter.frame(b"data: not-json\n\n", state))
+    with pytest.raises(ValueError, match="invalid upstream stream event"):
+        adapter.transform_stream_event(event, state)
+
+
+@pytest.mark.parametrize("kind", KINDS)
+def test_an_empty_buffered_provider_response_is_rejected(kind):
+    with pytest.raises(ValueError, match="invalid upstream response"):
+        _adapter(kind).transform_response(b"{}", CTX)
+
+
+@pytest.mark.parametrize("kind", KINDS)
 def test_tool_call_fragments_reassemble_with_valid_json(kind):
     adapter = _adapter(kind)
     chunks, final = fold(adapter, CASES[kind]["tools"].log, 3)

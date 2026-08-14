@@ -33,7 +33,9 @@ def test_the_unmodified_sdk_round_trips(stack: Stack) -> None:
     text = "".join(c.choices[0].delta.content or "" for c in chunks if c.choices and c.choices[0].delta)
     assert text == "".join(f"tick{i} " for i in range(30))
     (usage_chunk,) = [c for c in chunks if c.usage is not None]
-    assert usage_chunk.usage.completion_tokens == 60
+    usage = usage_chunk.usage
+    assert usage is not None
+    assert usage.completion_tokens == 60
 
     deadline = time.monotonic() + 30
     while time.monotonic() < deadline and sum(e["status"] == "ok" for e in stack.events()) < 2:

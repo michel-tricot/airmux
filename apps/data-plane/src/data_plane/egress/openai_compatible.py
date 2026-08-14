@@ -10,6 +10,8 @@ import json
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
+from pydantic import ValidationError
+
 from data_plane.canonical import (
     AssistantPart,
     CanonicalChunk,
@@ -22,9 +24,17 @@ from data_plane.canonical import (
     ToolCallDelta,
     ToolCallPart,
 )
-from data_plane.egress.base import EgressAdapter, RawEvent, StreamState, UpstreamRequest, UpstreamStreamError, encode, frame_sse
+from data_plane.egress.base import (
+    EgressAdapter,
+    RawEvent,
+    StreamState,
+    UpstreamProtocolError,
+    UpstreamRequest,
+    UpstreamStreamError,
+    encode,
+    frame_sse,
+)
 from data_plane.formats.openai import (
-    UpstreamChoice,
     UpstreamChunk,
     UpstreamChunkChoice,
     UpstreamCompletion,
@@ -61,6 +71,7 @@ class OpenAIStreamState(StreamState):
     tool_drafts: dict[int, ToolCallDraft] = field(default_factory=dict)
     finish: str | None = None
     usage: UpstreamUsage | None = None
+    terminal_seen: bool = False
 
     @property
     def chunk_id(self) -> str:
@@ -106,8 +117,11 @@ class OpenAICompatibleAdapter(EgressAdapter):
         return UpstreamRequest(method="POST", url=url, headers=headers, body=body)
 
     def transform_response(self, raw: bytes, ctx: Ctx) -> CanonicalResponse:
-        completion = UpstreamCompletion.model_validate_json(raw)
-        choice = completion.choices[0] if completion.choices else UpstreamChoice()
+        try:
+            completion = UpstreamCompletion.model_validate_json(raw)
+        except ValidationError as error:
+            raise UpstreamProtocolError.buffered_response() from error
+        choice = completion.choices[0]
         return CanonicalResponse(
             id=completion.id or ctx.request_id,
             model=ctx.model.model_id,
@@ -121,20 +135,40 @@ class OpenAICompatibleAdapter(EgressAdapter):
 
     def frame(self, chunk: bytes, state: StreamState) -> Iterator[RawEvent]:
         """The shared SSE machine, plus this dialect's one addition: the [DONE] sentinel."""
-        return (event for event in frame_sse(chunk, state) if event.data != b"[DONE]")
+        assert isinstance(state, OpenAIStreamState)  # noqa: S101 state comes from new_stream_state
+        if state.terminal_seen:
+            return
+        for event in frame_sse(chunk, state):
+            if event.data == b"[DONE]":
+                state.terminal_seen = True
+                return
+            yield event
 
     def transform_stream_event(self, ev: RawEvent, state: StreamState) -> list[CanonicalChunk]:
         assert isinstance(state, OpenAIStreamState)  # noqa: S101 state comes from new_stream_state
-        data = json.loads(ev.data)
+        try:
+            data = json.loads(ev.data)
+        except (json.JSONDecodeError, UnicodeDecodeError) as error:
+            raise UpstreamProtocolError.stream_event() from error
+        if not isinstance(data, dict):
+            raise UpstreamProtocolError.stream_event()
         if "error" in data:
-            error = data["error"] or {}
-            raise UpstreamStreamError(code=str(error.get("code") or "upstream_error"), message=str(error.get("message") or ""))
-        chunk = UpstreamChunk.model_validate(data)
+            payload = data["error"] if isinstance(data["error"], dict) else {}
+            raise UpstreamStreamError(code=str(payload.get("code") or "upstream_error"), message=str(payload.get("message") or ""))
+        try:
+            chunk = UpstreamChunk.model_validate(data)
+        except ValidationError as error:
+            raise UpstreamProtocolError.stream_event() from error
         if chunk.id:
             state.response_id = chunk.id
         if chunk.usage is not None:
             state.usage = chunk.usage
         return [c for choice in chunk.choices for c in _fold_choice(state, choice)]
+
+    def validate_stream(self, state: StreamState) -> None:
+        assert isinstance(state, OpenAIStreamState)  # noqa: S101 state comes from new_stream_state
+        if not state.terminal_seen or state.finish is None:
+            raise UpstreamProtocolError.incomplete_stream()
 
     def finalize(self, state: StreamState) -> CanonicalResponse:
         assert isinstance(state, OpenAIStreamState)  # noqa: S101 state comes from new_stream_state
