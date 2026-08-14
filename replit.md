@@ -42,7 +42,7 @@ See `.env.example`. Key variables:
 | `GW_BUNDLE_PUBLIC_KEY` | Ed25519 public key — data plane verifies bundles |
 | `GW_INSTANCE_KEY` | Bearer for the instance API |
 | `GW_DATAPLANE_TOKEN` | Data plane → control plane bearer |
-| `AIRLLM_TOKEN` | Caller inference key |
+| `AIRLLM_API_KEY` | Caller inference key |
 
 `uv run airllmcp keygen` writes the key pair; the tokens are minted through the
 API or the CLI and pasted in.
