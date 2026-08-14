@@ -13,6 +13,11 @@ providers:
     # The gpt-5 family rejects max_tokens; the profile re-spells it, no code involved.
     param_aliases:
       max_tokens: max_completion_tokens
+    # OpenAI rejects unknown params outright, so the schema is closed and the real extras are
+    # declared; anything else (an Anthropic caller's thinking, say) drops with an adjustment.
+    params_closed: true
+    accepted_params:
+      [frequency_penalty, presence_penalty, logit_bias, logprobs, top_logprobs, user, store, parallel_tool_calls, reasoning_effort, verbosity, service_tier, prediction]
   - provider_id: anthropic
     kind: anthropic
     base_url: https://api.anthropic.com/v1

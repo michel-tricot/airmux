@@ -24,6 +24,7 @@ from data_plane.auth import authenticate
 from data_plane.canonical import Adjustment, CanonicalRequest, CanonicalResponse, GatewayInfo, TextPart, Usage
 from data_plane.egress import REGISTRY
 from data_plane.egress.base import CanonicalError, Ctx, UpstreamStreamError
+from data_plane.ingress import REGISTRY as INGRESS
 from data_plane.ingress import resolve
 from data_plane.ingress.canonical import CanonicalResponseStream
 from data_plane.metering import cost_breakdown, estimate_tokens
@@ -63,11 +64,22 @@ def _error(status: int, code: str, message: str = "") -> JSONResponse:
 
 
 async def complete(request: Request) -> Response:
+    """The native route: the dialect is resolved from the request."""
+    return await _complete(request, forced=None)
+
+
+async def messages(request: Request) -> Response:
+    """The Anthropic-shaped route: the dialect is bound, so every answer speaks it, errors included."""
+    return await _complete(request, forced=INGRESS.get("anthropic"))
+
+
+async def _complete(request: Request, forced: IngressAdapter | None) -> Response:
     try:
-        return await _handle(request)
+        return await _handle(request, forced)
     except RequestRejectedError as e:
-        if e.ingress is not None:
-            return e.ingress.render_error(CanonicalError(status=e.status, code=e.code, message=e.message))
+        ingress = e.ingress or forced
+        if ingress is not None:
+            return ingress.render_error(CanonicalError(status=e.status, code=e.code, message=e.message))
         return _error(e.status, e.code, e.message)
 
 
@@ -85,15 +97,15 @@ def _authenticate(request: Request) -> tuple[KeyEntry, BundleSnapshot]:
     return key, snap
 
 
-async def _parse(request: Request) -> tuple[CanonicalRequest, list[Adjustment], IngressAdapter]:
+async def _parse(request: Request, forced: IngressAdapter | None) -> tuple[CanonicalRequest, list[Adjustment], IngressAdapter]:
     """The body into canonical through whichever dialect claims it, with the dialect's own
     translation losses carried as adjustments; parse failures speak that dialect."""
-    ingress: IngressAdapter | None = None
+    ingress: IngressAdapter | None = forced
     try:
         body = json.loads(await request.body())
         if not isinstance(body, dict):
             raise RequestRejectedError(400, "invalid_request", "the request body must be a JSON object")
-        ingress = resolve(request.headers, body)
+        ingress = forced if forced is not None else resolve(request.headers, body)
         req, adjustments = ingress.parse(body)
     except ValidationError as e:
         rejection = RequestRejectedError(400, "invalid_request", str(e.errors(include_url=False)[:3]))
@@ -148,9 +160,9 @@ def reconcile(req: CanonicalRequest, model: ModelEntry, profile: CompiledProfile
     return CanonicalRequest.model_validate({**forwarded, **core}), adjustments
 
 
-async def _handle(request: Request) -> Response:
+async def _handle(request: Request, forced: IngressAdapter | None = None) -> Response:
     key, snap = _authenticate(request)
-    req, parse_adjustments, ingress = await _parse(request)
+    req, parse_adjustments, ingress = await _parse(request, forced)
     try:
         return await _serve(req, key, snap, ingress, parse_adjustments)
     except RequestRejectedError as e:

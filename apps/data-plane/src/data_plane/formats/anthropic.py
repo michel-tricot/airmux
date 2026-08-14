@@ -1,10 +1,9 @@
-"""The Anthropic Messages format: canonical into Anthropic's JSON spelling, and back out.
+"""The Anthropic Messages format, both directions the gateway needs.
 
-One consumer today, the anthropic egress adapter; the /v1/messages ingress joins later. The
-request direction renders by hand, field by field. The Upstream* models parse what the
-provider returns, lenient so a missing field degrades to a default rather than failing the
-response. Thinking signatures round-trip: a signature the provider issues comes back as part
-of the reasoning, because a later turn without it is rejected."""
+Two consumers, one spelling: the anthropic egress adapter renders upstream requests and parses
+provider responses; the /v1/messages ingress reads Anthropic-shaped requests and writes
+Anthropic-shaped replies. Lenient parse models where inputs vary; thinking signatures
+round-trip everywhere, because a later turn without one is rejected."""
 
 from __future__ import annotations
 
@@ -19,6 +18,7 @@ from data_plane.canonical import (
     CanonicalMessage,
     ContentPart,
     FinishReason,
+    GatewayInfo,
     ImagePart,
     NamedTool,
     ReasoningPart,
@@ -259,3 +259,328 @@ class UpstreamStreamEvent(BaseModel):
     content_block: UpstreamBlock | None = None
     delta: dict[str, Any] = Field(default_factory=dict)
     usage: UpstreamUsage | None = None
+
+
+# The ingress direction: Anthropic-shaped requests into canonical, canonical replies into the
+# shapes the official SDKs and Claude Code deserialize.
+
+
+def _mapping(value: object) -> dict[str, object]:
+    return {str(key): item for key, item in value.items()} if isinstance(value, dict) else {}
+
+
+def _str(value: object) -> str:
+    return value if isinstance(value, str) else ""
+
+
+def _cache_of(block: dict[str, object]) -> Literal["ephemeral"] | None:
+    return "ephemeral" if block.get("cache_control") else None
+
+
+def _is_directive(block: dict[str, object]) -> bool:
+    """Anthropic clients smuggle protocol metadata as a system text block. It is not prompt content, and
+    forwarding it breaks prefix caching for a provider that caches by exact prefix, since it changes per call."""
+    text = block.get("text")
+    return isinstance(text, str) and text.lstrip().lower().startswith("x-anthropic-")
+
+
+def _image_from_source(source: dict[str, object]) -> ImagePart:
+    if source.get("type") == "url":
+        return ImagePart(url=_str(source.get("url")))
+    return ImagePart(media_type=_str(source.get("media_type")), data=_str(source.get("data")))
+
+
+def _tool_result_content(content: object) -> list[TextPart | ImagePart]:
+    if isinstance(content, str):
+        return [TextPart(text=content)]
+    if not isinstance(content, list):
+        return []
+    parts: list[TextPart | ImagePart] = []
+    for raw in content:
+        block = _mapping(raw)
+        if block.get("type") == "text":
+            parts.append(TextPart(text=_str(block.get("text"))))
+        elif block.get("type") == "image":
+            parts.append(_image_from_source(_mapping(block.get("source"))))
+    return parts
+
+
+def _parts_from_blocks(content: object) -> list[ContentPart]:
+    if isinstance(content, str):
+        return [TextPart(text=content)] if content else []
+    if not isinstance(content, list):
+        return []
+    parts: list[ContentPart] = []
+    for raw in content:
+        block = _mapping(raw)
+        if _is_directive(block):
+            continue
+        cache = _cache_of(block)
+        kind = block.get("type")
+        if kind == "text":
+            parts.append(TextPart(text=_str(block.get("text")), cache=cache))
+        elif kind == "thinking":
+            signature = block.get("signature")
+            parts.append(ReasoningPart(text=_str(block.get("thinking")), signature=_str(signature) or None, cache=cache))
+        elif kind == "image":
+            parts.append(_image_from_source(_mapping(block.get("source"))).model_copy(update={"cache": cache}))
+        elif kind == "tool_use":
+            parts.append(
+                ToolCallPart(
+                    id=_str(block.get("id")),
+                    name=_str(block.get("name")),
+                    arguments=json.dumps(dict(_mapping(block.get("input")))),
+                    cache=cache,
+                )
+            )
+        elif kind == "tool_result":
+            parts.append(
+                ToolResultPart(
+                    call_id=_str(block.get("tool_use_id")),
+                    content=_tool_result_content(block.get("content")),
+                    is_error=bool(block.get("is_error")),
+                    cache=cache,
+                )
+            )
+    return parts
+
+
+def from_request(data: dict[str, object]) -> list[CanonicalMessage]:
+    """Anthropic's Messages body into canonical, with the out-of-band system prompt as the first message."""
+    messages: list[CanonicalMessage] = []
+    system = _parts_from_blocks(data.get("system"))
+    if system:
+        messages.append(CanonicalMessage(role="system", content=system))
+    raw_messages = data.get("messages")
+    for raw in raw_messages if isinstance(raw_messages, list) else []:
+        message = _mapping(raw)
+        parts = _parts_from_blocks(message.get("content"))
+        if parts:
+            messages.append(CanonicalMessage(role="assistant" if message.get("role") == "assistant" else "user", content=parts))
+    return messages
+
+
+def from_tools(tools: object) -> list[ToolDef] | None:
+    if not isinstance(tools, list) or not tools:
+        return None
+    return [
+        ToolDef(
+            name=_str(_mapping(tool).get("name")),
+            description=_str(_mapping(tool).get("description")) or None,
+            parameters=dict(_mapping(_mapping(tool).get("input_schema"))),
+            cache=_cache_of(_mapping(tool)),
+        )
+        for tool in tools
+    ]
+
+
+def from_tool_choice(choice: object) -> ToolChoice | None:
+    block = _mapping(choice)
+    kind = block.get("type")
+    name = _str(block.get("name"))
+    if kind == "tool" and name:
+        return NamedTool(name=name)
+    if kind == "auto":
+        return "auto"
+    if kind == "any":
+        return "required"
+    if kind == "none":
+        return "none"
+    return None
+
+
+# Render models: what an Anthropic client deserializes. Signatures ride with the thinking.
+
+REVERSE_STOP: dict[str, str] = {"stop": "end_turn", "length": "max_tokens", "tool_calls": "tool_use", "content_filter": "refusal"}
+
+
+def stop_reason(finish: FinishReason | None) -> str | None:
+    """None when the reason is unknown, which is what a cancelled or failed response has; claiming
+    end_turn would tell the caller a truncated answer is complete."""
+    return REVERSE_STOP.get(finish) if finish else None
+
+
+class TextOut(BaseModel):
+    type: Literal["text"] = "text"
+    text: str
+
+
+class ThinkingOut(BaseModel):
+    type: Literal["thinking"] = "thinking"
+    thinking: str
+    signature: str = ""
+
+
+class ToolUseOut(BaseModel):
+    type: Literal["tool_use"] = "tool_use"
+    id: str
+    name: str
+    input: dict[str, Any]
+
+
+BlockOut = TextOut | ThinkingOut | ToolUseOut
+
+
+def _response_tool_input(arguments: str) -> dict[str, Any]:
+    """The render-side parse, where the arguments came from a provider and the response already
+    exists. Refusing would turn a delivered answer into a 502, so this reports and continues."""
+    try:
+        return _tool_input(arguments)
+    except ValueError:
+        logger.warning("upstream tool call arguments did not parse; rendering empty input")
+        return {}
+
+
+def to_response_content(parts: Sequence[AssistantPart]) -> list[BlockOut]:
+    blocks: list[BlockOut] = []
+    for part in parts:
+        if isinstance(part, ReasoningPart):
+            blocks.append(ThinkingOut(thinking=part.text, signature=part.signature or ""))
+        elif isinstance(part, TextPart):
+            blocks.append(TextOut(text=part.text))
+        elif isinstance(part, ToolCallPart):
+            blocks.append(ToolUseOut(id=part.id, name=part.name, input=_response_tool_input(part.arguments)))
+    return blocks
+
+
+class UsageOut(BaseModel):
+    """Anthropic reports fresh input separately from cache traffic. The floor guards a provider that
+    reports more cache than total: a negative count would corrupt the caller's cost arithmetic."""
+
+    input_tokens: int
+    cache_read_input_tokens: int
+    cache_creation_input_tokens: int
+    output_tokens: int
+
+
+def usage_out(usage: Usage) -> UsageOut:
+    fresh = usage.input_tokens - usage.cache_read_tokens - usage.cache_write_tokens
+    if fresh < 0:
+        logger.warning(
+            "provider reported cache tokens above total input: input=%d read=%d write=%d",
+            usage.input_tokens,
+            usage.cache_read_tokens,
+            usage.cache_write_tokens,
+        )
+    return UsageOut(
+        input_tokens=max(0, fresh),
+        cache_read_input_tokens=usage.cache_read_tokens,
+        cache_creation_input_tokens=usage.cache_write_tokens,
+        output_tokens=usage.output_tokens,
+    )
+
+
+class MessageOut(BaseModel):
+    """What an Anthropic client deserializes; gateway rides along as an extra field SDKs ignore."""
+
+    id: str
+    type: Literal["message"] = "message"
+    role: Literal["assistant"] = "assistant"
+    model: str
+    content: list[BlockOut]
+    stop_reason: str | None
+    stop_sequence: str | None = None
+    usage: UsageOut
+    gateway: GatewayInfo | None = None
+
+
+class TextDeltaOut(BaseModel):
+    type: Literal["text_delta"] = "text_delta"
+    text: str
+
+
+class ThinkingDeltaOut(BaseModel):
+    type: Literal["thinking_delta"] = "thinking_delta"
+    thinking: str
+
+
+class SignatureDeltaOut(BaseModel):
+    type: Literal["signature_delta"] = "signature_delta"
+    signature: str
+
+
+class InputJsonDeltaOut(BaseModel):
+    type: Literal["input_json_delta"] = "input_json_delta"
+    partial_json: str
+
+
+DeltaOut = TextDeltaOut | ThinkingDeltaOut | SignatureDeltaOut | InputJsonDeltaOut
+
+
+class StopDeltaOut(BaseModel):
+    stop_reason: str | None
+    stop_sequence: str | None = None
+
+
+class ErrorOut(BaseModel):
+    type: str
+    message: str
+
+
+class Event(BaseModel):
+    """One named SSE event. Anthropic names the event after its type, so the frame needs no second label."""
+
+    type: str
+
+    def sse(self) -> bytes:
+        return b"event: " + self.type.encode() + b"\ndata: " + self.model_dump_json().encode() + b"\n\n"
+
+
+class StartUsage(BaseModel):
+    """What is knowable when the stream opens, which is nothing: real counts land in message_delta."""
+
+    input_tokens: int = 0
+    output_tokens: int = 0
+
+
+class MessageStartOut(BaseModel):
+    id: str
+    type: Literal["message"] = "message"
+    role: Literal["assistant"] = "assistant"
+    model: str
+    content: list[BlockOut] = Field(default_factory=list)
+    stop_reason: str | None = None
+    stop_sequence: str | None = None
+    usage: StartUsage = Field(default_factory=StartUsage)
+
+
+class MessageStart(Event):
+    type: Literal["message_start"] = "message_start"
+    message: MessageStartOut
+
+
+class Ping(Event):
+    type: Literal["ping"] = "ping"
+
+
+class ContentBlockStart(Event):
+    type: Literal["content_block_start"] = "content_block_start"
+    index: int
+    content_block: BlockOut
+
+
+class ContentBlockDelta(Event):
+    type: Literal["content_block_delta"] = "content_block_delta"
+    index: int
+    delta: DeltaOut
+
+
+class ContentBlockStop(Event):
+    type: Literal["content_block_stop"] = "content_block_stop"
+    index: int
+
+
+class MessageDelta(Event):
+    type: Literal["message_delta"] = "message_delta"
+    delta: StopDeltaOut
+    usage: UsageOut
+    gateway: GatewayInfo | None = None
+
+
+class MessageStop(Event):
+    type: Literal["message_stop"] = "message_stop"
+
+
+class ErrorEvent(Event):
+    type: Literal["error"] = "error"
+    error: ErrorOut

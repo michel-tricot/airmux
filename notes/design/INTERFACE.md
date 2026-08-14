@@ -12,7 +12,7 @@ document is the contract around them.
 | POST /v1/chat/completions | locked, the native completion route, canonical shape, with OpenAI interpretation (see below) |
 | GET /healthz | locked, liveness, always 200 |
 | GET /readyz | locked, 200 with a served bundle, 503 without |
-| POST /v1/messages | reserved for an Anthropic-shaped compat surface, additive |
+| POST /v1/messages | locked, the Anthropic-shaped surface, routed to any provider |
 
 The native route deliberately sits at the path OpenAI clients already have configured. It
 speaks the canonical shape, not OpenAI's: a caller who swaps only the base URL keeps working
@@ -96,6 +96,16 @@ choices, `data: [DONE]`). The gateway envelope rides along as an additional fiel
 completion and on the usage-bearing chunk; SDKs ignore fields they do not know. Fields the
 interpretation does not consume follow the same open-top-level rules as canonical extras:
 captured, forwarded when the provider profile allows, reported under gateway.adjustments when not.
+
+## The Messages surface
+
+POST /v1/messages speaks Anthropic's Messages dialect, buffered and streamed, routed through
+the same canonical middle to any provider. The route binds the dialect: every answer, errors
+included, uses Anthropic's shapes (`{"type": "error", "error": {...}}`, named SSE events).
+Auth is the same bearer key; Claude Code's ANTHROPIC_AUTH_TOKEN works as is. Thinking
+signatures round-trip. Fields the dialect does not consume follow the extras rules above, so
+thinking and top_k reach providers whose profile accepts them. The gateway envelope rides as
+an extra field on the buffered message and on the usage-bearing message_delta.
 
 ## Errors
 
