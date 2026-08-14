@@ -57,11 +57,68 @@ class StreamCase:
     nonstream: dict
 
 
+def anthropic_sse(payload: dict) -> bytes:
+    return b"event: " + payload["type"].encode() + b"\ndata: " + json.dumps(payload, ensure_ascii=False).encode() + b"\n\n"
+
+
+ANTHROPIC_TEXT_EVENTS = [
+    {"type": "message_start", "message": {"id": "msg_9", "usage": {"input_tokens": 5, "output_tokens": 1}}},
+    {"type": "content_block_start", "index": 0, "content_block": {"type": "text", "text": ""}},
+    {"type": "content_block_delta", "index": 0, "delta": {"type": "text_delta", "text": "héllo "}},
+    {"type": "content_block_delta", "index": 0, "delta": {"type": "text_delta", "text": "\U0001f30d wor"}},
+    {"type": "content_block_delta", "index": 0, "delta": {"type": "text_delta", "text": "ld"}},
+    {"type": "content_block_stop", "index": 0},
+    {"type": "message_delta", "delta": {"stop_reason": "end_turn"}, "usage": {"output_tokens": 7}},
+    {"type": "message_stop"},
+]
+ANTHROPIC_TEXT_LOG = b"".join(anthropic_sse(e) for e in ANTHROPIC_TEXT_EVENTS)
+
+ANTHROPIC_TEXT_NONSTREAM = {
+    "id": "msg_9",
+    "content": [{"type": "text", "text": "héllo \U0001f30d world"}],
+    "stop_reason": "end_turn",
+    "usage": {"input_tokens": 5, "output_tokens": 7},
+}
+
+ANTHROPIC_TOOL_EVENTS = [
+    {"type": "message_start", "message": {"id": "msg_9", "usage": {"input_tokens": 9, "output_tokens": 1}}},
+    {"type": "content_block_start", "index": 0, "content_block": {"type": "tool_use", "id": "call_1", "name": "get_weather", "input": {}}},
+    {"type": "content_block_delta", "index": 0, "delta": {"type": "input_json_delta", "partial_json": '{"ci'}},
+    {"type": "content_block_delta", "index": 0, "delta": {"type": "input_json_delta", "partial_json": 'ty": "Paris"}'}},
+    {"type": "content_block_stop", "index": 0},
+    {"type": "content_block_start", "index": 1, "content_block": {"type": "tool_use", "id": "call_2", "name": "search", "input": {}}},
+    {"type": "content_block_delta", "index": 1, "delta": {"type": "input_json_delta", "partial_json": '{"q": "x"}'}},
+    {"type": "content_block_stop", "index": 1},
+    {"type": "message_delta", "delta": {"stop_reason": "tool_use"}, "usage": {"output_tokens": 4}},
+    {"type": "message_stop"},
+]
+ANTHROPIC_TOOL_LOG = b"".join(anthropic_sse(e) for e in ANTHROPIC_TOOL_EVENTS)
+
+ANTHROPIC_TOOL_NONSTREAM = {
+    "id": "msg_9",
+    "content": [
+        {"type": "tool_use", "id": "call_1", "name": "get_weather", "input": {"city": "Paris"}},
+        {"type": "tool_use", "id": "call_2", "name": "search", "input": {"q": "x"}},
+    ],
+    "stop_reason": "tool_use",
+    "usage": {"input_tokens": 9, "output_tokens": 4},
+}
+
 CASES: dict[str, dict[str, StreamCase]] = {
     "openai_compatible": {
         "text": StreamCase(log=TEXT_LOG, nonstream=TEXT_NONSTREAM),
         "tools": StreamCase(log=TOOL_LOG, nonstream=TOOL_NONSTREAM),
     },
+    "anthropic": {
+        "text": StreamCase(log=ANTHROPIC_TEXT_LOG, nonstream=ANTHROPIC_TEXT_NONSTREAM),
+        "tools": StreamCase(log=ANTHROPIC_TOOL_LOG, nonstream=ANTHROPIC_TOOL_NONSTREAM),
+    },
+}
+
+# A provider error arrives in each family's own spelling.
+ERROR_LOGS: dict[str, bytes] = {
+    "openai_compatible": sse({"error": {"code": "overloaded", "message": "try later"}}),
+    "anthropic": anthropic_sse({"type": "error", "error": {"type": "overloaded", "message": "try later"}}),
 }
 
 KINDS = sorted(REGISTRY)
@@ -142,8 +199,7 @@ def test_tool_call_fragments_reassemble_with_valid_json(kind):
 def test_a_mid_stream_error_event_raises(kind):
     adapter = _adapter(kind)
     state = adapter.new_stream_state(CTX)
-    log = sse({"error": {"code": "overloaded", "message": "try later"}})
-    (event,) = list(adapter.frame(log, state))
+    (event,) = list(adapter.frame(ERROR_LOGS[kind], state))
     with pytest.raises(UpstreamStreamError) as err:
         adapter.transform_stream_event(event, state)
     assert err.value.code == "overloaded"
@@ -155,3 +211,41 @@ def test_usage_reported_in_an_unknown_shape_reads_as_estimated():
     body = dict(TEXT_NONSTREAM, usage={"total_billing_units": 14})
     response = adapter.transform_response(json.dumps(body).encode(), CTX)
     assert response.usage.estimated
+
+
+ANTHROPIC_THINKING_EVENTS = [
+    {"type": "message_start", "message": {"id": "msg_9", "usage": {"input_tokens": 5, "output_tokens": 1}}},
+    {"type": "content_block_start", "index": 0, "content_block": {"type": "thinking", "thinking": ""}},
+    {"type": "content_block_delta", "index": 0, "delta": {"type": "thinking_delta", "thinking": "think "}},
+    {"type": "content_block_delta", "index": 0, "delta": {"type": "thinking_delta", "thinking": "hard"}},
+    {"type": "content_block_delta", "index": 0, "delta": {"type": "signature_delta", "signature": "sig_1"}},
+    {"type": "content_block_stop", "index": 0},
+    {"type": "content_block_start", "index": 1, "content_block": {"type": "text", "text": ""}},
+    {"type": "content_block_delta", "index": 1, "delta": {"type": "text_delta", "text": "done"}},
+    {"type": "content_block_stop", "index": 1},
+    {"type": "message_delta", "delta": {"stop_reason": "end_turn"}, "usage": {"output_tokens": 9}},
+    {"type": "message_stop"},
+]
+
+
+def test_the_thinking_signature_survives_the_stream():
+    """A signature the provider issues must come back on the reasoning part: a later turn
+    without it is rejected, so losing it in the fold breaks multi-turn reasoning."""
+    adapter = _adapter("anthropic")
+    log = b"".join(anthropic_sse(e) for e in ANTHROPIC_THINKING_EVENTS)
+    chunks, final = fold(adapter, log, 7)
+    (reasoning, text) = final.content
+    assert reasoning.type == "reasoning"
+    assert (reasoning.text, reasoning.signature) == ("think hard", "sig_1")
+    assert text.type == "text"
+    signatures = [c.delta.signature for c in chunks if c.delta is not None and c.delta.type == "reasoning" and c.delta.signature]
+    assert signatures == ["sig_1"]
+
+
+def test_a_cancel_before_the_final_usage_reads_as_estimated():
+    """message_delta carries the real output count; a disconnect before it must meter as an
+    estimate, never as an authoritative zero."""
+    adapter = _adapter("anthropic")
+    log = b"".join(anthropic_sse(e) for e in ANTHROPIC_TEXT_EVENTS[:5])  # cut before message_delta
+    _, final = fold(adapter, log, 7)
+    assert final.usage.estimated

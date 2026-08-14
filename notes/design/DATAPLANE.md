@@ -111,14 +111,16 @@ identity minus deliberate, reported edits.
 **Proof:** a field absent from the typed core, such as seed or top_k, reaches a provider that accepts
 it; onboarding a quirky OpenAI-compatible provider is a config change with zero code.
 
-### 7. Second adapter: anthropic (deferred)
+### 7. Second adapter: anthropic
 
-Deferred by choice, 2026-08-12: the OpenAI-family path is the adoption surface, so profiles come
-first. Proves the interface generalizes when it lands: harvest the branch's wire conversion logic
-into formats/anthropic.py and egress/anthropic.py, split so no 457-line module returns. The
-registry-parameterized suites (schema conformance, stream folds) pick the new kind up on their own.
-When the ingress side follows someday, its claims() must not lean on the x-stainless-* headers:
-every Stainless-generated SDK sends those, so the User-Agent prefix is the discriminating half.
+Landed 2026-08-14, after the profile work by choice. The interface generalized as designed: one
+module per side (formats/anthropic.py, egress/anthropic.py), and the registry-parameterized
+suites picked the new kind up on their own. The port also fixed a quarry gap: thinking
+signatures now survive both the buffered parse and the stream fold. Known gaps, deliberate:
+redacted_thinking blocks have no canonical carrier yet, and response_format and seed drop
+silently at this egress until capabilities land as a routing input. When the ingress side
+follows someday, its claims() must not lean on the x-stainless-* headers: every
+Stainless-generated SDK sends those, so the User-Agent prefix is the discriminating half.
 
 **Proof:** the same corpus of real requests against Anthropic, streamed and buffered.
 

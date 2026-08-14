@@ -14,11 +14,13 @@ providers:
     param_aliases:
       max_tokens: max_completion_tokens
   - provider_id: anthropic
-    # Anthropic's OpenAI-compatible surface; the native anthropic adapter is a later step.
-    kind: openai_compatible
+    kind: anthropic
     base_url: https://api.anthropic.com/v1
     cache_read_multiplier: 0.1
     cache_write_multiplier: 1.25
+    # The native schema is closed; these are the extras it accepts beyond the core.
+    params_closed: true
+    accepted_params: [top_k, thinking, metadata, service_tier]
   - provider_id: groq
     kind: openai_compatible
     base_url: https://api.groq.com/openai/v1
