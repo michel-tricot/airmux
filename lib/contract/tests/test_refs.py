@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from contract import UnsupportedRefSchemeError, load_config_section, resolve_ref, try_resolve_ref
+from contract import UnknownVarError, UnsupportedRefSchemeError, load_config_section, resolve_ref, try_resolve_ref
 
 
 def _write_config(tmp_path, text):
@@ -138,3 +138,24 @@ def test_a_ref_without_a_default_still_voids_the_string(tmp_path, monkeypatch):
     monkeypatch.delenv("REFS_TEST_ABSENT", raising=False)
     path = _write_config(tmp_path, "app:\n  token: ${env:REFS_TEST_ABSENT}-suffix\n")
     assert load_config_section("app", path)["token"] is None
+
+
+def test_vars_substitute_inside_refs_and_as_plain_values(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "keys").mkdir()
+    (tmp_path / "keys" / "signing.key").write_text("sekrit\n", encoding="utf-8")
+    path = tmp_path / "config.yml"
+    path.write_text(
+        "vars:\n  dir: keys\napp:\n  signing_key: ${file:${var:dir}/signing.key}\n  cache_dir: ${var:dir}\n",
+        encoding="utf-8",
+    )
+    section = load_config_section("app", path)
+    assert section["signing_key"] == "sekrit"
+    assert section["cache_dir"] == "keys"
+
+
+def test_an_unknown_var_fails_loudly(tmp_path):
+    path = tmp_path / "config.yml"
+    path.write_text("app:\n  cache_dir: ${var:missing}\n", encoding="utf-8")
+    with pytest.raises(UnknownVarError):
+        load_config_section("app", path)
