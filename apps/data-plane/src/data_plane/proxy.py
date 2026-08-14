@@ -65,19 +65,19 @@ def _error(status: int, code: str, message: str = "") -> JSONResponse:
 
 async def complete(request: Request) -> Response:
     """The native route: the dialect is resolved from the request."""
-    return await _complete(request, forced=None)
+    return await _complete(request, bound=None)
 
 
 async def messages(request: Request) -> Response:
     """The Anthropic-shaped route: the dialect is bound, so every answer speaks it, errors included."""
-    return await _complete(request, forced=INGRESS.get("anthropic"))
+    return await _complete(request, bound=INGRESS.get("anthropic"))
 
 
-async def _complete(request: Request, forced: IngressAdapter | None) -> Response:
+async def _complete(request: Request, bound: IngressAdapter | None) -> Response:
     try:
-        return await _handle(request, forced)
+        return await _handle(request, bound)
     except RequestRejectedError as e:
-        ingress = e.ingress or forced
+        ingress = e.ingress or bound
         if ingress is not None:
             return ingress.render_error(CanonicalError(status=e.status, code=e.code, message=e.message))
         return _error(e.status, e.code, e.message)
@@ -97,15 +97,15 @@ def _authenticate(request: Request) -> tuple[KeyEntry, BundleSnapshot]:
     return key, snap
 
 
-async def _parse(request: Request, forced: IngressAdapter | None) -> tuple[CanonicalRequest, list[Adjustment], IngressAdapter]:
+async def _parse(request: Request, bound: IngressAdapter | None) -> tuple[CanonicalRequest, list[Adjustment], IngressAdapter]:
     """The body into canonical through whichever dialect claims it, with the dialect's own
     translation losses carried as adjustments; parse failures speak that dialect."""
-    ingress: IngressAdapter | None = forced
+    ingress: IngressAdapter | None = bound
     try:
         body = json.loads(await request.body())
         if not isinstance(body, dict):
             raise RequestRejectedError(400, "invalid_request", "the request body must be a JSON object")
-        ingress = forced if forced is not None else resolve(request.headers, body)
+        ingress = bound if bound is not None else resolve(request.headers, body)
         req, adjustments = ingress.parse(body)
     except ValidationError as e:
         rejection = RequestRejectedError(400, "invalid_request", str(e.errors(include_url=False)[:3]))
@@ -160,9 +160,9 @@ def reconcile(req: CanonicalRequest, model: ModelEntry, profile: CompiledProfile
     return CanonicalRequest.model_validate({**forwarded, **core}), adjustments
 
 
-async def _handle(request: Request, forced: IngressAdapter | None = None) -> Response:
+async def _handle(request: Request, bound: IngressAdapter | None = None) -> Response:
     key, snap = _authenticate(request)
-    req, parse_adjustments, ingress = await _parse(request, forced)
+    req, parse_adjustments, ingress = await _parse(request, bound)
     try:
         return await _serve(req, key, snap, ingress, parse_adjustments)
     except RequestRejectedError as e:
