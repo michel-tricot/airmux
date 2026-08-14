@@ -42,7 +42,11 @@ class IngressAdapter(ABC):
         """Is this request unmistakably mine? Answer only that; resolve() owns ordering and the default."""
 
     @abstractmethod
-    def parse(self, body: dict[str, Any]) -> CanonicalRequest: ...
+    def parse(self, body: dict[str, Any]) -> tuple[CanonicalRequest, list[Adjustment]]:
+        """The body into canonical, plus what this dialect could not carry across.
+
+        Translation loss is an adjustment, never silence: a slot value the dialect cannot
+        interpret is reported dropped, and the canonical field stays honestly unset."""
 
     @abstractmethod
     def render_response(self, final: CanonicalResponse) -> Response: ...

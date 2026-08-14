@@ -48,8 +48,8 @@ class CanonicalIngress(IngressAdapter):
         """Never claims: canonical is what resolve() falls back to when nobody else does."""
         return False
 
-    def parse(self, body: dict[str, Any]) -> CanonicalRequest:
-        return CanonicalRequest.model_validate(body)
+    def parse(self, body: dict[str, Any]) -> tuple[CanonicalRequest, list[Adjustment]]:
+        return CanonicalRequest.model_validate(body), []
 
     def render_response(self, final: CanonicalResponse) -> Response:
         return JSONResponse(final.model_dump(mode="json", exclude_none=True))

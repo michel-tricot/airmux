@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, HttpUrl
+from pydantic import BaseModel, ConfigDict, Field, HttpUrl
 
 from contract.secrets import SecretRef
 
@@ -28,7 +28,10 @@ class KeyEntry(BaseModel):
 
 
 class ProviderEntry(BaseModel):
-    """An upstream LLM provider endpoint."""
+    """An upstream LLM provider endpoint, plus its profile: declarative facts about what the
+    provider accepts, so onboarding quirks is a bundle edit rather than an adapter branch.
+    Profile fields are names, sets and flags, never predicates; a provider that needs a
+    predicate needs an adapter."""
 
     model_config = ConfigDict(frozen=True)
 
@@ -37,6 +40,9 @@ class ProviderEntry(BaseModel):
     base_url: HttpUrl
     cache_read_multiplier: float = 1.0  # input price factor for prompt-cache hits (OpenAI 0.5, Anthropic 0.1)
     cache_write_multiplier: float = 1.0  # input price factor for cache writes (Anthropic 1.25)
+    param_aliases: dict[str, str] = Field(default_factory=dict)  # canonical param -> this provider's spelling
+    accepted_params: list[str] | None = None  # params known accepted beyond the core; consulted when params_closed
+    params_closed: bool = False  # True for the few providers whose schema rejects unknown params (3 of 22 in taxonomy)
 
 
 class ModelEntry(BaseModel):
