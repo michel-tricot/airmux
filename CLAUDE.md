@@ -22,7 +22,8 @@ registry, the registry is wrong; fix the registry.
   single consumer may stay inline in its adapter until a second consumer exists.
 - resolve() owns dialect discrimination end to end: override header, then claims() in registry order,
   then canonical as the unclaimed default. An ingress adapter answers only "is this mine".
-- The transport never parses SSE. frame() owns wire framing and the partial-line buffer.
+- The transport never parses SSE. Framing lives once in egress/base.frame_sse, the single source
+  of truth for the SSE machine; an adapter's frame() adds only its dialect, like OpenAI's [DONE].
 - StreamState is adapter-shaped. Construct it in new_stream_state(), never in the transport.
 - finalize(state) must return a valid CanonicalResponse at ANY point in the stream, including
   after a client disconnect. Cancellation accounting depends on this.

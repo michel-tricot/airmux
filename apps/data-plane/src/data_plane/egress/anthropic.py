@@ -24,7 +24,7 @@ from data_plane.canonical import (
     ToolCallPart,
     Usage,
 )
-from data_plane.egress.base import EgressAdapter, RawEvent, StreamState, UpstreamRequest, UpstreamStreamError, encode
+from data_plane.egress.base import EgressAdapter, RawEvent, StreamState, UpstreamRequest, UpstreamStreamError, encode, frame_sse
 from data_plane.formats.anthropic import (
     MessagesBody,
     UpstreamBlockDelta,
@@ -66,7 +66,6 @@ class _Block:
 @dataclass
 class AnthropicStreamState(StreamState):
     ctx: Ctx = field(kw_only=True)
-    pending_event: str | None = None  # the SSE event name captured across a read boundary
     response_id: str | None = None
     blocks: dict[int, _Block] = field(default_factory=dict)
     tool_count: int = 0
@@ -163,15 +162,8 @@ class AnthropicAdapter(EgressAdapter):
         return AnthropicStreamState(ctx=ctx)
 
     def frame(self, chunk: bytes, state: StreamState) -> Iterator[RawEvent]:
-        assert isinstance(state, AnthropicStreamState)  # noqa: S101 state comes from new_stream_state
-        state.buffer += chunk
-        *lines, state.buffer = state.buffer.split(b"\n")
-        for raw_line in lines:
-            line = raw_line.rstrip(b"\r")
-            if line.startswith(b"event:"):
-                state.pending_event = line[len(b"event:") :].strip().decode()
-            elif line.startswith(b"data:"):
-                yield RawEvent(data=line[len(b"data:") :].strip(), name=state.pending_event)
+        """The shared SSE machine; this dialect's event names ride RawEvent.name."""
+        return frame_sse(chunk, state)
 
     def transform_stream_event(self, ev: RawEvent, state: StreamState) -> list[CanonicalChunk]:
         assert isinstance(state, AnthropicStreamState)  # noqa: S101 state comes from new_stream_state

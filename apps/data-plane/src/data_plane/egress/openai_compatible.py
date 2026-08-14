@@ -22,7 +22,7 @@ from data_plane.canonical import (
     ToolCallDelta,
     ToolCallPart,
 )
-from data_plane.egress.base import EgressAdapter, RawEvent, StreamState, UpstreamRequest, UpstreamStreamError, encode
+from data_plane.egress.base import EgressAdapter, RawEvent, StreamState, UpstreamRequest, UpstreamStreamError, encode, frame_sse
 from data_plane.formats.openai import (
     UpstreamChoice,
     UpstreamChunk,
@@ -120,16 +120,8 @@ class OpenAICompatibleAdapter(EgressAdapter):
         return OpenAIStreamState(ctx=ctx)
 
     def frame(self, chunk: bytes, state: StreamState) -> Iterator[RawEvent]:
-        state.buffer += chunk
-        *lines, state.buffer = state.buffer.split(b"\n")
-        for raw_line in lines:
-            line = raw_line.rstrip(b"\r")
-            if not line.startswith(b"data:"):
-                continue
-            data = line[len(b"data:") :].strip()
-            if data == b"[DONE]":
-                continue
-            yield RawEvent(data=data)
+        """The shared SSE machine, plus this dialect's one addition: the [DONE] sentinel."""
+        return (event for event in frame_sse(chunk, state) if event.data != b"[DONE]")
 
     def transform_stream_event(self, ev: RawEvent, state: StreamState) -> list[CanonicalChunk]:
         assert isinstance(state, OpenAIStreamState)  # noqa: S101 state comes from new_stream_state
