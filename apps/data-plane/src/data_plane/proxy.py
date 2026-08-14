@@ -11,8 +11,9 @@ import contextlib
 import json
 import logging
 import time
+from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 import anyio
 import httpx
@@ -24,8 +25,8 @@ from data_plane.auth import authenticate
 from data_plane.canonical import Adjustment, CanonicalRequest, CanonicalResponse, GatewayInfo, TextPart, Usage
 from data_plane.egress import REGISTRY
 from data_plane.egress.base import CanonicalError, Ctx, UpstreamStreamError
+from data_plane.ingress import CANONICAL, resolve
 from data_plane.ingress import REGISTRY as INGRESS
-from data_plane.ingress import resolve
 from data_plane.ingress.canonical import CanonicalResponseStream
 from data_plane.metering import cost_breakdown, estimate_tokens
 from data_plane.policy import Allow, Deny, evaluate
@@ -33,8 +34,9 @@ from data_plane.runtime import holder, state
 from data_plane.transport import client
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterator, Sequence
+    from collections.abc import AsyncIterator, Callable, Sequence
 
+    from starlette.datastructures import Headers
     from starlette.requests import Request
 
     from contract import CredentialEntry, KeyEntry, ModelEntry, Secret, UsageStatus
@@ -63,24 +65,39 @@ def _error(status: int, code: str, message: str = "") -> JSONResponse:
     return JSONResponse({"error": {"code": code, "message": message}}, status_code=status)
 
 
+@dataclass(frozen=True)
+class BoundedIngress:
+    """A route's dialect contract, total by construction: pick chooses once a body exists, and
+    fallback answers when a request dies before a body does. Nothing is ever None."""
+
+    pick: Callable[[Headers, dict[str, Any]], IngressAdapter]
+    fallback: IngressAdapter
+
+
+def _fixed(ingress: IngressAdapter) -> BoundedIngress:
+    return BoundedIngress(pick=lambda headers, body: ingress, fallback=ingress)  # noqa: ARG005 uniform pick signature
+
+
+CHAT_INGRESS = BoundedIngress(pick=resolve, fallback=INGRESS[CANONICAL])
+MESSAGES_INGRESS = _fixed(INGRESS["anthropic"])
+
+
 async def complete(request: Request) -> Response:
-    """The native route: the dialect is resolved from the request."""
-    return await _complete(request, bound=None)
+    """The native route: the dialect is resolved from the request, canonical when nothing claims."""
+    return await _complete(request, CHAT_INGRESS)
 
 
 async def messages(request: Request) -> Response:
-    """The Anthropic-shaped route: the dialect is bound, so every answer speaks it, errors included."""
-    return await _complete(request, bound=INGRESS.get("anthropic"))
+    """The Anthropic-shaped route: the dialect is fixed, so every answer speaks it, errors included."""
+    return await _complete(request, MESSAGES_INGRESS)
 
 
-async def _complete(request: Request, bound: IngressAdapter | None) -> Response:
+async def _complete(request: Request, bounded_ingress: BoundedIngress) -> Response:
     try:
-        return await _handle(request, bound)
+        return await _handle(request, bounded_ingress)
     except RequestRejectedError as e:
-        ingress = e.ingress or bound
-        if ingress is not None:
-            return ingress.render_error(CanonicalError(status=e.status, code=e.code, message=e.message))
-        return _error(e.status, e.code, e.message)
+        ingress = e.ingress or bounded_ingress.fallback
+        return ingress.render_error(CanonicalError(status=e.status, code=e.code, message=e.message))
 
 
 def _authenticate(request: Request) -> tuple[KeyEntry, BundleSnapshot]:
@@ -97,15 +114,15 @@ def _authenticate(request: Request) -> tuple[KeyEntry, BundleSnapshot]:
     return key, snap
 
 
-async def _parse(request: Request, bound: IngressAdapter | None) -> tuple[CanonicalRequest, list[Adjustment], IngressAdapter]:
-    """The body into canonical through whichever dialect claims it, with the dialect's own
-    translation losses carried as adjustments; parse failures speak that dialect."""
-    ingress: IngressAdapter | None = bound
+async def _parse(request: Request, bounded_ingress: BoundedIngress) -> tuple[CanonicalRequest, list[Adjustment], IngressAdapter]:
+    """The body into canonical through whichever dialect the route's contract picks, with the
+    dialect's own translation losses carried as adjustments; parse failures speak that dialect."""
+    ingress: IngressAdapter | None = None
     try:
         body = json.loads(await request.body())
         if not isinstance(body, dict):
             raise RequestRejectedError(400, "invalid_request", "the request body must be a JSON object")
-        ingress = bound if bound is not None else resolve(request.headers, body)
+        ingress = bounded_ingress.pick(request.headers, body)
         req, adjustments = ingress.parse(body)
     except ValidationError as e:
         rejection = RequestRejectedError(400, "invalid_request", str(e.errors(include_url=False)[:3]))
@@ -160,9 +177,9 @@ def reconcile(req: CanonicalRequest, model: ModelEntry, profile: CompiledProfile
     return CanonicalRequest.model_validate({**forwarded, **core}), adjustments
 
 
-async def _handle(request: Request, bound: IngressAdapter | None = None) -> Response:
+async def _handle(request: Request, bounded_ingress: BoundedIngress = CHAT_INGRESS) -> Response:
     key, snap = _authenticate(request)
-    req, parse_adjustments, ingress = await _parse(request, bound)
+    req, parse_adjustments, ingress = await _parse(request, bounded_ingress)
     try:
         return await _serve(req, key, snap, ingress, parse_adjustments)
     except RequestRejectedError as e:
