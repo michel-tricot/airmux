@@ -47,13 +47,13 @@ def _load(url: str, headers: dict[str, str], body: dict, clients: int, per_clien
 def test_multiworker_shared_cache_dir_loses_no_events(stack: Stack) -> None:
     stack.write_config()
     stack.start_cp()
-    stack.collect_tokens()
+    stack.collect_credentials()
     stack.start_dp(workers=WORKERS)
     stack.wait_dp_ready()
     time.sleep(3)  # wait_dp_ready only proves one worker answered; let the rest boot and poll a bundle
 
     url = f"{stack.dp_url}/v1/chat/completions"
-    headers = {"authorization": f"Bearer {stack.caller_token}"}
+    headers = {"authorization": f"Bearer {stack.caller_api_key}"}
     body = {"model": "echo", "messages": [{"role": "user", "content": "hi"}]}
 
     warmup = _load(url, headers, body, clients=WORKERS, per_client=5)

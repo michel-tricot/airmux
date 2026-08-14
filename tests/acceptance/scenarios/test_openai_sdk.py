@@ -18,11 +18,11 @@ if TYPE_CHECKING:
 def test_the_unmodified_sdk_round_trips(stack: Stack) -> None:
     stack.write_config()
     stack.start_cp()
-    stack.collect_tokens()
+    stack.collect_credentials()
     stack.start_dp()
     stack.wait_dp_ready()
 
-    client = OpenAI(base_url=f"{stack.dp_url}/v1", api_key=stack.caller_token)
+    client = OpenAI(base_url=f"{stack.dp_url}/v1", api_key=stack.caller_api_key)
 
     completion = client.chat.completions.create(model="echo", messages=[{"role": "user", "content": "hi"}])
     assert completion.choices[0].message.content == "ok"
