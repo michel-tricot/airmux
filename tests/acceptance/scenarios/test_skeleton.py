@@ -1,8 +1,7 @@
-"""Acceptance: the keeper skeleton joins a deployment with no request path.
+"""Acceptance: bundle distribution and event delivery without inference traffic.
 
-Before it can serve inference, a data plane must prove the two loops that survive the rebuild:
-bundle distribution down (poll, verify, admit) and event tracking up (buffer, flush, ingest
-exactly once). Step 1 of notes/design/DATAPLANE.md; the request path returns at step 3.
+Before it can serve inference, a data plane must prove bundle distribution down (poll, verify,
+admit) and event tracking up (buffer, flush, ingest exactly once).
 """
 
 from __future__ import annotations

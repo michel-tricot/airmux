@@ -204,5 +204,6 @@ event schemas, signing, tokens). `apps/control-plane`, `apps/data-plane`,
 `apps/cli`, `lib/contract` and `lib/api-models` are uv workspace members.
 `apps/console` and the other `lib/*` packages are the bun workspace holding the
 console and its generated clients.
-The full design spec lives in `notes/PROTOTYPE.md`, and the working rules in
+The full design spec lives in `notes/PROTOTYPE.md`, the implemented data-plane architecture and
+public gateway contract live in `notes/design/DATAPLANE.md`, and the working rules live in
 `CLAUDE.md`.
