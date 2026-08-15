@@ -11,7 +11,6 @@ import httpx
 from contract import UsageEventV1
 from data_plane.outbox.base import EventOutbox
 from data_plane.tasks import run_periodic
-from data_plane.transport import client
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -57,12 +56,20 @@ def _connect(cache_dir: Path) -> sqlite3.Connection:
 class SqliteOutbox(EventOutbox):
     """Durable, multi-writer event queue with single-flusher leasing, flushed to the control plane."""
 
-    def __init__(self, cache_dir: Path, control_plane_url: str | None, control_plane_token: str | None, flush_interval_s: float) -> None:
+    def __init__(
+        self,
+        cache_dir: Path,
+        control_plane_url: str | None,
+        control_plane_token: str | None,
+        flush_interval_s: float,
+        http_client: httpx.AsyncClient,
+    ) -> None:
         self._conn = _connect(cache_dir)
         self._owner = str(os.getpid())
         self._url = control_plane_url
         self._token = control_plane_token
         self._flush_interval_s = flush_interval_s
+        self._http_client = http_client
 
     def record(self, event: UsageEventV1) -> None:
         with self._conn:
@@ -89,7 +96,7 @@ class SqliteOutbox(EventOutbox):
         events = self._read_batch(BATCH)
         if not events:
             return 0
-        resp = await client.post(
+        resp = await self._http_client.post(
             f"{self._url}/v1/events",
             headers={"authorization": f"Bearer {self._token}"},
             json=[e.model_dump(mode="json") for e in events],

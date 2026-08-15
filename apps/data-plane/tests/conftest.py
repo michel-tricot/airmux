@@ -6,6 +6,7 @@ from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
 from uuid import uuid4
 
+import httpx
 import pytest
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
@@ -31,6 +32,8 @@ from data_plane.egress import REGISTRY
 from data_plane.egress.base import Ctx
 
 if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
     from starlette.applications import Starlette
 
 NOW = datetime.now(tz=UTC)
@@ -177,3 +180,9 @@ def api_key(booted: BootedApp) -> str:
 @pytest.fixture
 def dp_app(booted: BootedApp) -> Starlette:
     return booted.app
+
+
+@pytest.fixture
+async def http_client() -> AsyncIterator[httpx.AsyncClient]:
+    async with httpx.AsyncClient() as client:
+        yield client

@@ -10,7 +10,6 @@ from pydantic import ValidationError
 from contract import SignedBundle, public_key_to_b64, verify_bundle
 from data_plane.cache import write_cached_bundle
 from data_plane.tasks import run_periodic
-from data_plane.transport import client
 
 if TYPE_CHECKING:
     from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
@@ -22,8 +21,14 @@ if TYPE_CHECKING:
 logger = logging.getLogger("data_plane")
 
 
-async def poll_once(link: ControlPlaneLink, bundle_config: RemoteBundleConfig, holder: BundleHolder, public_key: Ed25519PublicKey) -> None:
-    resp = await client.get(
+async def poll_once(
+    link: ControlPlaneLink,
+    bundle_config: RemoteBundleConfig,
+    holder: BundleHolder,
+    public_key: Ed25519PublicKey,
+    http_client: httpx.AsyncClient,
+) -> None:
+    resp = await http_client.get(
         f"{link.url}/v1/bundle/latest",
         headers={"authorization": f"Bearer {link.token}"},
         params={"org_id": str(bundle_config.org)} if bundle_config.org else {},
@@ -48,9 +53,15 @@ async def poll_once(link: ControlPlaneLink, bundle_config: RemoteBundleConfig, h
         write_cached_bundle(bundle_config.cache_dir, signed)
 
 
-async def run_poller(link: ControlPlaneLink, bundle_config: RemoteBundleConfig, holder: BundleHolder, public_key: Ed25519PublicKey) -> None:
+async def run_poller(
+    link: ControlPlaneLink,
+    bundle_config: RemoteBundleConfig,
+    holder: BundleHolder,
+    public_key: Ed25519PublicKey,
+    http_client: httpx.AsyncClient,
+) -> None:
     await run_periodic(
-        lambda: poll_once(link, bundle_config, holder, public_key),
+        lambda: poll_once(link, bundle_config, holder, public_key, http_client),
         bundle_config.poll_interval_s,
         (httpx.HTTPError, ValidationError, InvalidSignature, OSError),
         "bundle poll",

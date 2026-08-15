@@ -29,7 +29,6 @@ from data_plane.metering import record_denied, record_usage, status_for_error, s
 from data_plane.policy import Allow, Deny, evaluate
 from data_plane.reconcile import reconcile
 from data_plane.runtime import Runtime, runtime_of
-from data_plane.transport import client
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Sequence
@@ -162,9 +161,9 @@ async def _serve(  # noqa: PLR0913 request serving needs canonical input, auth, 
     adjustments = [*parse_adjustments, *reconcile_adjustments]
     upstream = adapter.transform_request(req, decision.model)
     if req.stream:
-        return await _stream(adapter, ingress, ctx, upstream, req, adjustments, runtime.outbox)
+        return await _stream(adapter, ingress, ctx, upstream, req, adjustments, runtime.outbox, runtime.http_client)
     try:
-        resp = await client.request(upstream.method, upstream.url, headers=upstream.headers, content=upstream.body)
+        resp = await runtime.http_client.request(upstream.method, upstream.url, headers=upstream.headers, content=upstream.body)
     except httpx.HTTPError as e:
         return ingress.render_error(_record_upstream_error(adapter, ctx, e, req, runtime.outbox))
     if resp.is_error:
@@ -178,7 +177,7 @@ async def _serve(  # noqa: PLR0913 request serving needs canonical input, auth, 
     return ingress.render_response(final)
 
 
-async def _stream(  # noqa: PLR0913, PLR0917 the streaming lifecycle genuinely spans these seven
+async def _stream(  # noqa: PLR0913, PLR0917 the streaming lifecycle genuinely spans these eight
     adapter: EgressAdapter,
     ingress: IngressAdapter,
     ctx: Ctx,
@@ -186,6 +185,7 @@ async def _stream(  # noqa: PLR0913, PLR0917 the streaming lifecycle genuinely s
     req: CanonicalRequest,
     adjustments: Sequence[Adjustment],
     outbox: EventOutbox,
+    http_client: httpx.AsyncClient,
 ) -> Response:
     """Open the upstream and peek at the status, then hand the socket to the response generator.
 
@@ -195,7 +195,7 @@ async def _stream(  # noqa: PLR0913, PLR0917 the streaming lifecycle genuinely s
     """
     async with contextlib.AsyncExitStack() as stack:
         try:
-            resp = await stack.enter_async_context(client.stream(upstream.method, upstream.url, headers=upstream.headers, content=upstream.body))
+            resp = await stack.enter_async_context(http_client.stream(upstream.method, upstream.url, headers=upstream.headers, content=upstream.body))
             if resp.is_error:
                 body = await resp.aread()
                 error = UpstreamResponseError(resp.status_code, body)

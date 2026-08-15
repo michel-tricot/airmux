@@ -5,6 +5,7 @@ import contextlib
 import logging
 from typing import TYPE_CHECKING
 
+import httpx
 import yaml
 from cryptography.exceptions import InvalidSignature
 from pydantic import ValidationError
@@ -21,7 +22,7 @@ from data_plane.cache import instance_id as cache_instance_id
 from data_plane.cache import read_cached_bundle
 from data_plane.config import Config, load_config
 from data_plane.credentials import CredentialResolver
-from data_plane.heartbeat import run_heartbeat
+from data_plane.heartbeat import Heartbeat
 from data_plane.outbox import build_outbox
 from data_plane.proxy import complete, messages
 from data_plane.runtime import Runtime, runtime_of
@@ -87,10 +88,11 @@ def _start_bundle_source(config: Config, runtime: Runtime) -> list[asyncio.Task[
     if not config.control_plane.url:
         return []
     instance_id = cache_instance_id(bundle_config.cache_dir)
+    heartbeat = Heartbeat(config.control_plane, runtime.holder, instance_id, runtime.http_client)
     return [
-        asyncio.create_task(run_poller(config.control_plane, bundle_config, runtime.holder, public_key)),
+        asyncio.create_task(run_poller(config.control_plane, bundle_config, runtime.holder, public_key, runtime.http_client)),
         asyncio.create_task(runtime.outbox.run()),
-        asyncio.create_task(run_heartbeat(config, runtime.holder, instance_id)),
+        asyncio.create_task(heartbeat.run()),
     ]
 
 
@@ -99,19 +101,29 @@ def create_app(config: Config) -> Starlette:
     async def lifespan(_app: Starlette) -> AsyncIterator[dict[str, Runtime]]:
         if config.dev:
             _configure_dev_logging()
-        outbox = build_outbox(config)
-        try:
-            runtime = Runtime(holder=BundleHolder(), outbox=outbox, credentials=CredentialResolver(config.secrets.build()))
-            tasks = _start_bundle_source(config, runtime)
+        async with httpx.AsyncClient(
+            http2=True,
+            limits=httpx.Limits(max_connections=100, max_keepalive_connections=20),
+            timeout=httpx.Timeout(connect=5.0, read=120.0, write=30.0, pool=5.0),
+        ) as http_client:
+            outbox = build_outbox(config, http_client)
             try:
-                yield {"runtime": runtime}
+                runtime = Runtime(
+                    holder=BundleHolder(),
+                    outbox=outbox,
+                    credentials=CredentialResolver(config.secrets.build()),
+                    http_client=http_client,
+                )
+                tasks = _start_bundle_source(config, runtime)
+                try:
+                    yield {"runtime": runtime}
+                finally:
+                    for task in tasks:
+                        task.cancel()
+                        with contextlib.suppress(asyncio.CancelledError):
+                            await task
             finally:
-                for task in tasks:
-                    task.cancel()
-                    with contextlib.suppress(asyncio.CancelledError):
-                        await task
-        finally:
-            outbox.close()
+                outbox.close()
 
     return Starlette(
         routes=[

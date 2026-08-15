@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, cast
 
 if TYPE_CHECKING:
+    import httpx
     from starlette.requests import Request
 
     from data_plane.bundle.holder import BundleHolder
@@ -16,6 +17,7 @@ class Runtime:
     holder: BundleHolder
     outbox: EventOutbox
     credentials: CredentialResolver
+    http_client: httpx.AsyncClient
 
 
 def runtime_of(request: Request) -> Runtime:

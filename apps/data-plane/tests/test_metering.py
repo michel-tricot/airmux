@@ -35,8 +35,14 @@ def test_cache_counts_cannot_make_fresh_input_negative():
     assert cost_in == (80 * 0.25 + 40 * 2.5) / 1_000_000
 
 
-def test_estimated_usage_is_persisted_with_request_attribution(tmp_path):
-    outbox = SqliteOutbox(cache_dir=tmp_path, control_plane_url=None, control_plane_token=None, flush_interval_s=5.0)
+def test_estimated_usage_is_persisted_with_request_attribution(tmp_path, http_client):
+    outbox = SqliteOutbox(
+        cache_dir=tmp_path,
+        control_plane_url=None,
+        control_plane_token=None,
+        flush_interval_s=5.0,
+        http_client=http_client,
+    )
     bundle_id = uuid7()
     credential_id = uuid7()
     ctx = Ctx(

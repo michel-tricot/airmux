@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from datetime import UTC, datetime
+from typing import TYPE_CHECKING, cast
 
 import httpx
 import pytest
@@ -16,6 +17,9 @@ from data_plane.bundle import BundleHolder, LocalBundleConfig
 from data_plane.bundle.local import load_local, reload_if_changed
 from data_plane.config import Config, EventsConfig
 from data_plane.outbox import SqliteOutbox
+
+if TYPE_CHECKING:
+    from data_plane.runtime import Runtime
 
 NOW = datetime.now(tz=UTC)
 
@@ -52,8 +56,14 @@ def _write(tmp_path, text=BUNDLE_YML):
     return path
 
 
-def _recorded(cache_dir):
-    outbox = SqliteOutbox(cache_dir=cache_dir, control_plane_url=None, control_plane_token=None, flush_interval_s=5.0)
+def _recorded(cache_dir, http_client):
+    outbox = SqliteOutbox(
+        cache_dir=cache_dir,
+        control_plane_url=None,
+        control_plane_token=None,
+        flush_interval_s=5.0,
+        http_client=http_client,
+    )
     events = outbox._read_batch(10)
     outbox.close()
     return events
@@ -120,7 +130,7 @@ def test_local_mode_serves_end_to_end(tmp_path, monkeypatch):
 
 
 @respx.mock
-def test_app_instances_keep_their_own_runtime(tmp_path):
+def test_app_instances_keep_their_own_runtime(tmp_path, http_client):
     first_path = tmp_path / "first.yml"
     first_path.write_text(BUNDLE_YML.replace("sk-inf-local-dev", "sk-inf-first"), encoding="utf-8")
     second_path = tmp_path / "second.yml"
@@ -143,6 +153,11 @@ def test_app_instances_keep_their_own_runtime(tmp_path):
     body = {"model": "gpt-test", "messages": [{"role": "user", "content": "hi"}]}
 
     with TestClient(first) as first_client, TestClient(second) as second_client:
+        first_http_client = cast("Runtime", first_client.app_state["runtime"]).http_client
+        second_http_client = cast("Runtime", second_client.app_state["runtime"]).http_client
+        assert first_http_client is not second_http_client
+        assert not first_http_client.is_closed
+        assert not second_http_client.is_closed
         first_response = first_client.post(
             "/v1/chat/completions",
             headers={"Authorization": "Bearer sk-inf-first"},
@@ -154,8 +169,10 @@ def test_app_instances_keep_their_own_runtime(tmp_path):
             json=body,
         )
 
+    assert first_http_client.is_closed
+    assert second_http_client.is_closed
     assert first_response.status_code == 200
     assert second_response.status_code == 200
     assert [call.request.headers["authorization"] for call in route.calls] == ["Bearer sk-first", "Bearer sk-second"]
-    assert [event.bundle_id for event in _recorded(first_events)] == [first_bundle.bundle_id]
-    assert [event.bundle_id for event in _recorded(second_events)] == [second_bundle.bundle_id]
+    assert [event.bundle_id for event in _recorded(first_events, http_client)] == [first_bundle.bundle_id]
+    assert [event.bundle_id for event in _recorded(second_events, http_client)] == [second_bundle.bundle_id]
