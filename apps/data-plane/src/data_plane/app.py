@@ -14,6 +14,7 @@ from starlette.routing import Route
 
 from contract import verify_bundle
 from data_plane.bundle.config import LocalBundleConfig, RemoteBundleConfig
+from data_plane.bundle.holder import BundleHolder
 from data_plane.bundle.local import admit_local, run_local_reload
 from data_plane.bundle.remote import run_poller
 from data_plane.cache import instance_id as cache_instance_id
@@ -21,9 +22,9 @@ from data_plane.cache import read_cached_bundle
 from data_plane.config import Config, load_config
 from data_plane.credentials import CredentialResolver
 from data_plane.heartbeat import run_heartbeat
-from data_plane.outbox import EventOutbox, build_outbox
+from data_plane.outbox import build_outbox
 from data_plane.proxy import complete, messages
-from data_plane.runtime import holder, state
+from data_plane.runtime import Runtime, runtime_of
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -38,8 +39,8 @@ async def healthz(_request: Request) -> JSONResponse:
     return JSONResponse({"status": "ok"})
 
 
-async def readyz(_request: Request) -> JSONResponse:
-    if holder.snapshot is None:
+async def readyz(request: Request) -> JSONResponse:
+    if runtime_of(request).holder.snapshot is None:
         return JSONResponse({"status": "no bundle"}, status_code=503)
     return JSONResponse({"status": "ready"})
 
@@ -52,7 +53,7 @@ def _configure_dev_logging() -> None:
         logger.setLevel(logging.INFO)
 
 
-def _load_cached_bundle(bundle_config: RemoteBundleConfig, public_key: Ed25519PublicKey) -> None:
+def _load_cached_bundle(bundle_config: RemoteBundleConfig, public_key: Ed25519PublicKey, holder: BundleHolder) -> None:
     try:
         signed = read_cached_bundle(bundle_config.cache_dir)
     except ValidationError:
@@ -69,7 +70,7 @@ def _load_cached_bundle(bundle_config: RemoteBundleConfig, public_key: Ed25519Pu
     holder.admit(bundle, bundle_config.staleness_policy, source="cached")
 
 
-def _start_bundle_source(config: Config, outbox: EventOutbox) -> list[asyncio.Task[None]]:
+def _start_bundle_source(config: Config, runtime: Runtime) -> list[asyncio.Task[None]]:
     """Start whichever source feeds admit(): the file watcher, or the poller with its siblings.
 
     A broken local file at boot logs and serves 503 until the reload sees a good one, the same
@@ -77,42 +78,40 @@ def _start_bundle_source(config: Config, outbox: EventOutbox) -> list[asyncio.Ta
     bundle_config = config.bundle
     if isinstance(bundle_config, LocalBundleConfig):
         try:
-            admit_local(bundle_config, holder)
+            admit_local(bundle_config, runtime.holder)
         except (OSError, ValidationError, ValueError, yaml.YAMLError):
             logger.exception("local bundle %s did not load, serving 503 until it does", bundle_config.path)
-        return [asyncio.create_task(run_local_reload(bundle_config, holder))]
-    state.bundle_verify_key = bundle_config.verify_key
-    _load_cached_bundle(bundle_config, state.bundle_verify_key)
+        return [asyncio.create_task(run_local_reload(bundle_config, runtime.holder))]
+    public_key = bundle_config.verify_key
+    _load_cached_bundle(bundle_config, public_key, runtime.holder)
     if not config.control_plane.url:
         return []
     instance_id = cache_instance_id(bundle_config.cache_dir)
     return [
-        asyncio.create_task(run_poller(config.control_plane, bundle_config, holder, state.bundle_verify_key)),
-        asyncio.create_task(outbox.run()),
-        asyncio.create_task(run_heartbeat(config, holder, instance_id)),
+        asyncio.create_task(run_poller(config.control_plane, bundle_config, runtime.holder, public_key)),
+        asyncio.create_task(runtime.outbox.run()),
+        asyncio.create_task(run_heartbeat(config, runtime.holder, instance_id)),
     ]
 
 
 def create_app(config: Config) -> Starlette:
     @contextlib.asynccontextmanager
-    async def lifespan(_app: Starlette) -> AsyncIterator[None]:
+    async def lifespan(_app: Starlette) -> AsyncIterator[dict[str, Runtime]]:
         if config.dev:
             _configure_dev_logging()
-        state.config = config
         outbox = build_outbox(config)
-        state.outbox = outbox
-        state.credentials = CredentialResolver(config.secrets.build())
         try:
-            tasks = _start_bundle_source(config, outbox)
+            runtime = Runtime(holder=BundleHolder(), outbox=outbox, credentials=CredentialResolver(config.secrets.build()))
+            tasks = _start_bundle_source(config, runtime)
             try:
-                yield
+                yield {"runtime": runtime}
             finally:
                 for task in tasks:
                     task.cancel()
                     with contextlib.suppress(asyncio.CancelledError):
                         await task
         finally:
-            state.outbox.close()
+            outbox.close()
 
     return Starlette(
         routes=[
