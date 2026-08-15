@@ -10,7 +10,6 @@ import asyncio
 import contextlib
 import json
 import logging
-from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any, Literal
 
 import anyio
@@ -137,7 +136,7 @@ async def _serve(  # noqa: PLR0913 request serving needs canonical input, auth, 
     parse_adjustments: list[Adjustment],
     runtime: Runtime,
 ) -> Response:
-    decision = evaluate(req, key, snap, datetime.now(tz=UTC))
+    decision = evaluate(req, key, snap)
     if isinstance(decision, Deny):
         record_denied(runtime.outbox, key, snap.bundle.bundle_id, req)
         raise RequestRejectedError(decision.status, decision.reason)

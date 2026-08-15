@@ -5,7 +5,7 @@ import asyncio
 import httpx
 import pytest
 import respx
-from conftest import MODEL, NOW, ORG, PROVIDER, WORKSPACE, make_bundle, make_credential, make_key
+from conftest import MODEL, ORG, PROVIDER, WORKSPACE, make_bundle, make_credential, make_key
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from starlette.testclient import TestClient
 
@@ -50,7 +50,7 @@ def snap(*credentials):
 def decide(*credentials, workspace=WORKSPACE):
     request = CanonicalRequest(model="gpt-test", messages=[{"role": "user", "content": "hi"}])
     key = make_key("k1", org=ORG, workspace=workspace)[1]
-    return evaluate(request, key, snap(*credentials), NOW)
+    return evaluate(request, key, snap(*credentials))
 
 
 def test_a_workspace_key_wins_over_the_org_one():

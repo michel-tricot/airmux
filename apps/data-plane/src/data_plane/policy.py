@@ -6,8 +6,6 @@ from typing import TYPE_CHECKING
 from data_plane.credentials import candidates_for
 
 if TYPE_CHECKING:
-    from datetime import datetime
-
     from contract import CredentialEntry, KeyEntry, ModelEntry, ProviderEntry
     from data_plane.bundle.holder import BundleSnapshot
     from data_plane.canonical import CanonicalRequest
@@ -31,7 +29,7 @@ class Deny:
 type Decision = Allow | Deny
 
 
-def evaluate(req: CanonicalRequest, key: KeyEntry, snap: BundleSnapshot, now: datetime) -> Decision:  # noqa: ARG001 now is spec-fixed, staleness enforced at swap time
+def evaluate(req: CanonicalRequest, key: KeyEntry, snap: BundleSnapshot) -> Decision:
     """Pure and synchronous: no async, no network, no I/O, no datetime.now(). Under 100 lines.
 
     Returns the credentials that may be spent rather than a choice between them: picking one means
