@@ -28,7 +28,7 @@ from data_plane.ingress import REGISTRY as INGRESS
 from data_plane.metering import record_denied, record_usage, status_for_error, status_for_upstream
 from data_plane.policy import Allow, Deny, evaluate
 from data_plane.reconcile import reconcile
-from data_plane.runtime import holder, state
+from data_plane.runtime import Runtime, runtime_of
 from data_plane.transport import client
 
 if TYPE_CHECKING:
@@ -37,7 +37,8 @@ if TYPE_CHECKING:
     from starlette.requests import Request
 
     from contract import CredentialEntry, KeyEntry, Secret
-    from data_plane.bundle.holder import BundleSnapshot
+    from data_plane.bundle.holder import BundleHolder, BundleSnapshot
+    from data_plane.credentials import CredentialResolver
     from data_plane.egress.base import EgressAdapter, StreamState, UpstreamRequest
     from data_plane.ingress import IngressAdapter
     from data_plane.ingress.base import ResponseStream
@@ -64,24 +65,26 @@ async def complete(request: Request) -> Response:
 
     Failures before detection cannot speak a dialect, so they use the canonical envelope,
     which is what the canonical ingress renders anyway."""
+    runtime = runtime_of(request)
     try:
-        key, snap = _authenticate(request)
+        key, snap = _authenticate(request, runtime.holder)
         body = await _body(request)
         ingress = resolve(request.headers, body)
     except RequestRejectedError as e:
         return INGRESS[CANONICAL].render_error(_rejection(e))
-    return await _run(body, key, snap, ingress)
+    return await _run(body, key, snap, ingress, runtime)
 
 
 async def messages(request: Request) -> Response:
     """The Anthropic-shaped route: the dialect is the route, so every answer speaks it."""
     ingress = INGRESS["anthropic"]
+    runtime = runtime_of(request)
     try:
-        key, snap = _authenticate(request)
+        key, snap = _authenticate(request, runtime.holder)
         body = await _body(request)
     except RequestRejectedError as e:
         return ingress.render_error(_rejection(e))
-    return await _run(body, key, snap, ingress)
+    return await _run(body, key, snap, ingress, runtime)
 
 
 async def _body(request: Request) -> dict[str, Any]:
@@ -94,15 +97,15 @@ async def _body(request: Request) -> dict[str, Any]:
     return body
 
 
-async def _run(body: dict[str, Any], key: KeyEntry, snap: BundleSnapshot, ingress: IngressAdapter) -> Response:
+async def _run(body: dict[str, Any], key: KeyEntry, snap: BundleSnapshot, ingress: IngressAdapter, runtime: Runtime) -> Response:
     try:
         req, parse_adjustments = _parse(body, ingress)
-        return await _serve(req, key, snap, ingress, parse_adjustments)
+        return await _serve(req, key, snap, ingress, parse_adjustments=parse_adjustments, runtime=runtime)
     except RequestRejectedError as e:
         return ingress.render_error(_rejection(e))
 
 
-def _authenticate(request: Request) -> tuple[KeyEntry, BundleSnapshot]:
+def _authenticate(request: Request, holder: BundleHolder) -> tuple[KeyEntry, BundleSnapshot]:
     """The caller against the bundle, before the body is even read; raises RequestRejectedError on every no."""
     snap = holder.snapshot
     if snap is None:
@@ -126,16 +129,22 @@ def _parse(body: dict[str, Any], ingress: IngressAdapter) -> tuple[CanonicalRequ
         raise RequestRejectedError(400, "invalid_request", str(e)) from e
 
 
-async def _serve(
-    req: CanonicalRequest, key: KeyEntry, snap: BundleSnapshot, ingress: IngressAdapter, parse_adjustments: list[Adjustment]
+async def _serve(  # noqa: PLR0913 request serving needs canonical input, auth, bundle, ingress, adjustments, and its app runtime
+    req: CanonicalRequest,
+    key: KeyEntry,
+    snap: BundleSnapshot,
+    ingress: IngressAdapter,
+    *,
+    parse_adjustments: list[Adjustment],
+    runtime: Runtime,
 ) -> Response:
     decision = evaluate(req, key, snap, datetime.now(tz=UTC))
     if isinstance(decision, Deny):
-        record_denied(_outbox(), key, snap.bundle.bundle_id, req)
+        record_denied(runtime.outbox, key, snap.bundle.bundle_id, req)
         raise RequestRejectedError(decision.status, decision.reason)
 
     entry = decision.candidates[0]
-    credential = await _resolve_credential(decision)
+    credential = await _resolve_credential(decision, runtime.credentials)
     adapter = REGISTRY[decision.provider.kind](decision.provider, credential)
     ctx = Ctx(
         request_id=str(uuid7()),
@@ -153,28 +162,30 @@ async def _serve(
     adjustments = [*parse_adjustments, *reconcile_adjustments]
     upstream = adapter.transform_request(req, decision.model)
     if req.stream:
-        return await _stream(adapter, ingress, ctx, upstream, req, adjustments)
+        return await _stream(adapter, ingress, ctx, upstream, req, adjustments, runtime.outbox)
     try:
         resp = await client.request(upstream.method, upstream.url, headers=upstream.headers, content=upstream.body)
     except httpx.HTTPError as e:
-        return _upstream_exception(adapter, ingress, ctx, e, req)
+        return ingress.render_error(_record_upstream_error(adapter, ctx, e, req, runtime.outbox))
     if resp.is_error:
-        return _upstream_response_error(adapter, ingress, ctx, UpstreamResponseError(resp.status_code, resp.content), req)
+        error = UpstreamResponseError(resp.status_code, resp.content)
+        return ingress.render_error(_record_upstream_error(adapter, ctx, error, req, runtime.outbox))
     try:
         final = adapter.transform_response(resp.content, ctx).model_copy(update={"gateway": GatewayInfo(adjustments=adjustments)})
     except UpstreamProtocolError as e:
-        return _upstream_exception(adapter, ingress, ctx, e, req)
-    record_usage(_outbox(), ctx, final, status="ok", request=req)
+        return ingress.render_error(_record_upstream_error(adapter, ctx, e, req, runtime.outbox))
+    record_usage(runtime.outbox, ctx, final, status="ok", request=req)
     return ingress.render_response(final)
 
 
-async def _stream(  # noqa: PLR0913, PLR0917 the streaming lifecycle genuinely spans these six
+async def _stream(  # noqa: PLR0913, PLR0917 the streaming lifecycle genuinely spans these seven
     adapter: EgressAdapter,
     ingress: IngressAdapter,
     ctx: Ctx,
     upstream: UpstreamRequest,
     req: CanonicalRequest,
     adjustments: Sequence[Adjustment],
+    outbox: EventOutbox,
 ) -> Response:
     """Open the upstream and peek at the status, then hand the socket to the response generator.
 
@@ -187,17 +198,18 @@ async def _stream(  # noqa: PLR0913, PLR0917 the streaming lifecycle genuinely s
             resp = await stack.enter_async_context(client.stream(upstream.method, upstream.url, headers=upstream.headers, content=upstream.body))
             if resp.is_error:
                 body = await resp.aread()
-                return _upstream_response_error(adapter, ingress, ctx, UpstreamResponseError(resp.status_code, body), req)
+                error = UpstreamResponseError(resp.status_code, body)
+                return ingress.render_error(_record_upstream_error(adapter, ctx, error, req, outbox))
         except httpx.HTTPError as e:
-            return _upstream_exception(adapter, ingress, ctx, e, req)
+            return ingress.render_error(_record_upstream_error(adapter, ctx, e, req, outbox))
         stream_state = adapter.new_stream_state(ctx)
         handoff = stack.pop_all()
 
     out = ingress.new_stream()
-    return StreamingResponse(_events(adapter, ctx, resp, handoff, stream_state, req, list(adjustments), out), media_type="text/event-stream")
+    return StreamingResponse(_events(adapter, ctx, resp, handoff, stream_state, req, list(adjustments), out, outbox), media_type="text/event-stream")
 
 
-async def _events(  # noqa: PLR0913, PLR0917 the streaming lifecycle genuinely spans these eight
+async def _events(  # noqa: PLR0913, PLR0917 the streaming lifecycle genuinely spans these nine
     adapter: EgressAdapter,
     ctx: Ctx,
     resp: httpx.Response,
@@ -206,6 +218,7 @@ async def _events(  # noqa: PLR0913, PLR0917 the streaming lifecycle genuinely s
     req: CanonicalRequest,
     adjustments: list[Adjustment],
     renderer: ResponseStream,
+    outbox: EventOutbox,
 ) -> AsyncIterator[bytes]:
     """One canonical stream, spelled by whichever dialect the caller's ingress picked; an error
     after bytes flowed is a data frame, since the status is already spent."""
@@ -222,26 +235,23 @@ async def _events(  # noqa: PLR0913, PLR0917 the streaming lifecycle genuinely s
             final = adapter.finalize(stream_state)
             for b in renderer.closing(final, adjustments):
                 yield b
-            record_usage(_outbox(), ctx, final, status="ok", request=req)
+            record_usage(outbox, ctx, final, status="ok", request=req)
         except (UpstreamProtocolError, UpstreamStreamError, httpx.HTTPError) as e:
             for b in renderer.error(adapter.map_error(e)):
                 yield b
-            record_usage(_outbox(), ctx, adapter.finalize(stream_state), status=status_for_error(e), request=req)
+            record_usage(outbox, ctx, adapter.finalize(stream_state), status=status_for_error(e), request=req)
         except (asyncio.CancelledError, anyio.get_cancelled_exc_class()):
-            record_usage(_outbox(), ctx, adapter.finalize(stream_state), status="cancelled", request=req)
+            record_usage(outbox, ctx, adapter.finalize(stream_state), status="cancelled", request=req)
             raise
 
 
-async def _resolve_credential(decision: Allow) -> Secret:
+async def _resolve_credential(decision: Allow, resolver: CredentialResolver) -> Secret:
     """The value behind the first candidate the tier offers.
 
     Failover across candidates is not here yet, so a broken first key fails the request rather than
     falling through to the second. What it never does is widen to a broader tier: a key that is
     missing or a store that is down must not silently move an org's spend onto the platform account.
     """
-    resolver = state.credentials
-    if resolver is None:
-        raise RequestRejectedError(500, "credentials_unavailable")
     entry = decision.candidates[0]
     try:
         secret = await resolver.fetch(entry)
@@ -259,30 +269,10 @@ def _scope_of(entry: CredentialEntry) -> Literal["platform", "org", "workspace"]
     return "workspace" if entry.ref.workspace_id is not None else "org"
 
 
-def _outbox() -> EventOutbox:
-    outbox = state.outbox
-    if outbox is None:
-        msg = "event outbox is not initialized"
-        raise RuntimeError(msg)
-    return outbox
-
-
-def _upstream_exception(adapter: EgressAdapter, ingress: IngressAdapter, ctx: Ctx, e: Exception, req: CanonicalRequest) -> Response:
-    err = adapter.map_error(e)
-    record_usage(_outbox(), ctx, _empty_response(ctx), status=status_for_error(e), request=req)
-    return ingress.render_error(err)
-
-
-def _upstream_response_error(
-    adapter: EgressAdapter,
-    ingress: IngressAdapter,
-    ctx: Ctx,
-    error: UpstreamResponseError,
-    req: CanonicalRequest,
-) -> Response:
-    err = adapter.map_error(error)
-    record_usage(_outbox(), ctx, _empty_response(ctx), status=status_for_upstream(error.status), request=req)
-    return ingress.render_error(err)
+def _record_upstream_error(adapter: EgressAdapter, ctx: Ctx, error: Exception, req: CanonicalRequest, outbox: EventOutbox) -> CanonicalError:
+    status = status_for_upstream(error.status) if isinstance(error, UpstreamResponseError) else status_for_error(error)
+    record_usage(outbox, ctx, _empty_response(ctx), status=status, request=req)
+    return adapter.map_error(error)
 
 
 def _empty_response(ctx: Ctx) -> CanonicalResponse:
