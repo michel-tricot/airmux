@@ -36,6 +36,12 @@ not data: whatever renders it sanitizes it.
 The vendor's product page and the top level of its API documentation. Both are recorded
 post-redirect, because these hosts migrate often.
 
+## base_url
+
+The inference endpoint, which is what the applied `taxonomy.yml` routes to. Distinct from
+`models_url`: Groq lists at `/openai/v1/models` and infers at `/openai/v1`, and the two are
+not always one path apart. Candidates have no base_url, because nothing routes to them.
+
 ## openapi
 
 A machine-readable spec that parses and contains the inference paths, checked rather than

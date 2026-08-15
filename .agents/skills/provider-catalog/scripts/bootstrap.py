@@ -25,8 +25,8 @@ from paths import TAXONOMY
 
 SEED = HERE.parent / "seed.yml"
 CANON = {"oai": "openai", "anthropic": "anthropic"}
-FIELD_ORDER = ("id", "name", "icon_mono", "icon_color", "homepage", "docs", "openapi",
-               "models_url", "ingress", "auth", "env_var", "schema")
+FIELD_ORDER = ("id", "name", "icon_mono", "icon_color", "homepage", "docs", "base_url",
+               "openapi", "models_url", "ingress", "auth", "env_var", "schema")
 # (provider, ingress) pairs that borrow the canonical schema because the vendor documents
 # no parameters of its own for that surface
 STANDIN = {(p, i) for p in ("nvidia", "hyperbolic", "lambda") for i in ("oai",)} | {
@@ -98,7 +98,7 @@ def main() -> int:
         return 0
 
     for script in ("extract_schemas.py", "doc_schemas.py", "fetch_icons.py",
-                   "doc_models.py", "fetch_models.py", "enrich_limits.py"):
+                   "doc_models.py", "fetch_models.py", "enrich.py"):
         run(script)
 
     print("\nrewiring schema references now that the extractors have run")
@@ -109,6 +109,7 @@ def main() -> int:
     for ingress in ("oai", "anthropic"):
         run_with("field_matrix.py", ingress)
     run("build_report.py")
+    run("build_taxonomy.py")
     print()
     return subprocess.run([sys.executable, str(HERE / "validate.py")]).returncode
 
