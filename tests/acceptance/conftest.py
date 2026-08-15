@@ -7,6 +7,7 @@ only be written by reaching into internals, that is a gap in the product, not th
 
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import shutil
@@ -17,7 +18,7 @@ import subprocess
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from typing import TYPE_CHECKING, TextIO
+from typing import TYPE_CHECKING, Literal, TextIO
 from uuid import uuid4
 
 import httpx
@@ -37,6 +38,7 @@ ORG = "org-acc"
 ADMIN_EMAIL = "admin@acceptance.test"
 ADMIN_PASSWORD = "acceptance-admin-password"
 MODEL = "echo"
+ECHO_MODEL = "quirk-upstream"  # the stub echoes the received body back for this model, so tests can see the wire
 STUB_API_KEY = "sk-acceptance-stub"
 READY_TIMEOUT = 30.0
 
@@ -113,15 +115,53 @@ def _poll(predicate: Callable[[], bool], timeout: float) -> bool:
 
 
 class _StubHandler(BaseHTTPRequestHandler):
-    """A stand-in OpenAI-compatible upstream: fixed reply and usage, no dependencies."""
+    """A stand-in OpenAI-compatible upstream: fixed reply and usage, no dependencies.
+
+    A request with stream true gets a slow SSE stream, unhurried enough that a client can
+    disconnect mid-way; the disconnect scenario's cancellation accounting depends on that pace.
+    """
+
+    STREAM_CHUNKS = 30
+    STREAM_DELAY_S = 0.05
 
     def do_POST(self) -> None:
-        self.rfile.read(int(self.headers.get("content-length", 0)))
+        server = self.server
+        assert isinstance(server, _StubServer)
+        server.record_request()
+        request = json.loads(self.rfile.read(int(self.headers.get("content-length", 0))) or b"{}")
+        messages = request.get("messages")
+        message = messages[-1] if isinstance(messages, list) and messages and isinstance(messages[-1], dict) else {}
+        prompt = message.get("content")
+        if prompt == "rate-limited":
+            body = json.dumps({"error": {"code": "rate_limit_exceeded", "message": "slow down"}}).encode("utf-8")
+            self.send_response(429)
+            self.send_header("content-type", "application/json")
+            self.send_header("content-length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+            return
+        if request.get("stream"):
+            self._stream_response(terminal=prompt != "truncated-stream")
+            return
+        if prompt == "malformed-buffered":
+            body = b"{}"
+            self.send_response(200)
+            self.send_header("content-type", "application/json")
+            self.send_header("content-length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+            return
+        content = json.dumps(request) if request.get("model") == ECHO_MODEL else "ok"
         body = json.dumps(
             {
                 "id": "cmpl-stub",
-                "choices": [{"index": 0, "message": {"role": "assistant", "content": "ok"}, "finish_reason": "stop"}],
-                "usage": {"prompt_tokens": 11, "completion_tokens": 3, "total_tokens": 14},
+                "choices": [{"index": 0, "message": {"role": "assistant", "content": content}, "finish_reason": "stop"}],
+                "usage": {
+                    "prompt_tokens": 11,
+                    "completion_tokens": 3,
+                    "total_tokens": 14,
+                    "prompt_tokens_details": {"cached_tokens": 4},
+                },
             }
         ).encode("utf-8")
         self.send_response(200)
@@ -130,8 +170,45 @@ class _StubHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def _stream_response(self, terminal: bool = True) -> None:
+        self.send_response(200)
+        self.send_header("content-type", "text/event-stream")
+        self.end_headers()
+        with contextlib.suppress(BrokenPipeError, ConnectionResetError):
+            for i in range(self.STREAM_CHUNKS):
+                event = {"id": "cmpl-stub", "choices": [{"index": 0, "delta": {"content": f"tick{i} "}, "finish_reason": None}]}
+                self.wfile.write(b"data: " + json.dumps(event).encode() + b"\n\n")
+                self.wfile.flush()
+                time.sleep(self.STREAM_DELAY_S)
+            finish = {"id": "cmpl-stub", "choices": [{"index": 0, "delta": {}, "finish_reason": "stop"}]}
+            usage = {"id": "cmpl-stub", "choices": [], "usage": {"prompt_tokens": 11, "completion_tokens": 60, "total_tokens": 71}}
+            for event in (finish, usage):
+                self.wfile.write(b"data: " + json.dumps(event).encode() + b"\n\n")
+            if terminal:
+                self.wfile.write(b"data: [DONE]\n\n")
+            self.wfile.flush()
+
     def log_message(self, format: str, *args: object) -> None:  # noqa: A002 name fixed by the BaseHTTPRequestHandler override; keeps the stub silent
         return
+
+
+class _StubServer(ThreadingHTTPServer):
+    def __init__(self, address: tuple[str, int]) -> None:
+        super().__init__(address, _StubHandler)
+        self._request_count = 0
+        self._request_lock = threading.Lock()
+
+    def record_request(self) -> None:
+        with self._request_lock:
+            self._request_count += 1
+
+    def start(self) -> None:
+        threading.Thread(target=self.serve_forever, daemon=True).start()
+
+    @property
+    def request_count(self) -> int:
+        with self._request_lock:
+            return self._request_count
 
 
 class Stack:
@@ -147,12 +224,12 @@ class Stack:
         self.dp_url = f"http://127.0.0.1:{self.dp_port}"
         self.cache_dir = tmp / ".airllm"
         self.config_path = tmp / "config.yml"
-        self.caller_token = ""
+        self.caller_api_key = ""
         self.provisioned = False
         self.env: dict[str, str] = {}
         self._procs: dict[str, tuple[subprocess.Popen[bytes], TextIO]] = {}
-        self._stub = ThreadingHTTPServer(("127.0.0.1", self.stub_port), _StubHandler)
-        threading.Thread(target=self._stub.serve_forever, daemon=True).start()
+        self._stub = _StubServer(("127.0.0.1", self.stub_port))
+        self._stub.start()
 
     # setup ----------------------------------------------------------------
 
@@ -199,10 +276,11 @@ class Stack:
 
             self._run([_bin("airllmcp"), "taxonomy", "--config", str(self.config_path)], self.env)
             _payload(session.post("/v1/org/provider-credentials", json={"provider": "stub", "value": STUB_API_KEY}, headers=scope))
+            _payload(session.post("/v1/org/provider-credentials", json={"provider": "quirk", "value": STUB_API_KEY}, headers=scope))
             _payload(session.post("/v1/org/bundles/compile", headers=scope))
 
         secrets = {
-            "AIRLLM_TOKEN": caller["token"],
+            "AIRLLM_API_KEY": caller["token"],
             "GW_ORG_MGMT_TOKEN": org_key["token"],
             "GW_DATAPLANE_TOKEN": data_plane_key["token"],
             "GW_BUNDLE_SIGNING_KEY": self.env["GW_BUNDLE_SIGNING_KEY"],
@@ -213,15 +291,28 @@ class Stack:
         self.provisioned = True
 
     def _write_taxonomy(self) -> None:
+        """The stub provider, plus a quirky one that exists to prove onboarding is config: it
+        respells max_tokens, closes its schema, and declares the one extra param it accepts."""
         spec = {
             "providers": [
                 {
                     "provider_id": "stub",
                     "kind": "openai_compatible",
                     "base_url": f"http://127.0.0.1:{self.stub_port}",
-                }
+                },
+                {
+                    "provider_id": "quirk",
+                    "kind": "openai_compatible",
+                    "base_url": f"http://127.0.0.1:{self.stub_port}",
+                    "param_aliases": {"max_tokens": "max_completion_tokens"},
+                    "accepted_params": ["top_k"],
+                    "params_closed": True,
+                },
             ],
-            "models": [{"model_id": MODEL, "provider_id": "stub", "upstream_model": MODEL}],
+            "models": [
+                {"model_id": MODEL, "provider_id": "stub", "upstream_model": MODEL},
+                {"model_id": "quirk", "provider_id": "quirk", "upstream_model": ECHO_MODEL},
+            ],
         }
         (self.tmp / "taxonomy.yml").write_text(yaml.safe_dump(spec), encoding="utf-8")
 
@@ -232,11 +323,21 @@ class Stack:
         staleness_policy: str = "serve_and_warn",
         poll_interval_s: int = 1,
         flush_interval_s: int = 1,
-        backend: str = "sqlite",
+        outbox_kind: Literal["sqlite", "devnull"] = "sqlite",
     ) -> None:
+        """Write both planes against one secret store and the selected event outbox."""
         secrets_store = {"kind": "file", "root": str(self.tmp / "secrets")}
-        """Both planes name the same store, because one writes what the other reads. The file store
-        is the smallest one that can hold a value the data plane will read back in another process."""
+        control_plane_link = {"url": self.cp_url, "token": "env:GW_DATAPLANE_TOKEN"}
+        outbox_config = (
+            {"kind": "devnull"}
+            if outbox_kind == "devnull"
+            else {
+                "kind": "sqlite",
+                "control_plane": dict(control_plane_link),
+                "flush_interval_s": flush_interval_s,
+                "cache_dir": str(self.cache_dir),
+            }
+        )
         cfg = {
             "control_plane": {
                 "database": {"url": self.db_url},
@@ -245,27 +346,29 @@ class Stack:
             },
             "data_plane": {
                 "secrets": secrets_store,
-                "control_plane": {"url": self.cp_url, "token": "env:GW_DATAPLANE_TOKEN", "heartbeat_interval_s": 2},
                 "bundle": {
-                    "public_key": "env:GW_BUNDLE_PUBLIC_KEY",
+                    "kind": "remote",
+                    "control_plane": dict(control_plane_link),
+                    "verify_key": "env:GW_BUNDLE_PUBLIC_KEY",
                     "cache_dir": str(self.cache_dir),
                     "staleness_policy": staleness_policy,
                     "poll_interval_s": poll_interval_s,
+                    "heartbeat_interval_s": 2,
                 },
-                "events": {"flush_interval_s": flush_interval_s, "backend": backend},
+                "events": outbox_config,
             },
         }
         self.config_path.write_text(yaml.safe_dump(cfg), encoding="utf-8")
 
-    def collect_tokens(self) -> None:
-        """Collect the tokens the bootstrap minted into .env; a checkpoint that they all exist."""
+    def collect_credentials(self) -> None:
+        """Collect the credentials the bootstrap minted into .env; a checkpoint that they all exist."""
         secrets = {k: v for k, v in dotenv_values(self.tmp / ".env").items() if v is not None}
         self.env = {**self.env, **secrets}
-        token = secrets.get("AIRLLM_TOKEN")
-        assert token, "bootstrap did not mint a caller token"
+        token = secrets.get("AIRLLM_API_KEY")
+        assert token, "bootstrap did not mint a caller api key"
         assert secrets.get("GW_ORG_MGMT_TOKEN"), "bootstrap did not mint an org token"
         assert secrets.get("GW_DATAPLANE_TOKEN"), "bootstrap did not mint a data plane token"
-        self.caller_token = token
+        self.caller_api_key = token
 
     # processes ------------------------------------------------------------
 
@@ -279,8 +382,8 @@ class Stack:
             self._bootstrap()  # a restart keeps the deployment it already provisioned
 
     def start_dp(self, workers: int = 1) -> None:
-        cmd = [_bin("airllmdp"), "--host", "127.0.0.1", "--port", str(self.dp_port), "--config", str(self.config_path), "--workers", str(workers)]
-        self._spawn("dp", cmd)
+        cmd = [_bin("airllmdp"), "serve", "--host", "127.0.0.1", "--port", str(self.dp_port), "--config", str(self.config_path)]
+        self._spawn("dp", [*cmd, "--workers", str(workers)])
         assert _poll(lambda: self._responds(f"{self.dp_url}/readyz"), READY_TIMEOUT), "data plane process did not start"
 
     def stop(self, name: str, sig: int = signal.SIGTERM) -> None:
@@ -307,10 +410,14 @@ class Stack:
     def request(self, content: str = "hi") -> httpx.Response:
         return httpx.post(
             f"{self.dp_url}/v1/chat/completions",
-            headers={"authorization": f"Bearer {self.caller_token}"},
+            headers={"authorization": f"Bearer {self.caller_api_key}"},
             json={"model": MODEL, "messages": [{"role": "user", "content": content}]},
             timeout=10.0,
         )
+
+    @property
+    def upstream_requests(self) -> int:
+        return self._stub.request_count
 
     def readyz(self) -> int:
         return httpx.get(f"{self.dp_url}/readyz", timeout=5.0).status_code

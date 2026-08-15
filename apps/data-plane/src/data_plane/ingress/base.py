@@ -1,51 +1,58 @@
 from __future__ import annotations
 
-import json
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, ClassVar
 
 if TYPE_CHECKING:
-    from starlette.responses import JSONResponse, Response
+    from typing import Protocol
 
-    from data_plane.canonical import CanonicalChunk, CanonicalError, CanonicalRequest, CanonicalResponse, Ctx
+    from starlette.datastructures import Headers
+    from starlette.responses import Response
+
+    from data_plane.canonical import Adjustment, CanonicalChunk, CanonicalRequest, CanonicalResponse
+    from data_plane.egress.base import CanonicalError, Ctx
+
+    class ResponseStream(Protocol):
+        """How one dialect spells the canonical stream on the way out."""
+
+        def start(self, ctx: Ctx, /) -> list[bytes]: ...
+
+        def chunk(self, c: CanonicalChunk) -> list[bytes]: ...
+
+        def closing(self, final: CanonicalResponse, adjustments: list[Adjustment]) -> list[bytes]: ...
+
+        def error(self, err: CanonicalError) -> list[bytes]: ...
 
 
-def sse(payload: dict) -> bytes:
-    return b"data: " + json.dumps(payload, ensure_ascii=False).encode() + b"\n\n"
+DIALECT_HEADER = "x-airllm-dialect"
+DONE = b"data: [DONE]\n\n"
 
 
-class EgressStream(ABC):
-    """Renders the canonical stream into one client-facing wire format; stateful per request."""
+def sse(payload: bytes) -> bytes:
+    return b"data: " + payload + b"\n\n"
+
+
+class IngressAdapter(ABC):
+    """One caller dialect: how requests in it become canonical, and how canonical answers speak it."""
+
+    dialect: ClassVar[str]
 
     @abstractmethod
-    def start(self, ctx: Ctx) -> list[bytes]: ...
+    def claims(self, headers: Headers, body: dict[str, Any], /) -> bool:
+        """Is this request unmistakably mine? Answer only that; resolve() owns ordering and the default."""
 
     @abstractmethod
-    def chunk(self, c: CanonicalChunk) -> list[bytes]: ...
+    def parse(self, body: dict[str, Any]) -> tuple[CanonicalRequest, list[Adjustment]]:
+        """The body into canonical, plus what this dialect could not carry across.
 
-    @abstractmethod
-    def finish(self, final: CanonicalResponse) -> list[bytes]: ...
-
-    @abstractmethod
-    def error(self, err: CanonicalError) -> list[bytes]: ...
-
-
-class Ingress(ABC):
-    """A client-facing API surface: parse its request into canonical, render canonical back into its shape."""
-
-    @abstractmethod
-    def parse(self, body: bytes) -> CanonicalRequest: ...
+        Translation loss is an adjustment, never silence: a slot value the dialect cannot
+        interpret is reported dropped, and the canonical field stays honestly unset."""
 
     @abstractmethod
     def render_response(self, final: CanonicalResponse) -> Response: ...
 
     @abstractmethod
-    def render_error(self, err: CanonicalError) -> JSONResponse:
-        """A gateway-side failure (upstream unreachable, timeout) rendered in this surface's error shape."""
+    def render_error(self, err: CanonicalError) -> Response: ...
 
     @abstractmethod
-    def render_upstream_error(self, status_code: int, body: bytes) -> Response:
-        """An upstream 4xx/5xx passed back to the client in this surface's shape."""
-
-    @abstractmethod
-    def new_egress(self) -> EgressStream: ...
+    def new_stream(self) -> ResponseStream: ...

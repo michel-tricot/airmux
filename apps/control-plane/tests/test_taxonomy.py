@@ -71,6 +71,72 @@ def test_apply_taxonomy_carries_the_provider_icon(tmp_path):
     assert [p.icon for p in run_in_db(tmp_path, Provider.find)] == [replaced]
 
 
+TAXONOMY_WITH_PROFILE = """
+providers:
+  - provider_id: stub
+    base_url: https://stub.example/v1
+    param_aliases:
+      max_tokens: max_completion_tokens
+    accepted_params: [top_k]
+    params_closed: true
+"""
+
+
+def test_apply_taxonomy_carries_the_provider_profile(tmp_path):
+    """The profile is what makes onboarding a quirky provider a config change; losing it on
+    upsert would silently reopen a closed schema."""
+    setup_db(tmp_path)
+
+    async def apply(doc: str):
+        await set_actor("u-test")
+        return await apply_taxonomy(TaxonomySpec.model_validate(yaml.safe_load(doc)))
+
+    run_in_db(tmp_path, lambda: apply(TAXONOMY_WITH_PROFILE))
+    (provider,) = run_in_db(tmp_path, Provider.find)
+    assert provider.param_aliases == {"max_tokens": "max_completion_tokens"}
+    assert provider.accepted_params == ["top_k"]
+    assert provider.params_closed is True
+
+    run_in_db(tmp_path, lambda: apply(TAXONOMY))
+    (provider,) = run_in_db(tmp_path, Provider.find)
+    assert provider.param_aliases == {}
+    assert provider.accepted_params is None
+    assert provider.params_closed is False
+
+
+def test_apply_taxonomy_carries_direct_model_prices(tmp_path):
+    setup_db(tmp_path)
+    spec = TaxonomySpec.model_validate(
+        yaml.safe_load(
+            """
+providers:
+  - provider_id: stub
+    base_url: https://stub.example/v1
+models:
+  - model_id: echo
+    provider_id: stub
+    input_price_per_mtok: 2.0
+    output_price_per_mtok: 5.0
+    cache_read_price_per_mtok: 0.25
+    cache_write_price_per_mtok: 2.5
+"""
+        )
+    )
+
+    async def apply():
+        await set_actor("u-test")
+        return await apply_taxonomy(spec)
+
+    run_in_db(tmp_path, apply)
+    (model,) = run_in_db(tmp_path, Model.find)
+    assert (
+        model.input_price_per_mtok,
+        model.output_price_per_mtok,
+        model.cache_read_price_per_mtok,
+        model.cache_write_price_per_mtok,
+    ) == (2.0, 5.0, 0.25, 2.5)
+
+
 def test_a_provider_declaring_no_icon_has_none(tmp_path):
     setup_db(tmp_path)
 
@@ -90,6 +156,21 @@ def test_every_shipped_provider_carries_a_square_icon():
         assert provider.icon.startswith("<svg "), provider.provider_id
         assert provider.icon.endswith("</svg>"), provider.provider_id
         assert 'viewBox="0 0 24 24"' in provider.icon, provider.provider_id
+
+
+def test_shipped_taxonomy_prices_each_model_directly():
+    taxonomy = yaml.safe_load((REPO_ROOT / "taxonomy.yml").read_text(encoding="utf-8"))
+    price_fields = {
+        "input_price_per_mtok",
+        "output_price_per_mtok",
+        "cache_read_price_per_mtok",
+        "cache_write_price_per_mtok",
+    }
+    for provider in taxonomy["providers"]:
+        assert "cache_read_multiplier" not in provider
+        assert "cache_write_multiplier" not in provider
+    for model in taxonomy["models"]:
+        assert price_fields <= model.keys(), model["model_id"]
 
 
 def test_apply_taxonomy_rejects_a_model_with_an_unknown_provider(tmp_path):

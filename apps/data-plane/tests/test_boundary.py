@@ -10,7 +10,6 @@ SCRIPT = """
 import json
 import sys
 import data_plane.app
-import data_plane.adapters
 print(json.dumps(sorted(sys.modules)))
 """
 

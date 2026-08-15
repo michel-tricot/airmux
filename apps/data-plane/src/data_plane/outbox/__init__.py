@@ -2,23 +2,20 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from data_plane.config import DevNullOutboxConfig
 from data_plane.outbox.base import EventOutbox
 from data_plane.outbox.devnull import DevNullOutbox
 from data_plane.outbox.sqlite import SqliteOutbox
 
 if TYPE_CHECKING:
-    from data_plane.config import Config
+    import httpx
+
+    from data_plane.config import OutboxConfig
 
 __all__ = ["DevNullOutbox", "EventOutbox", "SqliteOutbox", "build_outbox"]
 
 
-def build_outbox(config: Config) -> EventOutbox:
-    """Pick the event collection backend named in config.events.backend and hand it only what it needs."""
-    if config.events.backend == "devnull":
+def build_outbox(config: OutboxConfig, http_client: httpx.AsyncClient) -> EventOutbox:
+    if isinstance(config, DevNullOutboxConfig):
         return DevNullOutbox()
-    return SqliteOutbox(
-        cache_dir=config.bundle.cache_dir,
-        control_plane_url=config.control_plane.url,
-        control_plane_token=config.control_plane.token,
-        flush_interval_s=config.events.flush_interval_s,
-    )
+    return SqliteOutbox(config, http_client)

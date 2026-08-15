@@ -1,0 +1,24 @@
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, cast
+
+if TYPE_CHECKING:
+    import httpx
+    from starlette.requests import Request
+
+    from data_plane.bundle.holder import BundleHolder
+    from data_plane.credentials import CredentialResolver
+    from data_plane.outbox import EventOutbox
+
+
+@dataclass(frozen=True)
+class Runtime:
+    holder: BundleHolder
+    outbox: EventOutbox
+    credentials: CredentialResolver
+    http_client: httpx.AsyncClient
+
+
+def runtime_of(request: Request) -> Runtime:
+    return cast("Runtime", request.state.runtime)

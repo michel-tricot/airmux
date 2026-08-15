@@ -69,8 +69,9 @@ async def compile_bundle(org_id: UUID, bundle_id: UUID, now: datetime, staleness
                         "provider_id": r.name,
                         "kind": r.kind,
                         "base_url": r.base_url,
-                        "cache_read_multiplier": r.cache_read_multiplier,
-                        "cache_write_multiplier": r.cache_write_multiplier,
+                        "param_aliases": r.param_aliases,
+                        "accepted_params": r.accepted_params,
+                        "params_closed": r.params_closed,
                     }
                 )
                 for r in provider_rows
@@ -83,6 +84,8 @@ async def compile_bundle(org_id: UUID, bundle_id: UUID, now: datetime, staleness
                     upstream_model=r.upstream_model,
                     input_price_per_mtok=r.input_price_per_mtok,
                     output_price_per_mtok=r.output_price_per_mtok,
+                    cache_read_price_per_mtok=r.cache_read_price_per_mtok,
+                    cache_write_price_per_mtok=r.cache_write_price_per_mtok,
                     context_window=r.context_window,
                     max_output_tokens=r.max_output_tokens,
                     capabilities=r.capabilities,

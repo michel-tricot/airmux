@@ -7,14 +7,10 @@ from uuid import uuid4
 import httpx
 import pytest
 import respx
-from conftest import make_config
+from conftest import make_config, make_outbox
 
 from contract import UsageEventV1, uuid7
 from data_plane.outbox import DevNullOutbox, SqliteOutbox, build_outbox
-
-
-def make_outbox(tmp_path, url="http://cp.test", flush_interval_s=5.0) -> SqliteOutbox:
-    return SqliteOutbox(cache_dir=tmp_path, control_plane_url=url, control_plane_token="dp-token", flush_interval_s=flush_interval_s)
 
 
 def make_event(request_id) -> UsageEventV1:
@@ -37,65 +33,60 @@ def make_event(request_id) -> UsageEventV1:
     )
 
 
-def test_record_roundtrips_in_order(tmp_path):
-    outbox = make_outbox(tmp_path)
+def test_record_roundtrips_in_order(tmp_path, http_client):
+    outbox = make_outbox(tmp_path, http_client)
     events = [make_event(uuid7()), make_event(uuid7())]
-    for e in events:
-        outbox.record(e)
-    assert outbox._read_batch(10) == events
-    assert outbox._pending() == 2
+    for event in events:
+        outbox.record(event)
+    assert outbox.next_batch(10) == events
 
 
-def test_record_is_idempotent_on_event_id(tmp_path):
-    outbox = make_outbox(tmp_path)
+def test_record_is_idempotent_on_event_id(tmp_path, http_client):
+    outbox = make_outbox(tmp_path, http_client)
     event = make_event(uuid7())
     outbox.record(event)
     outbox.record(event)
-    assert outbox._pending() == 1
+    assert outbox.next_batch(10) == [event]
 
 
 @respx.mock
-async def test_flush_sends_batch_and_deletes(tmp_path):
+async def test_flush_sends_batch_and_deletes(tmp_path, http_client):
     route = respx.post("http://cp.test/v1/events").mock(return_value=httpx.Response(200, json={"received": 2, "ingested": 2}))
-    outbox = make_outbox(tmp_path)
+    outbox = make_outbox(tmp_path, http_client)
     first, second = uuid7(), uuid7()
     outbox.record(make_event(first))
     outbox.record(make_event(second))
-    assert await outbox._flush() == 2
-    assert outbox._pending() == 0
+    assert await outbox.export_once() == 2
+    assert outbox.next_batch(10) == []
     sent = json.loads(route.calls.last.request.content)
     assert [e["request_id"] for e in sent] == [str(first), str(second)]
     assert route.calls.last.request.headers["authorization"] == "Bearer dp-token"
 
 
 @respx.mock
-async def test_failed_flush_keeps_the_events(tmp_path):
+async def test_failed_flush_keeps_the_events(tmp_path, http_client):
     respx.post("http://cp.test/v1/events").mock(return_value=httpx.Response(503))
-    outbox = make_outbox(tmp_path)
-    outbox.record(make_event(uuid7()))
+    outbox = make_outbox(tmp_path, http_client)
+    event = make_event(uuid7())
+    outbox.record(event)
     with pytest.raises(httpx.HTTPStatusError):
-        await outbox._flush()
-    assert outbox._pending() == 1
+        await outbox.export_once()
+    assert outbox.next_batch(10) == [event]
 
 
-def test_only_one_holder_wins_the_flush_lease(tmp_path):
-    a = make_outbox(tmp_path)
-    b = make_outbox(tmp_path)
+def test_only_one_holder_wins_the_flush_lease(tmp_path, http_client):
+    a = make_outbox(tmp_path, http_client)
+    b = make_outbox(tmp_path, http_client)
     a._owner = "worker-a"  # stand in for two processes on one shared cache dir
     b._owner = "worker-b"
-    assert a._claim_flush(ttl=30, now=1000.0) is True
-    assert b._claim_flush(ttl=30, now=1000.0) is False  # a still holds a live lease
-    assert b._claim_flush(ttl=30, now=1040.0) is True  # a's lease expired, b takes over
-    assert a._claim_flush(ttl=30, now=1041.0) is False
+    assert a.claim_export(ttl=30, now=1000.0) is True
+    assert b.claim_export(ttl=30, now=1000.0) is False  # a still holds a live lease
+    assert b.claim_export(ttl=30, now=1040.0) is True  # a's lease expired, b takes over
+    assert a.claim_export(ttl=30, now=1041.0) is False
 
 
-async def test_devnull_discards_and_runs_without_work():
-    outbox = DevNullOutbox()
-    outbox.record(make_event(uuid7()))
-    await outbox.run()  # returns at once, no background work
-    outbox.close()
-
-
-def test_build_outbox_selects_backend(tmp_path):
-    assert isinstance(build_outbox(make_config(tmp_path)), SqliteOutbox)
-    assert isinstance(build_outbox(make_config(tmp_path, backend="devnull")), DevNullOutbox)
+def test_build_outbox_selects_kind(tmp_path, http_client):
+    config = make_config(tmp_path)
+    assert isinstance(build_outbox(config.events, http_client), SqliteOutbox)
+    devnull = make_config(tmp_path, outbox_kind="devnull")
+    assert isinstance(build_outbox(devnull.events, http_client), DevNullOutbox)

@@ -24,12 +24,14 @@ def test_missing_required_without_tty_exits(monkeypatch):
 
 def test_prompts_fill_missing_fields(monkeypatch):
     monkeypatch.setattr("sys.stdin.isatty", lambda: True)
-    answers = iter(["m1", "p1", "", "0.5", "1.5", "64000", "", "streaming, tools, vision"])
+    answers = iter(["m1", "p1", "", "0.5", "1.5", "0.1", "0.75", "64000", "", "streaming, tools, vision"])
     monkeypatch.setattr(typer, "prompt", lambda label, default=None: next(answers) or default)
     spec = fill_spec(ModelCreate, {})
     assert spec.model_id == "m1"
     assert spec.upstream_model == ""
     assert spec.input_price_per_mtok == 0.5
+    assert spec.cache_read_price_per_mtok == 0.1
+    assert spec.cache_write_price_per_mtok == 0.75
     assert spec.context_window == 64000
     assert spec.capabilities == ["streaming", "tools", "vision"]
 

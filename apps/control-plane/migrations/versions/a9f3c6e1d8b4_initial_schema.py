@@ -1,9 +1,9 @@
 """initial schema
 
 Consolidated on 2026-08-09 from the pre-release chain (initial schema, enrollment and cli auth,
-workspaces, workspace slugs, provider credentials, provider icons); nothing had deployed, so the
-chain had no consumers. From first deployment on the chain is append-only: never squash again or
-edit a shipped revision.
+workspaces, workspace slugs, provider credentials, provider icons), and again on 2026-08-14 to
+fold in the provider profile and direct model pricing; nothing had deployed either time, so the chain had no consumers.
+From first deployment on the chain is append-only: never squash again or edit a shipped revision.
 
 The tenancy model: users and orgs are instance-level, org_membership ties them, workspaces live
 under an org and are named within it by an org-unique slug, workspace_membership's composite foreign keys make cross-org membership
@@ -142,8 +142,9 @@ def upgrade() -> None:
         sa.Column("kind", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("base_url", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("icon", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
-        sa.Column("cache_read_multiplier", sa.Float(), nullable=False),
-        sa.Column("cache_write_multiplier", sa.Float(), nullable=False),
+        sa.Column("param_aliases", sa.JSON(), nullable=False),
+        sa.Column("accepted_params", sa.JSON(), nullable=True),
+        sa.Column("params_closed", sa.Boolean(), nullable=False),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("name"),
     )
@@ -276,6 +277,8 @@ def upgrade() -> None:
         sa.Column("upstream_model", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("input_price_per_mtok", sa.Float(), nullable=False),
         sa.Column("output_price_per_mtok", sa.Float(), nullable=False),
+        sa.Column("cache_read_price_per_mtok", sa.Float(), nullable=False),
+        sa.Column("cache_write_price_per_mtok", sa.Float(), nullable=False),
         sa.Column("context_window", sa.Integer(), nullable=False),
         sa.Column("max_output_tokens", sa.Integer(), nullable=True),
         sa.Column("capabilities", sa.JSON(), nullable=False),

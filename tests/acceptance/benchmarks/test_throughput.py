@@ -58,12 +58,12 @@ def _load(url: str, headers: dict[str, str], body: dict, workers: int, duration:
 def test_single_data_plane_throughput(stack: Stack, bench: Bench) -> None:
     stack.write_config()
     stack.start_cp()
-    stack.collect_tokens()
+    stack.collect_credentials()
     stack.start_dp()
     stack.wait_dp_ready()
 
     url = f"{stack.dp_url}/v1/chat/completions"
-    headers = {"authorization": f"Bearer {stack.caller_token}"}
+    headers = {"authorization": f"Bearer {stack.caller_api_key}"}
     body = {"model": "echo", "messages": [{"role": "user", "content": "hi"}]}
 
     _load(url, headers, body, workers=4, duration=0.5)  # warm up connections and the event loop

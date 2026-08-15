@@ -41,8 +41,9 @@ class ProviderIn(BaseModel):
             "which makes it untrusted markup to whatever renders it; sanitize at the render site"
         ),
     )
-    cache_read_multiplier: float = Field(1.0, description="Input price factor for prompt-cache hits")
-    cache_write_multiplier: float = Field(1.0, description="Input price factor for cache writes")
+    param_aliases: dict[str, str] = Field(default_factory=dict, description="Canonical param name to this provider's spelling")
+    accepted_params: list[str] | None = Field(None, description="Params known accepted beyond the core; consulted when params_closed")
+    params_closed: bool = Field(False, description="True when the provider's request schema rejects unknown params")
 
 
 class ModelIn(BaseModel):
@@ -51,6 +52,8 @@ class ModelIn(BaseModel):
     upstream_model: str = Field("", description="Model name sent to the provider, lets model_id be an alias; defaults to model_id")
     input_price_per_mtok: float = Field(0.0, description="USD per million input tokens")
     output_price_per_mtok: float = Field(0.0, description="USD per million output tokens")
+    cache_read_price_per_mtok: float = Field(0.0, description="USD per million cache-read input tokens")
+    cache_write_price_per_mtok: float = Field(0.0, description="USD per million cache-write input tokens")
     context_window: int = Field(128000, description="Context window in tokens")
     max_output_tokens: int | None = Field(None, description="Max completion tokens; requests are clamped to it")
     capabilities: list[str] = Field(default=["streaming", "tools"], description="Capabilities, comma separated")
@@ -79,8 +82,9 @@ async def upsert_provider(p: ProviderIn) -> Provider:
         provider.kind = p.kind
         provider.base_url = p.base_url
     provider.icon = p.icon
-    provider.cache_read_multiplier = p.cache_read_multiplier
-    provider.cache_write_multiplier = p.cache_write_multiplier
+    provider.param_aliases = p.param_aliases
+    provider.accepted_params = p.accepted_params
+    provider.params_closed = p.params_closed
     return await provider.save()
 
 
@@ -97,6 +101,8 @@ async def upsert_model(m: ModelIn) -> Model:
             upstream_model=m.upstream_model or m.model_id,
             input_price_per_mtok=m.input_price_per_mtok,
             output_price_per_mtok=m.output_price_per_mtok,
+            cache_read_price_per_mtok=m.cache_read_price_per_mtok,
+            cache_write_price_per_mtok=m.cache_write_price_per_mtok,
             context_window=m.context_window,
             max_output_tokens=m.max_output_tokens,
             capabilities=m.capabilities,
@@ -106,6 +112,8 @@ async def upsert_model(m: ModelIn) -> Model:
         model.upstream_model = m.upstream_model or m.model_id
         model.input_price_per_mtok = m.input_price_per_mtok
         model.output_price_per_mtok = m.output_price_per_mtok
+        model.cache_read_price_per_mtok = m.cache_read_price_per_mtok
+        model.cache_write_price_per_mtok = m.cache_write_price_per_mtok
         model.context_window = m.context_window
         model.max_output_tokens = m.max_output_tokens
         model.capabilities = m.capabilities
