@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import inspect
 import json
 from dataclasses import replace
 from typing import TYPE_CHECKING, cast
@@ -19,17 +18,13 @@ from data_plane.egress.base import Ctx, UpstreamRequest
 from data_plane.ingress import CANONICAL
 from data_plane.ingress import REGISTRY as INGRESS
 from data_plane.outbox import SqliteOutbox
-from data_plane.proxy import _stream
+from data_plane.proxy import StreamSession
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Iterator
 
 UPSTREAM = UpstreamRequest(method="POST", url="https://api.openai.com/v1/chat/completions", headers={}, body=b"{}")
 REQUEST = CanonicalRequest(model="gpt-test", messages=[{"role": "user", "content": "hi"}], stream=True)
-
-
-def test_stream_requires_complete_request_context():
-    assert all(parameter.default is inspect.Parameter.empty for parameter in inspect.signature(_stream).parameters.values())
 
 
 @pytest.fixture
@@ -101,7 +96,16 @@ def _body_gen(response: object) -> AsyncGenerator[bytes]:
 
 
 async def _open_stream(ctx: Ctx, request: CanonicalRequest, outbox: SqliteOutbox, http_client: httpx.AsyncClient) -> Response:
-    return await _stream(make_adapter(), INGRESS[CANONICAL], ctx, UPSTREAM, request, [], outbox, http_client)
+    session = StreamSession(
+        adapter=make_adapter(),
+        ingress=INGRESS[CANONICAL],
+        ctx=ctx,
+        request=request,
+        adjustments=(),
+        outbox=outbox,
+        http_client=http_client,
+    )
+    return await session.open(UPSTREAM)
 
 
 @respx.mock
