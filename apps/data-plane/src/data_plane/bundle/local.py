@@ -6,6 +6,7 @@ trusted because the operator owns the filesystem it sits on."""
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
@@ -15,6 +16,7 @@ import yaml
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from contract import BundleV1, Catalog, CredentialEntry, KeyEntry, ModelEntry, ProviderEntry, SecretPurpose, SecretRef, token_hash
+from data_plane.bundle.base import BundleSource
 from data_plane.tasks import run_periodic
 
 if TYPE_CHECKING:
@@ -85,27 +87,36 @@ def load_local(path: Path, now: datetime) -> BundleV1:
     return compile_local(spec, raw, now)
 
 
-def admit_local(config: LocalBundleConfig, holder: BundleHolder) -> None:
-    bundle = load_local(config.path, datetime.now(tz=UTC))
-    holder.admit(bundle, "serve_and_warn", source="local")
+class LocalBundleSource(BundleSource):
+    """Loads a local bundle at boot and admits later file changes."""
 
+    def __init__(self, config: LocalBundleConfig, holder: BundleHolder) -> None:
+        self._config = config
+        self._holder = holder
+        self._served_mtime: float | None = None
 
-def reload_if_changed(config: LocalBundleConfig, holder: BundleHolder, last_mtime: float) -> float:
-    """Admit the file again when it changes; return the mtime that is now served."""
-    mtime = config.path.stat().st_mtime
-    if mtime != last_mtime:
-        admit_local(config, holder)
-    return mtime
+    def load(self) -> None:
+        mtime = self._config.path.stat().st_mtime
+        if mtime == self._served_mtime:
+            return
+        bundle = load_local(self._config.path, datetime.now(tz=UTC))
+        self._holder.admit(bundle, "serve_and_warn", source="local")
+        self._served_mtime = mtime
 
+    async def once(self) -> None:
+        await asyncio.to_thread(self.load)
 
-async def run_local_reload(config: LocalBundleConfig, holder: BundleHolder) -> None:
-    """The local counterpart of the poller: same loop, the file instead of the control plane.
+    async def run(self) -> None:
+        await run_periodic(
+            self.once,
+            self._config.reload_interval_s,
+            (OSError, ValidationError, ValueError, yaml.YAMLError),
+            "local bundle reload",
+        )
 
-    A broken edit logs and keeps the last good bundle serving, like a failed poll."""
-    served = config.path.stat().st_mtime if config.path.exists() else 0.0
-
-    async def once() -> None:
-        nonlocal served
-        served = reload_if_changed(config, holder, served)
-
-    await run_periodic(once, config.reload_interval_s, (OSError, ValidationError, ValueError, yaml.YAMLError), "local bundle reload")
+    def start(self) -> tuple[asyncio.Task[None], ...]:
+        try:
+            self.load()
+        except (OSError, ValidationError, ValueError, yaml.YAMLError):
+            logger.exception("local bundle %s did not load, serving 503 until it does", self._config.path)
+        return (asyncio.create_task(self.run()),)

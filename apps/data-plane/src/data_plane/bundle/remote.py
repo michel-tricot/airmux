@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 from typing import TYPE_CHECKING
 
@@ -8,7 +9,10 @@ from cryptography.exceptions import InvalidSignature
 from pydantic import ValidationError
 
 from contract import SignedBundle, public_key_to_b64, verify_bundle
-from data_plane.cache import write_cached_bundle
+from data_plane.bundle.base import BundleSource
+from data_plane.cache import instance_id as cache_instance_id
+from data_plane.cache import read_cached_bundle, write_cached_bundle
+from data_plane.heartbeat import Heartbeat
 from data_plane.tasks import run_periodic
 
 if TYPE_CHECKING:
@@ -19,7 +23,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger("data_plane")
 
 
-class BundlePoller:
+class RemoteBundleSource(BundleSource):
     def __init__(
         self,
         link: ControlPlaneLink,
@@ -44,16 +48,12 @@ class BundlePoller:
             return
         try:
             bundle = verify_bundle(signed, self._config.verify_key)
-        except InvalidSignature:
-            logger.error(  # noqa: TRY400 run_periodic already logs the traceback; this adds only the key diagnostic, no stack
-                "bundle signature rejected: verifying with pubkey %s, bundle %s signed by key_id=%s for org=%s; "
-                "if the pubkey matches the control plane's signing key this is a payload/canonicalization mismatch, not a key mismatch",
-                public_key_to_b64(self._config.verify_key),
-                signed.payload.bundle_id,
-                signed.signing_key_id,
-                signed.payload.org_id,
+        except InvalidSignature as error:
+            message = (
+                f"bundle {signed.payload.bundle_id} signed by {signed.signing_key_id} for org {signed.payload.org_id} "
+                f"failed verification with public key {public_key_to_b64(self._config.verify_key)}"
             )
-            raise
+            raise InvalidSignature(message) from error
         if self._holder.admit(bundle, self._config.staleness_policy, source="polled"):
             write_cached_bundle(self._config.cache_dir, signed)
 
@@ -64,3 +64,34 @@ class BundlePoller:
             (httpx.HTTPError, ValidationError, InvalidSignature, OSError),
             "bundle poll",
         )
+
+    def start(self) -> tuple[asyncio.Task[None], ...]:
+        self._load_cached()
+        if not self._link.url:
+            return ()
+        heartbeat = Heartbeat(
+            self._link,
+            self._holder,
+            cache_instance_id(self._config.cache_dir),
+            self._http_client,
+        )
+        return (
+            asyncio.create_task(self.run()),
+            asyncio.create_task(heartbeat.run()),
+        )
+
+    def _load_cached(self) -> None:
+        try:
+            signed = read_cached_bundle(self._config.cache_dir)
+        except ValidationError:
+            logger.exception("cached bundle in %s does not parse, ignoring it", self._config.cache_dir)
+            return
+        if signed is None:
+            logger.warning("no cached bundle in %s, serving 503 until one arrives", self._config.cache_dir)
+            return
+        try:
+            bundle = verify_bundle(signed, self._config.verify_key)
+        except InvalidSignature:
+            logger.exception("cached bundle failed signature verification, ignoring it")
+            return
+        self._holder.admit(bundle, self._config.staleness_policy, source="cached")

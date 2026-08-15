@@ -76,7 +76,7 @@ class OpenAIResponseStream:
         choice = fmt.ChunkChoiceOut(delta=delta, finish_reason=finish_reason)
         return fmt.ChatCompletionChunkOut(id=self.id, created=self.created, model=self.model, choices=[choice]).sse()
 
-    def start(self, ctx: Ctx) -> list[bytes]:
+    def start(self, ctx: Ctx, /) -> list[bytes]:
         self.id, self.model, self.created = ctx.request_id, ctx.model.model_id, int(time.time())
         return [self._chunk(fmt.DeltaOut(role="assistant"))]
 
@@ -112,7 +112,7 @@ def _tool_call_delta(delta: ToolCallDelta) -> fmt.ToolCallDeltaOut:
 class OpenAINativeIngress(IngressAdapter):
     dialect = "openai_native"
 
-    def claims(self, headers: Headers, body: dict[str, Any]) -> bool:
+    def claims(self, headers: Headers, body: dict[str, Any], /) -> bool:
         """The client fingerprint the official SDKs send on every request, or an unambiguous shape.
 
         A text-only body is shape-identical in both dialects, which is why the fingerprint matters.

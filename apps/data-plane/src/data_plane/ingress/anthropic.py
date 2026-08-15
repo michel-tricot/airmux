@@ -45,7 +45,7 @@ class AnthropicResponseStream:
         self.open: _OpenBlock | None = None
         self.opened = 0  # blocks opened so far, which is also the next index
 
-    def start(self, ctx: Ctx) -> list[bytes]:
+    def start(self, ctx: Ctx, /) -> list[bytes]:
         message = fmt.MessageStartOut(id=ctx.request_id, model=ctx.model.model_id)
         return [fmt.MessageStart(message=message).sse(), fmt.Ping().sse()]
 
@@ -98,7 +98,7 @@ class AnthropicResponseStream:
 class AnthropicIngress(IngressAdapter):
     dialect = "anthropic"
 
-    def claims(self, headers: Headers, body: dict[str, Any]) -> bool:  # noqa: ARG002 uniform claims signature
+    def claims(self, _headers: Headers, _body: dict[str, Any], /) -> bool:
         """Never claims on the chat route: /v1/messages binds this dialect directly."""
         return False
 

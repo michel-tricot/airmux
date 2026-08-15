@@ -13,7 +13,7 @@ import httpx
 import pytest
 import respx
 from anthropic.types import Message, RawMessageStreamEvent
-from conftest import TEXT_LOG, TEXT_NONSTREAM
+from conftest import TEXT_LOG, TEXT_NONSTREAM, mock_control_plane
 from pydantic import TypeAdapter
 from starlette.testclient import TestClient
 
@@ -78,6 +78,7 @@ def test_the_sdk_reads_a_thinking_signature_back():
 def test_a_cross_provider_round_trip_parses_with_the_sdk_models(api_key, dp_app):
     """An Anthropic-speaking caller served by an OpenAI-family upstream: the route's reason to exist."""
     route = respx.post(UPSTREAM).mock(return_value=httpx.Response(200, json=TEXT_NONSTREAM))
+    mock_control_plane()
     with TestClient(dp_app) as client:
         response = _post(
             client, api_key, {"model": "gpt-test", "max_tokens": 64, "system": "You are terse.", "messages": [{"role": "user", "content": "hi"}]}
@@ -96,6 +97,7 @@ def test_a_cross_provider_round_trip_parses_with_the_sdk_models(api_key, dp_app)
 @respx.mock
 def test_the_stream_parses_with_the_sdk_models(api_key, dp_app):
     respx.post(UPSTREAM).mock(return_value=httpx.Response(200, content=TEXT_LOG))
+    mock_control_plane()
     with TestClient(dp_app) as client:
         response = _post(client, api_key, {"model": "gpt-test", "max_tokens": 64, "messages": [{"role": "user", "content": "hi"}], "stream": True})
     payloads = [line[6:] for line in response.text.splitlines() if line.startswith("data: ")]
@@ -130,6 +132,7 @@ def test_tools_translate_on_the_way_through(api_key, dp_app):
         "usage": {"prompt_tokens": 9, "completion_tokens": 4, "total_tokens": 13},
     }
     route = respx.post(UPSTREAM).mock(return_value=httpx.Response(200, json=reply))
+    mock_control_plane()
     with TestClient(dp_app) as client:
         response = _post(
             client,
@@ -163,6 +166,7 @@ def test_errors_speak_this_dialect(api_key, dp_app):
 @pytest.mark.parametrize("stream", [False, True])
 def test_cross_provider_http_errors_speak_this_dialect(api_key, dp_app, stream):
     respx.post(UPSTREAM).mock(return_value=httpx.Response(429, json={"error": {"code": "rate_limit_exceeded", "message": "slow down"}}))
+    mock_control_plane()
     with TestClient(dp_app) as client:
         response = _post(
             client,
@@ -176,6 +180,7 @@ def test_cross_provider_http_errors_speak_this_dialect(api_key, dp_app, stream):
 @respx.mock
 def test_cross_provider_transport_errors_speak_this_dialect(api_key, dp_app):
     respx.post(UPSTREAM).mock(side_effect=httpx.ReadTimeout("timed out"))
+    mock_control_plane()
     with TestClient(dp_app) as client:
         response = _post(client, api_key, {"model": "gpt-test", "max_tokens": 8, "messages": [{"role": "user", "content": "hi"}]})
     assert response.status_code == 504

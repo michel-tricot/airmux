@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     class ResponseStream(Protocol):
         """How one dialect spells the canonical stream on the way out."""
 
-        def start(self, ctx: Ctx) -> list[bytes]: ...
+        def start(self, ctx: Ctx, /) -> list[bytes]: ...
 
         def chunk(self, c: CanonicalChunk) -> list[bytes]: ...
 
@@ -38,7 +38,7 @@ class IngressAdapter(ABC):
     dialect: ClassVar[str]
 
     @abstractmethod
-    def claims(self, headers: Headers, body: dict[str, Any]) -> bool:
+    def claims(self, headers: Headers, body: dict[str, Any], /) -> bool:
         """Is this request unmistakably mine? Answer only that; resolve() owns ordering and the default."""
 
     @abstractmethod

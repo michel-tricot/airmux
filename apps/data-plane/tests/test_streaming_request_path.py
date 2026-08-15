@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, cast
 import httpx
 import pytest
 import respx
-from conftest import CTX, ORG, TEXT_LOG, WORKSPACE, make_adapter, sse
+from conftest import CTX, ORG, TEXT_LOG, WORKSPACE, make_adapter, make_outbox, mock_control_plane, sse
 from starlette.responses import Response, StreamingResponse
 from starlette.testclient import TestClient
 
@@ -17,11 +17,12 @@ from data_plane.canonical import CanonicalRequest
 from data_plane.egress.base import Ctx, UpstreamRequest
 from data_plane.ingress import CANONICAL
 from data_plane.ingress import REGISTRY as INGRESS
-from data_plane.outbox import SqliteOutbox
 from data_plane.proxy import StreamSession
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Iterator
+
+    from data_plane.outbox import SqliteOutbox
 
 UPSTREAM = UpstreamRequest(method="POST", url="https://api.openai.com/v1/chat/completions", headers={}, body=b"{}")
 REQUEST = CanonicalRequest(model="gpt-test", messages=[{"role": "user", "content": "hi"}], stream=True)
@@ -29,13 +30,7 @@ REQUEST = CanonicalRequest(model="gpt-test", messages=[{"role": "user", "content
 
 @pytest.fixture
 def metering(tmp_path, http_client) -> Iterator[tuple[Ctx, SqliteOutbox]]:
-    outbox = SqliteOutbox(
-        cache_dir=tmp_path,
-        control_plane_url=None,
-        control_plane_token=None,
-        flush_interval_s=5.0,
-        http_client=http_client,
-    )
+    outbox = make_outbox(tmp_path, http_client)
     ctx = replace(
         CTX,
         request_id=str(uuid7()),
@@ -51,13 +46,14 @@ def metering(tmp_path, http_client) -> Iterator[tuple[Ctx, SqliteOutbox]]:
 
 
 def _event(outbox: SqliteOutbox):
-    (event,) = outbox._read_batch(10)
+    (event,) = outbox.next_batch(10)
     return event
 
 
 @respx.mock
 def test_streaming_end_to_end(api_key, dp_app):
     respx.post("https://api.openai.com/v1/chat/completions").mock(return_value=httpx.Response(200, content=TEXT_LOG))
+    mock_control_plane()
     with (
         TestClient(dp_app) as client,
         client.stream(
@@ -81,6 +77,7 @@ def test_streaming_end_to_end(api_key, dp_app):
 @respx.mock
 def test_streaming_upstream_error_status_passes_through(api_key, dp_app):
     respx.post("https://api.openai.com/v1/chat/completions").mock(return_value=httpx.Response(429, json={"error": {"code": "rate_limited"}}))
+    mock_control_plane()
     with TestClient(dp_app) as client:
         r = client.post(
             "/v1/chat/completions",

@@ -2,13 +2,12 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from conftest import MODEL, ORG, PROVIDER, WORKSPACE
+from conftest import MODEL, ORG, PROVIDER, WORKSPACE, make_outbox
 
 from contract import uuid7
 from data_plane.canonical import CanonicalRequest, CanonicalResponse, TextPart, Usage
 from data_plane.egress.base import Ctx
 from data_plane.metering import cost_breakdown, record_usage
-from data_plane.outbox import SqliteOutbox
 
 
 def _model():
@@ -36,13 +35,7 @@ def test_cache_counts_cannot_make_fresh_input_negative():
 
 
 def test_estimated_usage_is_persisted_with_request_attribution(tmp_path, http_client):
-    outbox = SqliteOutbox(
-        cache_dir=tmp_path,
-        control_plane_url=None,
-        control_plane_token=None,
-        flush_interval_s=5.0,
-        http_client=http_client,
-    )
+    outbox = make_outbox(tmp_path, http_client)
     bundle_id = uuid7()
     credential_id = uuid7()
     ctx = Ctx(
@@ -67,7 +60,7 @@ def test_estimated_usage_is_persisted_with_request_attribution(tmp_path, http_cl
     )
 
     record_usage(outbox, ctx, response, "cancelled", request)
-    (event,) = outbox._read_batch(10)
+    (event,) = outbox.next_batch(10)
     outbox.close()
 
     assert event.request_id == UUID(ctx.request_id)

@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import asyncio
+import threading
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, cast
 
 import httpx
 import pytest
 import respx
+from conftest import make_outbox
 from pydantic import ValidationError
 from starlette.testclient import TestClient
 
@@ -14,9 +16,8 @@ from contract import FileStoreConfig, Secret
 from data_plane.app import create_app
 from data_plane.auth import authenticate, index_keys
 from data_plane.bundle import BundleHolder, LocalBundleConfig
-from data_plane.bundle.local import load_local, reload_if_changed
-from data_plane.config import Config, EventsConfig
-from data_plane.outbox import SqliteOutbox
+from data_plane.bundle.local import LocalBundleSource, load_local
+from data_plane.config import Config, ControlPlaneLink, SqliteOutboxConfig
 
 if TYPE_CHECKING:
     from data_plane.runtime import Runtime
@@ -57,14 +58,8 @@ def _write(tmp_path, text=BUNDLE_YML):
 
 
 def _recorded(cache_dir, http_client):
-    outbox = SqliteOutbox(
-        cache_dir=cache_dir,
-        control_plane_url=None,
-        control_plane_token=None,
-        flush_interval_s=5.0,
-        http_client=http_client,
-    )
-    events = outbox._read_batch(10)
+    outbox = make_outbox(cache_dir, http_client)
+    events = outbox.next_batch(10)
     outbox.close()
     return events
 
@@ -96,19 +91,22 @@ def test_the_bundle_id_follows_the_file_content(tmp_path):
     assert load_local(path, NOW).bundle_id != before.bundle_id
 
 
-def test_a_reload_swaps_on_change_and_survives_a_broken_edit(tmp_path):
+async def test_a_reload_swaps_on_change_and_survives_a_broken_edit(tmp_path):
     path = _write(tmp_path)
     config = LocalBundleConfig(kind="local", path=path)
     holder = BundleHolder()
-    mtime = reload_if_changed(config, holder, 0.0)
+    source = LocalBundleSource(config, holder)
+    await source.once()
     assert holder.snapshot is not None
     served = holder.snapshot.bundle.bundle_id
+    snapshot = holder.snapshot
 
-    assert reload_if_changed(config, holder, mtime) == mtime  # unchanged file, no re-admit
+    await source.once()
+    assert holder.snapshot is snapshot
 
     path.write_text("keys: []\n", encoding="utf-8")
     with pytest.raises(ValidationError):
-        reload_if_changed(config, holder, mtime)
+        await source.once()
     assert holder.snapshot.bundle.bundle_id == served  # the last good bundle keeps serving
 
 
@@ -116,7 +114,7 @@ def test_a_reload_swaps_on_change_and_survives_a_broken_edit(tmp_path):
 def test_local_mode_serves_end_to_end(tmp_path, monkeypatch):
     monkeypatch.setenv("P1_API_KEY", "sk-upstream")
     route = respx.post("https://api.openai.com/v1/chat/completions").mock(return_value=httpx.Response(200, json=UPSTREAM_REPLY))
-    config = Config(bundle=LocalBundleConfig(kind="local", path=_write(tmp_path)), events=EventsConfig(cache_dir=tmp_path))
+    config = Config(bundle=LocalBundleConfig(kind="local", path=_write(tmp_path)))
     with TestClient(create_app(config)) as client:
         assert client.get("/readyz").status_code == 200
         response = client.post(
@@ -127,6 +125,33 @@ def test_local_mode_serves_end_to_end(tmp_path, monkeypatch):
     assert response.status_code == 200, response.text
     assert response.json()["content"] == [{"type": "text", "text": "hi"}]
     assert route.calls.last.request.headers["authorization"] == "Bearer sk-upstream"
+
+
+@respx.mock
+def test_local_bundle_source_does_not_disable_event_export(tmp_path, monkeypatch):
+    monkeypatch.setenv("P1_API_KEY", "sk-upstream")
+    respx.post("https://api.openai.com/v1/chat/completions").mock(return_value=httpx.Response(200, json=UPSTREAM_REPLY))
+    exported = threading.Event()
+
+    def accept_events(_request):
+        exported.set()
+        return httpx.Response(200, json={"received": 1, "ingested": 1})
+
+    respx.post("http://cp.test/v1/events").mock(side_effect=accept_events)
+    config = Config(
+        control_plane=ControlPlaneLink(url="http://cp.test", token="dp-token"),
+        bundle=LocalBundleConfig(kind="local", path=_write(tmp_path)),
+        events=SqliteOutboxConfig(cache_dir=tmp_path, flush_interval_s=0.01),
+    )
+
+    with TestClient(create_app(config)) as client:
+        response = client.post(
+            "/v1/chat/completions",
+            headers={"Authorization": "Bearer sk-inf-local-dev"},
+            json={"model": "gpt-test", "messages": [{"role": "user", "content": "hi"}]},
+        )
+        assert response.status_code == 200
+        assert exported.wait(1)
 
 
 @respx.mock
@@ -144,10 +169,20 @@ def test_app_instances_keep_their_own_runtime(tmp_path, http_client):
     first_events = tmp_path / "first-events"
     second_events = tmp_path / "second-events"
     first = create_app(
-        Config(bundle=LocalBundleConfig(kind="local", path=first_path), secrets=first_secrets, events=EventsConfig(cache_dir=first_events))
+        Config(
+            control_plane=ControlPlaneLink(url="http://cp.test"),
+            bundle=LocalBundleConfig(kind="local", path=first_path),
+            secrets=first_secrets,
+            events=SqliteOutboxConfig(cache_dir=first_events, flush_interval_s=3600),
+        )
     )
     second = create_app(
-        Config(bundle=LocalBundleConfig(kind="local", path=second_path), secrets=second_secrets, events=EventsConfig(cache_dir=second_events))
+        Config(
+            control_plane=ControlPlaneLink(url="http://cp.test"),
+            bundle=LocalBundleConfig(kind="local", path=second_path),
+            secrets=second_secrets,
+            events=SqliteOutboxConfig(cache_dir=second_events, flush_interval_s=3600),
+        )
     )
     route = respx.post("https://api.openai.com/v1/chat/completions").mock(return_value=httpx.Response(200, json=UPSTREAM_REPLY))
     body = {"model": "gpt-test", "messages": [{"role": "user", "content": "hi"}]}

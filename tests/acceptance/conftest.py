@@ -18,7 +18,7 @@ import subprocess
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from typing import TYPE_CHECKING, TextIO
+from typing import TYPE_CHECKING, Literal, TextIO
 from uuid import uuid4
 
 import httpx
@@ -323,11 +323,15 @@ class Stack:
         staleness_policy: str = "serve_and_warn",
         poll_interval_s: int = 1,
         flush_interval_s: int = 1,
-        backend: str = "sqlite",
+        outbox_kind: Literal["sqlite", "devnull"] = "sqlite",
     ) -> None:
+        """Write both planes against one secret store and the selected event outbox."""
         secrets_store = {"kind": "file", "root": str(self.tmp / "secrets")}
-        """Both planes name the same store, because one writes what the other reads. The file store
-        is the smallest one that can hold a value the data plane will read back in another process."""
+        outbox_config = (
+            {"kind": "devnull"}
+            if outbox_kind == "devnull"
+            else {"kind": "sqlite", "flush_interval_s": flush_interval_s, "cache_dir": str(self.cache_dir)}
+        )
         cfg = {
             "control_plane": {
                 "database": {"url": self.db_url},
@@ -344,7 +348,7 @@ class Stack:
                     "staleness_policy": staleness_policy,
                     "poll_interval_s": poll_interval_s,
                 },
-                "events": {"flush_interval_s": flush_interval_s, "backend": backend, "cache_dir": str(self.cache_dir)},
+                "events": outbox_config,
             },
         }
         self.config_path.write_text(yaml.safe_dump(cfg), encoding="utf-8")

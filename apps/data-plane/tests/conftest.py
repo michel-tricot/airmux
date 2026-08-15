@@ -3,11 +3,12 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 from uuid import uuid4
 
 import httpx
 import pytest
+import respx
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from contract import (
@@ -27,9 +28,10 @@ from contract import (
 )
 from data_plane.app import create_app
 from data_plane.bundle import RemoteBundleConfig
-from data_plane.config import Config, ControlPlaneLink, EventsConfig
+from data_plane.config import Config, ControlPlaneLink, DevNullOutboxConfig, SqliteOutboxConfig
 from data_plane.egress import REGISTRY
 from data_plane.egress.base import Ctx
+from data_plane.outbox import SqliteOutbox
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -41,6 +43,7 @@ ORG = uuid7()
 WORKSPACE = uuid7()
 
 UNUSED_PUBLIC_KEY = Ed25519PrivateKey.generate().public_key()
+CONTROL_PLANE_URL = "http://cp.test"
 
 PROVIDER = ProviderEntry(provider_id="p1", kind="openai_compatible", base_url="https://api.openai.com/v1")
 MODEL = ModelEntry(
@@ -95,12 +98,28 @@ def make_signed(private_key, key_ids=("k1",), org=ORG):
     return sign_bundle(make_bundle(keys=keys, org=org), private_key, "k1")
 
 
-def make_config(tmp_path, backend="sqlite") -> Config:
+def make_config(tmp_path, outbox_kind: Literal["sqlite", "devnull"] = "sqlite") -> Config:
+    outbox_config = DevNullOutboxConfig() if outbox_kind == "devnull" else SqliteOutboxConfig(cache_dir=tmp_path)
     return Config(
-        control_plane=ControlPlaneLink(url="http://cp.test", token="dp-token"),
+        control_plane=ControlPlaneLink(url=CONTROL_PLANE_URL, token="dp-token"),
         bundle=RemoteBundleConfig(verify_key=UNUSED_PUBLIC_KEY, cache_dir=tmp_path),
-        events=EventsConfig(backend=backend, cache_dir=tmp_path),
+        events=outbox_config,
     )
+
+
+def make_outbox(tmp_path, http_client: httpx.AsyncClient, flush_interval_s: float = 5.0) -> SqliteOutbox:
+    return SqliteOutbox(
+        cache_dir=tmp_path,
+        control_plane_url=CONTROL_PLANE_URL,
+        control_plane_token="dp-token",
+        flush_interval_s=flush_interval_s,
+        http_client=http_client,
+    )
+
+
+def mock_control_plane() -> None:
+    respx.get(f"{CONTROL_PLANE_URL}/v1/bundle/latest").mock(return_value=httpx.Response(503))
+    respx.post(f"{CONTROL_PLANE_URL}/v1/heartbeat").mock(return_value=httpx.Response(200))
 
 
 PLATFORM_CREDENTIAL = make_credential(org=None)
@@ -167,7 +186,11 @@ def booted(tmp_path, monkeypatch) -> BootedApp:
     catalog = Catalog(providers=[PROVIDER], models=[MODEL], credentials=[PLATFORM_CREDENTIAL])
     bundle = make_bundle(keys=[entry], catalog=catalog)
     (tmp_path / "bundle.json").write_text(sign_bundle(bundle, bundle_key, "k1").model_dump_json(), encoding="utf-8")
-    config = Config(bundle=RemoteBundleConfig(verify_key=bundle_key.public_key(), cache_dir=tmp_path), events=EventsConfig(cache_dir=tmp_path))
+    config = Config(
+        control_plane=ControlPlaneLink(url=CONTROL_PLANE_URL),
+        bundle=RemoteBundleConfig(verify_key=bundle_key.public_key(), cache_dir=tmp_path),
+        events=SqliteOutboxConfig(cache_dir=tmp_path),
+    )
     monkeypatch.setenv("P1_API_KEY", "sk-test-not-real")  # the conventional name the env store falls back to for a platform provider key
     return BootedApp(app=create_app(config), api_key=caller_token)
 
