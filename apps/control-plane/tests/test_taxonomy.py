@@ -150,7 +150,7 @@ def test_a_provider_declaring_no_icon_has_none(tmp_path):
 
 def test_every_shipped_provider_carries_a_square_icon():
     """The icons are data, so the guard is on the file the instance actually applies."""
-    spec = TaxonomySpec.model_validate(yaml.safe_load((REPO_ROOT / "taxonomy.yml").read_text(encoding="utf-8")))
+    spec = TaxonomySpec.model_validate(yaml.safe_load((REPO_ROOT / "taxonomy" / "taxonomy.yml").read_text(encoding="utf-8")))
     assert spec.providers != []
     for provider in spec.providers:
         assert provider.icon.startswith("<svg "), provider.provider_id
@@ -159,7 +159,7 @@ def test_every_shipped_provider_carries_a_square_icon():
 
 
 def test_shipped_taxonomy_prices_each_model_directly():
-    taxonomy = yaml.safe_load((REPO_ROOT / "taxonomy.yml").read_text(encoding="utf-8"))
+    taxonomy = yaml.safe_load((REPO_ROOT / "taxonomy" / "taxonomy.yml").read_text(encoding="utf-8"))
     price_fields = {
         "input_price_per_mtok",
         "output_price_per_mtok",

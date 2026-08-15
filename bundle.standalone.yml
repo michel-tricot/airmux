@@ -1,6 +1,6 @@
 # The hand-written bundle for the standalone data plane.
 # Keys are plaintext here and hashed at load; treat this file like the secrets it guards.
-# Prices and limits copied from taxonomy.yml, 2026-08-14.
+# Prices and limits copied from taxonomy/taxonomy.yml, 2026-08-14.
 
 keys:
   - sk-inf-standalone-dev

@@ -49,7 +49,7 @@ services:
     volumes:
       - state:/state
       - ./airllm.yml:/state/airllm.yml:ro
-      - ./taxonomy.yml:/state/taxonomy.yml:ro
+      - ./taxonomy/taxonomy.yml:/state/taxonomy.yml:ro
     ports:
       - "8000:8000"
     depends_on:

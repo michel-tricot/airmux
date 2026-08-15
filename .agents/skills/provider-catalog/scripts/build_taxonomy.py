@@ -1,10 +1,10 @@
 """Generate the repo's applied taxonomy.yml from the researched catalog.
 
-taxonomy/ is research: what each vendor publishes, with provenance. taxonomy.yml at the
-repo root is what `airllmcp taxonomy` applies to the database. This turns the first into
+taxonomy/ holds both halves: the researched catalog, and taxonomy.yml, the applied file
+`airllmcp taxonomy` reads. This turns the first into
 the second, so the applied catalog is derived rather than hand-maintained and drifting.
 
-    uv run python build_taxonomy.py            write taxonomy.yml
+    uv run python build_taxonomy.py            write taxonomy/taxonomy.yml
     uv run python build_taxonomy.py --check    fail if it is out of date, for CI
 
 Only validated providers are emitted. A candidate has no base_url and no model catalog, so
@@ -45,9 +45,9 @@ from pathlib import Path
 import yaml
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from paths import TAXONOMY, repo_root
+from paths import TAXONOMY
 
-APPLIED = repo_root() / "taxonomy.yml"
+APPLIED = TAXONOMY / "taxonomy.yml"
 KIND = {"anthropic": "anthropic"}          # everything else is openai_compatible
 
 HEADER = """\

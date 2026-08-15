@@ -9,7 +9,7 @@ user-invocable: true
 `taxonomy/` is a researched catalog of LLM providers and routers: what wire shape each one
 accepts, how it authenticates, what models it serves, and the JSON Schema of its completion
 request and response. It is research input for adapter planning. It is never loaded at
-runtime; `taxonomy.yml` at the repo root is the file `airllmcp taxonomy` reads.
+runtime; `taxonomy/taxonomy.yml` is the generated file `airllmcp taxonomy` reads.
 
 ## Active versus candidate
 
@@ -67,7 +67,7 @@ The tooling lives with this skill; the catalog is its output. Nothing executable
     fetch_icons.py         vendors provider marks as SVG
     field_matrix.py        field support matrix, per ingress
     build_report.py        renders the matrix to HTML
-    build_taxonomy.py      regenerates the repo's applied taxonomy.yml
+    build_taxonomy.py      regenerates taxonomy/taxonomy.yml, the applied file
     validate.py            structural gates, run after every change
 
 taxonomy/
@@ -178,12 +178,12 @@ Rerun after any schema change. It is not automatic.
 ### Regenerating the applied taxonomy
 
 ```
-python build_taxonomy.py            # write taxonomy.yml at the repo root
+python build_taxonomy.py            # write taxonomy/taxonomy.yml
 python build_taxonomy.py --check    # fail if stale, for CI
 ```
 
-`taxonomy/` is research; `taxonomy.yml` at the repo root is what `airllmcp taxonomy`
-applies to the database. The second is generated from the first, so never hand-edit it.
+`taxonomy/` holds both halves: providers.yml and the derived data are research, and
+`taxonomy/taxonomy.yml` is what `airllmcp taxonomy` applies to the database. The second is generated from the first, so never hand-edit it.
 `validate.py` fails when the two have drifted, and `bootstrap.py` regenerates it last.
 
 Model ids are always `<provider>/<upstream>`. `gpt-oss-120b` is served by both Groq and

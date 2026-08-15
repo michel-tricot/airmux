@@ -137,7 +137,7 @@ scripts/claude-gateway.sh gpt-4o-mini       # Claude Code, backed by gpt-4o-mini
 scripts/claude-gateway.sh claude-sonnet-4-6
 ```
 
-`taxonomy.yml` ships with a catalog of OpenAI-compatible hosted providers
+`taxonomy/taxonomy.yml` ships with a catalog of OpenAI-compatible hosted providers
 (openai, anthropic, gemini, xai, deepseek, mistral, groq); after editing it, apply
 with `uv run airllmcp taxonomy`. A model becomes callable as soon as its
 provider's key (for example `GROQ_API_KEY`) is in `.env`.

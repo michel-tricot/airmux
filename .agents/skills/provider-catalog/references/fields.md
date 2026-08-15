@@ -38,7 +38,7 @@ post-redirect, because these hosts migrate often.
 
 ## base_url
 
-The inference endpoint, which is what the applied `taxonomy.yml` routes to. Distinct from
+The inference endpoint, which is what the applied `taxonomy/taxonomy.yml` routes to. Distinct from
 `models_url`: Groq lists at `/openai/v1/models` and infers at `/openai/v1`, and the two are
 not always one path apart. Candidates have no base_url, because nothing routes to them.
 

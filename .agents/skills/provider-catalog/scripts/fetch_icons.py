@@ -2,7 +2,7 @@
 
 Source is @lobehub/icons-static-svg (MIT), pinned, resolved from the icon_mono and
 icon_color slugs in providers.yml and routers.yml. Marks are normalized the same way the
-root taxonomy.yml documents for its inline copies: sizing attributes and titles dropped so
+taxonomy/taxonomy.yml documents for its inline copies: sizing attributes and titles dropped so
 the consumer controls both, gradient and clip ids namespaced so two marks on one page
 cannot collide.
 
