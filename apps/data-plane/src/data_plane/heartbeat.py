@@ -12,7 +12,7 @@ if TYPE_CHECKING:
     from uuid import UUID
 
     from data_plane.bundle.holder import BundleHolder
-    from data_plane.config import ControlPlaneLink
+    from data_plane.control_plane_link import ControlPlaneLink
 
 try:
     VERSION = version("data-plane")
@@ -23,12 +23,14 @@ except PackageNotFoundError:  # pragma: no cover - only when running from a non-
 class Heartbeat:
     def __init__(
         self,
-        config: ControlPlaneLink,
+        control_plane: ControlPlaneLink,
+        interval_s: float,
         holder: BundleHolder,
         instance_id: UUID,
         http_client: httpx.AsyncClient,
     ) -> None:
-        self._config = config
+        self._control_plane = control_plane
+        self._interval_s = interval_s
         self._holder = holder
         self._instance_id = instance_id
         self._http_client = http_client
@@ -41,8 +43,8 @@ class Heartbeat:
             bundle_id=snapshot.bundle.bundle_id if snapshot else None,
         )
         response = await self._http_client.post(
-            f"{self._config.url}/v1/heartbeat",
-            headers={"authorization": f"Bearer {self._config.token}"},
+            f"{self._control_plane.url}/v1/heartbeat",
+            headers={"authorization": f"Bearer {self._control_plane.token}"},
             json=body.model_dump(mode="json"),
         )
         response.raise_for_status()
@@ -50,7 +52,7 @@ class Heartbeat:
     async def run(self) -> None:
         await run_periodic(
             self.once,
-            self._config.heartbeat_interval_s,
+            self._interval_s,
             (httpx.HTTPError, OSError),
             "heartbeat",
         )

@@ -7,6 +7,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field
 
 from contract import Ed25519PublicKeyB64
+from data_plane.control_plane_link import ControlPlaneLink
 
 
 class RemoteBundleConfig(BaseModel):
@@ -15,11 +16,13 @@ class RemoteBundleConfig(BaseModel):
     model_config = ConfigDict(frozen=True, arbitrary_types_allowed=True)
 
     kind: Literal["remote"] = "remote"
+    control_plane: ControlPlaneLink
     verify_key: Ed25519PublicKeyB64  # the public half of the control plane's signing key; verifies bundle signatures
     org: UUID | None = None  # which org's bundle this data plane serves; None takes the newest across orgs
     cache_dir: Path = Path(".airllm")
     staleness_policy: Literal["serve_and_warn", "refuse"] = "serve_and_warn"
-    poll_interval_s: float = 30.0
+    poll_interval_s: float = Field(default=30.0, gt=0)
+    heartbeat_interval_s: float = Field(default=30.0, gt=0)
 
 
 class LocalBundleConfig(BaseModel):
@@ -29,8 +32,7 @@ class LocalBundleConfig(BaseModel):
 
     kind: Literal["local"]
     path: Path
-    reload_interval_s: float = 2.0
+    reload_interval_s: float = Field(default=2.0, gt=0)
 
 
 BundleConfig = Annotated[RemoteBundleConfig | LocalBundleConfig, Field(discriminator="kind")]
-"""Where the bundle comes from, tagged by kind so each source parses only its own settings."""

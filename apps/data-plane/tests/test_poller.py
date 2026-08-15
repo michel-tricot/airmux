@@ -13,16 +13,15 @@ from data_plane.cache import read_cached_bundle
 
 
 def _source(tmp_path):
-    """The poller's two arguments out of the test config, with the union narrowed for the type checker."""
     config = make_config(tmp_path)
     assert isinstance(config.bundle, RemoteBundleConfig)
-    return config.control_plane, config.bundle
+    return config.bundle
 
 
 def _remote_source(tmp_path, holder, private_key, http_client) -> RemoteBundleSource:
-    link, bundle_config = _source(tmp_path)
+    bundle_config = _source(tmp_path)
     bundle_config = bundle_config.model_copy(update={"verify_key": private_key.public_key()})
-    return RemoteBundleSource(link, bundle_config, holder, http_client)
+    return RemoteBundleSource(bundle_config, holder, http_client)
 
 
 def enveloped(signed) -> str:

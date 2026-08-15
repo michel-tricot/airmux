@@ -17,7 +17,8 @@ from data_plane.app import create_app
 from data_plane.auth import authenticate, index_keys
 from data_plane.bundle import BundleHolder, LocalBundleConfig
 from data_plane.bundle.local import LocalBundleSource, load_local
-from data_plane.config import Config, ControlPlaneLink, SqliteOutboxConfig
+from data_plane.config import Config, SqliteOutboxConfig
+from data_plane.control_plane_link import ControlPlaneLink
 
 if TYPE_CHECKING:
     from data_plane.runtime import Runtime
@@ -139,9 +140,12 @@ def test_local_bundle_source_does_not_disable_event_export(tmp_path, monkeypatch
 
     respx.post("http://cp.test/v1/events").mock(side_effect=accept_events)
     config = Config(
-        control_plane=ControlPlaneLink(url="http://cp.test", token="dp-token"),
         bundle=LocalBundleConfig(kind="local", path=_write(tmp_path)),
-        events=SqliteOutboxConfig(cache_dir=tmp_path, flush_interval_s=0.01),
+        events=SqliteOutboxConfig(
+            control_plane=ControlPlaneLink(url="http://cp.test", token="dp-token"),
+            cache_dir=tmp_path,
+            flush_interval_s=0.01,
+        ),
     )
 
     with TestClient(create_app(config)) as client:
@@ -170,18 +174,24 @@ def test_app_instances_keep_their_own_runtime(tmp_path, http_client):
     second_events = tmp_path / "second-events"
     first = create_app(
         Config(
-            control_plane=ControlPlaneLink(url="http://cp.test"),
             bundle=LocalBundleConfig(kind="local", path=first_path),
             secrets=first_secrets,
-            events=SqliteOutboxConfig(cache_dir=first_events, flush_interval_s=3600),
+            events=SqliteOutboxConfig(
+                control_plane=ControlPlaneLink(url="http://cp.test", token="dp-token"),
+                cache_dir=first_events,
+                flush_interval_s=3600,
+            ),
         )
     )
     second = create_app(
         Config(
-            control_plane=ControlPlaneLink(url="http://cp.test"),
             bundle=LocalBundleConfig(kind="local", path=second_path),
             secrets=second_secrets,
-            events=SqliteOutboxConfig(cache_dir=second_events, flush_interval_s=3600),
+            events=SqliteOutboxConfig(
+                control_plane=ControlPlaneLink(url="http://cp.test", token="dp-token"),
+                cache_dir=second_events,
+                flush_interval_s=3600,
+            ),
         )
     )
     route = respx.post("https://api.openai.com/v1/chat/completions").mock(return_value=httpx.Response(200, json=UPSTREAM_REPLY))

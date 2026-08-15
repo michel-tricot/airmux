@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import logging
 from typing import TYPE_CHECKING
 
@@ -16,9 +15,10 @@ from data_plane.heartbeat import Heartbeat
 from data_plane.tasks import run_periodic
 
 if TYPE_CHECKING:
+    import asyncio
+
     from data_plane.bundle.config import RemoteBundleConfig
     from data_plane.bundle.holder import BundleHolder
-    from data_plane.config import ControlPlaneLink
 
 logger = logging.getLogger("data_plane")
 
@@ -26,20 +26,18 @@ logger = logging.getLogger("data_plane")
 class RemoteBundleSource(BundleSource):
     def __init__(
         self,
-        link: ControlPlaneLink,
         config: RemoteBundleConfig,
         holder: BundleHolder,
         http_client: httpx.AsyncClient,
     ) -> None:
-        self._link = link
         self._config = config
         self._holder = holder
         self._http_client = http_client
 
     async def once(self) -> None:
         response = await self._http_client.get(
-            f"{self._link.url}/v1/bundle/latest",
-            headers={"authorization": f"Bearer {self._link.token}"},
+            f"{self._config.control_plane.url}/v1/bundle/latest",
+            headers={"authorization": f"Bearer {self._config.control_plane.token}"},
             params={"org_id": str(self._config.org)} if self._config.org else {},
         )
         response.raise_for_status()
@@ -65,19 +63,18 @@ class RemoteBundleSource(BundleSource):
             "bundle poll",
         )
 
-    def start(self) -> tuple[asyncio.Task[None], ...]:
+    def start(self, task_group: asyncio.TaskGroup, /) -> tuple[asyncio.Task[None], ...]:
         self._load_cached()
-        if not self._link.url:
-            return ()
         heartbeat = Heartbeat(
-            self._link,
-            self._holder,
-            cache_instance_id(self._config.cache_dir),
-            self._http_client,
+            control_plane=self._config.control_plane,
+            interval_s=self._config.heartbeat_interval_s,
+            holder=self._holder,
+            instance_id=cache_instance_id(self._config.cache_dir),
+            http_client=self._http_client,
         )
         return (
-            asyncio.create_task(self.run()),
-            asyncio.create_task(heartbeat.run()),
+            task_group.create_task(self.run(), name="bundle poll"),
+            task_group.create_task(heartbeat.run(), name="heartbeat"),
         )
 
     def _load_cached(self) -> None:

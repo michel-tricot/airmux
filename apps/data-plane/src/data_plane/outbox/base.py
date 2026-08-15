@@ -16,7 +16,7 @@ class EventOutbox(ABC):
     def record(self, event: UsageEventV1, /) -> None:
         """Accept one event without network work."""
 
-    def start(self) -> tuple[asyncio.Task[None], ...]:
+    def start(self, _task_group: asyncio.TaskGroup, /) -> tuple[asyncio.Task[None], ...]:
         return ()
 
     def close(self) -> None:

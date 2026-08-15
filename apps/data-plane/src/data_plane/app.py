@@ -3,6 +3,8 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import logging
+import os
+import signal
 from typing import TYPE_CHECKING
 
 import httpx
@@ -51,30 +53,46 @@ def _build_http_client() -> httpx.AsyncClient:
     )
 
 
+def _terminate_process() -> None:
+    os.kill(os.getpid(), signal.SIGTERM)
+
+
+def _terminate_process_on_failure(task: asyncio.Task[None], /) -> None:
+    if task.cancelled():
+        return
+    error = task.exception()
+    if error is None:
+        logger.critical("background task %s stopped, terminating process", task.get_name())
+    else:
+        logger.critical("background task %s failed, terminating process", task.get_name(), exc_info=error)
+    _terminate_process()
+
+
 def create_app(config: Config) -> Starlette:
     @contextlib.asynccontextmanager
     async def lifespan(_app: Starlette) -> AsyncIterator[dict[str, Runtime]]:
         if config.dev:
             _configure_dev_logging()
         async with _build_http_client() as http_client:
-            outbox = build_outbox(config.events, config.control_plane, http_client)
+            outbox = build_outbox(config.events, http_client)
             try:
                 holder = BundleHolder()
-                bundle_source = build_bundle_source(config.bundle, config.control_plane, holder, http_client)
+                bundle_source = build_bundle_source(config.bundle, holder, http_client)
                 runtime = Runtime(
                     holder=holder,
                     outbox=outbox,
                     credentials=CredentialResolver(config.secrets.build()),
                     http_client=http_client,
                 )
-                tasks = (*bundle_source.start(), *outbox.start())
-                try:
-                    yield {"runtime": runtime}
-                finally:
+                async with asyncio.TaskGroup() as task_group:
+                    tasks = (*bundle_source.start(task_group), *outbox.start(task_group))
                     for task in tasks:
-                        task.cancel()
-                        with contextlib.suppress(asyncio.CancelledError):
-                            await task
+                        task.add_done_callback(_terminate_process_on_failure)
+                    try:
+                        yield {"runtime": runtime}
+                    finally:
+                        for task in tasks:
+                            task.cancel()
             finally:
                 outbox.close()
 
