@@ -10,6 +10,7 @@ import asyncio
 import contextlib
 import json
 import logging
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Literal
 
 import anyio
@@ -30,7 +31,7 @@ from data_plane.reconcile import reconcile
 from data_plane.runtime import Runtime, runtime_of
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterator, Sequence
+    from collections.abc import AsyncIterator
 
     from starlette.requests import Request
 
@@ -127,6 +128,72 @@ def _parse(body: dict[str, Any], ingress: IngressAdapter) -> tuple[CanonicalRequ
         raise RequestRejectedError(400, "invalid_request", str(e)) from e
 
 
+@dataclass(frozen=True)
+class StreamSession:
+    """Request state shared by opening and folding one provider stream."""
+
+    adapter: EgressAdapter
+    ingress: IngressAdapter
+    ctx: Ctx
+    request: CanonicalRequest
+    adjustments: tuple[Adjustment, ...]
+    outbox: EventOutbox
+    http_client: httpx.AsyncClient
+
+    async def open(self, upstream: UpstreamRequest) -> Response:
+        async with contextlib.AsyncExitStack() as stack:
+            try:
+                response = await stack.enter_async_context(
+                    self.http_client.stream(upstream.method, upstream.url, headers=upstream.headers, content=upstream.body)
+                )
+                if response.is_error:
+                    body = await response.aread()
+                    error = UpstreamResponseError(response.status_code, body)
+                    return self.ingress.render_error(_record_upstream_error(self.adapter, self.ctx, error, self.request, self.outbox))
+            except httpx.HTTPError as e:
+                return self.ingress.render_error(_record_upstream_error(self.adapter, self.ctx, e, self.request, self.outbox))
+            stream_state = self.adapter.new_stream_state(self.ctx)
+            handoff = stack.pop_all()
+
+        renderer = self.ingress.new_stream()
+        return StreamingResponse(self._events(response, handoff, stream_state, renderer), media_type="text/event-stream")
+
+    async def _events(
+        self,
+        response: httpx.Response,
+        handoff: contextlib.AsyncExitStack,
+        stream_state: StreamState,
+        renderer: ResponseStream,
+    ) -> AsyncIterator[bytes]:
+        async with handoff:
+            try:
+                for frame in renderer.start(self.ctx):
+                    yield frame
+                async for payload in response.aiter_bytes():
+                    for event in self.adapter.frame(payload, stream_state):
+                        for canonical_chunk in self.adapter.transform_stream_event(event, stream_state):
+                            for frame in renderer.chunk(canonical_chunk):
+                                yield frame
+                self.adapter.validate_stream(stream_state)
+                final = self.adapter.finalize(stream_state)
+                for frame in renderer.closing(final, list(self.adjustments)):
+                    yield frame
+                record_usage(self.outbox, self.ctx, final, status="ok", request=self.request)
+            except (UpstreamProtocolError, UpstreamStreamError, httpx.HTTPError) as e:
+                for frame in renderer.error(self.adapter.map_error(e)):
+                    yield frame
+                record_usage(
+                    self.outbox,
+                    self.ctx,
+                    self.adapter.finalize(stream_state),
+                    status=status_for_error(e),
+                    request=self.request,
+                )
+            except (asyncio.CancelledError, anyio.get_cancelled_exc_class()):
+                record_usage(self.outbox, self.ctx, self.adapter.finalize(stream_state), status="cancelled", request=self.request)
+                raise
+
+
 async def _serve(  # noqa: PLR0913 request serving needs canonical input, auth, bundle, ingress, adjustments, and its app runtime
     req: CanonicalRequest,
     key: KeyEntry,
@@ -160,7 +227,16 @@ async def _serve(  # noqa: PLR0913 request serving needs canonical input, auth, 
     adjustments = [*parse_adjustments, *reconcile_adjustments]
     upstream = adapter.transform_request(req, decision.model)
     if req.stream:
-        return await _stream(adapter, ingress, ctx, upstream, req, adjustments, runtime.outbox, runtime.http_client)
+        session = StreamSession(
+            adapter=adapter,
+            ingress=ingress,
+            ctx=ctx,
+            request=req,
+            adjustments=tuple(adjustments),
+            outbox=runtime.outbox,
+            http_client=runtime.http_client,
+        )
+        return await session.open(upstream)
     try:
         resp = await runtime.http_client.request(upstream.method, upstream.url, headers=upstream.headers, content=upstream.body)
     except httpx.HTTPError as e:
@@ -174,74 +250,6 @@ async def _serve(  # noqa: PLR0913 request serving needs canonical input, auth, 
         return ingress.render_error(_record_upstream_error(adapter, ctx, e, req, runtime.outbox))
     record_usage(runtime.outbox, ctx, final, status="ok", request=req)
     return ingress.render_response(final)
-
-
-async def _stream(  # noqa: PLR0913, PLR0917 the streaming lifecycle genuinely spans these eight
-    adapter: EgressAdapter,
-    ingress: IngressAdapter,
-    ctx: Ctx,
-    upstream: UpstreamRequest,
-    req: CanonicalRequest,
-    adjustments: Sequence[Adjustment],
-    outbox: EventOutbox,
-    http_client: httpx.AsyncClient,
-) -> Response:
-    """Open the upstream and peek at the status, then hand the socket to the response generator.
-
-    The stack owns the upstream connection: every early return or exception in
-    this function closes it, and pop_all transfers that obligation to the
-    generator once we commit to streaming.
-    """
-    async with contextlib.AsyncExitStack() as stack:
-        try:
-            resp = await stack.enter_async_context(http_client.stream(upstream.method, upstream.url, headers=upstream.headers, content=upstream.body))
-            if resp.is_error:
-                body = await resp.aread()
-                error = UpstreamResponseError(resp.status_code, body)
-                return ingress.render_error(_record_upstream_error(adapter, ctx, error, req, outbox))
-        except httpx.HTTPError as e:
-            return ingress.render_error(_record_upstream_error(adapter, ctx, e, req, outbox))
-        stream_state = adapter.new_stream_state(ctx)
-        handoff = stack.pop_all()
-
-    out = ingress.new_stream()
-    return StreamingResponse(_events(adapter, ctx, resp, handoff, stream_state, req, list(adjustments), out, outbox), media_type="text/event-stream")
-
-
-async def _events(  # noqa: PLR0913, PLR0917 the streaming lifecycle genuinely spans these nine
-    adapter: EgressAdapter,
-    ctx: Ctx,
-    resp: httpx.Response,
-    handoff: contextlib.AsyncExitStack,
-    stream_state: StreamState,
-    req: CanonicalRequest,
-    adjustments: list[Adjustment],
-    renderer: ResponseStream,
-    outbox: EventOutbox,
-) -> AsyncIterator[bytes]:
-    """One canonical stream, spelled by whichever dialect the caller's ingress picked; an error
-    after bytes flowed is a data frame, since the status is already spent."""
-    async with handoff:
-        try:
-            for b in renderer.start(ctx):
-                yield b
-            async for chunk in resp.aiter_bytes():
-                for ev in adapter.frame(chunk, stream_state):
-                    for c in adapter.transform_stream_event(ev, stream_state):
-                        for b in renderer.chunk(c):
-                            yield b
-            adapter.validate_stream(stream_state)
-            final = adapter.finalize(stream_state)
-            for b in renderer.closing(final, adjustments):
-                yield b
-            record_usage(outbox, ctx, final, status="ok", request=req)
-        except (UpstreamProtocolError, UpstreamStreamError, httpx.HTTPError) as e:
-            for b in renderer.error(adapter.map_error(e)):
-                yield b
-            record_usage(outbox, ctx, adapter.finalize(stream_state), status=status_for_error(e), request=req)
-        except (asyncio.CancelledError, anyio.get_cancelled_exc_class()):
-            record_usage(outbox, ctx, adapter.finalize(stream_state), status="cancelled", request=req)
-            raise
 
 
 async def _resolve_credential(decision: Allow, resolver: CredentialResolver) -> Secret:
