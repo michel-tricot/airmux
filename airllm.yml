@@ -12,6 +12,8 @@ control_plane:
     signing_key: ${file:${var:cache_dir}/signing.key}
     staleness_bound_hours: 24
   console_url: ${env:GW_CONSOLE_URL:-http://127.0.0.1:5000}
+  secrets:
+    kind: env
 
 data_plane:
   bundle:
@@ -30,3 +32,5 @@ data_plane:
     control_plane: *control_plane
     cache_dir: ${var:cache_dir}
     flush_interval_s: 5
+  secrets:
+    kind: env
