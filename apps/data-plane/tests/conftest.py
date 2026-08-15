@@ -102,7 +102,18 @@ def make_config(tmp_path, backend="sqlite") -> Config:
 
 PLATFORM_CREDENTIAL = make_credential(org=None)
 USAGE = {"prompt_tokens": 5, "completion_tokens": 7, "total_tokens": 12}
-CTX = Ctx(request_id="req-1", model=MODEL, provider=PROVIDER, stream=True)
+CTX = Ctx(
+    request_id="req-1",
+    model=MODEL,
+    provider=PROVIDER,
+    stream=True,
+    org_id=ORG,
+    workspace_id=WORKSPACE,
+    key_id="k-dev",
+    credential_id=uuid7(),
+    credential_scope="workspace",
+    bundle_id=uuid7(),
+)
 
 
 def make_adapter():

@@ -84,7 +84,7 @@ class SqliteOutbox(EventOutbox):
 
     async def _flush(self) -> int:
         """At-least-once delivery: only the leaseholder sends, then deletes exactly what it sent; the CP dedups on event_id."""
-        if not self._url or not self._claim_flush(self._lease_ttl()):
+        if not self._url or not self._claim_flush(self._lease_ttl(), time.time()):
             return 0
         events = self._read_batch(BATCH)
         if not events:
@@ -106,15 +106,14 @@ class SqliteOutbox(EventOutbox):
         (count,) = self._conn.execute("SELECT COUNT(*) FROM outbox").fetchone()
         return int(count)
 
-    def _claim_flush(self, ttl: float, now: float | None = None) -> bool:
+    def _claim_flush(self, ttl: float, now: float) -> bool:
         """Win or renew the single flush lease. A dead holder's lease expires, so another worker takes over."""
-        moment = time.time() if now is None else now
         with self._conn:
             self._conn.execute(
                 "INSERT INTO flush_lease(id, owner, expires) VALUES (1, ?, ?) "
                 "ON CONFLICT(id) DO UPDATE SET owner = excluded.owner, expires = excluded.expires "
                 "WHERE flush_lease.expires < ? OR flush_lease.owner = excluded.owner",
-                (self._owner, moment + ttl, moment),
+                (self._owner, now + ttl, now),
             )
             (owner,) = self._conn.execute("SELECT owner FROM flush_lease WHERE id = 1").fetchone()
         return owner == self._owner

@@ -25,11 +25,13 @@ from data_plane.canonical import (
     ToolCallPart,
 )
 from data_plane.egress.base import (
+    CanonicalError,
     EgressAdapter,
     RawEvent,
     StreamState,
     UpstreamProtocolError,
     UpstreamRequest,
+    UpstreamResponseError,
     UpstreamStreamError,
     encode,
     frame_sse,
@@ -38,6 +40,7 @@ from data_plane.formats.openai import (
     UpstreamChunk,
     UpstreamChunkChoice,
     UpstreamCompletion,
+    UpstreamErrorBody,
     UpstreamUsage,
     body_of,
     finish_reason,
@@ -130,6 +133,19 @@ class OpenAICompatibleAdapter(EgressAdapter):
             usage=usage_of(completion.usage),
         )
 
+    def map_error(self, error: Exception) -> CanonicalError:
+        if not isinstance(error, UpstreamResponseError):
+            return super().map_error(error)
+        try:
+            upstream_error = UpstreamErrorBody.model_validate_json(error.body)
+        except ValidationError:
+            return super().map_error(error)
+        return CanonicalError(
+            status=error.status,
+            code=upstream_error.error.code or "upstream_error",
+            message=upstream_error.error.message,
+        )
+
     def new_stream_state(self, ctx: Ctx) -> OpenAIStreamState:
         return OpenAIStreamState(ctx=ctx)
 
@@ -153,8 +169,11 @@ class OpenAICompatibleAdapter(EgressAdapter):
         if not isinstance(data, dict):
             raise UpstreamProtocolError.stream_event()
         if "error" in data:
-            payload = data["error"] if isinstance(data["error"], dict) else {}
-            raise UpstreamStreamError(code=str(payload.get("code") or "upstream_error"), message=str(payload.get("message") or ""))
+            try:
+                upstream_error = UpstreamErrorBody.model_validate(data)
+            except ValidationError as error:
+                raise UpstreamProtocolError.stream_event() from error
+            raise UpstreamStreamError(code=upstream_error.error.code or "upstream_error", message=upstream_error.error.message)
         try:
             chunk = UpstreamChunk.model_validate(data)
         except ValidationError as error:

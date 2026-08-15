@@ -20,7 +20,7 @@ def serve(host: str = "127.0.0.1", port: int = 8080, dev: bool = False, config: 
     if dev:
         os.environ["GW_DEV"] = "1"
     # Workers share one cache dir: the SQLite outbox serializes their writes and one leaseholder flushes.
-    uvicorn.run("data_plane.app:app", host=host, port=port, reload=dev, workers=None if dev else workers)
+    uvicorn.run("data_plane.app:load_app", host=host, port=port, reload=dev, workers=None if dev else workers, factory=True)
 
 
 @app.command()

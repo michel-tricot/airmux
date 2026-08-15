@@ -93,12 +93,9 @@ def _start_bundle_source(config: Config, outbox: EventOutbox) -> list[asyncio.Ta
     ]
 
 
-def create_app(config_override: Config | None = None) -> Starlette:
-    """App factory: production loads the config file, tests inject a constructed Config."""
-
+def create_app(config: Config) -> Starlette:
     @contextlib.asynccontextmanager
     async def lifespan(_app: Starlette) -> AsyncIterator[None]:
-        config = config_override or load_config()
         if config.dev:
             _configure_dev_logging()
         state.config = config
@@ -128,4 +125,5 @@ def create_app(config_override: Config | None = None) -> Starlette:
     )
 
 
-app = create_app()
+def load_app() -> Starlette:
+    return create_app(load_config())
