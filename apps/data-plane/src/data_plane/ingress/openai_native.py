@@ -1,4 +1,4 @@
-"""The OpenAI dialect: an unmodified OpenAI client that swapped only its base URL, per INTERFACE.md.
+"""The OpenAI dialect: an unmodified OpenAI client that swapped only its base URL, per DATAPLANE.md.
 
 Requests are recognized by fingerprint or unambiguous shape, parsed through the same canonical
 middle as every other request, and answered as OpenAI's shapes: choices on the completion,

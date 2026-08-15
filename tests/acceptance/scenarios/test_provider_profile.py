@@ -2,9 +2,8 @@
 
 The quirk provider exists only in taxonomy.yml: it respells max_tokens as
 max_completion_tokens, closes its schema, and declares top_k as its one accepted extra. The
-proof reads the wire the stub echoes back: the alias applied, the declared extra forwarded, the
-undeclared one dropped with its reason on the gateway envelope. Step 6 of
-notes/design/DATAPLANE.md, the config-over-code half."""
+proof reads the wire the stub echoes back: the alias applied, the declared extra forwarded, and the
+undeclared one dropped with its reason on the gateway envelope."""
 
 from __future__ import annotations
 

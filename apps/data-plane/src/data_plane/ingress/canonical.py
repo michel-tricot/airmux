@@ -1,4 +1,4 @@
-"""The native dialect: the locked consumer surface from INTERFACE.md, translating nothing.
+"""The native dialect: the locked consumer surface from DATAPLANE.md, translating nothing.
 
 It exists on the ingress side because callers speak canonical; no provider does, which is why
 the egress side has no counterpart module."""
@@ -22,7 +22,7 @@ if TYPE_CHECKING:
 
 
 class CanonicalResponseStream:
-    """The native stream, exactly as INTERFACE.md locks it: delta frames, one closing chunk
+    """The native stream, exactly as DATAPLANE.md locks it: delta frames, one closing chunk
     carrying finish_reason, usage and gateway with no delta, then [DONE]."""
 
     def start(self, _ctx: Ctx, /) -> list[bytes]:
