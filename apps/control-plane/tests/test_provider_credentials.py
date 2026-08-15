@@ -91,6 +91,45 @@ def test_a_name_is_taken_once_per_provider_and_scope(tmp_path):
         assert c.post("/v1/org/provider-credentials", json=body, headers=org).status_code == 409
 
 
+def test_the_database_constraint_closes_the_credential_name_race(tmp_path, monkeypatch):
+    cp = setup_control_plane(tmp_path)
+    with TestClient(cp.app) as c:
+        root = cp.headers()
+        _catalog(c, root)
+        org = cp.headers(make_org(c, root))
+        body = {"provider": "openai", "name": "Primary", "value": KEY}
+        assert c.post("/v1/org/provider-credentials", json=body, headers=org).status_code == 200
+
+        async def miss(*_args):
+            return None
+
+        monkeypatch.setattr(ProviderCredential, "named", classmethod(miss))
+        raced = c.post("/v1/org/provider-credentials", json={**body, "name": "primary"}, headers=org)
+
+        assert raced.status_code == 409
+        assert raced.json() == {"detail": "Request conflicts with existing state"}
+
+
+def test_provider_credentials_reject_empty_values(tmp_path):
+    cp = setup_control_plane(tmp_path)
+    with TestClient(cp.app) as c:
+        root = cp.headers()
+        _catalog(c, root)
+        org = cp.headers(make_org(c, root))
+        assert c.post("/v1/org/provider-credentials", json={"provider": "openai", "value": ""}, headers=org).status_code == 422
+        assert (
+            c.post(
+                "/v1/org/provider-credentials",
+                json={"provider": "openai", "name": "../outside", "value": KEY},
+                headers=org,
+            ).status_code
+            == 422
+        )
+        assert c.post("/v1/org/provider-credentials", json={"provider": "openai", "value": KEY, "priority": -1}, headers=org).status_code == 422
+        credential = c.post("/v1/org/provider-credentials", json={"provider": "openai", "value": KEY}, headers=org).json()["data"]
+        assert c.patch(f"/v1/org/provider-credentials/{credential['id']}", json={"priority": -1}, headers=org).status_code == 422
+
+
 def test_a_rotation_replaces_the_value_and_bumps_the_version(tmp_path):
     """One integer of bundle diff is what makes a data plane refetch within a poll."""
     cp = setup_control_plane(tmp_path)

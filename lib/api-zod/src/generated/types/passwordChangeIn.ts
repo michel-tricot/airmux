@@ -6,7 +6,14 @@
  */
 
 export interface PasswordChangeIn {
+  /**
+     * @minLength 1
+     * @maxLength 1024
+     */
   current_password: string;
-  /** @minLength 8 */
+  /**
+     * @minLength 8
+     * @maxLength 1024
+     */
   new_password: string;
 }

@@ -3,16 +3,17 @@ from __future__ import annotations
 import contextlib
 from typing import TYPE_CHECKING
 
-from fastapi import APIRouter, FastAPI
+from fastapi import APIRouter, Depends, FastAPI
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.routing import APIRoute
 from sqlalchemy import text
-from sqlalchemy.exc import ProgrammingError, SQLAlchemyError
+from sqlalchemy.exc import IntegrityError, ProgrammingError, SQLAlchemyError
 
 from control_plane.config import load_settings
 from control_plane.db import make_engine, make_session_factory
+from control_plane.deps import get_session
 from control_plane.migrate import head_revision
 from control_plane.models import NotOwnedError
 from control_plane.routes.auth import router as auth_router
@@ -26,6 +27,7 @@ from control_plane.routes.sync import router as sync_router
 from control_plane.routes.taxonomy import router as taxonomy_router
 from control_plane.routes.users import router as users_router
 from control_plane.routes.workspaces import router as workspaces_router
+from control_plane.sessions import SESSION_COOKIE
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -76,36 +78,38 @@ TAG_GROUPS = [
 
 
 def _api_routes(routes: list[Any]) -> list[APIRoute]:
-    """All served routes, reaching through FastAPI's lazily included routers at any depth."""
-    routers = (getattr(r, "original_router", None) for r in routes)
+    routers = (getattr(route, "original_router", None) for route in routes)
     nested = [route for router in routers if router is not None for route in _api_routes(router.routes)]
-    return [*(r for r in routes if isinstance(r, APIRoute)), *nested]
+    return [*(route for route in routes if isinstance(route, APIRoute)), *nested]
 
 
 class ControlPlaneApp(FastAPI):
     def openapi(self) -> dict[str, Any]:
-        """The security arrays are derived from the require() markers on the routes, so the spec
-        can never drift from enforcement. OpenAPI 3.1 permits role names in security requirements
-        on non-OAuth2 schemes; stamping them here keeps the runtime dependency chain single and
-        cached, which Security(scopes=...) would not (its scopes fork the dependency cache key).
-        super().openapi() caches and returns the same dict on every call, so the stamping must run
-        once: the early return keeps the description append from compounding on each request."""
         if self.openapi_schema:
             return self.openapi_schema
         schema = super().openapi()
         schema["x-tagGroups"] = TAG_GROUPS
+        schema.setdefault("components", {}).setdefault("securitySchemes", {})["SessionCookie"] = {
+            "type": "apiKey",
+            "in": "cookie",
+            "name": SESSION_COOKIE,
+        }
         for route in _api_routes(self.routes):
             scopes = [str(s) for dep in route.dependant.dependencies if (s := getattr(dep.call, "required_scope", None)) is not None]
             access = [a for dep in route.dependant.dependencies if (a := getattr(dep.call, "access", None)) is not None]
             for method in route.methods or ():
                 operation = schema["paths"]["/v1" + route.path][method.lower()]
                 if scopes:
-                    operation["security"] = [{"HTTPBearer": scopes}]
+                    operation["security"] = [{"HTTPBearer": []}, {"SessionCookie": []}]
                     line = f"Requires the `{'`, `'.join(scopes)}` scope."
                 elif "public" in access:
                     operation["security"] = []
                     line = "No authentication required."
+                elif "browser" in access:
+                    operation["security"] = [{"SessionCookie": []}]
+                    line = "Requires a browser session."
                 elif "user" in access:
+                    operation["security"] = [{"HTTPBearer": []}, {"SessionCookie": []}]
                     line = "Requires an authenticated user; not org-scoped."
                 else:
                     continue
@@ -154,6 +158,10 @@ async def validation_handler(_request: Request, exc: Exception) -> JSONResponse:
     return JSONResponse(status_code=422, content={"detail": jsonable_encoder(detail)})
 
 
+async def integrity_handler(_request: Request, _exc: Exception) -> JSONResponse:
+    return JSONResponse(status_code=409, content={"detail": "Request conflicts with existing state"})
+
+
 async def healthz(request: Request) -> JSONResponse:
     """Unauthenticated probe for container orchestration; touches the database because process-up alone cannot serve a bundle poll."""
     try:
@@ -176,8 +184,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.secret_store = app.state.settings.secrets.build()
     app.add_exception_handler(NotOwnedError, not_owned_handler)
     app.add_exception_handler(RequestValidationError, validation_handler)
+    app.add_exception_handler(IntegrityError, integrity_handler)
     app.add_route("/healthz", healthz)
-    v1 = APIRouter(prefix="/v1")
+    v1 = APIRouter(prefix="/v1", dependencies=[Depends(get_session, scope="function")])
     for router in (
         auth_router,
         enroll_router,

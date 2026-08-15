@@ -6,8 +6,16 @@
  */
 
 export interface SignupIn {
+  /**
+     * @minLength 3
+     * @maxLength 320
+     */
   email: string;
+  /** @maxLength 200 */
   name?: string;
-  /** @minLength 8 */
+  /**
+     * @minLength 8
+     * @maxLength 1024
+     */
   password: string;
 }

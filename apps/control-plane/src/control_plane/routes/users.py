@@ -15,17 +15,9 @@ from control_plane.authz import Scope
 from control_plane.deps import instance_scope, require
 from control_plane.models import InferenceKey, Org, OrgMembership, User
 from control_plane.models.common.wire import DeletedOut, Envelope
-from control_plane.models.user import ServiceAccountIn, UserCreate, UserOut
+from control_plane.models.user import ServiceAccountIn, UserOut
 
 router = APIRouter(dependencies=[Depends(instance_scope)])
-
-
-@router.post("/users", tags=["Users"], dependencies=[require(Scope.users_write)])
-async def create_user(body: UserCreate) -> Envelope[UserOut]:
-    if await User.first(User.email == body.email) is not None:
-        raise HTTPException(status_code=409, detail="A user with this email already exists")
-    user = User(email=body.email, name=body.name or body.email, service_account=False)
-    return Envelope(data=_user_out(await user.save(), []))
 
 
 @router.post("/service-accounts", tags=["Users"], dependencies=[require(Scope.users_write)])

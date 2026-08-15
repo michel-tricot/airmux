@@ -6,5 +6,9 @@
  */
 
 export interface QuickstartIn {
+  /**
+     * @minLength 1
+     * @maxLength 512
+     */
   token: string;
 }

@@ -88,7 +88,6 @@ export * from './usageEventOut';
 export * from './usageEventV1';
 export * from './usageEventV1CredentialScope';
 export * from './usageEventV1Status';
-export * from './userCreate';
 export * from './userOut';
 export * from './validationError';
 export * from './validationErrorCtx';

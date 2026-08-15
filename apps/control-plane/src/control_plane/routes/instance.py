@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from typing import Annotated
 from uuid import UUID  # noqa: TC003 fastapi resolves path param annotations at runtime
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel import col
 
 from control_plane.authz import Scope
@@ -78,6 +79,6 @@ async def revoke_any_management_key(key_id: UUID) -> Envelope[ManagementKeyRevok
 
 
 @router.get("/activity", tags=["Activity"], dependencies=[require(Scope.activity_read)])
-async def list_instance_activity(limit: int = 50) -> Envelope[list[ActivityOut]]:
+async def list_instance_activity(limit: Annotated[int, Query(ge=1, le=200)] = 50) -> Envelope[list[ActivityOut]]:
     """What changed anywhere on the instance, newest first; the org-scoped view of the same trail is /org/activity."""
     return Envelope(data=[ActivityOut.model_validate(entry) for entry in await AuditLog.recent(limit)])

@@ -4,6 +4,7 @@ from datetime import datetime
 from uuid import UUID
 
 from sqlalchemy import JSON
+from sqlalchemy.dialects.postgresql import CITEXT
 from sqlmodel import Field
 
 from control_plane.models.audit import audited
@@ -14,7 +15,7 @@ from control_plane.models.common.wire import RecordOut
 
 @audited
 class Provider(Record, Identified, Tombstonable, table=True):
-    name: str = Field(unique=True)
+    name: str = Field(unique=True, sa_type=CITEXT)
     kind: str
     base_url: str
     icon: str = ""

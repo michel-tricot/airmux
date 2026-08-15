@@ -6,7 +6,10 @@
  */
 
 export type ListEventsParams = {
+before?: Date | null;
+before_event_id?: string | null;
 after?: Date | null;
+after_event_id?: string | null;
 /**
  * @minimum 1
  * @maximum 200

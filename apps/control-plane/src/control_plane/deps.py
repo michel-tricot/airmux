@@ -12,9 +12,10 @@ from control_plane.keys import ManagementClaims, verify_bearer
 from control_plane.models import Org, User, Workspace, WorkspaceMembership, set_actor
 from control_plane.sessions import SESSION_COOKIE, verify_session
 
-SessionCookie = Annotated[str | None, Cookie(alias=SESSION_COOKIE)]
-RequestedWith = Annotated[str | None, Header(alias="X-Requested-With")]
-FetchSite = Annotated[str | None, Header(alias="Sec-Fetch-Site")]
+SessionCookie = Annotated[str | None, Cookie(alias=SESSION_COOKIE, include_in_schema=False)]
+OrgHeader = Annotated[str | None, Header(alias="X-Org-Id")]
+RequestedWith = Annotated[str | None, Header(alias="X-Requested-With", include_in_schema=False)]
+FetchSite = Annotated[str | None, Header(alias="Sec-Fetch-Site", include_in_schema=False)]
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Awaitable
@@ -69,11 +70,10 @@ async def _cookie_claims(auth_session: AuthSession, user: User, x_org_id: str | 
 
 async def management_claims(
     credentials: BearerDep,
-    _session: SessionDep,
-    session_cookie: Annotated[str | None, Cookie(alias=SESSION_COOKIE)] = None,
-    x_org_id: Annotated[str | None, Header(alias="X-Org-Id")] = None,
-    x_requested_with: Annotated[str | None, Header(alias="X-Requested-With")] = None,
-    sec_fetch_site: Annotated[str | None, Header(alias="Sec-Fetch-Site")] = None,
+    session_cookie: SessionCookie = None,
+    x_org_id: OrgHeader = None,
+    x_requested_with: RequestedWith = None,
+    sec_fetch_site: FetchSite = None,
 ) -> ManagementClaims:
     if credentials is not None:
         claims = await verify_bearer(credentials.credentials)
@@ -93,7 +93,6 @@ MgmtDep = Annotated[ManagementClaims, Depends(management_claims)]
 
 async def acting_user(
     credentials: BearerDep,
-    _session: SessionDep,
     session_cookie: SessionCookie = None,
     x_requested_with: RequestedWith = None,
     sec_fetch_site: FetchSite = None,
@@ -118,7 +117,6 @@ ActingUserDep = Annotated[User, Depends(acting_user)]
 
 
 async def cookie_user(
-    _session: SessionDep,
     session_cookie: SessionCookie = None,
     x_requested_with: RequestedWith = None,
     sec_fetch_site: FetchSite = None,
@@ -220,6 +218,10 @@ def public() -> params.Depends:
 def user_scoped() -> params.Depends:
     """Authenticated user through either door; no org or scope semantics apply."""
     return _access_marker("user")
+
+
+def browser_scoped() -> params.Depends:
+    return _access_marker("browser")
 
 
 async def get_session(request: Request) -> AsyncIterator[AsyncSession]:

@@ -20,17 +20,49 @@ export interface UsageEventV1 {
   occurred_at: Date;
   org_id: string;
   workspace_id: string;
+  /**
+     * @minLength 1
+     * @maxLength 255
+     */
   key_id: string;
+  /**
+     * @minLength 1
+     * @maxLength 255
+     */
   model_id: string;
+  /** @maxLength 63 */
   provider_id: string;
   bundle_id: string;
+  /**
+     * @minimum 0
+     * @maximum 2147483647
+     */
   input_tokens: number;
+  /**
+     * @minimum 0
+     * @maximum 2147483647
+     */
   output_tokens: number;
+  /** @minimum 0 */
   cost_usd: number;
+  /** @minimum 0 */
   cost_input_usd?: number;
+  /** @minimum 0 */
   cost_output_usd?: number;
+  /**
+     * @minimum 0
+     * @maximum 2147483647
+     */
   cache_read_tokens?: number;
+  /**
+     * @minimum 0
+     * @maximum 2147483647
+     */
   cache_write_tokens?: number;
+  /**
+     * @minimum 0
+     * @maximum 2147483647
+     */
   latency_ms: number;
   status: UsageEventV1Status;
   stream: boolean;

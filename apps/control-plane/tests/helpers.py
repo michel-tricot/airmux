@@ -117,6 +117,16 @@ def make_admin(tmp_path, user_id: UUID | str) -> None:
     run_in_db(tmp_path, promote)
 
 
+def make_user(tmp_path, email: str, name: str = "") -> User:
+    async def create():
+        normalized = User.normalize_email(email)
+        user = User(email=normalized, name=name or normalized)
+        await set_actor(user.id)
+        return await user.save()
+
+    return run_in_db(tmp_path, create)
+
+
 def setup_db(tmp_path) -> str:
     """A bare database for tests that never build the app: a clone of the migrated template.
 

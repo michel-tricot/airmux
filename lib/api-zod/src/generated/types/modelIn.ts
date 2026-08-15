@@ -6,24 +6,55 @@
  */
 
 export interface ModelIn {
-  /** Caller-facing model name */
+  /**
+     * Caller-facing model name
+     * @minLength 1
+     * @maxLength 255
+     */
   model_id: string;
-  /** Provider id the model routes to */
+  /**
+     * Provider id the model routes to
+     * @minLength 1
+     * @maxLength 63
+     * @pattern ^[a-z0-9][a-z0-9_-]*$
+     */
   provider_id: string;
-  /** Model name sent to the provider, lets model_id be an alias; defaults to model_id */
+  /**
+     * Model name sent to the provider, lets model_id be an alias; defaults to model_id
+     * @maxLength 255
+     */
   upstream_model?: string;
-  /** USD per million input tokens */
+  /**
+     * USD per million input tokens
+     * @minimum 0
+     */
   input_price_per_mtok?: number;
-  /** USD per million output tokens */
+  /**
+     * USD per million output tokens
+     * @minimum 0
+     */
   output_price_per_mtok?: number;
-  /** USD per million cache-read input tokens */
+  /**
+     * USD per million cache-read input tokens
+     * @minimum 0
+     */
   cache_read_price_per_mtok?: number;
-  /** USD per million cache-write input tokens */
+  /**
+     * USD per million cache-write input tokens
+     * @minimum 0
+     */
   cache_write_price_per_mtok?: number;
-  /** Context window in tokens */
+  /**
+     * Context window in tokens
+     * @minimum 1
+     * @maximum 100000000
+     */
   context_window?: number;
   /** Max completion tokens; requests are clamped to it */
   max_output_tokens?: number | null;
-  /** Capabilities, comma separated */
+  /**
+     * Capabilities supported by the model
+     * @maxItems 128
+     */
   capabilities?: string[];
 }

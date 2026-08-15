@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 from datetime import timedelta
 from typing import TYPE_CHECKING
 
@@ -54,7 +53,6 @@ class Settings(BaseModel):
     secrets: SecretsConfig = Field(default_factory=EnvStoreConfig)  # where provider keys live; the data plane must name the same store
 
     console_url: str = DEFAULT_CONSOLE_URL  # where the console is served; device-flow verification URLs are built from it
-    dev: bool = False  # set by the --dev flag on the entry point, gate dev-only behavior on this
 
 
 def database_url() -> str:
@@ -66,4 +64,4 @@ def database_url() -> str:
 def load_settings(config_path: str | Path | None = None) -> Settings:
     """Load settings from an explicit config path, falling back to GW_CONFIG for the serve/migrate contexts that pass it via env."""
     section = load_config_section("control_plane", config_path)
-    return Settings.model_validate({**section, "dev": os.environ.get("GW_DEV") == "1"})
+    return Settings.model_validate(section)

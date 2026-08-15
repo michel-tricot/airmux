@@ -6,5 +6,9 @@
  */
 
 export interface CliAuthPollIn {
+  /**
+     * @minLength 1
+     * @maxLength 256
+     */
   poll_secret: string;
 }

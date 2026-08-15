@@ -18,7 +18,7 @@ from control_plane.models.bundle import BundleOut
 from control_plane.models.common.wire import DeletedOut, Envelope
 from control_plane.models.management_key import ManagementKeyIn, ManagementKeyMintedOut, ManagementKeyOut, ManagementKeyRevokedOut
 from control_plane.models.org_membership import MembershipOut, OrgMemberOut
-from control_plane.models.usage_event import UsageEventOut
+from control_plane.models.usage_event import UsageEventOut, UsageEventPage
 
 router = APIRouter(prefix="/org")
 
@@ -100,15 +100,13 @@ async def list_bundles(org_id: OrgDep) -> Envelope[list[BundleOut]]:
 @router.get("/events", tags=["Events"], dependencies=[require(Scope.events_read)])
 async def list_events(
     org_id: OrgDep,
-    after: Annotated[datetime | None, Query()] = None,
-    limit: Annotated[int, Query(ge=1, le=200)] = 50,
-    workspace_id: Annotated[UUID | None, Query()] = None,
+    page: Annotated[UsageEventPage, Query()],
 ) -> Envelope[list[UsageEventOut]]:
-    events = await UsageEvent.for_org(org_id, after=after, workspace_id=workspace_id, limit=limit)
+    events = await UsageEvent.for_org(org_id, page)
     return Envelope(data=[UsageEventOut.model_validate(e) for e in events])
 
 
 @router.get("/activity", tags=["Activity"], dependencies=[require(Scope.activity_read)])
-async def list_activity(org_id: OrgDep, limit: int = 50) -> Envelope[list[ActivityOut]]:
+async def list_activity(org_id: OrgDep, limit: Annotated[int, Query(ge=1, le=200)] = 50) -> Envelope[list[ActivityOut]]:
     """What changed in this org, newest first: the audit trail the write triggers already record."""
     return Envelope(data=[ActivityOut.model_validate(entry) for entry in await AuditLog.for_org(org_id, limit)])

@@ -2,16 +2,21 @@ from __future__ import annotations
 
 from typing import get_args, get_origin
 
+from fastapi.routing import APIRoute
 from helpers import make_app
 from pydantic import BaseModel
 
-from control_plane.app import _api_routes as _walk_routes
+from control_plane.deps import get_session
 from control_plane.models.common.wire import Envelope
 
 
 def _api_routes(app):
-    """The routes the app serves, through the same walker that stamps the OpenAPI security arrays."""
-    return _walk_routes(app.routes)
+    def walk(routes):
+        routers = (getattr(route, "original_router", None) for route in routes)
+        nested = [route for router in routers if router is not None for route in walk(router.routes)]
+        return [*(route for route in routes if isinstance(route, APIRoute)), *nested]
+
+    return walk(app.routes)
 
 
 def test_every_endpoint_declares_an_envelope():
@@ -51,7 +56,7 @@ def test_operation_ids_are_the_handler_names():
     assert duplicates == [], f"Two handlers share a name, so one client method overwrites the other: {duplicates}"
 
 
-def _nested_models(tp: object, seen: set[type] | None = None) -> set[type]:
+def _nested_models(tp: object, seen: set[type[BaseModel]] | None = None) -> set[type[BaseModel]]:
     """Every BaseModel reachable from a type annotation, through generics and model fields."""
     found = seen if seen is not None else set()
     if isinstance(tp, type) and issubclass(tp, BaseModel):
@@ -91,6 +96,17 @@ def test_no_table_model_is_accepted_as_input():
     assert offenders == [], f"Accept a RecordCreate[Table] or RecordUpdate[Table] subclass instead: {offenders}"
 
 
+def test_every_body_model_rejects_unknown_fields():
+    offenders = sorted(
+        f"{model.__name__} via {sorted(route.methods or ())} {route.path}"
+        for route in _api_routes(make_app())
+        for field in route.dependant.body_params
+        for model in _nested_models(field.field_info.annotation)
+        if model.model_config.get("extra") != "forbid"
+    )
+    assert offenders == [], f"Request bodies must fail on misspelled or obsolete fields: {offenders}"
+
+
 def test_payloads_are_named_models():
     """Anonymous dict payloads document nothing in OpenAPI; every envelope carries a named model."""
     offenders = []
@@ -116,3 +132,20 @@ def test_response_schemas_are_pure_envelopes():
             if set(schema.get("properties", {})) != {"data"}:
                 offenders.append(f"{method.upper()} {path}")
     assert offenders == []
+
+
+def test_request_transactions_are_shared_without_polluting_route_signatures():
+    app = make_app()
+    v1 = [
+        router for route in app.routes if (router := getattr(route, "original_router", None)) is not None and getattr(router, "prefix", None) == "/v1"
+    ]
+    assert len(v1) == 1
+    assert any(dependency.dependency is get_session and dependency.scope == "function" for dependency in v1[0].dependencies)
+    routes = _api_routes(app)
+    raw_sql = {"/events", "/heartbeat"}
+    polluted = [
+        route.path
+        for route in routes
+        if route.path not in raw_sql and any(parameter.name == "_session" for parameter in route.dependant.dependencies)
+    ]
+    assert polluted == []

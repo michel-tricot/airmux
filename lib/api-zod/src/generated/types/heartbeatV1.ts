@@ -13,6 +13,10 @@
  */
 export interface HeartbeatV1 {
   instance_id: string;
+  /**
+     * @minLength 1
+     * @maxLength 100
+     */
   version: string;
   bundle_id?: string | null;
 }

@@ -20,4 +20,6 @@ RUN uv sync --all-packages --no-dev --frozen
 FROM python:3.13-slim
 COPY --from=build /app /app
 ENV PATH="/app/.venv/bin:$PATH"
+RUN groupadd --system --gid 10001 airllm && useradd --system --uid 10001 --gid airllm --home-dir /state --shell /usr/sbin/nologin airllm && mkdir -p /state && chown airllm:airllm /state
 WORKDIR /state
+USER 10001:10001

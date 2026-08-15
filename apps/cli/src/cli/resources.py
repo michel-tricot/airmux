@@ -246,19 +246,6 @@ ORG_MEMBER_COLS = [
 ]
 
 
-@users_app.command("create")
-def users_create(
-    email: str,
-    name: str = "",
-    control_plane_url: str = "",
-) -> None:
-    """Create an account. Add it to an organization with airllm orgs members add."""
-    body = {"email": email, "name": name}
-    with instance_client(control_plane_url) as c:
-        resp = payload(post_expecting(c, "/v1/users", body, ok=(200,)))
-    console.print(f"Created [bold]{resp['email']}[/bold]")
-
-
 @service_accounts_app.command("create")
 def service_accounts_create(
     name: str | None = typer.Argument(None, help="Service account name; prompted for when omitted"),
@@ -457,26 +444,26 @@ def events_tail(interval: float = 2.0, keep: int = 30, control_plane_url: str = 
         resp = c.get("/v1/org/events", params={"limit": keep})
         ensure_ok(resp)
         rows.extend(reversed(payload_rows(resp)))
-        cursor = rows[-1]["occurred_at"] if rows else "1970-01-01T00:00:00"
+        cursor = (rows[-1]["occurred_at"], rows[-1]["event_id"]) if rows else ("1970-01-01T00:00:00+00:00", "00000000-0000-0000-0000-000000000000")
         try:
             if fmt is not OutputFormat.table:
                 while True:
                     time.sleep(interval)
-                    resp = c.get("/v1/org/events", params={"after": cursor, "limit": 200})
+                    resp = c.get("/v1/org/events", params={"after": cursor[0], "after_event_id": cursor[1], "limit": 200})
                     ensure_ok(resp)
                     for event in payload_rows(resp):
                         emit(event)
-                        cursor = event["occurred_at"]
+                        cursor = (event["occurred_at"], event["event_id"])
             with Live(table(), console=console, refresh_per_second=4) as live:
                 while True:
                     time.sleep(interval)
-                    resp = c.get("/v1/org/events", params={"after": cursor, "limit": 200})
+                    resp = c.get("/v1/org/events", params={"after": cursor[0], "after_event_id": cursor[1], "limit": 200})
                     ensure_ok(resp)
                     batch = payload_rows(resp)
                     fresh_ids = {event["event_id"] for event in batch}
                     if batch:
                         rows.extend(batch)
-                        cursor = batch[-1]["occurred_at"]
+                        cursor = (batch[-1]["occurred_at"], batch[-1]["event_id"])
                     live.update(table())
         except KeyboardInterrupt:
             console.print("[dim]stopped[/dim]")

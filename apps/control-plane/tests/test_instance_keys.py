@@ -6,7 +6,7 @@ other, since that separation is the whole reason management keys can carry a man
 
 from __future__ import annotations
 
-from helpers import run_in_db, seed_admin, seed_member, setup_control_plane, setup_db
+from helpers import make_user, run_in_db, seed_admin, seed_member, setup_control_plane, setup_db
 from starlette.testclient import TestClient
 
 from contract import token_hash
@@ -165,7 +165,6 @@ def test_instance_keys_are_only_minted_for_instance_admins(tmp_path):
     cp = setup_control_plane(tmp_path)
     with TestClient(cp.app) as client:
         headers = cp.headers()
-        plain = client.post("/v1/users", json={"email": "plain@example.com", "name": "plain"}, headers=headers)
-        assert plain.status_code == 200, plain.text
-        refused = client.post("/v1/instance/instance-keys", json={"label": "ci", "user_id": plain.json()["data"]["id"]}, headers=headers)
+        plain = make_user(tmp_path, "plain@example.com", "plain")
+        refused = client.post("/v1/instance/instance-keys", json={"label": "ci", "user_id": str(plain.id)}, headers=headers)
         assert refused.status_code == 403

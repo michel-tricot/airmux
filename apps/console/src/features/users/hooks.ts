@@ -2,7 +2,6 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   useListUsers,
   useGetUser,
-  useCreateUser,
   useCreateServiceAccount,
   useDeleteUser,
   addOrgUser,
@@ -22,16 +21,6 @@ export function useUsers() {
 
 export function useUser(userId: string) {
   return useGetUser(userId, { query: { queryKey: getGetUserQueryKey(userId), retry: false } });
-}
-
-export function useCreateUserMutation() {
-  const queryClient = useQueryClient();
-  return useCreateUser({
-    mutation: {
-      onSuccess: () => queryClient.invalidateQueries({ queryKey: getListUsersQueryKey() }),
-      meta: { errorMessage: 'We couldn’t add the user. Please try again.' },
-    },
-  });
 }
 
 export function useCreateServiceAccountMutation() {

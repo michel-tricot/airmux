@@ -5,9 +5,6 @@
  * OpenAPI spec version: 0.1.0
  */
 
-/**
- * The mint result: the id plus the one-time plaintext token, which is not a column and never returns again.
- */
 export interface InferenceKeyMintedOut {
   id: string;
   token: string;

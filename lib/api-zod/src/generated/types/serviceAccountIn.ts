@@ -6,6 +6,10 @@
  */
 
 export interface ServiceAccountIn {
-  /** Service account name; the email is derived as name-<id>@airbytesvcaccount.ai */
+  /**
+     * Service account name; the email is derived as name-<id>@airbytesvcaccount.ai
+     * @minLength 1
+     * @maxLength 200
+     */
   name: string;
 }

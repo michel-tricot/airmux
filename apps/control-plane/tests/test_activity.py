@@ -65,3 +65,6 @@ def test_org_activity_is_limited_and_ordered_newest_first(tmp_path):
         entries = c.get("/v1/org/activity", params={"limit": 2}, headers=headers).json()["data"]
         assert len(entries) == 2
         assert entries[0]["id"] > entries[1]["id"]
+        assert c.get("/v1/org/activity", params={"limit": 0}, headers=headers).status_code == 422
+        assert c.get("/v1/org/activity", params={"limit": 201}, headers=headers).status_code == 422
+        assert c.get("/v1/instance/activity", params={"limit": 201}, headers=root).status_code == 422

@@ -94,6 +94,30 @@ def test_migrations_produce_the_model_schema(pg_db):
     assert diff == []
 
 
+def test_case_insensitive_identifiers_use_citext_in_models_and_migrations(pg_db):
+    expected = {
+        ("provider", "name"),
+        ("provider_credential", "name"),
+        ("user", "email"),
+        ("workspace", "slug"),
+    }
+    model_columns = {
+        (table_name, column)
+        for table_name, column in expected
+        if SQLModel.metadata.tables[table_name].c[column].type.__class__.__name__.lower() == "citext"
+    }
+    url = _migrated_url(pg_db)
+
+    def migrated_columns(conn):
+        rows = conn.execute(
+            text("SELECT table_name, column_name FROM information_schema.columns WHERE table_schema = 'public' AND udt_name = 'citext'")
+        )
+        return set(rows)
+
+    assert model_columns == expected
+    assert _run_sync(url, migrated_columns) == expected
+
+
 def _triggers(conn) -> dict[str, str]:
     """Trigger and trigger-function definitions, keyed by name; our trigger names embed the table."""
     triggers = conn.execute(text("SELECT tgname, pg_get_triggerdef(oid) FROM pg_trigger WHERE NOT tgisinternal"))
@@ -121,6 +145,7 @@ def _created_triggers(url: str) -> dict[str, str]:
             async with engine.begin() as conn:
                 if await conn.run_sync(needs_uuidv7_shim):
                     await conn.exec_driver_sql(UUIDV7_SHIM_DDL_V1)
+                await conn.exec_driver_sql("CREATE EXTENSION IF NOT EXISTS citext")
                 await conn.run_sync(SQLModel.metadata.create_all)
                 for statement in _current_trigger_ddl():
                     await conn.exec_driver_sql(statement)

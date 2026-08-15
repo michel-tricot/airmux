@@ -46,7 +46,10 @@ class ClaimOut(BaseModel):
 
 
 class CliAuthApproveIn(BaseModel):
-    user_code: Annotated[str, Field(title="User Code")]
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    user_code: Annotated[str, Field(max_length=16, min_length=8, title="User Code")]
     org_id: Annotated[UUID, Field(title="Org Id")]
 
 
@@ -56,7 +59,10 @@ class CliAuthApprovedOut(BaseModel):
 
 
 class CliAuthPollIn(BaseModel):
-    poll_secret: Annotated[str, Field(title="Poll Secret")]
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    poll_secret: Annotated[str, Field(max_length=256, min_length=1, title="Poll Secret")]
 
 
 class CliAuthPollOut(BaseModel):
@@ -74,6 +80,9 @@ class CliAuthRequestOut(BaseModel):
 
 
 class CliAuthStartIn(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
     client_name: Annotated[
         str,
         Field(
@@ -174,12 +183,18 @@ class HeartbeatV1(BaseModel):
     config, and bundle_id already says which one that is.
     """
 
+    model_config = ConfigDict(
+        extra="forbid",
+    )
     instance_id: Annotated[UUID, Field(title="Instance Id")]
-    version: Annotated[str, Field(title="Version")]
+    version: Annotated[str, Field(max_length=100, min_length=1, title="Version")]
     bundle_id: Annotated[UUID | None, Field(title="Bundle Id")] = None
 
 
 class InferenceKeyIn(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
     label: Annotated[
         str,
         Field(
@@ -192,10 +207,6 @@ class InferenceKeyIn(BaseModel):
 
 
 class InferenceKeyMintedOut(BaseModel):
-    """
-    The mint result: the id plus the one-time plaintext token, which is not a column and never returns again.
-    """
-
     id: Annotated[UUID, Field(title="Id")]
     token: Annotated[str, Field(title="Token")]
 
@@ -261,8 +272,11 @@ class KeyEntry(BaseModel):
 
 
 class LoginIn(BaseModel):
-    email: Annotated[str, Field(title="Email")]
-    password: Annotated[str, Field(title="Password")]
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    email: Annotated[str, Field(max_length=320, min_length=3, title="Email")]
+    password: Annotated[str, Field(max_length=1024, min_length=1, title="Password")]
 
 
 class ManagementKeyMintedOut(BaseModel):
@@ -323,28 +337,70 @@ class ModelEntry(BaseModel):
     capabilities: Annotated[list[str], Field(title="Capabilities")]
 
 
+class MaxOutputTokens(RootModel[int]):
+    root: Annotated[
+        int,
+        Field(
+            description="Max completion tokens; requests are clamped to it",
+            ge=1,
+            le=100000000,
+            title="Max Output Tokens",
+        ),
+    ]
+
+
 class ModelIn(BaseModel):
-    model_id: Annotated[str, Field(description="Caller-facing model name", title="Model Id")]
-    provider_id: Annotated[str, Field(description="Provider id the model routes to", title="Provider Id")]
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    model_id: Annotated[
+        str,
+        Field(
+            description="Caller-facing model name",
+            max_length=255,
+            min_length=1,
+            title="Model Id",
+        ),
+    ]
+    provider_id: Annotated[
+        str,
+        Field(
+            description="Provider id the model routes to",
+            max_length=63,
+            min_length=1,
+            pattern="^[a-z0-9][a-z0-9_-]*$",
+            title="Provider Id",
+        ),
+    ]
     upstream_model: Annotated[
         str | None,
         Field(
             description="Model name sent to the provider, lets model_id be an alias; defaults to model_id",
+            max_length=255,
             title="Upstream Model",
         ),
     ] = ""
     input_price_per_mtok: Annotated[
         float | None,
-        Field(description="USD per million input tokens", title="Input Price Per Mtok"),
+        Field(
+            description="USD per million input tokens",
+            ge=0.0,
+            title="Input Price Per Mtok",
+        ),
     ] = 0.0
     output_price_per_mtok: Annotated[
         float | None,
-        Field(description="USD per million output tokens", title="Output Price Per Mtok"),
+        Field(
+            description="USD per million output tokens",
+            ge=0.0,
+            title="Output Price Per Mtok",
+        ),
     ] = 0.0
     cache_read_price_per_mtok: Annotated[
         float | None,
         Field(
             description="USD per million cache-read input tokens",
+            ge=0.0,
             title="Cache Read Price Per Mtok",
         ),
     ] = 0.0
@@ -352,15 +408,21 @@ class ModelIn(BaseModel):
         float | None,
         Field(
             description="USD per million cache-write input tokens",
+            ge=0.0,
             title="Cache Write Price Per Mtok",
         ),
     ] = 0.0
     context_window: Annotated[
         int | None,
-        Field(description="Context window in tokens", title="Context Window"),
+        Field(
+            description="Context window in tokens",
+            ge=1,
+            le=100000000,
+            title="Context Window",
+        ),
     ] = 128000
     max_output_tokens: Annotated[
-        int | None,
+        MaxOutputTokens | None,
         Field(
             description="Max completion tokens; requests are clamped to it",
             title="Max Output Tokens",
@@ -368,8 +430,12 @@ class ModelIn(BaseModel):
     ] = None
     capabilities: Annotated[
         list[str] | None,
-        Field(description="Capabilities, comma separated", title="Capabilities"),
-    ] = ["streaming", "tools"]
+        Field(
+            description="Capabilities supported by the model",
+            max_length=128,
+            title="Capabilities",
+        ),
+    ] = None
 
 
 class ModelOut(BaseModel):
@@ -390,7 +456,18 @@ class ModelOut(BaseModel):
 
 
 class OrgCreate(BaseModel):
-    name: Annotated[str, Field(description="Org name, e.g. My Org", title="Name")]
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    name: Annotated[
+        str,
+        Field(
+            description="Org name, e.g. My Org",
+            max_length=200,
+            min_length=1,
+            title="Name",
+        ),
+    ]
 
 
 class OrgMemberOut(BaseModel):
@@ -417,18 +494,40 @@ class OrgOut(BaseModel):
     deleted_at: Annotated[AwareDatetime | None, Field(title="Deleted At")]
 
 
+class Name(RootModel[str]):
+    root: Annotated[str, Field(max_length=200, min_length=1, title="Name")]
+
+
 class OrgUpdate(BaseModel):
-    name: Annotated[str | None, Field(title="Name")] = None
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    name: Annotated[Name | None, Field(title="Name")] = None
 
 
 class PasswordChangeIn(BaseModel):
-    current_password: Annotated[str, Field(title="Current Password")]
-    new_password: Annotated[str, Field(min_length=8, title="New Password")]
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    current_password: Annotated[str, Field(max_length=1024, min_length=1, title="Current Password")]
+    new_password: Annotated[str, Field(max_length=1024, min_length=8, title="New Password")]
 
 
 class PasswordChangedOut(BaseModel):
     user_id: Annotated[UUID, Field(title="User Id")]
     status: Annotated[Literal["changed"], Field(title="Status")]
+
+
+class Workspace(RootModel[str]):
+    root: Annotated[
+        str,
+        Field(
+            description="Workspace id or slug for a workspace-scoped key; omitted makes it org-scoped",
+            max_length=63,
+            min_length=1,
+            title="Workspace",
+        ),
+    ]
 
 
 class ProviderCredentialIn(BaseModel):
@@ -441,9 +540,18 @@ class ProviderCredentialIn(BaseModel):
     validation for some other reason comes back to the caller with the key still in it.
     """
 
+    model_config = ConfigDict(
+        extra="forbid",
+    )
     provider: Annotated[
         str,
-        Field(description="Provider name from the catalog, e.g. openai", title="Provider"),
+        Field(
+            description="Provider name from the catalog, e.g. openai",
+            max_length=63,
+            min_length=1,
+            pattern="^[a-z0-9][a-z0-9_-]*$",
+            title="Provider",
+        ),
     ]
     name: Annotated[
         str | None,
@@ -451,6 +559,7 @@ class ProviderCredentialIn(BaseModel):
             description="Handle for this key within the provider and scope, e.g. prod or backup",
             max_length=80,
             min_length=1,
+            pattern="^[A-Za-z0-9][A-Za-z0-9_.-]*$",
             title="Name",
         ),
     ] = "default"
@@ -458,15 +567,22 @@ class ProviderCredentialIn(BaseModel):
         SecretStr,
         Field(
             description="The provider API key. Written to the secret store and never persisted anywhere else",
+            max_length=16384,
+            min_length=1,
             title="Value",
         ),
     ]
     priority: Annotated[
         int | None,
-        Field(description="Lower is tried first; ties break by name", title="Priority"),
+        Field(
+            description="Lower is tried first; ties break by name",
+            ge=0,
+            le=1000000,
+            title="Priority",
+        ),
     ] = 100
     workspace: Annotated[
-        str | None,
+        Workspace | None,
         Field(
             description="Workspace id or slug for a workspace-scoped key; omitted makes it org-scoped",
             title="Workspace",
@@ -493,8 +609,15 @@ class ProviderCredentialOut(BaseModel):
     scope: Annotated[Literal["platform", "org", "workspace"], Field(title="Scope")]
 
 
+class Priority(RootModel[int]):
+    root: Annotated[int, Field(ge=0, le=1000000, title="Priority")]
+
+
 class ProviderCredentialUpdate(BaseModel):
-    priority: Annotated[int | None, Field(title="Priority")] = None
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    priority: Annotated[Priority | None, Field(title="Priority")] = None
     enabled: Annotated[bool | None, Field(title="Enabled")] = None
 
 
@@ -503,7 +626,18 @@ class ProviderCredentialValueIn(BaseModel):
     A rotation: the same credential, a new value.
     """
 
-    value: Annotated[SecretStr, Field(description="The replacement provider API key", title="Value")]
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    value: Annotated[
+        SecretStr,
+        Field(
+            description="The replacement provider API key",
+            max_length=16384,
+            min_length=1,
+            title="Value",
+        ),
+    ]
 
 
 class ProviderEntry(BaseModel):
@@ -522,6 +656,17 @@ class ProviderEntry(BaseModel):
     params_closed: Annotated[bool | None, Field(title="Params Closed")] = False
 
 
+class AcceptedParams(RootModel[list[str]]):
+    root: Annotated[
+        list[str],
+        Field(
+            description="Params known accepted beyond the core; consulted when params_closed",
+            max_length=256,
+            title="Accepted Params",
+        ),
+    ]
+
+
 class ProviderIn(BaseModel):
     """
     How to reach a provider, not how to authenticate to it: credentials are their own resource.
@@ -533,13 +678,22 @@ class ProviderIn(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
     )
-    provider_id: Annotated[str, Field(description="Provider name, e.g. openai", title="Provider Id")]
+    provider_id: Annotated[
+        str,
+        Field(
+            description="Provider name, e.g. openai",
+            max_length=63,
+            min_length=1,
+            pattern="^[a-z0-9][a-z0-9_-]*$",
+            title="Provider Id",
+        ),
+    ]
     kind: Annotated[
         Literal["openai_compatible", "anthropic"] | None,
         Field(description="Adapter kind", title="Kind"),
     ] = "openai_compatible"
     base_url: Annotated[
-        str,
+        AnyUrl,
         Field(
             description="OpenAI-compatible endpoint, e.g. https://api.groq.com/openai/v1",
             title="Base Url",
@@ -549,6 +703,7 @@ class ProviderIn(BaseModel):
         str | None,
         Field(
             description="Provider mark as a standalone 24x24 SVG document, empty when the provider has none. Carried as markup so adding a provider needs no client change to make it recognisable, which makes it untrusted markup to whatever renders it; sanitize at the render site",
+            max_length=65536,
             title="Icon",
         ),
     ] = ""
@@ -556,11 +711,12 @@ class ProviderIn(BaseModel):
         dict[str, str] | None,
         Field(
             description="Canonical param name to this provider's spelling",
+            max_length=256,
             title="Param Aliases",
         ),
     ] = None
     accepted_params: Annotated[
-        list[str] | None,
+        AcceptedParams | None,
         Field(
             description="Params known accepted beyond the core; consulted when params_closed",
             title="Accepted Params",
@@ -590,7 +746,10 @@ class ProviderOut(BaseModel):
 
 
 class QuickstartIn(BaseModel):
-    token: Annotated[str, Field(title="Token")]
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    token: Annotated[str, Field(max_length=512, min_length=1, title="Token")]
 
 
 class QuickstartOut(BaseModel):
@@ -697,19 +856,27 @@ class SecretRef(BaseModel):
 
 
 class ServiceAccountIn(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
     name: Annotated[
         str,
         Field(
             description="Service account name; the email is derived as name-<id>@airbytesvcaccount.ai",
+            max_length=200,
+            min_length=1,
             title="Name",
         ),
     ]
 
 
 class SignupIn(BaseModel):
-    email: Annotated[str, Field(title="Email")]
-    name: Annotated[str | None, Field(title="Name")] = ""
-    password: Annotated[str, Field(min_length=8, title="Password")]
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    email: Annotated[str, Field(max_length=320, min_length=3, title="Email")]
+    name: Annotated[str | None, Field(max_length=200, title="Name")] = ""
+    password: Annotated[str, Field(max_length=1024, min_length=8, title="Password")]
 
 
 class TaxonomyOut(BaseModel):
@@ -749,24 +916,27 @@ class UsageEventV1(BaseModel):
     event_id, so replays after an outage land exactly once.
     """
 
+    model_config = ConfigDict(
+        extra="forbid",
+    )
     schema_version: Annotated[Literal[1], Field(title="Schema Version")] = 1
     event_id: Annotated[UUID, Field(title="Event Id")]
     request_id: Annotated[UUID, Field(title="Request Id")]
     occurred_at: Annotated[AwareDatetime, Field(title="Occurred At")]
     org_id: Annotated[UUID, Field(title="Org Id")]
     workspace_id: Annotated[UUID, Field(title="Workspace Id")]
-    key_id: Annotated[str, Field(title="Key Id")]
-    model_id: Annotated[str, Field(title="Model Id")]
-    provider_id: Annotated[str, Field(title="Provider Id")]
+    key_id: Annotated[str, Field(max_length=255, min_length=1, title="Key Id")]
+    model_id: Annotated[str, Field(max_length=255, min_length=1, title="Model Id")]
+    provider_id: Annotated[str, Field(max_length=63, title="Provider Id")]
     bundle_id: Annotated[UUID, Field(title="Bundle Id")]
-    input_tokens: Annotated[int, Field(title="Input Tokens")]
-    output_tokens: Annotated[int, Field(title="Output Tokens")]
-    cost_usd: Annotated[float, Field(title="Cost Usd")]
-    cost_input_usd: Annotated[float | None, Field(title="Cost Input Usd")] = 0.0
-    cost_output_usd: Annotated[float | None, Field(title="Cost Output Usd")] = 0.0
-    cache_read_tokens: Annotated[int | None, Field(title="Cache Read Tokens")] = 0
-    cache_write_tokens: Annotated[int | None, Field(title="Cache Write Tokens")] = 0
-    latency_ms: Annotated[int, Field(title="Latency Ms")]
+    input_tokens: Annotated[int, Field(ge=0, le=2147483647, title="Input Tokens")]
+    output_tokens: Annotated[int, Field(ge=0, le=2147483647, title="Output Tokens")]
+    cost_usd: Annotated[float, Field(ge=0.0, title="Cost Usd")]
+    cost_input_usd: Annotated[float | None, Field(ge=0.0, title="Cost Input Usd")] = 0.0
+    cost_output_usd: Annotated[float | None, Field(ge=0.0, title="Cost Output Usd")] = 0.0
+    cache_read_tokens: Annotated[int | None, Field(ge=0, le=2147483647, title="Cache Read Tokens")] = 0
+    cache_write_tokens: Annotated[int | None, Field(ge=0, le=2147483647, title="Cache Write Tokens")] = 0
+    latency_ms: Annotated[int, Field(ge=0, le=2147483647, title="Latency Ms")]
     status: Annotated[
         Literal[
             "ok",
@@ -782,14 +952,6 @@ class UsageEventV1(BaseModel):
     stream: Annotated[bool, Field(title="Stream")]
     credential_id: Annotated[UUID | None, Field(title="Credential Id")] = None
     credential_scope: Annotated[Literal["platform", "org", "workspace"] | None, Field(title="Credential Scope")] = None
-
-
-class UserCreate(BaseModel):
-    email: Annotated[str, Field(description="Unique email identifying the user", title="Email")]
-    name: Annotated[
-        str | None,
-        Field(description="Display name, defaults to the email", title="Name"),
-    ] = ""
 
 
 class UserOut(BaseModel):
@@ -812,7 +974,18 @@ class ValidationError(BaseModel):
 
 
 class WorkspaceCreate(BaseModel):
-    name: Annotated[str, Field(description="Workspace name, e.g. Staging", title="Name")]
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    name: Annotated[
+        str,
+        Field(
+            description="Workspace name, e.g. Staging",
+            max_length=200,
+            min_length=1,
+            title="Name",
+        ),
+    ]
     slug: Annotated[
         str | None,
         Field(
@@ -841,7 +1014,10 @@ class WorkspaceOut(BaseModel):
 
 
 class WorkspaceUpdate(BaseModel):
-    name: Annotated[str | None, Field(title="Name")] = None
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    name: Annotated[Name | None, Field(title="Name")] = None
 
 
 class CredentialEntry(BaseModel):
@@ -995,6 +1171,9 @@ class HTTPValidationError(BaseModel):
 
 
 class InstanceKeyIn(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
     label: Annotated[
         str,
         Field(
@@ -1021,6 +1200,9 @@ class InstanceKeyIn(BaseModel):
 
 
 class ManagementKeyIn(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
     label: Annotated[
         str,
         Field(

@@ -5,9 +5,10 @@ from datetime import datetime
 from typing import ClassVar, Literal, Self
 from uuid import UUID
 
-from pydantic import BaseModel, SecretStr
 from pydantic import Field as PydanticField
+from pydantic import SecretStr, field_validator
 from sqlalchemy import CheckConstraint, ColumnElement, ForeignKeyConstraint, UniqueConstraint
+from sqlalchemy.dialects.postgresql import CITEXT
 from sqlmodel import Field, col
 
 from contract import SecretNotFoundError, SecretPurpose, SecretRef, SecretRejectedError, SecretStore
@@ -17,11 +18,10 @@ from control_plane.models.common import Identified, Tombstonable
 from control_plane.models.common.base import Record
 from control_plane.models.common.column_types import UTCDateTime
 from control_plane.models.common.org_owned import NotOwnedError
-from control_plane.models.common.wire import RecordOut, RecordUpdate
+from control_plane.models.common.wire import RecordOut, RecordUpdate, RequestModel
 
 DEFAULT_PRIORITY = 100
 CredentialScope = Literal["platform", "org", "workspace"]
-CredentialStatus = Literal["unknown", "live", "invalid", "rate_limited"]
 
 
 @audited
@@ -52,7 +52,14 @@ class ProviderCredential(Record, Identified, Tombstonable, table=True):
 
     __table_args__: ClassVar = (
         ForeignKeyConstraint(["workspace_id", "org_id"], ["workspace.id", "workspace.org_id"]),
-        UniqueConstraint("org_id", "workspace_id", "provider_id", "name", name="provider_credential_scope_name_key"),
+        UniqueConstraint(
+            "org_id",
+            "workspace_id",
+            "provider_id",
+            "name",
+            name="provider_credential_scope_name_key",
+            postgresql_nulls_not_distinct=True,
+        ),
         CheckConstraint("workspace_id IS NULL OR org_id IS NOT NULL", name="provider_credential_workspace_needs_org"),
     )
 
@@ -60,7 +67,7 @@ class ProviderCredential(Record, Identified, Tombstonable, table=True):
     workspace_id: UUID | None = None
     provider_id: UUID = Field(foreign_key="provider.id")
     provider_name: str
-    name: str
+    name: str = Field(sa_type=CITEXT)
     priority: int = DEFAULT_PRIORITY
     enabled: bool = True
     version: int = 1
@@ -168,7 +175,7 @@ class ProviderCredential(Record, Identified, Tombstonable, table=True):
         return await cls.first(cls.org_id == org_id, cls.workspace_id == workspace_id, cls.provider_id == provider_id, cls.name == name)
 
 
-class ProviderCredentialIn(BaseModel):
+class ProviderCredentialIn(RequestModel):
     """Creating a credential is an action, not a plain row insert: the value crosses the wire once
     and is never a column, so this is not a RecordCreate and is exempt from parity by that choice.
 
@@ -177,23 +184,41 @@ class ProviderCredentialIn(BaseModel):
     validation for some other reason comes back to the caller with the key still in it.
     """
 
-    provider: str = PydanticField(description="Provider name from the catalog, e.g. openai")
-    name: str = PydanticField(
-        default="default", description="Handle for this key within the provider and scope, e.g. prod or backup", min_length=1, max_length=80
+    provider: str = PydanticField(
+        description="Provider name from the catalog, e.g. openai",
+        min_length=1,
+        max_length=63,
+        pattern=r"^[a-z0-9][a-z0-9_-]*$",
     )
-    value: SecretStr = PydanticField(description="The provider API key. Written to the secret store and never persisted anywhere else")
-    priority: int = PydanticField(default=DEFAULT_PRIORITY, description="Lower is tried first; ties break by name")
-    workspace: str | None = PydanticField(default=None, description="Workspace id or slug for a workspace-scoped key; omitted makes it org-scoped")
+    name: str = PydanticField(
+        default="default",
+        description="Handle for this key within the provider and scope, e.g. prod or backup",
+        min_length=1,
+        max_length=80,
+        pattern=r"^[A-Za-z0-9][A-Za-z0-9_.-]*$",
+    )
+    value: SecretStr = PydanticField(
+        description="The provider API key. Written to the secret store and never persisted anywhere else", min_length=1, max_length=16384
+    )
+    priority: int = PydanticField(default=DEFAULT_PRIORITY, ge=0, le=1_000_000, description="Lower is tried first; ties break by name")
+    workspace: str | None = PydanticField(
+        default=None, min_length=1, max_length=63, description="Workspace id or slug for a workspace-scoped key; omitted makes it org-scoped"
+    )
+
+    @field_validator("provider", mode="before")
+    @classmethod
+    def normalize_provider(cls, provider: object) -> object:
+        return provider.strip().casefold() if isinstance(provider, str) else provider
 
 
-class ProviderCredentialValueIn(BaseModel):
+class ProviderCredentialValueIn(RequestModel):
     """A rotation: the same credential, a new value."""
 
-    value: SecretStr = PydanticField(description="The replacement provider API key")
+    value: SecretStr = PydanticField(description="The replacement provider API key", min_length=1, max_length=16384)
 
 
 class ProviderCredentialUpdate(RecordUpdate[ProviderCredential]):
-    priority: int | None = None
+    priority: int | None = PydanticField(default=None, ge=0, le=1_000_000)
     enabled: bool | None = None
 
 

@@ -9,6 +9,10 @@
  * A rotation: the same credential, a new value.
  */
 export interface ProviderCredentialValueIn {
-  /** The replacement provider API key */
+  /**
+     * The replacement provider API key
+     * @minLength 1
+     * @maxLength 16384
+     */
   value: string;
 }

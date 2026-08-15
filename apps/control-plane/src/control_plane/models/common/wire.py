@@ -42,9 +42,13 @@ class RecordOut[T: Record](BaseModel):
     api_extra: ClassVar[frozenset[str]] = frozenset()
 
 
-class RecordCreate[T: Record](BaseModel):
+class RequestModel(BaseModel):
+    model_config = ConfigDict(extra="forbid", allow_inf_nan=False)
+
+
+class RecordCreate[T: Record](RequestModel):
     """Create body for a table resource, declared as RecordCreate[Table]; test_api_parity holds it to the writable columns."""
 
 
-class RecordUpdate[T: Record](BaseModel):
+class RecordUpdate[T: Record](RequestModel):
     """Update body for a table resource, declared as RecordUpdate[Table]; every field is `T | None = None` so exclude_unset gives partial updates."""

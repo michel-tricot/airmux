@@ -6,7 +6,7 @@ from uuid import UUID, uuid4
 import pytest
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from fastapi.testclient import TestClient
-from helpers import MODEL, PROVIDER, make_admin, make_org, make_workspace, run_in_db, setup_control_plane
+from helpers import MODEL, PROVIDER, make_admin, make_org, make_user, make_workspace, run_in_db, setup_control_plane
 from pg import db_name_for, ensure_database
 
 from contract import INFERENCE_TOKEN_PREFIX, SignedBundle, private_key_to_b64, token_hash, uuid7, verify_bundle
@@ -17,9 +17,9 @@ from control_plane.models import DataPlaneInstance
 
 
 def _api_user(c, root, tmp_path, email: str = "ops@example.com") -> str:
-    uid = c.post("/v1/users", json={"email": email}, headers=root).json()["data"]["id"]
-    make_admin(tmp_path, uid)
-    return uid
+    user = make_user(tmp_path, email)
+    make_admin(tmp_path, user.id)
+    return str(user.id)
 
 
 def test_create_returns_the_full_resource_and_patch_updates_it(tmp_path):
@@ -34,6 +34,13 @@ def test_create_returns_the_full_resource_and_patch_updates_it(tmp_path):
         assert patched["id"] == created["id"]
         assert c.patch(f"/v1/orgs/{uuid7()}", json={"name": "x"}, headers=root).status_code == 404
         assert [o["name"] for o in c.get("/v1/orgs", headers=root).json()["data"]] == ["Acme"]
+
+
+def test_mutation_inputs_reject_unknown_fields(tmp_path):
+    cp = setup_control_plane(tmp_path)
+    with TestClient(cp.app) as c:
+        response = c.post("/v1/orgs", json={"name": "o1", "naem": "typo"}, headers=cp.headers())
+        assert response.status_code == 422
 
 
 def test_full_flow_to_verified_bundle(tmp_path):
@@ -299,6 +306,24 @@ def test_model_with_unknown_provider_is_not_found(tmp_path):
         assert c.post("/v1/taxonomy/models", json={**MODEL, "provider_id": "nope"}, headers=cp.headers()).status_code == 404
 
 
+@pytest.mark.parametrize(
+    ("path", "body"),
+    [
+        ("/v1/taxonomy/providers", {**PROVIDER, "base_url": "not-a-url"}),
+        ("/v1/taxonomy/models", {**MODEL, "input_price_per_mtok": -1}),
+        ("/v1/taxonomy/models", {**MODEL, "context_window": 0}),
+        ("/v1/taxonomy/models", {**MODEL, "unexpected": True}),
+    ],
+)
+def test_taxonomy_rejects_values_that_cannot_form_a_valid_bundle(tmp_path, path, body):
+    cp = setup_control_plane(tmp_path)
+    with TestClient(cp.app) as c:
+        root = cp.headers()
+        if path.endswith("models"):
+            assert c.post("/v1/taxonomy/providers", json=PROVIDER, headers=root).status_code == 200
+        assert c.post(path, json=body, headers=root).status_code == 422
+
+
 def _event(org: UUID) -> dict:
     return {
         "event_id": str(uuid7()),
@@ -384,6 +409,94 @@ def test_event_ingest_accepts_an_empty_batch(tmp_path):
         empty = c.post("/v1/events", json=[], headers=root)
         assert empty.status_code == 200, empty.text
         assert empty.json()["data"] == {"received": 0, "ingested": 0}
+
+
+def test_event_ingest_rejects_unbounded_or_ambiguous_events(tmp_path):
+    cp = setup_control_plane(tmp_path)
+    with TestClient(cp.app) as c:
+        root = cp.headers()
+        org_id = make_org(c, root, "o1")
+        event = _event(org_id)
+        assert c.post("/v1/events", json=[{**event, "unexpected": True}], headers=root).status_code == 422
+        assert c.post("/v1/events", json=[{**event, "occurred_at": "2026-08-15T12:00:00"}], headers=root).status_code == 422
+        assert c.post("/v1/events", json=[{**event, "input_tokens": -1}], headers=root).status_code == 422
+        assert c.post("/v1/events", json=[{**event, "input_tokens": 2_147_483_648}], headers=root).status_code == 422
+        assert c.post("/v1/events", json=[{**event, "key_id": ""}], headers=root).status_code == 422
+        assert c.post("/v1/events", json=[{**event, "model_id": "m" * 256}], headers=root).status_code == 422
+        assert c.post("/v1/events", json=[{**event, "provider_id": ""}], headers=root).status_code == 422
+        assert c.post("/v1/events", json=[{**event, "provider_id": "p" * 64}], headers=root).status_code == 422
+        assert c.post("/v1/events", json=[event] * 1001, headers=root).status_code == 422
+
+        denied = c.post("/v1/events", json=[{**event, "provider_id": "", "status": "denied"}], headers=root)
+        assert denied.status_code == 200, denied.text
+
+
+def test_event_pages_walk_newest_to_oldest_without_repeating_rows(tmp_path):
+    cp = setup_control_plane(tmp_path)
+    with TestClient(cp.app) as c:
+        root = cp.headers()
+        org_id = make_org(c, root, "o1")
+        events = [{**_event(org_id), "event_id": str(UUID(int=index)), "occurred_at": f"2026-08-15T12:00:0{index}+00:00"} for index in range(1, 4)]
+        assert c.post("/v1/events", json=events, headers=root).status_code == 200
+        headers = cp.headers(org_id)
+
+        first = c.get("/v1/org/events", params={"limit": 2}, headers=headers).json()["data"]
+        second = c.get(
+            "/v1/org/events",
+            params={"limit": 2, "before": first[-1]["occurred_at"], "before_event_id": first[-1]["event_id"]},
+            headers=headers,
+        ).json()["data"]
+
+        assert [event["event_id"] for event in [*first, *second]] == [str(UUID(int=index)) for index in (3, 2, 1)]
+
+
+def test_event_cursors_are_stable_when_timestamps_match_and_support_tailing(tmp_path):
+    cp = setup_control_plane(tmp_path)
+    with TestClient(cp.app) as c:
+        root = cp.headers()
+        org_id = make_org(c, root, "o1")
+        occurred_at = "2026-08-15T12:00:00+00:00"
+        events = [{**_event(org_id), "event_id": str(UUID(int=index)), "occurred_at": occurred_at} for index in range(1, 4)]
+        assert c.post("/v1/events", json=events, headers=root).status_code == 200
+        headers = cp.headers(org_id)
+
+        newest = c.get("/v1/org/events", params={"limit": 2}, headers=headers).json()["data"]
+        older = c.get(
+            "/v1/org/events",
+            params={"before": newest[-1]["occurred_at"], "before_event_id": newest[-1]["event_id"]},
+            headers=headers,
+        ).json()["data"]
+        newer = c.get(
+            "/v1/org/events",
+            params={"after": older[-1]["occurred_at"], "after_event_id": older[-1]["event_id"]},
+            headers=headers,
+        ).json()["data"]
+
+        assert [event["event_id"] for event in newest] == [str(UUID(int=3)), str(UUID(int=2))]
+        assert [event["event_id"] for event in older] == [str(UUID(int=1))]
+        assert [event["event_id"] for event in newer] == [str(UUID(int=2)), str(UUID(int=3))]
+
+
+@pytest.mark.parametrize(
+    "params",
+    [
+        {"before": "2026-08-15T12:00:00+00:00"},
+        {"before_event_id": str(UUID(int=1))},
+        {"after": "2026-08-15T12:00:00+00:00"},
+        {"after_event_id": str(UUID(int=1))},
+        {
+            "before": "2026-08-15T12:00:00+00:00",
+            "before_event_id": str(UUID(int=1)),
+            "after": "2026-08-15T12:00:00+00:00",
+            "after_event_id": str(UUID(int=1)),
+        },
+    ],
+)
+def test_event_cursor_parameters_must_form_one_complete_pair(tmp_path, params):
+    cp = setup_control_plane(tmp_path)
+    with TestClient(cp.app) as c:
+        org_id = make_org(c, cp.headers(), "o1")
+        assert c.get("/v1/org/events", params=params, headers=cp.headers(org_id)).status_code == 422
 
 
 def _heartbeat(instance_id: UUID) -> dict:

@@ -11,7 +11,7 @@ from sqlmodel import Field
 from control_plane.models.audit import audited
 from control_plane.models.common import Identified, OrgOwned, Tombstonable
 from control_plane.models.common.base import Record
-from control_plane.models.common.wire import RecordOut
+from control_plane.models.common.wire import RecordOut, RequestModel
 
 
 @audited
@@ -33,7 +33,7 @@ class InferenceKey(Record, Identified, OrgOwned, Tombstonable, table=True):
     api_readonly: ClassVar[frozenset[str]] = frozenset({"workspace_id", "user_id", "revoked", "label", "prefix"})
 
 
-class InferenceKeyIn(BaseModel):
+class InferenceKeyIn(RequestModel):
     label: str = Field(description="What this key is for, e.g. staging or the calling app; shown in listings", min_length=1, max_length=80)
 
 
@@ -50,13 +50,9 @@ class InferenceKeyOut(RecordOut[InferenceKey]):
     deleted_at: datetime | None
 
 
-class InferenceKeyMintedOut(RecordOut[InferenceKey]):
-    """The mint result: the id plus the one-time plaintext token, which is not a column and never returns again."""
-
+class InferenceKeyMintedOut(BaseModel):
     id: UUID
     token: str
-
-    api_extra: ClassVar[frozenset[str]] = frozenset({"token"})
 
 
 class InferenceKeyRevokedOut(BaseModel):

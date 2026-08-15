@@ -3,9 +3,10 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Literal
 
 import yaml
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, Field, HttpUrl, field_validator
 
 from control_plane.models import Model, Provider
+from control_plane.models.common.wire import RequestModel
 from control_plane.models.model import ModelOut
 from control_plane.models.provider import ProviderOut
 
@@ -13,55 +14,60 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-class TaxonomyError(Exception):
-    """The taxonomy cannot be applied."""
+class UnknownProviderError(ValueError):
+    pass
 
 
-class UnknownProviderError(TaxonomyError):
-    """A model routes to a provider that does not exist."""
-
-
-class ProviderIn(BaseModel):
+class ProviderIn(RequestModel):
     """How to reach a provider, not how to authenticate to it: credentials are their own resource.
 
     Extra keys are refused so a taxonomy still carrying credential_ref fails loudly. Ignoring it
     would leave the operator believing they configured a credential when the provider has none.
     """
 
-    model_config = ConfigDict(extra="forbid")
-
-    provider_id: str = Field(description="Provider name, e.g. openai")
+    provider_id: str = Field(description="Provider name, e.g. openai", min_length=1, max_length=63, pattern=r"^[a-z0-9][a-z0-9_-]*$")
     kind: Literal["openai_compatible", "anthropic"] = Field("openai_compatible", description="Adapter kind")
-    base_url: str = Field(description="OpenAI-compatible endpoint, e.g. https://api.groq.com/openai/v1")
+    base_url: HttpUrl = Field(description="OpenAI-compatible endpoint, e.g. https://api.groq.com/openai/v1")
     icon: str = Field(
         "",
+        max_length=65536,
         description=(
             "Provider mark as a standalone 24x24 SVG document, empty when the provider has none. "
             "Carried as markup so adding a provider needs no client change to make it recognisable, "
             "which makes it untrusted markup to whatever renders it; sanitize at the render site"
         ),
     )
-    param_aliases: dict[str, str] = Field(default_factory=dict, description="Canonical param name to this provider's spelling")
-    accepted_params: list[str] | None = Field(None, description="Params known accepted beyond the core; consulted when params_closed")
+    param_aliases: dict[str, str] = Field(default_factory=dict, max_length=256, description="Canonical param name to this provider's spelling")
+    accepted_params: list[str] | None = Field(None, max_length=256, description="Params known accepted beyond the core; consulted when params_closed")
     params_closed: bool = Field(False, description="True when the provider's request schema rejects unknown params")
 
-
-class ModelIn(BaseModel):
-    model_id: str = Field(description="Caller-facing model name")
-    provider_id: str = Field(description="Provider id the model routes to")
-    upstream_model: str = Field("", description="Model name sent to the provider, lets model_id be an alias; defaults to model_id")
-    input_price_per_mtok: float = Field(0.0, description="USD per million input tokens")
-    output_price_per_mtok: float = Field(0.0, description="USD per million output tokens")
-    cache_read_price_per_mtok: float = Field(0.0, description="USD per million cache-read input tokens")
-    cache_write_price_per_mtok: float = Field(0.0, description="USD per million cache-write input tokens")
-    context_window: int = Field(128000, description="Context window in tokens")
-    max_output_tokens: int | None = Field(None, description="Max completion tokens; requests are clamped to it")
-    capabilities: list[str] = Field(default=["streaming", "tools"], description="Capabilities, comma separated")
+    @field_validator("provider_id", mode="before")
+    @classmethod
+    def normalize_provider_id(cls, provider_id: object) -> object:
+        return provider_id.strip().casefold() if isinstance(provider_id, str) else provider_id
 
 
-class TaxonomySpec(BaseModel):
-    providers: list[ProviderIn] = Field(default_factory=list)
-    models: list[ModelIn] = Field(default_factory=list)
+class ModelIn(RequestModel):
+    model_id: str = Field(description="Caller-facing model name", min_length=1, max_length=255)
+    provider_id: str = Field(description="Provider id the model routes to", min_length=1, max_length=63, pattern=r"^[a-z0-9][a-z0-9_-]*$")
+    upstream_model: str = Field("", max_length=255, description="Model name sent to the provider, lets model_id be an alias; defaults to model_id")
+    input_price_per_mtok: float = Field(0.0, ge=0, description="USD per million input tokens")
+    output_price_per_mtok: float = Field(0.0, ge=0, description="USD per million output tokens")
+    cache_read_price_per_mtok: float = Field(0.0, ge=0, description="USD per million cache-read input tokens")
+    cache_write_price_per_mtok: float = Field(0.0, ge=0, description="USD per million cache-write input tokens")
+    context_window: int = Field(128000, ge=1, le=100_000_000, description="Context window in tokens")
+    max_output_tokens: int | None = Field(None, ge=1, le=100_000_000, description="Max completion tokens; requests are clamped to it")
+    capabilities: list[str] = Field(default_factory=lambda: ["streaming", "tools"], max_length=128, description="Capabilities supported by the model")
+
+    @field_validator("provider_id", mode="before")
+    @classmethod
+    def normalize_provider_id(cls, provider_id: object) -> object:
+        return provider_id.strip().casefold() if isinstance(provider_id, str) else provider_id
+
+
+class TaxonomySpec(RequestModel):
+    providers: list[ProviderIn] = Field(default_factory=list, max_length=1000)
+    models: list[ModelIn] = Field(default_factory=list, max_length=10000)
 
 
 class TaxonomyOut(BaseModel):
@@ -77,10 +83,10 @@ async def upsert_provider(p: ProviderIn) -> Provider:
     """Create or update by name; the single upsert shared by the API route and taxonomy application."""
     provider = await Provider.first(Provider.name == p.provider_id)
     if provider is None:
-        provider = Provider(name=p.provider_id, kind=p.kind, base_url=p.base_url)
+        provider = Provider(name=p.provider_id, kind=p.kind, base_url=str(p.base_url))
     else:
         provider.kind = p.kind
-        provider.base_url = p.base_url
+        provider.base_url = str(p.base_url)
     provider.icon = p.icon
     provider.param_aliases = p.param_aliases
     provider.accepted_params = p.accepted_params
@@ -121,10 +127,7 @@ async def upsert_model(m: ModelIn) -> Model:
 
 
 async def apply_taxonomy(spec: TaxonomySpec) -> tuple[int, int]:
-    """Converge the instance catalog on the taxonomy: create missing providers and models, update existing ones.
-
-    Entries absent from the taxonomy are left alone; removal stays an explicit API operation.
-    """
+    """Create or update every provider and model present in the taxonomy."""
     for p in spec.providers:
         await upsert_provider(p)
     for m in spec.models:

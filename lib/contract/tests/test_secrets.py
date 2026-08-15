@@ -58,6 +58,46 @@ async def test_a_rotation_replaces_the_value_under_the_same_ref(store):
     assert (await store.get(ref)).reveal() == "second"
 
 
+async def test_a_file_rotation_atomically_replaces_the_file(tmp_path):
+    root = tmp_path / "secrets"
+    store = FileSecretStore(root=root)
+    ref = a_ref()
+    await store.put(ref, Secret("first"))
+    path = next(path for path in root.rglob("*") if path.is_file())
+    first_inode = path.stat().st_ino
+
+    await store.put(ref, Secret("second"))
+
+    assert path.stat().st_ino != first_inode
+    assert [candidate for candidate in root.rglob("*") if candidate.is_file()] == [path]
+    assert (await store.get(ref)).reveal() == "second"
+
+
+async def test_a_file_store_rejects_a_service_that_escapes_its_root(tmp_path):
+    root = tmp_path / "secrets"
+    escaped = tmp_path / "escaped"
+    store = FileSecretStore(root=root)
+
+    with pytest.raises(SecretRejectedError):
+        await store.put(a_ref(service=str(escaped)), Secret("outside"))
+
+    assert not escaped.exists()
+
+
+async def test_a_file_store_rejects_a_symlinked_parent_that_escapes_its_root(tmp_path):
+    root = tmp_path / "secrets"
+    outside = tmp_path / "outside"
+    root.mkdir()
+    outside.mkdir()
+    (root / "provider").symlink_to(outside, target_is_directory=True)
+    store = FileSecretStore(root=root)
+
+    with pytest.raises(SecretRejectedError):
+        await store.put(a_ref(), Secret("outside"))
+
+    assert list(outside.iterdir()) == []
+
+
 async def test_a_deleted_secret_is_gone(store):
     ref = a_ref()
     await store.put(ref, Secret("doomed"))
@@ -171,6 +211,8 @@ async def test_a_file_store_keeps_secrets_owner_readable(tmp_path):
     await store.put(ref, Secret("sk-value"))
     written = next(path for path in (tmp_path / "secrets").rglob("*") if path.is_file())
     assert stat.S_IMODE(written.stat().st_mode) == 0o600
+    directories = [tmp_path / "secrets", *(path for path in (tmp_path / "secrets").rglob("*") if path.is_dir())]
+    assert all(stat.S_IMODE(path.stat().st_mode) == 0o700 for path in directories)
 
 
 async def test_a_file_store_reports_an_unusable_root_as_unavailable(tmp_path):
