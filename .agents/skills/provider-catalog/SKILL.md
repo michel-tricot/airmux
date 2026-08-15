@@ -63,7 +63,6 @@ The tooling lives with this skill; the catalog is its output. Nothing executable
       openai.py            bare ids and shutdown_date, nothing more exists
       fireworks.py         serverless-only, control plane, UNVERIFIED
       openai_shaped.py     novita, deepinfra, sambanova, huggingface, nvidia
-    doc_models.py          model catalogs transcribed where no endpoint is reachable
     enrich.py              fills limits and pricing from secondary sources
     fetch_icons.py         vendors provider marks as SVG
     field_matrix.py        field support matrix, per ingress
@@ -144,7 +143,6 @@ is correct behaviour and worth reading the output for.
 ```
 cd .agents/skills/provider-catalog/scripts
 python fetch_models.py [provider ...]   # needs the provider's env_var
-python doc_models.py                    # transcribed lists, never overwrites api ones
 python enrich.py                        # fills limits and pricing, records provenance
 python validate.py
 ```
@@ -224,6 +222,10 @@ it. The catalog records when it was checked; it does not stay true on its own.
   runs produce byte-identical files, so anything that shows in a diff is a real change
 - **A provider without a module is not fetched.** `fetch_models.py` skips it and says so,
   rather than guessing at its shape. Doc-derived catalogs still cover those providers
+- **No prices are hardcoded in a module.** A frozen table is wrong twice over: it stops
+  tracking the vendor the day it is written, and because it is set inside a source module
+  every value gets stamped `pricing_source: provider`, claiming an authority it does not
+  have. Prices come from the provider's API or from `enrich.py`, never from a literal
 - **Gaps are filled from ranked sources, never invented.** The provider's own value wins
   and is never overwritten. models.dev fills next, and is preferred over OpenRouter because
   it is keyed by provider, so a Fireworks price is Fireworks' price rather than someone

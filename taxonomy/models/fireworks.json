@@ -2,8 +2,8 @@
   "provider": "fireworks",
   "source": "https://api.fireworks.ai/v1/accounts/fireworks/models?pageSize=200",
   "source_type": "api",
-  "updated": "2026-08-14",
-  "count": 17,
+  "updated": "2026-08-15",
+  "count": 18,
   "models": [
     {
       "id": "deepseek-v4-flash-0731",
@@ -392,8 +392,31 @@
       ],
       "supports_tools": true,
       "supports_structured_output": null,
-      "pricing": null,
       "display_name": "Qwen3.8-2.4T-A95B",
+      "hugging_face_id": "Qwen/Qwen3.8-2.4T-A95B"
+    },
+    {
+      "id": "qwen3p8-max",
+      "kind": "text",
+      "context_length": 262144,
+      "max_output_tokens": 131072,
+      "input_modalities": [
+        "text",
+        "image"
+      ],
+      "output_modalities": [
+        "text"
+      ],
+      "supports_tools": true,
+      "supports_structured_output": null,
+      "pricing": {
+        "input_per_mtok": 2,
+        "output_per_mtok": 6,
+        "cached_input_per_mtok": 0.25
+      },
+      "limits_source": "models.dev",
+      "pricing_source": "models.dev",
+      "display_name": "Qwen 3.8 Max",
       "hugging_face_id": "Qwen/Qwen3.8-2.4T-A95B"
     }
   ]

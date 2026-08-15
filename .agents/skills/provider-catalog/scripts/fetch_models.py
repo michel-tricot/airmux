@@ -47,7 +47,9 @@ UA = "airllm-taxonomy/1.0"
 # Fields the listing endpoint never returns; they are added downstream by enrich_limits.
 # Refetching must not drop them, or every refresh discards enrichment and moves the
 # fetched stamp even when the vendor returned exactly what it returned last time.
-DOWNSTREAM = ("kind", "limits_source", "context_length", "max_output_tokens", "pricing")
+# provenance travels with the value it describes. Carrying "pricing" without
+# "pricing_source" lets the next enrichment restamp a borrowed price as provider-supplied
+DOWNSTREAM = ("kind", "limits_source", "pricing_source", "context_length", "max_output_tokens", "pricing")
 
 
 def carry_forward(path: Path, models: list[dict]) -> list[dict]:

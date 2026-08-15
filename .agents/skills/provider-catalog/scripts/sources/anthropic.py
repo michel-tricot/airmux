@@ -8,43 +8,14 @@ It also carries a nested capabilities tree, which is the only place Anthropic pu
 tool and structured-output support in machine-readable form. Read it rather than assuming:
 capability differs across the family.
 
-Pricing is not on the API. The table below is transcribed from the pricing page and
-carries a date, because a hand-copied price is a fact with a shelf life.
+Pricing is not on the API and is not hardcoded here. A transcribed table lived in this
+file and was wrong twice over: it froze on the day it was written, and because it was set
+inside the source module every price was stamped pricing_source "provider", claiming
+Anthropic published numbers it does not publish. enrich.py fills them from models.dev,
+which covers the family and is fetched on every run.
 """
 
 from .base import ModelSource
-
-# Hand-transcribed from platform.claude.com/docs/en/about-claude/pricing, 2026-08-14.
-# USD per million tokens. Anthropic publishes no pricing on the API, so unlike Groq or
-# Together this table will rot: re-read the page when a model ships. Cache write is the
-# 5-minute rate, which Anthropic documents as 1.25x base input. The 1-hour rate is 2x and
-# the read is 0.1x, both derivable from base, so only the write is carried.
-PRICING = {
-    "claude-fable-5":    (10.0, 50.0, 1.0),
-    "claude-opus-5":     (5.0, 25.0, 0.5),
-    "claude-opus-4-8":   (5.0, 25.0, 0.5),
-    "claude-opus-4-7":   (5.0, 25.0, 0.5),
-    "claude-opus-4-6":   (5.0, 25.0, 0.5),
-    "claude-opus-4-5":   (5.0, 25.0, 0.5),
-    "claude-sonnet-5":   (2.0, 10.0, 0.2),
-    "claude-sonnet-4-6": (3.0, 15.0, 0.3),
-    "claude-sonnet-4-5": (3.0, 15.0, 0.3),
-    "claude-haiku-4-5":  (1.0, 5.0, 0.1),
-}
-
-
-def priced(model_id: str) -> dict | None:
-    """Match the id, then the id with its date suffix stripped: claude-opus-4-5-20251101."""
-    for key in (model_id, "-".join(model_id.split("-")[:-1])):
-        if key in PRICING:
-            inp, out, cached = PRICING[key]
-            return {
-                "input_per_mtok": inp,
-                "output_per_mtok": out,
-                "cached_input_per_mtok": cached,
-                "cache_write_per_mtok": round(inp * 1.25, 4),
-            }
-    return None
 
 
 
@@ -74,7 +45,6 @@ class Anthropic(ModelSource):
             output_modalities=["text"],
             supports_tools=supported("code_execution") or bool(caps),
             supports_structured_output=supported("structured_outputs"),
-            pricing=priced(item["id"]),
             display_name=item.get("display_name"),
             supports_thinking=supported("thinking"),
             supports_batch=supported("batch"),

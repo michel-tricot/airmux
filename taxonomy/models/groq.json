@@ -2,7 +2,7 @@
   "provider": "groq",
   "source": "https://api.groq.com/openai/v1/models",
   "source_type": "api",
-  "updated": "2026-08-14",
+  "updated": "2026-08-15",
   "count": 8,
   "models": [
     {
@@ -23,7 +23,7 @@
         "output_per_mtok": 0
       },
       "limits_source": "provider",
-      "pricing_source": "models.dev",
+      "pricing_source": "provider",
       "display_name": "ALLaM-2-7b",
       "hugging_face_id": "ALLaM-AI/ALLaM-2.0-7B-Instruct"
     },
