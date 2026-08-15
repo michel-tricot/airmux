@@ -10,7 +10,6 @@ import asyncio
 import contextlib
 import json
 import logging
-import time
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any, Literal
 
@@ -19,15 +18,15 @@ import httpx
 from pydantic import ValidationError
 from starlette.responses import JSONResponse, Response, StreamingResponse
 
-from contract import SecretStoreUnavailableError, UsageEventV1, uuid7
+from contract import SecretStoreUnavailableError, uuid7
 from data_plane.auth import authenticate
-from data_plane.canonical import Adjustment, CanonicalRequest, CanonicalResponse, GatewayInfo, TextPart, Usage
+from data_plane.canonical import Adjustment, CanonicalRequest, CanonicalResponse, GatewayInfo, Usage
 from data_plane.egress import REGISTRY
 from data_plane.egress.base import CanonicalError, Ctx, UpstreamProtocolError, UpstreamStreamError
 from data_plane.ingress import CANONICAL, resolve
 from data_plane.ingress import REGISTRY as INGRESS
 from data_plane.ingress.canonical import CanonicalResponseStream
-from data_plane.metering import cost_breakdown, estimate_tokens
+from data_plane.metering import record_denied, record_usage, status_for_error, status_for_upstream
 from data_plane.policy import Allow, Deny, evaluate
 from data_plane.reconcile import reconcile
 from data_plane.runtime import holder, state
@@ -38,7 +37,7 @@ if TYPE_CHECKING:
 
     from starlette.requests import Request
 
-    from contract import CredentialEntry, KeyEntry, Secret, UsageStatus
+    from contract import CredentialEntry, KeyEntry, Secret
     from data_plane.bundle.holder import BundleSnapshot
     from data_plane.egress.base import EgressAdapter, StreamState, UpstreamRequest
     from data_plane.ingress import IngressAdapter
@@ -46,8 +45,6 @@ if TYPE_CHECKING:
 
 
 logger = logging.getLogger("data_plane")
-
-REJECTS_CREDENTIAL = frozenset({httpx.codes.UNAUTHORIZED, httpx.codes.FORBIDDEN})
 
 
 class RequestRejectedError(Exception):
@@ -138,7 +135,7 @@ async def _serve(
 ) -> Response:
     decision = evaluate(req, key, snap, datetime.now(tz=UTC))
     if isinstance(decision, Deny):
-        _record_denied(key, snap, req)
+        record_denied(state.outbox, key, snap.bundle.bundle_id, req)
         raise RequestRejectedError(decision.status, decision.reason)
 
     entry = decision.candidates[0]
@@ -171,7 +168,7 @@ async def _serve(
         final = adapter.transform_response(resp.content, ctx).model_copy(update={"gateway": GatewayInfo(adjustments=adjustments)})
     except UpstreamProtocolError as e:
         return _upstream_exception(adapter, ctx, e, req)
-    _record_usage(ctx, final, status="ok", req=req)
+    record_usage(state.outbox, ctx, final, status="ok", request=req)
     return ingress.render_response(final)
 
 
@@ -229,13 +226,13 @@ async def _events(  # noqa: PLR0913, PLR0917 the streaming lifecycle genuinely s
             final = adapter.finalize(stream_state)
             for b in renderer.closing(final, adjustments):
                 yield b
-            _record_usage(ctx, final, status="ok", req=req)
+            record_usage(state.outbox, ctx, final, status="ok", request=req)
         except (UpstreamProtocolError, UpstreamStreamError, httpx.HTTPError) as e:
             for b in renderer.error(adapter.map_error(e)):
                 yield b
-            _record_usage(ctx, adapter.finalize(stream_state), status=_status_for_error(e), req=req)
+            record_usage(state.outbox, ctx, adapter.finalize(stream_state), status=status_for_error(e), request=req)
         except (asyncio.CancelledError, anyio.get_cancelled_exc_class()):
-            _record_usage(ctx, adapter.finalize(stream_state), status="cancelled", req=req)
+            record_usage(state.outbox, ctx, adapter.finalize(stream_state), status="cancelled", request=req)
             raise
 
 
@@ -266,121 +263,17 @@ def _scope_of(entry: CredentialEntry) -> Literal["platform", "org", "workspace"]
     return "workspace" if entry.ref.workspace_id is not None else "org"
 
 
-def _status_for_error(e: Exception) -> UsageStatus:
-    """Distinguish an upstream timeout from other upstream failures in the usage log."""
-    return "timeout" if isinstance(e, httpx.TimeoutException) else "upstream_error"
-
-
-def _credential_status(status_code: int) -> UsageStatus:
-    """A rejected or throttled key is a fact about the credential, which the control plane rolls
-    up into its status. Everything else upstream stays undifferentiated."""
-    if status_code in REJECTS_CREDENTIAL:
-        return "credential_rejected"
-    return "rate_limited" if status_code == httpx.codes.TOO_MANY_REQUESTS else "upstream_error"
-
-
 def _upstream_exception(adapter: EgressAdapter, ctx: Ctx, e: Exception, req: CanonicalRequest | None) -> Response:
     err = adapter.map_error(e)
-    _record_usage(ctx, _empty_response(ctx), status=_status_for_error(e), req=req)
+    record_usage(state.outbox, ctx, _empty_response(ctx), status=status_for_error(e), request=req)
     return _error(err.status, err.code, err.message)
 
 
 def _upstream_error_body(ctx: Ctx, body: bytes, status_code: int, req: CanonicalRequest | None) -> Response:
     """The provider's own error body passes through untouched; the status is what the gateway meters."""
-    _record_usage(ctx, _empty_response(ctx), status=_credential_status(status_code), req=req)
+    record_usage(state.outbox, ctx, _empty_response(ctx), status=status_for_upstream(status_code), request=req)
     return Response(content=body, status_code=status_code, media_type="application/json")
 
 
 def _empty_response(ctx: Ctx) -> CanonicalResponse:
     return CanonicalResponse(id=ctx.request_id, model=ctx.model.model_id, content=[], finish_reason=None, usage=Usage(estimated=True))
-
-
-def _text_of(parts: Sequence[object]) -> str:
-    return "\n".join(part.text for part in parts if isinstance(part, TextPart))
-
-
-def _prompt_text(req: CanonicalRequest) -> str:
-    return "\n".join(_text_of(message.content) for message in req.messages)
-
-
-def _record_denied(key: KeyEntry, snap: BundleSnapshot, req: CanonicalRequest) -> None:
-    """A policy denial is still metered: attribute it to the caller's key and requested model, with zero usage.
-
-    Only authenticated-but-unauthorized requests are recorded here; raw auth failures have no key to bill.
-    """
-    if state.outbox is None:
-        return
-    state.outbox.record(
-        UsageEventV1(
-            event_id=uuid7(),
-            request_id=uuid7(),
-            occurred_at=datetime.now(tz=UTC),
-            org_id=key.org_id,
-            workspace_id=key.workspace_id,
-            key_id=key.key_id,
-            model_id=req.model,
-            provider_id="",
-            bundle_id=snap.bundle.bundle_id,
-            input_tokens=0,
-            output_tokens=0,
-            cost_usd=0.0,
-            latency_ms=0,
-            status="denied",
-            stream=req.stream,
-        )
-    )
-
-
-def _record_usage(ctx: Ctx, final: CanonicalResponse, status: UsageStatus, req: CanonicalRequest | None = None) -> None:
-    """The single metering point: estimates fill missing provider counts, then buffer and log."""
-    usage = final.usage
-    if usage.estimated:
-        usage = Usage(
-            input_tokens=estimate_tokens(_prompt_text(req), ctx.model) if req else 0,
-            output_tokens=estimate_tokens(_text_of(final.content), ctx.model),
-            estimated=True,
-        )
-    cost_in, cost_out = cost_breakdown(usage, ctx.model)
-    latency_ms = int((time.monotonic() - ctx.started_at) * 1000)
-    if ctx.bundle_id is not None and state.outbox is not None:
-        state.outbox.record(
-            UsageEventV1(
-                event_id=uuid7(),
-                request_id=ctx.request_id,
-                occurred_at=datetime.now(tz=UTC),
-                org_id=ctx.org_id,
-                workspace_id=ctx.workspace_id,
-                key_id=ctx.key_id,
-                model_id=ctx.model.model_id,
-                provider_id=ctx.provider.provider_id,
-                bundle_id=ctx.bundle_id,
-                input_tokens=usage.input_tokens,
-                output_tokens=usage.output_tokens,
-                cache_read_tokens=usage.cache_read_tokens,
-                cache_write_tokens=usage.cache_write_tokens,
-                cost_usd=cost_in + cost_out,
-                cost_input_usd=cost_in,
-                cost_output_usd=cost_out,
-                latency_ms=latency_ms,
-                status=status,
-                stream=ctx.stream,
-                credential_id=ctx.credential_id,
-                credential_scope=ctx.credential_scope,
-            ),
-        )
-    logger.info(
-        "usage request_id=%s model=%s provider=%s status=%s stream=%s input_tokens=%d output_tokens=%d "
-        "cache_read=%d cache_write=%d estimated=%s cost_usd=%.6f latency_ms=%d",
-        ctx.request_id,
-        ctx.model.model_id,
-        ctx.provider.provider_id,
-        status,
-        ctx.stream,
-        usage.input_tokens,
-        usage.output_tokens,
-        usage.cache_read_tokens,
-        usage.cache_write_tokens,
-        usage.estimated,
-        cost_in + cost_out,
-        latency_ms,
-    )
