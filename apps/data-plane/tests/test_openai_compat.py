@@ -215,7 +215,7 @@ def test_errors_come_back_in_the_callers_dialect(api_key, dp_app):
 
 @respx.mock
 def test_a_canonical_caller_is_untouched_by_the_interpretation(api_key, dp_app):
-    """The mirror invariant from INTERFACE.md: detection never changes a canonical answer."""
+    """The mirror invariant from DATAPLANE.md: detection never changes a canonical answer."""
     respx.post(UPSTREAM).mock(return_value=httpx.Response(200, json=TEXT_NONSTREAM))
     mock_control_plane()
     with TestClient(dp_app) as client:

@@ -1,8 +1,8 @@
-"""Acceptance: streaming per INTERFACE.md, and the accounting when a client hangs up.
+"""Acceptance: streaming per DATAPLANE.md, and the accounting when a client hangs up.
 
 A full stream delivers typed delta frames, one closing chunk carrying finish_reason, usage and
 gateway, then [DONE]. A client that disconnects mid-stream still produces a usage event: status
-cancelled, partial output counted as an estimate. Step 4 of notes/design/DATAPLANE.md."""
+cancelled, partial output counted as an estimate."""
 
 from __future__ import annotations
 

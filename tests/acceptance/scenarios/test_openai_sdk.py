@@ -1,8 +1,7 @@
 """Acceptance: the official openai SDK, unmodified, against a running gateway.
 
 Nothing changes but base_url and api_key: buffered and streamed completions both round-trip,
-and both are metered. Step 5 of notes/design/DATAPLANE.md; the SDK's fingerprint headers are
-what routes it to the OpenAI interpretation."""
+and both are metered. The SDK's fingerprint headers route it to the OpenAI interpretation."""
 
 from __future__ import annotations
 
