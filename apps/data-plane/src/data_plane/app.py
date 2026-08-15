@@ -17,7 +17,7 @@ from contract import verify_bundle
 from data_plane.bundle.config import LocalBundleConfig, RemoteBundleConfig
 from data_plane.bundle.holder import BundleHolder
 from data_plane.bundle.local import admit_local, run_local_reload
-from data_plane.bundle.remote import run_poller
+from data_plane.bundle.remote import BundlePoller
 from data_plane.cache import instance_id as cache_instance_id
 from data_plane.cache import read_cached_bundle
 from data_plane.config import Config, load_config
@@ -88,9 +88,10 @@ def _start_bundle_source(config: Config, runtime: Runtime) -> list[asyncio.Task[
     if not config.control_plane.url:
         return []
     instance_id = cache_instance_id(bundle_config.cache_dir)
+    poller = BundlePoller(config.control_plane, bundle_config, runtime.holder, runtime.http_client)
     heartbeat = Heartbeat(config.control_plane, runtime.holder, instance_id, runtime.http_client)
     return [
-        asyncio.create_task(run_poller(config.control_plane, bundle_config, runtime.holder, public_key, runtime.http_client)),
+        asyncio.create_task(poller.run()),
         asyncio.create_task(runtime.outbox.run()),
         asyncio.create_task(heartbeat.run()),
     ]

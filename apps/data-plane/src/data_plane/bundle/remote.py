@@ -12,8 +12,6 @@ from data_plane.cache import write_cached_bundle
 from data_plane.tasks import run_periodic
 
 if TYPE_CHECKING:
-    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
-
     from data_plane.bundle.config import RemoteBundleConfig
     from data_plane.bundle.holder import BundleHolder
     from data_plane.config import ControlPlaneLink
@@ -21,48 +19,48 @@ if TYPE_CHECKING:
 logger = logging.getLogger("data_plane")
 
 
-async def poll_once(
-    link: ControlPlaneLink,
-    bundle_config: RemoteBundleConfig,
-    holder: BundleHolder,
-    public_key: Ed25519PublicKey,
-    http_client: httpx.AsyncClient,
-) -> None:
-    resp = await http_client.get(
-        f"{link.url}/v1/bundle/latest",
-        headers={"authorization": f"Bearer {link.token}"},
-        params={"org_id": str(bundle_config.org)} if bundle_config.org else {},
-    )
-    resp.raise_for_status()
-    signed = SignedBundle.model_validate(resp.json()["data"])
-    if holder.snapshot is not None and signed.payload.bundle_id == holder.snapshot.bundle.bundle_id:
-        return
-    try:
-        bundle = verify_bundle(signed, public_key)
-    except InvalidSignature:
-        logger.error(  # noqa: TRY400 run_periodic already logs the traceback; this adds only the key diagnostic, no stack
-            "bundle signature rejected: verifying with pubkey %s, bundle %s signed by key_id=%s for org=%s; "
-            "if the pubkey matches the control plane's signing key this is a payload/canonicalization mismatch, not a key mismatch",
-            public_key_to_b64(public_key),
-            signed.payload.bundle_id,
-            signed.signing_key_id,
-            signed.payload.org_id,
+class BundlePoller:
+    def __init__(
+        self,
+        link: ControlPlaneLink,
+        config: RemoteBundleConfig,
+        holder: BundleHolder,
+        http_client: httpx.AsyncClient,
+    ) -> None:
+        self._link = link
+        self._config = config
+        self._holder = holder
+        self._http_client = http_client
+
+    async def once(self) -> None:
+        response = await self._http_client.get(
+            f"{self._link.url}/v1/bundle/latest",
+            headers={"authorization": f"Bearer {self._link.token}"},
+            params={"org_id": str(self._config.org)} if self._config.org else {},
         )
-        raise
-    if holder.admit(bundle, bundle_config.staleness_policy, source="polled"):
-        write_cached_bundle(bundle_config.cache_dir, signed)
+        response.raise_for_status()
+        signed = SignedBundle.model_validate(response.json()["data"])
+        if self._holder.snapshot is not None and signed.payload.bundle_id == self._holder.snapshot.bundle.bundle_id:
+            return
+        try:
+            bundle = verify_bundle(signed, self._config.verify_key)
+        except InvalidSignature:
+            logger.error(  # noqa: TRY400 run_periodic already logs the traceback; this adds only the key diagnostic, no stack
+                "bundle signature rejected: verifying with pubkey %s, bundle %s signed by key_id=%s for org=%s; "
+                "if the pubkey matches the control plane's signing key this is a payload/canonicalization mismatch, not a key mismatch",
+                public_key_to_b64(self._config.verify_key),
+                signed.payload.bundle_id,
+                signed.signing_key_id,
+                signed.payload.org_id,
+            )
+            raise
+        if self._holder.admit(bundle, self._config.staleness_policy, source="polled"):
+            write_cached_bundle(self._config.cache_dir, signed)
 
-
-async def run_poller(
-    link: ControlPlaneLink,
-    bundle_config: RemoteBundleConfig,
-    holder: BundleHolder,
-    public_key: Ed25519PublicKey,
-    http_client: httpx.AsyncClient,
-) -> None:
-    await run_periodic(
-        lambda: poll_once(link, bundle_config, holder, public_key, http_client),
-        bundle_config.poll_interval_s,
-        (httpx.HTTPError, ValidationError, InvalidSignature, OSError),
-        "bundle poll",
-    )
+    async def run(self) -> None:
+        await run_periodic(
+            self.once,
+            self._config.poll_interval_s,
+            (httpx.HTTPError, ValidationError, InvalidSignature, OSError),
+            "bundle poll",
+        )
