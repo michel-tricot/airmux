@@ -5,27 +5,26 @@ import asyncio
 import httpx
 import pytest
 import respx
-from conftest import MODEL, NOW, ORG, PROVIDER, WORKSPACE, make_bundle, make_credential, make_key
+from conftest import MODEL, ORG, PROVIDER, WORKSPACE, make_bundle, make_credential, make_key, make_outbox, mock_control_plane
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from starlette.testclient import TestClient
 
 from contract import Catalog, FileStoreConfig, MemoryStoreConfig, Secret, SecretStore, SecretStoreUnavailableError, sign_bundle, uuid7
 from data_plane.app import create_app
-from data_plane.auth import index_keys
+from data_plane.bundle import BundleSnapshot, RemoteBundleConfig
 from data_plane.canonical import CanonicalRequest
-from data_plane.config import BundleConfig, Config
-from data_plane.credentials import CredentialResolver, index_credentials
-from data_plane.holder import BundleSnapshot
-from data_plane.outbox import SqliteOutbox
+from data_plane.config import Config, SqliteOutboxConfig
+from data_plane.control_plane_link import ControlPlaneLink
+from data_plane.credentials import CredentialResolver
 from data_plane.policy import Allow, Deny, evaluate
 
 OTHER_WORKSPACE = uuid7()
 
 
-def _recorded(tmp_path):
+def _recorded(tmp_path, http_client):
     """The events the data plane buffered, read straight from its outbox."""
-    outbox = SqliteOutbox(cache_dir=tmp_path, control_plane_url=None, control_plane_token=None, flush_interval_s=5.0)
-    events = outbox._read_batch(10)
+    outbox = make_outbox(tmp_path, http_client)
+    events = outbox.next_batch(10)
     outbox.close()
     return events
 
@@ -39,13 +38,13 @@ async def value_of(resolver, entry) -> str:
 
 def snap(*credentials):
     bundle = make_bundle(catalog=Catalog(providers=[PROVIDER], models=[MODEL], credentials=list(credentials)), org=ORG)
-    return BundleSnapshot(bundle=bundle, key_index=index_keys(bundle), credential_index=index_credentials(bundle))
+    return BundleSnapshot.from_bundle(bundle)
 
 
 def decide(*credentials, workspace=WORKSPACE):
     request = CanonicalRequest(model="gpt-test", messages=[{"role": "user", "content": "hi"}])
     key = make_key("k1", org=ORG, workspace=workspace)[1]
-    return evaluate(request, key, snap(*credentials), NOW)
+    return evaluate(request, key, snap(*credentials))
 
 
 def test_a_workspace_key_wins_over_the_org_one():
@@ -181,11 +180,17 @@ def _byok_app(tmp_path, credentials):
     bundle = make_bundle(keys=[entry], catalog=catalog, org=ORG)
     (tmp_path / "bundle.json").write_text(sign_bundle(bundle, bundle_key, "k1").model_dump_json(), encoding="utf-8")
     store_config = FileStoreConfig(root=tmp_path / "secrets")
-    config = Config(bundle=BundleConfig(public_key=bundle_key.public_key(), cache_dir=tmp_path), secrets=store_config)
+    control_plane = ControlPlaneLink(url="http://cp.test", token="dp-token")
+    config = Config(
+        bundle=RemoteBundleConfig(control_plane=control_plane, verify_key=bundle_key.public_key(), cache_dir=tmp_path),
+        secrets=store_config,
+        events=SqliteOutboxConfig(control_plane=control_plane, cache_dir=tmp_path),
+    )
     return create_app(config), caller_token, store_config.build()
 
 
 def _complete(app, caller_token):
+    mock_control_plane()
     with TestClient(app) as client:
         return client.post(
             "/v1/chat/completions",
@@ -218,13 +223,14 @@ def test_a_credential_with_no_value_fails_the_request(tmp_path):
     assert _complete(app, caller_token).status_code == 502
 
 
+@respx.mock
 def test_a_request_with_no_credential_anywhere_is_denied(tmp_path):
     app, caller_token, _ = _byok_app(tmp_path, [])
     assert _complete(app, caller_token).status_code == 402
 
 
 @respx.mock
-def test_the_usage_event_names_the_credential_that_paid(tmp_path):
+def test_the_usage_event_names_the_credential_that_paid(tmp_path, http_client):
     """Per-key attribution is what lets an operator separate a tenant's spend from the platform's,
     and it is the only channel a credential's health travels back on."""
     workspace_key = make_credential(workspace=WORKSPACE, name="mine")
@@ -233,7 +239,7 @@ def test_the_usage_event_names_the_credential_that_paid(tmp_path):
     respx.post("https://api.openai.com/v1/chat/completions").mock(return_value=httpx.Response(200, json=BYOK_RESPONSE))
 
     assert _complete(app, caller_token).status_code == 200
-    event = _recorded(tmp_path)[0]
+    event = _recorded(tmp_path, http_client)[0]
     assert event.credential_id == workspace_key.ref.secret_id
     assert event.credential_scope == "workspace"
     assert event.status == "ok"
@@ -244,7 +250,7 @@ def test_the_usage_event_names_the_credential_that_paid(tmp_path):
     ("upstream_status", "metered"),
     [(401, "credential_rejected"), (403, "credential_rejected"), (429, "rate_limited"), (500, "upstream_error")],
 )
-def test_the_event_says_whether_the_key_or_the_provider_failed(tmp_path, upstream_status, metered):
+def test_the_event_says_whether_the_key_or_the_provider_failed(tmp_path, http_client, upstream_status, metered):
     """A provider outage says nothing about whether the key is good, so only the statuses that are
     facts about the credential are split out."""
     workspace_key = make_credential(workspace=WORKSPACE, name="mine")
@@ -253,4 +259,4 @@ def test_the_event_says_whether_the_key_or_the_provider_failed(tmp_path, upstrea
     respx.post("https://api.openai.com/v1/chat/completions").mock(return_value=httpx.Response(upstream_status, json={"error": "no"}))
 
     assert _complete(app, caller_token).status_code == upstream_status
-    assert _recorded(tmp_path)[0].status == metered
+    assert _recorded(tmp_path, http_client)[0].status == metered

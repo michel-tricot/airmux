@@ -104,7 +104,7 @@ With either setup running, make a request through the gateway:
 ```bash
 source .env
 curl -s localhost:8080/v1/chat/completions \
-  -H "Authorization: Bearer $AIRLLM_TOKEN" \
+  -H "Authorization: Bearer $AIRLLM_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{"model": "gpt-4o-mini", "messages": [{"role": "user", "content": "say hi"}]}'
 ```

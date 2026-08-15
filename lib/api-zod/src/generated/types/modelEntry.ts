@@ -14,6 +14,8 @@ export interface ModelEntry {
   upstream_model: string;
   input_price_per_mtok: number;
   output_price_per_mtok: number;
+  cache_read_price_per_mtok: number;
+  cache_write_price_per_mtok: number;
   context_window: number;
   max_output_tokens?: number | null;
   capabilities: string[];

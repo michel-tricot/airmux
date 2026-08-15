@@ -51,8 +51,13 @@ export const ProviderEntryKind = {
   anthropic: 'anthropic',
 } as const;
 
+export type ProviderEntryParamAliases = {[key: string]: string};
+
 /**
- * An upstream LLM provider endpoint.
+ * An upstream LLM provider endpoint, plus its profile: declarative facts about what the
+ * provider accepts, so onboarding quirks is a bundle edit rather than an adapter branch.
+ * Profile fields are names, sets and flags, never predicates; a provider that needs a
+ * predicate needs an adapter.
  */
 export interface ProviderEntry {
   provider_id: string;
@@ -62,8 +67,9 @@ export interface ProviderEntry {
      * @maxLength 2083
      */
   base_url: string;
-  cache_read_multiplier?: number;
-  cache_write_multiplier?: number;
+  param_aliases?: ProviderEntryParamAliases;
+  accepted_params?: string[] | null;
+  params_closed?: boolean;
 }
 
 /**
@@ -75,6 +81,8 @@ export interface ModelEntry {
   upstream_model: string;
   input_price_per_mtok: number;
   output_price_per_mtok: number;
+  cache_read_price_per_mtok: number;
+  cache_write_price_per_mtok: number;
   context_window: number;
   max_output_tokens?: number | null;
   capabilities: string[];
@@ -475,6 +483,10 @@ export interface ModelIn {
   input_price_per_mtok?: number;
   /** USD per million output tokens */
   output_price_per_mtok?: number;
+  /** USD per million cache-read input tokens */
+  cache_read_price_per_mtok?: number;
+  /** USD per million cache-write input tokens */
+  cache_write_price_per_mtok?: number;
   /** Context window in tokens */
   context_window?: number;
   /** Max completion tokens; requests are clamped to it */
@@ -490,6 +502,8 @@ export interface ModelOut {
   upstream_model: string;
   input_price_per_mtok: number;
   output_price_per_mtok: number;
+  cache_read_price_per_mtok: number;
+  cache_write_price_per_mtok: number;
   context_window: number;
   max_output_tokens: number | null;
   capabilities: string[];
@@ -610,6 +624,11 @@ export const ProviderInKind = {
 } as const;
 
 /**
+ * Canonical param name to this provider's spelling
+ */
+export type ProviderInParamAliases = {[key: string]: string};
+
+/**
  * How to reach a provider, not how to authenticate to it: credentials are their own resource.
  *
  * Extra keys are refused so a taxonomy still carrying credential_ref fails loudly. Ignoring it
@@ -624,11 +643,15 @@ export interface ProviderIn {
   base_url: string;
   /** Provider mark as a standalone 24x24 SVG document, empty when the provider has none. Carried as markup so adding a provider needs no client change to make it recognisable, which makes it untrusted markup to whatever renders it; sanitize at the render site */
   icon?: string;
-  /** Input price factor for prompt-cache hits */
-  cache_read_multiplier?: number;
-  /** Input price factor for cache writes */
-  cache_write_multiplier?: number;
+  /** Canonical param name to this provider's spelling */
+  param_aliases?: ProviderInParamAliases;
+  /** Params known accepted beyond the core; consulted when params_closed */
+  accepted_params?: string[] | null;
+  /** True when the provider's request schema rejects unknown params */
+  params_closed?: boolean;
 }
+
+export type ProviderOutParamAliases = {[key: string]: string};
 
 export interface ProviderOut {
   id: string;
@@ -636,8 +659,9 @@ export interface ProviderOut {
   kind: string;
   base_url: string;
   icon: string;
-  cache_read_multiplier: number;
-  cache_write_multiplier: number;
+  param_aliases: ProviderOutParamAliases;
+  accepted_params: string[] | null;
+  params_closed: boolean;
   created_at: string;
   updated_at: string;
   deleted_at: string | null;

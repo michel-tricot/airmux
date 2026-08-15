@@ -22,14 +22,14 @@ def show(name: str, resp: httpx.Response) -> None:
 
 def main() -> int:
     load_dotenv(find_dotenv(usecwd=True))
-    token = os.environ.get("AIRLLM_TOKEN", "")
+    api_key = os.environ.get("AIRLLM_API_KEY", "")
     gateway = os.environ.get("AIRLLM_URL", "http://127.0.0.1:8080")
     url = f"{gateway}/v1/chat/completions"
-    auth = {"authorization": f"Bearer {token}"}
+    auth = {"authorization": f"Bearer {api_key}"}
     messages = [{"role": "user", "content": "hi"}]
 
     show(
-        "invalid token -> 401 from the gateway",
+        "invalid api key -> 401 from the gateway",
         httpx.post(url, headers={"authorization": "Bearer not-a-jwt"}, json={"model": "gpt-4o-mini", "messages": messages}),
     )
 

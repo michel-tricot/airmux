@@ -3,10 +3,12 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 from uuid import uuid4
 
+import httpx
 import pytest
+import respx
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from contract import (
@@ -24,12 +26,17 @@ from contract import (
     token_hash,
     uuid7,
 )
-from data_plane.adapters import REGISTRY
 from data_plane.app import create_app
-from data_plane.canonical import Ctx
-from data_plane.config import BundleConfig, Config, ControlPlaneLink, EventsConfig
+from data_plane.bundle import RemoteBundleConfig
+from data_plane.config import Config, DevNullOutboxConfig, SqliteOutboxConfig
+from data_plane.control_plane_link import ControlPlaneLink
+from data_plane.egress import REGISTRY
+from data_plane.egress.base import Ctx
+from data_plane.outbox import SqliteOutbox
 
 if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
     from starlette.applications import Starlette
 
 NOW = datetime.now(tz=UTC)
@@ -37,6 +44,7 @@ ORG = uuid7()
 WORKSPACE = uuid7()
 
 UNUSED_PUBLIC_KEY = Ed25519PrivateKey.generate().public_key()
+CONTROL_PLANE_URL = "http://cp.test"
 
 PROVIDER = ProviderEntry(provider_id="p1", kind="openai_compatible", base_url="https://api.openai.com/v1")
 MODEL = ModelEntry(
@@ -45,10 +53,11 @@ MODEL = ModelEntry(
     upstream_model="gpt-real",
     input_price_per_mtok=1.0,
     output_price_per_mtok=2.0,
+    cache_read_price_per_mtok=0.1,
+    cache_write_price_per_mtok=1.25,
     context_window=128000,
     capabilities=["streaming"],
 )
-CTX = Ctx(request_id="req-1", model=MODEL, provider=PROVIDER, stream=True)
 
 
 def make_credential(service="p1", name="default", org=ORG, **scope) -> CredentialEntry:
@@ -66,14 +75,6 @@ def make_credential(service="p1", name="default", org=ORG, **scope) -> Credentia
         workspace_id=scope.get("workspace"),
     )
     return CredentialEntry(ref=ref, priority=scope.get("priority", 100), version=scope.get("version", 1))
-
-
-PLATFORM_CREDENTIAL = make_credential(org=None)
-USAGE = {"prompt_tokens": 5, "completion_tokens": 7, "total_tokens": 12}
-
-
-def make_adapter():
-    return REGISTRY["openai_compatible"](PROVIDER, Secret("sk-test"))
 
 
 def make_key(key_id="k-dev", org=ORG, workspace=WORKSPACE):
@@ -98,12 +99,49 @@ def make_signed(private_key, key_ids=("k1",), org=ORG):
     return sign_bundle(make_bundle(keys=keys, org=org), private_key, "k1")
 
 
-def make_config(tmp_path, backend="sqlite") -> Config:
+def make_config(tmp_path, outbox_kind: Literal["sqlite", "devnull"] = "sqlite") -> Config:
+    control_plane = ControlPlaneLink(url=CONTROL_PLANE_URL, token="dp-token")
+    outbox_config = DevNullOutboxConfig() if outbox_kind == "devnull" else SqliteOutboxConfig(control_plane=control_plane, cache_dir=tmp_path)
     return Config(
-        control_plane=ControlPlaneLink(url="http://cp.test", token="dp-token"),
-        bundle=BundleConfig(public_key=UNUSED_PUBLIC_KEY, cache_dir=tmp_path),
-        events=EventsConfig(backend=backend),
+        bundle=RemoteBundleConfig(control_plane=control_plane, verify_key=UNUSED_PUBLIC_KEY, cache_dir=tmp_path),
+        events=outbox_config,
     )
+
+
+def make_outbox(tmp_path, http_client: httpx.AsyncClient, flush_interval_s: float = 5.0) -> SqliteOutbox:
+    return SqliteOutbox(
+        SqliteOutboxConfig(
+            control_plane=ControlPlaneLink(url=CONTROL_PLANE_URL, token="dp-token"),
+            cache_dir=tmp_path,
+            flush_interval_s=flush_interval_s,
+        ),
+        http_client=http_client,
+    )
+
+
+def mock_control_plane() -> None:
+    respx.get(f"{CONTROL_PLANE_URL}/v1/bundle/latest").mock(return_value=httpx.Response(503))
+    respx.post(f"{CONTROL_PLANE_URL}/v1/heartbeat").mock(return_value=httpx.Response(200))
+
+
+PLATFORM_CREDENTIAL = make_credential(org=None)
+USAGE = {"prompt_tokens": 5, "completion_tokens": 7, "total_tokens": 12}
+CTX = Ctx(
+    request_id="req-1",
+    model=MODEL,
+    provider=PROVIDER,
+    stream=True,
+    org_id=ORG,
+    workspace_id=WORKSPACE,
+    key_id="k-dev",
+    credential_id=uuid7(),
+    credential_scope="workspace",
+    bundle_id=uuid7(),
+)
+
+
+def make_adapter():
+    return REGISTRY["openai_compatible"](PROVIDER, Secret("sk-test"))
 
 
 def sse(payload: dict) -> bytes:
@@ -135,7 +173,7 @@ TEXT_NONSTREAM = {
 @dataclass(frozen=True)
 class BootedApp:
     app: Starlette
-    token: str
+    api_key: str
 
 
 @pytest.fixture
@@ -150,16 +188,26 @@ def booted(tmp_path, monkeypatch) -> BootedApp:
     catalog = Catalog(providers=[PROVIDER], models=[MODEL], credentials=[PLATFORM_CREDENTIAL])
     bundle = make_bundle(keys=[entry], catalog=catalog)
     (tmp_path / "bundle.json").write_text(sign_bundle(bundle, bundle_key, "k1").model_dump_json(), encoding="utf-8")
-    config = Config(bundle=BundleConfig(public_key=bundle_key.public_key(), cache_dir=tmp_path))
+    control_plane = ControlPlaneLink(url=CONTROL_PLANE_URL, token="dp-token")
+    config = Config(
+        bundle=RemoteBundleConfig(control_plane=control_plane, verify_key=bundle_key.public_key(), cache_dir=tmp_path),
+        events=SqliteOutboxConfig(control_plane=control_plane, cache_dir=tmp_path),
+    )
     monkeypatch.setenv("P1_API_KEY", "sk-test-not-real")  # the conventional name the env store falls back to for a platform provider key
-    return BootedApp(app=create_app(config), token=caller_token)
+    return BootedApp(app=create_app(config), api_key=caller_token)
 
 
 @pytest.fixture
-def token(booted: BootedApp) -> str:
-    return booted.token
+def api_key(booted: BootedApp) -> str:
+    return booted.api_key
 
 
 @pytest.fixture
 def dp_app(booted: BootedApp) -> Starlette:
     return booted.app
+
+
+@pytest.fixture
+async def http_client() -> AsyncIterator[httpx.AsyncClient]:
+    async with httpx.AsyncClient() as client:
+        yield client

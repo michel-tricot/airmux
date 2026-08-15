@@ -3,355 +3,36 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import logging
-import time
-from dataclasses import dataclass
-from datetime import UTC, datetime
-from typing import TYPE_CHECKING, Literal
+import os
+import signal
+from typing import TYPE_CHECKING
 
-import anyio
 import httpx
-from cryptography.exceptions import InvalidSignature
-from pydantic import ValidationError
 from starlette.applications import Starlette
-from starlette.responses import JSONResponse, Response, StreamingResponse
+from starlette.responses import JSONResponse
 from starlette.routing import Route
 
-from contract import SecretStoreUnavailableError, UsageEventV1, UsageStatus, uuid7, verify_bundle
-from data_plane.adapters import REGISTRY, ProviderAdapter
-from data_plane.auth import authenticate
-from data_plane.cache import instance_id as cache_instance_id
-from data_plane.cache import read_cached_bundle
-from data_plane.canonical import CanonicalRequest, CanonicalResponse, Ctx, StreamState, UpstreamRequest, UpstreamStreamError, Usage
+from data_plane.bundle import BundleHolder, build_bundle_source
 from data_plane.config import Config, load_config
 from data_plane.credentials import CredentialResolver
-from data_plane.heartbeat import run_heartbeat
-from data_plane.holder import BundleHolder, BundleSnapshot
-from data_plane.ingress import ANTHROPIC, CANONICAL, EgressStream, Ingress
-from data_plane.metering import cost_breakdown, estimate_tokens
-from data_plane.normalize import normalize_request
 from data_plane.outbox import build_outbox
-from data_plane.policy import Allow, Deny, evaluate
-from data_plane.poller import run_poller
-from data_plane.transport import client
+from data_plane.proxy import complete, messages
+from data_plane.runtime import Runtime, runtime_of
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
-    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
     from starlette.requests import Request
 
-    from contract import CredentialEntry, KeyEntry, Secret
-    from data_plane.outbox import EventOutbox
-
 logger = logging.getLogger("data_plane")
-
-REJECTS_CREDENTIAL = frozenset({httpx.codes.UNAUTHORIZED, httpx.codes.FORBIDDEN})
-
-holder = BundleHolder()
-
-
-@dataclass
-class AppState:
-    config: Config | None = None
-    bundle_public_key: Ed25519PublicKey | None = None
-    outbox: EventOutbox | None = None
-    credentials: CredentialResolver | None = None
-
-
-state = AppState()
-
-
-class RequestRejectedError(Exception):
-    def __init__(self, status: int, code: str) -> None:
-        self.status = status
-        self.code = code
-        super().__init__(code)
-
-
-def _error(status: int, code: str) -> JSONResponse:
-    return JSONResponse({"error": {"code": code}}, status_code=status)
-
-
-async def chat_completions(request: Request) -> Response:
-    try:
-        return await _handle(request, CANONICAL)
-    except RequestRejectedError as e:
-        return _error(e.status, e.code)
-
-
-async def messages(request: Request) -> Response:
-    try:
-        return await _handle(request, ANTHROPIC)
-    except RequestRejectedError as e:
-        return _error(e.status, e.code)
-
-
-async def _authorize(request: Request, ingress: Ingress) -> tuple[CanonicalRequest, KeyEntry, BundleSnapshot]:
-    """Authentication and body validation; raises RequestRejectedError on every no."""
-    snap = holder.snapshot
-    if snap is None:
-        raise RequestRejectedError(503, "bundle_unavailable")
-    auth_header = request.headers.get("authorization", "")
-    if not auth_header.startswith("Bearer "):
-        raise RequestRejectedError(401, "missing_bearer_token")
-    key = authenticate(auth_header.removeprefix("Bearer "), snap.key_index)
-    if key is None:
-        raise RequestRejectedError(401, "invalid_token")
-    try:
-        req = ingress.parse(await request.body())
-    except (ValidationError, ValueError, KeyError) as e:
-        raise RequestRejectedError(400, "invalid_request") from e
-    return req, key, snap
-
-
-async def _handle(request: Request, ingress: Ingress) -> Response:
-    req, key, snap = await _authorize(request, ingress)
-    decision = evaluate(req, key, snap, datetime.now(tz=UTC))
-    if isinstance(decision, Deny):
-        _record_denied(key, snap, req)
-        raise RequestRejectedError(decision.status, decision.reason)
-
-    entry = decision.candidates[0]
-    credential = await _resolve_credential(decision)
-    adapter = REGISTRY[decision.provider.kind](decision.provider, credential)
-    ctx = Ctx(
-        request_id=str(uuid7()),
-        model=decision.model,
-        provider=decision.provider,
-        stream=req.stream,
-        org_id=key.org_id,
-        workspace_id=key.workspace_id,
-        key_id=key.key_id,
-        credential_id=entry.ref.secret_id,
-        credential_scope=_scope_of(entry),
-        bundle_id=snap.bundle.bundle_id,
-    )
-    req = normalize_request(req, decision.model, decision.provider)
-    upstream = adapter.transform_request(req, decision.model)
-    if req.stream:
-        return await _stream(adapter, ctx, upstream, req, ingress)
-    try:
-        resp = await client.request(upstream.method, upstream.url, headers=upstream.headers, content=upstream.body)
-    except httpx.HTTPError as e:
-        return _upstream_exception(adapter, ctx, e, req, ingress)
-    if resp.is_error:
-        return _upstream_error_body(ctx, resp.content, resp.status_code, req, ingress)
-    final = adapter.transform_response(resp.content, ctx)
-    _record_usage(ctx, final, status="ok", req=req)
-    return ingress.render_response(final)
-
-
-async def _resolve_credential(decision: Allow) -> Secret:
-    """The value behind the first candidate the tier offers.
-
-    Failover across candidates is not here yet, so a broken first key fails the request rather than
-    falling through to the second. What it never does is widen to a broader tier: a key that is
-    missing or a store that is down must not silently move an org's spend onto the platform account.
-    """
-    resolver = state.credentials
-    if resolver is None:
-        raise RequestRejectedError(500, "credentials_unavailable")
-    entry = decision.candidates[0]
-    try:
-        secret = await resolver.fetch(entry)
-    except SecretStoreUnavailableError as e:
-        logger.exception("secret store unavailable for credential %s", entry.ref.secret_id)
-        raise RequestRejectedError(503, "credential_backend_unavailable") from e
-    if secret is None:
-        raise RequestRejectedError(502, "credential_missing")
-    return secret
-
-
-def _status_for_error(e: Exception) -> UsageStatus:
-    """Distinguish an upstream timeout from other upstream failures in the usage log."""
-    return "timeout" if isinstance(e, httpx.TimeoutException) else "upstream_error"
-
-
-def _upstream_exception(adapter: ProviderAdapter, ctx: Ctx, e: Exception, req: CanonicalRequest | None, ingress: Ingress) -> Response:
-    err = adapter.map_error(e)
-    _record_usage(ctx, _empty_response(ctx), status=_status_for_error(e), req=req)
-    return ingress.render_error(err)
-
-
-def _scope_of(entry: CredentialEntry) -> Literal["platform", "org", "workspace"]:
-    if entry.ref.org_id is None:
-        return "platform"
-    return "workspace" if entry.ref.workspace_id is not None else "org"
-
-
-def _credential_status(status_code: int) -> UsageStatus:
-    """A rejected or throttled key is a fact about the credential, which the control plane rolls
-    up into its status. Everything else upstream stays undifferentiated."""
-    if status_code in REJECTS_CREDENTIAL:
-        return "credential_rejected"
-    return "rate_limited" if status_code == httpx.codes.TOO_MANY_REQUESTS else "upstream_error"
-
-
-def _upstream_error_body(ctx: Ctx, body: bytes, status_code: int, req: CanonicalRequest | None, ingress: Ingress) -> Response:
-    _record_usage(ctx, _empty_response(ctx), status=_credential_status(status_code), req=req)
-    return ingress.render_upstream_error(status_code, body)
-
-
-def _empty_response(ctx: Ctx) -> CanonicalResponse:
-    return CanonicalResponse(id=ctx.request_id, model=ctx.model.model_id, content=[], finish_reason=None, usage=Usage(estimated=True))
-
-
-def _prompt_text(req: CanonicalRequest) -> str:
-    parts: list[str] = []
-    for message in req.messages:
-        content = message.get("content")
-        if isinstance(content, str):
-            parts.append(content)
-        elif isinstance(content, list):
-            parts.extend(str(p.get("text", "")) for p in content if isinstance(p, dict))
-    return "\n".join(parts)
-
-
-def _record_denied(key: KeyEntry, snap: BundleSnapshot, req: CanonicalRequest) -> None:
-    """A policy denial is still metered: attribute it to the caller's key and requested model, with zero usage.
-
-    Only authenticated-but-unauthorized requests are recorded here; raw auth failures have no key to bill.
-    """
-    if state.outbox is None:
-        return
-    state.outbox.record(
-        UsageEventV1(
-            event_id=uuid7(),
-            request_id=uuid7(),
-            occurred_at=datetime.now(tz=UTC),
-            org_id=key.org_id,
-            workspace_id=key.workspace_id,
-            key_id=key.key_id,
-            model_id=req.model,
-            provider_id="",
-            bundle_id=snap.bundle.bundle_id,
-            input_tokens=0,
-            output_tokens=0,
-            cost_usd=0.0,
-            latency_ms=0,
-            status="denied",
-            stream=req.stream,
-        )
-    )
-
-
-def _record_usage(ctx: Ctx, final: CanonicalResponse, status: UsageStatus, req: CanonicalRequest | None = None) -> None:
-    """The single metering point: estimates fill missing provider counts, then buffer and log."""
-    usage = final.usage
-    if usage.estimated:
-        output_text = "".join(str(part.get("text", "")) for part in final.content if part.get("type") == "text")
-        usage = Usage(
-            input_tokens=estimate_tokens(_prompt_text(req), ctx.model) if req else 0,
-            output_tokens=estimate_tokens(output_text, ctx.model),
-            estimated=True,
-        )
-    cost_in, cost_out = cost_breakdown(usage, ctx.model, ctx.provider)
-    latency_ms = int((time.monotonic() - ctx.started_at) * 1000)
-    if ctx.bundle_id is not None and state.outbox is not None:
-        state.outbox.record(
-            UsageEventV1(
-                event_id=uuid7(),
-                request_id=ctx.request_id,
-                occurred_at=datetime.now(tz=UTC),
-                org_id=ctx.org_id,
-                workspace_id=ctx.workspace_id,
-                key_id=ctx.key_id,
-                model_id=ctx.model.model_id,
-                provider_id=ctx.provider.provider_id,
-                bundle_id=ctx.bundle_id,
-                input_tokens=usage.input_tokens,
-                output_tokens=usage.output_tokens,
-                cache_read_tokens=usage.cache_read_tokens,
-                cache_write_tokens=usage.cache_write_tokens,
-                cost_usd=cost_in + cost_out,
-                cost_input_usd=cost_in,
-                cost_output_usd=cost_out,
-                latency_ms=latency_ms,
-                status=status,
-                stream=ctx.stream,
-                credential_id=ctx.credential_id,
-                credential_scope=ctx.credential_scope,
-            ),
-        )
-    logger.info(
-        "usage request_id=%s model=%s provider=%s status=%s stream=%s input_tokens=%d output_tokens=%d "
-        "cache_read=%d cache_write=%d estimated=%s cost_usd=%.6f latency_ms=%d",
-        ctx.request_id,
-        ctx.model.model_id,
-        ctx.provider.provider_id,
-        status,
-        ctx.stream,
-        usage.input_tokens,
-        usage.output_tokens,
-        usage.cache_read_tokens,
-        usage.cache_write_tokens,
-        usage.estimated,
-        cost_in + cost_out,
-        latency_ms,
-    )
-
-
-async def _stream(
-    adapter: ProviderAdapter, ctx: Ctx, upstream: UpstreamRequest, req: CanonicalRequest | None = None, ingress: Ingress | None = None
-) -> Response:
-    """Open the upstream and peek at the status, then hand the socket to the response generator.
-
-    The stack owns the upstream connection: every early return or exception in
-    this function closes it, and pop_all transfers that obligation to the
-    generator once we commit to streaming.
-    """
-    ingress = ingress if ingress is not None else CANONICAL
-    async with contextlib.AsyncExitStack() as stack:
-        try:
-            resp = await stack.enter_async_context(client.stream(upstream.method, upstream.url, headers=upstream.headers, content=upstream.body))
-            if resp.is_error:
-                body = await resp.aread()
-                return _upstream_error_body(ctx, body, resp.status_code, req, ingress)
-        except httpx.HTTPError as e:
-            return _upstream_exception(adapter, ctx, e, req, ingress)
-        stream_state = adapter.new_stream_state(ctx)
-        handoff = stack.pop_all()
-
-    return StreamingResponse(_events(adapter, ctx, resp, handoff, stream_state, req, ingress.new_egress()), media_type="text/event-stream")
-
-
-async def _events(  # noqa: PLR0913, PLR0917 the streaming lifecycle genuinely spans these seven
-    adapter: ProviderAdapter,
-    ctx: Ctx,
-    resp: httpx.Response,
-    handoff: contextlib.AsyncExitStack,
-    stream_state: StreamState,
-    req: CanonicalRequest | None,
-    egress: EgressStream,
-) -> AsyncIterator[bytes]:
-    async with handoff:
-        try:
-            for b in egress.start(ctx):
-                yield b
-            async for chunk in resp.aiter_bytes():
-                for ev in adapter.frame(chunk, stream_state):
-                    for c in adapter.transform_stream_event(ev, stream_state):
-                        for b in egress.chunk(c):
-                            yield b
-            final = adapter.finalize(stream_state)
-            for b in egress.finish(final):
-                yield b
-            _record_usage(ctx, final, status="ok", req=req)
-        except (UpstreamStreamError, httpx.HTTPError) as e:
-            for b in egress.error(adapter.map_error(e)):
-                yield b
-            _record_usage(ctx, adapter.finalize(stream_state), status=_status_for_error(e), req=req)
-        except (asyncio.CancelledError, anyio.get_cancelled_exc_class()):
-            _record_usage(ctx, adapter.finalize(stream_state), status="cancelled", req=req)
-            raise
 
 
 async def healthz(_request: Request) -> JSONResponse:
     return JSONResponse({"status": "ok"})
 
 
-async def readyz(_request: Request) -> JSONResponse:
-    if holder.snapshot is None:
+async def readyz(request: Request) -> JSONResponse:
+    if runtime_of(request).holder.snapshot is None:
         return JSONResponse({"status": "no bundle"}, status_code=503)
     return JSONResponse({"status": "ready"})
 
@@ -364,60 +45,60 @@ def _configure_dev_logging() -> None:
         logger.setLevel(logging.INFO)
 
 
-def _load_cached_bundle(config: Config, public_key: Ed25519PublicKey) -> None:
-    try:
-        signed = read_cached_bundle(config.bundle.cache_dir)
-    except ValidationError:
-        logger.exception("cached bundle in %s does not parse, ignoring it", config.bundle.cache_dir)
-        return
-    if signed is None:
-        logger.warning("no cached bundle in %s, serving 503 until one arrives", config.bundle.cache_dir)
-        return
-    try:
-        bundle = verify_bundle(signed, public_key)
-    except InvalidSignature:
-        logger.exception("cached bundle failed signature verification, ignoring it")
-        return
-    holder.admit(bundle, config.bundle.staleness_policy, source="cached")
+def _build_http_client() -> httpx.AsyncClient:
+    return httpx.AsyncClient(
+        http2=True,
+        limits=httpx.Limits(max_connections=100, max_keepalive_connections=20),
+        timeout=httpx.Timeout(connect=5.0, read=120.0, write=30.0, pool=5.0),
+    )
 
 
-def create_app(config_override: Config | None = None) -> Starlette:
-    """App factory: production loads the config file, tests inject a constructed Config."""
+def _terminate_process() -> None:
+    os.kill(os.getpid(), signal.SIGTERM)
 
+
+def _terminate_process_on_failure(task: asyncio.Task[None], /) -> None:
+    if task.cancelled():
+        return
+    error = task.exception()
+    if error is None:
+        logger.critical("background task %s stopped, terminating process", task.get_name())
+    else:
+        logger.critical("background task %s failed, terminating process", task.get_name(), exc_info=error)
+    _terminate_process()
+
+
+def create_app(config: Config) -> Starlette:
     @contextlib.asynccontextmanager
-    async def lifespan(_app: Starlette) -> AsyncIterator[None]:
-        config = config_override or load_config()
+    async def lifespan(_app: Starlette) -> AsyncIterator[dict[str, Runtime]]:
         if config.dev:
             _configure_dev_logging()
-        state.config = config
-        state.outbox = build_outbox(config)
-        state.credentials = CredentialResolver(config.secrets.build())
-        try:
-            state.bundle_public_key = config.bundle.public_key
-            _load_cached_bundle(config, state.bundle_public_key)
-            instance_id = cache_instance_id(config.bundle.cache_dir)
-            tasks = (
-                [
-                    asyncio.create_task(run_poller(config, holder, state.bundle_public_key)),
-                    asyncio.create_task(state.outbox.run()),
-                    asyncio.create_task(run_heartbeat(config, holder, instance_id)),
-                ]
-                if config.control_plane.url
-                else []
-            )
+        async with _build_http_client() as http_client:
+            outbox = build_outbox(config.events, http_client)
             try:
-                yield
+                holder = BundleHolder()
+                bundle_source = build_bundle_source(config.bundle, holder, http_client)
+                runtime = Runtime(
+                    holder=holder,
+                    outbox=outbox,
+                    credentials=CredentialResolver(config.secrets.build()),
+                    http_client=http_client,
+                )
+                async with asyncio.TaskGroup() as task_group:
+                    tasks = (*bundle_source.start(task_group), *outbox.start(task_group))
+                    for task in tasks:
+                        task.add_done_callback(_terminate_process_on_failure)
+                    try:
+                        yield {"runtime": runtime}
+                    finally:
+                        for task in tasks:
+                            task.cancel()
             finally:
-                for task in tasks:
-                    task.cancel()
-                    with contextlib.suppress(asyncio.CancelledError):
-                        await task
-        finally:
-            state.outbox.close()
+                outbox.close()
 
     return Starlette(
         routes=[
-            Route("/v1/chat/completions", chat_completions, methods=["POST"]),
+            Route("/v1/chat/completions", complete, methods=["POST"]),
             Route("/v1/messages", messages, methods=["POST"]),
             Route("/healthz", healthz),
             Route("/readyz", readyz),
@@ -426,4 +107,5 @@ def create_app(config_override: Config | None = None) -> Starlette:
     )
 
 
-app = create_app()
+def load_app() -> Starlette:
+    return create_app(load_config())

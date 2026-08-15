@@ -32,13 +32,13 @@ TURNS = [
 ]
 
 
-def run_turn(gateway: str, token: str, model: str, messages: list[dict]) -> str:
+def run_turn(gateway: str, api_key: str, model: str, messages: list[dict]) -> str:
     answer_parts: list[str] = []
     in_reasoning = False
     with httpx.stream(
         "POST",
         f"{gateway}/v1/chat/completions",
-        headers={"authorization": f"Bearer {token}"},
+        headers={"authorization": f"Bearer {api_key}"},
         json={"model": model, "messages": messages, "stream": True},
         timeout=120.0,
     ) as resp:
@@ -70,9 +70,9 @@ def run_turn(gateway: str, token: str, model: str, messages: list[dict]) -> str:
 
 def main() -> int:
     load_dotenv(find_dotenv(usecwd=True))
-    token = os.environ.get("AIRLLM_TOKEN")
-    if not token:
-        print("AIRLLM_TOKEN is not set, run `uv run airllm quickstart` first")
+    api_key = os.environ.get("AIRLLM_API_KEY")
+    if not api_key:
+        print("AIRLLM_API_KEY is not set, run `uv run airllm quickstart` first")
         return 1
     gateway = os.environ.get("AIRLLM_URL", "http://127.0.0.1:8080")
     model = os.environ.get("AIRLLM_MODEL") or ("deepseek-reasoner" if os.environ.get("DEEPSEEK_API_KEY") else "gpt-4o-mini")
@@ -83,7 +83,7 @@ def main() -> int:
     for turn, prompt in enumerate(TURNS, start=1):
         print(f"=== turn {turn}: {prompt}\n")
         messages.append({"role": "user", "content": prompt})
-        answer = run_turn(gateway, token, model, messages)
+        answer = run_turn(gateway, api_key, model, messages)
         messages.append({"role": "assistant", "content": answer})
         print()
     print(f"history sent on the last turn: {len(messages) - 1} messages")

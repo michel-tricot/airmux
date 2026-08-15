@@ -16,6 +16,7 @@ import csv
 import json
 import sys
 from pathlib import Path
+from typing import TypedDict
 
 from paths import TAXONOMY
 
@@ -29,6 +30,13 @@ MAXDEPTH = int(sys.argv[2]) if len(sys.argv) > 2 else 2
 # these point their schema at oai.openai.* or anthropic.anthropic.*, so their column is a
 # restatement of the canonical shape, not an independently documented surface
 STANDIN = {"nvidia", "hyperbolic", "lambda", "baseten", "bedrock", "vertex"}
+
+
+class MatrixRow(TypedDict):
+    path: str
+    flags: list[int]
+    total: int
+    verified: int
 
 
 def deref(node, defs, seen):
@@ -101,7 +109,7 @@ def main() -> int:
         })
 
     paths = sorted(set().union(*support.values()))
-    rows = []
+    rows: list[MatrixRow] = []
     for path in paths:
         flags = [1 if path in support[c["id"]] else 0 for c in columns]
         verified = sum(f for f, c in zip(flags, columns) if not c["standin"])

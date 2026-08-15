@@ -59,7 +59,12 @@ def test_full_flow_to_verified_bundle(tmp_path):
         assert [k.key_id for k in bundle.keys] == [key["id"]]
         assert [k.token_hash for k in bundle.keys] == [token_hash(key["token"])]
         assert [k.workspace_id for k in bundle.keys] == [ws]
-        assert bundle.catalog.models[0].upstream_model == "gpt-real"
+        (model,) = bundle.catalog.models
+        assert model.upstream_model == "gpt-real"
+        assert model.input_price_per_mtok == 1.0
+        assert model.output_price_per_mtok == 2.0
+        assert model.cache_read_price_per_mtok == 0.1
+        assert model.cache_write_price_per_mtok == 1.25
 
 
 def test_revocation_lands_in_next_bundle(tmp_path):
@@ -127,6 +132,13 @@ def test_the_catalog_refuses_a_credential(tmp_path):
     with TestClient(cp.app) as c:
         bad = {**PROVIDER, "credential_ref": "env:OPENAI_API_KEY"}
         assert c.post("/v1/taxonomy/providers", json=bad, headers=root).status_code == 422
+
+
+def test_provider_pricing_multipliers_are_not_part_of_the_catalog(tmp_path):
+    cp = setup_control_plane(tmp_path)
+    with TestClient(cp.app) as c:
+        bad = {**PROVIDER, "cache_read_multiplier": 0.5}
+        assert c.post("/v1/taxonomy/providers", json=bad, headers=cp.headers()).status_code == 422
 
 
 def test_auth_required_everywhere(tmp_path):

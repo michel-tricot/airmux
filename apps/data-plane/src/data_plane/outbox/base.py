@@ -4,25 +4,21 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    import asyncio
+
     from contract import UsageEventV1
 
 
 class EventOutbox(ABC):
-    """Where usage events go after metering: the plug point for how the data plane collects them.
-
-    record() sits on the request hot path, so it must not await or block on the network; do any
-    durable or remote work in run(), the background loop started once per process for the app's
-    lifetime. A backend that needs no background work returns from run() immediately.
-    """
+    """The synchronous request-path sink for metered usage events."""
 
     @abstractmethod
-    def record(self, event: UsageEventV1) -> None:
-        """Accept one event. Called inline while serving a request."""
+    def record(self, event: UsageEventV1, /) -> None:
+        """Accept one event without network work."""
 
-    async def run(self) -> None:
-        """Background export loop; runs until cancelled. The default does nothing, for backends with no background work."""
-        return
+    def start(self, _task_group: asyncio.TaskGroup, /) -> tuple[asyncio.Task[None], ...]:
+        return ()
 
     def close(self) -> None:
-        """Release resources on shutdown. The default does nothing."""
+        """Release owned resources on shutdown."""
         return

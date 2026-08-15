@@ -1532,8 +1532,7 @@ export const BundleLatestHeader = zod.object({
 export const bundleLatestResponsePayloadSchemaVersionDefault = 1;
 export const bundleLatestResponsePayloadCatalogProvidersItemBaseUrlMax = 2083;
 
-export const bundleLatestResponsePayloadCatalogProvidersItemCacheReadMultiplierDefault = 1;
-export const bundleLatestResponsePayloadCatalogProvidersItemCacheWriteMultiplierDefault = 1;
+export const bundleLatestResponsePayloadCatalogProvidersItemParamsClosedDefault = false;
 export const bundleLatestResponsePayloadCatalogCredentialsDefault = [];
 
 export const BundleLatestResponse = zod.object({
@@ -1554,15 +1553,18 @@ export const BundleLatestResponse = zod.object({
   "provider_id": zod.string(),
   "kind": zod.enum(['openai_compatible', 'anthropic']),
   "base_url": zod.url().min(1).max(bundleLatestResponsePayloadCatalogProvidersItemBaseUrlMax),
-  "cache_read_multiplier": zod.number().default(bundleLatestResponsePayloadCatalogProvidersItemCacheReadMultiplierDefault),
-  "cache_write_multiplier": zod.number().default(bundleLatestResponsePayloadCatalogProvidersItemCacheWriteMultiplierDefault)
-}).describe('An upstream LLM provider endpoint.')),
+  "param_aliases": zod.record(zod.string(), zod.string()).optional(),
+  "accepted_params": zod.union([zod.array(zod.string()),zod.null()]).optional(),
+  "params_closed": zod.boolean().default(bundleLatestResponsePayloadCatalogProvidersItemParamsClosedDefault)
+}).describe('An upstream LLM provider endpoint, plus its profile: declarative facts about what the\nprovider accepts, so onboarding quirks is a bundle edit rather than an adapter branch.\nProfile fields are names, sets and flags, never predicates; a provider that needs a\npredicate needs an adapter.')),
   "models": zod.array(zod.object({
   "model_id": zod.string(),
   "provider_id": zod.string(),
   "upstream_model": zod.string(),
   "input_price_per_mtok": zod.number(),
   "output_price_per_mtok": zod.number(),
+  "cache_read_price_per_mtok": zod.number(),
+  "cache_write_price_per_mtok": zod.number(),
   "context_window": zod.int(),
   "max_output_tokens": zod.union([zod.int(),zod.null()]).optional(),
   "capabilities": zod.array(zod.string())
@@ -1688,8 +1690,9 @@ export const GetTaxonomyResponse = zod.object({
   "kind": zod.string(),
   "base_url": zod.string(),
   "icon": zod.string(),
-  "cache_read_multiplier": zod.number(),
-  "cache_write_multiplier": zod.number(),
+  "param_aliases": zod.record(zod.string(), zod.string()),
+  "accepted_params": zod.union([zod.array(zod.string()),zod.null()]),
+  "params_closed": zod.boolean(),
   "created_at": zod.coerce.date(),
   "updated_at": zod.coerce.date(),
   "deleted_at": zod.union([zod.coerce.date(),zod.null()])
@@ -1701,6 +1704,8 @@ export const GetTaxonomyResponse = zod.object({
   "upstream_model": zod.string(),
   "input_price_per_mtok": zod.number(),
   "output_price_per_mtok": zod.number(),
+  "cache_read_price_per_mtok": zod.number(),
+  "cache_write_price_per_mtok": zod.number(),
   "context_window": zod.int(),
   "max_output_tokens": zod.union([zod.int(),zod.null()]),
   "capabilities": zod.array(zod.string()),
@@ -1725,16 +1730,16 @@ export const CreateProviderHeader = zod.object({
 
 export const createProviderBodyKindDefault = `openai_compatible`;
 export const createProviderBodyIconDefault = ``;
-export const createProviderBodyCacheReadMultiplierDefault = 1;
-export const createProviderBodyCacheWriteMultiplierDefault = 1;
+export const createProviderBodyParamsClosedDefault = false;
 
 export const CreateProviderBody = zod.object({
   "provider_id": zod.string().describe('Provider name, e.g. openai'),
   "kind": zod.enum(['openai_compatible', 'anthropic']).default(createProviderBodyKindDefault).describe('Adapter kind'),
   "base_url": zod.string().describe('OpenAI-compatible endpoint, e.g. https:\/\/api.groq.com\/openai\/v1'),
   "icon": zod.string().default(createProviderBodyIconDefault).describe('Provider mark as a standalone 24x24 SVG document, empty when the provider has none. Carried as markup so adding a provider needs no client change to make it recognisable, which makes it untrusted markup to whatever renders it; sanitize at the render site'),
-  "cache_read_multiplier": zod.number().default(createProviderBodyCacheReadMultiplierDefault).describe('Input price factor for prompt-cache hits'),
-  "cache_write_multiplier": zod.number().default(createProviderBodyCacheWriteMultiplierDefault).describe('Input price factor for cache writes')
+  "param_aliases": zod.record(zod.string(), zod.string()).optional().describe('Canonical param name to this provider\'s spelling'),
+  "accepted_params": zod.union([zod.array(zod.string()),zod.null()]).optional().describe('Params known accepted beyond the core; consulted when params_closed'),
+  "params_closed": zod.boolean().default(createProviderBodyParamsClosedDefault).describe('True when the provider\'s request schema rejects unknown params')
 }).describe('How to reach a provider, not how to authenticate to it: credentials are their own resource.\n\nExtra keys are refused so a taxonomy still carrying credential_ref fails loudly. Ignoring it\nwould leave the operator believing they configured a credential when the provider has none.')
 
 export const CreateProviderResponse = zod.object({
@@ -1743,8 +1748,9 @@ export const CreateProviderResponse = zod.object({
   "kind": zod.string(),
   "base_url": zod.string(),
   "icon": zod.string(),
-  "cache_read_multiplier": zod.number(),
-  "cache_write_multiplier": zod.number(),
+  "param_aliases": zod.record(zod.string(), zod.string()),
+  "accepted_params": zod.union([zod.array(zod.string()),zod.null()]),
+  "params_closed": zod.boolean(),
   "created_at": zod.coerce.date(),
   "updated_at": zod.coerce.date(),
   "deleted_at": zod.union([zod.coerce.date(),zod.null()])
@@ -1766,6 +1772,8 @@ export const CreateModelHeader = zod.object({
 export const createModelBodyUpstreamModelDefault = ``;
 export const createModelBodyInputPricePerMtokDefault = 0;
 export const createModelBodyOutputPricePerMtokDefault = 0;
+export const createModelBodyCacheReadPricePerMtokDefault = 0;
+export const createModelBodyCacheWritePricePerMtokDefault = 0;
 export const createModelBodyContextWindowDefault = 128000;
 export const createModelBodyCapabilitiesDefault = [`streaming`, `tools`];
 
@@ -1775,6 +1783,8 @@ export const CreateModelBody = zod.object({
   "upstream_model": zod.string().default(createModelBodyUpstreamModelDefault).describe('Model name sent to the provider, lets model_id be an alias; defaults to model_id'),
   "input_price_per_mtok": zod.number().default(createModelBodyInputPricePerMtokDefault).describe('USD per million input tokens'),
   "output_price_per_mtok": zod.number().default(createModelBodyOutputPricePerMtokDefault).describe('USD per million output tokens'),
+  "cache_read_price_per_mtok": zod.number().default(createModelBodyCacheReadPricePerMtokDefault).describe('USD per million cache-read input tokens'),
+  "cache_write_price_per_mtok": zod.number().default(createModelBodyCacheWritePricePerMtokDefault).describe('USD per million cache-write input tokens'),
   "context_window": zod.int().default(createModelBodyContextWindowDefault).describe('Context window in tokens'),
   "max_output_tokens": zod.union([zod.int(),zod.null()]).optional().describe('Max completion tokens; requests are clamped to it'),
   "capabilities": zod.array(zod.string()).default(createModelBodyCapabilitiesDefault).describe('Capabilities, comma separated')
@@ -1787,6 +1797,8 @@ export const CreateModelResponse = zod.object({
   "upstream_model": zod.string(),
   "input_price_per_mtok": zod.number(),
   "output_price_per_mtok": zod.number(),
+  "cache_read_price_per_mtok": zod.number(),
+  "cache_write_price_per_mtok": zod.number(),
   "context_window": zod.int(),
   "max_output_tokens": zod.union([zod.int(),zod.null()]),
   "capabilities": zod.array(zod.string()),
