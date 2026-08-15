@@ -43,16 +43,20 @@ def _configure_dev_logging() -> None:
         logger.setLevel(logging.INFO)
 
 
+def _build_http_client() -> httpx.AsyncClient:
+    return httpx.AsyncClient(
+        http2=True,
+        limits=httpx.Limits(max_connections=100, max_keepalive_connections=20),
+        timeout=httpx.Timeout(connect=5.0, read=120.0, write=30.0, pool=5.0),
+    )
+
+
 def create_app(config: Config) -> Starlette:
     @contextlib.asynccontextmanager
     async def lifespan(_app: Starlette) -> AsyncIterator[dict[str, Runtime]]:
         if config.dev:
             _configure_dev_logging()
-        async with httpx.AsyncClient(
-            http2=True,
-            limits=httpx.Limits(max_connections=100, max_keepalive_connections=20),
-            timeout=httpx.Timeout(connect=5.0, read=120.0, write=30.0, pool=5.0),
-        ) as http_client:
+        async with _build_http_client() as http_client:
             outbox = build_outbox(config.events, config.control_plane, http_client)
             try:
                 holder = BundleHolder()
