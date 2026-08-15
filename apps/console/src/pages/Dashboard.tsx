@@ -85,11 +85,7 @@ export default function Dashboard() {
             resource="data planes"
             onRetry={() => dataPlanesQuery.refetch()}
             loadingLabel="Loading connected services..."
-            empty={
-              <div className="py-8 text-center text-muted-foreground text-sm border-dashed border-2 rounded-md border-border">
-                No data plane has reported in yet.
-              </div>
-            }
+            empty="No data plane has reported in yet."
             columns={[
               { key: 'instance', header: 'Instance', cellClassName: 'font-mono text-xs', cell: (i) => i.address ?? i.instance_id },
               { key: 'bundle', header: 'Bundle', cellClassName: 'font-mono text-xs text-muted-foreground', cell: (i) => i.bundle_id ?? 'none' },
@@ -132,11 +128,7 @@ export default function Dashboard() {
             resource="activity"
             onRetry={() => activityQuery.refetch()}
             loadingLabel="Loading activity..."
-            empty={
-              <div className="py-8 text-center text-muted-foreground text-sm border-dashed border-2 rounded-md border-border">
-                Nothing has changed on this instance yet.
-              </div>
-            }
+            empty="Nothing has changed on this instance yet."
             columns={[
               {
                 key: 'action',

@@ -11,7 +11,7 @@ import {
   useUpdateCredentialMutation,
   useDeleteCredentialMutation,
 } from '@/features/credentials/hooks';
-import { Button, Card, Badge, Input, ConfirmButton } from '@/components/ui/elements';
+import { Button, Card, Badge, Input, ConfirmButton, Label } from '@/components/ui/elements';
 import { DataTable, type Column } from '@/components/shared/data-table';
 import { FormDialog } from '@/components/shared/form-dialog';
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -20,6 +20,7 @@ import { useRequiredParam } from '@/lib/route';
 import { ProviderIcon } from '@/components/ProviderIcon';
 import { PageShell } from '@/components/shared/page-shell';
 import { ErrorState } from '@/components/shared/states';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 const addSchema = z.object({
   provider: z.string().min(1, 'Pick a provider'),
@@ -181,25 +182,23 @@ export default function WorkspaceByok() {
                 <FormItem>
                   <FormLabel>Provider</FormLabel>
                   <FormControl>
-                    <div role="radiogroup" aria-label="Provider" className="flex flex-wrap gap-2">
+                    <RadioGroup value={field.value} onValueChange={field.onChange} aria-label="Provider" className="flex flex-wrap gap-2">
                       {providers.map((p) => {
-                        const selected = field.value === p.name;
+                        const optionId = `provider-${p.id}`;
                         return (
-                          <Button
-                            key={p.id}
-                            role="radio"
-                            aria-checked={selected}
-                            size="sm"
-                            variant={selected ? 'secondary' : 'outline'}
-                            onClick={() => field.onChange(p.name)}
-                            className="gap-2"
-                          >
-                            {p.icon ? <ProviderIcon markup={p.icon} /> : null}
-                            {p.name}
-                          </Button>
+                          <div key={p.id} className="relative">
+                            <RadioGroupItem id={optionId} value={p.name} className="peer sr-only" />
+                            <Label
+                              htmlFor={optionId}
+                              className="inline-flex h-8 cursor-pointer items-center justify-center gap-2 rounded border border-input bg-background/50 px-3 shadow-sm transition-colors hover:border-primary/50 hover:bg-primary/10 hover:text-primary peer-data-[state=checked]:border-border/50 peer-data-[state=checked]:bg-secondary peer-data-[state=checked]:text-secondary-foreground peer-focus-visible:outline-none peer-focus-visible:ring-2 peer-focus-visible:ring-ring peer-focus-visible:ring-offset-2"
+                            >
+                              {p.icon ? <ProviderIcon markup={p.icon} /> : null}
+                              {p.name}
+                            </Label>
+                          </div>
                         );
                       })}
-                    </div>
+                    </RadioGroup>
                   </FormControl>
                   <FormMessage />
                 </FormItem>

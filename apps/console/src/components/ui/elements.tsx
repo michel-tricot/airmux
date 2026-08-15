@@ -1,10 +1,5 @@
 import React, { forwardRef } from 'react';
 import { cn } from '@/lib/utils';
-import * as DialogPrimitive from '@radix-ui/react-dialog';
-import * as TabsPrimitive from '@radix-ui/react-tabs';
-import * as SelectPrimitive from '@radix-ui/react-select';
-import { Slot } from '@radix-ui/react-slot';
-import { X, Check, ChevronsUpDown } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import {
   AlertDialog,
@@ -17,7 +12,34 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge as BadgePrimitive } from '@/components/ui/badge';
+import { Button as ButtonPrimitive, type ButtonProps as ButtonPrimitiveProps } from '@/components/ui/button';
+import {
+  Card as CardPrimitive,
+  CardContent as CardContentPrimitive,
+  CardDescription as CardDescriptionPrimitive,
+  CardFooter as CardFooterPrimitive,
+  CardHeader as CardHeaderPrimitive,
+} from '@/components/ui/card';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input as InputPrimitive } from '@/components/ui/input';
+import { Label as LabelPrimitive } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectSeparator, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Sheet, SheetClose, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import {
+  Table as TablePrimitive,
+  TableBody as TableBodyPrimitive,
+  TableCell as TableCellPrimitive,
+  TableHead as TableHeadPrimitive,
+  TableHeader as TableHeaderPrimitive,
+  TableRow as TableRowPrimitive,
+} from '@/components/ui/table';
+import {
+  Tabs as TabsPrimitive,
+  TabsContent as TabsContentPrimitive,
+  TabsList as TabsListPrimitive,
+  TabsTrigger as TabsTriggerPrimitive,
+} from '@/components/ui/tabs';
 
 export {
   Alert,
@@ -34,64 +56,56 @@ export {
   SheetTitle,
 };
 
-export const Button = forwardRef<
-  HTMLButtonElement,
-  React.ButtonHTMLAttributes<HTMLButtonElement> & {
-    variant?: 'default' | 'outline' | 'ghost' | 'destructive' | 'secondary';
-    size?: 'default' | 'sm' | 'lg' | 'icon';
-    asChild?: boolean;
-  }
->(({ asChild = false, className, variant = 'default', size = 'default', type = 'button', ...props }, ref) => {
-  const variants = {
-    default: 'bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm',
-    secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/80 shadow-sm border border-border/50',
-    outline: 'border border-input bg-background/50 hover:border-primary/50 hover:bg-primary/10 hover:text-primary transition-all duration-200',
-    ghost: 'hover:bg-primary/10 hover:text-primary',
-    destructive: 'bg-destructive/10 text-destructive border border-destructive/20 hover:bg-destructive/20',
-  };
-  const sizes = {
-    default: 'h-9 px-4 py-2 text-[12px]',
-    sm: 'h-8 rounded px-3 text-[11px]',
-    lg: 'h-10 rounded px-8 text-[13px]',
-    icon: 'h-9 w-9',
-  };
-  const Component = asChild ? Slot : 'button';
-  return (
-    <Component
-      ref={ref}
-      type={asChild ? undefined : type}
-      className={cn(
-        'inline-flex items-center justify-center whitespace-nowrap rounded font-mono font-bold uppercase tracking-wider transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50',
-        variants[variant],
-        sizes[size],
-        className,
-      )}
-      {...props}
-    />
-  );
-});
+type ButtonVariant = 'default' | 'outline' | 'ghost' | 'destructive' | 'secondary';
+type ButtonSize = 'default' | 'sm' | 'lg' | 'icon';
+type ButtonProps = Omit<ButtonPrimitiveProps, 'variant' | 'size'> & { variant?: ButtonVariant; size?: ButtonSize };
+
+export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
+  ({ asChild = false, className, variant = 'default', size = 'default', type = 'button', ...props }, ref) => {
+    const variants = {
+      default: 'border-0 bg-primary text-primary-foreground shadow-sm hover:bg-primary/90',
+      secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/80 shadow-sm border border-border/50',
+      outline: 'border border-input bg-background/50 hover:border-primary/50 hover:bg-primary/10 hover:text-primary transition-all duration-200',
+      ghost: 'border-0 hover:bg-primary/10 hover:text-primary',
+      destructive: 'bg-destructive/10 text-destructive border border-destructive/20 hover:bg-destructive/20',
+    };
+    const sizes = {
+      default: 'h-9 px-4 py-2 text-[12px]',
+      sm: 'h-8 rounded px-3 text-[11px]',
+      lg: 'h-10 rounded px-8 text-[13px]',
+      icon: 'h-9 w-9',
+    };
+    return (
+      <ButtonPrimitive
+        ref={ref}
+        asChild={asChild}
+        type={asChild ? undefined : type}
+        variant={variant}
+        size={size}
+        className={cn('gap-0 rounded font-mono font-bold uppercase tracking-wider focus-visible:ring-2', variants[variant], sizes[size], className)}
+        {...props}
+      />
+    );
+  },
+);
 Button.displayName = 'Button';
 
-export const Input = forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement>>(({ className, type, ...props }, ref) => {
-  return (
-    <input
-      type={type}
-      className={cn(
-        'flex h-9 w-full rounded border border-input bg-background/50 px-3 py-1 text-sm font-mono shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground/50 focus-visible:outline-none focus-visible:border-primary focus-visible:ring-1 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-50',
-        className,
-      )}
-      ref={ref}
-      {...props}
-    />
-  );
-});
+export const Input = forwardRef<HTMLInputElement, React.ComponentPropsWithoutRef<typeof InputPrimitive>>(({ className, ...props }, ref) => (
+  <InputPrimitive
+    ref={ref}
+    className={cn(
+      'rounded bg-background/50 text-sm font-mono placeholder:text-muted-foreground/50 focus-visible:border-primary focus-visible:ring-primary',
+      className,
+    )}
+    {...props}
+  />
+));
 Input.displayName = 'Input';
 
-export const Label = forwardRef<HTMLLabelElement, React.LabelHTMLAttributes<HTMLLabelElement> & { htmlFor: string }>(
-  ({ className, htmlFor, ...props }, ref) => (
-    <label
+export const Label = forwardRef<React.ElementRef<typeof LabelPrimitive>, React.ComponentPropsWithoutRef<typeof LabelPrimitive> & { htmlFor: string }>(
+  ({ className, ...props }, ref) => (
+    <LabelPrimitive
       ref={ref}
-      htmlFor={htmlFor}
       className={cn(
         'text-[11px] font-mono font-bold uppercase tracking-wider leading-none text-muted-foreground peer-disabled:cursor-not-allowed peer-disabled:opacity-70',
         className,
@@ -126,7 +140,7 @@ export const Dropdown = ({
   className?: string;
   'aria-label'?: string;
 }) => (
-  <SelectPrimitive.Root
+  <Select
     value={value}
     onValueChange={(v) => {
       if (v.startsWith(ACTION_PREFIX)) {
@@ -137,58 +151,48 @@ export const Dropdown = ({
     }}
     disabled={disabled}
   >
-    <SelectPrimitive.Trigger
+    <SelectTrigger
       aria-label={ariaLabel}
       className={cn(
         'flex h-9 w-full items-center justify-between gap-2 rounded border border-input bg-background/50 px-3 text-[13px] font-mono shadow-sm transition-colors hover:border-primary/50 hover:bg-primary/5 focus:outline-none focus-visible:border-primary focus-visible:ring-1 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-50 data-[placeholder]:text-muted-foreground',
         className,
       )}
     >
-      <span className="truncate text-left">
-        <SelectPrimitive.Value placeholder={placeholder} />
-      </span>
-      <SelectPrimitive.Icon asChild>
-        <ChevronsUpDown className="h-4 w-4 shrink-0 text-muted-foreground/70" />
-      </SelectPrimitive.Icon>
-    </SelectPrimitive.Trigger>
-    <SelectPrimitive.Portal>
-      <SelectPrimitive.Content
-        position="popper"
-        sideOffset={6}
-        className="z-50 min-w-[var(--radix-select-trigger-width)] overflow-hidden rounded-md border border-border bg-card text-card-foreground shadow-xl shadow-black/50 animate-in fade-in-0 zoom-in-95"
-      >
-        <SelectPrimitive.Viewport className="p-1 max-h-72">
-          {options.map((option) => (
-            <SelectPrimitive.Item
-              key={option.value}
-              value={option.value}
-              className="relative flex cursor-pointer select-none items-center rounded-sm px-3 py-2 pr-9 text-sm font-mono outline-none transition-colors data-[highlighted]:bg-primary/10 data-[highlighted]:text-primary data-[state=checked]:text-primary"
+      <SelectValue placeholder={placeholder} />
+    </SelectTrigger>
+    <SelectContent
+      position="popper"
+      sideOffset={6}
+      className="z-50 min-w-[var(--radix-select-trigger-width)] border-border bg-card text-card-foreground shadow-xl shadow-black/50 [&_[data-radix-select-viewport]]:h-auto [&_[data-radix-select-viewport]]:max-h-72"
+    >
+      {options.map((option) => (
+        <SelectItem
+          key={option.value}
+          value={option.value}
+          className="cursor-pointer px-3 py-2 pr-9 font-mono data-[highlighted]:bg-primary/10 data-[highlighted]:text-primary data-[state=checked]:text-primary"
+        >
+          {option.label}
+        </SelectItem>
+      ))}
+      {actions && actions.length > 0 && (
+        <>
+          {options.length > 0 && <SelectSeparator className="bg-border" />}
+          {actions.map((action, i) => (
+            <SelectItem
+              key={`${ACTION_PREFIX}${i}`}
+              value={`${ACTION_PREFIX}${i}`}
+              className="cursor-pointer px-3 py-2 font-mono data-[highlighted]:bg-primary/10 data-[highlighted]:text-primary"
             >
-              <SelectPrimitive.ItemText>{option.label}</SelectPrimitive.ItemText>
-              <SelectPrimitive.ItemIndicator className="absolute right-3">
-                <Check className="h-4 w-4" />
-              </SelectPrimitive.ItemIndicator>
-            </SelectPrimitive.Item>
+              <span className="flex w-full items-center justify-between gap-3">
+                {action.label}
+                {action.icon && <span className="shrink-0 opacity-70">{action.icon}</span>}
+              </span>
+            </SelectItem>
           ))}
-          {actions && actions.length > 0 && (
-            <>
-              {options.length > 0 && <div className="my-1 h-px bg-border" />}
-              {actions.map((action, i) => (
-                <SelectPrimitive.Item
-                  key={i}
-                  value={`${ACTION_PREFIX}${i}`}
-                  className="flex cursor-pointer select-none items-center justify-between gap-3 rounded-sm px-3 py-2 text-sm font-mono outline-none transition-colors data-[highlighted]:bg-primary/10 data-[highlighted]:text-primary"
-                >
-                  <SelectPrimitive.ItemText>{action.label}</SelectPrimitive.ItemText>
-                  {action.icon && <span className="shrink-0 opacity-70">{action.icon}</span>}
-                </SelectPrimitive.Item>
-              ))}
-            </>
-          )}
-        </SelectPrimitive.Viewport>
-      </SelectPrimitive.Content>
-    </SelectPrimitive.Portal>
-  </SelectPrimitive.Root>
+        </>
+      )}
+    </SelectContent>
+  </Select>
 );
 
 export const Badge = ({
@@ -205,7 +209,8 @@ export const Badge = ({
     mono: 'border-border bg-muted/50 text-muted-foreground',
   };
   return (
-    <div
+    <BadgePrimitive
+      variant={variant === 'success' || variant === 'mono' ? 'outline' : variant}
       className={cn(
         'inline-flex items-center rounded border px-2 py-0.5 text-[10px] font-mono font-bold uppercase tracking-wider transition-colors',
         variants[variant],
@@ -216,23 +221,29 @@ export const Badge = ({
   );
 };
 
-export const Card = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
-  <div
-    className={cn('rounded-lg border border-card-border bg-card/80 backdrop-blur-sm text-card-foreground shadow-lg shadow-black/20', className)}
-    {...props}
-  />
+export const Card = forwardRef<React.ElementRef<typeof CardPrimitive>, React.ComponentPropsWithoutRef<typeof CardPrimitive>>(
+  ({ className, ...props }, ref) => (
+    <CardPrimitive
+      ref={ref}
+      className={cn('rounded-lg border-card-border bg-card/80 backdrop-blur-sm shadow-lg shadow-black/20', className)}
+      {...props}
+    />
+  ),
 );
-export const CardHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
-  <div className={cn('flex flex-col space-y-1.5 p-6', className)} {...props} />
-);
-export const CardTitle = ({ className, children, ...props }: React.HTMLAttributes<HTMLHeadingElement>) => (
-  <h3 className={cn('font-semibold leading-none tracking-tight text-lg text-foreground', className)} {...props}>
+Card.displayName = 'Card';
+
+export const CardHeader = CardHeaderPrimitive;
+
+export const CardTitle = forwardRef<HTMLHeadingElement, React.HTMLAttributes<HTMLHeadingElement>>(({ className, children, ...props }, ref) => (
+  <h3 ref={ref} className={cn('text-lg font-semibold leading-none tracking-tight text-foreground', className)} {...props}>
     {children}
   </h3>
-);
-export const CardContent = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
-  <div className={cn('p-6 pt-0', className)} {...props} />
-);
+));
+CardTitle.displayName = 'CardTitle';
+
+export const CardDescription = CardDescriptionPrimitive;
+export const CardContent = CardContentPrimitive;
+export const CardFooter = CardFooterPrimitive;
 
 export const Modal = ({
   open,
@@ -249,27 +260,20 @@ export const Modal = ({
   children: React.ReactNode;
   contentClassName?: string;
 }) => (
-  <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
-    <DialogPrimitive.Portal>
-      <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
-      <DialogPrimitive.Content
-        className={cn(
-          'fixed left-[50%] top-[50%] z-50 grid w-[calc(100%-2rem)] max-w-lg translate-x-[-50%] translate-y-[-50%] gap-6 border border-border bg-card p-6 shadow-2xl shadow-black/50 duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[50%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[50%] sm:rounded-lg',
-          contentClassName,
-        )}
-      >
-        <div className="flex flex-col space-y-2">
-          <DialogPrimitive.Title className="text-xl font-semibold leading-none tracking-tight">{title}</DialogPrimitive.Title>
-          {description && <DialogPrimitive.Description className="text-sm text-muted-foreground">{description}</DialogPrimitive.Description>}
-        </div>
-        {children}
-        <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 hover:text-primary hover:bg-primary/10 p-1 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:pointer-events-none">
-          <X className="h-4 w-4" />
-          <span className="sr-only">Close</span>
-        </DialogPrimitive.Close>
-      </DialogPrimitive.Content>
-    </DialogPrimitive.Portal>
-  </DialogPrimitive.Root>
+  <Dialog open={open} onOpenChange={onOpenChange}>
+    <DialogContent
+      className={cn(
+        'w-[calc(100%-2rem)] gap-6 border-border bg-card text-card-foreground shadow-2xl shadow-black/50 data-[state=closed]:slide-out-to-top-[50%] data-[state=open]:slide-in-from-top-[50%]',
+        contentClassName,
+      )}
+    >
+      <DialogHeader className="space-y-2">
+        <DialogTitle className="text-xl">{title}</DialogTitle>
+        {description && <DialogDescription>{description}</DialogDescription>}
+      </DialogHeader>
+      {children}
+    </DialogContent>
+  </Dialog>
 );
 
 export const ConfirmButton = ({
@@ -330,38 +334,48 @@ export const ConfirmButton = ({
   );
 };
 
-export const Table = ({ className, ...props }: React.HTMLAttributes<HTMLTableElement>) => (
-  <div className="relative w-full overflow-auto rounded-md border border-border bg-card/50">
-    <table className={cn('w-full caption-bottom text-sm', className)} {...props} />
-  </div>
-);
-export const TableHeader = ({ className, ...props }: React.HTMLAttributes<HTMLTableSectionElement>) => (
-  <thead className={cn('[&_tr]:border-b border-border bg-muted/30', className)} {...props} />
-);
-export const TableBody = ({ className, ...props }: React.HTMLAttributes<HTMLTableSectionElement>) => (
-  <tbody className={cn('[&_tr:last-child]:border-0', className)} {...props} />
-);
-export const TableRow = ({ className, ...props }: React.HTMLAttributes<HTMLTableRowElement>) => (
-  <tr className={cn('border-b border-border transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted', className)} {...props} />
-);
-export const TableHead = ({ className, ...props }: React.HTMLAttributes<HTMLTableCellElement>) => (
-  <th
-    className={cn(
-      'h-10 px-3 text-left align-middle font-mono text-[11px] font-bold uppercase tracking-wider text-muted-foreground [&:has([role=checkbox])]:pr-0',
-      className,
-    )}
-    {...props}
-  />
-);
-export const TableCell = ({ className, ...props }: React.HTMLAttributes<HTMLTableCellElement>) => (
-  <td className={cn('p-3 align-middle [&:has([role=checkbox])]:pr-0', className)} {...props} />
-);
-
-export const Tabs = TabsPrimitive.Root;
-
-export const TabsList = React.forwardRef<React.ElementRef<typeof TabsPrimitive.List>, React.ComponentPropsWithoutRef<typeof TabsPrimitive.List>>(
+export const Table = forwardRef<React.ElementRef<typeof TablePrimitive>, React.ComponentPropsWithoutRef<typeof TablePrimitive>>(
   ({ className, ...props }, ref) => (
-    <TabsPrimitive.List
+    <div className="relative w-full overflow-auto rounded-md border border-border bg-card/50">
+      <TablePrimitive ref={ref} className={className} {...props} />
+    </div>
+  ),
+);
+Table.displayName = 'Table';
+
+export const TableHeader = forwardRef<React.ElementRef<typeof TableHeaderPrimitive>, React.ComponentPropsWithoutRef<typeof TableHeaderPrimitive>>(
+  ({ className, ...props }, ref) => <TableHeaderPrimitive ref={ref} className={cn('border-border bg-muted/30', className)} {...props} />,
+);
+TableHeader.displayName = 'TableHeader';
+
+export const TableBody = TableBodyPrimitive;
+
+export const TableRow = forwardRef<React.ElementRef<typeof TableRowPrimitive>, React.ComponentPropsWithoutRef<typeof TableRowPrimitive>>(
+  ({ className, ...props }, ref) => <TableRowPrimitive ref={ref} className={cn('border-border', className)} {...props} />,
+);
+TableRow.displayName = 'TableRow';
+
+export const TableHead = forwardRef<React.ElementRef<typeof TableHeadPrimitive>, React.ComponentPropsWithoutRef<typeof TableHeadPrimitive>>(
+  ({ className, ...props }, ref) => (
+    <TableHeadPrimitive
+      ref={ref}
+      className={cn('px-3 font-mono text-[11px] font-bold uppercase tracking-wider [&>[role=checkbox]]:translate-y-0', className)}
+      {...props}
+    />
+  ),
+);
+TableHead.displayName = 'TableHead';
+
+export const TableCell = forwardRef<React.ElementRef<typeof TableCellPrimitive>, React.ComponentPropsWithoutRef<typeof TableCellPrimitive>>(
+  ({ className, ...props }, ref) => <TableCellPrimitive ref={ref} className={cn('p-3 [&>[role=checkbox]]:translate-y-0', className)} {...props} />,
+);
+TableCell.displayName = 'TableCell';
+
+export const Tabs = TabsPrimitive;
+
+export const TabsList = React.forwardRef<React.ElementRef<typeof TabsListPrimitive>, React.ComponentPropsWithoutRef<typeof TabsListPrimitive>>(
+  ({ className, ...props }, ref) => (
+    <TabsListPrimitive
       ref={ref}
       className={cn(
         'inline-flex h-10 max-w-full items-center justify-start overflow-x-auto rounded bg-muted/50 p-1 text-muted-foreground',
@@ -371,13 +385,13 @@ export const TabsList = React.forwardRef<React.ElementRef<typeof TabsPrimitive.L
     />
   ),
 );
-TabsList.displayName = TabsPrimitive.List.displayName;
+TabsList.displayName = 'TabsList';
 
 export const TabsTrigger = React.forwardRef<
-  React.ElementRef<typeof TabsPrimitive.Trigger>,
-  React.ComponentPropsWithoutRef<typeof TabsPrimitive.Trigger>
+  React.ElementRef<typeof TabsTriggerPrimitive>,
+  React.ComponentPropsWithoutRef<typeof TabsTriggerPrimitive>
 >(({ className, ...props }, ref) => (
-  <TabsPrimitive.Trigger
+  <TabsTriggerPrimitive
     ref={ref}
     className={cn(
       'inline-flex items-center justify-center whitespace-nowrap rounded-sm px-4 py-1.5 text-[12px] font-mono font-bold uppercase tracking-wider ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm',
@@ -386,13 +400,13 @@ export const TabsTrigger = React.forwardRef<
     {...props}
   />
 ));
-TabsTrigger.displayName = TabsPrimitive.Trigger.displayName;
+TabsTrigger.displayName = 'TabsTrigger';
 
 export const TabsContent = React.forwardRef<
-  React.ElementRef<typeof TabsPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof TabsPrimitive.Content>
+  React.ElementRef<typeof TabsContentPrimitive>,
+  React.ComponentPropsWithoutRef<typeof TabsContentPrimitive>
 >(({ className, ...props }, ref) => (
-  <TabsPrimitive.Content
+  <TabsContentPrimitive
     ref={ref}
     className={cn(
       'mt-4 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2',
@@ -401,4 +415,4 @@ export const TabsContent = React.forwardRef<
     {...props}
   />
 ));
-TabsContent.displayName = TabsPrimitive.Content.displayName;
+TabsContent.displayName = 'TabsContent';

@@ -8,7 +8,7 @@ import { useCreatePersonalOrgMutation } from '@/features/orgs/hooks';
 import { useSession } from '@/lib/session';
 import { Card, Button, Input, Label } from '@/components/ui/elements';
 import { Building2 } from 'lucide-react';
-import { ErrorState, LoadingState } from '@/components/shared/states';
+import { EmptyState, ErrorState, LoadingState } from '@/components/shared/states';
 
 const personalOrgSchema = z.object({ name: z.string().min(1, 'Name is required') });
 
@@ -84,7 +84,7 @@ export default function AppOrgPicker() {
             </Button>
           ))}
           {orgs?.length === 0 && (
-            <div className="text-center p-8 border border-dashed rounded-md text-muted-foreground">You don't belong to any organizations yet.</div>
+            <EmptyState className="rounded-md border border-dashed border-border">You don't belong to any organizations yet.</EmptyState>
           )}
         </div>
 

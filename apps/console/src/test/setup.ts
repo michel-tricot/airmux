@@ -31,7 +31,16 @@ class MemoryStorage implements Storage {
   }
 }
 
+class TestResizeObserver implements ResizeObserver {
+  disconnect() {}
+
+  observe() {}
+
+  unobserve() {}
+}
+
 Object.defineProperty(window, 'localStorage', { configurable: true, value: new MemoryStorage() });
+Object.defineProperty(globalThis, 'ResizeObserver', { configurable: true, value: TestResizeObserver });
 window.HTMLElement.prototype.scrollIntoView = () => {};
 window.HTMLElement.prototype.hasPointerCapture = () => false;
 window.HTMLElement.prototype.setPointerCapture = () => {};

@@ -10,6 +10,22 @@ import { Link } from 'wouter';
 
 const now = '2026-01-01T00:00:00Z';
 
+function taxonomyProvider(id: string, name: string, icon: string | null = null) {
+  return {
+    id,
+    name,
+    kind: 'openai_compatible',
+    base_url: `https://${name}.example/v1`,
+    icon,
+    param_aliases: {},
+    accepted_params: null,
+    params_closed: false,
+    created_at: now,
+    updated_at: now,
+    deleted_at: null,
+  };
+}
+
 beforeEach(() => {
   window.localStorage.setItem('airllm_org_id', ORG.id);
 });
@@ -21,19 +37,11 @@ describe('provider icons', () => {
         HttpResponse.json({
           models: [],
           providers: [
-            {
-              id: 'provider-1',
-              name: 'malicious',
-              kind: 'openai_compatible',
-              base_url: 'https://example.com/v1',
-              icon: '<svg viewBox="0 0 24 24" onload="alert(1)"><script>alert(1)</script><image href="https://tracker.example/pixel" /><path style="filter:url(https://tracker.example/filter)" d="M0 0h24v24H0z" /></svg>',
-              param_aliases: {},
-              accepted_params: null,
-              params_closed: false,
-              created_at: now,
-              updated_at: now,
-              deleted_at: null,
-            },
+            taxonomyProvider(
+              'provider-1',
+              'malicious',
+              '<svg viewBox="0 0 24 24" onload="alert(1)"><script>alert(1)</script><image href="https://tracker.example/pixel" /><path style="filter:url(https://tracker.example/filter)" d="M0 0h24v24H0z" /></svg>',
+            ),
           ],
         }),
       ),
@@ -48,6 +56,29 @@ describe('provider icons', () => {
     expect(provider.querySelector('[onload]')).toBeNull();
     expect(provider.querySelector('[href]')).toBeNull();
     expect(provider.querySelector('[style]')).toBeNull();
+  });
+
+  it('supports arrow-key navigation between providers', async () => {
+    server.use(
+      http.get('/v1/taxonomy', () =>
+        HttpResponse.json({
+          models: [],
+          providers: [taxonomyProvider('provider-1', 'first'), taxonomyProvider('provider-2', 'second')],
+        }),
+      ),
+    );
+    window.history.replaceState(null, '', `/org/workspaces/${WORKSPACES[0].slug}/byok`);
+    render(<App />);
+
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: 'Add Key' }));
+    const first = await screen.findByRole('radio', { name: 'first' });
+    const second = screen.getByRole('radio', { name: 'second' });
+    await user.click(first);
+    expect(first).toHaveFocus();
+    await user.keyboard('{ArrowRight}');
+
+    expect(second).toHaveFocus();
   });
 });
 

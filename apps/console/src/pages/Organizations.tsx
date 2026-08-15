@@ -8,6 +8,7 @@ import { useOrgs, useCreateOrgMutation } from '@/features/orgs/hooks';
 import { DataTable } from '@/components/shared/data-table';
 import { FormDialog } from '@/components/shared/form-dialog';
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group';
 import { PageShell } from '@/components/shared/page-shell';
 
 const createOrgSchema = z.object({ name: z.string().min(1, 'Name is required') });
@@ -35,16 +36,18 @@ export default function Organizations() {
 
       <Card>
         <div className="p-4 border-b border-border flex items-center gap-4">
-          <div className="relative flex-1 max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
+          <InputGroup className="max-w-sm flex-1 bg-background/50">
+            <InputGroupAddon>
+              <Search />
+            </InputGroupAddon>
+            <InputGroupInput
               aria-label="Search organizations"
               placeholder="Search organizations..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-9"
+              className="font-mono"
             />
-          </div>
+          </InputGroup>
         </div>
 
         <DataTable

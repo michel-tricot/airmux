@@ -1,6 +1,7 @@
 import { type ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/elements';
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia } from '@/components/ui/empty';
 import { queryErrorMessage } from '@/lib/errors';
 
 export function LoadingState({ label = 'Loading...', className }: { label?: string; className?: string }) {
@@ -46,9 +47,15 @@ export function EmptyState({
   className?: string;
 }) {
   return (
-    <div className={cn(Icon ? 'p-12' : 'p-8', 'text-center text-muted-foreground', className)}>
-      {Icon && <Icon className="w-12 h-12 mx-auto mb-4 opacity-20" />}
-      {typeof children === 'string' ? <p>{children}</p> : children}
-    </div>
+    <Empty className={cn(Icon ? 'p-12' : 'p-8', 'gap-0 border-0 text-muted-foreground', className)}>
+      <EmptyHeader>
+        {Icon && (
+          <EmptyMedia>
+            <Icon className="h-12 w-12 opacity-20" />
+          </EmptyMedia>
+        )}
+        <EmptyDescription>{children}</EmptyDescription>
+      </EmptyHeader>
+    </Empty>
   );
 }

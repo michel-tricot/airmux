@@ -1,6 +1,7 @@
-import { Alert, AlertDescription, Modal, Button, Input, Label } from '@/components/ui/elements';
+import { Alert, AlertDescription, Modal, Button, Label } from '@/components/ui/elements';
 import { Copy, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group';
 
 export function KeyRevealDialog({ open, onOpenChange, token }: { open: boolean; onOpenChange: (open: boolean) => void; token: string | null }) {
   const [copiedToken, setCopiedToken] = useState<string | null>(null);
@@ -38,20 +39,22 @@ export function KeyRevealDialog({ open, onOpenChange, token }: { open: boolean; 
 
         <div className="space-y-2">
           <Label htmlFor="generated-key">Key Secret</Label>
-          <div className="flex gap-2">
-            <Input id="generated-key" readOnly value={token} className="font-mono bg-muted text-muted-foreground" />
-            <Button onClick={copyToClipboard} variant="secondary" className="w-28" aria-label={copied ? 'Copied' : 'Copy key'}>
-              {copied ? (
-                <>
-                  <CheckCircle2 className="w-4 h-4 mr-2 text-success" /> Copied
-                </>
-              ) : (
-                <>
-                  <Copy className="w-4 h-4 mr-2" /> Copy
-                </>
-              )}
-            </Button>
-          </div>
+          <InputGroup className="bg-muted">
+            <InputGroupInput id="generated-key" readOnly value={token} className="font-mono text-muted-foreground" />
+            <InputGroupAddon align="inline-end" className="pr-1">
+              <Button onClick={copyToClipboard} variant="secondary" className="h-7 w-28" aria-label={copied ? 'Copied' : 'Copy key'}>
+                {copied ? (
+                  <>
+                    <CheckCircle2 className="w-4 h-4 mr-2 text-success" /> Copied
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-4 h-4 mr-2" /> Copy
+                  </>
+                )}
+              </Button>
+            </InputGroupAddon>
+          </InputGroup>
           {copyError && (
             <p role="alert" className="text-sm text-destructive">
               Could not copy the key. Select it and copy it manually.
