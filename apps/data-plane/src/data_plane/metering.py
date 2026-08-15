@@ -1,13 +1,30 @@
 from __future__ import annotations
 
 import functools
+import logging
+import time
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
+import httpx
 import tiktoken
 
+from contract import UsageEventV1, uuid7
+from data_plane.canonical import TextPart, Usage
+
 if TYPE_CHECKING:
-    from contract import ModelEntry
-    from data_plane.canonical import Usage
+    from collections.abc import Sequence
+    from uuid import UUID
+
+    from contract import KeyEntry, ModelEntry, UsageStatus
+    from data_plane.canonical import CanonicalRequest, CanonicalResponse
+    from data_plane.egress.base import Ctx
+    from data_plane.outbox import EventOutbox
+
+
+logger = logging.getLogger("data_plane")
+
+REJECTS_CREDENTIAL = frozenset({httpx.codes.UNAUTHORIZED, httpx.codes.FORBIDDEN})
 
 
 def cost_breakdown(usage: Usage, model: ModelEntry) -> tuple[float, float]:
@@ -33,3 +50,105 @@ def estimate_tokens(text: str, model: ModelEntry) -> int:
     if not text:
         return 0
     return len(_encoding(model.upstream_model).encode(text))
+
+
+def status_for_error(error: Exception) -> UsageStatus:
+    return "timeout" if isinstance(error, httpx.TimeoutException) else "upstream_error"
+
+
+def status_for_upstream(status_code: int) -> UsageStatus:
+    if status_code in REJECTS_CREDENTIAL:
+        return "credential_rejected"
+    return "rate_limited" if status_code == httpx.codes.TOO_MANY_REQUESTS else "upstream_error"
+
+
+def _text_of(parts: Sequence[object]) -> str:
+    return "\n".join(part.text for part in parts if isinstance(part, TextPart))
+
+
+def _prompt_text(request: CanonicalRequest) -> str:
+    return "\n".join(_text_of(message.content) for message in request.messages)
+
+
+def record_denied(outbox: EventOutbox | None, key: KeyEntry, bundle_id: UUID, request: CanonicalRequest) -> None:
+    if outbox is None:
+        return
+    outbox.record(
+        UsageEventV1(
+            event_id=uuid7(),
+            request_id=uuid7(),
+            occurred_at=datetime.now(tz=UTC),
+            org_id=key.org_id,
+            workspace_id=key.workspace_id,
+            key_id=key.key_id,
+            model_id=request.model,
+            provider_id="",
+            bundle_id=bundle_id,
+            input_tokens=0,
+            output_tokens=0,
+            cost_usd=0.0,
+            latency_ms=0,
+            status="denied",
+            stream=request.stream,
+        )
+    )
+
+
+def record_usage(
+    outbox: EventOutbox | None,
+    ctx: Ctx,
+    response: CanonicalResponse,
+    status: UsageStatus,
+    request: CanonicalRequest | None = None,
+) -> None:
+    usage = response.usage
+    if usage.estimated:
+        usage = Usage(
+            input_tokens=estimate_tokens(_prompt_text(request), ctx.model) if request else 0,
+            output_tokens=estimate_tokens(_text_of(response.content), ctx.model),
+            estimated=True,
+        )
+    cost_in, cost_out = cost_breakdown(usage, ctx.model)
+    latency_ms = int((time.monotonic() - ctx.started_at) * 1000)
+    if ctx.bundle_id is not None and outbox is not None:
+        outbox.record(
+            UsageEventV1(
+                event_id=uuid7(),
+                request_id=ctx.request_id,
+                occurred_at=datetime.now(tz=UTC),
+                org_id=ctx.org_id,
+                workspace_id=ctx.workspace_id,
+                key_id=ctx.key_id,
+                model_id=ctx.model.model_id,
+                provider_id=ctx.provider.provider_id,
+                bundle_id=ctx.bundle_id,
+                input_tokens=usage.input_tokens,
+                output_tokens=usage.output_tokens,
+                cache_read_tokens=usage.cache_read_tokens,
+                cache_write_tokens=usage.cache_write_tokens,
+                cost_usd=cost_in + cost_out,
+                cost_input_usd=cost_in,
+                cost_output_usd=cost_out,
+                latency_ms=latency_ms,
+                status=status,
+                stream=ctx.stream,
+                credential_id=ctx.credential_id,
+                credential_scope=ctx.credential_scope,
+            ),
+        )
+    logger.info(
+        "usage request_id=%s model=%s provider=%s status=%s stream=%s input_tokens=%d output_tokens=%d "
+        "cache_read=%d cache_write=%d estimated=%s cost_usd=%.6f latency_ms=%d",
+        ctx.request_id,
+        ctx.model.model_id,
+        ctx.provider.provider_id,
+        status,
+        ctx.stream,
+        usage.input_tokens,
+        usage.output_tokens,
+        usage.cache_read_tokens,
+        usage.cache_write_tokens,
+        usage.estimated,
+        cost_in + cost_out,
+        latency_ms,
+    )
