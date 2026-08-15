@@ -28,7 +28,8 @@ from contract import (
 )
 from data_plane.app import create_app
 from data_plane.bundle import RemoteBundleConfig
-from data_plane.config import Config, ControlPlaneLink, DevNullOutboxConfig, SqliteOutboxConfig
+from data_plane.config import Config, DevNullOutboxConfig, SqliteOutboxConfig
+from data_plane.control_plane_link import ControlPlaneLink
 from data_plane.egress import REGISTRY
 from data_plane.egress.base import Ctx
 from data_plane.outbox import SqliteOutbox
@@ -99,19 +100,21 @@ def make_signed(private_key, key_ids=("k1",), org=ORG):
 
 
 def make_config(tmp_path, outbox_kind: Literal["sqlite", "devnull"] = "sqlite") -> Config:
-    outbox_config = DevNullOutboxConfig() if outbox_kind == "devnull" else SqliteOutboxConfig(cache_dir=tmp_path)
+    control_plane = ControlPlaneLink(url=CONTROL_PLANE_URL, token="dp-token")
+    outbox_config = DevNullOutboxConfig() if outbox_kind == "devnull" else SqliteOutboxConfig(control_plane=control_plane, cache_dir=tmp_path)
     return Config(
-        control_plane=ControlPlaneLink(url=CONTROL_PLANE_URL, token="dp-token"),
-        bundle=RemoteBundleConfig(verify_key=UNUSED_PUBLIC_KEY, cache_dir=tmp_path),
+        bundle=RemoteBundleConfig(control_plane=control_plane, verify_key=UNUSED_PUBLIC_KEY, cache_dir=tmp_path),
         events=outbox_config,
     )
 
 
 def make_outbox(tmp_path, http_client: httpx.AsyncClient, flush_interval_s: float = 5.0) -> SqliteOutbox:
     return SqliteOutbox(
-        cache_dir=tmp_path,
-        control_plane=ControlPlaneLink(url=CONTROL_PLANE_URL, token="dp-token"),
-        flush_interval_s=flush_interval_s,
+        SqliteOutboxConfig(
+            control_plane=ControlPlaneLink(url=CONTROL_PLANE_URL, token="dp-token"),
+            cache_dir=tmp_path,
+            flush_interval_s=flush_interval_s,
+        ),
         http_client=http_client,
     )
 
@@ -185,10 +188,10 @@ def booted(tmp_path, monkeypatch) -> BootedApp:
     catalog = Catalog(providers=[PROVIDER], models=[MODEL], credentials=[PLATFORM_CREDENTIAL])
     bundle = make_bundle(keys=[entry], catalog=catalog)
     (tmp_path / "bundle.json").write_text(sign_bundle(bundle, bundle_key, "k1").model_dump_json(), encoding="utf-8")
+    control_plane = ControlPlaneLink(url=CONTROL_PLANE_URL, token="dp-token")
     config = Config(
-        control_plane=ControlPlaneLink(url=CONTROL_PLANE_URL, token="dp-token"),
-        bundle=RemoteBundleConfig(verify_key=bundle_key.public_key(), cache_dir=tmp_path),
-        events=SqliteOutboxConfig(cache_dir=tmp_path),
+        bundle=RemoteBundleConfig(control_plane=control_plane, verify_key=bundle_key.public_key(), cache_dir=tmp_path),
+        events=SqliteOutboxConfig(control_plane=control_plane, cache_dir=tmp_path),
     )
     monkeypatch.setenv("P1_API_KEY", "sk-test-not-real")  # the conventional name the env store falls back to for a platform provider key
     return BootedApp(app=create_app(config), api_key=caller_token)

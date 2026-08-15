@@ -13,7 +13,8 @@ from contract import Catalog, FileStoreConfig, MemoryStoreConfig, Secret, Secret
 from data_plane.app import create_app
 from data_plane.bundle import BundleSnapshot, RemoteBundleConfig
 from data_plane.canonical import CanonicalRequest
-from data_plane.config import Config, ControlPlaneLink, SqliteOutboxConfig
+from data_plane.config import Config, SqliteOutboxConfig
+from data_plane.control_plane_link import ControlPlaneLink
 from data_plane.credentials import CredentialResolver
 from data_plane.policy import Allow, Deny, evaluate
 
@@ -179,11 +180,11 @@ def _byok_app(tmp_path, credentials):
     bundle = make_bundle(keys=[entry], catalog=catalog, org=ORG)
     (tmp_path / "bundle.json").write_text(sign_bundle(bundle, bundle_key, "k1").model_dump_json(), encoding="utf-8")
     store_config = FileStoreConfig(root=tmp_path / "secrets")
+    control_plane = ControlPlaneLink(url="http://cp.test", token="dp-token")
     config = Config(
-        control_plane=ControlPlaneLink(url="http://cp.test", token="dp-token"),
-        bundle=RemoteBundleConfig(verify_key=bundle_key.public_key(), cache_dir=tmp_path),
+        bundle=RemoteBundleConfig(control_plane=control_plane, verify_key=bundle_key.public_key(), cache_dir=tmp_path),
         secrets=store_config,
-        events=SqliteOutboxConfig(cache_dir=tmp_path),
+        events=SqliteOutboxConfig(control_plane=control_plane, cache_dir=tmp_path),
     )
     return create_app(config), caller_token, store_config.build()
 

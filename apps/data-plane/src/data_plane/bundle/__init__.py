@@ -17,20 +17,14 @@ from data_plane.bundle.remote import RemoteBundleSource
 if TYPE_CHECKING:
     import httpx
 
-    from data_plane.config import ControlPlaneLink
-
 __all__ = ["BundleConfig", "BundleHolder", "BundleSnapshot", "BundleSource", "LocalBundleConfig", "RemoteBundleConfig", "build_bundle_source"]
 
 
 def build_bundle_source(
     config: BundleConfig,
-    control_plane: ControlPlaneLink | None,
     holder: BundleHolder,
     http_client: httpx.AsyncClient,
 ) -> BundleSource:
     if isinstance(config, LocalBundleConfig):
         return LocalBundleSource(config, holder)
-    if control_plane is None:
-        msg = "remote bundle requires a control plane"
-        raise ValueError(msg)
-    return RemoteBundleSource(control_plane, config, holder, http_client)
+    return RemoteBundleSource(config, holder, http_client)

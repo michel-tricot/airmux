@@ -327,10 +327,16 @@ class Stack:
     ) -> None:
         """Write both planes against one secret store and the selected event outbox."""
         secrets_store = {"kind": "file", "root": str(self.tmp / "secrets")}
+        control_plane_link = {"url": self.cp_url, "token": "env:GW_DATAPLANE_TOKEN"}
         outbox_config = (
             {"kind": "devnull"}
             if outbox_kind == "devnull"
-            else {"kind": "sqlite", "flush_interval_s": flush_interval_s, "cache_dir": str(self.cache_dir)}
+            else {
+                "kind": "sqlite",
+                "control_plane": dict(control_plane_link),
+                "flush_interval_s": flush_interval_s,
+                "cache_dir": str(self.cache_dir),
+            }
         )
         cfg = {
             "control_plane": {
@@ -340,13 +346,14 @@ class Stack:
             },
             "data_plane": {
                 "secrets": secrets_store,
-                "control_plane": {"url": self.cp_url, "token": "env:GW_DATAPLANE_TOKEN", "heartbeat_interval_s": 2},
                 "bundle": {
                     "kind": "remote",
+                    "control_plane": dict(control_plane_link),
                     "verify_key": "env:GW_BUNDLE_PUBLIC_KEY",
                     "cache_dir": str(self.cache_dir),
                     "staleness_policy": staleness_policy,
                     "poll_interval_s": poll_interval_s,
+                    "heartbeat_interval_s": 2,
                 },
                 "events": outbox_config,
             },

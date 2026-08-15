@@ -74,10 +74,10 @@ def create_app(config: Config) -> Starlette:
         if config.dev:
             _configure_dev_logging()
         async with _build_http_client() as http_client:
-            outbox = build_outbox(config.events, config.control_plane, http_client)
+            outbox = build_outbox(config.events, http_client)
             try:
                 holder = BundleHolder()
-                bundle_source = build_bundle_source(config.bundle, config.control_plane, holder, http_client)
+                bundle_source = build_bundle_source(config.bundle, holder, http_client)
                 runtime = Runtime(
                     holder=holder,
                     outbox=outbox,

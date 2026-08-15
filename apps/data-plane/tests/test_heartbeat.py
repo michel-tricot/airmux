@@ -8,7 +8,7 @@ from conftest import make_bundle
 
 from contract import uuid7
 from data_plane.bundle import BundleHolder
-from data_plane.config import ControlPlaneLink
+from data_plane.control_plane_link import ControlPlaneLink
 from data_plane.heartbeat import Heartbeat
 
 
@@ -20,7 +20,8 @@ async def test_heartbeat_owns_transport_and_reports_the_current_bundle(http_clie
     instance_id = uuid7()
     route = respx.post("http://cp.test/v1/heartbeat").mock(return_value=httpx.Response(200))
     heartbeat = Heartbeat(
-        config=ControlPlaneLink(url="http://cp.test", token="dp-token"),
+        control_plane=ControlPlaneLink(url="http://cp.test", token="dp-token"),
+        interval_s=30,
         holder=holder,
         instance_id=instance_id,
         http_client=http_client,

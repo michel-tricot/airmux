@@ -23,7 +23,6 @@ if TYPE_CHECKING:
     from starlette.applications import Starlette
 
     from data_plane.bundle import BundleConfig, BundleHolder
-    from data_plane.config import ControlPlaneLink
 
 
 class FailingSource(BundleSource):
@@ -67,7 +66,6 @@ def failing_app() -> Starlette:
 
     def build_source(
         config: BundleConfig,
-        control_plane: ControlPlaneLink | None,
         holder: BundleHolder,
         http_client: httpx.AsyncClient,
     ) -> BundleSource:

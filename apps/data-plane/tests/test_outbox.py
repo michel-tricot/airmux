@@ -87,6 +87,6 @@ def test_only_one_holder_wins_the_flush_lease(tmp_path, http_client):
 
 def test_build_outbox_selects_kind(tmp_path, http_client):
     config = make_config(tmp_path)
-    assert isinstance(build_outbox(config.events, config.control_plane, http_client), SqliteOutbox)
+    assert isinstance(build_outbox(config.events, http_client), SqliteOutbox)
     devnull = make_config(tmp_path, outbox_kind="devnull")
-    assert isinstance(build_outbox(devnull.events, devnull.control_plane, http_client), DevNullOutbox)
+    assert isinstance(build_outbox(devnull.events, http_client), DevNullOutbox)
