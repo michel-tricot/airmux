@@ -11,7 +11,6 @@ import httpx
 from contract import UsageEventV1
 from data_plane.outbox.base import EventOutbox
 from data_plane.tasks import run_periodic
-from data_plane.transport import client
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -68,12 +67,12 @@ class SqliteOutbox(EventOutbox):
         with self._conn:
             self._conn.execute("INSERT OR IGNORE INTO outbox(event_id, body) VALUES (?, ?)", (str(event.event_id), event.model_dump_json()))
 
-    async def run(self) -> None:
+    async def run(self, http_client: httpx.AsyncClient) -> None:
         if not self._url:
             return
 
         async def once() -> None:
-            sent = await self._flush()
+            sent = await self._flush(http_client)
             if sent:
                 logger.info("flushed %d usage events to the control plane", sent)
 
@@ -82,14 +81,14 @@ class SqliteOutbox(EventOutbox):
     def close(self) -> None:
         self._conn.close()
 
-    async def _flush(self) -> int:
+    async def _flush(self, http_client: httpx.AsyncClient) -> int:
         """At-least-once delivery: only the leaseholder sends, then deletes exactly what it sent; the CP dedups on event_id."""
         if not self._url or not self._claim_flush(self._lease_ttl(), time.time()):
             return 0
         events = self._read_batch(BATCH)
         if not events:
             return 0
-        resp = await client.post(
+        resp = await http_client.post(
             f"{self._url}/v1/events",
             headers={"authorization": f"Bearer {self._token}"},
             json=[e.model_dump(mode="json") for e in events],

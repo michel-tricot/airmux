@@ -55,13 +55,13 @@ def test_record_is_idempotent_on_event_id(tmp_path):
 
 
 @respx.mock
-async def test_flush_sends_batch_and_deletes(tmp_path):
+async def test_flush_sends_batch_and_deletes(tmp_path, http_client):
     route = respx.post("http://cp.test/v1/events").mock(return_value=httpx.Response(200, json={"received": 2, "ingested": 2}))
     outbox = make_outbox(tmp_path)
     first, second = uuid7(), uuid7()
     outbox.record(make_event(first))
     outbox.record(make_event(second))
-    assert await outbox._flush() == 2
+    assert await outbox._flush(http_client) == 2
     assert outbox._pending() == 0
     sent = json.loads(route.calls.last.request.content)
     assert [e["request_id"] for e in sent] == [str(first), str(second)]
@@ -69,12 +69,12 @@ async def test_flush_sends_batch_and_deletes(tmp_path):
 
 
 @respx.mock
-async def test_failed_flush_keeps_the_events(tmp_path):
+async def test_failed_flush_keeps_the_events(tmp_path, http_client):
     respx.post("http://cp.test/v1/events").mock(return_value=httpx.Response(503))
     outbox = make_outbox(tmp_path)
     outbox.record(make_event(uuid7()))
     with pytest.raises(httpx.HTTPStatusError):
-        await outbox._flush()
+        await outbox._flush(http_client)
     assert outbox._pending() == 1
 
 
@@ -89,10 +89,10 @@ def test_only_one_holder_wins_the_flush_lease(tmp_path):
     assert a._claim_flush(ttl=30, now=1041.0) is False
 
 
-async def test_devnull_discards_and_runs_without_work():
+async def test_devnull_discards_and_runs_without_work(http_client):
     outbox = DevNullOutbox()
     outbox.record(make_event(uuid7()))
-    await outbox.run()  # returns at once, no background work
+    await outbox.run(http_client)  # returns at once, no background work
     outbox.close()
 
 

@@ -7,7 +7,6 @@ import httpx
 
 from contract import HeartbeatV1
 from data_plane.tasks import run_periodic
-from data_plane.transport import client
 
 if TYPE_CHECKING:
     from uuid import UUID
@@ -21,10 +20,10 @@ except PackageNotFoundError:  # pragma: no cover - only when running from a non-
     VERSION = "unknown"
 
 
-async def heartbeat_once(config: Config, holder: BundleHolder, instance_id: UUID) -> None:
+async def heartbeat_once(config: Config, holder: BundleHolder, instance_id: UUID, http_client: httpx.AsyncClient) -> None:
     snapshot = holder.snapshot
     body = HeartbeatV1(instance_id=instance_id, version=VERSION, bundle_id=snapshot.bundle.bundle_id if snapshot else None)
-    resp = await client.post(
+    resp = await http_client.post(
         f"{config.control_plane.url}/v1/heartbeat",
         headers={"authorization": f"Bearer {config.control_plane.token}"},
         json=body.model_dump(mode="json"),
@@ -32,9 +31,9 @@ async def heartbeat_once(config: Config, holder: BundleHolder, instance_id: UUID
     resp.raise_for_status()
 
 
-async def run_heartbeat(config: Config, holder: BundleHolder, instance_id: UUID) -> None:
+async def run_heartbeat(config: Config, holder: BundleHolder, instance_id: UUID, http_client: httpx.AsyncClient) -> None:
     await run_periodic(
-        lambda: heartbeat_once(config, holder, instance_id),
+        lambda: heartbeat_once(config, holder, instance_id, http_client),
         config.control_plane.heartbeat_interval_s,
         (httpx.HTTPError, OSError),
         "heartbeat",
