@@ -16,6 +16,7 @@ import yaml
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from contract import BundleV1, Catalog, CredentialEntry, KeyEntry, ModelEntry, ProviderEntry, SecretPurpose, SecretRef, token_hash
+from data_plane.bundle.base import BundleSource
 from data_plane.tasks import run_periodic
 
 if TYPE_CHECKING:
@@ -86,7 +87,7 @@ def load_local(path: Path, now: datetime) -> BundleV1:
     return compile_local(spec, raw, now)
 
 
-class LocalBundleReloader:
+class LocalBundleSource(BundleSource):
     """Loads a local bundle at boot and admits later file changes."""
 
     def __init__(self, config: LocalBundleConfig, holder: BundleHolder) -> None:
@@ -112,3 +113,10 @@ class LocalBundleReloader:
             (OSError, ValidationError, ValueError, yaml.YAMLError),
             "local bundle reload",
         )
+
+    def start(self) -> tuple[asyncio.Task[None], ...]:
+        try:
+            self.load()
+        except (OSError, ValidationError, ValueError, yaml.YAMLError):
+            logger.exception("local bundle %s did not load, serving 503 until it does", self._config.path)
+        return (asyncio.create_task(self.run()),)

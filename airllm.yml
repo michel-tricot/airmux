@@ -26,5 +26,6 @@ data_plane:
     staleness_policy: serve_and_warn # or refuse
     poll_interval_s: 5
   events:
+    kind: sqlite
     cache_dir: ${var:cache_dir}
     flush_interval_s: 5

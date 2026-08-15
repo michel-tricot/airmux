@@ -2,13 +2,12 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from conftest import MODEL, ORG, PROVIDER, WORKSPACE
+from conftest import MODEL, ORG, PROVIDER, WORKSPACE, make_outbox
 
 from contract import uuid7
 from data_plane.canonical import CanonicalRequest, CanonicalResponse, TextPart, Usage
 from data_plane.egress.base import Ctx
 from data_plane.metering import cost_breakdown, record_usage
-from data_plane.outbox import SqliteOutbox
 
 
 def _model():
@@ -35,8 +34,8 @@ def test_cache_counts_cannot_make_fresh_input_negative():
     assert cost_in == (80 * 0.25 + 40 * 2.5) / 1_000_000
 
 
-def test_estimated_usage_is_persisted_with_request_attribution(tmp_path):
-    outbox = SqliteOutbox(cache_dir=tmp_path)
+def test_estimated_usage_is_persisted_with_request_attribution(tmp_path, http_client):
+    outbox = make_outbox(tmp_path, http_client)
     bundle_id = uuid7()
     credential_id = uuid7()
     ctx = Ctx(

@@ -11,15 +11,12 @@
 #     -H "Content-Type: application/json" \
 #     -d '{"model": "claude-sonnet-5", "messages": [{"role": "user", "content": "hi"}]}'
 
-vars:
-  dir: .airllm
-
 data_plane:
   bundle:
     kind: local
     path: bundle.standalone.yml
   events:
-    cache_dir: ${var:dir} # usage events queue here in sqlite; nothing ships them without a control plane
+    kind: devnull
   secrets:
     # Explicit on purpose: provider keys resolve from the environment as {PROVIDER}_API_KEY,
     # so the provider_id in the bundle decides the variable name.

@@ -8,7 +8,7 @@ from pydantic import ValidationError
 
 from contract import public_key_to_b64
 from data_plane.bundle import LocalBundleConfig, RemoteBundleConfig
-from data_plane.config import load_config
+from data_plane.config import DevNullOutboxConfig, load_config
 
 PUBLIC_KEY_B64 = public_key_to_b64(Ed25519PrivateKey.generate().public_key())
 
@@ -66,9 +66,24 @@ def test_defaults_apply_for_missing_sections(clean_env):
     config = load_config()
     assert config.control_plane.url is None
     assert isinstance(config.bundle, RemoteBundleConfig)
+    assert isinstance(config.events, DevNullOutboxConfig)
     assert config.bundle.poll_interval_s == 30.0
-    assert config.events.flush_interval_s == 5.0
     assert config.bundle.staleness_policy == "serve_and_warn"
+
+
+def test_outbox_kind_discriminates_the_config(clean_env):
+    config = f"data_plane:\n  bundle:\n    kind: remote\n    verify_key: {PUBLIC_KEY_B64}\n  events:\n    kind: devnull\n"
+    (clean_env / "airllm.yml").write_text(config, encoding="utf-8")
+
+    assert isinstance(load_config().events, DevNullOutboxConfig)
+
+
+def test_sqlite_outbox_requires_a_control_plane(clean_env):
+    config = f"data_plane:\n  bundle:\n    kind: remote\n    verify_key: {PUBLIC_KEY_B64}\n  events:\n    kind: sqlite\n"
+    (clean_env / "airllm.yml").write_text(config, encoding="utf-8")
+
+    with pytest.raises(ValidationError, match=r"sqlite event outbox requires data_plane\.control_plane\.url"):
+        load_config()
 
 
 def test_a_local_bundle_source_parses_without_a_verify_key(clean_env):

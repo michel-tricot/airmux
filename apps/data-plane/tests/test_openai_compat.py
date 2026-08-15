@@ -13,7 +13,7 @@ import httpx
 import openai
 import pytest
 import respx
-from conftest import MODEL, PROVIDER, TEXT_LOG, TEXT_NONSTREAM, make_adapter
+from conftest import MODEL, PROVIDER, TEXT_LOG, TEXT_NONSTREAM, make_adapter, mock_control_plane
 from openai import OpenAI
 from openai.types.chat import ChatCompletionMessageFunctionToolCall
 from starlette.datastructures import Headers
@@ -88,6 +88,7 @@ def _sdk(client: TestClient, api_key: str) -> OpenAI:
 @respx.mock
 def test_the_sdk_completes_a_text_round_trip(api_key, dp_app):
     respx.post(UPSTREAM).mock(return_value=httpx.Response(200, json=TEXT_NONSTREAM))
+    mock_control_plane()
     with TestClient(dp_app) as client:
         completion = _sdk(client, api_key).chat.completions.create(model="gpt-test", messages=[{"role": "user", "content": "hi"}])
     assert completion.choices[0].message.content == "héllo \U0001f30d world"
@@ -115,6 +116,7 @@ def test_the_sdk_completes_a_tool_round_trip(api_key, dp_app):
         "usage": {"prompt_tokens": 9, "completion_tokens": 4, "total_tokens": 13},
     }
     route = respx.post(UPSTREAM).mock(return_value=httpx.Response(200, json=upstream_reply))
+    mock_control_plane()
     with TestClient(dp_app) as client:
         completion = _sdk(client, api_key).chat.completions.create(
             model="gpt-test",
@@ -138,6 +140,7 @@ def test_the_sdk_completes_a_tool_round_trip(api_key, dp_app):
 @respx.mock
 def test_the_sdk_parses_the_stream(api_key, dp_app):
     respx.post(UPSTREAM).mock(return_value=httpx.Response(200, content=TEXT_LOG))
+    mock_control_plane()
     with TestClient(dp_app) as client:
         stream = _sdk(client, api_key).chat.completions.create(model="gpt-test", messages=[{"role": "user", "content": "hi"}], stream=True)
         chunks = list(stream)
@@ -153,6 +156,7 @@ def test_the_sdk_parses_the_stream(api_key, dp_app):
 @respx.mock
 def test_what_the_gateway_dropped_is_visible_to_the_sdk_caller(api_key, dp_app):
     respx.post(UPSTREAM).mock(return_value=httpx.Response(200, json=TEXT_NONSTREAM))
+    mock_control_plane()
     with TestClient(dp_app) as client:
         completion = _sdk(client, api_key).chat.completions.create(
             model="gpt-test", messages=[{"role": "user", "content": "hi"}], extra_body={"n": 2}
@@ -191,6 +195,7 @@ def test_an_unknown_tool_choice_variant_is_never_silently_none():
 @respx.mock
 def test_a_forwardable_extra_reaches_the_provider_with_no_adjustment(api_key, dp_app):
     route = respx.post(UPSTREAM).mock(return_value=httpx.Response(200, json=TEXT_NONSTREAM))
+    mock_control_plane()
     with TestClient(dp_app) as client:
         completion = _sdk(client, api_key).chat.completions.create(
             model="gpt-test", messages=[{"role": "user", "content": "hi"}], extra_body={"frequency_penalty": 0.5}
@@ -212,6 +217,7 @@ def test_errors_come_back_in_the_callers_dialect(api_key, dp_app):
 def test_a_canonical_caller_is_untouched_by_the_interpretation(api_key, dp_app):
     """The mirror invariant from INTERFACE.md: detection never changes a canonical answer."""
     respx.post(UPSTREAM).mock(return_value=httpx.Response(200, json=TEXT_NONSTREAM))
+    mock_control_plane()
     with TestClient(dp_app) as client:
         r = client.post(
             "/v1/chat/completions",
