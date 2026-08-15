@@ -63,7 +63,7 @@ type ButtonProps = Omit<ButtonPrimitiveProps, 'variant' | 'size'> & { variant?: 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   ({ asChild = false, className, variant = 'default', size = 'default', type = 'button', ...props }, ref) => {
     const variants = {
-      default: 'border-0 bg-primary text-primary-foreground shadow-sm hover:bg-primary/90',
+      default: 'border-0 bg-primary text-primary-foreground shadow-[0_0_15px_rgba(97,94,255,0.4)] hover:bg-primary/90',
       secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/80 shadow-sm border border-border/50',
       outline: 'border border-input bg-background/50 hover:border-primary/50 hover:bg-primary/10 hover:text-primary transition-all duration-200',
       ghost: 'border-0 hover:bg-primary/10 hover:text-primary',
@@ -201,7 +201,7 @@ export const Badge = ({
   ...props
 }: React.HTMLAttributes<HTMLDivElement> & { variant?: 'default' | 'secondary' | 'destructive' | 'outline' | 'success' | 'mono' }) => {
   const variants = {
-    default: 'border-primary/30 bg-primary/10 text-primary',
+    default: 'border-primary/30 bg-primary/10 text-primary shadow-[0_0_8px_rgba(97,94,255,0.15)]',
     secondary: 'border-border bg-secondary text-secondary-foreground',
     destructive: 'border-destructive/30 bg-destructive/10 text-destructive',
     success: 'border-success/30 bg-success/10 text-success',

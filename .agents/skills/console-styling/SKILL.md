@@ -53,12 +53,12 @@ token, never the hex or the slate/zinc number behind it:
 | Sidebar | `bg-sidebar`, `text-sidebar-foreground`, `border-sidebar-border`, active `bg-sidebar-accent` |
 | Negative | `text-destructive`, `bg-destructive/10`, `border-destructive/30` |
 
-The palette is monochrome: black surfaces, white primary, grey text. Hue appears only for semantics.
-Positive is `green-500/400` and warning is `amber-500/400`, both used at low alpha for the surface and
-full strength for text and icon, matching the `success` and `destructive` badge shape. Reach for a raw
-Tailwind color only for those two roles; everything else has a token.
+The palette uses near-black, violet-tinted surfaces with violet as the primary accent. Preserve that
+accent across primary actions, focus rings, active navigation, badges, and the ambient page glow.
+Positive and warning states use the `success` and `warning` tokens at low alpha for surfaces and full
+strength for text and icons. Everything else uses a semantic token.
 
-Type is `font-sans` (Inter) with `font-mono` (Space Mono) for ids, tokens, and machine values.
+Type is `font-sans` with `font-mono` for ids, tokens, and machine values.
 
 ## Common patterns
 
