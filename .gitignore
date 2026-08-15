@@ -26,3 +26,6 @@ npm-debug.log
 yarn-error.log
 .cache/
 .local/
+
+# editor and task-runner drop zone; nothing here belongs in the repo
+attached_assets/
