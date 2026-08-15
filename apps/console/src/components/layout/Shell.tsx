@@ -1,7 +1,7 @@
 import { Link, useLocation } from 'wouter';
 import { LayoutDashboard, Building2, Users, KeyRound, LogOut } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/elements';
+import { Avatar, AvatarFallback, Button } from '@/components/ui/elements';
 import { useSession } from '@/lib/session';
 import { GatewayBrand, ResponsiveShell } from '@/components/layout/responsive-shell';
 
@@ -46,9 +46,11 @@ export function Shell({ children }: { children: React.ReactNode }) {
       </nav>
       <div className="shrink-0 border-t border-sidebar-border/50 p-4">
         <div className="mb-4 flex items-center gap-3 px-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-sidebar-accent text-xs font-bold text-sidebar-accent-foreground">
-            {user?.name?.charAt(0) || '?'}
-          </div>
+          <Avatar aria-hidden="true" className="h-8 w-8">
+            <AvatarFallback className="bg-sidebar-accent text-xs font-bold text-sidebar-accent-foreground">
+              {user?.name?.charAt(0) || '?'}
+            </AvatarFallback>
+          </Avatar>
           <div className="flex min-w-0 flex-col">
             <span className="truncate text-sm font-medium text-foreground">{user?.name}</span>
             <span className="text-xs text-sidebar-foreground/50">Administrator</span>

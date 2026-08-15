@@ -3,7 +3,7 @@ import { useLocation } from 'wouter';
 import { useRequiredOrgId } from '@/lib/session';
 import { useWorkspace, useRenameWorkspaceMutation, useDeleteWorkspaceMutation } from '@/features/workspaces/hooks';
 import { useOrgMembers, useWorkspaceMembers, useAddWorkspaceMemberMutation, useRemoveWorkspaceMemberMutation } from '@/features/members/hooks';
-import { Card, Button, Input, Label } from '@/components/ui/elements';
+import { Card, Button, ConfirmButton, Input, Label } from '@/components/ui/elements';
 import { Trash2, Users } from 'lucide-react';
 import { LoadingState, ErrorState } from '@/components/shared/states';
 import { MembersPanel } from '@/components/shared/members-panel';
@@ -23,7 +23,6 @@ function WorkspaceSettingsContent({ workspaceRef }: { workspaceRef: string }) {
   const workspace = workspaceQuery.data;
 
   const [name, setName] = useState<string | null>(null);
-  const [confirming, setConfirming] = useState(false);
 
   const membersQuery = useWorkspaceMembers(orgId, workspaceRef);
   const orgUsersQuery = useOrgMembers(orgId);
@@ -111,28 +110,21 @@ function WorkspaceSettingsContent({ workspaceRef }: { workspaceRef: string }) {
         <p className="text-sm text-muted-foreground">
           Deleting <strong>{workspace.name}</strong> cannot be undone. Usage already recorded remains on the organization’s bill.
         </p>
-        {confirming ? (
-          <div className="flex items-center gap-2">
-            <Button
-              variant="destructive"
-              disabled={remove.isPending}
-              onClick={() => remove.mutate({ workspaceRef }, { onSuccess: () => setLocation('/org') })}
-            >
-              Confirm delete
-            </Button>
-            <Button variant="outline" onClick={() => setConfirming(false)}>
-              Cancel
-            </Button>
-          </div>
-        ) : (
-          <Button
-            variant="outline"
-            className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
-            onClick={() => setConfirming(true)}
-          >
-            <Trash2 className="w-4 h-4 mr-2" /> Delete Workspace
-          </Button>
-        )}
+        <ConfirmButton
+          variant="outline"
+          size="default"
+          className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
+          title="Delete Workspace"
+          description={`Deleting ${workspace.name} also deletes its inference keys and memberships. Usage already recorded remains on the organization’s bill.`}
+          confirmLabel="Delete Workspace"
+          pending={remove.isPending}
+          onConfirm={async () => {
+            await remove.mutateAsync({ workspaceRef });
+            setLocation('/org');
+          }}
+        >
+          <Trash2 className="w-4 h-4 mr-2" /> Delete Workspace
+        </ConfirmButton>
       </Card>
     </PageShell>
   );

@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQueryClient } from '@tanstack/react-query';
 import { useLogin, useSignup, useClaim, getMeQueryKey, type MeOut } from '@workspace/api-client-react';
-import { Card, Button, Input } from '@/components/ui/elements';
+import { Alert, AlertDescription, Card, Button, Input } from '@/components/ui/elements';
 import { TerminalSquare } from 'lucide-react';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 
@@ -113,11 +113,13 @@ export default function Login() {
             />
 
             {error && (
-              <div role="alert" className="p-3 rounded-md bg-destructive/10 border border-destructive/20 text-destructive text-sm">
-                {mode === 'login'
-                  ? 'Sign in failed. Check your email and password.'
-                  : 'We couldn’t create your account. Please check your details and try again.'}
-              </div>
+              <Alert variant="destructive">
+                <AlertDescription>
+                  {mode === 'login'
+                    ? 'Sign in failed. Check your email and password.'
+                    : 'We couldn’t create your account. Please check your details and try again.'}
+                </AlertDescription>
+              </Alert>
             )}
 
             <Button type="submit" className="w-full" disabled={pending}>

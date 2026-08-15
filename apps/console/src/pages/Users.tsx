@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import * as z from 'zod';
-import { Card, Button, Input, Badge } from '@/components/ui/elements';
+import { Avatar, AvatarFallback, Card, Button, Input, Badge } from '@/components/ui/elements';
 import { Users, Plus, Search, Bot } from 'lucide-react';
 import { formatDate } from '@/lib/format';
 import { Link } from 'wouter';
@@ -85,9 +85,9 @@ export default function UsersList() {
               cellClassName: 'font-medium',
               cell: (user) => (
                 <Link href={`/instance/users/${user.id}`} className="flex items-center gap-2 hover:text-primary transition-colors">
-                  <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center text-xs font-bold text-muted-foreground">
-                    {user.name.charAt(0)}
-                  </div>
+                  <Avatar aria-hidden="true" className="h-6 w-6">
+                    <AvatarFallback className="text-xs font-bold">{user.name.charAt(0)}</AvatarFallback>
+                  </Avatar>
                   {user.name}
                 </Link>
               ),

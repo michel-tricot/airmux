@@ -3,15 +3,45 @@ import { cn } from '@/lib/utils';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import * as TabsPrimitive from '@radix-ui/react-tabs';
 import * as SelectPrimitive from '@radix-ui/react-select';
+import { Slot } from '@radix-ui/react-slot';
 import { X, Check, ChevronsUpDown } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Sheet, SheetClose, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+
+export {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
+  Sheet,
+  SheetClose,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+};
 
 export const Button = forwardRef<
   HTMLButtonElement,
   React.ButtonHTMLAttributes<HTMLButtonElement> & {
     variant?: 'default' | 'outline' | 'ghost' | 'destructive' | 'secondary';
     size?: 'default' | 'sm' | 'lg' | 'icon';
+    asChild?: boolean;
   }
->(({ className, variant = 'default', size = 'default', type = 'button', ...props }, ref) => {
+>(({ asChild = false, className, variant = 'default', size = 'default', type = 'button', ...props }, ref) => {
   const variants = {
     default: 'bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm',
     secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/80 shadow-sm border border-border/50',
@@ -25,10 +55,11 @@ export const Button = forwardRef<
     lg: 'h-10 rounded px-8 text-[13px]',
     icon: 'h-9 w-9',
   };
+  const Component = asChild ? Slot : 'button';
   return (
-    <button
+    <Component
       ref={ref}
-      type={type}
+      type={asChild ? undefined : type}
       className={cn(
         'inline-flex items-center justify-center whitespace-nowrap rounded font-mono font-bold uppercase tracking-wider transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50',
         variants[variant],
@@ -262,21 +293,23 @@ export const ConfirmButton = ({
 } & Omit<React.ComponentProps<typeof Button>, 'onClick' | 'title'>) => {
   const [open, setOpen] = React.useState(false);
   return (
-    <>
-      <Button
-        variant={variant}
-        size={size}
-        className={cn('text-destructive hover:bg-destructive/10 hover:text-destructive', className)}
-        onClick={() => setOpen(true)}
-        {...props}
-      >
-        {children}
-      </Button>
-      <Modal open={open} onOpenChange={setOpen} title={title} description={description}>
-        <div className="flex justify-end gap-2 pt-2">
-          <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-            Cancel
-          </Button>
+    <AlertDialog open={open} onOpenChange={setOpen}>
+      <AlertDialogTrigger asChild>
+        <Button variant={variant} size={size} className={cn('text-destructive hover:bg-destructive/10 hover:text-destructive', className)} {...props}>
+          {children}
+        </Button>
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>{title}</AlertDialogTitle>
+          <AlertDialogDescription>{description ?? 'This action cannot be undone.'}</AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel asChild>
+            <Button type="button" variant="outline">
+              Cancel
+            </Button>
+          </AlertDialogCancel>
           <Button
             variant="destructive"
             disabled={pending}
@@ -291,9 +324,9 @@ export const ConfirmButton = ({
           >
             {confirmLabel}
           </Button>
-        </div>
-      </Modal>
-    </>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 };
 

@@ -1,4 +1,4 @@
-import { Modal, Button, Input, Label } from '@/components/ui/elements';
+import { Alert, AlertDescription, Modal, Button, Input, Label } from '@/components/ui/elements';
 import { Copy, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
@@ -29,12 +29,12 @@ export function KeyRevealDialog({ open, onOpenChange, token }: { open: boolean; 
   return (
     <Modal open={open} onOpenChange={onOpenChange} title="Key Generated Successfully">
       <div className="space-y-6 pt-2">
-        <div className="p-4 bg-warning/10 border border-warning/20 rounded-lg flex gap-3 text-warning">
-          <AlertTriangle className="w-5 h-5 flex-shrink-0 mt-0.5" />
-          <p className="text-sm">
+        <Alert role="note" variant="warning">
+          <AlertTriangle />
+          <AlertDescription>
             Please copy this key and store it somewhere safe. <strong>You will not be able to see it again.</strong>
-          </p>
-        </div>
+          </AlertDescription>
+        </Alert>
 
         <div className="space-y-2">
           <Label htmlFor="generated-key">Key Secret</Label>

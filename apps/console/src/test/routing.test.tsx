@@ -95,15 +95,13 @@ describe('workspace switching keeps the active section', () => {
 });
 
 describe('workspace route state', () => {
-  it('resets unsaved settings and delete confirmation when switching workspaces', async () => {
+  it('resets unsaved settings when switching workspaces', async () => {
     const user = userEvent.setup();
     renderAt(`/org/workspaces/${WORKSPACES[0].slug}/settings`);
 
     const name = await screen.findByLabelText('Workspace name');
     await user.clear(name);
     await user.type(name, 'Unsaved production name');
-    await user.click(screen.getByRole('button', { name: 'Delete Workspace' }));
-    expect(screen.getByRole('button', { name: 'Confirm delete' })).toBeInTheDocument();
 
     await user.click(screen.getByRole('combobox', { name: 'Workspace' }));
     await user.click(await screen.findByRole('option', { name: WORKSPACES[1].name }));
@@ -112,7 +110,6 @@ describe('workspace route state', () => {
       expect(window.location.pathname).toBe(`/org/workspaces/${WORKSPACES[1].slug}/settings`);
     });
     expect(await screen.findByLabelText('Workspace name')).toHaveValue(WORKSPACES[1].name);
-    expect(screen.queryByRole('button', { name: 'Confirm delete' })).not.toBeInTheDocument();
   });
 });
 

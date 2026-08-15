@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import * as z from 'zod';
-import { Card, Button, Dropdown, Modal, Badge, ConfirmButton } from '@/components/ui/elements';
+import { Avatar, AvatarFallback, Card, Button, Dropdown, Badge, ConfirmButton } from '@/components/ui/elements';
 import { ArrowLeft, Building2, KeyRound, Plus, UserMinus, Trash2 } from 'lucide-react';
 import { formatDate } from '@/lib/format';
 import { Link, useLocation } from 'wouter';
@@ -28,7 +28,6 @@ export default function UserDetail() {
   const managementKeysQuery = useAllManagementKeys();
 
   const [addOpen, setAddOpen] = useState(false);
-  const [deleteOpen, setDeleteOpen] = useState(false);
 
   const addMember = useAddUserToOrgMutation();
   const removeMember = useRemoveUserFromOrgMutation();
@@ -53,9 +52,9 @@ export default function UserDetail() {
 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <div className="w-16 h-16 rounded-full bg-primary flex items-center justify-center text-2xl font-bold text-primary-foreground shadow-lg">
-            {user.name.charAt(0)}
-          </div>
+          <Avatar aria-hidden="true" className="h-16 w-16 shadow-lg">
+            <AvatarFallback className="bg-primary text-2xl font-bold text-primary-foreground">{user.name.charAt(0)}</AvatarFallback>
+          </Avatar>
           <div>
             <h1 className="text-3xl font-bold tracking-tight">{user.name}</h1>
             <p className="text-muted-foreground text-sm">{user.email}</p>
@@ -64,13 +63,21 @@ export default function UserDetail() {
         </div>
         <div className="flex items-center gap-3">
           <Badge variant={user.service_account ? 'secondary' : 'outline'}>{user.service_account ? 'SERVICE ACCOUNT' : 'HUMAN'}</Badge>
-          <Button
+          <ConfirmButton
             variant="outline"
+            size="default"
             className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
-            onClick={() => setDeleteOpen(true)}
+            title="Delete User"
+            description="Their sign-in identities, sessions, and personal keys go with them. Users who still hold memberships, own a personal organization, or minted inference keys must be cleared first."
+            confirmLabel="Delete User"
+            pending={deleteUser.isPending}
+            onConfirm={async () => {
+              await deleteUser.mutateAsync({ userId: user.id });
+              setLocation('/instance/users');
+            }}
           >
             <Trash2 className="w-4 h-4 mr-2" /> Delete
-          </Button>
+          </ConfirmButton>
         </div>
       </div>
 
@@ -186,31 +193,6 @@ export default function UserDetail() {
           </Card>
         </div>
       </div>
-
-      <Modal
-        open={deleteOpen}
-        onOpenChange={setDeleteOpen}
-        title="Delete User"
-        description="Their sign-in identities, sessions and personal keys go with them."
-      >
-        <div className="space-y-4 pt-4">
-          <p className="text-sm text-muted-foreground">
-            A user who still holds memberships, owns a personal org, or minted inference keys is refused; clear those first.
-          </p>
-          <div className="flex justify-end gap-2 pt-4">
-            <Button type="button" variant="outline" onClick={() => setDeleteOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              disabled={deleteUser.isPending}
-              onClick={() => deleteUser.mutate({ userId: user.id }, { onSuccess: () => setLocation('/instance/users') })}
-            >
-              Delete User
-            </Button>
-          </div>
-        </div>
-      </Modal>
 
       <FormDialog
         open={addOpen}

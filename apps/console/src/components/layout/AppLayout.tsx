@@ -17,7 +17,7 @@ import {
   Plus,
 } from 'lucide-react';
 import { useEnrollment } from '@workspace/api-client-react';
-import { Button, Input, Dropdown } from '@/components/ui/elements';
+import { Avatar, AvatarFallback, Badge, Button, Input, Dropdown } from '@/components/ui/elements';
 import { cn } from '@/lib/utils';
 import { FormDialog } from '@/components/shared/form-dialog';
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -148,11 +148,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 >
                   <Icon className="h-4 w-4 shrink-0" />
                   <span className="truncate">{label}</span>
-                  {soon && (
-                    <span className="ml-auto inline-flex items-center rounded-full border border-primary/20 bg-primary/10 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-primary">
-                      Soon
-                    </span>
-                  )}
+                  {soon && <Badge className="ml-auto rounded-full px-1.5 py-0.5 text-[9px]">Soon</Badge>}
                 </Link>
               );
             })
@@ -193,9 +189,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
       <div className="shrink-0 border-t border-border/50 bg-muted/30 p-4">
         <div className="mb-4 flex items-center gap-3 px-1">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
-            {user?.name?.charAt(0) || '?'}
-          </div>
+          <Avatar aria-hidden="true" className="h-8 w-8">
+            <AvatarFallback className="bg-primary/10 text-sm font-bold text-primary">{user?.name?.charAt(0) || '?'}</AvatarFallback>
+          </Avatar>
           <div className="flex min-w-0 flex-1 flex-col">
             <span className="truncate text-sm font-medium leading-tight text-foreground">{user?.name}</span>
             <span className="truncate text-xs text-muted-foreground">{user?.email}</span>
@@ -207,15 +203,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             Sign out
           </Button>
           {user?.instance_admin && (
-            <Link
-              href="/instance"
-              onClick={close}
-              title="Instance admin"
-              aria-label="Instance admin"
-              className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              <Shield className="h-4 w-4" />
-            </Link>
+            <Button asChild variant="ghost" size="icon" className="h-8 w-8 shrink-0 text-muted-foreground hover:text-primary">
+              <Link href="/instance" onClick={close} title="Instance admin" aria-label="Instance admin">
+                <Shield className="h-4 w-4" />
+              </Link>
+            </Button>
           )}
         </div>
       </div>

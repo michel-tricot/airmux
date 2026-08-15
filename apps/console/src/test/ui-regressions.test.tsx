@@ -1,10 +1,12 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import App from '@/App';
 import { KeyRevealDialog } from '@/components/KeyRevealDialog';
+import { Button, ConfirmButton } from '@/components/ui/elements';
 import { ORG, WORKSPACES, server } from './msw';
+import { Link } from 'wouter';
 
 const now = '2026-01-01T00:00:00Z';
 
@@ -74,5 +76,34 @@ describe('show-once keys', () => {
 
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Copy key' })).toBeInTheDocument();
+  });
+});
+
+describe('shared controls', () => {
+  it('composes button styling onto navigation without nesting interactive controls', () => {
+    render(
+      <Button asChild>
+        <Link href="/next">Continue</Link>
+      </Button>,
+    );
+
+    const link = screen.getByRole('link', { name: 'Continue' });
+    expect(link.closest('button')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Continue' })).not.toBeInTheDocument();
+  });
+
+  it('uses alert-dialog semantics and stays open when confirmation fails', async () => {
+    const user = userEvent.setup();
+    render(
+      <ConfirmButton title="Delete organization" onConfirm={() => Promise.reject(new Error('failed'))}>
+        Delete
+      </ConfirmButton>,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Delete' }));
+    const dialog = screen.getByRole('alertdialog', { name: 'Delete organization' });
+    await user.click(within(dialog).getByRole('button', { name: 'Delete' }));
+
+    expect(screen.getByRole('alertdialog', { name: 'Delete organization' })).toBeInTheDocument();
   });
 });

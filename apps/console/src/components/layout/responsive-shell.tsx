@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import { Menu, TerminalSquare } from 'lucide-react';
 import { Link } from 'wouter';
-import { Button, Modal } from '@/components/ui/elements';
+import { Button, Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/elements';
 import { cn } from '@/lib/utils';
 
 interface ResponsiveShellProps {
@@ -43,14 +43,15 @@ export function ResponsiveShell({ brand, navigationLabel, sidebar, children, asi
         </header>
         <main className={cn('relative flex min-w-0 flex-1 flex-col overflow-auto', mainClassName)}>{children}</main>
       </div>
-      <Modal
-        open={open}
-        onOpenChange={setOpen}
-        title={navigationLabel}
-        contentClassName="left-0 top-0 h-[100dvh] w-[min(20rem,calc(100%-2rem))] max-w-none translate-x-0 translate-y-0 grid-rows-[auto_1fr] gap-0 overflow-hidden rounded-none p-0"
-      >
-        <div className="min-h-0 overflow-y-auto">{sidebar(() => setOpen(false))}</div>
-      </Modal>
+      <Sheet open={open} onOpenChange={setOpen}>
+        <SheetContent side="left" className="grid w-[min(20rem,calc(100%-2rem))] grid-rows-[auto_1fr] gap-0 overflow-hidden p-0">
+          <SheetHeader className="border-b border-border px-4 py-4">
+            <SheetTitle>{navigationLabel}</SheetTitle>
+            <SheetDescription className="sr-only">Navigate between console sections</SheetDescription>
+          </SheetHeader>
+          <div className="min-h-0 overflow-y-auto">{sidebar(() => setOpen(false))}</div>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

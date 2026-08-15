@@ -1,18 +1,10 @@
 import { useRequiredOrgId } from '@/lib/session';
 import { useWorkspace } from '@/features/workspaces/hooks';
-import { Card } from '@/components/ui/elements';
+import { Badge, Card } from '@/components/ui/elements';
 import { type LucideIcon } from 'lucide-react';
 import { useRequiredParam } from '@/lib/route';
 import { ErrorState, LoadingState } from '@/components/shared/states';
 import { PageShell } from '@/components/shared/page-shell';
-
-function ComingSoonPill() {
-  return (
-    <span className="inline-flex items-center rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-primary">
-      Coming soon
-    </span>
-  );
-}
 
 export default function WorkspaceComingSoon({ title, description, icon: Icon }: { title: string; description: string; icon: LucideIcon }) {
   const workspaceRef = useRequiredParam('workspaceRef');
@@ -26,7 +18,7 @@ export default function WorkspaceComingSoon({ title, description, icon: Icon }: 
     <PageShell>
       <div className="flex items-center gap-3">
         <h1 className="text-3xl font-bold tracking-tight">{title}</h1>
-        <ComingSoonPill />
+        <Badge className="rounded-full">Coming soon</Badge>
       </div>
       <p className="text-muted-foreground text-sm -mt-4">{workspaceQuery.data ? `Workspace ${workspaceQuery.data.name}` : ''}</p>
 

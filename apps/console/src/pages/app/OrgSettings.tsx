@@ -4,7 +4,7 @@ import { useRequiredOrgId } from '@/lib/session';
 import { useManagementKeys, useMintManagementKeyMutation, useRevokeManagementKeyMutation } from '@/features/keys/hooks';
 import { useOrgMembers } from '@/features/members/hooks';
 import { useBundles, useCompileBundleMutation, useOrgActivity } from '@/features/telemetry/hooks';
-import { Card, Button, Input, Badge, Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/elements';
+import { Avatar, AvatarFallback, Card, Button, Input, Badge, Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/elements';
 import { Plus, Key, Settings, Package, RefreshCw, Users, Activity } from 'lucide-react';
 import { formatDate, formatRelative } from '@/lib/format';
 import { KeyRevealDialog } from '@/components/KeyRevealDialog';
@@ -150,9 +150,9 @@ export default function AppOrgSettings() {
                   cellClassName: 'font-medium',
                   cell: (member) => (
                     <span className="flex items-center gap-2">
-                      <span className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs">
-                        {member.name.charAt(0)}
-                      </span>
+                      <Avatar aria-hidden="true" className="h-6 w-6">
+                        <AvatarFallback className="bg-primary/10 text-xs font-bold text-primary">{member.name.charAt(0)}</AvatarFallback>
+                      </Avatar>
                       {member.name}
                     </span>
                   ),

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import * as z from 'zod';
-import { Card, Button, Input, Modal, Badge, Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/elements';
-import { Building2, Plus, ArrowLeft, Key, TerminalSquare, Users, Pencil, Trash2, ShieldAlert } from 'lucide-react';
+import { Card, Button, Input, Badge, ConfirmButton, Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/elements';
+import { Building2, Plus, ArrowLeft, Key, TerminalSquare, Users, Pencil, Trash2 } from 'lucide-react';
 import { formatDate } from '@/lib/format';
 import { Link, useLocation } from 'wouter';
 import { useOrg, useRenameOrgMutation, useDeleteOrgMutation } from '@/features/orgs/hooks';
@@ -38,7 +38,6 @@ export default function OrganizationDetail() {
 
   const [wsOpen, setWsOpen] = useState(false);
   const [renameOpen, setRenameOpen] = useState(false);
-  const [deleteOpen, setDeleteOpen] = useState(false);
 
   const createWorkspace = useCreateWorkspaceMutation(orgId);
   const revokeKey = useRevokeManagementKeyMutation(orgId);
@@ -73,13 +72,21 @@ export default function OrganizationDetail() {
           <Button variant="outline" onClick={() => setRenameOpen(true)}>
             <Pencil className="w-4 h-4 mr-2" /> Rename
           </Button>
-          <Button
+          <ConfirmButton
             variant="outline"
+            size="default"
             className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
-            onClick={() => setDeleteOpen(true)}
+            title="Delete Organization"
+            description={`This permanently deletes ${org.name}, its workspaces, keys, members, and policies. Usage already recorded remains on the organization’s bill.`}
+            confirmLabel="Delete Organization"
+            pending={deleteOrg.isPending}
+            onConfirm={async () => {
+              await deleteOrg.mutateAsync({ orgId: org.id });
+              setLocation('/instance/organizations');
+            }}
           >
             <Trash2 className="w-4 h-4 mr-2" /> Delete
-          </Button>
+          </ConfirmButton>
         </div>
       </div>
 
@@ -229,34 +236,6 @@ export default function OrganizationDetail() {
           />
         )}
       </FormDialog>
-
-      <Modal
-        open={deleteOpen}
-        onOpenChange={setDeleteOpen}
-        title="Delete Organization"
-        description="This permanently deletes the organization, its workspaces, keys, members, and policies."
-      >
-        <div className="space-y-4 pt-4">
-          <div className="p-4 bg-destructive/10 text-destructive rounded-md flex items-start gap-3 border border-destructive/20">
-            <ShieldAlert className="w-5 h-5 flex-shrink-0 mt-0.5" />
-            <p className="text-sm font-medium">
-              Deleting <strong>{org.name}</strong> cannot be undone. Usage already recorded remains on the organization’s bill.
-            </p>
-          </div>
-          <div className="flex justify-end gap-2 pt-4">
-            <Button type="button" variant="outline" onClick={() => setDeleteOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              disabled={deleteOrg.isPending}
-              onClick={() => deleteOrg.mutate({ orgId: org.id }, { onSuccess: () => setLocation('/instance/organizations') })}
-            >
-              Delete Organization
-            </Button>
-          </div>
-        </div>
-      </Modal>
 
       <FormDialog
         open={renameOpen}

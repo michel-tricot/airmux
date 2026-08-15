@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import * as z from 'zod';
-import { Button, Input, Modal, Badge, Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/elements';
+import { Button, Input, Badge, ConfirmButton, Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/elements';
 import { TerminalSquare, Plus, ArrowLeft, Key, Users, Pencil, Trash2 } from 'lucide-react';
 import { Link, useLocation } from 'wouter';
 import { useWorkspace, useRenameWorkspaceMutation, useDeleteWorkspaceMutation } from '@/features/workspaces/hooks';
@@ -40,7 +40,6 @@ export function WorkspacePanel({ orgId, workspaceRef, backHref, backLabel }: Wor
 
   const [keyOpen, setKeyOpen] = useState(false);
   const [renameOpen, setRenameOpen] = useState(false);
-  const [deleteOpen, setDeleteOpen] = useState(false);
   const [token, setToken] = useState<string | null>(null);
 
   const createKey = useCreateInferenceKeyMutation(orgId, workspaceRef);
@@ -78,13 +77,21 @@ export function WorkspacePanel({ orgId, workspaceRef, backHref, backLabel }: Wor
           <Button variant="outline" onClick={() => setRenameOpen(true)}>
             <Pencil className="w-4 h-4 mr-2" /> Rename
           </Button>
-          <Button
+          <ConfirmButton
             variant="outline"
+            size="default"
             className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
-            onClick={() => setDeleteOpen(true)}
+            title="Delete Workspace"
+            description={`Deleting ${workspace.name} also deletes its inference keys and memberships. Usage already recorded remains on the organization’s bill.`}
+            confirmLabel="Delete Workspace"
+            pending={remove.isPending}
+            onConfirm={async () => {
+              await remove.mutateAsync({ workspaceRef });
+              setLocation(backHref);
+            }}
           >
             <Trash2 className="w-4 h-4 mr-2" /> Delete
-          </Button>
+          </ConfirmButton>
         </div>
       </div>
 
@@ -177,26 +184,6 @@ export function WorkspacePanel({ orgId, workspaceRef, backHref, backLabel }: Wor
           />
         )}
       </FormDialog>
-
-      <Modal open={deleteOpen} onOpenChange={setDeleteOpen} title="Delete Workspace" description="Its inference keys and its members go with it.">
-        <div className="space-y-4 pt-4">
-          <p className="text-sm text-muted-foreground">
-            Deleting <strong>{workspace.name}</strong> cannot be undone. Usage already recorded remains on the organization’s bill.
-          </p>
-          <div className="flex justify-end gap-2 pt-4">
-            <Button type="button" variant="outline" onClick={() => setDeleteOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              disabled={remove.isPending}
-              onClick={() => remove.mutate({ workspaceRef }, { onSuccess: () => setLocation(backHref) })}
-            >
-              Delete Workspace
-            </Button>
-          </div>
-        </div>
-      </Modal>
 
       <FormDialog
         open={renameOpen}
