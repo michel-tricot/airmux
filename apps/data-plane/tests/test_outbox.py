@@ -13,8 +13,14 @@ from contract import UsageEventV1, uuid7
 from data_plane.outbox import DevNullOutbox, SqliteOutbox, build_outbox
 
 
-def make_outbox(tmp_path, url="http://cp.test", flush_interval_s=5.0) -> SqliteOutbox:
-    return SqliteOutbox(cache_dir=tmp_path, control_plane_url=url, control_plane_token="dp-token", flush_interval_s=flush_interval_s)
+def make_outbox(tmp_path, http_client, url="http://cp.test", flush_interval_s=5.0) -> SqliteOutbox:
+    return SqliteOutbox(
+        cache_dir=tmp_path,
+        control_plane_url=url,
+        control_plane_token="dp-token",
+        flush_interval_s=flush_interval_s,
+        http_client=http_client,
+    )
 
 
 def make_event(request_id) -> UsageEventV1:
@@ -37,8 +43,8 @@ def make_event(request_id) -> UsageEventV1:
     )
 
 
-def test_record_roundtrips_in_order(tmp_path):
-    outbox = make_outbox(tmp_path)
+def test_record_roundtrips_in_order(tmp_path, http_client):
+    outbox = make_outbox(tmp_path, http_client)
     events = [make_event(uuid7()), make_event(uuid7())]
     for e in events:
         outbox.record(e)
@@ -46,8 +52,8 @@ def test_record_roundtrips_in_order(tmp_path):
     assert outbox._pending() == 2
 
 
-def test_record_is_idempotent_on_event_id(tmp_path):
-    outbox = make_outbox(tmp_path)
+def test_record_is_idempotent_on_event_id(tmp_path, http_client):
+    outbox = make_outbox(tmp_path, http_client)
     event = make_event(uuid7())
     outbox.record(event)
     outbox.record(event)
@@ -57,11 +63,11 @@ def test_record_is_idempotent_on_event_id(tmp_path):
 @respx.mock
 async def test_flush_sends_batch_and_deletes(tmp_path, http_client):
     route = respx.post("http://cp.test/v1/events").mock(return_value=httpx.Response(200, json={"received": 2, "ingested": 2}))
-    outbox = make_outbox(tmp_path)
+    outbox = make_outbox(tmp_path, http_client)
     first, second = uuid7(), uuid7()
     outbox.record(make_event(first))
     outbox.record(make_event(second))
-    assert await outbox._flush(http_client) == 2
+    assert await outbox._flush() == 2
     assert outbox._pending() == 0
     sent = json.loads(route.calls.last.request.content)
     assert [e["request_id"] for e in sent] == [str(first), str(second)]
@@ -71,16 +77,16 @@ async def test_flush_sends_batch_and_deletes(tmp_path, http_client):
 @respx.mock
 async def test_failed_flush_keeps_the_events(tmp_path, http_client):
     respx.post("http://cp.test/v1/events").mock(return_value=httpx.Response(503))
-    outbox = make_outbox(tmp_path)
+    outbox = make_outbox(tmp_path, http_client)
     outbox.record(make_event(uuid7()))
     with pytest.raises(httpx.HTTPStatusError):
-        await outbox._flush(http_client)
+        await outbox._flush()
     assert outbox._pending() == 1
 
 
-def test_only_one_holder_wins_the_flush_lease(tmp_path):
-    a = make_outbox(tmp_path)
-    b = make_outbox(tmp_path)
+def test_only_one_holder_wins_the_flush_lease(tmp_path, http_client):
+    a = make_outbox(tmp_path, http_client)
+    b = make_outbox(tmp_path, http_client)
     a._owner = "worker-a"  # stand in for two processes on one shared cache dir
     b._owner = "worker-b"
     assert a._claim_flush(ttl=30, now=1000.0) is True
@@ -89,13 +95,13 @@ def test_only_one_holder_wins_the_flush_lease(tmp_path):
     assert a._claim_flush(ttl=30, now=1041.0) is False
 
 
-async def test_devnull_discards_and_runs_without_work(http_client):
+async def test_devnull_discards_and_runs_without_work():
     outbox = DevNullOutbox()
     outbox.record(make_event(uuid7()))
-    await outbox.run(http_client)  # returns at once, no background work
+    await outbox.run()  # returns at once, no background work
     outbox.close()
 
 
-def test_build_outbox_selects_backend(tmp_path):
-    assert isinstance(build_outbox(make_config(tmp_path)), SqliteOutbox)
-    assert isinstance(build_outbox(make_config(tmp_path, backend="devnull")), DevNullOutbox)
+def test_build_outbox_selects_backend(tmp_path, http_client):
+    assert isinstance(build_outbox(make_config(tmp_path), http_client), SqliteOutbox)
+    assert isinstance(build_outbox(make_config(tmp_path, backend="devnull"), http_client), DevNullOutbox)

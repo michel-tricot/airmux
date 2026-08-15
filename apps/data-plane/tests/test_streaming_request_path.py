@@ -33,8 +33,14 @@ def test_stream_requires_complete_request_context():
 
 
 @pytest.fixture
-def metering(tmp_path) -> Iterator[tuple[Ctx, SqliteOutbox]]:
-    outbox = SqliteOutbox(cache_dir=tmp_path, control_plane_url=None, control_plane_token=None, flush_interval_s=5.0)
+def metering(tmp_path, http_client) -> Iterator[tuple[Ctx, SqliteOutbox]]:
+    outbox = SqliteOutbox(
+        cache_dir=tmp_path,
+        control_plane_url=None,
+        control_plane_token=None,
+        flush_interval_s=5.0,
+        http_client=http_client,
+    )
     ctx = replace(
         CTX,
         request_id=str(uuid7()),

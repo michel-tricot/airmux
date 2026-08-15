@@ -56,23 +56,31 @@ def _connect(cache_dir: Path) -> sqlite3.Connection:
 class SqliteOutbox(EventOutbox):
     """Durable, multi-writer event queue with single-flusher leasing, flushed to the control plane."""
 
-    def __init__(self, cache_dir: Path, control_plane_url: str | None, control_plane_token: str | None, flush_interval_s: float) -> None:
+    def __init__(
+        self,
+        cache_dir: Path,
+        control_plane_url: str | None,
+        control_plane_token: str | None,
+        flush_interval_s: float,
+        http_client: httpx.AsyncClient,
+    ) -> None:
         self._conn = _connect(cache_dir)
         self._owner = str(os.getpid())
         self._url = control_plane_url
         self._token = control_plane_token
         self._flush_interval_s = flush_interval_s
+        self._http_client = http_client
 
     def record(self, event: UsageEventV1) -> None:
         with self._conn:
             self._conn.execute("INSERT OR IGNORE INTO outbox(event_id, body) VALUES (?, ?)", (str(event.event_id), event.model_dump_json()))
 
-    async def run(self, http_client: httpx.AsyncClient) -> None:
+    async def run(self) -> None:
         if not self._url:
             return
 
         async def once() -> None:
-            sent = await self._flush(http_client)
+            sent = await self._flush()
             if sent:
                 logger.info("flushed %d usage events to the control plane", sent)
 
@@ -81,14 +89,14 @@ class SqliteOutbox(EventOutbox):
     def close(self) -> None:
         self._conn.close()
 
-    async def _flush(self, http_client: httpx.AsyncClient) -> int:
+    async def _flush(self) -> int:
         """At-least-once delivery: only the leaseholder sends, then deletes exactly what it sent; the CP dedups on event_id."""
         if not self._url or not self._claim_flush(self._lease_ttl(), time.time()):
             return 0
         events = self._read_batch(BATCH)
         if not events:
             return 0
-        resp = await http_client.post(
+        resp = await self._http_client.post(
             f"{self._url}/v1/events",
             headers={"authorization": f"Bearer {self._token}"},
             json=[e.model_dump(mode="json") for e in events],

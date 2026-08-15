@@ -56,8 +56,14 @@ def _write(tmp_path, text=BUNDLE_YML):
     return path
 
 
-def _recorded(cache_dir):
-    outbox = SqliteOutbox(cache_dir=cache_dir, control_plane_url=None, control_plane_token=None, flush_interval_s=5.0)
+def _recorded(cache_dir, http_client):
+    outbox = SqliteOutbox(
+        cache_dir=cache_dir,
+        control_plane_url=None,
+        control_plane_token=None,
+        flush_interval_s=5.0,
+        http_client=http_client,
+    )
     events = outbox._read_batch(10)
     outbox.close()
     return events
@@ -124,7 +130,7 @@ def test_local_mode_serves_end_to_end(tmp_path, monkeypatch):
 
 
 @respx.mock
-def test_app_instances_keep_their_own_runtime(tmp_path):
+def test_app_instances_keep_their_own_runtime(tmp_path, http_client):
     first_path = tmp_path / "first.yml"
     first_path.write_text(BUNDLE_YML.replace("sk-inf-local-dev", "sk-inf-first"), encoding="utf-8")
     second_path = tmp_path / "second.yml"
@@ -168,5 +174,5 @@ def test_app_instances_keep_their_own_runtime(tmp_path):
     assert first_response.status_code == 200
     assert second_response.status_code == 200
     assert [call.request.headers["authorization"] for call in route.calls] == ["Bearer sk-first", "Bearer sk-second"]
-    assert [event.bundle_id for event in _recorded(first_events)] == [first_bundle.bundle_id]
-    assert [event.bundle_id for event in _recorded(second_events)] == [second_bundle.bundle_id]
+    assert [event.bundle_id for event in _recorded(first_events, http_client)] == [first_bundle.bundle_id]
+    assert [event.bundle_id for event in _recorded(second_events, http_client)] == [second_bundle.bundle_id]

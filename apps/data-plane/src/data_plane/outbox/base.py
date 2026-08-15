@@ -4,8 +4,6 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    import httpx
-
     from contract import UsageEventV1
 
 
@@ -21,7 +19,7 @@ class EventOutbox(ABC):
     def record(self, event: UsageEventV1) -> None:
         """Accept one event. Called inline while serving a request."""
 
-    async def run(self, http_client: httpx.AsyncClient) -> None:  # noqa: ARG002 backends with no export work do not use HTTP
+    async def run(self) -> None:
         """Background export loop; runs until cancelled. The default does nothing, for backends with no background work."""
         return
 
