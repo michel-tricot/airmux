@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 
 import httpx
+import pytest
 import respx
 from anthropic.types import Message, RawMessageStreamEvent
 from conftest import TEXT_LOG, TEXT_NONSTREAM
@@ -156,3 +157,26 @@ def test_errors_speak_this_dialect(api_key, dp_app):
         response = _post(client, api_key, {"model": "ghost", "max_tokens": 8, "messages": [{"role": "user", "content": "hi"}]})
     assert response.status_code == 404
     assert response.json() == {"type": "error", "error": {"type": "unknown_model", "message": ""}}
+
+
+@respx.mock
+@pytest.mark.parametrize("stream", [False, True])
+def test_cross_provider_http_errors_speak_this_dialect(api_key, dp_app, stream):
+    respx.post(UPSTREAM).mock(return_value=httpx.Response(429, json={"error": {"code": "rate_limit_exceeded", "message": "slow down"}}))
+    with TestClient(dp_app) as client:
+        response = _post(
+            client,
+            api_key,
+            {"model": "gpt-test", "max_tokens": 8, "messages": [{"role": "user", "content": "hi"}], "stream": stream},
+        )
+    assert response.status_code == 429
+    assert response.json() == {"type": "error", "error": {"type": "rate_limit_exceeded", "message": "slow down"}}
+
+
+@respx.mock
+def test_cross_provider_transport_errors_speak_this_dialect(api_key, dp_app):
+    respx.post(UPSTREAM).mock(side_effect=httpx.ReadTimeout("timed out"))
+    with TestClient(dp_app) as client:
+        response = _post(client, api_key, {"model": "gpt-test", "max_tokens": 8, "messages": [{"role": "user", "content": "hi"}]})
+    assert response.status_code == 504
+    assert response.json() == {"type": "error", "error": {"type": "upstream_timeout", "message": "timed out"}}

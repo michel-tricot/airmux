@@ -70,9 +70,7 @@ def _prompt_text(request: CanonicalRequest) -> str:
     return "\n".join(_text_of(message.content) for message in request.messages)
 
 
-def record_denied(outbox: EventOutbox | None, key: KeyEntry, bundle_id: UUID, request: CanonicalRequest) -> None:
-    if outbox is None:
-        return
+def record_denied(outbox: EventOutbox, key: KeyEntry, bundle_id: UUID, request: CanonicalRequest) -> None:
     outbox.record(
         UsageEventV1(
             event_id=uuid7(),
@@ -95,47 +93,46 @@ def record_denied(outbox: EventOutbox | None, key: KeyEntry, bundle_id: UUID, re
 
 
 def record_usage(
-    outbox: EventOutbox | None,
+    outbox: EventOutbox,
     ctx: Ctx,
     response: CanonicalResponse,
     status: UsageStatus,
-    request: CanonicalRequest | None = None,
+    request: CanonicalRequest,
 ) -> None:
     usage = response.usage
     if usage.estimated:
         usage = Usage(
-            input_tokens=estimate_tokens(_prompt_text(request), ctx.model) if request else 0,
+            input_tokens=estimate_tokens(_prompt_text(request), ctx.model),
             output_tokens=estimate_tokens(_text_of(response.content), ctx.model),
             estimated=True,
         )
     cost_in, cost_out = cost_breakdown(usage, ctx.model)
     latency_ms = int((time.monotonic() - ctx.started_at) * 1000)
-    if ctx.bundle_id is not None and outbox is not None:
-        outbox.record(
-            UsageEventV1(
-                event_id=uuid7(),
-                request_id=ctx.request_id,
-                occurred_at=datetime.now(tz=UTC),
-                org_id=ctx.org_id,
-                workspace_id=ctx.workspace_id,
-                key_id=ctx.key_id,
-                model_id=ctx.model.model_id,
-                provider_id=ctx.provider.provider_id,
-                bundle_id=ctx.bundle_id,
-                input_tokens=usage.input_tokens,
-                output_tokens=usage.output_tokens,
-                cache_read_tokens=usage.cache_read_tokens,
-                cache_write_tokens=usage.cache_write_tokens,
-                cost_usd=cost_in + cost_out,
-                cost_input_usd=cost_in,
-                cost_output_usd=cost_out,
-                latency_ms=latency_ms,
-                status=status,
-                stream=ctx.stream,
-                credential_id=ctx.credential_id,
-                credential_scope=ctx.credential_scope,
-            ),
-        )
+    outbox.record(
+        UsageEventV1(
+            event_id=uuid7(),
+            request_id=ctx.request_id,
+            occurred_at=datetime.now(tz=UTC),
+            org_id=ctx.org_id,
+            workspace_id=ctx.workspace_id,
+            key_id=ctx.key_id,
+            model_id=ctx.model.model_id,
+            provider_id=ctx.provider.provider_id,
+            bundle_id=ctx.bundle_id,
+            input_tokens=usage.input_tokens,
+            output_tokens=usage.output_tokens,
+            cache_read_tokens=usage.cache_read_tokens,
+            cache_write_tokens=usage.cache_write_tokens,
+            cost_usd=cost_in + cost_out,
+            cost_input_usd=cost_in,
+            cost_output_usd=cost_out,
+            latency_ms=latency_ms,
+            status=status,
+            stream=ctx.stream,
+            credential_id=ctx.credential_id,
+            credential_scope=ctx.credential_scope,
+        ),
+    )
     logger.info(
         "usage request_id=%s model=%s provider=%s status=%s stream=%s input_tokens=%d output_tokens=%d "
         "cache_read=%d cache_write=%d estimated=%s cost_usd=%.6f latency_ms=%d",

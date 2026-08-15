@@ -156,6 +156,19 @@ class UpstreamFunction(BaseModel):
     arguments: str = ""
 
 
+class UpstreamErrorDetail(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    code: str | None = None
+    message: str = ""
+
+
+class UpstreamErrorBody(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    error: UpstreamErrorDetail
+
+
 class UpstreamToolCall(BaseModel):
     model_config = ConfigDict(extra="ignore")
 

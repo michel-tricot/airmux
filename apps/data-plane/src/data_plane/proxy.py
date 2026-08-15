@@ -16,16 +16,15 @@ from typing import TYPE_CHECKING, Any, Literal
 import anyio
 import httpx
 from pydantic import ValidationError
-from starlette.responses import JSONResponse, Response, StreamingResponse
+from starlette.responses import Response, StreamingResponse
 
 from contract import SecretStoreUnavailableError, uuid7
 from data_plane.auth import authenticate
 from data_plane.canonical import Adjustment, CanonicalRequest, CanonicalResponse, GatewayInfo, Usage
 from data_plane.egress import REGISTRY
-from data_plane.egress.base import CanonicalError, Ctx, UpstreamProtocolError, UpstreamStreamError
+from data_plane.egress.base import CanonicalError, Ctx, UpstreamProtocolError, UpstreamResponseError, UpstreamStreamError
 from data_plane.ingress import CANONICAL, resolve
 from data_plane.ingress import REGISTRY as INGRESS
-from data_plane.ingress.canonical import CanonicalResponseStream
 from data_plane.metering import record_denied, record_usage, status_for_error, status_for_upstream
 from data_plane.policy import Allow, Deny, evaluate
 from data_plane.reconcile import reconcile
@@ -42,6 +41,7 @@ if TYPE_CHECKING:
     from data_plane.egress.base import EgressAdapter, StreamState, UpstreamRequest
     from data_plane.ingress import IngressAdapter
     from data_plane.ingress.base import ResponseStream
+    from data_plane.outbox import EventOutbox
 
 
 logger = logging.getLogger("data_plane")
@@ -53,10 +53,6 @@ class RequestRejectedError(Exception):
         self.code = code
         self.message = message
         super().__init__(code)
-
-
-def _error(status: int, code: str, message: str = "") -> JSONResponse:
-    return JSONResponse({"error": {"code": code, "message": message}}, status_code=status)
 
 
 def _rejection(e: RequestRejectedError) -> CanonicalError:
@@ -135,7 +131,7 @@ async def _serve(
 ) -> Response:
     decision = evaluate(req, key, snap, datetime.now(tz=UTC))
     if isinstance(decision, Deny):
-        record_denied(state.outbox, key, snap.bundle.bundle_id, req)
+        record_denied(_outbox(), key, snap.bundle.bundle_id, req)
         raise RequestRejectedError(decision.status, decision.reason)
 
     entry = decision.candidates[0]
@@ -157,28 +153,28 @@ async def _serve(
     adjustments = [*parse_adjustments, *reconcile_adjustments]
     upstream = adapter.transform_request(req, decision.model)
     if req.stream:
-        return await _stream(adapter, ctx, upstream, req, adjustments, ingress.new_stream())
+        return await _stream(adapter, ingress, ctx, upstream, req, adjustments)
     try:
         resp = await client.request(upstream.method, upstream.url, headers=upstream.headers, content=upstream.body)
     except httpx.HTTPError as e:
-        return _upstream_exception(adapter, ctx, e, req)
+        return _upstream_exception(adapter, ingress, ctx, e, req)
     if resp.is_error:
-        return _upstream_error_body(ctx, resp.content, resp.status_code, req)
+        return _upstream_response_error(adapter, ingress, ctx, UpstreamResponseError(resp.status_code, resp.content), req)
     try:
         final = adapter.transform_response(resp.content, ctx).model_copy(update={"gateway": GatewayInfo(adjustments=adjustments)})
     except UpstreamProtocolError as e:
-        return _upstream_exception(adapter, ctx, e, req)
-    record_usage(state.outbox, ctx, final, status="ok", request=req)
+        return _upstream_exception(adapter, ingress, ctx, e, req)
+    record_usage(_outbox(), ctx, final, status="ok", request=req)
     return ingress.render_response(final)
 
 
 async def _stream(  # noqa: PLR0913, PLR0917 the streaming lifecycle genuinely spans these six
     adapter: EgressAdapter,
+    ingress: IngressAdapter,
     ctx: Ctx,
     upstream: UpstreamRequest,
-    req: CanonicalRequest | None = None,
-    adjustments: Sequence[Adjustment] = (),
-    renderer: ResponseStream | None = None,
+    req: CanonicalRequest,
+    adjustments: Sequence[Adjustment],
 ) -> Response:
     """Open the upstream and peek at the status, then hand the socket to the response generator.
 
@@ -191,13 +187,13 @@ async def _stream(  # noqa: PLR0913, PLR0917 the streaming lifecycle genuinely s
             resp = await stack.enter_async_context(client.stream(upstream.method, upstream.url, headers=upstream.headers, content=upstream.body))
             if resp.is_error:
                 body = await resp.aread()
-                return _upstream_error_body(ctx, body, resp.status_code, req)
+                return _upstream_response_error(adapter, ingress, ctx, UpstreamResponseError(resp.status_code, body), req)
         except httpx.HTTPError as e:
-            return _upstream_exception(adapter, ctx, e, req)
+            return _upstream_exception(adapter, ingress, ctx, e, req)
         stream_state = adapter.new_stream_state(ctx)
         handoff = stack.pop_all()
 
-    out = renderer if renderer is not None else CanonicalResponseStream()
+    out = ingress.new_stream()
     return StreamingResponse(_events(adapter, ctx, resp, handoff, stream_state, req, list(adjustments), out), media_type="text/event-stream")
 
 
@@ -207,7 +203,7 @@ async def _events(  # noqa: PLR0913, PLR0917 the streaming lifecycle genuinely s
     resp: httpx.Response,
     handoff: contextlib.AsyncExitStack,
     stream_state: StreamState,
-    req: CanonicalRequest | None,
+    req: CanonicalRequest,
     adjustments: list[Adjustment],
     renderer: ResponseStream,
 ) -> AsyncIterator[bytes]:
@@ -226,13 +222,13 @@ async def _events(  # noqa: PLR0913, PLR0917 the streaming lifecycle genuinely s
             final = adapter.finalize(stream_state)
             for b in renderer.closing(final, adjustments):
                 yield b
-            record_usage(state.outbox, ctx, final, status="ok", request=req)
+            record_usage(_outbox(), ctx, final, status="ok", request=req)
         except (UpstreamProtocolError, UpstreamStreamError, httpx.HTTPError) as e:
             for b in renderer.error(adapter.map_error(e)):
                 yield b
-            record_usage(state.outbox, ctx, adapter.finalize(stream_state), status=status_for_error(e), request=req)
+            record_usage(_outbox(), ctx, adapter.finalize(stream_state), status=status_for_error(e), request=req)
         except (asyncio.CancelledError, anyio.get_cancelled_exc_class()):
-            record_usage(state.outbox, ctx, adapter.finalize(stream_state), status="cancelled", request=req)
+            record_usage(_outbox(), ctx, adapter.finalize(stream_state), status="cancelled", request=req)
             raise
 
 
@@ -263,16 +259,30 @@ def _scope_of(entry: CredentialEntry) -> Literal["platform", "org", "workspace"]
     return "workspace" if entry.ref.workspace_id is not None else "org"
 
 
-def _upstream_exception(adapter: EgressAdapter, ctx: Ctx, e: Exception, req: CanonicalRequest | None) -> Response:
+def _outbox() -> EventOutbox:
+    outbox = state.outbox
+    if outbox is None:
+        msg = "event outbox is not initialized"
+        raise RuntimeError(msg)
+    return outbox
+
+
+def _upstream_exception(adapter: EgressAdapter, ingress: IngressAdapter, ctx: Ctx, e: Exception, req: CanonicalRequest) -> Response:
     err = adapter.map_error(e)
-    record_usage(state.outbox, ctx, _empty_response(ctx), status=status_for_error(e), request=req)
-    return _error(err.status, err.code, err.message)
+    record_usage(_outbox(), ctx, _empty_response(ctx), status=status_for_error(e), request=req)
+    return ingress.render_error(err)
 
 
-def _upstream_error_body(ctx: Ctx, body: bytes, status_code: int, req: CanonicalRequest | None) -> Response:
-    """The provider's own error body passes through untouched; the status is what the gateway meters."""
-    record_usage(state.outbox, ctx, _empty_response(ctx), status=status_for_upstream(status_code), request=req)
-    return Response(content=body, status_code=status_code, media_type="application/json")
+def _upstream_response_error(
+    adapter: EgressAdapter,
+    ingress: IngressAdapter,
+    ctx: Ctx,
+    error: UpstreamResponseError,
+    req: CanonicalRequest,
+) -> Response:
+    err = adapter.map_error(error)
+    record_usage(_outbox(), ctx, _empty_response(ctx), status=status_for_upstream(error.status), request=req)
+    return ingress.render_error(err)
 
 
 def _empty_response(ctx: Ctx) -> CanonicalResponse:

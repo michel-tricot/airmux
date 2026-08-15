@@ -12,6 +12,7 @@ from jsonschema import Draft202012Validator
 from contract import Secret
 from data_plane.canonical import CanonicalRequest
 from data_plane.egress import REGISTRY
+from data_plane.egress.base import UpstreamResponseError
 
 if TYPE_CHECKING:
     from jsonschema.protocols import Validator
@@ -20,6 +21,10 @@ SCHEMA_DIR = Path(__file__).resolve().parents[3] / "taxonomy" / "schemas" / "com
 
 # The reference vendor per wire family: its own extracted schema arbitrates what the adapter renders.
 REFERENCE_SCHEMA = {"openai_compatible": "oai.openai.request.json", "anthropic": "anthropic.anthropic.request.json"}
+ERROR_BODY = {
+    "openai_compatible": ({"error": {"code": "rate_limit_exceeded", "message": "slow down"}}, "rate_limit_exceeded"),
+    "anthropic": ({"type": "error", "error": {"type": "rate_limit_error", "message": "slow down"}}, "rate_limit_error"),
+}
 
 
 def _validator(kind: str) -> Validator:
@@ -49,6 +54,14 @@ def test_the_upstream_request_names_the_upstream_model_and_spends_the_injected_c
     upstream = adapter.transform_request(request_of(CORPUS[0]), model)
     assert json.loads(upstream.body)["model"] == model.upstream_model
     assert "sk-test" in upstream.headers.get("authorization", "") or "sk-test" in upstream.headers.get("x-api-key", "")
+
+
+@pytest.mark.parametrize("kind", sorted(REGISTRY))
+def test_provider_http_errors_become_canonical(kind):
+    adapter, _ = _adapter(kind)
+    body, code = ERROR_BODY[kind]
+    error = adapter.map_error(UpstreamResponseError(429, json.dumps(body).encode()))
+    assert (error.status, error.code, error.message) == (429, code, "slow down")
 
 
 @pytest.mark.parametrize("kind", sorted(REGISTRY))

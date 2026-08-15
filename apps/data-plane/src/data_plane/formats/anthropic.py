@@ -172,6 +172,20 @@ class UpstreamBlock(BaseModel):
     input: dict[str, Any] = Field(default_factory=dict)
 
 
+class UpstreamErrorDetail(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    type: str = "upstream_error"
+    message: str = ""
+
+
+class UpstreamErrorBody(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    type: Literal["error"] = "error"
+    error: UpstreamErrorDetail
+
+
 class UpstreamUsage(BaseModel):
     model_config = ConfigDict(extra="ignore")
 

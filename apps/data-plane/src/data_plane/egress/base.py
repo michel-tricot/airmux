@@ -5,19 +5,13 @@ import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, ClassVar, Literal
-from uuid import UUID
 
 import httpx
 from pydantic import BaseModel
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
-
-NIL_ORG = UUID(int=0)
-NIL_WORKSPACE = UUID(int=0)
-
-if TYPE_CHECKING:
-    from collections.abc import Iterator
+    from collections.abc import Iterator, Mapping
+    from uuid import UUID
 
     from contract import ModelEntry, ProviderEntry, Secret
     from data_plane.canonical import CanonicalChunk, CanonicalRequest, CanonicalResponse
@@ -29,13 +23,12 @@ class CanonicalError(BaseModel):
     message: str
 
 
-def encode(body: BaseModel, aliases: Mapping[str, str] | None = None, extras: Mapping[str, Any] | None = None) -> bytes:
+def encode(body: BaseModel, aliases: Mapping[str, str], extras: Mapping[str, Any]) -> bytes:
     """The wire body: typed fields spelled per the provider's aliases, then the forwardable
     extras merged after them, typed fields winning any collision. Absent fields are omitted:
     a provider must never see a null it would reject."""
-    spelling = aliases or {}
-    rendered = {spelling.get(key, key): value for key, value in body.model_dump(mode="json", exclude_none=True).items()}
-    return json.dumps({**dict(extras or {}), **rendered}).encode()
+    rendered = {aliases.get(key, key): value for key, value in body.model_dump(mode="json", exclude_none=True).items()}
+    return json.dumps({**dict(extras), **rendered}).encode()
 
 
 @dataclass(frozen=True)
@@ -101,6 +94,13 @@ class UpstreamStreamError(Exception):
         super().__init__(message)
 
 
+class UpstreamResponseError(Exception):
+    def __init__(self, status: int, body: bytes) -> None:
+        self.status = status
+        self.body = body
+        super().__init__(f"upstream returned {status}")
+
+
 class UpstreamProtocolError(ValueError):
     @classmethod
     def buffered_response(cls) -> UpstreamProtocolError:
@@ -120,13 +120,13 @@ class Ctx:
     request_id: str
     model: ModelEntry
     provider: ProviderEntry
-    stream: bool = False
-    org_id: UUID = NIL_ORG
-    workspace_id: UUID = NIL_WORKSPACE
-    key_id: str = ""
-    credential_id: UUID | None = None  # which provider key paid, stamped onto the usage event
-    credential_scope: Literal["platform", "org", "workspace"] | None = None
-    bundle_id: UUID | None = None
+    stream: bool
+    org_id: UUID
+    workspace_id: UUID
+    key_id: str
+    credential_id: UUID
+    credential_scope: Literal["platform", "org", "workspace"]
+    bundle_id: UUID
     started_at: float = field(default_factory=time.monotonic)
 
 
@@ -173,14 +173,16 @@ class EgressAdapter(ABC):
         being valid mid-stream.
         """
 
-    def map_error(self, e: Exception) -> CanonicalError:
+    def map_error(self, error: Exception) -> CanonicalError:
         """Transport failures mapped to a canonical error; override only for provider-specific codes."""
-        if isinstance(e, UpstreamProtocolError):
-            return CanonicalError(status=502, code="invalid_upstream_response", message=str(e))
-        if isinstance(e, UpstreamStreamError):
-            return CanonicalError(status=502, code=e.code, message=e.message)
-        if isinstance(e, httpx.TimeoutException):
-            return CanonicalError(status=504, code="upstream_timeout", message=str(e))
-        if isinstance(e, httpx.ConnectError):
-            return CanonicalError(status=502, code="upstream_unreachable", message=str(e))
-        return CanonicalError(status=502, code="upstream_error", message=str(e))
+        if isinstance(error, UpstreamResponseError):
+            return CanonicalError(status=error.status, code="upstream_error", message="")
+        if isinstance(error, UpstreamProtocolError):
+            return CanonicalError(status=502, code="invalid_upstream_response", message=str(error))
+        if isinstance(error, UpstreamStreamError):
+            return CanonicalError(status=502, code=error.code, message=error.message)
+        if isinstance(error, httpx.TimeoutException):
+            return CanonicalError(status=504, code="upstream_timeout", message=str(error))
+        if isinstance(error, httpx.ConnectError):
+            return CanonicalError(status=502, code="upstream_unreachable", message=str(error))
+        return CanonicalError(status=502, code="upstream_error", message=str(error))

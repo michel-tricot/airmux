@@ -27,11 +27,13 @@ from data_plane.canonical import (
     Usage,
 )
 from data_plane.egress.base import (
+    CanonicalError,
     EgressAdapter,
     RawEvent,
     StreamState,
     UpstreamProtocolError,
     UpstreamRequest,
+    UpstreamResponseError,
     UpstreamStreamError,
     encode,
     frame_sse,
@@ -40,6 +42,7 @@ from data_plane.formats.anthropic import (
     MessagesBody,
     UpstreamBlockDelta,
     UpstreamCompletedMessage,
+    UpstreamErrorBody,
     UpstreamStreamEvent,
     UpstreamUsage,
     finish_reason,
@@ -135,6 +138,14 @@ def _block_delta(state: AnthropicStreamState, event: UpstreamStreamEvent) -> lis
     return [CanonicalChunk(id=state.chunk_id, delta=out)] if out is not None else []
 
 
+def _raise_stream_error(data: dict[str, object]) -> None:
+    try:
+        upstream_error = UpstreamErrorBody.model_validate(data)
+    except ValidationError as error:
+        raise UpstreamProtocolError.stream_event() from error
+    raise UpstreamStreamError(code=upstream_error.error.type, message=upstream_error.error.message)
+
+
 class AnthropicAdapter(EgressAdapter):
     kind = "anthropic"
 
@@ -174,6 +185,15 @@ class AnthropicAdapter(EgressAdapter):
             usage=usage_of(message.usage),
         )
 
+    def map_error(self, error: Exception) -> CanonicalError:
+        if not isinstance(error, UpstreamResponseError):
+            return super().map_error(error)
+        try:
+            upstream_error = UpstreamErrorBody.model_validate_json(error.body)
+        except ValidationError:
+            return super().map_error(error)
+        return CanonicalError(status=error.status, code=upstream_error.error.type, message=upstream_error.error.message)
+
     def new_stream_state(self, ctx: Ctx) -> AnthropicStreamState:
         return AnthropicStreamState(ctx=ctx)
 
@@ -190,8 +210,7 @@ class AnthropicAdapter(EgressAdapter):
         if not isinstance(data, dict):
             raise UpstreamProtocolError.stream_event()
         if data.get("type") == "error":
-            payload = data.get("error") if isinstance(data.get("error"), dict) else {}
-            raise UpstreamStreamError(code=str(payload.get("type") or "upstream_error"), message=str(payload.get("message") or ""))
+            _raise_stream_error(data)
         try:
             event = UpstreamStreamEvent.model_validate(data)
         except ValidationError as error:
