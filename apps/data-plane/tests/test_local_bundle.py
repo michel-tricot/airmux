@@ -14,7 +14,7 @@ from contract import FileStoreConfig, Secret
 from data_plane.app import create_app
 from data_plane.auth import authenticate, index_keys
 from data_plane.bundle import BundleHolder, LocalBundleConfig
-from data_plane.bundle.local import load_local, reload_if_changed
+from data_plane.bundle.local import LocalBundleReloader, load_local
 from data_plane.config import Config, EventsConfig
 from data_plane.outbox import SqliteOutbox
 
@@ -56,15 +56,9 @@ def _write(tmp_path, text=BUNDLE_YML):
     return path
 
 
-def _recorded(cache_dir, http_client):
-    outbox = SqliteOutbox(
-        cache_dir=cache_dir,
-        control_plane_url=None,
-        control_plane_token=None,
-        flush_interval_s=5.0,
-        http_client=http_client,
-    )
-    events = outbox._read_batch(10)
+def _recorded(cache_dir):
+    outbox = SqliteOutbox(cache_dir=cache_dir)
+    events = outbox.next_batch(10)
     outbox.close()
     return events
 
@@ -96,19 +90,22 @@ def test_the_bundle_id_follows_the_file_content(tmp_path):
     assert load_local(path, NOW).bundle_id != before.bundle_id
 
 
-def test_a_reload_swaps_on_change_and_survives_a_broken_edit(tmp_path):
+async def test_a_reload_swaps_on_change_and_survives_a_broken_edit(tmp_path):
     path = _write(tmp_path)
     config = LocalBundleConfig(kind="local", path=path)
     holder = BundleHolder()
-    mtime = reload_if_changed(config, holder, 0.0)
+    reloader = LocalBundleReloader(config, holder)
+    await reloader.once()
     assert holder.snapshot is not None
     served = holder.snapshot.bundle.bundle_id
+    snapshot = holder.snapshot
 
-    assert reload_if_changed(config, holder, mtime) == mtime  # unchanged file, no re-admit
+    await reloader.once()
+    assert holder.snapshot is snapshot
 
     path.write_text("keys: []\n", encoding="utf-8")
     with pytest.raises(ValidationError):
-        reload_if_changed(config, holder, mtime)
+        await reloader.once()
     assert holder.snapshot.bundle.bundle_id == served  # the last good bundle keeps serving
 
 
@@ -130,7 +127,7 @@ def test_local_mode_serves_end_to_end(tmp_path, monkeypatch):
 
 
 @respx.mock
-def test_app_instances_keep_their_own_runtime(tmp_path, http_client):
+def test_app_instances_keep_their_own_runtime(tmp_path):
     first_path = tmp_path / "first.yml"
     first_path.write_text(BUNDLE_YML.replace("sk-inf-local-dev", "sk-inf-first"), encoding="utf-8")
     second_path = tmp_path / "second.yml"
@@ -174,5 +171,5 @@ def test_app_instances_keep_their_own_runtime(tmp_path, http_client):
     assert first_response.status_code == 200
     assert second_response.status_code == 200
     assert [call.request.headers["authorization"] for call in route.calls] == ["Bearer sk-first", "Bearer sk-second"]
-    assert [event.bundle_id for event in _recorded(first_events, http_client)] == [first_bundle.bundle_id]
-    assert [event.bundle_id for event in _recorded(second_events, http_client)] == [second_bundle.bundle_id]
+    assert [event.bundle_id for event in _recorded(first_events)] == [first_bundle.bundle_id]
+    assert [event.bundle_id for event in _recorded(second_events)] == [second_bundle.bundle_id]

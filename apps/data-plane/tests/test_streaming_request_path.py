@@ -28,14 +28,8 @@ REQUEST = CanonicalRequest(model="gpt-test", messages=[{"role": "user", "content
 
 
 @pytest.fixture
-def metering(tmp_path, http_client) -> Iterator[tuple[Ctx, SqliteOutbox]]:
-    outbox = SqliteOutbox(
-        cache_dir=tmp_path,
-        control_plane_url=None,
-        control_plane_token=None,
-        flush_interval_s=5.0,
-        http_client=http_client,
-    )
+def metering(tmp_path) -> Iterator[tuple[Ctx, SqliteOutbox]]:
+    outbox = SqliteOutbox(cache_dir=tmp_path)
     ctx = replace(
         CTX,
         request_id=str(uuid7()),
@@ -51,7 +45,7 @@ def metering(tmp_path, http_client) -> Iterator[tuple[Ctx, SqliteOutbox]]:
 
 
 def _event(outbox: SqliteOutbox):
-    (event,) = outbox._read_batch(10)
+    (event,) = outbox.next_batch(10)
     return event
 
 

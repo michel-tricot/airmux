@@ -1,28 +1,20 @@
 from __future__ import annotations
 
-import logging
 import os
 import sqlite3
 import time
 from typing import TYPE_CHECKING
 
-import httpx
-
 from contract import UsageEventV1
 from data_plane.outbox.base import EventOutbox
-from data_plane.tasks import run_periodic
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
     from pathlib import Path
 
-logger = logging.getLogger("data_plane")
-
-BATCH = 1000
-
 # A durable event queue backed by SQLite in WAL mode. Many data plane processes may share one cache
 # dir: SQLite serializes their writes, so every worker records into the same queue and a single
-# leaseholder flushes it. Deletes are keyed on event_id, so even a redundant flush can neither lose
+# leaseholder exports it. Deletes are keyed on event_id, so even a redundant export can neither lose
 # nor double-drop an event, unlike a positional file buffer.
 
 _SCHEMA = (
@@ -54,67 +46,25 @@ def _connect(cache_dir: Path) -> sqlite3.Connection:
 
 
 class SqliteOutbox(EventOutbox):
-    """Durable, multi-writer event queue with single-flusher leasing, flushed to the control plane."""
+    """Durable, multi-writer event queue with single-exporter leasing."""
 
-    def __init__(
-        self,
-        cache_dir: Path,
-        control_plane_url: str | None,
-        control_plane_token: str | None,
-        flush_interval_s: float,
-        http_client: httpx.AsyncClient,
-    ) -> None:
+    def __init__(self, cache_dir: Path) -> None:
         self._conn = _connect(cache_dir)
         self._owner = str(os.getpid())
-        self._url = control_plane_url
-        self._token = control_plane_token
-        self._flush_interval_s = flush_interval_s
-        self._http_client = http_client
 
-    def record(self, event: UsageEventV1) -> None:
+    def record(self, event: UsageEventV1, /) -> None:
         with self._conn:
             self._conn.execute("INSERT OR IGNORE INTO outbox(event_id, body) VALUES (?, ?)", (str(event.event_id), event.model_dump_json()))
-
-    async def run(self) -> None:
-        if not self._url:
-            return
-
-        async def once() -> None:
-            sent = await self._flush()
-            if sent:
-                logger.info("flushed %d usage events to the control plane", sent)
-
-        await run_periodic(once, self._flush_interval_s, (httpx.HTTPError, OSError, sqlite3.Error), "event flush")
 
     def close(self) -> None:
         self._conn.close()
 
-    async def _flush(self) -> int:
-        """At-least-once delivery: only the leaseholder sends, then deletes exactly what it sent; the CP dedups on event_id."""
-        if not self._url or not self._claim_flush(self._lease_ttl(), time.time()):
-            return 0
-        events = self._read_batch(BATCH)
-        if not events:
-            return 0
-        resp = await self._http_client.post(
-            f"{self._url}/v1/events",
-            headers={"authorization": f"Bearer {self._token}"},
-            json=[e.model_dump(mode="json") for e in events],
-        )
-        resp.raise_for_status()
-        self._delete([str(e.event_id) for e in events])
-        return len(events)
-
-    def _read_batch(self, limit: int) -> list[UsageEventV1]:
+    def next_batch(self, limit: int, /) -> list[UsageEventV1]:
         rows = self._conn.execute("SELECT body FROM outbox ORDER BY rowid LIMIT ?", (limit,)).fetchall()
         return [UsageEventV1.model_validate_json(body) for (body,) in rows]
 
-    def _pending(self) -> int:
-        (count,) = self._conn.execute("SELECT COUNT(*) FROM outbox").fetchone()
-        return int(count)
-
-    def _claim_flush(self, ttl: float, now: float) -> bool:
-        """Win or renew the single flush lease. A dead holder's lease expires, so another worker takes over."""
+    def claim_export(self, ttl: float, now: float) -> bool:
+        """Win or renew the export lease, which another worker can take after expiry."""
         with self._conn:
             self._conn.execute(
                 "INSERT INTO flush_lease(id, owner, expires) VALUES (1, ?, ?) "
@@ -125,10 +75,6 @@ class SqliteOutbox(EventOutbox):
             (owner,) = self._conn.execute("SELECT owner FROM flush_lease WHERE id = 1").fetchone()
         return owner == self._owner
 
-    def _delete(self, event_ids: Sequence[str]) -> None:
+    def acknowledge(self, event_ids: Sequence[str], /) -> None:
         with self._conn:
             self._conn.executemany("DELETE FROM outbox WHERE event_id = ?", [(event_id,) for event_id in event_ids])
-
-    def _lease_ttl(self) -> float:
-        """Outlast a few flush intervals so the holder renews before expiry, but fail over quickly if it dies."""
-        return max(self._flush_interval_s * 3, 5.0)

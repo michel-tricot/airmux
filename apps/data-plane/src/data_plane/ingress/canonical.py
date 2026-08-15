@@ -25,7 +25,7 @@ class CanonicalResponseStream:
     """The native stream, exactly as INTERFACE.md locks it: delta frames, one closing chunk
     carrying finish_reason, usage and gateway with no delta, then [DONE]."""
 
-    def start(self, ctx: Ctx) -> list[bytes]:  # noqa: ARG002 uniform ResponseStream signature
+    def start(self, _ctx: Ctx, /) -> list[bytes]:
         return []
 
     def chunk(self, c: CanonicalChunk) -> list[bytes]:
@@ -44,7 +44,7 @@ class CanonicalResponseStream:
 class CanonicalIngress(IngressAdapter):
     dialect = "canonical"
 
-    def claims(self, headers: Headers, body: dict[str, Any]) -> bool:  # noqa: ARG002 uniform claims signature
+    def claims(self, _headers: Headers, _body: dict[str, Any], /) -> bool:
         """Never claims: canonical is what resolve() falls back to when nobody else does."""
         return False
 

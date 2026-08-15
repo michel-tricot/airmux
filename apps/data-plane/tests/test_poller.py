@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import httpx
+import pytest
 import respx
 from conftest import make_config, make_key, make_signed
+from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from data_plane.bundle import BundleHolder, RemoteBundleConfig
@@ -69,3 +71,21 @@ async def test_poll_revocation_updates_holder(tmp_path, http_client):
     route.mock(return_value=httpx.Response(200, content=enveloped(second)))
     await poller.once()
     assert holder.snapshot.key_index == {}
+
+
+@respx.mock
+async def test_poll_signature_failure_identifies_the_bundle_and_signing_key(tmp_path, http_client):
+    signing_key = Ed25519PrivateKey.generate()
+    verify_key = Ed25519PrivateKey.generate()
+    signed = make_signed(signing_key)
+    respx.get("http://cp.test/v1/bundle/latest").mock(return_value=httpx.Response(200, content=enveloped(signed)))
+    holder = BundleHolder()
+
+    with pytest.raises(InvalidSignature) as error:
+        await _poller(tmp_path, holder, verify_key, http_client).once()
+
+    message = str(error.value)
+    assert str(signed.payload.bundle_id) in message
+    assert signed.signing_key_id in message
+    assert holder.snapshot is None
+    assert read_cached_bundle(tmp_path) is None

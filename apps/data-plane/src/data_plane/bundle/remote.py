@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import logging
 from typing import TYPE_CHECKING
 
 import httpx
@@ -15,8 +14,6 @@ if TYPE_CHECKING:
     from data_plane.bundle.config import RemoteBundleConfig
     from data_plane.bundle.holder import BundleHolder
     from data_plane.config import ControlPlaneLink
-
-logger = logging.getLogger("data_plane")
 
 
 class BundlePoller:
@@ -44,16 +41,12 @@ class BundlePoller:
             return
         try:
             bundle = verify_bundle(signed, self._config.verify_key)
-        except InvalidSignature:
-            logger.error(  # noqa: TRY400 run_periodic already logs the traceback; this adds only the key diagnostic, no stack
-                "bundle signature rejected: verifying with pubkey %s, bundle %s signed by key_id=%s for org=%s; "
-                "if the pubkey matches the control plane's signing key this is a payload/canonicalization mismatch, not a key mismatch",
-                public_key_to_b64(self._config.verify_key),
-                signed.payload.bundle_id,
-                signed.signing_key_id,
-                signed.payload.org_id,
+        except InvalidSignature as error:
+            message = (
+                f"bundle {signed.payload.bundle_id} signed by {signed.signing_key_id} for org {signed.payload.org_id} "
+                f"failed verification with public key {public_key_to_b64(self._config.verify_key)}"
             )
-            raise
+            raise InvalidSignature(message) from error
         if self._holder.admit(bundle, self._config.staleness_policy, source="polled"):
             write_cached_bundle(self._config.cache_dir, signed)
 

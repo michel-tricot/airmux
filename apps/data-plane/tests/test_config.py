@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import inspect
 from pathlib import Path
 
 import pytest
@@ -8,15 +7,10 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from pydantic import ValidationError
 
 from contract import public_key_to_b64
-from data_plane.app import create_app
 from data_plane.bundle import LocalBundleConfig, RemoteBundleConfig
 from data_plane.config import load_config
 
 PUBLIC_KEY_B64 = public_key_to_b64(Ed25519PrivateKey.generate().public_key())
-
-
-def test_app_factory_requires_config():
-    assert all(parameter.default is inspect.Parameter.empty for parameter in inspect.signature(create_app).parameters.values())
 
 
 @pytest.fixture

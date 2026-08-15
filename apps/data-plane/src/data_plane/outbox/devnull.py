@@ -11,5 +11,5 @@ if TYPE_CHECKING:
 class DevNullOutbox(EventOutbox):
     """Discards every event. For load tests, local dev, or deployments that meter elsewhere."""
 
-    def record(self, event: UsageEventV1) -> None:  # noqa: ARG002 the point is to drop the event
+    def record(self, _event: UsageEventV1, /) -> None:
         return
