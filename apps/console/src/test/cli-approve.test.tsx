@@ -43,7 +43,6 @@ describe('CLI device sign-in approval', () => {
     expect(await screen.findByRole('heading', { name: 'Authorize CLI login' })).toBeInTheDocument();
     expect(await screen.findByText(REQUEST.client_name)).toBeInTheDocument();
     expect(screen.getByText(REQUEST.requester)).toBeInTheDocument();
-    // The user's org is offered as the scope the CLI will act in.
     expect(screen.getByLabelText('Organization')).toHaveTextContent(ORG.name);
     expect(screen.getByRole('button', { name: 'Authorize' })).toBeEnabled();
   });
@@ -67,10 +66,7 @@ describe('CLI device sign-in approval', () => {
   it('shows a clear error and the code form for an unknown code', async () => {
     withPendingRequest('GOOD-CODE');
     renderAt('/cli?code=WRONG-CODE');
-    expect(
-      await screen.findByText('No pending login with this code. Check your terminal, or run airllm login again.'),
-    ).toBeInTheDocument();
-    // The form stays available so the user can correct the code.
+    expect(await screen.findByText('No pending login with this code. Check your terminal, or run airllm login again.')).toBeInTheDocument();
     expect(screen.getByLabelText('Code from your terminal')).toBeInTheDocument();
   });
 
@@ -97,5 +93,12 @@ describe('CLI device sign-in approval', () => {
     renderAt('/cli');
     expect(await screen.findByRole('heading', { name: 'Authorize CLI login' })).toBeInTheDocument();
     expect(screen.getByLabelText('Code from your terminal')).toBeInTheDocument();
+  });
+
+  it('does not treat routes that merely start with cli as approval routes', async () => {
+    window.localStorage.setItem('airllm_org_id', ORG.id);
+    renderAt('/client');
+    expect(await screen.findByRole('heading', { level: 1, name: 'Production' })).toBeInTheDocument();
+    expect(window.location.pathname).toBe('/org/workspaces/production');
   });
 });

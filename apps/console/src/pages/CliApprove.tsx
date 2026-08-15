@@ -11,6 +11,7 @@ import { useCreatePersonalOrgMutation } from '@/features/orgs/hooks';
 import { Card, Button, Input, Label, Dropdown } from '@/components/ui/elements';
 import { TerminalSquare, CheckCircle2 } from 'lucide-react';
 import { formatRelative } from '@/lib/format';
+import { ErrorState, LoadingState } from '@/components/shared/states';
 
 function lookupError(error: unknown): string {
   if (error instanceof ApiError) {
@@ -31,13 +32,12 @@ export default function CliApprove() {
     { code: submitted ?? '' },
     { query: { queryKey: getCliAuthRequestDetailsQueryKey({ code: submitted ?? '' }), enabled: submitted !== null, retry: false } },
   );
-  const { data: enrollment } = useEnrollment({ query: { queryKey: getEnrollmentQueryKey(), enabled: submitted !== null } });
+  const enrollment = useEnrollment({ query: { queryKey: getEnrollmentQueryKey(), enabled: submitted !== null, retry: false } });
   const approve = useCliAuthApprove();
   const createPersonalOrg = useCreatePersonalOrgMutation();
-  const submitPersonalOrg = (name: string) =>
-    createPersonalOrg.mutate({ data: { name } }, { onSuccess: (org) => setOrgId(org.id) });
+  const submitPersonalOrg = (name: string) => createPersonalOrg.mutate({ data: { name } }, { onSuccess: (org) => setOrgId(org.id) });
 
-  const orgs = enrollment?.orgs ?? [];
+  const orgs = enrollment.data?.orgs ?? [];
   const selected = orgId || orgs[0]?.id || '';
 
   return (
@@ -48,25 +48,36 @@ export default function CliApprove() {
             <TerminalSquare className="w-6 h-6" />
           </div>
           <h1 className="text-2xl font-bold tracking-tight">Authorize CLI login</h1>
-          <p className="text-muted-foreground text-sm mt-1 text-center">Continue only if you just ran <code>airllm login</code>.</p>
+          <p className="text-muted-foreground text-sm mt-1 text-center">
+            Continue only if you just ran <code>airllm login</code>.
+          </p>
         </div>
 
         {approve.isSuccess ? (
-          <div className="flex items-start gap-3 p-4 rounded-md bg-green-500/10 border border-green-500/20">
-            <CheckCircle2 className="w-5 h-5 text-green-500 shrink-0 mt-0.5" />
+          <div role="status" className="flex items-start gap-3 p-4 rounded-md bg-success/10 border border-success/20">
+            <CheckCircle2 className="w-5 h-5 text-success shrink-0 mt-0.5" />
             <p className="text-sm">Approved. Return to your terminal; the login completes within a few seconds.</p>
           </div>
         ) : submitted === null || details.error ? (
           <form
             className="space-y-4"
-            onSubmit={e => { e.preventDefault(); if (code.trim()) setSubmitted(code.trim()); }}
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (code.trim()) setSubmitted(code.trim());
+            }}
           >
             <div className="space-y-2">
               <Label htmlFor="code">Code from your terminal</Label>
-              <Input id="code" required value={code} className="font-mono" placeholder="ABCD-1234" onChange={e => setCode(e.target.value)} />
+              <Input id="code" required value={code} className="font-mono" placeholder="ABCD-1234" onChange={(e) => setCode(e.target.value)} />
             </div>
-            {details.error && <p className="text-sm text-destructive">{lookupError(details.error)}</p>}
-            <Button type="submit" className="w-full">Look up request</Button>
+            {details.error && (
+              <p role="alert" className="text-sm text-destructive">
+                {lookupError(details.error)}
+              </p>
+            )}
+            <Button type="submit" className="w-full">
+              Look up request
+            </Button>
           </form>
         ) : details.data ? (
           <div className="space-y-4">
@@ -85,38 +96,54 @@ export default function CliApprove() {
               </div>
             </dl>
 
-            {orgs.length > 0 ? (
+            {enrollment.isLoading ? (
+              <LoadingState label="Loading organizations..." />
+            ) : enrollment.isError ? (
+              <ErrorState message="Could not load your organizations. Try again." onRetry={() => enrollment.refetch()} />
+            ) : orgs.length > 0 ? (
               <div className="space-y-2">
                 <Label htmlFor="org">Organization for CLI access</Label>
                 <Dropdown
                   aria-label="Organization"
                   value={selected}
                   onValueChange={setOrgId}
-                  options={orgs.map(org => ({ value: org.id, label: org.name }))}
+                  options={orgs.map((org) => ({ value: org.id, label: org.name }))}
                 />
               </div>
             ) : (
-              <form className="space-y-2" onSubmit={e => { e.preventDefault(); submitPersonalOrg(name); }}>
+              <form
+                className="space-y-2"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  submitPersonalOrg(name);
+                }}
+              >
                 <Label htmlFor="org-name">You are not in an organization yet. Create yours to continue.</Label>
                 <div className="flex gap-2">
-                  <Input id="org-name" required value={name} placeholder="organization name" onChange={e => setName(e.target.value)} />
-                  <Button type="submit" disabled={createPersonalOrg.isPending}>Create</Button>
+                  <Input id="org-name" required value={name} placeholder="organization name" onChange={(e) => setName(e.target.value)} />
+                  <Button type="submit" disabled={createPersonalOrg.isPending}>
+                    Create
+                  </Button>
                 </div>
               </form>
             )}
 
-            {approve.error && <p className="text-sm text-destructive">Could not approve this request.</p>}
+            {approve.error && (
+              <p role="alert" className="text-sm text-destructive">
+                Could not approve this request.
+              </p>
+            )}
 
             <Button
               className="w-full"
-              disabled={!selected || approve.isPending}
+              disabled={!selected || approve.isPending || enrollment.isLoading || enrollment.isError}
               onClick={() => approve.mutate({ data: { user_code: submitted, org_id: selected } })}
             >
               {approve.isPending ? 'Approving...' : 'Authorize'}
             </Button>
           </div>
         ) : (
-          <p className="text-center text-muted-foreground font-mono text-sm">Loading request...</p>
+          <LoadingState label="Loading request..." />
         )}
       </Card>
     </div>

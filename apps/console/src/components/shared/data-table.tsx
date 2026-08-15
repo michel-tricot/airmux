@@ -17,6 +17,8 @@ interface DataTableProps<T> {
   rowClassName?: string;
   isLoading?: boolean;
   isError?: boolean;
+  error?: unknown;
+  resource?: string;
   onRetry?: () => void;
   loadingLabel?: string;
   errorMessage?: string;
@@ -24,10 +26,6 @@ interface DataTableProps<T> {
   emptyIcon?: React.ComponentType<{ className?: string }>;
 }
 
-/**
- * Entity table with the loading / error / empty states every list view shares.
- * Wrap it in a Card at the call site; columns own their cell rendering.
- */
 export function DataTable<T>({
   columns,
   rows,
@@ -35,6 +33,8 @@ export function DataTable<T>({
   rowClassName,
   isLoading,
   isError,
+  error,
+  resource,
   onRetry,
   loadingLabel,
   errorMessage,
@@ -42,23 +42,27 @@ export function DataTable<T>({
   emptyIcon,
 }: DataTableProps<T>) {
   if (isLoading) return <LoadingState label={loadingLabel} />;
-  if (isError) return <ErrorState message={errorMessage} onRetry={onRetry} />;
+  if (isError) return <ErrorState error={error} resource={resource} message={errorMessage} onRetry={onRetry} />;
   if (!rows || rows.length === 0) return <EmptyState icon={emptyIcon}>{empty}</EmptyState>;
 
   return (
     <Table>
       <TableHeader>
         <TableRow>
-          {columns.map(col => (
-            <TableHead key={col.key} className={col.headClassName}>{col.header}</TableHead>
+          {columns.map((col) => (
+            <TableHead key={col.key} className={col.headClassName}>
+              {col.header}
+            </TableHead>
           ))}
         </TableRow>
       </TableHeader>
       <TableBody>
-        {rows.map(row => (
+        {rows.map((row) => (
           <TableRow key={rowKey(row)} className={rowClassName}>
-            {columns.map(col => (
-              <TableCell key={col.key} className={col.cellClassName}>{col.cell(row)}</TableCell>
+            {columns.map((col) => (
+              <TableCell key={col.key} className={col.cellClassName}>
+                {col.cell(row)}
+              </TableCell>
             ))}
           </TableRow>
         ))}

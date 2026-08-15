@@ -1,28 +1,48 @@
 import '@testing-library/jest-dom/vitest';
+import { afterAll, afterEach, beforeAll, vi } from 'vitest';
+import { cleanup } from '@testing-library/react';
+import { server } from './msw';
 
-// jsdom lacks the pointer-capture and scroll APIs Radix Select relies on.
+class MemoryStorage implements Storage {
+  private readonly values = new Map<string, string>();
+
+  get length() {
+    return this.values.size;
+  }
+
+  clear() {
+    this.values.clear();
+  }
+
+  getItem(key: string) {
+    return this.values.get(key) ?? null;
+  }
+
+  key(index: number) {
+    return [...this.values.keys()][index] ?? null;
+  }
+
+  removeItem(key: string) {
+    this.values.delete(key);
+  }
+
+  setItem(key: string, value: string) {
+    this.values.set(key, String(value));
+  }
+}
+
+Object.defineProperty(window, 'localStorage', { configurable: true, value: new MemoryStorage() });
+window.HTMLElement.prototype.scrollIntoView = () => {};
 window.HTMLElement.prototype.hasPointerCapture = () => false;
 window.HTMLElement.prototype.setPointerCapture = () => {};
 window.HTMLElement.prototype.releasePointerCapture = () => {};
-window.HTMLElement.prototype.scrollIntoView = () => {};
-import { afterAll, afterEach, beforeAll } from 'vitest';
-import { cleanup } from '@testing-library/react';
-import { queryClient } from '@/App';
-import { server } from './msw';
-
-// jsdom lacks these APIs that Radix Select relies on.
-Element.prototype.scrollIntoView ??= () => {};
-Element.prototype.hasPointerCapture ??= () => false;
-Element.prototype.setPointerCapture ??= () => {};
-Element.prototype.releasePointerCapture ??= () => {};
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
 afterEach(() => {
   cleanup();
   server.resetHandlers();
-  localStorage.clear();
-  // The app's query client is a module-level singleton; without this, cached
-  // rows from one test leak into the next (same org id, different handlers).
-  queryClient.clear();
+  window.localStorage.clear();
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
 });
 afterAll(() => server.close());

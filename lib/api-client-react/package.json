@@ -3,6 +3,10 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "scripts": {
+    "coverage": "vitest run --coverage",
+    "test": "vitest run"
+  },
   "exports": {
     ".": "./src/index.ts"
   },
@@ -11,5 +15,9 @@
   },
   "peerDependencies": {
     "react": ">=18"
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "4.1.10",
+    "vitest": "4.1.10"
   }
 }

@@ -3,27 +3,25 @@ import * as z from 'zod';
 import { Card, Button, Dropdown, Modal, Badge, ConfirmButton } from '@/components/ui/elements';
 import { ArrowLeft, Building2, KeyRound, Plus, UserMinus, Trash2 } from 'lucide-react';
 import { formatDate } from '@/lib/format';
-import { Link, useParams, useLocation } from 'wouter';
+import { Link, useLocation } from 'wouter';
 import { useOrgs } from '@/features/orgs/hooks';
 import { useAllManagementKeys, useInstanceKeys } from '@/features/keys/hooks';
-import {
-  useUser,
-  useDeleteUserMutation,
-  useAddUserToOrgMutation,
-  useRemoveUserFromOrgMutation,
-} from '@/features/users/hooks';
+import { useUser, useDeleteUserMutation, useAddUserToOrgMutation, useRemoveUserFromOrgMutation } from '@/features/users/hooks';
 import { LoadingState, ErrorState } from '@/components/shared/states';
 import { DataTable } from '@/components/shared/data-table';
 import { FormDialog } from '@/components/shared/form-dialog';
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { useRequiredParam } from '@/lib/route';
+import { PageShell } from '@/components/shared/page-shell';
 
 const addToOrgSchema = z.object({ orgId: z.string().min(1, 'Select an organization') });
 
 export default function UserDetail() {
-  const { userId } = useParams();
+  const userId = useRequiredParam('userId');
   const [, setLocation] = useLocation();
 
-  const { data: user, isLoading } = useUser(userId!);
+  const userQuery = useUser(userId);
+  const user = userQuery.data;
   const orgsQuery = useOrgs();
   const orgs = orgsQuery.data;
   const instanceKeysQuery = useInstanceKeys();
@@ -36,18 +34,21 @@ export default function UserDetail() {
   const removeMember = useRemoveUserFromOrgMutation();
   const deleteUser = useDeleteUserMutation();
 
-  if (isLoading) return <LoadingState label="LOADING..." />;
+  if (userQuery.isLoading) return <LoadingState label="Loading user..." />;
+  if (userQuery.isError) return <ErrorState error={userQuery.error} resource="user" onRetry={() => userQuery.refetch()} />;
   if (!user) return <ErrorState message="User not found" />;
 
-  const memberships = orgs?.filter(o => user.orgs.includes(o.id));
-  const available = orgs?.filter(o => !user.orgs.includes(o.id));
-  const instanceKeys = instanceKeysQuery.data?.filter(key => key.user_id === user.id);
-  const managementKeys = managementKeysQuery.data?.filter(key => key.user_id === user.id);
+  const memberships = orgs?.filter((o) => user.orgs.includes(o.id));
+  const available = orgs?.filter((o) => !user.orgs.includes(o.id));
+  const instanceKeys = instanceKeysQuery.data?.filter((key) => key.user_id === user.id);
+  const managementKeys = managementKeysQuery.data?.filter((key) => key.user_id === user.id);
 
   return (
-    <div className="flex-1 p-8 max-w-6xl mx-auto w-full space-y-6 animate-in fade-in duration-300">
+    <PageShell>
       <div className="flex items-center gap-4 text-sm text-muted-foreground mb-4">
-        <Link href="/instance/users" className="hover:text-foreground flex items-center gap-1"><ArrowLeft className="w-4 h-4" /> Back to Users</Link>
+        <Link href="/instance/users" className="hover:text-foreground flex items-center gap-1">
+          <ArrowLeft className="w-4 h-4" /> Back to Users
+        </Link>
       </div>
 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -62,11 +63,12 @@ export default function UserDetail() {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <Badge variant={user.service_account ? 'secondary' : 'outline'}>
-            {user.service_account ? 'SERVICE ACCOUNT' : 'HUMAN'}
-          </Badge>
-          <Button variant="outline" className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
-            onClick={() => setDeleteOpen(true)}>
+          <Badge variant={user.service_account ? 'secondary' : 'outline'}>{user.service_account ? 'SERVICE ACCOUNT' : 'HUMAN'}</Badge>
+          <Button
+            variant="outline"
+            className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
+            onClick={() => setDeleteOpen(true)}
+          >
             <Trash2 className="w-4 h-4 mr-2" /> Delete
           </Button>
         </div>
@@ -78,14 +80,18 @@ export default function UserDetail() {
             <Building2 className="w-5 h-5 text-muted-foreground" />
             Organization Memberships
           </h2>
-          <Button onClick={() => setAddOpen(true)} size="sm"><Plus className="w-4 h-4 mr-1" /> Add to Organization</Button>
+          <Button onClick={() => setAddOpen(true)} size="sm" disabled={orgsQuery.isLoading || orgsQuery.isError || available?.length === 0}>
+            <Plus className="w-4 h-4 mr-1" /> Add to Organization
+          </Button>
         </div>
         <Card>
           <DataTable
             rows={memberships}
-            rowKey={org => org.id}
+            rowKey={(org) => org.id}
             isLoading={orgsQuery.isLoading}
             isError={orgsQuery.isError}
+            error={orgsQuery.error}
+            resource="organizations"
             onRetry={() => orgsQuery.refetch()}
             empty="User does not belong to any organizations."
             columns={[
@@ -93,23 +99,28 @@ export default function UserDetail() {
                 key: 'org',
                 header: 'Organization',
                 cellClassName: 'font-medium',
-                cell: org => <Link href={`/instance/organizations/${org.id}`} className="hover:text-primary">{org.name}</Link>,
+                cell: (org) => (
+                  <Link href={`/instance/organizations/${org.id}`} className="hover:text-primary">
+                    {org.name}
+                  </Link>
+                ),
               },
-              { key: 'id', header: 'ID', cellClassName: 'font-mono text-xs text-muted-foreground', cell: org => org.id },
-              { key: 'created', header: 'Created', cellClassName: 'text-muted-foreground text-sm', cell: org => formatDate(org.created_at) },
+              { key: 'id', header: 'ID', cellClassName: 'font-mono text-xs text-muted-foreground', cell: (org) => org.id },
+              { key: 'created', header: 'Created', cellClassName: 'text-muted-foreground text-sm', cell: (org) => formatDate(org.created_at) },
               {
                 key: 'actions',
                 header: 'Actions',
                 headClassName: 'text-right',
                 cellClassName: 'text-right',
-                cell: org => (
+                cell: (org) => (
                   <ConfirmButton
                     title={`Remove ${user.name} from ${org.name}?`}
                     description="They lose access to this organization and all of its workspaces."
                     confirmLabel="Remove membership"
                     pending={removeMember.isPending}
                     aria-label="Remove membership"
-                    onConfirm={() => removeMember.mutate({ userId: user.id, orgId: org.id })}>
+                    onConfirm={() => removeMember.mutateAsync({ userId: user.id, orgId: org.id })}
+                  >
                     <UserMinus className="w-4 h-4" />
                   </ConfirmButton>
                 ),
@@ -129,21 +140,23 @@ export default function UserDetail() {
           <Card>
             <DataTable
               rows={instanceKeys}
-              rowKey={key => key.id}
+              rowKey={(key) => key.id}
               isLoading={instanceKeysQuery.isLoading}
               isError={instanceKeysQuery.isError}
+              error={instanceKeysQuery.error}
+              resource="instance keys"
               onRetry={() => instanceKeysQuery.refetch()}
               empty="This user does not own any instance keys."
               columns={[
                 { key: 'type', header: 'Type', cell: () => <Badge variant="secondary">INSTANCE</Badge> },
-                { key: 'label', header: 'Label', cellClassName: 'font-medium', cell: key => key.label },
-                { key: 'key', header: 'Key', cellClassName: 'font-mono text-xs text-muted-foreground', cell: key => <>{key.prefix}…</> },
+                { key: 'label', header: 'Label', cellClassName: 'font-medium', cell: (key) => key.label },
+                { key: 'key', header: 'Key', cellClassName: 'font-mono text-xs text-muted-foreground', cell: (key) => <>{key.prefix}…</> },
                 {
                   key: 'status',
                   header: 'Status',
-                  cell: key => <Badge variant={key.revoked ? 'outline' : 'success'}>{key.revoked ? 'REVOKED' : 'ACTIVE'}</Badge>,
+                  cell: (key) => <Badge variant={key.revoked ? 'outline' : 'success'}>{key.revoked ? 'REVOKED' : 'ACTIVE'}</Badge>,
                 },
-                { key: 'created', header: 'Created', cellClassName: 'text-muted-foreground text-sm', cell: key => formatDate(key.created_at) },
+                { key: 'created', header: 'Created', cellClassName: 'text-muted-foreground text-sm', cell: (key) => formatDate(key.created_at) },
               ]}
             />
           </Card>
@@ -151,37 +164,48 @@ export default function UserDetail() {
           <Card>
             <DataTable
               rows={managementKeys}
-              rowKey={key => key.id}
+              rowKey={(key) => key.id}
               isLoading={managementKeysQuery.isLoading}
               isError={managementKeysQuery.isError}
+              error={managementKeysQuery.error}
+              resource="management keys"
               onRetry={() => managementKeysQuery.refetch()}
               empty="This user does not own any management keys."
               columns={[
                 { key: 'type', header: 'Type', cell: () => <Badge variant="secondary">MANAGEMENT</Badge> },
-                { key: 'label', header: 'Label', cellClassName: 'font-medium', cell: key => key.label },
-                { key: 'key', header: 'Key', cellClassName: 'font-mono text-xs text-muted-foreground', cell: key => <>{key.prefix}…</> },
+                { key: 'label', header: 'Label', cellClassName: 'font-medium', cell: (key) => key.label },
+                { key: 'key', header: 'Key', cellClassName: 'font-mono text-xs text-muted-foreground', cell: (key) => <>{key.prefix}…</> },
                 {
                   key: 'status',
                   header: 'Status',
-                  cell: key => <Badge variant={key.revoked ? 'outline' : 'success'}>{key.revoked ? 'REVOKED' : 'ACTIVE'}</Badge>,
+                  cell: (key) => <Badge variant={key.revoked ? 'outline' : 'success'}>{key.revoked ? 'REVOKED' : 'ACTIVE'}</Badge>,
                 },
-                { key: 'created', header: 'Created', cellClassName: 'text-muted-foreground text-sm', cell: key => formatDate(key.created_at) },
+                { key: 'created', header: 'Created', cellClassName: 'text-muted-foreground text-sm', cell: (key) => formatDate(key.created_at) },
               ]}
             />
           </Card>
         </div>
       </div>
 
-      <Modal open={deleteOpen} onOpenChange={setDeleteOpen} title="Delete User"
-        description="Their sign-in identities, sessions and personal keys go with them.">
+      <Modal
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        title="Delete User"
+        description="Their sign-in identities, sessions and personal keys go with them."
+      >
         <div className="space-y-4 pt-4">
           <p className="text-sm text-muted-foreground">
             A user who still holds memberships, owns a personal org, or minted inference keys is refused; clear those first.
           </p>
           <div className="flex justify-end gap-2 pt-4">
-            <Button type="button" variant="outline" onClick={() => setDeleteOpen(false)}>Cancel</Button>
-            <Button variant="destructive" disabled={deleteUser.isPending}
-              onClick={() => deleteUser.mutate({ userId: user.id }, { onSuccess: () => setLocation('/instance/users') })}>
+            <Button type="button" variant="outline" onClick={() => setDeleteOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={deleteUser.isPending}
+              onClick={() => deleteUser.mutate({ userId: user.id }, { onSuccess: () => setLocation('/instance/users') })}
+            >
               Delete User
             </Button>
           </div>
@@ -194,10 +218,11 @@ export default function UserDetail() {
         title="Add to Organization"
         schema={addToOrgSchema}
         defaultValues={{ orgId: '' }}
-        onSubmit={values => addMember.mutateAsync({ userId: user.id, orgId: values.orgId })}
+        onSubmit={(values) => addMember.mutateAsync({ userId: user.id, orgId: values.orgId })}
         submitLabel="Add"
-        pending={addMember.isPending}>
-        {form => (
+        pending={addMember.isPending}
+      >
+        {(form) => (
           <FormField
             control={form.control}
             name="orgId"
@@ -210,7 +235,7 @@ export default function UserDetail() {
                     value={field.value}
                     onValueChange={field.onChange}
                     placeholder="Select an organization"
-                    options={(available ?? []).map(org => ({ value: org.id, label: org.name }))}
+                    options={(available ?? []).map((org) => ({ value: org.id, label: org.name }))}
                   />
                 </FormControl>
                 <FormMessage />
@@ -219,6 +244,6 @@ export default function UserDetail() {
           />
         )}
       </FormDialog>
-    </div>
+    </PageShell>
   );
 }

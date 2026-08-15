@@ -339,6 +339,23 @@ def test_event_ingest_is_idempotent_and_org_scoped(tmp_path):
         assert c.post("/v1/events", json=events).status_code == 401
 
 
+def test_event_list_filters_by_workspace(tmp_path):
+    cp = setup_control_plane(tmp_path)
+    root = cp.headers()
+    with TestClient(cp.app) as c:
+        org_id = make_org(c, root, "o1")
+        first_workspace = make_workspace(c, cp.headers(org_id), "first")
+        second_workspace = make_workspace(c, cp.headers(org_id), "second")
+        first = {**_event(org_id), "workspace_id": str(first_workspace)}
+        second = {**_event(org_id), "workspace_id": str(second_workspace)}
+        assert c.post("/v1/events", json=[first, second], headers=root).status_code == 200
+
+        response = c.get("/v1/org/events", params={"workspace_id": str(first_workspace)}, headers=cp.headers(org_id))
+
+        assert response.status_code == 200, response.text
+        assert [event["event_id"] for event in response.json()["data"]] == [first["event_id"]]
+
+
 def test_event_ingest_survives_a_repeat_inside_one_batch(tmp_path):
     """At-least-once delivery can repeat an event_id within a single flush; the batch still lands."""
     cp = setup_control_plane(tmp_path)

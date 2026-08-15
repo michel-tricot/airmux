@@ -9,15 +9,14 @@ import {
   getListOrgsQueryKey,
   getGetOrgQueryKey,
   getEnrollmentQueryKey,
+  getMeQueryKey,
   type OrgOut,
 } from '@workspace/api-client-react';
 
-/** Every organization on the instance (admin scope). */
 export function useOrgs() {
   return useListOrgs();
 }
 
-/** One organization by id (admin scope). */
 export function useOrg(orgId: string) {
   return useGetOrg(orgId, { query: { queryKey: getGetOrgQueryKey(orgId) } });
 }
@@ -37,8 +36,11 @@ export function useRenameOrgMutation() {
   return useUpdateOrg({
     mutation: {
       onSuccess: (org: OrgOut) => {
-        queryClient.invalidateQueries({ queryKey: getListOrgsQueryKey() });
-        queryClient.invalidateQueries({ queryKey: getGetOrgQueryKey(org.id) });
+        return Promise.all([
+          queryClient.invalidateQueries({ queryKey: getListOrgsQueryKey() }),
+          queryClient.invalidateQueries({ queryKey: getGetOrgQueryKey(org.id) }),
+          queryClient.invalidateQueries({ queryKey: getEnrollmentQueryKey() }),
+        ]);
       },
       meta: { errorMessage: 'We couldn’t rename the organization. Please try again.' },
     },
@@ -49,18 +51,26 @@ export function useDeleteOrgMutation() {
   const queryClient = useQueryClient();
   return useDeleteOrg({
     mutation: {
-      onSuccess: () => queryClient.invalidateQueries({ queryKey: getListOrgsQueryKey() }),
+      onSuccess: () =>
+        Promise.all([
+          queryClient.invalidateQueries({ queryKey: getListOrgsQueryKey() }),
+          queryClient.invalidateQueries({ queryKey: getEnrollmentQueryKey() }),
+          queryClient.invalidateQueries({ queryKey: getMeQueryKey() }),
+        ]),
       meta: { errorMessage: 'We couldn’t delete this organization. Please try again.' },
     },
   });
 }
 
-/** Founds the signed-in account's personal org and refreshes enrollment. */
 export function useCreatePersonalOrgMutation() {
   const queryClient = useQueryClient();
   return useCreatePersonalOrg({
     mutation: {
-      onSuccess: () => queryClient.invalidateQueries({ queryKey: getEnrollmentQueryKey() }),
+      onSuccess: () =>
+        Promise.all([
+          queryClient.invalidateQueries({ queryKey: getEnrollmentQueryKey() }),
+          queryClient.invalidateQueries({ queryKey: getMeQueryKey() }),
+        ]),
       meta: { errorMessage: 'We couldn’t create your organization. Please try again.' },
     },
   });

@@ -11,18 +11,16 @@ import {
 import { orgScope } from '@/lib/api';
 import { orgScopedKey } from '@/lib/query-keys';
 
-/** The workspace's provider credentials, in the order the data plane tries them. */
 export function useProviderCredentials(orgId: string, workspaceRef: string) {
   return useListProviderCredentials(
     { workspace: workspaceRef },
     {
-      query: { queryKey: orgScopedKey(orgId, getListProviderCredentialsQueryKey({ workspace: workspaceRef })) },
+      query: { queryKey: orgScopedKey(orgId, getListProviderCredentialsQueryKey({ workspace: workspaceRef })), refetchInterval: 10_000 },
       request: orgScope(orgId),
     },
   );
 }
 
-/** The catalog, for naming the provider a credential only carries the id of. */
 export function useProviders(orgId: string) {
   return useGetTaxonomy({ request: orgScope(orgId) });
 }

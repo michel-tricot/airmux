@@ -1,4 +1,4 @@
-import { useSession } from '@/lib/session';
+import { useRequiredOrgId } from '@/lib/session';
 import { useWorkspaces } from '@/features/workspaces/hooks';
 import { useOrgEvents } from '@/features/telemetry/hooks';
 import { Card, Badge } from '@/components/ui/elements';
@@ -6,15 +6,16 @@ import { TerminalSquare, FolderGit2, Activity } from 'lucide-react';
 import { Link } from 'wouter';
 import { formatDate, formatRelative } from '@/lib/format';
 import { DataTable } from '@/components/shared/data-table';
+import { PageShell } from '@/components/shared/page-shell';
 
 export default function AppDashboard() {
-  const { orgId } = useSession();
+  const orgId = useRequiredOrgId();
 
-  const workspacesQuery = useWorkspaces(orgId!);
-  const eventsQuery = useOrgEvents(orgId!, { limit: 10 });
+  const workspacesQuery = useWorkspaces(orgId);
+  const eventsQuery = useOrgEvents(orgId, { limit: 10 });
 
   return (
-    <div className="flex-1 p-8 max-w-5xl mx-auto w-full space-y-6 animate-in fade-in duration-500">
+    <PageShell className="max-w-5xl">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Organization Overview</h1>
         <p className="text-muted-foreground mt-1 text-sm">Select a workspace to manage its keys and access.</p>
@@ -30,10 +31,12 @@ export default function AppDashboard() {
 
         <DataTable
           rows={workspacesQuery.data}
-          rowKey={ws => ws.id}
+          rowKey={(ws) => ws.id}
           rowClassName="group"
           isLoading={workspacesQuery.isLoading}
           isError={workspacesQuery.isError}
+          error={workspacesQuery.error}
+          resource="workspaces"
           onRetry={() => workspacesQuery.refetch()}
           loadingLabel="Loading workspaces..."
           empty="No workspaces in this organization yet."
@@ -43,20 +46,20 @@ export default function AppDashboard() {
               key: 'workspace',
               header: 'Workspace',
               cellClassName: 'font-medium',
-              cell: ws => (
+              cell: (ws) => (
                 <Link href={`/org/workspaces/${ws.slug}`} className="flex items-center gap-2 hover:text-primary transition-colors">
                   <FolderGit2 className="w-4 h-4 text-muted-foreground group-hover:text-primary" />
                   {ws.name}
                 </Link>
               ),
             },
-            { key: 'slug', header: 'Slug', cell: ws => <Badge variant="mono">{ws.slug}</Badge> },
+            { key: 'slug', header: 'Slug', cell: (ws) => <Badge variant="mono">{ws.slug}</Badge> },
             {
               key: 'created',
               header: 'Created',
               headClassName: 'text-right',
               cellClassName: 'text-right text-muted-foreground text-sm',
-              cell: ws => formatDate(ws.created_at),
+              cell: (ws) => formatDate(ws.created_at),
             },
           ]}
         />
@@ -72,18 +75,30 @@ export default function AppDashboard() {
 
         <DataTable
           rows={eventsQuery.data}
-          rowKey={event => event.event_id}
+          rowKey={(event) => event.event_id}
           isLoading={eventsQuery.isLoading}
           isError={eventsQuery.isError}
+          error={eventsQuery.error}
+          resource="usage"
           onRetry={() => eventsQuery.refetch()}
           empty="No requests through the gateway yet."
           columns={[
-            { key: 'model', header: 'Model', cell: event => <Badge variant="outline" className="font-mono">{event.model_id}</Badge> },
+            {
+              key: 'model',
+              header: 'Model',
+              cell: (event) => (
+                <Badge variant="outline" className="font-mono">
+                  {event.model_id}
+                </Badge>
+              ),
+            },
             {
               key: 'status',
               header: 'Status',
-              cell: event => (
-                <Badge variant={event.status === 'ok' ? 'success' : 'destructive'} className="font-mono">{event.status}</Badge>
+              cell: (event) => (
+                <Badge variant={event.status === 'ok' ? 'success' : 'destructive'} className="font-mono">
+                  {event.status}
+                </Badge>
               ),
             },
             {
@@ -91,25 +106,25 @@ export default function AppDashboard() {
               header: 'Tokens',
               headClassName: 'text-right',
               cellClassName: 'text-right font-mono text-sm',
-              cell: event => event.input_tokens + event.output_tokens,
+              cell: (event) => event.input_tokens + event.output_tokens,
             },
             {
               key: 'cost',
               header: 'Cost',
               headClassName: 'text-right',
               cellClassName: 'text-right font-mono text-sm',
-              cell: event => `$${event.cost_usd.toFixed(4)}`,
+              cell: (event) => `$${event.cost_usd.toFixed(4)}`,
             },
             {
               key: 'when',
               header: 'When',
               headClassName: 'text-right',
               cellClassName: 'text-right text-muted-foreground text-sm',
-              cell: event => formatRelative(event.occurred_at),
+              cell: (event) => formatRelative(event.occurred_at),
             },
           ]}
         />
       </Card>
-    </div>
+    </PageShell>
   );
 }

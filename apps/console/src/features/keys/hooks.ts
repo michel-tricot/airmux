@@ -18,12 +18,10 @@ import {
 import { orgScope } from '@/lib/api';
 import { orgScopedKey } from '@/lib/query-keys';
 
-/** Every management key across the instance (admin scope). */
 export function useAllManagementKeys() {
   return useListAllManagementKeys();
 }
 
-/** Every instance key minted on the deployment. */
 export function useInstanceKeys() {
   return useListInstanceKeys();
 }
@@ -48,7 +46,6 @@ export function useRevokeInstanceKeyMutation() {
   });
 }
 
-/** The given org's management (automation) keys. */
 export function useManagementKeys(orgId: string) {
   return useListManagementKeys({
     query: { queryKey: orgScopedKey(orgId, getListManagementKeysQueryKey()) },
@@ -84,7 +81,6 @@ export function useRevokeManagementKeyMutation(orgId: string) {
   });
 }
 
-/** The workspace's inference keys. */
 export function useInferenceKeys(orgId: string, workspaceRef: string) {
   return useListInferenceKeys(workspaceRef, {
     query: { queryKey: orgScopedKey(orgId, getListInferenceKeysQueryKey(workspaceRef)) },
@@ -96,8 +92,7 @@ export function useCreateInferenceKeyMutation(orgId: string, workspaceRef: strin
   const queryClient = useQueryClient();
   return useCreateInferenceKey({
     mutation: {
-      onSuccess: () =>
-        queryClient.invalidateQueries({ queryKey: orgScopedKey(orgId, getListInferenceKeysQueryKey(workspaceRef)) }),
+      onSuccess: () => queryClient.invalidateQueries({ queryKey: orgScopedKey(orgId, getListInferenceKeysQueryKey(workspaceRef)) }),
       meta: { errorMessage: 'We couldn’t generate the key. Please try again.' },
     },
     request: orgScope(orgId),
@@ -108,8 +103,7 @@ export function useRevokeInferenceKeyMutation(orgId: string, workspaceRef: strin
   const queryClient = useQueryClient();
   return useRevokeInferenceKey({
     mutation: {
-      onSuccess: () =>
-        queryClient.invalidateQueries({ queryKey: orgScopedKey(orgId, getListInferenceKeysQueryKey(workspaceRef)) }),
+      onSuccess: () => queryClient.invalidateQueries({ queryKey: orgScopedKey(orgId, getListInferenceKeysQueryKey(workspaceRef)) }),
       meta: { errorMessage: 'We couldn’t revoke the key. Please try again.' },
     },
     request: orgScope(orgId),

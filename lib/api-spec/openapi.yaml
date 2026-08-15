@@ -3329,8 +3329,19 @@ paths:
         required: false
         schema:
           type: integer
+          maximum: 200
+          minimum: 1
           default: 50
           title: Limit
+      - name: workspace_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Workspace Id
       - name: X-Org-Id
         in: header
         required: false

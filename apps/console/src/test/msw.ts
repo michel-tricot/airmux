@@ -27,17 +27,18 @@ export const server = setupServer(
       orgs: [ORG.id],
     }),
   ),
-  http.get('/v1/enroll', () =>
-    HttpResponse.json({ orgs: [ORG], personal_org_id: null }),
-  ),
+  http.get('/v1/enroll', () => HttpResponse.json({ orgs: [ORG], personal_org_id: null })),
   http.get('/v1/org/workspaces', () => HttpResponse.json(WORKSPACES)),
   http.get('/v1/org/workspaces/:workspaceRef', ({ params }) => {
-    const ws = WORKSPACES.find(w => w.id === params.workspaceRef || w.slug === params.workspaceRef);
+    const ws = WORKSPACES.find((w) => w.id === params.workspaceRef || w.slug === params.workspaceRef);
     return ws ? HttpResponse.json(ws) : new HttpResponse(null, { status: 404 });
   }),
   http.get('/v1/org/workspaces/:workspaceId/inference-keys', () => HttpResponse.json([])),
   http.get('/v1/org/workspaces/:workspaceId/members', () => HttpResponse.json([])),
   http.get('/v1/org/provider-credentials', () => HttpResponse.json([])),
+  http.get('/v1/org/management-keys', () => HttpResponse.json([])),
+  http.get('/v1/org/bundles', () => HttpResponse.json([])),
+  http.get('/v1/org/activity', () => HttpResponse.json([])),
   http.get('/v1/taxonomy', () => HttpResponse.json({ providers: [], models: [] })),
   http.get('/v1/org/users', () => HttpResponse.json([])),
   http.get('/v1/org/events', () => HttpResponse.json([])),

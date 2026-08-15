@@ -855,7 +855,12 @@ workspace?: string | null;
 
 export type ListEventsParams = {
 after?: string | null;
+/**
+ * @minimum 1
+ * @maximum 200
+ */
 limit?: number;
+workspace_id?: string | null;
 };
 
 export type ListActivityParams = {

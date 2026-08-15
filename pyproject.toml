@@ -111,7 +111,7 @@ runtime-evaluated-base-classes = [
 ]
 
 [tool.ty.src]
-exclude = ["**/migrations/versions", "examples/anthropic_sdk.py"]
+exclude = [".agents", ".claude", "**/migrations/versions", "examples/anthropic_sdk.py"]
 
 [tool.ty.environment]
 python-version = "3.13"

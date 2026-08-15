@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from typing import Annotated
 from uuid import UUID  # noqa: TC003 fastapi resolves path param annotations at runtime
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Query, Request
 from sqlmodel import col
 
 from contract import uuid7
@@ -97,12 +98,13 @@ async def list_bundles(org_id: OrgDep) -> Envelope[list[BundleOut]]:
 
 
 @router.get("/events", tags=["Events"], dependencies=[require(Scope.events_read)])
-async def list_events(org_id: OrgDep, after: datetime | None = None, limit: int = 50) -> Envelope[list[UsageEventOut]]:
-    occurred_at = col(UsageEvent.occurred_at)
-    # Paging forward from a cursor reads oldest first; the unanchored view is the newest events.
-    after_cursor = (occurred_at > after,) if after is not None else ()
-    order = occurred_at.asc() if after is not None else occurred_at.desc()
-    events = await UsageEvent.find(UsageEvent.org_id == org_id, *after_cursor, order_by=order, limit=limit)
+async def list_events(
+    org_id: OrgDep,
+    after: Annotated[datetime | None, Query()] = None,
+    limit: Annotated[int, Query(ge=1, le=200)] = 50,
+    workspace_id: Annotated[UUID | None, Query()] = None,
+) -> Envelope[list[UsageEventOut]]:
+    events = await UsageEvent.for_org(org_id, after=after, workspace_id=workspace_id, limit=limit)
     return Envelope(data=[UsageEventOut.model_validate(e) for e in events])
 
 

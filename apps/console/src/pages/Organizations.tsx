@@ -8,19 +8,21 @@ import { useOrgs, useCreateOrgMutation } from '@/features/orgs/hooks';
 import { DataTable } from '@/components/shared/data-table';
 import { FormDialog } from '@/components/shared/form-dialog';
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { PageShell } from '@/components/shared/page-shell';
 
 const createOrgSchema = z.object({ name: z.string().min(1, 'Name is required') });
 
 export default function Organizations() {
-  const { data: orgs, isLoading, isError, refetch } = useOrgs();
+  const orgsQuery = useOrgs();
+  const orgs = orgsQuery.data;
   const [search, setSearch] = useState('');
   const [createOpen, setCreateOpen] = useState(false);
   const createOrg = useCreateOrgMutation();
 
-  const filteredOrgs = orgs?.filter(o => o.name.toLowerCase().includes(search.toLowerCase()));
+  const filteredOrgs = orgs?.filter((o) => o.name.toLowerCase().includes(search.toLowerCase()));
 
   return (
-    <div className="flex-1 p-8 max-w-6xl mx-auto w-full space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <PageShell>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Organizations</h1>
@@ -36,6 +38,7 @@ export default function Organizations() {
           <div className="relative flex-1 max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
+              aria-label="Search organizations"
               placeholder="Search organizations..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -46,12 +49,14 @@ export default function Organizations() {
 
         <DataTable
           rows={filteredOrgs}
-          rowKey={org => org.id}
+          rowKey={(org) => org.id}
           rowClassName="group"
-          isLoading={isLoading}
-          isError={isError}
-          onRetry={() => refetch()}
-          loadingLabel="LOADING..."
+          isLoading={orgsQuery.isLoading}
+          isError={orgsQuery.isError}
+          error={orgsQuery.error}
+          resource="organizations"
+          onRetry={() => orgsQuery.refetch()}
+          loadingLabel="Loading organizations..."
           empty="No organizations found."
           emptyIcon={Building2}
           columns={[
@@ -59,25 +64,25 @@ export default function Organizations() {
               key: 'name',
               header: 'Organization Name',
               cellClassName: 'font-medium',
-              cell: org => (
+              cell: (org) => (
                 <Link href={`/instance/organizations/${org.id}`} className="flex items-center gap-2 hover:text-primary transition-colors">
                   <Building2 className="w-4 h-4 text-muted-foreground group-hover:text-primary" />
                   {org.name}
                 </Link>
               ),
             },
-            { key: 'id', header: 'ID', cellClassName: 'font-mono text-xs text-muted-foreground', cell: org => org.id },
+            { key: 'id', header: 'ID', cellClassName: 'font-mono text-xs text-muted-foreground', cell: (org) => org.id },
             {
               key: 'kind',
               header: 'Kind',
-              cell: org => <Badge variant={org.personal_for ? 'secondary' : 'outline'}>{org.personal_for ? 'PERSONAL' : 'SHARED'}</Badge>,
+              cell: (org) => <Badge variant={org.personal_for ? 'secondary' : 'outline'}>{org.personal_for ? 'PERSONAL' : 'SHARED'}</Badge>,
             },
             {
               key: 'created',
               header: 'Created',
               headClassName: 'text-right',
               cellClassName: 'text-right text-muted-foreground text-sm',
-              cell: org => formatDate(org.created_at),
+              cell: (org) => formatDate(org.created_at),
             },
           ]}
         />
@@ -90,11 +95,12 @@ export default function Organizations() {
         description="Set up a new organization."
         schema={createOrgSchema}
         defaultValues={{ name: '' }}
-        onSubmit={values => createOrg.mutateAsync({ data: values })}
+        onSubmit={(values) => createOrg.mutateAsync({ data: values })}
         submitLabel="Create Organization"
         pendingLabel="Creating..."
-        pending={createOrg.isPending}>
-        {form => (
+        pending={createOrg.isPending}
+      >
+        {(form) => (
           <FormField
             control={form.control}
             name="name"
@@ -110,6 +116,6 @@ export default function Organizations() {
           />
         )}
       </FormDialog>
-    </div>
+    </PageShell>
   );
 }

@@ -1448,10 +1448,14 @@ export const ListBundlesResponse = zod.array(ListBundlesResponseItem)
  * @summary List Events
  */
 export const listEventsQueryLimitDefault = 50;
+export const listEventsQueryLimitMax = 200;
+
+
 
 export const ListEventsQueryParams = zod.object({
   "after": zod.union([zod.date(),zod.null()]).optional(),
-  "limit": zod.coerce.number().int().default(listEventsQueryLimitDefault)
+  "limit": zod.coerce.number().int().min(1).max(listEventsQueryLimitMax).default(listEventsQueryLimitDefault),
+  "workspace_id": zod.union([zod.uuid(),zod.null()]).optional()
 })
 
 export const ListEventsHeader = zod.object({
