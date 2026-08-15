@@ -106,7 +106,7 @@ source .env
 curl -s localhost:8080/v1/chat/completions \
   -H "Authorization: Bearer $AIRLLM_API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"model": "gpt-4o-mini", "messages": [{"role": "user", "content": "say hi"}]}'
+  -d '{"model": "openai/gpt-4o-mini", "messages": [{"role": "user", "content": "say hi"}]}'
 ```
 
 Or use the ready-made examples (streaming prints tokens as they arrive):
@@ -133,8 +133,8 @@ through the gateway:
 
 ```bash
 scripts/claude-gateway.sh --list            # registered models
-scripts/claude-gateway.sh gpt-4o-mini       # Claude Code, backed by gpt-4o-mini
-scripts/claude-gateway.sh claude-sonnet-4-6
+scripts/claude-gateway.sh openai/gpt-4o-mini   # Claude Code, backed by gpt-4o-mini
+scripts/claude-gateway.sh anthropic/claude-sonnet-4-6
 ```
 
 `taxonomy/taxonomy.yml` ships with a catalog of OpenAI-compatible hosted providers

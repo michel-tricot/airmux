@@ -75,7 +75,7 @@ def main() -> int:
         print("AIRLLM_API_KEY is not set, run `uv run airllm quickstart` first")
         return 1
     gateway = os.environ.get("AIRLLM_URL", "http://127.0.0.1:8080")
-    model = os.environ.get("AIRLLM_MODEL") or ("deepseek-reasoner" if os.environ.get("DEEPSEEK_API_KEY") else "gpt-4o-mini")
+    model = os.environ.get("AIRLLM_MODEL", "openai/gpt-4o-mini")
     native = model.startswith("deepseek-reasoner")
     print(f"model: {model} ({'native reasoning stream' if native else 'prompted step-by-step, set DEEPSEEK_API_KEY for native reasoning'})\n")
 

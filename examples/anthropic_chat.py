@@ -25,7 +25,7 @@ def main() -> int:
         print("AIRLLM_API_KEY is not set, run `uv run airllm quickstart` first")
         return 1
     gateway = os.environ.get("AIRLLM_URL", "http://127.0.0.1:8080")
-    model = os.environ.get("AIRLLM_MODEL", "claude-sonnet-4-6")
+    model = os.environ.get("AIRLLM_MODEL", "anthropic/claude-sonnet-4-6")
     prompt = " ".join(sys.argv[1:]) or "In one sentence, what makes Claude different from other assistants?"
 
     resp = httpx.post(

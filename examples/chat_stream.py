@@ -23,7 +23,7 @@ def main() -> int:
         print("AIRLLM_API_KEY is not set, run `uv run airllm quickstart` first")
         return 1
     gateway = os.environ.get("AIRLLM_URL", "http://127.0.0.1:8080")
-    model = os.environ.get("AIRLLM_MODEL", "gpt-4o-mini")
+    model = os.environ.get("AIRLLM_MODEL", "openai/gpt-4o-mini")
     prompt = " ".join(sys.argv[1:]) or "Count from 1 to 10, then say something encouraging."
 
     with httpx.stream(

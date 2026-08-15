@@ -30,7 +30,7 @@ def main() -> int:
 
     show(
         "invalid api key -> 401 from the gateway",
-        httpx.post(url, headers={"authorization": "Bearer not-a-jwt"}, json={"model": "gpt-4o-mini", "messages": messages}),
+        httpx.post(url, headers={"authorization": "Bearer not-a-jwt"}, json={"model": "openai/gpt-4o-mini", "messages": messages}),
     )
 
     show("unknown model -> 404 from policy", httpx.post(url, headers=auth, json={"model": "no-such-model", "messages": messages}))
@@ -44,7 +44,7 @@ def main() -> int:
 
     show(
         "upstream rejection passes through -> OpenAI's own 400",
-        httpx.post(url, headers=auth, json={"model": "gpt-4o-mini", "messages": messages, "max_tokens": 10_000_000}, timeout=30.0),
+        httpx.post(url, headers=auth, json={"model": "openai/gpt-4o-mini", "messages": messages, "max_tokens": 10_000_000}, timeout=30.0),
     )
     return 0
 

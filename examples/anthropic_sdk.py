@@ -4,7 +4,7 @@
 
 Proves the gateway speaks Anthropic's Messages API well enough for the
 real SDK, including its streaming helper. The model can be any provider
-in the catalog: set AIRLLM_MODEL=gpt-4o-mini to route an Anthropic-SDK
+in the catalog: set AIRLLM_MODEL=openai/gpt-4o-mini to route an Anthropic-SDK
 call to OpenAI. Needs AIRLLM_API_KEY in .env and a running data plane.
 """
 
@@ -23,7 +23,7 @@ def main() -> int:
         print("AIRLLM_API_KEY is not set, run `uv run airllm quickstart` first")
         return 1
     gateway = os.environ.get("AIRLLM_URL", "http://127.0.0.1:8080")
-    model = os.environ.get("AIRLLM_MODEL", "claude-sonnet-4-6")
+    model = os.environ.get("AIRLLM_MODEL", "anthropic/claude-sonnet-4-6")
 
     # api_key is required by the SDK but unused; the gateway reads auth_token as the bearer.
     client = Anthropic(base_url=gateway, api_key="unused", auth_token=api_key)
