@@ -20,7 +20,14 @@ KINDS: list[tuple[str, str]] = [
     ("speech-in", r"whisper|transcribe|\basr\b|stt|speech-to"),
     ("speech-out", r"\btts\b|text-to-speech|orpheus|voxtral-tts|realtime-tts|voice"),
     ("music", r"lyria"),
-    ("video", r"video|veo-|seedance|wan2|t2v|vidu|pixverse|p-video|imagine-video"),
+    ("video", r"video|veo-|seedance|wan2|t2v|vidu|pixverse|p-video|imagine-video|\bsora\b"),
+    # a different protocol, not a different modality: the Realtime API is a WebSocket
+    # session, so these cannot be reached through chat completions at all
+    ("realtime", r"realtime"),
+    # legacy /v1/completions models. Matched by exact vendor id, never by a bare "instruct",
+    # because -instruct on an open-weights model means chat-tuned and matching it would
+    # delete most of the catalog
+    ("base-completion", r"^(davinci|babbage|ada|curie)-|^gpt-3\.5-turbo-instruct"),
     ("image", r"image|dall-e|flux|seedream|imagen|cogview|bria|t2i|virtual-try-on|p-image|fibo"),
     ("ocr", r"\bocr\b|paddleocr|deplot"),
     ("moderation", r"moderation|guard|shieldstral|safeguard"),

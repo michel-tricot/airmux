@@ -30,108 +30,26 @@ from paths import TAXONOMY
 import yaml
 
 from model_kind import text_only
+from sources import registry
 
 ROOT = TAXONOMY
 OUT = ROOT / "models"
 CTX = ssl.create_default_context()
 UA = "airllm-taxonomy/1.0"
 
-# Endpoints and credential names both come from providers.yml, which is the one place
-# either is written down. OPEN lists the providers whose catalog needs no credential.
-OPEN = {"nvidia", "sambanova", "deepinfra", "novita", "huggingface"}
-
-
-
-def blank(model_id: str) -> dict:
-    return {
-        "id": model_id,
-        "context_length": None,
-        "max_output_tokens": None,
-        "input_modalities": None,
-        "output_modalities": None,
-        "supports_tools": None,
-        "supports_structured_output": None,
-    }
 
 
 
 
-def normalize(provider: str, payload) -> list[dict]:
-    items = payload.get("data") if isinstance(payload, dict) else payload
-    if items is None and isinstance(payload, dict):
-        items = payload.get("models") or payload.get("results")
-    if not isinstance(items, list):
-        return []
 
-    out = []
-    for it in items:
-        if isinstance(it, str):
-            out.append(blank(it))
-            continue
-        if not isinstance(it, dict):
-            continue
-        rec = blank(it.get("id") or it.get("name") or it.get("model") or "")
-
-        if provider == "novita":
-            rec["context_length"] = it.get("context_size")
-            rec["max_output_tokens"] = it.get("max_output_tokens")
-            rec["input_modalities"] = it.get("input_modalities")
-            rec["output_modalities"] = it.get("output_modalities")
-            features = it.get("features") or []
-            if features:
-                rec["supports_tools"] = "function-calling" in features or "tool-calling" in features
-                rec["supports_structured_output"] = "structured-outputs" in features or "json-mode" in features
-
-        elif provider == "huggingface":
-            arch = it.get("architecture") or {}
-            rec["input_modalities"] = arch.get("input_modalities")
-            rec["output_modalities"] = arch.get("output_modalities")
-            routes = [p for p in (it.get("providers") or []) if p.get("status") == "live"]
-            if routes:
-                rec["context_length"] = max((p.get("context_length") or 0) for p in routes) or None
-                rec["supports_tools"] = any(p.get("supports_tools") for p in routes)
-                rec["supports_structured_output"] = any(p.get("supports_structured_output") for p in routes)
-                rec["routes"] = sorted({p.get("provider") for p in routes if p.get("provider")})
-
-        elif provider == "deepinfra":
-            meta = it.get("metadata") or {}
-            tags = meta.get("tags") or []
-            rec["context_length"] = meta.get("context_length")
-            rec["max_output_tokens"] = meta.get("max_tokens")
-            if tags:
-                rec["input_modalities"] = ["text"] + (["image"] if "vision" in tags or "vlm" in tags else [])
-                rec["output_modalities"] = ["image"] if "image-gen" in tags else ["audio"] if "tts" in tags else ["text"]
-                rec["tags"] = tags
-            pr = meta.get("pricing") or {}
-
-        elif provider == "sambanova":
-            rec["context_length"] = it.get("context_length")
-            rec["max_output_tokens"] = it.get("max_completion_tokens")
-
-        elif provider == "anthropic":
-            rec["id"] = it.get("id")
-            rec["display_name"] = it.get("display_name")
-
-        elif provider == "cohere":
-            rec["id"] = it.get("name")
-            rec["context_length"] = it.get("context_length")
-            rec["endpoints"] = it.get("endpoints") or None
-
-        elif provider == "gemini":
-            rec["id"] = (it.get("name") or "").removeprefix("models/")
-            rec["display_name"] = it.get("displayName")
-            rec["context_length"] = it.get("inputTokenLimit")
-            rec["max_output_tokens"] = it.get("outputTokenLimit")
-            rec["methods"] = it.get("supportedGenerationMethods")
-
-        out.append(rec)
-    return out
 
 
 # Fields the listing endpoint never returns; they are added downstream by enrich_limits.
 # Refetching must not drop them, or every refresh discards enrichment and moves the
 # fetched stamp even when the vendor returned exactly what it returned last time.
-DOWNSTREAM = ("kind", "limits_source", "context_length", "max_output_tokens")
+# provenance travels with the value it describes. Carrying "pricing" without
+# "pricing_source" lets the next enrichment restamp a borrowed price as provider-supplied
+DOWNSTREAM = ("kind", "limits_source", "pricing_source", "context_length", "max_output_tokens", "pricing")
 
 
 def carry_forward(path: Path, models: list[dict]) -> list[dict]:
@@ -151,26 +69,6 @@ def carry_forward(path: Path, models: list[dict]) -> list[dict]:
     return models
 
 
-def fetch(provider: str, url: str, env: str | None):
-    headers = {"User-Agent": UA, "Accept": "application/json"}
-    if env:
-        key = os.environ.get(env)
-        if not key:
-            return None, f"no {env} in environment"
-        if provider == "anthropic":
-            headers["x-api-key"] = key
-            headers["anthropic-version"] = "2023-06-01"
-        elif provider == "reka":
-            headers["X-Api-Key"] = key
-        else:
-            headers["Authorization"] = f"Bearer {key}"
-    try:
-        with urllib.request.urlopen(urllib.request.Request(url, headers=headers), timeout=60, context=CTX) as r:
-            return json.loads(r.read().decode()), None
-    except urllib.error.HTTPError as e:
-        return None, f"HTTP {e.code}"
-    except Exception as e:
-        return None, type(e).__name__
 
 
 def main() -> int:
@@ -185,24 +83,48 @@ def main() -> int:
     stamp = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     ok, skipped, failed = [], [], []
 
+    sources = registry()
     for provider in sorted(wanted):
+        source = sources.get(provider)
+        if source is None:
+            skipped.append((provider, "no module under sources/; add one to fetch it"))
+            continue
         url = providers[provider]["models_url"]
         if "{" in url:
             skipped.append((provider, f"account-scoped endpoint, resolve {url}"))
             continue
-        env = None if provider in OPEN else providers[provider]["env_var"]
-        payload, err = fetch(provider, url, env)
-        if err:
-            (skipped if err.startswith("no ") else failed).append((provider, err))
+        key = None
+        if not source.open_access:
+            env = providers[provider]["env_var"]
+            key = os.environ.get(env)
+            if not key:
+                skipped.append((provider, f"no {env} in environment"))
+                continue
+        try:
+            payload = source.fetch(key)
+        except urllib.error.HTTPError as exc:
+            detail = ""
+            try:
+                detail = ": " + (json.loads(exc.read().decode()).get("error") or {}).get("message", "")[:110]
+            except Exception:
+                pass
+            failed.append((provider, f"HTTP {exc.code}{detail}"))
             continue
-        models = text_only(normalize(provider, payload))
+        except Exception as exc:
+            failed.append((provider, type(exc).__name__))
+            continue
+        raw = source.items(payload)
+        models = text_only([m for m in (source.normalize(i) for i in raw) if m])
+        if raw and not models:
+            failed.append((provider, f"{len(raw)} returned, none kept; check the module's filter"))
+            continue
         if not models:
             failed.append((provider, "empty or unrecognized payload"))
             continue
         declared = sum(1 for m in models if m.get("context_length") or m.get("supports_tools") is not None)
         target = OUT / f"{provider}.json"
         write_catalog(target, {
-            "provider": provider, "source": url, "source_type": "api",
+            "provider": provider, "source": source.url, "source_type": "api",
             "updated": stamp, "models": carry_forward(target, models),
         })
         ok.append((provider, len(models), declared))

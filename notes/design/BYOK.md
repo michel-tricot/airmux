@@ -110,7 +110,7 @@ which is a real single-host deployment), `env` (read only, quickstart and single
 whose provider keys already arrive as environment variables).
 
 The env store resolves a provider credential to **`{SERVICE}_API_KEY`**, the name every provider SDK
-documents and the one `taxonomy.yml` used before credentials became a resource, so an operator
+documents and the one `taxonomy/taxonomy.yml` used before credentials became a resource, so an operator
 running on the environment configures nothing new. `{prefix}_{PURPOSE}_{SERVICE}` takes precedence,
 for an environment that already means something else by `OPENAI_API_KEY` and as the only name a
 non-provider purpose answers to.

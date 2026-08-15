@@ -2,7 +2,7 @@
   "provider": "anthropic",
   "source": "https://api.anthropic.com/v1/models",
   "source_type": "api",
-  "updated": "2026-08-11",
+  "updated": "2026-08-15",
   "count": 10,
   "models": [
     {
@@ -10,120 +10,270 @@
       "kind": "text",
       "context_length": 1000000,
       "max_output_tokens": 128000,
-      "input_modalities": null,
-      "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
+      "input_modalities": [
+        "text",
+        "image",
+        "pdf"
+      ],
+      "output_modalities": [
+        "text"
+      ],
+      "supports_tools": true,
+      "supports_structured_output": true,
+      "pricing": {
+        "input_per_mtok": 10,
+        "output_per_mtok": 50,
+        "cached_input_per_mtok": 1,
+        "cache_write_per_mtok": 12.5
+      },
       "limits_source": "openrouter-index",
-      "display_name": "Claude Fable 5"
+      "pricing_source": "models.dev",
+      "display_name": "Claude Fable 5",
+      "supports_batch": true,
+      "supports_thinking": true
     },
     {
       "id": "claude-haiku-4-5-20251001",
       "kind": "text",
       "context_length": 200000,
       "max_output_tokens": 64000,
-      "input_modalities": null,
-      "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
+      "input_modalities": [
+        "text",
+        "image",
+        "pdf"
+      ],
+      "output_modalities": [
+        "text"
+      ],
+      "supports_tools": true,
+      "supports_structured_output": true,
+      "pricing": {
+        "input_per_mtok": 1,
+        "output_per_mtok": 5,
+        "cached_input_per_mtok": 0.1,
+        "cache_write_per_mtok": 1.25
+      },
       "limits_source": "openrouter-index",
-      "display_name": "Claude Haiku 4.5"
+      "pricing_source": "models.dev",
+      "display_name": "Claude Haiku 4.5",
+      "supports_batch": true,
+      "supports_thinking": true
     },
     {
       "id": "claude-opus-4-5-20251101",
       "kind": "text",
       "context_length": 200000,
       "max_output_tokens": 64000,
-      "input_modalities": null,
-      "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
+      "input_modalities": [
+        "text",
+        "image",
+        "pdf"
+      ],
+      "output_modalities": [
+        "text"
+      ],
+      "supports_tools": true,
+      "supports_structured_output": true,
+      "pricing": {
+        "input_per_mtok": 5,
+        "output_per_mtok": 25,
+        "cached_input_per_mtok": 0.5,
+        "cache_write_per_mtok": 6.25
+      },
       "limits_source": "openrouter-index",
-      "display_name": "Claude Opus 4.5"
+      "pricing_source": "models.dev",
+      "display_name": "Claude Opus 4.5",
+      "supports_batch": true,
+      "supports_thinking": true
     },
     {
       "id": "claude-opus-4-6",
       "kind": "text",
       "context_length": 1000000,
       "max_output_tokens": 128000,
-      "input_modalities": null,
-      "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
+      "input_modalities": [
+        "text",
+        "image",
+        "pdf"
+      ],
+      "output_modalities": [
+        "text"
+      ],
+      "supports_tools": true,
+      "supports_structured_output": true,
+      "pricing": {
+        "input_per_mtok": 5,
+        "output_per_mtok": 25,
+        "cached_input_per_mtok": 0.5,
+        "cache_write_per_mtok": 6.25
+      },
       "limits_source": "openrouter-index",
-      "display_name": "Claude Opus 4.6"
+      "pricing_source": "models.dev",
+      "display_name": "Claude Opus 4.6",
+      "supports_batch": true,
+      "supports_thinking": true
     },
     {
       "id": "claude-opus-4-7",
       "kind": "text",
       "context_length": 1000000,
       "max_output_tokens": 128000,
-      "input_modalities": null,
-      "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
+      "input_modalities": [
+        "text",
+        "image",
+        "pdf"
+      ],
+      "output_modalities": [
+        "text"
+      ],
+      "supports_tools": true,
+      "supports_structured_output": true,
+      "pricing": {
+        "input_per_mtok": 5,
+        "output_per_mtok": 25,
+        "cached_input_per_mtok": 0.5,
+        "cache_write_per_mtok": 6.25
+      },
       "limits_source": "openrouter-index",
-      "display_name": "Claude Opus 4.7"
+      "pricing_source": "models.dev",
+      "display_name": "Claude Opus 4.7",
+      "supports_batch": true,
+      "supports_thinking": true
     },
     {
       "id": "claude-opus-4-8",
       "kind": "text",
       "context_length": 1000000,
       "max_output_tokens": 128000,
-      "input_modalities": null,
-      "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
+      "input_modalities": [
+        "text",
+        "image",
+        "pdf"
+      ],
+      "output_modalities": [
+        "text"
+      ],
+      "supports_tools": true,
+      "supports_structured_output": true,
+      "pricing": {
+        "input_per_mtok": 5,
+        "output_per_mtok": 25,
+        "cached_input_per_mtok": 0.5,
+        "cache_write_per_mtok": 6.25
+      },
       "limits_source": "openrouter-index",
-      "display_name": "Claude Opus 4.8"
+      "pricing_source": "models.dev",
+      "display_name": "Claude Opus 4.8",
+      "supports_batch": true,
+      "supports_thinking": true
     },
     {
       "id": "claude-opus-5",
       "kind": "text",
       "context_length": 1000000,
       "max_output_tokens": 128000,
-      "input_modalities": null,
-      "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
+      "input_modalities": [
+        "text",
+        "image",
+        "pdf"
+      ],
+      "output_modalities": [
+        "text"
+      ],
+      "supports_tools": true,
+      "supports_structured_output": true,
+      "pricing": {
+        "input_per_mtok": 5,
+        "output_per_mtok": 25,
+        "cached_input_per_mtok": 0.5,
+        "cache_write_per_mtok": 6.25
+      },
       "limits_source": "openrouter-index",
-      "display_name": "Claude Opus 5"
+      "pricing_source": "models.dev",
+      "display_name": "Claude Opus 5",
+      "supports_batch": true,
+      "supports_thinking": true
     },
     {
       "id": "claude-sonnet-4-5-20250929",
       "kind": "text",
       "context_length": 1000000,
       "max_output_tokens": 64000,
-      "input_modalities": null,
-      "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
+      "input_modalities": [
+        "text",
+        "image",
+        "pdf"
+      ],
+      "output_modalities": [
+        "text"
+      ],
+      "supports_tools": true,
+      "supports_structured_output": true,
+      "pricing": {
+        "input_per_mtok": 3,
+        "output_per_mtok": 15,
+        "cached_input_per_mtok": 0.3,
+        "cache_write_per_mtok": 3.75
+      },
       "limits_source": "openrouter-index",
-      "display_name": "Claude Sonnet 4.5"
+      "pricing_source": "models.dev",
+      "display_name": "Claude Sonnet 4.5",
+      "supports_batch": true,
+      "supports_thinking": true
     },
     {
       "id": "claude-sonnet-4-6",
       "kind": "text",
       "context_length": 1000000,
       "max_output_tokens": 128000,
-      "input_modalities": null,
-      "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
+      "input_modalities": [
+        "text",
+        "image",
+        "pdf"
+      ],
+      "output_modalities": [
+        "text"
+      ],
+      "supports_tools": true,
+      "supports_structured_output": true,
+      "pricing": {
+        "input_per_mtok": 3,
+        "output_per_mtok": 15,
+        "cached_input_per_mtok": 0.3,
+        "cache_write_per_mtok": 3.75
+      },
       "limits_source": "openrouter-index",
-      "display_name": "Claude Sonnet 4.6"
+      "pricing_source": "models.dev",
+      "display_name": "Claude Sonnet 4.6",
+      "supports_batch": true,
+      "supports_thinking": true
     },
     {
       "id": "claude-sonnet-5",
       "kind": "text",
       "context_length": 1000000,
       "max_output_tokens": 128000,
-      "input_modalities": null,
-      "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
+      "input_modalities": [
+        "text",
+        "image",
+        "pdf"
+      ],
+      "output_modalities": [
+        "text"
+      ],
+      "supports_tools": true,
+      "supports_structured_output": true,
+      "pricing": {
+        "input_per_mtok": 2,
+        "output_per_mtok": 10,
+        "cached_input_per_mtok": 0.2,
+        "cache_write_per_mtok": 2.5
+      },
       "limits_source": "openrouter-index",
-      "display_name": "Claude Sonnet 5"
+      "pricing_source": "models.dev",
+      "display_name": "Claude Sonnet 5",
+      "supports_batch": true,
+      "supports_thinking": true
     }
   ]
 }

@@ -2,19 +2,9 @@
   "provider": "openai",
   "source": "https://api.openai.com/v1/models",
   "source_type": "api",
-  "updated": "2026-08-11",
-  "count": 101,
+  "updated": "2026-08-15",
+  "count": 86,
   "models": [
-    {
-      "id": "babbage-002",
-      "kind": "text",
-      "context_length": null,
-      "max_output_tokens": null,
-      "input_modalities": null,
-      "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null
-    },
     {
       "id": "chat-latest",
       "kind": "text",
@@ -33,7 +23,8 @@
       "input_modalities": null,
       "output_modalities": null,
       "supports_tools": null,
-      "supports_structured_output": null
+      "supports_structured_output": null,
+      "shutdown_date": "2026-07-23"
     },
     {
       "id": "computer-use-preview-2025-03-11",
@@ -43,17 +34,8 @@
       "input_modalities": null,
       "output_modalities": null,
       "supports_tools": null,
-      "supports_structured_output": null
-    },
-    {
-      "id": "davinci-002",
-      "kind": "text",
-      "context_length": null,
-      "max_output_tokens": null,
-      "input_modalities": null,
-      "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null
+      "supports_structured_output": null,
+      "shutdown_date": "2026-07-23"
     },
     {
       "id": "gpt-3.5-turbo",
@@ -62,9 +44,16 @@
       "max_output_tokens": 4096,
       "input_modalities": null,
       "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
-      "limits_source": "openrouter-index"
+      "supports_tools": false,
+      "supports_structured_output": false,
+      "pricing": {
+        "input_per_mtok": 0.5,
+        "output_per_mtok": 1.5,
+        "cached_input_per_mtok": 0
+      },
+      "limits_source": "openrouter-index",
+      "pricing_source": "models.dev",
+      "shutdown_date": "2026-10-23"
     },
     {
       "id": "gpt-3.5-turbo-0125",
@@ -74,7 +63,8 @@
       "input_modalities": null,
       "output_modalities": null,
       "supports_tools": null,
-      "supports_structured_output": null
+      "supports_structured_output": null,
+      "shutdown_date": "2026-10-23"
     },
     {
       "id": "gpt-3.5-turbo-1106",
@@ -84,7 +74,8 @@
       "input_modalities": null,
       "output_modalities": null,
       "supports_tools": null,
-      "supports_structured_output": null
+      "supports_structured_output": null,
+      "shutdown_date": "2026-09-28"
     },
     {
       "id": "gpt-3.5-turbo-16k",
@@ -95,28 +86,12 @@
       "output_modalities": null,
       "supports_tools": null,
       "supports_structured_output": null,
-      "limits_source": "openrouter-index"
-    },
-    {
-      "id": "gpt-3.5-turbo-instruct",
-      "kind": "text",
-      "context_length": 4095,
-      "max_output_tokens": 4096,
-      "input_modalities": null,
-      "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
-      "limits_source": "openrouter-index"
-    },
-    {
-      "id": "gpt-3.5-turbo-instruct-0914",
-      "kind": "text",
-      "context_length": null,
-      "max_output_tokens": null,
-      "input_modalities": null,
-      "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null
+      "pricing": {
+        "input_per_mtok": 3.0,
+        "output_per_mtok": 4.0
+      },
+      "limits_source": "openrouter-index",
+      "pricing_source": "openrouter-index"
     },
     {
       "id": "gpt-4",
@@ -125,9 +100,15 @@
       "max_output_tokens": 4096,
       "input_modalities": null,
       "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
-      "limits_source": "openrouter-index"
+      "supports_tools": true,
+      "supports_structured_output": false,
+      "pricing": {
+        "input_per_mtok": 30,
+        "output_per_mtok": 60
+      },
+      "limits_source": "openrouter-index",
+      "pricing_source": "models.dev",
+      "shutdown_date": "2026-10-23"
     },
     {
       "id": "gpt-4-0613",
@@ -137,7 +118,8 @@
       "input_modalities": null,
       "output_modalities": null,
       "supports_tools": null,
-      "supports_structured_output": null
+      "supports_structured_output": null,
+      "shutdown_date": "2026-10-23"
     },
     {
       "id": "gpt-4-turbo",
@@ -146,9 +128,15 @@
       "max_output_tokens": 4096,
       "input_modalities": null,
       "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
-      "limits_source": "openrouter-index"
+      "supports_tools": true,
+      "supports_structured_output": false,
+      "pricing": {
+        "input_per_mtok": 10,
+        "output_per_mtok": 30
+      },
+      "limits_source": "openrouter-index",
+      "pricing_source": "models.dev",
+      "shutdown_date": "2026-10-23"
     },
     {
       "id": "gpt-4-turbo-2024-04-09",
@@ -158,7 +146,8 @@
       "input_modalities": null,
       "output_modalities": null,
       "supports_tools": null,
-      "supports_structured_output": null
+      "supports_structured_output": null,
+      "shutdown_date": "2026-10-23"
     },
     {
       "id": "gpt-4.1",
@@ -167,9 +156,15 @@
       "max_output_tokens": 32768,
       "input_modalities": null,
       "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
-      "limits_source": "openrouter-index"
+      "supports_tools": true,
+      "supports_structured_output": true,
+      "pricing": {
+        "input_per_mtok": 2,
+        "output_per_mtok": 8,
+        "cached_input_per_mtok": 0.5
+      },
+      "limits_source": "openrouter-index",
+      "pricing_source": "models.dev"
     },
     {
       "id": "gpt-4.1-2025-04-14",
@@ -180,7 +175,12 @@
       "output_modalities": null,
       "supports_tools": null,
       "supports_structured_output": null,
-      "limits_source": "openrouter-index"
+      "pricing": {
+        "input_per_mtok": 2.0,
+        "output_per_mtok": 8.0
+      },
+      "limits_source": "openrouter-index",
+      "pricing_source": "openrouter-index"
     },
     {
       "id": "gpt-4.1-mini",
@@ -189,9 +189,15 @@
       "max_output_tokens": 32768,
       "input_modalities": null,
       "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
-      "limits_source": "openrouter-index"
+      "supports_tools": true,
+      "supports_structured_output": true,
+      "pricing": {
+        "input_per_mtok": 0.4,
+        "output_per_mtok": 1.6,
+        "cached_input_per_mtok": 0.1
+      },
+      "limits_source": "openrouter-index",
+      "pricing_source": "models.dev"
     },
     {
       "id": "gpt-4.1-mini-2025-04-14",
@@ -202,7 +208,12 @@
       "output_modalities": null,
       "supports_tools": null,
       "supports_structured_output": null,
-      "limits_source": "openrouter-index"
+      "pricing": {
+        "input_per_mtok": 0.4,
+        "output_per_mtok": 1.6
+      },
+      "limits_source": "openrouter-index",
+      "pricing_source": "openrouter-index"
     },
     {
       "id": "gpt-4.1-nano",
@@ -211,9 +222,16 @@
       "max_output_tokens": 32768,
       "input_modalities": null,
       "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
-      "limits_source": "openrouter-index"
+      "supports_tools": true,
+      "supports_structured_output": true,
+      "pricing": {
+        "input_per_mtok": 0.1,
+        "output_per_mtok": 0.4,
+        "cached_input_per_mtok": 0.025
+      },
+      "limits_source": "openrouter-index",
+      "pricing_source": "models.dev",
+      "shutdown_date": "2026-10-23"
     },
     {
       "id": "gpt-4.1-nano-2025-04-14",
@@ -224,7 +242,13 @@
       "output_modalities": null,
       "supports_tools": null,
       "supports_structured_output": null,
-      "limits_source": "openrouter-index"
+      "pricing": {
+        "input_per_mtok": 0.1,
+        "output_per_mtok": 0.4
+      },
+      "limits_source": "openrouter-index",
+      "pricing_source": "openrouter-index",
+      "shutdown_date": "2026-10-23"
     },
     {
       "id": "gpt-4o",
@@ -233,9 +257,15 @@
       "max_output_tokens": 16384,
       "input_modalities": null,
       "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
-      "limits_source": "openrouter-index"
+      "supports_tools": true,
+      "supports_structured_output": true,
+      "pricing": {
+        "input_per_mtok": 2.5,
+        "output_per_mtok": 10,
+        "cached_input_per_mtok": 1.25
+      },
+      "limits_source": "openrouter-index",
+      "pricing_source": "models.dev"
     },
     {
       "id": "gpt-4o-2024-05-13",
@@ -244,9 +274,15 @@
       "max_output_tokens": 4096,
       "input_modalities": null,
       "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
-      "limits_source": "openrouter-index"
+      "supports_tools": true,
+      "supports_structured_output": true,
+      "pricing": {
+        "input_per_mtok": 5,
+        "output_per_mtok": 15
+      },
+      "limits_source": "openrouter-index",
+      "pricing_source": "models.dev",
+      "shutdown_date": "2026-10-23"
     },
     {
       "id": "gpt-4o-2024-08-06",
@@ -255,9 +291,15 @@
       "max_output_tokens": 16384,
       "input_modalities": null,
       "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
-      "limits_source": "openrouter-index"
+      "supports_tools": true,
+      "supports_structured_output": true,
+      "pricing": {
+        "input_per_mtok": 2.5,
+        "output_per_mtok": 10,
+        "cached_input_per_mtok": 1.25
+      },
+      "limits_source": "openrouter-index",
+      "pricing_source": "models.dev"
     },
     {
       "id": "gpt-4o-2024-11-20",
@@ -266,9 +308,15 @@
       "max_output_tokens": 16384,
       "input_modalities": null,
       "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
-      "limits_source": "openrouter-index"
+      "supports_tools": true,
+      "supports_structured_output": true,
+      "pricing": {
+        "input_per_mtok": 2.5,
+        "output_per_mtok": 10,
+        "cached_input_per_mtok": 1.25
+      },
+      "limits_source": "openrouter-index",
+      "pricing_source": "models.dev"
     },
     {
       "id": "gpt-4o-mini",
@@ -277,9 +325,15 @@
       "max_output_tokens": 16384,
       "input_modalities": null,
       "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
-      "limits_source": "openrouter-index"
+      "supports_tools": true,
+      "supports_structured_output": true,
+      "pricing": {
+        "input_per_mtok": 0.15,
+        "output_per_mtok": 0.6,
+        "cached_input_per_mtok": 0.075
+      },
+      "limits_source": "openrouter-index",
+      "pricing_source": "models.dev"
     },
     {
       "id": "gpt-4o-mini-2024-07-18",
@@ -290,7 +344,12 @@
       "output_modalities": null,
       "supports_tools": null,
       "supports_structured_output": null,
-      "limits_source": "openrouter-index"
+      "pricing": {
+        "input_per_mtok": 0.15,
+        "output_per_mtok": 0.6
+      },
+      "limits_source": "openrouter-index",
+      "pricing_source": "openrouter-index"
     },
     {
       "id": "gpt-4o-mini-search-preview",
@@ -310,7 +369,8 @@
       "input_modalities": null,
       "output_modalities": null,
       "supports_tools": null,
-      "supports_structured_output": null
+      "supports_structured_output": null,
+      "shutdown_date": "2026-07-23"
     },
     {
       "id": "gpt-4o-search-preview",
@@ -330,7 +390,8 @@
       "input_modalities": null,
       "output_modalities": null,
       "supports_tools": null,
-      "supports_structured_output": null
+      "supports_structured_output": null,
+      "shutdown_date": "2026-07-23"
     },
     {
       "id": "gpt-5",
@@ -339,9 +400,15 @@
       "max_output_tokens": 128000,
       "input_modalities": null,
       "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
-      "limits_source": "openrouter-index"
+      "supports_tools": true,
+      "supports_structured_output": true,
+      "pricing": {
+        "input_per_mtok": 1.25,
+        "output_per_mtok": 10,
+        "cached_input_per_mtok": 0.125
+      },
+      "limits_source": "openrouter-index",
+      "pricing_source": "models.dev"
     },
     {
       "id": "gpt-5-2025-08-07",
@@ -352,7 +419,13 @@
       "output_modalities": null,
       "supports_tools": null,
       "supports_structured_output": null,
-      "limits_source": "openrouter-index"
+      "pricing": {
+        "input_per_mtok": 1.25,
+        "output_per_mtok": 10.0
+      },
+      "limits_source": "openrouter-index",
+      "pricing_source": "openrouter-index",
+      "shutdown_date": "2026-12-11"
     },
     {
       "id": "gpt-5-chat-latest",
@@ -362,7 +435,8 @@
       "input_modalities": null,
       "output_modalities": null,
       "supports_tools": null,
-      "supports_structured_output": null
+      "supports_structured_output": null,
+      "shutdown_date": "2026-07-23"
     },
     {
       "id": "gpt-5-codex",
@@ -373,7 +447,13 @@
       "output_modalities": null,
       "supports_tools": null,
       "supports_structured_output": null,
-      "limits_source": "openrouter-index"
+      "pricing": {
+        "input_per_mtok": 0.625,
+        "output_per_mtok": 5.0
+      },
+      "limits_source": "openrouter-index",
+      "pricing_source": "openrouter-index",
+      "shutdown_date": "2026-07-23"
     },
     {
       "id": "gpt-5-mini",
@@ -382,9 +462,15 @@
       "max_output_tokens": 128000,
       "input_modalities": null,
       "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
-      "limits_source": "openrouter-index"
+      "supports_tools": true,
+      "supports_structured_output": true,
+      "pricing": {
+        "input_per_mtok": 0.25,
+        "output_per_mtok": 2,
+        "cached_input_per_mtok": 0.025
+      },
+      "limits_source": "openrouter-index",
+      "pricing_source": "models.dev"
     },
     {
       "id": "gpt-5-mini-2025-08-07",
@@ -395,7 +481,13 @@
       "output_modalities": null,
       "supports_tools": null,
       "supports_structured_output": null,
-      "limits_source": "openrouter-index"
+      "pricing": {
+        "input_per_mtok": 0.25,
+        "output_per_mtok": 2.0
+      },
+      "limits_source": "openrouter-index",
+      "pricing_source": "openrouter-index",
+      "shutdown_date": "2026-12-11"
     },
     {
       "id": "gpt-5-nano",
@@ -404,9 +496,15 @@
       "max_output_tokens": 128000,
       "input_modalities": null,
       "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
-      "limits_source": "openrouter-index"
+      "supports_tools": true,
+      "supports_structured_output": true,
+      "pricing": {
+        "input_per_mtok": 0.05,
+        "output_per_mtok": 0.4,
+        "cached_input_per_mtok": 0.005
+      },
+      "limits_source": "openrouter-index",
+      "pricing_source": "models.dev"
     },
     {
       "id": "gpt-5-nano-2025-08-07",
@@ -417,7 +515,13 @@
       "output_modalities": null,
       "supports_tools": null,
       "supports_structured_output": null,
-      "limits_source": "openrouter-index"
+      "pricing": {
+        "input_per_mtok": 0.05,
+        "output_per_mtok": 0.4
+      },
+      "limits_source": "openrouter-index",
+      "pricing_source": "openrouter-index",
+      "shutdown_date": "2026-12-11"
     },
     {
       "id": "gpt-5-pro",
@@ -426,9 +530,14 @@
       "max_output_tokens": 128000,
       "input_modalities": null,
       "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
-      "limits_source": "openrouter-index"
+      "supports_tools": true,
+      "supports_structured_output": true,
+      "pricing": {
+        "input_per_mtok": 15,
+        "output_per_mtok": 120
+      },
+      "limits_source": "openrouter-index",
+      "pricing_source": "models.dev"
     },
     {
       "id": "gpt-5-pro-2025-10-06",
@@ -439,7 +548,13 @@
       "output_modalities": null,
       "supports_tools": null,
       "supports_structured_output": null,
-      "limits_source": "openrouter-index"
+      "pricing": {
+        "input_per_mtok": 15.0,
+        "output_per_mtok": 120.0
+      },
+      "limits_source": "openrouter-index",
+      "pricing_source": "openrouter-index",
+      "shutdown_date": "2026-12-11"
     },
     {
       "id": "gpt-5-search-api",
@@ -468,9 +583,15 @@
       "max_output_tokens": 128000,
       "input_modalities": null,
       "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
-      "limits_source": "openrouter-index"
+      "supports_tools": true,
+      "supports_structured_output": true,
+      "pricing": {
+        "input_per_mtok": 1.25,
+        "output_per_mtok": 10,
+        "cached_input_per_mtok": 0.125
+      },
+      "limits_source": "openrouter-index",
+      "pricing_source": "models.dev"
     },
     {
       "id": "gpt-5.1-2025-11-13",
@@ -490,7 +611,8 @@
       "input_modalities": null,
       "output_modalities": null,
       "supports_tools": null,
-      "supports_structured_output": null
+      "supports_structured_output": null,
+      "shutdown_date": "2026-07-23"
     },
     {
       "id": "gpt-5.1-codex",
@@ -501,7 +623,13 @@
       "output_modalities": null,
       "supports_tools": null,
       "supports_structured_output": null,
-      "limits_source": "openrouter-index"
+      "pricing": {
+        "input_per_mtok": 1.25,
+        "output_per_mtok": 10.0
+      },
+      "limits_source": "openrouter-index",
+      "pricing_source": "openrouter-index",
+      "shutdown_date": "2026-07-23"
     },
     {
       "id": "gpt-5.1-codex-max",
@@ -512,7 +640,13 @@
       "output_modalities": null,
       "supports_tools": null,
       "supports_structured_output": null,
-      "limits_source": "openrouter-index"
+      "pricing": {
+        "input_per_mtok": 1.25,
+        "output_per_mtok": 10.0
+      },
+      "limits_source": "openrouter-index",
+      "pricing_source": "openrouter-index",
+      "shutdown_date": "2026-07-23"
     },
     {
       "id": "gpt-5.1-codex-mini",
@@ -523,7 +657,13 @@
       "output_modalities": null,
       "supports_tools": null,
       "supports_structured_output": null,
-      "limits_source": "openrouter-index"
+      "pricing": {
+        "input_per_mtok": 0.25,
+        "output_per_mtok": 2.0
+      },
+      "limits_source": "openrouter-index",
+      "pricing_source": "openrouter-index",
+      "shutdown_date": "2026-07-23"
     },
     {
       "id": "gpt-5.2",
@@ -532,9 +672,15 @@
       "max_output_tokens": 128000,
       "input_modalities": null,
       "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
-      "limits_source": "openrouter-index"
+      "supports_tools": true,
+      "supports_structured_output": true,
+      "pricing": {
+        "input_per_mtok": 1.75,
+        "output_per_mtok": 14,
+        "cached_input_per_mtok": 0.175
+      },
+      "limits_source": "openrouter-index",
+      "pricing_source": "models.dev"
     },
     {
       "id": "gpt-5.2-2025-12-11",
@@ -553,9 +699,16 @@
       "max_output_tokens": 32000,
       "input_modalities": null,
       "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
-      "limits_source": "openrouter-index"
+      "supports_tools": true,
+      "supports_structured_output": true,
+      "pricing": {
+        "input_per_mtok": 1.75,
+        "output_per_mtok": 14,
+        "cached_input_per_mtok": 0.175
+      },
+      "limits_source": "openrouter-index",
+      "pricing_source": "models.dev",
+      "shutdown_date": "2026-08-10"
     },
     {
       "id": "gpt-5.2-codex",
@@ -566,7 +719,13 @@
       "output_modalities": null,
       "supports_tools": null,
       "supports_structured_output": null,
-      "limits_source": "openrouter-index"
+      "pricing": {
+        "input_per_mtok": 1.75,
+        "output_per_mtok": 14.0
+      },
+      "limits_source": "openrouter-index",
+      "pricing_source": "openrouter-index",
+      "shutdown_date": "2026-07-23"
     },
     {
       "id": "gpt-5.2-pro",
@@ -575,9 +734,14 @@
       "max_output_tokens": 128000,
       "input_modalities": null,
       "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
-      "limits_source": "openrouter-index"
+      "supports_tools": true,
+      "supports_structured_output": false,
+      "pricing": {
+        "input_per_mtok": 21,
+        "output_per_mtok": 168
+      },
+      "limits_source": "openrouter-index",
+      "pricing_source": "models.dev"
     },
     {
       "id": "gpt-5.2-pro-2025-12-11",
@@ -592,12 +756,20 @@
     {
       "id": "gpt-5.3-chat-latest",
       "kind": "text",
-      "context_length": null,
-      "max_output_tokens": null,
+      "context_length": 128000,
+      "max_output_tokens": 16384,
       "input_modalities": null,
       "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null
+      "supports_tools": true,
+      "supports_structured_output": true,
+      "pricing": {
+        "input_per_mtok": 1.75,
+        "output_per_mtok": 14,
+        "cached_input_per_mtok": 0.175
+      },
+      "limits_source": "models.dev",
+      "pricing_source": "models.dev",
+      "shutdown_date": "2026-08-10"
     },
     {
       "id": "gpt-5.3-codex",
@@ -606,9 +778,15 @@
       "max_output_tokens": 128000,
       "input_modalities": null,
       "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
-      "limits_source": "openrouter-index"
+      "supports_tools": true,
+      "supports_structured_output": true,
+      "pricing": {
+        "input_per_mtok": 1.75,
+        "output_per_mtok": 14,
+        "cached_input_per_mtok": 0.175
+      },
+      "limits_source": "openrouter-index",
+      "pricing_source": "models.dev"
     },
     {
       "id": "gpt-5.4",
@@ -617,9 +795,15 @@
       "max_output_tokens": 128000,
       "input_modalities": null,
       "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
-      "limits_source": "openrouter-index"
+      "supports_tools": true,
+      "supports_structured_output": true,
+      "pricing": {
+        "input_per_mtok": 2.5,
+        "output_per_mtok": 15,
+        "cached_input_per_mtok": 0.25
+      },
+      "limits_source": "openrouter-index",
+      "pricing_source": "models.dev"
     },
     {
       "id": "gpt-5.4-2026-03-05",
@@ -638,9 +822,15 @@
       "max_output_tokens": 128000,
       "input_modalities": null,
       "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
-      "limits_source": "openrouter-index"
+      "supports_tools": true,
+      "supports_structured_output": true,
+      "pricing": {
+        "input_per_mtok": 0.75,
+        "output_per_mtok": 4.5,
+        "cached_input_per_mtok": 0.075
+      },
+      "limits_source": "openrouter-index",
+      "pricing_source": "models.dev"
     },
     {
       "id": "gpt-5.4-mini-2026-03-17",
@@ -659,9 +849,15 @@
       "max_output_tokens": 128000,
       "input_modalities": null,
       "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
-      "limits_source": "openrouter-index"
+      "supports_tools": true,
+      "supports_structured_output": true,
+      "pricing": {
+        "input_per_mtok": 0.2,
+        "output_per_mtok": 1.25,
+        "cached_input_per_mtok": 0.02
+      },
+      "limits_source": "openrouter-index",
+      "pricing_source": "models.dev"
     },
     {
       "id": "gpt-5.4-nano-2026-03-17",
@@ -680,9 +876,14 @@
       "max_output_tokens": 128000,
       "input_modalities": null,
       "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
-      "limits_source": "openrouter-index"
+      "supports_tools": true,
+      "supports_structured_output": false,
+      "pricing": {
+        "input_per_mtok": 30,
+        "output_per_mtok": 180
+      },
+      "limits_source": "openrouter-index",
+      "pricing_source": "models.dev"
     },
     {
       "id": "gpt-5.4-pro-2026-03-05",
@@ -701,9 +902,15 @@
       "max_output_tokens": 128000,
       "input_modalities": null,
       "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
-      "limits_source": "openrouter-index"
+      "supports_tools": true,
+      "supports_structured_output": true,
+      "pricing": {
+        "input_per_mtok": 5,
+        "output_per_mtok": 30,
+        "cached_input_per_mtok": 0.5
+      },
+      "limits_source": "openrouter-index",
+      "pricing_source": "models.dev"
     },
     {
       "id": "gpt-5.5-2026-04-23",
@@ -722,9 +929,14 @@
       "max_output_tokens": 128000,
       "input_modalities": null,
       "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
-      "limits_source": "openrouter-index"
+      "supports_tools": true,
+      "supports_structured_output": true,
+      "pricing": {
+        "input_per_mtok": 30,
+        "output_per_mtok": 180
+      },
+      "limits_source": "openrouter-index",
+      "pricing_source": "models.dev"
     },
     {
       "id": "gpt-5.5-pro-2026-04-23",
@@ -743,9 +955,16 @@
       "max_output_tokens": 128000,
       "input_modalities": null,
       "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
-      "limits_source": "openrouter-index"
+      "supports_tools": true,
+      "supports_structured_output": true,
+      "pricing": {
+        "input_per_mtok": 0.2,
+        "output_per_mtok": 1.2,
+        "cached_input_per_mtok": 0.02,
+        "cache_write_per_mtok": 0.25
+      },
+      "limits_source": "openrouter-index",
+      "pricing_source": "models.dev"
     },
     {
       "id": "gpt-5.6-sol",
@@ -754,9 +973,16 @@
       "max_output_tokens": 128000,
       "input_modalities": null,
       "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
-      "limits_source": "openrouter-index"
+      "supports_tools": true,
+      "supports_structured_output": true,
+      "pricing": {
+        "input_per_mtok": 5,
+        "output_per_mtok": 30,
+        "cached_input_per_mtok": 0.5,
+        "cache_write_per_mtok": 6.25
+      },
+      "limits_source": "openrouter-index",
+      "pricing_source": "models.dev"
     },
     {
       "id": "gpt-5.6-terra",
@@ -765,9 +991,16 @@
       "max_output_tokens": 128000,
       "input_modalities": null,
       "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
-      "limits_source": "openrouter-index"
+      "supports_tools": true,
+      "supports_structured_output": true,
+      "pricing": {
+        "input_per_mtok": 2,
+        "output_per_mtok": 12,
+        "cached_input_per_mtok": 0.2,
+        "cache_write_per_mtok": 2.5
+      },
+      "limits_source": "openrouter-index",
+      "pricing_source": "models.dev"
     },
     {
       "id": "gpt-audio",
@@ -778,7 +1011,13 @@
       "output_modalities": null,
       "supports_tools": null,
       "supports_structured_output": null,
-      "limits_source": "openrouter-index"
+      "pricing": {
+        "input_per_mtok": 2.5,
+        "output_per_mtok": 10.0
+      },
+      "limits_source": "openrouter-index",
+      "pricing_source": "openrouter-index",
+      "shutdown_date": "2027-01-20"
     },
     {
       "id": "gpt-audio-1.5",
@@ -809,7 +1048,13 @@
       "output_modalities": null,
       "supports_tools": null,
       "supports_structured_output": null,
-      "limits_source": "openrouter-index"
+      "pricing": {
+        "input_per_mtok": 0.6,
+        "output_per_mtok": 2.4
+      },
+      "limits_source": "openrouter-index",
+      "pricing_source": "openrouter-index",
+      "shutdown_date": "2027-01-20"
     },
     {
       "id": "gpt-audio-mini-2025-10-06",
@@ -819,100 +1064,11 @@
       "input_modalities": null,
       "output_modalities": null,
       "supports_tools": null,
-      "supports_structured_output": null
+      "supports_structured_output": null,
+      "shutdown_date": "2026-07-23"
     },
     {
       "id": "gpt-audio-mini-2025-12-15",
-      "kind": "text",
-      "context_length": null,
-      "max_output_tokens": null,
-      "input_modalities": null,
-      "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null
-    },
-    {
-      "id": "gpt-realtime",
-      "kind": "text",
-      "context_length": null,
-      "max_output_tokens": null,
-      "input_modalities": null,
-      "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null
-    },
-    {
-      "id": "gpt-realtime-1.5",
-      "kind": "text",
-      "context_length": null,
-      "max_output_tokens": null,
-      "input_modalities": null,
-      "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null
-    },
-    {
-      "id": "gpt-realtime-2",
-      "kind": "text",
-      "context_length": null,
-      "max_output_tokens": null,
-      "input_modalities": null,
-      "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null
-    },
-    {
-      "id": "gpt-realtime-2.1",
-      "kind": "text",
-      "context_length": null,
-      "max_output_tokens": null,
-      "input_modalities": null,
-      "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null
-    },
-    {
-      "id": "gpt-realtime-2.1-mini",
-      "kind": "text",
-      "context_length": null,
-      "max_output_tokens": null,
-      "input_modalities": null,
-      "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null
-    },
-    {
-      "id": "gpt-realtime-2025-08-28",
-      "kind": "text",
-      "context_length": null,
-      "max_output_tokens": null,
-      "input_modalities": null,
-      "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null
-    },
-    {
-      "id": "gpt-realtime-mini",
-      "kind": "text",
-      "context_length": null,
-      "max_output_tokens": null,
-      "input_modalities": null,
-      "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null
-    },
-    {
-      "id": "gpt-realtime-mini-2025-12-15",
-      "kind": "text",
-      "context_length": null,
-      "max_output_tokens": null,
-      "input_modalities": null,
-      "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null
-    },
-    {
-      "id": "gpt-realtime-translate",
       "kind": "text",
       "context_length": null,
       "max_output_tokens": null,
@@ -928,9 +1084,16 @@
       "max_output_tokens": 100000,
       "input_modalities": null,
       "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
-      "limits_source": "openrouter-index"
+      "supports_tools": true,
+      "supports_structured_output": true,
+      "pricing": {
+        "input_per_mtok": 15,
+        "output_per_mtok": 60,
+        "cached_input_per_mtok": 7.5
+      },
+      "limits_source": "openrouter-index",
+      "pricing_source": "models.dev",
+      "shutdown_date": "2026-10-23"
     },
     {
       "id": "o1-2024-12-17",
@@ -941,7 +1104,13 @@
       "output_modalities": null,
       "supports_tools": null,
       "supports_structured_output": null,
-      "limits_source": "openrouter-index"
+      "pricing": {
+        "input_per_mtok": 15.0,
+        "output_per_mtok": 60.0
+      },
+      "limits_source": "openrouter-index",
+      "pricing_source": "openrouter-index",
+      "shutdown_date": "2026-10-23"
     },
     {
       "id": "o1-pro",
@@ -950,9 +1119,15 @@
       "max_output_tokens": 100000,
       "input_modalities": null,
       "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
-      "limits_source": "openrouter-index"
+      "supports_tools": true,
+      "supports_structured_output": true,
+      "pricing": {
+        "input_per_mtok": 150,
+        "output_per_mtok": 600
+      },
+      "limits_source": "openrouter-index",
+      "pricing_source": "models.dev",
+      "shutdown_date": "2026-10-23"
     },
     {
       "id": "o1-pro-2025-03-19",
@@ -962,7 +1137,8 @@
       "input_modalities": null,
       "output_modalities": null,
       "supports_tools": null,
-      "supports_structured_output": null
+      "supports_structured_output": null,
+      "shutdown_date": "2026-10-23"
     },
     {
       "id": "o3",
@@ -971,9 +1147,15 @@
       "max_output_tokens": 100000,
       "input_modalities": null,
       "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
-      "limits_source": "openrouter-index"
+      "supports_tools": true,
+      "supports_structured_output": true,
+      "pricing": {
+        "input_per_mtok": 2,
+        "output_per_mtok": 8,
+        "cached_input_per_mtok": 0.5
+      },
+      "limits_source": "openrouter-index",
+      "pricing_source": "models.dev"
     },
     {
       "id": "o3-2025-04-16",
@@ -984,7 +1166,13 @@
       "output_modalities": null,
       "supports_tools": null,
       "supports_structured_output": null,
-      "limits_source": "openrouter-index"
+      "pricing": {
+        "input_per_mtok": 2.0,
+        "output_per_mtok": 8.0
+      },
+      "limits_source": "openrouter-index",
+      "pricing_source": "openrouter-index",
+      "shutdown_date": "2026-12-11"
     },
     {
       "id": "o3-mini",
@@ -993,9 +1181,16 @@
       "max_output_tokens": 100000,
       "input_modalities": null,
       "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
-      "limits_source": "openrouter-index"
+      "supports_tools": true,
+      "supports_structured_output": true,
+      "pricing": {
+        "input_per_mtok": 1.1,
+        "output_per_mtok": 4.4,
+        "cached_input_per_mtok": 0.55
+      },
+      "limits_source": "openrouter-index",
+      "pricing_source": "models.dev",
+      "shutdown_date": "2026-10-23"
     },
     {
       "id": "o3-mini-2025-01-31",
@@ -1006,7 +1201,13 @@
       "output_modalities": null,
       "supports_tools": null,
       "supports_structured_output": null,
-      "limits_source": "openrouter-index"
+      "pricing": {
+        "input_per_mtok": 1.1,
+        "output_per_mtok": 4.4
+      },
+      "limits_source": "openrouter-index",
+      "pricing_source": "openrouter-index",
+      "shutdown_date": "2026-10-23"
     },
     {
       "id": "o4-mini",
@@ -1015,9 +1216,16 @@
       "max_output_tokens": 100000,
       "input_modalities": null,
       "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
-      "limits_source": "openrouter-index"
+      "supports_tools": true,
+      "supports_structured_output": true,
+      "pricing": {
+        "input_per_mtok": 1.1,
+        "output_per_mtok": 4.4,
+        "cached_input_per_mtok": 0.275
+      },
+      "limits_source": "openrouter-index",
+      "pricing_source": "models.dev",
+      "shutdown_date": "2026-10-23"
     },
     {
       "id": "o4-mini-2025-04-16",
@@ -1028,7 +1236,13 @@
       "output_modalities": null,
       "supports_tools": null,
       "supports_structured_output": null,
-      "limits_source": "openrouter-index"
+      "pricing": {
+        "input_per_mtok": 1.1,
+        "output_per_mtok": 4.4
+      },
+      "limits_source": "openrouter-index",
+      "pricing_source": "openrouter-index",
+      "shutdown_date": "2026-10-23"
     },
     {
       "id": "o4-mini-deep-research",
@@ -1038,7 +1252,8 @@
       "input_modalities": null,
       "output_modalities": null,
       "supports_tools": null,
-      "supports_structured_output": null
+      "supports_structured_output": null,
+      "shutdown_date": "2026-07-23"
     },
     {
       "id": "o4-mini-deep-research-2025-06-26",
@@ -1048,27 +1263,8 @@
       "input_modalities": null,
       "output_modalities": null,
       "supports_tools": null,
-      "supports_structured_output": null
-    },
-    {
-      "id": "sora-2",
-      "kind": "text",
-      "context_length": null,
-      "max_output_tokens": null,
-      "input_modalities": null,
-      "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null
-    },
-    {
-      "id": "sora-2-pro",
-      "kind": "text",
-      "context_length": null,
-      "max_output_tokens": null,
-      "input_modalities": null,
-      "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null
+      "supports_structured_output": null,
+      "shutdown_date": "2026-07-23"
     }
   ]
 }

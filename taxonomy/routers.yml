@@ -8,6 +8,7 @@ routers:
   icon_color: openrouter-color
   homepage: https://openrouter.ai
   docs: https://openrouter.ai/docs
+  base_url: https://openrouter.ai/api/v1
   openapi: https://openrouter.ai/openapi.json
   models_url: https://openrouter.ai/api/v1/models
   ingress:

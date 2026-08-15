@@ -116,20 +116,7 @@ HTML = """<title>Completion request field support</title>
 
   <div class="scroll"><div id="matrix"></div></div>
 
-  <div class="notes">
-    <div class="note">
-      <h3><span class="flag" style="background:var(--warn)"></span>Canonical stand-ins</h3>
-      <p>Six providers publish no request parameters of their own and only state SDK compatibility, so their column restates OpenAI's schema verbatim. Their amber headers are a compatibility claim, not independent evidence. The <code>verified</code> count excludes them.</p>
-    </div>
-    <div class="note">
-      <h3>Why so few universal fields</h3>
-      <p>Only <code>$.messages</code>, <code>$.messages[*].role</code>, <code>$.messages[*].content</code> and <code>$.stream</code> appear in all 28. Even <code>$.model</code> misses one: Azure AI Foundry puts the deployment name in the URL, so the body has no model field.</p>
-    </div>
-    <div class="note">
-      <h3>The long tail is mostly one router</h3>
-      <p>Most single-provider paths belong to OpenRouter, whose request carries routing controls no upstream provider has. Filtering to shared fields leaves the surface an adapter actually has to reconcile.</p>
-    </div>
-  </div>
+  <div class="notes" id="notes"></div>
 </div>
 
 <script>
@@ -225,7 +212,42 @@ function renderMatrix() {
   if (first) document.documentElement.style.setProperty("--pathw", first.getBoundingClientRect().width + "px");
 }
 
-function render() { renderStats(); renderMatrix(); }
+function renderNotes() {
+  const d = DATA[ingress], cols = activeColumns(), rows = activeRows();
+  const universal = rows.filter(r => r.total === cols.length);
+  const solo = rows.filter(r => r.total === 1);
+  const standins = d.columns.filter(c => c.standin);
+  const busiest = [...cols].sort((a, b) => b.count - a.count)[0];
+  const code = p => `<code>${p}</code>`;
+
+  const notes = [];
+  notes.push([
+    "The shared core",
+    universal.length
+      ? `${universal.length} paths are accepted by all ${cols.length} columns, led by ${universal.slice(0, 4).map(r => code(r.path)).join(", ")}. Those are the fields an adapter can rely on without a per-provider branch.`
+      : `No path is accepted by all ${cols.length} columns, so every field needs a per-provider decision.`,
+  ]);
+  notes.push([
+    "The long tail",
+    `${solo.length} of ${rows.length} paths belong to exactly one column, most of them ${busiest.name}'s at ${busiest.count} fields. Filter to shared fields to see the surface an adapter actually has to reconcile.`,
+  ]);
+  notes.push(standins.length
+    ? ["Canonical stand-ins",
+       `${standins.length} columns publish no request parameters of their own and restate the canonical schema: ${standins.map(c => c.name).join(", ")}. Amber headers are a compatibility claim, not independent evidence, and the verified count excludes them.`]
+    : ["Every column is first-hand",
+       "No column borrows another provider's schema, so each one is evidence in its own right and the two support counts agree."]);
+
+  document.getElementById("notes").replaceChildren(...notes.map(([title, body]) => {
+    const el2 = document.createElement("div");
+    el2.className = "note";
+    const h = document.createElement("h3"); h.textContent = title;
+    const p = document.createElement("p"); p.innerHTML = body;
+    el2.append(h, p);
+    return el2;
+  }));
+}
+
+function render() { renderStats(); renderMatrix(); renderNotes(); }
 
 document.querySelectorAll(".seg button").forEach(b => b.addEventListener("click", () => {
   ingress = b.dataset.ingress;

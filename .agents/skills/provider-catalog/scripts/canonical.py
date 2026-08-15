@@ -27,7 +27,8 @@ CATALOG_ORDER = ("provider", "source", "source_type", "updated", "count", "model
 MODEL_ORDER = (
     "id", "kind", "context_length", "max_output_tokens",
     "input_modalities", "output_modalities",
-    "supports_tools", "supports_structured_output", "limits_source",
+    "supports_tools", "supports_structured_output", "pricing",
+    "limits_source", "pricing_source",
 )
 
 
@@ -37,9 +38,20 @@ def order_keys(record: dict, leading: tuple[str, ...]) -> dict:
     return {k: record[k] for k in known + rest}
 
 
+def clean_floats(record: dict) -> dict:
+    """Round money to the cent-per-million. Vendors return binary float noise like
+    0.030000000000000002, which is meaningless precision and pure diff churn."""
+    pricing = record.get("pricing")
+    if isinstance(pricing, dict):
+        record["pricing"] = {
+            k: round(v, 4) if isinstance(v, float) else v for k, v in pricing.items()
+        }
+    return record
+
+
 def sort_models(models: list[dict]) -> list[dict]:
     """Vendors return catalogs in arbitrary and unstable order. Impose one."""
-    return sorted((order_keys(m, MODEL_ORDER) for m in models),
+    return sorted((clean_floats(order_keys(m, MODEL_ORDER)) for m in models),
                   key=lambda m: (str(m.get("id", "")).lower(), str(m.get("id", ""))))
 
 

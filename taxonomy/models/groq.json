@@ -1,98 +1,183 @@
 {
   "provider": "groq",
-  "source": "https://console.groq.com/docs/models",
-  "source_type": "docs",
-  "updated": "2026-08-11",
+  "source": "https://api.groq.com/openai/v1/models",
+  "source_type": "api",
+  "updated": "2026-08-15",
   "count": 8,
   "models": [
+    {
+      "id": "allam-2-7b",
+      "kind": "text",
+      "context_length": 4096,
+      "max_output_tokens": 4096,
+      "input_modalities": [
+        "text"
+      ],
+      "output_modalities": [
+        "text"
+      ],
+      "supports_tools": false,
+      "supports_structured_output": true,
+      "pricing": {
+        "input_per_mtok": 0,
+        "output_per_mtok": 0
+      },
+      "limits_source": "provider",
+      "pricing_source": "provider",
+      "display_name": "ALLaM-2-7b",
+      "hugging_face_id": "ALLaM-AI/ALLaM-2.0-7B-Instruct"
+    },
     {
       "id": "groq/compound",
       "kind": "text",
       "context_length": 131072,
       "max_output_tokens": 8192,
-      "input_modalities": null,
-      "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
-      "limits_source": "provider"
+      "input_modalities": [
+        "text"
+      ],
+      "output_modalities": [
+        "text"
+      ],
+      "supports_tools": false,
+      "supports_structured_output": true,
+      "pricing": null,
+      "limits_source": "provider",
+      "display_name": "Compound",
+      "hugging_face_id": "groq/compound-beta"
     },
     {
       "id": "groq/compound-mini",
       "kind": "text",
       "context_length": 131072,
       "max_output_tokens": 8192,
-      "input_modalities": null,
-      "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
-      "limits_source": "provider"
+      "input_modalities": [
+        "text"
+      ],
+      "output_modalities": [
+        "text"
+      ],
+      "supports_tools": false,
+      "supports_structured_output": true,
+      "pricing": null,
+      "limits_source": "provider",
+      "display_name": "Compound Mini",
+      "hugging_face_id": "groq/compound-beta-mini"
     },
     {
       "id": "llama-3.1-8b-instant",
       "kind": "text",
       "context_length": 131072,
       "max_output_tokens": 131072,
-      "input_modalities": null,
-      "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
-      "limits_source": "provider"
+      "input_modalities": [
+        "text"
+      ],
+      "output_modalities": [
+        "text"
+      ],
+      "supports_tools": true,
+      "supports_structured_output": true,
+      "pricing": {
+        "input_per_mtok": 0.05,
+        "output_per_mtok": 0.08,
+        "cached_input_per_mtok": 0.025
+      },
+      "limits_source": "provider",
+      "pricing_source": "provider",
+      "display_name": "Llama 3.1 8B",
+      "hugging_face_id": "meta-llama/Llama-3.1-8B-Instruct"
     },
     {
       "id": "llama-3.3-70b-versatile",
       "kind": "text",
       "context_length": 131072,
       "max_output_tokens": 32768,
-      "input_modalities": null,
-      "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
-      "limits_source": "provider"
-    },
-    {
-      "id": "minimaxai/minimax-m2.7",
-      "kind": "text",
-      "context_length": 196608,
-      "max_output_tokens": 131072,
-      "input_modalities": null,
-      "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
-      "limits_source": "provider"
+      "input_modalities": [
+        "text"
+      ],
+      "output_modalities": [
+        "text"
+      ],
+      "supports_tools": true,
+      "supports_structured_output": true,
+      "pricing": {
+        "input_per_mtok": 0.59,
+        "output_per_mtok": 0.79,
+        "cached_input_per_mtok": 0.295
+      },
+      "limits_source": "provider",
+      "pricing_source": "provider",
+      "display_name": "Llama 3.3 70B",
+      "hugging_face_id": "meta-llama/Llama-3.3-70B-Instruct"
     },
     {
       "id": "openai/gpt-oss-120b",
       "kind": "text",
       "context_length": 131072,
       "max_output_tokens": 65536,
-      "input_modalities": null,
-      "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
-      "limits_source": "provider"
+      "input_modalities": [
+        "text"
+      ],
+      "output_modalities": [
+        "text"
+      ],
+      "supports_tools": true,
+      "supports_structured_output": true,
+      "pricing": {
+        "input_per_mtok": 0.15,
+        "output_per_mtok": 0.6,
+        "cached_input_per_mtok": 0.075
+      },
+      "limits_source": "provider",
+      "pricing_source": "provider",
+      "display_name": "GPT OSS 120B",
+      "hugging_face_id": "openai/gpt-oss-120b"
     },
     {
       "id": "openai/gpt-oss-20b",
       "kind": "text",
       "context_length": 131072,
       "max_output_tokens": 65536,
-      "input_modalities": null,
-      "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
-      "limits_source": "provider"
+      "input_modalities": [
+        "text"
+      ],
+      "output_modalities": [
+        "text"
+      ],
+      "supports_tools": true,
+      "supports_structured_output": true,
+      "pricing": {
+        "input_per_mtok": 0.075,
+        "output_per_mtok": 0.3,
+        "cached_input_per_mtok": 0.0375
+      },
+      "limits_source": "provider",
+      "pricing_source": "provider",
+      "display_name": "GPT OSS 20B",
+      "hugging_face_id": "openai/gpt-oss-20b"
     },
     {
       "id": "qwen/qwen3.6-27b",
       "kind": "text",
       "context_length": 131072,
       "max_output_tokens": 16384,
-      "input_modalities": null,
-      "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
-      "limits_source": "provider"
+      "input_modalities": [
+        "text",
+        "image"
+      ],
+      "output_modalities": [
+        "text"
+      ],
+      "supports_tools": true,
+      "supports_structured_output": true,
+      "pricing": {
+        "input_per_mtok": 0.6,
+        "output_per_mtok": 3.0,
+        "cached_input_per_mtok": 0.3
+      },
+      "limits_source": "provider",
+      "pricing_source": "provider",
+      "display_name": "Qwen/Qwen3.6-27B",
+      "hugging_face_id": "Qwen/Qwen3.6-27B"
     }
-  ],
-  "note": "the vendor OpenAPI spec carries an older, shorter enum; the docs page is newer and used here"
+  ]
 }

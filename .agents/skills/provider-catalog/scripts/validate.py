@@ -27,13 +27,14 @@ from canonical import MODEL_ORDER, sort_models
 from model_kind import classify
 
 ROOT = TAXONOMY
-FIELDS = {"id", "name", "icon_mono", "icon_color", "homepage", "docs", "openapi", "models_url", "ingress", "auth", "env_var", "schema"}
+FIELDS = {"id", "name", "icon_mono", "icon_color", "homepage", "docs", "base_url", "openapi", "models_url", "ingress", "auth", "env_var", "schema"}
 INGRESS = {"oai", "oai_responses", "anthropic", "google", "other_standard", "custom"}
 # ingresses that carry a schema; google is the one shape we have not extracted
 WIRE = {"oai", "oai_responses", "anthropic", "custom"}
 AUTH_BARE = {"bearer", "sigv4", "oauth"}
 PARTS = {"request", "response", "stream"}
-LIMITS_SOURCE = {"provider", "openrouter-index", "vendor-docs"}
+LIMITS_SOURCE = {"provider", "models.dev", "openrouter-index", "vendor-docs"}
+PRICING_SOURCE = LIMITS_SOURCE
 ROOT_FORMS = {"properties", "$ref", "oneOf", "anyOf", "allOf", "type", "items"}
 
 # A wire ingress with no schema is normally a hole. These are the exceptions, recorded
@@ -83,6 +84,8 @@ def check_shape(all_entries: list[dict]) -> None:
             seen_env[env] = eid
         if not (e.get("models_url") or "").startswith("http"):
             fail("models_url", f"{eid} has no usable listing endpoint")
+        if not (e.get("base_url") or "").startswith("http"):
+            fail("base_url", f"{eid} has no inference endpoint; the applied taxonomy needs one")
 
 
 def check_icons(all_entries: list[dict]) -> None:
@@ -191,6 +194,43 @@ def check_models(all_entries: list[dict]) -> None:
                 fail("models", f"{provider}/{mid} has limits_source {source!r}")
             if source in LIMITS_SOURCE and not (m.get("context_length") and m.get("max_output_tokens")):
                 fail("models", f"{provider}/{mid} claims {source} but is missing a limit")
+            psource = m.get("pricing_source")
+            if psource is not None and psource not in PRICING_SOURCE:
+                fail("models", f"{provider}/{mid} has pricing_source {psource!r}")
+            if psource and not m.get("pricing"):
+                fail("models", f"{provider}/{mid} claims a pricing source but carries no price")
+            if m.get("pricing") and not psource:
+                fail("models", f"{provider}/{mid} has a price with no pricing_source")
+
+
+CANDIDATE_FIELDS = {"id", "name", "homepage", "docs", "env_var"}
+
+
+def check_candidates(all_entries: list[dict]) -> None:
+    """Candidates are tracked, not modelled. Identity only, and never derived data."""
+    path = ROOT / "candidates.yml"
+    if not path.exists():
+        return
+    active = {e["id"] for e in all_entries}
+    for entry in yaml.safe_load(path.read_text())["candidates"]:
+        eid = entry.get("id", "<unnamed>")
+        if set(entry) != CANDIDATE_FIELDS:
+            fail("candidate", f"{eid} has {sorted(set(entry) ^ CANDIDATE_FIELDS)}; candidates are identity only")
+        if eid in active:
+            fail("candidate", f"{eid} is both active and a candidate")
+        if (ROOT / "models" / f"{eid}.json").exists():
+            fail("candidate", f"{eid} still has a model catalog; candidates carry no derived data")
+
+
+def check_applied() -> None:
+    """taxonomy.yml is generated. If it has drifted, the database gets stale routing."""
+    import subprocess
+    result = subprocess.run(
+        [sys.executable, str(Path(__file__).resolve().parent / "build_taxonomy.py"), "--check"],
+        capture_output=True, text=True,
+    )
+    if result.returncode != 0:
+        fail("applied", "taxonomy.yml is out of date; run build_taxonomy.py")
 
 
 def check_seed(all_entries: list[dict]) -> None:
@@ -199,9 +239,10 @@ def check_seed(all_entries: list[dict]) -> None:
     if not seed_path.exists():
         fail("seed", "seed.yml is missing; a rebuild from scratch would be impossible")
         return
-    carried = ("id", "name", "icon_mono", "icon_color", "homepage", "docs", "openapi", "models_url", "ingress", "auth", "env_var")
+    carried = ("id", "name", "icon_mono", "icon_color", "homepage", "docs", "base_url", "openapi", "models_url", "ingress", "auth", "env_var")
     seed = yaml.safe_load(seed_path.read_text())
-    seeded = {e["id"]: e for group in seed.values() for e in group}
+    # candidates live in the seed too, but they are not catalog entries
+    seeded = {e["id"]: e for key, group in seed.items() if key != "candidates" for e in group}
     for e in all_entries:
         if e["id"] not in seeded:
             fail("seed", f"{e['id']} is in the catalog but not the seed; run make_seed.py")
@@ -219,6 +260,8 @@ def main() -> int:
     check_icons(all_entries)
     check_schemas(all_entries)
     check_models(all_entries)
+    check_candidates(all_entries)
+    check_applied()
     check_seed(all_entries)
 
     if not HAS_JSONSCHEMA:

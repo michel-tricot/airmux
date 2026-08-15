@@ -9,7 +9,25 @@ user-invocable: true
 `taxonomy/` is a researched catalog of LLM providers and routers: what wire shape each one
 accepts, how it authenticates, what models it serves, and the JSON Schema of its completion
 request and response. It is research input for adapter planning. It is never loaded at
-runtime; `taxonomy.yml` at the repo root is the file `airllmcp taxonomy` reads.
+runtime; `taxonomy/taxonomy.yml` is the generated file `airllmcp taxonomy` reads.
+
+## Active versus candidate
+
+`providers.yml` holds only providers validated with a working account. Everything else is
+in `candidates.yml` with five fields: id, name, homepage, docs, env_var. Candidates carry
+no schemas, no model catalogs and no icons, and nothing fetches them.
+
+The split exists because unvalidated data is worse than absent data. A doc-derived catalog
+looks the same in a diff as a live one and is wrong in ways nobody notices: Fireworks
+advertised 297 models and serves 20, Together advertised 24 and serves 74.
+
+To promote a candidate: move its entry to `providers.yml` with the full field set, add a
+module under `scripts/sources/`, run the extractors and `make_seed.py`. Everything derived
+comes back in minutes. Demoting is the reverse, and `validate.py` fails if an id is in both
+files or if a candidate still has derived data.
+
+nvidia is a candidate for a different reason. It was validated, and a key proved its API
+publishes nothing beyond model ids, so it is parked rather than dropped.
 
 ## The rule that matters most
 
@@ -37,16 +55,24 @@ The tooling lives with this skill; the catalog is its output. Nothing executable
     extract_schemas.py     request/response/stream out of vendor OpenAPI specs
     doc_schemas.py         request schemas transcribed where there is no spec
     model_kind.py          text vs embedding/image/audio/rerank classifier
-    fetch_models.py        model catalogs from each provider's listing endpoint
-    doc_models.py          model catalogs transcribed where no endpoint is reachable
-    enrich_limits.py       fills context_length and max_output_tokens
+    fetch_models.py        drives the sources registry and writes the catalogs
+    sources/               one module per provider, see sources/base.py
+      base.py              ModelSource, the registry, and the shared helpers
+      groq.py              pricing, modalities, supported_features
+      anthropic.py         limits plus the nested capabilities tree
+      openai.py            bare ids and shutdown_date, nothing more exists
+      fireworks.py         serverless-only, control plane, UNVERIFIED
+      openai_shaped.py     novita, deepinfra, sambanova, huggingface, nvidia
+    enrich.py              fills limits and pricing from secondary sources
     fetch_icons.py         vendors provider marks as SVG
     field_matrix.py        field support matrix, per ingress
     build_report.py        renders the matrix to HTML
+    build_taxonomy.py      regenerates taxonomy/taxonomy.yml, the applied file
     validate.py            structural gates, run after every change
 
 taxonomy/
-  providers.yml            one entry per provider, 12 fields, uniform
+  providers.yml            validated providers only, 12 fields, uniform
+  candidates.yml           everything else, identity only, never fetched
   routers.yml              same shape, for services that dispatch to others
   schemas/completion/      <ingress>.<id>.<part>.json
   models/                  <id>.json, text models only
@@ -60,6 +86,25 @@ taxonomy/
 rot.
 
 ## Workflows
+
+### Adding a model source
+
+One new module under `scripts/sources/`. Subclass `ModelSource`, set `id` and `url`,
+implement `normalize`. Override `items` when the payload is not `{"data": [...]}` and
+`fetch` when one request is not enough. Touch no other file: the registry is a subclass
+walk, so a module that exists is a module that runs.
+
+Map every field by hand. A generic normalizer holds only the intersection of what vendors
+publish, which is close to nothing: Groq returns pricing and a feature list, Anthropic a
+capabilities tree, OpenAI four fields. Flattening those loses most of the catalog's value.
+
+Put the per-provider instructions in the module docstring. Which endpoint is the real
+catalog, what serverless means for that vendor, which fields lie, what state the account
+has to be in. That is knowledge nobody recovers by reading code.
+
+Return `None` from `normalize` for anything the account cannot call without provisioning.
+The catalog answers "what can airllm route to today", so a model that needs a deployment
+spun up does not belong in it.
 
 ### Adding a provider
 
@@ -98,8 +143,7 @@ is correct behaviour and worth reading the output for.
 ```
 cd .agents/skills/provider-catalog/scripts
 python fetch_models.py [provider ...]   # needs the provider's env_var
-python doc_models.py                    # transcribed lists, never overwrites api ones
-python enrich_limits.py                 # fills limits, records provenance
+python enrich.py                        # fills limits and pricing, records provenance
 python validate.py
 ```
 
@@ -131,6 +175,26 @@ Depth 2 is the useful default. Depth 1 gives 255 paths and reads as a summary; d
 
 Rerun after any schema change. It is not automatic.
 
+### Regenerating the applied taxonomy
+
+```
+python build_taxonomy.py            # write taxonomy/taxonomy.yml
+python build_taxonomy.py --check    # fail if stale, for CI
+```
+
+`taxonomy/` holds both halves: providers.yml and the derived data are research, and
+`taxonomy/taxonomy.yml` is what `airllmcp taxonomy` applies to the database. The second is generated from the first, so never hand-edit it.
+`validate.py` fails when the two have drifted, and `bootstrap.py` regenerates it last.
+
+Model ids are always `<provider>/<upstream>`. `gpt-oss-120b` is served by both Groq and
+Together at different prices and limits, so a bare id cannot be the caller-facing key, and
+prefixing only on collision would rename existing models whenever a provider is added.
+`upstream_model` carries the name that goes on the wire.
+
+A model with no context window is skipped rather than emitted. `ModelIn` defaults
+`context_window` to 128000, and writing that default for an unknown window would invent a
+routing limit. The run prints how many were skipped.
+
 ### Answering a question about a provider
 
 Read the catalog first, then verify the specific claim against the vendor before repeating
@@ -156,6 +220,18 @@ it. The catalog records when it was checked; it does not stay true on its own.
   record keys follow a fixed order, `$defs` sort alphabetically, and `updated` is the date
   content last *changed* rather than the date it was last checked. Two consecutive full
   runs produce byte-identical files, so anything that shows in a diff is a real change
+- **A provider without a module is not fetched.** `fetch_models.py` skips it and says so,
+  rather than guessing at its shape. Doc-derived catalogs still cover those providers
+- **No prices are hardcoded in a module.** A frozen table is wrong twice over: it stops
+  tracking the vendor the day it is written, and because it is set inside a source module
+  every value gets stamped `pricing_source: provider`, claiming an authority it does not
+  have. Prices come from the provider's API or from `enrich.py`, never from a literal
+- **Gaps are filled from ranked sources, never invented.** The provider's own value wins
+  and is never overwritten. models.dev fills next, and is preferred over OpenRouter because
+  it is keyed by provider, so a Fireworks price is Fireworks' price rather than someone
+  else's for the same weights. The OpenRouter index fills last and is marked, because it is
+  one entry per model rather than per host. `limits_source` and `pricing_source` are
+  separate, since a record commonly has an authoritative limit and a borrowed price
 - **Refetching never discards enrichment.** `fetch_models.py` carries forward the fields
   only `enrich_limits.py` can supply, so a refresh does not undo a limits pass
 - **One source of truth per fact.** Endpoints and credential names live in the YAML;

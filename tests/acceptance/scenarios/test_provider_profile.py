@@ -1,6 +1,6 @@
 """Acceptance: onboarding a quirky provider is a config change with zero code.
 
-The quirk provider exists only in taxonomy.yml: it respells max_tokens as
+The quirk provider exists only in the taxonomy file: it respells max_tokens as
 max_completion_tokens, closes its schema, and declares top_k as its one accepted extra. The
 proof reads the wire the stub echoes back: the alias applied, the declared extra forwarded, and the
 undeclared one dropped with its reason on the gateway envelope."""
