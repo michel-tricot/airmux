@@ -15,16 +15,15 @@ if TYPE_CHECKING:
 __all__ = ["DevNullOutbox", "EventOutbox", "SqliteOutbox", "build_outbox"]
 
 
-def build_outbox(config: OutboxConfig, control_plane: ControlPlaneLink, http_client: httpx.AsyncClient) -> EventOutbox:
+def build_outbox(config: OutboxConfig, control_plane: ControlPlaneLink | None, http_client: httpx.AsyncClient) -> EventOutbox:
     if isinstance(config, DevNullOutboxConfig):
         return DevNullOutbox()
-    if not control_plane.url:
-        msg = "sqlite event outbox requires a control-plane URL"
+    if control_plane is None:
+        msg = "sqlite event outbox requires a control plane"
         raise ValueError(msg)
     return SqliteOutbox(
         cache_dir=config.cache_dir,
-        control_plane_url=control_plane.url,
-        control_plane_token=control_plane.token,
+        control_plane=control_plane,
         flush_interval_s=config.flush_interval_s,
         http_client=http_client,
     )

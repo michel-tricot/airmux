@@ -15,6 +15,7 @@ from data_plane.cache import read_cached_bundle
 def _source(tmp_path):
     """The poller's two arguments out of the test config, with the union narrowed for the type checker."""
     config = make_config(tmp_path)
+    assert config.control_plane is not None
     assert isinstance(config.bundle, RemoteBundleConfig)
     return config.control_plane, config.bundle
 

@@ -110,8 +110,7 @@ def make_config(tmp_path, outbox_kind: Literal["sqlite", "devnull"] = "sqlite") 
 def make_outbox(tmp_path, http_client: httpx.AsyncClient, flush_interval_s: float = 5.0) -> SqliteOutbox:
     return SqliteOutbox(
         cache_dir=tmp_path,
-        control_plane_url=CONTROL_PLANE_URL,
-        control_plane_token="dp-token",
+        control_plane=ControlPlaneLink(url=CONTROL_PLANE_URL, token="dp-token"),
         flush_interval_s=flush_interval_s,
         http_client=http_client,
     )
@@ -187,7 +186,7 @@ def booted(tmp_path, monkeypatch) -> BootedApp:
     bundle = make_bundle(keys=[entry], catalog=catalog)
     (tmp_path / "bundle.json").write_text(sign_bundle(bundle, bundle_key, "k1").model_dump_json(), encoding="utf-8")
     config = Config(
-        control_plane=ControlPlaneLink(url=CONTROL_PLANE_URL),
+        control_plane=ControlPlaneLink(url=CONTROL_PLANE_URL, token="dp-token"),
         bundle=RemoteBundleConfig(verify_key=bundle_key.public_key(), cache_dir=tmp_path),
         events=SqliteOutboxConfig(cache_dir=tmp_path),
     )

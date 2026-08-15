@@ -24,10 +24,13 @@ __all__ = ["BundleConfig", "BundleHolder", "BundleSnapshot", "BundleSource", "Lo
 
 def build_bundle_source(
     config: BundleConfig,
-    control_plane: ControlPlaneLink,
+    control_plane: ControlPlaneLink | None,
     holder: BundleHolder,
     http_client: httpx.AsyncClient,
 ) -> BundleSource:
     if isinstance(config, LocalBundleConfig):
         return LocalBundleSource(config, holder)
+    if control_plane is None:
+        msg = "remote bundle requires a control plane"
+        raise ValueError(msg)
     return RemoteBundleSource(control_plane, config, holder, http_client)

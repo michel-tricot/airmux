@@ -180,7 +180,7 @@ def _byok_app(tmp_path, credentials):
     (tmp_path / "bundle.json").write_text(sign_bundle(bundle, bundle_key, "k1").model_dump_json(), encoding="utf-8")
     store_config = FileStoreConfig(root=tmp_path / "secrets")
     config = Config(
-        control_plane=ControlPlaneLink(url="http://cp.test"),
+        control_plane=ControlPlaneLink(url="http://cp.test", token="dp-token"),
         bundle=RemoteBundleConfig(verify_key=bundle_key.public_key(), cache_dir=tmp_path),
         secrets=store_config,
         events=SqliteOutboxConfig(cache_dir=tmp_path),

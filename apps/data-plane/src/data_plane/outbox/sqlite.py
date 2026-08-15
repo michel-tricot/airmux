@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import logging
 import os
 import sqlite3
@@ -14,8 +13,11 @@ from data_plane.outbox.base import EventOutbox
 from data_plane.tasks import run_periodic
 
 if TYPE_CHECKING:
+    import asyncio
     from collections.abc import Sequence
     from pathlib import Path
+
+    from data_plane.config import ControlPlaneLink
 
 logger = logging.getLogger("data_plane")
 
@@ -60,15 +62,13 @@ class SqliteOutbox(EventOutbox):
     def __init__(
         self,
         cache_dir: Path,
-        control_plane_url: str,
-        control_plane_token: str | None,
+        control_plane: ControlPlaneLink,
         flush_interval_s: float,
         http_client: httpx.AsyncClient,
     ) -> None:
         self._conn = _connect(cache_dir)
         self._owner = str(os.getpid())
-        self._control_plane_url = control_plane_url
-        self._control_plane_token = control_plane_token
+        self._control_plane = control_plane
         self._flush_interval_s = flush_interval_s
         self._http_client = http_client
 
@@ -79,8 +79,8 @@ class SqliteOutbox(EventOutbox):
     def close(self) -> None:
         self._conn.close()
 
-    def start(self) -> tuple[asyncio.Task[None], ...]:
-        return (asyncio.create_task(self._run_export()),)
+    def start(self, task_group: asyncio.TaskGroup, /) -> tuple[asyncio.Task[None], ...]:
+        return (task_group.create_task(self._run_export()),)
 
     def next_batch(self, limit: int, /) -> list[UsageEventV1]:
         rows = self._conn.execute("SELECT body FROM outbox ORDER BY rowid LIMIT ?", (limit,)).fetchall()
@@ -109,8 +109,8 @@ class SqliteOutbox(EventOutbox):
         if not events:
             return 0
         response = await self._http_client.post(
-            f"{self._control_plane_url}/v1/events",
-            headers={"authorization": f"Bearer {self._control_plane_token}"},
+            f"{self._control_plane.url}/v1/events",
+            headers={"authorization": f"Bearer {self._control_plane.token}"},
             json=[event.model_dump(mode="json") for event in events],
         )
         response.raise_for_status()

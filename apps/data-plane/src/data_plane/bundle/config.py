@@ -19,7 +19,7 @@ class RemoteBundleConfig(BaseModel):
     org: UUID | None = None  # which org's bundle this data plane serves; None takes the newest across orgs
     cache_dir: Path = Path(".airllm")
     staleness_policy: Literal["serve_and_warn", "refuse"] = "serve_and_warn"
-    poll_interval_s: float = 30.0
+    poll_interval_s: float = Field(default=30.0, gt=0)
 
 
 class LocalBundleConfig(BaseModel):
@@ -29,8 +29,7 @@ class LocalBundleConfig(BaseModel):
 
     kind: Literal["local"]
     path: Path
-    reload_interval_s: float = 2.0
+    reload_interval_s: float = Field(default=2.0, gt=0)
 
 
 BundleConfig = Annotated[RemoteBundleConfig | LocalBundleConfig, Field(discriminator="kind")]
-"""Where the bundle comes from, tagged by kind so each source parses only its own settings."""

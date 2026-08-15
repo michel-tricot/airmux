@@ -8,7 +8,7 @@ from pydantic import ValidationError
 
 from contract import public_key_to_b64
 from data_plane.bundle import LocalBundleConfig, RemoteBundleConfig
-from data_plane.config import DevNullOutboxConfig, load_config
+from data_plane.config import Config, DevNullOutboxConfig, load_config
 
 PUBLIC_KEY_B64 = public_key_to_b64(Ed25519PrivateKey.generate().public_key())
 
@@ -36,6 +36,7 @@ def test_repo_config_parses_through_the_data_plane_loader(clean_env, monkeypatch
     (clean_env / ".airllm" / "dataplane.key").write_text("dp-token", encoding="utf-8")
     monkeypatch.setenv("GW_DATAPLANE_TOKEN", "dp-token")
     config = load_config()
+    assert config.control_plane is not None
     assert config.control_plane.url == "http://127.0.0.1:8000"
     assert config.control_plane.token == "dp-token"
     assert isinstance(config.bundle, RemoteBundleConfig)
@@ -51,7 +52,9 @@ def test_repo_config_takes_the_stack_control_plane_from_the_environment(clean_en
     (clean_env / ".airllm" / "dataplane.key").write_text("dp-token", encoding="utf-8")
     monkeypatch.setenv("GW_DATAPLANE_CONTROL_PLANE_URL", "http://control-plane:8000")
 
-    assert load_config().control_plane.url == "http://control-plane:8000"
+    control_plane = load_config().control_plane
+    assert control_plane is not None
+    assert control_plane.url == "http://control-plane:8000"
 
 
 def test_malformed_verify_key_fails_at_load(clean_env):
@@ -60,36 +63,57 @@ def test_malformed_verify_key_fails_at_load(clean_env):
         load_config()
 
 
-def test_defaults_apply_for_missing_sections(clean_env):
-    config = f"data_plane:\n  bundle:\n    kind: remote\n    verify_key: {PUBLIC_KEY_B64}\n"
-    (clean_env / "airllm.yml").write_text(config, encoding="utf-8")
+def test_defaults_apply_to_a_standalone_data_plane(clean_env):
+    (clean_env / "airllm.yml").write_text("data_plane:\n  bundle:\n    kind: local\n    path: ./bundle.yml\n", encoding="utf-8")
     config = load_config()
-    assert config.control_plane.url is None
-    assert isinstance(config.bundle, RemoteBundleConfig)
+    assert config.control_plane is None
+    assert isinstance(config.bundle, LocalBundleConfig)
     assert isinstance(config.events, DevNullOutboxConfig)
-    assert config.bundle.poll_interval_s == 30.0
-    assert config.bundle.staleness_policy == "serve_and_warn"
+    assert config.bundle.reload_interval_s == 2.0
 
 
 def test_outbox_kind_discriminates_the_config(clean_env):
-    config = f"data_plane:\n  bundle:\n    kind: remote\n    verify_key: {PUBLIC_KEY_B64}\n  events:\n    kind: devnull\n"
+    config = "data_plane:\n  bundle:\n    kind: local\n    path: ./bundle.yml\n  events:\n    kind: devnull\n"
     (clean_env / "airllm.yml").write_text(config, encoding="utf-8")
 
     assert isinstance(load_config().events, DevNullOutboxConfig)
 
 
-def test_sqlite_outbox_requires_a_control_plane(clean_env):
-    config = f"data_plane:\n  bundle:\n    kind: remote\n    verify_key: {PUBLIC_KEY_B64}\n  events:\n    kind: sqlite\n"
+def test_remote_bundle_requires_a_control_plane(clean_env):
+    config = f"data_plane:\n  bundle:\n    kind: remote\n    verify_key: {PUBLIC_KEY_B64}\n"
     (clean_env / "airllm.yml").write_text(config, encoding="utf-8")
 
-    with pytest.raises(ValidationError, match=r"sqlite event outbox requires data_plane\.control_plane\.url"):
+    with pytest.raises(ValidationError, match=r"remote bundle requires data_plane\.control_plane"):
         load_config()
 
 
-def test_a_local_bundle_source_parses_without_a_verify_key(clean_env):
-    """Local mode needs no signature, so it must not demand the key that verifies one."""
-    (clean_env / "airllm.yml").write_text("data_plane:\n  bundle:\n    kind: local\n    path: ./bundle.yml\n", encoding="utf-8")
-    config = load_config()
-    assert isinstance(config.bundle, LocalBundleConfig)
-    assert config.bundle.path == Path("./bundle.yml")
-    assert config.control_plane.url is None
+def test_sqlite_outbox_requires_a_control_plane(clean_env):
+    config = "data_plane:\n  bundle:\n    kind: local\n    path: ./bundle.yml\n  events:\n    kind: sqlite\n"
+    (clean_env / "airllm.yml").write_text(config, encoding="utf-8")
+
+    with pytest.raises(ValidationError, match=r"sqlite event outbox requires data_plane\.control_plane"):
+        load_config()
+
+
+@pytest.mark.parametrize("control_plane", [{"url": "http://cp.test"}, {"token": "dp-token"}])
+def test_control_plane_link_is_complete_or_absent(control_plane):
+    with pytest.raises(ValidationError):
+        Config.model_validate({"control_plane": control_plane, "bundle": {"kind": "local", "path": "bundle.yml"}})
+
+
+def test_remote_intervals_must_be_positive():
+    with pytest.raises(ValidationError) as error:
+        Config.model_validate(
+            {
+                "control_plane": {"url": "http://cp.test", "token": "dp-token", "heartbeat_interval_s": 0},
+                "bundle": {"kind": "remote", "verify_key": PUBLIC_KEY_B64, "poll_interval_s": 0},
+                "events": {"kind": "sqlite", "flush_interval_s": 0},
+            }
+        )
+
+    assert {issue["loc"][-1] for issue in error.value.errors()} == {"heartbeat_interval_s", "poll_interval_s", "flush_interval_s"}
+
+
+def test_local_reload_interval_must_be_positive():
+    with pytest.raises(ValidationError, match="reload_interval_s"):
+        Config.model_validate({"bundle": {"kind": "local", "path": "bundle.yml", "reload_interval_s": 0}})

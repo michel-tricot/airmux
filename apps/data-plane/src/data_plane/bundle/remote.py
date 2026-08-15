@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import logging
 from typing import TYPE_CHECKING
 
@@ -16,6 +15,8 @@ from data_plane.heartbeat import Heartbeat
 from data_plane.tasks import run_periodic
 
 if TYPE_CHECKING:
+    import asyncio
+
     from data_plane.bundle.config import RemoteBundleConfig
     from data_plane.bundle.holder import BundleHolder
     from data_plane.config import ControlPlaneLink
@@ -65,10 +66,8 @@ class RemoteBundleSource(BundleSource):
             "bundle poll",
         )
 
-    def start(self) -> tuple[asyncio.Task[None], ...]:
+    def start(self, task_group: asyncio.TaskGroup, /) -> tuple[asyncio.Task[None], ...]:
         self._load_cached()
-        if not self._link.url:
-            return ()
         heartbeat = Heartbeat(
             self._link,
             self._holder,
@@ -76,8 +75,8 @@ class RemoteBundleSource(BundleSource):
             self._http_client,
         )
         return (
-            asyncio.create_task(self.run()),
-            asyncio.create_task(heartbeat.run()),
+            task_group.create_task(self.run()),
+            task_group.create_task(heartbeat.run()),
         )
 
     def _load_cached(self) -> None:

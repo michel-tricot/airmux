@@ -67,14 +67,13 @@ def create_app(config: Config) -> Starlette:
                     credentials=CredentialResolver(config.secrets.build()),
                     http_client=http_client,
                 )
-                tasks = (*bundle_source.start(), *outbox.start())
-                try:
-                    yield {"runtime": runtime}
-                finally:
-                    for task in tasks:
-                        task.cancel()
-                        with contextlib.suppress(asyncio.CancelledError):
-                            await task
+                async with asyncio.TaskGroup() as task_group:
+                    tasks = (*bundle_source.start(task_group), *outbox.start(task_group))
+                    try:
+                        yield {"runtime": runtime}
+                    finally:
+                        for task in tasks:
+                            task.cancel()
             finally:
                 outbox.close()
 

@@ -170,7 +170,7 @@ def test_app_instances_keep_their_own_runtime(tmp_path, http_client):
     second_events = tmp_path / "second-events"
     first = create_app(
         Config(
-            control_plane=ControlPlaneLink(url="http://cp.test"),
+            control_plane=ControlPlaneLink(url="http://cp.test", token="dp-token"),
             bundle=LocalBundleConfig(kind="local", path=first_path),
             secrets=first_secrets,
             events=SqliteOutboxConfig(cache_dir=first_events, flush_interval_s=3600),
@@ -178,7 +178,7 @@ def test_app_instances_keep_their_own_runtime(tmp_path, http_client):
     )
     second = create_app(
         Config(
-            control_plane=ControlPlaneLink(url="http://cp.test"),
+            control_plane=ControlPlaneLink(url="http://cp.test", token="dp-token"),
             bundle=LocalBundleConfig(kind="local", path=second_path),
             secrets=second_secrets,
             events=SqliteOutboxConfig(cache_dir=second_events, flush_interval_s=3600),
