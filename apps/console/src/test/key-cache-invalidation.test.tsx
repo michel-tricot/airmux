@@ -1,9 +1,9 @@
-import { QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { renderHook, waitFor } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import type { ReactNode } from 'react';
-import { queryClient } from '@/App';
+import { createQueryClient } from '@/App';
 import {
   useAllManagementKeys,
   useCreateInferenceKeyMutation,
@@ -17,6 +17,11 @@ import {
 import { ORG, server } from './msw';
 
 const now = '2026-01-01T00:00:00Z';
+let queryClient: QueryClient;
+
+beforeEach(() => {
+  queryClient = createQueryClient();
+});
 
 function wrapper({ children }: { children: ReactNode }) {
   return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
@@ -64,7 +69,6 @@ function instanceKey(id: string, status: string) {
 
 describe('key cache invalidation across pages', () => {
   it('revoking a management key via the org-scoped mutation refetches the instance-wide list', async () => {
-    // The instance-wide list serves ACTIVE until the revoke lands on the server.
     let revoked = false;
     let instanceListFetches = 0;
     server.use(
@@ -78,21 +82,16 @@ describe('key cache invalidation across pages', () => {
       }),
     );
 
-    // A view backed by the instance-wide management-key list (user detail / dashboard).
     const list = renderHook(() => useAllManagementKeys(), { wrapper });
     await waitFor(() => expect(list.result.current.isSuccess).toBe(true));
     expect(list.result.current.data).toEqual([expect.objectContaining({ status: 'active' })]);
     expect(instanceListFetches).toBe(1);
 
-    // The org page revokes the key through its org-scoped mutation.
     const revoke = renderHook(() => useRevokeManagementKeyMutation(ORG.id), { wrapper });
     await revoke.result.current.mutateAsync({ keyId: 'mk-1' });
 
-    // The instance-wide query must be invalidated and refetched with fresh status.
     await waitFor(() => expect(instanceListFetches).toBe(2));
-    await waitFor(() =>
-      expect(list.result.current.data).toEqual([expect.objectContaining({ status: 'revoked' })]),
-    );
+    await waitFor(() => expect(list.result.current.data).toEqual([expect.objectContaining({ status: 'revoked' })]));
   });
 
   it('minting an instance key refetches the instance key list', async () => {
@@ -143,9 +142,7 @@ describe('key cache invalidation across pages', () => {
     await revoke.result.current.mutateAsync({ keyId: 'ik-1' });
 
     await waitFor(() => expect(listFetches).toBe(2));
-    await waitFor(() =>
-      expect(list.result.current.data).toEqual([expect.objectContaining({ status: 'revoked' })]),
-    );
+    await waitFor(() => expect(list.result.current.data).toEqual([expect.objectContaining({ status: 'revoked' })]));
   });
 
   it('minting an inference key refetches the workspace inference key list', async () => {
@@ -196,8 +193,6 @@ describe('key cache invalidation across pages', () => {
     await revoke.result.current.mutateAsync({ workspaceRef: WORKSPACE_REF, keyId: 'ifk-1' });
 
     await waitFor(() => expect(listFetches).toBe(2));
-    await waitFor(() =>
-      expect(list.result.current.data).toEqual([expect.objectContaining({ revoked: true })]),
-    );
+    await waitFor(() => expect(list.result.current.data).toEqual([expect.objectContaining({ revoked: true })]));
   });
 });

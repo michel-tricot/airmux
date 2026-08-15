@@ -13,8 +13,6 @@ function renderAt(path: string) {
 const now = '2026-01-01T00:00:00Z';
 const ORG2 = { id: 'org-2', name: 'Beta Corp', personal_for: null, created_at: now, updated_at: now, deleted_at: null };
 
-// Enrollment must return at least two orgs for the picker UI to render at all —
-// with a single org the picker auto-selects it. These tests opt into two orgs.
 function withTwoOrgs() {
   server.use(
     http.get('/v1/auth/me', () =>
@@ -27,29 +25,50 @@ function withTwoOrgs() {
       }),
     ),
     http.get('/v1/enroll', () => HttpResponse.json({ orgs: [ORG, ORG2], personal_org_id: ORG.id })),
-    // Workspaces are org-scoped via the X-Org-Id header. Serving different rows
-    // per org lets the tests detect stale cross-org cache leaks.
     http.get('/v1/org/workspaces', ({ request }) => {
       const org = request.headers.get('X-Org-Id');
       if (org === ORG.id) {
         return HttpResponse.json([
-           { id: 'ws-acme', org_id: ORG.id, name: 'Acme Production', slug: 'acme-production', created_at: now, updated_at: now, deleted_at: null },
+          { id: 'ws-acme', org_id: ORG.id, name: 'Acme Production', slug: 'acme-production', created_at: now, updated_at: now, deleted_at: null },
         ]);
       }
       if (org === ORG2.id) {
         return HttpResponse.json([
-           { id: 'ws-beta', org_id: ORG2.id, name: 'Beta Staging', slug: 'beta-staging', created_at: now, updated_at: now, deleted_at: null },
+          { id: 'ws-beta', org_id: ORG2.id, name: 'Beta Staging', slug: 'beta-staging', created_at: now, updated_at: now, deleted_at: null },
         ]);
       }
       return new HttpResponse(null, { status: 403 });
     }),
-    // /org now defaults into a workspace, so its detail endpoint must resolve too.
     http.get('/v1/org/workspaces/:workspaceRef', ({ params }) => {
       const rows = {
-        'ws-acme': { id: 'ws-acme', org_id: ORG.id, name: 'Acme Production', slug: 'acme-production', created_at: now, updated_at: now, deleted_at: null },
+        'ws-acme': {
+          id: 'ws-acme',
+          org_id: ORG.id,
+          name: 'Acme Production',
+          slug: 'acme-production',
+          created_at: now,
+          updated_at: now,
+          deleted_at: null,
+        },
         'ws-beta': { id: 'ws-beta', org_id: ORG2.id, name: 'Beta Staging', slug: 'beta-staging', created_at: now, updated_at: now, deleted_at: null },
-        'acme-production': { id: 'ws-acme', org_id: ORG.id, name: 'Acme Production', slug: 'acme-production', created_at: now, updated_at: now, deleted_at: null },
-        'beta-staging': { id: 'ws-beta', org_id: ORG2.id, name: 'Beta Staging', slug: 'beta-staging', created_at: now, updated_at: now, deleted_at: null },
+        'acme-production': {
+          id: 'ws-acme',
+          org_id: ORG.id,
+          name: 'Acme Production',
+          slug: 'acme-production',
+          created_at: now,
+          updated_at: now,
+          deleted_at: null,
+        },
+        'beta-staging': {
+          id: 'ws-beta',
+          org_id: ORG2.id,
+          name: 'Beta Staging',
+          slug: 'beta-staging',
+          created_at: now,
+          updated_at: now,
+          deleted_at: null,
+        },
       } as const;
       const ws = rows[params.workspaceRef as keyof typeof rows];
       return ws ? HttpResponse.json(ws) : new HttpResponse(null, { status: 404 });
@@ -67,11 +86,46 @@ describe('sign-in gate', () => {
     expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument();
     expect(screen.queryByText('Organization Overview')).not.toBeInTheDocument();
   });
+
+  it('shows a service error when the session endpoint is unavailable', async () => {
+    server.use(
+      http.get('/v1/auth/me', () => new HttpResponse(null, { status: 503 })),
+      http.get('/v1/instance/oss/claim', () => HttpResponse.json({ claimed: true })),
+    );
+    renderAt('/org');
+    expect(await screen.findByRole('alert')).toHaveTextContent('Could not reach the control plane');
+    expect(screen.queryByRole('heading', { name: 'Sign in' })).not.toBeInTheDocument();
+  });
+
+  it('signs in without requiring the signup-only name field', async () => {
+    window.localStorage.setItem('airllm_org_id', ORG.id);
+    server.use(
+      http.get('/v1/auth/me', () => new HttpResponse(null, { status: 401 })),
+      http.get('/v1/instance/oss/claim', () => HttpResponse.json({ claimed: true })),
+      http.post('/v1/auth/login', () =>
+        HttpResponse.json({
+          user_id: 'user-1',
+          email: 'dev@example.com',
+          name: 'Dev',
+          instance_admin: false,
+          orgs: [ORG.id],
+        }),
+      ),
+    );
+    const user = userEvent.setup();
+    renderAt('/');
+
+    await user.type(await screen.findByLabelText('Email'), 'dev@example.com');
+    await user.type(screen.getByLabelText('Password'), 'secret');
+    await user.click(screen.getByRole('button', { name: 'Sign in' }));
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Production' })).toBeInTheDocument();
+  });
 });
 
 describe('sign-in landing', () => {
   it('lands in the last-selected org', async () => {
-    localStorage.setItem('airllm_org_id', ORG.id);
+    window.localStorage.setItem('airllm_org_id', ORG.id);
     renderAt('/');
     expect(await screen.findByRole('heading', { level: 1, name: 'Production' })).toBeInTheDocument();
   });
@@ -85,18 +139,25 @@ describe('sign-in landing', () => {
 
 describe('instance admin gate', () => {
   it('redirects non-admin users from /instance to the org console', async () => {
-    localStorage.setItem('airllm_org_id', ORG.id);
+    window.localStorage.setItem('airllm_org_id', ORG.id);
     renderAt('/instance');
-    // Default handlers: instance_admin is false, so the org console renders instead.
     expect(await screen.findByRole('heading', { level: 1, name: 'Production' })).toBeInTheDocument();
     expect(window.location.pathname).not.toBe('/instance');
   });
 });
 
 describe('organization picker', () => {
+  it('shows an enrollment error instead of an empty organization picker', async () => {
+    window.localStorage.setItem('airllm_org_id', ORG.id);
+    server.use(http.get('/v1/enroll', () => new HttpResponse(null, { status: 503 })));
+    renderAt('/org');
+    expect(await screen.findByRole('alert')).toHaveTextContent('Could not load your organizations');
+    expect(screen.queryByRole('heading', { name: 'Select Organization' })).not.toBeInTheDocument();
+  });
+
   it('falls back to the picker when the stored org is no longer a membership', async () => {
     withTwoOrgs();
-    localStorage.setItem('airllm_org_id', 'org-gone');
+    window.localStorage.setItem('airllm_org_id', 'org-gone');
     renderAt('/org');
     expect(await screen.findByRole('heading', { name: 'Select Organization' })).toBeInTheDocument();
     expect(screen.getByText(ORG.name)).toBeInTheDocument();
@@ -108,37 +169,32 @@ describe('organization picker', () => {
     const user = userEvent.setup();
     renderAt('/org');
     await user.click(await screen.findByRole('button', { name: new RegExp(ORG.name) }));
-    // /org auto-picks a default workspace, so the workspace overview renders.
     expect(await screen.findByRole('heading', { level: 1, name: 'Acme Production' })).toBeInTheDocument();
-    expect(localStorage.getItem('airllm_org_id')).toBe(ORG.id);
+    expect(window.localStorage.getItem('airllm_org_id')).toBe(ORG.id);
   });
 
   it('auto-selects the org when the user belongs to exactly one', async () => {
-    // Default handlers: single ORG membership, no stored selection.
     renderAt('/org');
-    // The single org is auto-picked, then /org defaults to its first workspace.
     expect(await screen.findByRole('heading', { level: 1, name: 'Production' })).toBeInTheDocument();
-    expect(localStorage.getItem('airllm_org_id')).toBe(ORG.id);
+    expect(window.localStorage.getItem('airllm_org_id')).toBe(ORG.id);
   });
 });
 
 describe('switching organizations', () => {
-  it('returns to the picker and drops the previous org\'s data', async () => {
+  it("returns to the picker and drops the previous org's data", async () => {
     withTwoOrgs();
-    localStorage.setItem('airllm_org_id', ORG.id);
+    window.localStorage.setItem('airllm_org_id', ORG.id);
     const user = userEvent.setup();
     renderAt('/org');
 
-    // Signed in to org-1: its workspace is on screen (and in the query cache).
     expect(await screen.findByRole('heading', { level: 1, name: 'Acme Production' })).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Switch organization' }));
     expect(await screen.findByRole('heading', { name: 'Select Organization' })).toBeInTheDocument();
-    expect(localStorage.getItem('airllm_org_id')).toBeNull();
+    expect(window.localStorage.getItem('airllm_org_id')).toBeNull();
 
     await user.click(screen.getByRole('button', { name: new RegExp(ORG2.name) }));
 
-    // Org-2's default workspace renders and none of org-1's stale rows remain.
     expect(await screen.findByRole('heading', { level: 1, name: 'Beta Staging' })).toBeInTheDocument();
     await waitFor(() => {
       expect(screen.queryByText('Acme Production')).not.toBeInTheDocument();

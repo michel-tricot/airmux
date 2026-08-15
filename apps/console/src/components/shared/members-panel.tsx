@@ -6,7 +6,7 @@ import { DataTable, type Column } from '@/components/shared/data-table';
 import { FormDialog } from '@/components/shared/form-dialog';
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 
-export interface MemberRow {
+interface MemberRow {
   user_id: string;
   name?: string | null;
   email?: string | null;
@@ -19,12 +19,11 @@ interface MembersPanelProps<T extends MemberRow> {
   members: T[] | undefined;
   isLoading?: boolean;
   isError?: boolean;
+  error?: unknown;
   onRetry?: () => void;
   emptyText: string;
-  /** Custom rendering of the member's name cell (e.g. a link to the user page). */
   renderName?: (member: T) => ReactNode;
   renderEmail?: (member: T) => ReactNode;
-  /** Omit to render a read-only roster without add/remove controls. */
   add?: {
     candidates: Array<{ value: string; label: string }>;
     dialogTitle: string;
@@ -36,20 +35,17 @@ interface MembersPanelProps<T extends MemberRow> {
   remove?: {
     title: (member: T) => string;
     description: string;
-    onRemove: (member: T) => void;
+    onRemove: (member: T) => Promise<unknown>;
     pending: boolean;
   };
 }
 
-/**
- * Member roster shared by the org and workspace views: heading with an optional
- * add-member dialog, and a table with an optional confirm-to-remove action.
- */
 export function MembersPanel<T extends MemberRow>({
   heading,
   members,
   isLoading,
   isError,
+  error,
   onRetry,
   emptyText,
   renderName,
@@ -64,13 +60,13 @@ export function MembersPanel<T extends MemberRow>({
       key: 'name',
       header: 'User',
       cellClassName: 'font-medium',
-      cell: member => (renderName ? renderName(member) : member.name ?? 'Member'),
+      cell: (member) => (renderName ? renderName(member) : (member.name ?? 'Member')),
     },
     {
       key: 'email',
       header: 'Email',
       cellClassName: 'text-muted-foreground',
-      cell: member => (renderEmail ? renderEmail(member) : member.email ?? member.user_id),
+      cell: (member) => (renderEmail ? renderEmail(member) : (member.email ?? member.user_id)),
     },
   ];
   if (remove) {
@@ -79,14 +75,15 @@ export function MembersPanel<T extends MemberRow>({
       header: 'Actions',
       headClassName: 'text-right',
       cellClassName: 'text-right',
-      cell: member => (
+      cell: (member) => (
         <ConfirmButton
           title={remove.title(member)}
           description={remove.description}
           confirmLabel="Remove member"
           pending={remove.pending}
           aria-label="Remove member"
-          onConfirm={() => remove.onRemove(member)}>
+          onConfirm={() => remove.onRemove(member)}
+        >
           <UserMinus className="w-4 h-4" />
         </ConfirmButton>
       ),
@@ -98,16 +95,20 @@ export function MembersPanel<T extends MemberRow>({
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-lg font-semibold">{heading}</h2>
         {add && (
-          <Button onClick={() => setAddOpen(true)} size="sm"><Plus className="w-4 h-4 mr-1" /> Add Member</Button>
+          <Button onClick={() => setAddOpen(true)} size="sm" disabled={add.pending || add.candidates.length === 0}>
+            <Plus className="w-4 h-4 mr-1" /> Add Member
+          </Button>
         )}
       </div>
       <Card>
         <DataTable
           columns={columns}
           rows={members}
-          rowKey={member => member.user_id}
+          rowKey={(member) => member.user_id}
           isLoading={isLoading}
           isError={isError}
+          error={error}
+          resource="members"
           onRetry={onRetry}
           empty={emptyText}
         />
@@ -121,10 +122,11 @@ export function MembersPanel<T extends MemberRow>({
           description={add.dialogDescription}
           schema={addMemberSchema}
           defaultValues={{ userId: '' }}
-          onSubmit={values => add.onAdd(values.userId)}
+          onSubmit={(values) => add.onAdd(values.userId)}
           submitLabel="Add"
-          pending={add.pending}>
-          {form => (
+          pending={add.pending}
+        >
+          {(form) => (
             <FormField
               control={form.control}
               name="userId"

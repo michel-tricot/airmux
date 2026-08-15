@@ -7,5 +7,10 @@
 
 export type ListEventsParams = {
 after?: Date | null;
+/**
+ * @minimum 1
+ * @maximum 200
+ */
 limit?: number;
+workspace_id?: string | null;
 };

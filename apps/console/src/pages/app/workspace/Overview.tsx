@@ -1,5 +1,4 @@
-import { useParams } from 'wouter';
-import { useSession } from '@/lib/session';
+import { useRequiredOrgId } from '@/lib/session';
 import { useWorkspace } from '@/features/workspaces/hooks';
 import { useWorkspaceMembers } from '@/features/members/hooks';
 import { useInferenceKeys } from '@/features/keys/hooks';
@@ -11,10 +10,22 @@ import { TerminalSquare, KeyRound, Users, Database, Activity, Coins, ArrowDownTo
 import { formatRelative } from '@/lib/format';
 import { LoadingState, ErrorState } from '@/components/shared/states';
 import { DataTable } from '@/components/shared/data-table';
+import { useRequiredParam } from '@/lib/route';
+import { PageShell } from '@/components/shared/page-shell';
 
 const EVENTS_WINDOW = 200;
 
-function MetricCard({ icon: Icon, label, value, hint }: { icon: React.ComponentType<{ className?: string }>, label: string, value: React.ReactNode, hint?: string }) {
+function MetricCard({
+  icon: Icon,
+  label,
+  value,
+  hint,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  value: React.ReactNode;
+  hint?: string;
+}) {
   return (
     <Card className="p-4 flex items-start gap-3">
       <div className="w-9 h-9 rounded-md bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
@@ -29,45 +40,50 @@ function MetricCard({ icon: Icon, label, value, hint }: { icon: React.ComponentT
   );
 }
 
-const formatTokens = (n: number) =>
-  n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)}M` : n >= 1_000 ? `${(n / 1_000).toFixed(1)}k` : String(n);
+const formatTokens = (n: number) => (n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)}M` : n >= 1_000 ? `${(n / 1_000).toFixed(1)}k` : String(n));
 
 export default function WorkspaceOverview() {
-  const { workspaceRef } = useParams();
-  const { orgId } = useSession();
+  const workspaceRef = useRequiredParam('workspaceRef');
+  const orgId = useRequiredOrgId();
 
-  const { data: workspace, isLoading } = useWorkspace(orgId!, workspaceRef!);
-  const { data: members } = useWorkspaceMembers(orgId!, workspaceRef!);
-  const { data: keys } = useInferenceKeys(orgId!, workspaceRef!);
-  const { data: providerCredentials } = useProviderCredentials(orgId!, workspaceRef!);
-  const eventsQuery = useOrgEvents(orgId!, { limit: EVENTS_WINDOW });
+  const workspaceQuery = useWorkspace(orgId, workspaceRef);
+  const workspace = workspaceQuery.data;
+  const membersQuery = useWorkspaceMembers(orgId, workspaceRef);
+  const keysQuery = useInferenceKeys(orgId, workspaceRef);
+  const credentialsQuery = useProviderCredentials(orgId, workspaceRef);
+  const eventsQuery = useOrgEvents(orgId, { limit: EVENTS_WINDOW, workspace_id: workspace?.id }, workspace !== undefined);
   const events = eventsQuery.data;
 
-  if (isLoading) return <LoadingState label="Loading workspace..." />;
+  if (workspaceQuery.isLoading) return <LoadingState label="Loading workspace..." />;
+  if (workspaceQuery.isError) return <ErrorState error={workspaceQuery.error} resource="workspace" onRetry={() => workspaceQuery.refetch()} />;
   if (!workspace) return <ErrorState message="Workspace not found" />;
 
-  const activeKeys = keys?.filter(k => !k.revoked).length;
-  const wsEvents = events?.filter(e => e.workspace_id === workspace.id) ?? [];
-  const requests = wsEvents.length;
-  const inputTokens = wsEvents.reduce((sum, e) => sum + e.input_tokens, 0);
-  const outputTokens = wsEvents.reduce((sum, e) => sum + e.output_tokens, 0);
-  const costUsd = wsEvents.reduce((sum, e) => sum + e.cost_usd, 0);
-  const recent = wsEvents.slice(0, 8);
-  const keyLabels = new Map(keys?.map(k => [k.id, k.label] as const) ?? []);
+  const activeKeys = keysQuery.data?.filter((key) => !key.revoked).length;
+  const requests = events?.length;
+  const inputTokens = events?.reduce((sum, event) => sum + event.input_tokens, 0);
+  const outputTokens = events?.reduce((sum, event) => sum + event.output_tokens, 0);
+  const costUsd = events?.reduce((sum, event) => sum + event.cost_usd, 0);
+  const recent = events?.slice(0, 8);
+  const keyLabels = new Map(keysQuery.data?.map((key) => [key.id, key.label] as const) ?? []);
 
-  const byModel = new Map<string, { requests: number, tokens: number, cost: number }>();
-  for (const e of wsEvents) {
-    const row = byModel.get(e.model_id) ?? { requests: 0, tokens: 0, cost: 0 };
-    row.requests += 1;
-    row.tokens += e.input_tokens + e.output_tokens;
-    row.cost += e.cost_usd;
-    byModel.set(e.model_id, row);
-  }
-  const topModels = [...byModel.entries()].map(([model, row]) => ({ model, ...row }))
-    .sort((a, b) => b.requests - a.requests).slice(0, 5);
+  const topModels = events
+    ? [...new Set(events.map((event) => event.model_id))]
+        .map((model) => {
+          const modelEvents = events.filter((event) => event.model_id === model);
+          return {
+            model,
+            requests: modelEvents.length,
+            tokens: modelEvents.reduce((sum, event) => sum + event.input_tokens + event.output_tokens, 0),
+            cost: modelEvents.reduce((sum, event) => sum + event.cost_usd, 0),
+          };
+        })
+        .sort((a, b) => b.requests - a.requests)
+        .slice(0, 5)
+    : undefined;
+  const detailsFailed = membersQuery.isError || keysQuery.isError || credentialsQuery.isError;
 
   return (
-    <div className="flex-1 p-8 max-w-6xl mx-auto w-full space-y-6 animate-in fade-in duration-300">
+    <PageShell>
       <div className="flex items-center gap-4">
         <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center border border-primary/20">
           <TerminalSquare className="w-6 h-6 text-primary" />
@@ -78,17 +94,39 @@ export default function WorkspaceOverview() {
         </div>
       </div>
 
+      {detailsFailed && (
+        <ErrorState
+          message="Some workspace details could not be loaded. Try again."
+          onRetry={() => Promise.all([membersQuery.refetch(), keysQuery.refetch(), credentialsQuery.refetch()])}
+        />
+      )}
+
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <MetricCard icon={KeyRound} label="API Keys" value={activeKeys ?? '—'} hint="active inference keys" />
-        <MetricCard icon={Users} label="Members" value={members?.length ?? '—'} hint="with workspace access" />
-        <MetricCard icon={Database} label="BYOK" value={providerCredentials?.length ?? '—'} hint="provider keys configured" />
-        <MetricCard icon={Activity} label="Requests" value={requests} hint="in recent activity" />
+        <MetricCard icon={KeyRound} label="API Keys" value={activeKeys ?? '-'} hint="active inference keys" />
+        <MetricCard icon={Users} label="Members" value={membersQuery.data?.length ?? '-'} hint="with workspace access" />
+        <MetricCard icon={Database} label="BYOK" value={credentialsQuery.data?.length ?? '-'} hint="provider keys configured" />
+        <MetricCard icon={Activity} label="Requests" value={requests ?? '-'} hint={`latest ${EVENTS_WINDOW} requests`} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <MetricCard icon={ArrowDownToLine} label="Input Tokens" value={formatTokens(inputTokens)} hint="recent usage" />
-        <MetricCard icon={ArrowUpFromLine} label="Output Tokens" value={formatTokens(outputTokens)} hint="recent usage" />
-        <MetricCard icon={Coins} label="Spend" value={`$${costUsd.toFixed(costUsd >= 1 ? 2 : 4)}`} hint="recent usage" />
+        <MetricCard
+          icon={ArrowDownToLine}
+          label="Input Tokens"
+          value={inputTokens === undefined ? '-' : formatTokens(inputTokens)}
+          hint={`latest ${EVENTS_WINDOW} requests`}
+        />
+        <MetricCard
+          icon={ArrowUpFromLine}
+          label="Output Tokens"
+          value={outputTokens === undefined ? '-' : formatTokens(outputTokens)}
+          hint={`latest ${EVENTS_WINDOW} requests`}
+        />
+        <MetricCard
+          icon={Coins}
+          label="Spend"
+          value={costUsd === undefined ? '-' : `$${costUsd.toFixed(costUsd >= 1 ? 2 : 4)}`}
+          hint={`latest ${EVENTS_WINDOW} requests`}
+        />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
@@ -97,15 +135,44 @@ export default function WorkspaceOverview() {
           <Card>
             <DataTable
               rows={topModels}
-              rowKey={row => row.model}
+              rowKey={(row) => row.model}
+              isLoading={eventsQuery.isLoading}
               isError={eventsQuery.isError}
+              error={eventsQuery.error}
+              resource="usage"
               onRetry={() => eventsQuery.refetch()}
               empty="No usage recorded yet."
               columns={[
-                { key: 'model', header: 'Model', cell: row => <Badge variant="outline" className="font-mono">{row.model}</Badge> },
-                { key: 'requests', header: 'Requests', headClassName: 'text-right', cellClassName: 'text-right tabular-nums', cell: row => row.requests },
-                { key: 'tokens', header: 'Tokens', headClassName: 'text-right', cellClassName: 'text-right tabular-nums', cell: row => formatTokens(row.tokens) },
-                { key: 'cost', header: 'Cost', headClassName: 'text-right', cellClassName: 'text-right tabular-nums', cell: row => `$${row.cost.toFixed(row.cost >= 1 ? 2 : 4)}` },
+                {
+                  key: 'model',
+                  header: 'Model',
+                  cell: (row) => (
+                    <Badge variant="outline" className="font-mono">
+                      {row.model}
+                    </Badge>
+                  ),
+                },
+                {
+                  key: 'requests',
+                  header: 'Requests',
+                  headClassName: 'text-right',
+                  cellClassName: 'text-right tabular-nums',
+                  cell: (row) => row.requests,
+                },
+                {
+                  key: 'tokens',
+                  header: 'Tokens',
+                  headClassName: 'text-right',
+                  cellClassName: 'text-right tabular-nums',
+                  cell: (row) => formatTokens(row.tokens),
+                },
+                {
+                  key: 'cost',
+                  header: 'Cost',
+                  headClassName: 'text-right',
+                  cellClassName: 'text-right tabular-nums',
+                  cell: (row) => `$${row.cost.toFixed(row.cost >= 1 ? 2 : 4)}`,
+                },
               ]}
             />
           </Card>
@@ -116,8 +183,11 @@ export default function WorkspaceOverview() {
           <Card>
             <DataTable
               rows={recent}
-              rowKey={e => e.event_id}
+              rowKey={(e) => e.event_id}
+              isLoading={eventsQuery.isLoading}
               isError={eventsQuery.isError}
+              error={eventsQuery.error}
+              resource="usage"
               onRetry={() => eventsQuery.refetch()}
               empty="No events for this workspace yet."
               columns={[
@@ -125,21 +195,37 @@ export default function WorkspaceOverview() {
                   key: 'model',
                   header: 'Model',
                   cellClassName: 'font-mono text-xs',
-                  cell: e => <Badge variant="outline" className="font-mono">{e.model_id}</Badge>,
+                  cell: (e) => (
+                    <Badge variant="outline" className="font-mono">
+                      {e.model_id}
+                    </Badge>
+                  ),
                 },
                 {
                   key: 'key',
                   header: 'Key',
                   cellClassName: 'text-xs',
-                  cell: e => keyLabels.get(e.key_id) ?? <span className="font-mono text-muted-foreground">{e.key_id}</span>,
+                  cell: (e) => keyLabels.get(e.key_id) ?? <span className="font-mono text-muted-foreground">{e.key_id}</span>,
                 },
-                { key: 'tokens', header: 'Tokens', headClassName: 'text-right', cellClassName: 'text-right tabular-nums', cell: e => formatTokens(e.input_tokens + e.output_tokens) },
-                { key: 'when', header: 'When', headClassName: 'text-right', cellClassName: 'text-right text-muted-foreground text-xs', cell: e => formatRelative(e.occurred_at) },
+                {
+                  key: 'tokens',
+                  header: 'Tokens',
+                  headClassName: 'text-right',
+                  cellClassName: 'text-right tabular-nums',
+                  cell: (e) => formatTokens(e.input_tokens + e.output_tokens),
+                },
+                {
+                  key: 'when',
+                  header: 'When',
+                  headClassName: 'text-right',
+                  cellClassName: 'text-right text-muted-foreground text-xs',
+                  cell: (e) => formatRelative(e.occurred_at),
+                },
               ]}
             />
           </Card>
         </div>
       </div>
-    </div>
+    </PageShell>
   );
 }

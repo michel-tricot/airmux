@@ -1,46 +1,49 @@
 import { useState } from 'react';
-import { useParams, useLocation } from 'wouter';
-import { useSession } from '@/lib/session';
+import { useLocation } from 'wouter';
+import { useRequiredOrgId } from '@/lib/session';
 import { useWorkspace, useRenameWorkspaceMutation, useDeleteWorkspaceMutation } from '@/features/workspaces/hooks';
-import {
-  useOrgMembers,
-  useWorkspaceMembers,
-  useAddWorkspaceMemberMutation,
-  useRemoveWorkspaceMemberMutation,
-} from '@/features/members/hooks';
-import { Card, Button, Input, Label } from '@/components/ui/elements';
+import { useOrgMembers, useWorkspaceMembers, useAddWorkspaceMemberMutation, useRemoveWorkspaceMemberMutation } from '@/features/members/hooks';
+import { Card, Button, ConfirmButton, Input, Label } from '@/components/ui/elements';
 import { Trash2, Users } from 'lucide-react';
 import { LoadingState, ErrorState } from '@/components/shared/states';
 import { MembersPanel } from '@/components/shared/members-panel';
+import { useRequiredParam } from '@/lib/route';
+import { PageShell } from '@/components/shared/page-shell';
 
 export default function WorkspaceSettings() {
-  const { workspaceRef } = useParams();
-  const { orgId } = useSession();
+  const workspaceRef = useRequiredParam('workspaceRef');
+  return <WorkspaceSettingsContent key={workspaceRef} workspaceRef={workspaceRef} />;
+}
+
+function WorkspaceSettingsContent({ workspaceRef }: { workspaceRef: string }) {
+  const orgId = useRequiredOrgId();
   const [, setLocation] = useLocation();
 
-  const { data: workspace, isLoading } = useWorkspace(orgId!, workspaceRef!);
+  const workspaceQuery = useWorkspace(orgId, workspaceRef);
+  const workspace = workspaceQuery.data;
 
   const [name, setName] = useState<string | null>(null);
-  const [confirming, setConfirming] = useState(false);
 
-  const membersQuery = useWorkspaceMembers(orgId!, workspaceRef!);
-  const { data: orgUsers } = useOrgMembers(orgId!);
+  const membersQuery = useWorkspaceMembers(orgId, workspaceRef);
+  const orgUsersQuery = useOrgMembers(orgId);
+  const orgUsers = orgUsersQuery.data;
   const members = membersQuery.data;
-  const candidates = orgUsers?.filter(u => !members?.some(m => m.user_id === u.user_id));
-  const describe = (userId: string) => orgUsers?.find(u => u.user_id === userId);
+  const candidates = orgUsers && members ? orgUsers.filter((user) => !members.some((member) => member.user_id === user.user_id)) : undefined;
+  const describe = (userId: string) => orgUsers?.find((u) => u.user_id === userId);
 
-  const addMember = useAddWorkspaceMemberMutation(orgId!, workspaceRef!);
-  const removeMember = useRemoveWorkspaceMemberMutation(orgId!, workspaceRef!);
-  const rename = useRenameWorkspaceMutation(orgId!, workspaceRef!);
-  const remove = useDeleteWorkspaceMutation(orgId!);
+  const addMember = useAddWorkspaceMemberMutation(orgId, workspaceRef);
+  const removeMember = useRemoveWorkspaceMemberMutation(orgId, workspaceRef);
+  const rename = useRenameWorkspaceMutation(orgId, workspaceRef);
+  const remove = useDeleteWorkspaceMutation(orgId);
 
-  if (isLoading) return <LoadingState label="Loading workspace..." />;
+  if (workspaceQuery.isLoading) return <LoadingState label="Loading workspace..." />;
+  if (workspaceQuery.isError) return <ErrorState error={workspaceQuery.error} resource="workspace" onRetry={() => workspaceQuery.refetch()} />;
   if (!workspace) return <ErrorState message="Workspace not found" />;
 
   const draft = name ?? workspace.name;
 
   return (
-    <div className="flex-1 p-8 max-w-4xl mx-auto w-full space-y-6 animate-in fade-in duration-300">
+    <PageShell className="max-w-4xl">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Workspace Settings</h1>
         <p className="text-muted-foreground mt-1 text-sm font-mono">{workspace.slug}</p>
@@ -49,24 +52,24 @@ export default function WorkspaceSettings() {
       <Card className="p-6 space-y-4">
         <h2 className="text-lg font-semibold">General</h2>
         <form
-          onSubmit={e => {
+          onSubmit={(e) => {
             e.preventDefault();
-            rename.mutate({ workspaceRef: workspaceRef!, data: { name: draft } }, { onSuccess: () => setName(null) });
+            rename.mutate({ workspaceRef, data: { name: draft } }, { onSuccess: () => setName(null) });
           }}
           className="flex items-end gap-3 max-w-md"
         >
           <div className="flex-1 space-y-2">
             <Label htmlFor="ws-name">Workspace name</Label>
-            <Input id="ws-name" required value={draft} onChange={e => setName(e.target.value)} />
+            <Input id="ws-name" required value={draft} onChange={(e) => setName(e.target.value)} />
           </div>
-          <Button type="submit" disabled={rename.isPending || draft === workspace.name}>Save</Button>
+          <Button type="submit" disabled={rename.isPending || draft === workspace.name}>
+            Save
+          </Button>
         </form>
         <div className="space-y-2 max-w-md">
           <Label htmlFor="ws-slug">Slug</Label>
-          <Input id="ws-slug" readOnly disabled value={workspace.slug} className="font-mono" />
-          <p className="text-xs text-muted-foreground">
-             The workspace slug is used in links and command-line tools and cannot be changed.
-          </p>
+          <Input id="ws-slug" readOnly value={workspace.slug} className="font-mono" />
+          <p className="text-xs text-muted-foreground">The workspace slug is used in links and command-line tools and cannot be changed.</p>
         </div>
       </Card>
 
@@ -79,23 +82,24 @@ export default function WorkspaceSettings() {
           }
           members={members}
           isLoading={membersQuery.isLoading}
-          isError={membersQuery.isError}
-          onRetry={() => membersQuery.refetch()}
+          isError={membersQuery.isError || orgUsersQuery.isError}
+          error={membersQuery.error ?? orgUsersQuery.error}
+          onRetry={() => Promise.all([membersQuery.refetch(), orgUsersQuery.refetch()])}
           emptyText="No members in this workspace."
-          renderName={member => describe(member.user_id)?.name ?? 'Member'}
-          renderEmail={member => describe(member.user_id)?.email ?? member.user_id}
+          renderName={(member) => describe(member.user_id)?.name ?? 'Member'}
+          renderEmail={(member) => describe(member.user_id)?.email ?? member.user_id}
           add={{
-            candidates: (candidates ?? []).map(user => ({ value: user.user_id, label: `${user.name} (${user.email})` })),
+            candidates: candidates?.map((user) => ({ value: user.user_id, label: `${user.name} (${user.email})` })) ?? [],
             dialogTitle: 'Add Member',
             dialogDescription: 'Choose someone who already belongs to this organization.',
             placeholder: 'Select an org member',
-            onAdd: userId => addMember.mutateAsync({ workspaceRef: workspaceRef!, userId }),
-            pending: addMember.isPending,
+            onAdd: (userId) => addMember.mutateAsync({ workspaceRef, userId }),
+            pending: addMember.isPending || candidates === undefined,
           }}
           remove={{
-            title: member => `Remove ${describe(member.user_id)?.name ?? 'this member'} from the workspace?`,
+            title: (member) => `Remove ${describe(member.user_id)?.name ?? 'this member'} from the workspace?`,
             description: 'They lose access to this workspace but stay in the organization.',
-            onRemove: member => removeMember.mutate({ workspaceRef: workspaceRef!, userId: member.user_id }),
+            onRemove: (member) => removeMember.mutateAsync({ workspaceRef, userId: member.user_id }),
             pending: removeMember.isPending,
           }}
         />
@@ -104,23 +108,24 @@ export default function WorkspaceSettings() {
       <Card className="p-6 space-y-4 border-destructive/30">
         <h2 className="text-lg font-semibold text-destructive">Danger zone</h2>
         <p className="text-sm text-muted-foreground">
-            Deleting <strong>{workspace.name}</strong> cannot be undone. Usage already recorded remains on the organization’s bill.
+          Deleting <strong>{workspace.name}</strong> cannot be undone. Usage already recorded remains on the organization’s bill.
         </p>
-        {confirming ? (
-          <div className="flex items-center gap-2">
-            <Button variant="destructive" disabled={remove.isPending}
-              onClick={() => remove.mutate({ workspaceRef: workspaceRef! }, { onSuccess: () => setLocation('/org') })}>
-              Confirm delete
-            </Button>
-            <Button variant="outline" onClick={() => setConfirming(false)}>Cancel</Button>
-          </div>
-        ) : (
-          <Button variant="outline" className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
-            onClick={() => setConfirming(true)}>
-            <Trash2 className="w-4 h-4 mr-2" /> Delete Workspace
-          </Button>
-        )}
+        <ConfirmButton
+          variant="outline"
+          size="default"
+          className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
+          title="Delete Workspace"
+          description={`Deleting ${workspace.name} also deletes its inference keys and memberships. Usage already recorded remains on the organization’s bill.`}
+          confirmLabel="Delete Workspace"
+          pending={remove.isPending}
+          onConfirm={async () => {
+            await remove.mutateAsync({ workspaceRef });
+            setLocation('/org');
+          }}
+        >
+          <Trash2 className="w-4 h-4 mr-2" /> Delete Workspace
+        </ConfirmButton>
       </Card>
-    </div>
+    </PageShell>
   );
 }

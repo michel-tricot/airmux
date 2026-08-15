@@ -1,209 +1,278 @@
-# airllm
+# AirLLM
 
-An LLM gateway prototype with a strict control plane / data plane split.
+**One gateway for your LLM applications, across providers**
 
-The **control plane** (FastAPI + Postgres) holds orgs, API keys, providers and models,
-and compiles them into signed, self-contained policy bundles. The **data plane**
-(bare Starlette) serves `POST /v1/chat/completions` (and `POST /v1/messages`, the Anthropic
-Messages API) using only a bundle it polled
-and cached on disk: auth, policy and routing happen with zero I/O on the request
-path, and the data plane keeps serving even if the control plane is down.
-Caller credentials are opaque secrets stored only as SHA-256 hashes; the bundle
-carries the hash index, so the data plane authenticates by hash lookup and
-revocation is absence from the next bundle, propagating within one poll interval.
+AirLLM gives OpenAI and Anthropic clients a stable API while letting you choose where each model
+runs. Start with a single process and an API key, then add the control plane, web console,
+organizations, workspaces, bring-your-own provider credentials, and durable usage tracking when
+you need them.
 
-## Getting started
+Provider choice belongs in infrastructure, not throughout application code. AirLLM translates
+requests and responses through a canonical model, so an Anthropic client can call an OpenAI-hosted
+model and an OpenAI client can call an Anthropic model without provider-specific branches in the
+application.
 
-You need [uv](https://docs.astral.sh/uv/), Docker (or a local Postgres), and an OpenAI API key.
+## Why AirLLM
 
-```bash
-uv sync --all-packages
+- Use the OpenAI Chat Completions API and Anthropic Messages API through one gateway
+- Route models across OpenAI, Anthropic, Groq, Fireworks, Together, and other compatible providers
+- Keep provider credentials scoped to an organization or workspace
+- Authenticate, route, and enforce policy from a signed local bundle
+- Keep serving from cached configuration when the control plane is unavailable
+- Capture usage and cost events without making the management database part of the request path
+- Run only the data plane for local development or the complete stack for a team
 
-# 0. Start the non-code dependencies (Postgres) for local development
-docker compose -f docker-compose.dev.yml up -d --wait
+## Try it in two minutes
 
-# 1. Generate the bundle signing key pair (private to .airllm/signing.key, public alongside it)
-uv run airllmcp keygen
-echo 'OPENAI_API_KEY=sk-...' >> .env
+Standalone mode runs one data-plane process. It needs no Postgres, control plane, signature setup, or web console.
 
-# 2. Start the control plane (dev mode auto-runs migrations and reloads on change)
-uv run airllmcp serve --dev
+You need:
 
-# 3. Start the console and claim the instance: the first account to sign up becomes its admin
-bun install && bun run --filter '@workspace/gateway-console' dev   # http://localhost:5000
+- Python 3.13 or newer
+- [uv](https://docs.astral.sh/uv/)
+- An OpenAI API key
 
-# 4. Start the data plane; it polls the bundle and goes ready
-uv run airllmdp --dev
-```
+Clone the repository and start the gateway:
 
-`uv run airllm quickstart --dev` bootstraps against that stack in one step: it targets the
-control plane on `127.0.0.1:8000` and prints the console at `localhost:5000`, ahead of any
-profile or `GW_CONTROL_PLANE_URL` left over from another instance. `airllm login --dev` takes
-the same shortcut for an instance that is already set up.
+~~~bash
+git clone https://github.com/michel-tricot/airllm.git
+cd airllm
+uv sync --all-packages --frozen
 
-The first human account on a fresh deployment claims it and becomes the instance
-admin; every signup after that is an ordinary account. Claim a deployment before
-exposing it, or provision the admin yourself with `airllmcp admin --email you@example.com`,
-which is also how a second admin is granted: the bit never crosses the API.
+export OPENAI_API_KEY=sk-...
+uv run airllmdp serve --config airllm.standalone.yml
+~~~
 
-### Docker Compose
+In another terminal:
 
-The same stack runs under compose: Postgres comes up first, then the control
-plane starts with `migrate && taxonomy && serve` (schema to head, catalog applied,
-attributed to `root`), then the data plane, then the console on
-`localhost:5000`, which nginx serves and which proxies `/v1` to the control
-plane. There is no init service and no account provisioning at startup: claim the
-instance by signing up in the console. The stack shares the one checked-in
-`airllm.yml`: the containers work out of the shared `/state` volume, so its
-relative refs resolve there, and compose passes the few values that differ from a
-checkout (`DATABASE_URL`, `GW_CONSOLE_URL`, `GW_DATAPLANE_CONTROL_PLANE_URL`) as
-environment variables the file reads through its `:-` defaults.
+~~~bash
+curl http://127.0.0.1:8080/v1/chat/completions \
+  -H "Authorization: Bearer sk-inf-standalone-dev" \
+  -H "Content-Type: application/json" \
+  -d '{"model":"gpt-5-nano","messages":[{"role":"user","content":"Say hello in one sentence"}]}'
+~~~
 
-```bash
-# .env at the repo root: compose reads it for interpolation
-# GW_BUNDLE_SIGNING_KEY=<base64 Ed25519 private key>
-# OPENAI_API_KEY=sk-...
-docker compose up -d --build --wait
-```
+That is a real request to OpenAI through AirLLM. The standalone configuration reads
+`bundle.standalone.yml`, resolves provider keys from the environment, and reloads bundle changes
+automatically. Its built-in inference key is for local development only, and usage events are
+intentionally discarded.
 
-Accounts are self-serve: sign up on the console login page (`localhost:5000`),
-where the first account claims the instance, then create your organization and
-mint an inference key on a workspace; `airllm login` connects the CLI through the
-browser, which the console approves at `/cli`. The gateway
-listens on `localhost:8080` and the control plane API on `localhost:8000`.
-`docker compose down -v` resets the instance.
+## Run the complete stack
 
-### The console
+The complete stack adds Postgres, the control plane, the web console, signed bundles, multi-tenant credentials, and durable usage export.
 
-`apps/console` is the console. It is a bun/TypeScript workspace, separate from
-the uv one, sharing `lib/api-client-react` (generated React Query hooks) and
-`lib/api-zod` (generated schemas). You need [bun](https://bun.sh).
+You need:
 
-```bash
-bun install                                      # once, at the repo root
-bun run --filter '@workspace/gateway-console' dev   # http://localhost:5000
-```
+- Docker with Compose
+- [uv](https://docs.astral.sh/uv/)
+- At least one provider API key
 
-`PORT` and `BASE_PATH` override the port and the base path. `bun run build`
-typechecks the whole workspace and emits `apps/console/dist/public`, which
-`bun run --filter '@workspace/gateway-console' serve` previews.
+Copy the example environment file and replace at least one placeholder with a real provider key,
+then start the stack:
 
-The dev server proxies `/v1` to `localhost:8000`, which `CONTROL_PLANE_URL`
-overrides; under compose nginx proxies the same path to the control plane. Either
-way the API answers on the console's own origin, which is what the same-site
-session cookie needs. Signing in takes an account on the instance (the login page
-also signs one up). Three sections live behind that: `/app` is the org console,
-where the org travels in the `X-Org-Id` header the session picks, `/` is the
-instance admin console, which instance admins alone can open, and `/cli` is where
-`airllm login` sends the browser to approve a device login.
+~~~bash
+git clone https://github.com/michel-tricot/airllm.git
+cd airllm
 
-### Making a request
+cp .env.example .env
 
-With either setup running, make a request through the gateway:
+uv sync --all-packages --frozen
+docker compose up -d --build
+uv run airllm --dev quickstart
+docker compose up -d --wait
+~~~
 
-```bash
-source .env
-curl -s localhost:8080/v1/chat/completions \
+`quickstart` creates the first account, an organization, a default workspace, an inference key,
+and the first signed bundle. It reads keys from `.env`, prompts for anything it still needs, and
+lets you skip providers you do not use. Save the `AIRLLM_API_KEY` it prints.
+
+The stack is now available at:
+
+- Gateway: [http://localhost:8080](http://localhost:8080)
+- Web console: [http://localhost:5000](http://localhost:5000)
+- Control-plane API docs: [http://localhost:8000/docs](http://localhost:8000/docs)
+
+Try the managed gateway:
+
+~~~bash
+export AIRLLM_API_KEY='the key printed by quickstart'
+
+curl http://localhost:8080/v1/chat/completions \
   -H "Authorization: Bearer $AIRLLM_API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"model": "gpt-4o-mini", "messages": [{"role": "user", "content": "say hi"}]}'
-```
+  -d '{"model":"openai/gpt-4o-mini","messages":[{"role":"user","content":"Why use an LLM gateway?"}]}'
+~~~
 
-Or use the ready-made examples (streaming prints tokens as they arrive):
+Stop the stack without deleting its state:
 
-```bash
-uv run python examples/chat.py                # non-streaming
-uv run python examples/chat_stream.py        # tokens as they arrive
-uv run python examples/chat_stream_raw.py    # the raw SSE wire format
-uv run python examples/chat_stream_tools.py  # tool-call fragments assembling
-uv run python examples/chat_multi_turn.py    # conversation history + reasoning steps
-uv run python examples/chat_stream_cancel.py # abandon mid-stream, see cancelled accounting
-uv run python examples/chat_errors.py        # every failure mode and its status code
-uv run python examples/anthropic_chat.py         # Claude via the native Anthropic adapter
-uv run python examples/anthropic_chat_stream.py  # Claude streaming
-uv run --with anthropic python examples/anthropic_sdk.py  # the real Anthropic SDK via POST /v1/messages
-```
+~~~bash
+docker compose down
+~~~
 
-The gateway also exposes Anthropic's Messages API at `POST /v1/messages`, so
-Anthropic-SDK clients can point at it; the request is routed to whatever provider
-the model maps to (an Anthropic-SDK call can even run on an OpenAI model).
+`docker compose down -v` also deletes the database and AirLLM state volumes, so use it only when
+you want a clean reset.
 
-Because Claude Code itself speaks that API, you can run it on any cataloged model
-through the gateway:
+## Use your existing SDK
 
-```bash
-scripts/claude-gateway.sh --list            # registered models
-scripts/claude-gateway.sh gpt-4o-mini       # Claude Code, backed by gpt-4o-mini
-scripts/claude-gateway.sh claude-sonnet-4-6
-```
+Point the OpenAI SDK at AirLLM:
 
-`taxonomy/taxonomy.yml` ships with a catalog of OpenAI-compatible hosted providers
-(openai, anthropic, gemini, xai, deepseek, mistral, groq); after editing it, apply
-with `uv run airllmcp taxonomy`. A model becomes callable as soon as its
-provider's key (for example `GROQ_API_KEY`) is in `.env`.
+~~~python
+import os
 
-## Everyday commands
+from openai import OpenAI
 
-```bash
-uv run airllm --help            # commands are grouped: Resources, Testing
-uv run airllm inference-keys list        # every list command takes -f table|json|text
-uv run airllm inference-keys create      # flags, or interactive prompts for anything omitted
-uv run airllm inference-keys revoke <id> # takes effect at the next compile
-uv run airllm bundles compile   # recompile and sign after any change
-```
+client = OpenAI(
+    base_url="http://localhost:8080/v1",
+    api_key=os.environ["AIRLLM_API_KEY"],
+)
 
-The admin API is browsable at `http://localhost:8000/docs`; authorize with the
-`GW_INSTANCE_KEY` from `.env`. Instance keys reach the `/instance` endpoints,
-management keys reach one org's.
+response = client.chat.completions.create(
+    model="openai/gpt-4o-mini",
+    messages=[{"role": "user", "content": "Hello from AirLLM"}],
+)
+
+print(response.choices[0].message.content)
+~~~
+
+Or point the Anthropic SDK at the same gateway. The model can still be hosted by OpenAI:
+
+~~~python
+import os
+
+from anthropic import Anthropic
+
+client = Anthropic(
+    base_url="http://localhost:8080",
+    api_key="unused",
+    auth_token=os.environ["AIRLLM_API_KEY"],
+)
+
+message = client.messages.create(
+    model="openai/gpt-4o-mini",
+    max_tokens=256,
+    messages=[{"role": "user", "content": "Hello from AirLLM"}],
+)
+
+print(message.content[0].text)
+~~~
+
+Streaming, tools, structured provider errors, and cancellation accounting use the same gateway
+paths. More runnable examples live in [examples](examples).
+
+## How it works
+
+~~~mermaid
+flowchart LR
+    Clients["OpenAI and Anthropic clients"] --> DP["Data plane"]
+    DP --> Providers["Model providers"]
+    Console["Web console and CLI"] --> CP["Control plane"]
+    CP -- "signed bundles" --> DP
+    DP -- "usage events" --> CP
+    CP --> DB[("Postgres")]
+~~~
+
+The control plane owns organizations, workspaces, credentials, the model catalog, and bundle
+compilation. It publishes signed, self-contained configuration to the data plane. The data plane
+uses that local snapshot to authenticate callers, select a model and provider, translate the
+request, stream the response, and meter usage. It never queries the control-plane database while
+serving an inference request.
+
+Every caller dialect and provider family crosses the same canonical representation. This keeps
+policy and metering provider-independent and turns each new integration into one adapter instead
+of a matrix of pairwise translators.
+
+Read [the data-plane design](notes/design/DATAPLANE.md) for the request lifecycle, adapter
+contracts, streaming behavior, configuration ownership, and failure model. Read
+[the BYOK design](notes/design/BYOK.md) for credential resolution and isolation.
 
 ## Configuration
 
-- `airllm.yml` holds all non-secret config for both planes, grouped by domain.
-  Secrets are referenced as `env:VAR` or `file:PATH` entries and resolved at load.
-  Refs also interpolate inside strings as `${env:VAR}` / `${file:PATH}`, e.g.
-  `url: postgresql+asyncpg://${env:DB_USER}:${env:DB_PASSWORD}@db:5432/airllm`;
-  a string with any unresolvable ref loads as null and fails validation instead
-  of producing a half-filled value.
-- `.env` holds the secrets: the bundle signing key pair, admin and data plane
-  bearers, provider API keys. Nothing maintains it for you: `airllmcp keygen`
-  writes the key pair to files, and tokens are minted through the API or the
-  CLI and pasted in.
-- Precedence: explicit environment variable, then the config file, then defaults.
+- `airllm.standalone.yml` runs a local bundle with environment-backed provider secrets and no event export
+- `bundle.standalone.yml` is the editable local catalog, policy, and development inference-key bundle
+- `airllm.yml` configures the control plane and managed data plane used by Docker Compose
+- `taxonomy/taxonomy.yml` is the provider and model catalog applied by the control plane
+- `.env` holds local secrets and is loaded automatically
 
-## Development
+Do not commit real provider or AirLLM keys. In managed mode, add provider credentials through
+`quickstart`, the CLI, or the web console, then compile a bundle to publish the change.
 
-```bash
-uv run pytest                   # unit tests for all packages
-uv run pytest tests/acceptance  # black-box scenarios against real processes
-uv run ruff format --check .    # formatting
-uv run ruff check .             # lint, including the plane boundary rules
-uv run ty check .               # types, whole workspace
-uv run lint-imports             # data plane may never import the control plane or a database
-./scripts/export-openapi.sh       # re-export lib/api-spec/openapi.yaml from the routes
-./scripts/generate-api-models.sh  # regenerate lib/api-models from that spec
-```
+## Contributing
 
-The bun workspace is checked separately, and CI does not cover it yet:
+Issues, focused pull requests, and new provider or caller adapters are welcome. Before starting a
+larger change, open a [GitHub issue](https://github.com/michel-tricot/airllm/issues) so the design
+can be discussed early.
 
-```bash
-bun run typecheck               # lib/* project references, then the console
-bun run build                   # typecheck, then build apps/console
-bun run --cwd lib/api-spec codegen  # regenerate lib/api-client-react and lib/api-zod
-```
+Set up the Python workspace:
 
-`lib/api-spec/openapi.yaml` is the committed contract every client generates
-from: `lib/api-models` for python, `lib/api-client-react` and `lib/api-zod` for
-typescript. It is exported from the control plane routes, and CI fails on drift
-in the spec or in the python models, so change a route and re-export rather than
-hand-editing the spec or anything under a `generated/` directory. Orval unwraps
-the `{"data": ...}` envelope out of the typescript types and `customFetch` strips
-it at runtime, so the console's hooks return payloads.
+~~~bash
+git clone https://github.com/michel-tricot/airllm.git
+cd airllm
+uv sync --all-packages --frozen
+~~~
 
-Repo layout: `lib/contract` is the only code both planes share (bundle and
-event schemas, signing, tokens). `apps/control-plane`, `apps/data-plane`,
-`apps/cli`, `lib/contract` and `lib/api-models` are uv workspace members.
-`apps/console` and the other `lib/*` packages are the bun workspace holding the
-console and its generated clients.
-The full design spec lives in `notes/PROTOTYPE.md`, the implemented data-plane architecture and
-public gateway contract live in `notes/design/DATAPLANE.md`, and the working rules live in
-`CLAUDE.md`.
+Keep changes small, add tests for observable behavior, and run the Python checks:
+
+~~~bash
+uv run ruff format .
+uv run ruff check .
+uv run ty check .
+uv run lint-imports
+uv run pytest -n auto
+~~~
+
+Changes to request handling should also pass the black-box scenarios:
+
+~~~bash
+uv run pytest tests/acceptance/scenarios
+~~~
+
+For console changes, install [Bun](https://bun.sh/) and run:
+
+~~~bash
+bun install --frozen-lockfile
+bun run format:check
+bun run lint
+bun run typecheck
+bun run coverage
+bun run --filter '@workspace/gateway-console' build
+~~~
+
+When an API or canonical schema changes, regenerate the committed clients and schemas instead of editing generated files:
+
+~~~bash
+./scripts/export-openapi.sh
+./scripts/generate-api-models.sh
+./scripts/export-completion-schemas.sh
+bun run --cwd lib/api-spec codegen
+~~~
+
+A few architectural rules keep the project coherent:
+
+- The data plane never imports the control plane or database frameworks
+- `lib/contract` is the only code shared by both planes
+- New ingress and egress adapters register through discovery, not a central registry edit
+- Data-plane request-path fixes are proven with a real request against a running gateway
+
+See [AGENTS.md](AGENTS.md) for the complete development conventions and boundary rules.
+
+## Repository map
+
+- `apps/data-plane`: inference gateway, adapters, policy evaluation, streaming, and metering
+- `apps/control-plane`: management API, catalog, bundle compiler, and event ingestion
+- `apps/console`: React management console
+- `apps/cli`: setup and resource-management CLI
+- `lib/contract`: signed bundle, event, token, and shared wire contracts
+- `taxonomy`: provider definitions, model catalog, and canonical completion schemas
+- `tests/acceptance`: black-box gateway scenarios
+
+## Project status
+
+AirLLM is pre-1.0 and under active development. Configuration, migrations, and APIs may change
+before the first stable release. Evaluate it carefully before production use.
+
+The first account on a fresh complete-stack deployment becomes the instance administrator. Run
+`quickstart` and claim the instance before exposing the control plane or console beyond localhost.
+
+## License
+
+AirLLM is licensed under the [Elastic License 2.0](LICENSE) (ELv2).

@@ -9,21 +9,20 @@ import {
   getListEventsQueryKey,
   getListActivityQueryKey,
   getListBundlesQueryKey,
+  getListDataPlanesQueryKey,
   type ListEventsParams,
   type ListActivityParams,
 } from '@workspace/api-client-react';
 import { orgScope } from '@/lib/api';
 import { orgScopedKey } from '@/lib/query-keys';
 
-/** Recent gateway usage events for the org. */
-export function useOrgEvents(orgId: string, params: ListEventsParams) {
+export function useOrgEvents(orgId: string, params: ListEventsParams, enabled = true) {
   return useListEvents(params, {
-    query: { queryKey: orgScopedKey(orgId, getListEventsQueryKey(params)) },
+    query: { queryKey: orgScopedKey(orgId, getListEventsQueryKey(params)), enabled, refetchInterval: 3_000 },
     request: orgScope(orgId),
   });
 }
 
-/** The org's audit trail. */
 export function useOrgActivity(orgId: string, params: ListActivityParams) {
   return useListActivity(params, {
     query: { queryKey: orgScopedKey(orgId, getListActivityQueryKey(params)) },
@@ -31,7 +30,6 @@ export function useOrgActivity(orgId: string, params: ListActivityParams) {
   });
 }
 
-/** Published policy bundles for the org. */
 export function useBundles(orgId: string) {
   return useListBundles({
     query: { queryKey: orgScopedKey(orgId, getListBundlesQueryKey()) },
@@ -43,20 +41,17 @@ export function useCompileBundleMutation(orgId: string) {
   const queryClient = useQueryClient();
   return useCompileBundle({
     mutation: {
-      onSuccess: () =>
-        queryClient.invalidateQueries({ queryKey: orgScopedKey(orgId, getListBundlesQueryKey()) }),
+      onSuccess: () => queryClient.invalidateQueries({ queryKey: orgScopedKey(orgId, getListBundlesQueryKey()) }),
       meta: { errorMessage: 'We couldn’t publish the policy. Please try again.' },
     },
     request: orgScope(orgId),
   });
 }
 
-/** Data planes reporting in to the instance (admin scope). */
 export function useDataPlanes() {
-  return useListDataPlanes();
+  return useListDataPlanes(undefined, { query: { queryKey: getListDataPlanesQueryKey(), refetchInterval: 10_000 } });
 }
 
-/** Instance-wide audit trail (admin scope). */
 export function useInstanceActivity(params: { limit?: number }) {
   return useListInstanceActivity(params);
 }

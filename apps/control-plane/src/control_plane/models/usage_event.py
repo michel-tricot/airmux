@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Self
 from uuid import UUID
 
 from pydantic import BaseModel
-from sqlmodel import Field
+from sqlmodel import Field, col
 
 from control_plane.models.common.base import Record
 from control_plane.models.common.column_types import UTCDateTime
@@ -33,6 +34,21 @@ class UsageEvent(Record, table=True):
     stream: bool
     credential_id: UUID | None = None
     credential_scope: str | None = None
+
+    @classmethod
+    async def for_org(
+        cls,
+        org_id: UUID,
+        *,
+        after: datetime | None,
+        workspace_id: UUID | None,
+        limit: int,
+    ) -> list[Self]:
+        occurred_at = col(cls.occurred_at)
+        after_condition = (occurred_at > after,) if after is not None else ()
+        workspace_condition = (cls.workspace_id == workspace_id,) if workspace_id is not None else ()
+        order = occurred_at.asc() if after is not None else occurred_at.desc()
+        return await cls.find(cls.org_id == org_id, *workspace_condition, *after_condition, order_by=order, limit=limit)
 
 
 class UsageEventOut(RecordOut[UsageEvent]):

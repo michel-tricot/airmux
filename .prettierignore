@@ -1,0 +1,5 @@
+bun.lock
+coverage
+dist
+node_modules
+lib/api-client-react/src/generated

@@ -41,9 +41,11 @@ a fetch or a resource interface.
 
 Before editing, inspect nearby files and callsites. Reuse before creating:
 
-- Shared primitives live in `src/components/ui/elements.tsx`: `Button`, `Input`, `Label`, `Badge`, `Card`, `Modal`, `Table`, `Tabs`
-- The rest of `src/components/ui/` is the vendored shadcn set. Do not edit those files by hand; reach for one only when
-  `elements.tsx` has no equivalent
+- Application primitives live in `src/components/ui/elements.tsx`: actions, fields, status, cards, dialogs, tables, tabs, alerts, avatars, and sheets
+- Reusable product compositions live in `src/components/shared/`: data tables, form dialogs, loading,
+  error and empty states, page shells, member panels, and key tables
+- The rest of `src/components/ui/` is the vendored shadcn foundation. Do not edit those files by hand; compose one when
+  `elements.tsx` has no equivalent instead of rebuilding its behavior with native elements or direct Radix imports
 - Formatters live in `src/lib/format.ts` (`formatDate`, `formatRelative`), class merging in `src/lib/utils.ts` (`cn`)
 - Pages live in `src/pages/` (instance admin) and `src/pages/app/` (org member), registered in the matching
   `Switch` in `App.tsx`
@@ -52,7 +54,10 @@ Before editing, inspect nearby files and callsites. Reuse before creating:
 
 - Two consoles share one app: instance-admin routes at the root behind `user.instance_admin`, org-member routes under `/app`.
   Put a page in the section whose permission it needs
-- Do not add a shared component, hook, or helper before the third real caller unless matching an existing local pattern
+- Extend an existing UI component before creating a parallel implementation
+- Extract a stable UI concept at its second real caller, or immediately when accessibility-sensitive
+  behavior such as a dialog, select, or radio group needs one implementation
+- Keep a one-off presentation local only when no existing primitive fits and the behavior is genuinely page-specific
 - Do not rewrite adjacent code for preference only: component style, naming, import shape, formatting
 - All server data flows through the generated hooks. Mutations invalidate the list key they affect via its `get*QueryKey` helper
 - Render timestamps with `formatDate` or `formatRelative`, do not roll new formatters per page

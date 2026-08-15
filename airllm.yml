@@ -13,7 +13,12 @@ control_plane:
     staleness_bound_hours: 24
   console_url: ${env:GW_CONSOLE_URL:-http://127.0.0.1:5000}
   secrets:
-    kind: env
+    # One file per credential under root, owner-readable only. Both planes must name the same
+    # store, because the control plane writes what the data plane reads, so root has to be a
+    # path both processes can reach. Under docker-compose that is the shared `state` volume,
+    # which is why it sits beside the rest of the cache_dir state.
+    kind: file
+    root: ${var:cache_dir}/secrets
 
 data_plane:
   bundle:
@@ -33,4 +38,6 @@ data_plane:
     cache_dir: ${var:cache_dir}
     flush_interval_s: 5
   secrets:
-    kind: env
+    # Must match the control plane's store above, root included
+    kind: file
+    root: ${var:cache_dir}/secrets

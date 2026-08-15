@@ -10,16 +10,16 @@ import {
   getListUsersQueryKey,
   getGetUserQueryKey,
   getListOrgUsersQueryKey,
+  getEnrollmentQueryKey,
+  getMeQueryKey,
 } from '@workspace/api-client-react';
 import { orgScope } from '@/lib/api';
 import { orgScopedKey } from '@/lib/query-keys';
 
-/** Every account on the instance (admin scope). */
 export function useUsers() {
   return useListUsers();
 }
 
-/** One account by id (admin scope). */
 export function useUser(userId: string) {
   return useGetUser(userId, { query: { queryKey: getGetUserQueryKey(userId), retry: false } });
 }
@@ -54,19 +54,16 @@ export function useDeleteUserMutation() {
   });
 }
 
-/**
- * Org membership changes span orgs: the org travels in the X-Org-Id header per call,
- * so these go through the generated functions rather than the header-fixed hooks.
- * Both the admin user pages and the org detail page funnel through here so the
- * users list, the user detail, and the org's member roster all stay coherent.
- */
 function useMembershipInvalidation() {
   const queryClient = useQueryClient();
-  return (target: { userId: string; orgId: string }) => {
-    queryClient.invalidateQueries({ queryKey: getListUsersQueryKey() });
-    queryClient.invalidateQueries({ queryKey: getGetUserQueryKey(target.userId) });
-    queryClient.invalidateQueries({ queryKey: orgScopedKey(target.orgId, getListOrgUsersQueryKey()) });
-  };
+  return (target: { userId: string; orgId: string }) =>
+    Promise.all([
+      queryClient.invalidateQueries({ queryKey: getListUsersQueryKey() }),
+      queryClient.invalidateQueries({ queryKey: getGetUserQueryKey(target.userId) }),
+      queryClient.invalidateQueries({ queryKey: orgScopedKey(target.orgId, getListOrgUsersQueryKey()) }),
+      queryClient.invalidateQueries({ queryKey: getEnrollmentQueryKey() }),
+      queryClient.invalidateQueries({ queryKey: getMeQueryKey() }),
+    ]);
 }
 
 export function useAddUserToOrgMutation() {

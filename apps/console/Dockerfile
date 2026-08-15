@@ -1,5 +1,3 @@
-# Built from the repo root: the console is a member of the bun workspace and imports the
-# generated clients out of lib/, so the whole workspace has to be present to install and build.
 FROM oven/bun:1 AS build
 WORKDIR /app
 COPY package.json bun.lock bunfig.toml tsconfig.json tsconfig.base.json ./

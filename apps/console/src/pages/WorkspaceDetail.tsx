@@ -1,13 +1,15 @@
-import { useParams } from 'wouter';
 import { WorkspacePanel } from '@/components/WorkspacePanel';
+import { useRequiredParam } from '@/lib/route';
 
 export default function WorkspaceDetail() {
-  const { orgId, workspaceRef } = useParams();
+  const orgId = useRequiredParam('orgId');
+  const workspaceRef = useRequiredParam('workspaceRef');
 
   return (
     <WorkspacePanel
-      orgId={orgId!}
-      workspaceRef={workspaceRef!}
+      key={`${orgId}:${workspaceRef}`}
+      orgId={orgId}
+      workspaceRef={workspaceRef}
       backHref={`/instance/organizations/${orgId}`}
       backLabel="Organization"
     />

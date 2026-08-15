@@ -102,7 +102,7 @@ curl http://127.0.0.1:8080/v1/chat/completions \
   -H 'Authorization: Bearer sk-inf-...' \
   -H 'Content-Type: application/json' \
   -H 'x-airllm-dialect: canonical' \
-  -d '{"model":"gpt-4o-mini","messages":[{"role":"user","content":"hello"}]}'
+  -d '{"model":"openai/gpt-4o-mini","messages":[{"role":"user","content":"hello"}]}'
 ```
 
 Messages contain typed parts rather than provider-specific blocks:
@@ -216,7 +216,7 @@ client = Anthropic(
     auth_token=inference_key,
 )
 message = client.messages.create(
-    model="claude-sonnet-4-6",
+    model="anthropic/claude-sonnet-4-6",
     max_tokens=256,
     messages=[{"role": "user", "content": "hello"}],
 )

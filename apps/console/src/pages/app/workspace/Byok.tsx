@@ -1,9 +1,8 @@
 import { useState } from 'react';
 import * as z from 'zod';
-import { useParams } from 'wouter';
 import { Plus, KeyRound, RefreshCw, Power, Trash2 } from 'lucide-react';
 import type { ProviderCredentialOut } from '@workspace/api-client-react';
-import { useSession } from '@/lib/session';
+import { useRequiredOrgId } from '@/lib/session';
 import {
   useProviderCredentials,
   useProviders,
@@ -12,12 +11,16 @@ import {
   useUpdateCredentialMutation,
   useDeleteCredentialMutation,
 } from '@/features/credentials/hooks';
-import { Button, Card, Badge, Input, ConfirmButton } from '@/components/ui/elements';
+import { Button, Card, Badge, Input, ConfirmButton, Label } from '@/components/ui/elements';
 import { DataTable, type Column } from '@/components/shared/data-table';
 import { FormDialog } from '@/components/shared/form-dialog';
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { cn } from '@/lib/utils';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { useRequiredParam } from '@/lib/route';
+import { ProviderIcon } from '@/components/ProviderIcon';
+import { PageShell } from '@/components/shared/page-shell';
+import { ErrorState } from '@/components/shared/states';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 const addSchema = z.object({
   provider: z.string().min(1, 'Pick a provider'),
@@ -41,35 +44,35 @@ function health(credential: ProviderCredentialOut) {
 }
 
 export default function WorkspaceByok() {
-  const { workspaceRef } = useParams();
-  const { orgId } = useSession();
+  const workspaceRef = useRequiredParam('workspaceRef');
+  const orgId = useRequiredOrgId();
 
-  const credentialsQuery = useProviderCredentials(orgId!, workspaceRef!);
-  const taxonomy = useProviders(orgId!);
+  const credentialsQuery = useProviderCredentials(orgId, workspaceRef);
+  const taxonomy = useProviders(orgId);
   const providers = taxonomy.data?.providers ?? [];
 
   const [addOpen, setAddOpen] = useState(false);
   const [rotating, setRotating] = useState<ProviderCredentialOut | null>(null);
 
-  const addCredential = useAddCredentialMutation(orgId!, workspaceRef!);
-  const rotateCredential = useRotateCredentialMutation(orgId!, workspaceRef!);
-  const updateCredential = useUpdateCredentialMutation(orgId!, workspaceRef!);
-  const deleteCredential = useDeleteCredentialMutation(orgId!, workspaceRef!);
+  const addCredential = useAddCredentialMutation(orgId, workspaceRef);
+  const rotateCredential = useRotateCredentialMutation(orgId, workspaceRef);
+  const updateCredential = useUpdateCredentialMutation(orgId, workspaceRef);
+  const deleteCredential = useDeleteCredentialMutation(orgId, workspaceRef);
 
   const columns: Array<Column<ProviderCredentialOut>> = [
-    { key: 'provider', header: 'Provider', cellClassName: 'font-medium', cell: c => c.provider_name },
-    { key: 'name', header: 'Name', cell: c => c.name },
+    { key: 'provider', header: 'Provider', cellClassName: 'font-medium', cell: (c) => c.provider_name },
+    { key: 'name', header: 'Name', cell: (c) => c.name },
     {
       key: 'key',
       header: 'Key',
       cellClassName: 'font-mono text-xs text-muted-foreground',
-      cell: c => <>…{c.fingerprint}</>,
+      cell: (c) => <>…{c.fingerprint}</>,
     },
-    { key: 'priority', header: 'Priority', cellClassName: 'text-muted-foreground text-sm', cell: c => c.priority },
+    { key: 'priority', header: 'Priority', cellClassName: 'text-muted-foreground text-sm', cell: (c) => c.priority },
     {
       key: 'health',
       header: 'Status',
-      cell: c => {
+      cell: (c) => {
         const { label, variant } = health(c);
         return <Badge variant={variant}>{label}</Badge>;
       },
@@ -79,73 +82,80 @@ export default function WorkspaceByok() {
       header: '',
       headClassName: 'w-px',
       cellClassName: 'w-px',
-      cell: c => (
-        <TooltipProvider delayDuration={300}>
-          <div className="flex items-center gap-1">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button size="icon" variant="ghost" onClick={() => setRotating(c)}>
-                  <RefreshCw className="w-4 h-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Rotate key</TooltipContent>
-            </Tooltip>
+      cell: (c) => (
+        <div className="flex items-center gap-1">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button aria-label={`Rotate ${c.name}`} size="icon" variant="ghost" onClick={() => setRotating(c)}>
+                <RefreshCw className="w-4 h-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Rotate key</TooltipContent>
+          </Tooltip>
 
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className={c.enabled ? '' : 'text-muted-foreground'}
-                  onClick={() => updateCredential.mutate({ credentialId: c.id, data: { enabled: !c.enabled } })}>
-                  <Power className="w-4 h-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>{c.enabled ? 'Disable' : 'Enable'}</TooltipContent>
-            </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                size="icon"
+                variant="ghost"
+                aria-label={`${c.enabled ? 'Disable' : 'Enable'} ${c.name}`}
+                aria-pressed={c.enabled}
+                className={c.enabled ? '' : 'text-muted-foreground'}
+                onClick={() => updateCredential.mutate({ credentialId: c.id, data: { enabled: !c.enabled } })}
+              >
+                <Power className="w-4 h-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{c.enabled ? 'Disable' : 'Enable'}</TooltipContent>
+          </Tooltip>
 
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span>
-                  <ConfirmButton
-                    title={`Delete "${c.name}"?`}
-                    description="Permanently removes this key. Traffic will fall back to the next available key in priority order. This cannot be undone."
-                    confirmLabel="Delete"
-                    pending={deleteCredential.isPending}
-                    onConfirm={() => deleteCredential.mutate({ credentialId: c.id })}>
-                    <Trash2 className="w-4 h-4" />
-                  </ConfirmButton>
-                </span>
-              </TooltipTrigger>
-              <TooltipContent>Delete</TooltipContent>
-            </Tooltip>
-          </div>
-        </TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span>
+                <ConfirmButton
+                  title={`Delete "${c.name}"?`}
+                  description="Permanently removes this key. Traffic will fall back to the next available key in priority order. This cannot be undone."
+                  confirmLabel="Delete"
+                  pending={deleteCredential.isPending}
+                  aria-label={`Delete ${c.name}`}
+                  onConfirm={() => deleteCredential.mutateAsync({ credentialId: c.id })}
+                >
+                  <Trash2 className="w-4 h-4" />
+                </ConfirmButton>
+              </span>
+            </TooltipTrigger>
+            <TooltipContent>Delete</TooltipContent>
+          </Tooltip>
+        </div>
       ),
     },
   ];
 
   return (
-    <div className="flex-1 p-8 max-w-6xl mx-auto w-full space-y-6 animate-in fade-in duration-300">
-      <div className="flex justify-between items-center">
+    <PageShell>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Provider Keys</h1>
           <p className="text-muted-foreground mt-1 text-sm">
             Use your own API keys for this workspace. Keys are tried in priority order. If one fails, the next takes over automatically.
           </p>
         </div>
-        <Button onClick={() => setAddOpen(true)}>
+        <Button onClick={() => setAddOpen(true)} disabled={taxonomy.isLoading || taxonomy.isError || providers.length === 0}>
           <Plus className="w-4 h-4 mr-1" /> Add Key
         </Button>
       </div>
+
+      {taxonomy.isError && <ErrorState error={taxonomy.error} resource="provider catalog" onRetry={() => taxonomy.refetch()} />}
 
       <Card>
         <DataTable
           columns={columns}
           rows={credentialsQuery.data}
-          rowKey={c => c.id}
+          rowKey={(c) => c.id}
           isLoading={credentialsQuery.isLoading}
           isError={credentialsQuery.isError}
+          error={credentialsQuery.error}
+          resource="provider keys"
           onRetry={() => credentialsQuery.refetch()}
           empty="No keys yet. Add one to route this workspace's traffic through your own provider accounts."
           emptyIcon={KeyRound}
@@ -159,10 +169,11 @@ export default function WorkspaceByok() {
         description="Your key is stored encrypted and never exposed again. Paste it once, and we handle the rest."
         schema={addSchema}
         defaultValues={{ provider: providers[0]?.name ?? '', name: 'default', value: '', priority: 100 }}
-        onSubmit={values => addCredential.mutateAsync({ data: { ...values, workspace: workspaceRef! } })}
+        onSubmit={(values) => addCredential.mutateAsync({ data: { ...values, workspace: workspaceRef } })}
         submitLabel="Add Key"
-        pending={addCredential.isPending}>
-        {form => (
+        pending={addCredential.isPending}
+      >
+        {(form) => (
           <>
             <FormField
               control={form.control}
@@ -171,31 +182,23 @@ export default function WorkspaceByok() {
                 <FormItem>
                   <FormLabel>Provider</FormLabel>
                   <FormControl>
-                    <div className="flex flex-wrap gap-2">
-                      {providers.map(p => {
-                        const selected = field.value === p.name;
+                    <RadioGroup value={field.value} onValueChange={field.onChange} aria-label="Provider" className="flex flex-wrap gap-2">
+                      {providers.map((p) => {
+                        const optionId = `provider-${p.id}`;
                         return (
-                          <button
-                            key={p.id}
-                            type="button"
-                            onClick={() => field.onChange(p.name)}
-                            className={cn(
-                              'inline-flex items-center gap-2 rounded border px-3 py-1.5 text-[11px] font-mono font-bold uppercase tracking-wider transition-all',
-                              selected
-                                ? 'border-primary bg-primary/10 text-primary'
-                                : 'border-border bg-background/50 text-muted-foreground hover:border-primary/50 hover:text-foreground'
-                            )}>
-                            {p.icon ? (
-                              <span
-                                className="w-4 h-4 shrink-0 [&_svg]:w-full [&_svg]:h-full"
-                                dangerouslySetInnerHTML={{ __html: p.icon }}
-                              />
-                            ) : null}
-                            {p.name}
-                          </button>
+                          <div key={p.id} className="relative">
+                            <RadioGroupItem id={optionId} value={p.name} className="peer sr-only" />
+                            <Label
+                              htmlFor={optionId}
+                              className="inline-flex h-8 cursor-pointer items-center justify-center gap-2 rounded border border-input bg-background/50 px-3 shadow-sm transition-colors hover:border-primary/50 hover:bg-primary/10 hover:text-primary peer-data-[state=checked]:border-border/50 peer-data-[state=checked]:bg-secondary peer-data-[state=checked]:text-secondary-foreground peer-focus-visible:outline-none peer-focus-visible:ring-2 peer-focus-visible:ring-ring peer-focus-visible:ring-offset-2"
+                            >
+                              {p.icon ? <ProviderIcon markup={p.icon} /> : null}
+                              {p.name}
+                            </Label>
+                          </div>
                         );
                       })}
-                    </div>
+                    </RadioGroup>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -246,18 +249,20 @@ export default function WorkspaceByok() {
 
       <FormDialog
         open={!!rotating}
-        onOpenChange={v => !v && setRotating(null)}
+        onOpenChange={(v) => !v && setRotating(null)}
         title={rotating ? `Rotate "${rotating.name}"` : 'Rotate'}
         description="Replaces the existing key immediately. Any in-flight requests will finish with the old key."
         schema={rotateSchema}
         defaultValues={{ value: '' }}
-        onSubmit={async values => {
-          await rotateCredential.mutateAsync({ credentialId: rotating!.id, data: values });
+        onSubmit={async (values) => {
+          if (!rotating) return;
+          await rotateCredential.mutateAsync({ credentialId: rotating.id, data: values });
           setRotating(null);
         }}
         submitLabel="Rotate"
-        pending={rotateCredential.isPending}>
-        {form => (
+        pending={rotateCredential.isPending}
+      >
+        {(form) => (
           <FormField
             control={form.control}
             name="value"
@@ -273,6 +278,6 @@ export default function WorkspaceByok() {
           />
         )}
       </FormDialog>
-    </div>
+    </PageShell>
   );
 }
