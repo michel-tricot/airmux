@@ -89,6 +89,20 @@ Adding a resource is four steps; test_api_hygiene and test_api_parity name the e
 - Clients unwrap the envelope in one place each: the console's customFetch, cli client payload helpers, the data plane
   poller. Never unwrap at call sites.
 
+## Console UI composition
+- Before writing styled markup under `apps/console`, inspect `components/ui/elements.tsx`,
+  `components/shared`, and the vendored `components/ui` primitives
+- Pages compose shared components; they never rebuild an existing button, field, dialog, select,
+  radio group, table, tabs, empty state, or other interactive pattern with native elements and utilities
+- `components/ui` owns low-level accessible behavior, `elements.tsx` owns the themed application API,
+  and `components/shared` owns reusable product-level compositions
+- Extend an existing component with a focused prop or variant before creating a parallel implementation
+- Extract a stable UI concept when it gains a second real caller, or immediately when accessibility-sensitive
+  behavior needs one implementation; keep genuinely page-specific layout local
+- Direct `@radix-ui` imports belong in vendored primitive modules only; application wrappers compose those local primitives
+- Never delete a UI primitive from import counts alone; first check whether an application wrapper is
+  manually recreating the same behavior and migrate it to composition
+
 ## Typing and lint
 ty must pass clean. Do not widen to Any to silence an error, and do not add `# ty: ignore` or a blanket
 `# noqa`. Fix the type or ask. Every suppression that does survive must name the exact rule and carry a
