@@ -119,4 +119,4 @@ class LocalBundleSource(BundleSource):
             self.load()
         except (OSError, ValidationError, ValueError, yaml.YAMLError):
             logger.exception("local bundle %s did not load, serving 503 until it does", self._config.path)
-        return (task_group.create_task(self.run()),)
+        return (task_group.create_task(self.run(), name="local bundle reload"),)

@@ -75,8 +75,8 @@ class RemoteBundleSource(BundleSource):
             self._http_client,
         )
         return (
-            task_group.create_task(self.run()),
-            task_group.create_task(heartbeat.run()),
+            task_group.create_task(self.run(), name="bundle poll"),
+            task_group.create_task(heartbeat.run(), name="heartbeat"),
         )
 
     def _load_cached(self) -> None:

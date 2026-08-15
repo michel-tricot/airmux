@@ -80,7 +80,7 @@ class SqliteOutbox(EventOutbox):
         self._conn.close()
 
     def start(self, task_group: asyncio.TaskGroup, /) -> tuple[asyncio.Task[None], ...]:
-        return (task_group.create_task(self._run_export()),)
+        return (task_group.create_task(self._run_export(), name="event export"),)
 
     def next_batch(self, limit: int, /) -> list[UsageEventV1]:
         rows = self._conn.execute("SELECT body FROM outbox ORDER BY rowid LIMIT ?", (limit,)).fetchall()

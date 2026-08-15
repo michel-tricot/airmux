@@ -3,6 +3,8 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import logging
+import os
+import signal
 from typing import TYPE_CHECKING
 
 import httpx
@@ -51,6 +53,21 @@ def _build_http_client() -> httpx.AsyncClient:
     )
 
 
+def _terminate_process() -> None:
+    os.kill(os.getpid(), signal.SIGTERM)
+
+
+def _terminate_process_on_failure(task: asyncio.Task[None], /) -> None:
+    if task.cancelled():
+        return
+    error = task.exception()
+    if error is None:
+        logger.critical("background task %s stopped, terminating process", task.get_name())
+    else:
+        logger.critical("background task %s failed, terminating process", task.get_name(), exc_info=error)
+    _terminate_process()
+
+
 def create_app(config: Config) -> Starlette:
     @contextlib.asynccontextmanager
     async def lifespan(_app: Starlette) -> AsyncIterator[dict[str, Runtime]]:
@@ -69,6 +86,8 @@ def create_app(config: Config) -> Starlette:
                 )
                 async with asyncio.TaskGroup() as task_group:
                     tasks = (*bundle_source.start(task_group), *outbox.start(task_group))
+                    for task in tasks:
+                        task.add_done_callback(_terminate_process_on_failure)
                     try:
                         yield {"runtime": runtime}
                     finally:
