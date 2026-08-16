@@ -1,6 +1,6 @@
 """The request-lifecycle wiring in deps.py, observed through its durable effects.
 
-management_claims must stamp the acting user for every authenticated request (audit
+authority must stamp the acting principal for every authenticated request (audit
 attribution depends on it), and get_session must bind each request to exactly one transaction
 whose failure surfaces as an error, never as a phantom success.
 """
@@ -13,17 +13,22 @@ from sqlalchemy import event
 from sqlalchemy.orm import Session
 from sqlmodel import col
 
+from control_plane.authz import Permission
 from control_plane.models import AuditLog, Org
 
 
 def test_api_requests_attribute_the_acting_user(tmp_path):
-    """The full chain: bearer token -> management_claims -> set_actor -> GUC -> audit trigger."""
+    """The full chain: bearer token -> authority -> set_actor -> GUC -> audit trigger."""
     cp = setup_control_plane(tmp_path)
     root = cp.headers()
     with TestClient(cp.app) as c:
         user = make_user(tmp_path, "admin@example.com")
         make_admin(tmp_path, user.id)
-        token = c.post("/v1/instance/instance-keys", json={"user_id": str(user.id), "label": "t"}, headers=root).json()["data"]["token"]
+        token = c.post(
+            "/v1/access-keys",
+            json={"user_id": str(user.id), "label": "t", "permissions": [Permission.organizations_create]},
+            headers=root,
+        ).json()["data"]["token"]
         c.post("/v1/orgs", json={"name": "o2"}, headers={"authorization": f"Bearer {token}"})
 
     rows = run_in_db(tmp_path, lambda: AuditLog.find(order_by=col(AuditLog.id)))
@@ -57,9 +62,9 @@ def test_refused_requests_explain_themselves(tmp_path):
         org_headers = cp.headers(org_id=org_id)
 
         # Invalid bearer credential
-        resp = c.get("/v1/orgs", headers={"authorization": "Bearer mk_bogus"})
+        resp = c.get("/v1/orgs", headers={"authorization": "Bearer sk-cp-bogus"})
         assert resp.status_code == 401
-        assert resp.json()["detail"] == "Invalid or revoked credential"
+        assert resp.json()["detail"] == "Invalid, expired, or revoked credential"
 
         # No credential at all
         resp = c.get("/v1/orgs")
@@ -69,12 +74,12 @@ def test_refused_requests_explain_themselves(tmp_path):
         # Org-scoped credential on an instance route
         resp = c.get("/v1/orgs", headers=org_headers)
         assert resp.status_code == 403
-        assert "instance scope" in resp.json()["detail"]
+        assert "instance boundary" in resp.json()["detail"]
 
         # Instance credential on an org route
         resp = c.get("/v1/org/workspaces", headers=root)
         assert resp.status_code == 403
-        assert "org scope" in resp.json()["detail"]
+        assert resp.json()["detail"] == "X-Org-Id required"
 
         # Expired/invalid session cookie through the cookie door
         c.cookies.set("airllm_session", "bogus")

@@ -172,9 +172,7 @@ def test_database_mints_uuid7_ids_for_raw_inserts(pg_db):
 
     def raw_insert(conn):
         conn.execute(text("SELECT set_config('app.user_id', 'schema-test', true)"))
-        row = conn.execute(
-            text("INSERT INTO \"user\" (email, name, instance_admin, service_account) VALUES ('raw@example.com', 'raw', false, false) RETURNING id")
-        )
+        row = conn.execute(text("INSERT INTO \"user\" (email, name, service_account) VALUES ('raw@example.com', 'raw', false) RETURNING id"))
         return row.scalar_one()
 
     minted = _run_sync(url, raw_insert)

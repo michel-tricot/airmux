@@ -5,6 +5,8 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type ListAllManagementKeysParams = {
+export type ListAccessKeysParams = {
+user_id?: string | null;
 org_id?: string | null;
+workspace_id?: string | null;
 };

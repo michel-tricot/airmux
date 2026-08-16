@@ -4,6 +4,7 @@
  * Api
  * OpenAPI spec version: 0.1.0
  */
+import type { OrgRole } from './orgRole';
 
 /**
  * A member of the acting org: who they are and that they belong.
@@ -16,5 +17,6 @@ export interface OrgMemberOut {
   email: string;
   name: string;
   service_account: boolean;
+  role: OrgRole;
   status: 'member';
 }

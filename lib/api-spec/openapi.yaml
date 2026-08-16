@@ -3,6 +3,124 @@ info:
   title: airllm control plane
   version: 0.1.0
 paths:
+  /v1/access-keys:
+    get:
+      tags:
+      - Access Keys
+      summary: List Access Keys
+      operationId: list_access_keys
+      security:
+      - HTTPBearer: []
+      - SessionCookie: []
+      parameters:
+      - name: user_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: User Id
+      - name: org_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Org Id
+      - name: workspace_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Workspace Id
+      - name: X-Org-Id
+        in: header
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: X-Org-Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_list_AccessKeyOut__'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+      description: Requires `access-keys.read` authority at the route's tenant boundary.
+    post:
+      tags:
+      - Access Keys
+      summary: Create Access Key
+      operationId: create_access_key
+      security:
+      - HTTPBearer: []
+      - SessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AccessKeyIn'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_AccessKeyMintedOut_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+      description: Requires `access-keys.issue` authority at the route's tenant boundary.
+  /v1/access-keys/{key_id}:
+    delete:
+      tags:
+      - Access Keys
+      summary: Revoke Access Key
+      operationId: revoke_access_key
+      security:
+      - HTTPBearer: []
+      - SessionCookie: []
+      parameters:
+      - name: key_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Key Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_AccessKeyRevokedOut_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+      description: Requires `access-keys.revoke` authority at the route's tenant boundary.
   /v1/auth/login:
     post:
       tags:
@@ -39,7 +157,7 @@ paths:
         an org.
 
 
-        The exception is the first human on a deployment, who claims it and becomes its instance admin: a
+        The exception is the first human on a deployment, who claims it and becomes its instance owner: a
 
         fresh install has no other way to reach the instance endpoints, and /instance/oss/claim exists to
 
@@ -116,7 +234,7 @@ paths:
       security:
       - HTTPBearer: []
       - SessionCookie: []
-      description: Requires an authenticated user; not org-scoped.
+      description: Requires an authenticated human; access-key responses honor the credential boundary.
   /v1/auth/password:
     post:
       tags:
@@ -145,7 +263,7 @@ paths:
       security:
       - HTTPBearer: []
       - SessionCookie: []
-      description: Requires an authenticated user; not org-scoped.
+      description: Requires an authenticated human; access-key responses honor the credential boundary.
   /v1/auth/cli/start:
     post:
       tags:
@@ -277,7 +395,7 @@ paths:
       description: 'The acting user''s standing: their orgs by name, and whether their one personal org exists.
 
 
-        Requires an authenticated user; not org-scoped.'
+        Requires an authenticated human; access-key responses honor the credential boundary.'
       operationId: enrollment
       responses:
         '200':
@@ -312,7 +430,7 @@ paths:
         personal org frees it.
 
 
-        Requires an authenticated user; not org-scoped.'
+        Requires a browser session.'
       operationId: create_personal_org
       requestBody:
         content:
@@ -334,7 +452,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
       security:
-      - HTTPBearer: []
       - SessionCookie: []
   /v1/instance/oss/claim:
     get:
@@ -374,11 +491,9 @@ paths:
         has into the file the co-mounted data plane container waits for.
 
 
-        Either control-plane key type can drive a data plane: a management key pins it to one org''s
+        The accepted key authenticates a service account with the data-plane role and exactly the three
 
-        bundles, an instance key leaves the org to its config. The prefix check only catches a token
-
-        that could never work at all, an inference key or a paste accident.
+        runtime permissions. The prefix check catches an inference key or a paste accident early.
 
 
         No authentication required.'
@@ -408,10 +523,6 @@ paths:
       tags:
       - Data Plane
       summary: List Data Planes
-      description: 'Every data plane known to the instance; offline ones are kept as history and shown only with include_offline.
-
-
-        Requires the `data-planes:read` scope.'
       operationId: list_data_planes
       security:
       - HTTPBearer: []
@@ -424,14 +535,6 @@ paths:
           type: boolean
           default: false
           title: Include Offline
-      - name: X-Org-Id
-        in: header
-        required: false
-        schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: X-Org-Id
       responses:
         '200':
           description: Successful Response
@@ -445,215 +548,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
-  /v1/instance/instance-keys:
-    get:
-      tags:
-      - Instance Keys
-      summary: List Instance Keys
-      description: 'Every instance key on the deployment; there is no org axis to filter on.
-
-
-        Requires the `instance-keys:read` scope.'
-      operationId: list_instance_keys
-      security:
-      - HTTPBearer: []
-      - SessionCookie: []
-      parameters:
-      - name: X-Org-Id
-        in: header
-        required: false
-        schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: X-Org-Id
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Envelope_list_InstanceKeyOut__'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HTTPValidationError'
-    post:
-      tags:
-      - Instance Keys
-      summary: Create Instance Key
-      description: 'Mint an instance key for the acting admin, or for another instance admin when user_id names one.
-
-
-        Requires the `instance-keys:write` scope.'
-      operationId: create_instance_key
-      security:
-      - HTTPBearer: []
-      - SessionCookie: []
-      parameters:
-      - name: X-Org-Id
-        in: header
-        required: false
-        schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: X-Org-Id
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/InstanceKeyIn'
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Envelope_InstanceKeyMintedOut_'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HTTPValidationError'
-  /v1/instance/instance-keys/{key_id}:
-    delete:
-      tags:
-      - Instance Keys
-      summary: Revoke Instance Key
-      operationId: revoke_instance_key
-      security:
-      - HTTPBearer: []
-      - SessionCookie: []
-      parameters:
-      - name: key_id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-          title: Key Id
-      - name: X-Org-Id
-        in: header
-        required: false
-        schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: X-Org-Id
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Envelope_InstanceKeyRevokedOut_'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HTTPValidationError'
-      description: Requires the `instance-keys:write` scope.
-  /v1/instance/management-keys:
-    get:
-      tags:
-      - Instance Management Keys
-      summary: List All Management Keys
-      description: 'Instance-wide oversight: every org''s management keys, optionally filtered to one org.
-
-
-        Requires the `management-keys:read` scope.'
-      operationId: list_all_management_keys
-      security:
-      - HTTPBearer: []
-      - SessionCookie: []
-      parameters:
-      - name: org_id
-        in: query
-        required: false
-        schema:
-          anyOf:
-          - type: string
-            format: uuid
-          - type: 'null'
-          title: Org Id
-      - name: X-Org-Id
-        in: header
-        required: false
-        schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: X-Org-Id
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Envelope_list_ManagementKeyOut__'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HTTPValidationError'
-  /v1/instance/management-keys/{key_id}:
-    delete:
-      tags:
-      - Instance Management Keys
-      summary: Revoke Any Management Key
-      description: 'Revoke any org''s management key; the org-scoped route reaches only its own.
-
-
-        Requires the `management-keys:write` scope.'
-      operationId: revoke_any_management_key
-      security:
-      - HTTPBearer: []
-      - SessionCookie: []
-      parameters:
-      - name: key_id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-          title: Key Id
-      - name: X-Org-Id
-        in: header
-        required: false
-        schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: X-Org-Id
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Envelope_ManagementKeyRevokedOut_'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HTTPValidationError'
+      description: Requires `data-planes.read` authority at the route's tenant boundary.
   /v1/instance/activity:
     get:
       tags:
       - Activity
       summary: List Instance Activity
-      description: 'What changed anywhere on the instance, newest first; the org-scoped view of the same trail is /org/activity.
-
-
-        Requires the `activity:read` scope.'
       operationId: list_instance_activity
       security:
       - HTTPBearer: []
@@ -668,14 +568,6 @@ paths:
           minimum: 1
           default: 50
           title: Limit
-      - name: X-Org-Id
-        in: header
-        required: false
-        schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: X-Org-Id
       responses:
         '200':
           description: Successful Response
@@ -689,30 +581,19 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+      description: Requires `audit.read` authority at the route's tenant boundary.
   /v1/service-accounts:
     post:
       tags:
       - Users
       summary: Create Service Account
       operationId: create_service_account
-      security:
-      - HTTPBearer: []
-      - SessionCookie: []
-      parameters:
-      - name: X-Org-Id
-        in: header
-        required: false
-        schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: X-Org-Id
       requestBody:
-        required: true
         content:
           application/json:
             schema:
               $ref: '#/components/schemas/ServiceAccountIn'
+        required: true
       responses:
         '200':
           description: Successful Response
@@ -726,7 +607,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
-      description: Requires the `users:write` scope.
+      security:
+      - HTTPBearer: []
+      - SessionCookie: []
+      description: Requires `principals.manage` authority at the route's tenant boundary.
   /v1/users/{user_id}:
     get:
       tags:
@@ -744,14 +628,6 @@ paths:
           type: string
           format: uuid
           title: User Id
-      - name: X-Org-Id
-        in: header
-        required: false
-        schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: X-Org-Id
       responses:
         '200':
           description: Successful Response
@@ -765,13 +641,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
-      description: Requires the `users:read` scope.
+      description: Requires `principals.read` authority at the route's tenant boundary.
     delete:
       tags:
       - Users
       summary: Delete User
-      description: 'Delete a user with the credentials that are theirs alone: identities, sessions, management and instance
-        keys.
+      description: 'Delete a user with the credentials that are theirs alone: identities, sessions, and access keys.
 
 
         Everything else a user touches outlives them, so it blocks the delete instead of following it:
@@ -781,7 +656,7 @@ paths:
         belongs to its workspace and merely records who minted it.
 
 
-        Requires the `users:write` scope.'
+        Requires `principals.manage` authority at the route''s tenant boundary.'
       operationId: delete_user
       security:
       - HTTPBearer: []
@@ -794,14 +669,6 @@ paths:
           type: string
           format: uuid
           title: User Id
-      - name: X-Org-Id
-        in: header
-        required: false
-        schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: X-Org-Id
       responses:
         '200':
           description: Successful Response
@@ -823,7 +690,7 @@ paths:
       description: 'Every principal on the instance, or one kind of them: service_account splits the machines from the humans.
 
 
-        Requires the `users:read` scope.'
+        Requires `principals.read` authority at the route''s tenant boundary.'
       operationId: list_users
       security:
       - HTTPBearer: []
@@ -837,14 +704,6 @@ paths:
           - type: boolean
           - type: 'null'
           title: Service Account
-      - name: X-Org-Id
-        in: header
-        required: false
-        schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: X-Org-Id
       responses:
         '200':
           description: Successful Response
@@ -859,60 +718,11 @@ paths:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
   /v1/orgs:
-    post:
-      tags:
-      - Orgs
-      summary: Create Org
-      operationId: create_org
-      security:
-      - HTTPBearer: []
-      - SessionCookie: []
-      parameters:
-      - name: X-Org-Id
-        in: header
-        required: false
-        schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: X-Org-Id
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/OrgCreate'
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Envelope_OrgOut_'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HTTPValidationError'
-      description: Requires the `orgs:create` scope.
     get:
       tags:
       - Orgs
       summary: List Orgs
       operationId: list_orgs
-      security:
-      - HTTPBearer: []
-      - SessionCookie: []
-      parameters:
-      - name: X-Org-Id
-        in: header
-        required: false
-        schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: X-Org-Id
       responses:
         '200':
           description: Successful Response
@@ -926,7 +736,38 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
-      description: Requires the `orgs:read` scope.
+      security:
+      - HTTPBearer: []
+      - SessionCookie: []
+      description: Requires `organizations.read` authority at the route's tenant boundary.
+    post:
+      tags:
+      - Orgs
+      summary: Create Org
+      operationId: create_org
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrgCreate'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_OrgOut_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+      security:
+      - HTTPBearer: []
+      - SessionCookie: []
+      description: Requires `organizations.create` authority at the route's tenant boundary.
   /v1/orgs/{org_id}:
     patch:
       tags:
@@ -944,14 +785,6 @@ paths:
           type: string
           format: uuid
           title: Org Id
-      - name: X-Org-Id
-        in: header
-        required: false
-        schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: X-Org-Id
       requestBody:
         required: true
         content:
@@ -971,7 +804,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
-      description: Requires the `orgs:write` scope.
+      description: Requires `organizations.update` authority at the route's tenant boundary.
     get:
       tags:
       - Orgs
@@ -988,14 +821,6 @@ paths:
           type: string
           format: uuid
           title: Org Id
-      - name: X-Org-Id
-        in: header
-        required: false
-        schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: X-Org-Id
       responses:
         '200':
           description: Successful Response
@@ -1009,7 +834,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
-      description: Requires the `orgs:read` scope.
+      description: Requires `organizations.read` authority at the route's tenant boundary.
     delete:
       tags:
       - Orgs
@@ -1024,7 +849,7 @@ paths:
         outlive it the way the audit trail does rather than standing in the way of the delete.
 
 
-        Requires the `orgs:delete` scope.'
+        Requires `organizations.delete` authority at the route''s tenant boundary.'
       operationId: delete_org
       security:
       - HTTPBearer: []
@@ -1037,14 +862,6 @@ paths:
           type: string
           format: uuid
           title: Org Id
-      - name: X-Org-Id
-        in: header
-        required: false
-        schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: X-Org-Id
       responses:
         '200':
           description: Successful Response
@@ -1063,7 +880,7 @@ paths:
       tags:
       - Workspaces
       summary: Create Workspace
-      description: 'The creator becomes the first member when they hold an org membership; an instance admin
+      description: 'The creator becomes the first member when they hold an org membership; an instance owner
 
         acting on an org they never joined creates it member-less and relies on their bypass.
 
@@ -1073,7 +890,7 @@ paths:
         org already holds it, rather than a silently numbered variant of what they asked for.
 
 
-        Requires the `workspaces:create` scope.'
+        Requires `workspaces.create` authority at the route''s tenant boundary.'
       operationId: create_workspace
       security:
       - HTTPBearer: []
@@ -1136,7 +953,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
-      description: Requires the `workspaces:read` scope.
+      description: Requires `workspaces.read` authority at the route's tenant boundary.
   /v1/org/workspaces/{workspace_ref}:
     get:
       tags:
@@ -1174,7 +991,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
-      description: Requires the `workspaces:read` scope.
+      description: Requires `workspaces.read` authority at the route's tenant boundary.
     delete:
       tags:
       - Workspaces
@@ -1184,7 +1001,7 @@ paths:
         the usage it recorded stays, as it does for an org.
 
 
-        Requires the `workspaces:delete` scope.'
+        Requires `workspaces.delete` authority at the route''s tenant boundary.'
       operationId: delete_workspace
       security:
       - HTTPBearer: []
@@ -1259,7 +1076,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
-      description: Requires the `workspaces:write` scope.
+      description: Requires `workspaces.update` authority at the route's tenant boundary.
   /v1/org/workspaces/{workspace_ref}/members:
     get:
       tags:
@@ -1297,7 +1114,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
-      description: Requires the `workspaces:read` scope.
+      description: Requires `members.read` authority at the route's tenant boundary.
   /v1/org/workspaces/{workspace_ref}/members/{user_id}:
     put:
       tags:
@@ -1306,18 +1123,12 @@ paths:
       description: 'The composite foreign keys are the enforcement; the 409 turns what they would reject into a client error.
 
 
-        Requires the `workspaces:write` scope.'
+        Requires `members.manage` authority at the route''s tenant boundary.'
       operationId: add_member
       security:
       - HTTPBearer: []
       - SessionCookie: []
       parameters:
-      - name: workspace_ref
-        in: path
-        required: true
-        schema:
-          type: string
-          title: Workspace Ref
       - name: user_id
         in: path
         required: true
@@ -1325,6 +1136,12 @@ paths:
           type: string
           format: uuid
           title: User Id
+      - name: workspace_ref
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Workspace Ref
       - name: X-Org-Id
         in: header
         required: false
@@ -1333,6 +1150,12 @@ paths:
           - type: string
           - type: 'null'
           title: X-Org-Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkspaceMembershipIn'
       responses:
         '200':
           description: Successful Response
@@ -1355,12 +1178,6 @@ paths:
       - HTTPBearer: []
       - SessionCookie: []
       parameters:
-      - name: workspace_ref
-        in: path
-        required: true
-        schema:
-          type: string
-          title: Workspace Ref
       - name: user_id
         in: path
         required: true
@@ -1368,6 +1185,12 @@ paths:
           type: string
           format: uuid
           title: User Id
+      - name: workspace_ref
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Workspace Ref
       - name: X-Org-Id
         in: header
         required: false
@@ -1389,7 +1212,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
-      description: Requires the `workspaces:write` scope.
+      description: Requires `members.manage` authority at the route's tenant boundary.
   /v1/org/workspaces/{workspace_ref}/inference-keys:
     post:
       tags:
@@ -1433,7 +1256,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
-      description: Requires the `inference-keys:write` scope.
+      description: Requires `inference-keys.manage` authority at the route's tenant boundary.
     get:
       tags:
       - Inference Keys
@@ -1470,7 +1293,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
-      description: Requires the `inference-keys:read` scope.
+      description: Requires `inference-keys.read` authority at the route's tenant boundary.
   /v1/org/workspaces/{workspace_ref}/inference-keys/{key_id}:
     delete:
       tags:
@@ -1515,7 +1338,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
-      description: Requires the `inference-keys:write` scope.
+      description: Requires `inference-keys.manage` authority at the route's tenant boundary.
   /v1/org/provider-credentials:
     post:
       tags:
@@ -1524,11 +1347,11 @@ paths:
       description: 'Bring a provider key for this org, or for one workspace in it.
 
 
-        A workspace-scoped key needs membership in that workspace, the way minting an inference key
+        Workspace writes require provider-credential management authority at that workspace: whoever
 
-        there does: whoever supplies the key owns the account its traffic is billed to, and that
+        supplies the key owns the account its traffic is billed to, and that account''s dashboard shows
 
-        account''s dashboard shows every request made with it.
+        every request made with it.
 
 
         The row is written before the value so a crash between the two leaves a credential with nothing
@@ -1538,7 +1361,7 @@ paths:
         would leave a value in the store with no row to delete it by.
 
 
-        Requires the `provider-credentials:write` scope.'
+        Requires `provider-credentials.manage` authority at the route''s tenant boundary.'
       operationId: create_provider_credential
       security:
       - HTTPBearer: []
@@ -1578,7 +1401,7 @@ paths:
       description: 'The org''s credentials in the order the data plane tries them, optionally narrowed to one workspace.
 
 
-        Requires the `provider-credentials:read` scope.'
+        Requires `provider-credentials.read` authority at the route''s tenant boundary.'
       operationId: list_provider_credentials
       security:
       - HTTPBearer: []
@@ -1651,7 +1474,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
-      description: Requires the `provider-credentials:read` scope.
+      description: Requires `provider-credentials.read` authority at the route's tenant boundary.
     patch:
       tags:
       - Provider Credentials
@@ -1661,7 +1484,7 @@ paths:
         changing it would orphan the value rather than move it.
 
 
-        Requires the `provider-credentials:write` scope.'
+        Requires `provider-credentials.manage` authority at the route''s tenant boundary.'
       operationId: update_provider_credential
       security:
       - HTTPBearer: []
@@ -1710,7 +1533,7 @@ paths:
         it runs through the same method rather than a second copy of the ordering rule.
 
 
-        Requires the `provider-credentials:write` scope.'
+        Requires `provider-credentials.manage` authority at the route''s tenant boundary.'
       operationId: delete_provider_credential
       security:
       - HTTPBearer: []
@@ -1754,7 +1577,7 @@ paths:
         integer and every data plane refetches within a poll instead of waiting out a cache TTL.
 
 
-        Requires the `provider-credentials:write` scope.'
+        Requires `provider-credentials.manage` authority at the route''s tenant boundary.'
       operationId: rotate_provider_credential
       security:
       - HTTPBearer: []
@@ -1802,7 +1625,7 @@ paths:
       description: 'The acting org''s members; an org credential sees its own roster, never the instance''s.
 
 
-        Requires the `users:read` scope.'
+        Requires `members.read` authority at the route''s tenant boundary.'
       operationId: list_org_users
       security:
       - HTTPBearer: []
@@ -1837,7 +1660,7 @@ paths:
       description: 'Idempotent: the org comes from the credential, so membership can only ever be granted in scope.
 
 
-        Requires the `users:write` scope.'
+        Requires `members.manage` authority at the route''s tenant boundary.'
       operationId: add_org_user
       security:
       - HTTPBearer: []
@@ -1858,6 +1681,12 @@ paths:
           - type: string
           - type: 'null'
           title: X-Org-Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrgMembershipIn'
       responses:
         '200':
           description: Successful Response
@@ -1878,7 +1707,7 @@ paths:
       description: 'Removing the membership cascades the user out of the org''s workspaces.
 
 
-        Requires the `users:write` scope.'
+        Requires `members.manage` authority at the route''s tenant boundary.'
       operationId: remove_org_user
       security:
       - HTTPBearer: []
@@ -1912,117 +1741,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
-  /v1/org/management-keys:
-    get:
-      tags:
-      - Management Keys
-      summary: List Management Keys
-      operationId: list_management_keys
-      security:
-      - HTTPBearer: []
-      - SessionCookie: []
-      parameters:
-      - name: X-Org-Id
-        in: header
-        required: false
-        schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: X-Org-Id
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Envelope_list_ManagementKeyOut__'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HTTPValidationError'
-      description: Requires the `management-keys:read` scope.
-    post:
-      tags:
-      - Management Keys
-      summary: Mint Org Management Key
-      description: 'Mint an org-scoped key for the acting user, or for another org member when user_id names one.
-
-
-        Requires the `management-keys:write` scope.'
-      operationId: mint_org_management_key
-      security:
-      - HTTPBearer: []
-      - SessionCookie: []
-      parameters:
-      - name: X-Org-Id
-        in: header
-        required: false
-        schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: X-Org-Id
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ManagementKeyIn'
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Envelope_ManagementKeyMintedOut_'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HTTPValidationError'
-  /v1/org/management-keys/{key_id}:
-    delete:
-      tags:
-      - Management Keys
-      summary: Revoke Management Key
-      operationId: revoke_management_key
-      security:
-      - HTTPBearer: []
-      - SessionCookie: []
-      parameters:
-      - name: key_id
-        in: path
-        required: true
-        schema:
-          type: string
-          format: uuid
-          title: Key Id
-      - name: X-Org-Id
-        in: header
-        required: false
-        schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: X-Org-Id
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Envelope_ManagementKeyRevokedOut_'
-        '422':
-          description: Validation Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HTTPValidationError'
-      description: Requires the `management-keys:write` scope.
   /v1/org/bundles/compile:
     post:
       tags:
@@ -2054,7 +1772,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
-      description: Requires the `bundles:write` scope.
+      description: Requires `bundles.publish` authority at the route's tenant boundary.
   /v1/org/bundles:
     get:
       tags:
@@ -2086,7 +1804,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
-      description: Requires the `bundles:read` scope.
+      description: Requires `bundles.read` authority at the route's tenant boundary.
   /v1/org/events:
     get:
       tags:
@@ -2172,7 +1890,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
-      description: Requires the `events:read` scope.
+      description: Requires `usage.read` authority at the route's tenant boundary.
   /v1/org/activity:
     get:
       tags:
@@ -2181,7 +1899,7 @@ paths:
       description: 'What changed in this org, newest first: the audit trail the write triggers already record.
 
 
-        Requires the `activity:read` scope.'
+        Requires `audit.read` authority at the route''s tenant boundary.'
       operationId: list_activity
       security:
       - HTTPBearer: []
@@ -2257,7 +1975,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
-      description: Requires the `sync` scope.
+      description: Requires `bundles.read` authority at the route's tenant boundary.
   /v1/events:
     post:
       tags:
@@ -2279,7 +1997,7 @@ paths:
         so a replay reports zero.
 
 
-        Requires the `sync` scope.'
+        Requires `usage.ingest` authority at the route''s tenant boundary.'
       operationId: ingest_events
       security:
       - HTTPBearer: []
@@ -2326,10 +2044,12 @@ paths:
 
         Every worker of a multi-worker data plane heartbeats with the same instance_id, so the first
 
-        insert can race; do it as one atomic upsert instead of read-then-write.
+        insert can race; do it as one atomic upsert instead of read-then-write. The first heartbeat
+
+        pins the id to its organization, and another tenant cannot move it.
 
 
-        Requires the `sync` scope.'
+        Requires `data-planes.heartbeat` authority at the route''s tenant boundary.'
       operationId: heartbeat
       security:
       - HTTPBearer: []
@@ -2367,10 +2087,10 @@ paths:
       tags:
       - Taxonomy
       summary: Get Taxonomy
-      description: 'The instance-wide catalog, readable by any management token.
+      description: 'The instance-wide catalog, readable where the principal and credential both carry catalog access.
 
 
-        Requires the `taxonomy:read` scope.'
+        Requires `catalog.read` authority at the route''s tenant boundary.'
       operationId: get_taxonomy
       security:
       - HTTPBearer: []
@@ -2405,26 +2125,14 @@ paths:
       description: 'Create or update: reapplying a taxonomy converges the catalog.
 
 
-        Requires the `taxonomy:write` scope.'
+        Requires `catalog.manage` authority at the route''s tenant boundary.'
       operationId: create_provider
-      security:
-      - HTTPBearer: []
-      - SessionCookie: []
-      parameters:
-      - name: X-Org-Id
-        in: header
-        required: false
-        schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: X-Org-Id
       requestBody:
-        required: true
         content:
           application/json:
             schema:
               $ref: '#/components/schemas/ProviderIn'
+        required: true
       responses:
         '200':
           description: Successful Response
@@ -2438,6 +2146,9 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+      security:
+      - HTTPBearer: []
+      - SessionCookie: []
   /v1/taxonomy/models:
     post:
       tags:
@@ -2446,26 +2157,14 @@ paths:
       description: 'Create or update: reapplying a taxonomy converges the catalog.
 
 
-        Requires the `taxonomy:write` scope.'
+        Requires `catalog.manage` authority at the route''s tenant boundary.'
       operationId: create_model
-      security:
-      - HTTPBearer: []
-      - SessionCookie: []
-      parameters:
-      - name: X-Org-Id
-        in: header
-        required: false
-        schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: X-Org-Id
       requestBody:
-        required: true
         content:
           application/json:
             schema:
               $ref: '#/components/schemas/ModelIn'
+        required: true
       responses:
         '200':
           description: Successful Response
@@ -2479,8 +2178,267 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+      security:
+      - HTTPBearer: []
+      - SessionCookie: []
 components:
   schemas:
+    AccessKeyIn:
+      properties:
+        label:
+          type: string
+          maxLength: 80
+          minLength: 1
+          title: Label
+          description: Where this key lives, such as ci, laptop, or data-plane
+        user_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: User Id
+          description: Principal the key authenticates; defaults to the acting principal
+        org_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Org Id
+          description: Organization boundary; omit with workspace_id for instance authority
+        workspace_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Workspace Id
+          description: Workspace boundary; requires org_id
+        permissions:
+          items:
+            $ref: '#/components/schemas/Permission'
+          type: array
+          minItems: 1
+          title: Permissions
+          description: Explicit maximum permissions carried by the key
+        expires_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Expires At
+      additionalProperties: false
+      type: object
+      required:
+      - label
+      - permissions
+      title: AccessKeyIn
+    AccessKeyMintedOut:
+      properties:
+        id:
+          type: string
+          format: uuid
+          title: Id
+        user_id:
+          type: string
+          format: uuid
+          title: User Id
+        org_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Org Id
+        workspace_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Workspace Id
+        parent_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Parent Id
+        prefix:
+          type: string
+          title: Prefix
+        permissions:
+          items:
+            $ref: '#/components/schemas/Permission'
+          type: array
+          title: Permissions
+        label:
+          type: string
+          title: Label
+        expires_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Expires At
+        revoked_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Revoked At
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        updated_at:
+          type: string
+          format: date-time
+          title: Updated At
+        deleted_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Deleted At
+        boundary:
+          $ref: '#/components/schemas/Boundary'
+        status:
+          type: string
+          enum:
+          - active
+          - expired
+          - revoked
+          title: Status
+        token:
+          type: string
+          title: Token
+      type: object
+      required:
+      - id
+      - user_id
+      - org_id
+      - workspace_id
+      - parent_id
+      - prefix
+      - permissions
+      - label
+      - expires_at
+      - revoked_at
+      - created_at
+      - updated_at
+      - deleted_at
+      - boundary
+      - status
+      - token
+      title: AccessKeyMintedOut
+    AccessKeyOut:
+      properties:
+        id:
+          type: string
+          format: uuid
+          title: Id
+        user_id:
+          type: string
+          format: uuid
+          title: User Id
+        org_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Org Id
+        workspace_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Workspace Id
+        parent_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Parent Id
+        prefix:
+          type: string
+          title: Prefix
+        permissions:
+          items:
+            $ref: '#/components/schemas/Permission'
+          type: array
+          title: Permissions
+        label:
+          type: string
+          title: Label
+        expires_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Expires At
+        revoked_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Revoked At
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        updated_at:
+          type: string
+          format: date-time
+          title: Updated At
+        deleted_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Deleted At
+        boundary:
+          $ref: '#/components/schemas/Boundary'
+        status:
+          type: string
+          enum:
+          - active
+          - expired
+          - revoked
+          title: Status
+      type: object
+      required:
+      - id
+      - user_id
+      - org_id
+      - workspace_id
+      - parent_id
+      - prefix
+      - permissions
+      - label
+      - expires_at
+      - revoked_at
+      - created_at
+      - updated_at
+      - deleted_at
+      - boundary
+      - status
+      title: AccessKeyOut
+    AccessKeyRevokedOut:
+      properties:
+        id:
+          type: string
+          format: uuid
+          title: Id
+        status:
+          type: string
+          const: revoked
+          title: Status
+        revoked_at:
+          type: string
+          format: date-time
+          title: Revoked At
+      type: object
+      required:
+      - id
+      - status
+      - revoked_at
+      title: AccessKeyRevokedOut
     ActivityOut:
       properties:
         id:
@@ -2517,6 +2475,13 @@ components:
 
 
         id mirrors the column, which the sequence fills: nullable in the table, never null once read.'
+    Boundary:
+      type: string
+      enum:
+      - instance
+      - org
+      - workspace
+      title: Boundary
     BundleOut:
       properties:
         id:
@@ -2798,6 +2763,12 @@ components:
           type: string
           format: uuid
           title: Instance Id
+        org_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Org Id
         version:
           type: string
           title: Version
@@ -2829,6 +2800,7 @@ components:
       type: object
       required:
       - instance_id
+      - org_id
       - version
       - bundle_id
       - address
@@ -2883,6 +2855,22 @@ components:
       - orgs
       - personal_org_id
       title: EnrollOut
+    Envelope_AccessKeyMintedOut_:
+      properties:
+        data:
+          $ref: '#/components/schemas/AccessKeyMintedOut'
+      type: object
+      required:
+      - data
+      title: Envelope[AccessKeyMintedOut]
+    Envelope_AccessKeyRevokedOut_:
+      properties:
+        data:
+          $ref: '#/components/schemas/AccessKeyRevokedOut'
+      type: object
+      required:
+      - data
+      title: Envelope[AccessKeyRevokedOut]
     Envelope_BundleOut_:
       properties:
         data:
@@ -2987,38 +2975,6 @@ components:
       required:
       - data
       title: Envelope[InferenceKeyRevokedOut]
-    Envelope_InstanceKeyMintedOut_:
-      properties:
-        data:
-          $ref: '#/components/schemas/InstanceKeyMintedOut'
-      type: object
-      required:
-      - data
-      title: Envelope[InstanceKeyMintedOut]
-    Envelope_InstanceKeyRevokedOut_:
-      properties:
-        data:
-          $ref: '#/components/schemas/InstanceKeyRevokedOut'
-      type: object
-      required:
-      - data
-      title: Envelope[InstanceKeyRevokedOut]
-    Envelope_ManagementKeyMintedOut_:
-      properties:
-        data:
-          $ref: '#/components/schemas/ManagementKeyMintedOut'
-      type: object
-      required:
-      - data
-      title: Envelope[ManagementKeyMintedOut]
-    Envelope_ManagementKeyRevokedOut_:
-      properties:
-        data:
-          $ref: '#/components/schemas/ManagementKeyRevokedOut'
-      type: object
-      required:
-      - data
-      title: Envelope[ManagementKeyRevokedOut]
     Envelope_MeOut_:
       properties:
         data:
@@ -3123,6 +3079,17 @@ components:
       required:
       - data
       title: Envelope[WorkspaceOut]
+    Envelope_list_AccessKeyOut__:
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/AccessKeyOut'
+          type: array
+          title: Data
+      type: object
+      required:
+      - data
+      title: Envelope[list[AccessKeyOut]]
     Envelope_list_ActivityOut__:
       properties:
         data:
@@ -3167,28 +3134,6 @@ components:
       required:
       - data
       title: Envelope[list[InferenceKeyOut]]
-    Envelope_list_InstanceKeyOut__:
-      properties:
-        data:
-          items:
-            $ref: '#/components/schemas/InstanceKeyOut'
-          type: array
-          title: Data
-      type: object
-      required:
-      - data
-      title: Envelope[list[InstanceKeyOut]]
-    Envelope_list_ManagementKeyOut__:
-      properties:
-        data:
-          items:
-            $ref: '#/components/schemas/ManagementKeyOut'
-          type: array
-          title: Data
-      type: object
-      required:
-      - data
-      title: Envelope[list[ManagementKeyOut]]
     Envelope_list_OrgMemberOut__:
       properties:
         data:
@@ -3423,132 +3368,12 @@ components:
       - id
       - status
       title: InferenceKeyRevokedOut
-    InstanceKeyIn:
-      properties:
-        label:
-          type: string
-          maxLength: 80
-          minLength: 1
-          title: Label
-          description: Where this key lives, e.g. ci or a data plane; shown in listings
-        user_id:
-          anyOf:
-          - type: string
-            format: uuid
-          - type: 'null'
-          title: User Id
-          description: Instance admin the key is minted for; defaults to the acting user
-        scopes:
-          anyOf:
-          - items:
-              $ref: '#/components/schemas/Scope'
-            type: array
-          - type: 'null'
-          title: Scopes
-          description: Restrict the key to these scopes; omit for the user's full authority
-      additionalProperties: false
-      type: object
-      required:
-      - label
-      title: InstanceKeyIn
-    InstanceKeyMintedOut:
-      properties:
-        id:
-          type: string
-          format: uuid
-          title: Id
-        user_id:
-          type: string
-          format: uuid
-          title: User Id
-        scopes:
-          anyOf:
-          - items:
-              type: string
-            type: array
-          - type: 'null'
-          title: Scopes
-        label:
-          type: string
-          title: Label
-        token:
-          type: string
-          title: Token
-      type: object
-      required:
-      - id
-      - user_id
-      - scopes
-      - label
-      - token
-      title: InstanceKeyMintedOut
-    InstanceKeyOut:
-      properties:
-        id:
-          type: string
-          format: uuid
-          title: Id
-        user_id:
-          type: string
-          format: uuid
-          title: User Id
-        revoked:
-          type: boolean
-          title: Revoked
-        scopes:
-          anyOf:
-          - items:
-              type: string
-            type: array
-          - type: 'null'
-          title: Scopes
-        label:
-          type: string
-          title: Label
-        prefix:
-          type: string
-          title: Prefix
-        created_at:
-          type: string
-          format: date-time
-          title: Created At
-        updated_at:
-          type: string
-          format: date-time
-          title: Updated At
-        deleted_at:
-          anyOf:
-          - type: string
-            format: date-time
-          - type: 'null'
-          title: Deleted At
-      type: object
-      required:
-      - id
-      - user_id
-      - revoked
-      - scopes
-      - label
-      - prefix
-      - created_at
-      - updated_at
-      - deleted_at
-      title: InstanceKeyOut
-    InstanceKeyRevokedOut:
-      properties:
-        id:
-          type: string
-          format: uuid
-          title: Id
-        status:
-          type: string
-          const: revoked
-          title: Status
-      type: object
-      required:
-      - id
-      - status
-      title: InstanceKeyRevokedOut
+    InstanceRole:
+      type: string
+      enum:
+      - owner
+      - auditor
+      title: InstanceRole
     KeyEntry:
       properties:
         key_id:
@@ -3602,142 +3427,6 @@ components:
       - email
       - password
       title: LoginIn
-    ManagementKeyIn:
-      properties:
-        label:
-          type: string
-          maxLength: 80
-          minLength: 1
-          title: Label
-          description: Where this key lives, e.g. ci or laptop; shown in listings
-        user_id:
-          anyOf:
-          - type: string
-            format: uuid
-          - type: 'null'
-          title: User Id
-          description: User the key is minted for; defaults to the acting user
-        scopes:
-          anyOf:
-          - items:
-              $ref: '#/components/schemas/Scope'
-            type: array
-          - type: 'null'
-          title: Scopes
-          description: Restrict the key to these scopes; omit for the user's full authority
-      additionalProperties: false
-      type: object
-      required:
-      - label
-      title: ManagementKeyIn
-    ManagementKeyMintedOut:
-      properties:
-        id:
-          type: string
-          format: uuid
-          title: Id
-        org_id:
-          type: string
-          format: uuid
-          title: Org Id
-        user_id:
-          type: string
-          format: uuid
-          title: User Id
-        scopes:
-          anyOf:
-          - items:
-              type: string
-            type: array
-          - type: 'null'
-          title: Scopes
-        label:
-          type: string
-          title: Label
-        token:
-          type: string
-          title: Token
-      type: object
-      required:
-      - id
-      - org_id
-      - user_id
-      - scopes
-      - label
-      - token
-      title: ManagementKeyMintedOut
-    ManagementKeyOut:
-      properties:
-        id:
-          type: string
-          format: uuid
-          title: Id
-        org_id:
-          type: string
-          format: uuid
-          title: Org Id
-        user_id:
-          type: string
-          format: uuid
-          title: User Id
-        revoked:
-          type: boolean
-          title: Revoked
-        scopes:
-          anyOf:
-          - items:
-              type: string
-            type: array
-          - type: 'null'
-          title: Scopes
-        label:
-          type: string
-          title: Label
-        prefix:
-          type: string
-          title: Prefix
-        created_at:
-          type: string
-          format: date-time
-          title: Created At
-        updated_at:
-          type: string
-          format: date-time
-          title: Updated At
-        deleted_at:
-          anyOf:
-          - type: string
-            format: date-time
-          - type: 'null'
-          title: Deleted At
-      type: object
-      required:
-      - id
-      - org_id
-      - user_id
-      - revoked
-      - scopes
-      - label
-      - prefix
-      - created_at
-      - updated_at
-      - deleted_at
-      title: ManagementKeyOut
-    ManagementKeyRevokedOut:
-      properties:
-        id:
-          type: string
-          format: uuid
-          title: Id
-        status:
-          type: string
-          const: revoked
-          title: Status
-      type: object
-      required:
-      - id
-      - status
-      title: ManagementKeyRevokedOut
     MeOut:
       properties:
         user_id:
@@ -3750,9 +3439,10 @@ components:
         name:
           type: string
           title: Name
-        instance_admin:
-          type: boolean
-          title: Instance Admin
+        instance_role:
+          anyOf:
+          - $ref: '#/components/schemas/InstanceRole'
+          - type: 'null'
         orgs:
           items:
             type: string
@@ -3764,7 +3454,7 @@ components:
       - user_id
       - email
       - name
-      - instance_admin
+      - instance_role
       - orgs
       title: MeOut
     MembershipOut:
@@ -3777,6 +3467,8 @@ components:
           type: string
           format: uuid
           title: Org Id
+        role:
+          $ref: '#/components/schemas/OrgRole'
         status:
           type: string
           const: member
@@ -3785,6 +3477,7 @@ components:
       required:
       - user_id
       - org_id
+      - role
       - status
       title: MembershipOut
     ModelEntry:
@@ -4009,6 +3702,8 @@ components:
         service_account:
           type: boolean
           title: Service Account
+        role:
+          $ref: '#/components/schemas/OrgRole'
         status:
           type: string
           const: member
@@ -4019,6 +3714,7 @@ components:
       - email
       - name
       - service_account
+      - role
       - status
       title: OrgMemberOut
       description: 'A member of the acting org: who they are and that they belong.
@@ -4027,6 +3723,15 @@ components:
         Deliberately not UserOut: that carries the user''s every membership, which would let one org''s
 
         credential read the shape of the orgs it has no scope over.'
+    OrgMembershipIn:
+      properties:
+        role:
+          $ref: '#/components/schemas/OrgRole'
+      additionalProperties: false
+      type: object
+      required:
+      - role
+      title: OrgMembershipIn
     OrgOut:
       properties:
         id:
@@ -4065,6 +3770,14 @@ components:
       - updated_at
       - deleted_at
       title: OrgOut
+    OrgRole:
+      type: string
+      enum:
+      - owner
+      - admin
+      - member
+      - data_plane
+      title: OrgRole
     OrgUpdate:
       properties:
         name:
@@ -4110,6 +3823,38 @@ components:
       - user_id
       - status
       title: PasswordChangedOut
+    Permission:
+      type: string
+      enum:
+      - organizations.read
+      - organizations.create
+      - organizations.update
+      - organizations.delete
+      - principals.read
+      - principals.manage
+      - members.read
+      - members.manage
+      - workspaces.read
+      - workspaces.create
+      - workspaces.update
+      - workspaces.delete
+      - catalog.read
+      - catalog.manage
+      - provider-credentials.read
+      - provider-credentials.manage
+      - inference-keys.read
+      - inference-keys.manage
+      - bundles.read
+      - bundles.publish
+      - usage.read
+      - usage.ingest
+      - data-planes.read
+      - data-planes.heartbeat
+      - audit.read
+      - access-keys.read
+      - access-keys.issue
+      - access-keys.revoke
+      title: Permission
     ProviderCredentialIn:
       properties:
         provider:
@@ -4481,51 +4226,6 @@ components:
       required:
       - path
       title: QuickstartOut
-    Scope:
-      type: string
-      enum:
-      - inference-keys:read
-      - inference-keys:write
-      - workspaces:read
-      - workspaces:create
-      - workspaces:write
-      - workspaces:delete
-      - bundles:read
-      - bundles:write
-      - events:read
-      - data-planes:read
-      - provider-credentials:read
-      - provider-credentials:write
-      - taxonomy:read
-      - taxonomy:write
-      - orgs:read
-      - orgs:create
-      - orgs:write
-      - orgs:delete
-      - users:read
-      - users:write
-      - activity:read
-      - management-keys:read
-      - management-keys:write
-      - instance-keys:read
-      - instance-keys:write
-      - sync
-      title: Scope
-      description: 'What a management credential may do; org and instance row-scoping are a separate axis.
-
-
-        A scope restricts the credential, never expands it: a token minted without scopes carries the
-
-        owning user''s full authority, an explicit list is a restriction that also excludes scopes
-
-        invented later. Roles arrive later as named bundles over these same values.
-
-
-        Orgs and workspaces split their lifecycle three ways because founding a tenant and destroying
-
-        one with everything inside it are each a different privilege from governing one day to day:
-
-        :create founds, :write governs, :delete destroys. Elsewhere :write still covers all three.'
     SecretPurpose:
       type: string
       enum:
@@ -4908,6 +4608,11 @@ components:
         name:
           type: string
           title: Name
+        instance_role:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Instance Role
         service_account:
           type: boolean
           title: Service Account
@@ -4936,6 +4641,7 @@ components:
       - id
       - email
       - name
+      - instance_role
       - service_account
       - created_at
       - updated_at
@@ -4988,6 +4694,15 @@ components:
       required:
       - name
       title: WorkspaceCreate
+    WorkspaceMembershipIn:
+      properties:
+        role:
+          $ref: '#/components/schemas/WorkspaceRole'
+      additionalProperties: false
+      type: object
+      required:
+      - role
+      title: WorkspaceMembershipIn
     WorkspaceMembershipOut:
       properties:
         user_id:
@@ -4998,6 +4713,8 @@ components:
           type: string
           format: uuid
           title: Workspace Id
+        role:
+          $ref: '#/components/schemas/WorkspaceRole'
         status:
           type: string
           const: member
@@ -5006,6 +4723,7 @@ components:
       required:
       - user_id
       - workspace_id
+      - role
       - status
       title: WorkspaceMembershipOut
     WorkspaceOut:
@@ -5048,6 +4766,13 @@ components:
       - updated_at
       - deleted_at
       title: WorkspaceOut
+    WorkspaceRole:
+      type: string
+      enum:
+      - admin
+      - member
+      - viewer
+      title: WorkspaceRole
     WorkspaceUpdate:
       properties:
         name:
@@ -5070,20 +4795,15 @@ components:
       name: airllm_session
 tags:
 - name: Orgs
-  description: Tenants of the instance; every key, bundle and event belongs to one org
+  description: Tenants of the instance; bundles, usage, and org or workspace resources belong to one org
 - name: Users
-  description: Instance admins, org members and service accounts, with their org memberships
-- name: Instance Management Keys
-  description: Instance-wide oversight of every org's management keys
-  x-displayName: Org Management Keys
-- name: Instance Keys
-  description: Admin-held bearer keys for the instance endpoints, and the credential a data plane carries
+  description: Human and service-account principals, their instance roles, and org memberships
+- name: Access Keys
+  description: Principal-bound control-plane credentials attenuated by permission and tenant boundary
 - name: Data Plane
   description: 'Data-plane-facing endpoints: bundle polling, event ingestion, heartbeats'
 - name: OSS
   description: 'Self-hosted bootstrap: whether this deployment has a claimed account yet, and the quickstart trapdoor'
-- name: Management Keys
-  description: User-bound bearer keys for one org; instance reach is a separate key type
 - name: Org Users
   description: 'Membership in the acting org: who belongs to it, and adding or removing them'
   x-displayName: Users
@@ -5109,7 +4829,6 @@ x-tagGroups:
 - name: Org Management
   tags:
   - Org Users
-  - Management Keys
   - Workspaces
   - Inference Keys
   - Provider Credentials
@@ -5127,7 +4846,6 @@ x-tagGroups:
   tags:
   - Orgs
   - Users
-  - Instance Keys
-  - Instance Management Keys
+  - Access Keys
   - Data Plane
   - OSS

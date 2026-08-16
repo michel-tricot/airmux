@@ -27,7 +27,7 @@ def test_get_user_by_id_carries_their_memberships(tmp_path):
         org = make_org(c, root, "o1")
         user = make_user(tmp_path, "one@example.com")
 
-        c.put(f"/v1/org/users/{user.id}", headers=cp.headers(org))
+        c.put(f"/v1/org/users/{user.id}", json={"role": "member"}, headers=cp.headers(org))
 
         fetched = c.get(f"/v1/users/{user.id}", headers=root)
         assert fetched.status_code == 200, fetched.text

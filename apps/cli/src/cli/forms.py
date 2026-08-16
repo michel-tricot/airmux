@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Union, get_args, get_origin
 import typer
 from pydantic import BaseModel, ValidationError
 
-from cli.client import org_client, payload, post_expecting
+from cli.client import access_client, payload, post_expecting
 from cli.common import console
 
 if TYPE_CHECKING:
@@ -70,7 +70,7 @@ def register_create(  # noqa: PLR0913, PLR0917 the six registration facts are th
     path: str,
     help_text: str,
     done: Callable[[dict], None],
-    client: Callable[[str], httpx.Client] = org_client,
+    client: Callable[[str], httpx.Client] = access_client,
     panel: str | None = None,
 ) -> None:
     """Derive a create command from a spec model: one flag and one prompt per field, never hardcoded."""

@@ -18,6 +18,7 @@ from sqlalchemy.engine import make_url
 from contract import private_key_to_b64, public_key_to_b64, uuid7
 from contract.secrets.file import write_private_text
 from control_plane.app import create_app
+from control_plane.authz import InstanceRole
 from control_plane.compiler import compile_and_store
 from control_plane.config import BundlePolicy, Settings, database_url, load_settings
 from control_plane.db import standalone_transaction
@@ -82,7 +83,7 @@ def serve(host: str = "127.0.0.1", port: int = 8000, dev: bool = False, config: 
 
 
 @app.command()
-def admin(
+def owner(
     email: str = typer.Option(..., "--email", help="Existing account to promote"),
     config: str = "airllm.yml",
 ) -> None:
@@ -104,10 +105,10 @@ def admin(
             if user.service_account:
                 msg = "instance authority belongs to a human account"
                 raise ValueError(msg)
-            if user.instance_admin:
+            if user.instance_role == InstanceRole.owner:
                 return email, True
             await set_actor(user.id)
-            user.instance_admin = True
+            user.instance_role = InstanceRole.owner
             await user.save()
             return email, False
 
@@ -116,7 +117,7 @@ def admin(
     except ValueError as e:
         typer.echo(f"{email}: {e}", err=True)
         raise typer.Exit(1) from e
-    typer.echo(f"{granted} is already an instance admin" if already else f"{granted} is now an instance admin")
+    typer.echo(f"{granted} is already an instance owner" if already else f"{granted} is now an instance owner")
 
 
 @app.command()
@@ -153,11 +154,11 @@ def fixtures(config: str = "airllm.yml") -> None:
         names = ", ".join(seeded.unresolved_providers)
         typer.echo(f"no key behind the seeded {names} credentials; supply one with `airllm provider-credentials add <provider>`")
 
-    logins = [(email, seeded.password, "instance admin" if email == seeded.admin_email else "member") for email in seeded.emails]
+    logins = [(email, seeded.password, "instance owner" if email == seeded.admin_email else "member") for email in seeded.emails]
     keys = [
         ("inference (Acme production)", seeded.inference_token),
-        ("management (Acme)", seeded.management_token),
-        ("instance", seeded.instance_token),
+        ("access (Acme)", seeded.org_access_token),
+        ("access (instance)", seeded.instance_access_token),
     ]
     console.print(_table("logins", ("Email", "Password", "Role"), logins))
     console.print(_table("keys", ("Key", "Token"), keys))

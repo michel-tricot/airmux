@@ -2,17 +2,17 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 from typing import Annotated
-from uuid import UUID  # noqa: TC003 fastapi resolves query param annotations at runtime
+from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import Field
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlmodel import col
 
 from contract import BundleV1, HeartbeatV1, SignedBundle, UsageEventV1
-from control_plane.authz import Scope
-from control_plane.deps import MgmtDep, SessionDep, require
-from control_plane.models import Bundle, DataPlaneInstance, ProviderCredential, UsageEvent
+from control_plane.authz import Boundary, Permission, Target
+from control_plane.deps import AuthorityDep, OrgHeader, SessionDep, authorize, require, selected_target
+from control_plane.models import Bundle, DataPlaneInstance, Org, ProviderCredential, UsageEvent
 from control_plane.models.common.wire import Envelope
 from control_plane.models.data_plane_instance import HeartbeatOut
 from control_plane.models.usage_event import EventsIngestedOut
@@ -25,30 +25,43 @@ CREDENTIAL_HEALTH = {"ok": "live", "credential_rejected": "invalid", "rate_limit
 """Usage statuses that say something about the credential; everything else is about the provider."""
 
 
-def _sync_org(claims_org_id: UUID | None, org_id: UUID | None) -> UUID | None:
-    """The org a sync request may touch: an instance key leaves the choice to the caller, an
-    org-scoped management key pins it. Only the bundle and event paths have an org to pin; the
-    heartbeat registers the data plane against the instance and names no org at all."""
-    if claims_org_id is None:
-        return org_id
-    if org_id is not None and org_id != claims_org_id:
-        raise HTTPException(status_code=403, detail="This key is scoped to a different org than the one requested")
-    return claims_org_id
+async def bundle_org(authority: AuthorityDep, org_id: UUID | None = None, x_org_id: OrgHeader = None) -> UUID:
+    if authority.boundary in {Boundary.org, Boundary.workspace}:
+        if org_id is not None and org_id != authority.org_id:
+            raise HTTPException(status_code=403, detail="The credential is bound to a different organization")
+        selected = authority.org_id
+    else:
+        selected = org_id
+        if selected is None and x_org_id is not None:
+            try:
+                selected = UUID(x_org_id)
+            except ValueError:
+                raise HTTPException(status_code=403, detail="X-Org-Id is not a valid organization id") from None
+    if selected is None:
+        raise HTTPException(status_code=422, detail="org_id is required for an instance-bound credential")
+    if await Org.find_by_id(selected) is None:
+        raise HTTPException(status_code=404, detail="Organization not found")
+    return selected
 
 
-@router.get("/bundle/latest", dependencies=[require(Scope.sync)])
-async def bundle_latest(claims: MgmtDep, org_id: UUID | None = None) -> Envelope[SignedBundle]:
-    org_id = _sync_org(claims.org_id, org_id)
-    conditions = (Bundle.org_id == org_id,) if org_id else ()
-    bundle = await Bundle.first(*conditions, order_by=(col(Bundle.issued_at).desc(), col(Bundle.version).desc()))
+BundleOrgDep = Annotated[UUID, Depends(bundle_org)]
+
+
+async def bundle_target(org_id: BundleOrgDep) -> Target:
+    return Target.org(org_id)
+
+
+@router.get("/bundle/latest", dependencies=[require(Permission.bundles_read, bundle_target)])
+async def bundle_latest(org_id: BundleOrgDep) -> Envelope[SignedBundle]:
+    bundle = await Bundle.first(Bundle.org_id == org_id, order_by=(col(Bundle.issued_at).desc(), col(Bundle.version).desc()))
     if bundle is None:
         raise HTTPException(status_code=404, detail="No bundle has been compiled yet for this org")
     signed = SignedBundle(payload=BundleV1.model_validate_json(bundle.payload), signature=bundle.signature, signing_key_id=bundle.signing_key_id)
     return Envelope(data=signed)
 
 
-@router.post("/events", dependencies=[require(Scope.sync)])
-async def ingest_events(claims: MgmtDep, events: EventBatch, session: SessionDep) -> Envelope[EventsIngestedOut]:
+@router.post("/events", dependencies=[require(Permission.usage_ingest, selected_target)])
+async def ingest_events(authority: AuthorityDep, events: EventBatch, session: SessionDep) -> Envelope[EventsIngestedOut]:
     """Idempotent on event_id: at-least-once delivery lands exactly once, and a failed batch lands nothing.
 
     One atomic upsert rather than a read per event. Reading first would also be racy: two flushes
@@ -58,15 +71,15 @@ async def ingest_events(claims: MgmtDep, events: EventBatch, session: SessionDep
     ingested counts what RETURNING hands back, which under DO NOTHING is exactly the rows written,
     so a replay reports zero.
     """
-    if claims.org_id is not None and any(event.org_id != claims.org_id for event in events):
-        raise HTTPException(status_code=403, detail="Events may only be ingested for the org this key is scoped to")
     if not events:
         return Envelope(data=EventsIngestedOut(received=0, ingested=0))
+    for event in events:
+        await authorize(authority, Permission.usage_ingest, Target.workspace(event.org_id, event.workspace_id))
     # A batch may repeat an event_id; keep the first so the statement has one row per key
-    rows = list({event.event_id: event.model_dump(exclude={"schema_version"}) for event in events}.values())
-    stmt = pg_insert(UsageEvent).values(rows).on_conflict_do_nothing(index_elements=["event_id"]).returning(col(UsageEvent.event_id))
+    values = list({event.event_id: event.model_dump(exclude={"schema_version"}) for event in events}.values())
+    stmt = pg_insert(UsageEvent).values(values).on_conflict_do_nothing(index_elements=["event_id"]).returning(col(UsageEvent.event_id))
     inserted = (await session.execute(stmt)).scalars().all()
-    await ProviderCredential.observe(_credential_health(events))
+    await ProviderCredential.observe(_credential_health(events), org_id=authority.org_id)
     return Envelope(data=EventsIngestedOut(received=len(events), ingested=len(inserted)))
 
 
@@ -88,20 +101,24 @@ def _credential_health(events: list[UsageEventV1]) -> dict[UUID, tuple[datetime,
     return health
 
 
-@router.post("/heartbeat", dependencies=[require(Scope.sync)])
-async def heartbeat(_claims: MgmtDep, body: HeartbeatV1, session: SessionDep, request: Request) -> Envelope[HeartbeatOut]:
+@router.post("/heartbeat", dependencies=[require(Permission.data_planes_heartbeat, selected_target)])
+async def heartbeat(authority: AuthorityDep, body: HeartbeatV1, session: SessionDep, request: Request) -> Envelope[HeartbeatOut]:
     """Upsert the instance record; the row persists as history, last_seen drives liveness.
 
     Every worker of a multi-worker data plane heartbeats with the same instance_id, so the first
-    insert can race; do it as one atomic upsert instead of read-then-write.
+    insert can race; do it as one atomic upsert instead of read-then-write. The first heartbeat
+    pins the id to its organization, and another tenant cannot move it.
     """
     now = datetime.now(tz=UTC)
     address = request.client.host if request.client else None
-    fields = {"version": body.version, "bundle_id": body.bundle_id, "address": address, "last_seen": now}
+    fields = {"org_id": authority.org_id, "version": body.version, "bundle_id": body.bundle_id, "address": address, "last_seen": now}
+    same_org = col(DataPlaneInstance.org_id).is_(None) if authority.org_id is None else col(DataPlaneInstance.org_id) == authority.org_id
     stmt = (
         pg_insert(DataPlaneInstance)
         .values(instance_id=body.instance_id, first_seen=now, **fields)
-        .on_conflict_do_update(index_elements=["instance_id"], set_=fields)
+        .on_conflict_do_update(index_elements=["instance_id"], set_=fields, where=same_org)
+        .returning(col(DataPlaneInstance.instance_id))
     )
-    await session.execute(stmt)
+    if (await session.execute(stmt)).scalar_one_or_none() is None:
+        raise HTTPException(status_code=409, detail="instance_id already belongs to another organization")
     return Envelope(data=HeartbeatOut(instance_id=body.instance_id))

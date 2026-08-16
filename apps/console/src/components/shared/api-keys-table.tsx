@@ -7,7 +7,9 @@ interface ApiKeyRow {
   id: string;
   label: string;
   prefix: string;
-  revoked: boolean;
+  revoked?: boolean;
+  revoked_at?: string | null;
+  status?: string;
   created_at: string;
 }
 
@@ -36,6 +38,8 @@ export function ApiKeysTable<T extends ApiKeyRow>({
   onRevoke,
   revokePending,
 }: ApiKeysTableProps<T>) {
+  const statusOf = (key: T) => key.status ?? (key.revoked === true || key.revoked_at != null ? 'revoked' : 'active');
+  const isRevoked = (key: T) => statusOf(key) === 'revoked';
   const columns: Array<Column<T>> = [
     { key: 'label', header: 'Label', cellClassName: 'font-medium', cell: (key) => key.label },
     {
@@ -48,7 +52,10 @@ export function ApiKeysTable<T extends ApiKeyRow>({
     {
       key: 'status',
       header: 'Status',
-      cell: (key) => <Badge variant={key.revoked ? 'outline' : 'success'}>{key.revoked ? 'REVOKED' : 'ACTIVE'}</Badge>,
+      cell: (key) => {
+        const status = statusOf(key);
+        return <Badge variant={status === 'active' ? 'success' : 'outline'}>{status.toUpperCase()}</Badge>;
+      },
     },
     {
       key: 'created',
@@ -62,7 +69,7 @@ export function ApiKeysTable<T extends ApiKeyRow>({
       headClassName: 'text-right',
       cellClassName: 'text-right',
       cell: (key) =>
-        key.revoked ? null : (
+        isRevoked(key) ? null : (
           <ConfirmButton
             size="sm"
             title={`Revoke "${key.label}"?`}

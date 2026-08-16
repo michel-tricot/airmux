@@ -4,9 +4,11 @@
  * Api
  * OpenAPI spec version: 0.1.0
  */
+import type { OrgRole } from './orgRole';
 
 export interface MembershipOut {
   user_id: string;
   org_id: string;
+  role: OrgRole;
   status: 'member';
 }

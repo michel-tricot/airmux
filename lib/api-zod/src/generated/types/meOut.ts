@@ -4,11 +4,12 @@
  * Api
  * OpenAPI spec version: 0.1.0
  */
+import type { InstanceRole } from './instanceRole';
 
 export interface MeOut {
   user_id: string;
   email: string;
   name: string;
-  instance_admin: boolean;
+  instance_role: InstanceRole | null;
   orgs: string[];
 }

@@ -4,9 +4,11 @@
  * Api
  * OpenAPI spec version: 0.1.0
  */
+import type { WorkspaceRole } from './workspaceRole';
 
 export interface WorkspaceMembershipOut {
   user_id: string;
   workspace_id: string;
+  role: WorkspaceRole;
   status: 'member';
 }

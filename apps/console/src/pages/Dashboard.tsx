@@ -3,7 +3,7 @@ import { Building2, Users, Key, Server, Activity } from 'lucide-react';
 import { formatRelative } from '@/lib/format';
 import { useOrgs } from '@/features/orgs/hooks';
 import { useUsers } from '@/features/users/hooks';
-import { useAllManagementKeys, useInstanceKeys } from '@/features/keys/hooks';
+import { useAccessKeys } from '@/features/keys/hooks';
 import { useDataPlanes, useInstanceActivity } from '@/features/telemetry/hooks';
 import { DataTable } from '@/components/shared/data-table';
 import { ErrorState } from '@/components/shared/states';
@@ -13,22 +13,18 @@ export default function Dashboard() {
   const orgsQuery = useOrgs();
   const usersQuery = useUsers();
   const dataPlanesQuery = useDataPlanes();
-  const keysQuery = useAllManagementKeys();
-  const instanceKeysQuery = useInstanceKeys();
+  const keysQuery = useAccessKeys();
   const activityQuery = useInstanceActivity({ limit: 25 });
   const usersById = new Map(usersQuery.data?.map((user) => [user.id, user]));
   const actor = (userId: string) => usersById.get(userId)?.email ?? userId;
 
-  const keyLabels = new Map([
-    ...(instanceKeysQuery.data?.map((key) => [key.id, key.label] as const) ?? []),
-    ...(keysQuery.data?.map((key) => [key.id, key.label] as const) ?? []),
-  ]);
+  const keyLabels = new Map(keysQuery.data?.map((key) => [key.id, key.label] as const) ?? []);
   const describeRecord = (entry: { table_name: string; record_id: string }) => keyLabels.get(entry.record_id) ?? null;
 
   const statCards = [
     { label: 'Organizations', value: orgsQuery.data?.length, query: orgsQuery, icon: Building2 },
     { label: 'Users', value: usersQuery.data?.length, query: usersQuery, icon: Users },
-    { label: 'Automation Keys', value: keysQuery.data?.filter((key) => !key.revoked).length, query: keysQuery, icon: Key },
+    { label: 'Access Keys', value: keysQuery.data?.filter((key) => key.status === 'active').length, query: keysQuery, icon: Key },
     {
       label: 'Connected Services',
       value: dataPlanesQuery.data?.filter((dataPlane) => dataPlane.status === 'online').length,

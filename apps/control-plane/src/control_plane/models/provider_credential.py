@@ -7,7 +7,7 @@ from uuid import UUID
 
 from pydantic import Field as PydanticField
 from pydantic import SecretStr, field_validator
-from sqlalchemy import CheckConstraint, ColumnElement, ForeignKeyConstraint, UniqueConstraint
+from sqlalchemy import CheckConstraint, ColumnElement, ForeignKeyConstraint, UniqueConstraint, or_
 from sqlalchemy.dialects.postgresql import CITEXT
 from sqlmodel import Field, col
 
@@ -139,13 +139,13 @@ class ProviderCredential(Record, Identified, Tombstonable, table=True):
             await credential.delete_with_value(store)
 
     @classmethod
-    async def observe(cls, observations: dict[UUID, tuple[datetime, str]]) -> None:
+    async def observe(cls, observations: dict[UUID, tuple[datetime, str]], org_id: UUID | None = None) -> None:
         """Record what the data plane saw of each credential, from the usage events just ingested.
 
         Advisory and best effort: the status tells an operator which key to look at, and nothing on
-        the request path reads it. A credential the events name but the table does not is skipped
-        rather than treated as an error, because a deleted credential can still have events in
-        flight.
+        the request path reads it. A credential the events name but the table does not, or that
+        belongs to another organization, is skipped. Deleted credentials can still have events in
+        flight, and an organization-bound data plane cannot change another tenant's health.
 
         status_at is what makes this safe under at-least-once delivery: events replay after an
         outage and arrive out of order, so an older observation must never overwrite a newer one and
@@ -157,7 +157,8 @@ class ProviderCredential(Record, Identified, Tombstonable, table=True):
         """
         if not observations:
             return
-        credentials = await cls.find(col(cls.id).in_(observations))
+        tenant = () if org_id is None else (or_(col(cls.org_id) == org_id, col(cls.org_id).is_(None)),)
+        credentials = await cls.find(col(cls.id).in_(observations), *tenant)
         touched = False
         for credential in credentials:
             observed_at, status = observations[credential.id]

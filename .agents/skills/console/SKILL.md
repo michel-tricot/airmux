@@ -26,7 +26,7 @@ a fetch or a resource interface.
 
 - Hooks and query-key helpers come from the package: `useListOrgs`, `getListOrgsQueryKey`, `useCreateOrg`
 - `customFetch` owns the wire: it strips the `{"data": ...}` envelope, attaches the CSRF header, raises `ApiError`
-- A new endpoint means editing `lib/api-spec/openapi.yaml` and running `bun run codegen`, never a local shim
+- A new endpoint means exporting `lib/api-spec/openapi.yaml` from the control-plane routes and running `bun run codegen`, never a local shim
 - Query keys are the request path, so they are shared across orgs. Anything org-scoped puts the org in the key too
 
 ## Auth and org scope
@@ -52,7 +52,7 @@ Before editing, inspect nearby files and callsites. Reuse before creating:
 
 ## Local contract
 
-- Two consoles share one app: instance-admin routes at the root behind `user.instance_admin`, org-member routes under `/app`.
+- Two consoles share one app: instance routes under `/instance` behind `user.instance_role`, org-member routes under `/org`.
   Put a page in the section whose permission it needs
 - Extend an existing UI component before creating a parallel implementation
 - Extract a stable UI concept at its second real caller, or immediately when accessibility-sensitive

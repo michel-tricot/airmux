@@ -16,6 +16,7 @@ from control_plane.db import make_engine, make_session_factory
 from control_plane.deps import get_session
 from control_plane.migrate import head_revision
 from control_plane.models import NotOwnedError
+from control_plane.routes.access_keys import router as access_keys_router
 from control_plane.routes.auth import router as auth_router
 from control_plane.routes.enroll import router as enroll_router
 from control_plane.routes.instance import router as instance_router
@@ -39,17 +40,11 @@ if TYPE_CHECKING:
     from control_plane.config import Settings
 
 API_TAGS = [
-    {"name": "Orgs", "description": "Tenants of the instance; every key, bundle and event belongs to one org"},
-    {"name": "Users", "description": "Instance admins, org members and service accounts, with their org memberships"},
-    {
-        "name": "Instance Management Keys",
-        "x-displayName": "Org Management Keys",
-        "description": "Instance-wide oversight of every org's management keys",
-    },
-    {"name": "Instance Keys", "description": "Admin-held bearer keys for the instance endpoints, and the credential a data plane carries"},
+    {"name": "Orgs", "description": "Tenants of the instance; bundles, usage, and org or workspace resources belong to one org"},
+    {"name": "Users", "description": "Human and service-account principals, their instance roles, and org memberships"},
+    {"name": "Access Keys", "description": "Principal-bound control-plane credentials attenuated by permission and tenant boundary"},
     {"name": "Data Plane", "description": "Data-plane-facing endpoints: bundle polling, event ingestion, heartbeats"},
     {"name": "OSS", "description": "Self-hosted bootstrap: whether this deployment has a claimed account yet, and the quickstart trapdoor"},
-    {"name": "Management Keys", "description": "User-bound bearer keys for one org; instance reach is a separate key type"},
     {
         "name": "Org Users",
         "x-displayName": "Users",
@@ -69,11 +64,11 @@ API_TAGS = [
 TAG_GROUPS = [
     {
         "name": "Org Management",
-        "tags": ["Org Users", "Management Keys", "Workspaces", "Inference Keys", "Provider Credentials", "Bundles", "Events", "Activity"],
+        "tags": ["Org Users", "Workspaces", "Inference Keys", "Provider Credentials", "Bundles", "Events", "Activity"],
     },
     {"name": "Account", "tags": ["Auth", "Enrollment"]},
     {"name": "Catalog", "tags": ["Taxonomy"]},
-    {"name": "Instance Admin", "tags": ["Orgs", "Users", "Instance Keys", "Instance Management Keys", "Data Plane", "OSS"]},
+    {"name": "Instance Admin", "tags": ["Orgs", "Users", "Access Keys", "Data Plane", "OSS"]},
 ]
 
 
@@ -95,13 +90,15 @@ class ControlPlaneApp(FastAPI):
             "name": SESSION_COOKIE,
         }
         for route in _api_routes(self.routes):
-            scopes = [str(s) for dep in route.dependant.dependencies if (s := getattr(dep.call, "required_scope", None)) is not None]
+            permissions = [
+                str(permission) for dep in route.dependant.dependencies if (permission := getattr(dep.call, "required_permission", None)) is not None
+            ]
             access = [a for dep in route.dependant.dependencies if (a := getattr(dep.call, "access", None)) is not None]
             for method in route.methods or ():
                 operation = schema["paths"]["/v1" + route.path][method.lower()]
-                if scopes:
+                if permissions:
                     operation["security"] = [{"HTTPBearer": []}, {"SessionCookie": []}]
-                    line = f"Requires the `{'`, `'.join(scopes)}` scope."
+                    line = f"Requires `{'`, `'.join(permissions)}` authority at the route's tenant boundary."
                 elif "public" in access:
                     operation["security"] = []
                     line = "No authentication required."
@@ -110,7 +107,7 @@ class ControlPlaneApp(FastAPI):
                     line = "Requires a browser session."
                 elif "user" in access:
                     operation["security"] = [{"HTTPBearer": []}, {"SessionCookie": []}]
-                    line = "Requires an authenticated user; not org-scoped."
+                    line = "Requires an authenticated human; access-key responses honor the credential boundary."
                 else:
                     continue
                 operation["description"] = f"{operation['description']}\n\n{line}" if operation.get("description") else line
@@ -188,6 +185,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.add_route("/healthz", healthz)
     v1 = APIRouter(prefix="/v1", dependencies=[Depends(get_session, scope="function")])
     for router in (
+        access_keys_router,
         auth_router,
         enroll_router,
         oss_router,

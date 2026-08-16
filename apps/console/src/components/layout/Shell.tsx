@@ -9,7 +9,7 @@ const NAV_ITEMS = [
   { href: '/instance', label: 'Overview', icon: LayoutDashboard },
   { href: '/instance/organizations', label: 'Organizations', icon: Building2 },
   { href: '/instance/users', label: 'Users', icon: Users },
-  { href: '/instance/keys', label: 'Instance Keys', icon: KeyRound },
+  { href: '/instance/keys', label: 'Access Keys', icon: KeyRound },
 ];
 
 export function Shell({ children }: { children: React.ReactNode }) {
@@ -53,7 +53,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
           </Avatar>
           <div className="flex min-w-0 flex-col">
             <span className="truncate text-sm font-medium text-foreground">{user?.name}</span>
-            <span className="text-xs text-sidebar-foreground/50">Administrator</span>
+            <span className="text-xs text-sidebar-foreground/50">{user?.instance_role === 'owner' ? 'Owner' : 'Auditor'}</span>
           </div>
         </div>
         <Link

@@ -9,6 +9,7 @@ export interface UserOut {
   id: string;
   email: string;
   name: string;
+  instance_role: string | null;
   service_account: boolean;
   created_at: Date;
   updated_at: Date;

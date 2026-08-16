@@ -11,6 +11,7 @@ import {
   getListOrgUsersQueryKey,
   getEnrollmentQueryKey,
   getMeQueryKey,
+  type OrgRole,
 } from '@workspace/api-client-react';
 import { orgScope } from '@/lib/api';
 import { orgScopedKey } from '@/lib/query-keys';
@@ -43,9 +44,18 @@ export function useDeleteUserMutation() {
   });
 }
 
+type OrgMembershipTarget = { userId: string; orgId: string; role?: OrgRole };
+
+export const orgRoleOptions: Array<{ value: OrgRole; label: string }> = [
+  { value: 'owner', label: 'Owner' },
+  { value: 'admin', label: 'Admin' },
+  { value: 'member', label: 'Member' },
+  { value: 'data_plane', label: 'Data plane' },
+];
+
 function useMembershipInvalidation() {
   const queryClient = useQueryClient();
-  return (target: { userId: string; orgId: string }) =>
+  return (target: OrgMembershipTarget) =>
     Promise.all([
       queryClient.invalidateQueries({ queryKey: getListUsersQueryKey() }),
       queryClient.invalidateQueries({ queryKey: getGetUserQueryKey(target.userId) }),
@@ -58,7 +68,7 @@ function useMembershipInvalidation() {
 export function useAddUserToOrgMutation() {
   const invalidate = useMembershipInvalidation();
   return useMutation({
-    mutationFn: (target: { userId: string; orgId: string }) => addOrgUser(target.userId, orgScope(target.orgId)),
+    mutationFn: (target: OrgMembershipTarget) => addOrgUser(target.userId, { role: target.role ?? 'member' }, orgScope(target.orgId)),
     onSuccess: (_data, target) => invalidate(target),
     meta: { errorMessage: 'We couldn’t add the member. Please try again.' },
   });

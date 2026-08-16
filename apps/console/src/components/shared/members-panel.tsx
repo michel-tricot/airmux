@@ -10,9 +10,10 @@ interface MemberRow {
   user_id: string;
   name?: string | null;
   email?: string | null;
+  role: string;
 }
 
-const addMemberSchema = z.object({ userId: z.string().min(1, 'Select a user') });
+const addMemberSchema = z.object({ userId: z.string().min(1, 'Select a user'), role: z.string().min(1, 'Select a role') });
 
 interface MembersPanelProps<T extends MemberRow> {
   heading: ReactNode;
@@ -29,7 +30,9 @@ interface MembersPanelProps<T extends MemberRow> {
     dialogTitle: string;
     dialogDescription?: string;
     placeholder: string;
-    onAdd: (userId: string) => Promise<unknown>;
+    roles: Array<{ value: string; label: string }>;
+    defaultRole: string;
+    onAdd: (userId: string, role: string) => Promise<unknown>;
     pending: boolean;
   };
   remove?: {
@@ -68,6 +71,7 @@ export function MembersPanel<T extends MemberRow>({
       cellClassName: 'text-muted-foreground',
       cell: (member) => (renderEmail ? renderEmail(member) : (member.email ?? member.user_id)),
     },
+    { key: 'role', header: 'Role', cellClassName: 'text-muted-foreground', cell: (member) => member.role },
   ];
   if (remove) {
     columns.push({
@@ -121,31 +125,46 @@ export function MembersPanel<T extends MemberRow>({
           title={add.dialogTitle}
           description={add.dialogDescription}
           schema={addMemberSchema}
-          defaultValues={{ userId: '' }}
-          onSubmit={(values) => add.onAdd(values.userId)}
+          defaultValues={{ userId: '', role: add.defaultRole }}
+          onSubmit={(values) => add.onAdd(values.userId, values.role)}
           submitLabel="Add"
           pending={add.pending}
         >
           {(form) => (
-            <FormField
-              control={form.control}
-              name="userId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>User</FormLabel>
-                  <FormControl>
-                    <Dropdown
-                      aria-label="User"
-                      value={field.value}
-                      onValueChange={field.onChange}
-                      placeholder={add.placeholder}
-                      options={add.candidates}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <>
+              <FormField
+                control={form.control}
+                name="userId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>User</FormLabel>
+                    <FormControl>
+                      <Dropdown
+                        aria-label="User"
+                        value={field.value}
+                        onValueChange={field.onChange}
+                        placeholder={add.placeholder}
+                        options={add.candidates}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="role"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Role</FormLabel>
+                    <FormControl>
+                      <Dropdown aria-label="Role" value={field.value} onValueChange={field.onChange} options={add.roles} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </>
           )}
         </FormDialog>
       )}

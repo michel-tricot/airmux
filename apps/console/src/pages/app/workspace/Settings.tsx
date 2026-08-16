@@ -2,7 +2,14 @@ import { useState } from 'react';
 import { useLocation } from 'wouter';
 import { useRequiredOrgId } from '@/lib/session';
 import { useWorkspace, useRenameWorkspaceMutation, useDeleteWorkspaceMutation } from '@/features/workspaces/hooks';
-import { useOrgMembers, useWorkspaceMembers, useAddWorkspaceMemberMutation, useRemoveWorkspaceMemberMutation } from '@/features/members/hooks';
+import {
+  useOrgMembers,
+  useWorkspaceMembers,
+  useAddWorkspaceMemberMutation,
+  useRemoveWorkspaceMemberMutation,
+  workspaceRoleOptions,
+} from '@/features/members/hooks';
+import type { WorkspaceRole } from '@workspace/api-client-react';
 import { Card, Button, ConfirmButton, Input, Label } from '@/components/ui/elements';
 import { Trash2, Users } from 'lucide-react';
 import { LoadingState, ErrorState } from '@/components/shared/states';
@@ -93,7 +100,9 @@ function WorkspaceSettingsContent({ workspaceRef }: { workspaceRef: string }) {
             dialogTitle: 'Add Member',
             dialogDescription: 'Choose someone who already belongs to this organization.',
             placeholder: 'Select an org member',
-            onAdd: (userId) => addMember.mutateAsync({ workspaceRef, userId }),
+            roles: workspaceRoleOptions,
+            defaultRole: 'member',
+            onAdd: (userId, role) => addMember.mutateAsync({ workspaceRef, userId, data: { role: role as WorkspaceRole } }),
             pending: addMember.isPending || candidates === undefined,
           }}
           remove={{

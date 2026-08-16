@@ -183,7 +183,9 @@ of a matrix of pairwise translators.
 
 Read [the data-plane design](notes/design/DATAPLANE.md) for the request lifecycle, adapter
 contracts, streaming behavior, configuration ownership, and failure model. Read
-[the BYOK design](notes/design/BYOK.md) for credential resolution and isolation.
+[the authority design](notes/design/AUTHORITY.md) for roles, tenant boundaries, access keys, and
+data-plane permissions. Read [the BYOK design](notes/design/BYOK.md) for provider-credential
+resolution and isolation.
 
 ## Configuration
 
@@ -270,7 +272,7 @@ See [AGENTS.md](AGENTS.md) for the complete development conventions and boundary
 AirLLM is pre-1.0 and under active development. Configuration, migrations, and APIs may change
 before the first stable release. Evaluate it carefully before production use.
 
-The first account on a fresh complete-stack deployment becomes the instance administrator. Run
+The first account on a fresh complete-stack deployment becomes the instance owner. Run
 `quickstart` and claim the instance before exposing the control plane or console beyond localhost.
 
 ## License

@@ -29,12 +29,12 @@ from uuid import UUID, uuid5
 from sqlmodel import col
 
 from contract import INFERENCE_TOKEN_PREFIX, Secret, SecretRejectedError, SecretStore, token_hash
-from control_plane.keys import INSTANCE_KEY_PREFIX, MANAGEMENT_KEY_PREFIX, key_prefix
+from control_plane.authz import ALL_PERMISSIONS, OrgRole, WorkspaceRole, permissions_for_org_role
+from control_plane.keys import ACCESS_KEY_PREFIX, key_prefix
 from control_plane.models import (
+    AccessKey,
     AuthIdentity,
     InferenceKey,
-    InstanceKey,
-    ManagementKey,
     Org,
     OrgMembership,
     Provider,
@@ -57,8 +57,8 @@ ACME_PROD_TOKEN = f"{INFERENCE_TOKEN_PREFIX}fixture-acme-production"
 ACME_STAGING_TOKEN = f"{INFERENCE_TOKEN_PREFIX}fixture-acme-staging"
 ACME_RETIRED_TOKEN = f"{INFERENCE_TOKEN_PREFIX}fixture-acme-retired"
 SOLO_TOKEN = f"{INFERENCE_TOKEN_PREFIX}fixture-solo-default"
-ACME_MANAGEMENT_TOKEN = f"{MANAGEMENT_KEY_PREFIX}fixture-acme"
-INSTANCE_TOKEN = f"{INSTANCE_KEY_PREFIX}fixture-admin"
+ACME_ACCESS_TOKEN = f"{ACCESS_KEY_PREFIX}fixture-acme"
+INSTANCE_ACCESS_TOKEN = f"{ACCESS_KEY_PREFIX}fixture-admin"
 
 MODELS = [("gpt-4o-mini", "openai"), ("gpt-4o", "openai"), ("claude-opus-4-5", "anthropic")]
 
@@ -102,8 +102,8 @@ class Fixtures:
     admin_email: str
     emails: list[str]
     inference_token: str
-    management_token: str
-    instance_token: str
+    org_access_token: str
+    instance_access_token: str
     unresolved_providers: list[str]  # seeded credentials whose store holds no value, so nothing routes through them yet
 
 
@@ -222,7 +222,7 @@ async def apply_fixtures(now: datetime, store: SecretStore) -> Fixtures:
 
     await set_actor("root")
 
-    michel = await User(id=fixture_id("user:michel"), email="m@airbyte.com", name="Michel Tricot", instance_admin=True).save()
+    michel = await User(id=fixture_id("user:michel"), email="m@airbyte.com", name="Michel Tricot", instance_role="owner").save()
     await AuthIdentity.set_password(michel, FIXTURE_PASSWORD)
 
     dana = await User(id=fixture_id("user:dana"), email="b@airbyte.com", name="Dana Reeves").save()
@@ -231,37 +231,39 @@ async def apply_fixtures(now: datetime, store: SecretStore) -> Fixtures:
     acme = await Org(id=fixture_id("org:acme"), name="Acme", personal_for=michel.id).save()
     solo = await Org(id=fixture_id("org:solo"), name="Solo Shop").save()
 
-    await OrgMembership(user_id=michel.id, org_id=acme.id).save()
-    await OrgMembership(user_id=dana.id, org_id=acme.id).save()
-    await OrgMembership(user_id=dana.id, org_id=solo.id).save()
+    await OrgMembership(user_id=michel.id, org_id=acme.id, role=OrgRole.owner).save()
+    await OrgMembership(user_id=dana.id, org_id=acme.id, role=OrgRole.member).save()
+    await OrgMembership(user_id=dana.id, org_id=solo.id, role=OrgRole.owner).save()
 
     production = await Workspace(id=fixture_id("workspace:acme:production"), org_id=acme.id, name="Production", slug="production").save()
     staging = await Workspace(id=fixture_id("workspace:acme:staging"), org_id=acme.id, name="Staging", slug="staging").save()
     default = await Workspace(id=fixture_id("workspace:solo:default"), org_id=solo.id, name="Default", slug="default").save()
 
-    await WorkspaceMembership(user_id=michel.id, workspace_id=production.id, org_id=acme.id).save()
-    await WorkspaceMembership(user_id=dana.id, workspace_id=production.id, org_id=acme.id).save()
-    await WorkspaceMembership(user_id=michel.id, workspace_id=staging.id, org_id=acme.id).save()
-    await WorkspaceMembership(user_id=dana.id, workspace_id=default.id, org_id=solo.id).save()
+    await WorkspaceMembership(user_id=michel.id, workspace_id=production.id, org_id=acme.id, role=WorkspaceRole.admin).save()
+    await WorkspaceMembership(user_id=dana.id, workspace_id=production.id, org_id=acme.id, role=WorkspaceRole.member).save()
+    await WorkspaceMembership(user_id=michel.id, workspace_id=staging.id, org_id=acme.id, role=WorkspaceRole.admin).save()
+    await WorkspaceMembership(user_id=dana.id, workspace_id=default.id, org_id=solo.id, role=WorkspaceRole.admin).save()
 
     checkout = await inference_key(ACME_PROD_TOKEN, production, michel, label="checkout-service").save()
     ci = await inference_key(ACME_STAGING_TOKEN, staging, michel, label="ci").save()
     solo_key = await inference_key(SOLO_TOKEN, default, dana, label="default").save()
     await inference_key(ACME_RETIRED_TOKEN, production, dana, label="batch-jobs", revoked=True).save()
 
-    await ManagementKey(
-        id=fixture_id("management-key:acme"),
+    await AccessKey(
+        id=fixture_id("access-key:acme"),
         org_id=acme.id,
         user_id=michel.id,
-        token_hash=token_hash(ACME_MANAGEMENT_TOKEN),
-        prefix=key_prefix(ACME_MANAGEMENT_TOKEN, MANAGEMENT_KEY_PREFIX),
+        token_hash=token_hash(ACME_ACCESS_TOKEN),
+        prefix=key_prefix(ACME_ACCESS_TOKEN, ACCESS_KEY_PREFIX),
+        permissions=sorted(permissions_for_org_role(OrgRole.owner), key=str),
         label="fixture-cli",
     ).save()
-    await InstanceKey(
-        id=fixture_id("instance-key:admin"),
+    await AccessKey(
+        id=fixture_id("access-key:instance-owner"),
         user_id=michel.id,
-        token_hash=token_hash(INSTANCE_TOKEN),
-        prefix=key_prefix(INSTANCE_TOKEN, INSTANCE_KEY_PREFIX),
+        token_hash=token_hash(INSTANCE_ACCESS_TOKEN),
+        prefix=key_prefix(INSTANCE_ACCESS_TOKEN, ACCESS_KEY_PREFIX),
+        permissions=sorted(ALL_PERMISSIONS, key=str),
         label="fixture-admin",
     ).save()
 
@@ -284,7 +286,7 @@ async def apply_fixtures(now: datetime, store: SecretStore) -> Fixtures:
         admin_email=michel.email,
         emails=[michel.email, dana.email],
         inference_token=ACME_PROD_TOKEN,
-        management_token=ACME_MANAGEMENT_TOKEN,
-        instance_token=INSTANCE_TOKEN,
+        org_access_token=ACME_ACCESS_TOKEN,
+        instance_access_token=INSTANCE_ACCESS_TOKEN,
         unresolved_providers=sorted({key.provider_name for key in keys if not key.fingerprint}),
     )

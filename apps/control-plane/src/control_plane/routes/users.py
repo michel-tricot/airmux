@@ -8,19 +8,19 @@ from __future__ import annotations
 
 from uuid import UUID  # noqa: TC003 fastapi resolves path param annotations at runtime
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, HTTPException
 from sqlmodel import col
 
-from control_plane.authz import Scope
-from control_plane.deps import instance_scope, require
+from control_plane.authz import Permission
+from control_plane.deps import instance_target, require
 from control_plane.models import InferenceKey, Org, OrgMembership, User
 from control_plane.models.common.wire import DeletedOut, Envelope
 from control_plane.models.user import ServiceAccountIn, UserOut
 
-router = APIRouter(dependencies=[Depends(instance_scope)])
+router = APIRouter()
 
 
-@router.post("/service-accounts", tags=["Users"], dependencies=[require(Scope.users_write)])
+@router.post("/service-accounts", tags=["Users"], dependencies=[require(Permission.principals_manage, instance_target)])
 async def create_service_account(body: ServiceAccountIn) -> Envelope[UserOut]:
     user = User.new_service_account(body.name)
     return Envelope(data=_user_out(await user.save(), []))
@@ -30,7 +30,7 @@ def _user_out(u: User, orgs: list[UUID]) -> UserOut:
     return UserOut.model_validate({**u.model_dump(), "orgs": orgs})
 
 
-@router.get("/users/{user_id}", tags=["Users"], dependencies=[require(Scope.users_read)])
+@router.get("/users/{user_id}", tags=["Users"], dependencies=[require(Permission.principals_read, instance_target)])
 async def get_user(user_id: UUID) -> Envelope[UserOut]:
     user = await User.find_by_id(user_id)
     if user is None:
@@ -39,9 +39,9 @@ async def get_user(user_id: UUID) -> Envelope[UserOut]:
     return Envelope(data=_user_out(user, [m.org_id for m in memberships]))
 
 
-@router.delete("/users/{user_id}", tags=["Users"], dependencies=[require(Scope.users_write)])
+@router.delete("/users/{user_id}", tags=["Users"], dependencies=[require(Permission.principals_manage, instance_target)])
 async def delete_user(user_id: UUID) -> Envelope[DeletedOut[UUID]]:
-    """Delete a user with the credentials that are theirs alone: identities, sessions, management and instance keys.
+    """Delete a user with the credentials that are theirs alone: identities, sessions, and access keys.
 
     Everything else a user touches outlives them, so it blocks the delete instead of following it:
     a membership is the org's decision to revisit, a personal org is a tenant, and an inference key
@@ -60,7 +60,7 @@ async def delete_user(user_id: UUID) -> Envelope[DeletedOut[UUID]]:
     return Envelope(data=DeletedOut.of(user_id))
 
 
-@router.get("/users", tags=["Users"], dependencies=[require(Scope.users_read)])
+@router.get("/users", tags=["Users"], dependencies=[require(Permission.principals_read, instance_target)])
 async def list_users(service_account: bool | None = None) -> Envelope[list[UserOut]]:
     """Every principal on the instance, or one kind of them: service_account splits the machines from the humans."""
     kind = [] if service_account is None else [User.service_account == service_account]

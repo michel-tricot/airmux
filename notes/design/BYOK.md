@@ -164,10 +164,10 @@ Rules that fall out:
   is never something a tenant, an operator, or a migration writes down
 - `name` is `api_immutable`: it is part of the ref a store may address a value by, so renaming would
   orphan the secret. Same standing as `Workspace.slug`
-- `scope=platform` implies null org and workspace, instance admin only, enforced by a check
+- `scope=platform` implies null org and workspace, instance owner only, enforced by a check
   constraint rather than guard code
 
-New scopes: `provider-credentials:read`, `provider-credentials:write`.
+Control-plane authority uses `provider-credentials.read` and `provider-credentials.manage`.
 
 ## Control plane write path
 
@@ -200,43 +200,25 @@ it, the usage event carries the failure, ingestion flips `status` to `invalid`, 
 red key. Slower than a probe, but no adapter knowledge leaks into the control plane and there is no
 outbound call on the write path.
 
-## Security: who can write a credential today
+## Security: who can write a credential
 
-Writing a credential is a higher privilege than the current authorization model can express, and as
-shipped it is held more widely than it should be. Nothing below is theoretical; all three are true
-of the code in the repo right now.
+Whoever supplies a provider key owns the upstream account the organization's traffic is billed to,
+and that account's dashboard can expose the prompts and completions sent through it. Credential
+writes therefore use `provider-credentials.manage`, not a generic workspace write permission.
 
-**Why it matters more than a normal write.** Whoever supplies a key owns the upstream account the
-org's traffic is billed to, and that account's dashboard shows every request made with it. A member
-who attaches their own key does not only move spend, they gain a copy of the org's prompt and
-completion traffic at the provider. The tier rules make the blast radius wider than the write looks:
-an org-scoped credential is what every workspace with no credential of its own falls back to,
-including workspaces the writer cannot otherwise reach.
+The [authority model](AUTHORITY.md) applies both a role grant and a credential ceiling at the
+credential's actual tenant target:
 
-**1. Every unscoped org management key already has it.** Scopes restrict rather than grant: a key
-minted with no explicit scope list carries its user's full authority and picks up scopes invented
-later. So every management key that existed before `provider-credentials:write` gained it the moment
-the scope was added, and no operator was asked. That is a general property of adding a scope to this
-model rather than something specific to BYOK, but BYOK is the first scope where the retroactive
-grant is worth real money.
+- Organization owners and admins can manage organization credentials and credentials in their workspaces
+- Workspace admins can manage credentials only in their workspace
+- Workspace members and viewers can read credential metadata but cannot supply, rotate, disable, or delete values
+- Organization members outside a workspace receive no credential access there
+- Data-plane service accounts receive no provider-credential permission
 
-**2. There is no role between org member and org admin.** Any org member holding
-`management-keys:write` can mint themselves a key, and an unscoped one carries provider-credentials
-write with it. Membership in the org is the whole gate.
-
-**3. Workspace-scoped writes skipped workspace membership. Fixed.** The routes resolved the
-workspace with `Workspace.by_ref` rather than through the membership check every inference key route
-makes, so an org member outside a workspace could attach a credential to it. Both now go through
-`joined_workspace`, which is `workspace_member` with the ref as an argument instead of a path
-parameter, so the routes that name a workspace in a body or a query string run the same rule as the
-ones that name it in the path.
-
-### What is left
-
-1 and 2 are changes to the authorization model rather than to this feature, and are parked in
-[notes/IDEAS.md](../IDEAS.md). Until they land, `provider-credentials:write` is an org-admin
-privilege that the code does not enforce as one, and deployment notes should say so rather than
-implying the scope is a boundary.
+Access keys always store an explicit permission ceiling. Adding a future permission cannot expand an
+existing key, and role changes take effect without reminting it. Workspace targets resolve through
+the workspace's organization-owned identity before authorization, so a credential cannot cross an
+organization boundary by naming a workspace id from another tenant.
 
 ## Bundle contract
 

@@ -28,6 +28,7 @@ MINE_COLS = [
 HTTP_GONE = 410
 
 CSRF = {"X-Requested-With": "airllm-cli"}
+DATA_PLANE_PERMISSIONS = ["bundles.read", "usage.ingest", "data-planes.heartbeat"]
 
 
 def _client_name() -> str:
@@ -144,9 +145,28 @@ def quickstart(  # noqa: PLR0913, PLR0917 flags are the command's interface
         org_id, org_name = created["id"], created["name"]
         _step(f"Organization [bold]{org_name}[/bold]")
 
-        started = _payload_or_die(c.post("/v1/auth/cli/start", json={"client_name": _client_name()}), "management key request")
-        _payload_or_die(c.post("/v1/auth/cli/approve", json={"user_code": started["user_code"], "org_id": org_id}), "management key approval")
-        token = _payload_or_die(c.post("/v1/auth/cli/poll", json={"poll_secret": started["poll_secret"]}), "management key delivery")["token"]
+        data_plane = _payload_or_die(c.post("/v1/service-accounts", json={"name": "data-plane"}), "data-plane principal creation")
+        org_headers = {"X-Org-Id": org_id}
+        _payload_or_die(
+            c.put(f"/v1/org/users/{data_plane['id']}", json={"role": "data_plane"}, headers=org_headers),
+            "data-plane role assignment",
+        )
+        data_plane_key = _payload_or_die(
+            c.post(
+                "/v1/access-keys",
+                json={
+                    "label": "data-plane",
+                    "user_id": data_plane["id"],
+                    "org_id": org_id,
+                    "permissions": DATA_PLANE_PERMISSIONS,
+                },
+            ),
+            "data-plane key creation",
+        )
+
+        started = _payload_or_die(c.post("/v1/auth/cli/start", json={"client_name": _client_name()}), "access key request")
+        _payload_or_die(c.post("/v1/auth/cli/approve", json={"user_code": started["user_code"], "org_id": org_id}), "access key approval")
+        token = _payload_or_die(c.post("/v1/auth/cli/poll", json={"poll_secret": started["poll_secret"]}), "access key delivery")["token"]
 
         bearer = {"authorization": f"Bearer {token}"}
         workspace = _payload_or_die(c.post("/v1/org/workspaces", json={"name": "default"}, headers=bearer), "workspace creation")
@@ -164,11 +184,12 @@ def quickstart(  # noqa: PLR0913, PLR0917 flags are the command's interface
         )
         _step(f"Workspace [bold]{workspace['name']}[/bold], signed in and saved to {config_path()}")
 
-        quick = c.post("/v1/instance/oss/quickstart", json={"token": token})
+        quick = c.post("/v1/instance/oss/quickstart", json={"token": data_plane_key["token"]})
         if quick.is_success:
             _step("Connected your gateway")
         else:
-            console.print(f"  [yellow]![/yellow] Could not connect your gateway ({quick.status_code}). Set GW_DATAPLANE_TOKEN yourself.")
+            console.print(f"  [yellow]![/yellow] Could not connect your gateway ({quick.status_code}).")
+            console.print(f"  Set GW_DATAPLANE_TOKEN={data_plane_key['token']}")
 
         key = _payload_or_die(
             c.post(f"/v1/org/workspaces/{workspace['id']}/inference-keys", json={"label": "quickstart"}, headers=bearer), "key mint"
@@ -244,8 +265,8 @@ def login(
 @orgs_app.command("switch")
 def orgs_switch(name: str, control_plane_url: str = "") -> None:
     """Switch to another organization."""
-    if os.environ.get("GW_ORG_MGMT_TOKEN"):
-        console.print("[yellow]GW_ORG_MGMT_TOKEN is set and takes precedence. Unset it for this to take effect.[/yellow]")
+    if os.environ.get("GW_ACCESS_KEY"):
+        console.print("[yellow]GW_ACCESS_KEY is set and takes precedence. Unset it for this to take effect.[/yellow]")
     config = load_config()
     if name in (config.get("profiles") or {}):
         set_active(name)
@@ -261,9 +282,9 @@ def orgs_switch(name: str, control_plane_url: str = "") -> None:
 @orgs_app.command("mine")
 def orgs_mine(control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
     """List the organizations you belong to."""
-    from cli.client import org_client  # noqa: PLC0415 lazy import keeps CLI startup fast
+    from cli.client import access_client  # noqa: PLC0415 lazy import keeps CLI startup fast
 
-    with org_client(control_plane_url) as c:
+    with access_client(control_plane_url) as c:
         resp = c.get("/v1/enroll")
         ensure_ok(resp)
         standing = payload(resp)

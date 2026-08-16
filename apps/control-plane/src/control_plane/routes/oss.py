@@ -7,9 +7,10 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
 from contract.secrets.file import write_private_text
+from control_plane.authz import DATA_PLANE_PERMISSIONS, Boundary, OrgRole
 from control_plane.deps import public
-from control_plane.keys import INSTANCE_KEY_PREFIX, MANAGEMENT_KEY_PREFIX
-from control_plane.models import DataPlaneInstance, User
+from control_plane.keys import ACCESS_KEY_PREFIX, verify_access_key
+from control_plane.models import DataPlaneInstance, OrgMembership, User
 from control_plane.models.common.wire import Envelope, RequestModel
 
 router = APIRouter(prefix="/instance/oss", tags=["OSS"])
@@ -50,15 +51,25 @@ async def quickstart(body: QuickstartIn) -> Envelope[QuickstartOut]:
     writes, so nothing is minted or leaked here; the endpoint only bridges a token the operator
     has into the file the co-mounted data plane container waits for.
 
-    Either control-plane key type can drive a data plane: a management key pins it to one org's
-    bundles, an instance key leaves the org to its config. The prefix check only catches a token
-    that could never work at all, an inference key or a paste accident.
+    The accepted key authenticates a service account with the data-plane role and exactly the three
+    runtime permissions. The prefix check catches an inference key or a paste accident early.
     """
     if await DataPlaneInstance.first() is not None:
         raise HTTPException(status_code=409, detail="a data plane has already registered; quickstart is closed")
-    if not body.token.startswith((MANAGEMENT_KEY_PREFIX, INSTANCE_KEY_PREFIX)):
-        accepted = f"{MANAGEMENT_KEY_PREFIX}... or {INSTANCE_KEY_PREFIX}..."
-        raise HTTPException(status_code=422, detail=f"token must be a management or instance key ({accepted})")
+    authority = await verify_access_key(body.token)
+    user = await User.find_by_id(authority.principal_id) if authority is not None else None
+    membership = await OrgMembership.get((authority.principal_id, authority.org_id)) if authority is not None and authority.org_id else None
+    if (
+        not body.token.startswith(ACCESS_KEY_PREFIX)
+        or authority is None
+        or authority.boundary is not Boundary.org
+        or authority.permission_ceiling != DATA_PLANE_PERMISSIONS
+        or user is None
+        or not user.service_account
+        or membership is None
+        or membership.role != OrgRole.data_plane
+    ):
+        raise HTTPException(status_code=422, detail="token must be a live org-bound data-plane access key")
     return Envelope(data=QuickstartOut(path=await run_sync(_write_data_plane_key, body.token)))
 
 

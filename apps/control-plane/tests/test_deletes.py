@@ -13,7 +13,8 @@ from fastapi.testclient import TestClient
 from helpers import make_org, make_user, make_workspace, run_in_db, setup_control_plane
 
 from contract import uuid7
-from control_plane.models import InferenceKey, ManagementKey, Org, OrgMembership, UsageEvent, Workspace, WorkspaceMembership
+from control_plane.authz import Permission
+from control_plane.models import AccessKey, DataPlaneInstance, InferenceKey, Org, OrgMembership, UsageEvent, Workspace, WorkspaceMembership
 
 
 def _record_usage(tmp_path, org_id, workspace_id):
@@ -85,14 +86,18 @@ def test_deleting_an_org_takes_its_workspaces_keys_and_memberships(tmp_path):
         headers = cp.headers(org)
         workspace = make_workspace(c, headers, "staging")
         c.post(f"/v1/org/workspaces/{workspace}/inference-keys", json={"label": "k"}, headers=headers)
-        c.post("/v1/org/management-keys", json={"label": "k"}, headers=headers)
+        c.post(
+            "/v1/access-keys",
+            json={"label": "k", "org_id": str(org), "permissions": [Permission.workspaces_read]},
+            headers=headers,
+        )
         c.post("/v1/org/bundles/compile", headers=headers)
 
         deleted = c.delete(f"/v1/orgs/{org}", headers=root)
         assert deleted.status_code == 200, deleted.text
         assert c.get("/v1/orgs", headers=root).json()["data"] == []
         assert run_in_db(tmp_path, lambda: Workspace.find(Workspace.org_id == org)) == []
-        assert run_in_db(tmp_path, lambda: ManagementKey.find(ManagementKey.org_id == org)) == []
+        assert run_in_db(tmp_path, lambda: AccessKey.find(AccessKey.org_id == org)) == []
         assert run_in_db(tmp_path, lambda: OrgMembership.find(OrgMembership.org_id == org)) == []
 
 
@@ -109,6 +114,26 @@ def test_deleting_an_org_keeps_the_usage_it_recorded(tmp_path):
         assert deleted.status_code == 200, deleted.text
         assert run_in_db(tmp_path, lambda: Org.find_by_id(org)) is None
         assert [e.workspace_id for e in run_in_db(tmp_path, lambda: UsageEvent.find(UsageEvent.org_id == org))] == [workspace]
+
+
+def test_deleting_an_org_keeps_data_plane_history_without_a_dead_foreign_key(tmp_path):
+    cp = setup_control_plane(tmp_path)
+    root = cp.headers()
+    with TestClient(cp.app) as c:
+        org = make_org(c, root, "o1")
+        instance_id = uuid7()
+
+        async def heartbeat():
+            now = datetime.now(tz=UTC)
+            await DataPlaneInstance(instance_id=instance_id, org_id=org, version="test", first_seen=now, last_seen=now).save()
+
+        run_in_db(tmp_path, heartbeat)
+        deleted = c.delete(f"/v1/orgs/{org}", headers=root)
+        assert deleted.status_code == 200, deleted.text
+
+        instance = run_in_db(tmp_path, lambda: DataPlaneInstance.get(instance_id))
+        assert instance is not None
+        assert instance.org_id is None
 
 
 def test_deleting_a_user_takes_their_credentials(tmp_path):
@@ -128,7 +153,7 @@ def test_deleting_a_user_refuses_while_they_hold_a_membership(tmp_path):
     with TestClient(cp.app) as c:
         org = make_org(c, root, "o1")
         user = make_user(tmp_path, "member@example.com")
-        assert c.put(f"/v1/org/users/{user.id}", headers=cp.headers(org)).status_code == 200
+        assert c.put(f"/v1/org/users/{user.id}", json={"role": "member"}, headers=cp.headers(org)).status_code == 200
 
         refused = c.delete(f"/v1/users/{user.id}", headers=root)
         assert refused.status_code == 409

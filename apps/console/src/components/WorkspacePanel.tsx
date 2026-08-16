@@ -5,7 +5,14 @@ import { TerminalSquare, Plus, ArrowLeft, Key, Users, Pencil, Trash2 } from 'luc
 import { Link, useLocation } from 'wouter';
 import { useWorkspace, useRenameWorkspaceMutation, useDeleteWorkspaceMutation } from '@/features/workspaces/hooks';
 import { useInferenceKeys, useCreateInferenceKeyMutation, useRevokeInferenceKeyMutation } from '@/features/keys/hooks';
-import { useOrgMembers, useWorkspaceMembers, useAddWorkspaceMemberMutation, useRemoveWorkspaceMemberMutation } from '@/features/members/hooks';
+import {
+  useOrgMembers,
+  useWorkspaceMembers,
+  useAddWorkspaceMemberMutation,
+  useRemoveWorkspaceMemberMutation,
+  workspaceRoleOptions,
+} from '@/features/members/hooks';
+import type { WorkspaceRole } from '@workspace/api-client-react';
 import { LoadingState, ErrorState } from '@/components/shared/states';
 import { FormDialog } from '@/components/shared/form-dialog';
 import { MembersPanel } from '@/components/shared/members-panel';
@@ -141,7 +148,9 @@ export function WorkspacePanel({ orgId, workspaceRef, backHref, backLabel }: Wor
               dialogTitle: 'Add Member',
               dialogDescription: 'Members are drawn from the org; the user must already belong to it.',
               placeholder: 'Select an org member',
-              onAdd: (userId) => addMember.mutateAsync({ workspaceRef, userId }),
+              roles: workspaceRoleOptions,
+              defaultRole: 'member',
+              onAdd: (userId, role) => addMember.mutateAsync({ workspaceRef, userId, data: { role: role as WorkspaceRole } }),
               pending: addMember.isPending || candidates === undefined,
             }}
             remove={{

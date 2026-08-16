@@ -4,8 +4,8 @@
  * Api
  * OpenAPI spec version: 0.1.0
  */
+import type { OrgRole } from './orgRole';
 
-export interface InstanceKeyRevokedOut {
-  id: string;
-  status: 'revoked';
+export interface OrgMembershipIn {
+  role: OrgRole;
 }

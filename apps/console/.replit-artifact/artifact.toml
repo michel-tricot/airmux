@@ -1,7 +1,7 @@
 kind = "web"
 previewPath = "/"
 title = "LLM Gateway Console"
-description = "An admin web console for an LLM gateway. Manages organizations, their users, management keys, workspaces, workspace memberships, and inference keys. Built against a placeholder OpenAPI contract so the real backend can be swapped in later."
+description = "An admin web console for an LLM gateway. Manages principals, roles, tenant-bound access keys, organizations, workspaces, and inference keys through the generated control-plane client."
 version = "1.0.0"
 id = "artifacts/gateway-console"
 router = "path"

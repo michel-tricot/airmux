@@ -42,7 +42,7 @@ def cli(tmp_path, monkeypatch):
             return TestClient(cp.app, headers=org)
 
         monkeypatch.setattr("cli.client._bearer_client", _client)
-        monkeypatch.setenv("GW_ORG_MGMT_TOKEN", org["authorization"].removeprefix("Bearer "))
+        monkeypatch.setenv("GW_ACCESS_KEY", org["authorization"].removeprefix("Bearer "))
         yield cp, workspace["slug"]
 
 

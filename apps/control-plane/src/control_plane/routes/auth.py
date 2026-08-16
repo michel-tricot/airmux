@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Literal
 from urllib.parse import quote
 from uuid import UUID
@@ -8,8 +8,10 @@ from uuid import UUID
 from fastapi import APIRouter, HTTPException, Request, Response
 from pydantic import BaseModel, Field, field_validator
 
+from control_plane.authz import Authority, Boundary, InstanceRole, Target, principal_permissions
 from control_plane.deps import (
     ActingUserDep,
+    AuthorityDep,
     CookieUserDep,
     FetchSite,
     RequestedWith,
@@ -19,8 +21,8 @@ from control_plane.deps import (
     require_csrf,
     user_scoped,
 )
-from control_plane.keys import mint_management_key
-from control_plane.models import AuthIdentity, CliAuthRequest, ManagementKey, Org, OrgMembership, User, set_actor
+from control_plane.keys import AccessKeyGrant, mint_access_key
+from control_plane.models import AccessKey, AuthIdentity, CliAuthRequest, Org, OrgMembership, User, set_actor
 from control_plane.models.auth_identity import IdentityConflictError
 from control_plane.models.cli_auth_request import AUTH_REQUEST_TTL
 from control_plane.models.common.wire import DeletedOut, Envelope, RequestModel
@@ -55,7 +57,7 @@ class MeOut(BaseModel):
     user_id: UUID
     email: str
     name: str
-    instance_admin: bool
+    instance_role: InstanceRole | None
     orgs: list[UUID]
 
 
@@ -83,9 +85,12 @@ def _set_session_cookie(response: Response, token: str, request: Request) -> Non
     )
 
 
-async def _me_out(user: User) -> MeOut:
+async def _me_out(user: User, authority: Authority | None = None) -> MeOut:
     memberships = await OrgMembership.find(OrgMembership.user_id == user.id)
-    return MeOut(user_id=user.id, email=user.email, name=user.name, instance_admin=user.instance_admin, orgs=sorted(m.org_id for m in memberships))
+    orgs = sorted(membership.org_id for membership in memberships)
+    if authority is not None and authority.boundary in {Boundary.org, Boundary.workspace}:
+        orgs = [org_id for org_id in orgs if org_id == authority.org_id]
+    return MeOut(user_id=user.id, email=user.email, name=user.name, instance_role=user.instance_role, orgs=orgs)
 
 
 async def _login_user(email: str, password: str) -> User:
@@ -117,7 +122,7 @@ async def login(body: LoginIn, request: Request, response: Response) -> Envelope
 async def signup(body: SignupIn, request: Request, response: Response) -> Envelope[MeOut]:
     """Open self-signup: an account holds no memberships, so it can see nothing until granted or until it founds an org.
 
-    The exception is the first human on a deployment, who claims it and becomes its instance admin: a
+    The exception is the first human on a deployment, who claims it and becomes its instance owner: a
     fresh install has no other way to reach the instance endpoints, and /instance/oss/claim exists to
     route that first visitor here. Every signup after the claim is an ordinary account. Anyone who can
     reach an unclaimed deployment can therefore take it, which is the same trapdoor the quickstart
@@ -125,7 +130,8 @@ async def signup(body: SignupIn, request: Request, response: Response) -> Envelo
     """
     if await User.first(User.email == body.email) is not None:
         raise HTTPException(status_code=409, detail="An account with this email already exists")
-    user = User(email=body.email, name=body.name or body.email, instance_admin=await User.claims_the_instance(), service_account=False)
+    instance_role = InstanceRole.owner if await User.claims_the_instance() else None
+    user = User(email=body.email, name=body.name or body.email, instance_role=instance_role, service_account=False)
     await set_actor(user.id)
     await user.save()
     try:
@@ -156,8 +162,8 @@ async def logout(
 
 
 @router.get("/me", tags=["Auth"], dependencies=[user_scoped()])
-async def me(user: ActingUserDep) -> Envelope[MeOut]:
-    return Envelope(data=await _me_out(user))
+async def me(user: ActingUserDep, authority: AuthorityDep) -> Envelope[MeOut]:
+    return Envelope(data=await _me_out(user, authority))
 
 
 @router.post("/password", tags=["Auth"], dependencies=[user_scoped()])
@@ -273,7 +279,17 @@ async def cli_auth_poll(body: CliAuthPollIn) -> Envelope[CliAuthPollOut]:
     if org is None:
         raise HTTPException(status_code=410, detail="The approved organization no longer exists; start again")
     await set_actor(auth_request.approved_user_id)
-    await ManagementKey.retire_for_client(auth_request.approved_user_id, auth_request.approved_org_id, auth_request.client_name)
-    _, token = await mint_management_key(auth_request.approved_org_id, auth_request.approved_user_id, label=auth_request.client_name)
+    target = Target.org(org.id)
+    now = datetime.now(tz=UTC)
+    await AccessKey.retire_for_client(auth_request.approved_user_id, target, auth_request.client_name, now)
+    permissions = await principal_permissions(auth_request.approved_user_id, target)
+    _, token = await mint_access_key(
+        AccessKeyGrant(
+            principal_id=auth_request.approved_user_id,
+            target=target,
+            permissions=permissions,
+            label=auth_request.client_name,
+        )
+    )
     await auth_request.delete()
     return Envelope(data=CliAuthPollOut(status="complete", interval_seconds=CLI_POLL_INTERVAL_SECONDS, token=token, org_id=org.id, org_name=org.name))

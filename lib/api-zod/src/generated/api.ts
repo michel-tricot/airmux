@@ -8,6 +8,93 @@ import * as zod from 'zod/v4';
 
 
 /**
+ * Requires `access-keys.read` authority at the route's tenant boundary.
+ * @summary List Access Keys
+ */
+export const ListAccessKeysQueryParams = zod.object({
+  "user_id": zod.union([zod.uuid(),zod.null()]).optional(),
+  "org_id": zod.union([zod.uuid(),zod.null()]).optional(),
+  "workspace_id": zod.union([zod.uuid(),zod.null()]).optional()
+})
+
+export const ListAccessKeysHeader = zod.object({
+  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional()
+})
+
+export const ListAccessKeysResponseItem = zod.object({
+  "id": zod.uuid(),
+  "user_id": zod.uuid(),
+  "org_id": zod.union([zod.uuid(),zod.null()]),
+  "workspace_id": zod.union([zod.uuid(),zod.null()]),
+  "parent_id": zod.union([zod.uuid(),zod.null()]),
+  "prefix": zod.string(),
+  "permissions": zod.array(zod.enum(['organizations.read', 'organizations.create', 'organizations.update', 'organizations.delete', 'principals.read', 'principals.manage', 'members.read', 'members.manage', 'workspaces.read', 'workspaces.create', 'workspaces.update', 'workspaces.delete', 'catalog.read', 'catalog.manage', 'provider-credentials.read', 'provider-credentials.manage', 'inference-keys.read', 'inference-keys.manage', 'bundles.read', 'bundles.publish', 'usage.read', 'usage.ingest', 'data-planes.read', 'data-planes.heartbeat', 'audit.read', 'access-keys.read', 'access-keys.issue', 'access-keys.revoke'])),
+  "label": zod.string(),
+  "expires_at": zod.union([zod.coerce.date(),zod.null()]),
+  "revoked_at": zod.union([zod.coerce.date(),zod.null()]),
+  "created_at": zod.coerce.date(),
+  "updated_at": zod.coerce.date(),
+  "deleted_at": zod.union([zod.coerce.date(),zod.null()]),
+  "boundary": zod.enum(['instance', 'org', 'workspace']),
+  "status": zod.enum(['active', 'expired', 'revoked'])
+})
+export const ListAccessKeysResponse = zod.array(ListAccessKeysResponseItem)
+
+
+/**
+ * Requires `access-keys.issue` authority at the route's tenant boundary.
+ * @summary Create Access Key
+ */
+export const createAccessKeyBodyLabelMax = 80;
+
+
+
+
+export const CreateAccessKeyBody = zod.object({
+  "label": zod.string().min(1).max(createAccessKeyBodyLabelMax).describe('Where this key lives, such as ci, laptop, or data-plane'),
+  "user_id": zod.union([zod.uuid(),zod.null()]).optional().describe('Principal the key authenticates; defaults to the acting principal'),
+  "org_id": zod.union([zod.uuid(),zod.null()]).optional().describe('Organization boundary; omit with workspace_id for instance authority'),
+  "workspace_id": zod.union([zod.uuid(),zod.null()]).optional().describe('Workspace boundary; requires org_id'),
+  "permissions": zod.array(zod.enum(['organizations.read', 'organizations.create', 'organizations.update', 'organizations.delete', 'principals.read', 'principals.manage', 'members.read', 'members.manage', 'workspaces.read', 'workspaces.create', 'workspaces.update', 'workspaces.delete', 'catalog.read', 'catalog.manage', 'provider-credentials.read', 'provider-credentials.manage', 'inference-keys.read', 'inference-keys.manage', 'bundles.read', 'bundles.publish', 'usage.read', 'usage.ingest', 'data-planes.read', 'data-planes.heartbeat', 'audit.read', 'access-keys.read', 'access-keys.issue', 'access-keys.revoke'])).min(1).describe('Explicit maximum permissions carried by the key'),
+  "expires_at": zod.union([zod.coerce.date(),zod.null()]).optional()
+})
+
+export const CreateAccessKeyResponse = zod.object({
+  "id": zod.uuid(),
+  "user_id": zod.uuid(),
+  "org_id": zod.union([zod.uuid(),zod.null()]),
+  "workspace_id": zod.union([zod.uuid(),zod.null()]),
+  "parent_id": zod.union([zod.uuid(),zod.null()]),
+  "prefix": zod.string(),
+  "permissions": zod.array(zod.enum(['organizations.read', 'organizations.create', 'organizations.update', 'organizations.delete', 'principals.read', 'principals.manage', 'members.read', 'members.manage', 'workspaces.read', 'workspaces.create', 'workspaces.update', 'workspaces.delete', 'catalog.read', 'catalog.manage', 'provider-credentials.read', 'provider-credentials.manage', 'inference-keys.read', 'inference-keys.manage', 'bundles.read', 'bundles.publish', 'usage.read', 'usage.ingest', 'data-planes.read', 'data-planes.heartbeat', 'audit.read', 'access-keys.read', 'access-keys.issue', 'access-keys.revoke'])),
+  "label": zod.string(),
+  "expires_at": zod.union([zod.coerce.date(),zod.null()]),
+  "revoked_at": zod.union([zod.coerce.date(),zod.null()]),
+  "created_at": zod.coerce.date(),
+  "updated_at": zod.coerce.date(),
+  "deleted_at": zod.union([zod.coerce.date(),zod.null()]),
+  "boundary": zod.enum(['instance', 'org', 'workspace']),
+  "status": zod.enum(['active', 'expired', 'revoked']),
+  "token": zod.string()
+})
+
+
+/**
+ * Requires `access-keys.revoke` authority at the route's tenant boundary.
+ * @summary Revoke Access Key
+ */
+export const RevokeAccessKeyParams = zod.object({
+  "key_id": zod.uuid()
+})
+
+export const RevokeAccessKeyResponse = zod.object({
+  "id": zod.uuid(),
+  "status": zod.literal("revoked"),
+  "revoked_at": zod.coerce.date()
+})
+
+
+/**
  * No authentication required.
  * @summary Login
  */
@@ -27,7 +114,7 @@ export const LoginResponse = zod.object({
   "user_id": zod.uuid(),
   "email": zod.string(),
   "name": zod.string(),
-  "instance_admin": zod.boolean(),
+  "instance_role": zod.union([zod.enum(['owner', 'auditor']),zod.null()]),
   "orgs": zod.array(zod.uuid())
 })
 
@@ -35,7 +122,7 @@ export const LoginResponse = zod.object({
 /**
  * Open self-signup: an account holds no memberships, so it can see nothing until granted or until it founds an org.
  *
- * The exception is the first human on a deployment, who claims it and becomes its instance admin: a
+ * The exception is the first human on a deployment, who claims it and becomes its instance owner: a
  * fresh install has no other way to reach the instance endpoints, and /instance/oss/claim exists to
  * route that first visitor here. Every signup after the claim is an ordinary account. Anyone who can
  * reach an unclaimed deployment can therefore take it, which is the same trapdoor the quickstart
@@ -65,7 +152,7 @@ export const SignupResponse = zod.object({
   "user_id": zod.uuid(),
   "email": zod.string(),
   "name": zod.string(),
-  "instance_admin": zod.boolean(),
+  "instance_role": zod.union([zod.enum(['owner', 'auditor']),zod.null()]),
   "orgs": zod.array(zod.uuid())
 })
 
@@ -81,20 +168,20 @@ export const LogoutResponse = zod.object({
 
 
 /**
- * Requires an authenticated user; not org-scoped.
+ * Requires an authenticated human; access-key responses honor the credential boundary.
  * @summary Me
  */
 export const MeResponse = zod.object({
   "user_id": zod.uuid(),
   "email": zod.string(),
   "name": zod.string(),
-  "instance_admin": zod.boolean(),
+  "instance_role": zod.union([zod.enum(['owner', 'auditor']),zod.null()]),
   "orgs": zod.array(zod.uuid())
 })
 
 
 /**
- * Requires an authenticated user; not org-scoped.
+ * Requires an authenticated human; access-key responses honor the credential boundary.
  * @summary Change Password
  */
 export const changePasswordBodyCurrentPasswordMax = 1024;
@@ -203,7 +290,7 @@ export const CliAuthPollResponse = zod.object({
 /**
  * The acting user's standing: their orgs by name, and whether their one personal org exists.
  *
- * Requires an authenticated user; not org-scoped.
+ * Requires an authenticated human; access-key responses honor the credential boundary.
  * @summary Enrollment
  */
 export const EnrollmentResponse = zod.object({
@@ -227,7 +314,7 @@ export const EnrollmentResponse = zod.object({
  * are admin-provisioned. The slot survives losing the membership; only deleting the
  * personal org frees it.
  *
- * Requires an authenticated user; not org-scoped.
+ * Requires a browser session.
  * @summary Create Personal Org
  */
 export const createPersonalOrgBodyNameMax = 200;
@@ -269,9 +356,8 @@ export const ClaimResponse = zod.object({
  * writes, so nothing is minted or leaked here; the endpoint only bridges a token the operator
  * has into the file the co-mounted data plane container waits for.
  *
- * Either control-plane key type can drive a data plane: a management key pins it to one org's
- * bundles, an instance key leaves the org to its config. The prefix check only catches a token
- * that could never work at all, an inference key or a paste accident.
+ * The accepted key authenticates a service account with the data-plane role and exactly the three
+ * runtime permissions. The prefix check catches an inference key or a paste accident early.
  *
  * No authentication required.
  * @summary Quickstart
@@ -290,9 +376,7 @@ export const QuickstartResponse = zod.object({
 
 
 /**
- * Every data plane known to the instance; offline ones are kept as history and shown only with include_offline.
- *
- * Requires the `data-planes:read` scope.
+ * Requires `data-planes.read` authority at the route's tenant boundary.
  * @summary List Data Planes
  */
 export const listDataPlanesQueryIncludeOfflineDefault = false;
@@ -301,12 +385,9 @@ export const ListDataPlanesQueryParams = zod.object({
   "include_offline": zod.coerce.boolean().default(listDataPlanesQueryIncludeOfflineDefault)
 })
 
-export const ListDataPlanesHeader = zod.object({
-  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional()
-})
-
 export const ListDataPlanesResponseItem = zod.object({
   "instance_id": zod.uuid(),
+  "org_id": zod.union([zod.uuid(),zod.null()]),
   "version": zod.string(),
   "bundle_id": zod.union([zod.uuid(),zod.null()]),
   "address": zod.union([zod.string(),zod.null()]),
@@ -318,129 +399,7 @@ export const ListDataPlanesResponse = zod.array(ListDataPlanesResponseItem)
 
 
 /**
- * Every instance key on the deployment; there is no org axis to filter on.
- *
- * Requires the `instance-keys:read` scope.
- * @summary List Instance Keys
- */
-export const ListInstanceKeysHeader = zod.object({
-  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional()
-})
-
-export const ListInstanceKeysResponseItem = zod.object({
-  "id": zod.uuid(),
-  "user_id": zod.uuid(),
-  "revoked": zod.boolean(),
-  "scopes": zod.union([zod.array(zod.string()),zod.null()]),
-  "label": zod.string(),
-  "prefix": zod.string(),
-  "created_at": zod.coerce.date(),
-  "updated_at": zod.coerce.date(),
-  "deleted_at": zod.union([zod.coerce.date(),zod.null()])
-})
-export const ListInstanceKeysResponse = zod.array(ListInstanceKeysResponseItem)
-
-
-/**
- * Mint an instance key for the acting admin, or for another instance admin when user_id names one.
- *
- * Requires the `instance-keys:write` scope.
- * @summary Create Instance Key
- */
-export const CreateInstanceKeyHeader = zod.object({
-  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional()
-})
-
-export const createInstanceKeyBodyLabelMax = 80;
-
-
-
-export const CreateInstanceKeyBody = zod.object({
-  "label": zod.string().min(1).max(createInstanceKeyBodyLabelMax).describe('Where this key lives, e.g. ci or a data plane; shown in listings'),
-  "user_id": zod.union([zod.uuid(),zod.null()]).optional().describe('Instance admin the key is minted for; defaults to the acting user'),
-  "scopes": zod.union([zod.array(zod.enum(['inference-keys:read', 'inference-keys:write', 'workspaces:read', 'workspaces:create', 'workspaces:write', 'workspaces:delete', 'bundles:read', 'bundles:write', 'events:read', 'data-planes:read', 'provider-credentials:read', 'provider-credentials:write', 'taxonomy:read', 'taxonomy:write', 'orgs:read', 'orgs:create', 'orgs:write', 'orgs:delete', 'users:read', 'users:write', 'activity:read', 'management-keys:read', 'management-keys:write', 'instance-keys:read', 'instance-keys:write', 'sync']).describe('What a management credential may do; org and instance row-scoping are a separate axis.\n\nA scope restricts the credential, never expands it: a token minted without scopes carries the\nowning user\'s full authority, an explicit list is a restriction that also excludes scopes\ninvented later. Roles arrive later as named bundles over these same values.\n\nOrgs and workspaces split their lifecycle three ways because founding a tenant and destroying\none with everything inside it are each a different privilege from governing one day to day:\n:create founds, :write governs, :delete destroys. Elsewhere :write still covers all three.')),zod.null()]).optional().describe('Restrict the key to these scopes; omit for the user\'s full authority')
-})
-
-export const CreateInstanceKeyResponse = zod.object({
-  "id": zod.uuid(),
-  "user_id": zod.uuid(),
-  "scopes": zod.union([zod.array(zod.string()),zod.null()]),
-  "label": zod.string(),
-  "token": zod.string()
-})
-
-
-/**
- * Requires the `instance-keys:write` scope.
- * @summary Revoke Instance Key
- */
-export const RevokeInstanceKeyParams = zod.object({
-  "key_id": zod.uuid()
-})
-
-export const RevokeInstanceKeyHeader = zod.object({
-  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional()
-})
-
-export const RevokeInstanceKeyResponse = zod.object({
-  "id": zod.uuid(),
-  "status": zod.literal("revoked")
-})
-
-
-/**
- * Instance-wide oversight: every org's management keys, optionally filtered to one org.
- *
- * Requires the `management-keys:read` scope.
- * @summary List All Management Keys
- */
-export const ListAllManagementKeysQueryParams = zod.object({
-  "org_id": zod.union([zod.uuid(),zod.null()]).optional()
-})
-
-export const ListAllManagementKeysHeader = zod.object({
-  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional()
-})
-
-export const ListAllManagementKeysResponseItem = zod.object({
-  "id": zod.uuid(),
-  "org_id": zod.uuid(),
-  "user_id": zod.uuid(),
-  "revoked": zod.boolean(),
-  "scopes": zod.union([zod.array(zod.string()),zod.null()]),
-  "label": zod.string(),
-  "prefix": zod.string(),
-  "created_at": zod.coerce.date(),
-  "updated_at": zod.coerce.date(),
-  "deleted_at": zod.union([zod.coerce.date(),zod.null()])
-})
-export const ListAllManagementKeysResponse = zod.array(ListAllManagementKeysResponseItem)
-
-
-/**
- * Revoke any org's management key; the org-scoped route reaches only its own.
- *
- * Requires the `management-keys:write` scope.
- * @summary Revoke Any Management Key
- */
-export const RevokeAnyManagementKeyParams = zod.object({
-  "key_id": zod.uuid()
-})
-
-export const RevokeAnyManagementKeyHeader = zod.object({
-  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional()
-})
-
-export const RevokeAnyManagementKeyResponse = zod.object({
-  "id": zod.uuid(),
-  "status": zod.literal("revoked")
-})
-
-
-/**
- * What changed anywhere on the instance, newest first; the org-scoped view of the same trail is /org/activity.
- *
- * Requires the `activity:read` scope.
+ * Requires `audit.read` authority at the route's tenant boundary.
  * @summary List Instance Activity
  */
 export const listInstanceActivityQueryLimitDefault = 50;
@@ -450,10 +409,6 @@ export const listInstanceActivityQueryLimitMax = 200;
 
 export const ListInstanceActivityQueryParams = zod.object({
   "limit": zod.coerce.number().int().min(1).max(listInstanceActivityQueryLimitMax).default(listInstanceActivityQueryLimitDefault)
-})
-
-export const ListInstanceActivityHeader = zod.object({
-  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional()
 })
 
 export const ListInstanceActivityResponseItem = zod.object({
@@ -468,13 +423,9 @@ export const ListInstanceActivityResponse = zod.array(ListInstanceActivityRespon
 
 
 /**
- * Requires the `users:write` scope.
+ * Requires `principals.manage` authority at the route's tenant boundary.
  * @summary Create Service Account
  */
-export const CreateServiceAccountHeader = zod.object({
-  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional()
-})
-
 export const createServiceAccountBodyNameMax = 200;
 
 
@@ -487,6 +438,7 @@ export const CreateServiceAccountResponse = zod.object({
   "id": zod.uuid(),
   "email": zod.string(),
   "name": zod.string(),
+  "instance_role": zod.union([zod.string(),zod.null()]),
   "service_account": zod.boolean(),
   "created_at": zod.coerce.date(),
   "updated_at": zod.coerce.date(),
@@ -496,21 +448,18 @@ export const CreateServiceAccountResponse = zod.object({
 
 
 /**
- * Requires the `users:read` scope.
+ * Requires `principals.read` authority at the route's tenant boundary.
  * @summary Get User
  */
 export const GetUserParams = zod.object({
   "user_id": zod.uuid()
 })
 
-export const GetUserHeader = zod.object({
-  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional()
-})
-
 export const GetUserResponse = zod.object({
   "id": zod.uuid(),
   "email": zod.string(),
   "name": zod.string(),
+  "instance_role": zod.union([zod.string(),zod.null()]),
   "service_account": zod.boolean(),
   "created_at": zod.coerce.date(),
   "updated_at": zod.coerce.date(),
@@ -520,21 +469,17 @@ export const GetUserResponse = zod.object({
 
 
 /**
- * Delete a user with the credentials that are theirs alone: identities, sessions, management and instance keys.
+ * Delete a user with the credentials that are theirs alone: identities, sessions, and access keys.
  *
  * Everything else a user touches outlives them, so it blocks the delete instead of following it:
  * a membership is the org's decision to revisit, a personal org is a tenant, and an inference key
  * belongs to its workspace and merely records who minted it.
  *
- * Requires the `users:write` scope.
+ * Requires `principals.manage` authority at the route's tenant boundary.
  * @summary Delete User
  */
 export const DeleteUserParams = zod.object({
   "user_id": zod.uuid()
-})
-
-export const DeleteUserHeader = zod.object({
-  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional()
 })
 
 export const DeleteUserResponse = zod.object({
@@ -546,21 +491,18 @@ export const DeleteUserResponse = zod.object({
 /**
  * Every principal on the instance, or one kind of them: service_account splits the machines from the humans.
  *
- * Requires the `users:read` scope.
+ * Requires `principals.read` authority at the route's tenant boundary.
  * @summary List Users
  */
 export const ListUsersQueryParams = zod.object({
   "service_account": zod.union([zod.coerce.boolean(),zod.null()]).optional()
 })
 
-export const ListUsersHeader = zod.object({
-  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional()
-})
-
 export const ListUsersResponseItem = zod.object({
   "id": zod.uuid(),
   "email": zod.string(),
   "name": zod.string(),
+  "instance_role": zod.union([zod.string(),zod.null()]),
   "service_account": zod.boolean(),
   "created_at": zod.coerce.date(),
   "updated_at": zod.coerce.date(),
@@ -571,13 +513,24 @@ export const ListUsersResponse = zod.array(ListUsersResponseItem)
 
 
 /**
- * Requires the `orgs:create` scope.
+ * Requires `organizations.read` authority at the route's tenant boundary.
+ * @summary List Orgs
+ */
+export const ListOrgsResponseItem = zod.object({
+  "id": zod.uuid(),
+  "name": zod.string(),
+  "personal_for": zod.union([zod.uuid(),zod.null()]),
+  "created_at": zod.coerce.date(),
+  "updated_at": zod.coerce.date(),
+  "deleted_at": zod.union([zod.coerce.date(),zod.null()])
+})
+export const ListOrgsResponse = zod.array(ListOrgsResponseItem)
+
+
+/**
+ * Requires `organizations.create` authority at the route's tenant boundary.
  * @summary Create Org
  */
-export const CreateOrgHeader = zod.object({
-  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional()
-})
-
 export const createOrgBodyNameMax = 200;
 
 
@@ -597,34 +550,11 @@ export const CreateOrgResponse = zod.object({
 
 
 /**
- * Requires the `orgs:read` scope.
- * @summary List Orgs
- */
-export const ListOrgsHeader = zod.object({
-  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional()
-})
-
-export const ListOrgsResponseItem = zod.object({
-  "id": zod.uuid(),
-  "name": zod.string(),
-  "personal_for": zod.union([zod.uuid(),zod.null()]),
-  "created_at": zod.coerce.date(),
-  "updated_at": zod.coerce.date(),
-  "deleted_at": zod.union([zod.coerce.date(),zod.null()])
-})
-export const ListOrgsResponse = zod.array(ListOrgsResponseItem)
-
-
-/**
- * Requires the `orgs:write` scope.
+ * Requires `organizations.update` authority at the route's tenant boundary.
  * @summary Update Org
  */
 export const UpdateOrgParams = zod.object({
   "org_id": zod.uuid()
-})
-
-export const UpdateOrgHeader = zod.object({
-  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional()
 })
 
 export const updateOrgBodyNameOneMax = 200;
@@ -646,15 +576,11 @@ export const UpdateOrgResponse = zod.object({
 
 
 /**
- * Requires the `orgs:read` scope.
+ * Requires `organizations.read` authority at the route's tenant boundary.
  * @summary Get Org
  */
 export const GetOrgParams = zod.object({
   "org_id": zod.uuid()
-})
-
-export const GetOrgHeader = zod.object({
-  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional()
 })
 
 export const GetOrgResponse = zod.object({
@@ -674,15 +600,11 @@ export const GetOrgResponse = zod.object({
  * Its usage events stay. They are history keyed by ids, not rows belonging to the org, so they
  * outlive it the way the audit trail does rather than standing in the way of the delete.
  *
- * Requires the `orgs:delete` scope.
+ * Requires `organizations.delete` authority at the route's tenant boundary.
  * @summary Delete Org
  */
 export const DeleteOrgParams = zod.object({
   "org_id": zod.uuid()
-})
-
-export const DeleteOrgHeader = zod.object({
-  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional()
 })
 
 export const DeleteOrgResponse = zod.object({
@@ -692,13 +614,13 @@ export const DeleteOrgResponse = zod.object({
 
 
 /**
- * The creator becomes the first member when they hold an org membership; an instance admin
+ * The creator becomes the first member when they hold an org membership; an instance owner
  * acting on an org they never joined creates it member-less and relies on their bypass.
  *
  * A caller who names no slug gets one derived from the name; one who does gets a 409 when the
  * org already holds it, rather than a silently numbered variant of what they asked for.
  *
- * Requires the `workspaces:create` scope.
+ * Requires `workspaces.create` authority at the route's tenant boundary.
  * @summary Create Workspace
  */
 export const CreateWorkspaceHeader = zod.object({
@@ -731,7 +653,7 @@ export const CreateWorkspaceResponse = zod.object({
 
 
 /**
- * Requires the `workspaces:read` scope.
+ * Requires `workspaces.read` authority at the route's tenant boundary.
  * @summary List Workspaces
  */
 export const ListWorkspacesHeader = zod.object({
@@ -751,7 +673,7 @@ export const ListWorkspacesResponse = zod.array(ListWorkspacesResponseItem)
 
 
 /**
- * Requires the `workspaces:read` scope.
+ * Requires `workspaces.read` authority at the route's tenant boundary.
  * @summary Get Workspace
  */
 export const GetWorkspaceParams = zod.object({
@@ -777,7 +699,7 @@ export const GetWorkspaceResponse = zod.object({
  * Delete a workspace with its inference keys, its members, and the provider credentials it brought;
  * the usage it recorded stays, as it does for an org.
  *
- * Requires the `workspaces:delete` scope.
+ * Requires `workspaces.delete` authority at the route's tenant boundary.
  * @summary Delete Workspace
  */
 export const DeleteWorkspaceParams = zod.object({
@@ -795,7 +717,7 @@ export const DeleteWorkspaceResponse = zod.object({
 
 
 /**
- * Requires the `workspaces:write` scope.
+ * Requires `workspaces.update` authority at the route's tenant boundary.
  * @summary Update Workspace
  */
 export const UpdateWorkspaceParams = zod.object({
@@ -826,7 +748,7 @@ export const UpdateWorkspaceResponse = zod.object({
 
 
 /**
- * Requires the `workspaces:read` scope.
+ * Requires `members.read` authority at the route's tenant boundary.
  * @summary List Members
  */
 export const ListMembersParams = zod.object({
@@ -840,6 +762,7 @@ export const ListMembersHeader = zod.object({
 export const ListMembersResponseItem = zod.object({
   "user_id": zod.uuid(),
   "workspace_id": zod.uuid(),
+  "role": zod.enum(['admin', 'member', 'viewer']),
   "status": zod.literal("member")
 })
 export const ListMembersResponse = zod.array(ListMembersResponseItem)
@@ -848,32 +771,37 @@ export const ListMembersResponse = zod.array(ListMembersResponseItem)
 /**
  * The composite foreign keys are the enforcement; the 409 turns what they would reject into a client error.
  *
- * Requires the `workspaces:write` scope.
+ * Requires `members.manage` authority at the route's tenant boundary.
  * @summary Add Member
  */
 export const AddMemberParams = zod.object({
-  "workspace_ref": zod.coerce.string(),
-  "user_id": zod.uuid()
+  "user_id": zod.uuid(),
+  "workspace_ref": zod.coerce.string()
 })
 
 export const AddMemberHeader = zod.object({
   "X-Org-Id": zod.union([zod.string(),zod.null()]).optional()
 })
 
+export const AddMemberBody = zod.object({
+  "role": zod.enum(['admin', 'member', 'viewer'])
+})
+
 export const AddMemberResponse = zod.object({
   "user_id": zod.uuid(),
   "workspace_id": zod.uuid(),
+  "role": zod.enum(['admin', 'member', 'viewer']),
   "status": zod.literal("member")
 })
 
 
 /**
- * Requires the `workspaces:write` scope.
+ * Requires `members.manage` authority at the route's tenant boundary.
  * @summary Remove Member
  */
 export const RemoveMemberParams = zod.object({
-  "workspace_ref": zod.coerce.string(),
-  "user_id": zod.uuid()
+  "user_id": zod.uuid(),
+  "workspace_ref": zod.coerce.string()
 })
 
 export const RemoveMemberHeader = zod.object({
@@ -887,7 +815,7 @@ export const RemoveMemberResponse = zod.object({
 
 
 /**
- * Requires the `inference-keys:write` scope.
+ * Requires `inference-keys.manage` authority at the route's tenant boundary.
  * @summary Create Inference Key
  */
 export const CreateInferenceKeyParams = zod.object({
@@ -913,7 +841,7 @@ export const CreateInferenceKeyResponse = zod.object({
 
 
 /**
- * Requires the `inference-keys:read` scope.
+ * Requires `inference-keys.read` authority at the route's tenant boundary.
  * @summary List Inference Keys
  */
 export const ListInferenceKeysParams = zod.object({
@@ -940,7 +868,7 @@ export const ListInferenceKeysResponse = zod.array(ListInferenceKeysResponseItem
 
 
 /**
- * Requires the `inference-keys:write` scope.
+ * Requires `inference-keys.manage` authority at the route's tenant boundary.
  * @summary Revoke Inference Key
  */
 export const RevokeInferenceKeyParams = zod.object({
@@ -961,15 +889,15 @@ export const RevokeInferenceKeyResponse = zod.object({
 /**
  * Bring a provider key for this org, or for one workspace in it.
  *
- * A workspace-scoped key needs membership in that workspace, the way minting an inference key
- * there does: whoever supplies the key owns the account its traffic is billed to, and that
- * account's dashboard shows every request made with it.
+ * Workspace writes require provider-credential management authority at that workspace: whoever
+ * supplies the key owns the account its traffic is billed to, and that account's dashboard shows
+ * every request made with it.
  *
  * The row is written before the value so a crash between the two leaves a credential with nothing
  * behind it, which the request path already handles by skipping the candidate. The other order
  * would leave a value in the store with no row to delete it by.
  *
- * Requires the `provider-credentials:write` scope.
+ * Requires `provider-credentials.manage` authority at the route's tenant boundary.
  * @summary Create Provider Credential
  */
 export const CreateProviderCredentialHeader = zod.object({
@@ -1026,7 +954,7 @@ export const CreateProviderCredentialResponse = zod.object({
 /**
  * The org's credentials in the order the data plane tries them, optionally narrowed to one workspace.
  *
- * Requires the `provider-credentials:read` scope.
+ * Requires `provider-credentials.read` authority at the route's tenant boundary.
  * @summary List Provider Credentials
  */
 export const ListProviderCredentialsQueryParams = zod.object({
@@ -1059,7 +987,7 @@ export const ListProviderCredentialsResponse = zod.array(ListProviderCredentials
 
 
 /**
- * Requires the `provider-credentials:read` scope.
+ * Requires `provider-credentials.read` authority at the route's tenant boundary.
  * @summary Get Provider Credential
  */
 export const GetProviderCredentialParams = zod.object({
@@ -1094,7 +1022,7 @@ export const GetProviderCredentialResponse = zod.object({
  * Priority and enabled are the whole mutable surface: everything else names the secret, so
  * changing it would orphan the value rather than move it.
  *
- * Requires the `provider-credentials:write` scope.
+ * Requires `provider-credentials.manage` authority at the route's tenant boundary.
  * @summary Update Provider Credential
  */
 export const UpdateProviderCredentialParams = zod.object({
@@ -1139,7 +1067,7 @@ export const UpdateProviderCredentialResponse = zod.object({
  * Deleting one credential is the same operation a workspace or org delete performs in bulk, so
  * it runs through the same method rather than a second copy of the ordering rule.
  *
- * Requires the `provider-credentials:write` scope.
+ * Requires `provider-credentials.manage` authority at the route's tenant boundary.
  * @summary Delete Provider Credential
  */
 export const DeleteProviderCredentialParams = zod.object({
@@ -1160,7 +1088,7 @@ export const DeleteProviderCredentialResponse = zod.object({
  * A rotation is the same row and the same ref with a new value, so the bundle diff is one
  * integer and every data plane refetches within a poll instead of waiting out a cache TTL.
  *
- * Requires the `provider-credentials:write` scope.
+ * Requires `provider-credentials.manage` authority at the route's tenant boundary.
  * @summary Rotate Provider Credential
  */
 export const RotateProviderCredentialParams = zod.object({
@@ -1202,7 +1130,7 @@ export const RotateProviderCredentialResponse = zod.object({
 /**
  * The acting org's members; an org credential sees its own roster, never the instance's.
  *
- * Requires the `users:read` scope.
+ * Requires `members.read` authority at the route's tenant boundary.
  * @summary List Org Users
  */
 export const ListOrgUsersHeader = zod.object({
@@ -1214,6 +1142,7 @@ export const ListOrgUsersResponseItem = zod.object({
   "email": zod.string(),
   "name": zod.string(),
   "service_account": zod.boolean(),
+  "role": zod.enum(['owner', 'admin', 'member', 'data_plane']),
   "status": zod.literal("member")
 }).describe('A member of the acting org: who they are and that they belong.\n\nDeliberately not UserOut: that carries the user\'s every membership, which would let one org\'s\ncredential read the shape of the orgs it has no scope over.')
 export const ListOrgUsersResponse = zod.array(ListOrgUsersResponseItem)
@@ -1222,7 +1151,7 @@ export const ListOrgUsersResponse = zod.array(ListOrgUsersResponseItem)
 /**
  * Idempotent: the org comes from the credential, so membership can only ever be granted in scope.
  *
- * Requires the `users:write` scope.
+ * Requires `members.manage` authority at the route's tenant boundary.
  * @summary Add Org User
  */
 export const AddOrgUserParams = zod.object({
@@ -1233,9 +1162,14 @@ export const AddOrgUserHeader = zod.object({
   "X-Org-Id": zod.union([zod.string(),zod.null()]).optional()
 })
 
+export const AddOrgUserBody = zod.object({
+  "role": zod.enum(['owner', 'admin', 'member', 'data_plane'])
+})
+
 export const AddOrgUserResponse = zod.object({
   "user_id": zod.uuid(),
   "org_id": zod.uuid(),
+  "role": zod.enum(['owner', 'admin', 'member', 'data_plane']),
   "status": zod.literal("member")
 })
 
@@ -1243,7 +1177,7 @@ export const AddOrgUserResponse = zod.object({
 /**
  * Removing the membership cascades the user out of the org's workspaces.
  *
- * Requires the `users:write` scope.
+ * Requires `members.manage` authority at the route's tenant boundary.
  * @summary Remove Org User
  */
 export const RemoveOrgUserParams = zod.object({
@@ -1261,78 +1195,7 @@ export const RemoveOrgUserResponse = zod.object({
 
 
 /**
- * Requires the `management-keys:read` scope.
- * @summary List Management Keys
- */
-export const ListManagementKeysHeader = zod.object({
-  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional()
-})
-
-export const ListManagementKeysResponseItem = zod.object({
-  "id": zod.uuid(),
-  "org_id": zod.uuid(),
-  "user_id": zod.uuid(),
-  "revoked": zod.boolean(),
-  "scopes": zod.union([zod.array(zod.string()),zod.null()]),
-  "label": zod.string(),
-  "prefix": zod.string(),
-  "created_at": zod.coerce.date(),
-  "updated_at": zod.coerce.date(),
-  "deleted_at": zod.union([zod.coerce.date(),zod.null()])
-})
-export const ListManagementKeysResponse = zod.array(ListManagementKeysResponseItem)
-
-
-/**
- * Mint an org-scoped key for the acting user, or for another org member when user_id names one.
- *
- * Requires the `management-keys:write` scope.
- * @summary Mint Org Management Key
- */
-export const MintOrgManagementKeyHeader = zod.object({
-  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional()
-})
-
-export const mintOrgManagementKeyBodyLabelMax = 80;
-
-
-
-export const MintOrgManagementKeyBody = zod.object({
-  "label": zod.string().min(1).max(mintOrgManagementKeyBodyLabelMax).describe('Where this key lives, e.g. ci or laptop; shown in listings'),
-  "user_id": zod.union([zod.uuid(),zod.null()]).optional().describe('User the key is minted for; defaults to the acting user'),
-  "scopes": zod.union([zod.array(zod.enum(['inference-keys:read', 'inference-keys:write', 'workspaces:read', 'workspaces:create', 'workspaces:write', 'workspaces:delete', 'bundles:read', 'bundles:write', 'events:read', 'data-planes:read', 'provider-credentials:read', 'provider-credentials:write', 'taxonomy:read', 'taxonomy:write', 'orgs:read', 'orgs:create', 'orgs:write', 'orgs:delete', 'users:read', 'users:write', 'activity:read', 'management-keys:read', 'management-keys:write', 'instance-keys:read', 'instance-keys:write', 'sync']).describe('What a management credential may do; org and instance row-scoping are a separate axis.\n\nA scope restricts the credential, never expands it: a token minted without scopes carries the\nowning user\'s full authority, an explicit list is a restriction that also excludes scopes\ninvented later. Roles arrive later as named bundles over these same values.\n\nOrgs and workspaces split their lifecycle three ways because founding a tenant and destroying\none with everything inside it are each a different privilege from governing one day to day:\n:create founds, :write governs, :delete destroys. Elsewhere :write still covers all three.')),zod.null()]).optional().describe('Restrict the key to these scopes; omit for the user\'s full authority')
-})
-
-export const MintOrgManagementKeyResponse = zod.object({
-  "id": zod.uuid(),
-  "org_id": zod.uuid(),
-  "user_id": zod.uuid(),
-  "scopes": zod.union([zod.array(zod.string()),zod.null()]),
-  "label": zod.string(),
-  "token": zod.string()
-})
-
-
-/**
- * Requires the `management-keys:write` scope.
- * @summary Revoke Management Key
- */
-export const RevokeManagementKeyParams = zod.object({
-  "key_id": zod.uuid()
-})
-
-export const RevokeManagementKeyHeader = zod.object({
-  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional()
-})
-
-export const RevokeManagementKeyResponse = zod.object({
-  "id": zod.uuid(),
-  "status": zod.literal("revoked")
-})
-
-
-/**
- * Requires the `bundles:write` scope.
+ * Requires `bundles.publish` authority at the route's tenant boundary.
  * @summary Compile Bundle
  */
 export const CompileBundleHeader = zod.object({
@@ -1350,7 +1213,7 @@ export const CompileBundleResponse = zod.object({
 
 
 /**
- * Requires the `bundles:read` scope.
+ * Requires `bundles.read` authority at the route's tenant boundary.
  * @summary List Bundles
  */
 export const ListBundlesHeader = zod.object({
@@ -1369,7 +1232,7 @@ export const ListBundlesResponse = zod.array(ListBundlesResponseItem)
 
 
 /**
- * Requires the `events:read` scope.
+ * Requires `usage.read` authority at the route's tenant boundary.
  * @summary List Events
  */
 export const listEventsQueryLimitDefault = 50;
@@ -1419,7 +1282,7 @@ export const ListEventsResponse = zod.array(ListEventsResponseItem)
 /**
  * What changed in this org, newest first: the audit trail the write triggers already record.
  *
- * Requires the `activity:read` scope.
+ * Requires `audit.read` authority at the route's tenant boundary.
  * @summary List Activity
  */
 export const listActivityQueryLimitDefault = 50;
@@ -1447,7 +1310,7 @@ export const ListActivityResponse = zod.array(ListActivityResponseItem)
 
 
 /**
- * Requires the `sync` scope.
+ * Requires `bundles.read` authority at the route's tenant boundary.
  * @summary Bundle Latest
  */
 export const BundleLatestQueryParams = zod.object({
@@ -1527,7 +1390,7 @@ export const BundleLatestResponse = zod.object({
  * ingested counts what RETURNING hands back, which under DO NOTHING is exactly the rows written,
  * so a replay reports zero.
  *
- * Requires the `sync` scope.
+ * Requires `usage.ingest` authority at the route's tenant boundary.
  * @summary Ingest Events
  */
 export const IngestEventsHeader = zod.object({
@@ -1604,9 +1467,10 @@ export const IngestEventsResponse = zod.object({
  * Upsert the instance record; the row persists as history, last_seen drives liveness.
  *
  * Every worker of a multi-worker data plane heartbeats with the same instance_id, so the first
- * insert can race; do it as one atomic upsert instead of read-then-write.
+ * insert can race; do it as one atomic upsert instead of read-then-write. The first heartbeat
+ * pins the id to its organization, and another tenant cannot move it.
  *
- * Requires the `sync` scope.
+ * Requires `data-planes.heartbeat` authority at the route's tenant boundary.
  * @summary Heartbeat
  */
 export const HeartbeatHeader = zod.object({
@@ -1629,9 +1493,9 @@ export const HeartbeatResponse = zod.object({
 
 
 /**
- * The instance-wide catalog, readable by any management token.
+ * The instance-wide catalog, readable where the principal and credential both carry catalog access.
  *
- * Requires the `taxonomy:read` scope.
+ * Requires `catalog.read` authority at the route's tenant boundary.
  * @summary Get Taxonomy
  */
 export const GetTaxonomyHeader = zod.object({
@@ -1674,13 +1538,9 @@ export const GetTaxonomyResponse = zod.object({
 /**
  * Create or update: reapplying a taxonomy converges the catalog.
  *
- * Requires the `taxonomy:write` scope.
+ * Requires `catalog.manage` authority at the route's tenant boundary.
  * @summary Create Provider
  */
-export const CreateProviderHeader = zod.object({
-  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional()
-})
-
 export const createProviderBodyProviderIdMax = 63;
 
 
@@ -1723,13 +1583,9 @@ export const CreateProviderResponse = zod.object({
 /**
  * Create or update: reapplying a taxonomy converges the catalog.
  *
- * Requires the `taxonomy:write` scope.
+ * Requires `catalog.manage` authority at the route's tenant boundary.
  * @summary Create Model
  */
-export const CreateModelHeader = zod.object({
-  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional()
-})
-
 export const createModelBodyModelIdMax = 255;
 
 export const createModelBodyProviderIdMax = 63;

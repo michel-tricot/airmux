@@ -11,6 +11,7 @@ from helpers import MODEL, PROVIDER, make_org, make_workspace, run_in_db, setup_
 from sqlalchemy.exc import IntegrityError
 
 from contract import EnvStoreConfig, SecretNotFoundError, SecretPurpose, SecretRef, uuid7
+from control_plane.authz import Permission
 from control_plane.models import Provider, ProviderCredential, set_actor
 
 KEY = "sk-provider-abcd1234"
@@ -179,9 +180,9 @@ def test_the_bundle_names_the_credential_and_carries_no_secret(tmp_path):
         org = cp.headers(org_id)
         c.post("/v1/org/provider-credentials", json={"provider": "openai", "value": KEY}, headers=org)
         c.post("/v1/org/bundles/compile", headers=org)
-        payload = c.get("/v1/bundle/latest", headers=root).text
+        payload = c.get("/v1/bundle/latest", headers=org).text
         assert KEY not in payload
-        entry = c.get("/v1/bundle/latest", headers=root).json()["data"]["payload"]["catalog"]["credentials"][0]
+        entry = c.get("/v1/bundle/latest", headers=org).json()["data"]["payload"]["catalog"]["credentials"][0]
         assert entry["ref"]["service"] == "openai"
         assert entry["ref"]["purpose"] == "provider"
         assert entry["version"] == 1
@@ -197,7 +198,7 @@ def test_a_disabled_credential_drops_out_of_the_bundle(tmp_path):
         created = c.post("/v1/org/provider-credentials", json={"provider": "openai", "value": KEY}, headers=org).json()["data"]
         c.patch(f"/v1/org/provider-credentials/{created['id']}", json={"enabled": False}, headers=org)
         c.post("/v1/org/bundles/compile", headers=org)
-        payload = c.get("/v1/bundle/latest", headers=root).json()["data"]["payload"]
+        payload = c.get("/v1/bundle/latest", headers=org).json()["data"]["payload"]
         assert payload["catalog"]["credentials"] == []
 
 
@@ -324,6 +325,21 @@ def test_a_rejected_key_shows_up_as_invalid(tmp_path):
         assert _status_of(c, m) == "invalid"
 
 
+def test_an_org_data_plane_cannot_change_another_orgs_credential_health(tmp_path):
+    cp = setup_control_plane(tmp_path)
+    with TestClient(cp.app) as c:
+        first = _with_credential(cp, c)
+        second = _with_credential(cp, c)
+        event = {
+            **_usage_event(first, "credential_rejected", datetime.now(tz=UTC)),
+            "credential_id": second.credential["id"],
+        }
+        data_plane = cp.headers(first.org_id, permissions=[Permission.usage_ingest])
+
+        assert c.post("/v1/events", json=[event], headers=data_plane).status_code == 200
+        assert _status_of(c, second) == "unknown"
+
+
 def test_a_working_key_shows_up_as_live(tmp_path):
     cp = setup_control_plane(tmp_path)
     with TestClient(cp.app) as c:
@@ -413,7 +429,7 @@ def test_a_workspace_credential_needs_workspace_membership(tmp_path):
         outsider = c.post("/v1/auth/signup", json={"email": "out@example.com", "password": "hunter2hunter2", "name": "Out"}, headers=CSRF)
         assert outsider.status_code == 200, outsider.text
         user_id = outsider.json()["data"]["user_id"]
-        c.put(f"/v1/org/users/{user_id}", headers=org)
+        c.put(f"/v1/org/users/{user_id}", json={"role": "member"}, headers=org)
         theirs = cp.headers_for(org_id, user_id)
 
         body = {"provider": "openai", "value": KEY, "workspace": workspace["slug"]}
@@ -441,6 +457,6 @@ def test_a_platform_credential_reaches_every_org(tmp_path):
 
         org = cp.headers(make_org(c, root))
         c.post("/v1/org/bundles/compile", headers=org)
-        entries = c.get("/v1/bundle/latest", headers=root).json()["data"]["payload"]["catalog"]["credentials"]
+        entries = c.get("/v1/bundle/latest", headers=org).json()["data"]["payload"]["catalog"]["credentials"]
         assert [e["ref"]["name"] for e in entries] == ["platform"]
         assert entries[0]["ref"]["org_id"] is None

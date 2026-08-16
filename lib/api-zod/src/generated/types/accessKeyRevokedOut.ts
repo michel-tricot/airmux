@@ -5,10 +5,8 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface InstanceKeyMintedOut {
+export interface AccessKeyRevokedOut {
   id: string;
-  user_id: string;
-  scopes: string[] | null;
-  label: string;
-  token: string;
+  status: 'revoked';
+  revoked_at: Date;
 }

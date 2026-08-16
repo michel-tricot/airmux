@@ -5,16 +5,20 @@ import { ArrowLeft, Building2, KeyRound, Plus, UserMinus, Trash2 } from 'lucide-
 import { formatDate } from '@/lib/format';
 import { Link, useLocation } from 'wouter';
 import { useOrgs } from '@/features/orgs/hooks';
-import { useAllManagementKeys, useInstanceKeys } from '@/features/keys/hooks';
-import { useUser, useDeleteUserMutation, useAddUserToOrgMutation, useRemoveUserFromOrgMutation } from '@/features/users/hooks';
+import { useAccessKeys } from '@/features/keys/hooks';
+import { useUser, useDeleteUserMutation, useAddUserToOrgMutation, useRemoveUserFromOrgMutation, orgRoleOptions } from '@/features/users/hooks';
 import { LoadingState, ErrorState } from '@/components/shared/states';
 import { DataTable } from '@/components/shared/data-table';
 import { FormDialog } from '@/components/shared/form-dialog';
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useRequiredParam } from '@/lib/route';
 import { PageShell } from '@/components/shared/page-shell';
+import type { OrgRole } from '@workspace/api-client-react';
 
-const addToOrgSchema = z.object({ orgId: z.string().min(1, 'Select an organization') });
+const addToOrgSchema = z.object({
+  orgId: z.string().min(1, 'Select an organization'),
+  role: z.enum(['owner', 'admin', 'member', 'data_plane']),
+});
 
 export default function UserDetail() {
   const userId = useRequiredParam('userId');
@@ -24,8 +28,7 @@ export default function UserDetail() {
   const user = userQuery.data;
   const orgsQuery = useOrgs();
   const orgs = orgsQuery.data;
-  const instanceKeysQuery = useInstanceKeys();
-  const managementKeysQuery = useAllManagementKeys();
+  const accessKeysQuery = useAccessKeys({ user_id: userId });
 
   const [addOpen, setAddOpen] = useState(false);
 
@@ -39,9 +42,6 @@ export default function UserDetail() {
 
   const memberships = orgs?.filter((o) => user.orgs.includes(o.id));
   const available = orgs?.filter((o) => !user.orgs.includes(o.id));
-  const instanceKeys = instanceKeysQuery.data?.filter((key) => key.user_id === user.id);
-  const managementKeys = managementKeysQuery.data?.filter((key) => key.user_id === user.id);
-
   return (
     <PageShell>
       <div className="flex items-center gap-4 text-sm text-muted-foreground mb-4">
@@ -143,55 +143,29 @@ export default function UserDetail() {
           Keys owned by this user
         </h2>
 
-        <div className="space-y-6">
-          <Card>
-            <DataTable
-              rows={instanceKeys}
-              rowKey={(key) => key.id}
-              isLoading={instanceKeysQuery.isLoading}
-              isError={instanceKeysQuery.isError}
-              error={instanceKeysQuery.error}
-              resource="instance keys"
-              onRetry={() => instanceKeysQuery.refetch()}
-              empty="This user does not own any instance keys."
-              columns={[
-                { key: 'type', header: 'Type', cell: () => <Badge variant="secondary">INSTANCE</Badge> },
-                { key: 'label', header: 'Label', cellClassName: 'font-medium', cell: (key) => key.label },
-                { key: 'key', header: 'Key', cellClassName: 'font-mono text-xs text-muted-foreground', cell: (key) => <>{key.prefix}…</> },
-                {
-                  key: 'status',
-                  header: 'Status',
-                  cell: (key) => <Badge variant={key.revoked ? 'outline' : 'success'}>{key.revoked ? 'REVOKED' : 'ACTIVE'}</Badge>,
-                },
-                { key: 'created', header: 'Created', cellClassName: 'text-muted-foreground text-sm', cell: (key) => formatDate(key.created_at) },
-              ]}
-            />
-          </Card>
-
-          <Card>
-            <DataTable
-              rows={managementKeys}
-              rowKey={(key) => key.id}
-              isLoading={managementKeysQuery.isLoading}
-              isError={managementKeysQuery.isError}
-              error={managementKeysQuery.error}
-              resource="management keys"
-              onRetry={() => managementKeysQuery.refetch()}
-              empty="This user does not own any management keys."
-              columns={[
-                { key: 'type', header: 'Type', cell: () => <Badge variant="secondary">MANAGEMENT</Badge> },
-                { key: 'label', header: 'Label', cellClassName: 'font-medium', cell: (key) => key.label },
-                { key: 'key', header: 'Key', cellClassName: 'font-mono text-xs text-muted-foreground', cell: (key) => <>{key.prefix}…</> },
-                {
-                  key: 'status',
-                  header: 'Status',
-                  cell: (key) => <Badge variant={key.revoked ? 'outline' : 'success'}>{key.revoked ? 'REVOKED' : 'ACTIVE'}</Badge>,
-                },
-                { key: 'created', header: 'Created', cellClassName: 'text-muted-foreground text-sm', cell: (key) => formatDate(key.created_at) },
-              ]}
-            />
-          </Card>
-        </div>
+        <Card>
+          <DataTable
+            rows={accessKeysQuery.data}
+            rowKey={(key) => key.id}
+            isLoading={accessKeysQuery.isLoading}
+            isError={accessKeysQuery.isError}
+            error={accessKeysQuery.error}
+            resource="access keys"
+            onRetry={() => accessKeysQuery.refetch()}
+            empty="This user does not own any access keys."
+            columns={[
+              { key: 'boundary', header: 'Boundary', cell: (key) => <Badge variant="secondary">{key.boundary}</Badge> },
+              { key: 'label', header: 'Label', cellClassName: 'font-medium', cell: (key) => key.label },
+              { key: 'key', header: 'Key', cellClassName: 'font-mono text-xs text-muted-foreground', cell: (key) => <>{key.prefix}…</> },
+              {
+                key: 'status',
+                header: 'Status',
+                cell: (key) => <Badge variant={key.status === 'active' ? 'success' : 'outline'}>{key.status.toUpperCase()}</Badge>,
+              },
+              { key: 'created', header: 'Created', cellClassName: 'text-muted-foreground text-sm', cell: (key) => formatDate(key.created_at) },
+            ]}
+          />
+        </Card>
       </div>
 
       <FormDialog
@@ -199,31 +173,46 @@ export default function UserDetail() {
         onOpenChange={setAddOpen}
         title="Add to Organization"
         schema={addToOrgSchema}
-        defaultValues={{ orgId: '' }}
-        onSubmit={(values) => addMember.mutateAsync({ userId: user.id, orgId: values.orgId })}
+        defaultValues={{ orgId: '', role: 'member' }}
+        onSubmit={(values) => addMember.mutateAsync({ userId: user.id, orgId: values.orgId, role: values.role as OrgRole })}
         submitLabel="Add"
         pending={addMember.isPending}
       >
         {(form) => (
-          <FormField
-            control={form.control}
-            name="orgId"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Organization</FormLabel>
-                <FormControl>
-                  <Dropdown
-                    aria-label="Organization"
-                    value={field.value}
-                    onValueChange={field.onChange}
-                    placeholder="Select an organization"
-                    options={(available ?? []).map((org) => ({ value: org.id, label: org.name }))}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          <>
+            <FormField
+              control={form.control}
+              name="orgId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Organization</FormLabel>
+                  <FormControl>
+                    <Dropdown
+                      aria-label="Organization"
+                      value={field.value}
+                      onValueChange={field.onChange}
+                      placeholder="Select an organization"
+                      options={(available ?? []).map((org) => ({ value: org.id, label: org.name }))}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="role"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Role</FormLabel>
+                  <FormControl>
+                    <Dropdown aria-label="Role" value={field.value} onValueChange={field.onChange} options={orgRoleOptions} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </>
         )}
       </FormDialog>
     </PageShell>

@@ -255,7 +255,7 @@ class Stack:
         """Provision the deployment the way an operator does, over the public surfaces only.
 
         The first signup claims the instance, which is what makes the rest reachable: the org, a
-        workspace, the caller's inference key and the two management keys.
+        workspace, the caller's inference key, a human access key, and a data-plane access key.
 
         The taxonomy runs in the middle rather than last, because a provider credential names a
         provider that has to exist first. The credential is what a workspace brings, so the deployment
@@ -265,14 +265,31 @@ class Stack:
         """
         with httpx.Client(base_url=self.cp_url, headers={"X-Requested-With": "XMLHttpRequest"}, timeout=10.0) as session:
             me = _payload(session.post("/v1/auth/signup", json={"email": ADMIN_EMAIL, "name": "Acceptance Admin", "password": ADMIN_PASSWORD}))
-            assert me["instance_admin"], "the first signup should have claimed the instance"
+            assert me["instance_role"] == "owner", "the first signup should have claimed the instance"
             org = _payload(session.post("/v1/orgs", json={"name": ORG}))
             scope = {"X-Org-Id": org["id"]}
-            _payload(session.put(f"/v1/org/users/{me['user_id']}", headers=scope))
+            _payload(session.put(f"/v1/org/users/{me['user_id']}", json={"role": "owner"}, headers=scope))
             workspace = _payload(session.post("/v1/org/workspaces", json={"name": "acceptance"}, headers=scope))
             caller = _payload(session.post(f"/v1/org/workspaces/{workspace['id']}/inference-keys", json={"label": "caller"}, headers=scope))
-            org_key = _payload(session.post("/v1/org/management-keys", json={"label": "acceptance"}, headers=scope))
-            data_plane_key = _payload(session.post("/v1/org/management-keys", json={"label": "data-plane"}, headers=scope))
+            access_key = _payload(
+                session.post(
+                    "/v1/access-keys",
+                    json={"label": "acceptance", "org_id": org["id"], "permissions": ["usage.read"]},
+                )
+            )
+            data_plane = _payload(session.post("/v1/service-accounts", json={"name": "acceptance-data-plane"}))
+            _payload(session.put(f"/v1/org/users/{data_plane['id']}", json={"role": "data_plane"}, headers=scope))
+            data_plane_key = _payload(
+                session.post(
+                    "/v1/access-keys",
+                    json={
+                        "label": "data-plane",
+                        "user_id": data_plane["id"],
+                        "org_id": org["id"],
+                        "permissions": ["bundles.read", "usage.ingest", "data-planes.heartbeat"],
+                    },
+                )
+            )
 
             self._run([_bin("airllmcp"), "taxonomy", "--config", str(self.config_path)], self.env)
             _payload(session.post("/v1/org/provider-credentials", json={"provider": "stub", "value": STUB_API_KEY}, headers=scope))
@@ -281,7 +298,7 @@ class Stack:
 
         secrets = {
             "AIRLLM_API_KEY": caller["token"],
-            "GW_ORG_MGMT_TOKEN": org_key["token"],
+            "GW_ACCESS_KEY": access_key["token"],
             "GW_DATAPLANE_TOKEN": data_plane_key["token"],
             "GW_BUNDLE_SIGNING_KEY": self.env["GW_BUNDLE_SIGNING_KEY"],
             "GW_BUNDLE_PUBLIC_KEY": self.env["GW_BUNDLE_PUBLIC_KEY"],
@@ -366,7 +383,7 @@ class Stack:
         self.env = {**self.env, **secrets}
         token = secrets.get("AIRLLM_API_KEY")
         assert token, "bootstrap did not mint a caller api key"
-        assert secrets.get("GW_ORG_MGMT_TOKEN"), "bootstrap did not mint an org token"
+        assert secrets.get("GW_ACCESS_KEY"), "bootstrap did not mint an access key"
         assert secrets.get("GW_DATAPLANE_TOKEN"), "bootstrap did not mint a data plane token"
         self.caller_api_key = token
 
@@ -428,7 +445,7 @@ class Stack:
         while True:
             response = httpx.get(
                 f"{self.cp_url}/v1/org/events",
-                headers={"authorization": f"Bearer {self.env['GW_ORG_MGMT_TOKEN']}"},
+                headers={"authorization": f"Bearer {self.env['GW_ACCESS_KEY']}"},
                 params=page_query,
                 timeout=10.0,
             )

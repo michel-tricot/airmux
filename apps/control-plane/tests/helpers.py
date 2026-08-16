@@ -15,9 +15,10 @@ from pg import TEMPLATE_DB, db_name_for, db_url_for, ensure_database
 
 from contract import MemoryStoreConfig, private_key_to_b64
 from control_plane.app import create_app
+from control_plane.authz import ALL_PERMISSIONS, InstanceRole, OrgRole, Permission, Target, principal_permissions
 from control_plane.config import BundlePolicy, DatabaseConfig, Settings
 from control_plane.db import standalone_transaction
-from control_plane.keys import mint_instance_key, mint_management_key
+from control_plane.keys import AccessKeyGrant, mint_access_key
 from control_plane.models import Org, OrgMembership, User, set_actor
 
 PROVIDER = {
@@ -46,37 +47,51 @@ class ControlPlane:
     app: FastAPI
     db_url: str
 
-    def headers(self, org_id: UUID | None = None, scopes: list[str] | None = None) -> dict[str, str]:
-        """Mint a real backed key for the shared fixture admin: an org key when org_id names one, an instance key otherwise.
-
-        The key type is what carries the scope now, so the two doors a test can knock on are the
-        two tables; instance_admin backs both.
-        """
+    def headers(
+        self,
+        org_id: UUID | None = None,
+        permissions: list[Permission | str] | None = None,
+        workspace_id: UUID | None = None,
+    ) -> dict[str, str]:
 
         async def mint() -> str:
             async with standalone_transaction(self.db_url):
                 admin = await User.first(User.email == FIXTURE_ADMIN_EMAIL)
                 if admin is None:
-                    admin = User(email=FIXTURE_ADMIN_EMAIL, name="Fixture Admin", instance_admin=True)
+                    admin = User(email=FIXTURE_ADMIN_EMAIL, name="Fixture Admin", instance_role=InstanceRole.owner)
                     await set_actor(admin.id)
                     await admin.save()
                 else:
                     await set_actor(admin.id)
-                if org_id is None:
-                    _, token = await mint_instance_key(admin.id, label="fixture-admin", scopes=scopes)
-                else:
-                    _, token = await mint_management_key(org_id, admin.id, label="fixture-admin", scopes=scopes)
+                target = (
+                    Target.workspace(org_id, workspace_id)
+                    if workspace_id is not None and org_id is not None
+                    else Target.org(org_id)
+                    if org_id
+                    else Target.instance()
+                )
+                ceiling = frozenset(Permission(permission) for permission in permissions) if permissions is not None else ALL_PERMISSIONS
+                _, token = await mint_access_key(AccessKeyGrant(principal_id=admin.id, target=target, permissions=ceiling, label="fixture-admin"))
                 return token
 
         return {"authorization": f"Bearer {asyncio.run(mint())}"}
 
-    def headers_for(self, org_id: UUID, user_id: UUID | str) -> dict[str, str]:
-        """An org key bound to a named user, for the checks an instance admin bypasses."""
+    def headers_for(self, org_id: UUID, user_id: UUID | str, workspace_id: UUID | None = None) -> dict[str, str]:
+        """An org key bound to a named user, for the checks an instance owner bypasses."""
 
         async def mint() -> str:
             async with standalone_transaction(self.db_url):
                 await set_actor(UUID(str(user_id)))
-                _, token = await mint_management_key(org_id, UUID(str(user_id)), label="member")
+                principal_id = UUID(str(user_id))
+                target = Target.workspace(org_id, workspace_id) if workspace_id is not None else Target.org(org_id)
+                _, token = await mint_access_key(
+                    AccessKeyGrant(
+                        principal_id=principal_id,
+                        target=target,
+                        permissions=await principal_permissions(principal_id, target),
+                        label="member",
+                    )
+                )
                 return token
 
         return {"authorization": f"Bearer {asyncio.run(mint())}"}
@@ -105,13 +120,12 @@ def run_in_db(tmp_path, action):
 
 
 def make_admin(tmp_path, user_id: UUID | str) -> None:
-    """Set the instance_admin bit directly in the database; the API deliberately exposes no path to it."""
 
     async def promote():
         user = await User.find_by_id(UUID(str(user_id)))
         assert user is not None
         await set_actor(user.id)
-        user.instance_admin = True
+        user.instance_role = InstanceRole.owner
         await user.save()
 
     run_in_db(tmp_path, promote)
@@ -174,8 +188,7 @@ def write_config(tmp_path, cp: ControlPlane) -> str:
 
 
 async def seed_admin(email: str = "admin@example.com") -> User:
-    """An instance admin straight through the model; the API exposes no path to the bit."""
-    user = User(email=email, name=email, instance_admin=True)
+    user = User(email=email, name=email, instance_role=InstanceRole.owner)
     await set_actor(user.id)
     return await user.save()
 
@@ -186,5 +199,5 @@ async def seed_member(email: str = "member@example.com", org_name: str = "o1") -
     await set_actor(user.id)
     await user.save()
     org = await Org(name=org_name).save()
-    await OrgMembership(user_id=user.id, org_id=org.id).save()
+    await OrgMembership(user_id=user.id, org_id=org.id, role=OrgRole.member).save()
     return user, org.id

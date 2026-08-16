@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from fastapi.testclient import TestClient
-from helpers import make_org, setup_control_plane
+from helpers import make_org, make_user, setup_control_plane
 
 CSRF = {"X-Requested-With": "fetch"}
 PASSWORD = "hunter2-hunter2"
@@ -51,7 +51,7 @@ def test_enrollment_lists_granted_orgs_but_only_marks_the_personal_one(tmp_path)
     with _client(cp) as c:
         granted = make_org(c, root, "granted")
         me = _signup(c)
-        assert c.put(f"/v1/org/users/{me['user_id']}", headers=cp.headers(granted)).status_code == 200
+        assert c.put(f"/v1/org/users/{me['user_id']}", json={"role": "member"}, headers=cp.headers(granted)).status_code == 200
         personal = c.post("/v1/enroll/org", json={"name": "mine"}, headers=CSRF).json()["data"]
 
         standing = c.get("/v1/enroll", headers=CSRF).json()["data"]
@@ -59,15 +59,30 @@ def test_enrollment_lists_granted_orgs_but_only_marks_the_personal_one(tmp_path)
         assert standing["personal_org_id"] == personal["id"]
 
 
-def test_enrollment_works_through_the_bearer_door_too(tmp_path):
+def test_bearer_can_read_enrollment_but_cannot_found_a_personal_org(tmp_path):
     cp = setup_control_plane(tmp_path)
     root = cp.headers()
     with _client(cp) as c:
-        created = c.post("/v1/enroll/org", json={"name": "admins-own"}, headers=root)
-        assert created.status_code == 200, created.text
-        assert c.post("/v1/enroll/org", json={"name": "again"}, headers=root).status_code == 409
+        assert c.post("/v1/enroll/org", json={"name": "admins-own"}, headers=root).status_code == 401
         standing = c.get("/v1/enroll", headers=root).json()["data"]
-        assert standing["personal_org_id"] == created.json()["data"]["id"]
+        assert standing == {"orgs": [], "personal_org_id": None}
+
+
+def test_org_bound_bearer_does_not_disclose_other_memberships(tmp_path):
+    cp = setup_control_plane(tmp_path)
+    root = cp.headers()
+    with _client(cp) as c:
+        first = make_org(c, root, "first")
+        second = make_org(c, root, "second")
+        user = make_user(tmp_path, "member@example.com")
+        assert c.put(f"/v1/org/users/{user.id}", json={"role": "member"}, headers=cp.headers(first)).status_code == 200
+        assert c.put(f"/v1/org/users/{user.id}", json={"role": "member"}, headers=cp.headers(second)).status_code == 200
+
+        bearer = cp.headers_for(first, user.id)
+        standing = c.get("/v1/enroll", headers=bearer).json()["data"]
+        assert [org["id"] for org in standing["orgs"]] == [str(first)]
+        assert standing["personal_org_id"] is None
+        assert c.get("/v1/auth/me", headers=bearer).json()["data"]["orgs"] == [str(first)]
 
 
 def test_admin_provisioned_orgs_are_not_personal(tmp_path):
@@ -84,7 +99,10 @@ def test_personal_slot_survives_membership_removal(tmp_path):
     with _client(cp) as c:
         me = _signup(c)
         org = c.post("/v1/enroll/org", json={"name": "mine"}, headers=CSRF).json()["data"]
-        assert c.delete(f"/v1/org/users/{me['user_id']}", headers=cp.headers(org["id"])).status_code == 200
+        successor = make_user(tmp_path, "successor@example.com")
+        org_headers = cp.headers(org["id"])
+        assert c.put(f"/v1/org/users/{successor.id}", json={"role": "owner"}, headers=org_headers).status_code == 200
+        assert c.delete(f"/v1/org/users/{me['user_id']}", headers=org_headers).status_code == 200
 
         standing = c.get("/v1/enroll", headers=CSRF).json()["data"]
         assert standing["orgs"] == []

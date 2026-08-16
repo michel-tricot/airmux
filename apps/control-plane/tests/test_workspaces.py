@@ -4,19 +4,20 @@ from __future__ import annotations
 
 import pytest
 from fastapi.testclient import TestClient
-from helpers import make_org, make_user, make_workspace, run_in_db, setup_control_plane
+from helpers import make_org, make_workspace, run_in_db, setup_control_plane
 from sqlmodel import col
 
 from contract import SignedBundle, uuid7, verify_bundle
+from control_plane.authz import OrgRole
 from control_plane.models import AuditLog
 
 
-def _member(c, cp, org_id, email, tmp_path):
-    """A real org member with an org-scoped management key: the non-admin path through every dep."""
-    uid = str(make_user(tmp_path, email).id)
-    assert c.put(f"/v1/org/users/{uid}", headers=cp.headers(org_id)).status_code == 200
-    minted = c.post("/v1/org/management-keys", json={"user_id": uid, "label": "t"}, headers=cp.headers(org_id)).json()["data"]
-    return uid, {"authorization": f"Bearer {minted['token']}"}
+def _member(c, cp, org_id, email, role: OrgRole = OrgRole.member):
+    created = c.post("/v1/auth/signup", json={"email": email, "name": email, "password": "hunter2-hunter2"})
+    assert created.status_code == 200, created.text
+    uid = created.json()["data"]["user_id"]
+    assert c.put(f"/v1/org/users/{uid}", json={"role": role}, headers=cp.headers(org_id)).status_code == 200
+    return uid, cp.headers_for(org_id, uid)
 
 
 def test_workspace_lifecycle_and_creator_auto_enrollment(tmp_path):
@@ -24,7 +25,7 @@ def test_workspace_lifecycle_and_creator_auto_enrollment(tmp_path):
     root = cp.headers()
     with TestClient(cp.app) as c:
         o1 = make_org(c, root, "o1")
-        uid, member = _member(c, cp, o1, "m@example.com", tmp_path)
+        uid, member = _member(c, cp, o1, "m@example.com", OrgRole.admin)
         assert c.get("/v1/org/workspaces", headers=member).json()["data"] == []
 
         created = c.post("/v1/org/workspaces", json={"name": "staging", "slug": "staging"}, headers=member).json()["data"]
@@ -145,9 +146,12 @@ def test_adding_a_non_org_member_is_a_conflict(tmp_path):
     with TestClient(cp.app) as c:
         o1 = make_org(c, root, "o1")
         ws = make_workspace(c, cp.headers(o1))
-        outsider = make_user(tmp_path, "out@example.com").id
-        assert c.put(f"/v1/org/workspaces/{ws}/members/{outsider}", headers=cp.headers(o1)).status_code == 409
-        assert c.put(f"/v1/org/workspaces/{ws}/members/{uuid7()}", headers=cp.headers(o1)).status_code == 404
+        outsider = c.post(
+            "/v1/auth/signup",
+            json={"email": "out@example.com", "name": "Out", "password": "hunter2-hunter2"},
+        ).json()["data"]["user_id"]
+        assert c.put(f"/v1/org/workspaces/{ws}/members/{outsider}", json={"role": "member"}, headers=cp.headers(o1)).status_code == 409
+        assert c.put(f"/v1/org/workspaces/{ws}/members/{uuid7()}", json={"role": "member"}, headers=cp.headers(o1)).status_code == 404
 
 
 def test_key_operations_require_workspace_membership(tmp_path):
@@ -155,8 +159,8 @@ def test_key_operations_require_workspace_membership(tmp_path):
     root = cp.headers()
     with TestClient(cp.app) as c:
         o1 = make_org(c, root, "o1")
-        _, creator = _member(c, cp, o1, "creator@example.com", tmp_path)
-        _, outsider = _member(c, cp, o1, "orgmate@example.com", tmp_path)
+        _, creator = _member(c, cp, o1, "creator@example.com", OrgRole.admin)
+        _, outsider = _member(c, cp, o1, "orgmate@example.com")
         ws = make_workspace(c, creator)
 
         assert c.post(f"/v1/org/workspaces/{ws}/inference-keys", json={"label": "k"}, headers=creator).status_code == 200
@@ -174,13 +178,14 @@ def test_membership_lifecycle_within_the_workspace(tmp_path):
     root = cp.headers()
     with TestClient(cp.app) as c:
         o1 = make_org(c, root, "o1")
-        _, creator = _member(c, cp, o1, "creator@example.com", tmp_path)
-        joiner, joiner_headers = _member(c, cp, o1, "joiner@example.com", tmp_path)
+        _, creator = _member(c, cp, o1, "creator@example.com", OrgRole.admin)
+        joiner, joiner_headers = _member(c, cp, o1, "joiner@example.com")
         ws = make_workspace(c, creator)
 
         assert c.get(f"/v1/org/workspaces/{ws}/inference-keys", headers=joiner_headers).status_code == 403
-        assert c.put(f"/v1/org/workspaces/{ws}/members/{joiner}", headers=creator).status_code == 200
-        assert c.put(f"/v1/org/workspaces/{ws}/members/{joiner}", headers=creator).status_code == 200
+        assert c.put(f"/v1/org/workspaces/{ws}/members/{joiner}", json={"role": "member"}, headers=creator).status_code == 200
+        assert c.put(f"/v1/org/workspaces/{ws}/members/{joiner}", json={"role": "member"}, headers=creator).status_code == 200
+        joiner_headers = cp.headers_for(o1, joiner, ws)
         assert c.get(f"/v1/org/workspaces/{ws}/inference-keys", headers=joiner_headers).status_code == 200
 
         deleted = c.delete(f"/v1/org/workspaces/{ws}/members/{joiner}", headers=creator).json()["data"]
@@ -194,7 +199,7 @@ def test_org_membership_removal_cascades_out_of_workspaces(tmp_path):
     root = cp.headers()
     with TestClient(cp.app) as c:
         o1 = make_org(c, root, "o1")
-        uid, member = _member(c, cp, o1, "m@example.com", tmp_path)
+        uid, member = _member(c, cp, o1, "m@example.com")
         ws = make_workspace(c, member)
         assert [m["user_id"] for m in c.get(f"/v1/org/workspaces/{ws}/members", headers=cp.headers(o1)).json()["data"]] == [uid]
 
@@ -221,11 +226,11 @@ def test_bundle_spans_workspaces_and_keys_carry_their_workspace(tmp_path):
         k2 = c.post(f"/v1/org/workspaces/{ws2}/inference-keys", json={"label": "k2"}, headers=org).json()["data"]
 
         c.post("/v1/org/bundles/compile", headers=org)
-        bundle = verify_bundle(SignedBundle.model_validate(c.get("/v1/bundle/latest", headers=root).json()["data"]), cp.bundle_key.public_key())
+        bundle = verify_bundle(SignedBundle.model_validate(c.get("/v1/bundle/latest", headers=org).json()["data"]), cp.bundle_key.public_key())
         assert {(k.key_id, str(k.workspace_id)) for k in bundle.keys} == {(k1["id"], str(ws1)), (k2["id"], str(ws2))}
 
         assert c.delete(f"/v1/org/workspaces/{ws2}/inference-keys/{k1['id']}", headers=org).status_code == 404
         assert c.delete(f"/v1/org/workspaces/{ws1}/inference-keys/{k1['id']}", headers=org).status_code == 200
         c.post("/v1/org/bundles/compile", headers=org)
-        bundle = verify_bundle(SignedBundle.model_validate(c.get("/v1/bundle/latest", headers=root).json()["data"]), cp.bundle_key.public_key())
+        bundle = verify_bundle(SignedBundle.model_validate(c.get("/v1/bundle/latest", headers=org).json()["data"]), cp.bundle_key.public_key())
         assert [k.key_id for k in bundle.keys] == [k2["id"]]

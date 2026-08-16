@@ -5,7 +5,7 @@ from typing import ClassVar, Self
 from uuid import UUID, uuid4
 
 from pydantic import field_validator
-from sqlalchemy import text
+from sqlalchemy import CheckConstraint, text
 from sqlalchemy.dialects.postgresql import CITEXT
 from sqlmodel import Field, col, select
 
@@ -25,12 +25,13 @@ _CLAIM_LOCK = 0x41524C4C
 
 @audited
 class User(Record, Identified, Tombstonable, table=True):
+    __table_args__: ClassVar = (CheckConstraint("instance_role IS NULL OR instance_role IN ('owner', 'auditor')", name="user_instance_role_valid"),)
+
     email: str = Field(unique=True, sa_type=CITEXT)
     name: str
-    instance_admin: bool = False
+    instance_role: str | None = None
     service_account: bool = False
 
-    api_hidden: ClassVar[frozenset[str]] = frozenset({"instance_admin"})
     api_readonly: ClassVar[frozenset[str]] = frozenset({"service_account"})
     api_immutable: ClassVar[frozenset[str]] = frozenset({"email"})
 
@@ -74,14 +75,14 @@ class User(Record, Identified, Tombstonable, table=True):
         return not await cls.instance_claimed()
 
     async def backs_org(self, org_id: UUID) -> bool:
-        """Whether this user's authority covers the org: instance admins everywhere, everyone else by membership.
+        """Whether this user's standing reaches the org: instance roles everywhere, everyone else by membership.
 
-        The rule every org-scoped credential is checked against, so it has one home rather than one per door.
+        Device approval uses this to constrain organization selection before minting a bounded key.
         """
-        return self.instance_admin or await OrgMembership.get((self.id, org_id)) is not None
+        return self.instance_role is not None or await OrgMembership.get((self.id, org_id)) is not None
 
     async def delete_with_contents(self) -> None:
-        """Delete the user with the entities they own that are theirs alone: identities, sessions, management and instance keys.
+        """Delete the user with the entities they own that are theirs alone: identities, sessions, and access keys.
 
         The sibling of Org.delete_with_contents and Workspace.delete_with_contents. Everything else a
         user touches outlives them, so the route refuses rather than cascading: a membership is the
@@ -89,9 +90,10 @@ class User(Record, Identified, Tombstonable, table=True):
         """
         from control_plane import models  # noqa: PLC0415 auth_identity imports user, so the two only meet at call time
 
-        for owned in (models.AuthIdentity, models.AuthSession, models.ManagementKey, models.InstanceKey):
+        for owned in (models.AuthIdentity, models.AuthSession):
             for record in await owned.find(owned.user_id == self.id):
                 await record.delete()
+        await models.AccessKey.delete_scoped(models.AccessKey.user_id == self.id)
         await self.delete()
 
     @classmethod
@@ -124,6 +126,7 @@ class UserOut(RecordOut[User]):
     id: UUID
     email: str
     name: str
+    instance_role: str | None
     service_account: bool
     created_at: datetime
     updated_at: datetime

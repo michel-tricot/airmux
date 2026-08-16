@@ -4,6 +4,131 @@
  * Api
  * OpenAPI spec version: 0.1.0
  */
+export type Permission = typeof Permission[keyof typeof Permission];
+
+
+export const Permission = {
+  organizationsread: 'organizations.read',
+  organizationscreate: 'organizations.create',
+  organizationsupdate: 'organizations.update',
+  organizationsdelete: 'organizations.delete',
+  principalsread: 'principals.read',
+  principalsmanage: 'principals.manage',
+  membersread: 'members.read',
+  membersmanage: 'members.manage',
+  workspacesread: 'workspaces.read',
+  workspacescreate: 'workspaces.create',
+  workspacesupdate: 'workspaces.update',
+  workspacesdelete: 'workspaces.delete',
+  catalogread: 'catalog.read',
+  catalogmanage: 'catalog.manage',
+  'provider-credentialsread': 'provider-credentials.read',
+  'provider-credentialsmanage': 'provider-credentials.manage',
+  'inference-keysread': 'inference-keys.read',
+  'inference-keysmanage': 'inference-keys.manage',
+  bundlesread: 'bundles.read',
+  bundlespublish: 'bundles.publish',
+  usageread: 'usage.read',
+  usageingest: 'usage.ingest',
+  'data-planesread': 'data-planes.read',
+  'data-planesheartbeat': 'data-planes.heartbeat',
+  auditread: 'audit.read',
+  'access-keysread': 'access-keys.read',
+  'access-keysissue': 'access-keys.issue',
+  'access-keysrevoke': 'access-keys.revoke',
+} as const;
+
+export interface AccessKeyIn {
+  /**
+     * Where this key lives, such as ci, laptop, or data-plane
+     * @minLength 1
+     * @maxLength 80
+     */
+  label: string;
+  /** Principal the key authenticates; defaults to the acting principal */
+  user_id?: string | null;
+  /** Organization boundary; omit with workspace_id for instance authority */
+  org_id?: string | null;
+  /** Workspace boundary; requires org_id */
+  workspace_id?: string | null;
+  /**
+     * Explicit maximum permissions carried by the key
+     * @minItems 1
+     */
+  permissions: Permission[];
+  expires_at?: string | null;
+}
+
+export type AccessKeyMintedOutStatus = typeof AccessKeyMintedOutStatus[keyof typeof AccessKeyMintedOutStatus];
+
+
+export const AccessKeyMintedOutStatus = {
+  active: 'active',
+  expired: 'expired',
+  revoked: 'revoked',
+} as const;
+
+export type Boundary = typeof Boundary[keyof typeof Boundary];
+
+
+export const Boundary = {
+  instance: 'instance',
+  org: 'org',
+  workspace: 'workspace',
+} as const;
+
+export interface AccessKeyMintedOut {
+  id: string;
+  user_id: string;
+  org_id: string | null;
+  workspace_id: string | null;
+  parent_id: string | null;
+  prefix: string;
+  permissions: Permission[];
+  label: string;
+  expires_at: string | null;
+  revoked_at: string | null;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+  boundary: Boundary;
+  status: AccessKeyMintedOutStatus;
+  token: string;
+}
+
+export type AccessKeyOutStatus = typeof AccessKeyOutStatus[keyof typeof AccessKeyOutStatus];
+
+
+export const AccessKeyOutStatus = {
+  active: 'active',
+  expired: 'expired',
+  revoked: 'revoked',
+} as const;
+
+export interface AccessKeyOut {
+  id: string;
+  user_id: string;
+  org_id: string | null;
+  workspace_id: string | null;
+  parent_id: string | null;
+  prefix: string;
+  permissions: Permission[];
+  label: string;
+  expires_at: string | null;
+  revoked_at: string | null;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+  boundary: Boundary;
+  status: AccessKeyOutStatus;
+}
+
+export interface AccessKeyRevokedOut {
+  id: string;
+  status: 'revoked';
+  revoked_at: string;
+}
+
 /**
  * One entry in the feed: what changed, who changed it, when. Never the snapshots themselves.
  *
@@ -238,6 +363,7 @@ export const DataPlaneInstanceOutStatus = {
 
 export interface DataPlaneInstanceOut {
   instance_id: string;
+  org_id: string | null;
   version: string;
   bundle_id: string | null;
   address: string | null;
@@ -341,86 +467,13 @@ export interface InferenceKeyRevokedOut {
   status: 'revoked';
 }
 
-/**
- * What a management credential may do; org and instance row-scoping are a separate axis.
- *
- * A scope restricts the credential, never expands it: a token minted without scopes carries the
- * owning user's full authority, an explicit list is a restriction that also excludes scopes
- * invented later. Roles arrive later as named bundles over these same values.
- *
- * Orgs and workspaces split their lifecycle three ways because founding a tenant and destroying
- * one with everything inside it are each a different privilege from governing one day to day:
- * :create founds, :write governs, :delete destroys. Elsewhere :write still covers all three.
- */
-export type Scope = typeof Scope[keyof typeof Scope];
+export type InstanceRole = typeof InstanceRole[keyof typeof InstanceRole];
 
 
-export const Scope = {
-  'inference-keys:read': 'inference-keys:read',
-  'inference-keys:write': 'inference-keys:write',
-  'workspaces:read': 'workspaces:read',
-  'workspaces:create': 'workspaces:create',
-  'workspaces:write': 'workspaces:write',
-  'workspaces:delete': 'workspaces:delete',
-  'bundles:read': 'bundles:read',
-  'bundles:write': 'bundles:write',
-  'events:read': 'events:read',
-  'data-planes:read': 'data-planes:read',
-  'provider-credentials:read': 'provider-credentials:read',
-  'provider-credentials:write': 'provider-credentials:write',
-  'taxonomy:read': 'taxonomy:read',
-  'taxonomy:write': 'taxonomy:write',
-  'orgs:read': 'orgs:read',
-  'orgs:create': 'orgs:create',
-  'orgs:write': 'orgs:write',
-  'orgs:delete': 'orgs:delete',
-  'users:read': 'users:read',
-  'users:write': 'users:write',
-  'activity:read': 'activity:read',
-  'management-keys:read': 'management-keys:read',
-  'management-keys:write': 'management-keys:write',
-  'instance-keys:read': 'instance-keys:read',
-  'instance-keys:write': 'instance-keys:write',
-  sync: 'sync',
+export const InstanceRole = {
+  owner: 'owner',
+  auditor: 'auditor',
 } as const;
-
-export interface InstanceKeyIn {
-  /**
-     * Where this key lives, e.g. ci or a data plane; shown in listings
-     * @minLength 1
-     * @maxLength 80
-     */
-  label: string;
-  /** Instance admin the key is minted for; defaults to the acting user */
-  user_id?: string | null;
-  /** Restrict the key to these scopes; omit for the user's full authority */
-  scopes?: Scope[] | null;
-}
-
-export interface InstanceKeyMintedOut {
-  id: string;
-  user_id: string;
-  scopes: string[] | null;
-  label: string;
-  token: string;
-}
-
-export interface InstanceKeyOut {
-  id: string;
-  user_id: string;
-  revoked: boolean;
-  scopes: string[] | null;
-  label: string;
-  prefix: string;
-  created_at: string;
-  updated_at: string;
-  deleted_at: string | null;
-}
-
-export interface InstanceKeyRevokedOut {
-  id: string;
-  status: 'revoked';
-}
 
 export interface LoginIn {
   /**
@@ -435,57 +488,28 @@ export interface LoginIn {
   password: string;
 }
 
-export interface ManagementKeyIn {
-  /**
-     * Where this key lives, e.g. ci or laptop; shown in listings
-     * @minLength 1
-     * @maxLength 80
-     */
-  label: string;
-  /** User the key is minted for; defaults to the acting user */
-  user_id?: string | null;
-  /** Restrict the key to these scopes; omit for the user's full authority */
-  scopes?: Scope[] | null;
-}
-
-export interface ManagementKeyMintedOut {
-  id: string;
-  org_id: string;
-  user_id: string;
-  scopes: string[] | null;
-  label: string;
-  token: string;
-}
-
-export interface ManagementKeyOut {
-  id: string;
-  org_id: string;
-  user_id: string;
-  revoked: boolean;
-  scopes: string[] | null;
-  label: string;
-  prefix: string;
-  created_at: string;
-  updated_at: string;
-  deleted_at: string | null;
-}
-
-export interface ManagementKeyRevokedOut {
-  id: string;
-  status: 'revoked';
-}
-
 export interface MeOut {
   user_id: string;
   email: string;
   name: string;
-  instance_admin: boolean;
+  instance_role: InstanceRole | null;
   orgs: string[];
 }
+
+export type OrgRole = typeof OrgRole[keyof typeof OrgRole];
+
+
+export const OrgRole = {
+  owner: 'owner',
+  admin: 'admin',
+  member: 'member',
+  data_plane: 'data_plane',
+} as const;
 
 export interface MembershipOut {
   user_id: string;
   org_id: string;
+  role: OrgRole;
   status: 'member';
 }
 
@@ -580,7 +604,12 @@ export interface OrgMemberOut {
   email: string;
   name: string;
   service_account: boolean;
+  role: OrgRole;
   status: 'member';
+}
+
+export interface OrgMembershipIn {
+  role: OrgRole;
 }
 
 export interface OrgUpdate {
@@ -921,6 +950,7 @@ export interface UserOut {
   id: string;
   email: string;
   name: string;
+  instance_role: string | null;
   service_account: boolean;
   created_at: string;
   updated_at: string;
@@ -943,9 +973,23 @@ export interface WorkspaceCreate {
   slug?: string;
 }
 
+export type WorkspaceRole = typeof WorkspaceRole[keyof typeof WorkspaceRole];
+
+
+export const WorkspaceRole = {
+  admin: 'admin',
+  member: 'member',
+  viewer: 'viewer',
+} as const;
+
+export interface WorkspaceMembershipIn {
+  role: WorkspaceRole;
+}
+
 export interface WorkspaceMembershipOut {
   user_id: string;
   workspace_id: string;
+  role: WorkspaceRole;
   status: 'member';
 }
 
@@ -963,16 +1007,18 @@ export interface WorkspaceUpdate {
   name?: string | null;
 }
 
+export type ListAccessKeysParams = {
+user_id?: string | null;
+org_id?: string | null;
+workspace_id?: string | null;
+};
+
 export type CliAuthRequestDetailsParams = {
 code: string;
 };
 
 export type ListDataPlanesParams = {
 include_offline?: boolean;
-};
-
-export type ListAllManagementKeysParams = {
-org_id?: string | null;
 };
 
 export type ListInstanceActivityParams = {

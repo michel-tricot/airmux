@@ -6,9 +6,16 @@ import {
   useRemoveMember,
   getListOrgUsersQueryKey,
   getListMembersQueryKey,
+  type WorkspaceRole,
 } from '@workspace/api-client-react';
 import { orgScope } from '@/lib/api';
 import { orgScopedKey } from '@/lib/query-keys';
+
+export const workspaceRoleOptions: Array<{ value: WorkspaceRole; label: string }> = [
+  { value: 'admin', label: 'Admin' },
+  { value: 'member', label: 'Member' },
+  { value: 'viewer', label: 'Viewer' },
+];
 
 export function useOrgMembers(orgId: string) {
   return useListOrgUsers({

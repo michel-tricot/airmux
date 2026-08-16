@@ -6,25 +6,6 @@ building one, move it out of this file and into the code or the spec.
 
 ---
 
-## URGENT: session opening ergonomics
-
-Open conversation (2026-08-07), resume soon. Public auth routes must each declare
-`_session: SessionDep` to open the request transaction (authenticated routes inherit it through
-management_claims/acting_user); forgetting one is a loud runtime failure but still a per-route
-chore. The always-open-via-middleware alternative was analyzed and rejected: FastAPI exception
-handlers turn HTTPExceptions into responses before middleware sees them, so middleware would
-commit on 4xx paths instead of rolling back (the 401-rolls-back-the-sliding-refresh behavior
-depends on the exception crossing the transaction boundary), and a middleware-held transaction
-pins its connection across response send instead of ending at handler return (which is what
-SessionDep's scope="function" buys). Lazy connection checkout makes the per-request cost argument
-minor either way.
-
-Proposed fix, not yet applied: attach the dependency once at the router level,
-`APIRouter(prefix="/auth", dependencies=[Depends(get_session)])`, and drop the per-route _session
-parameters. FastAPI's per-request dependency cache makes the redundant resolution on
-authenticated routes free. Decide, apply, and consider a hygiene test that public DB-touching
-routes resolve a session.
-
 ## Token counting endpoint
 
 `POST /v1/messages/count_tokens` on the Anthropic ingress. Claude Code calls it to drive its context
@@ -65,25 +46,6 @@ data plane, like the control-plane-down and event-replay scenarios already do.
   and reports the delta, so the cost of durable metering is tracked over time rather than measured
   by hand
 
-## Self-minted instance access from key possession
-
-`airllmcp admin create` replaced mint-root-token with a user-bound instance token, but a
-standing root credential still lands in .env. The original variant (self-mint a short-lived token
-from the signing key at invocation time) died with the token signing key: management keys are now
-opaque and verified by database lookup, so there is no key whose possession equals root. What
-survives is the Jenkins-style variant: any command with database access can mint directly through
-the fat-model API, and for operators without database access, first start prints a single-use code
-exchanged for a token via the API or console login, pairing naturally with
-[service accounts](#service-accounts-as-control-plane-entities).
-
-## Finish service accounts
-
-Users exist with a service_account flag, memberships, and token binding, and a data plane carries
-an org management key today rather than a service account of its own. Human login now excludes service
-accounts everywhere (password login, session use). What remains:
-kind-specific policies (token TTLs, sync-only permissions narrower than org admin). If a third
-principal kind ever appears, convert the boolean to a kind enum rather than stacking flags.
-
 ## Non-sqlite event collection backends
 
 The `EventOutbox` facade makes the collection method pluggable (sqlite, devnull today). Candidates:
@@ -110,7 +72,7 @@ deleted_at stays null until soft delete lands as one coordinated change. The blu
   convention of server-minted ids split from caller-facing names.
 - Resurrection disappears as a concept: re-adding a removed membership inserts a fresh row; each
   membership period is its own row and tombstones accumulate as history.
-- InferenceKey.revoked and ManagementKey.revoked stay distinct from deleted_at: a revoked key drops out
+- InferenceKey.revoked and AccessKey.revoked_at stay distinct from deleted_at: a revoked key drops out
   of the compiled bundle but remains visible; deleted means gone from view.
 - Open policy question: what soft-deleting an org does to its keys, providers, and models
   (cascade, orphan, or forbid).
@@ -132,10 +94,10 @@ non-Python data plane or third-party contract consumers appear.
 ## Console login switch and session policy
 
 Human login is password only (2026-08-06, argon2 on AuthIdentity) with cookie sessions (sk-sess-
-opaque token, sha256 at rest, 12h sliding / 14d absolute) as a second door into the management API
-through management_claims: bearer wins, cookie branch does CSRF (static X-Requested-With plus
-Sec-Fetch-Site) and org scoping via X-Org-Id backed by memberships. SSO shipped alongside it and
-was removed untested on 2026-08-07 to cut clutter; the design is parked in
+opaque token, sha256 at rest, 12h sliding / 14d absolute) as a second authentication door. Bearer
+credentials win when both are present; the cookie branch does CSRF (static X-Requested-With plus
+Sec-Fetch-Site), and organization selection uses X-Org-Id with current roles. SSO shipped alongside
+it and was removed untested on 2026-08-07 to cut clutter; the design is parked in
 [SSO login](#sso-login-parked).
 
 The console rides the cookie door: password login/signup page (open self-signup via
@@ -151,9 +113,6 @@ which is also what closed-signup corporate provisioning waits on.
 
 What remains:
 
-- Session-only actions: claims minted from a session carry the s- token_id prefix, so restricting
-  mgmt-key minting to the session door is one check when wanted (a stolen
-  key must not breed keys).
 - Expired sessions are inert rather than deleted (the 401 rolls the request transaction back);
   a sweeper or delete-on-logout-only policy if the table ever matters.
 - Hosted deployments could delegate the session lifecycle to WorkOS AuthKit sealed sessions
@@ -227,19 +186,10 @@ it is ring 1 plus an argon2 verify.
 
 ## Per-data-plane credentials with enrollment
 
-Context: management and inference keys are opaque secrets (built 2026-08-06), all data planes of
-an org still share GW_DATAPLANE_TOKEN, and the bundle public key is a second shared .env secret.
-Enrollment gives each data plane its own credential and its pinned bundle key through a one-time
-exchange, reusing the existing verify path wholesale: a per-instance credential is just a key
-owned by a per-instance service account.
-
-Revised 2026-08-08, when instance keys landed and data planes stopped recording an org: which key
-type enrollment mints is now an open decision. An instance key matches how a data plane registers
-(the heartbeat names no org) and is what a data plane serving several orgs would need, but it
-requires the instance_admin bit on the service account, which is a lot of authority for a bundle
-poller. An org-scoped management key keeps the blast radius to one org and matches today's
-single-org config (data_plane.bundle.org). The quickstart trapdoor accepts either prefix, so
-nothing forces the choice yet. Decide before building; the plan below is otherwise unaffected.
+The first local data plane already gets a dedicated service account with the `data_plane` org role
+and an org-bound access key limited to bundle polling, event ingestion, and heartbeat. Quickstart
+bridges that key into the shared volume. Enrollment remains useful for the second machine, which
+does not share a disk with the control plane and should not reuse the first machine's credential.
 
 - EnrollmentCode table in the house shape: id, org_id, label, token_hash (sha256), expires_at
   (~24h), consumed_at. Minted by an org admin (`airllm instances enroll <org> --name rack-7` or
@@ -247,10 +197,9 @@ nothing forces the choice yet. Decide before building; the plan below is otherwi
   the new machine.
 - `POST /v1/enroll {code}` (unauthenticated): hash lookup, reject expired or consumed, consume
   before any other work (the OIDC callback's single-use-first discipline). Then create the
-  instance identity: service account named after the label, membership in the code's org, and a
-  key of whichever type the decision above settles on (mint_management_key for the org-scoped
-  choice, mint_instance_key for the instance-scoped one). Respond once with {token,
-  bundle_public_key, org_id}. The
+  instance identity: service account named after the label, `data_plane` membership in the code's
+  org, and an org-bound access key with the exact data-plane permission set. Respond once with
+  {token, bundle_public_key, org_id}. The
   exchange trusts the transport exactly once: operator-chosen URL, short-TTL single-use code;
   after it, the pinned bundle key is the anchor (which is why the key can never come from
   bundle/latest: a key fetched over the channel it verifies verifies nothing).
@@ -265,8 +214,7 @@ nothing forces the choice yet. Decide before building; the plan below is otherwi
   folding init into serve since init no longer pre-writes dp credentials into a shared .env.
 - Dev loop: single-host init keeps provisioning the local dp directly (it has database access);
   enrollment earns its keep from the second data plane on, the machine that does not share a disk
-  with the control plane. Pairs with the Jenkins-style variant in
-  [self-minted instance access](#self-minted-instance-access-from-key-possession).
+  with the control plane. Pairs with the existing quickstart path.
 
 ## Audit redaction for secret-bearing tables
 
@@ -278,44 +226,6 @@ returns). The enabler is per-table redaction: let
 policy, then audit identity and connection changes, which are exactly the security events an
 auditor wants. The session sliding-refresh write would also need an actor story, since it happens
 before current_actor is set.
-
-## Roles over credential scopes
-
-Credential scopes shipped (2026-08-06), inverting the original roles-first blueprint: the verbs
-axis landed as restrictions on the credential (GitHub-PAT style) with roles deferred. What exists
-now: Scope StrEnum and pure allowed() in authz.py, require(Scope...) declared on every org, sync,
-and taxonomy route, a hygiene test in test_authz.py proving coverage (every route carries exactly
-one scope, is instance-scoped, or sits in an explicit PUBLIC list), ManagementKey.scopes as a nullable
-JSON column where NULL means the owning user's full authority, and `airllm tokens mint --scope`.
-Init mints GW_DATAPLANE_TOKEN with the sync scope only, the first kind-specific policy from
-[finish service accounts](#finish-service-accounts). A scope restricts, never expands: sessions
-carry all scopes, an explicit list correctly excludes scopes invented later. 403 for
-right-org-wrong-scope, 404 stays for wrong-org via owned_by.
-
-What remains when roles arrive, layered on the same machinery with no route changes:
-
-- Roles are named frozensets over the same Scope values in a GRANTS mapping (viewer, editor,
-  admin). OrgMembership grows a `role` column; verify_management_token and the cookie door already
-  fetch the membership row, so resolving role to scopes adds zero queries.
-- Effective authority becomes GRANTS[role] intersected with the credential's scopes; today's
-  behavior is the degenerate case where every member holds all scopes.
-- Session-only actions (mint keys) add a `via` requirement to require(), so a
-  stolen key cannot breed keys; claims minted from sessions already carry the s- token_id prefix.
-- Instance routes carry scopes too (orgs, users, tokens read/write, taxonomy:write, added
-  2026-08-06 for restricted instance credentials like a read-only auditor token); instance_admin
-  stays as the row-scope gate underneath. Roles could subsume the boolean as an instance-level
-  role when a second instance role is needed.
-- Per-resource sharing later grows allowed() a resource parameter or swaps its body for a
-  relationship engine (OpenFGA, SpiceDB) while route declarations survive intact. External engines
-  stay rejected until then: a network hop on the request path for a prototype that needs three
-  roles.
-- Delegation must attenuate (noted 2026-08-07): once users carry claims of their own (role-derived
-  scopes rather than today's implicit full authority), every path that hands authority onward must
-  cap the grant at a subset of the granter's claims: an admin minting a token for a user caps at
-  that user's claims, the device-flow approve caps the CLI key at the approving user's claims, and
-  any future self-serve mint caps at the presenting credential's claims. Today this holds
-  degenerately because every member holds all scopes and keys can only restrict; when roles land,
-  the subset check must become explicit at every mint site or a viewer could mint an editor token.
 
 ## Off-the-shelf rule engine for policy in evaluate()
 
@@ -343,36 +253,6 @@ The alternative that beats all of them while rules stay simple: compile bundle p
 Python closures at bundle load. Nanoseconds, no dependency, trivially testable. Reach for ZEN or
 CEL only when policy becomes user-authored or needs tables a human edits.
 
-## Scope down user listing
-
-GET /v1/users (noted 2026-08-07) returns every user on the instance, email and org memberships
-included, to any credential carrying users:read. The scope was added for restricted instance
-credentials (the read-only auditor token), but it makes user listing all-or-nothing: anything that
-legitimately needs to list some users (a future org-admin members page, support tooling scoped to
-one tenant) must be handed cross-tenant PII to get it. Fix direction: an org-scoped members
-endpoint under /org (the claims org's memberships only, backed by owned_by-style filtering), with
-instance-wide listing staying an instance-credential affair; when roles land, users:read on an
-org-scoped credential must mean "members of my org", never "everyone on the instance". Same
-review applies to the membership mutation routes, which are instance-only today and will need org-
-admin variants with the same tenant fence.
-
-## Simplify key creation
-
-Minting has accumulated parts (noted 2026-08-07, after mandatory labels and the CLI device flow
-landed). Two shapes of duplication:
-
-- The backing policy "may this user hold an org-scoped credential for this org" (instance_admin, or
-  membership in the org) now lives in three places: mint_user_token in routes/users.py, the
-  device-flow approve in routes/auth.py, and _cookie_claims in deps.py. One shared helper should
-  own it; when roles land, that helper is also where delegation attenuation
-  ([roles over credential scopes](#roles-over-credential-scopes)) gets enforced once instead of
-  three times.
-- Each credential kind carries a full set of moving parts: table, mint function in keys.py, In
-  action shape, MintedOut, create route, revoke route, and now retire_for_client. Making labels
-  mandatory touched every one of them. Worth collapsing toward fat-model mints (ManagementKey.mint,
-  InferenceKey.mint) with keys.py keeping only the shared token format and verify paths, so the
-  next field or the next credential kind is one file's change instead of five.
-
 ## Generate the CLI client from the OpenAPI spec
 
 Half exists (noted 2026-08-07): scripts/generate-api-models.sh dumps the spec and datamodel-codegen
@@ -386,23 +266,11 @@ over the spec (ours is unusually trustworthy input: security arrays and descript
 from route markers and pinned by hygiene tests). Keep hand-written: the typer UX layer, Col
 rendering, the login device flow, the profile keyring, and the envelope unwrap seam (payload/
 payload_rows stay the single unwrap point per CLAUDE.md). Costs to weigh: generator pinning and
-template churn, wiring the generated client to the two-door auth model (instance vs org token,
-env-then-profile resolution), and generated-code noise. A cheap intermediate step with most of the
+template churn, wiring the generated client to session and access-key authentication plus tenant
+boundaries, and generated-code noise. A cheap intermediate step with most of the
 value: keep the hand transport but make every command construct its body through the generated In
 models and parse responses through the generated Out models, so call sites type-check against the
 spec without new tooling.
-
-## Org id should be a minted unique id
-
-Org ids are caller-chosen today (`--org org-dev` at init, `OrgIn.id` on /instance/orgs) and double
-as the human handle. Every other record follows the server-mints-ids convention (u-, mt-, k-) with
-the caller-facing name split out; orgs should too: mint `o-<hex>` at creation, keep the display
-name (already derived from the admin email domain) as a mutable field, and add a slug if CLI
-ergonomics need a stable human handle. Cost: org_id is threaded through bundles, tokens, the data
-plane config (`data_plane.bundle.org`), and usage events, so the switch needs either slug-based
-references in config or a resolve step at data-plane sync. Pairs with the surrogate-key bullet of
-[soft delete](#soft-delete-on-postgres), which wants the same id/identity split for partial unique
-indexes.
 
 ## Credential policy
 
@@ -445,27 +313,3 @@ deployments and self-hosted vLLM instances still need an instance-wide Provider 
 base_url per workspace means Provider stops being instance-global (it is `name`-unique with no
 org_id today) and the bundle's provider list becomes workspace-scoped like the credential list.
 Deliberately out of scope of BYOK, which keeps the change to one new table and one new bundle field.
-
-## A new scope should not grant itself to keys that already exist
-
-Found while adding `provider-credentials:write` (see [BYOK](design/BYOK.md)). Scopes restrict rather
-than grant: a management key minted with no explicit scope list carries its user's full authority
-and picks up scopes invented later. So every key that existed before the scope was added silently
-gained it, and no operator was asked.
-
-That is tolerable for a scope that reads, and not for one that spends money: whoever holds
-`provider-credentials:write` can attach a provider key, which owns the upstream account the org's
-traffic is billed to and whose dashboard shows every request made with it.
-
-Two ways out, both authorization-model changes rather than per-feature ones: mark a scope as
-opt-in so unscoped keys never receive it, or require an explicit re-mint when a scope of that
-class is introduced. Pairs with [roles](#roles-between-org-member-and-org-admin), because a named
-role is the natural place to say which scopes a bundle carries.
-
-## Roles between org member and org admin
-
-Also found while adding provider credentials. Any org member holding `management-keys:write` can
-mint themselves a key, and an unscoped one carries every scope, so org membership is the whole gate
-on operations that differ enormously in privilege. `authz.py` already anticipates the fix in its
-docstring: roles as named bundles over the existing scopes. Until they exist, an operator who cares
-mints org keys with explicit scope lists and treats unscoped keys as admin credentials.

@@ -19,6 +19,10 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  AccessKeyIn,
+  AccessKeyMintedOut,
+  AccessKeyOut,
+  AccessKeyRevokedOut,
   ActivityOut,
   BundleLatestParams,
   BundleOut,
@@ -43,28 +47,21 @@ import type {
   InferenceKeyMintedOut,
   InferenceKeyOut,
   InferenceKeyRevokedOut,
-  InstanceKeyIn,
-  InstanceKeyMintedOut,
-  InstanceKeyOut,
-  InstanceKeyRevokedOut,
+  ListAccessKeysParams,
   ListActivityParams,
-  ListAllManagementKeysParams,
   ListDataPlanesParams,
   ListEventsParams,
   ListInstanceActivityParams,
   ListProviderCredentialsParams,
   ListUsersParams,
   LoginIn,
-  ManagementKeyIn,
-  ManagementKeyMintedOut,
-  ManagementKeyOut,
-  ManagementKeyRevokedOut,
   MeOut,
   MembershipOut,
   ModelIn,
   ModelOut,
   OrgCreate,
   OrgMemberOut,
+  OrgMembershipIn,
   OrgOut,
   OrgUpdate,
   PasswordChangeIn,
@@ -85,6 +82,7 @@ import type {
   UsageEventV1,
   UserOut,
   WorkspaceCreate,
+  WorkspaceMembershipIn,
   WorkspaceMembershipOut,
   WorkspaceOut,
   WorkspaceUpdate
@@ -116,6 +114,235 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   }
   return result;
 };
+
+export const getListAccessKeysUrl = (params?: ListAccessKeysParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/v1/access-keys?${stringifiedParams}` : `/v1/access-keys`
+}
+
+/**
+ * Requires `access-keys.read` authority at the route's tenant boundary.
+ * @summary List Access Keys
+ */
+export const listAccessKeys = async (params?: ListAccessKeysParams, options?: Parameters<typeof customFetch>[1]): Promise<AccessKeyOut[]> => {
+
+  return customFetch<AccessKeyOut[]>(getListAccessKeysUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListAccessKeysQueryKey = (params?: ListAccessKeysParams,) => {
+    return [
+    `/v1/access-keys`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListAccessKeysQueryOptions = <TData = Awaited<ReturnType<typeof listAccessKeys>>, TError = ErrorType<HTTPValidationError>>(params?: ListAccessKeysParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAccessKeys>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListAccessKeysQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAccessKeys>>> = ({ signal }) => listAccessKeys(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAccessKeys>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListAccessKeysQueryResult = NonNullable<Awaited<ReturnType<typeof listAccessKeys>>>
+export type ListAccessKeysQueryError = ErrorType<HTTPValidationError>
+
+
+/**
+ * @summary List Access Keys
+ */
+
+export function useListAccessKeys<TData = Awaited<ReturnType<typeof listAccessKeys>>, TError = ErrorType<HTTPValidationError>>(
+ params?: ListAccessKeysParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAccessKeys>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListAccessKeysQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateAccessKeyUrl = () => {
+
+
+
+
+  return `/v1/access-keys`
+}
+
+/**
+ * Requires `access-keys.issue` authority at the route's tenant boundary.
+ * @summary Create Access Key
+ */
+export const createAccessKey = async (accessKeyIn: AccessKeyIn, options?: Parameters<typeof customFetch>[1]): Promise<AccessKeyMintedOut> => {
+
+  return customFetch<AccessKeyMintedOut>(getCreateAccessKeyUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(accessKeyIn)
+  }
+);}
+
+
+
+
+
+export const getCreateAccessKeyMutationOptions = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAccessKey>>, TError,{data: BodyType<AccessKeyIn>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createAccessKey>>, TError,{data: BodyType<AccessKeyIn>}, TContext> => {
+
+const mutationKey = ['createAccessKey'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createAccessKey>>, {data: BodyType<AccessKeyIn>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createAccessKey(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateAccessKeyMutationResult = NonNullable<Awaited<ReturnType<typeof createAccessKey>>>
+    export type CreateAccessKeyMutationBody = BodyType<AccessKeyIn>
+    export type CreateAccessKeyMutationError = ErrorType<HTTPValidationError>
+
+    /**
+ * @summary Create Access Key
+ */
+export const useCreateAccessKey = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAccessKey>>, TError,{data: BodyType<AccessKeyIn>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createAccessKey>>,
+        TError,
+        {data: BodyType<AccessKeyIn>},
+        TContext
+      > => {
+      return useMutation(getCreateAccessKeyMutationOptions(options));
+    }
+
+export const getRevokeAccessKeyUrl = (keyId: string,) => {
+
+
+
+
+  return `/v1/access-keys/${keyId}`
+}
+
+/**
+ * Requires `access-keys.revoke` authority at the route's tenant boundary.
+ * @summary Revoke Access Key
+ */
+export const revokeAccessKey = async (keyId: string, options?: Parameters<typeof customFetch>[1]): Promise<AccessKeyRevokedOut> => {
+
+  return customFetch<AccessKeyRevokedOut>(getRevokeAccessKeyUrl(keyId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getRevokeAccessKeyMutationOptions = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof revokeAccessKey>>, TError,{keyId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof revokeAccessKey>>, TError,{keyId: string}, TContext> => {
+
+const mutationKey = ['revokeAccessKey'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof revokeAccessKey>>, {keyId: string}> = (props) => {
+          const {keyId} = props ?? {};
+
+          return  revokeAccessKey(keyId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RevokeAccessKeyMutationResult = NonNullable<Awaited<ReturnType<typeof revokeAccessKey>>>
+
+    export type RevokeAccessKeyMutationError = ErrorType<HTTPValidationError>
+
+    /**
+ * @summary Revoke Access Key
+ */
+export const useRevokeAccessKey = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof revokeAccessKey>>, TError,{keyId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof revokeAccessKey>>,
+        TError,
+        {keyId: string},
+        TContext
+      > => {
+      return useMutation(getRevokeAccessKeyMutationOptions(options));
+    }
 
 export const getLoginUrl = () => {
 
@@ -200,7 +427,7 @@ export const getSignupUrl = () => {
 /**
  * Open self-signup: an account holds no memberships, so it can see nothing until granted or until it founds an org.
  *
- * The exception is the first human on a deployment, who claims it and becomes its instance admin: a
+ * The exception is the first human on a deployment, who claims it and becomes its instance owner: a
  * fresh install has no other way to reach the instance endpoints, and /instance/oss/claim exists to
  * route that first visitor here. Every signup after the claim is an ordinary account. Anyone who can
  * reach an unclaimed deployment can therefore take it, which is the same trapdoor the quickstart
@@ -350,7 +577,7 @@ export const getMeUrl = () => {
 }
 
 /**
- * Requires an authenticated user; not org-scoped.
+ * Requires an authenticated human; access-key responses honor the credential boundary.
  * @summary Me
  */
 export const me = async ( options?: Parameters<typeof customFetch>[1]): Promise<MeOut> => {
@@ -428,7 +655,7 @@ export const getChangePasswordUrl = () => {
 }
 
 /**
- * Requires an authenticated user; not org-scoped.
+ * Requires an authenticated human; access-key responses honor the credential boundary.
  * @summary Change Password
  */
 export const changePassword = async (passwordChangeIn: PasswordChangeIn, options?: Parameters<typeof customFetch>[1]): Promise<PasswordChangedOut> => {
@@ -811,7 +1038,7 @@ export const getEnrollmentUrl = () => {
 /**
  * The acting user's standing: their orgs by name, and whether their one personal org exists.
  *
- * Requires an authenticated user; not org-scoped.
+ * Requires an authenticated human; access-key responses honor the credential boundary.
  * @summary Enrollment
  */
 export const enrollment = async ( options?: Parameters<typeof customFetch>[1]): Promise<EnrollOut> => {
@@ -896,7 +1123,7 @@ export const getCreatePersonalOrgUrl = () => {
  * are admin-provisioned. The slot survives losing the membership; only deleting the
  * personal org frees it.
  *
- * Requires an authenticated user; not org-scoped.
+ * Requires a browser session.
  * @summary Create Personal Org
  */
 export const createPersonalOrg = async (orgCreate: OrgCreate, options?: Parameters<typeof customFetch>[1]): Promise<OrgOut> => {
@@ -1057,9 +1284,8 @@ export const getQuickstartUrl = () => {
  * writes, so nothing is minted or leaked here; the endpoint only bridges a token the operator
  * has into the file the co-mounted data plane container waits for.
  *
- * Either control-plane key type can drive a data plane: a management key pins it to one org's
- * bundles, an instance key leaves the org to its config. The prefix check only catches a token
- * that could never work at all, an inference key or a paste accident.
+ * The accepted key authenticates a service account with the data-plane role and exactly the three
+ * runtime permissions. The prefix check catches an inference key or a paste accident early.
  *
  * No authentication required.
  * @summary Quickstart
@@ -1140,9 +1366,7 @@ export const getListDataPlanesUrl = (params?: ListDataPlanesParams,) => {
 }
 
 /**
- * Every data plane known to the instance; offline ones are kept as history and shown only with include_offline.
- *
- * Requires the `data-planes:read` scope.
+ * Requires `data-planes.read` authority at the route's tenant boundary.
  * @summary List Data Planes
  */
 export const listDataPlanes = async (params?: ListDataPlanesParams, options?: Parameters<typeof customFetch>[1]): Promise<DataPlaneInstanceOut[]> => {
@@ -1211,393 +1435,6 @@ export function useListDataPlanes<TData = Awaited<ReturnType<typeof listDataPlan
 
 
 
-export const getListInstanceKeysUrl = () => {
-
-
-
-
-  return `/v1/instance/instance-keys`
-}
-
-/**
- * Every instance key on the deployment; there is no org axis to filter on.
- *
- * Requires the `instance-keys:read` scope.
- * @summary List Instance Keys
- */
-export const listInstanceKeys = async ( options?: Parameters<typeof customFetch>[1]): Promise<InstanceKeyOut[]> => {
-
-  return customFetch<InstanceKeyOut[]>(getListInstanceKeysUrl(),
-  {
-    ...options,
-    method: 'GET'
-
-
-  }
-);}
-
-
-
-
-
-export const getListInstanceKeysQueryKey = () => {
-    return [
-    `/v1/instance/instance-keys`
-    ] as const;
-    }
-
-
-export const getListInstanceKeysQueryOptions = <TData = Awaited<ReturnType<typeof listInstanceKeys>>, TError = ErrorType<HTTPValidationError>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listInstanceKeys>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
-) => {
-
-const {query: queryOptions, request: requestOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getListInstanceKeysQueryKey();
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listInstanceKeys>>> = ({ signal }) => listInstanceKeys({ signal, ...requestOptions });
-
-
-
-
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listInstanceKeys>>, TError, TData> & { queryKey: QueryKey }
-}
-
-export type ListInstanceKeysQueryResult = NonNullable<Awaited<ReturnType<typeof listInstanceKeys>>>
-export type ListInstanceKeysQueryError = ErrorType<HTTPValidationError>
-
-
-/**
- * @summary List Instance Keys
- */
-
-export function useListInstanceKeys<TData = Awaited<ReturnType<typeof listInstanceKeys>>, TError = ErrorType<HTTPValidationError>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listInstanceKeys>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
-
- ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
-
-  const queryOptions = getListInstanceKeysQueryOptions(options)
-
-  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-
-export const getCreateInstanceKeyUrl = () => {
-
-
-
-
-  return `/v1/instance/instance-keys`
-}
-
-/**
- * Mint an instance key for the acting admin, or for another instance admin when user_id names one.
- *
- * Requires the `instance-keys:write` scope.
- * @summary Create Instance Key
- */
-export const createInstanceKey = async (instanceKeyIn: InstanceKeyIn, options?: Parameters<typeof customFetch>[1]): Promise<InstanceKeyMintedOut> => {
-
-  return customFetch<InstanceKeyMintedOut>(getCreateInstanceKeyUrl(),
-  {
-    ...options,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(instanceKeyIn)
-  }
-);}
-
-
-
-
-
-export const getCreateInstanceKeyMutationOptions = <TError = ErrorType<HTTPValidationError>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createInstanceKey>>, TError,{data: BodyType<InstanceKeyIn>}, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof createInstanceKey>>, TError,{data: BodyType<InstanceKeyIn>}, TContext> => {
-
-const mutationKey = ['createInstanceKey'];
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createInstanceKey>>, {data: BodyType<InstanceKeyIn>}> = (props) => {
-          const {data} = props ?? {};
-
-          return  createInstanceKey(data,requestOptions)
-        }
-
-
-
-
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type CreateInstanceKeyMutationResult = NonNullable<Awaited<ReturnType<typeof createInstanceKey>>>
-    export type CreateInstanceKeyMutationBody = BodyType<InstanceKeyIn>
-    export type CreateInstanceKeyMutationError = ErrorType<HTTPValidationError>
-
-    /**
- * @summary Create Instance Key
- */
-export const useCreateInstanceKey = <TError = ErrorType<HTTPValidationError>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createInstanceKey>>, TError,{data: BodyType<InstanceKeyIn>}, TContext>, request?: SecondParameter<typeof customFetch>}
- ): UseMutationResult<
-        Awaited<ReturnType<typeof createInstanceKey>>,
-        TError,
-        {data: BodyType<InstanceKeyIn>},
-        TContext
-      > => {
-      return useMutation(getCreateInstanceKeyMutationOptions(options));
-    }
-
-export const getRevokeInstanceKeyUrl = (keyId: string,) => {
-
-
-
-
-  return `/v1/instance/instance-keys/${keyId}`
-}
-
-/**
- * Requires the `instance-keys:write` scope.
- * @summary Revoke Instance Key
- */
-export const revokeInstanceKey = async (keyId: string, options?: Parameters<typeof customFetch>[1]): Promise<InstanceKeyRevokedOut> => {
-
-  return customFetch<InstanceKeyRevokedOut>(getRevokeInstanceKeyUrl(keyId),
-  {
-    ...options,
-    method: 'DELETE'
-
-
-  }
-);}
-
-
-
-
-
-export const getRevokeInstanceKeyMutationOptions = <TError = ErrorType<HTTPValidationError>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof revokeInstanceKey>>, TError,{keyId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof revokeInstanceKey>>, TError,{keyId: string}, TContext> => {
-
-const mutationKey = ['revokeInstanceKey'];
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof revokeInstanceKey>>, {keyId: string}> = (props) => {
-          const {keyId} = props ?? {};
-
-          return  revokeInstanceKey(keyId,requestOptions)
-        }
-
-
-
-
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type RevokeInstanceKeyMutationResult = NonNullable<Awaited<ReturnType<typeof revokeInstanceKey>>>
-
-    export type RevokeInstanceKeyMutationError = ErrorType<HTTPValidationError>
-
-    /**
- * @summary Revoke Instance Key
- */
-export const useRevokeInstanceKey = <TError = ErrorType<HTTPValidationError>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof revokeInstanceKey>>, TError,{keyId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
- ): UseMutationResult<
-        Awaited<ReturnType<typeof revokeInstanceKey>>,
-        TError,
-        {keyId: string},
-        TContext
-      > => {
-      return useMutation(getRevokeInstanceKeyMutationOptions(options));
-    }
-
-export const getListAllManagementKeysUrl = (params?: ListAllManagementKeysParams,) => {
-  const normalizedParams = new URLSearchParams();
-
-  Object.entries(params || {}).forEach(([key, value]) => {
-
-    if (value !== undefined) {
-      normalizedParams.append(key, value === null ? 'null' : String(value))
-    }
-  });
-
-  const stringifiedParams = normalizedParams.toString();
-
-  return stringifiedParams.length > 0 ? `/v1/instance/management-keys?${stringifiedParams}` : `/v1/instance/management-keys`
-}
-
-/**
- * Instance-wide oversight: every org's management keys, optionally filtered to one org.
- *
- * Requires the `management-keys:read` scope.
- * @summary List All Management Keys
- */
-export const listAllManagementKeys = async (params?: ListAllManagementKeysParams, options?: Parameters<typeof customFetch>[1]): Promise<ManagementKeyOut[]> => {
-
-  return customFetch<ManagementKeyOut[]>(getListAllManagementKeysUrl(params),
-  {
-    ...options,
-    method: 'GET'
-
-
-  }
-);}
-
-
-
-
-
-export const getListAllManagementKeysQueryKey = (params?: ListAllManagementKeysParams,) => {
-    return [
-    `/v1/instance/management-keys`, ...(params ? [params] : [])
-    ] as const;
-    }
-
-
-export const getListAllManagementKeysQueryOptions = <TData = Awaited<ReturnType<typeof listAllManagementKeys>>, TError = ErrorType<HTTPValidationError>>(params?: ListAllManagementKeysParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAllManagementKeys>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
-) => {
-
-const {query: queryOptions, request: requestOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getListAllManagementKeysQueryKey(params);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAllManagementKeys>>> = ({ signal }) => listAllManagementKeys(params, { signal, ...requestOptions });
-
-
-
-
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAllManagementKeys>>, TError, TData> & { queryKey: QueryKey }
-}
-
-export type ListAllManagementKeysQueryResult = NonNullable<Awaited<ReturnType<typeof listAllManagementKeys>>>
-export type ListAllManagementKeysQueryError = ErrorType<HTTPValidationError>
-
-
-/**
- * @summary List All Management Keys
- */
-
-export function useListAllManagementKeys<TData = Awaited<ReturnType<typeof listAllManagementKeys>>, TError = ErrorType<HTTPValidationError>>(
- params?: ListAllManagementKeysParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAllManagementKeys>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
-
- ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
-
-  const queryOptions = getListAllManagementKeysQueryOptions(params,options)
-
-  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-
-export const getRevokeAnyManagementKeyUrl = (keyId: string,) => {
-
-
-
-
-  return `/v1/instance/management-keys/${keyId}`
-}
-
-/**
- * Revoke any org's management key; the org-scoped route reaches only its own.
- *
- * Requires the `management-keys:write` scope.
- * @summary Revoke Any Management Key
- */
-export const revokeAnyManagementKey = async (keyId: string, options?: Parameters<typeof customFetch>[1]): Promise<ManagementKeyRevokedOut> => {
-
-  return customFetch<ManagementKeyRevokedOut>(getRevokeAnyManagementKeyUrl(keyId),
-  {
-    ...options,
-    method: 'DELETE'
-
-
-  }
-);}
-
-
-
-
-
-export const getRevokeAnyManagementKeyMutationOptions = <TError = ErrorType<HTTPValidationError>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof revokeAnyManagementKey>>, TError,{keyId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof revokeAnyManagementKey>>, TError,{keyId: string}, TContext> => {
-
-const mutationKey = ['revokeAnyManagementKey'];
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof revokeAnyManagementKey>>, {keyId: string}> = (props) => {
-          const {keyId} = props ?? {};
-
-          return  revokeAnyManagementKey(keyId,requestOptions)
-        }
-
-
-
-
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type RevokeAnyManagementKeyMutationResult = NonNullable<Awaited<ReturnType<typeof revokeAnyManagementKey>>>
-
-    export type RevokeAnyManagementKeyMutationError = ErrorType<HTTPValidationError>
-
-    /**
- * @summary Revoke Any Management Key
- */
-export const useRevokeAnyManagementKey = <TError = ErrorType<HTTPValidationError>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof revokeAnyManagementKey>>, TError,{keyId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
- ): UseMutationResult<
-        Awaited<ReturnType<typeof revokeAnyManagementKey>>,
-        TError,
-        {keyId: string},
-        TContext
-      > => {
-      return useMutation(getRevokeAnyManagementKeyMutationOptions(options));
-    }
-
 export const getListInstanceActivityUrl = (params?: ListInstanceActivityParams,) => {
   const normalizedParams = new URLSearchParams();
 
@@ -1614,9 +1451,7 @@ export const getListInstanceActivityUrl = (params?: ListInstanceActivityParams,)
 }
 
 /**
- * What changed anywhere on the instance, newest first; the org-scoped view of the same trail is /org/activity.
- *
- * Requires the `activity:read` scope.
+ * Requires `audit.read` authority at the route's tenant boundary.
  * @summary List Instance Activity
  */
 export const listInstanceActivity = async (params?: ListInstanceActivityParams, options?: Parameters<typeof customFetch>[1]): Promise<ActivityOut[]> => {
@@ -1694,7 +1529,7 @@ export const getCreateServiceAccountUrl = () => {
 }
 
 /**
- * Requires the `users:write` scope.
+ * Requires `principals.manage` authority at the route's tenant boundary.
  * @summary Create Service Account
  */
 export const createServiceAccount = async (serviceAccountIn: ServiceAccountIn, options?: Parameters<typeof customFetch>[1]): Promise<UserOut> => {
@@ -1766,7 +1601,7 @@ export const getGetUserUrl = (userId: string,) => {
 }
 
 /**
- * Requires the `users:read` scope.
+ * Requires `principals.read` authority at the route's tenant boundary.
  * @summary Get User
  */
 export const getUser = async (userId: string, options?: Parameters<typeof customFetch>[1]): Promise<UserOut> => {
@@ -1844,13 +1679,13 @@ export const getDeleteUserUrl = (userId: string,) => {
 }
 
 /**
- * Delete a user with the credentials that are theirs alone: identities, sessions, management and instance keys.
+ * Delete a user with the credentials that are theirs alone: identities, sessions, and access keys.
  *
  * Everything else a user touches outlives them, so it blocks the delete instead of following it:
  * a membership is the org's decision to revisit, a personal org is a tenant, and an inference key
  * belongs to its workspace and merely records who minted it.
  *
- * Requires the `users:write` scope.
+ * Requires `principals.manage` authority at the route's tenant boundary.
  * @summary Delete User
  */
 export const deleteUser = async (userId: string, options?: Parameters<typeof customFetch>[1]): Promise<DeletedOutUUID> => {
@@ -1931,7 +1766,7 @@ export const getListUsersUrl = (params?: ListUsersParams,) => {
 /**
  * Every principal on the instance, or one kind of them: service_account splits the machines from the humans.
  *
- * Requires the `users:read` scope.
+ * Requires `principals.read` authority at the route's tenant boundary.
  * @summary List Users
  */
 export const listUsers = async (params?: ListUsersParams, options?: Parameters<typeof customFetch>[1]): Promise<UserOut[]> => {
@@ -2000,78 +1835,6 @@ export function useListUsers<TData = Awaited<ReturnType<typeof listUsers>>, TErr
 
 
 
-export const getCreateOrgUrl = () => {
-
-
-
-
-  return `/v1/orgs`
-}
-
-/**
- * Requires the `orgs:create` scope.
- * @summary Create Org
- */
-export const createOrg = async (orgCreate: OrgCreate, options?: Parameters<typeof customFetch>[1]): Promise<OrgOut> => {
-
-  return customFetch<OrgOut>(getCreateOrgUrl(),
-  {
-    ...options,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(orgCreate)
-  }
-);}
-
-
-
-
-
-export const getCreateOrgMutationOptions = <TError = ErrorType<HTTPValidationError>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createOrg>>, TError,{data: BodyType<OrgCreate>}, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof createOrg>>, TError,{data: BodyType<OrgCreate>}, TContext> => {
-
-const mutationKey = ['createOrg'];
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createOrg>>, {data: BodyType<OrgCreate>}> = (props) => {
-          const {data} = props ?? {};
-
-          return  createOrg(data,requestOptions)
-        }
-
-
-
-
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type CreateOrgMutationResult = NonNullable<Awaited<ReturnType<typeof createOrg>>>
-    export type CreateOrgMutationBody = BodyType<OrgCreate>
-    export type CreateOrgMutationError = ErrorType<HTTPValidationError>
-
-    /**
- * @summary Create Org
- */
-export const useCreateOrg = <TError = ErrorType<HTTPValidationError>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createOrg>>, TError,{data: BodyType<OrgCreate>}, TContext>, request?: SecondParameter<typeof customFetch>}
- ): UseMutationResult<
-        Awaited<ReturnType<typeof createOrg>>,
-        TError,
-        {data: BodyType<OrgCreate>},
-        TContext
-      > => {
-      return useMutation(getCreateOrgMutationOptions(options));
-    }
-
 export const getListOrgsUrl = () => {
 
 
@@ -2081,7 +1844,7 @@ export const getListOrgsUrl = () => {
 }
 
 /**
- * Requires the `orgs:read` scope.
+ * Requires `organizations.read` authority at the route's tenant boundary.
  * @summary List Orgs
  */
 export const listOrgs = async ( options?: Parameters<typeof customFetch>[1]): Promise<OrgOut[]> => {
@@ -2150,6 +1913,78 @@ export function useListOrgs<TData = Awaited<ReturnType<typeof listOrgs>>, TError
 
 
 
+export const getCreateOrgUrl = () => {
+
+
+
+
+  return `/v1/orgs`
+}
+
+/**
+ * Requires `organizations.create` authority at the route's tenant boundary.
+ * @summary Create Org
+ */
+export const createOrg = async (orgCreate: OrgCreate, options?: Parameters<typeof customFetch>[1]): Promise<OrgOut> => {
+
+  return customFetch<OrgOut>(getCreateOrgUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(orgCreate)
+  }
+);}
+
+
+
+
+
+export const getCreateOrgMutationOptions = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createOrg>>, TError,{data: BodyType<OrgCreate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createOrg>>, TError,{data: BodyType<OrgCreate>}, TContext> => {
+
+const mutationKey = ['createOrg'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createOrg>>, {data: BodyType<OrgCreate>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createOrg(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateOrgMutationResult = NonNullable<Awaited<ReturnType<typeof createOrg>>>
+    export type CreateOrgMutationBody = BodyType<OrgCreate>
+    export type CreateOrgMutationError = ErrorType<HTTPValidationError>
+
+    /**
+ * @summary Create Org
+ */
+export const useCreateOrg = <TError = ErrorType<HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createOrg>>, TError,{data: BodyType<OrgCreate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createOrg>>,
+        TError,
+        {data: BodyType<OrgCreate>},
+        TContext
+      > => {
+      return useMutation(getCreateOrgMutationOptions(options));
+    }
+
 export const getUpdateOrgUrl = (orgId: string,) => {
 
 
@@ -2159,7 +1994,7 @@ export const getUpdateOrgUrl = (orgId: string,) => {
 }
 
 /**
- * Requires the `orgs:write` scope.
+ * Requires `organizations.update` authority at the route's tenant boundary.
  * @summary Update Org
  */
 export const updateOrg = async (orgId: string,
@@ -2232,7 +2067,7 @@ export const getGetOrgUrl = (orgId: string,) => {
 }
 
 /**
- * Requires the `orgs:read` scope.
+ * Requires `organizations.read` authority at the route's tenant boundary.
  * @summary Get Org
  */
 export const getOrg = async (orgId: string, options?: Parameters<typeof customFetch>[1]): Promise<OrgOut> => {
@@ -2316,7 +2151,7 @@ export const getDeleteOrgUrl = (orgId: string,) => {
  * Its usage events stay. They are history keyed by ids, not rows belonging to the org, so they
  * outlive it the way the audit trail does rather than standing in the way of the delete.
  *
- * Requires the `orgs:delete` scope.
+ * Requires `organizations.delete` authority at the route's tenant boundary.
  * @summary Delete Org
  */
 export const deleteOrg = async (orgId: string, options?: Parameters<typeof customFetch>[1]): Promise<DeletedOutUUID> => {
@@ -2388,13 +2223,13 @@ export const getCreateWorkspaceUrl = () => {
 }
 
 /**
- * The creator becomes the first member when they hold an org membership; an instance admin
+ * The creator becomes the first member when they hold an org membership; an instance owner
  * acting on an org they never joined creates it member-less and relies on their bypass.
  *
  * A caller who names no slug gets one derived from the name; one who does gets a 409 when the
  * org already holds it, rather than a silently numbered variant of what they asked for.
  *
- * Requires the `workspaces:create` scope.
+ * Requires `workspaces.create` authority at the route's tenant boundary.
  * @summary Create Workspace
  */
 export const createWorkspace = async (workspaceCreate: WorkspaceCreate, options?: Parameters<typeof customFetch>[1]): Promise<WorkspaceOut> => {
@@ -2466,7 +2301,7 @@ export const getListWorkspacesUrl = () => {
 }
 
 /**
- * Requires the `workspaces:read` scope.
+ * Requires `workspaces.read` authority at the route's tenant boundary.
  * @summary List Workspaces
  */
 export const listWorkspaces = async ( options?: Parameters<typeof customFetch>[1]): Promise<WorkspaceOut[]> => {
@@ -2544,7 +2379,7 @@ export const getGetWorkspaceUrl = (workspaceRef: string,) => {
 }
 
 /**
- * Requires the `workspaces:read` scope.
+ * Requires `workspaces.read` authority at the route's tenant boundary.
  * @summary Get Workspace
  */
 export const getWorkspace = async (workspaceRef: string, options?: Parameters<typeof customFetch>[1]): Promise<WorkspaceOut> => {
@@ -2625,7 +2460,7 @@ export const getDeleteWorkspaceUrl = (workspaceRef: string,) => {
  * Delete a workspace with its inference keys, its members, and the provider credentials it brought;
  * the usage it recorded stays, as it does for an org.
  *
- * Requires the `workspaces:delete` scope.
+ * Requires `workspaces.delete` authority at the route's tenant boundary.
  * @summary Delete Workspace
  */
 export const deleteWorkspace = async (workspaceRef: string, options?: Parameters<typeof customFetch>[1]): Promise<DeletedOutUUID> => {
@@ -2697,7 +2532,7 @@ export const getUpdateWorkspaceUrl = (workspaceRef: string,) => {
 }
 
 /**
- * Requires the `workspaces:write` scope.
+ * Requires `workspaces.update` authority at the route's tenant boundary.
  * @summary Update Workspace
  */
 export const updateWorkspace = async (workspaceRef: string,
@@ -2770,7 +2605,7 @@ export const getListMembersUrl = (workspaceRef: string,) => {
 }
 
 /**
- * Requires the `workspaces:read` scope.
+ * Requires `members.read` authority at the route's tenant boundary.
  * @summary List Members
  */
 export const listMembers = async (workspaceRef: string, options?: Parameters<typeof customFetch>[1]): Promise<WorkspaceMembershipOut[]> => {
@@ -2851,18 +2686,19 @@ export const getAddMemberUrl = (workspaceRef: string,
 /**
  * The composite foreign keys are the enforcement; the 409 turns what they would reject into a client error.
  *
- * Requires the `workspaces:write` scope.
+ * Requires `members.manage` authority at the route's tenant boundary.
  * @summary Add Member
  */
 export const addMember = async (workspaceRef: string,
-    userId: string, options?: Parameters<typeof customFetch>[1]): Promise<WorkspaceMembershipOut> => {
+    userId: string,
+    workspaceMembershipIn: WorkspaceMembershipIn, options?: Parameters<typeof customFetch>[1]): Promise<WorkspaceMembershipOut> => {
 
   return customFetch<WorkspaceMembershipOut>(getAddMemberUrl(workspaceRef,userId),
   {
     ...options,
-    method: 'PUT'
-
-
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(workspaceMembershipIn)
   }
 );}
 
@@ -2871,8 +2707,8 @@ export const addMember = async (workspaceRef: string,
 
 
 export const getAddMemberMutationOptions = <TError = ErrorType<HTTPValidationError>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addMember>>, TError,{workspaceRef: string;userId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof addMember>>, TError,{workspaceRef: string;userId: string}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addMember>>, TError,{workspaceRef: string;userId: string;data: BodyType<WorkspaceMembershipIn>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof addMember>>, TError,{workspaceRef: string;userId: string;data: BodyType<WorkspaceMembershipIn>}, TContext> => {
 
 const mutationKey = ['addMember'];
 const {mutation: mutationOptions, request: requestOptions} = options ?
@@ -2884,10 +2720,10 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof addMember>>, {workspaceRef: string;userId: string}> = (props) => {
-          const {workspaceRef,userId} = props ?? {};
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof addMember>>, {workspaceRef: string;userId: string;data: BodyType<WorkspaceMembershipIn>}> = (props) => {
+          const {workspaceRef,userId,data} = props ?? {};
 
-          return  addMember(workspaceRef,userId,requestOptions)
+          return  addMember(workspaceRef,userId,data,requestOptions)
         }
 
 
@@ -2898,18 +2734,18 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type AddMemberMutationResult = NonNullable<Awaited<ReturnType<typeof addMember>>>
-
+    export type AddMemberMutationBody = BodyType<WorkspaceMembershipIn>
     export type AddMemberMutationError = ErrorType<HTTPValidationError>
 
     /**
  * @summary Add Member
  */
 export const useAddMember = <TError = ErrorType<HTTPValidationError>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addMember>>, TError,{workspaceRef: string;userId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addMember>>, TError,{workspaceRef: string;userId: string;data: BodyType<WorkspaceMembershipIn>}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof addMember>>,
         TError,
-        {workspaceRef: string;userId: string},
+        {workspaceRef: string;userId: string;data: BodyType<WorkspaceMembershipIn>},
         TContext
       > => {
       return useMutation(getAddMemberMutationOptions(options));
@@ -2925,7 +2761,7 @@ export const getRemoveMemberUrl = (workspaceRef: string,
 }
 
 /**
- * Requires the `workspaces:write` scope.
+ * Requires `members.manage` authority at the route's tenant boundary.
  * @summary Remove Member
  */
 export const removeMember = async (workspaceRef: string,
@@ -2998,7 +2834,7 @@ export const getCreateInferenceKeyUrl = (workspaceRef: string,) => {
 }
 
 /**
- * Requires the `inference-keys:write` scope.
+ * Requires `inference-keys.manage` authority at the route's tenant boundary.
  * @summary Create Inference Key
  */
 export const createInferenceKey = async (workspaceRef: string,
@@ -3071,7 +2907,7 @@ export const getListInferenceKeysUrl = (workspaceRef: string,) => {
 }
 
 /**
- * Requires the `inference-keys:read` scope.
+ * Requires `inference-keys.read` authority at the route's tenant boundary.
  * @summary List Inference Keys
  */
 export const listInferenceKeys = async (workspaceRef: string, options?: Parameters<typeof customFetch>[1]): Promise<InferenceKeyOut[]> => {
@@ -3150,7 +2986,7 @@ export const getRevokeInferenceKeyUrl = (workspaceRef: string,
 }
 
 /**
- * Requires the `inference-keys:write` scope.
+ * Requires `inference-keys.manage` authority at the route's tenant boundary.
  * @summary Revoke Inference Key
  */
 export const revokeInferenceKey = async (workspaceRef: string,
@@ -3225,15 +3061,15 @@ export const getCreateProviderCredentialUrl = () => {
 /**
  * Bring a provider key for this org, or for one workspace in it.
  *
- * A workspace-scoped key needs membership in that workspace, the way minting an inference key
- * there does: whoever supplies the key owns the account its traffic is billed to, and that
- * account's dashboard shows every request made with it.
+ * Workspace writes require provider-credential management authority at that workspace: whoever
+ * supplies the key owns the account its traffic is billed to, and that account's dashboard shows
+ * every request made with it.
  *
  * The row is written before the value so a crash between the two leaves a credential with nothing
  * behind it, which the request path already handles by skipping the candidate. The other order
  * would leave a value in the store with no row to delete it by.
  *
- * Requires the `provider-credentials:write` scope.
+ * Requires `provider-credentials.manage` authority at the route's tenant boundary.
  * @summary Create Provider Credential
  */
 export const createProviderCredential = async (providerCredentialIn: ProviderCredentialIn, options?: Parameters<typeof customFetch>[1]): Promise<ProviderCredentialOut> => {
@@ -3314,7 +3150,7 @@ export const getListProviderCredentialsUrl = (params?: ListProviderCredentialsPa
 /**
  * The org's credentials in the order the data plane tries them, optionally narrowed to one workspace.
  *
- * Requires the `provider-credentials:read` scope.
+ * Requires `provider-credentials.read` authority at the route's tenant boundary.
  * @summary List Provider Credentials
  */
 export const listProviderCredentials = async (params?: ListProviderCredentialsParams, options?: Parameters<typeof customFetch>[1]): Promise<ProviderCredentialOut[]> => {
@@ -3392,7 +3228,7 @@ export const getGetProviderCredentialUrl = (credentialId: string,) => {
 }
 
 /**
- * Requires the `provider-credentials:read` scope.
+ * Requires `provider-credentials.read` authority at the route's tenant boundary.
  * @summary Get Provider Credential
  */
 export const getProviderCredential = async (credentialId: string, options?: Parameters<typeof customFetch>[1]): Promise<ProviderCredentialOut> => {
@@ -3473,7 +3309,7 @@ export const getUpdateProviderCredentialUrl = (credentialId: string,) => {
  * Priority and enabled are the whole mutable surface: everything else names the secret, so
  * changing it would orphan the value rather than move it.
  *
- * Requires the `provider-credentials:write` scope.
+ * Requires `provider-credentials.manage` authority at the route's tenant boundary.
  * @summary Update Provider Credential
  */
 export const updateProviderCredential = async (credentialId: string,
@@ -3549,7 +3385,7 @@ export const getDeleteProviderCredentialUrl = (credentialId: string,) => {
  * Deleting one credential is the same operation a workspace or org delete performs in bulk, so
  * it runs through the same method rather than a second copy of the ordering rule.
  *
- * Requires the `provider-credentials:write` scope.
+ * Requires `provider-credentials.manage` authority at the route's tenant boundary.
  * @summary Delete Provider Credential
  */
 export const deleteProviderCredential = async (credentialId: string, options?: Parameters<typeof customFetch>[1]): Promise<DeletedOutUUID> => {
@@ -3624,7 +3460,7 @@ export const getRotateProviderCredentialUrl = (credentialId: string,) => {
  * A rotation is the same row and the same ref with a new value, so the bundle diff is one
  * integer and every data plane refetches within a poll instead of waiting out a cache TTL.
  *
- * Requires the `provider-credentials:write` scope.
+ * Requires `provider-credentials.manage` authority at the route's tenant boundary.
  * @summary Rotate Provider Credential
  */
 export const rotateProviderCredential = async (credentialId: string,
@@ -3699,7 +3535,7 @@ export const getListOrgUsersUrl = () => {
 /**
  * The acting org's members; an org credential sees its own roster, never the instance's.
  *
- * Requires the `users:read` scope.
+ * Requires `members.read` authority at the route's tenant boundary.
  * @summary List Org Users
  */
 export const listOrgUsers = async ( options?: Parameters<typeof customFetch>[1]): Promise<OrgMemberOut[]> => {
@@ -3779,17 +3615,18 @@ export const getAddOrgUserUrl = (userId: string,) => {
 /**
  * Idempotent: the org comes from the credential, so membership can only ever be granted in scope.
  *
- * Requires the `users:write` scope.
+ * Requires `members.manage` authority at the route's tenant boundary.
  * @summary Add Org User
  */
-export const addOrgUser = async (userId: string, options?: Parameters<typeof customFetch>[1]): Promise<MembershipOut> => {
+export const addOrgUser = async (userId: string,
+    orgMembershipIn: OrgMembershipIn, options?: Parameters<typeof customFetch>[1]): Promise<MembershipOut> => {
 
   return customFetch<MembershipOut>(getAddOrgUserUrl(userId),
   {
     ...options,
-    method: 'PUT'
-
-
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(orgMembershipIn)
   }
 );}
 
@@ -3798,8 +3635,8 @@ export const addOrgUser = async (userId: string, options?: Parameters<typeof cus
 
 
 export const getAddOrgUserMutationOptions = <TError = ErrorType<HTTPValidationError>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addOrgUser>>, TError,{userId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof addOrgUser>>, TError,{userId: string}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addOrgUser>>, TError,{userId: string;data: BodyType<OrgMembershipIn>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof addOrgUser>>, TError,{userId: string;data: BodyType<OrgMembershipIn>}, TContext> => {
 
 const mutationKey = ['addOrgUser'];
 const {mutation: mutationOptions, request: requestOptions} = options ?
@@ -3811,10 +3648,10 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof addOrgUser>>, {userId: string}> = (props) => {
-          const {userId} = props ?? {};
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof addOrgUser>>, {userId: string;data: BodyType<OrgMembershipIn>}> = (props) => {
+          const {userId,data} = props ?? {};
 
-          return  addOrgUser(userId,requestOptions)
+          return  addOrgUser(userId,data,requestOptions)
         }
 
 
@@ -3825,18 +3662,18 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type AddOrgUserMutationResult = NonNullable<Awaited<ReturnType<typeof addOrgUser>>>
-
+    export type AddOrgUserMutationBody = BodyType<OrgMembershipIn>
     export type AddOrgUserMutationError = ErrorType<HTTPValidationError>
 
     /**
  * @summary Add Org User
  */
 export const useAddOrgUser = <TError = ErrorType<HTTPValidationError>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addOrgUser>>, TError,{userId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addOrgUser>>, TError,{userId: string;data: BodyType<OrgMembershipIn>}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof addOrgUser>>,
         TError,
-        {userId: string},
+        {userId: string;data: BodyType<OrgMembershipIn>},
         TContext
       > => {
       return useMutation(getAddOrgUserMutationOptions(options));
@@ -3853,7 +3690,7 @@ export const getRemoveOrgUserUrl = (userId: string,) => {
 /**
  * Removing the membership cascades the user out of the org's workspaces.
  *
- * Requires the `users:write` scope.
+ * Requires `members.manage` authority at the route's tenant boundary.
  * @summary Remove Org User
  */
 export const removeOrgUser = async (userId: string, options?: Parameters<typeof customFetch>[1]): Promise<DeletedOutStr> => {
@@ -3916,230 +3753,6 @@ export const useRemoveOrgUser = <TError = ErrorType<HTTPValidationError>,
       return useMutation(getRemoveOrgUserMutationOptions(options));
     }
 
-export const getListManagementKeysUrl = () => {
-
-
-
-
-  return `/v1/org/management-keys`
-}
-
-/**
- * Requires the `management-keys:read` scope.
- * @summary List Management Keys
- */
-export const listManagementKeys = async ( options?: Parameters<typeof customFetch>[1]): Promise<ManagementKeyOut[]> => {
-
-  return customFetch<ManagementKeyOut[]>(getListManagementKeysUrl(),
-  {
-    ...options,
-    method: 'GET'
-
-
-  }
-);}
-
-
-
-
-
-export const getListManagementKeysQueryKey = () => {
-    return [
-    `/v1/org/management-keys`
-    ] as const;
-    }
-
-
-export const getListManagementKeysQueryOptions = <TData = Awaited<ReturnType<typeof listManagementKeys>>, TError = ErrorType<HTTPValidationError>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listManagementKeys>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
-) => {
-
-const {query: queryOptions, request: requestOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getListManagementKeysQueryKey();
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listManagementKeys>>> = ({ signal }) => listManagementKeys({ signal, ...requestOptions });
-
-
-
-
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listManagementKeys>>, TError, TData> & { queryKey: QueryKey }
-}
-
-export type ListManagementKeysQueryResult = NonNullable<Awaited<ReturnType<typeof listManagementKeys>>>
-export type ListManagementKeysQueryError = ErrorType<HTTPValidationError>
-
-
-/**
- * @summary List Management Keys
- */
-
-export function useListManagementKeys<TData = Awaited<ReturnType<typeof listManagementKeys>>, TError = ErrorType<HTTPValidationError>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listManagementKeys>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
-
- ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
-
-  const queryOptions = getListManagementKeysQueryOptions(options)
-
-  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-
-export const getMintOrgManagementKeyUrl = () => {
-
-
-
-
-  return `/v1/org/management-keys`
-}
-
-/**
- * Mint an org-scoped key for the acting user, or for another org member when user_id names one.
- *
- * Requires the `management-keys:write` scope.
- * @summary Mint Org Management Key
- */
-export const mintOrgManagementKey = async (managementKeyIn: ManagementKeyIn, options?: Parameters<typeof customFetch>[1]): Promise<ManagementKeyMintedOut> => {
-
-  return customFetch<ManagementKeyMintedOut>(getMintOrgManagementKeyUrl(),
-  {
-    ...options,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(managementKeyIn)
-  }
-);}
-
-
-
-
-
-export const getMintOrgManagementKeyMutationOptions = <TError = ErrorType<HTTPValidationError>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof mintOrgManagementKey>>, TError,{data: BodyType<ManagementKeyIn>}, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof mintOrgManagementKey>>, TError,{data: BodyType<ManagementKeyIn>}, TContext> => {
-
-const mutationKey = ['mintOrgManagementKey'];
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof mintOrgManagementKey>>, {data: BodyType<ManagementKeyIn>}> = (props) => {
-          const {data} = props ?? {};
-
-          return  mintOrgManagementKey(data,requestOptions)
-        }
-
-
-
-
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type MintOrgManagementKeyMutationResult = NonNullable<Awaited<ReturnType<typeof mintOrgManagementKey>>>
-    export type MintOrgManagementKeyMutationBody = BodyType<ManagementKeyIn>
-    export type MintOrgManagementKeyMutationError = ErrorType<HTTPValidationError>
-
-    /**
- * @summary Mint Org Management Key
- */
-export const useMintOrgManagementKey = <TError = ErrorType<HTTPValidationError>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof mintOrgManagementKey>>, TError,{data: BodyType<ManagementKeyIn>}, TContext>, request?: SecondParameter<typeof customFetch>}
- ): UseMutationResult<
-        Awaited<ReturnType<typeof mintOrgManagementKey>>,
-        TError,
-        {data: BodyType<ManagementKeyIn>},
-        TContext
-      > => {
-      return useMutation(getMintOrgManagementKeyMutationOptions(options));
-    }
-
-export const getRevokeManagementKeyUrl = (keyId: string,) => {
-
-
-
-
-  return `/v1/org/management-keys/${keyId}`
-}
-
-/**
- * Requires the `management-keys:write` scope.
- * @summary Revoke Management Key
- */
-export const revokeManagementKey = async (keyId: string, options?: Parameters<typeof customFetch>[1]): Promise<ManagementKeyRevokedOut> => {
-
-  return customFetch<ManagementKeyRevokedOut>(getRevokeManagementKeyUrl(keyId),
-  {
-    ...options,
-    method: 'DELETE'
-
-
-  }
-);}
-
-
-
-
-
-export const getRevokeManagementKeyMutationOptions = <TError = ErrorType<HTTPValidationError>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof revokeManagementKey>>, TError,{keyId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof revokeManagementKey>>, TError,{keyId: string}, TContext> => {
-
-const mutationKey = ['revokeManagementKey'];
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof revokeManagementKey>>, {keyId: string}> = (props) => {
-          const {keyId} = props ?? {};
-
-          return  revokeManagementKey(keyId,requestOptions)
-        }
-
-
-
-
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type RevokeManagementKeyMutationResult = NonNullable<Awaited<ReturnType<typeof revokeManagementKey>>>
-
-    export type RevokeManagementKeyMutationError = ErrorType<HTTPValidationError>
-
-    /**
- * @summary Revoke Management Key
- */
-export const useRevokeManagementKey = <TError = ErrorType<HTTPValidationError>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof revokeManagementKey>>, TError,{keyId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
- ): UseMutationResult<
-        Awaited<ReturnType<typeof revokeManagementKey>>,
-        TError,
-        {keyId: string},
-        TContext
-      > => {
-      return useMutation(getRevokeManagementKeyMutationOptions(options));
-    }
-
 export const getCompileBundleUrl = () => {
 
 
@@ -4149,7 +3762,7 @@ export const getCompileBundleUrl = () => {
 }
 
 /**
- * Requires the `bundles:write` scope.
+ * Requires `bundles.publish` authority at the route's tenant boundary.
  * @summary Compile Bundle
  */
 export const compileBundle = async ( options?: Parameters<typeof customFetch>[1]): Promise<BundleOut> => {
@@ -4221,7 +3834,7 @@ export const getListBundlesUrl = () => {
 }
 
 /**
- * Requires the `bundles:read` scope.
+ * Requires `bundles.read` authority at the route's tenant boundary.
  * @summary List Bundles
  */
 export const listBundles = async ( options?: Parameters<typeof customFetch>[1]): Promise<BundleOut[]> => {
@@ -4306,7 +3919,7 @@ export const getListEventsUrl = (params?: ListEventsParams,) => {
 }
 
 /**
- * Requires the `events:read` scope.
+ * Requires `usage.read` authority at the route's tenant boundary.
  * @summary List Events
  */
 export const listEvents = async (params?: ListEventsParams, options?: Parameters<typeof customFetch>[1]): Promise<UsageEventOut[]> => {
@@ -4393,7 +4006,7 @@ export const getListActivityUrl = (params?: ListActivityParams,) => {
 /**
  * What changed in this org, newest first: the audit trail the write triggers already record.
  *
- * Requires the `activity:read` scope.
+ * Requires `audit.read` authority at the route's tenant boundary.
  * @summary List Activity
  */
 export const listActivity = async (params?: ListActivityParams, options?: Parameters<typeof customFetch>[1]): Promise<ActivityOut[]> => {
@@ -4478,7 +4091,7 @@ export const getBundleLatestUrl = (params?: BundleLatestParams,) => {
 }
 
 /**
- * Requires the `sync` scope.
+ * Requires `bundles.read` authority at the route's tenant boundary.
  * @summary Bundle Latest
  */
 export const bundleLatest = async (params?: BundleLatestParams, options?: Parameters<typeof customFetch>[1]): Promise<SignedBundle> => {
@@ -4565,7 +4178,7 @@ export const getIngestEventsUrl = () => {
  * ingested counts what RETURNING hands back, which under DO NOTHING is exactly the rows written,
  * so a replay reports zero.
  *
- * Requires the `sync` scope.
+ * Requires `usage.ingest` authority at the route's tenant boundary.
  * @summary Ingest Events
  */
 export const ingestEvents = async (usageEventV1: UsageEventV1[], options?: Parameters<typeof customFetch>[1]): Promise<EventsIngestedOut> => {
@@ -4640,9 +4253,10 @@ export const getHeartbeatUrl = () => {
  * Upsert the instance record; the row persists as history, last_seen drives liveness.
  *
  * Every worker of a multi-worker data plane heartbeats with the same instance_id, so the first
- * insert can race; do it as one atomic upsert instead of read-then-write.
+ * insert can race; do it as one atomic upsert instead of read-then-write. The first heartbeat
+ * pins the id to its organization, and another tenant cannot move it.
  *
- * Requires the `sync` scope.
+ * Requires `data-planes.heartbeat` authority at the route's tenant boundary.
  * @summary Heartbeat
  */
 export const heartbeat = async (heartbeatV1: HeartbeatV1, options?: Parameters<typeof customFetch>[1]): Promise<HeartbeatOut> => {
@@ -4714,9 +4328,9 @@ export const getGetTaxonomyUrl = () => {
 }
 
 /**
- * The instance-wide catalog, readable by any management token.
+ * The instance-wide catalog, readable where the principal and credential both carry catalog access.
  *
- * Requires the `taxonomy:read` scope.
+ * Requires `catalog.read` authority at the route's tenant boundary.
  * @summary Get Taxonomy
  */
 export const getTaxonomy = async ( options?: Parameters<typeof customFetch>[1]): Promise<TaxonomyOut> => {
@@ -4796,7 +4410,7 @@ export const getCreateProviderUrl = () => {
 /**
  * Create or update: reapplying a taxonomy converges the catalog.
  *
- * Requires the `taxonomy:write` scope.
+ * Requires `catalog.manage` authority at the route's tenant boundary.
  * @summary Create Provider
  */
 export const createProvider = async (providerIn: ProviderIn, options?: Parameters<typeof customFetch>[1]): Promise<ProviderOut> => {
@@ -4870,7 +4484,7 @@ export const getCreateModelUrl = () => {
 /**
  * Create or update: reapplying a taxonomy converges the catalog.
  *
- * Requires the `taxonomy:write` scope.
+ * Requires `catalog.manage` authority at the route's tenant boundary.
  * @summary Create Model
  */
 export const createModel = async (modelIn: ModelIn, options?: Parameters<typeof customFetch>[1]): Promise<ModelOut> => {

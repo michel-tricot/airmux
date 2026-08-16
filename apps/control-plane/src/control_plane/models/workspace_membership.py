@@ -4,12 +4,14 @@ from typing import ClassVar, Literal
 from uuid import UUID
 
 from pydantic import BaseModel
-from sqlalchemy import ForeignKeyConstraint
+from sqlalchemy import CheckConstraint, ForeignKeyConstraint
 from sqlmodel import Field
 
+from control_plane.authz import WorkspaceRole
 from control_plane.models.audit import audited
 from control_plane.models.common import Tombstonable
 from control_plane.models.common.base import Record
+from control_plane.models.common.wire import RequestModel
 
 
 @audited
@@ -23,6 +25,7 @@ class WorkspaceMembership(Record, Tombstonable, table=True):
     """
 
     __table_args__: ClassVar = (
+        CheckConstraint("role IN ('admin', 'member', 'viewer')", name="workspace_membership_role_valid"),
         ForeignKeyConstraint(["workspace_id", "org_id"], ["workspace.id", "workspace.org_id"]),
         ForeignKeyConstraint(["user_id", "org_id"], ["org_membership.user_id", "org_membership.org_id"], ondelete="CASCADE"),
     )
@@ -30,9 +33,15 @@ class WorkspaceMembership(Record, Tombstonable, table=True):
     user_id: UUID = Field(primary_key=True)
     workspace_id: UUID = Field(primary_key=True)
     org_id: UUID
+    role: str = WorkspaceRole.member
+
+
+class WorkspaceMembershipIn(RequestModel):
+    role: WorkspaceRole
 
 
 class WorkspaceMembershipOut(BaseModel):
     user_id: UUID
     workspace_id: UUID
+    role: WorkspaceRole
     status: Literal["member"]
