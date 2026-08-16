@@ -83,7 +83,6 @@ import type {
   TaxonomyOut,
   UsageEventOut,
   UsageEventV1,
-  UserCreate,
   UserOut,
   WorkspaceCreate,
   WorkspaceMembershipOut,
@@ -205,7 +204,7 @@ export const getSignupUrl = () => {
  * fresh install has no other way to reach the instance endpoints, and /instance/oss/claim exists to
  * route that first visitor here. Every signup after the claim is an ordinary account. Anyone who can
  * reach an unclaimed deployment can therefore take it, which is the same trapdoor the quickstart
- * endpoint opens; claim the deployment before exposing it, or provision the admin with airllmcp admin.
+ * endpoint opens; complete the first signup before exposing the deployment.
  *
  * No authentication required.
  * @summary Signup
@@ -279,7 +278,7 @@ export const getLogoutUrl = () => {
 }
 
 /**
- * Requires an authenticated user; not org-scoped.
+ * Requires a browser session.
  * @summary Logout
  */
 export const logout = async ( options?: Parameters<typeof customFetch>[1]): Promise<DeletedOutUUID> => {
@@ -584,7 +583,7 @@ export const getCliAuthRequestDetailsUrl = (params: CliAuthRequestDetailsParams,
 /**
  * Context for the approve page: who is asking, from where, until when.
  *
- * Requires an authenticated user; not org-scoped.
+ * Requires a browser session.
  * @summary Cli Auth Request Details
  */
 export const cliAuthRequestDetails = async (params: CliAuthRequestDetailsParams, options?: Parameters<typeof customFetch>[1]): Promise<CliAuthRequestOut> => {
@@ -664,7 +663,7 @@ export const getCliAuthApproveUrl = () => {
 /**
  * The human confirms the code and picks the org; membership backs the pick like key minting.
  *
- * Requires an authenticated user; not org-scoped.
+ * Requires a browser session.
  * @summary Cli Auth Approve
  */
 export const cliAuthApprove = async (cliAuthApproveIn: CliAuthApproveIn, options?: Parameters<typeof customFetch>[1]): Promise<CliAuthApprovedOut> => {
@@ -736,13 +735,7 @@ export const getCliAuthPollUrl = () => {
 }
 
 /**
- * The CLI's side of the flow: pending until approved, then the key exactly once.
- *
- * The key is minted here, not at approve, so its plaintext never rests in the pending request;
- * deleting the request in the same transaction makes delivery one-time. Route-level actor stamp
- * like signup: the poller is anonymous, the audited key write is attributed to the human who
- * approved. Re-approving from the same client replaces that client's previous key for the org
- * instead of accumulating.
+ * Return pending state or consume an approved request and deliver its key once.
  *
  * No authentication required.
  * @summary Cli Auth Poll
@@ -1692,165 +1685,6 @@ export function useListInstanceActivity<TData = Awaited<ReturnType<typeof listIn
 
 
 
-export const getCreateUserUrl = () => {
-
-
-
-
-  return `/v1/users`
-}
-
-/**
- * Requires the `users:write` scope.
- * @summary Create User
- */
-export const createUser = async (userCreate: UserCreate, options?: Parameters<typeof customFetch>[1]): Promise<UserOut> => {
-
-  return customFetch<UserOut>(getCreateUserUrl(),
-  {
-    ...options,
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(userCreate)
-  }
-);}
-
-
-
-
-
-export const getCreateUserMutationOptions = <TError = ErrorType<HTTPValidationError>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createUser>>, TError,{data: BodyType<UserCreate>}, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof createUser>>, TError,{data: BodyType<UserCreate>}, TContext> => {
-
-const mutationKey = ['createUser'];
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createUser>>, {data: BodyType<UserCreate>}> = (props) => {
-          const {data} = props ?? {};
-
-          return  createUser(data,requestOptions)
-        }
-
-
-
-
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type CreateUserMutationResult = NonNullable<Awaited<ReturnType<typeof createUser>>>
-    export type CreateUserMutationBody = BodyType<UserCreate>
-    export type CreateUserMutationError = ErrorType<HTTPValidationError>
-
-    /**
- * @summary Create User
- */
-export const useCreateUser = <TError = ErrorType<HTTPValidationError>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createUser>>, TError,{data: BodyType<UserCreate>}, TContext>, request?: SecondParameter<typeof customFetch>}
- ): UseMutationResult<
-        Awaited<ReturnType<typeof createUser>>,
-        TError,
-        {data: BodyType<UserCreate>},
-        TContext
-      > => {
-      return useMutation(getCreateUserMutationOptions(options));
-    }
-
-export const getListUsersUrl = (params?: ListUsersParams,) => {
-  const normalizedParams = new URLSearchParams();
-
-  Object.entries(params || {}).forEach(([key, value]) => {
-
-    if (value !== undefined) {
-      normalizedParams.append(key, value === null ? 'null' : String(value))
-    }
-  });
-
-  const stringifiedParams = normalizedParams.toString();
-
-  return stringifiedParams.length > 0 ? `/v1/users?${stringifiedParams}` : `/v1/users`
-}
-
-/**
- * Every principal on the instance, or one kind of them: service_account splits the machines from the humans.
- *
- * Requires the `users:read` scope.
- * @summary List Users
- */
-export const listUsers = async (params?: ListUsersParams, options?: Parameters<typeof customFetch>[1]): Promise<UserOut[]> => {
-
-  return customFetch<UserOut[]>(getListUsersUrl(params),
-  {
-    ...options,
-    method: 'GET'
-
-
-  }
-);}
-
-
-
-
-
-export const getListUsersQueryKey = (params?: ListUsersParams,) => {
-    return [
-    `/v1/users`, ...(params ? [params] : [])
-    ] as const;
-    }
-
-
-export const getListUsersQueryOptions = <TData = Awaited<ReturnType<typeof listUsers>>, TError = ErrorType<HTTPValidationError>>(params?: ListUsersParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listUsers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
-) => {
-
-const {query: queryOptions, request: requestOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getListUsersQueryKey(params);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listUsers>>> = ({ signal }) => listUsers(params, { signal, ...requestOptions });
-
-
-
-
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listUsers>>, TError, TData> & { queryKey: QueryKey }
-}
-
-export type ListUsersQueryResult = NonNullable<Awaited<ReturnType<typeof listUsers>>>
-export type ListUsersQueryError = ErrorType<HTTPValidationError>
-
-
-/**
- * @summary List Users
- */
-
-export function useListUsers<TData = Awaited<ReturnType<typeof listUsers>>, TError = ErrorType<HTTPValidationError>>(
- params?: ListUsersParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listUsers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
-
- ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
-
-  const queryOptions = getListUsersQueryOptions(params,options)
-
-  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
-
 export const getCreateServiceAccountUrl = () => {
 
 
@@ -2078,6 +1912,93 @@ export const useDeleteUser = <TError = ErrorType<HTTPValidationError>,
       > => {
       return useMutation(getDeleteUserMutationOptions(options));
     }
+
+export const getListUsersUrl = (params?: ListUsersParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/v1/users?${stringifiedParams}` : `/v1/users`
+}
+
+/**
+ * Every principal on the instance, or one kind of them: service_account splits the machines from the humans.
+ *
+ * Requires the `users:read` scope.
+ * @summary List Users
+ */
+export const listUsers = async (params?: ListUsersParams, options?: Parameters<typeof customFetch>[1]): Promise<UserOut[]> => {
+
+  return customFetch<UserOut[]>(getListUsersUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListUsersQueryKey = (params?: ListUsersParams,) => {
+    return [
+    `/v1/users`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListUsersQueryOptions = <TData = Awaited<ReturnType<typeof listUsers>>, TError = ErrorType<HTTPValidationError>>(params?: ListUsersParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listUsers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListUsersQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listUsers>>> = ({ signal }) => listUsers(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listUsers>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListUsersQueryResult = NonNullable<Awaited<ReturnType<typeof listUsers>>>
+export type ListUsersQueryError = ErrorType<HTTPValidationError>
+
+
+/**
+ * @summary List Users
+ */
+
+export function useListUsers<TData = Awaited<ReturnType<typeof listUsers>>, TError = ErrorType<HTTPValidationError>>(
+ params?: ListUsersParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listUsers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListUsersQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getCreateOrgUrl = () => {
 

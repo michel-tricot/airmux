@@ -11,9 +11,16 @@ import * as zod from 'zod/v4';
  * No authentication required.
  * @summary Login
  */
+export const loginBodyEmailMin = 3;
+export const loginBodyEmailMax = 320;
+
+export const loginBodyPasswordMax = 1024;
+
+
+
 export const LoginBody = zod.object({
-  "email": zod.string(),
-  "password": zod.string()
+  "email": zod.string().min(loginBodyEmailMin).max(loginBodyEmailMax),
+  "password": zod.string().min(1).max(loginBodyPasswordMax)
 })
 
 export const LoginResponse = zod.object({
@@ -32,20 +39,26 @@ export const LoginResponse = zod.object({
  * fresh install has no other way to reach the instance endpoints, and /instance/oss/claim exists to
  * route that first visitor here. Every signup after the claim is an ordinary account. Anyone who can
  * reach an unclaimed deployment can therefore take it, which is the same trapdoor the quickstart
- * endpoint opens; claim the deployment before exposing it, or provision the admin with airllmcp admin.
+ * endpoint opens; complete the first signup before exposing the deployment.
  *
  * No authentication required.
  * @summary Signup
  */
+export const signupBodyEmailMin = 3;
+export const signupBodyEmailMax = 320;
+
 export const signupBodyNameDefault = ``;
+export const signupBodyNameMax = 200;
+
 export const signupBodyPasswordMin = 8;
+export const signupBodyPasswordMax = 1024;
 
 
 
 export const SignupBody = zod.object({
-  "email": zod.string(),
-  "name": zod.string().default(signupBodyNameDefault),
-  "password": zod.string().min(signupBodyPasswordMin)
+  "email": zod.string().min(signupBodyEmailMin).max(signupBodyEmailMax),
+  "name": zod.string().max(signupBodyNameMax).default(signupBodyNameDefault),
+  "password": zod.string().min(signupBodyPasswordMin).max(signupBodyPasswordMax)
 })
 
 export const SignupResponse = zod.object({
@@ -58,14 +71,9 @@ export const SignupResponse = zod.object({
 
 
 /**
- * Requires an authenticated user; not org-scoped.
+ * Requires a browser session.
  * @summary Logout
  */
-export const LogoutHeader = zod.object({
-  "X-Requested-With": zod.union([zod.string(),zod.null()]).optional(),
-  "Sec-Fetch-Site": zod.union([zod.string(),zod.null()]).optional()
-})
-
 export const LogoutResponse = zod.object({
   "id": zod.uuid(),
   "deleted_at": zod.coerce.date()
@@ -76,11 +84,6 @@ export const LogoutResponse = zod.object({
  * Requires an authenticated user; not org-scoped.
  * @summary Me
  */
-export const MeHeader = zod.object({
-  "X-Requested-With": zod.union([zod.string(),zod.null()]).optional(),
-  "Sec-Fetch-Site": zod.union([zod.string(),zod.null()]).optional()
-})
-
 export const MeResponse = zod.object({
   "user_id": zod.uuid(),
   "email": zod.string(),
@@ -94,18 +97,16 @@ export const MeResponse = zod.object({
  * Requires an authenticated user; not org-scoped.
  * @summary Change Password
  */
-export const ChangePasswordHeader = zod.object({
-  "X-Requested-With": zod.union([zod.string(),zod.null()]).optional(),
-  "Sec-Fetch-Site": zod.union([zod.string(),zod.null()]).optional()
-})
+export const changePasswordBodyCurrentPasswordMax = 1024;
 
 export const changePasswordBodyNewPasswordMin = 8;
+export const changePasswordBodyNewPasswordMax = 1024;
 
 
 
 export const ChangePasswordBody = zod.object({
-  "current_password": zod.string(),
-  "new_password": zod.string().min(changePasswordBodyNewPasswordMin)
+  "current_password": zod.string().min(1).max(changePasswordBodyCurrentPasswordMax),
+  "new_password": zod.string().min(changePasswordBodyNewPasswordMin).max(changePasswordBodyNewPasswordMax)
 })
 
 export const ChangePasswordResponse = zod.object({
@@ -140,16 +141,11 @@ export const CliAuthStartResponse = zod.object({
 /**
  * Context for the approve page: who is asking, from where, until when.
  *
- * Requires an authenticated user; not org-scoped.
+ * Requires a browser session.
  * @summary Cli Auth Request Details
  */
 export const CliAuthRequestDetailsQueryParams = zod.object({
   "code": zod.coerce.string()
-})
-
-export const CliAuthRequestDetailsHeader = zod.object({
-  "X-Requested-With": zod.union([zod.string(),zod.null()]).optional(),
-  "Sec-Fetch-Site": zod.union([zod.string(),zod.null()]).optional()
 })
 
 export const CliAuthRequestDetailsResponse = zod.object({
@@ -162,16 +158,16 @@ export const CliAuthRequestDetailsResponse = zod.object({
 /**
  * The human confirms the code and picks the org; membership backs the pick like key minting.
  *
- * Requires an authenticated user; not org-scoped.
+ * Requires a browser session.
  * @summary Cli Auth Approve
  */
-export const CliAuthApproveHeader = zod.object({
-  "X-Requested-With": zod.union([zod.string(),zod.null()]).optional(),
-  "Sec-Fetch-Site": zod.union([zod.string(),zod.null()]).optional()
-})
+export const cliAuthApproveBodyUserCodeMin = 8;
+export const cliAuthApproveBodyUserCodeMax = 16;
+
+
 
 export const CliAuthApproveBody = zod.object({
-  "user_code": zod.string(),
+  "user_code": zod.string().min(cliAuthApproveBodyUserCodeMin).max(cliAuthApproveBodyUserCodeMax),
   "org_id": zod.uuid()
 })
 
@@ -182,19 +178,17 @@ export const CliAuthApproveResponse = zod.object({
 
 
 /**
- * The CLI's side of the flow: pending until approved, then the key exactly once.
- *
- * The key is minted here, not at approve, so its plaintext never rests in the pending request;
- * deleting the request in the same transaction makes delivery one-time. Route-level actor stamp
- * like signup: the poller is anonymous, the audited key write is attributed to the human who
- * approved. Re-approving from the same client replaces that client's previous key for the org
- * instead of accumulating.
+ * Return pending state or consume an approved request and deliver its key once.
  *
  * No authentication required.
  * @summary Cli Auth Poll
  */
+export const cliAuthPollBodyPollSecretMax = 256;
+
+
+
 export const CliAuthPollBody = zod.object({
-  "poll_secret": zod.string()
+  "poll_secret": zod.string().min(1).max(cliAuthPollBodyPollSecretMax)
 })
 
 export const CliAuthPollResponse = zod.object({
@@ -212,11 +206,6 @@ export const CliAuthPollResponse = zod.object({
  * Requires an authenticated user; not org-scoped.
  * @summary Enrollment
  */
-export const EnrollmentHeader = zod.object({
-  "X-Requested-With": zod.union([zod.string(),zod.null()]).optional(),
-  "Sec-Fetch-Site": zod.union([zod.string(),zod.null()]).optional()
-})
-
 export const EnrollmentResponse = zod.object({
   "orgs": zod.array(zod.object({
   "id": zod.uuid(),
@@ -241,13 +230,12 @@ export const EnrollmentResponse = zod.object({
  * Requires an authenticated user; not org-scoped.
  * @summary Create Personal Org
  */
-export const CreatePersonalOrgHeader = zod.object({
-  "X-Requested-With": zod.union([zod.string(),zod.null()]).optional(),
-  "Sec-Fetch-Site": zod.union([zod.string(),zod.null()]).optional()
-})
+export const createPersonalOrgBodyNameMax = 200;
+
+
 
 export const CreatePersonalOrgBody = zod.object({
-  "name": zod.string().describe('Org name, e.g. My Org')
+  "name": zod.string().min(1).max(createPersonalOrgBodyNameMax).describe('Org name, e.g. My Org')
 })
 
 export const CreatePersonalOrgResponse = zod.object({
@@ -288,8 +276,12 @@ export const ClaimResponse = zod.object({
  * No authentication required.
  * @summary Quickstart
  */
+export const quickstartBodyTokenMax = 512;
+
+
+
 export const QuickstartBody = zod.object({
-  "token": zod.string()
+  "token": zod.string().min(1).max(quickstartBodyTokenMax)
 })
 
 export const QuickstartResponse = zod.object({
@@ -310,9 +302,7 @@ export const ListDataPlanesQueryParams = zod.object({
 })
 
 export const ListDataPlanesHeader = zod.object({
-  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional(),
-  "X-Requested-With": zod.union([zod.string(),zod.null()]).optional(),
-  "Sec-Fetch-Site": zod.union([zod.string(),zod.null()]).optional()
+  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional()
 })
 
 export const ListDataPlanesResponseItem = zod.object({
@@ -334,9 +324,7 @@ export const ListDataPlanesResponse = zod.array(ListDataPlanesResponseItem)
  * @summary List Instance Keys
  */
 export const ListInstanceKeysHeader = zod.object({
-  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional(),
-  "X-Requested-With": zod.union([zod.string(),zod.null()]).optional(),
-  "Sec-Fetch-Site": zod.union([zod.string(),zod.null()]).optional()
+  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional()
 })
 
 export const ListInstanceKeysResponseItem = zod.object({
@@ -360,9 +348,7 @@ export const ListInstanceKeysResponse = zod.array(ListInstanceKeysResponseItem)
  * @summary Create Instance Key
  */
 export const CreateInstanceKeyHeader = zod.object({
-  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional(),
-  "X-Requested-With": zod.union([zod.string(),zod.null()]).optional(),
-  "Sec-Fetch-Site": zod.union([zod.string(),zod.null()]).optional()
+  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional()
 })
 
 export const createInstanceKeyBodyLabelMax = 80;
@@ -393,9 +379,7 @@ export const RevokeInstanceKeyParams = zod.object({
 })
 
 export const RevokeInstanceKeyHeader = zod.object({
-  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional(),
-  "X-Requested-With": zod.union([zod.string(),zod.null()]).optional(),
-  "Sec-Fetch-Site": zod.union([zod.string(),zod.null()]).optional()
+  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional()
 })
 
 export const RevokeInstanceKeyResponse = zod.object({
@@ -415,9 +399,7 @@ export const ListAllManagementKeysQueryParams = zod.object({
 })
 
 export const ListAllManagementKeysHeader = zod.object({
-  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional(),
-  "X-Requested-With": zod.union([zod.string(),zod.null()]).optional(),
-  "Sec-Fetch-Site": zod.union([zod.string(),zod.null()]).optional()
+  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional()
 })
 
 export const ListAllManagementKeysResponseItem = zod.object({
@@ -446,9 +428,7 @@ export const RevokeAnyManagementKeyParams = zod.object({
 })
 
 export const RevokeAnyManagementKeyHeader = zod.object({
-  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional(),
-  "X-Requested-With": zod.union([zod.string(),zod.null()]).optional(),
-  "Sec-Fetch-Site": zod.union([zod.string(),zod.null()]).optional()
+  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional()
 })
 
 export const RevokeAnyManagementKeyResponse = zod.object({
@@ -464,15 +444,16 @@ export const RevokeAnyManagementKeyResponse = zod.object({
  * @summary List Instance Activity
  */
 export const listInstanceActivityQueryLimitDefault = 50;
+export const listInstanceActivityQueryLimitMax = 200;
+
+
 
 export const ListInstanceActivityQueryParams = zod.object({
-  "limit": zod.coerce.number().int().default(listInstanceActivityQueryLimitDefault)
+  "limit": zod.coerce.number().int().min(1).max(listInstanceActivityQueryLimitMax).default(listInstanceActivityQueryLimitDefault)
 })
 
 export const ListInstanceActivityHeader = zod.object({
-  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional(),
-  "X-Requested-With": zod.union([zod.string(),zod.null()]).optional(),
-  "Sec-Fetch-Site": zod.union([zod.string(),zod.null()]).optional()
+  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional()
 })
 
 export const ListInstanceActivityResponseItem = zod.object({
@@ -488,74 +469,18 @@ export const ListInstanceActivityResponse = zod.array(ListInstanceActivityRespon
 
 /**
  * Requires the `users:write` scope.
- * @summary Create User
- */
-export const CreateUserHeader = zod.object({
-  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional(),
-  "X-Requested-With": zod.union([zod.string(),zod.null()]).optional(),
-  "Sec-Fetch-Site": zod.union([zod.string(),zod.null()]).optional()
-})
-
-export const createUserBodyNameDefault = ``;
-
-export const CreateUserBody = zod.object({
-  "email": zod.string().describe('Unique email identifying the user'),
-  "name": zod.string().default(createUserBodyNameDefault).describe('Display name, defaults to the email')
-})
-
-export const CreateUserResponse = zod.object({
-  "id": zod.uuid(),
-  "email": zod.string(),
-  "name": zod.string(),
-  "service_account": zod.boolean(),
-  "created_at": zod.coerce.date(),
-  "updated_at": zod.coerce.date(),
-  "deleted_at": zod.union([zod.coerce.date(),zod.null()]),
-  "orgs": zod.array(zod.uuid())
-})
-
-
-/**
- * Every principal on the instance, or one kind of them: service_account splits the machines from the humans.
- *
- * Requires the `users:read` scope.
- * @summary List Users
- */
-export const ListUsersQueryParams = zod.object({
-  "service_account": zod.union([zod.coerce.boolean(),zod.null()]).optional()
-})
-
-export const ListUsersHeader = zod.object({
-  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional(),
-  "X-Requested-With": zod.union([zod.string(),zod.null()]).optional(),
-  "Sec-Fetch-Site": zod.union([zod.string(),zod.null()]).optional()
-})
-
-export const ListUsersResponseItem = zod.object({
-  "id": zod.uuid(),
-  "email": zod.string(),
-  "name": zod.string(),
-  "service_account": zod.boolean(),
-  "created_at": zod.coerce.date(),
-  "updated_at": zod.coerce.date(),
-  "deleted_at": zod.union([zod.coerce.date(),zod.null()]),
-  "orgs": zod.array(zod.uuid())
-})
-export const ListUsersResponse = zod.array(ListUsersResponseItem)
-
-
-/**
- * Requires the `users:write` scope.
  * @summary Create Service Account
  */
 export const CreateServiceAccountHeader = zod.object({
-  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional(),
-  "X-Requested-With": zod.union([zod.string(),zod.null()]).optional(),
-  "Sec-Fetch-Site": zod.union([zod.string(),zod.null()]).optional()
+  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional()
 })
 
+export const createServiceAccountBodyNameMax = 200;
+
+
+
 export const CreateServiceAccountBody = zod.object({
-  "name": zod.string().describe('Service account name; the email is derived as name-<id>@airbytesvcaccount.ai')
+  "name": zod.string().min(1).max(createServiceAccountBodyNameMax).describe('Service account name; the email is derived as name-<id>@airbytesvcaccount.ai')
 })
 
 export const CreateServiceAccountResponse = zod.object({
@@ -579,9 +504,7 @@ export const GetUserParams = zod.object({
 })
 
 export const GetUserHeader = zod.object({
-  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional(),
-  "X-Requested-With": zod.union([zod.string(),zod.null()]).optional(),
-  "Sec-Fetch-Site": zod.union([zod.string(),zod.null()]).optional()
+  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional()
 })
 
 export const GetUserResponse = zod.object({
@@ -611,9 +534,7 @@ export const DeleteUserParams = zod.object({
 })
 
 export const DeleteUserHeader = zod.object({
-  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional(),
-  "X-Requested-With": zod.union([zod.string(),zod.null()]).optional(),
-  "Sec-Fetch-Site": zod.union([zod.string(),zod.null()]).optional()
+  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional()
 })
 
 export const DeleteUserResponse = zod.object({
@@ -623,17 +544,46 @@ export const DeleteUserResponse = zod.object({
 
 
 /**
+ * Every principal on the instance, or one kind of them: service_account splits the machines from the humans.
+ *
+ * Requires the `users:read` scope.
+ * @summary List Users
+ */
+export const ListUsersQueryParams = zod.object({
+  "service_account": zod.union([zod.coerce.boolean(),zod.null()]).optional()
+})
+
+export const ListUsersHeader = zod.object({
+  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional()
+})
+
+export const ListUsersResponseItem = zod.object({
+  "id": zod.uuid(),
+  "email": zod.string(),
+  "name": zod.string(),
+  "service_account": zod.boolean(),
+  "created_at": zod.coerce.date(),
+  "updated_at": zod.coerce.date(),
+  "deleted_at": zod.union([zod.coerce.date(),zod.null()]),
+  "orgs": zod.array(zod.uuid())
+})
+export const ListUsersResponse = zod.array(ListUsersResponseItem)
+
+
+/**
  * Requires the `orgs:create` scope.
  * @summary Create Org
  */
 export const CreateOrgHeader = zod.object({
-  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional(),
-  "X-Requested-With": zod.union([zod.string(),zod.null()]).optional(),
-  "Sec-Fetch-Site": zod.union([zod.string(),zod.null()]).optional()
+  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional()
 })
 
+export const createOrgBodyNameMax = 200;
+
+
+
 export const CreateOrgBody = zod.object({
-  "name": zod.string().describe('Org name, e.g. My Org')
+  "name": zod.string().min(1).max(createOrgBodyNameMax).describe('Org name, e.g. My Org')
 })
 
 export const CreateOrgResponse = zod.object({
@@ -651,9 +601,7 @@ export const CreateOrgResponse = zod.object({
  * @summary List Orgs
  */
 export const ListOrgsHeader = zod.object({
-  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional(),
-  "X-Requested-With": zod.union([zod.string(),zod.null()]).optional(),
-  "Sec-Fetch-Site": zod.union([zod.string(),zod.null()]).optional()
+  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional()
 })
 
 export const ListOrgsResponseItem = zod.object({
@@ -676,13 +624,15 @@ export const UpdateOrgParams = zod.object({
 })
 
 export const UpdateOrgHeader = zod.object({
-  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional(),
-  "X-Requested-With": zod.union([zod.string(),zod.null()]).optional(),
-  "Sec-Fetch-Site": zod.union([zod.string(),zod.null()]).optional()
+  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional()
 })
 
+export const updateOrgBodyNameOneMax = 200;
+
+
+
 export const UpdateOrgBody = zod.object({
-  "name": zod.union([zod.string(),zod.null()]).optional()
+  "name": zod.union([zod.string().min(1).max(updateOrgBodyNameOneMax),zod.null()]).optional()
 })
 
 export const UpdateOrgResponse = zod.object({
@@ -704,9 +654,7 @@ export const GetOrgParams = zod.object({
 })
 
 export const GetOrgHeader = zod.object({
-  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional(),
-  "X-Requested-With": zod.union([zod.string(),zod.null()]).optional(),
-  "Sec-Fetch-Site": zod.union([zod.string(),zod.null()]).optional()
+  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional()
 })
 
 export const GetOrgResponse = zod.object({
@@ -734,9 +682,7 @@ export const DeleteOrgParams = zod.object({
 })
 
 export const DeleteOrgHeader = zod.object({
-  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional(),
-  "X-Requested-With": zod.union([zod.string(),zod.null()]).optional(),
-  "Sec-Fetch-Site": zod.union([zod.string(),zod.null()]).optional()
+  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional()
 })
 
 export const DeleteOrgResponse = zod.object({
@@ -756,10 +702,10 @@ export const DeleteOrgResponse = zod.object({
  * @summary Create Workspace
  */
 export const CreateWorkspaceHeader = zod.object({
-  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional(),
-  "X-Requested-With": zod.union([zod.string(),zod.null()]).optional(),
-  "Sec-Fetch-Site": zod.union([zod.string(),zod.null()]).optional()
+  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional()
 })
+
+export const createWorkspaceBodyNameMax = 200;
 
 export const createWorkspaceBodySlugDefault = ``;
 export const createWorkspaceBodySlugMax = 63;
@@ -769,7 +715,7 @@ export const createWorkspaceBodySlugRegExp = new RegExp('^[a-z0-9]+(?:-[a-z0-9]+
 
 
 export const CreateWorkspaceBody = zod.object({
-  "name": zod.string().describe('Workspace name, e.g. Staging'),
+  "name": zod.string().min(1).max(createWorkspaceBodyNameMax).describe('Workspace name, e.g. Staging'),
   "slug": zod.string().max(createWorkspaceBodySlugMax).regex(createWorkspaceBodySlugRegExp).default(createWorkspaceBodySlugDefault).describe('Workspace handle, unique in the org and usable in place of the id; derived from the name when omitted')
 })
 
@@ -789,9 +735,7 @@ export const CreateWorkspaceResponse = zod.object({
  * @summary List Workspaces
  */
 export const ListWorkspacesHeader = zod.object({
-  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional(),
-  "X-Requested-With": zod.union([zod.string(),zod.null()]).optional(),
-  "Sec-Fetch-Site": zod.union([zod.string(),zod.null()]).optional()
+  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional()
 })
 
 export const ListWorkspacesResponseItem = zod.object({
@@ -815,9 +759,7 @@ export const GetWorkspaceParams = zod.object({
 })
 
 export const GetWorkspaceHeader = zod.object({
-  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional(),
-  "X-Requested-With": zod.union([zod.string(),zod.null()]).optional(),
-  "Sec-Fetch-Site": zod.union([zod.string(),zod.null()]).optional()
+  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional()
 })
 
 export const GetWorkspaceResponse = zod.object({
@@ -843,9 +785,7 @@ export const DeleteWorkspaceParams = zod.object({
 })
 
 export const DeleteWorkspaceHeader = zod.object({
-  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional(),
-  "X-Requested-With": zod.union([zod.string(),zod.null()]).optional(),
-  "Sec-Fetch-Site": zod.union([zod.string(),zod.null()]).optional()
+  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional()
 })
 
 export const DeleteWorkspaceResponse = zod.object({
@@ -863,13 +803,15 @@ export const UpdateWorkspaceParams = zod.object({
 })
 
 export const UpdateWorkspaceHeader = zod.object({
-  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional(),
-  "X-Requested-With": zod.union([zod.string(),zod.null()]).optional(),
-  "Sec-Fetch-Site": zod.union([zod.string(),zod.null()]).optional()
+  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional()
 })
 
+export const updateWorkspaceBodyNameOneMax = 200;
+
+
+
 export const UpdateWorkspaceBody = zod.object({
-  "name": zod.union([zod.string(),zod.null()]).optional()
+  "name": zod.union([zod.string().min(1).max(updateWorkspaceBodyNameOneMax),zod.null()]).optional()
 })
 
 export const UpdateWorkspaceResponse = zod.object({
@@ -892,9 +834,7 @@ export const ListMembersParams = zod.object({
 })
 
 export const ListMembersHeader = zod.object({
-  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional(),
-  "X-Requested-With": zod.union([zod.string(),zod.null()]).optional(),
-  "Sec-Fetch-Site": zod.union([zod.string(),zod.null()]).optional()
+  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional()
 })
 
 export const ListMembersResponseItem = zod.object({
@@ -917,9 +857,7 @@ export const AddMemberParams = zod.object({
 })
 
 export const AddMemberHeader = zod.object({
-  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional(),
-  "X-Requested-With": zod.union([zod.string(),zod.null()]).optional(),
-  "Sec-Fetch-Site": zod.union([zod.string(),zod.null()]).optional()
+  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional()
 })
 
 export const AddMemberResponse = zod.object({
@@ -939,9 +877,7 @@ export const RemoveMemberParams = zod.object({
 })
 
 export const RemoveMemberHeader = zod.object({
-  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional(),
-  "X-Requested-With": zod.union([zod.string(),zod.null()]).optional(),
-  "Sec-Fetch-Site": zod.union([zod.string(),zod.null()]).optional()
+  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional()
 })
 
 export const RemoveMemberResponse = zod.object({
@@ -959,9 +895,7 @@ export const CreateInferenceKeyParams = zod.object({
 })
 
 export const CreateInferenceKeyHeader = zod.object({
-  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional(),
-  "X-Requested-With": zod.union([zod.string(),zod.null()]).optional(),
-  "Sec-Fetch-Site": zod.union([zod.string(),zod.null()]).optional()
+  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional()
 })
 
 export const createInferenceKeyBodyLabelMax = 80;
@@ -975,7 +909,7 @@ export const CreateInferenceKeyBody = zod.object({
 export const CreateInferenceKeyResponse = zod.object({
   "id": zod.uuid(),
   "token": zod.string()
-}).describe('The mint result: the id plus the one-time plaintext token, which is not a column and never returns again.')
+})
 
 
 /**
@@ -987,9 +921,7 @@ export const ListInferenceKeysParams = zod.object({
 })
 
 export const ListInferenceKeysHeader = zod.object({
-  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional(),
-  "X-Requested-With": zod.union([zod.string(),zod.null()]).optional(),
-  "Sec-Fetch-Site": zod.union([zod.string(),zod.null()]).optional()
+  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional()
 })
 
 export const ListInferenceKeysResponseItem = zod.object({
@@ -1017,9 +949,7 @@ export const RevokeInferenceKeyParams = zod.object({
 })
 
 export const RevokeInferenceKeyHeader = zod.object({
-  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional(),
-  "X-Requested-With": zod.union([zod.string(),zod.null()]).optional(),
-  "Sec-Fetch-Site": zod.union([zod.string(),zod.null()]).optional()
+  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional()
 })
 
 export const RevokeInferenceKeyResponse = zod.object({
@@ -1043,22 +973,34 @@ export const RevokeInferenceKeyResponse = zod.object({
  * @summary Create Provider Credential
  */
 export const CreateProviderCredentialHeader = zod.object({
-  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional(),
-  "X-Requested-With": zod.union([zod.string(),zod.null()]).optional(),
-  "Sec-Fetch-Site": zod.union([zod.string(),zod.null()]).optional()
+  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional()
 })
 
+export const createProviderCredentialBodyProviderMax = 63;
+
+
+export const createProviderCredentialBodyProviderRegExp = new RegExp('^[a-z0-9][a-z0-9_-]*$');
 export const createProviderCredentialBodyNameDefault = `default`;
 export const createProviderCredentialBodyNameMax = 80;
 
+
+export const createProviderCredentialBodyNameRegExp = new RegExp('^[A-Za-z0-9][A-Za-z0-9_.-]*$');
+export const createProviderCredentialBodyValueMax = 16384;
+
 export const createProviderCredentialBodyPriorityDefault = 100;
+export const createProviderCredentialBodyPriorityMin = 0;
+export const createProviderCredentialBodyPriorityMax = 1000000;
+
+export const createProviderCredentialBodyWorkspaceOneMax = 63;
+
+
 
 export const CreateProviderCredentialBody = zod.object({
-  "provider": zod.string().describe('Provider name from the catalog, e.g. openai'),
-  "name": zod.string().min(1).max(createProviderCredentialBodyNameMax).default(createProviderCredentialBodyNameDefault).describe('Handle for this key within the provider and scope, e.g. prod or backup'),
-  "value": zod.string().describe('The provider API key. Written to the secret store and never persisted anywhere else'),
-  "priority": zod.int().default(createProviderCredentialBodyPriorityDefault).describe('Lower is tried first; ties break by name'),
-  "workspace": zod.union([zod.string(),zod.null()]).optional().describe('Workspace id or slug for a workspace-scoped key; omitted makes it org-scoped')
+  "provider": zod.string().min(1).max(createProviderCredentialBodyProviderMax).regex(createProviderCredentialBodyProviderRegExp).describe('Provider name from the catalog, e.g. openai'),
+  "name": zod.string().min(1).max(createProviderCredentialBodyNameMax).regex(createProviderCredentialBodyNameRegExp).default(createProviderCredentialBodyNameDefault).describe('Handle for this key within the provider and scope, e.g. prod or backup'),
+  "value": zod.string().min(1).max(createProviderCredentialBodyValueMax).describe('The provider API key. Written to the secret store and never persisted anywhere else'),
+  "priority": zod.int().min(createProviderCredentialBodyPriorityMin).max(createProviderCredentialBodyPriorityMax).default(createProviderCredentialBodyPriorityDefault).describe('Lower is tried first; ties break by name'),
+  "workspace": zod.union([zod.string().min(1).max(createProviderCredentialBodyWorkspaceOneMax),zod.null()]).optional().describe('Workspace id or slug for a workspace-scoped key; omitted makes it org-scoped')
 }).describe('Creating a credential is an action, not a plain row insert: the value crosses the wire once\nand is never a column, so this is not a RecordCreate and is exempt from parity by that choice.\n\nThe value is a SecretStr so nothing that renders this model can print it. That is not enough on\nits own: the validation error handler in app.py drops the offending input, or a body that fails\nvalidation for some other reason comes back to the caller with the key still in it.')
 
 export const CreateProviderCredentialResponse = zod.object({
@@ -1092,9 +1034,7 @@ export const ListProviderCredentialsQueryParams = zod.object({
 })
 
 export const ListProviderCredentialsHeader = zod.object({
-  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional(),
-  "X-Requested-With": zod.union([zod.string(),zod.null()]).optional(),
-  "Sec-Fetch-Site": zod.union([zod.string(),zod.null()]).optional()
+  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional()
 })
 
 export const ListProviderCredentialsResponseItem = zod.object({
@@ -1127,9 +1067,7 @@ export const GetProviderCredentialParams = zod.object({
 })
 
 export const GetProviderCredentialHeader = zod.object({
-  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional(),
-  "X-Requested-With": zod.union([zod.string(),zod.null()]).optional(),
-  "Sec-Fetch-Site": zod.union([zod.string(),zod.null()]).optional()
+  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional()
 })
 
 export const GetProviderCredentialResponse = zod.object({
@@ -1164,13 +1102,16 @@ export const UpdateProviderCredentialParams = zod.object({
 })
 
 export const UpdateProviderCredentialHeader = zod.object({
-  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional(),
-  "X-Requested-With": zod.union([zod.string(),zod.null()]).optional(),
-  "Sec-Fetch-Site": zod.union([zod.string(),zod.null()]).optional()
+  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional()
 })
 
+export const updateProviderCredentialBodyPriorityOneMin = 0;
+export const updateProviderCredentialBodyPriorityOneMax = 1000000;
+
+
+
 export const UpdateProviderCredentialBody = zod.object({
-  "priority": zod.union([zod.int(),zod.null()]).optional(),
+  "priority": zod.union([zod.int().min(updateProviderCredentialBodyPriorityOneMin).max(updateProviderCredentialBodyPriorityOneMax),zod.null()]).optional(),
   "enabled": zod.union([zod.boolean(),zod.null()]).optional()
 })
 
@@ -1206,9 +1147,7 @@ export const DeleteProviderCredentialParams = zod.object({
 })
 
 export const DeleteProviderCredentialHeader = zod.object({
-  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional(),
-  "X-Requested-With": zod.union([zod.string(),zod.null()]).optional(),
-  "Sec-Fetch-Site": zod.union([zod.string(),zod.null()]).optional()
+  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional()
 })
 
 export const DeleteProviderCredentialResponse = zod.object({
@@ -1229,13 +1168,15 @@ export const RotateProviderCredentialParams = zod.object({
 })
 
 export const RotateProviderCredentialHeader = zod.object({
-  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional(),
-  "X-Requested-With": zod.union([zod.string(),zod.null()]).optional(),
-  "Sec-Fetch-Site": zod.union([zod.string(),zod.null()]).optional()
+  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional()
 })
 
+export const rotateProviderCredentialBodyValueMax = 16384;
+
+
+
 export const RotateProviderCredentialBody = zod.object({
-  "value": zod.string().describe('The replacement provider API key')
+  "value": zod.string().min(1).max(rotateProviderCredentialBodyValueMax).describe('The replacement provider API key')
 }).describe('A rotation: the same credential, a new value.')
 
 export const RotateProviderCredentialResponse = zod.object({
@@ -1265,9 +1206,7 @@ export const RotateProviderCredentialResponse = zod.object({
  * @summary List Org Users
  */
 export const ListOrgUsersHeader = zod.object({
-  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional(),
-  "X-Requested-With": zod.union([zod.string(),zod.null()]).optional(),
-  "Sec-Fetch-Site": zod.union([zod.string(),zod.null()]).optional()
+  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional()
 })
 
 export const ListOrgUsersResponseItem = zod.object({
@@ -1291,9 +1230,7 @@ export const AddOrgUserParams = zod.object({
 })
 
 export const AddOrgUserHeader = zod.object({
-  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional(),
-  "X-Requested-With": zod.union([zod.string(),zod.null()]).optional(),
-  "Sec-Fetch-Site": zod.union([zod.string(),zod.null()]).optional()
+  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional()
 })
 
 export const AddOrgUserResponse = zod.object({
@@ -1314,9 +1251,7 @@ export const RemoveOrgUserParams = zod.object({
 })
 
 export const RemoveOrgUserHeader = zod.object({
-  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional(),
-  "X-Requested-With": zod.union([zod.string(),zod.null()]).optional(),
-  "Sec-Fetch-Site": zod.union([zod.string(),zod.null()]).optional()
+  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional()
 })
 
 export const RemoveOrgUserResponse = zod.object({
@@ -1330,9 +1265,7 @@ export const RemoveOrgUserResponse = zod.object({
  * @summary List Management Keys
  */
 export const ListManagementKeysHeader = zod.object({
-  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional(),
-  "X-Requested-With": zod.union([zod.string(),zod.null()]).optional(),
-  "Sec-Fetch-Site": zod.union([zod.string(),zod.null()]).optional()
+  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional()
 })
 
 export const ListManagementKeysResponseItem = zod.object({
@@ -1357,9 +1290,7 @@ export const ListManagementKeysResponse = zod.array(ListManagementKeysResponseIt
  * @summary Mint Org Management Key
  */
 export const MintOrgManagementKeyHeader = zod.object({
-  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional(),
-  "X-Requested-With": zod.union([zod.string(),zod.null()]).optional(),
-  "Sec-Fetch-Site": zod.union([zod.string(),zod.null()]).optional()
+  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional()
 })
 
 export const mintOrgManagementKeyBodyLabelMax = 80;
@@ -1391,9 +1322,7 @@ export const RevokeManagementKeyParams = zod.object({
 })
 
 export const RevokeManagementKeyHeader = zod.object({
-  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional(),
-  "X-Requested-With": zod.union([zod.string(),zod.null()]).optional(),
-  "Sec-Fetch-Site": zod.union([zod.string(),zod.null()]).optional()
+  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional()
 })
 
 export const RevokeManagementKeyResponse = zod.object({
@@ -1407,9 +1336,7 @@ export const RevokeManagementKeyResponse = zod.object({
  * @summary Compile Bundle
  */
 export const CompileBundleHeader = zod.object({
-  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional(),
-  "X-Requested-With": zod.union([zod.string(),zod.null()]).optional(),
-  "Sec-Fetch-Site": zod.union([zod.string(),zod.null()]).optional()
+  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional()
 })
 
 export const CompileBundleResponse = zod.object({
@@ -1427,9 +1354,7 @@ export const CompileBundleResponse = zod.object({
  * @summary List Bundles
  */
 export const ListBundlesHeader = zod.object({
-  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional(),
-  "X-Requested-With": zod.union([zod.string(),zod.null()]).optional(),
-  "Sec-Fetch-Site": zod.union([zod.string(),zod.null()]).optional()
+  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional()
 })
 
 export const ListBundlesResponseItem = zod.object({
@@ -1453,15 +1378,16 @@ export const listEventsQueryLimitMax = 200;
 
 
 export const ListEventsQueryParams = zod.object({
+  "before": zod.union([zod.date(),zod.null()]).optional(),
+  "before_event_id": zod.union([zod.uuid(),zod.null()]).optional(),
   "after": zod.union([zod.date(),zod.null()]).optional(),
+  "after_event_id": zod.union([zod.uuid(),zod.null()]).optional(),
   "limit": zod.coerce.number().int().min(1).max(listEventsQueryLimitMax).default(listEventsQueryLimitDefault),
   "workspace_id": zod.union([zod.uuid(),zod.null()]).optional()
 })
 
 export const ListEventsHeader = zod.object({
-  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional(),
-  "X-Requested-With": zod.union([zod.string(),zod.null()]).optional(),
-  "Sec-Fetch-Site": zod.union([zod.string(),zod.null()]).optional()
+  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional()
 })
 
 export const ListEventsResponseItem = zod.object({
@@ -1497,15 +1423,16 @@ export const ListEventsResponse = zod.array(ListEventsResponseItem)
  * @summary List Activity
  */
 export const listActivityQueryLimitDefault = 50;
+export const listActivityQueryLimitMax = 200;
+
+
 
 export const ListActivityQueryParams = zod.object({
-  "limit": zod.coerce.number().int().default(listActivityQueryLimitDefault)
+  "limit": zod.coerce.number().int().min(1).max(listActivityQueryLimitMax).default(listActivityQueryLimitDefault)
 })
 
 export const ListActivityHeader = zod.object({
-  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional(),
-  "X-Requested-With": zod.union([zod.string(),zod.null()]).optional(),
-  "Sec-Fetch-Site": zod.union([zod.string(),zod.null()]).optional()
+  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional()
 })
 
 export const ListActivityResponseItem = zod.object({
@@ -1528,9 +1455,7 @@ export const BundleLatestQueryParams = zod.object({
 })
 
 export const BundleLatestHeader = zod.object({
-  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional(),
-  "X-Requested-With": zod.union([zod.string(),zod.null()]).optional(),
-  "Sec-Fetch-Site": zod.union([zod.string(),zod.null()]).optional()
+  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional()
 })
 
 export const bundleLatestResponsePayloadSchemaVersionDefault = 1;
@@ -1606,16 +1531,42 @@ export const BundleLatestResponse = zod.object({
  * @summary Ingest Events
  */
 export const IngestEventsHeader = zod.object({
-  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional(),
-  "X-Requested-With": zod.union([zod.string(),zod.null()]).optional(),
-  "Sec-Fetch-Site": zod.union([zod.string(),zod.null()]).optional()
+  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional()
 })
 
 export const ingestEventsBodySchemaVersionDefault = 1;
+export const ingestEventsBodyKeyIdMax = 255;
+
+export const ingestEventsBodyModelIdMax = 255;
+
+export const ingestEventsBodyProviderIdMax = 63;
+
+export const ingestEventsBodyInputTokensMin = 0;
+export const ingestEventsBodyInputTokensMax = 2147483647;
+
+export const ingestEventsBodyOutputTokensMin = 0;
+export const ingestEventsBodyOutputTokensMax = 2147483647;
+
+export const ingestEventsBodyCostUsdMin = 0;
+
 export const ingestEventsBodyCostInputUsdDefault = 0;
+export const ingestEventsBodyCostInputUsdMin = 0;
+
 export const ingestEventsBodyCostOutputUsdDefault = 0;
+export const ingestEventsBodyCostOutputUsdMin = 0;
+
 export const ingestEventsBodyCacheReadTokensDefault = 0;
+export const ingestEventsBodyCacheReadTokensMin = 0;
+export const ingestEventsBodyCacheReadTokensMax = 2147483647;
+
 export const ingestEventsBodyCacheWriteTokensDefault = 0;
+export const ingestEventsBodyCacheWriteTokensMin = 0;
+export const ingestEventsBodyCacheWriteTokensMax = 2147483647;
+
+export const ingestEventsBodyLatencyMsMin = 0;
+export const ingestEventsBodyLatencyMsMax = 2147483647;
+
+
 
 export const IngestEventsBodyItem = zod.object({
   "schema_version": zod.literal(1).default(ingestEventsBodySchemaVersionDefault),
@@ -1624,24 +1575,24 @@ export const IngestEventsBodyItem = zod.object({
   "occurred_at": zod.coerce.date(),
   "org_id": zod.uuid(),
   "workspace_id": zod.uuid(),
-  "key_id": zod.string(),
-  "model_id": zod.string(),
-  "provider_id": zod.string(),
+  "key_id": zod.string().min(1).max(ingestEventsBodyKeyIdMax),
+  "model_id": zod.string().min(1).max(ingestEventsBodyModelIdMax),
+  "provider_id": zod.string().max(ingestEventsBodyProviderIdMax),
   "bundle_id": zod.uuid(),
-  "input_tokens": zod.int(),
-  "output_tokens": zod.int(),
-  "cost_usd": zod.number(),
-  "cost_input_usd": zod.number().default(ingestEventsBodyCostInputUsdDefault),
-  "cost_output_usd": zod.number().default(ingestEventsBodyCostOutputUsdDefault),
-  "cache_read_tokens": zod.int().default(ingestEventsBodyCacheReadTokensDefault),
-  "cache_write_tokens": zod.int().default(ingestEventsBodyCacheWriteTokensDefault),
-  "latency_ms": zod.int(),
+  "input_tokens": zod.int().min(ingestEventsBodyInputTokensMin).max(ingestEventsBodyInputTokensMax),
+  "output_tokens": zod.int().min(ingestEventsBodyOutputTokensMin).max(ingestEventsBodyOutputTokensMax),
+  "cost_usd": zod.number().min(ingestEventsBodyCostUsdMin),
+  "cost_input_usd": zod.number().min(ingestEventsBodyCostInputUsdMin).default(ingestEventsBodyCostInputUsdDefault),
+  "cost_output_usd": zod.number().min(ingestEventsBodyCostOutputUsdMin).default(ingestEventsBodyCostOutputUsdDefault),
+  "cache_read_tokens": zod.int().min(ingestEventsBodyCacheReadTokensMin).max(ingestEventsBodyCacheReadTokensMax).default(ingestEventsBodyCacheReadTokensDefault),
+  "cache_write_tokens": zod.int().min(ingestEventsBodyCacheWriteTokensMin).max(ingestEventsBodyCacheWriteTokensMax).default(ingestEventsBodyCacheWriteTokensDefault),
+  "latency_ms": zod.int().min(ingestEventsBodyLatencyMsMin).max(ingestEventsBodyLatencyMsMax),
   "status": zod.enum(['ok', 'upstream_error', 'denied', 'timeout', 'cancelled', 'credential_rejected', 'rate_limited']),
   "stream": zod.boolean(),
   "credential_id": zod.union([zod.uuid(),zod.null()]).optional(),
   "credential_scope": zod.union([zod.enum(['platform', 'org', 'workspace']),zod.null()]).optional()
 }).describe('One metered request, emitted by the data plane and ingested by the control plane.\n\nDelivery is at-least-once from a local disk buffer; the control plane upserts on\nevent_id, so replays after an outage land exactly once.')
-export const IngestEventsBody = zod.array(IngestEventsBodyItem)
+export const IngestEventsBody = zod.array(IngestEventsBodyItem).max(1000)
 
 export const IngestEventsResponse = zod.object({
   "received": zod.int(),
@@ -1659,14 +1610,16 @@ export const IngestEventsResponse = zod.object({
  * @summary Heartbeat
  */
 export const HeartbeatHeader = zod.object({
-  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional(),
-  "X-Requested-With": zod.union([zod.string(),zod.null()]).optional(),
-  "Sec-Fetch-Site": zod.union([zod.string(),zod.null()]).optional()
+  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional()
 })
+
+export const heartbeatBodyVersionMax = 100;
+
+
 
 export const HeartbeatBody = zod.object({
   "instance_id": zod.uuid(),
-  "version": zod.string(),
+  "version": zod.string().min(1).max(heartbeatBodyVersionMax),
   "bundle_id": zod.union([zod.uuid(),zod.null()]).optional()
 }).describe('A data plane announcing itself to the control plane; the record survives, liveness is derived from last_seen.\n\nA data plane registers against the instance: which bundle it happens to serve is\nconfig, and bundle_id already says which one that is.')
 
@@ -1682,9 +1635,7 @@ export const HeartbeatResponse = zod.object({
  * @summary Get Taxonomy
  */
 export const GetTaxonomyHeader = zod.object({
-  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional(),
-  "X-Requested-With": zod.union([zod.string(),zod.null()]).optional(),
-  "Sec-Fetch-Site": zod.union([zod.string(),zod.null()]).optional()
+  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional()
 })
 
 export const GetTaxonomyResponse = zod.object({
@@ -1727,22 +1678,30 @@ export const GetTaxonomyResponse = zod.object({
  * @summary Create Provider
  */
 export const CreateProviderHeader = zod.object({
-  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional(),
-  "X-Requested-With": zod.union([zod.string(),zod.null()]).optional(),
-  "Sec-Fetch-Site": zod.union([zod.string(),zod.null()]).optional()
+  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional()
 })
 
+export const createProviderBodyProviderIdMax = 63;
+
+
+export const createProviderBodyProviderIdRegExp = new RegExp('^[a-z0-9][a-z0-9_-]*$');
 export const createProviderBodyKindDefault = `openai_compatible`;
+export const createProviderBodyBaseUrlMax = 2083;
+
 export const createProviderBodyIconDefault = ``;
+export const createProviderBodyIconMax = 65536;
+
+export const createProviderBodyAcceptedParamsOneMax = 256;
+
 export const createProviderBodyParamsClosedDefault = false;
 
 export const CreateProviderBody = zod.object({
-  "provider_id": zod.string().describe('Provider name, e.g. openai'),
+  "provider_id": zod.string().min(1).max(createProviderBodyProviderIdMax).regex(createProviderBodyProviderIdRegExp).describe('Provider name, e.g. openai'),
   "kind": zod.enum(['openai_compatible', 'anthropic']).default(createProviderBodyKindDefault).describe('Adapter kind'),
-  "base_url": zod.string().describe('OpenAI-compatible endpoint, e.g. https:\/\/api.groq.com\/openai\/v1'),
-  "icon": zod.string().default(createProviderBodyIconDefault).describe('Provider mark as a standalone 24x24 SVG document, empty when the provider has none. Carried as markup so adding a provider needs no client change to make it recognisable, which makes it untrusted markup to whatever renders it; sanitize at the render site'),
+  "base_url": zod.url().min(1).max(createProviderBodyBaseUrlMax).describe('OpenAI-compatible endpoint, e.g. https:\/\/api.groq.com\/openai\/v1'),
+  "icon": zod.string().max(createProviderBodyIconMax).default(createProviderBodyIconDefault).describe('Provider mark as a standalone 24x24 SVG document, empty when the provider has none. Carried as markup so adding a provider needs no client change to make it recognisable, which makes it untrusted markup to whatever renders it; sanitize at the render site'),
   "param_aliases": zod.record(zod.string(), zod.string()).optional().describe('Canonical param name to this provider\'s spelling'),
-  "accepted_params": zod.union([zod.array(zod.string()),zod.null()]).optional().describe('Params known accepted beyond the core; consulted when params_closed'),
+  "accepted_params": zod.union([zod.array(zod.string()).max(createProviderBodyAcceptedParamsOneMax),zod.null()]).optional().describe('Params known accepted beyond the core; consulted when params_closed'),
   "params_closed": zod.boolean().default(createProviderBodyParamsClosedDefault).describe('True when the provider\'s request schema rejects unknown params')
 }).describe('How to reach a provider, not how to authenticate to it: credentials are their own resource.\n\nExtra keys are refused so a taxonomy still carrying credential_ref fails loudly. Ignoring it\nwould leave the operator believing they configured a credential when the provider has none.')
 
@@ -1768,30 +1727,50 @@ export const CreateProviderResponse = zod.object({
  * @summary Create Model
  */
 export const CreateModelHeader = zod.object({
-  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional(),
-  "X-Requested-With": zod.union([zod.string(),zod.null()]).optional(),
-  "Sec-Fetch-Site": zod.union([zod.string(),zod.null()]).optional()
+  "X-Org-Id": zod.union([zod.string(),zod.null()]).optional()
 })
 
+export const createModelBodyModelIdMax = 255;
+
+export const createModelBodyProviderIdMax = 63;
+
+
+export const createModelBodyProviderIdRegExp = new RegExp('^[a-z0-9][a-z0-9_-]*$');
 export const createModelBodyUpstreamModelDefault = ``;
+export const createModelBodyUpstreamModelMax = 255;
+
 export const createModelBodyInputPricePerMtokDefault = 0;
+export const createModelBodyInputPricePerMtokMin = 0;
+
 export const createModelBodyOutputPricePerMtokDefault = 0;
+export const createModelBodyOutputPricePerMtokMin = 0;
+
 export const createModelBodyCacheReadPricePerMtokDefault = 0;
+export const createModelBodyCacheReadPricePerMtokMin = 0;
+
 export const createModelBodyCacheWritePricePerMtokDefault = 0;
+export const createModelBodyCacheWritePricePerMtokMin = 0;
+
 export const createModelBodyContextWindowDefault = 128000;
-export const createModelBodyCapabilitiesDefault = [`streaming`, `tools`];
+export const createModelBodyContextWindowMax = 100000000;
+
+export const createModelBodyMaxOutputTokensOneMax = 100000000;
+
+export const createModelBodyCapabilitiesMax = 128;
+
+
 
 export const CreateModelBody = zod.object({
-  "model_id": zod.string().describe('Caller-facing model name'),
-  "provider_id": zod.string().describe('Provider id the model routes to'),
-  "upstream_model": zod.string().default(createModelBodyUpstreamModelDefault).describe('Model name sent to the provider, lets model_id be an alias; defaults to model_id'),
-  "input_price_per_mtok": zod.number().default(createModelBodyInputPricePerMtokDefault).describe('USD per million input tokens'),
-  "output_price_per_mtok": zod.number().default(createModelBodyOutputPricePerMtokDefault).describe('USD per million output tokens'),
-  "cache_read_price_per_mtok": zod.number().default(createModelBodyCacheReadPricePerMtokDefault).describe('USD per million cache-read input tokens'),
-  "cache_write_price_per_mtok": zod.number().default(createModelBodyCacheWritePricePerMtokDefault).describe('USD per million cache-write input tokens'),
-  "context_window": zod.int().default(createModelBodyContextWindowDefault).describe('Context window in tokens'),
-  "max_output_tokens": zod.union([zod.int(),zod.null()]).optional().describe('Max completion tokens; requests are clamped to it'),
-  "capabilities": zod.array(zod.string()).default(createModelBodyCapabilitiesDefault).describe('Capabilities, comma separated')
+  "model_id": zod.string().min(1).max(createModelBodyModelIdMax).describe('Caller-facing model name'),
+  "provider_id": zod.string().min(1).max(createModelBodyProviderIdMax).regex(createModelBodyProviderIdRegExp).describe('Provider id the model routes to'),
+  "upstream_model": zod.string().max(createModelBodyUpstreamModelMax).default(createModelBodyUpstreamModelDefault).describe('Model name sent to the provider, lets model_id be an alias; defaults to model_id'),
+  "input_price_per_mtok": zod.number().min(createModelBodyInputPricePerMtokMin).default(createModelBodyInputPricePerMtokDefault).describe('USD per million input tokens'),
+  "output_price_per_mtok": zod.number().min(createModelBodyOutputPricePerMtokMin).default(createModelBodyOutputPricePerMtokDefault).describe('USD per million output tokens'),
+  "cache_read_price_per_mtok": zod.number().min(createModelBodyCacheReadPricePerMtokMin).default(createModelBodyCacheReadPricePerMtokDefault).describe('USD per million cache-read input tokens'),
+  "cache_write_price_per_mtok": zod.number().min(createModelBodyCacheWritePricePerMtokMin).default(createModelBodyCacheWritePricePerMtokDefault).describe('USD per million cache-write input tokens'),
+  "context_window": zod.int().min(1).max(createModelBodyContextWindowMax).default(createModelBodyContextWindowDefault).describe('Context window in tokens'),
+  "max_output_tokens": zod.union([zod.int().min(1).max(createModelBodyMaxOutputTokensOneMax),zod.null()]).optional().describe('Max completion tokens; requests are clamped to it'),
+  "capabilities": zod.array(zod.string()).max(createModelBodyCapabilitiesMax).optional().describe('Capabilities supported by the model')
 })
 
 export const CreateModelResponse = zod.object({

@@ -34,6 +34,7 @@ services:
     # plane), or leave it unset and keygen writes signing.key and its matching signing.pub together.
     command: >
       sh -c '
+        umask 077;
         mkdir -p /state/.airllm;
         if [ -n "$$GW_BUNDLE_SIGNING_KEY" ]; then
           printf %s "$$GW_BUNDLE_SIGNING_KEY" > /state/.airllm/signing.key;
@@ -66,6 +67,7 @@ services:
     # and wait for the key keygen wrote to the shared volume. Then wait for the token airllm quickstart drops.
     command: >
       sh -c '
+      umask 077;
       mkdir -p /state/.airllm;
       if [ -n "$$GW_BUNDLE_PUBLIC_KEY" ]; then
         printf %s "$$GW_BUNDLE_PUBLIC_KEY" > /state/.airllm/signing.pub;

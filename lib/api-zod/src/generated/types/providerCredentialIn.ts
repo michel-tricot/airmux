@@ -14,17 +14,31 @@
  * validation for some other reason comes back to the caller with the key still in it.
  */
 export interface ProviderCredentialIn {
-  /** Provider name from the catalog, e.g. openai */
+  /**
+     * Provider name from the catalog, e.g. openai
+     * @minLength 1
+     * @maxLength 63
+     * @pattern ^[a-z0-9][a-z0-9_-]*$
+     */
   provider: string;
   /**
      * Handle for this key within the provider and scope, e.g. prod or backup
      * @minLength 1
      * @maxLength 80
+     * @pattern ^[A-Za-z0-9][A-Za-z0-9_.-]*$
      */
   name?: string;
-  /** The provider API key. Written to the secret store and never persisted anywhere else */
+  /**
+     * The provider API key. Written to the secret store and never persisted anywhere else
+     * @minLength 1
+     * @maxLength 16384
+     */
   value: string;
-  /** Lower is tried first; ties break by name */
+  /**
+     * Lower is tried first; ties break by name
+     * @minimum 0
+     * @maximum 1000000
+     */
   priority?: number;
   /** Workspace id or slug for a workspace-scoped key; omitted makes it org-scoped */
   workspace?: string | null;

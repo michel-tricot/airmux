@@ -423,14 +423,22 @@ class Stack:
         return httpx.get(f"{self.dp_url}/readyz", timeout=5.0).status_code
 
     def events(self) -> list[dict]:
-        resp = httpx.get(
-            f"{self.cp_url}/v1/org/events",
-            headers={"authorization": f"Bearer {self.env['GW_ORG_MGMT_TOKEN']}"},
-            params={"limit": 1000},
-            timeout=10.0,
-        )
-        resp.raise_for_status()
-        return resp.json()["data"]
+        events: list[dict] = []
+        page_query: dict[str, int | str] = {"limit": 200}
+        while True:
+            response = httpx.get(
+                f"{self.cp_url}/v1/org/events",
+                headers={"authorization": f"Bearer {self.env['GW_ORG_MGMT_TOKEN']}"},
+                params=page_query,
+                timeout=10.0,
+            )
+            response.raise_for_status()
+            page = response.json()["data"]
+            events.extend(page)
+            if len(page) < 200:
+                return events
+            oldest = page[-1]
+            page_query = {"limit": 200, "before": oldest["occurred_at"], "before_event_id": oldest["event_id"]}
 
     def dp_log_contains(self, needle: str) -> bool:
         log = self.tmp / "dp.log"

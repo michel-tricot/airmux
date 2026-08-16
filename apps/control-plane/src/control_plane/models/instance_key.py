@@ -8,11 +8,11 @@ from pydantic import BaseModel
 from sqlalchemy import JSON
 from sqlmodel import Field
 
-from control_plane.authz import Scope
+from control_plane.authz import Scope  # noqa: TC001 Pydantic evaluates the enum at runtime
 from control_plane.models.audit import audited
 from control_plane.models.common import Identified, Tombstonable
 from control_plane.models.common.base import Record
-from control_plane.models.common.wire import RecordOut
+from control_plane.models.common.wire import RecordOut, RequestModel
 
 
 @audited
@@ -55,7 +55,7 @@ class InstanceKeyRevokedOut(BaseModel):
     status: Literal["revoked"]
 
 
-class InstanceKeyIn(BaseModel):
+class InstanceKeyIn(RequestModel):
     label: str = Field(description="Where this key lives, e.g. ci or a data plane; shown in listings", min_length=1, max_length=80)
     user_id: UUID | None = Field(None, description="Instance admin the key is minted for; defaults to the acting user")
     scopes: list[Scope] | None = Field(None, description="Restrict the key to these scopes; omit for the user's full authority")

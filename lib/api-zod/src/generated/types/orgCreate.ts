@@ -6,6 +6,10 @@
  */
 
 export interface OrgCreate {
-  /** Org name, e.g. My Org */
+  /**
+     * Org name, e.g. My Org
+     * @minLength 1
+     * @maxLength 200
+     */
   name: string;
 }

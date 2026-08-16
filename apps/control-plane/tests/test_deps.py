@@ -8,7 +8,7 @@ whose failure surfaces as an error, never as a phantom success.
 from __future__ import annotations
 
 from fastapi.testclient import TestClient
-from helpers import make_admin, make_org, run_in_db, setup_control_plane
+from helpers import make_admin, make_org, make_user, run_in_db, setup_control_plane
 from sqlalchemy import event
 from sqlalchemy.orm import Session
 from sqlmodel import col
@@ -21,17 +21,14 @@ def test_api_requests_attribute_the_acting_user(tmp_path):
     cp = setup_control_plane(tmp_path)
     root = cp.headers()
     with TestClient(cp.app) as c:
-        user = c.post("/v1/users", json={"email": "admin@example.com"}, headers=root).json()["data"]
-        make_admin(tmp_path, user["id"])
-        token = c.post("/v1/instance/instance-keys", json={"user_id": user["id"], "label": "t"}, headers=root).json()["data"]["token"]
+        user = make_user(tmp_path, "admin@example.com")
+        make_admin(tmp_path, user.id)
+        token = c.post("/v1/instance/instance-keys", json={"user_id": str(user.id), "label": "t"}, headers=root).json()["data"]["token"]
         c.post("/v1/orgs", json={"name": "o2"}, headers={"authorization": f"Bearer {token}"})
 
     rows = run_in_db(tmp_path, lambda: AuditLog.find(order_by=col(AuditLog.id)))
-    user_creation = next(r for r in rows if (r.table_name, r.action) == ("user", "create") and r.record_id == user["id"])
-    assert user_creation.user_id is not None
-    assert user_creation.user_id != user["id"]
     org_creation = next(r for r in rows if (r.table_name, r.action) == ("org", "create"))
-    assert org_creation.user_id == user["id"]
+    assert org_creation.user_id == str(user.id)
 
 
 def test_failed_commit_is_not_reported_as_success(tmp_path):

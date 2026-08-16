@@ -1,10 +1,9 @@
 from __future__ import annotations
 
 import re
-from uuid import UUID
 
 from fastapi.testclient import TestClient
-from helpers import FIXTURE_ADMIN_EMAIL, make_admin, make_org, make_workspace, run_in_db, setup_control_plane
+from helpers import FIXTURE_ADMIN_EMAIL, make_admin, make_org, make_user, make_workspace, run_in_db, setup_control_plane
 
 from contract import uuid7
 from control_plane.models import User, set_actor
@@ -32,17 +31,11 @@ def test_claim_is_public_and_flips_on_the_first_human(tmp_path):
         assert c.get("/v1/instance/oss/claim").json()["data"] == {"claimed": True}
 
 
-def test_user_create_returns_full_resource_with_server_id(tmp_path):
+def test_human_accounts_can_only_be_created_through_signup(tmp_path):
     cp = setup_control_plane(tmp_path)
     root = cp.headers()
     with TestClient(cp.app) as c:
-        created = c.post("/v1/users", json={"email": "michel@example.com"}, headers=root).json()["data"]
-        assert UUID(created["id"]).version == 7
-        assert created["email"] == "michel@example.com"
-        assert created["name"] == "michel@example.com"
-        assert "instance_admin" not in created
-        assert created["orgs"] == []
-        assert c.post("/v1/users", json={"email": "michel@example.com"}, headers=root).status_code == 409
+        assert c.post("/v1/users", json={"email": "michel@example.com"}, headers=root).status_code == 405
 
 
 def test_service_account_gets_a_derived_email(tmp_path):
@@ -56,6 +49,8 @@ def test_service_account_gets_a_derived_email(tmp_path):
         again = c.post("/v1/service-accounts", json={"name": "Data Plane"}, headers=root).json()["data"]
         assert again["email"] != created["email"]
         assert c.post("/v1/service-accounts", json={"name": "!!"}, headers=root).status_code == 422
+        assert c.post("/v1/service-accounts", json={"name": ""}, headers=root).status_code == 422
+        assert c.post("/v1/service-accounts", json={"name": "x" * 201}, headers=root).status_code == 422
 
 
 def test_service_account_is_a_full_principal(tmp_path):
@@ -64,8 +59,7 @@ def test_service_account_is_a_full_principal(tmp_path):
     with TestClient(cp.app) as c:
         o1 = make_org(c, root, "o1")
         created = c.post("/v1/service-accounts", json={"name": "dp"}, headers=root).json()["data"]
-        human = c.post("/v1/users", json={"email": "m@example.com"}, headers=root).json()["data"]
-        assert human["service_account"] is False
+        make_user(tmp_path, "m@example.com")
 
         c.put(f"/v1/org/users/{created['id']}", headers=cp.headers(o1))
         minted = c.post("/v1/org/management-keys", json={"user_id": created["id"], "label": "t"}, headers=cp.headers(o1)).json()["data"]
@@ -84,7 +78,7 @@ def test_listing_filters_by_principal_kind(tmp_path):
     root = cp.headers()
     with TestClient(cp.app) as c:
         account = c.post("/v1/service-accounts", json={"name": "dp"}, headers=root).json()["data"]
-        c.post("/v1/users", json={"email": "m@example.com"}, headers=root)
+        make_user(tmp_path, "m@example.com")
 
         def emails(params):
             return [u["email"] for u in c.get("/v1/users", params=params, headers=root).json()["data"] if u["email"] != FIXTURE_ADMIN_EMAIL]
@@ -100,8 +94,7 @@ def test_membership_lifecycle_and_listing(tmp_path):
     with TestClient(cp.app) as c:
         o1 = make_org(c, root, "o1")
         o2 = make_org(c, root, "o2")
-        user = c.post("/v1/users", json={"email": "m@example.com"}, headers=root).json()["data"]
-        uid = user["id"]
+        uid = str(make_user(tmp_path, "m@example.com").id)
 
         assert c.put(f"/v1/org/users/{uid}", headers=cp.headers(o1)).status_code == 200
         assert c.put(f"/v1/org/users/{uid}", headers=cp.headers(o2)).status_code == 200
@@ -126,8 +119,8 @@ def test_org_user_listing_is_scoped_to_the_acting_org(tmp_path):
     with TestClient(cp.app) as c:
         o1 = make_org(c, root, "o1")
         o2 = make_org(c, root, "o2")
-        both = c.post("/v1/users", json={"email": "both@example.com", "name": "Both"}, headers=root).json()["data"]["id"]
-        only_two = c.post("/v1/users", json={"email": "two@example.com"}, headers=root).json()["data"]["id"]
+        both = str(make_user(tmp_path, "both@example.com", "Both").id)
+        only_two = str(make_user(tmp_path, "two@example.com").id)
         for org, user in ((o1, both), (o2, both), (o2, only_two)):
             assert c.put(f"/v1/org/users/{user}", headers=cp.headers(org)).status_code == 200
 
@@ -148,7 +141,7 @@ def test_org_users_are_unreachable_without_org_scope(tmp_path):
     root = cp.headers()
     with TestClient(cp.app) as c:
         o1 = make_org(c, root, "o1")
-        uid = c.post("/v1/users", json={"email": "m@example.com"}, headers=root).json()["data"]["id"]
+        uid = str(make_user(tmp_path, "m@example.com").id)
         assert c.get("/v1/org/users", headers=root).status_code == 403
         assert c.put(f"/v1/org/users/{uid}", headers=root).status_code == 403
         assert c.delete(f"/v1/org/users/{uid}", headers=root).status_code == 403
@@ -160,7 +153,7 @@ def test_user_org_token_requires_membership(tmp_path):
     root = cp.headers()
     with TestClient(cp.app) as c:
         o1 = make_org(c, root, "o1")
-        uid = c.post("/v1/users", json={"email": "m@example.com"}, headers=root).json()["data"]["id"]
+        uid = str(make_user(tmp_path, "m@example.com").id)
         assert c.post("/v1/org/management-keys", json={"user_id": uid, "label": "t"}, headers=cp.headers(o1)).status_code == 403
         c.put(f"/v1/org/users/{uid}", headers=cp.headers(o1))
         minted = c.post("/v1/org/management-keys", json={"user_id": uid, "label": "t"}, headers=cp.headers(o1)).json()["data"]
@@ -176,8 +169,8 @@ def test_instance_token_requires_instance_admin(tmp_path):
     cp = setup_control_plane(tmp_path)
     root = cp.headers()
     with TestClient(cp.app) as c:
-        member = c.post("/v1/users", json={"email": "m@example.com"}, headers=root).json()["data"]["id"]
-        admin = c.post("/v1/users", json={"email": "a@example.com"}, headers=root).json()["data"]["id"]
+        member = str(make_user(tmp_path, "m@example.com").id)
+        admin = str(make_user(tmp_path, "a@example.com").id)
         make_admin(tmp_path, admin)
         assert c.post("/v1/instance/instance-keys", json={"user_id": member, "label": "t"}, headers=root).status_code == 403
         minted = c.post("/v1/instance/instance-keys", json={"user_id": admin, "label": "t"}, headers=root).json()["data"]
@@ -191,7 +184,7 @@ def test_instance_admin_can_take_org_scope_without_membership(tmp_path):
     root = cp.headers()
     with TestClient(cp.app) as c:
         o1 = make_org(c, root, "o1")
-        admin = c.post("/v1/users", json={"email": "a@example.com"}, headers=root).json()["data"]["id"]
+        admin = str(make_user(tmp_path, "a@example.com").id)
         make_admin(tmp_path, admin)
         minted = c.post("/v1/org/management-keys", json={"user_id": admin, "label": "t"}, headers=cp.headers(o1)).json()["data"]
         org = {"authorization": f"Bearer {minted['token']}"}
@@ -203,7 +196,7 @@ def test_removing_membership_invalidates_user_tokens(tmp_path):
     root = cp.headers()
     with TestClient(cp.app) as c:
         o1 = make_org(c, root, "o1")
-        uid = c.post("/v1/users", json={"email": "m@example.com"}, headers=root).json()["data"]["id"]
+        uid = str(make_user(tmp_path, "m@example.com").id)
         c.put(f"/v1/org/users/{uid}", headers=cp.headers(o1))
         minted = c.post("/v1/org/management-keys", json={"user_id": uid, "label": "t"}, headers=cp.headers(o1)).json()["data"]
         org = {"authorization": f"Bearer {minted['token']}"}
@@ -217,7 +210,7 @@ def test_token_listing_shows_the_owner(tmp_path):
     root = cp.headers()
     with TestClient(cp.app) as c:
         o1 = make_org(c, root, "o1")
-        uid = c.post("/v1/users", json={"email": "m@example.com"}, headers=root).json()["data"]["id"]
+        uid = str(make_user(tmp_path, "m@example.com").id)
         c.put(f"/v1/org/users/{uid}", headers=cp.headers(o1))
         minted = c.post("/v1/org/management-keys", json={"user_id": uid, "label": "t"}, headers=cp.headers(o1)).json()["data"]
         listed = {t["id"]: t["user_id"] for t in c.get("/v1/instance/management-keys", headers=root).json()["data"]}

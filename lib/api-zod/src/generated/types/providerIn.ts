@@ -14,13 +14,25 @@ import type { ProviderInParamAliases } from './providerInParamAliases';
  * would leave the operator believing they configured a credential when the provider has none.
  */
 export interface ProviderIn {
-  /** Provider name, e.g. openai */
+  /**
+     * Provider name, e.g. openai
+     * @minLength 1
+     * @maxLength 63
+     * @pattern ^[a-z0-9][a-z0-9_-]*$
+     */
   provider_id: string;
   /** Adapter kind */
   kind?: ProviderInKind;
-  /** OpenAI-compatible endpoint, e.g. https://api.groq.com/openai/v1 */
+  /**
+     * OpenAI-compatible endpoint, e.g. https://api.groq.com/openai/v1
+     * @minLength 1
+     * @maxLength 2083
+     */
   base_url: string;
-  /** Provider mark as a standalone 24x24 SVG document, empty when the provider has none. Carried as markup so adding a provider needs no client change to make it recognisable, which makes it untrusted markup to whatever renders it; sanitize at the render site */
+  /**
+     * Provider mark as a standalone 24x24 SVG document, empty when the provider has none. Carried as markup so adding a provider needs no client change to make it recognisable, which makes it untrusted markup to whatever renders it; sanitize at the render site
+     * @maxLength 65536
+     */
   icon?: string;
   /** Canonical param name to this provider's spelling */
   param_aliases?: ProviderInParamAliases;

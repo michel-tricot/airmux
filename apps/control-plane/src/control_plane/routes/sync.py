@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from typing import Annotated
 from uuid import UUID  # noqa: TC003 fastapi resolves query param annotations at runtime
 
 from fastapi import APIRouter, HTTPException, Request
+from pydantic import Field
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlmodel import col
 
@@ -16,6 +18,8 @@ from control_plane.models.data_plane_instance import HeartbeatOut
 from control_plane.models.usage_event import EventsIngestedOut
 
 router = APIRouter(tags=["Data Plane"])
+
+EventBatch = Annotated[list[UsageEventV1], Field(max_length=1000)]
 
 CREDENTIAL_HEALTH = {"ok": "live", "credential_rejected": "invalid", "rate_limited": "rate_limited"}
 """Usage statuses that say something about the credential; everything else is about the provider."""
@@ -44,7 +48,7 @@ async def bundle_latest(claims: MgmtDep, org_id: UUID | None = None) -> Envelope
 
 
 @router.post("/events", dependencies=[require(Scope.sync)])
-async def ingest_events(claims: MgmtDep, events: list[UsageEventV1], session: SessionDep) -> Envelope[EventsIngestedOut]:
+async def ingest_events(claims: MgmtDep, events: EventBatch, session: SessionDep) -> Envelope[EventsIngestedOut]:
     """Idempotent on event_id: at-least-once delivery lands exactly once, and a failed batch lands nothing.
 
     One atomic upsert rather than a read per event. Reading first would also be racy: two flushes

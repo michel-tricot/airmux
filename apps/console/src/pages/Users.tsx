@@ -1,25 +1,21 @@
 import { useState } from 'react';
 import * as z from 'zod';
 import { Avatar, AvatarFallback, Card, Button, Input, Badge } from '@/components/ui/elements';
-import { Users, Plus, Search, Bot } from 'lucide-react';
+import { Users, Search, Bot } from 'lucide-react';
 import { formatDate } from '@/lib/format';
 import { Link } from 'wouter';
-import { useUsers, useCreateUserMutation, useCreateServiceAccountMutation } from '@/features/users/hooks';
+import { useUsers, useCreateServiceAccountMutation } from '@/features/users/hooks';
 import { DataTable } from '@/components/shared/data-table';
 import { FormDialog } from '@/components/shared/form-dialog';
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group';
 import { PageShell } from '@/components/shared/page-shell';
 
-const createUserSchema = z.object({
-  name: z.string().min(1, 'Name is required'),
-  email: z.string().email('Enter a valid email address'),
-});
-
 const createServiceAccountSchema = z.object({
   name: z
     .string()
     .min(1, 'Name is required')
+    .max(200, 'Use 200 characters or fewer')
     .refine((value) => /[a-zA-Z0-9]/.test(value), 'Use at least one letter or number'),
 });
 
@@ -27,9 +23,7 @@ export default function UsersList() {
   const usersQuery = useUsers();
   const users = usersQuery.data;
   const [search, setSearch] = useState('');
-  const [createOpen, setCreateOpen] = useState(false);
   const [serviceAccountOpen, setServiceAccountOpen] = useState(false);
-  const createUser = useCreateUserMutation();
   const createServiceAccount = useCreateServiceAccountMutation();
 
   const filteredUsers = users?.filter(
@@ -41,16 +35,13 @@ export default function UsersList() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Global Users</h1>
-          <p className="text-muted-foreground mt-1 text-sm">Every account on the instance, with the orgs it belongs to.</p>
+          <p className="text-muted-foreground mt-1 text-sm">
+            Every account on the instance, with the orgs it belongs to. Human accounts sign up themselves.
+          </p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Button onClick={() => setServiceAccountOpen(true)} variant="outline" className="gap-2">
-            <Bot className="w-4 h-4" /> Create Service Account
-          </Button>
-          <Button onClick={() => setCreateOpen(true)} className="gap-2">
-            <Plus className="w-4 h-4" /> Add User
-          </Button>
-        </div>
+        <Button onClick={() => setServiceAccountOpen(true)} variant="outline" className="gap-2">
+          <Bot className="w-4 h-4" /> Create Service Account
+        </Button>
       </div>
 
       <Card>
@@ -122,50 +113,6 @@ export default function UsersList() {
           ]}
         />
       </Card>
-
-      <FormDialog
-        open={createOpen}
-        onOpenChange={setCreateOpen}
-        title="Add User"
-        description="The account starts with no password; the user signs in once one is set."
-        schema={createUserSchema}
-        defaultValues={{ name: '', email: '' }}
-        onSubmit={(values) => createUser.mutateAsync({ data: values })}
-        submitLabel="Add User"
-        pendingLabel="Adding..."
-        pending={createUser.isPending}
-      >
-        {(form) => (
-          <>
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Full Name</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Jane Doe" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="email"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Email</FormLabel>
-                  <FormControl>
-                    <Input type="email" placeholder="jane@example.com" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </>
-        )}
-      </FormDialog>
 
       <FormDialog
         open={serviceAccountOpen}

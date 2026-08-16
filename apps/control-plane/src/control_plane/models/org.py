@@ -65,11 +65,11 @@ class Org(Record, Identified, Tombstonable, table=True):
 
 
 class OrgCreate(RecordCreate[Org]):
-    name: str = Field(description="Org name, e.g. My Org")
+    name: str = Field(description="Org name, e.g. My Org", min_length=1, max_length=200)
 
 
 class OrgUpdate(RecordUpdate[Org]):
-    name: str | None = None
+    name: str | None = Field(default=None, min_length=1, max_length=200)
 
 
 class OrgOut(RecordOut[Org]):

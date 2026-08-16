@@ -6,6 +6,7 @@ from uuid import UUID
 
 from pydantic import field_validator
 from sqlalchemy import UniqueConstraint
+from sqlalchemy.dialects.postgresql import CITEXT
 from sqlmodel import Field
 
 from control_plane.models.audit import audited
@@ -47,7 +48,7 @@ class Workspace(Record, Identified, OrgOwned, Tombstonable, table=True):
 
     org_id: UUID = Field(foreign_key="org.id")
     name: str
-    slug: str
+    slug: str = Field(sa_type=CITEXT)
 
     api_immutable: ClassVar[frozenset[str]] = frozenset({"slug"})
 
@@ -106,7 +107,7 @@ class Workspace(Record, Identified, OrgOwned, Tombstonable, table=True):
 
 
 class WorkspaceCreate(RecordCreate[Workspace]):
-    name: str = Field(description="Workspace name, e.g. Staging")
+    name: str = Field(description="Workspace name, e.g. Staging", min_length=1, max_length=200)
     slug: Slug = Field("", description="Workspace handle, unique in the org and usable in place of the id; derived from the name when omitted")
 
     @field_validator("slug")
@@ -120,7 +121,7 @@ class WorkspaceCreate(RecordCreate[Workspace]):
 
 
 class WorkspaceUpdate(RecordUpdate[Workspace]):
-    name: str | None = None
+    name: str | None = Field(default=None, min_length=1, max_length=200)
 
 
 class WorkspaceOut(RecordOut[Workspace]):

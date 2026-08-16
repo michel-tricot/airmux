@@ -4,12 +4,13 @@ from pathlib import Path
 
 from anyio.to_thread import run_sync
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
-from control_plane.deps import SessionDep, public
+from contract.secrets.file import write_private_text
+from control_plane.deps import public
 from control_plane.keys import INSTANCE_KEY_PREFIX, MANAGEMENT_KEY_PREFIX
 from control_plane.models import DataPlaneInstance, User
-from control_plane.models.common.wire import Envelope
+from control_plane.models.common.wire import Envelope, RequestModel
 
 router = APIRouter(prefix="/instance/oss", tags=["OSS"])
 
@@ -24,7 +25,7 @@ class ClaimOut(BaseModel):
 
 
 @router.get("/claim", dependencies=[public()])
-async def claim(_session: SessionDep) -> Envelope[ClaimOut]:
+async def claim() -> Envelope[ClaimOut]:
     """Whether any human holds an account yet: public so a fresh deployment can route its first visitor to signup.
 
     Service accounts do not claim an instance; it leaks nothing beyond set-up-or-not, like healthz.
@@ -32,8 +33,8 @@ async def claim(_session: SessionDep) -> Envelope[ClaimOut]:
     return Envelope(data=ClaimOut(claimed=await User.instance_claimed()))
 
 
-class QuickstartIn(BaseModel):
-    token: str
+class QuickstartIn(RequestModel):
+    token: str = Field(min_length=1, max_length=512)
 
 
 class QuickstartOut(BaseModel):
@@ -41,7 +42,7 @@ class QuickstartOut(BaseModel):
 
 
 @router.post("/quickstart", dependencies=[public()])
-async def quickstart(body: QuickstartIn, _session: SessionDep) -> Envelope[QuickstartOut]:
+async def quickstart(body: QuickstartIn) -> Envelope[QuickstartOut]:
     """Drop the data plane's sync credential onto the shared volume so the first data plane can boot.
 
     A single-use bootstrap trapdoor: public, but it only fires while no data plane has ever
@@ -62,7 +63,6 @@ async def quickstart(body: QuickstartIn, _session: SessionDep) -> Envelope[Quick
 
 
 def _write_data_plane_key(token: str) -> str:
-    DATA_PLANE_KEY_DIR.mkdir(parents=True, exist_ok=True)
     destination = DATA_PLANE_KEY_DIR / DATA_PLANE_KEY_FILE
-    destination.write_text(token, encoding="utf-8")
-    return str(destination.resolve())  # the operator reading it has no reason to know the server's working directory
+    write_private_text(destination, token)
+    return str(destination.resolve())

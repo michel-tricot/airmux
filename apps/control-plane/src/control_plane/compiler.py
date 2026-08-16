@@ -41,10 +41,7 @@ async def compile_and_store(org_id: UUID, bundle_id: UUID, now: datetime, stalen
 
 
 async def compile_bundle(org_id: UUID, bundle_id: UUID, now: datetime, staleness_bound: timedelta) -> BundleV1:
-    """Pure function of database state plus the explicit inputs, so it can be diffed and replayed.
-
-    All nondeterminism (bundle_id, now) is injected by the caller.
-    """
+    """Compile the current transaction's visible state with caller-supplied identity and time."""
     org = await Org.find_by_id(org_id)
     if org is None:
         raise UnknownOrgError(org_id)

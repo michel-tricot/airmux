@@ -36,9 +36,11 @@ def test_keygen_force_rotates_the_key(tmp_path):
     key_path = tmp_path / "signing.key"
     assert runner.invoke(cli_app, ["keygen", "--out", str(key_path)]).exit_code == 0
     before = key_path.read_text(encoding="utf-8")
+    before_inode = key_path.stat().st_ino
     result = runner.invoke(cli_app, ["keygen", "--out", str(key_path), "--force"])
     assert result.exit_code == 0, result.output
     assert key_path.read_text(encoding="utf-8") != before
+    assert key_path.stat().st_ino != before_inode
 
 
 def test_migrate_reports_what_it_did(tmp_path):
@@ -77,17 +79,29 @@ def test_admin_promotes_an_existing_account(tmp_path):
     assert run_in_db(tmp_path, lambda: User.first(User.email == "someone@example.com")).instance_admin is True
 
 
-def test_admin_creates_the_account_when_it_does_not_exist(tmp_path):
+def test_admin_refuses_an_account_that_has_not_signed_up(tmp_path):
     cfg = _config(tmp_path)
     result = runner.invoke(cli_app, ["admin", "--email", "new@example.com", "--config", str(cfg)])
-    assert result.exit_code == 0, result.output
-    created = run_in_db(tmp_path, lambda: User.first(User.email == "new@example.com"))
-    assert created is not None
-    assert created.instance_admin is True
+    assert result.exit_code == 1
+    assert "sign up" in result.output
+    assert run_in_db(tmp_path, lambda: User.first(User.email == "new@example.com")) is None
+
+
+def test_admin_reports_an_invalid_email_without_opening_the_database(tmp_path):
+    result = runner.invoke(cli_app, ["admin", "--email", "not-an-email", "--config", str(tmp_path / "missing.yml")])
+    assert result.exit_code == 1
+    assert "email must be a valid address" in result.output
 
 
 def test_admin_is_idempotent(tmp_path):
     cfg = _config(tmp_path)
+
+    async def add_user():
+        user = User(email="twice@example.com", name="Twice")
+        await set_actor(user.id)
+        await user.save()
+
+    run_in_db(tmp_path, add_user)
     assert runner.invoke(cli_app, ["admin", "--email", "twice@example.com", "--config", str(cfg)]).exit_code == 0
     again = runner.invoke(cli_app, ["admin", "--email", "twice@example.com", "--config", str(cfg)])
     assert again.exit_code == 0, again.output

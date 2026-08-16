@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import stat
 from datetime import UTC, datetime
 
 import pytest
@@ -40,6 +41,7 @@ def test_oss_quickstart_writes_the_token_on_a_virgin_instance(tmp_path, key_path
         assert resp.status_code == 200, resp.text
         assert resp.json()["data"]["path"] == str(key_path)
         assert key_path.read_text(encoding="utf-8") == TOKEN
+        assert stat.S_IMODE(key_path.stat().st_mode) == 0o600
 
 
 def test_oss_quickstart_is_public(tmp_path, key_path):

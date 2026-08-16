@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from fastapi.testclient import TestClient
-from helpers import make_app, make_org, make_workspace, setup_control_plane
+from helpers import make_app, make_org, make_user, make_workspace, setup_control_plane
 from test_api_hygiene import _api_routes
 
 from contract import uuid7
@@ -18,7 +18,8 @@ def _markers(route) -> list[str]:
 def test_every_route_declares_its_authorization():
     """Every endpoint carries exactly one authorization marker on its decorator: require(Scope...)
     for scoped access, public() for deliberately unauthenticated routes, user_scoped() for
-    account routes authenticated as a user with no org or scope semantics. Instance routes
+    account routes authenticated as a user with no org or scope semantics. browser_scoped()
+    marks cookie-only account routes. Instance routes
     additionally gate on instance_scope, which is the row-scope axis, not a marker."""
     app = make_app()
     problems = [
@@ -29,7 +30,7 @@ def test_every_route_declares_its_authorization():
     ]
     assert problems == [], (
         f"Every route declares its authorization exactly once: add dependencies=[require(Scope...)], "
-        f"dependencies=[public()], or dependencies=[user_scoped()] to the route decorator: {problems}"
+        f"dependencies=[public()], dependencies=[user_scoped()], or dependencies=[browser_scoped()] to the route decorator: {problems}"
     )
 
 
@@ -55,16 +56,19 @@ def test_spec_advertises_the_enforced_scope():
         access = [a for dep in route.dependant.dependencies if (a := getattr(dep.call, "access", None)) is not None]
         for method in sorted(route.methods or ()):
             operation = spec["paths"]["/v1" + route.path][method.lower()]
-            advertised = [scope for entry in operation.get("security", []) for scope in entry.get("HTTPBearer", [])]
             description = operation.get("description", "")
-            if advertised != enforced:
-                problems.append(f"{method} /v1{route.path} enforces {enforced} but advertises {advertised}")
+            if enforced and operation.get("security") != [{"HTTPBearer": []}, {"SessionCookie": []}]:
+                problems.append(f"{method} {route.path} does not advertise bearer-or-cookie authentication")
             if enforced and f"`{enforced[0]}`" not in description:
-                problems.append(f"{method} /v1{route.path} description does not state the required scope")
+                problems.append(f"{method} {route.path} description does not state the required scope")
             if "public" in access and (operation.get("security") != [] or "No authentication required." not in description):
-                problems.append(f"{method} /v1{route.path} is public() but the spec does not say so")
-            if "user" in access and "Requires an authenticated user" not in description:
-                problems.append(f"{method} /v1{route.path} is user_scoped() but the spec does not say so")
+                problems.append(f"{method} {route.path} is public() but the spec does not say so")
+            if "user" in access and (
+                operation.get("security") != [{"HTTPBearer": []}, {"SessionCookie": []}] or "Requires an authenticated user" not in description
+            ):
+                problems.append(f"{method} {route.path} is user_scoped() but the spec does not say so")
+            if "browser" in access and (operation.get("security") != [{"SessionCookie": []}] or "Requires a browser session" not in description):
+                problems.append(f"{method} {route.path} is browser_scoped() but the spec does not say so")
     assert problems == [], f"The spec must advertise exactly what the markers enforce; fix the openapi() derivation, not the spec: {problems}"
 
 
@@ -77,6 +81,25 @@ def test_spec_stamping_is_idempotent_across_requests():
     assert first == second
     assert first is not None
     assert first.count("Requires the") == 1
+
+
+def test_spec_describes_cookie_and_bearer_authentication_truthfully():
+    spec = make_app().openapi()
+    schemes = spec["components"]["securitySchemes"]
+    assert schemes["SessionCookie"] == {"type": "apiKey", "in": "cookie", "name": "airllm_session"}
+    assert spec["paths"]["/v1/auth/login"]["post"]["security"] == []
+    assert spec["paths"]["/v1/auth/me"]["get"]["security"] == [{"HTTPBearer": []}, {"SessionCookie": []}]
+    assert spec["paths"]["/v1/auth/cli/request"]["get"]["security"] == [{"SessionCookie": []}]
+    assert spec["paths"]["/v1/org/workspaces"]["get"]["security"] == [{"HTTPBearer": []}, {"SessionCookie": []}]
+
+    internal = {"airllm_session", "X-Requested-With", "Sec-Fetch-Site"}
+    parameters = {
+        parameter["name"]
+        for operations in spec["paths"].values()
+        for operation in operations.values()
+        for parameter in operation.get("parameters", [])
+    }
+    assert parameters.isdisjoint(internal)
 
 
 def _claims(scopes) -> ManagementClaims:
@@ -183,12 +206,12 @@ def test_mint_accepts_scopes_and_rejects_unknown_ones(tmp_path):
     with TestClient(cp.app) as client:
         root = cp.headers()
         o1 = _seed_org(client, root)
-        user = client.post("/v1/users", json={"email": "dev@example.com"}, headers=root).json()["data"]
-        assert client.put(f"/v1/org/users/{user['id']}", headers=cp.headers(o1)).status_code == 200
-        bad = client.post("/v1/org/management-keys", json={"user_id": user["id"], "scopes": ["nope"], "label": "t"}, headers=cp.headers(org_id=o1))
+        user = make_user(tmp_path, "dev@example.com")
+        assert client.put(f"/v1/org/users/{user.id}", headers=cp.headers(o1)).status_code == 200
+        bad = client.post("/v1/org/management-keys", json={"user_id": str(user.id), "scopes": ["nope"], "label": "t"}, headers=cp.headers(org_id=o1))
         assert bad.status_code == 422
         minted = client.post(
-            "/v1/org/management-keys", json={"user_id": user["id"], "scopes": ["inference-keys:read"], "label": "t"}, headers=cp.headers(org_id=o1)
+            "/v1/org/management-keys", json={"user_id": str(user.id), "scopes": ["inference-keys:read"], "label": "t"}, headers=cp.headers(org_id=o1)
         )
         assert minted.status_code == 200
         assert minted.json()["data"]["scopes"] == ["inference-keys:read"]
@@ -203,7 +226,7 @@ def test_restricted_instance_credential(tmp_path):
         assert client.get("/v1/users", headers=auditor).status_code == 200
         assert client.get("/v1/instance/management-keys", headers=auditor).status_code == 200
         assert client.get("/v1/orgs", headers=auditor).status_code == 403
-        assert client.post("/v1/users", json={"email": "x@example.com"}, headers=auditor).status_code == 403
+        assert client.post("/v1/service-accounts", json={"name": "x"}, headers=auditor).status_code == 403
         assert client.post("/v1/taxonomy/providers", json={}, headers=auditor).status_code == 403
         provisioner = cp.headers(scopes=["orgs:create", "users:write"])
         assert client.post("/v1/orgs", json={"name": "o2"}, headers=provisioner).status_code == 200

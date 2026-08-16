@@ -10,7 +10,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 
 from fastapi.testclient import TestClient
-from helpers import make_org, make_workspace, run_in_db, setup_control_plane
+from helpers import make_org, make_user, make_workspace, run_in_db, setup_control_plane
 
 from contract import uuid7
 from control_plane.models import InferenceKey, ManagementKey, Org, OrgMembership, UsageEvent, Workspace, WorkspaceMembership
@@ -115,11 +115,11 @@ def test_deleting_a_user_takes_their_credentials(tmp_path):
     cp = setup_control_plane(tmp_path)
     root = cp.headers()
     with TestClient(cp.app) as c:
-        user = c.post("/v1/users", json={"email": "gone@example.com"}, headers=root).json()["data"]
+        user = make_user(tmp_path, "gone@example.com")
 
-        deleted = c.delete(f"/v1/users/{user['id']}", headers=root)
+        deleted = c.delete(f"/v1/users/{user.id}", headers=root)
         assert deleted.status_code == 200, deleted.text
-        assert c.get(f"/v1/users/{user['id']}", headers=root).status_code == 404
+        assert c.get(f"/v1/users/{user.id}", headers=root).status_code == 404
 
 
 def test_deleting_a_user_refuses_while_they_hold_a_membership(tmp_path):
@@ -127,15 +127,15 @@ def test_deleting_a_user_refuses_while_they_hold_a_membership(tmp_path):
     root = cp.headers()
     with TestClient(cp.app) as c:
         org = make_org(c, root, "o1")
-        user = c.post("/v1/users", json={"email": "member@example.com"}, headers=root).json()["data"]
-        assert c.put(f"/v1/org/users/{user['id']}", headers=cp.headers(org)).status_code == 200
+        user = make_user(tmp_path, "member@example.com")
+        assert c.put(f"/v1/org/users/{user.id}", headers=cp.headers(org)).status_code == 200
 
-        refused = c.delete(f"/v1/users/{user['id']}", headers=root)
+        refused = c.delete(f"/v1/users/{user.id}", headers=root)
         assert refused.status_code == 409
         assert "member" in refused.json()["detail"]
 
-        assert c.delete(f"/v1/org/users/{user['id']}", headers=cp.headers(org)).status_code == 200
-        assert c.delete(f"/v1/users/{user['id']}", headers=root).status_code == 200
+        assert c.delete(f"/v1/org/users/{user.id}", headers=cp.headers(org)).status_code == 200
+        assert c.delete(f"/v1/users/{user.id}", headers=root).status_code == 200
 
 
 def test_delete_is_404_for_an_unknown_resource(tmp_path):

@@ -4,17 +4,16 @@ from __future__ import annotations
 
 import pytest
 from fastapi.testclient import TestClient
-from helpers import make_org, make_workspace, run_in_db, setup_control_plane
+from helpers import make_org, make_user, make_workspace, run_in_db, setup_control_plane
 from sqlmodel import col
 
 from contract import SignedBundle, uuid7, verify_bundle
 from control_plane.models import AuditLog
 
 
-def _member(c, cp, org_id, email):
+def _member(c, cp, org_id, email, tmp_path):
     """A real org member with an org-scoped management key: the non-admin path through every dep."""
-    root = cp.headers()
-    uid = c.post("/v1/users", json={"email": email}, headers=root).json()["data"]["id"]
+    uid = str(make_user(tmp_path, email).id)
     assert c.put(f"/v1/org/users/{uid}", headers=cp.headers(org_id)).status_code == 200
     minted = c.post("/v1/org/management-keys", json={"user_id": uid, "label": "t"}, headers=cp.headers(org_id)).json()["data"]
     return uid, {"authorization": f"Bearer {minted['token']}"}
@@ -25,7 +24,7 @@ def test_workspace_lifecycle_and_creator_auto_enrollment(tmp_path):
     root = cp.headers()
     with TestClient(cp.app) as c:
         o1 = make_org(c, root, "o1")
-        uid, member = _member(c, cp, o1, "m@example.com")
+        uid, member = _member(c, cp, o1, "m@example.com", tmp_path)
         assert c.get("/v1/org/workspaces", headers=member).json()["data"] == []
 
         created = c.post("/v1/org/workspaces", json={"name": "staging", "slug": "staging"}, headers=member).json()["data"]
@@ -58,8 +57,9 @@ def test_slug_is_create_only(tmp_path):
         o1 = make_org(c, root, "o1")
         org = cp.headers(o1)
         ws = make_workspace(c, org, "staging")
-        patched = c.patch(f"/v1/org/workspaces/{ws}", json={"name": "prod", "slug": "prod"}, headers=org).json()["data"]
-        assert (patched["name"], patched["slug"]) == ("prod", "staging")
+        assert c.patch(f"/v1/org/workspaces/{ws}", json={"name": "prod", "slug": "prod"}, headers=org).status_code == 422
+        workspace = c.get(f"/v1/org/workspaces/{ws}", headers=org).json()["data"]
+        assert (workspace["name"], workspace["slug"]) == ("staging", "staging")
 
 
 def test_an_omitted_slug_is_derived_from_the_name(tmp_path):
@@ -145,7 +145,7 @@ def test_adding_a_non_org_member_is_a_conflict(tmp_path):
     with TestClient(cp.app) as c:
         o1 = make_org(c, root, "o1")
         ws = make_workspace(c, cp.headers(o1))
-        outsider = c.post("/v1/users", json={"email": "out@example.com"}, headers=root).json()["data"]["id"]
+        outsider = make_user(tmp_path, "out@example.com").id
         assert c.put(f"/v1/org/workspaces/{ws}/members/{outsider}", headers=cp.headers(o1)).status_code == 409
         assert c.put(f"/v1/org/workspaces/{ws}/members/{uuid7()}", headers=cp.headers(o1)).status_code == 404
 
@@ -155,8 +155,8 @@ def test_key_operations_require_workspace_membership(tmp_path):
     root = cp.headers()
     with TestClient(cp.app) as c:
         o1 = make_org(c, root, "o1")
-        _, creator = _member(c, cp, o1, "creator@example.com")
-        _, outsider = _member(c, cp, o1, "orgmate@example.com")
+        _, creator = _member(c, cp, o1, "creator@example.com", tmp_path)
+        _, outsider = _member(c, cp, o1, "orgmate@example.com", tmp_path)
         ws = make_workspace(c, creator)
 
         assert c.post(f"/v1/org/workspaces/{ws}/inference-keys", json={"label": "k"}, headers=creator).status_code == 200
@@ -174,8 +174,8 @@ def test_membership_lifecycle_within_the_workspace(tmp_path):
     root = cp.headers()
     with TestClient(cp.app) as c:
         o1 = make_org(c, root, "o1")
-        _, creator = _member(c, cp, o1, "creator@example.com")
-        joiner, joiner_headers = _member(c, cp, o1, "joiner@example.com")
+        _, creator = _member(c, cp, o1, "creator@example.com", tmp_path)
+        joiner, joiner_headers = _member(c, cp, o1, "joiner@example.com", tmp_path)
         ws = make_workspace(c, creator)
 
         assert c.get(f"/v1/org/workspaces/{ws}/inference-keys", headers=joiner_headers).status_code == 403
@@ -194,7 +194,7 @@ def test_org_membership_removal_cascades_out_of_workspaces(tmp_path):
     root = cp.headers()
     with TestClient(cp.app) as c:
         o1 = make_org(c, root, "o1")
-        uid, member = _member(c, cp, o1, "m@example.com")
+        uid, member = _member(c, cp, o1, "m@example.com", tmp_path)
         ws = make_workspace(c, member)
         assert [m["user_id"] for m in c.get(f"/v1/org/workspaces/{ws}/members", headers=cp.headers(o1)).json()["data"]] == [uid]
 

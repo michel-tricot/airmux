@@ -4,18 +4,20 @@ from datetime import datetime
 from typing import ClassVar, Self
 from uuid import UUID, uuid4
 
-from pydantic import BaseModel, field_validator
+from pydantic import field_validator
 from sqlalchemy import text
+from sqlalchemy.dialects.postgresql import CITEXT
 from sqlmodel import Field, col, select
 
 from control_plane.db import current_session
 from control_plane.models.audit import audited
 from control_plane.models.common import Identified, Tombstonable, slugify
 from control_plane.models.common.base import Record
-from control_plane.models.common.wire import RecordCreate, RecordOut
+from control_plane.models.common.wire import RecordOut, RequestModel
 from control_plane.models.org_membership import OrgMembership
 
 SERVICE_ACCOUNT_EMAIL_DOMAIN = "airbytesvcaccount.ai"
+EMAIL_MAX_LENGTH = 320
 
 # Advisory lock key for the instance claim. Arbitrary and constant: it names the claim, nothing else.
 _CLAIM_LOCK = 0x41524C4C
@@ -23,7 +25,7 @@ _CLAIM_LOCK = 0x41524C4C
 
 @audited
 class User(Record, Identified, Tombstonable, table=True):
-    email: str = Field(unique=True)
+    email: str = Field(unique=True, sa_type=CITEXT)
     name: str
     instance_admin: bool = False
     service_account: bool = False
@@ -31,6 +33,15 @@ class User(Record, Identified, Tombstonable, table=True):
     api_hidden: ClassVar[frozenset[str]] = frozenset({"instance_admin"})
     api_readonly: ClassVar[frozenset[str]] = frozenset({"service_account"})
     api_immutable: ClassVar[frozenset[str]] = frozenset({"email"})
+
+    @staticmethod
+    def normalize_email(email: str) -> str:
+        normalized = email.strip().casefold()
+        local, separator, domain = normalized.partition("@")
+        if not separator or not local or not domain or len(normalized) > EMAIL_MAX_LENGTH:
+            msg = "email must be a valid address"
+            raise ValueError(msg)
+        return normalized
 
     @classmethod
     async def members_of(cls, org_id: UUID) -> list[Self]:
@@ -93,13 +104,12 @@ class User(Record, Identified, Tombstonable, table=True):
         )
 
 
-class UserCreate(RecordCreate[User]):
-    email: str = Field(description="Unique email identifying the user")
-    name: str = Field("", description="Display name, defaults to the email")
-
-
-class ServiceAccountIn(BaseModel):
-    name: str = Field(description="Service account name; the email is derived as name-<id>@airbytesvcaccount.ai")
+class ServiceAccountIn(RequestModel):
+    name: str = Field(
+        description="Service account name; the email is derived as name-<id>@airbytesvcaccount.ai",
+        min_length=1,
+        max_length=200,
+    )
 
     @field_validator("name")
     @classmethod

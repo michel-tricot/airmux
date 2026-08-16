@@ -6,6 +6,10 @@
  */
 
 export interface CliAuthApproveIn {
+  /**
+     * @minLength 8
+     * @maxLength 16
+     */
   user_code: string;
   org_id: string;
 }

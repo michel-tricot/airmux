@@ -223,7 +223,7 @@ def test_signup_creates_user_identity_and_session(tmp_path):
         assert resp.status_code == 200, resp.text
         assert SESSION_COOKIE in resp.cookies
         me = resp.json()["data"]
-        assert me["email"] == "New@Example.com"
+        assert me["email"] == "new@example.com"
         assert me["instance_admin"] is False
         assert me["orgs"] == []
         assert c.get("/v1/auth/me", headers=CSRF).json()["data"]["user_id"] == me["user_id"]
@@ -237,6 +237,22 @@ def test_signup_duplicate_email_is_409(tmp_path):
     with _client(cp) as c:
         _make_user(c, cp)
         assert c.post("/v1/auth/signup", json={"email": "m@example.com", "password": PASSWORD}).status_code == 409
+
+
+def test_case_variant_signup_cannot_replace_an_existing_password(tmp_path):
+    cp = setup_control_plane(tmp_path)
+    with _client(cp) as c:
+        victim_password = "victim-password"
+        attacker_password = "attacker-password"
+        assert c.post("/v1/auth/signup", json={"email": "victim@example.com", "password": victim_password}).status_code == 200
+        c.cookies.clear()
+
+        takeover = c.post("/v1/auth/signup", json={"email": " Victim@Example.COM ", "password": attacker_password})
+
+        assert takeover.status_code == 409
+        assert c.post("/v1/auth/login", json={"email": "victim@example.com", "password": victim_password}).status_code == 200
+        c.cookies.clear()
+        assert c.post("/v1/auth/login", json={"email": "victim@example.com", "password": attacker_password}).status_code == 401
 
 
 def test_signup_rejects_short_passwords(tmp_path):

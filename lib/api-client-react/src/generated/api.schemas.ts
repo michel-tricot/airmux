@@ -168,6 +168,10 @@ export interface ClaimOut {
 }
 
 export interface CliAuthApproveIn {
+  /**
+     * @minLength 8
+     * @maxLength 16
+     */
   user_code: string;
   org_id: string;
 }
@@ -178,6 +182,10 @@ export interface CliAuthApprovedOut {
 }
 
 export interface CliAuthPollIn {
+  /**
+     * @minLength 1
+     * @maxLength 256
+     */
   poll_secret: string;
 }
 
@@ -293,6 +301,10 @@ export interface HeartbeatOut {
  */
 export interface HeartbeatV1 {
   instance_id: string;
+  /**
+     * @minLength 1
+     * @maxLength 100
+     */
   version: string;
   bundle_id?: string | null;
 }
@@ -306,9 +318,6 @@ export interface InferenceKeyIn {
   label: string;
 }
 
-/**
- * The mint result: the id plus the one-time plaintext token, which is not a column and never returns again.
- */
 export interface InferenceKeyMintedOut {
   id: string;
   token: string;
@@ -414,7 +423,15 @@ export interface InstanceKeyRevokedOut {
 }
 
 export interface LoginIn {
+  /**
+     * @minLength 3
+     * @maxLength 320
+     */
   email: string;
+  /**
+     * @minLength 1
+     * @maxLength 1024
+     */
   password: string;
 }
 
@@ -473,25 +490,56 @@ export interface MembershipOut {
 }
 
 export interface ModelIn {
-  /** Caller-facing model name */
+  /**
+     * Caller-facing model name
+     * @minLength 1
+     * @maxLength 255
+     */
   model_id: string;
-  /** Provider id the model routes to */
+  /**
+     * Provider id the model routes to
+     * @minLength 1
+     * @maxLength 63
+     * @pattern ^[a-z0-9][a-z0-9_-]*$
+     */
   provider_id: string;
-  /** Model name sent to the provider, lets model_id be an alias; defaults to model_id */
+  /**
+     * Model name sent to the provider, lets model_id be an alias; defaults to model_id
+     * @maxLength 255
+     */
   upstream_model?: string;
-  /** USD per million input tokens */
+  /**
+     * USD per million input tokens
+     * @minimum 0
+     */
   input_price_per_mtok?: number;
-  /** USD per million output tokens */
+  /**
+     * USD per million output tokens
+     * @minimum 0
+     */
   output_price_per_mtok?: number;
-  /** USD per million cache-read input tokens */
+  /**
+     * USD per million cache-read input tokens
+     * @minimum 0
+     */
   cache_read_price_per_mtok?: number;
-  /** USD per million cache-write input tokens */
+  /**
+     * USD per million cache-write input tokens
+     * @minimum 0
+     */
   cache_write_price_per_mtok?: number;
-  /** Context window in tokens */
+  /**
+     * Context window in tokens
+     * @minimum 1
+     * @maximum 100000000
+     */
   context_window?: number;
   /** Max completion tokens; requests are clamped to it */
   max_output_tokens?: number | null;
-  /** Capabilities, comma separated */
+  /**
+     * Capabilities supported by the model
+     * @maxItems 128
+     */
   capabilities?: string[];
 }
 
@@ -513,7 +561,11 @@ export interface ModelOut {
 }
 
 export interface OrgCreate {
-  /** Org name, e.g. My Org */
+  /**
+     * Org name, e.g. My Org
+     * @minLength 1
+     * @maxLength 200
+     */
   name: string;
 }
 
@@ -536,8 +588,15 @@ export interface OrgUpdate {
 }
 
 export interface PasswordChangeIn {
+  /**
+     * @minLength 1
+     * @maxLength 1024
+     */
   current_password: string;
-  /** @minLength 8 */
+  /**
+     * @minLength 8
+     * @maxLength 1024
+     */
   new_password: string;
 }
 
@@ -555,17 +614,31 @@ export interface PasswordChangedOut {
  * validation for some other reason comes back to the caller with the key still in it.
  */
 export interface ProviderCredentialIn {
-  /** Provider name from the catalog, e.g. openai */
+  /**
+     * Provider name from the catalog, e.g. openai
+     * @minLength 1
+     * @maxLength 63
+     * @pattern ^[a-z0-9][a-z0-9_-]*$
+     */
   provider: string;
   /**
      * Handle for this key within the provider and scope, e.g. prod or backup
      * @minLength 1
      * @maxLength 80
+     * @pattern ^[A-Za-z0-9][A-Za-z0-9_.-]*$
      */
   name?: string;
-  /** The provider API key. Written to the secret store and never persisted anywhere else */
+  /**
+     * The provider API key. Written to the secret store and never persisted anywhere else
+     * @minLength 1
+     * @maxLength 16384
+     */
   value: string;
-  /** Lower is tried first; ties break by name */
+  /**
+     * Lower is tried first; ties break by name
+     * @minimum 0
+     * @maximum 1000000
+     */
   priority?: number;
   /** Workspace id or slug for a workspace-scoped key; omitted makes it org-scoped */
   workspace?: string | null;
@@ -608,7 +681,11 @@ export interface ProviderCredentialUpdate {
  * A rotation: the same credential, a new value.
  */
 export interface ProviderCredentialValueIn {
-  /** The replacement provider API key */
+  /**
+     * The replacement provider API key
+     * @minLength 1
+     * @maxLength 16384
+     */
   value: string;
 }
 
@@ -635,13 +712,25 @@ export type ProviderInParamAliases = {[key: string]: string};
  * would leave the operator believing they configured a credential when the provider has none.
  */
 export interface ProviderIn {
-  /** Provider name, e.g. openai */
+  /**
+     * Provider name, e.g. openai
+     * @minLength 1
+     * @maxLength 63
+     * @pattern ^[a-z0-9][a-z0-9_-]*$
+     */
   provider_id: string;
   /** Adapter kind */
   kind?: ProviderInKind;
-  /** OpenAI-compatible endpoint, e.g. https://api.groq.com/openai/v1 */
+  /**
+     * OpenAI-compatible endpoint, e.g. https://api.groq.com/openai/v1
+     * @minLength 1
+     * @maxLength 2083
+     */
   base_url: string;
-  /** Provider mark as a standalone 24x24 SVG document, empty when the provider has none. Carried as markup so adding a provider needs no client change to make it recognisable, which makes it untrusted markup to whatever renders it; sanitize at the render site */
+  /**
+     * Provider mark as a standalone 24x24 SVG document, empty when the provider has none. Carried as markup so adding a provider needs no client change to make it recognisable, which makes it untrusted markup to whatever renders it; sanitize at the render site
+     * @maxLength 65536
+     */
   icon?: string;
   /** Canonical param name to this provider's spelling */
   param_aliases?: ProviderInParamAliases;
@@ -668,6 +757,10 @@ export interface ProviderOut {
 }
 
 export interface QuickstartIn {
+  /**
+     * @minLength 1
+     * @maxLength 512
+     */
   token: string;
 }
 
@@ -676,7 +769,11 @@ export interface QuickstartOut {
 }
 
 export interface ServiceAccountIn {
-  /** Service account name; the email is derived as name-<id>@airbytesvcaccount.ai */
+  /**
+     * Service account name; the email is derived as name-<id>@airbytesvcaccount.ai
+     * @minLength 1
+     * @maxLength 200
+     */
   name: string;
 }
 
@@ -692,9 +789,17 @@ export interface SignedBundle {
 }
 
 export interface SignupIn {
+  /**
+     * @minLength 3
+     * @maxLength 320
+     */
   email: string;
+  /** @maxLength 200 */
   name?: string;
-  /** @minLength 8 */
+  /**
+     * @minLength 8
+     * @maxLength 1024
+     */
   password: string;
 }
 
@@ -762,29 +867,54 @@ export interface UsageEventV1 {
   occurred_at: string;
   org_id: string;
   workspace_id: string;
+  /**
+     * @minLength 1
+     * @maxLength 255
+     */
   key_id: string;
+  /**
+     * @minLength 1
+     * @maxLength 255
+     */
   model_id: string;
+  /** @maxLength 63 */
   provider_id: string;
   bundle_id: string;
+  /**
+     * @minimum 0
+     * @maximum 2147483647
+     */
   input_tokens: number;
+  /**
+     * @minimum 0
+     * @maximum 2147483647
+     */
   output_tokens: number;
+  /** @minimum 0 */
   cost_usd: number;
+  /** @minimum 0 */
   cost_input_usd?: number;
+  /** @minimum 0 */
   cost_output_usd?: number;
+  /**
+     * @minimum 0
+     * @maximum 2147483647
+     */
   cache_read_tokens?: number;
+  /**
+     * @minimum 0
+     * @maximum 2147483647
+     */
   cache_write_tokens?: number;
+  /**
+     * @minimum 0
+     * @maximum 2147483647
+     */
   latency_ms: number;
   status: UsageEventV1Status;
   stream: boolean;
   credential_id?: string | null;
   credential_scope?: UsageEventV1CredentialScope;
-}
-
-export interface UserCreate {
-  /** Unique email identifying the user */
-  email: string;
-  /** Display name, defaults to the email */
-  name?: string;
 }
 
 export interface UserOut {
@@ -799,7 +929,11 @@ export interface UserOut {
 }
 
 export interface WorkspaceCreate {
-  /** Workspace name, e.g. Staging */
+  /**
+     * Workspace name, e.g. Staging
+     * @minLength 1
+     * @maxLength 200
+     */
   name: string;
   /**
      * Workspace handle, unique in the org and usable in place of the id; derived from the name when omitted
@@ -842,6 +976,10 @@ org_id?: string | null;
 };
 
 export type ListInstanceActivityParams = {
+/**
+ * @minimum 1
+ * @maximum 200
+ */
 limit?: number;
 };
 
@@ -854,7 +992,10 @@ workspace?: string | null;
 };
 
 export type ListEventsParams = {
+before?: string | null;
+before_event_id?: string | null;
 after?: string | null;
+after_event_id?: string | null;
 /**
  * @minimum 1
  * @maximum 200
@@ -864,6 +1005,10 @@ workspace_id?: string | null;
 };
 
 export type ListActivityParams = {
+/**
+ * @minimum 1
+ * @maximum 200
+ */
 limit?: number;
 };
 

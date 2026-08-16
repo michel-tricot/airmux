@@ -102,6 +102,17 @@ describe('instance administration routes', () => {
     expect(screen.queryByText('No users found.')).not.toBeInTheDocument();
   });
 
+  it('keeps service-account creation and directs humans through signup', async () => {
+    const user = userEvent.setup();
+    renderAt('/instance/users');
+    await screen.findByRole('heading', { name: 'Global Users' });
+
+    expect(screen.getByText(/Human accounts sign up themselves/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Add User' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Create Service Account' }));
+    expect(screen.getByRole('dialog', { name: 'Create Service Account' })).toBeInTheDocument();
+  });
+
   it('provides route-complete navigation from the mobile menu', async () => {
     const user = userEvent.setup();
     renderAt('/instance');

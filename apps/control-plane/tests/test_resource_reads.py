@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from fastapi.testclient import TestClient
-from helpers import make_org, make_workspace, setup_control_plane
+from helpers import make_org, make_user, make_workspace, setup_control_plane
 
 from contract import uuid7
 
@@ -25,12 +25,11 @@ def test_get_user_by_id_carries_their_memberships(tmp_path):
     root = cp.headers()
     with TestClient(cp.app) as c:
         org = make_org(c, root, "o1")
-        user = c.post("/v1/users", json={"email": "one@example.com"}, headers=root).json()["data"]
-        assert user["orgs"] == []
+        user = make_user(tmp_path, "one@example.com")
 
-        c.put(f"/v1/org/users/{user['id']}", headers=cp.headers(org))
+        c.put(f"/v1/org/users/{user.id}", headers=cp.headers(org))
 
-        fetched = c.get(f"/v1/users/{user['id']}", headers=root)
+        fetched = c.get(f"/v1/users/{user.id}", headers=root)
         assert fetched.status_code == 200, fetched.text
         assert fetched.json()["data"]["orgs"] == [str(org)]
         assert c.get(f"/v1/users/{uuid7()}", headers=root).status_code == 404
