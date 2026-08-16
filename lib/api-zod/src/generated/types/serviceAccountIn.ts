@@ -12,4 +12,5 @@ export interface ServiceAccountIn {
      * @maxLength 200
      */
   name: string;
+  instance_role?: 'data_plane' | null;
 }

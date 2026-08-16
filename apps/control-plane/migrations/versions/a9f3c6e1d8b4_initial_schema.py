@@ -105,7 +105,11 @@ def upgrade() -> None:
         sa.Column("name", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("instance_role", sqlmodel.sql.sqltypes.AutoString(), nullable=True),
         sa.Column("service_account", sa.Boolean(), nullable=False),
-        sa.CheckConstraint("instance_role IS NULL OR instance_role IN ('owner', 'auditor')", name="user_instance_role_valid"),
+        sa.CheckConstraint("instance_role IS NULL OR instance_role IN ('owner', 'auditor', 'data_plane')", name="user_instance_role_valid"),
+        sa.CheckConstraint(
+            "instance_role IS NULL OR service_account = (instance_role = 'data_plane')",
+            name="user_instance_role_matches_principal_kind",
+        ),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("email"),
     )

@@ -6,8 +6,8 @@ from fastapi.testclient import TestClient
 from helpers import FIXTURE_ADMIN_EMAIL, make_admin, make_org, make_user, run_in_db, setup_control_plane
 
 from contract import uuid7
-from control_plane.authz import DATA_PLANE_PERMISSIONS, Permission
-from control_plane.models import User, set_actor
+from control_plane.authz import DATA_PLANE_PERMISSIONS, InstanceRole, Permission
+from control_plane.models import DataPlaneInstance, User, set_actor
 
 
 def _users(c, headers):
@@ -52,6 +52,43 @@ def test_service_account_gets_a_derived_email(tmp_path):
         assert c.post("/v1/service-accounts", json={"name": "!!"}, headers=root).status_code == 422
         assert c.post("/v1/service-accounts", json={"name": ""}, headers=root).status_code == 422
         assert c.post("/v1/service-accounts", json={"name": "x" * 201}, headers=root).status_code == 422
+
+
+def test_data_plane_service_account_can_hold_the_instance_runtime_role(tmp_path):
+    cp = setup_control_plane(tmp_path)
+    root = cp.headers()
+    with TestClient(cp.app) as c:
+        created = c.post(
+            "/v1/service-accounts",
+            json={"name": "Global Data Plane", "instance_role": InstanceRole.data_plane},
+            headers=root,
+        )
+        assert created.status_code == 200, created.text
+        principal = created.json()["data"]
+        assert principal["instance_role"] == InstanceRole.data_plane
+        assert (
+            c.post(
+                "/v1/service-accounts",
+                json={"name": "Invalid", "instance_role": InstanceRole.owner},
+                headers=root,
+            ).status_code
+            == 422
+        )
+
+        minted = c.post(
+            "/v1/access-keys",
+            json={"user_id": principal["id"], "label": "data-plane", "permissions": sorted(DATA_PLANE_PERMISSIONS)},
+            headers=root,
+        )
+        assert minted.status_code == 200, minted.text
+        token = minted.json()["data"]
+        assert token["boundary"] == "instance"
+        instance_id = uuid7()
+        heartbeat = {"instance_id": str(instance_id), "version": "0.1.0", "bundle_id": None}
+        assert c.post("/v1/heartbeat", json=heartbeat, headers={"authorization": f"Bearer {token['token']}"}).status_code == 200
+        instance = run_in_db(tmp_path, lambda: DataPlaneInstance.get(instance_id))
+        assert instance is not None
+        assert instance.org_id is None
 
 
 def test_service_account_is_a_full_principal(tmp_path):

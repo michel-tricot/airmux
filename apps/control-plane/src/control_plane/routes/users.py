@@ -22,7 +22,7 @@ router = APIRouter()
 
 @router.post("/service-accounts", tags=["Users"], dependencies=[require(Permission.principals_manage, instance_target)])
 async def create_service_account(body: ServiceAccountIn) -> Envelope[UserOut]:
-    user = User.new_service_account(body.name)
+    user = User.new_service_account(body.name, body.instance_role)
     return Envelope(data=_user_out(await user.save(), []))
 
 

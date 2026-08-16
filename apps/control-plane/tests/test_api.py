@@ -246,7 +246,10 @@ def test_bundle_latest_filters_by_org(tmp_path):
         o2 = make_org(c, root, "o2")
         c.post("/v1/org/bundles/compile", headers=cp.headers(o1))
         c.post("/v1/org/bundles/compile", headers=cp.headers(o2))
-        assert c.get("/v1/bundle/latest", headers=root).status_code == 422
+        global_latest = verify_bundle(
+            SignedBundle.model_validate(c.get("/v1/bundle/latest", headers=root).json()["data"]), cp.bundle_key.public_key()
+        )
+        assert global_latest.org_id == o2
         latest = verify_bundle(
             SignedBundle.model_validate(c.get("/v1/bundle/latest", headers=cp.headers(o2)).json()["data"]), cp.bundle_key.public_key()
         )
@@ -505,6 +508,21 @@ def test_heartbeat_cannot_move_an_instance_between_organizations(tmp_path):
         assert moved.status_code == 409
         instances = c.get("/v1/instance/data-planes", headers=root, params={"include_offline": True}).json()["data"]
         assert next(instance for instance in instances if instance["instance_id"] == str(instance_id))["org_id"] == str(first)
+
+
+def test_heartbeat_cannot_move_a_global_instance_into_an_organization(tmp_path):
+    cp = setup_control_plane(tmp_path)
+    root = cp.headers()
+    instance_id = uuid7()
+    with TestClient(cp.app) as c:
+        org_id = make_org(c, root, "dedicated")
+        assert c.post("/v1/heartbeat", json=_heartbeat(instance_id), headers=root).status_code == 200
+
+        moved = c.post("/v1/heartbeat", json=_heartbeat(instance_id), headers=cp.headers(org_id))
+
+        assert moved.status_code == 409
+        instances = c.get("/v1/instance/data-planes", headers=root, params={"include_offline": True}).json()["data"]
+        assert next(instance for instance in instances if instance["instance_id"] == str(instance_id))["org_id"] is None
 
 
 def test_stale_instance_is_offline_and_hidden_by_default(tmp_path):

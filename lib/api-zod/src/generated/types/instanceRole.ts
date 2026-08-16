@@ -11,4 +11,5 @@ export type InstanceRole = typeof InstanceRole[keyof typeof InstanceRole];
 export const InstanceRole = {
   owner: 'owner',
   auditor: 'auditor',
+  data_plane: 'data_plane',
 } as const;

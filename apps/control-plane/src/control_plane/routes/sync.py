@@ -25,7 +25,7 @@ CREDENTIAL_HEALTH = {"ok": "live", "credential_rejected": "invalid", "rate_limit
 """Usage statuses that say something about the credential; everything else is about the provider."""
 
 
-async def bundle_org(authority: AuthorityDep, org_id: UUID | None = None, x_org_id: OrgHeader = None) -> UUID:
+async def bundle_target(authority: AuthorityDep, org_id: UUID | None = None, x_org_id: OrgHeader = None) -> Target:
     if authority.boundary in {Boundary.org, Boundary.workspace}:
         if org_id is not None and org_id != authority.org_id:
             raise HTTPException(status_code=403, detail="The credential is bound to a different organization")
@@ -37,25 +37,20 @@ async def bundle_org(authority: AuthorityDep, org_id: UUID | None = None, x_org_
                 selected = UUID(x_org_id)
             except ValueError:
                 raise HTTPException(status_code=403, detail="X-Org-Id is not a valid organization id") from None
-    if selected is None:
-        raise HTTPException(status_code=422, detail="org_id is required for an instance-bound credential")
-    if await Org.find_by_id(selected) is None:
+    if selected is not None and await Org.find_by_id(selected) is None:
         raise HTTPException(status_code=404, detail="Organization not found")
-    return selected
+    return Target.org(selected) if selected is not None else Target.instance()
 
 
-BundleOrgDep = Annotated[UUID, Depends(bundle_org)]
-
-
-async def bundle_target(org_id: BundleOrgDep) -> Target:
-    return Target.org(org_id)
+BundleTargetDep = Annotated[Target, Depends(bundle_target)]
 
 
 @router.get("/bundle/latest", dependencies=[require(Permission.bundles_read, bundle_target)])
-async def bundle_latest(org_id: BundleOrgDep) -> Envelope[SignedBundle]:
-    bundle = await Bundle.first(Bundle.org_id == org_id, order_by=(col(Bundle.issued_at).desc(), col(Bundle.version).desc()))
+async def bundle_latest(target: BundleTargetDep) -> Envelope[SignedBundle]:
+    conditions = (Bundle.org_id == target.org_id,) if target.org_id is not None else ()
+    bundle = await Bundle.first(*conditions, order_by=(col(Bundle.issued_at).desc(), col(Bundle.version).desc()))
     if bundle is None:
-        raise HTTPException(status_code=404, detail="No bundle has been compiled yet for this org")
+        raise HTTPException(status_code=404, detail="No bundle has been compiled yet for this target")
     signed = SignedBundle(payload=BundleV1.model_validate_json(bundle.payload), signature=bundle.signature, signing_key_id=bundle.signing_key_id)
     return Envelope(data=signed)
 
@@ -106,8 +101,8 @@ async def heartbeat(authority: AuthorityDep, body: HeartbeatV1, session: Session
     """Upsert the instance record; the row persists as history, last_seen drives liveness.
 
     Every worker of a multi-worker data plane heartbeats with the same instance_id, so the first
-    insert can race; do it as one atomic upsert instead of read-then-write. The first heartbeat
-    pins the id to its organization, and another tenant cannot move it.
+    insert can race; do it as one atomic upsert instead of read-then-write. The first heartbeat pins
+    the id to either the global or organization boundary, and another credential cannot move it.
     """
     now = datetime.now(tz=UTC)
     address = request.client.host if request.client else None
@@ -120,5 +115,5 @@ async def heartbeat(authority: AuthorityDep, body: HeartbeatV1, session: Session
         .returning(col(DataPlaneInstance.instance_id))
     )
     if (await session.execute(stmt)).scalar_one_or_none() is None:
-        raise HTTPException(status_code=409, detail="instance_id already belongs to another organization")
+        raise HTTPException(status_code=409, detail="instance_id already belongs to another data-plane boundary")
     return Envelope(data=HeartbeatOut(instance_id=body.instance_id))

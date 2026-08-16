@@ -12,6 +12,7 @@ from control_plane.authz import Authority, Boundary, InstanceRole, Target, princ
 from control_plane.deps import (
     ActingUserDep,
     AuthorityDep,
+    BearerDep,
     CookieUserDep,
     FetchSite,
     RequestedWith,
@@ -21,7 +22,7 @@ from control_plane.deps import (
     require_csrf,
     user_scoped,
 )
-from control_plane.keys import AccessKeyGrant, mint_access_key
+from control_plane.keys import AccessKeyGrant, mint_access_key, verify_access_key
 from control_plane.models import AccessKey, AuthIdentity, CliAuthRequest, Org, OrgMembership, User, set_actor
 from control_plane.models.auth_identity import IdentityConflictError
 from control_plane.models.cli_auth_request import AUTH_REQUEST_TTL
@@ -270,8 +271,12 @@ async def cli_auth_approve(body: CliAuthApproveIn, user: CookieUserDep) -> Envel
 
 
 @router.post("/cli/poll", tags=["Auth"], dependencies=[public()])
-async def cli_auth_poll(body: CliAuthPollIn) -> Envelope[CliAuthPollOut]:
-    """Return pending state or consume an approved request and deliver its key once."""
+async def cli_auth_poll(body: CliAuthPollIn, credentials: BearerDep) -> Envelope[CliAuthPollOut]:
+    """Return pending state or consume an approved request and deliver its key once.
+
+    A valid existing bearer retires exactly that key when its principal and target match the
+    approval. An absent, stale, or unrelated bearer changes nothing.
+    """
     auth_request = _live(await CliAuthRequest.for_delivery(body.poll_secret))
     if auth_request.approved_user_id is None or auth_request.approved_org_id is None:
         return Envelope(data=CliAuthPollOut(status="pending", interval_seconds=CLI_POLL_INTERVAL_SECONDS))
@@ -281,7 +286,9 @@ async def cli_auth_poll(body: CliAuthPollIn) -> Envelope[CliAuthPollOut]:
     await set_actor(auth_request.approved_user_id)
     target = Target.org(org.id)
     now = datetime.now(tz=UTC)
-    await AccessKey.retire_for_client(auth_request.approved_user_id, target, auth_request.client_name, now)
+    replaced = await verify_access_key(credentials.credentials) if credentials is not None else None
+    if replaced is not None:
+        await AccessKey.retire_replaced(replaced.credential_id, auth_request.approved_user_id, target, now)
     permissions = await principal_permissions(auth_request.approved_user_id, target)
     _, token = await mint_access_key(
         AccessKeyGrant(

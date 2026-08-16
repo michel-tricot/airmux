@@ -7,6 +7,7 @@ from threading import Barrier
 from fastapi.testclient import TestClient
 from helpers import make_org, run_in_db, setup_control_plane
 
+from control_plane.authz import Permission
 from control_plane.keys import ACCESS_KEY_PREFIX
 from control_plane.models import CliAuthRequest
 
@@ -81,7 +82,36 @@ def test_two_simultaneous_polls_deliver_one_key(tmp_path):
         assert complete["token"].startswith(ACCESS_KEY_PREFIX)
 
 
-def test_reapproving_from_the_same_client_replaces_the_previous_key(tmp_path):
+def test_reapproving_from_the_same_client_replaces_only_the_presented_key(tmp_path):
+    cp = setup_control_plane(tmp_path)
+    with _client(cp) as c:
+        user, org = _signup_with_org(c)
+
+        def login_once(replaced: str | None = None) -> str:
+            started = _start(c, client_name="mbp")
+            assert c.post("/v1/auth/cli/approve", json={"user_code": started["user_code"], "org_id": org["id"]}, headers=CSRF).status_code == 200
+            headers = {"authorization": f"Bearer {replaced}"} if replaced else {}
+            return c.post("/v1/auth/cli/poll", json={"poll_secret": started["poll_secret"]}, headers=headers).json()["data"]["token"]
+
+        first = login_once()
+        peer = c.post(
+            "/v1/access-keys",
+            json={
+                "user_id": user["user_id"],
+                "org_id": org["id"],
+                "label": "mbp",
+                "permissions": [Permission.workspaces_read],
+            },
+            headers=CSRF,
+        ).json()["data"]["token"]
+        assert c.get("/v1/org/workspaces", headers={"authorization": f"Bearer {first}"}).status_code == 200
+        second = login_once(first)
+        assert c.get("/v1/org/workspaces", headers={"authorization": f"Bearer {second}"}).status_code == 200
+        assert c.get("/v1/org/workspaces", headers={"authorization": f"Bearer {first}"}).status_code == 401
+        assert c.get("/v1/org/workspaces", headers={"authorization": f"Bearer {peer}"}).status_code == 200
+
+
+def test_login_without_an_existing_key_does_not_retire_matching_labels(tmp_path):
     cp = setup_control_plane(tmp_path)
     with _client(cp) as c:
         _, org = _signup_with_org(c)
@@ -92,10 +122,10 @@ def test_reapproving_from_the_same_client_replaces_the_previous_key(tmp_path):
             return c.post("/v1/auth/cli/poll", json={"poll_secret": started["poll_secret"]}).json()["data"]["token"]
 
         first = login_once()
-        assert c.get("/v1/org/workspaces", headers={"authorization": f"Bearer {first}"}).status_code == 200
         second = login_once()
+
+        assert c.get("/v1/org/workspaces", headers={"authorization": f"Bearer {first}"}).status_code == 200
         assert c.get("/v1/org/workspaces", headers={"authorization": f"Bearer {second}"}).status_code == 200
-        assert c.get("/v1/org/workspaces", headers={"authorization": f"Bearer {first}"}).status_code == 401
 
 
 def test_approval_requires_membership_and_a_browser_session(tmp_path):

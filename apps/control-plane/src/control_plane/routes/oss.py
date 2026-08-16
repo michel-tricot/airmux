@@ -7,7 +7,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
 from contract.secrets.file import write_private_text
-from control_plane.authz import DATA_PLANE_PERMISSIONS, Boundary, OrgRole
+from control_plane.authz import DATA_PLANE_PERMISSIONS, Boundary, InstanceRole, OrgRole
 from control_plane.deps import public
 from control_plane.keys import ACCESS_KEY_PREFIX, verify_access_key
 from control_plane.models import DataPlaneInstance, OrgMembership, User
@@ -59,17 +59,20 @@ async def quickstart(body: QuickstartIn) -> Envelope[QuickstartOut]:
     authority = await verify_access_key(body.token)
     user = await User.find_by_id(authority.principal_id) if authority is not None else None
     membership = await OrgMembership.get((authority.principal_id, authority.org_id)) if authority is not None and authority.org_id else None
+    data_plane_role = authority is not None and (
+        (authority.boundary is Boundary.instance and user is not None and user.instance_role == InstanceRole.data_plane)
+        or (authority.boundary is Boundary.org and membership is not None and membership.role == OrgRole.data_plane)
+    )
     if (
         not body.token.startswith(ACCESS_KEY_PREFIX)
         or authority is None
-        or authority.boundary is not Boundary.org
+        or authority.boundary not in {Boundary.instance, Boundary.org}
         or authority.permission_ceiling != DATA_PLANE_PERMISSIONS
         or user is None
         or not user.service_account
-        or membership is None
-        or membership.role != OrgRole.data_plane
+        or not data_plane_role
     ):
-        raise HTTPException(status_code=422, detail="token must be a live org-bound data-plane access key")
+        raise HTTPException(status_code=422, detail="token must be a live data-plane access key")
     return Envelope(data=QuickstartOut(path=await run_sync(_write_data_plane_key, body.token)))
 
 

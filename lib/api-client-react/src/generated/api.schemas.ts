@@ -473,6 +473,7 @@ export type InstanceRole = typeof InstanceRole[keyof typeof InstanceRole];
 export const InstanceRole = {
   owner: 'owner',
   auditor: 'auditor',
+  data_plane: 'data_plane',
 } as const;
 
 export interface LoginIn {
@@ -804,6 +805,7 @@ export interface ServiceAccountIn {
      * @maxLength 200
      */
   name: string;
+  instance_role?: 'data_plane' | null;
 }
 
 /**

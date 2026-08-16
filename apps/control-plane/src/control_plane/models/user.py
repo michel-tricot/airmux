@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import ClassVar, Self
+from typing import ClassVar, Literal, Self
 from uuid import UUID, uuid4
 
 from pydantic import field_validator
@@ -25,7 +25,13 @@ _CLAIM_LOCK = 0x41524C4C
 
 @audited
 class User(Record, Identified, Tombstonable, table=True):
-    __table_args__: ClassVar = (CheckConstraint("instance_role IS NULL OR instance_role IN ('owner', 'auditor')", name="user_instance_role_valid"),)
+    __table_args__: ClassVar = (
+        CheckConstraint("instance_role IS NULL OR instance_role IN ('owner', 'auditor', 'data_plane')", name="user_instance_role_valid"),
+        CheckConstraint(
+            "instance_role IS NULL OR service_account = (instance_role = 'data_plane')",
+            name="user_instance_role_matches_principal_kind",
+        ),
+    )
 
     email: str = Field(unique=True, sa_type=CITEXT)
     name: str
@@ -97,11 +103,12 @@ class User(Record, Identified, Tombstonable, table=True):
         await self.delete()
 
     @classmethod
-    def new_service_account(cls, name: str) -> Self:
+    def new_service_account(cls, name: str, instance_role: Literal["data_plane"] | None = None) -> Self:
         """Machine principal with a derived unique email; the caller saves it and adds memberships."""
         return cls(
             email=f"{slugify(name)}-{uuid4().hex[:8]}@{SERVICE_ACCOUNT_EMAIL_DOMAIN}",
             name=name,
+            instance_role=instance_role,
             service_account=True,
         )
 
@@ -112,6 +119,7 @@ class ServiceAccountIn(RequestModel):
         min_length=1,
         max_length=200,
     )
+    instance_role: Literal["data_plane"] | None = None
 
     @field_validator("name")
     @classmethod

@@ -14,9 +14,10 @@ from control_plane.models.common.wire import RecordOut
 
 
 class DataPlaneInstance(Record, table=True):
-    """A data plane that has heartbeated with the organization carried by its access key.
+    """A data plane that has heartbeated at either the global or organization boundary.
 
-    The org link is cleared when the org is deleted, while the row survives as operational history.
+    Instance-bound keys register global data planes. Organization-bound keys register dedicated
+    data planes, and the org link is cleared on deletion while the row survives as history.
     """
 
     __table_args__: ClassVar = (ForeignKeyConstraint(["org_id"], ["org.id"], ondelete="SET NULL"),)

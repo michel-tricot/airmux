@@ -964,6 +964,9 @@ export const getCliAuthPollUrl = () => {
 /**
  * Return pending state or consume an approved request and deliver its key once.
  *
+ * A valid existing bearer retires exactly that key when its principal and target match the
+ * approval. An absent, stale, or unrelated bearer changes nothing.
+ *
  * No authentication required.
  * @summary Cli Auth Poll
  */
@@ -4253,8 +4256,8 @@ export const getHeartbeatUrl = () => {
  * Upsert the instance record; the row persists as history, last_seen drives liveness.
  *
  * Every worker of a multi-worker data plane heartbeats with the same instance_id, so the first
- * insert can race; do it as one atomic upsert instead of read-then-write. The first heartbeat
- * pins the id to its organization, and another tenant cannot move it.
+ * insert can race; do it as one atomic upsert instead of read-then-write. The first heartbeat pins
+ * the id to either the global or organization boundary, and another credential cannot move it.
  *
  * Requires `data-planes.heartbeat` authority at the route's tenant boundary.
  * @summary Heartbeat

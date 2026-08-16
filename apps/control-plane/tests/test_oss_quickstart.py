@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 from helpers import run_in_db, setup_control_plane
 
 from contract import INFERENCE_TOKEN_PREFIX, uuid7
-from control_plane.authz import DATA_PLANE_PERMISSIONS, OrgRole, Permission, Target
+from control_plane.authz import DATA_PLANE_PERMISSIONS, InstanceRole, OrgRole, Permission, Target
 from control_plane.keys import ACCESS_KEY_PREFIX, AccessKeyGrant, mint_access_key
 from control_plane.models import DataPlaneInstance, Org, OrgMembership, User, set_actor
 from control_plane.routes import oss
@@ -20,18 +20,47 @@ def key_path(tmp_path, monkeypatch):
     return tmp_path / oss.DATA_PLANE_KEY_DIR / oss.DATA_PLANE_KEY_FILE
 
 
-def _data_plane_token(tmp_path, *, role: OrgRole = OrgRole.data_plane, permissions=DATA_PLANE_PERMISSIONS, service_account: bool = True) -> str:
+def _data_plane_token(
+    tmp_path,
+    *,
+    instance_role: InstanceRole | None = InstanceRole.data_plane,
+    permissions=DATA_PLANE_PERMISSIONS,
+    service_account: bool = True,
+) -> str:
     async def mint() -> str:
-        user = User(email=f"data-plane-{uuid7()}@example.com", name="Data Plane", service_account=service_account)
+        user = User(
+            email=f"data-plane-{uuid7()}@example.com",
+            name="Data Plane",
+            instance_role=instance_role,
+            service_account=service_account,
+        )
         await set_actor(user.id)
         await user.save()
-        org = await Org(name="Org").save()
+        _, token = await mint_access_key(
+            AccessKeyGrant(
+                principal_id=user.id,
+                target=Target.instance(),
+                permissions=frozenset(permissions),
+                label="data-plane",
+            )
+        )
+        return token
+
+    return run_in_db(tmp_path, mint)
+
+
+def _org_data_plane_token(tmp_path, *, role: OrgRole = OrgRole.data_plane) -> str:
+    async def mint() -> str:
+        user = User(email=f"data-plane-{uuid7()}@example.com", name="Data Plane", service_account=True)
+        await set_actor(user.id)
+        await user.save()
+        org = await Org(name=f"Org {uuid7()}").save()
         await OrgMembership(user_id=user.id, org_id=org.id, role=role).save()
         _, token = await mint_access_key(
             AccessKeyGrant(
                 principal_id=user.id,
                 target=Target.org(org.id),
-                permissions=frozenset(permissions),
+                permissions=DATA_PLANE_PERMISSIONS,
                 label="data-plane",
             )
         )
@@ -66,6 +95,14 @@ def test_oss_quickstart_is_public(tmp_path, key_path):
         assert client.post("/v1/instance/oss/quickstart", json={"token": token}).status_code == 200
 
 
+def test_oss_quickstart_accepts_an_org_specific_data_plane_key(tmp_path, key_path):
+    cp = setup_control_plane(tmp_path)
+    token = _org_data_plane_token(tmp_path)
+    with TestClient(cp.app) as client:
+        assert client.post("/v1/instance/oss/quickstart", json={"token": token}).status_code == 200
+        assert key_path.read_text(encoding="utf-8") == token
+
+
 def test_oss_quickstart_closes_once_a_data_plane_has_registered(tmp_path, key_path):
     cp = setup_control_plane(tmp_path)
     token = _data_plane_token(tmp_path)
@@ -88,9 +125,10 @@ def test_oss_quickstart_rejects_unknown_credentials(tmp_path, key_path, token):
 def test_oss_quickstart_rejects_human_broad_and_wrong_role_keys(tmp_path, key_path):
     cp = setup_control_plane(tmp_path)
     tokens = [
-        _data_plane_token(tmp_path, service_account=False),
+        _data_plane_token(tmp_path, service_account=False, instance_role=InstanceRole.owner),
         _data_plane_token(tmp_path, permissions=DATA_PLANE_PERMISSIONS | {Permission.catalog_read}),
-        _data_plane_token(tmp_path, role=OrgRole.admin),
+        _data_plane_token(tmp_path, instance_role=None),
+        _org_data_plane_token(tmp_path, role=OrgRole.admin),
     ]
     with TestClient(cp.app) as client:
         for token in tokens:

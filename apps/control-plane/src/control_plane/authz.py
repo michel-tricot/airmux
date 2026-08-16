@@ -57,6 +57,7 @@ class Permission(StrEnum):
 class InstanceRole(StrEnum):
     owner = "owner"
     auditor = "auditor"
+    data_plane = "data_plane"
 
 
 class OrgRole(StrEnum):
@@ -100,6 +101,7 @@ DATA_PLANE_PERMISSIONS = frozenset(
 INSTANCE_ROLE_PERMISSIONS = {
     InstanceRole.owner: ALL_PERMISSIONS,
     InstanceRole.auditor: READ_PERMISSIONS,
+    InstanceRole.data_plane: DATA_PLANE_PERMISSIONS,
 }
 ORG_ROLE_PERMISSIONS = {
     OrgRole.owner: frozenset(

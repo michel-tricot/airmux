@@ -73,18 +73,17 @@ class AccessKey(Record, Identified, Tombstonable, table=True):
         return "active"
 
     @classmethod
-    async def retire_for_client(cls, user_id: UUID, target: Target, label: str, revoked_at: datetime) -> list[Self]:
-        keys = await cls.find(
+    async def retire_replaced(cls, key_id: UUID, user_id: UUID, target: Target, revoked_at: datetime) -> Self | None:
+        key = await cls.first(
+            cls.id == key_id,
             cls.user_id == user_id,
             cls.org_id == target.org_id,
             cls.workspace_id == target.workspace_id,
-            cls.label == label,
             col(cls.revoked_at).is_(None),
         )
-        for key in keys:
-            key.revoked_at = revoked_at
-            await key.save()
-        return keys
+        if key is not None:
+            await key.revoke_with_descendants(revoked_at)
+        return key
 
     async def revoke_with_descendants(self, revoked_at: datetime) -> None:
         pending: list[AccessKey] = [self]

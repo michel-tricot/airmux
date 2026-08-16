@@ -186,10 +186,11 @@ it is ring 1 plus an argon2 verify.
 
 ## Per-data-plane credentials with enrollment
 
-The first local data plane already gets a dedicated service account with the `data_plane` org role
-and an org-bound access key limited to bundle polling, event ingestion, and heartbeat. Quickstart
-bridges that key into the shared volume. Enrollment remains useful for the second machine, which
-does not share a disk with the control plane and should not reuse the first machine's credential.
+The first local data plane already gets a dedicated service account with the `data_plane` instance
+role and an instance-bound access key limited to bundle polling, event ingestion, and heartbeat.
+Quickstart bridges that key into the shared volume. Organization-dedicated deployments use the same
+permission ceiling with an org role and boundary. Enrollment remains useful for the second machine,
+which does not share a disk with the control plane and should not reuse the first machine's credential.
 
 - EnrollmentCode table in the house shape: id, org_id, label, token_hash (sha256), expires_at
   (~24h), consumed_at. Minted by an org admin (`airllm instances enroll <org> --name rack-7` or
@@ -197,8 +198,8 @@ does not share a disk with the control plane and should not reuse the first mach
   the new machine.
 - `POST /v1/enroll {code}` (unauthenticated): hash lookup, reject expired or consumed, consume
   before any other work (the OIDC callback's single-use-first discipline). Then create the
-  instance identity: service account named after the label, `data_plane` membership in the code's
-  org, and an org-bound access key with the exact data-plane permission set. Respond once with
+  instance identity: service account named after the label, a `data_plane` role at the enrollment
+  boundary, and an access key with the exact data-plane permission set. Respond once with
   {token, bundle_public_key, org_id}. The
   exchange trusts the transport exactly once: operator-chosen URL, short-TTL single-use code;
   after it, the pinned bundle key is the anchor (which is why the key can never come from

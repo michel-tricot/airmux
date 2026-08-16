@@ -56,9 +56,11 @@ organization grants combine with workspace grants for a target below them.
 |---|---|
 | `owner` | Every control-plane permission |
 | `auditor` | Read-only organization, principal, membership, workspace, catalog, credential, key, bundle, usage, data-plane, and audit access |
+| `data_plane` | `bundles.read`, `usage.ingest`, and `data-planes.heartbeat` only |
 
-Only a human can hold instance authority. The first human signup becomes the instance owner. The
-`airllmcp owner` command is the local recovery path for promoting an existing human account.
+Only humans can hold `owner` or `auditor`, and only a service account can hold `data_plane`. The
+first human signup becomes the instance owner. The `airllmcp owner` command is the local recovery
+path for promoting an existing human account.
 
 ### Organization roles
 
@@ -121,6 +123,11 @@ attenuation rules:
 Verification walks the parent chain. A missing, expired, or revoked ancestor invalidates every
 descendant. Revoking a key records one timestamp and recursively revokes its descendants.
 
+CLI login may present its current access key as the bearer on the one-time delivery request. The
+server verifies that token, resolves its unique key id, and retires exactly that key and its
+descendants only when its principal and target match the approved login. Labels remain display
+metadata and never identify a credential. A login with no valid existing bearer revokes nothing.
+
 ### Target selection
 
 An organization-bound or workspace-bound key supplies its own organization context. `X-Org-Id` may
@@ -140,8 +147,10 @@ workspace explicitly, so a tenant boundary cannot be bypassed by leaving the fil
 
 ## Data-plane authority
 
-A managed data plane authenticates with an ordinary organization-bound access key. Its principal is
-a service account holding the `data_plane` organization role, and the key ceiling must be exactly:
+A managed data plane authenticates with an ordinary access key whose principal is a service account
+holding a `data_plane` role. The default is the instance role and an instance-bound key, which makes
+the data plane global. A deployment dedicated to one organization uses the organization role and an
+organization-bound key instead. In both cases the key ceiling must be exactly:
 
 ```text
 bundles.read
@@ -151,14 +160,14 @@ data-planes.heartbeat
 
 Those permissions match the only control-plane actions the data plane performs:
 
-- Poll the organization's latest signed bundle
+- Poll the latest signed bundle globally or for the organization selected by its boundary or configuration
 - Ingest usage events, with every event checked against its workspace target
-- Heartbeat, retaining the key's organization on the data-plane instance row and preventing the id from moving to another organization
+- Heartbeat, retaining a null organization for a global instance or the key's organization for a dedicated instance
 
 The public OSS quickstart endpoint does not mint authority. It accepts an already minted live key
-only while no data plane has registered, verifies the service-account role, organization boundary,
-and exact permission set, then writes that token to the shared data-plane key file. The CLI keeps the
-simple first-run path by creating the service account, role, and limited key before calling it.
+only while no data plane has registered, verifies the service-account role, supported boundary, and
+exact permission set, then writes that token to the shared data-plane key file. The CLI keeps the
+simple first-run path by creating the global service account, role, and limited key before calling it.
 
 ## Adding authority
 

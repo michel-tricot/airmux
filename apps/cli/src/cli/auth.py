@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 from cli.client import api_error, ensure_ok, payload, resolve_control_plane_url
 from cli.common import SETUP, app, console, orgs_app
 from cli.output import Col, FormatOption, OutputFormat, print_rows
-from cli.profiles import DEFAULT_CONSOLE_URL, config_path, load_config, set_active, upsert_profile
+from cli.profiles import DEFAULT_CONSOLE_URL, active_profile, config_path, load_config, set_active, upsert_profile
 
 MINE_COLS = [
     Col("id", "ID", style="dim", no_wrap=True),
@@ -33,6 +33,14 @@ DATA_PLANE_PERMISSIONS = ["bundles.read", "usage.ingest", "data-planes.heartbeat
 
 def _client_name() -> str:
     return f"cli@{socket.gethostname()}"
+
+
+def _existing_access_key(control_plane_url: str) -> str | None:
+    profile = active_profile()
+    if profile is None or str(profile.get("control_plane_url", "")).rstrip("/") != control_plane_url.rstrip("/"):
+        return None
+    token = profile.get("token")
+    return str(token) if token else None
 
 
 def _payload_or_die(resp: httpx.Response, what: str) -> dict:
@@ -145,11 +153,9 @@ def quickstart(  # noqa: PLR0913, PLR0917 flags are the command's interface
         org_id, org_name = created["id"], created["name"]
         _step(f"Organization [bold]{org_name}[/bold]")
 
-        data_plane = _payload_or_die(c.post("/v1/service-accounts", json={"name": "data-plane"}), "data-plane principal creation")
-        org_headers = {"X-Org-Id": org_id}
-        _payload_or_die(
-            c.put(f"/v1/org/users/{data_plane['id']}", json={"role": "data_plane"}, headers=org_headers),
-            "data-plane role assignment",
+        data_plane = _payload_or_die(
+            c.post("/v1/service-accounts", json={"name": "data-plane", "instance_role": "data_plane"}),
+            "data-plane principal creation",
         )
         data_plane_key = _payload_or_die(
             c.post(
@@ -157,7 +163,6 @@ def quickstart(  # noqa: PLR0913, PLR0917 flags are the command's interface
                 json={
                     "label": "data-plane",
                     "user_id": data_plane["id"],
-                    "org_id": org_id,
                     "permissions": DATA_PLANE_PERMISSIONS,
                 },
             ),
@@ -232,6 +237,7 @@ def login(
 
     url, console_url = resolve_urls(control_plane_url, console_url)
     client_name = _client_name()
+    existing_access_key = _existing_access_key(url)
     with httpx.Client(base_url=url, timeout=10.0) as c:
         started = _payload_or_die(c.post("/v1/auth/cli/start", json={"client_name": client_name}), "Starting sign-in")
         console.print(f"Confirm code [bold]{started['user_code']}[/bold] at {started['verification_url']}")
@@ -240,7 +246,11 @@ def login(
         deadline = time.monotonic() + started["expires_in_seconds"]
         while time.monotonic() < deadline:
             time.sleep(started["interval_seconds"])
-            poll = c.post("/v1/auth/cli/poll", json={"poll_secret": started["poll_secret"]})
+            poll = c.post(
+                "/v1/auth/cli/poll",
+                json={"poll_secret": started["poll_secret"]},
+                headers={"authorization": f"Bearer {existing_access_key}"} if existing_access_key else None,
+            )
             if poll.status_code == HTTP_GONE:
                 console.print("[red]Login expired before it was approved. Run [bold]airllm login[/bold] again.[/red]")
                 raise typer.Exit(1)

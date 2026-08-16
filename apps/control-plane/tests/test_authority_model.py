@@ -7,7 +7,9 @@ from helpers import run_in_db, setup_db
 from contract import token_hash, uuid7
 from control_plane.authz import (
     DATA_PLANE_PERMISSIONS,
+    INSTANCE_ROLE_PERMISSIONS,
     Boundary,
+    InstanceRole,
     OrgRole,
     Permission,
     Target,
@@ -28,6 +30,7 @@ def test_data_plane_role_has_only_its_runtime_permissions():
         )
         == DATA_PLANE_PERMISSIONS
     )
+    assert INSTANCE_ROLE_PERMISSIONS[InstanceRole.data_plane] == DATA_PLANE_PERMISSIONS
     assert permissions_for_org_role(OrgRole.data_plane) == DATA_PLANE_PERMISSIONS
     assert Permission.data_planes_read not in permissions_for_org_role(OrgRole.owner)
     assert Permission.data_planes_read not in permissions_for_org_role(OrgRole.admin)

@@ -365,6 +365,11 @@ paths:
       description: 'Return pending state or consume an approved request and deliver its key once.
 
 
+        A valid existing bearer retires exactly that key when its principal and target match the
+
+        approval. An absent, stale, or unrelated bearer changes nothing.
+
+
         No authentication required.'
       operationId: cli_auth_poll
       requestBody:
@@ -2044,9 +2049,9 @@ paths:
 
         Every worker of a multi-worker data plane heartbeats with the same instance_id, so the first
 
-        insert can race; do it as one atomic upsert instead of read-then-write. The first heartbeat
+        insert can race; do it as one atomic upsert instead of read-then-write. The first heartbeat pins
 
-        pins the id to its organization, and another tenant cannot move it.
+        the id to either the global or organization boundary, and another credential cannot move it.
 
 
         Requires `data-planes.heartbeat` authority at the route''s tenant boundary.'
@@ -3373,6 +3378,7 @@ components:
       enum:
       - owner
       - auditor
+      - data_plane
       title: InstanceRole
     KeyEntry:
       properties:
@@ -4291,6 +4297,12 @@ components:
           minLength: 1
           title: Name
           description: Service account name; the email is derived as name-<id>@airbytesvcaccount.ai
+        instance_role:
+          anyOf:
+          - type: string
+            const: data_plane
+          - type: 'null'
+          title: Instance Role
       additionalProperties: false
       type: object
       required:

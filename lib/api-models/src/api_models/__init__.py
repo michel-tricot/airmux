@@ -244,8 +244,8 @@ class InferenceKeyRevokedOut(BaseModel):
     status: Annotated[Literal["revoked"], Field(title="Status")]
 
 
-class InstanceRole(RootModel[Literal["owner", "auditor"]]):
-    root: Annotated[Literal["owner", "auditor"], Field(title="InstanceRole")]
+class InstanceRole(RootModel[Literal["owner", "auditor", "data_plane"]]):
+    root: Annotated[Literal["owner", "auditor", "data_plane"], Field(title="InstanceRole")]
 
 
 class KeyEntry(BaseModel):
@@ -819,6 +819,7 @@ class ServiceAccountIn(BaseModel):
             title="Name",
         ),
     ]
+    instance_role: Annotated[Literal["data_plane"] | None, Field(title="Instance Role")] = None
 
 
 class SignupIn(BaseModel):

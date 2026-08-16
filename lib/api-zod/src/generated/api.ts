@@ -114,7 +114,7 @@ export const LoginResponse = zod.object({
   "user_id": zod.uuid(),
   "email": zod.string(),
   "name": zod.string(),
-  "instance_role": zod.union([zod.enum(['owner', 'auditor']),zod.null()]),
+  "instance_role": zod.union([zod.enum(['owner', 'auditor', 'data_plane']),zod.null()]),
   "orgs": zod.array(zod.uuid())
 })
 
@@ -152,7 +152,7 @@ export const SignupResponse = zod.object({
   "user_id": zod.uuid(),
   "email": zod.string(),
   "name": zod.string(),
-  "instance_role": zod.union([zod.enum(['owner', 'auditor']),zod.null()]),
+  "instance_role": zod.union([zod.enum(['owner', 'auditor', 'data_plane']),zod.null()]),
   "orgs": zod.array(zod.uuid())
 })
 
@@ -175,7 +175,7 @@ export const MeResponse = zod.object({
   "user_id": zod.uuid(),
   "email": zod.string(),
   "name": zod.string(),
-  "instance_role": zod.union([zod.enum(['owner', 'auditor']),zod.null()]),
+  "instance_role": zod.union([zod.enum(['owner', 'auditor', 'data_plane']),zod.null()]),
   "orgs": zod.array(zod.uuid())
 })
 
@@ -266,6 +266,9 @@ export const CliAuthApproveResponse = zod.object({
 
 /**
  * Return pending state or consume an approved request and deliver its key once.
+ *
+ * A valid existing bearer retires exactly that key when its principal and target match the
+ * approval. An absent, stale, or unrelated bearer changes nothing.
  *
  * No authentication required.
  * @summary Cli Auth Poll
@@ -431,7 +434,8 @@ export const createServiceAccountBodyNameMax = 200;
 
 
 export const CreateServiceAccountBody = zod.object({
-  "name": zod.string().min(1).max(createServiceAccountBodyNameMax).describe('Service account name; the email is derived as name-<id>@airbytesvcaccount.ai')
+  "name": zod.string().min(1).max(createServiceAccountBodyNameMax).describe('Service account name; the email is derived as name-<id>@airbytesvcaccount.ai'),
+  "instance_role": zod.union([zod.literal("data_plane"),zod.null()]).optional()
 })
 
 export const CreateServiceAccountResponse = zod.object({
@@ -1467,8 +1471,8 @@ export const IngestEventsResponse = zod.object({
  * Upsert the instance record; the row persists as history, last_seen drives liveness.
  *
  * Every worker of a multi-worker data plane heartbeats with the same instance_id, so the first
- * insert can race; do it as one atomic upsert instead of read-then-write. The first heartbeat
- * pins the id to its organization, and another tenant cannot move it.
+ * insert can race; do it as one atomic upsert instead of read-then-write. The first heartbeat pins
+ * the id to either the global or organization boundary, and another credential cannot move it.
  *
  * Requires `data-planes.heartbeat` authority at the route's tenant boundary.
  * @summary Heartbeat
