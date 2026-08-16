@@ -22,7 +22,7 @@ async def create_org(body: OrgCreate) -> Envelope[OrgOut]:
     return Envelope(data=OrgOut.model_validate(org))
 
 
-@router.patch("/{org_id}", tags=["Orgs"], dependencies=[require(Permission.organizations_update, org_scope)])
+@router.patch("/{org_id}", tags=["Organization Settings"], dependencies=[require(Permission.organizations_update, org_scope)])
 async def update_org(org_id: UUID, body: OrgUpdate) -> Envelope[OrgOut]:
     """Update an organization's mutable fields."""
     org = await Org.find_by_id(org_id)
@@ -37,7 +37,7 @@ async def list_orgs() -> Envelope[list[OrgOut]]:
     return Envelope(data=[OrgOut.model_validate(r) for r in await Org.find(order_by=col(Org.name))])
 
 
-@router.get("/{org_id}", tags=["Orgs"], dependencies=[require(Permission.organizations_read, org_scope)])
+@router.get("/{org_id}", tags=["Organization Settings"], dependencies=[require(Permission.organizations_read, org_scope)])
 async def get_org(org_id: UUID) -> Envelope[OrgOut]:
     """Return one organization."""
     org = await Org.find_by_id(org_id)
@@ -46,7 +46,7 @@ async def get_org(org_id: UUID) -> Envelope[OrgOut]:
     return Envelope(data=OrgOut.model_validate(org))
 
 
-@router.delete("/{org_id}", tags=["Orgs"], dependencies=[require(Permission.organizations_delete, org_scope)])
+@router.delete("/{org_id}", tags=["Organization Settings"], dependencies=[require(Permission.organizations_delete, org_scope)])
 async def delete_org(org_id: UUID, request: Request) -> Envelope[DeletedOut[UUID]]:
     """Delete an organization and its workspaces, keys, credentials, memberships, and bundles.
 

@@ -16,7 +16,7 @@ paths:
   /v1/instance/access-keys:
     get:
       tags:
-      - Access Keys
+      - Instance Access Keys
       summary: List Instance Access Keys
       description: 'List access keys across all scopes, optionally filtered by principal.
 
@@ -56,7 +56,7 @@ paths:
           description: The credential does not have the required permission
     post:
       tags:
-      - Access Keys
+      - Instance Access Keys
       summary: Create Instance Access Key
       description: 'Issue an instance-scoped access key and return its token once.
 
@@ -92,7 +92,7 @@ paths:
   /v1/orgs/{org_id}/access-keys:
     get:
       tags:
-      - Access Keys
+      - Organization Access Keys
       summary: List Org Access Keys
       description: 'List organization- and workspace-scoped access keys within an organization.
 
@@ -140,7 +140,7 @@ paths:
           description: The credential does not have the required permission
     post:
       tags:
-      - Access Keys
+      - Organization Access Keys
       summary: Create Org Access Key
       description: 'Issue an organization-scoped access key and return its token once.
 
@@ -185,7 +185,7 @@ paths:
   /v1/orgs/{org_id}/workspaces/{workspace_ref}/access-keys:
     get:
       tags:
-      - Access Keys
+      - Workspace Access Keys
       summary: List Workspace Access Keys
       description: 'List access keys scoped to one workspace.
 
@@ -240,7 +240,7 @@ paths:
           description: The credential does not have the required permission
     post:
       tags:
-      - Access Keys
+      - Workspace Access Keys
       summary: Create Workspace Access Key
       description: 'Issue a workspace-scoped access key and return its token once.
 
@@ -292,7 +292,7 @@ paths:
   /v1/access-keys/{key_id}:
     delete:
       tags:
-      - Access Keys
+      - Access Key Revocation
       summary: Revoke Access Key
       description: 'Revoke an access key and every key delegated from it.
 
@@ -743,7 +743,7 @@ paths:
   /v1/instance/data-planes:
     get:
       tags:
-      - Data Plane
+      - Data Plane Instances
       summary: List Data Planes
       description: 'List data-plane instances by most recent heartbeat.
 
@@ -782,7 +782,7 @@ paths:
   /v1/instance/activity:
     get:
       tags:
-      - Activity
+      - Instance Activity
       summary: List Instance Activity
       description: 'List the most recent audited changes across the instance.
 
@@ -1046,7 +1046,7 @@ paths:
   /v1/orgs/{org_id}:
     patch:
       tags:
-      - Orgs
+      - Organization Settings
       summary: Update Organization
       description: 'Update an organization''s mutable fields.
 
@@ -1090,7 +1090,7 @@ paths:
           description: The credential does not have the required permission
     get:
       tags:
-      - Orgs
+      - Organization Settings
       summary: Get Organization
       description: 'Return one organization.
 
@@ -1128,7 +1128,7 @@ paths:
           description: The credential does not have the required permission
     delete:
       tags:
-      - Orgs
+      - Organization Settings
       summary: Delete Organization
       description: 'Delete an organization and its workspaces, keys, credentials, memberships, and bundles.
 
@@ -2490,7 +2490,7 @@ paths:
   /v1/orgs/{org_id}/activity:
     get:
       tags:
-      - Activity
+      - Organization Activity
       summary: List Organization Activity
       description: 'List the most recent audited changes in an organization.
 
@@ -2539,7 +2539,7 @@ paths:
   /v1/bundle/latest:
     get:
       tags:
-      - Data Plane
+      - Data Plane API
       summary: Get Latest Bundle
       description: 'Return the newest signed policy bundle available at the requested organization scope.
 
@@ -2580,7 +2580,7 @@ paths:
   /v1/events:
     post:
       tags:
-      - Data Plane
+      - Data Plane API
       summary: Ingest Usage Events
       description: 'Ingest up to 1,000 usage events; repeated event IDs are ignored.
 
@@ -2620,7 +2620,7 @@ paths:
   /v1/heartbeat:
     post:
       tags:
-      - Data Plane
+      - Data Plane API
       summary: Record Data Plane Heartbeat
       description: 'Create or refresh a data-plane instance at the access key''s scope.
 
@@ -5431,12 +5431,22 @@ tags:
 - name: Orgs
   description: Create and manage organizations on this AirLLM instance
   x-displayName: Organizations
+- name: Organization Settings
+  description: View, update, and delete one organization
 - name: Users
   description: Manage human users and service accounts across the instance
-- name: Access Keys
-  description: Issue and revoke scoped credentials for the control-plane API
-- name: Data Plane
-  description: Poll bundles, ingest usage events, record heartbeats, and inspect connected data planes
+- name: Instance Access Keys
+  description: List access keys across the instance and issue instance-scoped credentials
+- name: Organization Access Keys
+  description: List access keys within an organization and issue organization-scoped credentials
+- name: Workspace Access Keys
+  description: List and issue access keys scoped to one workspace
+- name: Access Key Revocation
+  description: Revoke an access key at the scope recorded on that key
+- name: Data Plane Instances
+  description: Inspect data-plane instances connected to this AirLLM instance
+- name: Data Plane API
+  description: Poll bundles, ingest usage events, and record data-plane heartbeats
 - name: OSS
   description: Bootstrap a new self-hosted AirLLM deployment
   x-displayName: Self-hosting
@@ -5460,18 +5470,21 @@ tags:
   x-displayName: Model Catalog
 - name: Provider Credentials
   description: Manage provider API keys for an organization or workspace
-- name: Activity
-  description: Inspect recent audited changes at organization or instance scope
+- name: Instance Activity
+  description: Inspect recent audited changes across the instance
+- name: Organization Activity
+  description: Inspect recent audited changes in one organization
 x-tagGroups:
 - name: Organization Management
   tags:
+  - Organization Settings
   - Org Users
   - Workspaces
   - Inference Keys
   - Provider Credentials
   - Bundles
   - Events
-  - Activity
+  - Organization Activity
 - name: Account
   tags:
   - Auth
@@ -5479,10 +5492,19 @@ x-tagGroups:
 - name: Catalog
   tags:
   - Taxonomy
+- name: Access Keys
+  tags:
+  - Instance Access Keys
+  - Organization Access Keys
+  - Workspace Access Keys
+  - Access Key Revocation
+- name: Data Plane API
+  tags:
+  - Data Plane API
 - name: Instance Administration
   tags:
   - Orgs
   - Users
-  - Access Keys
-  - Data Plane
+  - Data Plane Instances
+  - Instance Activity
   - OSS

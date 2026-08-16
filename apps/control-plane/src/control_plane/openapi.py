@@ -19,9 +19,17 @@ each operation. Inference keys authenticate model requests at the data plane and
 
 API_TAGS = [
     {"name": "Orgs", "x-displayName": "Organizations", "description": "Create and manage organizations on this AirLLM instance"},
+    {"name": "Organization Settings", "description": "View, update, and delete one organization"},
     {"name": "Users", "description": "Manage human users and service accounts across the instance"},
-    {"name": "Access Keys", "description": "Issue and revoke scoped credentials for the control-plane API"},
-    {"name": "Data Plane", "description": "Poll bundles, ingest usage events, record heartbeats, and inspect connected data planes"},
+    {"name": "Instance Access Keys", "description": "List access keys across the instance and issue instance-scoped credentials"},
+    {
+        "name": "Organization Access Keys",
+        "description": "List access keys within an organization and issue organization-scoped credentials",
+    },
+    {"name": "Workspace Access Keys", "description": "List and issue access keys scoped to one workspace"},
+    {"name": "Access Key Revocation", "description": "Revoke an access key at the scope recorded on that key"},
+    {"name": "Data Plane Instances", "description": "Inspect data-plane instances connected to this AirLLM instance"},
+    {"name": "Data Plane API", "description": "Poll bundles, ingest usage events, and record data-plane heartbeats"},
     {"name": "OSS", "x-displayName": "Self-hosting", "description": "Bootstrap a new self-hosted AirLLM deployment"},
     {
         "name": "Org Users",
@@ -36,17 +44,32 @@ API_TAGS = [
     {"name": "Events", "description": "Inspect usage events reported by data planes"},
     {"name": "Taxonomy", "x-displayName": "Model Catalog", "description": "Manage the providers and models available through AirLLM"},
     {"name": "Provider Credentials", "description": "Manage provider API keys for an organization or workspace"},
-    {"name": "Activity", "description": "Inspect recent audited changes at organization or instance scope"},
+    {"name": "Instance Activity", "description": "Inspect recent audited changes across the instance"},
+    {"name": "Organization Activity", "description": "Inspect recent audited changes in one organization"},
 ]
 
 TAG_GROUPS = [
     {
         "name": "Organization Management",
-        "tags": ["Org Users", "Workspaces", "Inference Keys", "Provider Credentials", "Bundles", "Events", "Activity"],
+        "tags": [
+            "Organization Settings",
+            "Org Users",
+            "Workspaces",
+            "Inference Keys",
+            "Provider Credentials",
+            "Bundles",
+            "Events",
+            "Organization Activity",
+        ],
     },
     {"name": "Account", "tags": ["Auth", "Enrollment"]},
     {"name": "Catalog", "tags": ["Taxonomy"]},
-    {"name": "Instance Administration", "tags": ["Orgs", "Users", "Access Keys", "Data Plane", "OSS"]},
+    {
+        "name": "Access Keys",
+        "tags": ["Instance Access Keys", "Organization Access Keys", "Workspace Access Keys", "Access Key Revocation"],
+    },
+    {"name": "Data Plane API", "tags": ["Data Plane API"]},
+    {"name": "Instance Administration", "tags": ["Orgs", "Users", "Data Plane Instances", "Instance Activity", "OSS"]},
 ]
 
 OPERATION_SUMMARIES = {

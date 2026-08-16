@@ -18,7 +18,7 @@ from control_plane.models.common.wire import Envelope
 from control_plane.models.data_plane_instance import HeartbeatOut
 from control_plane.models.usage_event import EventsIngestedOut
 
-router = APIRouter(tags=["Data Plane"])
+router = APIRouter(tags=["Data Plane API"])
 
 EventBatch = Annotated[list[UsageEventV1], Field(max_length=1000)]
 

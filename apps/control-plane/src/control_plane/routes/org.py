@@ -106,7 +106,7 @@ async def list_workspace_events(workspace: WorkspaceDep, page: Annotated[UsageEv
     return Envelope(data=[UsageEventOut.model_validate(event) for event in events])
 
 
-@router.get("/activity", tags=["Activity"], dependencies=[require(Permission.audit_read, org_scope)])
+@router.get("/activity", tags=["Organization Activity"], dependencies=[require(Permission.audit_read, org_scope)])
 async def list_activity(org_id: OrgDep, limit: Annotated[int, Query(ge=1, le=200)] = 50) -> Envelope[list[ActivityOut]]:
     """List the most recent audited changes in an organization."""
     return Envelope(data=[ActivityOut.model_validate(entry) for entry in await AuditLog.for_org(org_id, limit)])

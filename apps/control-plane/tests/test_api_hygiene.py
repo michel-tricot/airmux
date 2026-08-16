@@ -41,9 +41,46 @@ def test_every_endpoint_is_tagged_for_docs():
     schema = app.openapi()
     used = {str(tag) for r in _api_routes(app) for tag in r.tags}
     declared = {t["name"] for t in schema.get("tags", [])}
-    grouped = {tag for group in schema.get("x-tagGroups", []) for tag in group["tags"]}
+    grouped_tags = [tag for group in schema.get("x-tagGroups", []) for tag in group["tags"]]
+    grouped = set(grouped_tags)
     assert used == declared, f"Declare every used tag in openapi_tags with a description: {used ^ declared}"
     assert used == grouped, f"List every tag in an x-tagGroups group or it disappears from the ReDoc sidebar: {used ^ grouped}"
+    assert len(grouped_tags) == len(grouped), "Place each tag in exactly one ReDoc group"
+
+
+def test_access_key_docs_distinguish_tenant_scopes():
+    operations = {
+        operation["operationId"]: operation["tags"]
+        for methods in make_app().openapi()["paths"].values()
+        for operation in methods.values()
+        if "access_key" in operation["operationId"]
+    }
+    assert operations == {
+        "list_instance_access_keys": ["Instance Access Keys"],
+        "create_instance_access_key": ["Instance Access Keys"],
+        "list_org_access_keys": ["Organization Access Keys"],
+        "create_org_access_key": ["Organization Access Keys"],
+        "list_workspace_access_keys": ["Workspace Access Keys"],
+        "create_workspace_access_key": ["Workspace Access Keys"],
+        "revoke_access_key": ["Access Key Revocation"],
+    }
+
+
+def test_tenant_management_doc_groups_match_authority_scopes():
+    app = make_app()
+    groups = {tag: group["name"] for group in app.openapi()["x-tagGroups"] for tag in group["tags"]}
+    allowed = {
+        "Instance Administration": {"instance_scope"},
+        "Organization Management": {"org_scope", "workspace_scope", "credential_scope"},
+    }
+    offenders = sorted(
+        f"{route.name}: {scope} under {group}"
+        for route in _api_routes(app)
+        if (group := groups[route.tags[0]]) in allowed
+        for dependency in route.dependant.dependencies
+        if (scope := getattr(dependency.call, "required_scope", None)) is not None and scope not in allowed[group]
+    )
+    assert offenders == []
 
 
 def test_operation_ids_are_the_handler_names():
