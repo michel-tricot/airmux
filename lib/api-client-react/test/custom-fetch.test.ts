@@ -54,16 +54,16 @@ describe('customFetch', () => {
   it('lets request headers override configured defaults and bearer auth', async () => {
     fetchMock.mockResolvedValue(jsonResponse({ data: null }));
     vi.stubGlobal('fetch', fetchMock);
-    setDefaultHeaders(() => ({ 'X-Org-Id': 'default-org', 'X-Skip': null }));
+    setDefaultHeaders(() => ({ 'X-Trace-Id': 'default-trace', 'X-Skip': null }));
     setAuthTokenGetter(() => 'default-token');
 
     await customFetch('/v1/items', {
-      headers: { Authorization: 'Bearer explicit-token', 'X-Org-Id': 'selected-org' },
+      headers: { Authorization: 'Bearer explicit-token', 'X-Trace-Id': 'selected-trace' },
     });
 
     const headers = new Headers(fetchMock.mock.calls[0]?.[1]?.headers);
     expect(headers.get('authorization')).toBe('Bearer explicit-token');
-    expect(headers.get('x-org-id')).toBe('selected-org');
+    expect(headers.get('x-trace-id')).toBe('selected-trace');
     expect(headers.has('x-skip')).toBe(false);
   });
 

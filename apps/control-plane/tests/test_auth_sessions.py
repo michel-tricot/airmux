@@ -25,7 +25,7 @@ def _make_user(c, cp, email="m@example.com", *, admin=False, org=None, tmp_path=
     c.cookies.clear()
     user = {"id": me["user_id"], **me}
     if org is not None:
-        assert c.put(f"/v1/org/users/{user['id']}", json={"role": "member"}, headers=cp.headers(org)).status_code == 200
+        assert c.put(f"/v1/orgs/{org}/users/{user['id']}", json={"role": "member"}, headers=cp.headers(org)).status_code == 200
     if admin:
         assert tmp_path is not None
 
@@ -61,7 +61,7 @@ def test_password_login_sets_cookie_and_cookie_reaches_org_routes(tmp_path):
         assert resp.json()["data"]["user_id"] == user["id"]
         assert resp.json()["data"]["orgs"] == [str(org_id)]
 
-        keys = c.get("/v1/org/workspaces", headers={**CSRF, "X-Org-Id": str(org_id)})
+        keys = c.get(f"/v1/orgs/{org_id}/workspaces", headers=CSRF)
         assert keys.status_code == 200
         me = c.get("/v1/auth/me", headers=CSRF)
         assert me.status_code == 200
@@ -99,7 +99,7 @@ def test_bearer_wins_over_cookie_and_a_bad_bearer_never_falls_back(tmp_path):
         assert c.get("/v1/orgs", headers=root).status_code == 200
 
 
-def test_x_org_id_requires_membership_and_instance_routes_require_an_instance_role(tmp_path):
+def test_org_paths_require_membership_and_instance_routes_require_an_instance_role(tmp_path):
     cp = setup_control_plane(tmp_path)
     root = cp.headers()
     with _client(cp) as c:
@@ -107,15 +107,14 @@ def test_x_org_id_requires_membership_and_instance_routes_require_an_instance_ro
         o2 = make_org(c, root, "o2")
         _make_user(c, cp, org=o1)
         _login(c)
-        assert c.get("/v1/org/workspaces", headers={**CSRF, "X-Org-Id": str(o1)}).status_code == 200
-        assert c.get("/v1/org/workspaces", headers={**CSRF, "X-Org-Id": str(o2)}).status_code == 403
-        assert c.get("/v1/org/workspaces", headers={**CSRF, "X-Org-Id": "ghost"}).status_code == 403
+        assert c.get(f"/v1/orgs/{o1}/workspaces", headers=CSRF).status_code == 200
+        assert c.get(f"/v1/orgs/{o2}/workspaces", headers=CSRF).status_code == 403
         assert c.get("/v1/orgs", headers=CSRF).status_code == 403
 
         _make_user(c, cp, email="root@example.com", admin=True, tmp_path=tmp_path)
         _login(c, email="root@example.com")
         assert c.get("/v1/orgs", headers=CSRF).status_code == 200
-        assert c.get("/v1/org/workspaces", headers={**CSRF, "X-Org-Id": str(o1)}).status_code == 200
+        assert c.get(f"/v1/orgs/{o1}/workspaces", headers=CSRF).status_code == 200
 
 
 def test_expired_session_is_401_and_half_life_touch_slides_expiry(tmp_path):

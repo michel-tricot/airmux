@@ -65,7 +65,7 @@ describe('console theme', () => {
 describe('provider icons', () => {
   it('removes active content from taxonomy SVG markup', async () => {
     server.use(
-      http.get('/v1/taxonomy', () =>
+      http.get(`/v1/orgs/${ORG.id}/workspaces/${WORKSPACES[0].slug}/taxonomy`, () =>
         HttpResponse.json({
           models: [],
           providers: [
@@ -92,7 +92,7 @@ describe('provider icons', () => {
 
   it('supports arrow-key navigation between providers', async () => {
     server.use(
-      http.get('/v1/taxonomy', () =>
+      http.get(`/v1/orgs/${ORG.id}/workspaces/${WORKSPACES[0].slug}/taxonomy`, () =>
         HttpResponse.json({
           models: [],
           providers: [taxonomyProvider('provider-1', 'first'), taxonomyProvider('provider-2', 'second')],

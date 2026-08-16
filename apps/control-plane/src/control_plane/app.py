@@ -1,21 +1,22 @@
 from __future__ import annotations
 
 import contextlib
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from fastapi import APIRouter, Depends, FastAPI
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
-from fastapi.routing import APIRoute
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError, ProgrammingError, SQLAlchemyError
 
+from control_plane.authority import AuthorizationError, CredentialError
 from control_plane.config import load_settings
 from control_plane.db import make_engine, make_session_factory
 from control_plane.deps import get_session
 from control_plane.migrate import head_revision
 from control_plane.models import NotOwnedError
+from control_plane.openapi import API_DESCRIPTION, API_TAGS, ControlPlaneApp, operation_id
 from control_plane.routes.access_keys import router as access_keys_router
 from control_plane.routes.auth import router as auth_router
 from control_plane.routes.enroll import router as enroll_router
@@ -28,90 +29,14 @@ from control_plane.routes.sync import router as sync_router
 from control_plane.routes.taxonomy import router as taxonomy_router
 from control_plane.routes.users import router as users_router
 from control_plane.routes.workspaces import router as workspaces_router
-from control_plane.sessions import SESSION_COOKIE
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
-    from typing import Any
 
     from fastapi import Request
     from sqlalchemy.ext.asyncio import AsyncEngine
 
     from control_plane.config import Settings
-
-API_TAGS = [
-    {"name": "Orgs", "description": "Tenants of the instance; bundles, usage, and org or workspace resources belong to one org"},
-    {"name": "Users", "description": "Human and service-account principals, their instance roles, and org memberships"},
-    {"name": "Access Keys", "description": "Principal-bound control-plane credentials attenuated by permission and tenant boundary"},
-    {"name": "Data Plane", "description": "Data-plane-facing endpoints: bundle polling, event ingestion, heartbeats"},
-    {"name": "OSS", "description": "Self-hosted bootstrap: whether this deployment has a claimed account yet, and the quickstart trapdoor"},
-    {
-        "name": "Org Users",
-        "x-displayName": "Users",
-        "description": "Membership in the acting org: who belongs to it, and adding or removing them",
-    },
-    {"name": "Workspaces", "description": "Scopes inside an org where inference keys live; members are drawn from the org"},
-    {"name": "Inference Keys", "description": "Caller credentials for the gateway: opaque keys whose hashes reach data planes through bundles"},
-    {"name": "Auth", "description": "Human login: password, cookie sessions, account endpoints, CLI device authorization"},
-    {"name": "Enrollment", "description": "A user's path into orgs: their standing and their one self-serve personal org"},
-    {"name": "Bundles", "description": "Signed policy bundles compiled per org and polled by data planes"},
-    {"name": "Events", "description": "Usage events reported by data planes"},
-    {"name": "Taxonomy", "description": "The models catalog: providers and models compiled into bundles"},
-    {"name": "Provider Credentials", "description": "Provider API keys an org or workspace brings; values live in the secret store, never here"},
-    {"name": "Activity", "description": "The audit trail of writes, per org and instance-wide"},
-]
-
-TAG_GROUPS = [
-    {
-        "name": "Org Management",
-        "tags": ["Org Users", "Workspaces", "Inference Keys", "Provider Credentials", "Bundles", "Events", "Activity"],
-    },
-    {"name": "Account", "tags": ["Auth", "Enrollment"]},
-    {"name": "Catalog", "tags": ["Taxonomy"]},
-    {"name": "Instance Admin", "tags": ["Orgs", "Users", "Access Keys", "Data Plane", "OSS"]},
-]
-
-
-def _api_routes(routes: list[Any]) -> list[APIRoute]:
-    routers = (getattr(route, "original_router", None) for route in routes)
-    nested = [route for router in routers if router is not None for route in _api_routes(router.routes)]
-    return [*(route for route in routes if isinstance(route, APIRoute)), *nested]
-
-
-class ControlPlaneApp(FastAPI):
-    def openapi(self) -> dict[str, Any]:
-        if self.openapi_schema:
-            return self.openapi_schema
-        schema = super().openapi()
-        schema["x-tagGroups"] = TAG_GROUPS
-        schema.setdefault("components", {}).setdefault("securitySchemes", {})["SessionCookie"] = {
-            "type": "apiKey",
-            "in": "cookie",
-            "name": SESSION_COOKIE,
-        }
-        for route in _api_routes(self.routes):
-            permissions = [
-                str(permission) for dep in route.dependant.dependencies if (permission := getattr(dep.call, "required_permission", None)) is not None
-            ]
-            access = [a for dep in route.dependant.dependencies if (a := getattr(dep.call, "access", None)) is not None]
-            for method in route.methods or ():
-                operation = schema["paths"]["/v1" + route.path][method.lower()]
-                if permissions:
-                    operation["security"] = [{"HTTPBearer": []}, {"SessionCookie": []}]
-                    line = f"Requires `{'`, `'.join(permissions)}` authority at the route's tenant boundary."
-                elif "public" in access:
-                    operation["security"] = []
-                    line = "No authentication required."
-                elif "browser" in access:
-                    operation["security"] = [{"SessionCookie": []}]
-                    line = "Requires a browser session."
-                elif "user" in access:
-                    operation["security"] = [{"HTTPBearer": []}, {"SessionCookie": []}]
-                    line = "Requires an authenticated human; access-key responses honor the credential boundary."
-                else:
-                    continue
-                operation["description"] = f"{operation['description']}\n\n{line}" if operation.get("description") else line
-        return schema
 
 
 async def _require_migrated_schema(engine: AsyncEngine) -> None:
@@ -159,6 +84,16 @@ async def integrity_handler(_request: Request, _exc: Exception) -> JSONResponse:
     return JSONResponse(status_code=409, content={"detail": "Request conflicts with existing state"})
 
 
+async def authorization_handler(_request: Request, exc: Exception) -> JSONResponse:
+    error = cast("AuthorizationError", exc)
+    return JSONResponse(status_code=403, content={"detail": error.detail})
+
+
+async def credential_handler(_request: Request, exc: Exception) -> JSONResponse:
+    error = cast("CredentialError", exc)
+    return JSONResponse(status_code=401, content={"detail": error.detail})
+
+
 async def healthz(request: Request) -> JSONResponse:
     """Unauthenticated probe for container orchestration; touches the database because process-up alone cannot serve a bundle poll."""
     try:
@@ -169,19 +104,22 @@ async def healthz(request: Request) -> JSONResponse:
     return JSONResponse({"status": "ok"})
 
 
-def _operation_id(route: APIRoute) -> str:
-    """The handler name is the operation id, so generated clients read useListOrgs rather than FastAPI's
-    useListOrgsV1OrgsGet. Handler names are unique across the routers; test_api_hygiene holds that."""
-    return route.name
-
-
 def create_app(settings: Settings | None = None) -> FastAPI:
-    app = ControlPlaneApp(title="airllm control plane", lifespan=lifespan, openapi_tags=API_TAGS, generate_unique_id_function=_operation_id)
+    app = ControlPlaneApp(
+        title="AirLLM Control Plane API",
+        description=API_DESCRIPTION,
+        version="0.1.0",
+        lifespan=lifespan,
+        openapi_tags=API_TAGS,
+        generate_unique_id_function=operation_id,
+    )
     app.state.settings = settings if settings is not None else load_settings()
     app.state.secret_store = app.state.settings.secrets.build()
     app.add_exception_handler(NotOwnedError, not_owned_handler)
     app.add_exception_handler(RequestValidationError, validation_handler)
     app.add_exception_handler(IntegrityError, integrity_handler)
+    app.add_exception_handler(AuthorizationError, authorization_handler)
+    app.add_exception_handler(CredentialError, credential_handler)
     app.add_route("/healthz", healthz)
     v1 = APIRouter(prefix="/v1", dependencies=[Depends(get_session, scope="function")])
     for router in (

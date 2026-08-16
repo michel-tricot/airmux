@@ -43,9 +43,10 @@ class UsageEvent(Record, table=True):
     credential_scope: str | None = None
 
     @classmethod
-    async def for_org(
+    async def for_scope(
         cls,
         org_id: UUID,
+        workspace_id: UUID | None,
         page: UsageEventPage,
     ) -> list[Self]:
         occurred_at = col(cls.occurred_at)
@@ -59,7 +60,7 @@ class UsageEvent(Record, table=True):
         else:
             cursor = ()
             order = (occurred_at.desc(), event_id.desc())
-        workspace_condition = (cls.workspace_id == page.workspace_id,) if page.workspace_id is not None else ()
+        workspace_condition = (cls.workspace_id == workspace_id,) if workspace_id is not None else ()
         return await cls.find(
             cls.org_id == org_id,
             *workspace_condition,
@@ -75,7 +76,6 @@ class UsageEventPage(RequestModel):
     after: datetime | None = None
     after_event_id: UUID | None = None
     limit: int = PydanticField(default=50, ge=1, le=200)
-    workspace_id: UUID | None = None
 
     @model_validator(mode="after")
     def validate_cursor(self) -> Self:

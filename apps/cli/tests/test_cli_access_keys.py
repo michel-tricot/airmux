@@ -22,7 +22,7 @@ class Client:
     def post(self, path: str, json: dict) -> httpx.Response:
         self.submitted.update(path=path, body=json)
         request = httpx.Request("POST", f"http://control-plane{path}")
-        return httpx.Response(200, request=request, json={"data": {"id": "key", "boundary": "instance", "token": "shown-once"}})
+        return httpx.Response(200, request=request, json={"data": {"id": "key", "scope": {"level": "instance"}, "token": "shown-once"}})
 
 
 def test_instance_flag_overrides_the_active_org_for_access_key_mint(monkeypatch):
@@ -33,6 +33,6 @@ def test_instance_flag_overrides_the_active_org_for_access_key_mint(monkeypatch)
     result = runner.invoke(app, ["access-keys", "mint", "--label", "ci", "--permission", "bundles.read", "--instance"])
 
     assert result.exit_code == 0, result.output
-    assert submitted["path"] == "/v1/access-keys"
-    assert submitted["body"]["org_id"] is None
-    assert submitted["body"]["workspace_id"] is None
+    assert submitted["path"] == "/v1/instance/access-keys"
+    assert "org_id" not in submitted["body"]
+    assert "workspace_id" not in submitted["body"]

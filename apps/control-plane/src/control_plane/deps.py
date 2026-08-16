@@ -3,19 +3,19 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Annotated, Protocol, cast
 from uuid import UUID
 
-from fastapi import Cookie, Depends, Header, HTTPException, Request, params
+from fastapi import Cookie, Depends, HTTPException, Request, params
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
-from control_plane.authz import ALL_PERMISSIONS, Authority, Boundary, Permission, Target
+from control_plane.authority import decision
+from control_plane.authz import ALL_PERMISSIONS, Actor, Decision, Grant, Permission, Scope
 from control_plane.db import transaction
 from control_plane.keys import verify_bearer
 from control_plane.models import Org, User, Workspace, set_actor
 from control_plane.sessions import SESSION_COOKIE, verify_session
 
 SessionCookie = Annotated[str | None, Cookie(alias=SESSION_COOKIE, include_in_schema=False)]
-OrgHeader = Annotated[str | None, Header(alias="X-Org-Id")]
-RequestedWith = Annotated[str | None, Header(alias="X-Requested-With", include_in_schema=False)]
-FetchSite = Annotated[str | None, Header(alias="Sec-Fetch-Site", include_in_schema=False)]
+RequestedWith = Annotated[str | None, params.Header(alias="X-Requested-With", include_in_schema=False)]
+FetchSite = Annotated[str | None, params.Header(alias="Sec-Fetch-Site", include_in_schema=False)]
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Awaitable, Callable
@@ -24,7 +24,11 @@ if TYPE_CHECKING:
 
     from control_plane.models import AuthSession
 
-_bearer = HTTPBearer(auto_error=False)
+_bearer = HTTPBearer(
+    auto_error=False,
+    scheme_name="AccessKey",
+    description="A control-plane access key using the `sk-cp-` prefix. Inference keys are not accepted by control-plane endpoints.",
+)
 
 BearerDep = Annotated[HTTPAuthorizationCredentials | None, Depends(_bearer)]
 
@@ -47,23 +51,23 @@ async def _session_user(session_cookie: str, x_requested_with: str | None, sec_f
     return auth_session, user
 
 
-async def authority(
+async def actor(
     credentials: BearerDep,
     session_cookie: SessionCookie = None,
     x_requested_with: RequestedWith = None,
     sec_fetch_site: FetchSite = None,
-) -> Authority:
+) -> Actor:
     if credentials is not None:
         resolved = await verify_bearer(credentials.credentials)
         if resolved is None:
             raise HTTPException(status_code=401, detail="Invalid, expired, or revoked credential")
     elif session_cookie is not None:
         auth_session, user = await _session_user(session_cookie, x_requested_with, sec_fetch_site)
-        resolved = Authority(
+        resolved = Actor(
             credential_id=auth_session.id,
             principal_id=user.id,
             credential_kind="session",
-            permission_ceiling=ALL_PERMISSIONS,
+            grant=Grant(scope=Scope.instance(), permissions=ALL_PERMISSIONS),
         )
     else:
         raise HTTPException(status_code=401, detail="Authentication required; sign in or provide a credential")
@@ -71,10 +75,10 @@ async def authority(
     return resolved
 
 
-AuthorityDep = Annotated[Authority, Depends(authority)]
+ActorDep = Annotated[Actor, Depends(actor)]
 
 
-async def acting_user(resolved: AuthorityDep) -> User:
+async def acting_user(resolved: ActorDep) -> User:
     user = await User.find_by_id(resolved.principal_id)
     if user is None or user.service_account:
         raise HTTPException(status_code=401, detail="This credential's account no longer exists")
@@ -99,25 +103,7 @@ async def cookie_user(
 CookieUserDep = Annotated[User, Depends(cookie_user)]
 
 
-def _org_header(value: str | None) -> UUID | None:
-    if value is None:
-        return None
-    try:
-        return UUID(value)
-    except ValueError:
-        raise HTTPException(status_code=403, detail="X-Org-Id is not a valid organization id") from None
-
-
-async def selected_org(authority: AuthorityDep, x_org_id: OrgHeader = None) -> UUID:
-    requested = _org_header(x_org_id)
-    if authority.boundary in {Boundary.org, Boundary.workspace}:
-        if requested is not None and requested != authority.org_id:
-            raise HTTPException(status_code=403, detail="The credential is bound to a different organization")
-        org_id = authority.org_id
-    else:
-        org_id = requested
-    if org_id is None:
-        raise HTTPException(status_code=403, detail="X-Org-Id required")
+async def selected_org(org_id: UUID) -> UUID:
     if await Org.find_by_id(org_id) is None:
         raise HTTPException(status_code=404, detail="Organization not found")
     return org_id
@@ -133,55 +119,62 @@ async def selected_workspace(workspace_ref: str, org_id: OrgDep) -> Workspace:
 WorkspaceDep = Annotated[Workspace, Depends(selected_workspace)]
 
 
-async def instance_target() -> Target:
-    return Target.instance()
+async def instance_scope() -> Scope:
+    return Scope.instance()
 
 
-async def org_target(org_id: OrgDep) -> Target:
-    return Target.org(org_id)
+async def org_scope(org_id: OrgDep) -> Scope:
+    return Scope.org(org_id)
 
 
-async def named_org_target(org_id: UUID) -> Target:
-    return Target.org(org_id)
+async def workspace_scope(workspace: WorkspaceDep) -> Scope:
+    return Scope.workspace(workspace.org_id, workspace.id)
 
 
-async def workspace_target(workspace: WorkspaceDep) -> Target:
-    return Target.workspace(workspace.org_id, workspace.id)
+async def credential_scope(resolved: ActorDep) -> Scope:
+    return resolved.grant.scope
 
 
-async def selected_target(authority: AuthorityDep, x_org_id: OrgHeader = None) -> Target:
-    if authority.boundary is not None:
-        return Target(level=authority.boundary, org_id=authority.org_id, workspace_id=authority.workspace_id)
-    org_id = _org_header(x_org_id)
-    if org_id is None:
-        return Target.instance()
-    if await Org.find_by_id(org_id) is None:
+CredentialScopeDep = Annotated[Scope, Depends(credential_scope)]
+
+
+async def bundle_scope(resolved: ActorDep, org_id: UUID | None = None) -> Scope:
+    selected = org_id
+    if selected is None and resolved.grant.scope.org_id is not None:
+        selected = resolved.grant.scope.org_id
+    if selected is None:
+        return Scope.instance()
+    if await Org.find_by_id(selected) is None:
         raise HTTPException(status_code=404, detail="Organization not found")
-    return Target.org(org_id)
+    return Scope.org(selected)
 
 
-async def authorize(authority: Authority, permission: Permission, target: Target) -> None:
-    if not await authority.allows(permission, target):
-        raise HTTPException(status_code=403, detail=f"authority lacks {permission.value} at the {target.level.value} boundary")
+BundleScopeDep = Annotated[Scope, Depends(bundle_scope)]
+
+
+async def authorize(resolved: Actor, permission: Permission, scope: Scope) -> None:
+    result = await decision(resolved, permission, scope)
+    if result is not Decision.allow:
+        raise HTTPException(status_code=403, detail=f"Missing {permission.value} permission for {scope.level.value} scope")
 
 
 class PermissionCheck(Protocol):
     required_permission: Permission
-    required_target: str
+    required_scope: str
 
-    def __call__(self, authority: Authority) -> Awaitable[None]: ...
+    def __call__(self, actor: Actor) -> Awaitable[None]: ...
 
 
-def require(permission: Permission, target_resolver: Callable[..., Awaitable[Target]]) -> params.Depends:
-    target_dependency = Depends(target_resolver)
+def require(permission: Permission, scope_resolver: Callable[..., Awaitable[Scope]]) -> params.Depends:
+    scope_dependency = Depends(scope_resolver)
 
-    async def check_permission(authority: AuthorityDep, target: Target = target_dependency) -> None:
-        await authorize(authority, permission, target)
+    async def check_permission(resolved: ActorDep, scope: Scope = scope_dependency) -> None:
+        await authorize(resolved, permission, scope)
 
     checker = cast("PermissionCheck", check_permission)
     checker.required_permission = permission
-    target_name = getattr(target_resolver, "__name__", "")
-    checker.required_target = target_name if isinstance(target_name, str) else type(target_resolver).__name__
+    scope_name = getattr(scope_resolver, "__name__", "")
+    checker.required_scope = scope_name if isinstance(scope_name, str) else type(scope_resolver).__name__
     return Depends(checker)
 
 

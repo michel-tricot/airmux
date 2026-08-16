@@ -25,7 +25,7 @@ def test_api_requests_attribute_the_acting_user(tmp_path):
         user = make_user(tmp_path, "admin@example.com")
         make_admin(tmp_path, user.id)
         token = c.post(
-            "/v1/access-keys",
+            "/v1/instance/access-keys",
             json={"user_id": str(user.id), "label": "t", "permissions": [Permission.organizations_create]},
             headers=root,
         ).json()["data"]["token"]
@@ -74,12 +74,12 @@ def test_refused_requests_explain_themselves(tmp_path):
         # Org-scoped credential on an instance route
         resp = c.get("/v1/orgs", headers=org_headers)
         assert resp.status_code == 403
-        assert "instance boundary" in resp.json()["detail"]
+        assert "instance scope" in resp.json()["detail"]
 
-        # Instance credential on an org route
-        resp = c.get("/v1/org/workspaces", headers=root)
+        limited = cp.headers(org_id=org_id, permissions=[Permission.organizations_read])
+        resp = c.get(f"/v1/orgs/{org_id}/workspaces", headers=limited)
         assert resp.status_code == 403
-        assert resp.json()["detail"] == "X-Org-Id required"
+        assert resp.json()["detail"] == "Missing workspaces.read permission for org scope"
 
         # Expired/invalid session cookie through the cookie door
         c.cookies.set("airllm_session", "bogus")

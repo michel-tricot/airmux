@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState, type ReactNode } from 'react';
+import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react';
 import { hashKey, MutationCache, QueryCache, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
 import { ErrorBoundary } from '@/components/error-boundary';
@@ -77,8 +77,12 @@ export function createQueryClient(): QueryClient {
 }
 
 function AppSection() {
-  const { orgId } = useSession();
+  const { orgId, setOrgId } = useSession();
   const enrollment = useEnrollment({ query: { queryKey: getEnrollmentQueryKey(), retry: false } });
+
+  useEffect(() => {
+    if (orgId && enrollment.data && !enrollment.data.orgs.some((org) => org.id === orgId)) setOrgId(null);
+  }, [enrollment.data, orgId, setOrgId]);
 
   if (enrollment.isLoading) return <Splash>Loading organizations...</Splash>;
   if (enrollment.isError || !enrollment.data) {

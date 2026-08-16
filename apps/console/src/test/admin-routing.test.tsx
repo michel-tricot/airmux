@@ -26,7 +26,7 @@ const ACCESS_KEY = {
   revoked_at: null,
   expires_at: null,
   permissions: ['organizations.read'],
-  boundary: 'instance',
+  scope: { level: 'instance', org_id: null, workspace_id: null },
   status: 'active',
   label: 'deploy',
   prefix: 'sk-cp-abc',
@@ -44,7 +44,7 @@ function installAdminHandlers() {
     http.get('/v1/orgs/:orgId', () => HttpResponse.json(ORG)),
     http.get('/v1/users', () => HttpResponse.json([USER])),
     http.get('/v1/users/:userId', () => HttpResponse.json(USER)),
-    http.get('/v1/access-keys', () => HttpResponse.json([ACCESS_KEY])),
+    http.get('/v1/instance/access-keys', () => HttpResponse.json([ACCESS_KEY])),
     http.get('/v1/instance/data-planes', () =>
       HttpResponse.json([
         {
@@ -61,10 +61,10 @@ function installAdminHandlers() {
     http.get('/v1/instance/activity', () =>
       HttpResponse.json([{ id: 1, table_name: 'org', record_id: ORG.id, action: 'create', user_id: USER.id, occurred_at: now }]),
     ),
-    http.get('/v1/org/users', () =>
+    http.get('/v1/orgs/:orgId/users', () =>
       HttpResponse.json([{ user_id: USER.id, email: USER.email, name: USER.name, service_account: false, role: 'owner', status: 'member' }]),
     ),
-    http.get('/v1/org/workspaces', () => HttpResponse.json(WORKSPACES)),
+    http.get('/v1/orgs/:orgId/workspaces', () => HttpResponse.json(WORKSPACES)),
   );
 }
 
@@ -99,7 +99,7 @@ describe('instance administration routes', () => {
 
   it('counts only active access keys on the dashboard', async () => {
     server.use(
-      http.get('/v1/access-keys', () =>
+      http.get('/v1/instance/access-keys', () =>
         HttpResponse.json([
           ACCESS_KEY,
           { ...ACCESS_KEY, id: 'access-key-2', status: 'expired' },

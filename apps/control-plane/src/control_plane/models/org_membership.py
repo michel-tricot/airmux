@@ -25,9 +25,15 @@ class OrgMembership(Record, Tombstonable, table=True):
     org_id: UUID = Field(primary_key=True, foreign_key="org.id", index=True)
     role: str = OrgRole.member
 
+    async def is_only_owner(self) -> bool:
+        if self.role != OrgRole.owner:
+            return False
+        owners = await OrgMembership.find(OrgMembership.org_id == self.org_id, OrgMembership.role == OrgRole.owner)
+        return len(owners) == 1
+
 
 class OrgMembershipIn(RequestModel):
-    role: OrgRole
+    role: OrgRole = Field(description="Organization role to grant")
 
 
 class MembershipOut(BaseModel):
@@ -38,11 +44,7 @@ class MembershipOut(BaseModel):
 
 
 class OrgMemberOut(BaseModel):
-    """A member of the acting org: who they are and that they belong.
-
-    Deliberately not UserOut: that carries the user's every membership, which would let one org's
-    credential read the shape of the orgs it has no scope over.
-    """
+    """A human user or service account that belongs to an organization."""
 
     user_id: UUID
     email: str

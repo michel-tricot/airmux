@@ -14,9 +14,11 @@ from cli.client import (
     access_client,
     access_get,
     ensure_ok,
+    org_path,
     payload,
     payload_rows,
     post_expecting,
+    resolve_org_id,
     resolve_workspace,
 )
 from cli.common import (
@@ -138,7 +140,7 @@ WorkspaceOption = Annotated[str, typer.Option("--workspace", "-w", help="Workspa
 @workspaces_app.command("list")
 def workspaces_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
     """List your workspaces."""
-    print_rows("workspaces", access_get("/v1/org/workspaces", control_plane_url), WORKSPACE_COLS, fmt)
+    print_rows("workspaces", access_get(org_path("/workspaces"), control_plane_url), WORKSPACE_COLS, fmt)
 
 
 @workspaces_app.command("use")
@@ -149,7 +151,7 @@ def workspaces_use(workspace: str, control_plane_url: str = "") -> None:
         console.print("[red]Not signed in. Run [bold]airllm login[/bold].[/red]")
         raise typer.Exit(1)
     with access_client(control_plane_url) as c:
-        resp = c.get(f"/v1/org/workspaces/{workspace}")
+        resp = c.get(org_path(f"/workspaces/{workspace}"))
     if not resp.is_success:
         console.print(f"[red]No workspace [bold]{workspace}[/bold]. See [bold]airllm workspaces list[/bold].[/red]")
         raise typer.Exit(1)
@@ -163,7 +165,7 @@ def workspaces_use(workspace: str, control_plane_url: str = "") -> None:
 def workspace_members_list(workspace: WorkspaceOption = "", control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
     """List who can use this workspace."""
     workspace_ref = resolve_workspace(workspace)
-    print_rows("members", access_get(f"/v1/org/workspaces/{workspace_ref}/members", control_plane_url), MEMBER_COLS, fmt)
+    print_rows("members", access_get(org_path(f"/workspaces/{workspace_ref}/members"), control_plane_url), MEMBER_COLS, fmt)
 
 
 @workspace_members_app.command("add")
@@ -176,7 +178,7 @@ def workspace_members_add(
     """Give someone access to this workspace."""
     workspace_ref = resolve_workspace(workspace)
     with access_client(control_plane_url) as c:
-        resp = c.put(f"/v1/org/workspaces/{workspace_ref}/members/{user_id}", json={"role": role})
+        resp = c.put(org_path(f"/workspaces/{workspace_ref}/members/{user_id}"), json={"role": role})
         ensure_ok(resp)
     console.print(f"Added [bold]{user_id}[/bold] to [bold]{workspace_ref}[/bold]")
 
@@ -186,7 +188,7 @@ def workspace_members_remove(user_id: str, workspace: WorkspaceOption = "", cont
     """Remove a member from a workspace."""
     workspace_ref = resolve_workspace(workspace)
     with access_client(control_plane_url) as c:
-        resp = c.delete(f"/v1/org/workspaces/{workspace_ref}/members/{user_id}")
+        resp = c.delete(org_path(f"/workspaces/{workspace_ref}/members/{user_id}"))
         ensure_ok(resp)
     console.print(f"Removed [bold]{user_id}[/bold] from [bold]{workspace_ref}[/bold]")
 
@@ -195,7 +197,7 @@ def workspace_members_remove(user_id: str, workspace: WorkspaceOption = "", cont
 def inference_keys_list(workspace: WorkspaceOption = "", control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
     """List this workspace's API keys."""
     workspace_ref = resolve_workspace(workspace)
-    print_rows("inference keys", access_get(f"/v1/org/workspaces/{workspace_ref}/inference-keys", control_plane_url), KEY_COLS, fmt)
+    print_rows("inference keys", access_get(org_path(f"/workspaces/{workspace_ref}/inference-keys"), control_plane_url), KEY_COLS, fmt)
 
 
 @inference_keys_app.command("revoke")
@@ -203,7 +205,7 @@ def inference_keys_revoke(key_id: str, workspace: WorkspaceOption = "", control_
     """Revoke an API key."""
     workspace_ref = resolve_workspace(workspace)
     with access_client(control_plane_url) as c:
-        resp = c.delete(f"/v1/org/workspaces/{workspace_ref}/inference-keys/{key_id}")
+        resp = c.delete(org_path(f"/workspaces/{workspace_ref}/inference-keys/{key_id}"))
         ensure_ok(resp)
     console.print(f"Revoked [bold]{key_id}[/bold]")
 
@@ -215,7 +217,7 @@ def _permissions(value: object) -> str:
 ACCESS_KEY_COLS = [
     Col("id", "ID", style="dim", no_wrap=True),
     Col("label", "Label", max_width=30),
-    Col("boundary", "Boundary"),
+    Col("scope", "Scope", fmt=lambda value: str(value.get("level", "")) if isinstance(value, dict) else str(value or "")),
     Col("org_id", "Org", no_wrap=True),
     Col("workspace_id", "Workspace", no_wrap=True),
     Col("user_id", "Principal", style="dim", no_wrap=True),
@@ -274,7 +276,7 @@ def users_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat.tab
 @org_members_app.command("list")
 def org_members_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
     """List the active org's members."""
-    print_rows("members", access_get("/v1/org/users", control_plane_url), ORG_MEMBER_COLS, fmt)
+    print_rows("members", access_get(org_path("/users"), control_plane_url), ORG_MEMBER_COLS, fmt)
 
 
 @org_members_app.command("add")
@@ -285,7 +287,7 @@ def org_members_add(
 ) -> None:
     """Add a principal to the active organization."""
     with access_client(control_plane_url) as c:
-        resp = c.put(f"/v1/org/users/{user_id}", json={"role": role})
+        resp = c.put(org_path(f"/users/{user_id}"), json={"role": role})
         ensure_ok(resp)
     console.print(f"Added [bold]{user_id}[/bold] to your organization")
 
@@ -294,22 +296,33 @@ def org_members_add(
 def org_members_remove(user_id: str, control_plane_url: str = "") -> None:
     """Remove a principal from the active organization."""
     with access_client(control_plane_url) as c:
-        resp = c.delete(f"/v1/org/users/{user_id}")
+        resp = c.delete(org_path(f"/users/{user_id}"))
         ensure_ok(resp)
     console.print(f"Removed [bold]{user_id}[/bold] from your organization")
 
 
 @access_keys_app.command("list")
-def access_keys_list(
-    org_id: str = typer.Option("", "--org", help="Organization target; defaults to the credential boundary"),
-    workspace_id: str = typer.Option("", "--workspace", help="Workspace target; requires --org"),
+def access_keys_list(  # noqa: PLR0913, PLR0917 command flags define the CLI surface
+    org_id: str = typer.Option("", "--org", help="Organization target; defaults to the active profile"),
+    workspace_id: str = typer.Option("", "--workspace", help="Workspace target within the selected organization"),
+    instance: bool = typer.Option(False, "--instance", help="List keys at instance scope"),
     user_id: str = typer.Option("", "--user", help="Only keys for this principal"),
     control_plane_url: str = "",
     fmt: FormatOption = OutputFormat.table,
 ) -> None:
-    """List access keys at a tenancy boundary."""
-    params = {name: value for name, value in (("org_id", org_id), ("workspace_id", workspace_id), ("user_id", user_id)) if value}
-    print_rows("access keys", access_get("/v1/access-keys", control_plane_url, params), ACCESS_KEY_COLS, fmt)
+    """List access keys at a tenancy scope."""
+    if instance and (org_id or workspace_id):
+        console.print("[red]--instance cannot be combined with --org or --workspace.[/red]")
+        raise typer.Exit(1)
+    selected_org = "" if instance else resolve_org_id(org_id)
+    path = (
+        "/v1/instance/access-keys"
+        if instance
+        else f"/v1/orgs/{selected_org}/workspaces/{workspace_id}/access-keys"
+        if workspace_id
+        else f"/v1/orgs/{selected_org}/access-keys"
+    )
+    print_rows("access keys", access_get(path, control_plane_url, {"user_id": user_id} if user_id else None), ACCESS_KEY_COLS, fmt)
 
 
 @access_keys_app.command("mint")
@@ -317,9 +330,9 @@ def access_keys_mint(  # noqa: PLR0913, PLR0917 command flags define the CLI sur
     label: str = typer.Option(..., "--label", help="What this key is for, e.g. ci"),
     permission: Annotated[list[str] | None, typer.Option("--permission", "-p", help="Permission ceiling; repeat for each permission")] = None,
     user_id: str = typer.Option("", "--user", help="Principal the key authenticates; defaults to you"),
-    org_id: str = typer.Option("", "--org", help="Organization boundary; defaults to the active profile"),
-    workspace_id: str = typer.Option("", "--workspace", help="Workspace boundary; requires an organization"),
-    instance: bool = typer.Option(False, "--instance", help="Use the instance boundary instead of the active organization"),
+    org_id: str = typer.Option("", "--org", help="Organization scope; defaults to the active profile"),
+    workspace_id: str = typer.Option("", "--workspace", help="Workspace scope; requires an organization"),
+    instance: bool = typer.Option(False, "--instance", help="Use instance scope instead of the active organization"),
     expires_at: str = typer.Option("", "--expires-at", help="Optional ISO 8601 expiration"),
     control_plane_url: str = "",
 ) -> None:
@@ -330,22 +343,23 @@ def access_keys_mint(  # noqa: PLR0913, PLR0917 command flags define the CLI sur
     if instance and (org_id or workspace_id):
         console.print("[red]--instance cannot be combined with --org or --workspace.[/red]")
         raise typer.Exit(1)
-    profile = active_profile() or {}
-    selected_org = None if instance else org_id or profile.get("org_id")
-    if workspace_id and not selected_org:
-        console.print("[red]--workspace requires --org or an active organization profile.[/red]")
-        raise typer.Exit(1)
+    selected_org = "" if instance else resolve_org_id(org_id)
+    path = (
+        "/v1/instance/access-keys"
+        if instance
+        else f"/v1/orgs/{selected_org}/workspaces/{workspace_id}/access-keys"
+        if workspace_id
+        else f"/v1/orgs/{selected_org}/access-keys"
+    )
     body = {
         "label": label,
         "permissions": permission,
         "user_id": user_id or None,
-        "org_id": selected_org,
-        "workspace_id": workspace_id or None,
         "expires_at": expires_at or None,
     }
     with access_client(control_plane_url) as c:
-        resp = payload(post_expecting(c, "/v1/access-keys", body, ok=(200,)))
-    console.print(f"Access key [bold]{resp['id']}[/bold] minted at the [bold]{resp['boundary']}[/bold] boundary, shown once:")
+        resp = payload(post_expecting(c, path, body, ok=(200,)))
+    console.print(f"Access key [bold]{resp['id']}[/bold] minted at [bold]{resp['scope']['level']}[/bold] scope, shown once:")
     console.print(resp["token"])
 
 
@@ -360,7 +374,7 @@ def access_keys_revoke(key_id: str, control_plane_url: str = "") -> None:
 
 def _taxonomy(control_plane_url: str) -> dict:
     with access_client(control_plane_url) as c:
-        resp = c.get("/v1/taxonomy")
+        resp = c.get(org_path("/taxonomy"))
         ensure_ok(resp)
         return payload(resp)
 
@@ -380,14 +394,14 @@ def models_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat.ta
 @bundles_app.command("list")
 def bundles_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
     """List published configuration versions."""
-    print_rows("bundles", access_get("/v1/org/bundles", control_plane_url), BUNDLE_COLS, fmt)
+    print_rows("bundles", access_get(org_path("/bundles"), control_plane_url), BUNDLE_COLS, fmt)
 
 
 @bundles_app.command("compile")
 def bundles_compile(control_plane_url: str = "") -> None:
     """Publish your current configuration to your gateways."""
     with access_client(control_plane_url) as c:
-        compiled = payload(post_expecting(c, "/v1/org/bundles/compile", {}, ok=(200,)))
+        compiled = payload(post_expecting(c, org_path("/bundles/compile"), {}, ok=(200,)))
     console.print(f"Published v{compiled['version']}")
 
 
@@ -418,7 +432,7 @@ def data_planes_list(
 @events_app.command("list")
 def events_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
     """List recent requests, newest first."""
-    print_rows("events", access_get("/v1/org/events", control_plane_url), EVENT_COLS, fmt)
+    print_rows("events", access_get(org_path("/events"), control_plane_url), EVENT_COLS, fmt)
 
 
 @events_app.command("tail")
@@ -436,8 +450,9 @@ def events_tail(interval: float = 2.0, keep: int = 30, control_plane_url: str = 
         else:
             print("\t".join(c.fmt(event.get(c.key)) for c in EVENT_COLS), flush=True)
 
+    path = org_path("/events")
     with access_client(control_plane_url) as c:
-        resp = c.get("/v1/org/events", params={"limit": keep})
+        resp = c.get(path, params={"limit": keep})
         ensure_ok(resp)
         rows.extend(reversed(payload_rows(resp)))
         cursor = (rows[-1]["occurred_at"], rows[-1]["event_id"]) if rows else ("1970-01-01T00:00:00+00:00", "00000000-0000-0000-0000-000000000000")
@@ -445,7 +460,7 @@ def events_tail(interval: float = 2.0, keep: int = 30, control_plane_url: str = 
             if fmt is not OutputFormat.table:
                 while True:
                     time.sleep(interval)
-                    resp = c.get("/v1/org/events", params={"after": cursor[0], "after_event_id": cursor[1], "limit": 200})
+                    resp = c.get(path, params={"after": cursor[0], "after_event_id": cursor[1], "limit": 200})
                     ensure_ok(resp)
                     for event in payload_rows(resp):
                         emit(event)
@@ -453,7 +468,7 @@ def events_tail(interval: float = 2.0, keep: int = 30, control_plane_url: str = 
             with Live(table(), console=console, refresh_per_second=4) as live:
                 while True:
                     time.sleep(interval)
-                    resp = c.get("/v1/org/events", params={"after": cursor[0], "after_event_id": cursor[1], "limit": 200})
+                    resp = c.get(path, params={"after": cursor[0], "after_event_id": cursor[1], "limit": 200})
                     ensure_ok(resp)
                     batch = payload_rows(resp)
                     fresh_ids = {event["event_id"] for event in batch}
@@ -491,7 +506,7 @@ def inference_keys_create(
     """Create an API key. Shown once, never stored."""
     workspace_ref = resolve_workspace(workspace)
     with access_client(control_plane_url) as c:
-        _key_created(payload(post_expecting(c, f"/v1/org/workspaces/{workspace_ref}/inference-keys", {"label": label}, ok=(200,))))
+        _key_created(payload(post_expecting(c, org_path(f"/workspaces/{workspace_ref}/inference-keys"), {"label": label}, ok=(200,))))
 
 
 @workspaces_app.command("create")
@@ -503,14 +518,14 @@ def workspaces_create(
     """Create a workspace. You become its first member."""
     with access_client(control_plane_url) as c:
         body = {"name": name, "slug": slug} if slug else {"name": name}
-        created = payload(post_expecting(c, "/v1/org/workspaces", body, ok=(200,)))
+        created = payload(post_expecting(c, org_path("/workspaces"), body, ok=(200,)))
     console.print(f"Created [bold]{created['slug']}[/bold]. Select it with airllm workspaces use {created['slug']}.")
 
 
 register_create(
     providers_app,
     ProviderCreate,
-    "/v1/taxonomy/providers",
+    "/v1/instance/taxonomy/providers",
     "Add an upstream provider for every organization on this instance.",
     lambda resp: console.print(f"Added [bold]{resp['name']}[/bold]. Add models, then airllm bundles compile."),
     client=access_client,
@@ -519,7 +534,7 @@ register_create(
 register_create(
     models_app,
     ModelCreate,
-    "/v1/taxonomy/models",
+    "/v1/instance/taxonomy/models",
     "Add a routable model for every organization on this instance.",
     lambda resp: console.print(f"Added [bold]{resp['name']}[/bold]. Run airllm bundles compile to apply."),
     client=access_client,
@@ -569,10 +584,9 @@ def provider_credentials_add(  # noqa: PLR0913, PLR0917 flags are the command's 
     """
     secret = _read_secret(f"{provider} API key")
     body = {"provider": provider, "name": name, "value": secret, "priority": priority}
-    if not org_wide:
-        body["workspace"] = resolve_workspace(workspace)
+    path = org_path("/provider-credentials" if org_wide else f"/workspaces/{resolve_workspace(workspace)}/provider-credentials")
     with access_client(control_plane_url) as c:
-        credential = payload(post_expecting(c, "/v1/org/provider-credentials", body, ok=(200,)))
+        credential = payload(post_expecting(c, path, body, ok=(200,)))
     scope = credential["scope"]
     console.print(f"Added [bold]{provider}[/bold] key [bold]{credential['name']}[/bold] to this {scope} (...{credential['fingerprint']})")
     console.print("[dim]Run airllm bundles compile to apply.[/dim]")
@@ -586,9 +600,9 @@ def provider_credentials_list(
     fmt: FormatOption = OutputFormat.table,
 ) -> None:
     """List provider keys, in the order they are tried."""
-    params = {} if org_wide else {"workspace": resolve_workspace(workspace)}
+    path = org_path("/provider-credentials" if org_wide else f"/workspaces/{resolve_workspace(workspace)}/provider-credentials")
     with access_client(control_plane_url) as c:
-        resp = c.get("/v1/org/provider-credentials", params=params)
+        resp = c.get(path)
         ensure_ok(resp)
         rows = payload_rows(resp)
     print_rows("provider credentials", _credential_rows(rows), PROVIDER_CREDENTIAL_COLS, fmt)
@@ -602,7 +616,7 @@ def provider_credentials_rotate(
     """Replace a provider key, keeping its name and position."""
     secret = _read_secret("replacement API key")
     with access_client(control_plane_url) as c:
-        resp = c.put(f"/v1/org/provider-credentials/{credential_id}/value", json={"value": secret})
+        resp = c.put(org_path(f"/provider-credentials/{credential_id}/value"), json={"value": secret})
         ensure_ok(resp)
         credential = payload(resp)
     console.print(f"Rotated [bold]{credential['name']}[/bold] to ...{credential['fingerprint']}")
@@ -616,7 +630,7 @@ def provider_credentials_rm(
 ) -> None:
     """Delete a provider key."""
     with access_client(control_plane_url) as c:
-        resp = c.delete(f"/v1/org/provider-credentials/{credential_id}")
+        resp = c.delete(org_path(f"/provider-credentials/{credential_id}"))
         ensure_ok(resp)
     console.print(f"Deleted [bold]{credential_id}[/bold]. Run [bold]airllm bundles compile[/bold] to apply.")
 
@@ -629,7 +643,7 @@ def provider_credentials_disable(
 ) -> None:
     """Stop using a provider key without deleting it. Use --enable to put it back."""
     with access_client(control_plane_url) as c:
-        resp = c.patch(f"/v1/org/provider-credentials/{credential_id}", json={"enabled": enable})
+        resp = c.patch(org_path(f"/provider-credentials/{credential_id}"), json={"enabled": enable})
         ensure_ok(resp)
         credential = payload(resp)
     state = "Enabled" if credential["enabled"] else "Disabled"

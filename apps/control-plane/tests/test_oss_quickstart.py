@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 from helpers import run_in_db, setup_control_plane
 
 from contract import INFERENCE_TOKEN_PREFIX, uuid7
-from control_plane.authz import DATA_PLANE_PERMISSIONS, InstanceRole, OrgRole, Permission, Target
+from control_plane.authz import DATA_PLANE_PERMISSIONS, InstanceRole, OrgRole, Permission, Scope
 from control_plane.keys import ACCESS_KEY_PREFIX, AccessKeyGrant, mint_access_key
 from control_plane.models import DataPlaneInstance, Org, OrgMembership, User, set_actor
 from control_plane.routes import oss
@@ -39,7 +39,7 @@ def _data_plane_token(
         _, token = await mint_access_key(
             AccessKeyGrant(
                 principal_id=user.id,
-                target=Target.instance(),
+                scope=Scope.instance(),
                 permissions=frozenset(permissions),
                 label="data-plane",
             )
@@ -59,7 +59,7 @@ def _org_data_plane_token(tmp_path, *, role: OrgRole = OrgRole.data_plane) -> st
         _, token = await mint_access_key(
             AccessKeyGrant(
                 principal_id=user.id,
-                target=Target.org(org.id),
+                scope=Scope.org(org.id),
                 permissions=DATA_PLANE_PERMISSIONS,
                 label="data-plane",
             )
@@ -103,6 +103,14 @@ def test_oss_quickstart_accepts_an_org_specific_data_plane_key(tmp_path, key_pat
         assert key_path.read_text(encoding="utf-8") == token
 
 
+def test_oss_quickstart_accepts_exact_runtime_authority_from_any_service_account_role(tmp_path, key_path):
+    cp = setup_control_plane(tmp_path)
+    token = _data_plane_token(tmp_path, instance_role=InstanceRole.owner)
+    with TestClient(cp.app) as client:
+        assert client.post("/v1/instance/oss/quickstart", json={"token": token}).status_code == 200
+        assert key_path.read_text(encoding="utf-8") == token
+
+
 def test_oss_quickstart_closes_once_a_data_plane_has_registered(tmp_path, key_path):
     cp = setup_control_plane(tmp_path)
     token = _data_plane_token(tmp_path)
@@ -122,7 +130,7 @@ def test_oss_quickstart_rejects_unknown_credentials(tmp_path, key_path, token):
         assert not key_path.exists()
 
 
-def test_oss_quickstart_rejects_human_broad_and_wrong_role_keys(tmp_path, key_path):
+def test_oss_quickstart_rejects_human_broad_and_unauthorized_keys(tmp_path, key_path):
     cp = setup_control_plane(tmp_path)
     tokens = [
         _data_plane_token(tmp_path, service_account=False, instance_role=InstanceRole.owner),

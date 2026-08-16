@@ -44,20 +44,26 @@ def _bearer_client(token: str, control_plane_url: str) -> httpx.Client:
     return httpx.Client(base_url=resolve_control_plane_url(control_plane_url), headers={"authorization": f"Bearer {token}"}, timeout=10.0)
 
 
-def access_client(control_plane_url: str = "", token: str | None = None, org_id: str | None = None) -> httpx.Client:
+def access_client(control_plane_url: str = "", token: str | None = None) -> httpx.Client:
     profile = active_profile() or {}
     environment_token = os.environ.get("GW_ACCESS_KEY")
     selected_token = token or environment_token or profile.get("token")
     if not selected_token:
         console.print("[red]No access key available. Run [bold]airllm login[/bold] or set GW_ACCESS_KEY.[/red]")
         raise typer.Exit(1)
-    client = _bearer_client(str(selected_token), control_plane_url)
-    selected_org = org_id or os.environ.get("GW_ORG_ID")
-    if token is None and environment_token is None:
-        selected_org = selected_org or profile.get("org_id")
+    return _bearer_client(str(selected_token), control_plane_url)
+
+
+def resolve_org_id(override: str = "") -> str:
+    selected_org = override or os.environ.get("GW_ORG_ID") or (active_profile() or {}).get("org_id")
     if selected_org:
-        client.headers["X-Org-Id"] = str(selected_org)
-    return client
+        return str(selected_org)
+    console.print("[red]No organization selected. Pass --org, set GW_ORG_ID, or sign in with [bold]airllm login[/bold].[/red]")
+    raise typer.Exit(1)
+
+
+def org_path(suffix: str, org_id: str = "") -> str:
+    return f"/v1/orgs/{resolve_org_id(org_id)}{suffix}"
 
 
 def api_error(resp: httpx.Response) -> str:

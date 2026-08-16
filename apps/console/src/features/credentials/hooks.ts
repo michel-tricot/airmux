@@ -1,61 +1,58 @@
 import { useQueryClient } from '@tanstack/react-query';
 import {
-  useListProviderCredentials,
-  useCreateProviderCredential,
+  useListWorkspaceProviderCredentials,
+  useCreateWorkspaceProviderCredential,
   useRotateProviderCredential,
   useUpdateProviderCredential,
   useDeleteProviderCredential,
-  useGetTaxonomy,
-  getListProviderCredentialsQueryKey,
+  useGetWorkspaceTaxonomy,
+  getListWorkspaceProviderCredentialsQueryKey,
 } from '@workspace/api-client-react';
-import { orgScope } from '@/lib/api';
-import { orgScopedKey } from '@/lib/query-keys';
 
 export function useProviderCredentials(orgId: string, workspaceRef: string) {
-  return useListProviderCredentials(
-    { workspace: workspaceRef },
-    {
-      query: { queryKey: orgScopedKey(orgId, getListProviderCredentialsQueryKey({ workspace: workspaceRef })), refetchInterval: 10_000 },
-      request: orgScope(orgId),
-    },
-  );
+  return useListWorkspaceProviderCredentials(orgId, workspaceRef);
 }
 
-export function useProviders(orgId: string) {
-  return useGetTaxonomy({ request: orgScope(orgId) });
-}
-
-function useCredentialMutation<T>(
-  orgId: string,
-  workspaceRef: string,
-  errorMessage: string,
-  hook: (options: { mutation: object; request: object }) => T,
-) {
-  const queryClient = useQueryClient();
-  return hook({
-    mutation: {
-      onSuccess: () =>
-        queryClient.invalidateQueries({
-          queryKey: orgScopedKey(orgId, getListProviderCredentialsQueryKey({ workspace: workspaceRef })),
-        }),
-      meta: { errorMessage },
-    },
-    request: orgScope(orgId),
-  });
+export function useProviders(orgId: string, workspaceRef: string) {
+  return useGetWorkspaceTaxonomy(orgId, workspaceRef);
 }
 
 export function useAddCredentialMutation(orgId: string, workspaceRef: string) {
-  return useCredentialMutation(orgId, workspaceRef, 'We couldn’t store the key. Please try again.', useCreateProviderCredential);
+  const queryClient = useQueryClient();
+  return useCreateWorkspaceProviderCredential({
+    mutation: {
+      onSuccess: () => queryClient.invalidateQueries({ queryKey: getListWorkspaceProviderCredentialsQueryKey(orgId, workspaceRef) }),
+      meta: { errorMessage: 'We couldn’t store the key. Please try again.' },
+    },
+  });
 }
 
 export function useRotateCredentialMutation(orgId: string, workspaceRef: string) {
-  return useCredentialMutation(orgId, workspaceRef, 'We couldn’t rotate the key. Please try again.', useRotateProviderCredential);
+  const queryClient = useQueryClient();
+  return useRotateProviderCredential({
+    mutation: {
+      onSuccess: () => queryClient.invalidateQueries({ queryKey: getListWorkspaceProviderCredentialsQueryKey(orgId, workspaceRef) }),
+      meta: { errorMessage: 'We couldn’t rotate the key. Please try again.' },
+    },
+  });
 }
 
 export function useUpdateCredentialMutation(orgId: string, workspaceRef: string) {
-  return useCredentialMutation(orgId, workspaceRef, 'We couldn’t update the key. Please try again.', useUpdateProviderCredential);
+  const queryClient = useQueryClient();
+  return useUpdateProviderCredential({
+    mutation: {
+      onSuccess: () => queryClient.invalidateQueries({ queryKey: getListWorkspaceProviderCredentialsQueryKey(orgId, workspaceRef) }),
+      meta: { errorMessage: 'We couldn’t update the key. Please try again.' },
+    },
+  });
 }
 
 export function useDeleteCredentialMutation(orgId: string, workspaceRef: string) {
-  return useCredentialMutation(orgId, workspaceRef, 'We couldn’t delete the key. Please try again.', useDeleteProviderCredential);
+  const queryClient = useQueryClient();
+  return useDeleteProviderCredential({
+    mutation: {
+      onSuccess: () => queryClient.invalidateQueries({ queryKey: getListWorkspaceProviderCredentialsQueryKey(orgId, workspaceRef) }),
+      meta: { errorMessage: 'We couldn’t delete the key. Please try again.' },
+    },
+  });
 }

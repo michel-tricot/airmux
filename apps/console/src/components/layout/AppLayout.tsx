@@ -234,7 +234,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         schema={workspaceNameSchema}
         defaultValues={{ name: '' }}
         onSubmit={async (values) => {
-          const created = await createWorkspace.mutateAsync({ data: values });
+          const created = await createWorkspace.mutateAsync({ orgId, data: values });
           setLocation(`/org/workspaces/${created.slug}`);
         }}
         submitLabel="Create"

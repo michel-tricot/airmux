@@ -7,10 +7,10 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
 from contract.secrets.file import write_private_text
-from control_plane.authz import DATA_PLANE_PERMISSIONS, Boundary, InstanceRole, OrgRole
+from control_plane.authority import is_data_plane_credential
 from control_plane.deps import public
-from control_plane.keys import ACCESS_KEY_PREFIX, verify_access_key
-from control_plane.models import DataPlaneInstance, OrgMembership, User
+from control_plane.keys import verify_access_key
+from control_plane.models import DataPlaneInstance, User
 from control_plane.models.common.wire import Envelope, RequestModel
 
 router = APIRouter(prefix="/instance/oss", tags=["OSS"])
@@ -27,15 +27,12 @@ class ClaimOut(BaseModel):
 
 @router.get("/claim", dependencies=[public()])
 async def claim() -> Envelope[ClaimOut]:
-    """Whether any human holds an account yet: public so a fresh deployment can route its first visitor to signup.
-
-    Service accounts do not claim an instance; it leaks nothing beyond set-up-or-not, like healthz.
-    """
+    """Return whether a human account has claimed this deployment."""
     return Envelope(data=ClaimOut(claimed=await User.instance_claimed()))
 
 
 class QuickstartIn(RequestModel):
-    token: str = Field(min_length=1, max_length=512)
+    token: str = Field(description="Existing limited access key for the first data plane", min_length=1, max_length=512)
 
 
 class QuickstartOut(BaseModel):
@@ -44,34 +41,16 @@ class QuickstartOut(BaseModel):
 
 @router.post("/quickstart", dependencies=[public()])
 async def quickstart(body: QuickstartIn) -> Envelope[QuickstartOut]:
-    """Drop the data plane's sync credential onto the shared volume so the first data plane can boot.
+    """Install an existing access key where the first co-located data plane can read it.
 
-    A single-use bootstrap trapdoor: public, but it only fires while no data plane has ever
-    registered, and it closes the moment one heartbeats. The caller already holds the token it
-    writes, so nothing is minted or leaked here; the endpoint only bridges a token the operator
-    has into the file the co-mounted data plane container waits for.
-
-    The accepted key authenticates a service account with the data-plane role and exactly the three
-    runtime permissions. The prefix check catches an inference key or a paste accident early.
+    This endpoint is available only until a data plane first registers. The key must authenticate a
+    service account and carry exactly the bundle, event-ingestion, and heartbeat permissions.
     """
     if await DataPlaneInstance.first() is not None:
         raise HTTPException(status_code=409, detail="a data plane has already registered; quickstart is closed")
-    authority = await verify_access_key(body.token)
-    user = await User.find_by_id(authority.principal_id) if authority is not None else None
-    membership = await OrgMembership.get((authority.principal_id, authority.org_id)) if authority is not None and authority.org_id else None
-    data_plane_role = authority is not None and (
-        (authority.boundary is Boundary.instance and user is not None and user.instance_role == InstanceRole.data_plane)
-        or (authority.boundary is Boundary.org and membership is not None and membership.role == OrgRole.data_plane)
-    )
-    if (
-        not body.token.startswith(ACCESS_KEY_PREFIX)
-        or authority is None
-        or authority.boundary not in {Boundary.instance, Boundary.org}
-        or authority.permission_ceiling != DATA_PLANE_PERMISSIONS
-        or user is None
-        or not user.service_account
-        or not data_plane_role
-    ):
+    actor = await verify_access_key(body.token)
+    user = await User.find_by_id(actor.principal_id) if actor is not None else None
+    if actor is None or user is None or not await is_data_plane_credential(actor, user):
         raise HTTPException(status_code=422, detail="token must be a live data-plane access key")
     return Envelope(data=QuickstartOut(path=await run_sync(_write_data_plane_key, body.token)))
 

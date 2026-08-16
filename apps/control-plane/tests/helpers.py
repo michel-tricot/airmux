@@ -15,7 +15,8 @@ from pg import TEMPLATE_DB, db_name_for, db_url_for, ensure_database
 
 from contract import MemoryStoreConfig, private_key_to_b64
 from control_plane.app import create_app
-from control_plane.authz import ALL_PERMISSIONS, InstanceRole, OrgRole, Permission, Target, principal_permissions
+from control_plane.authority import principal_permissions
+from control_plane.authz import ALL_PERMISSIONS, InstanceRole, OrgRole, Permission, Scope
 from control_plane.config import BundlePolicy, DatabaseConfig, Settings
 from control_plane.db import standalone_transaction
 from control_plane.keys import AccessKeyGrant, mint_access_key
@@ -63,18 +64,21 @@ class ControlPlane:
                     await admin.save()
                 else:
                     await set_actor(admin.id)
-                target = (
-                    Target.workspace(org_id, workspace_id)
+                scope = (
+                    Scope.workspace(org_id, workspace_id)
                     if workspace_id is not None and org_id is not None
-                    else Target.org(org_id)
+                    else Scope.org(org_id)
                     if org_id
-                    else Target.instance()
+                    else Scope.instance()
                 )
                 ceiling = frozenset(Permission(permission) for permission in permissions) if permissions is not None else ALL_PERMISSIONS
-                _, token = await mint_access_key(AccessKeyGrant(principal_id=admin.id, target=target, permissions=ceiling, label="fixture-admin"))
+                _, token = await mint_access_key(AccessKeyGrant(principal_id=admin.id, scope=scope, permissions=ceiling, label="fixture-admin"))
                 return token
 
-        return {"authorization": f"Bearer {asyncio.run(mint())}"}
+        headers = {"authorization": f"Bearer {asyncio.run(mint())}"}
+        if org_id is not None:
+            headers["X-Test-Org-Id"] = str(org_id)
+        return headers
 
     def headers_for(self, org_id: UUID, user_id: UUID | str, workspace_id: UUID | None = None) -> dict[str, str]:
         """An org key bound to a named user, for the checks an instance owner bypasses."""
@@ -83,18 +87,18 @@ class ControlPlane:
             async with standalone_transaction(self.db_url):
                 await set_actor(UUID(str(user_id)))
                 principal_id = UUID(str(user_id))
-                target = Target.workspace(org_id, workspace_id) if workspace_id is not None else Target.org(org_id)
+                scope = Scope.workspace(org_id, workspace_id) if workspace_id is not None else Scope.org(org_id)
                 _, token = await mint_access_key(
                     AccessKeyGrant(
                         principal_id=principal_id,
-                        target=target,
-                        permissions=await principal_permissions(principal_id, target),
+                        scope=scope,
+                        permissions=await principal_permissions(principal_id, scope),
                         label="member",
                     )
                 )
                 return token
 
-        return {"authorization": f"Bearer {asyncio.run(mint())}"}
+        return {"authorization": f"Bearer {asyncio.run(mint())}", "X-Test-Org-Id": str(org_id)}
 
 
 def make_org(client, headers: dict[str, str], name: str = "org-test") -> UUID:
@@ -104,7 +108,8 @@ def make_org(client, headers: dict[str, str], name: str = "org-test") -> UUID:
 
 def make_workspace(client, headers: dict[str, str], name: str = "ws-test") -> UUID:
     """Create a workspace in the caller's org scope and return its server-minted id; the slug derives from the name."""
-    response = client.post("/v1/org/workspaces", json={"name": name}, headers=headers)
+    org_id = headers["X-Test-Org-Id"]
+    response = client.post(f"/v1/orgs/{org_id}/workspaces", json={"name": name}, headers=headers)
     assert response.status_code == 200, response.text
     return UUID(response.json()["data"]["id"])
 

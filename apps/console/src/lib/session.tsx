@@ -1,7 +1,6 @@
 import { createContext, useCallback, useContext, useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useMe, useLogout, getMeQueryKey, type MeOut } from '@workspace/api-client-react';
-import { ORG_SCOPE_ROOT } from '@/lib/query-keys';
 
 const ORG_STORAGE_KEY = 'airllm_org_id';
 
@@ -21,24 +20,21 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const session = useMe({ query: { queryKey: getMeQueryKey(), retry: false } });
   const [orgId, setOrgIdState] = useState<string | null>(() => window.localStorage.getItem(ORG_STORAGE_KEY));
 
-  const setOrgId = useCallback(
-    (id: string | null) => {
-      setOrgIdState(id);
-      if (id) window.localStorage.setItem(ORG_STORAGE_KEY, id);
-      else window.localStorage.removeItem(ORG_STORAGE_KEY);
-      queryClient.removeQueries({ queryKey: ORG_SCOPE_ROOT });
-    },
-    [queryClient],
-  );
+  const setOrgId = useCallback((id: string | null) => {
+    setOrgIdState(id);
+    if (id) window.localStorage.setItem(ORG_STORAGE_KEY, id);
+    else window.localStorage.removeItem(ORG_STORAGE_KEY);
+  }, []);
 
   const logoutMutation = useLogout();
   const logout = useCallback(() => {
     logoutMutation.mutate(undefined, {
       onSettled: () => {
+        setOrgId(null);
         queryClient.clear();
       },
     });
-  }, [logoutMutation, queryClient]);
+  }, [logoutMutation, queryClient, setOrgId]);
 
   const user = session.isError ? undefined : session.data;
 

@@ -68,7 +68,7 @@ class OrgCreate(RecordCreate[Org]):
 
 
 class OrgUpdate(RecordUpdate[Org]):
-    name: str | None = Field(default=None, min_length=1, max_length=200)
+    name: str | None = Field(default=None, description="Replacement organization name", min_length=1, max_length=200)
 
 
 class OrgOut(RecordOut[Org]):

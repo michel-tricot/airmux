@@ -4,36 +4,52 @@ from fastapi import APIRouter, HTTPException
 from sqlmodel import col
 
 from control_plane.authz import Permission
-from control_plane.deps import instance_target, require, selected_target
+from control_plane.deps import instance_scope, org_scope, require, workspace_scope
 from control_plane.models import Model, Provider
 from control_plane.models.common.wire import Envelope
 from control_plane.models.model import ModelOut
 from control_plane.models.provider import ProviderOut
 from control_plane.taxonomy import ModelIn, ProviderIn, TaxonomyOut, UnknownProviderError, upsert_model, upsert_provider
 
-router = APIRouter(prefix="/taxonomy", tags=["Taxonomy"])
+router = APIRouter(tags=["Taxonomy"])
 
 
-@router.get("", dependencies=[require(Permission.catalog_read, selected_target)])
-async def get_taxonomy() -> Envelope[TaxonomyOut]:
-    """The instance-wide catalog, readable where the principal and credential both carry catalog access."""
+async def _taxonomy() -> Envelope[TaxonomyOut]:
     return Envelope(
         data=TaxonomyOut(
-            providers=[ProviderOut.model_validate(r) for r in await Provider.find(order_by=col(Provider.name))],
-            models=[ModelOut.model_validate(r) for r in await Model.find(order_by=col(Model.name))],
+            providers=[ProviderOut.model_validate(provider) for provider in await Provider.find(order_by=col(Provider.name))],
+            models=[ModelOut.model_validate(model) for model in await Model.find(order_by=col(Model.name))],
         )
     )
 
 
-@router.post("/providers", dependencies=[require(Permission.catalog_manage, instance_target)])
+@router.get("/instance/taxonomy", dependencies=[require(Permission.catalog_read, instance_scope)])
+async def get_instance_taxonomy() -> Envelope[TaxonomyOut]:
+    """Return the provider and model catalog at instance scope."""
+    return await _taxonomy()
+
+
+@router.get("/orgs/{org_id}/taxonomy", dependencies=[require(Permission.catalog_read, org_scope)])
+async def get_org_taxonomy() -> Envelope[TaxonomyOut]:
+    """Return the provider and model catalog available to an organization."""
+    return await _taxonomy()
+
+
+@router.get("/orgs/{org_id}/workspaces/{workspace_ref}/taxonomy", dependencies=[require(Permission.catalog_read, workspace_scope)])
+async def get_workspace_taxonomy() -> Envelope[TaxonomyOut]:
+    """Return the provider and model catalog available to a workspace."""
+    return await _taxonomy()
+
+
+@router.post("/instance/taxonomy/providers", dependencies=[require(Permission.catalog_manage, instance_scope)])
 async def create_provider(body: ProviderIn) -> Envelope[ProviderOut]:
-    """Create or update: reapplying a taxonomy converges the catalog."""
+    """Create a provider or replace the catalog entry with the same name."""
     return Envelope(data=ProviderOut.model_validate(await upsert_provider(body)))
 
 
-@router.post("/models", dependencies=[require(Permission.catalog_manage, instance_target)])
+@router.post("/instance/taxonomy/models", dependencies=[require(Permission.catalog_manage, instance_scope)])
 async def create_model(body: ModelIn) -> Envelope[ModelOut]:
-    """Create or update: reapplying a taxonomy converges the catalog."""
+    """Create a model or replace the catalog entry with the same name."""
     try:
         model = await upsert_model(body)
     except UnknownProviderError:

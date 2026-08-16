@@ -37,7 +37,7 @@ class WorkspaceMembership(Record, Tombstonable, table=True):
 
 
 class WorkspaceMembershipIn(RequestModel):
-    role: WorkspaceRole
+    role: WorkspaceRole = Field(description="Workspace role to grant")
 
 
 class WorkspaceMembershipOut(BaseModel):

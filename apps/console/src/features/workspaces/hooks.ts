@@ -8,31 +8,22 @@ import {
   getListWorkspacesQueryKey,
   getGetWorkspaceQueryKey,
 } from '@workspace/api-client-react';
-import { orgScope } from '@/lib/api';
-import { orgScopedKey } from '@/lib/query-keys';
 
 export function useWorkspaces(orgId: string) {
-  return useListWorkspaces({
-    query: { queryKey: orgScopedKey(orgId, getListWorkspacesQueryKey()) },
-    request: orgScope(orgId),
-  });
+  return useListWorkspaces(orgId);
 }
 
 export function useWorkspace(orgId: string, workspaceRef: string) {
-  return useGetWorkspace(workspaceRef, {
-    query: { queryKey: orgScopedKey(orgId, getGetWorkspaceQueryKey(workspaceRef)), retry: false },
-    request: orgScope(orgId),
-  });
+  return useGetWorkspace(orgId, workspaceRef, { query: { queryKey: getGetWorkspaceQueryKey(orgId, workspaceRef), retry: false } });
 }
 
 export function useCreateWorkspaceMutation(orgId: string) {
   const queryClient = useQueryClient();
   return useCreateWorkspace({
     mutation: {
-      onSuccess: () => queryClient.invalidateQueries({ queryKey: orgScopedKey(orgId, getListWorkspacesQueryKey()) }),
+      onSuccess: () => queryClient.invalidateQueries({ queryKey: getListWorkspacesQueryKey(orgId) }),
       meta: { errorMessage: 'We couldn’t create the workspace. Please try again.' },
     },
-    request: orgScope(orgId),
   });
 }
 
@@ -41,12 +32,11 @@ export function useRenameWorkspaceMutation(orgId: string, workspaceRef: string) 
   return useUpdateWorkspace({
     mutation: {
       onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: orgScopedKey(orgId, getListWorkspacesQueryKey()) });
-        queryClient.invalidateQueries({ queryKey: orgScopedKey(orgId, getGetWorkspaceQueryKey(workspaceRef)) });
+        queryClient.invalidateQueries({ queryKey: getListWorkspacesQueryKey(orgId) });
+        queryClient.invalidateQueries({ queryKey: getGetWorkspaceQueryKey(orgId, workspaceRef) });
       },
       meta: { errorMessage: 'We couldn’t rename the workspace. Please try again.' },
     },
-    request: orgScope(orgId),
   });
 }
 
@@ -54,9 +44,8 @@ export function useDeleteWorkspaceMutation(orgId: string) {
   const queryClient = useQueryClient();
   return useDeleteWorkspace({
     mutation: {
-      onSuccess: () => queryClient.invalidateQueries({ queryKey: orgScopedKey(orgId, getListWorkspacesQueryKey()) }),
+      onSuccess: () => queryClient.invalidateQueries({ queryKey: getListWorkspacesQueryKey(orgId) }),
       meta: { errorMessage: 'We couldn’t delete this workspace. Please try again.' },
     },
-    request: orgScope(orgId),
   });
 }

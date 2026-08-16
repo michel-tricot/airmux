@@ -19,11 +19,7 @@ class UnknownProviderError(ValueError):
 
 
 class ProviderIn(RequestModel):
-    """How to reach a provider, not how to authenticate to it: credentials are their own resource.
-
-    Extra keys are refused so a taxonomy still carrying credential_ref fails loudly. Ignoring it
-    would leave the operator believing they configured a credential when the provider has none.
-    """
+    """An upstream provider endpoint and its request-profile settings."""
 
     provider_id: str = Field(description="Provider name, e.g. openai", min_length=1, max_length=63, pattern=r"^[a-z0-9][a-z0-9_-]*$")
     kind: Literal["openai_compatible", "anthropic"] = Field("openai_compatible", description="Adapter kind")
@@ -32,9 +28,8 @@ class ProviderIn(RequestModel):
         "",
         max_length=65536,
         description=(
-            "Provider mark as a standalone 24x24 SVG document, empty when the provider has none. "
-            "Carried as markup so adding a provider needs no client change to make it recognisable, "
-            "which makes it untrusted markup to whatever renders it; sanitize at the render site"
+            "Provider mark as a standalone 24x24 SVG document, or an empty string when no icon is available. "
+            "Clients must sanitize this untrusted markup before rendering it"
         ),
     )
     param_aliases: dict[str, str] = Field(default_factory=dict, max_length=256, description="Canonical param name to this provider's spelling")

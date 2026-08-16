@@ -3,7 +3,7 @@ import { useWorkspace } from '@/features/workspaces/hooks';
 import { useWorkspaceMembers } from '@/features/members/hooks';
 import { useInferenceKeys } from '@/features/keys/hooks';
 import { useProviderCredentials } from '@/features/credentials/hooks';
-import { useOrgEvents } from '@/features/telemetry/hooks';
+import { useWorkspaceEvents } from '@/features/telemetry/hooks';
 import { Card } from '@/components/ui/elements';
 import { Badge } from '@/components/ui/elements';
 import { TerminalSquare, KeyRound, Users, Database, Activity, Coins, ArrowDownToLine, ArrowUpFromLine } from 'lucide-react';
@@ -51,7 +51,7 @@ export default function WorkspaceOverview() {
   const membersQuery = useWorkspaceMembers(orgId, workspaceRef);
   const keysQuery = useInferenceKeys(orgId, workspaceRef);
   const credentialsQuery = useProviderCredentials(orgId, workspaceRef);
-  const eventsQuery = useOrgEvents(orgId, { limit: EVENTS_WINDOW, workspace_id: workspace?.id }, workspace !== undefined);
+  const eventsQuery = useWorkspaceEvents(orgId, workspaceRef, { limit: EVENTS_WINDOW }, workspace !== undefined);
   const events = eventsQuery.data;
 
   if (workspaceQuery.isLoading) return <LoadingState label="Loading workspace..." />;

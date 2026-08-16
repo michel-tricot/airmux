@@ -14,9 +14,9 @@ from control_plane.models.common.wire import RecordOut
 
 
 class DataPlaneInstance(Record, table=True):
-    """A data plane that has heartbeated at either the global or organization boundary.
+    """A data plane that has heartbeated at either the global or organization scope.
 
-    Instance-bound keys register global data planes. Organization-bound keys register dedicated
+    Instance-scoped keys register global data planes. Organization-scoped keys register dedicated
     data planes, and the org link is cleared on deletion while the row survives as history.
     """
 

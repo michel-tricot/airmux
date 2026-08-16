@@ -4,12 +4,9 @@ import {
   useListMembers,
   useAddMember,
   useRemoveMember,
-  getListOrgUsersQueryKey,
   getListMembersQueryKey,
   type WorkspaceRole,
 } from '@workspace/api-client-react';
-import { orgScope } from '@/lib/api';
-import { orgScopedKey } from '@/lib/query-keys';
 
 export const workspaceRoleOptions: Array<{ value: WorkspaceRole; label: string }> = [
   { value: 'admin', label: 'Admin' },
@@ -18,27 +15,20 @@ export const workspaceRoleOptions: Array<{ value: WorkspaceRole; label: string }
 ];
 
 export function useOrgMembers(orgId: string) {
-  return useListOrgUsers({
-    query: { queryKey: orgScopedKey(orgId, getListOrgUsersQueryKey()) },
-    request: orgScope(orgId),
-  });
+  return useListOrgUsers(orgId);
 }
 
 export function useWorkspaceMembers(orgId: string, workspaceRef: string) {
-  return useListMembers(workspaceRef, {
-    query: { queryKey: orgScopedKey(orgId, getListMembersQueryKey(workspaceRef)) },
-    request: orgScope(orgId),
-  });
+  return useListMembers(orgId, workspaceRef);
 }
 
 export function useAddWorkspaceMemberMutation(orgId: string, workspaceRef: string) {
   const queryClient = useQueryClient();
   return useAddMember({
     mutation: {
-      onSuccess: () => queryClient.invalidateQueries({ queryKey: orgScopedKey(orgId, getListMembersQueryKey(workspaceRef)) }),
+      onSuccess: () => queryClient.invalidateQueries({ queryKey: getListMembersQueryKey(orgId, workspaceRef) }),
       meta: { errorMessage: 'We couldn’t add the member. Please try again.' },
     },
-    request: orgScope(orgId),
   });
 }
 
@@ -46,9 +36,8 @@ export function useRemoveWorkspaceMemberMutation(orgId: string, workspaceRef: st
   const queryClient = useQueryClient();
   return useRemoveMember({
     mutation: {
-      onSuccess: () => queryClient.invalidateQueries({ queryKey: orgScopedKey(orgId, getListMembersQueryKey(workspaceRef)) }),
+      onSuccess: () => queryClient.invalidateQueries({ queryKey: getListMembersQueryKey(orgId, workspaceRef) }),
       meta: { errorMessage: 'We couldn’t remove the member. Please try again.' },
     },
-    request: orgScope(orgId),
   });
 }

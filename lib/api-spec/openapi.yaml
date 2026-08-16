@@ -1,16 +1,30 @@
 openapi: 3.1.0
 info:
-  title: airllm control plane
+  title: AirLLM Control Plane API
+  description: 'Manage AirLLM organizations, workspaces, access keys, provider credentials, and data-plane synchronization.
+
+
+    Organization and workspace targets are part of each URL. Successful responses wrap their result in
+
+    `{"data": ...}`. Authenticate with a control-plane access key or a browser session as documented by
+
+    each operation. Inference keys authenticate model requests at the data plane and are not accepted here.
+
+    '
   version: 0.1.0
 paths:
-  /v1/access-keys:
+  /v1/instance/access-keys:
     get:
       tags:
       - Access Keys
-      summary: List Access Keys
-      operationId: list_access_keys
+      summary: List Instance Access Keys
+      description: 'List access keys across all scopes, optionally filtered by principal.
+
+
+        Required permission: `access-keys.read`.'
+      operationId: list_instance_access_keys
       security:
-      - HTTPBearer: []
+      - AccessKey: []
       - SessionCookie: []
       parameters:
       - name: user_id
@@ -22,32 +36,7 @@ paths:
             format: uuid
           - type: 'null'
           title: User Id
-      - name: org_id
-        in: query
-        required: false
-        schema:
-          anyOf:
-          - type: string
-            format: uuid
-          - type: 'null'
-          title: Org Id
-      - name: workspace_id
-        in: query
-        required: false
-        schema:
-          anyOf:
-          - type: string
-            format: uuid
-          - type: 'null'
-          title: Workspace Id
-      - name: X-Org-Id
-        in: header
-        required: false
-        schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: X-Org-Id
+        description: Return only access keys issued to this principal
       responses:
         '200':
           description: Successful Response
@@ -61,14 +50,21 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
-      description: Requires `access-keys.read` authority at the route's tenant boundary.
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
     post:
       tags:
       - Access Keys
-      summary: Create Access Key
-      operationId: create_access_key
+      summary: Create Instance Access Key
+      description: 'Issue an instance-scoped access key and return its token once.
+
+
+        Required permission: `access-keys.issue`.'
+      operationId: create_instance_access_key
       security:
-      - HTTPBearer: []
+      - AccessKey: []
       - SessionCookie: []
       requestBody:
         required: true
@@ -89,15 +85,222 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
-      description: Requires `access-keys.issue` authority at the route's tenant boundary.
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
+  /v1/orgs/{org_id}/access-keys:
+    get:
+      tags:
+      - Access Keys
+      summary: List Org Access Keys
+      description: 'List organization- and workspace-scoped access keys within an organization.
+
+
+        Required permission: `access-keys.read`.'
+      operationId: list_org_access_keys
+      security:
+      - AccessKey: []
+      - SessionCookie: []
+      parameters:
+      - name: org_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Org Id
+        description: Organization ID
+      - name: user_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: User Id
+        description: Return only access keys issued to this principal
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_list_AccessKeyOut__'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
+    post:
+      tags:
+      - Access Keys
+      summary: Create Org Access Key
+      description: 'Issue an organization-scoped access key and return its token once.
+
+
+        Required permission: `access-keys.issue`.'
+      operationId: create_org_access_key
+      security:
+      - AccessKey: []
+      - SessionCookie: []
+      parameters:
+      - name: org_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Org Id
+        description: Organization ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AccessKeyIn'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_AccessKeyMintedOut_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
+  /v1/orgs/{org_id}/workspaces/{workspace_ref}/access-keys:
+    get:
+      tags:
+      - Access Keys
+      summary: List Workspace Access Keys
+      description: 'List access keys scoped to one workspace.
+
+
+        Required permission: `access-keys.read`.'
+      operationId: list_workspace_access_keys
+      security:
+      - AccessKey: []
+      - SessionCookie: []
+      parameters:
+      - name: workspace_ref
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Workspace Ref
+        description: Workspace ID or slug
+      - name: org_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Org Id
+        description: Organization ID
+      - name: user_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: User Id
+        description: Return only access keys issued to this principal
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_list_AccessKeyOut__'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
+    post:
+      tags:
+      - Access Keys
+      summary: Create Workspace Access Key
+      description: 'Issue a workspace-scoped access key and return its token once.
+
+
+        Required permission: `access-keys.issue`.'
+      operationId: create_workspace_access_key
+      security:
+      - AccessKey: []
+      - SessionCookie: []
+      parameters:
+      - name: workspace_ref
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Workspace Ref
+        description: Workspace ID or slug
+      - name: org_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Org Id
+        description: Organization ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AccessKeyIn'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_AccessKeyMintedOut_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
   /v1/access-keys/{key_id}:
     delete:
       tags:
       - Access Keys
       summary: Revoke Access Key
+      description: 'Revoke an access key and every key delegated from it.
+
+
+        Required permission: `access-keys.revoke`.'
       operationId: revoke_access_key
       security:
-      - HTTPBearer: []
+      - AccessKey: []
       - SessionCookie: []
       parameters:
       - name: key_id
@@ -107,6 +310,7 @@ paths:
           type: string
           format: uuid
           title: Key Id
+        description: Access key ID
       responses:
         '200':
           description: Successful Response
@@ -120,12 +324,19 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
-      description: Requires `access-keys.revoke` authority at the route's tenant boundary.
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
   /v1/auth/login:
     post:
       tags:
       - Auth
       summary: Login
+      description: 'Authenticate a human user and start a browser session.
+
+
+        Authentication: none.'
       operationId: login
       requestBody:
         content:
@@ -147,28 +358,20 @@ paths:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
       security: []
-      description: No authentication required.
   /v1/auth/signup:
     post:
       tags:
       - Auth
-      summary: Signup
-      description: 'Open self-signup: an account holds no memberships, so it can see nothing until granted or until it founds
-        an org.
+      summary: Sign Up
+      description: 'Create a human account and start a browser session.
 
 
-        The exception is the first human on a deployment, who claims it and becomes its instance owner: a
+        The first human account on a new deployment becomes the instance owner. Later accounts require
 
-        fresh install has no other way to reach the instance endpoints, and /instance/oss/claim exists to
-
-        route that first visitor here. Every signup after the claim is an ordinary account. Anyone who can
-
-        reach an unclaimed deployment can therefore take it, which is the same trapdoor the quickstart
-
-        endpoint opens; complete the first signup before exposing the deployment.
+        an organization membership or instance role before they can access managed resources.
 
 
-        No authentication required.'
+        Authentication: none.'
       operationId: signup
       requestBody:
         content:
@@ -195,6 +398,10 @@ paths:
       tags:
       - Auth
       summary: Logout
+      description: 'End the current browser session and clear its cookie.
+
+
+        Authentication: browser session.'
       operationId: logout
       responses:
         '200':
@@ -209,14 +416,21 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: A valid browser session is required
+        '403':
+          description: The request failed browser security checks
       security:
       - SessionCookie: []
-      description: Requires a browser session.
   /v1/auth/me:
     get:
       tags:
       - Auth
-      summary: Me
+      summary: Get Current User
+      description: 'Return the authenticated human user and the organizations visible to this credential.
+
+
+        Authentication: human account using a browser session or control-plane access key.'
       operationId: me
       responses:
         '200':
@@ -231,15 +445,20 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: An authenticated human account is required
       security:
-      - HTTPBearer: []
+      - AccessKey: []
       - SessionCookie: []
-      description: Requires an authenticated human; access-key responses honor the credential boundary.
   /v1/auth/password:
     post:
       tags:
       - Auth
       summary: Change Password
+      description: 'Replace the authenticated user''s password after verifying the current password.
+
+
+        Authentication: human account using a browser session or control-plane access key.'
       operationId: change_password
       requestBody:
         content:
@@ -260,19 +479,20 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: An authenticated human account is required
       security:
-      - HTTPBearer: []
+      - AccessKey: []
       - SessionCookie: []
-      description: Requires an authenticated human; access-key responses honor the credential boundary.
   /v1/auth/cli/start:
     post:
       tags:
       - Auth
-      summary: Cli Auth Start
-      description: 'Open a device authorization: unauthenticated like signup, it grants nothing by itself.
+      summary: Start CLI Authorization
+      description: 'Create a short-lived device authorization for a CLI sign-in.
 
 
-        No authentication required.'
+        Authentication: none.'
       operationId: cli_auth_start
       requestBody:
         content:
@@ -298,11 +518,11 @@ paths:
     get:
       tags:
       - Auth
-      summary: Cli Auth Request Details
-      description: 'Context for the approve page: who is asking, from where, until when.
+      summary: Get CLI Authorization Request
+      description: 'Return the client and expiry details for a device authorization code.
 
 
-        Requires a browser session.'
+        Authentication: browser session.'
       operationId: cli_auth_request_details
       parameters:
       - name: code
@@ -311,6 +531,7 @@ paths:
         schema:
           type: string
           title: Code
+        description: Device authorization code shown by the CLI
       responses:
         '200':
           description: Successful Response
@@ -324,17 +545,21 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: A valid browser session is required
+        '403':
+          description: The request failed browser security checks
       security:
       - SessionCookie: []
   /v1/auth/cli/approve:
     post:
       tags:
       - Auth
-      summary: Cli Auth Approve
-      description: 'The human confirms the code and picks the org; membership backs the pick like key minting.
+      summary: Approve CLI Authorization
+      description: 'Approve a device authorization for one organization visible to the current user.
 
 
-        Requires a browser session.'
+        Authentication: browser session.'
       operationId: cli_auth_approve
       requestBody:
         content:
@@ -355,22 +580,26 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: A valid browser session is required
+        '403':
+          description: The request failed browser security checks
       security:
       - SessionCookie: []
   /v1/auth/cli/poll:
     post:
       tags:
       - Auth
-      summary: Cli Auth Poll
-      description: 'Return pending state or consume an approved request and deliver its key once.
+      summary: Poll CLI Authorization
+      description: 'Return pending status or deliver the approved organization-scoped access key once.
 
 
-        A valid existing bearer retires exactly that key when its principal and target match the
+        When the request includes the CLI''s current access key for the same user and organization, that
 
-        approval. An absent, stale, or unrelated bearer changes nothing.
+        key is revoked as part of replacement. Labels do not participate in matching.
 
 
-        No authentication required.'
+        Authentication: none.'
       operationId: cli_auth_poll
       requestBody:
         content:
@@ -396,11 +625,11 @@ paths:
     get:
       tags:
       - Enrollment
-      summary: Enrollment
-      description: 'The acting user''s standing: their orgs by name, and whether their one personal org exists.
+      summary: Get Current Enrollment
+      description: 'List the organizations visible to the current user and identify their personal organization.
 
 
-        Requires an authenticated human; access-key responses honor the credential boundary.'
+        Authentication: human account using a browser session or control-plane access key.'
       operationId: enrollment
       responses:
         '200':
@@ -415,27 +644,23 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: An authenticated human account is required
       security:
-      - HTTPBearer: []
+      - AccessKey: []
       - SessionCookie: []
   /v1/enroll/org:
     post:
       tags:
       - Enrollment
-      summary: Create Personal Org
-      description: 'Found the acting user''s one personal org, with the creator as its first member.
+      summary: Create Personal Organization
+      description: 'Create the current user''s personal organization and make them its owner.
 
 
-        The unique personal_for column is the cap: the database refuses a second personal org
-
-        however hard a credential races, so no scope or guard code is involved. Further orgs
-
-        are admin-provisioned. The slot survives losing the membership; only deleting the
-
-        personal org frees it.
+        A user can own one personal organization at a time. Deleting it allows another to be created.
 
 
-        Requires a browser session.'
+        Authentication: browser session.'
       operationId: create_personal_org
       requestBody:
         content:
@@ -456,20 +681,21 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: A valid browser session is required
+        '403':
+          description: The request failed browser security checks
       security:
       - SessionCookie: []
   /v1/instance/oss/claim:
     get:
       tags:
       - OSS
-      summary: Claim
-      description: 'Whether any human holds an account yet: public so a fresh deployment can route its first visitor to signup.
+      summary: Get Instance Claim Status
+      description: 'Return whether a human account has claimed this deployment.
 
 
-        Service accounts do not claim an instance; it leaks nothing beyond set-up-or-not, like healthz.
-
-
-        No authentication required.'
+        Authentication: none.'
       operationId: claim
       responses:
         '200':
@@ -483,25 +709,16 @@ paths:
     post:
       tags:
       - OSS
-      summary: Quickstart
-      description: 'Drop the data plane''s sync credential onto the shared volume so the first data plane can boot.
+      summary: Install First Data Plane Credential
+      description: 'Install an existing access key where the first co-located data plane can read it.
 
 
-        A single-use bootstrap trapdoor: public, but it only fires while no data plane has ever
+        This endpoint is available only until a data plane first registers. The key must authenticate a
 
-        registered, and it closes the moment one heartbeats. The caller already holds the token it
-
-        writes, so nothing is minted or leaked here; the endpoint only bridges a token the operator
-
-        has into the file the co-mounted data plane container waits for.
+        service account and carry exactly the bundle, event-ingestion, and heartbeat permissions.
 
 
-        The accepted key authenticates a service account with the data-plane role and exactly the three
-
-        runtime permissions. The prefix check catches an inference key or a paste accident early.
-
-
-        No authentication required.'
+        Authentication: none.'
       operationId: quickstart
       requestBody:
         content:
@@ -528,9 +745,13 @@ paths:
       tags:
       - Data Plane
       summary: List Data Planes
+      description: 'List data-plane instances by most recent heartbeat.
+
+
+        Required permission: `data-planes.read`.'
       operationId: list_data_planes
       security:
-      - HTTPBearer: []
+      - AccessKey: []
       - SessionCookie: []
       parameters:
       - name: include_offline
@@ -540,6 +761,7 @@ paths:
           type: boolean
           default: false
           title: Include Offline
+        description: Include data planes whose most recent heartbeat is outside the online window
       responses:
         '200':
           description: Successful Response
@@ -553,15 +775,22 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
-      description: Requires `data-planes.read` authority at the route's tenant boundary.
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
   /v1/instance/activity:
     get:
       tags:
       - Activity
       summary: List Instance Activity
+      description: 'List the most recent audited changes across the instance.
+
+
+        Required permission: `audit.read`.'
       operationId: list_instance_activity
       security:
-      - HTTPBearer: []
+      - AccessKey: []
       - SessionCookie: []
       parameters:
       - name: limit
@@ -573,6 +802,7 @@ paths:
           minimum: 1
           default: 50
           title: Limit
+        description: Maximum number of results to return
       responses:
         '200':
           description: Successful Response
@@ -586,12 +816,19 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
-      description: Requires `audit.read` authority at the route's tenant boundary.
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
   /v1/service-accounts:
     post:
       tags:
       - Users
       summary: Create Service Account
+      description: 'Create a machine principal with an optional instance role.
+
+
+        Required permission: `principals.manage`.'
       operationId: create_service_account
       requestBody:
         content:
@@ -612,18 +849,25 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
       security:
-      - HTTPBearer: []
+      - AccessKey: []
       - SessionCookie: []
-      description: Requires `principals.manage` authority at the route's tenant boundary.
   /v1/users/{user_id}:
     get:
       tags:
       - Users
       summary: Get User
+      description: 'Return one human user or service account and its organization memberships.
+
+
+        Required permission: `principals.read`.'
       operationId: get_user
       security:
-      - HTTPBearer: []
+      - AccessKey: []
       - SessionCookie: []
       parameters:
       - name: user_id
@@ -633,6 +877,7 @@ paths:
           type: string
           format: uuid
           title: User Id
+        description: User or service-account ID
       responses:
         '200':
           description: Successful Response
@@ -646,25 +891,26 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
-      description: Requires `principals.read` authority at the route's tenant boundary.
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
     delete:
       tags:
       - Users
       summary: Delete User
-      description: 'Delete a user with the credentials that are theirs alone: identities, sessions, and access keys.
+      description: 'Delete a principal and its login identities, sessions, and control-plane access keys.
 
 
-        Everything else a user touches outlives them, so it blocks the delete instead of following it:
+        Remove organization memberships, personal organizations, and workspaces containing inference
 
-        a membership is the org''s decision to revisit, a personal org is a tenant, and an inference key
-
-        belongs to its workspace and merely records who minted it.
+        keys created by this principal before deleting it.
 
 
-        Requires `principals.manage` authority at the route''s tenant boundary.'
+        Required permission: `principals.manage`.'
       operationId: delete_user
       security:
-      - HTTPBearer: []
+      - AccessKey: []
       - SessionCookie: []
       parameters:
       - name: user_id
@@ -674,6 +920,7 @@ paths:
           type: string
           format: uuid
           title: User Id
+        description: User or service-account ID
       responses:
         '200':
           description: Successful Response
@@ -687,18 +934,22 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
   /v1/users:
     get:
       tags:
       - Users
       summary: List Users
-      description: 'Every principal on the instance, or one kind of them: service_account splits the machines from the humans.
+      description: 'List human users and service accounts across the instance.
 
 
-        Requires `principals.read` authority at the route''s tenant boundary.'
+        Required permission: `principals.read`.'
       operationId: list_users
       security:
-      - HTTPBearer: []
+      - AccessKey: []
       - SessionCookie: []
       parameters:
       - name: service_account
@@ -709,6 +960,7 @@ paths:
           - type: boolean
           - type: 'null'
           title: Service Account
+        description: 'Filter by principal type: true for service accounts and false for human users'
       responses:
         '200':
           description: Successful Response
@@ -722,11 +974,19 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
   /v1/orgs:
     get:
       tags:
       - Orgs
-      summary: List Orgs
+      summary: List Organizations
+      description: 'List every organization on the instance.
+
+
+        Required permission: `organizations.read`.'
       operationId: list_orgs
       responses:
         '200':
@@ -741,14 +1001,21 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
       security:
-      - HTTPBearer: []
+      - AccessKey: []
       - SessionCookie: []
-      description: Requires `organizations.read` authority at the route's tenant boundary.
     post:
       tags:
       - Orgs
-      summary: Create Org
+      summary: Create Organization
+      description: 'Create an organization.
+
+
+        Required permission: `organizations.create`.'
       operationId: create_org
       requestBody:
         content:
@@ -769,18 +1036,25 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
       security:
-      - HTTPBearer: []
+      - AccessKey: []
       - SessionCookie: []
-      description: Requires `organizations.create` authority at the route's tenant boundary.
   /v1/orgs/{org_id}:
     patch:
       tags:
       - Orgs
-      summary: Update Org
+      summary: Update Organization
+      description: 'Update an organization''s mutable fields.
+
+
+        Required permission: `organizations.update`.'
       operationId: update_org
       security:
-      - HTTPBearer: []
+      - AccessKey: []
       - SessionCookie: []
       parameters:
       - name: org_id
@@ -790,6 +1064,7 @@ paths:
           type: string
           format: uuid
           title: Org Id
+        description: Organization ID
       requestBody:
         required: true
         content:
@@ -809,14 +1084,21 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
-      description: Requires `organizations.update` authority at the route's tenant boundary.
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
     get:
       tags:
       - Orgs
-      summary: Get Org
+      summary: Get Organization
+      description: 'Return one organization.
+
+
+        Required permission: `organizations.read`.'
       operationId: get_org
       security:
-      - HTTPBearer: []
+      - AccessKey: []
       - SessionCookie: []
       parameters:
       - name: org_id
@@ -826,6 +1108,7 @@ paths:
           type: string
           format: uuid
           title: Org Id
+        description: Organization ID
       responses:
         '200':
           description: Successful Response
@@ -839,25 +1122,24 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
-      description: Requires `organizations.read` authority at the route's tenant boundary.
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
     delete:
       tags:
       - Orgs
-      summary: Delete Org
-      description: 'Delete an org with everything scoped to it: its workspaces and their keys, the provider
-
-        credentials it brought, its own keys, its memberships, its bundles.
+      summary: Delete Organization
+      description: 'Delete an organization and its workspaces, keys, credentials, memberships, and bundles.
 
 
-        Its usage events stay. They are history keyed by ids, not rows belonging to the org, so they
-
-        outlive it the way the audit trail does rather than standing in the way of the delete.
+        Historical usage events and audit entries are retained.
 
 
-        Requires `organizations.delete` authority at the route''s tenant boundary.'
+        Required permission: `organizations.delete`.'
       operationId: delete_org
       security:
-      - HTTPBearer: []
+      - AccessKey: []
       - SessionCookie: []
       parameters:
       - name: org_id
@@ -867,6 +1149,7 @@ paths:
           type: string
           format: uuid
           title: Org Id
+        description: Organization ID
       responses:
         '200':
           description: Successful Response
@@ -880,35 +1163,35 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
-  /v1/org/workspaces:
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
+  /v1/orgs/{org_id}/workspaces:
     post:
       tags:
       - Workspaces
       summary: Create Workspace
-      description: 'The creator becomes the first member when they hold an org membership; an instance owner
-
-        acting on an org they never joined creates it member-less and relies on their bypass.
+      description: 'Create a workspace and make the creator its first admin when they belong to the organization.
 
 
-        A caller who names no slug gets one derived from the name; one who does gets a 409 when the
-
-        org already holds it, rather than a silently numbered variant of what they asked for.
+        The slug is derived from the name when omitted and must be unique within the organization.
 
 
-        Requires `workspaces.create` authority at the route''s tenant boundary.'
+        Required permission: `workspaces.create`.'
       operationId: create_workspace
       security:
-      - HTTPBearer: []
+      - AccessKey: []
       - SessionCookie: []
       parameters:
-      - name: X-Org-Id
-        in: header
-        required: false
+      - name: org_id
+        in: path
+        required: true
         schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: X-Org-Id
+          type: string
+          format: uuid
+          title: Org Id
+        description: Organization ID
       requestBody:
         required: true
         content:
@@ -928,23 +1211,31 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
     get:
       tags:
       - Workspaces
       summary: List Workspaces
+      description: 'List workspaces in an organization.
+
+
+        Required permission: `workspaces.read`.'
       operationId: list_workspaces
       security:
-      - HTTPBearer: []
+      - AccessKey: []
       - SessionCookie: []
       parameters:
-      - name: X-Org-Id
-        in: header
-        required: false
+      - name: org_id
+        in: path
+        required: true
         schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: X-Org-Id
+          type: string
+          format: uuid
+          title: Org Id
+        description: Organization ID
       responses:
         '200':
           description: Successful Response
@@ -958,15 +1249,22 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
-      description: Requires `workspaces.read` authority at the route's tenant boundary.
-  /v1/org/workspaces/{workspace_ref}:
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
+  /v1/orgs/{org_id}/workspaces/{workspace_ref}:
     get:
       tags:
       - Workspaces
       summary: Get Workspace
+      description: 'Return a workspace by ID or slug.
+
+
+        Required permission: `workspaces.read`.'
       operationId: get_workspace
       security:
-      - HTTPBearer: []
+      - AccessKey: []
       - SessionCookie: []
       parameters:
       - name: workspace_ref
@@ -975,14 +1273,15 @@ paths:
         schema:
           type: string
           title: Workspace Ref
-      - name: X-Org-Id
-        in: header
-        required: false
+        description: Workspace ID or slug
+      - name: org_id
+        in: path
+        required: true
         schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: X-Org-Id
+          type: string
+          format: uuid
+          title: Org Id
+        description: Organization ID
       responses:
         '200':
           description: Successful Response
@@ -996,20 +1295,24 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
-      description: Requires `workspaces.read` authority at the route's tenant boundary.
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
     delete:
       tags:
       - Workspaces
       summary: Delete Workspace
-      description: 'Delete a workspace with its inference keys, its members, and the provider credentials it brought;
-
-        the usage it recorded stays, as it does for an org.
+      description: 'Delete a workspace, its memberships, inference keys, and provider credentials.
 
 
-        Requires `workspaces.delete` authority at the route''s tenant boundary.'
+        Historical usage events are retained.
+
+
+        Required permission: `workspaces.delete`.'
       operationId: delete_workspace
       security:
-      - HTTPBearer: []
+      - AccessKey: []
       - SessionCookie: []
       parameters:
       - name: workspace_ref
@@ -1018,14 +1321,15 @@ paths:
         schema:
           type: string
           title: Workspace Ref
-      - name: X-Org-Id
-        in: header
-        required: false
+        description: Workspace ID or slug
+      - name: org_id
+        in: path
+        required: true
         schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: X-Org-Id
+          type: string
+          format: uuid
+          title: Org Id
+        description: Organization ID
       responses:
         '200':
           description: Successful Response
@@ -1039,13 +1343,21 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
     patch:
       tags:
       - Workspaces
       summary: Update Workspace
+      description: 'Update a workspace''s name or slug.
+
+
+        Required permission: `workspaces.update`.'
       operationId: update_workspace
       security:
-      - HTTPBearer: []
+      - AccessKey: []
       - SessionCookie: []
       parameters:
       - name: workspace_ref
@@ -1054,14 +1366,15 @@ paths:
         schema:
           type: string
           title: Workspace Ref
-      - name: X-Org-Id
-        in: header
-        required: false
+        description: Workspace ID or slug
+      - name: org_id
+        in: path
+        required: true
         schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: X-Org-Id
+          type: string
+          format: uuid
+          title: Org Id
+        description: Organization ID
       requestBody:
         required: true
         content:
@@ -1081,15 +1394,22 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
-      description: Requires `workspaces.update` authority at the route's tenant boundary.
-  /v1/org/workspaces/{workspace_ref}/members:
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
+  /v1/orgs/{org_id}/workspaces/{workspace_ref}/members:
     get:
       tags:
       - Workspaces
-      summary: List Members
+      summary: List Workspace Members
+      description: 'List the members of a workspace and their workspace roles.
+
+
+        Required permission: `members.read`.'
       operationId: list_members
       security:
-      - HTTPBearer: []
+      - AccessKey: []
       - SessionCookie: []
       parameters:
       - name: workspace_ref
@@ -1098,14 +1418,15 @@ paths:
         schema:
           type: string
           title: Workspace Ref
-      - name: X-Org-Id
-        in: header
-        required: false
+        description: Workspace ID or slug
+      - name: org_id
+        in: path
+        required: true
         schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: X-Org-Id
+          type: string
+          format: uuid
+          title: Org Id
+        description: Organization ID
       responses:
         '200':
           description: Successful Response
@@ -1119,19 +1440,22 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
-      description: Requires `members.read` authority at the route's tenant boundary.
-  /v1/org/workspaces/{workspace_ref}/members/{user_id}:
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
+  /v1/orgs/{org_id}/workspaces/{workspace_ref}/members/{user_id}:
     put:
       tags:
       - Workspaces
-      summary: Add Member
-      description: 'The composite foreign keys are the enforcement; the 409 turns what they would reject into a client error.
+      summary: Add Workspace Member
+      description: 'Add or update a workspace member who already belongs to the organization.
 
 
-        Requires `members.manage` authority at the route''s tenant boundary.'
+        Required permission: `members.manage`.'
       operationId: add_member
       security:
-      - HTTPBearer: []
+      - AccessKey: []
       - SessionCookie: []
       parameters:
       - name: user_id
@@ -1141,20 +1465,22 @@ paths:
           type: string
           format: uuid
           title: User Id
+        description: User or service-account ID
       - name: workspace_ref
         in: path
         required: true
         schema:
           type: string
           title: Workspace Ref
-      - name: X-Org-Id
-        in: header
-        required: false
+        description: Workspace ID or slug
+      - name: org_id
+        in: path
+        required: true
         schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: X-Org-Id
+          type: string
+          format: uuid
+          title: Org Id
+        description: Organization ID
       requestBody:
         required: true
         content:
@@ -1174,13 +1500,21 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
     delete:
       tags:
       - Workspaces
-      summary: Remove Member
+      summary: Remove Workspace Member
+      description: 'Remove a member from a workspace without changing organization membership.
+
+
+        Required permission: `members.manage`.'
       operationId: remove_member
       security:
-      - HTTPBearer: []
+      - AccessKey: []
       - SessionCookie: []
       parameters:
       - name: user_id
@@ -1190,20 +1524,22 @@ paths:
           type: string
           format: uuid
           title: User Id
+        description: User or service-account ID
       - name: workspace_ref
         in: path
         required: true
         schema:
           type: string
           title: Workspace Ref
-      - name: X-Org-Id
-        in: header
-        required: false
+        description: Workspace ID or slug
+      - name: org_id
+        in: path
+        required: true
         schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: X-Org-Id
+          type: string
+          format: uuid
+          title: Org Id
+        description: Organization ID
       responses:
         '200':
           description: Successful Response
@@ -1217,15 +1553,22 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
-      description: Requires `members.manage` authority at the route's tenant boundary.
-  /v1/org/workspaces/{workspace_ref}/inference-keys:
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
+  /v1/orgs/{org_id}/workspaces/{workspace_ref}/inference-keys:
     post:
       tags:
       - Inference Keys
       summary: Create Inference Key
+      description: 'Issue an inference key for model requests to this workspace and return its token once.
+
+
+        Required permission: `inference-keys.manage`.'
       operationId: create_inference_key
       security:
-      - HTTPBearer: []
+      - AccessKey: []
       - SessionCookie: []
       parameters:
       - name: workspace_ref
@@ -1234,14 +1577,15 @@ paths:
         schema:
           type: string
           title: Workspace Ref
-      - name: X-Org-Id
-        in: header
-        required: false
+        description: Workspace ID or slug
+      - name: org_id
+        in: path
+        required: true
         schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: X-Org-Id
+          type: string
+          format: uuid
+          title: Org Id
+        description: Organization ID
       requestBody:
         required: true
         content:
@@ -1261,14 +1605,21 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
-      description: Requires `inference-keys.manage` authority at the route's tenant boundary.
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
     get:
       tags:
       - Inference Keys
       summary: List Inference Keys
+      description: 'List inference-key metadata for a workspace without returning secret tokens.
+
+
+        Required permission: `inference-keys.read`.'
       operationId: list_inference_keys
       security:
-      - HTTPBearer: []
+      - AccessKey: []
       - SessionCookie: []
       parameters:
       - name: workspace_ref
@@ -1277,14 +1628,15 @@ paths:
         schema:
           type: string
           title: Workspace Ref
-      - name: X-Org-Id
-        in: header
-        required: false
+        description: Workspace ID or slug
+      - name: org_id
+        in: path
+        required: true
         schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: X-Org-Id
+          type: string
+          format: uuid
+          title: Org Id
+        description: Organization ID
       responses:
         '200':
           description: Successful Response
@@ -1298,15 +1650,22 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
-      description: Requires `inference-keys.read` authority at the route's tenant boundary.
-  /v1/org/workspaces/{workspace_ref}/inference-keys/{key_id}:
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
+  /v1/orgs/{org_id}/workspaces/{workspace_ref}/inference-keys/{key_id}:
     delete:
       tags:
       - Inference Keys
       summary: Revoke Inference Key
+      description: 'Revoke an inference key in a workspace.
+
+
+        Required permission: `inference-keys.manage`.'
       operationId: revoke_inference_key
       security:
-      - HTTPBearer: []
+      - AccessKey: []
       - SessionCookie: []
       parameters:
       - name: key_id
@@ -1316,20 +1675,22 @@ paths:
           type: string
           format: uuid
           title: Key Id
+        description: Inference key ID
       - name: workspace_ref
         in: path
         required: true
         schema:
           type: string
           title: Workspace Ref
-      - name: X-Org-Id
-        in: header
-        required: false
+        description: Workspace ID or slug
+      - name: org_id
+        in: path
+        required: true
         schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: X-Org-Id
+          type: string
+          format: uuid
+          title: Org Id
+        description: Organization ID
       responses:
         '200':
           description: Successful Response
@@ -1343,43 +1704,32 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
-      description: Requires `inference-keys.manage` authority at the route's tenant boundary.
-  /v1/org/provider-credentials:
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
+  /v1/orgs/{org_id}/provider-credentials:
     post:
       tags:
       - Provider Credentials
-      summary: Create Provider Credential
-      description: 'Bring a provider key for this org, or for one workspace in it.
+      summary: Create Org Provider Credential
+      description: 'Store a provider API key for every workspace in an organization.
 
 
-        Workspace writes require provider-credential management authority at that workspace: whoever
-
-        supplies the key owns the account its traffic is billed to, and that account''s dashboard shows
-
-        every request made with it.
-
-
-        The row is written before the value so a crash between the two leaves a credential with nothing
-
-        behind it, which the request path already handles by skipping the candidate. The other order
-
-        would leave a value in the store with no row to delete it by.
-
-
-        Requires `provider-credentials.manage` authority at the route''s tenant boundary.'
-      operationId: create_provider_credential
+        Required permission: `provider-credentials.manage`.'
+      operationId: create_org_provider_credential
       security:
-      - HTTPBearer: []
+      - AccessKey: []
       - SessionCookie: []
       parameters:
-      - name: X-Org-Id
-        in: header
-        required: false
+      - name: org_id
+        in: path
+        required: true
         schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: X-Org-Id
+          type: string
+          format: uuid
+          title: Org Id
+        description: Organization ID
       requestBody:
         required: true
         content:
@@ -1399,35 +1749,31 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
     get:
       tags:
       - Provider Credentials
-      summary: List Provider Credentials
-      description: 'The org''s credentials in the order the data plane tries them, optionally narrowed to one workspace.
+      summary: List Org Provider Credentials
+      description: 'List provider credentials owned by an organization, including its workspace credentials.
 
 
-        Requires `provider-credentials.read` authority at the route''s tenant boundary.'
-      operationId: list_provider_credentials
+        Required permission: `provider-credentials.read`.'
+      operationId: list_org_provider_credentials
       security:
-      - HTTPBearer: []
+      - AccessKey: []
       - SessionCookie: []
       parameters:
-      - name: workspace
-        in: query
-        required: false
+      - name: org_id
+        in: path
+        required: true
         schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Workspace
-      - name: X-Org-Id
-        in: header
-        required: false
-        schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: X-Org-Id
+          type: string
+          format: uuid
+          title: Org Id
+        description: Organization ID
       responses:
         '200':
           description: Successful Response
@@ -1441,31 +1787,45 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
-  /v1/org/provider-credentials/{credential_id}:
-    get:
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
+  /v1/orgs/{org_id}/workspaces/{workspace_ref}/provider-credentials:
+    post:
       tags:
       - Provider Credentials
-      summary: Get Provider Credential
-      operationId: get_provider_credential
+      summary: Create Workspace Provider Credential
+      description: 'Store a provider API key for one workspace.
+
+
+        Required permission: `provider-credentials.manage`.'
+      operationId: create_workspace_provider_credential
       security:
-      - HTTPBearer: []
+      - AccessKey: []
       - SessionCookie: []
       parameters:
-      - name: credential_id
+      - name: workspace_ref
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Workspace Ref
+        description: Workspace ID or slug
+      - name: org_id
         in: path
         required: true
         schema:
           type: string
           format: uuid
-          title: Credential Id
-      - name: X-Org-Id
-        in: header
-        required: false
-        schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: X-Org-Id
+          title: Org Id
+        description: Organization ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProviderCredentialIn'
       responses:
         '200':
           description: Successful Response
@@ -1479,20 +1839,67 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
-      description: Requires `provider-credentials.read` authority at the route's tenant boundary.
-    patch:
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
+    get:
       tags:
       - Provider Credentials
-      summary: Update Provider Credential
-      description: 'Priority and enabled are the whole mutable surface: everything else names the secret, so
-
-        changing it would orphan the value rather than move it.
+      summary: List Workspace Provider Credentials
+      description: 'List provider credentials stored specifically for one workspace.
 
 
-        Requires `provider-credentials.manage` authority at the route''s tenant boundary.'
-      operationId: update_provider_credential
+        Required permission: `provider-credentials.read`.'
+      operationId: list_workspace_provider_credentials
       security:
-      - HTTPBearer: []
+      - AccessKey: []
+      - SessionCookie: []
+      parameters:
+      - name: workspace_ref
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Workspace Ref
+        description: Workspace ID or slug
+      - name: org_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Org Id
+        description: Organization ID
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_list_ProviderCredentialOut__'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
+  /v1/orgs/{org_id}/provider-credentials/{credential_id}:
+    get:
+      tags:
+      - Provider Credentials
+      summary: Get Provider Credential
+      description: 'Return provider credential metadata without its secret value.
+
+
+        Required permission: `provider-credentials.read`.'
+      operationId: get_provider_credential
+      security:
+      - AccessKey: []
       - SessionCookie: []
       parameters:
       - name: credential_id
@@ -1502,14 +1909,61 @@ paths:
           type: string
           format: uuid
           title: Credential Id
-      - name: X-Org-Id
-        in: header
-        required: false
+        description: Provider credential ID
+      - name: org_id
+        in: path
+        required: true
         schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: X-Org-Id
+          type: string
+          format: uuid
+          title: Org Id
+        description: Organization ID
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_ProviderCredentialOut_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
+    patch:
+      tags:
+      - Provider Credentials
+      summary: Update Provider Credential
+      description: 'Update a provider credential''s priority or enabled state.
+
+
+        Required permission: `provider-credentials.manage`.'
+      operationId: update_provider_credential
+      security:
+      - AccessKey: []
+      - SessionCookie: []
+      parameters:
+      - name: credential_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Credential Id
+        description: Provider credential ID
+      - name: org_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Org Id
+        description: Organization ID
       requestBody:
         required: true
         content:
@@ -1529,19 +1983,21 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
     delete:
       tags:
       - Provider Credentials
       summary: Delete Provider Credential
-      description: 'Deleting one credential is the same operation a workspace or org delete performs in bulk, so
-
-        it runs through the same method rather than a second copy of the ordering rule.
+      description: 'Delete provider credential metadata and its stored secret value.
 
 
-        Requires `provider-credentials.manage` authority at the route''s tenant boundary.'
+        Required permission: `provider-credentials.manage`.'
       operationId: delete_provider_credential
       security:
-      - HTTPBearer: []
+      - AccessKey: []
       - SessionCookie: []
       parameters:
       - name: credential_id
@@ -1551,14 +2007,15 @@ paths:
           type: string
           format: uuid
           title: Credential Id
-      - name: X-Org-Id
-        in: header
-        required: false
+        description: Provider credential ID
+      - name: org_id
+        in: path
+        required: true
         schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: X-Org-Id
+          type: string
+          format: uuid
+          title: Org Id
+        description: Organization ID
       responses:
         '200':
           description: Successful Response
@@ -1572,20 +2029,22 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
-  /v1/org/provider-credentials/{credential_id}/value:
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
+  /v1/orgs/{org_id}/provider-credentials/{credential_id}/value:
     put:
       tags:
       - Provider Credentials
       summary: Rotate Provider Credential
-      description: 'A rotation is the same row and the same ref with a new value, so the bundle diff is one
-
-        integer and every data plane refetches within a poll instead of waiting out a cache TTL.
+      description: 'Replace a provider credential''s secret value.
 
 
-        Requires `provider-credentials.manage` authority at the route''s tenant boundary.'
+        Required permission: `provider-credentials.manage`.'
       operationId: rotate_provider_credential
       security:
-      - HTTPBearer: []
+      - AccessKey: []
       - SessionCookie: []
       parameters:
       - name: credential_id
@@ -1595,14 +2054,15 @@ paths:
           type: string
           format: uuid
           title: Credential Id
-      - name: X-Org-Id
-        in: header
-        required: false
+        description: Provider credential ID
+      - name: org_id
+        in: path
+        required: true
         schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: X-Org-Id
+          type: string
+          format: uuid
+          title: Org Id
+        description: Organization ID
       requestBody:
         required: true
         content:
@@ -1622,28 +2082,32 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
-  /v1/org/users:
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
+  /v1/orgs/{org_id}/users:
     get:
       tags:
       - Org Users
-      summary: List Org Users
-      description: 'The acting org''s members; an org credential sees its own roster, never the instance''s.
+      summary: List Organization Members
+      description: 'List the human users and service accounts that belong to an organization.
 
 
-        Requires `members.read` authority at the route''s tenant boundary.'
+        Required permission: `members.read`.'
       operationId: list_org_users
       security:
-      - HTTPBearer: []
+      - AccessKey: []
       - SessionCookie: []
       parameters:
-      - name: X-Org-Id
-        in: header
-        required: false
+      - name: org_id
+        in: path
+        required: true
         schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: X-Org-Id
+          type: string
+          format: uuid
+          title: Org Id
+        description: Organization ID
       responses:
         '200':
           description: Successful Response
@@ -1657,18 +2121,22 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
-  /v1/org/users/{user_id}:
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
+  /v1/orgs/{org_id}/users/{user_id}:
     put:
       tags:
       - Org Users
-      summary: Add Org User
-      description: 'Idempotent: the org comes from the credential, so membership can only ever be granted in scope.
+      summary: Add Organization Member
+      description: 'Add a principal to an organization or update its organization role.
 
 
-        Requires `members.manage` authority at the route''s tenant boundary.'
+        Required permission: `members.manage`.'
       operationId: add_org_user
       security:
-      - HTTPBearer: []
+      - AccessKey: []
       - SessionCookie: []
       parameters:
       - name: user_id
@@ -1678,14 +2146,15 @@ paths:
           type: string
           format: uuid
           title: User Id
-      - name: X-Org-Id
-        in: header
-        required: false
+        description: User or service-account ID
+      - name: org_id
+        in: path
+        required: true
         schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: X-Org-Id
+          type: string
+          format: uuid
+          title: Org Id
+        description: Organization ID
       requestBody:
         required: true
         content:
@@ -1705,17 +2174,21 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
     delete:
       tags:
       - Org Users
-      summary: Remove Org User
-      description: 'Removing the membership cascades the user out of the org''s workspaces.
+      summary: Remove Organization Member
+      description: 'Remove a principal from an organization and its workspaces.
 
 
-        Requires `members.manage` authority at the route''s tenant boundary.'
+        Required permission: `members.manage`.'
       operationId: remove_org_user
       security:
-      - HTTPBearer: []
+      - AccessKey: []
       - SessionCookie: []
       parameters:
       - name: user_id
@@ -1725,14 +2198,15 @@ paths:
           type: string
           format: uuid
           title: User Id
-      - name: X-Org-Id
-        in: header
-        required: false
+        description: User or service-account ID
+      - name: org_id
+        in: path
+        required: true
         schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: X-Org-Id
+          type: string
+          format: uuid
+          title: Org Id
+        description: Organization ID
       responses:
         '200':
           description: Successful Response
@@ -1746,24 +2220,32 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
-  /v1/org/bundles/compile:
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
+  /v1/orgs/{org_id}/bundles/compile:
     post:
       tags:
       - Bundles
-      summary: Compile Bundle
+      summary: Compile Policy Bundle
+      description: 'Compile and sign a new policy bundle from the organization''s current configuration.
+
+
+        Required permission: `bundles.publish`.'
       operationId: compile_bundle
       security:
-      - HTTPBearer: []
+      - AccessKey: []
       - SessionCookie: []
       parameters:
-      - name: X-Org-Id
-        in: header
-        required: false
+      - name: org_id
+        in: path
+        required: true
         schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: X-Org-Id
+          type: string
+          format: uuid
+          title: Org Id
+        description: Organization ID
       responses:
         '200':
           description: Successful Response
@@ -1777,25 +2259,32 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
-      description: Requires `bundles.publish` authority at the route's tenant boundary.
-  /v1/org/bundles:
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
+  /v1/orgs/{org_id}/bundles:
     get:
       tags:
       - Bundles
       summary: List Bundles
+      description: 'List policy bundle metadata for an organization.
+
+
+        Required permission: `bundles.read`.'
       operationId: list_bundles
       security:
-      - HTTPBearer: []
+      - AccessKey: []
       - SessionCookie: []
       parameters:
-      - name: X-Org-Id
-        in: header
-        required: false
+      - name: org_id
+        in: path
+        required: true
         schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: X-Org-Id
+          type: string
+          format: uuid
+          title: Org Id
+        description: Organization ID
       responses:
         '200':
           description: Successful Response
@@ -1809,17 +2298,32 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
-      description: Requires `bundles.read` authority at the route's tenant boundary.
-  /v1/org/events:
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
+  /v1/orgs/{org_id}/events:
     get:
       tags:
       - Events
-      summary: List Events
-      operationId: list_events
+      summary: List Org Events
+      description: 'List usage events across an organization with cursor pagination.
+
+
+        Required permission: `usage.read`.'
+      operationId: list_org_events
       security:
-      - HTTPBearer: []
+      - AccessKey: []
       - SessionCookie: []
       parameters:
+      - name: org_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Org Id
+        description: Organization ID
       - name: before
         in: query
         required: false
@@ -1829,6 +2333,7 @@ paths:
             format: date-time
           - type: 'null'
           title: Before
+        description: Return events before this timestamp; use with before_event_id
       - name: before_event_id
         in: query
         required: false
@@ -1838,6 +2343,7 @@ paths:
             format: uuid
           - type: 'null'
           title: Before Event Id
+        description: Event ID that disambiguates the before timestamp
       - name: after
         in: query
         required: false
@@ -1847,6 +2353,7 @@ paths:
             format: date-time
           - type: 'null'
           title: After
+        description: Return events after this timestamp; use with after_event_id
       - name: after_event_id
         in: query
         required: false
@@ -1856,6 +2363,7 @@ paths:
             format: uuid
           - type: 'null'
           title: After Event Id
+        description: Event ID that disambiguates the after timestamp
       - name: limit
         in: query
         required: false
@@ -1865,23 +2373,7 @@ paths:
           minimum: 1
           default: 50
           title: Limit
-      - name: workspace_id
-        in: query
-        required: false
-        schema:
-          anyOf:
-          - type: string
-            format: uuid
-          - type: 'null'
-          title: Workspace Id
-      - name: X-Org-Id
-        in: header
-        required: false
-        schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: X-Org-Id
+        description: Maximum number of results to return
       responses:
         '200':
           description: Successful Response
@@ -1895,21 +2387,79 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
-      description: Requires `usage.read` authority at the route's tenant boundary.
-  /v1/org/activity:
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
+  /v1/orgs/{org_id}/workspaces/{workspace_ref}/events:
     get:
       tags:
-      - Activity
-      summary: List Activity
-      description: 'What changed in this org, newest first: the audit trail the write triggers already record.
+      - Events
+      summary: List Workspace Events
+      description: 'List usage events for one workspace with cursor pagination.
 
 
-        Requires `audit.read` authority at the route''s tenant boundary.'
-      operationId: list_activity
+        Required permission: `usage.read`.'
+      operationId: list_workspace_events
       security:
-      - HTTPBearer: []
+      - AccessKey: []
       - SessionCookie: []
       parameters:
+      - name: workspace_ref
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Workspace Ref
+        description: Workspace ID or slug
+      - name: org_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Org Id
+        description: Organization ID
+      - name: before
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Before
+        description: Return events before this timestamp; use with before_event_id
+      - name: before_event_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Before Event Id
+        description: Event ID that disambiguates the before timestamp
+      - name: after
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: After
+        description: Return events after this timestamp; use with after_event_id
+      - name: after_event_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: After Event Id
+        description: Event ID that disambiguates the after timestamp
       - name: limit
         in: query
         required: false
@@ -1919,14 +2469,56 @@ paths:
           minimum: 1
           default: 50
           title: Limit
-      - name: X-Org-Id
-        in: header
+        description: Maximum number of results to return
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_list_UsageEventOut__'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
+  /v1/orgs/{org_id}/activity:
+    get:
+      tags:
+      - Activity
+      summary: List Organization Activity
+      description: 'List the most recent audited changes in an organization.
+
+
+        Required permission: `audit.read`.'
+      operationId: list_activity
+      security:
+      - AccessKey: []
+      - SessionCookie: []
+      parameters:
+      - name: org_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Org Id
+        description: Organization ID
+      - name: limit
+        in: query
         required: false
         schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: X-Org-Id
+          type: integer
+          maximum: 200
+          minimum: 1
+          default: 50
+          title: Limit
+        description: Maximum number of results to return
       responses:
         '200':
           description: Successful Response
@@ -1940,14 +2532,22 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
   /v1/bundle/latest:
     get:
       tags:
       - Data Plane
-      summary: Bundle Latest
+      summary: Get Latest Bundle
+      description: 'Return the newest signed policy bundle available at the requested organization scope.
+
+
+        Required permission: `bundles.read`.'
       operationId: bundle_latest
       security:
-      - HTTPBearer: []
+      - AccessKey: []
       - SessionCookie: []
       parameters:
       - name: org_id
@@ -1959,14 +2559,7 @@ paths:
             format: uuid
           - type: 'null'
           title: Org Id
-      - name: X-Org-Id
-        in: header
-        required: false
-        schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: X-Org-Id
+        description: Organization whose latest bundle to return; omit to use the credential's scope
       responses:
         '200':
           description: Successful Response
@@ -1980,52 +2573,30 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
-      description: Requires `bundles.read` authority at the route's tenant boundary.
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
   /v1/events:
     post:
       tags:
       - Data Plane
-      summary: Ingest Events
-      description: 'Idempotent on event_id: at-least-once delivery lands exactly once, and a failed batch lands nothing.
+      summary: Ingest Usage Events
+      description: 'Ingest up to 1,000 usage events; repeated event IDs are ignored.
 
 
-        One atomic upsert rather than a read per event. Reading first would also be racy: two flushes
-
-        carrying the same event_id would both see it missing and collide on the primary key, failing
-
-        both batches, and at-least-once delivery makes that overlap ordinary rather than exotic. The
-
-        outbox drains up to a thousand events at a time, so the per-event round trip cost was real too.
-
-        ingested counts what RETURNING hands back, which under DO NOTHING is exactly the rows written,
-
-        so a replay reports zero.
-
-
-        Requires `usage.ingest` authority at the route''s tenant boundary.'
+        Required permission: `usage.ingest`.'
       operationId: ingest_events
-      security:
-      - HTTPBearer: []
-      - SessionCookie: []
-      parameters:
-      - name: X-Org-Id
-        in: header
-        required: false
-        schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: X-Org-Id
       requestBody:
-        required: true
         content:
           application/json:
             schema:
-              type: array
               items:
                 $ref: '#/components/schemas/UsageEventV1'
+              type: array
               maxItems: 1000
               title: Events
+        required: true
       responses:
         '200':
           description: Successful Response
@@ -2039,41 +2610,29 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
+      security:
+      - AccessKey: []
+      - SessionCookie: []
   /v1/heartbeat:
     post:
       tags:
       - Data Plane
-      summary: Heartbeat
-      description: 'Upsert the instance record; the row persists as history, last_seen drives liveness.
+      summary: Record Data Plane Heartbeat
+      description: 'Create or refresh a data-plane instance at the access key''s scope.
 
 
-        Every worker of a multi-worker data plane heartbeats with the same instance_id, so the first
-
-        insert can race; do it as one atomic upsert instead of read-then-write. The first heartbeat pins
-
-        the id to either the global or organization boundary, and another credential cannot move it.
-
-
-        Requires `data-planes.heartbeat` authority at the route''s tenant boundary.'
+        Required permission: `data-planes.heartbeat`.'
       operationId: heartbeat
-      security:
-      - HTTPBearer: []
-      - SessionCookie: []
-      parameters:
-      - name: X-Org-Id
-        in: header
-        required: false
-        schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: X-Org-Id
       requestBody:
-        required: true
         content:
           application/json:
             schema:
               $ref: '#/components/schemas/HeartbeatV1'
+        required: true
       responses:
         '200':
           description: Successful Response
@@ -2087,28 +2646,23 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
-  /v1/taxonomy:
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
+      security:
+      - AccessKey: []
+      - SessionCookie: []
+  /v1/instance/taxonomy:
     get:
       tags:
       - Taxonomy
-      summary: Get Taxonomy
-      description: 'The instance-wide catalog, readable where the principal and credential both carry catalog access.
+      summary: Get Instance Model Catalog
+      description: 'Return the provider and model catalog at instance scope.
 
 
-        Requires `catalog.read` authority at the route''s tenant boundary.'
-      operationId: get_taxonomy
-      security:
-      - HTTPBearer: []
-      - SessionCookie: []
-      parameters:
-      - name: X-Org-Id
-        in: header
-        required: false
-        schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: X-Org-Id
+        Required permission: `catalog.read`.'
+      operationId: get_instance_taxonomy
       responses:
         '200':
           description: Successful Response
@@ -2122,15 +2676,107 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
-  /v1/taxonomy/providers:
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
+      security:
+      - AccessKey: []
+      - SessionCookie: []
+  /v1/orgs/{org_id}/taxonomy:
+    get:
+      tags:
+      - Taxonomy
+      summary: Get Organization Model Catalog
+      description: 'Return the provider and model catalog available to an organization.
+
+
+        Required permission: `catalog.read`.'
+      operationId: get_org_taxonomy
+      security:
+      - AccessKey: []
+      - SessionCookie: []
+      parameters:
+      - name: org_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Org Id
+        description: Organization ID
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_TaxonomyOut_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
+  /v1/orgs/{org_id}/workspaces/{workspace_ref}/taxonomy:
+    get:
+      tags:
+      - Taxonomy
+      summary: Get Workspace Model Catalog
+      description: 'Return the provider and model catalog available to a workspace.
+
+
+        Required permission: `catalog.read`.'
+      operationId: get_workspace_taxonomy
+      security:
+      - AccessKey: []
+      - SessionCookie: []
+      parameters:
+      - name: workspace_ref
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Workspace Ref
+        description: Workspace ID or slug
+      - name: org_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Org Id
+        description: Organization ID
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_TaxonomyOut_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
+  /v1/instance/taxonomy/providers:
     post:
       tags:
       - Taxonomy
-      summary: Create Provider
-      description: 'Create or update: reapplying a taxonomy converges the catalog.
+      summary: Create or Update Provider
+      description: 'Create a provider or replace the catalog entry with the same name.
 
 
-        Requires `catalog.manage` authority at the route''s tenant boundary.'
+        Required permission: `catalog.manage`.'
       operationId: create_provider
       requestBody:
         content:
@@ -2151,18 +2797,22 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
       security:
-      - HTTPBearer: []
+      - AccessKey: []
       - SessionCookie: []
-  /v1/taxonomy/models:
+  /v1/instance/taxonomy/models:
     post:
       tags:
       - Taxonomy
-      summary: Create Model
-      description: 'Create or update: reapplying a taxonomy converges the catalog.
+      summary: Create or Update Model
+      description: 'Create a model or replace the catalog entry with the same name.
 
 
-        Requires `catalog.manage` authority at the route''s tenant boundary.'
+        Required permission: `catalog.manage`.'
       operationId: create_model
       requestBody:
         content:
@@ -2183,8 +2833,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
       security:
-      - HTTPBearer: []
+      - AccessKey: []
       - SessionCookie: []
 components:
   schemas:
@@ -2202,21 +2856,7 @@ components:
             format: uuid
           - type: 'null'
           title: User Id
-          description: Principal the key authenticates; defaults to the acting principal
-        org_id:
-          anyOf:
-          - type: string
-            format: uuid
-          - type: 'null'
-          title: Org Id
-          description: Organization boundary; omit with workspace_id for instance authority
-        workspace_id:
-          anyOf:
-          - type: string
-            format: uuid
-          - type: 'null'
-          title: Workspace Id
-          description: Workspace boundary; requires org_id
+          description: Principal the key authenticates; defaults to the authenticated principal
         permissions:
           items:
             $ref: '#/components/schemas/Permission'
@@ -2230,6 +2870,7 @@ components:
             format: date-time
           - type: 'null'
           title: Expires At
+          description: Optional expiration timestamp with a timezone
       additionalProperties: false
       type: object
       required:
@@ -2301,8 +2942,8 @@ components:
             format: date-time
           - type: 'null'
           title: Deleted At
-        boundary:
-          $ref: '#/components/schemas/Boundary'
+        scope:
+          $ref: '#/components/schemas/Scope'
         status:
           type: string
           enum:
@@ -2328,7 +2969,7 @@ components:
       - created_at
       - updated_at
       - deleted_at
-      - boundary
+      - scope
       - status
       - token
       title: AccessKeyMintedOut
@@ -2397,8 +3038,8 @@ components:
             format: date-time
           - type: 'null'
           title: Deleted At
-        boundary:
-          $ref: '#/components/schemas/Boundary'
+        scope:
+          $ref: '#/components/schemas/Scope'
         status:
           type: string
           enum:
@@ -2421,7 +3062,7 @@ components:
       - created_at
       - updated_at
       - deleted_at
-      - boundary
+      - scope
       - status
       title: AccessKeyOut
     AccessKeyRevokedOut:
@@ -2476,17 +3117,7 @@ components:
       - user_id
       - occurred_at
       title: ActivityOut
-      description: 'One entry in the feed: what changed, who changed it, when. Never the snapshots themselves.
-
-
-        id mirrors the column, which the sequence fills: nullable in the table, never null once read.'
-    Boundary:
-      type: string
-      enum:
-      - instance
-      - org
-      - workspace
-      title: Boundary
+      description: One audited change, identifying what changed, who changed it, and when.
     BundleOut:
       properties:
         id:
@@ -2559,14 +3190,7 @@ components:
       - keys
       - catalog
       title: BundleV1
-      description: 'The complete policy snapshot one data plane needs to serve requests with no database.
-
-
-        Compiled by the control plane as a pure function of database state, signed, and polled
-
-        by the data plane. If a feature seems to need a DB read on the request path, the bundle
-
-        is missing a field; add the field here instead.'
+      description: A complete, versioned policy snapshot for one organization's model traffic.
     Catalog:
       properties:
         providers:
@@ -2609,10 +3233,12 @@ components:
           maxLength: 16
           minLength: 8
           title: User Code
+          description: Device code shown by the CLI
         org_id:
           type: string
           format: uuid
           title: Org Id
+          description: Organization the CLI access key should use
       additionalProperties: false
       type: object
       required:
@@ -2640,6 +3266,7 @@ components:
           maxLength: 256
           minLength: 1
           title: Poll Secret
+          description: Polling secret returned when device authorization started
       additionalProperties: false
       type: object
       required:
@@ -2749,19 +3376,10 @@ components:
       - priority
       - version
       title: CredentialEntry
-      description: 'One provider key the data plane may spend against, named but not carried.
+      description: 'A provider credential reference, priority, and version included in a policy bundle.
 
 
-        The ref says which secret; the data plane fetches the value from the store it is configured
-
-        with. Nothing here is a secret and nothing here is a location, so a bundle at rest and a bundle
-
-        on the wire are both safe to read.
-
-
-        version is the cache key: a rotation keeps the ref and bumps this, so a data plane refetches
-
-        within one poll rather than waiting out a TTL.'
+        The secret value is not included. A version change tells data planes to refresh their cached value.'
     DataPlaneInstanceOut:
       properties:
         instance_id:
@@ -3254,29 +3872,27 @@ components:
           type: string
           format: uuid
           title: Instance Id
+          description: Stable ID for this data-plane installation
         version:
           type: string
           maxLength: 100
           minLength: 1
           title: Version
+          description: Running data-plane software version
         bundle_id:
           anyOf:
           - type: string
             format: uuid
           - type: 'null'
           title: Bundle Id
+          description: Policy bundle currently served, if one is loaded
       additionalProperties: false
       type: object
       required:
       - instance_id
       - version
       title: HeartbeatV1
-      description: 'A data plane announcing itself to the control plane; the record survives, liveness is derived from last_seen.
-
-
-        A data plane registers against the instance: which bundle it happens to serve is
-
-        config, and bundle_id already says which one that is.'
+      description: The identity, software version, and active bundle reported by a data plane.
     InferenceKeyIn:
       properties:
         label:
@@ -3403,18 +4019,12 @@ components:
       - workspace_id
       - token_hash
       title: KeyEntry
-      description: 'An API key as the data plane sees it: enough to authorize with zero I/O.
+      description: 'An active inference key included in a policy bundle.
 
 
-        The caller''s bearer is an opaque secret; the data plane hashes it (see
+        The bundle contains a token hash for authorization and a key ID for usage attribution, never
 
-        credentials.py) and looks the hash up here. Absence is invalidity, so
-
-        revocation is simply dropping out of the next bundle. key_id exists for
-
-        event attribution only. The bundle carries hashes of live secrets and
-
-        stays org-sensitive even though the hashes are not reversible.'
+        the caller''s secret token.'
     LoginIn:
       properties:
         email:
@@ -3422,11 +4032,13 @@ components:
           maxLength: 320
           minLength: 3
           title: Email
+          description: Account email address
         password:
           type: string
           maxLength: 1024
           minLength: 1
           title: Password
+          description: Account password
       additionalProperties: false
       type: object
       required:
@@ -3723,16 +4335,12 @@ components:
       - role
       - status
       title: OrgMemberOut
-      description: 'A member of the acting org: who they are and that they belong.
-
-
-        Deliberately not UserOut: that carries the user''s every membership, which would let one org''s
-
-        credential read the shape of the orgs it has no scope over.'
+      description: A human user or service account that belongs to an organization.
     OrgMembershipIn:
       properties:
         role:
           $ref: '#/components/schemas/OrgRole'
+          description: Organization role to grant
       additionalProperties: false
       type: object
       required:
@@ -3793,6 +4401,7 @@ components:
             minLength: 1
           - type: 'null'
           title: Name
+          description: Replacement organization name
       additionalProperties: false
       type: object
       title: OrgUpdate
@@ -3803,11 +4412,13 @@ components:
           maxLength: 1024
           minLength: 1
           title: Current Password
+          description: Current account password
         new_password:
           type: string
           maxLength: 1024
           minLength: 8
           title: New Password
+          description: Replacement password; at least 8 characters
       additionalProperties: false
       type: object
       required:
@@ -3884,7 +4495,7 @@ components:
           minLength: 1
           format: password
           title: Value
-          description: The provider API key. Written to the secret store and never persisted anywhere else
+          description: The provider API key; stored securely and never returned
           writeOnly: true
         priority:
           type: integer
@@ -3893,30 +4504,13 @@ components:
           title: Priority
           description: Lower is tried first; ties break by name
           default: 100
-        workspace:
-          anyOf:
-          - type: string
-            maxLength: 63
-            minLength: 1
-          - type: 'null'
-          title: Workspace
-          description: Workspace id or slug for a workspace-scoped key; omitted makes it org-scoped
       additionalProperties: false
       type: object
       required:
       - provider
       - value
       title: ProviderCredentialIn
-      description: 'Creating a credential is an action, not a plain row insert: the value crosses the wire once
-
-        and is never a column, so this is not a RecordCreate and is exempt from parity by that choice.
-
-
-        The value is a SecretStr so nothing that renders this model can print it. That is not enough on
-
-        its own: the validation error handler in app.py drops the offending input, or a body that fails
-
-        validation for some other reason comes back to the caller with the key still in it.'
+      description: A provider API key and the metadata used to select it.
     ProviderCredentialOut:
       properties:
         id:
@@ -4015,11 +4609,13 @@ components:
             minimum: 0.0
           - type: 'null'
           title: Priority
+          description: Replacement selection priority; lower values are tried first
         enabled:
           anyOf:
           - type: boolean
           - type: 'null'
           title: Enabled
+          description: Whether the credential may be selected for requests
       additionalProperties: false
       type: object
       title: ProviderCredentialUpdate
@@ -4078,13 +4674,7 @@ components:
       - kind
       - base_url
       title: ProviderEntry
-      description: 'An upstream LLM provider endpoint, plus its profile: declarative facts about what the
-
-        provider accepts, so onboarding quirks is a bundle edit rather than an adapter branch.
-
-        Profile fields are names, sets and flags, never predicates; a provider that needs a
-
-        predicate needs an adapter.'
+      description: An upstream LLM provider endpoint and its supported request parameters.
     ProviderIn:
       properties:
         provider_id:
@@ -4113,9 +4703,8 @@ components:
           type: string
           maxLength: 65536
           title: Icon
-          description: Provider mark as a standalone 24x24 SVG document, empty when the provider has none. Carried as markup
-            so adding a provider needs no client change to make it recognisable, which makes it untrusted markup to whatever
-            renders it; sanitize at the render site
+          description: Provider mark as a standalone 24x24 SVG document, or an empty string when no icon is available. Clients
+            must sanitize this untrusted markup before rendering it
           default: ''
         param_aliases:
           additionalProperties:
@@ -4144,12 +4733,7 @@ components:
       - provider_id
       - base_url
       title: ProviderIn
-      description: 'How to reach a provider, not how to authenticate to it: credentials are their own resource.
-
-
-        Extra keys are refused so a taxonomy still carrying credential_ref fails loudly. Ignoring it
-
-        would leave the operator believing they configured a credential when the provider has none.'
+      description: An upstream provider endpoint and its request-profile settings.
     ProviderOut:
       properties:
         id:
@@ -4218,6 +4802,7 @@ components:
           maxLength: 512
           minLength: 1
           title: Token
+          description: Existing limited access key for the first data plane
       additionalProperties: false
       type: object
       required:
@@ -4232,15 +4817,39 @@ components:
       required:
       - path
       title: QuickstartOut
+    Scope:
+      properties:
+        level:
+          $ref: '#/components/schemas/ScopeLevel'
+        org_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Org Id
+        workspace_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Workspace Id
+      type: object
+      required:
+      - level
+      title: Scope
+    ScopeLevel:
+      type: string
+      enum:
+      - instance
+      - org
+      - workspace
+      title: ScopeLevel
     SecretPurpose:
       type: string
       enum:
       - provider
       title: SecretPurpose
-      description: 'What family a secret belongs to. Both planes must agree, which is why it lives here.
-
-
-        A new purpose is one member, and every store keeps it apart from the others without changing.'
+      description: The kind of credential addressed by a secret reference.
     SecretRef:
       properties:
         purpose:
@@ -4274,21 +4883,7 @@ components:
       - name
       - secret_id
       title: SecretRef
-      description: 'Which secret, said in terms of the domain rather than of any store''s layout.
-
-
-        purpose is the family, service is what inside that family the secret authenticates to (a
-
-        provider name today), and name is the caller-facing handle that lets one service hold several.
-
-        secret_id is what actually makes a ref unique; the rest is carried so a store with somewhere
-
-        legible to put it can.
-
-
-        org_id and workspace_id are absent for a platform secret and org_id alone is present for an org
-
-        one, so the same two fields express all three scopes.'
+      description: A stable reference to a secret value and the scope that owns it.
     ServiceAccountIn:
       properties:
         name:
@@ -4296,13 +4891,12 @@ components:
           maxLength: 200
           minLength: 1
           title: Name
-          description: Service account name; the email is derived as name-<id>@airbytesvcaccount.ai
+          description: Display name for the service account
         instance_role:
           anyOf:
-          - type: string
-            const: data_plane
+          - $ref: '#/components/schemas/InstanceRole'
           - type: 'null'
-          title: Instance Role
+          description: Optional instance-wide role for the service account
       additionalProperties: false
       type: object
       required:
@@ -4335,16 +4929,19 @@ components:
           maxLength: 320
           minLength: 3
           title: Email
+          description: Email address for the new account
         name:
           type: string
           maxLength: 200
           title: Name
+          description: Display name; defaults to the email address
           default: ''
         password:
           type: string
           maxLength: 1024
           minLength: 8
           title: Password
+          description: Password for the new account; at least 8 characters
       additionalProperties: false
       type: object
       required:
@@ -4474,86 +5071,104 @@ components:
           type: integer
           const: 1
           title: Schema Version
+          description: Usage event schema version
           default: 1
         event_id:
           type: string
           format: uuid
           title: Event Id
+          description: Idempotency key for event ingestion
         request_id:
           type: string
           format: uuid
           title: Request Id
+          description: Data-plane request ID
         occurred_at:
           type: string
           format: date-time
           title: Occurred At
+          description: Timestamp when the request completed
         org_id:
           type: string
           format: uuid
           title: Org Id
+          description: Organization that made the request
         workspace_id:
           type: string
           format: uuid
           title: Workspace Id
+          description: Workspace that made the request
         key_id:
           type: string
           maxLength: 255
           minLength: 1
           title: Key Id
+          description: Inference key ID used for the request
         model_id:
           type: string
           maxLength: 255
           minLength: 1
           title: Model Id
+          description: Caller-facing model ID
         provider_id:
           type: string
           maxLength: 63
           title: Provider Id
+          description: Provider that served the request, or empty for an early denial
         bundle_id:
           type: string
           format: uuid
           title: Bundle Id
+          description: Policy bundle used for the request
         input_tokens:
           type: integer
           maximum: 2147483647.0
           minimum: 0.0
           title: Input Tokens
+          description: Total input tokens
         output_tokens:
           type: integer
           maximum: 2147483647.0
           minimum: 0.0
           title: Output Tokens
+          description: Total output tokens
         cost_usd:
           type: number
           minimum: 0.0
           title: Cost Usd
+          description: Total estimated cost in USD
         cost_input_usd:
           type: number
           minimum: 0.0
           title: Cost Input Usd
+          description: Estimated input cost in USD
           default: 0.0
         cost_output_usd:
           type: number
           minimum: 0.0
           title: Cost Output Usd
+          description: Estimated output cost in USD
           default: 0.0
         cache_read_tokens:
           type: integer
           maximum: 2147483647.0
           minimum: 0.0
           title: Cache Read Tokens
+          description: Input tokens read from a provider cache
           default: 0
         cache_write_tokens:
           type: integer
           maximum: 2147483647.0
           minimum: 0.0
           title: Cache Write Tokens
+          description: Input tokens written to a provider cache
           default: 0
         latency_ms:
           type: integer
           maximum: 2147483647.0
           minimum: 0.0
           title: Latency Ms
+          description: End-to-end request latency in milliseconds
         status:
           type: string
           enum:
@@ -4565,15 +5180,18 @@ components:
           - credential_rejected
           - rate_limited
           title: Status
+          description: How the request ended; cancelled events may contain partial token counts
         stream:
           type: boolean
           title: Stream
+          description: Whether the response was streamed
         credential_id:
           anyOf:
           - type: string
             format: uuid
           - type: 'null'
           title: Credential Id
+          description: Provider credential used for the request
         credential_scope:
           anyOf:
           - type: string
@@ -4583,6 +5201,7 @@ components:
             - workspace
           - type: 'null'
           title: Credential Scope
+          description: Scope of the provider credential used for the request
       additionalProperties: false
       type: object
       required:
@@ -4602,12 +5221,10 @@ components:
       - status
       - stream
       title: UsageEventV1
-      description: 'One metered request, emitted by the data plane and ingested by the control plane.
+      description: 'One metered model request reported by a data plane.
 
 
-        Delivery is at-least-once from a local disk buffer; the control plane upserts on
-
-        event_id, so replays after an outage land exactly once.'
+        `event_id` makes retries idempotent.'
     UserOut:
       properties:
         id:
@@ -4710,6 +5327,7 @@ components:
       properties:
         role:
           $ref: '#/components/schemas/WorkspaceRole'
+          description: Workspace role to grant
       additionalProperties: false
       type: object
       required:
@@ -4794,51 +5412,58 @@ components:
             minLength: 1
           - type: 'null'
           title: Name
+          description: Replacement workspace name
       additionalProperties: false
       type: object
       title: WorkspaceUpdate
   securitySchemes:
-    HTTPBearer:
+    AccessKey:
       type: http
+      description: A control-plane access key using the `sk-cp-` prefix. Inference keys are not accepted by control-plane
+        endpoints.
       scheme: bearer
     SessionCookie:
       type: apiKey
       in: cookie
       name: airllm_session
+      description: Browser session cookie returned by login or signup. Browser requests must also send `X-Requested-With`.
 tags:
 - name: Orgs
-  description: Tenants of the instance; bundles, usage, and org or workspace resources belong to one org
+  description: Create and manage organizations on this AirLLM instance
+  x-displayName: Organizations
 - name: Users
-  description: Human and service-account principals, their instance roles, and org memberships
+  description: Manage human users and service accounts across the instance
 - name: Access Keys
-  description: Principal-bound control-plane credentials attenuated by permission and tenant boundary
+  description: Issue and revoke scoped credentials for the control-plane API
 - name: Data Plane
-  description: 'Data-plane-facing endpoints: bundle polling, event ingestion, heartbeats'
+  description: Poll bundles, ingest usage events, record heartbeats, and inspect connected data planes
 - name: OSS
-  description: 'Self-hosted bootstrap: whether this deployment has a claimed account yet, and the quickstart trapdoor'
+  description: Bootstrap a new self-hosted AirLLM deployment
+  x-displayName: Self-hosting
 - name: Org Users
-  description: 'Membership in the acting org: who belongs to it, and adding or removing them'
+  description: Manage organization membership and organization roles
   x-displayName: Users
 - name: Workspaces
-  description: Scopes inside an org where inference keys live; members are drawn from the org
+  description: Manage isolated environments within an organization
 - name: Inference Keys
-  description: 'Caller credentials for the gateway: opaque keys whose hashes reach data planes through bundles'
+  description: Issue and revoke credentials for model requests to a workspace
 - name: Auth
-  description: 'Human login: password, cookie sessions, account endpoints, CLI device authorization'
+  description: Sign in human users, manage browser sessions, and authorize the CLI
 - name: Enrollment
-  description: 'A user''s path into orgs: their standing and their one self-serve personal org'
+  description: List a user's organizations and create their personal organization
 - name: Bundles
-  description: Signed policy bundles compiled per org and polled by data planes
+  description: Compile and inspect signed policy bundles for an organization
 - name: Events
-  description: Usage events reported by data planes
+  description: Inspect usage events reported by data planes
 - name: Taxonomy
-  description: 'The models catalog: providers and models compiled into bundles'
+  description: Manage the providers and models available through AirLLM
+  x-displayName: Model Catalog
 - name: Provider Credentials
-  description: Provider API keys an org or workspace brings; values live in the secret store, never here
+  description: Manage provider API keys for an organization or workspace
 - name: Activity
-  description: The audit trail of writes, per org and instance-wide
+  description: Inspect recent audited changes at organization or instance scope
 x-tagGroups:
-- name: Org Management
+- name: Organization Management
   tags:
   - Org Users
   - Workspaces
@@ -4854,7 +5479,7 @@ x-tagGroups:
 - name: Catalog
   tags:
   - Taxonomy
-- name: Instance Admin
+- name: Instance Administration
   tags:
   - Orgs
   - Users

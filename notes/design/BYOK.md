@@ -218,7 +218,7 @@ credential's actual tenant target:
 Access keys always store an explicit permission ceiling. Adding a future permission cannot expand an
 existing key, and role changes take effect without reminting it. Workspace targets resolve through
 the workspace's organization-owned identity before authorization, so a credential cannot cross an
-organization boundary by naming a workspace id from another tenant.
+organization scope by naming a workspace id from another tenant.
 
 ## Bundle contract
 

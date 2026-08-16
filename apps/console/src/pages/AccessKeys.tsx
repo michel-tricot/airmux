@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { KeyRound, Plus } from 'lucide-react';
 import { Link } from 'wouter';
 import { Badge, Button } from '@/components/ui/elements';
-import { useAccessKeys, useCreateAccessKeyMutation, useRevokeAccessKeyMutation } from '@/features/keys/hooks';
+import { useInstanceAccessKeys, useCreateInstanceAccessKeyMutation, useRevokeInstanceAccessKeyMutation } from '@/features/keys/hooks';
 import { useUsers } from '@/features/users/hooks';
 import { KeyRevealDialog } from '@/components/KeyRevealDialog';
 import { AccessKeyFormFields, accessKeyFormSchema, parsePermissions } from '@/components/shared/access-key-form';
@@ -12,11 +12,11 @@ import { ErrorState } from '@/components/shared/states';
 import { PageShell } from '@/components/shared/page-shell';
 
 export default function AccessKeys() {
-  const keysQuery = useAccessKeys();
+  const keysQuery = useInstanceAccessKeys();
   const usersQuery = useUsers();
   const usersById = new Map(usersQuery.data?.map((user) => [user.id, user]));
-  const createKey = useCreateAccessKeyMutation();
-  const revokeKey = useRevokeAccessKeyMutation();
+  const createKey = useCreateInstanceAccessKeyMutation();
+  const revokeKey = useRevokeInstanceAccessKeyMutation();
   const [createOpen, setCreateOpen] = useState(false);
   const [token, setToken] = useState<string | null>(null);
 
@@ -28,7 +28,7 @@ export default function AccessKeys() {
             <KeyRound className="h-6 w-6 text-primary" />
             <h1 className="text-3xl font-bold tracking-tight">Access Keys</h1>
           </div>
-          <p className="mt-1 text-sm text-muted-foreground">Credentials limited by principal, tenant boundary, and explicit permissions.</p>
+          <p className="mt-1 text-sm text-muted-foreground">Credentials limited by principal, tenant scope, and explicit permissions.</p>
         </div>
         <Button onClick={() => setCreateOpen(true)} className="gap-2">
           <Plus className="h-4 w-4" /> Mint Access Key
@@ -61,15 +61,15 @@ export default function AccessKeys() {
             },
           },
           {
-            key: 'boundary',
-            header: 'Boundary',
-            cell: (key) => <Badge variant="secondary">{key.boundary}</Badge>,
+            key: 'scope',
+            header: 'Scope',
+            cell: (key) => <Badge variant="secondary">{key.scope.level}</Badge>,
           },
           {
             key: 'target',
             header: 'Target',
             cellClassName: 'font-mono text-xs text-muted-foreground',
-            cell: (key) => key.workspace_id ?? key.org_id ?? 'instance',
+            cell: (key) => key.scope.workspace_id ?? key.scope.org_id ?? 'instance',
           },
           {
             key: 'permissions',

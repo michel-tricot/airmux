@@ -25,21 +25,20 @@ function withTwoOrgs() {
       }),
     ),
     http.get('/v1/enroll', () => HttpResponse.json({ orgs: [ORG, ORG2], personal_org_id: ORG.id })),
-    http.get('/v1/org/workspaces', ({ request }) => {
-      const org = request.headers.get('X-Org-Id');
-      if (org === ORG.id) {
+    http.get('/v1/orgs/:orgId/workspaces', ({ params }) => {
+      if (params.orgId === ORG.id) {
         return HttpResponse.json([
           { id: 'ws-acme', org_id: ORG.id, name: 'Acme Production', slug: 'acme-production', created_at: now, updated_at: now, deleted_at: null },
         ]);
       }
-      if (org === ORG2.id) {
+      if (params.orgId === ORG2.id) {
         return HttpResponse.json([
           { id: 'ws-beta', org_id: ORG2.id, name: 'Beta Staging', slug: 'beta-staging', created_at: now, updated_at: now, deleted_at: null },
         ]);
       }
       return new HttpResponse(null, { status: 403 });
     }),
-    http.get('/v1/org/workspaces/:workspaceRef', ({ params }) => {
+    http.get('/v1/orgs/:orgId/workspaces/:workspaceRef', ({ params }) => {
       const rows = {
         'ws-acme': {
           id: 'ws-acme',
@@ -70,8 +69,8 @@ function withTwoOrgs() {
           deleted_at: null,
         },
       } as const;
-      const ws = rows[params.workspaceRef as keyof typeof rows];
-      return ws ? HttpResponse.json(ws) : new HttpResponse(null, { status: 404 });
+      const workspace = rows[params.workspaceRef as keyof typeof rows];
+      return workspace?.org_id === params.orgId ? HttpResponse.json(workspace) : new HttpResponse(null, { status: 404 });
     }),
   );
 }
@@ -121,6 +120,30 @@ describe('sign-in gate', () => {
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Production' })).toBeInTheDocument();
   });
+
+  it('clears the selected organization when signing out', async () => {
+    let signedIn = true;
+    window.localStorage.setItem('airllm_org_id', ORG.id);
+    server.use(
+      http.get('/v1/auth/me', () =>
+        signedIn
+          ? HttpResponse.json({ user_id: 'user-1', email: 'dev@example.com', name: 'Dev', instance_role: null, orgs: [ORG.id] })
+          : new HttpResponse(null, { status: 401 }),
+      ),
+      http.post('/v1/auth/logout', () => {
+        signedIn = false;
+        return HttpResponse.json({ id: 'session-1', status: 'deleted' });
+      }),
+      http.get('/v1/instance/oss/claim', () => HttpResponse.json({ claimed: true })),
+    );
+    const user = userEvent.setup();
+    renderAt('/org');
+
+    await user.click(await screen.findByRole('button', { name: 'Sign out' }));
+
+    expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument();
+    expect(window.localStorage.getItem('airllm_org_id')).toBeNull();
+  });
 });
 
 describe('sign-in landing', () => {
@@ -160,6 +183,7 @@ describe('organization picker', () => {
     window.localStorage.setItem('airllm_org_id', 'org-gone');
     renderAt('/org');
     expect(await screen.findByRole('heading', { name: 'Select Organization' })).toBeInTheDocument();
+    await waitFor(() => expect(window.localStorage.getItem('airllm_org_id')).toBeNull());
     expect(screen.getByText(ORG.name)).toBeInTheDocument();
     expect(screen.getByText(ORG2.name)).toBeInTheDocument();
   });

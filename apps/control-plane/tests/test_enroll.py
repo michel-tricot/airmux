@@ -32,7 +32,7 @@ def test_personal_org_is_born_with_its_creator_as_member(tmp_path):
         assert [o["id"] for o in standing["orgs"]] == [org["id"]]
         assert standing["personal_org_id"] == org["id"]
         assert c.get("/v1/auth/me", headers=CSRF).json()["data"]["orgs"] == [org["id"]]
-        assert c.get("/v1/org/workspaces", headers={**CSRF, "X-Org-Id": org["id"]}).status_code == 200
+        assert c.get(f"/v1/orgs/{org['id']}/workspaces", headers=CSRF).status_code == 200
 
 
 def test_personal_org_is_capped_at_one_per_user(tmp_path):
@@ -51,7 +51,7 @@ def test_enrollment_lists_granted_orgs_but_only_marks_the_personal_one(tmp_path)
     with _client(cp) as c:
         granted = make_org(c, root, "granted")
         me = _signup(c)
-        assert c.put(f"/v1/org/users/{me['user_id']}", json={"role": "member"}, headers=cp.headers(granted)).status_code == 200
+        assert c.put(f"/v1/orgs/{granted}/users/{me['user_id']}", json={"role": "member"}, headers=cp.headers(granted)).status_code == 200
         personal = c.post("/v1/enroll/org", json={"name": "mine"}, headers=CSRF).json()["data"]
 
         standing = c.get("/v1/enroll", headers=CSRF).json()["data"]
@@ -75,8 +75,8 @@ def test_org_bound_bearer_does_not_disclose_other_memberships(tmp_path):
         first = make_org(c, root, "first")
         second = make_org(c, root, "second")
         user = make_user(tmp_path, "member@example.com")
-        assert c.put(f"/v1/org/users/{user.id}", json={"role": "member"}, headers=cp.headers(first)).status_code == 200
-        assert c.put(f"/v1/org/users/{user.id}", json={"role": "member"}, headers=cp.headers(second)).status_code == 200
+        assert c.put(f"/v1/orgs/{first}/users/{user.id}", json={"role": "member"}, headers=cp.headers(first)).status_code == 200
+        assert c.put(f"/v1/orgs/{second}/users/{user.id}", json={"role": "member"}, headers=cp.headers(second)).status_code == 200
 
         bearer = cp.headers_for(first, user.id)
         standing = c.get("/v1/enroll", headers=bearer).json()["data"]
@@ -101,8 +101,8 @@ def test_personal_slot_survives_membership_removal(tmp_path):
         org = c.post("/v1/enroll/org", json={"name": "mine"}, headers=CSRF).json()["data"]
         successor = make_user(tmp_path, "successor@example.com")
         org_headers = cp.headers(org["id"])
-        assert c.put(f"/v1/org/users/{successor.id}", json={"role": "owner"}, headers=org_headers).status_code == 200
-        assert c.delete(f"/v1/org/users/{me['user_id']}", headers=org_headers).status_code == 200
+        assert c.put(f"/v1/orgs/{org['id']}/users/{successor.id}", json={"role": "owner"}, headers=org_headers).status_code == 200
+        assert c.delete(f"/v1/orgs/{org['id']}/users/{me['user_id']}", headers=org_headers).status_code == 200
 
         standing = c.get("/v1/enroll", headers=CSRF).json()["data"]
         assert standing["orgs"] == []

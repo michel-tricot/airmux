@@ -177,13 +177,7 @@ class ProviderCredential(Record, Identified, Tombstonable, table=True):
 
 
 class ProviderCredentialIn(RequestModel):
-    """Creating a credential is an action, not a plain row insert: the value crosses the wire once
-    and is never a column, so this is not a RecordCreate and is exempt from parity by that choice.
-
-    The value is a SecretStr so nothing that renders this model can print it. That is not enough on
-    its own: the validation error handler in app.py drops the offending input, or a body that fails
-    validation for some other reason comes back to the caller with the key still in it.
-    """
+    """A provider API key and the metadata used to select it."""
 
     provider: str = PydanticField(
         description="Provider name from the catalog, e.g. openai",
@@ -198,13 +192,8 @@ class ProviderCredentialIn(RequestModel):
         max_length=80,
         pattern=r"^[A-Za-z0-9][A-Za-z0-9_.-]*$",
     )
-    value: SecretStr = PydanticField(
-        description="The provider API key. Written to the secret store and never persisted anywhere else", min_length=1, max_length=16384
-    )
+    value: SecretStr = PydanticField(description="The provider API key; stored securely and never returned", min_length=1, max_length=16384)
     priority: int = PydanticField(default=DEFAULT_PRIORITY, ge=0, le=1_000_000, description="Lower is tried first; ties break by name")
-    workspace: str | None = PydanticField(
-        default=None, min_length=1, max_length=63, description="Workspace id or slug for a workspace-scoped key; omitted makes it org-scoped"
-    )
 
     @field_validator("provider", mode="before")
     @classmethod
@@ -219,8 +208,8 @@ class ProviderCredentialValueIn(RequestModel):
 
 
 class ProviderCredentialUpdate(RecordUpdate[ProviderCredential]):
-    priority: int | None = PydanticField(default=None, ge=0, le=1_000_000)
-    enabled: bool | None = None
+    priority: int | None = PydanticField(default=None, description="Replacement selection priority; lower values are tried first", ge=0, le=1_000_000)
+    enabled: bool | None = PydanticField(default=None, description="Whether the credential may be selected for requests")
 
 
 class ProviderCredentialOut(RecordOut[ProviderCredential]):

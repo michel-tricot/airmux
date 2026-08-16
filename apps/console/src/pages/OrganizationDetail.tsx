@@ -7,7 +7,7 @@ import { Link, useLocation } from 'wouter';
 import { useOrg, useRenameOrgMutation, useDeleteOrgMutation } from '@/features/orgs/hooks';
 import { useUsers, useAddUserToOrgMutation, useRemoveUserFromOrgMutation, orgRoleOptions } from '@/features/users/hooks';
 import { useWorkspaces, useCreateWorkspaceMutation } from '@/features/workspaces/hooks';
-import { useAccessKeys, useRevokeAccessKeyMutation } from '@/features/keys/hooks';
+import { useOrgAccessKeys, useRevokeOrgAccessKeyMutation } from '@/features/keys/hooks';
 import { useOrgMembers } from '@/features/members/hooks';
 import { LoadingState, ErrorState } from '@/components/shared/states';
 import { DataTable } from '@/components/shared/data-table';
@@ -29,7 +29,7 @@ export default function OrganizationDetail() {
   const org = orgQuery.data;
 
   const workspacesQuery = useWorkspaces(orgId);
-  const keysQuery = useAccessKeys({ org_id: orgId });
+  const keysQuery = useOrgAccessKeys(orgId);
   const membersQuery = useOrgMembers(orgId);
   const usersQuery = useUsers();
   const users = usersQuery.data;
@@ -41,7 +41,7 @@ export default function OrganizationDetail() {
   const [renameOpen, setRenameOpen] = useState(false);
 
   const createWorkspace = useCreateWorkspaceMutation(orgId);
-  const revokeKey = useRevokeAccessKeyMutation();
+  const revokeKey = useRevokeOrgAccessKeyMutation(orgId);
   const addMember = useAddUserToOrgMutation();
   const removeMember = useRemoveUserFromOrgMutation();
   const rename = useRenameOrgMutation();
@@ -173,7 +173,7 @@ export default function OrganizationDetail() {
                   );
                 },
               },
-              { key: 'boundary', header: 'Boundary', cellClassName: 'text-muted-foreground text-sm', cell: (key) => key.boundary },
+              { key: 'scope', header: 'Scope', cellClassName: 'text-muted-foreground text-sm', cell: (key) => key.scope.level },
             ]}
             revokeDescription="This key and every key delegated from it will stop working immediately."
             onRevoke={(key) => revokeKey.mutateAsync({ keyId: key.id })}
@@ -220,7 +220,7 @@ export default function OrganizationDetail() {
         title="New Workspace"
         schema={nameSchema}
         defaultValues={{ name: '' }}
-        onSubmit={(values) => createWorkspace.mutateAsync({ data: values })}
+        onSubmit={(values) => createWorkspace.mutateAsync({ orgId, data: values })}
         submitLabel="Create"
         pending={createWorkspace.isPending}
       >

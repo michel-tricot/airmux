@@ -10,17 +10,10 @@ if TYPE_CHECKING:
     from typing import Self
 
 
-class Boundary(StrEnum):
+class ScopeLevel(StrEnum):
     instance = "instance"
     org = "org"
     workspace = "workspace"
-
-    def covers(self, org_id: UUID | None, workspace_id: UUID | None, target: Target) -> bool:
-        if self is Boundary.instance:
-            return True
-        if self is Boundary.org:
-            return org_id == target.org_id and workspace_id is None and target.level is not Boundary.instance
-        return target.level is Boundary.workspace and org_id == target.org_id and workspace_id == target.workspace_id
 
 
 class Permission(StrEnum):
@@ -210,81 +203,80 @@ def permissions_for_org_role(role: OrgRole | str) -> frozenset[Permission]:
     return ORG_ROLE_PERMISSIONS[OrgRole(role)]
 
 
-class Target(BaseModel):
+class Scope(BaseModel):
     model_config = ConfigDict(frozen=True)
 
-    level: Boundary
+    level: ScopeLevel
     org_id: UUID | None = None
     workspace_id: UUID | None = None
 
     @model_validator(mode="after")
-    def valid_boundary(self) -> Self:
+    def valid_level(self) -> Self:
         expected = {
-            Boundary.instance: (False, False),
-            Boundary.org: (True, False),
-            Boundary.workspace: (True, True),
+            ScopeLevel.instance: (False, False),
+            ScopeLevel.org: (True, False),
+            ScopeLevel.workspace: (True, True),
         }[self.level]
         if (self.org_id is not None, self.workspace_id is not None) != expected:
-            msg = f"{self.level} target has inconsistent tenant identifiers"
+            msg = f"{self.level} scope has inconsistent tenant identifiers"
             raise ValueError(msg)
         return self
 
+    def covers(self, target: Scope) -> bool:
+        if self.level is ScopeLevel.instance:
+            return True
+        if self.level is ScopeLevel.org:
+            return self.org_id == target.org_id and target.level is not ScopeLevel.instance
+        return target.level is ScopeLevel.workspace and self.org_id == target.org_id and self.workspace_id == target.workspace_id
+
     @classmethod
     def instance(cls) -> Self:
-        return cls(level=Boundary.instance)
+        return cls(level=ScopeLevel.instance)
 
     @classmethod
     def org(cls, org_id: UUID) -> Self:
-        return cls(level=Boundary.org, org_id=org_id)
+        return cls(level=ScopeLevel.org, org_id=org_id)
 
     @classmethod
     def workspace(cls, org_id: UUID, workspace_id: UUID) -> Self:
-        return cls(level=Boundary.workspace, org_id=org_id, workspace_id=workspace_id)
+        return cls(level=ScopeLevel.workspace, org_id=org_id, workspace_id=workspace_id)
 
 
-class Authority(BaseModel):
+class Grant(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    scope: Scope
+    permissions: frozenset[Permission]
+
+
+class Actor(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     credential_id: UUID
     principal_id: UUID
     credential_kind: str
-    boundary: Boundary | None = None
-    org_id: UUID | None = None
-    workspace_id: UUID | None = None
-    permission_ceiling: frozenset[Permission] = frozenset()
-
-    @model_validator(mode="after")
-    def valid_boundary(self) -> Self:
-        if self.boundary is None:
-            if self.org_id is not None or self.workspace_id is not None:
-                msg = "a session authority cannot carry a key boundary"
-                raise ValueError(msg)
-            return self
-        Target(level=self.boundary, org_id=self.org_id, workspace_id=self.workspace_id)
-        return self
-
-    async def allows(self, permission: Permission, target: Target) -> bool:
-        if permission not in self.permission_ceiling:
-            return False
-        if self.boundary is not None and not self.boundary.covers(self.org_id, self.workspace_id, target):
-            return False
-        return permission in await principal_permissions(self.principal_id, target)
+    grant: Grant
 
 
-async def principal_permissions(principal_id: UUID, target: Target) -> frozenset[Permission]:
-    from control_plane.models import OrgMembership, User, WorkspaceMembership  # noqa: PLC0415 models import authority enums
+class AccessRequest(BaseModel):
+    model_config = ConfigDict(frozen=True)
 
-    user = await User.find_by_id(principal_id)
-    if user is None:
-        return frozenset()
-    permissions = INSTANCE_ROLE_PERMISSIONS.get(InstanceRole(user.instance_role)) if user.instance_role else None
-    granted = permissions or frozenset()
-    if target.org_id is not None:
-        membership = await OrgMembership.get((principal_id, target.org_id))
-        if membership is not None:
-            granted |= ORG_ROLE_PERMISSIONS[OrgRole(membership.role)]
-    if target.workspace_id is not None:
-        membership = await WorkspaceMembership.get((principal_id, target.workspace_id))
-        if membership is not None:
-            granted |= WORKSPACE_ROLE_PERMISSIONS[WorkspaceRole(membership.role)]
-    return granted
+    permission: Permission
+    target: Scope
+
+
+class Decision(StrEnum):
+    allow = "allow"
+    credential_scope = "credential_scope"
+    credential_ceiling = "credential_ceiling"
+    standing_authority = "standing_authority"
+
+
+def decide(actor: Actor, standing: tuple[Grant, ...], request: AccessRequest) -> Decision:
+    if not actor.grant.scope.covers(request.target):
+        return Decision.credential_scope
+    if request.permission not in actor.grant.permissions:
+        return Decision.credential_ceiling
+    if not any(grant.scope.covers(request.target) and request.permission in grant.permissions for grant in standing):
+        return Decision.standing_authority
+    return Decision.allow

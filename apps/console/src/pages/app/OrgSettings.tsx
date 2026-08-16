@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useRequiredOrgId } from '@/lib/session';
-import { useAccessKeys, useCreateAccessKeyMutation, useRevokeAccessKeyMutation } from '@/features/keys/hooks';
+import { useOrgAccessKeys, useCreateOrgAccessKeyMutation, useRevokeOrgAccessKeyMutation } from '@/features/keys/hooks';
 import { useOrgMembers } from '@/features/members/hooks';
 import { useBundles, useCompileBundleMutation, useOrgActivity } from '@/features/telemetry/hooks';
 import { Avatar, AvatarFallback, Card, Button, Badge, Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/elements';
@@ -16,7 +16,7 @@ import { AccessKeyFormFields, accessKeyFormSchema, parsePermissions } from '@/co
 export default function AppOrgSettings() {
   const orgId = useRequiredOrgId();
 
-  const keysQuery = useAccessKeys({ org_id: orgId });
+  const keysQuery = useOrgAccessKeys(orgId);
   const bundlesQuery = useBundles(orgId);
   const membersQuery = useOrgMembers(orgId);
   const activityQuery = useOrgActivity(orgId, { limit: 50 });
@@ -28,8 +28,8 @@ export default function AppOrgSettings() {
   const keyLabels = new Map(keysQuery.data?.map((key) => [key.id, key.label] as const) ?? []);
   const describeRecord = (entry: { record_id: string }) => keyLabels.get(entry.record_id) ?? null;
 
-  const mintKey = useCreateAccessKeyMutation();
-  const revokeKey = useRevokeAccessKeyMutation();
+  const mintKey = useCreateOrgAccessKeyMutation(orgId);
+  const revokeKey = useRevokeOrgAccessKeyMutation(orgId);
   const compile = useCompileBundleMutation(orgId);
 
   return (
@@ -81,7 +81,7 @@ export default function AppOrgSettings() {
                 cellClassName: 'font-mono text-xs text-muted-foreground',
                 cell: (key) => key.permissions.join(', '),
               },
-              { key: 'boundary', header: 'Boundary', cellClassName: 'text-muted-foreground text-sm', cell: (key) => key.boundary },
+              { key: 'scope', header: 'Scope', cellClassName: 'text-muted-foreground text-sm', cell: (key) => key.scope.level },
             ]}
             revokeDescription="This key and every key delegated from it will stop working immediately."
             onRevoke={(key) => revokeKey.mutateAsync({ keyId: key.id })}
@@ -92,7 +92,7 @@ export default function AppOrgSettings() {
         <TabsContent value="bundles" className="space-y-4 mt-0">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-lg font-semibold">Access Policies</h2>
-            <Button onClick={() => compile.mutate()} size="sm" disabled={compile.isPending}>
+            <Button onClick={() => compile.mutate({ orgId })} size="sm" disabled={compile.isPending}>
               <RefreshCw className="w-4 h-4 mr-1" /> {compile.isPending ? 'Publishing...' : 'Publish policy'}
             </Button>
           </div>
@@ -241,7 +241,8 @@ export default function AppOrgSettings() {
         defaultValues={{ label: '', permissions: '' }}
         onSubmit={async (values) => {
           const minted = await mintKey.mutateAsync({
-            data: { label: values.label, org_id: orgId, permissions: parsePermissions(values.permissions) },
+            orgId,
+            data: { label: values.label, permissions: parsePermissions(values.permissions) },
           });
           setToken(minted.token);
         }}

@@ -3,7 +3,7 @@ import { Building2, Users, Key, Server, Activity } from 'lucide-react';
 import { formatRelative } from '@/lib/format';
 import { useOrgs } from '@/features/orgs/hooks';
 import { useUsers } from '@/features/users/hooks';
-import { useAccessKeys } from '@/features/keys/hooks';
+import { useInstanceAccessKeys } from '@/features/keys/hooks';
 import { useDataPlanes, useInstanceActivity } from '@/features/telemetry/hooks';
 import { DataTable } from '@/components/shared/data-table';
 import { ErrorState } from '@/components/shared/states';
@@ -13,7 +13,7 @@ export default function Dashboard() {
   const orgsQuery = useOrgs();
   const usersQuery = useUsers();
   const dataPlanesQuery = useDataPlanes();
-  const keysQuery = useAccessKeys();
+  const keysQuery = useInstanceAccessKeys();
   const activityQuery = useInstanceActivity({ limit: 25 });
   const usersById = new Map(usersQuery.data?.map((user) => [user.id, user]));
   const actor = (userId: string) => usersById.get(userId)?.email ?? userId;

@@ -59,26 +59,14 @@ class Secret:
 
 
 class SecretPurpose(StrEnum):
-    """What family a secret belongs to. Both planes must agree, which is why it lives here.
-
-    A new purpose is one member, and every store keeps it apart from the others without changing.
-    """
+    """The kind of credential addressed by a secret reference."""
 
     provider = "provider"
 
 
 @dataclass(frozen=True)
 class SecretRef:
-    """Which secret, said in terms of the domain rather than of any store's layout.
-
-    purpose is the family, service is what inside that family the secret authenticates to (a
-    provider name today), and name is the caller-facing handle that lets one service hold several.
-    secret_id is what actually makes a ref unique; the rest is carried so a store with somewhere
-    legible to put it can.
-
-    org_id and workspace_id are absent for a platform secret and org_id alone is present for an org
-    one, so the same two fields express all three scopes.
-    """
+    """A stable reference to a secret value and the scope that owns it."""
 
     purpose: SecretPurpose
     service: str

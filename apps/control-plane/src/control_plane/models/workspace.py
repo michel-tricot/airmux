@@ -123,7 +123,7 @@ class WorkspaceCreate(RecordCreate[Workspace]):
 
 
 class WorkspaceUpdate(RecordUpdate[Workspace]):
-    name: str | None = Field(default=None, min_length=1, max_length=200)
+    name: str | None = Field(default=None, description="Replacement workspace name", min_length=1, max_length=200)
 
 
 class WorkspaceOut(RecordOut[Workspace]):

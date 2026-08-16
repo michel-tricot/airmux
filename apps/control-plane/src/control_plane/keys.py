@@ -6,7 +6,7 @@ from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
 from contract import INFERENCE_TOKEN_PREFIX, token_hash
-from control_plane.authz import Authority, Permission, Target
+from control_plane.authz import Actor, Grant, Permission, Scope
 from control_plane.models import AccessKey, InferenceKey
 
 if TYPE_CHECKING:
@@ -28,7 +28,7 @@ def _new_key(kind: str) -> tuple[str, str]:
 @dataclass(frozen=True)
 class AccessKeyGrant:
     principal_id: UUID
-    target: Target
+    scope: Scope
     permissions: frozenset[Permission]
     label: str
     expires_at: datetime | None = None
@@ -39,8 +39,8 @@ async def mint_access_key(grant: AccessKeyGrant) -> tuple[UUID, str]:
     token, prefix = _new_key(ACCESS_KEY_PREFIX)
     key = await AccessKey(
         user_id=grant.principal_id,
-        org_id=grant.target.org_id,
-        workspace_id=grant.target.workspace_id,
+        org_id=grant.scope.org_id,
+        workspace_id=grant.scope.workspace_id,
         parent_id=grant.parent_id,
         token_hash=token_hash(token),
         prefix=prefix,
@@ -49,6 +49,19 @@ async def mint_access_key(grant: AccessKeyGrant) -> tuple[UUID, str]:
         expires_at=grant.expires_at,
     ).save()
     return key.id, token
+
+
+async def mint_standing_access_key(principal_id: UUID, scope: Scope, label: str) -> tuple[UUID, str]:
+    from control_plane.authority import principal_permissions  # noqa: PLC0415 authority loads access-key models
+
+    return await mint_access_key(
+        AccessKeyGrant(
+            principal_id=principal_id,
+            scope=scope,
+            permissions=await principal_permissions(principal_id, scope),
+            label=label,
+        )
+    )
 
 
 async def mint_inference_key(org_id: UUID, workspace_id: UUID, user_id: UUID, *, label: str) -> tuple[UUID, str]:
@@ -69,7 +82,7 @@ def _live(key: AccessKey, now: datetime) -> bool:
     return key.status(now) == "active"
 
 
-async def verify_access_key(token: str) -> Authority | None:
+async def verify_access_key(token: str) -> Actor | None:
     if not token.startswith(ACCESS_KEY_PREFIX):
         return None
     key = await AccessKey.first(AccessKey.token_hash == token_hash(token))
@@ -90,16 +103,13 @@ async def verify_access_key(token: str) -> Authority | None:
         permissions = frozenset(Permission(value) for value in key.permissions)
     except ValueError:
         return None
-    return Authority(
+    return Actor(
         credential_id=key.id,
         principal_id=key.user_id,
         credential_kind="access_key",
-        boundary=key.boundary,
-        org_id=key.org_id,
-        workspace_id=key.workspace_id,
-        permission_ceiling=permissions,
+        grant=Grant(scope=key.scope, permissions=permissions),
     )
 
 
-async def verify_bearer(token: str) -> Authority | None:
+async def verify_bearer(token: str) -> Actor | None:
     return await verify_access_key(token)

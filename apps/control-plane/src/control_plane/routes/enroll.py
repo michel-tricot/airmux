@@ -5,8 +5,9 @@ from uuid import UUID
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from control_plane.authz import Boundary, OrgRole
-from control_plane.deps import ActingUserDep, AuthorityDep, CookieUserDep, browser_scoped, user_scoped
+from control_plane.authority import visible_org_ids
+from control_plane.authz import OrgRole
+from control_plane.deps import ActingUserDep, ActorDep, CookieUserDep, browser_scoped, user_scoped
 from control_plane.models import Org, OrgMembership
 from control_plane.models.common.wire import Envelope
 from control_plane.models.org import OrgCreate, OrgOut
@@ -20,13 +21,13 @@ class EnrollOut(BaseModel):
 
 
 @router.get("", tags=["Enrollment"], dependencies=[user_scoped()])
-async def enrollment(user: ActingUserDep, authority: AuthorityDep) -> Envelope[EnrollOut]:
-    """The acting user's standing: their orgs by name, and whether their one personal org exists."""
+async def enrollment(user: ActingUserDep, actor: ActorDep) -> Envelope[EnrollOut]:
+    """List the organizations visible to the current user and identify their personal organization."""
     orgs = await Org.joined_by(user.id)
-    if authority.boundary in {Boundary.org, Boundary.workspace}:
-        orgs = [org for org in orgs if org.id == authority.org_id]
+    visible = frozenset(visible_org_ids(actor, (org.id for org in orgs)))
+    orgs = [org for org in orgs if org.id in visible]
     personal = await Org.personal_of(user.id)
-    personal_visible = personal is not None and (authority.boundary not in {Boundary.org, Boundary.workspace} or personal.id == authority.org_id)
+    personal_visible = personal is not None and bool(visible_org_ids(actor, (personal.id,)))
     return Envelope(
         data=EnrollOut(orgs=[OrgOut.model_validate(org) for org in orgs], personal_org_id=personal.id if personal_visible and personal else None)
     )
@@ -34,12 +35,9 @@ async def enrollment(user: ActingUserDep, authority: AuthorityDep) -> Envelope[E
 
 @router.post("/org", tags=["Enrollment"], dependencies=[browser_scoped()])
 async def create_personal_org(body: OrgCreate, user: CookieUserDep) -> Envelope[OrgOut]:
-    """Found the acting user's one personal org, with the creator as its first member.
+    """Create the current user's personal organization and make them its owner.
 
-    The unique personal_for column is the cap: the database refuses a second personal org
-    however hard a credential races, so no scope or guard code is involved. Further orgs
-    are admin-provisioned. The slot survives losing the membership; only deleting the
-    personal org frees it.
+    A user can own one personal organization at a time. Deleting it allows another to be created.
     """
     if await Org.personal_of(user.id) is not None:
         raise HTTPException(status_code=409, detail="personal org already exists")

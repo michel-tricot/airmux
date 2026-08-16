@@ -61,7 +61,7 @@ function WorkspaceSettingsContent({ workspaceRef }: { workspaceRef: string }) {
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            rename.mutate({ workspaceRef, data: { name: draft } }, { onSuccess: () => setName(null) });
+            rename.mutate({ orgId, workspaceRef, data: { name: draft } }, { onSuccess: () => setName(null) });
           }}
           className="flex items-end gap-3 max-w-md"
         >
@@ -102,13 +102,13 @@ function WorkspaceSettingsContent({ workspaceRef }: { workspaceRef: string }) {
             placeholder: 'Select an org member',
             roles: workspaceRoleOptions,
             defaultRole: 'member',
-            onAdd: (userId, role) => addMember.mutateAsync({ workspaceRef, userId, data: { role: role as WorkspaceRole } }),
+            onAdd: (userId, role) => addMember.mutateAsync({ orgId, workspaceRef, userId, data: { role: role as WorkspaceRole } }),
             pending: addMember.isPending || candidates === undefined,
           }}
           remove={{
             title: (member) => `Remove ${describe(member.user_id)?.name ?? 'this member'} from the workspace?`,
             description: 'They lose access to this workspace but stay in the organization.',
-            onRemove: (member) => removeMember.mutateAsync({ workspaceRef, userId: member.user_id }),
+            onRemove: (member) => removeMember.mutateAsync({ orgId, workspaceRef, userId: member.user_id }),
             pending: removeMember.isPending,
           }}
         />
@@ -128,7 +128,7 @@ function WorkspaceSettingsContent({ workspaceRef }: { workspaceRef: string }) {
           confirmLabel="Delete Workspace"
           pending={remove.isPending}
           onConfirm={async () => {
-            await remove.mutateAsync({ workspaceRef });
+            await remove.mutateAsync({ orgId, workspaceRef });
             setLocation('/org');
           }}
         >

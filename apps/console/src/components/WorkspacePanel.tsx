@@ -93,7 +93,7 @@ export function WorkspacePanel({ orgId, workspaceRef, backHref, backLabel }: Wor
             confirmLabel="Delete Workspace"
             pending={remove.isPending}
             onConfirm={async () => {
-              await remove.mutateAsync({ workspaceRef });
+              await remove.mutateAsync({ orgId, workspaceRef });
               setLocation(backHref);
             }}
           >
@@ -127,7 +127,7 @@ export function WorkspacePanel({ orgId, workspaceRef, backHref, backLabel }: Wor
             onRetry={() => keysQuery.refetch()}
             emptyText="No inference keys generated."
             revokeDescription="Requests using this inference key will stop working immediately. This cannot be undone."
-            onRevoke={(key) => revokeKey.mutateAsync({ workspaceRef, keyId: key.id })}
+            onRevoke={(key) => revokeKey.mutateAsync({ orgId, workspaceRef, keyId: key.id })}
             revokePending={revokeKey.isPending}
           />
         </TabsContent>
@@ -150,13 +150,13 @@ export function WorkspacePanel({ orgId, workspaceRef, backHref, backLabel }: Wor
               placeholder: 'Select an org member',
               roles: workspaceRoleOptions,
               defaultRole: 'member',
-              onAdd: (userId, role) => addMember.mutateAsync({ workspaceRef, userId, data: { role: role as WorkspaceRole } }),
+              onAdd: (userId, role) => addMember.mutateAsync({ orgId, workspaceRef, userId, data: { role: role as WorkspaceRole } }),
               pending: addMember.isPending || candidates === undefined,
             }}
             remove={{
               title: (member) => `Remove ${describe(member.user_id)?.name ?? 'this member'} from the workspace?`,
               description: 'They lose access to this workspace but stay in the organization.',
-              onRemove: (member) => removeMember.mutateAsync({ workspaceRef, userId: member.user_id }),
+              onRemove: (member) => removeMember.mutateAsync({ orgId, workspaceRef, userId: member.user_id }),
               pending: removeMember.isPending,
             }}
           />
@@ -171,7 +171,7 @@ export function WorkspacePanel({ orgId, workspaceRef, backHref, backLabel }: Wor
         schema={keyLabelSchema}
         defaultValues={{ label: '' }}
         onSubmit={async (values) => {
-          const minted = await createKey.mutateAsync({ workspaceRef, data: values });
+          const minted = await createKey.mutateAsync({ orgId, workspaceRef, data: values });
           setToken(minted.token);
         }}
         submitLabel="Generate"
@@ -200,7 +200,7 @@ export function WorkspacePanel({ orgId, workspaceRef, backHref, backLabel }: Wor
         title="Rename Workspace"
         schema={nameSchema}
         defaultValues={{ name: workspace.name }}
-        onSubmit={(values) => rename.mutateAsync({ workspaceRef, data: values })}
+        onSubmit={(values) => rename.mutateAsync({ orgId, workspaceRef, data: values })}
         submitLabel="Save"
         pending={rename.isPending}
       >

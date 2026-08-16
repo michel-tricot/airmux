@@ -12,7 +12,7 @@ from fastapi import APIRouter, HTTPException
 from sqlmodel import col
 
 from control_plane.authz import Permission
-from control_plane.deps import instance_target, require
+from control_plane.deps import instance_scope, require
 from control_plane.models import InferenceKey, Org, OrgMembership, User
 from control_plane.models.common.wire import DeletedOut, Envelope
 from control_plane.models.user import ServiceAccountIn, UserOut
@@ -20,8 +20,9 @@ from control_plane.models.user import ServiceAccountIn, UserOut
 router = APIRouter()
 
 
-@router.post("/service-accounts", tags=["Users"], dependencies=[require(Permission.principals_manage, instance_target)])
+@router.post("/service-accounts", tags=["Users"], dependencies=[require(Permission.principals_manage, instance_scope)])
 async def create_service_account(body: ServiceAccountIn) -> Envelope[UserOut]:
+    """Create a machine principal with an optional instance role."""
     user = User.new_service_account(body.name, body.instance_role)
     return Envelope(data=_user_out(await user.save(), []))
 
@@ -30,8 +31,9 @@ def _user_out(u: User, orgs: list[UUID]) -> UserOut:
     return UserOut.model_validate({**u.model_dump(), "orgs": orgs})
 
 
-@router.get("/users/{user_id}", tags=["Users"], dependencies=[require(Permission.principals_read, instance_target)])
+@router.get("/users/{user_id}", tags=["Users"], dependencies=[require(Permission.principals_read, instance_scope)])
 async def get_user(user_id: UUID) -> Envelope[UserOut]:
+    """Return one human user or service account and its organization memberships."""
     user = await User.find_by_id(user_id)
     if user is None:
         raise HTTPException(status_code=404, detail="User not found")
@@ -39,13 +41,12 @@ async def get_user(user_id: UUID) -> Envelope[UserOut]:
     return Envelope(data=_user_out(user, [m.org_id for m in memberships]))
 
 
-@router.delete("/users/{user_id}", tags=["Users"], dependencies=[require(Permission.principals_manage, instance_target)])
+@router.delete("/users/{user_id}", tags=["Users"], dependencies=[require(Permission.principals_manage, instance_scope)])
 async def delete_user(user_id: UUID) -> Envelope[DeletedOut[UUID]]:
-    """Delete a user with the credentials that are theirs alone: identities, sessions, and access keys.
+    """Delete a principal and its login identities, sessions, and control-plane access keys.
 
-    Everything else a user touches outlives them, so it blocks the delete instead of following it:
-    a membership is the org's decision to revisit, a personal org is a tenant, and an inference key
-    belongs to its workspace and merely records who minted it.
+    Remove organization memberships, personal organizations, and workspaces containing inference
+    keys created by this principal before deleting it.
     """
     user = await User.find_by_id(user_id)
     if user is None:
@@ -60,9 +61,9 @@ async def delete_user(user_id: UUID) -> Envelope[DeletedOut[UUID]]:
     return Envelope(data=DeletedOut.of(user_id))
 
 
-@router.get("/users", tags=["Users"], dependencies=[require(Permission.principals_read, instance_target)])
+@router.get("/users", tags=["Users"], dependencies=[require(Permission.principals_read, instance_scope)])
 async def list_users(service_account: bool | None = None) -> Envelope[list[UserOut]]:
-    """Every principal on the instance, or one kind of them: service_account splits the machines from the humans."""
+    """List human users and service accounts across the instance."""
     kind = [] if service_account is None else [User.service_account == service_account]
     users = await User.find(*kind, order_by=col(User.email))
     memberships = await OrgMembership.find(order_by=col(OrgMembership.org_id))

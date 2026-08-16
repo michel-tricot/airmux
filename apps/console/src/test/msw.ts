@@ -28,18 +28,20 @@ export const server = setupServer(
     }),
   ),
   http.get('/v1/enroll', () => HttpResponse.json({ orgs: [ORG], personal_org_id: null })),
-  http.get('/v1/org/workspaces', () => HttpResponse.json(WORKSPACES)),
-  http.get('/v1/org/workspaces/:workspaceRef', ({ params }) => {
+  http.get('/v1/orgs/:orgId/workspaces', () => HttpResponse.json(WORKSPACES)),
+  http.get('/v1/orgs/:orgId/workspaces/:workspaceRef', ({ params }) => {
     const ws = WORKSPACES.find((w) => w.id === params.workspaceRef || w.slug === params.workspaceRef);
     return ws ? HttpResponse.json(ws) : new HttpResponse(null, { status: 404 });
   }),
-  http.get('/v1/org/workspaces/:workspaceId/inference-keys', () => HttpResponse.json([])),
-  http.get('/v1/org/workspaces/:workspaceId/members', () => HttpResponse.json([])),
-  http.get('/v1/org/provider-credentials', () => HttpResponse.json([])),
-  http.get('/v1/access-keys', () => HttpResponse.json([])),
-  http.get('/v1/org/bundles', () => HttpResponse.json([])),
-  http.get('/v1/org/activity', () => HttpResponse.json([])),
-  http.get('/v1/taxonomy', () => HttpResponse.json({ providers: [], models: [] })),
-  http.get('/v1/org/users', () => HttpResponse.json([])),
-  http.get('/v1/org/events', () => HttpResponse.json([])),
+  http.get('/v1/orgs/:orgId/workspaces/:workspaceRef/inference-keys', () => HttpResponse.json([])),
+  http.get('/v1/orgs/:orgId/workspaces/:workspaceRef/members', () => HttpResponse.json([])),
+  http.get('/v1/orgs/:orgId/workspaces/:workspaceRef/provider-credentials', () => HttpResponse.json([])),
+  http.get('/v1/instance/access-keys', () => HttpResponse.json([])),
+  http.get('/v1/orgs/:orgId/access-keys', () => HttpResponse.json([])),
+  http.get('/v1/orgs/:orgId/bundles', () => HttpResponse.json([])),
+  http.get('/v1/orgs/:orgId/activity', () => HttpResponse.json([])),
+  http.get('/v1/orgs/:orgId/workspaces/:workspaceRef/taxonomy', () => HttpResponse.json({ providers: [], models: [] })),
+  http.get('/v1/orgs/:orgId/users', () => HttpResponse.json([])),
+  http.get('/v1/orgs/:orgId/events', () => HttpResponse.json([])),
+  http.get('/v1/orgs/:orgId/workspaces/:workspaceRef/events', () => HttpResponse.json([])),
 );

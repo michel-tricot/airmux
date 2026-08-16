@@ -4,13 +4,13 @@ from datetime import UTC, datetime
 from typing import TYPE_CHECKING, ClassVar, Literal, Self
 from uuid import UUID
 
-from pydantic import BaseModel, field_validator, model_validator
+from pydantic import BaseModel, field_validator
 from pydantic import Field as PydanticField
 from sqlalchemy import JSON, CheckConstraint, ForeignKeyConstraint
 from sqlalchemy.types import TypeDecorator
 from sqlmodel import Field, col
 
-from control_plane.authz import Boundary, Permission, Target
+from control_plane.authz import Permission, Scope
 from control_plane.models.audit import audited
 from control_plane.models.common import Identified, Tombstonable
 from control_plane.models.common.base import Record
@@ -56,14 +56,14 @@ class AccessKey(Record, Identified, Tombstonable, table=True):
     api_hidden: ClassVar[frozenset[str]] = frozenset({"token_hash"})
 
     @property
-    def boundary(self) -> Boundary:
+    def scope(self) -> Scope:
         if self.workspace_id is not None:
-            return Boundary.workspace
-        return Boundary.org if self.org_id is not None else Boundary.instance
-
-    @property
-    def target(self) -> Target:
-        return Target(level=self.boundary, org_id=self.org_id, workspace_id=self.workspace_id)
+            org_id = self.org_id
+            if org_id is None:
+                msg = "workspace access key has no organization"
+                raise ValueError(msg)
+            return Scope.workspace(org_id, self.workspace_id)
+        return Scope.org(self.org_id) if self.org_id is not None else Scope.instance()
 
     def status(self, now: datetime) -> AccessKeyStatus:
         if self.revoked_at is not None:
@@ -73,12 +73,12 @@ class AccessKey(Record, Identified, Tombstonable, table=True):
         return "active"
 
     @classmethod
-    async def retire_replaced(cls, key_id: UUID, user_id: UUID, target: Target, revoked_at: datetime) -> Self | None:
+    async def retire_replaced(cls, key_id: UUID, user_id: UUID, scope: Scope, revoked_at: datetime) -> Self | None:
         key = await cls.first(
             cls.id == key_id,
             cls.user_id == user_id,
-            cls.org_id == target.org_id,
-            cls.workspace_id == target.workspace_id,
+            cls.org_id == scope.org_id,
+            cls.workspace_id == scope.workspace_id,
             col(cls.revoked_at).is_(None),
         )
         if key is not None:
@@ -126,10 +126,10 @@ class AccessKeyOut(RecordOut[AccessKey]):
     created_at: datetime
     updated_at: datetime
     deleted_at: datetime | None
-    boundary: Boundary
+    scope: Scope
     status: AccessKeyStatus
 
-    api_extra: ClassVar[frozenset[str]] = frozenset({"boundary", "status"})
+    api_extra: ClassVar[frozenset[str]] = frozenset({"scope", "status"})
 
 
 class AccessKeyMintedOut(BaseModel):
@@ -146,7 +146,7 @@ class AccessKeyMintedOut(BaseModel):
     created_at: datetime
     updated_at: datetime
     deleted_at: datetime | None
-    boundary: Boundary
+    scope: Scope
     status: AccessKeyStatus
     token: str
 
@@ -159,11 +159,9 @@ class AccessKeyRevokedOut(BaseModel):
 
 class AccessKeyIn(RequestModel):
     label: str = PydanticField(description="Where this key lives, such as ci, laptop, or data-plane", min_length=1, max_length=80)
-    user_id: UUID | None = PydanticField(default=None, description="Principal the key authenticates; defaults to the acting principal")
-    org_id: UUID | None = PydanticField(default=None, description="Organization boundary; omit with workspace_id for instance authority")
-    workspace_id: UUID | None = PydanticField(default=None, description="Workspace boundary; requires org_id")
+    user_id: UUID | None = PydanticField(default=None, description="Principal the key authenticates; defaults to the authenticated principal")
     permissions: list[Permission] = PydanticField(min_length=1, description="Explicit maximum permissions carried by the key")
-    expires_at: datetime | None = None
+    expires_at: datetime | None = PydanticField(default=None, description="Optional expiration timestamp with a timezone")
 
     @field_validator("permissions")
     @classmethod
@@ -182,20 +180,3 @@ class AccessKeyIn(RequestModel):
             msg = "expires_at must include a timezone"
             raise ValueError(msg)
         return expires_at.astimezone(UTC)
-
-    @model_validator(mode="after")
-    def valid_boundary(self) -> Self:
-        if self.workspace_id is not None and self.org_id is None:
-            msg = "workspace_id requires org_id"
-            raise ValueError(msg)
-        return self
-
-    @property
-    def target(self) -> Target:
-        org_id = self.org_id
-        if self.workspace_id is not None:
-            if org_id is None:
-                msg = "workspace_id requires org_id"
-                raise ValueError(msg)
-            return Target.workspace(org_id, self.workspace_id)
-        return Target.org(org_id) if org_id is not None else Target.instance()

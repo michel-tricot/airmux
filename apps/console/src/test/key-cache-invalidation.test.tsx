@@ -5,11 +5,12 @@ import { http, HttpResponse } from 'msw';
 import type { ReactNode } from 'react';
 import { createQueryClient } from '@/App';
 import {
-  useAccessKeys,
-  useCreateAccessKeyMutation,
+  useInstanceAccessKeys,
+  useOrgAccessKeys,
+  useCreateInstanceAccessKeyMutation,
   useCreateInferenceKeyMutation,
   useInferenceKeys,
-  useRevokeAccessKeyMutation,
+  useRevokeOrgAccessKeyMutation,
   useRevokeInferenceKeyMutation,
 } from '@/features/keys/hooks';
 import { ORG, server } from './msw';
@@ -40,7 +41,7 @@ function accessKey(id: string, revokedAt: string | null = null) {
     created_at: now,
     updated_at: now,
     deleted_at: null,
-    boundary: 'org',
+    scope: { level: 'org', org_id: ORG.id, workspace_id: null },
     status: revokedAt ? 'revoked' : 'active',
   };
 }
@@ -66,18 +67,18 @@ describe('key cache invalidation across pages', () => {
   it('revoking an access key refreshes a filtered access-key list', async () => {
     let key = accessKey('ak-1');
     server.use(
-      http.get('/v1/access-keys', () => HttpResponse.json([key])),
+      http.get(`/v1/orgs/${ORG.id}/access-keys`, () => HttpResponse.json([key])),
       http.delete('/v1/access-keys/:keyId', () => {
         key = accessKey('ak-1', now);
         return HttpResponse.json({ id: 'ak-1', status: 'revoked', revoked_at: now });
       }),
     );
 
-    const list = renderHook(() => useAccessKeys({ org_id: ORG.id }), { wrapper });
+    const list = renderHook(() => useOrgAccessKeys(ORG.id), { wrapper });
     await waitFor(() => expect(list.result.current.isSuccess).toBe(true));
     expect(list.result.current.data).toEqual([expect.objectContaining({ revoked_at: null })]);
 
-    const revoke = renderHook(() => useRevokeAccessKeyMutation(), { wrapper });
+    const revoke = renderHook(() => useRevokeOrgAccessKeyMutation(ORG.id), { wrapper });
     await revoke.result.current.mutateAsync({ keyId: 'ak-1' });
 
     await waitFor(() => expect(list.result.current.data).toEqual([expect.objectContaining({ revoked_at: now })]));
@@ -86,18 +87,18 @@ describe('key cache invalidation across pages', () => {
   it('minting an access key refetches the access-key list', async () => {
     const keys = [accessKey('ak-1')];
     server.use(
-      http.get('/v1/access-keys', () => HttpResponse.json(keys)),
-      http.post('/v1/access-keys', () => {
+      http.get('/v1/instance/access-keys', () => HttpResponse.json(keys)),
+      http.post('/v1/instance/access-keys', () => {
         keys.push(accessKey('ak-2'));
         return HttpResponse.json({ ...accessKey('ak-2'), token: 'tok-once' });
       }),
     );
 
-    const list = renderHook(() => useAccessKeys(), { wrapper });
+    const list = renderHook(() => useInstanceAccessKeys(), { wrapper });
     await waitFor(() => expect(list.result.current.isSuccess).toBe(true));
     expect(list.result.current.data).toHaveLength(1);
 
-    const mint = renderHook(() => useCreateAccessKeyMutation(), { wrapper });
+    const mint = renderHook(() => useCreateInstanceAccessKeyMutation(), { wrapper });
     await mint.result.current.mutateAsync({ data: { label: 'ci', permissions: ['workspaces.read'] } });
 
     await waitFor(() => expect(list.result.current.data).toHaveLength(2));
@@ -106,8 +107,8 @@ describe('key cache invalidation across pages', () => {
   it('minting an inference key refetches the workspace inference key list', async () => {
     const keys = [inferenceKey('ifk-1', false)];
     server.use(
-      http.get(`/v1/org/workspaces/${WORKSPACE_REF}/inference-keys`, () => HttpResponse.json(keys)),
-      http.post(`/v1/org/workspaces/${WORKSPACE_REF}/inference-keys`, () => {
+      http.get(`/v1/orgs/${ORG.id}/workspaces/${WORKSPACE_REF}/inference-keys`, () => HttpResponse.json(keys)),
+      http.post(`/v1/orgs/${ORG.id}/workspaces/${WORKSPACE_REF}/inference-keys`, () => {
         keys.push(inferenceKey('ifk-2', false));
         return HttpResponse.json({ id: 'ifk-2', token: 'tok-once' });
       }),
@@ -118,7 +119,7 @@ describe('key cache invalidation across pages', () => {
     expect(list.result.current.data).toHaveLength(1);
 
     const mint = renderHook(() => useCreateInferenceKeyMutation(ORG.id, WORKSPACE_REF), { wrapper });
-    await mint.result.current.mutateAsync({ workspaceRef: WORKSPACE_REF, data: { label: 'app' } });
+    await mint.result.current.mutateAsync({ orgId: ORG.id, workspaceRef: WORKSPACE_REF, data: { label: 'app' } });
 
     await waitFor(() => expect(list.result.current.data).toHaveLength(2));
   });
@@ -126,8 +127,8 @@ describe('key cache invalidation across pages', () => {
   it('revoking an inference key refetches the workspace inference key list with fresh status', async () => {
     let revoked = false;
     server.use(
-      http.get(`/v1/org/workspaces/${WORKSPACE_REF}/inference-keys`, () => HttpResponse.json([inferenceKey('ifk-1', revoked)])),
-      http.delete(`/v1/org/workspaces/${WORKSPACE_REF}/inference-keys/:keyId`, () => {
+      http.get(`/v1/orgs/${ORG.id}/workspaces/${WORKSPACE_REF}/inference-keys`, () => HttpResponse.json([inferenceKey('ifk-1', revoked)])),
+      http.delete(`/v1/orgs/${ORG.id}/workspaces/${WORKSPACE_REF}/inference-keys/:keyId`, () => {
         revoked = true;
         return HttpResponse.json({ id: 'ifk-1', status: 'revoked' });
       }),
@@ -138,7 +139,7 @@ describe('key cache invalidation across pages', () => {
     expect(list.result.current.data).toEqual([expect.objectContaining({ revoked: false })]);
 
     const revoke = renderHook(() => useRevokeInferenceKeyMutation(ORG.id, WORKSPACE_REF), { wrapper });
-    await revoke.result.current.mutateAsync({ workspaceRef: WORKSPACE_REF, keyId: 'ifk-1' });
+    await revoke.result.current.mutateAsync({ orgId: ORG.id, workspaceRef: WORKSPACE_REF, keyId: 'ifk-1' });
 
     await waitFor(() => expect(list.result.current.data).toEqual([expect.objectContaining({ revoked: true })]));
   });

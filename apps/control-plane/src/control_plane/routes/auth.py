@@ -8,10 +8,11 @@ from uuid import UUID
 from fastapi import APIRouter, HTTPException, Request, Response
 from pydantic import BaseModel, Field, field_validator
 
-from control_plane.authz import Authority, Boundary, InstanceRole, Target, principal_permissions
+from control_plane.authority import principal_can_select_org, visible_org_ids
+from control_plane.authz import Actor, InstanceRole, Scope
 from control_plane.deps import (
     ActingUserDep,
-    AuthorityDep,
+    ActorDep,
     BearerDep,
     CookieUserDep,
     FetchSite,
@@ -22,7 +23,7 @@ from control_plane.deps import (
     require_csrf,
     user_scoped,
 )
-from control_plane.keys import AccessKeyGrant, mint_access_key, verify_access_key
+from control_plane.keys import mint_standing_access_key, verify_access_key
 from control_plane.models import AccessKey, AuthIdentity, CliAuthRequest, Org, OrgMembership, User, set_actor
 from control_plane.models.auth_identity import IdentityConflictError
 from control_plane.models.cli_auth_request import AUTH_REQUEST_TTL
@@ -34,8 +35,8 @@ router = APIRouter(prefix="/auth")
 
 
 class LoginIn(RequestModel):
-    email: str = Field(min_length=3, max_length=320)
-    password: str = Field(min_length=1, max_length=1024)
+    email: str = Field(description="Account email address", min_length=3, max_length=320)
+    password: str = Field(description="Account password", min_length=1, max_length=1024)
 
     @field_validator("email")
     @classmethod
@@ -44,9 +45,9 @@ class LoginIn(RequestModel):
 
 
 class SignupIn(RequestModel):
-    email: str = Field(min_length=3, max_length=320)
-    name: str = Field("", max_length=200)
-    password: str = Field(min_length=8, max_length=1024)
+    email: str = Field(description="Email address for the new account", min_length=3, max_length=320)
+    name: str = Field("", description="Display name; defaults to the email address", max_length=200)
+    password: str = Field(description="Password for the new account; at least 8 characters", min_length=8, max_length=1024)
 
     @field_validator("email")
     @classmethod
@@ -63,8 +64,8 @@ class MeOut(BaseModel):
 
 
 class PasswordChangeIn(RequestModel):
-    current_password: str = Field(min_length=1, max_length=1024)
-    new_password: str = Field(min_length=8, max_length=1024)
+    current_password: str = Field(description="Current account password", min_length=1, max_length=1024)
+    new_password: str = Field(description="Replacement password; at least 8 characters", min_length=8, max_length=1024)
 
 
 class PasswordChangedOut(BaseModel):
@@ -86,11 +87,11 @@ def _set_session_cookie(response: Response, token: str, request: Request) -> Non
     )
 
 
-async def _me_out(user: User, authority: Authority | None = None) -> MeOut:
+async def _me_out(user: User, actor: Actor | None = None) -> MeOut:
     memberships = await OrgMembership.find(OrgMembership.user_id == user.id)
     orgs = sorted(membership.org_id for membership in memberships)
-    if authority is not None and authority.boundary in {Boundary.org, Boundary.workspace}:
-        orgs = [org_id for org_id in orgs if org_id == authority.org_id]
+    if actor is not None:
+        orgs = visible_org_ids(actor, orgs)
     return MeOut(user_id=user.id, email=user.email, name=user.name, instance_role=user.instance_role, orgs=orgs)
 
 
@@ -113,6 +114,7 @@ async def _login_user(email: str, password: str) -> User:
 
 @router.post("/login", tags=["Auth"], dependencies=[public()])
 async def login(body: LoginIn, request: Request, response: Response) -> Envelope[MeOut]:
+    """Authenticate a human user and start a browser session."""
     user = await _login_user(body.email, body.password)
     _, token = await mint_session(user.id)
     _set_session_cookie(response, token, request)
@@ -121,13 +123,10 @@ async def login(body: LoginIn, request: Request, response: Response) -> Envelope
 
 @router.post("/signup", tags=["Auth"], dependencies=[public()])
 async def signup(body: SignupIn, request: Request, response: Response) -> Envelope[MeOut]:
-    """Open self-signup: an account holds no memberships, so it can see nothing until granted or until it founds an org.
+    """Create a human account and start a browser session.
 
-    The exception is the first human on a deployment, who claims it and becomes its instance owner: a
-    fresh install has no other way to reach the instance endpoints, and /instance/oss/claim exists to
-    route that first visitor here. Every signup after the claim is an ordinary account. Anyone who can
-    reach an unclaimed deployment can therefore take it, which is the same trapdoor the quickstart
-    endpoint opens; complete the first signup before exposing the deployment.
+    The first human account on a new deployment becomes the instance owner. Later accounts require
+    an organization membership or instance role before they can access managed resources.
     """
     if await User.first(User.email == body.email) is not None:
         raise HTTPException(status_code=409, detail="An account with this email already exists")
@@ -151,6 +150,7 @@ async def logout(
     x_requested_with: RequestedWith = None,
     sec_fetch_site: FetchSite = None,
 ) -> Envelope[DeletedOut[UUID]]:
+    """End the current browser session and clear its cookie."""
     if session_cookie is None:
         raise HTTPException(status_code=401, detail="You are not signed in")
     require_csrf(x_requested_with, sec_fetch_site)
@@ -163,12 +163,14 @@ async def logout(
 
 
 @router.get("/me", tags=["Auth"], dependencies=[user_scoped()])
-async def me(user: ActingUserDep, authority: AuthorityDep) -> Envelope[MeOut]:
-    return Envelope(data=await _me_out(user, authority))
+async def me(user: ActingUserDep, actor: ActorDep) -> Envelope[MeOut]:
+    """Return the authenticated human user and the organizations visible to this credential."""
+    return Envelope(data=await _me_out(user, actor))
 
 
 @router.post("/password", tags=["Auth"], dependencies=[user_scoped()])
 async def change_password(body: PasswordChangeIn, user: ActingUserDep) -> Envelope[PasswordChangedOut]:
+    """Replace the authenticated user's password after verifying the current password."""
     identity = await AuthIdentity.password_for(user.email)
     if identity is None or identity.secret_hash is None or not verify_password(identity.secret_hash, body.current_password):
         raise HTTPException(status_code=403, detail="Current password is incorrect")
@@ -198,8 +200,8 @@ class CliAuthRequestOut(BaseModel):
 
 
 class CliAuthApproveIn(RequestModel):
-    user_code: str = Field(min_length=8, max_length=16)
-    org_id: UUID
+    user_code: str = Field(description="Device code shown by the CLI", min_length=8, max_length=16)
+    org_id: UUID = Field(description="Organization the CLI access key should use")
 
 
 class CliAuthApprovedOut(BaseModel):
@@ -208,7 +210,7 @@ class CliAuthApprovedOut(BaseModel):
 
 
 class CliAuthPollIn(RequestModel):
-    poll_secret: str = Field(min_length=1, max_length=256)
+    poll_secret: str = Field(description="Polling secret returned when device authorization started", min_length=1, max_length=256)
 
 
 class CliAuthPollOut(BaseModel):
@@ -229,7 +231,7 @@ def _live(auth_request: CliAuthRequest | None) -> CliAuthRequest:
 
 @router.post("/cli/start", tags=["Auth"], dependencies=[public()])
 async def cli_auth_start(body: CliAuthStartIn, request: Request) -> Envelope[CliAuthStartOut]:
-    """Open a device authorization: unauthenticated like signup, it grants nothing by itself."""
+    """Create a short-lived device authorization for a CLI sign-in."""
     _, user_code, poll_secret = await CliAuthRequest.open(body.client_name, request.client.host if request.client else "")
     settings = request.app.state.settings
     return Envelope(
@@ -245,7 +247,7 @@ async def cli_auth_start(body: CliAuthStartIn, request: Request) -> Envelope[Cli
 
 @router.get("/cli/request", tags=["Auth"], dependencies=[browser_scoped()])
 async def cli_auth_request_details(code: str, _user: CookieUserDep) -> Envelope[CliAuthRequestOut]:
-    """Context for the approve page: who is asking, from where, until when."""
+    """Return the client and expiry details for a device authorization code."""
     auth_request = _live(await CliAuthRequest.by_user_code(code))
     if auth_request.approved_user_id is not None:
         raise HTTPException(status_code=409, detail="This sign-in request was already approved")
@@ -256,13 +258,13 @@ async def cli_auth_request_details(code: str, _user: CookieUserDep) -> Envelope[
 
 @router.post("/cli/approve", tags=["Auth"], dependencies=[browser_scoped()])
 async def cli_auth_approve(body: CliAuthApproveIn, user: CookieUserDep) -> Envelope[CliAuthApprovedOut]:
-    """The human confirms the code and picks the org; membership backs the pick like key minting."""
+    """Approve a device authorization for one organization visible to the current user."""
     auth_request = _live(await CliAuthRequest.for_approval(body.user_code))
     if auth_request.approved_user_id is not None:
         raise HTTPException(status_code=409, detail="This sign-in request was already approved")
     if await Org.find_by_id(body.org_id) is None:
         raise HTTPException(status_code=403, detail="That organization no longer exists")
-    if not await user.backs_org(body.org_id):
+    if not await principal_can_select_org(user.id, body.org_id):
         raise HTTPException(status_code=403, detail="You are not a member of that organization")
     auth_request.approved_user_id = user.id
     auth_request.approved_org_id = body.org_id
@@ -272,10 +274,10 @@ async def cli_auth_approve(body: CliAuthApproveIn, user: CookieUserDep) -> Envel
 
 @router.post("/cli/poll", tags=["Auth"], dependencies=[public()])
 async def cli_auth_poll(body: CliAuthPollIn, credentials: BearerDep) -> Envelope[CliAuthPollOut]:
-    """Return pending state or consume an approved request and deliver its key once.
+    """Return pending status or deliver the approved organization-scoped access key once.
 
-    A valid existing bearer retires exactly that key when its principal and target match the
-    approval. An absent, stale, or unrelated bearer changes nothing.
+    When the request includes the CLI's current access key for the same user and organization, that
+    key is revoked as part of replacement. Labels do not participate in matching.
     """
     auth_request = _live(await CliAuthRequest.for_delivery(body.poll_secret))
     if auth_request.approved_user_id is None or auth_request.approved_org_id is None:
@@ -284,19 +286,11 @@ async def cli_auth_poll(body: CliAuthPollIn, credentials: BearerDep) -> Envelope
     if org is None:
         raise HTTPException(status_code=410, detail="The approved organization no longer exists; start again")
     await set_actor(auth_request.approved_user_id)
-    target = Target.org(org.id)
+    scope = Scope.org(org.id)
     now = datetime.now(tz=UTC)
     replaced = await verify_access_key(credentials.credentials) if credentials is not None else None
     if replaced is not None:
-        await AccessKey.retire_replaced(replaced.credential_id, auth_request.approved_user_id, target, now)
-    permissions = await principal_permissions(auth_request.approved_user_id, target)
-    _, token = await mint_access_key(
-        AccessKeyGrant(
-            principal_id=auth_request.approved_user_id,
-            target=target,
-            permissions=permissions,
-            label=auth_request.client_name,
-        )
-    )
+        await AccessKey.retire_replaced(replaced.credential_id, auth_request.approved_user_id, scope, now)
+    _, token = await mint_standing_access_key(auth_request.approved_user_id, scope, auth_request.client_name)
     await auth_request.delete()
     return Envelope(data=CliAuthPollOut(status="complete", interval_seconds=CLI_POLL_INTERVAL_SECONDS, token=token, org_id=org.id, org_name=org.name))

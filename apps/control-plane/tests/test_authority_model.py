@@ -5,14 +5,19 @@ from datetime import UTC, datetime, timedelta
 from helpers import run_in_db, setup_db
 
 from contract import token_hash, uuid7
+from control_plane.authority import is_allowed
 from control_plane.authz import (
     DATA_PLANE_PERMISSIONS,
     INSTANCE_ROLE_PERMISSIONS,
-    Boundary,
+    AccessRequest,
+    Actor,
+    Decision,
+    Grant,
     InstanceRole,
     OrgRole,
     Permission,
-    Target,
+    Scope,
+    decide,
     permissions_for_org_role,
 )
 from control_plane.keys import ACCESS_KEY_PREFIX, AccessKeyGrant, mint_access_key, verify_access_key
@@ -36,27 +41,46 @@ def test_data_plane_role_has_only_its_runtime_permissions():
     assert Permission.data_planes_read not in permissions_for_org_role(OrgRole.admin)
 
 
-def test_key_boundaries_reach_only_their_descendants():
+def test_key_scopes_reach_only_their_descendants():
     org_id = uuid7()
     other_org_id = uuid7()
     workspace_id = uuid7()
     other_workspace_id = uuid7()
-    instance = Target.instance()
-    org = Target.org(org_id)
-    other_org = Target.org(other_org_id)
-    workspace = Target.workspace(org_id, workspace_id)
-    sibling = Target.workspace(org_id, other_workspace_id)
+    instance = Scope.instance()
+    org = Scope.org(org_id)
+    other_org = Scope.org(other_org_id)
+    workspace = Scope.workspace(org_id, workspace_id)
+    sibling = Scope.workspace(org_id, other_workspace_id)
 
-    assert Boundary.instance.covers(None, None, instance)
-    assert Boundary.instance.covers(None, None, org)
-    assert Boundary.instance.covers(None, None, workspace)
-    assert Boundary.org.covers(org_id, None, org)
-    assert Boundary.org.covers(org_id, None, workspace)
-    assert not Boundary.org.covers(org_id, None, instance)
-    assert not Boundary.org.covers(org_id, None, other_org)
-    assert Boundary.workspace.covers(org_id, workspace_id, workspace)
-    assert not Boundary.workspace.covers(org_id, workspace_id, org)
-    assert not Boundary.workspace.covers(org_id, workspace_id, sibling)
+    assert instance.covers(instance)
+    assert instance.covers(org)
+    assert instance.covers(workspace)
+    assert org.covers(org)
+    assert org.covers(workspace)
+    assert not org.covers(instance)
+    assert not org.covers(other_org)
+    assert workspace.covers(workspace)
+    assert not workspace.covers(org)
+    assert not workspace.covers(sibling)
+
+
+def test_decision_requires_credential_scope_ceiling_and_standing_grant():
+    org_id = uuid7()
+    other_org_id = uuid7()
+    permission = Permission.workspaces_read
+    actor = Actor(
+        credential_id=uuid7(),
+        principal_id=uuid7(),
+        credential_kind="access_key",
+        grant=Grant(scope=Scope.org(org_id), permissions=frozenset({permission})),
+    )
+    standing = (Grant(scope=Scope.org(org_id), permissions=frozenset({permission})),)
+
+    assert decide(actor, standing, AccessRequest(permission=permission, target=Scope.org(org_id))) is Decision.allow
+    assert decide(actor, standing, AccessRequest(permission=permission, target=Scope.org(other_org_id))) is Decision.credential_scope
+    without_ceiling = actor.model_copy(update={"grant": Grant(scope=Scope.org(org_id), permissions=frozenset())})
+    assert decide(without_ceiling, standing, AccessRequest(permission=permission, target=Scope.org(org_id))) is Decision.credential_ceiling
+    assert decide(actor, (), AccessRequest(permission=permission, target=Scope.org(org_id))) is Decision.standing_authority
 
 
 def test_access_key_has_one_prefix_explicit_permissions_and_a_stored_hash(tmp_path):
@@ -69,7 +93,7 @@ def test_access_key_has_one_prefix_explicit_permissions_and_a_stored_hash(tmp_pa
         key_id, token = await mint_access_key(
             AccessKeyGrant(
                 principal_id=user.id,
-                target=Target.instance(),
+                scope=Scope.instance(),
                 permissions=frozenset({Permission.organizations_read}),
                 label="test",
             )
@@ -83,7 +107,7 @@ def test_access_key_has_one_prefix_explicit_permissions_and_a_stored_hash(tmp_pa
     assert key.token_hash == token_hash(token)
     assert token not in key.model_dump_json()
     assert authority is not None
-    assert authority.permission_ceiling == frozenset({Permission.organizations_read})
+    assert authority.grant.permissions == frozenset({Permission.organizations_read})
 
 
 def test_role_loss_removes_authority_without_changing_the_key(tmp_path):
@@ -100,21 +124,21 @@ def test_role_loss_removes_authority_without_changing_the_key(tmp_path):
         _, token = await mint_access_key(
             AccessKeyGrant(
                 principal_id=owner.id,
-                target=Target.org(org.id),
+                scope=Scope.org(org.id),
                 permissions=frozenset({Permission.workspaces_read, Permission.inference_keys_manage}),
                 label="test",
             )
         )
         authority = await verify_access_key(token)
         assert authority is not None
-        before = await authority.allows(Permission.inference_keys_manage, Target.workspace(org.id, workspace.id))
+        before = await is_allowed(authority, Permission.inference_keys_manage, Scope.workspace(org.id, workspace.id))
         membership.role = OrgRole.member
         await membership.save()
         workspace_membership = await WorkspaceMembership.get((owner.id, workspace.id))
         assert workspace_membership is not None
         workspace_membership.role = "viewer"
         await workspace_membership.save()
-        after = await authority.allows(Permission.inference_keys_manage, Target.workspace(org.id, workspace.id))
+        after = await is_allowed(authority, Permission.inference_keys_manage, Scope.workspace(org.id, workspace.id))
         stored = await AccessKey.find_by_id(authority.credential_id)
         return before, after, stored.permissions if stored else None
 
@@ -134,7 +158,7 @@ def test_expired_access_key_is_rejected(tmp_path):
         _, token = await mint_access_key(
             AccessKeyGrant(
                 principal_id=user.id,
-                target=Target.instance(),
+                scope=Scope.instance(),
                 permissions=frozenset({Permission.organizations_read}),
                 label="expired",
                 expires_at=datetime.now(tz=UTC) - timedelta(seconds=1),

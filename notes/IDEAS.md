@@ -1,316 +1,158 @@
 # Ideas
 
-A parking lot for ideas we have but are not building yet. Not a roadmap and not a spec. When we
-defer something worth remembering, it goes here with enough context to pick up later. When we start
-building one, move it out of this file and into the code or the spec.
+A parking lot for work that is intentionally deferred. This is neither a roadmap nor a record of
+features that already shipped. Move an idea out when implementation starts, and delete it when the
+current architecture makes it irrelevant.
 
----
+## Anthropic token counting
 
-## Token counting endpoint
+Add `POST /v1/messages/count_tokens` to the Anthropic ingress so Claude Code can populate its
+context meter without calling a provider. The data plane already estimates tokens for metering,
+but this endpoint needs a caller-facing accuracy contract and adapter-wide tests.
 
-`POST /v1/messages/count_tokens` on the Anthropic ingress. Claude Code calls it to drive its context
-meter, so without it the meter is blank. Would return a token estimate for a given request without
-calling the provider. The data plane already has tiktoken for metering estimates, so the machinery
-is mostly there. Deferred because it is UX polish, not part of the boundary thesis.
+## Move SQLite outbox writes off the event loop
 
-## Dedicated writer thread for the event insert
+`SqliteOutbox.record` commits synchronously on the request path. At moderate load this is cheap,
+but concurrent workers serialize on SQLite's write lock and can block the event loop. A dedicated
+writer thread with an acknowledged queue would retain durability while isolating that blocking
+work. Build it only if committed concurrency benchmarks show that single-host scale-out is not
+enough.
 
-The usage-event insert runs inline on the request hot path (synchronous SQLite write on the event
-loop). Measured cost is small at moderate load but the tail blows up under high concurrency: at 4
-workers and 128 concurrent, p99 hit ~1s and throughput collapsed as workers serialized on the write
-lock. A dedicated writer thread (own connection, fed by an asyncio.Queue, still awaited before
-responding) would unblock the event loop while keeping durability. Only worth it if a single instance
-is ever run hot; scale-out by instance sidesteps it. See the throughput numbers from the 4-worker run.
+## Observe unauthenticated gateway traffic
 
-## Meter raw auth failures
+Usage events can attribute an authorization denial to a valid inference key. Invalid or missing
+tokens have no principal, and recording every attempt would let unauthenticated callers create an
+unbounded telemetry workload. Add aggregate, rate-limited edge metrics if rejected-traffic
+visibility becomes operationally necessary.
 
-`denied` events are recorded only for authenticated-but-unauthorized requests (a valid key hitting a
-model it cannot use), because those have a key to attribute the event to. Requests that fail auth
-outright (bad or missing token) are not metered. If we ever want visibility into rejected traffic at
-the edge, we would need a way to record them without a key and without letting unauthenticated
-callers write unbounded rows to the outbox.
+## Black-box access-key revocation coverage
 
-## End-to-end acceptance for revocation and cancellation
+The acceptance suite now proves client-disconnect accounting through a running data plane. It does
+not yet prove that revoking a control-plane access key stops a running data plane within one bundle
+poll. Add that scenario when revocation latency becomes a release-level guarantee.
 
-Acceptance criteria #4 (revocation lands within one poll) and #6 (client-cancelled stream emits a
-partial `cancelled` event and closes the upstream) are covered by unit tests but have no black-box
-scenario in tests/acceptance. Promoting them would exercise the real request path against a running
-data plane, like the control-plane-down and event-replay scenarios already do.
+## Data-plane benchmarks
 
-## More benchmarks
+- Streaming time-to-first-token overhead
+- Committed concurrency throughput across worker counts
+- SQLite versus dev-null outbox cost, so durable metering overhead is measured continuously
 
-- Streaming time-to-first-token overhead, the streaming analogue of the non-streaming overhead test
-- Throughput under concurrency as a committed benchmark, including the multi-worker regime where the
-  shared-db write lock contends
-- A persistence-cost benchmark that runs the throughput sweep with the sqlite and devnull backends
-  and reports the delta, so the cost of durable metering is tracked over time rather than measured
-  by hand
+## Additional event outbox backends
 
-## Non-sqlite event collection backends
-
-The `EventOutbox` facade makes the collection method pluggable (sqlite, devnull today). Candidates:
-push straight to an external telemetry sink, write to a broker for cross-host aggregation, or a
-backend that survives sharing a cache dir across hosts (which the sqlite WAL backend cannot, since
-WAL does not work over a network filesystem). Each is a new subclass plus one line in build_outbox.
+`EventOutbox` supports SQLite and dev-null. Future deployments may need a broker, an external
+telemetry sink, or storage safe across hosts sharing a network filesystem. Keep the request-path
+contract synchronous and local; network delivery belongs in the backend's background exporter.
 
 ## Soft delete on Postgres
 
-Decision (2026-08-05, restated 2026-08-06 after the Postgres conversion): deletes stay hard and
-deleted_at stays null until soft delete lands as one coordinated change. The blueprint:
+Deletes remain hard and `deleted_at` remains null until soft delete lands as one coordinated
+schema and query change. The blueprint is:
 
-- Delete conversion: a versioned BEFORE DELETE trigger (touch_trigger_ddl sibling) that sets
-  deleted_at and updated_at to the same instant and suppresses the row deletion (RETURN NULL).
-- Read filtering at the session layer: a do_orm_execute listener adds
-  with_loader_criteria(Tombstonable, lambda cls: cls.deleted_at.is_(None), include_aliases=True,
-  track_closure_variables=False) to every ORM select, so fat-model and hand-written queries are
-  both scoped to live rows. Escape hatch: execution_options(include_deleted=True), exposed as a
-  find/first parameter for admin and history views. Known edge: identity-map hits in session.get
-  bypass the filter within a request.
-- Identity: surrogate primary keys everywhere, business identity (org slug, provider name, email,
-  (user_id, org_id)) moves to partial unique indexes WHERE deleted_at IS NULL. FKs reference the
-  surrogate PK because neither dialect lets an FK target a partial index. This matches the existing
-  convention of server-minted ids split from caller-facing names.
-- Resurrection disappears as a concept: re-adding a removed membership inserts a fresh row; each
-  membership period is its own row and tombstones accumulate as history.
-- InferenceKey.revoked and AccessKey.revoked_at stay distinct from deleted_at: a revoked key drops out
-  of the compiled bundle but remains visible; deleted means gone from view.
-- Open policy question: what soft-deleting an org does to its keys, providers, and models
-  (cascade, orphan, or forbid).
+- Add a versioned `BEFORE DELETE` trigger beside the touch and audit triggers. It sets
+  `deleted_at` and `updated_at` to the same instant and suppresses the physical delete
+- Add session-level live-row filtering with an explicit `include_deleted` escape hatch. Account
+  for identity-map hits from `session.get`, which bypass loader criteria inside a transaction
+- Give membership tables surrogate primary keys. Move reusable business identities such as
+  `(user_id, org_id)` to partial unique indexes where `deleted_at IS NULL`
+- Treat re-adding a membership as a new row, preserving each membership period as history
+- Keep inference-key and access-key revocation distinct from deletion
+- Decide whether deleting an org cascades soft deletion, leaves historical children, or is blocked
 
-## Sign-the-bytes bundle signing
+This must ship with a new trigger DDL version and a migration. Existing trigger functions are frozen.
 
-SignedBundle.payload becomes the exact serialized string the signature covers (sign once at compile
-time, verify those bytes verbatim, parse BundleV1 only after the signature holds). Removes
-canonical_json and the constraint that both planes run the same contract version: a lagging data
-plane verifies bytes it never re-serializes, then parses with its own model, ignoring unknown
-fields. Also fixes the ordering weakness of parsing attacker-controllable input before verifying.
-Costs: one coordinated breaking change to SignedBundle (the last such change the envelope needs),
-and bundles at rest inspect as `jq -r .payload | jq` instead of `jq .payload`. Independent of
-encoding; this is the pattern signed protobufs use, without switching the contract off JSON.
-Protobuf itself was considered and rejected: gzip erases the size win, Pydantic already ignores
-unknown fields, and proto3 would cost HttpUrl/UUID/datetime/Literal validation. Revisit only if a
-non-Python data plane or third-party contract consumers appear.
+## Sign exact bundle bytes
 
-## Console login switch and session policy
+Make `SignedBundle.payload` the serialized string covered by the signature. The control plane would
+serialize once, sign those bytes, and store them; the data plane would verify before parsing. This
+removes re-serialization from verification and lets a lagging data plane ignore new fields after
+signature validation. It is a coordinated contract break and is worth doing before third-party or
+non-Python consumers depend on the current shape.
 
-Human login is password only (2026-08-06, argon2 on AuthIdentity) with cookie sessions (sk-sess-
-opaque token, sha256 at rest, 12h sliding / 14d absolute) as a second authentication door. Bearer
-credentials win when both are present; the cookie branch does CSRF (static X-Requested-With plus
-Sec-Fetch-Site), and organization selection uses X-Org-Id with current roles. SSO shipped alongside
-it and was removed untested on 2026-08-07 to cut clutter; the design is parked in
-[SSO login](#sso-login-parked).
+## Session lifecycle hardening
 
-The console rides the cookie door: password login/signup page (open self-signup via
-/v1/auth/signup; fresh accounts hold nothing until granted), customFetch sends X-Requested-With
-always and X-Org-Id on org-scoped calls, a sidebar org selector persisted per browser, and
-a 401 anywhere flips the me query back to the login screen. The localStorage bearer is gone.
+- Expired sessions are inert but remain stored because a failed authenticated request rolls back.
+  Add a sweeper if table growth becomes material
+- A TLS-terminating proxy that forwards HTTP can cause cookies to be minted without `Secure`.
+  Before supporting that deployment, trust forwarded scheme headers from configured proxies or
+  derive the flag from a configured public HTTPS origin
+- Hosted deployments may eventually delegate session storage and recovery to a managed identity
+  product while self-hosted deployments keep local password sessions
 
-Decision (2026-08-07): self-signup is the only way a human gets a password. The admin
-set/reset-password endpoint was removed as unreachable surface (no CLI or console consumer);
-admins grant memberships and mint tokens after signup, and password recovery without email means
-signing up fresh or an operator editing the database. Revisit when email delivery or SSO lands,
-which is also what closed-signup corporate provisioning waits on.
+## Hosted identity and SSO
 
-What remains:
+Revisit OIDC only when a deployment needs closed signup, email recovery, or enterprise identity.
+Use one generic PKCE relying party and model brokers as OIDC issuers rather than adding provider-
+specific flows. Test verified-identity resolution without a network, protocol failures against a
+small fake IdP, and a few conformance cases against a pinned real IdP such as Dex. Do not restore
+the removed implementation from history without a current product requirement.
 
-- Expired sessions are inert rather than deleted (the 401 rolls the request transaction back);
-  a sweeper or delete-on-logout-only policy if the table ever matters.
-- Hosted deployments could delegate the session lifecycle to WorkOS AuthKit sealed sessions
-  behind the same cookie branch; self-hosted keeps the session row.
-- Session-cookie Secure flag follows the request scheme (2026-08-08): set over https, omitted over
-  http so localhost, the docker network, and `airllm quickstart` work without a dev flag. Security
-  risk behind a TLS-terminating proxy that forwards as http: request.url.scheme reads http, so the
-  cookie is minted without Secure and can leak over a plaintext hop. Before any such deployment,
-  add ProxyHeadersMiddleware (or trust X-Forwarded-Proto) so the scheme reflects the external one,
-  and consider forcing Secure on when a configured public base URL is https.
+## Remote data-plane enrollment
 
-## SSO login (parked)
+Quickstart provisions the first co-located data plane with a service account and an instance-scoped
+access key limited to bundle polling, event ingestion, and heartbeat. A second machine should not
+reuse that credential or require shared disk access.
 
-Built 2026-08-06, removed 2026-08-07 before any real-world use: it cluttered the auth surface
-while password is the only door anyone walks through. The implementation lives in git history
-(removed 2026-08-07); what existed, for when it returns:
+Add a short-lived, single-use enrollment code that exchanges for a new service account's limited
+access key and the pinned bundle public key. Instance scope should remain the default; organization
+scope is optional for a dedicated deployment. The data plane persists the result in a private local
+file and uses the ordinary poll, event, and heartbeat APIs afterward. Revoking that one key then
+retires one deployment without affecting its peers.
 
-- One generic OIDC relying party with PKCE: /auth/discover (home-realm discovery over
-  email_domains, purely domain-driven so it never reveals whether a user exists), /auth/sso/start
-  (mints a LoginAttempt row keyed by state, carrying nonce and code_verifier, 10 minute expiry),
-  /auth/sso/callback (code exchange, id_token validated against the connection's cached jwks_uri;
-  returns JSON, not a redirect, so a landing page can forward state/code via fetch).
-- Per-org SsoConnection rows: issuer, client_id/secret, email_domains, jit flag, and the three
-  endpoints cached from the issuer's discovery document at create time so logins never depend on
-  an outbound discovery fetch. CRUD under /org/sso-connections behind sso:read/sso:write scopes.
-  SAML and WorkOS stay config-only: any broker presenting as an OIDC issuer is one row.
-- Identity resolution: AuthIdentity(provider="oidc:<connection_id>", subject=sub), email-match
-  linking to existing users, JIT provisioning into the connection's org when jit is set, service
-  accounts excluded everywhere. AuthIdentity itself survives the removal; only the oidc:* minters
-  are gone.
-- Signup refused emails whose domain matched a connection, so SSO domains could not shadow
-  themselves with password accounts.
-- Unbuilt when parked: the console side (discover call, authorize redirect, callback landing page)
-  and an instance-wide default connection (org_id null) for instance admins.
+## Audit secret-bearing tables safely
 
-Restoring means: the SsoConnection and LoginAttempt models and their tables, the three auth routes plus the org CRUD, the authlib dependency, the sso:read
-and sso:write scopes, and settings.auth.public_base_url for the redirect_uri. The test plan is
-[three-ring OIDC testing](#three-ring-oidc-testing).
+`AuthIdentity` and `AuthSession` are intentionally not audited because the database trigger stores
+whole before and after snapshots, which would duplicate password and session-token hashes into the
+audit log. Add per-table excluded or redacted columns to a new audit-trigger DDL version before
+auditing identity records. Session sliding refresh also needs an explicit actor stamp before its
+write.
 
-## Three-ring OIDC testing
+## A policy language for `evaluate`
 
-Testing plan (2026-08-06) for the [parked SSO implementation](#sso-login-parked), kept for its
-return. Because SAML and brokers are config-only
-(any issuer is one SsoConnection row), there is exactly one OIDC relying party to test, ever.
-Three rings, each answering a different question; only the outermost needs Docker.
+Keep hand-written pure Python while policies remain simple. If policies become user-authored or
+need decision tables, evaluate a non-Turing-complete language compiled when a bundle is admitted:
 
-- Ring 1, below the identity seam, no network: everything downstream of a verified identity
-  (AuthIdentity resolve-or-create, JIT provisioning, membership, session mint, service-account
-  exclusion, invite email-match when invites land) is tested with a canned verified identity and
-  ordinary route tests. The combinatorics (new user x existing identity x subject collision x
-  pending invite) all live here, fast and pure.
-- Ring 2, the workhorse: a ~150-line FastAPI fake IdP as a pytest fixture serving discovery,
-  /authorize (302s straight back with a code, no login form), /token, and /jwks, signing real
-  JWTs with a per-run key, on an ephemeral localhost port via uvicorn in a thread (authlib does
-  real HTTP for discovery and token exchange, so a real socket, not ASGI mounting). The whole
-  code flow drives with httpx following redirects; no browser. The point of the fake over a
-  container is failure injection as a constructor argument: wrong nonce, unknown signing key,
-  issuer or audience mismatch, expired or skewed tokens, missing or unverified email claim,
-  tampered state, reused code, JWKS rotation mid-session. Cookie attribute assertions (httpOnly,
-  Secure, SameSite=Lax) also live here where the response is a real exchange.
-- Ring 3, conformance acceptance: a pinned Dex container (static YAML: staticClients plus
-  enablePasswordDB, plain-HTML login form POSTable with httpx), health-checked by polling
-  /.well-known/openid-configuration, as a GH Actions service or testcontainers fixture. A handful
-  of scenarios only: login lands a session, second login reuses the AuthIdentity by sub, logout,
-  and Dex restarted with a new signing key forces a JWKS refetch. Parameterize the happy path
-  over [fake_idp, dex] like the adapter suites, so the real IdP validates the fake.
+- CEL for portable expressions
+- GoRules ZEN for JSON decision tables and an editor
+- Rego only if policy structure grows enough to justify its runtime and ecosystem cost
 
-Out of CI: a nightly smoke against a hosted broker (WorkOS AuthKit test env) once one is
-integrated; needs secrets and sometimes JS, never a PR gate. Password login needs none of this,
-it is ring 1 plus an argon2 verify.
+The compiled program must stay in memory and evaluation must remain synchronous, pure, and free of
+I/O. Do not add an asynchronous loader to the request path.
 
-## Per-data-plane credentials with enrollment
+## Generate CLI operations from OpenAPI
 
-The first local data plane already gets a dedicated service account with the `data_plane` instance
-role and an instance-bound access key limited to bundle polling, event ingestion, and heartbeat.
-Quickstart bridges that key into the shared volume. Organization-dedicated deployments use the same
-permission ceiling with an org role and boundary. Enrollment remains useful for the second machine,
-which does not share a disk with the control plane and should not reuse the first machine's credential.
+The CLI already consumes generated Pydantic request and response models, while its transport still
+constructs paths and payload dictionaries by hand. Generate typed operation functions next, keeping
+Typer commands, formatting, device login, keyring profiles, and envelope unwrapping hand-written.
+The value is compile-time path and body parity; the cost is generator and template maintenance.
 
-- EnrollmentCode table in the house shape: id, org_id, label, token_hash (sha256), expires_at
-  (~24h), consumed_at. Minted by an org admin (`airllm instances enroll <org> --name rack-7` or
-  console), printed once as `sk-enroll-<token_urlsafe>`. The code is the only secret carried to
-  the new machine.
-- `POST /v1/enroll {code}` (unauthenticated): hash lookup, reject expired or consumed, consume
-  before any other work (the OIDC callback's single-use-first discipline). Then create the
-  instance identity: service account named after the label, a `data_plane` role at the enrollment
-  boundary, and an access key with the exact data-plane permission set. Respond once with
-  {token, bundle_public_key, org_id}. The
-  exchange trusts the transport exactly once: operator-chosen URL, short-TTL single-use code;
-  after it, the pinned bundle key is the anchor (which is why the key can never come from
-  bundle/latest: a key fetched over the channel it verifies verifies nothing).
-- Data plane config shrinks to control_plane.url + enrollment_code. First boot with no stored
-  credential enrolls and persists {token, bundle_public_key, org} to a 0600 file in cache_dir;
-  later boots read the file and the code is dead. Poller, heartbeat, and events are untouched;
-  they just read bearer and key from the enrollment file.
-- Buys: revoke one deployment (revoke its key or delete its service account; it degrades to
-  serving its cached bundle, the tested control-plane-down behavior) instead of all data planes at
-  once; heartbeats attributable to an enrolled identity rather than a self-reported instance_id;
-  GW_DATAPLANE_TOKEN and GW_BUNDLE_PUBLIC_KEY stop being shared multi-machine secrets; unblocks
-  folding init into serve since init no longer pre-writes dp credentials into a shared .env.
-- Dev loop: single-host init keeps provisioning the local dp directly (it has database access);
-  enrollment earns its keep from the second data plane on, the machine that does not share a disk
-  with the control plane. Pairs with the existing quickstart path.
+## Provider credential policy
 
-## Audit redaction for secret-bearing tables
+Current behavior is fixed: try credentials in priority order, cascade when a scope has no
+credentials, and stop when a populated tier is exhausted. A future policy resource could configure:
 
-AuthIdentity and AuthSession are deliberately not @audited: the
-listener snapshots whole rows into AuditLog.before/after, which would copy argon2 hashes and
-session token hashes into audit rows (SsoConnection's client secrets join the list if SSO
-returns). The enabler is per-table redaction: let
-@audited take an exclude set (like the tombstone timestamps already excluded) or a redact-to-hash
-policy, then audit identity and connection changes, which are exactly the security events an
-auditor wants. The session sliding-refresh write would also need an actor story, since it happens
-before current_actor is set.
-
-## Off-the-shelf rule engine for policy in evaluate()
-
-Survey (2026-08-06) of fast Python rule engines, in case policy outgrows hand-rolled checks in
-evaluate(). The fast ones are native cores with Python bindings; pure-Python engines all sit at
-10-100us+ per eval. The fit with our architecture is the same for all of them: the control plane
-stores the rule source, ships it in the bundle, the data plane compiles once at bundle load and
-keeps the compiled program in memory, evaluation stays a pure sync call so evaluate() keeps its
-no-I/O contract.
-
-- zen-engine (GoRules): Rust core, single-digit microsecond evals, rules are JSON decision graphs
-  (JDM) with decision tables and a visual editor. Rules-as-data fits bundle shipping exactly.
-  Healthiest adoption profile: 340k downloads/month, 1.9k stars, actively developed. Caveat: use
-  the pre-created sync decision object, never its async loader interface.
-- CEL: non-Turing-complete boolean expressions over a context, the policy language of Kubernetes
-  and Envoy, so the format outlives any binding. Rust binding (common-expression-language) is
-  microsecond-fast; celpy is pure Python, slower, dependency-light. Right shape if policies are
-  short expressions rather than tables.
-- regopy: OPA's Rego in-process via rego-cpp, Microsoft-maintained but tiny community (47 stars).
-  Worth it only if policies grow real structure.
-- Also looked at: pycasbin (authz-specific, now Apache-governed), rule-engine (pleasant pure-Python
-  DSL, ~10x slower), durable-rules and experta (Rete engines, unmaintained, ruled out).
-
-The alternative that beats all of them while rules stay simple: compile bundle policy to plain
-Python closures at bundle load. Nanoseconds, no dependency, trivially testable. Reach for ZEN or
-CEL only when policy becomes user-authored or needs tables a human edits.
-
-## Generate the CLI client from the OpenAPI spec
-
-Half exists (noted 2026-08-07): scripts/generate-api-models.sh dumps the spec and datamodel-codegen
-produces cli/api_models.py, CI fails on drift, and specs.py subclasses the generated create models
-for the form-driven commands. What stays hand-written is the transport: client.py carries string
-paths and commands post raw dicts (`{"label": label}`), so nothing ties a call site to the
-operation it invokes; the key_id/id crash in `keys create` (fixed 2026-08-07) is exactly the drift
-class this permits. The idea is to generate the operations too: one typed function per endpoint,
-taking and returning the generated models, either via openapi-python-client or a small jinja pass
-over the spec (ours is unusually trustworthy input: security arrays and descriptions are derived
-from route markers and pinned by hygiene tests). Keep hand-written: the typer UX layer, Col
-rendering, the login device flow, the profile keyring, and the envelope unwrap seam (payload/
-payload_rows stay the single unwrap point per CLAUDE.md). Costs to weigh: generator pinning and
-template churn, wiring the generated client to session and access-key authentication plus tenant
-boundaries, and generated-code noise. A cheap intermediate step with most of the
-value: keep the hand transport but make every command construct its body through the generated In
-models and parse responses through the generated Out models, so call sites type-check against the
-spec without new tooling.
-
-## Credential policy
-
-Deferred from [BYOK](design/BYOK.md), which ships fixed behavior instead: failover in priority
-order, empty tier cascades to the next broader scope, exhausted tier never does. Policy would make
-those configurable as a typed record scoped org, workspace, or (workspace, provider), resolved
-most-specific-wins:
-
-- `selection`: failover or round_robin, the latter an in-memory counter per (workspace, provider)
-  and therefore per data plane instance, not globally fair
-- `on_empty`: deny or cascade. `deny` at org scope is what "this org must bring its own keys" means,
-  which v1 cannot express
+- `selection`: failover or per-data-plane round robin
+- `on_empty`: deny or cascade
 - `on_exhausted`: deny or cascade
-- `cooldown_unauthorized_s`, `cooldown_rate_limited_s`: today constants in the data plane
+- Cooldowns for rejected and rate-limited credentials
 
-The precedence resolution belongs in the compiler, not the data plane: the bundle carries one
-already-merged `CredentialPolicyEntry` per pairing so the request path never merges anything and
-`evaluate()` stays a pure lookup. Same reason the credential index is built at bundle admission
-rather than per request.
+Resolve precedence in the compiler and emit one merged policy entry per workspace/provider pair.
+The data plane should perform a pure lookup, not merge policy on each request.
 
-## Binding an inference key to a subset of credentials
+## Bind inference keys to credential subsets
 
-The natural follow-on to [credential policy](#credential-policy): a caller's key selects which
-provider credentials it may spend against, so one workspace can hold a cheap pool and an expensive
-pool and hand out inference keys against each. Mechanically it is a filter over the candidate tuple
-`evaluate()` already returns, either an allowlist of credential names on the policy record or a
-binding column on InferenceKey. No new machinery, which is why it waits.
+Allow an inference key to use only a named subset of a workspace's provider credentials. This lets
+one workspace expose separate cost or compliance pools. Implement it as a filter over the candidate
+tuple already returned by policy evaluation, after provider credential policy has a stable model.
 
-## Caller-chosen provider credential by header
+## Caller-selected provider credential
 
-A request header naming a credential, gated per workspace, so a caller can pin traffic to a specific
-upstream account for a single call. Wants [binding](#binding-an-inference-key-to-a-subset-of-credentials)
-first so the header narrows an allowlist rather than selecting freely, and it is ingress-specific
-surface (the Anthropic and canonical ingresses would each need it), which is most of the cost.
+Optionally let a request select one allowed provider credential by header. This depends on
+inference-key credential binding so the header can narrow an allowlist rather than select arbitrary
+upstream authority. Every ingress dialect would need an explicit mapping.
 
-## Per-workspace provider endpoints
+## Workspace-specific provider endpoints
 
-BYOK gives a workspace its own credential for a provider but not its own endpoint, so Azure OpenAI
-deployments and self-hosted vLLM instances still need an instance-wide Provider row. Making
-base_url per workspace means Provider stops being instance-global (it is `name`-unique with no
-org_id today) and the bundle's provider list becomes workspace-scoped like the credential list.
-Deliberately out of scope of BYOK, which keeps the change to one new table and one new bundle field.
+Provider credentials are workspace-scoped, but provider base URLs remain instance-global. Azure
+OpenAI deployments and workspace-local vLLM instances may need a workspace-specific endpoint.
+Model and compile that scope explicitly if the use case appears; do not make the data plane perform
+a control-plane lookup.

@@ -5,7 +5,7 @@ import { ArrowLeft, Building2, KeyRound, Plus, UserMinus, Trash2 } from 'lucide-
 import { formatDate } from '@/lib/format';
 import { Link, useLocation } from 'wouter';
 import { useOrgs } from '@/features/orgs/hooks';
-import { useAccessKeys } from '@/features/keys/hooks';
+import { useInstanceAccessKeys } from '@/features/keys/hooks';
 import { useUser, useDeleteUserMutation, useAddUserToOrgMutation, useRemoveUserFromOrgMutation, orgRoleOptions } from '@/features/users/hooks';
 import { LoadingState, ErrorState } from '@/components/shared/states';
 import { DataTable } from '@/components/shared/data-table';
@@ -28,7 +28,7 @@ export default function UserDetail() {
   const user = userQuery.data;
   const orgsQuery = useOrgs();
   const orgs = orgsQuery.data;
-  const accessKeysQuery = useAccessKeys({ user_id: userId });
+  const accessKeysQuery = useInstanceAccessKeys({ user_id: userId });
 
   const [addOpen, setAddOpen] = useState(false);
 
@@ -154,7 +154,7 @@ export default function UserDetail() {
             onRetry={() => accessKeysQuery.refetch()}
             empty="This user does not own any access keys."
             columns={[
-              { key: 'boundary', header: 'Boundary', cell: (key) => <Badge variant="secondary">{key.boundary}</Badge> },
+              { key: 'scope', header: 'Scope', cell: (key) => <Badge variant="secondary">{key.scope.level}</Badge> },
               { key: 'label', header: 'Label', cellClassName: 'font-medium', cell: (key) => key.label },
               { key: 'key', header: 'Key', cellClassName: 'font-mono text-xs text-muted-foreground', cell: (key) => <>{key.prefix}…</> },
               {

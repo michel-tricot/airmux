@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import ClassVar, Literal, Self
+from typing import ClassVar, Self
 from uuid import UUID, uuid4
 
 from pydantic import field_validator
@@ -9,6 +9,7 @@ from sqlalchemy import CheckConstraint, text
 from sqlalchemy.dialects.postgresql import CITEXT
 from sqlmodel import Field, col, select
 
+from control_plane.authz import InstanceRole  # noqa: TC001 pydantic resolves this enum annotation at runtime
 from control_plane.db import current_session
 from control_plane.models.audit import audited
 from control_plane.models.common import Identified, Tombstonable, slugify
@@ -16,7 +17,7 @@ from control_plane.models.common.base import Record
 from control_plane.models.common.wire import RecordOut, RequestModel
 from control_plane.models.org_membership import OrgMembership
 
-SERVICE_ACCOUNT_EMAIL_DOMAIN = "airbytesvcaccount.ai"
+SERVICE_ACCOUNT_EMAIL_DOMAIN = "service-account.airllm.invalid"
 EMAIL_MAX_LENGTH = 320
 
 # Advisory lock key for the instance claim. Arbitrary and constant: it names the claim, nothing else.
@@ -27,10 +28,6 @@ _CLAIM_LOCK = 0x41524C4C
 class User(Record, Identified, Tombstonable, table=True):
     __table_args__: ClassVar = (
         CheckConstraint("instance_role IS NULL OR instance_role IN ('owner', 'auditor', 'data_plane')", name="user_instance_role_valid"),
-        CheckConstraint(
-            "instance_role IS NULL OR service_account = (instance_role = 'data_plane')",
-            name="user_instance_role_matches_principal_kind",
-        ),
     )
 
     email: str = Field(unique=True, sa_type=CITEXT)
@@ -80,13 +77,6 @@ class User(Record, Identified, Tombstonable, table=True):
         await current_session().execute(text("SELECT pg_advisory_xact_lock(:key)"), {"key": _CLAIM_LOCK})
         return not await cls.instance_claimed()
 
-    async def backs_org(self, org_id: UUID) -> bool:
-        """Whether this user's standing reaches the org: instance roles everywhere, everyone else by membership.
-
-        Device approval uses this to constrain organization selection before minting a bounded key.
-        """
-        return self.instance_role is not None or await OrgMembership.get((self.id, org_id)) is not None
-
     async def delete_with_contents(self) -> None:
         """Delete the user with the entities they own that are theirs alone: identities, sessions, and access keys.
 
@@ -103,7 +93,7 @@ class User(Record, Identified, Tombstonable, table=True):
         await self.delete()
 
     @classmethod
-    def new_service_account(cls, name: str, instance_role: Literal["data_plane"] | None = None) -> Self:
+    def new_service_account(cls, name: str, instance_role: InstanceRole | None = None) -> Self:
         """Machine principal with a derived unique email; the caller saves it and adds memberships."""
         return cls(
             email=f"{slugify(name)}-{uuid4().hex[:8]}@{SERVICE_ACCOUNT_EMAIL_DOMAIN}",
@@ -115,11 +105,11 @@ class User(Record, Identified, Tombstonable, table=True):
 
 class ServiceAccountIn(RequestModel):
     name: str = Field(
-        description="Service account name; the email is derived as name-<id>@airbytesvcaccount.ai",
+        description="Display name for the service account",
         min_length=1,
         max_length=200,
     )
-    instance_role: Literal["data_plane"] | None = None
+    instance_role: InstanceRole | None = Field(default=None, description="Optional instance-wide role for the service account")
 
     @field_validator("name")
     @classmethod

@@ -92,7 +92,13 @@ def _provider_key(name: str, overrides: dict[str, str]) -> tuple[str, str]:
     return (exported, f"found in {variable}") if exported else ("", "")
 
 
-def seed_provider_credentials(client: httpx.Client, bearer: dict[str, str], workspace: str, overrides: dict[str, str]) -> list[ProviderKey]:
+def seed_provider_credentials(
+    client: httpx.Client,
+    bearer: dict[str, str],
+    org_id: str,
+    workspace: str,
+    overrides: dict[str, str],
+) -> list[ProviderKey]:
     """Give the workspace a key for every catalog provider one can be found for, and say what happened.
 
     A fresh install has a catalog and no credentials, which is a gateway that routes nothing, so
@@ -109,7 +115,7 @@ def seed_provider_credentials(client: httpx.Client, bearer: dict[str, str], work
     finish setting up, and a provider without a key is skipped in silence rather than reported as a
     failure. Nothing here aborts the command, which has already created the account and the org.
     """
-    catalog = client.get("/v1/taxonomy", headers=bearer)
+    catalog = client.get(f"/v1/orgs/{org_id}/taxonomy", headers=bearer)
     if not catalog.is_success:
         return []
     results = []
@@ -118,8 +124,8 @@ def seed_provider_credentials(client: httpx.Client, bearer: dict[str, str], work
         value, source = _provider_key(name, overrides)
         if not value:
             continue
-        body = {"provider": name, "value": value, "workspace": workspace}
-        created = client.post("/v1/org/provider-credentials", json=body, headers=bearer)
+        body = {"provider": name, "value": value}
+        created = client.post(f"/v1/orgs/{org_id}/workspaces/{workspace}/provider-credentials", json=body, headers=bearer)
         error = "" if created.is_success else api_error(created)
         results.append(ProviderKey(name, source, error))
     return results
@@ -159,7 +165,7 @@ def quickstart(  # noqa: PLR0913, PLR0917 flags are the command's interface
         )
         data_plane_key = _payload_or_die(
             c.post(
-                "/v1/access-keys",
+                "/v1/instance/access-keys",
                 json={
                     "label": "data-plane",
                     "user_id": data_plane["id"],
@@ -174,7 +180,7 @@ def quickstart(  # noqa: PLR0913, PLR0917 flags are the command's interface
         token = _payload_or_die(c.post("/v1/auth/cli/poll", json={"poll_secret": started["poll_secret"]}), "access key delivery")["token"]
 
         bearer = {"authorization": f"Bearer {token}"}
-        workspace = _payload_or_die(c.post("/v1/org/workspaces", json={"name": "default"}, headers=bearer), "workspace creation")
+        workspace = _payload_or_die(c.post(f"/v1/orgs/{org_id}/workspaces", json={"name": "default"}, headers=bearer), "workspace creation")
         upsert_profile(
             org_name,
             {
@@ -197,11 +203,11 @@ def quickstart(  # noqa: PLR0913, PLR0917 flags are the command's interface
             console.print(f"  Set GW_DATAPLANE_TOKEN={data_plane_key['token']}")
 
         key = _payload_or_die(
-            c.post(f"/v1/org/workspaces/{workspace['id']}/inference-keys", json={"label": "quickstart"}, headers=bearer), "key mint"
+            c.post(f"/v1/orgs/{org_id}/workspaces/{workspace['id']}/inference-keys", json={"label": "quickstart"}, headers=bearer), "key mint"
         )
         overrides = {name: value for name, value in (("openai", openai_key), ("anthropic", anthropic_key)) if value}
         console.print("\n[dim]Provider keys. Press enter to skip a provider.[/dim]")
-        results = seed_provider_credentials(c, bearer, workspace["slug"], overrides)
+        results = seed_provider_credentials(c, bearer, org_id, workspace["slug"], overrides)
         for result in results:
             if result.error:
                 console.print(f"  [yellow]![/yellow] {result.provider}: {result.error}")
@@ -210,7 +216,7 @@ def quickstart(  # noqa: PLR0913, PLR0917 flags are the command's interface
         if not any(not result.error for result in results):
             console.print("  [yellow]![/yellow] No provider key set. Add one with [bold]airllm provider-credentials add <provider>[/bold].")
 
-        _payload_or_die(c.post("/v1/org/bundles/compile", json={}, headers=bearer), "publishing configuration")
+        _payload_or_die(c.post(f"/v1/orgs/{org_id}/bundles/compile", json={}, headers=bearer), "publishing configuration")
         _step("API key created and published")
 
     curl = (

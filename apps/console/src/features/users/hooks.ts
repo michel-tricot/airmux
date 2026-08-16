@@ -13,8 +13,6 @@ import {
   getMeQueryKey,
   type OrgRole,
 } from '@workspace/api-client-react';
-import { orgScope } from '@/lib/api';
-import { orgScopedKey } from '@/lib/query-keys';
 
 export function useUsers() {
   return useListUsers();
@@ -59,7 +57,7 @@ function useMembershipInvalidation() {
     Promise.all([
       queryClient.invalidateQueries({ queryKey: getListUsersQueryKey() }),
       queryClient.invalidateQueries({ queryKey: getGetUserQueryKey(target.userId) }),
-      queryClient.invalidateQueries({ queryKey: orgScopedKey(target.orgId, getListOrgUsersQueryKey()) }),
+      queryClient.invalidateQueries({ queryKey: getListOrgUsersQueryKey(target.orgId) }),
       queryClient.invalidateQueries({ queryKey: getEnrollmentQueryKey() }),
       queryClient.invalidateQueries({ queryKey: getMeQueryKey() }),
     ]);
@@ -68,7 +66,7 @@ function useMembershipInvalidation() {
 export function useAddUserToOrgMutation() {
   const invalidate = useMembershipInvalidation();
   return useMutation({
-    mutationFn: (target: OrgMembershipTarget) => addOrgUser(target.userId, { role: target.role ?? 'member' }, orgScope(target.orgId)),
+    mutationFn: (target: OrgMembershipTarget) => addOrgUser(target.orgId, target.userId, { role: target.role ?? 'member' }),
     onSuccess: (_data, target) => invalidate(target),
     meta: { errorMessage: 'We couldn’t add the member. Please try again.' },
   });
@@ -77,7 +75,7 @@ export function useAddUserToOrgMutation() {
 export function useRemoveUserFromOrgMutation() {
   const invalidate = useMembershipInvalidation();
   return useMutation({
-    mutationFn: (target: { userId: string; orgId: string }) => removeOrgUser(target.userId, orgScope(target.orgId)),
+    mutationFn: (target: { userId: string; orgId: string }) => removeOrgUser(target.orgId, target.userId),
     onSuccess: (_data, target) => invalidate(target),
     meta: { errorMessage: 'We couldn’t remove the member. Please try again.' },
   });

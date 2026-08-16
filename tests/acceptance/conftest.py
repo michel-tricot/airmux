@@ -225,6 +225,7 @@ class Stack:
         self.cache_dir = tmp / ".airllm"
         self.config_path = tmp / "config.yml"
         self.caller_api_key = ""
+        self.org_id = ""
         self.provisioned = False
         self.env: dict[str, str] = {}
         self._procs: dict[str, tuple[subprocess.Popen[bytes], TextIO]] = {}
@@ -267,34 +268,32 @@ class Stack:
             me = _payload(session.post("/v1/auth/signup", json={"email": ADMIN_EMAIL, "name": "Acceptance Admin", "password": ADMIN_PASSWORD}))
             assert me["instance_role"] == "owner", "the first signup should have claimed the instance"
             org = _payload(session.post("/v1/orgs", json={"name": ORG}))
-            scope = {"X-Org-Id": org["id"]}
-            _payload(session.put(f"/v1/org/users/{me['user_id']}", json={"role": "owner"}, headers=scope))
-            workspace = _payload(session.post("/v1/org/workspaces", json={"name": "acceptance"}, headers=scope))
-            caller = _payload(session.post(f"/v1/org/workspaces/{workspace['id']}/inference-keys", json={"label": "caller"}, headers=scope))
+            self.org_id = org["id"]
+            _payload(session.put(f"/v1/orgs/{self.org_id}/users/{me['user_id']}", json={"role": "owner"}))
+            workspace = _payload(session.post(f"/v1/orgs/{self.org_id}/workspaces", json={"name": "acceptance"}))
+            caller = _payload(session.post(f"/v1/orgs/{self.org_id}/workspaces/{workspace['id']}/inference-keys", json={"label": "caller"}))
             access_key = _payload(
                 session.post(
-                    "/v1/access-keys",
-                    json={"label": "acceptance", "org_id": org["id"], "permissions": ["usage.read"]},
+                    f"/v1/orgs/{self.org_id}/access-keys",
+                    json={"label": "acceptance", "permissions": ["usage.read"]},
                 )
             )
-            data_plane = _payload(session.post("/v1/service-accounts", json={"name": "acceptance-data-plane"}))
-            _payload(session.put(f"/v1/org/users/{data_plane['id']}", json={"role": "data_plane"}, headers=scope))
+            data_plane = _payload(session.post("/v1/service-accounts", json={"name": "acceptance-data-plane", "instance_role": "data_plane"}))
             data_plane_key = _payload(
                 session.post(
-                    "/v1/access-keys",
+                    "/v1/instance/access-keys",
                     json={
                         "label": "data-plane",
                         "user_id": data_plane["id"],
-                        "org_id": org["id"],
                         "permissions": ["bundles.read", "usage.ingest", "data-planes.heartbeat"],
                     },
                 )
             )
 
             self._run([_bin("airllmcp"), "taxonomy", "--config", str(self.config_path)], self.env)
-            _payload(session.post("/v1/org/provider-credentials", json={"provider": "stub", "value": STUB_API_KEY}, headers=scope))
-            _payload(session.post("/v1/org/provider-credentials", json={"provider": "quirk", "value": STUB_API_KEY}, headers=scope))
-            _payload(session.post("/v1/org/bundles/compile", headers=scope))
+            _payload(session.post(f"/v1/orgs/{self.org_id}/provider-credentials", json={"provider": "stub", "value": STUB_API_KEY}))
+            _payload(session.post(f"/v1/orgs/{self.org_id}/provider-credentials", json={"provider": "quirk", "value": STUB_API_KEY}))
+            _payload(session.post(f"/v1/orgs/{self.org_id}/bundles/compile"))
 
         secrets = {
             "AIRLLM_API_KEY": caller["token"],
@@ -444,7 +443,7 @@ class Stack:
         page_query: dict[str, int | str] = {"limit": 200}
         while True:
             response = httpx.get(
-                f"{self.cp_url}/v1/org/events",
+                f"{self.cp_url}/v1/orgs/{self.org_id}/events",
                 headers={"authorization": f"Bearer {self.env['GW_ACCESS_KEY']}"},
                 params=page_query,
                 timeout=10.0,

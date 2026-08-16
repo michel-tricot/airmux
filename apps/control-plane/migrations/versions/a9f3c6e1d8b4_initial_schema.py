@@ -12,9 +12,9 @@ structurally impossible (with a cascade evicting users whose org membership goes
 inference keys live in workspaces with org_id kept consistent by a composite foreign key.
 
 Access keys authenticate one principal and carry an explicit permission ceiling at an instance,
-organization, or workspace boundary. Roles on the principal and memberships provide standing
+organization, or workspace scope. Roles on the principal and memberships provide standing
 authority, so a key can attenuate authority but never create it. Data-plane instances retain the
-organization boundary of the key that heartbeats.
+organization scope of the key that heartbeats, or null for a global instance-scoped key.
 
 Provider credentials are the keys the gateway spends upstream, and provider_credential holds
 everything about one except its value, which lives in the secret store. Scope is derived from which
@@ -106,10 +106,6 @@ def upgrade() -> None:
         sa.Column("instance_role", sqlmodel.sql.sqltypes.AutoString(), nullable=True),
         sa.Column("service_account", sa.Boolean(), nullable=False),
         sa.CheckConstraint("instance_role IS NULL OR instance_role IN ('owner', 'auditor', 'data_plane')", name="user_instance_role_valid"),
-        sa.CheckConstraint(
-            "instance_role IS NULL OR service_account = (instance_role = 'data_plane')",
-            name="user_instance_role_matches_principal_kind",
-        ),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("email"),
     )

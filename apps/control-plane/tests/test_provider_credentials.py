@@ -19,8 +19,17 @@ CSRF = {"X-Requested-With": "fetch"}
 
 
 def _catalog(client, root):
-    client.post("/v1/taxonomy/providers", json=PROVIDER, headers=root)
-    client.post("/v1/taxonomy/models", json=MODEL, headers=root)
+    client.post("/v1/instance/taxonomy/providers", json=PROVIDER, headers=root)
+    client.post("/v1/instance/taxonomy/models", json=MODEL, headers=root)
+
+
+def _collection(headers: dict[str, str], workspace: UUID | str | None = None) -> str:
+    org_id = headers["X-Test-Org-Id"]
+    return f"/v1/orgs/{org_id}/workspaces/{workspace}/provider-credentials" if workspace is not None else f"/v1/orgs/{org_id}/provider-credentials"
+
+
+def _credential_path(credential: dict, org_id: UUID | str | None = None) -> str:
+    return f"/v1/orgs/{org_id or credential['org_id']}/provider-credentials/{credential['id']}"
 
 
 def _stored(cp, credential: dict) -> str:
@@ -43,7 +52,7 @@ def test_a_credential_keeps_its_value_out_of_the_api(tmp_path):
         root = cp.headers()
         _catalog(c, root)
         org = cp.headers(make_org(c, root))
-        response = c.post("/v1/org/provider-credentials", json={"provider": "openai", "value": KEY}, headers=org)
+        response = c.post(_collection(org), json={"provider": "openai", "value": KEY}, headers=org)
         assert response.status_code == 200, response.text
         credential = response.json()["data"]
         assert KEY not in response.text
@@ -61,8 +70,8 @@ def test_a_workspace_brings_its_own_key(tmp_path):
         org_id = make_org(c, root)
         org = cp.headers(org_id)
         make_workspace(c, org, name="Staging")
-        body = {"provider": "openai", "value": KEY, "workspace": "staging"}
-        credential = c.post("/v1/org/provider-credentials", json=body, headers=org).json()["data"]
+        body = {"provider": "openai", "value": KEY}
+        credential = c.post(_collection(org, "staging"), json=body, headers=org).json()["data"]
         assert credential["scope"] == "workspace"
         assert credential["workspace_id"] is not None
         assert _stored(cp, credential) == KEY
@@ -75,9 +84,9 @@ def test_one_provider_holds_several_keys(tmp_path):
         root = cp.headers()
         _catalog(c, root)
         org = cp.headers(make_org(c, root))
-        c.post("/v1/org/provider-credentials", json={"provider": "openai", "name": "backup", "value": "sk-b", "priority": 200}, headers=org)
-        c.post("/v1/org/provider-credentials", json={"provider": "openai", "name": "primary", "value": "sk-a", "priority": 10}, headers=org)
-        listed = c.get("/v1/org/provider-credentials", headers=org).json()["data"]
+        c.post(_collection(org), json={"provider": "openai", "name": "backup", "value": "sk-b", "priority": 200}, headers=org)
+        c.post(_collection(org), json={"provider": "openai", "name": "primary", "value": "sk-a", "priority": 10}, headers=org)
+        listed = c.get(_collection(org), headers=org).json()["data"]
         assert [credential["name"] for credential in listed] == ["primary", "backup"]
 
 
@@ -88,8 +97,8 @@ def test_a_name_is_taken_once_per_provider_and_scope(tmp_path):
         _catalog(c, root)
         org = cp.headers(make_org(c, root))
         body = {"provider": "openai", "value": KEY}
-        assert c.post("/v1/org/provider-credentials", json=body, headers=org).status_code == 200
-        assert c.post("/v1/org/provider-credentials", json=body, headers=org).status_code == 409
+        assert c.post(_collection(org), json=body, headers=org).status_code == 200
+        assert c.post(_collection(org), json=body, headers=org).status_code == 409
 
 
 def test_the_database_constraint_closes_the_credential_name_race(tmp_path, monkeypatch):
@@ -99,13 +108,13 @@ def test_the_database_constraint_closes_the_credential_name_race(tmp_path, monke
         _catalog(c, root)
         org = cp.headers(make_org(c, root))
         body = {"provider": "openai", "name": "Primary", "value": KEY}
-        assert c.post("/v1/org/provider-credentials", json=body, headers=org).status_code == 200
+        assert c.post(_collection(org), json=body, headers=org).status_code == 200
 
         async def miss(*_args):
             return None
 
         monkeypatch.setattr(ProviderCredential, "named", classmethod(miss))
-        raced = c.post("/v1/org/provider-credentials", json={**body, "name": "primary"}, headers=org)
+        raced = c.post(_collection(org), json={**body, "name": "primary"}, headers=org)
 
         assert raced.status_code == 409
         assert raced.json() == {"detail": "Request conflicts with existing state"}
@@ -117,18 +126,18 @@ def test_provider_credentials_reject_empty_values(tmp_path):
         root = cp.headers()
         _catalog(c, root)
         org = cp.headers(make_org(c, root))
-        assert c.post("/v1/org/provider-credentials", json={"provider": "openai", "value": ""}, headers=org).status_code == 422
+        assert c.post(_collection(org), json={"provider": "openai", "value": ""}, headers=org).status_code == 422
         assert (
             c.post(
-                "/v1/org/provider-credentials",
+                _collection(org),
                 json={"provider": "openai", "name": "../outside", "value": KEY},
                 headers=org,
             ).status_code
             == 422
         )
-        assert c.post("/v1/org/provider-credentials", json={"provider": "openai", "value": KEY, "priority": -1}, headers=org).status_code == 422
-        credential = c.post("/v1/org/provider-credentials", json={"provider": "openai", "value": KEY}, headers=org).json()["data"]
-        assert c.patch(f"/v1/org/provider-credentials/{credential['id']}", json={"priority": -1}, headers=org).status_code == 422
+        assert c.post(_collection(org), json={"provider": "openai", "value": KEY, "priority": -1}, headers=org).status_code == 422
+        credential = c.post(_collection(org), json={"provider": "openai", "value": KEY}, headers=org).json()["data"]
+        assert c.patch(_credential_path(credential), json={"priority": -1}, headers=org).status_code == 422
 
 
 def test_a_rotation_replaces_the_value_and_bumps_the_version(tmp_path):
@@ -138,8 +147,8 @@ def test_a_rotation_replaces_the_value_and_bumps_the_version(tmp_path):
         root = cp.headers()
         _catalog(c, root)
         org = cp.headers(make_org(c, root))
-        created = c.post("/v1/org/provider-credentials", json={"provider": "openai", "value": KEY}, headers=org).json()["data"]
-        rotated = c.put(f"/v1/org/provider-credentials/{created['id']}/value", json={"value": "sk-rotated-9999"}, headers=org)
+        created = c.post(_collection(org), json={"provider": "openai", "value": KEY}, headers=org).json()["data"]
+        rotated = c.put(f"{_credential_path(created)}/value", json={"value": "sk-rotated-9999"}, headers=org)
         assert rotated.status_code == 200, rotated.text
         assert rotated.json()["data"]["version"] == 2
         assert rotated.json()["data"]["fingerprint"] == "9999"
@@ -152,9 +161,9 @@ def test_deleting_a_credential_takes_its_value(tmp_path):
         root = cp.headers()
         _catalog(c, root)
         org = cp.headers(make_org(c, root))
-        created = c.post("/v1/org/provider-credentials", json={"provider": "openai", "value": KEY}, headers=org).json()["data"]
-        assert c.delete(f"/v1/org/provider-credentials/{created['id']}", headers=org).status_code == 200
-        assert c.get(f"/v1/org/provider-credentials/{created['id']}", headers=org).status_code == 404
+        created = c.post(_collection(org), json={"provider": "openai", "value": KEY}, headers=org).json()["data"]
+        assert c.delete(_credential_path(created), headers=org).status_code == 200
+        assert c.get(_credential_path(created), headers=org).status_code == 404
         with pytest.raises(SecretNotFoundError):
             _stored(cp, created)
 
@@ -165,10 +174,11 @@ def test_another_org_cannot_reach_the_credential(tmp_path):
         root = cp.headers()
         _catalog(c, root)
         mine = cp.headers(make_org(c, root, name="mine"))
-        theirs = cp.headers(make_org(c, root, name="theirs"))
-        created = c.post("/v1/org/provider-credentials", json={"provider": "openai", "value": KEY}, headers=mine).json()["data"]
-        assert c.get(f"/v1/org/provider-credentials/{created['id']}", headers=theirs).status_code == 404
-        assert c.delete(f"/v1/org/provider-credentials/{created['id']}", headers=theirs).status_code == 404
+        their_org_id = make_org(c, root, name="theirs")
+        theirs = cp.headers(their_org_id)
+        created = c.post(_collection(mine), json={"provider": "openai", "value": KEY}, headers=mine).json()["data"]
+        assert c.get(_credential_path(created, their_org_id), headers=theirs).status_code == 404
+        assert c.delete(_credential_path(created, their_org_id), headers=theirs).status_code == 404
 
 
 def test_the_bundle_names_the_credential_and_carries_no_secret(tmp_path):
@@ -178,8 +188,8 @@ def test_the_bundle_names_the_credential_and_carries_no_secret(tmp_path):
         _catalog(c, root)
         org_id = make_org(c, root)
         org = cp.headers(org_id)
-        c.post("/v1/org/provider-credentials", json={"provider": "openai", "value": KEY}, headers=org)
-        c.post("/v1/org/bundles/compile", headers=org)
+        c.post(_collection(org), json={"provider": "openai", "value": KEY}, headers=org)
+        c.post(f"/v1/orgs/{org_id}/bundles/compile", headers=org)
         payload = c.get("/v1/bundle/latest", headers=org).text
         assert KEY not in payload
         entry = c.get("/v1/bundle/latest", headers=org).json()["data"]["payload"]["catalog"]["credentials"][0]
@@ -194,10 +204,11 @@ def test_a_disabled_credential_drops_out_of_the_bundle(tmp_path):
     with TestClient(cp.app) as c:
         root = cp.headers()
         _catalog(c, root)
-        org = cp.headers(make_org(c, root))
-        created = c.post("/v1/org/provider-credentials", json={"provider": "openai", "value": KEY}, headers=org).json()["data"]
-        c.patch(f"/v1/org/provider-credentials/{created['id']}", json={"enabled": False}, headers=org)
-        c.post("/v1/org/bundles/compile", headers=org)
+        org_id = make_org(c, root)
+        org = cp.headers(org_id)
+        created = c.post(_collection(org), json={"provider": "openai", "value": KEY}, headers=org).json()["data"]
+        c.patch(_credential_path(created), json={"enabled": False}, headers=org)
+        c.post(f"/v1/orgs/{org_id}/bundles/compile", headers=org)
         payload = c.get("/v1/bundle/latest", headers=org).json()["data"]["payload"]
         assert payload["catalog"]["credentials"] == []
 
@@ -210,7 +221,7 @@ def test_a_rejected_body_does_not_echo_the_key(tmp_path):
         root = cp.headers()
         _catalog(c, root)
         org = cp.headers(make_org(c, root))
-        response = c.post("/v1/org/provider-credentials", json={"provider": "openai", "value": [KEY]}, headers=org)
+        response = c.post(_collection(org), json={"provider": "openai", "value": [KEY]}, headers=org)
         assert response.status_code == 422
         assert KEY not in response.text
         assert response.json()["detail"][0]["loc"] == ["body", "value"]
@@ -224,7 +235,7 @@ def test_an_env_backed_instance_refuses_credentials(tmp_path):
         root = cp.headers()
         _catalog(c, root)
         org = cp.headers(make_org(c, root))
-        response = c.post("/v1/org/provider-credentials", json={"provider": "openai", "value": KEY}, headers=org)
+        response = c.post(_collection(org), json={"provider": "openai", "value": KEY}, headers=org)
         assert response.status_code == 501
         assert KEY not in response.text
 
@@ -236,11 +247,12 @@ def test_the_audit_trail_holds_no_value(tmp_path):
     with TestClient(cp.app) as c:
         root = cp.headers()
         _catalog(c, root)
-        org = cp.headers(make_org(c, root))
-        created = c.post("/v1/org/provider-credentials", json={"provider": "openai", "value": KEY}, headers=org).json()["data"]
-        c.put(f"/v1/org/provider-credentials/{created['id']}/value", json={"value": "sk-rotated-9999"}, headers=org)
-        c.delete(f"/v1/org/provider-credentials/{created['id']}", headers=org)
-        trail = c.get("/v1/org/activity", headers=org)
+        org_id = make_org(c, root)
+        org = cp.headers(org_id)
+        created = c.post(_collection(org), json={"provider": "openai", "value": KEY}, headers=org).json()["data"]
+        c.put(f"{_credential_path(created)}/value", json={"value": "sk-rotated-9999"}, headers=org)
+        c.delete(_credential_path(created), headers=org)
+        trail = c.get(f"/v1/orgs/{org_id}/activity", headers=org)
         assert trail.status_code == 200, trail.text
         assert KEY not in trail.text
         assert "sk-rotated-9999" not in trail.text
@@ -304,13 +316,13 @@ def _with_credential(cp, c) -> Metered:
     org_id = make_org(c, root)
     org = cp.headers(org_id)
     workspace_id = make_workspace(c, org)
-    body = {"provider": "openai", "value": KEY, "workspace": str(workspace_id)}
-    credential = c.post("/v1/org/provider-credentials", json=body, headers=org).json()["data"]
+    body = {"provider": "openai", "value": KEY}
+    credential = c.post(_collection(org, workspace_id), json=body, headers=org).json()["data"]
     return Metered(root=root, org=org, org_id=org_id, workspace_id=workspace_id, credential=credential)
 
 
 def _status_of(c, m: Metered) -> str:
-    return c.get(f"/v1/org/provider-credentials/{m.credential['id']}", headers=m.org).json()["data"]["status"]
+    return c.get(_credential_path(m.credential), headers=m.org).json()["data"]["status"]
 
 
 def test_a_rejected_key_shows_up_as_invalid(tmp_path):
@@ -378,7 +390,7 @@ def test_events_for_a_deleted_credential_are_not_an_error(tmp_path):
     cp = setup_control_plane(tmp_path)
     with TestClient(cp.app) as c:
         m = _with_credential(cp, c)
-        c.delete(f"/v1/org/provider-credentials/{m.credential['id']}", headers=m.org)
+        c.delete(_credential_path(m.credential), headers=m.org)
         event = _usage_event(m, "ok", datetime.now(tz=UTC))
         assert c.post("/v1/events", json=[event], headers=m.root).status_code == 200
 
@@ -389,9 +401,9 @@ def test_deleting_a_workspace_takes_its_credentials(tmp_path):
     cp = setup_control_plane(tmp_path)
     with TestClient(cp.app) as c:
         m = _with_credential(cp, c)
-        deleted = c.delete(f"/v1/org/workspaces/{m.workspace_id}", headers=m.org)
+        deleted = c.delete(f"/v1/orgs/{m.org_id}/workspaces/{m.workspace_id}", headers=m.org)
         assert deleted.status_code == 200, deleted.text
-        assert c.get(f"/v1/org/provider-credentials/{m.credential['id']}", headers=m.org).status_code == 404
+        assert c.get(_credential_path(m.credential), headers=m.org).status_code == 404
         with pytest.raises(SecretNotFoundError):
             _stored(cp, m.credential)
 
@@ -401,7 +413,7 @@ def test_deleting_an_org_takes_its_credentials(tmp_path):
     cp = setup_control_plane(tmp_path)
     with TestClient(cp.app) as c:
         m = _with_credential(cp, c)
-        org_scoped = c.post("/v1/org/provider-credentials", json={"provider": "openai", "name": "shared", "value": KEY}, headers=m.org)
+        org_scoped = c.post(_collection(m.org), json={"provider": "openai", "name": "shared", "value": KEY}, headers=m.org)
         assert org_scoped.status_code == 200, org_scoped.text
         shared = org_scoped.json()["data"]
         deleted = c.delete(f"/v1/orgs/{m.org_id}", headers=m.root)
@@ -425,16 +437,16 @@ def test_a_workspace_credential_needs_workspace_membership(tmp_path):
         _catalog(c, root)
         org_id = make_org(c, root)
         org = cp.headers(org_id)
-        workspace = c.post("/v1/org/workspaces", json={"name": "Theirs"}, headers=org).json()["data"]
+        workspace = c.post(f"/v1/orgs/{org_id}/workspaces", json={"name": "Theirs"}, headers=org).json()["data"]
         outsider = c.post("/v1/auth/signup", json={"email": "out@example.com", "password": "hunter2hunter2", "name": "Out"}, headers=CSRF)
         assert outsider.status_code == 200, outsider.text
         user_id = outsider.json()["data"]["user_id"]
-        c.put(f"/v1/org/users/{user_id}", json={"role": "member"}, headers=org)
+        c.put(f"/v1/orgs/{org_id}/users/{user_id}", json={"role": "member"}, headers=org)
         theirs = cp.headers_for(org_id, user_id)
 
-        body = {"provider": "openai", "value": KEY, "workspace": workspace["slug"]}
-        assert c.post("/v1/org/provider-credentials", json=body, headers=theirs).status_code == 403
-        assert c.get("/v1/org/provider-credentials", params={"workspace": workspace["slug"]}, headers=theirs).status_code == 403
+        body = {"provider": "openai", "value": KEY}
+        assert c.post(_collection(theirs, workspace["slug"]), json=body, headers=theirs).status_code == 403
+        assert c.get(_collection(theirs, workspace["slug"]), headers=theirs).status_code == 403
 
 
 def test_a_platform_credential_reaches_every_org(tmp_path):
@@ -447,7 +459,7 @@ def test_a_platform_credential_reaches_every_org(tmp_path):
     with TestClient(cp.app) as c:
         root = cp.headers()
         _catalog(c, root)
-        provider_id = c.get("/v1/taxonomy", headers=root).json()["data"]["providers"][0]["id"]
+        provider_id = c.get("/v1/instance/taxonomy", headers=root).json()["data"]["providers"][0]["id"]
 
         async def declare():
             await set_actor("root")
@@ -455,8 +467,9 @@ def test_a_platform_credential_reaches_every_org(tmp_path):
 
         run_in_db(tmp_path, declare)
 
-        org = cp.headers(make_org(c, root))
-        c.post("/v1/org/bundles/compile", headers=org)
+        org_id = make_org(c, root)
+        org = cp.headers(org_id)
+        c.post(f"/v1/orgs/{org_id}/bundles/compile", headers=org)
         entries = c.get("/v1/bundle/latest", headers=org).json()["data"]["payload"]["catalog"]["credentials"]
         assert [e["ref"]["name"] for e in entries] == ["platform"]
         assert entries[0]["ref"]["org_id"] is None
