@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState, type ReactNode } from 'react';
+import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react';
 import { hashKey, MutationCache, QueryCache, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
 import { ErrorBoundary } from '@/components/error-boundary';
@@ -23,7 +23,7 @@ const OrganizationDetail = lazy(() => import('@/pages/OrganizationDetail'));
 const WorkspaceDetail = lazy(() => import('@/pages/WorkspaceDetail'));
 const Users = lazy(() => import('@/pages/Users'));
 const UserDetail = lazy(() => import('@/pages/UserDetail'));
-const InstanceKeys = lazy(() => import('@/pages/InstanceKeys'));
+const AccessKeys = lazy(() => import('@/pages/AccessKeys'));
 const CliApprove = lazy(() => import('@/pages/CliApprove'));
 const AppOrgPicker = lazy(() => import('@/pages/app/OrgPicker'));
 const AppDashboard = lazy(() => import('@/pages/app/Dashboard'));
@@ -77,8 +77,12 @@ export function createQueryClient(): QueryClient {
 }
 
 function AppSection() {
-  const { orgId } = useSession();
+  const { orgId, setOrgId } = useSession();
   const enrollment = useEnrollment({ query: { queryKey: getEnrollmentQueryKey(), retry: false } });
+
+  useEffect(() => {
+    if (orgId && enrollment.data && !enrollment.data.orgs.some((org) => org.id === orgId)) setOrgId(null);
+  }, [enrollment.data, orgId, setOrgId]);
 
   if (enrollment.isLoading) return <Splash>Loading organizations...</Splash>;
   if (enrollment.isError || !enrollment.data) {
@@ -128,7 +132,7 @@ function AdminSection() {
             <Route path="/instance/organizations/:orgId/workspaces/:workspaceRef" component={WorkspaceDetail} />
             <Route path="/instance/users" component={Users} />
             <Route path="/instance/users/:userId" component={UserDetail} />
-            <Route path="/instance/keys" component={InstanceKeys} />
+            <Route path="/instance/keys" component={AccessKeys} />
             <Route component={NotFound} />
           </Switch>
         </Suspense>
@@ -174,7 +178,7 @@ function Router() {
 
   if (location === '/') return <Redirect to={orgId ? '/org' : '/orgs'} replace />;
 
-  if (!user.instance_admin) return <Redirect to="/org" />;
+  if (!user.instance_role) return <Redirect to="/org" />;
 
   return <AdminSection />;
 }

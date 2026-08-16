@@ -63,7 +63,7 @@ def _config(tmp_path):
     return cfg
 
 
-def test_admin_promotes_an_existing_account(tmp_path):
+def test_owner_promotes_an_existing_account(tmp_path):
     cfg = _config(tmp_path)
 
     async def add_user():
@@ -73,27 +73,27 @@ def test_admin_promotes_an_existing_account(tmp_path):
 
     run_in_db(tmp_path, add_user)
 
-    result = runner.invoke(cli_app, ["admin", "--email", "someone@example.com", "--config", str(cfg)])
+    result = runner.invoke(cli_app, ["owner", "--email", "someone@example.com", "--config", str(cfg)])
     assert result.exit_code == 0, result.output
     assert "someone@example.com" in result.output
-    assert run_in_db(tmp_path, lambda: User.first(User.email == "someone@example.com")).instance_admin is True
+    assert run_in_db(tmp_path, lambda: User.first(User.email == "someone@example.com")).instance_role == "owner"
 
 
-def test_admin_refuses_an_account_that_has_not_signed_up(tmp_path):
+def test_owner_refuses_an_account_that_has_not_signed_up(tmp_path):
     cfg = _config(tmp_path)
-    result = runner.invoke(cli_app, ["admin", "--email", "new@example.com", "--config", str(cfg)])
+    result = runner.invoke(cli_app, ["owner", "--email", "new@example.com", "--config", str(cfg)])
     assert result.exit_code == 1
     assert "sign up" in result.output
     assert run_in_db(tmp_path, lambda: User.first(User.email == "new@example.com")) is None
 
 
-def test_admin_reports_an_invalid_email_without_opening_the_database(tmp_path):
-    result = runner.invoke(cli_app, ["admin", "--email", "not-an-email", "--config", str(tmp_path / "missing.yml")])
+def test_owner_reports_an_invalid_email_without_opening_the_database(tmp_path):
+    result = runner.invoke(cli_app, ["owner", "--email", "not-an-email", "--config", str(tmp_path / "missing.yml")])
     assert result.exit_code == 1
     assert "email must be a valid address" in result.output
 
 
-def test_admin_is_idempotent(tmp_path):
+def test_owner_is_idempotent(tmp_path):
     cfg = _config(tmp_path)
 
     async def add_user():
@@ -102,13 +102,13 @@ def test_admin_is_idempotent(tmp_path):
         await user.save()
 
     run_in_db(tmp_path, add_user)
-    assert runner.invoke(cli_app, ["admin", "--email", "twice@example.com", "--config", str(cfg)]).exit_code == 0
-    again = runner.invoke(cli_app, ["admin", "--email", "twice@example.com", "--config", str(cfg)])
+    assert runner.invoke(cli_app, ["owner", "--email", "twice@example.com", "--config", str(cfg)]).exit_code == 0
+    again = runner.invoke(cli_app, ["owner", "--email", "twice@example.com", "--config", str(cfg)])
     assert again.exit_code == 0, again.output
     assert "already" in again.output
 
 
-def test_admin_refuses_a_service_account(tmp_path):
+def test_owner_refuses_a_service_account(tmp_path):
     """Instance authority belongs to a human; a machine principal gets keys, not the bit."""
     cfg = _config(tmp_path)
 
@@ -119,6 +119,6 @@ def test_admin_refuses_a_service_account(tmp_path):
 
     email = run_in_db(tmp_path, add_robot).email
 
-    result = runner.invoke(cli_app, ["admin", "--email", email, "--config", str(cfg)])
+    result = runner.invoke(cli_app, ["owner", "--email", email, "--config", str(cfg)])
     assert result.exit_code == 1
-    assert run_in_db(tmp_path, lambda: User.first(User.email == email)).instance_admin is False
+    assert run_in_db(tmp_path, lambda: User.first(User.email == email)).instance_role is None

@@ -8,80 +8,74 @@ from fastapi import APIRouter, HTTPException, Query, Request
 from sqlmodel import col
 
 from contract import uuid7
-from control_plane.authz import Scope
+from control_plane.authority import ensure_org_role_change
+from control_plane.authz import OrgRole, Permission
 from control_plane.compiler import UnknownOrgError, compile_and_store
-from control_plane.deps import MgmtDep, OrgDep, require
-from control_plane.keys import mint_management_key
-from control_plane.models import AuditLog, Bundle, ManagementKey, OrgMembership, UsageEvent, User
+from control_plane.deps import ActorDep, OrgDep, WorkspaceDep, org_scope, require, workspace_scope
+from control_plane.models import AuditLog, Bundle, OrgMembership, UsageEvent, User
 from control_plane.models.audit import ActivityOut
 from control_plane.models.bundle import BundleOut
 from control_plane.models.common.wire import DeletedOut, Envelope
-from control_plane.models.management_key import ManagementKeyIn, ManagementKeyMintedOut, ManagementKeyOut, ManagementKeyRevokedOut
-from control_plane.models.org_membership import MembershipOut, OrgMemberOut
+from control_plane.models.org_membership import MembershipOut, OrgMemberOut, OrgMembershipIn
 from control_plane.models.usage_event import UsageEventOut, UsageEventPage
 
-router = APIRouter(prefix="/org")
+router = APIRouter(prefix="/orgs/{org_id}")
 
 
-@router.get("/users", tags=["Org Users"], dependencies=[require(Scope.users_read)])
+@router.get("/users", tags=["Org Users"], dependencies=[require(Permission.members_read, org_scope)])
 async def list_org_users(org_id: OrgDep) -> Envelope[list[OrgMemberOut]]:
-    """The acting org's members; an org credential sees its own roster, never the instance's."""
+    """List the human users and service accounts that belong to an organization."""
     members = await User.members_of(org_id)
+    memberships = {membership.user_id: membership for membership in await OrgMembership.find(OrgMembership.org_id == org_id)}
     return Envelope(
-        data=[OrgMemberOut(user_id=u.id, email=u.email, name=u.name, service_account=u.service_account, status="member") for u in members]
+        data=[
+            OrgMemberOut(
+                user_id=user.id,
+                email=user.email,
+                name=user.name,
+                service_account=user.service_account,
+                role=memberships[user.id].role,
+                status="member",
+            )
+            for user in members
+        ]
     )
 
 
-@router.put("/users/{user_id}", tags=["Org Users"], dependencies=[require(Scope.users_write)])
-async def add_org_user(user_id: UUID, org_id: OrgDep) -> Envelope[MembershipOut]:
-    """Idempotent: the org comes from the credential, so membership can only ever be granted in scope."""
+@router.put("/users/{user_id}", tags=["Org Users"], dependencies=[require(Permission.members_manage, org_scope)])
+async def add_org_user(user_id: UUID, body: OrgMembershipIn, org_id: OrgDep, actor: ActorDep) -> Envelope[MembershipOut]:
+    """Add a principal to an organization or update its organization role."""
     if await User.find_by_id(user_id) is None:
         raise HTTPException(status_code=404, detail="User not found")
-    if await OrgMembership.get((user_id, org_id)) is None:
-        await OrgMembership(user_id=user_id, org_id=org_id).save()
-    return Envelope(data=MembershipOut(user_id=user_id, org_id=org_id, status="member"))
+    membership = await OrgMembership.get((user_id, org_id))
+    current = membership.role if membership else None
+    await ensure_org_role_change(actor, org_id, current, body.role)
+    if membership is None:
+        membership = OrgMembership(user_id=user_id, org_id=org_id, role=body.role)
+    elif membership.role != body.role:
+        if await membership.is_only_owner():
+            raise HTTPException(status_code=409, detail="An organization must keep at least one owner")
+        membership.role = body.role
+    await membership.save()
+    return Envelope(data=MembershipOut(user_id=user_id, org_id=org_id, role=membership.role, status="member"))
 
 
-@router.delete("/users/{user_id}", tags=["Org Users"], dependencies=[require(Scope.users_write)])
-async def remove_org_user(user_id: UUID, org_id: OrgDep) -> Envelope[DeletedOut[str]]:
-    """Removing the membership cascades the user out of the org's workspaces."""
+@router.delete("/users/{user_id}", tags=["Org Users"], dependencies=[require(Permission.members_manage, org_scope)])
+async def remove_org_user(user_id: UUID, org_id: OrgDep, actor: ActorDep) -> Envelope[DeletedOut[str]]:
+    """Remove a principal from an organization and its workspaces."""
     membership = await OrgMembership.get((user_id, org_id))
     if membership is None:
         raise HTTPException(status_code=404, detail="User is not a member of this org")
+    await ensure_org_role_change(actor, org_id, membership.role, OrgRole.member)
+    if await membership.is_only_owner():
+        raise HTTPException(status_code=409, detail="An organization must keep at least one owner")
     await membership.delete()
     return Envelope(data=DeletedOut.of(f"{user_id}/{org_id}"))
 
 
-@router.get("/management-keys", tags=["Management Keys"], dependencies=[require(Scope.management_keys_read)])
-async def list_management_keys(org_id: OrgDep) -> Envelope[list[ManagementKeyOut]]:
-    keys = await ManagementKey.find(ManagementKey.org_id == org_id, order_by=col(ManagementKey.id))
-    return Envelope(data=[ManagementKeyOut.model_validate(k) for k in keys])
-
-
-@router.post("/management-keys", tags=["Management Keys"], dependencies=[require(Scope.management_keys_write)])
-async def mint_org_management_key(body: ManagementKeyIn, org_id: OrgDep, claims: MgmtDep) -> Envelope[ManagementKeyMintedOut]:
-    """Mint an org-scoped key for the acting user, or for another org member when user_id names one."""
-    user_id = body.user_id or claims.user_id
-    user = await User.find_by_id(user_id)
-    if user is None:
-        raise HTTPException(status_code=404, detail="User not found")
-    if not user.instance_admin and await OrgMembership.get((user_id, org_id)) is None:
-        raise HTTPException(status_code=403, detail="User is not a member of this org, so a key cannot be minted for them")
-    scopes = [s.value for s in body.scopes] if body.scopes is not None else None
-    key_id, token = await mint_management_key(org_id, user_id, label=body.label, scopes=scopes)
-    return Envelope(data=ManagementKeyMintedOut(id=key_id, org_id=org_id, user_id=user_id, scopes=scopes, label=body.label, token=token))
-
-
-@router.delete("/management-keys/{key_id}", tags=["Management Keys"], dependencies=[require(Scope.management_keys_write)])
-async def revoke_management_key(org_id: OrgDep, key_id: UUID) -> Envelope[ManagementKeyRevokedOut]:
-    key = await ManagementKey.owned_by(org_id, key_id)
-    key.revoked = True
-    await key.save()
-    return Envelope(data=ManagementKeyRevokedOut(id=key_id, status="revoked"))
-
-
-@router.post("/bundles/compile", tags=["Bundles"], dependencies=[require(Scope.bundles_write)])
+@router.post("/bundles/compile", tags=["Bundles"], dependencies=[require(Permission.bundles_publish, org_scope)])
 async def compile_bundle(org_id: OrgDep, request: Request) -> Envelope[BundleOut]:
+    """Compile and sign a new policy bundle from the organization's current configuration."""
     settings = request.app.state.settings
     now = datetime.now(tz=UTC)
     try:
@@ -91,22 +85,28 @@ async def compile_bundle(org_id: OrgDep, request: Request) -> Envelope[BundleOut
     return Envelope(data=BundleOut.model_validate(bundle))
 
 
-@router.get("/bundles", tags=["Bundles"], dependencies=[require(Scope.bundles_read)])
+@router.get("/bundles", tags=["Bundles"], dependencies=[require(Permission.bundles_read, org_scope)])
 async def list_bundles(org_id: OrgDep) -> Envelope[list[BundleOut]]:
+    """List policy bundle metadata for an organization."""
     bundles = await Bundle.find(Bundle.org_id == org_id, order_by=col(Bundle.version))
-    return Envelope(data=[BundleOut.model_validate(b) for b in bundles])
+    return Envelope(data=[BundleOut.model_validate(bundle) for bundle in bundles])
 
 
-@router.get("/events", tags=["Events"], dependencies=[require(Scope.events_read)])
-async def list_events(
-    org_id: OrgDep,
-    page: Annotated[UsageEventPage, Query()],
-) -> Envelope[list[UsageEventOut]]:
-    events = await UsageEvent.for_org(org_id, page)
-    return Envelope(data=[UsageEventOut.model_validate(e) for e in events])
+@router.get("/events", tags=["Events"], dependencies=[require(Permission.usage_read, org_scope)])
+async def list_org_events(org_id: OrgDep, page: Annotated[UsageEventPage, Query()]) -> Envelope[list[UsageEventOut]]:
+    """List usage events across an organization with cursor pagination."""
+    events = await UsageEvent.for_scope(org_id, None, page)
+    return Envelope(data=[UsageEventOut.model_validate(event) for event in events])
 
 
-@router.get("/activity", tags=["Activity"], dependencies=[require(Scope.activity_read)])
+@router.get("/workspaces/{workspace_ref}/events", tags=["Events"], dependencies=[require(Permission.usage_read, workspace_scope)])
+async def list_workspace_events(workspace: WorkspaceDep, page: Annotated[UsageEventPage, Query()]) -> Envelope[list[UsageEventOut]]:
+    """List usage events for one workspace with cursor pagination."""
+    events = await UsageEvent.for_scope(workspace.org_id, workspace.id, page)
+    return Envelope(data=[UsageEventOut.model_validate(event) for event in events])
+
+
+@router.get("/activity", tags=["Activity"], dependencies=[require(Permission.audit_read, org_scope)])
 async def list_activity(org_id: OrgDep, limit: Annotated[int, Query(ge=1, le=200)] = 50) -> Envelope[list[ActivityOut]]:
-    """What changed in this org, newest first: the audit trail the write triggers already record."""
+    """List the most recent audited changes in an organization."""
     return Envelope(data=[ActivityOut.model_validate(entry) for entry in await AuditLog.for_org(org_id, limit)])

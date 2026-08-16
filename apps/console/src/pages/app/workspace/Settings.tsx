@@ -2,7 +2,14 @@ import { useState } from 'react';
 import { useLocation } from 'wouter';
 import { useRequiredOrgId } from '@/lib/session';
 import { useWorkspace, useRenameWorkspaceMutation, useDeleteWorkspaceMutation } from '@/features/workspaces/hooks';
-import { useOrgMembers, useWorkspaceMembers, useAddWorkspaceMemberMutation, useRemoveWorkspaceMemberMutation } from '@/features/members/hooks';
+import {
+  useOrgMembers,
+  useWorkspaceMembers,
+  useAddWorkspaceMemberMutation,
+  useRemoveWorkspaceMemberMutation,
+  workspaceRoleOptions,
+} from '@/features/members/hooks';
+import type { WorkspaceRole } from '@workspace/api-client-react';
 import { Card, Button, ConfirmButton, Input, Label } from '@/components/ui/elements';
 import { Trash2, Users } from 'lucide-react';
 import { LoadingState, ErrorState } from '@/components/shared/states';
@@ -54,7 +61,7 @@ function WorkspaceSettingsContent({ workspaceRef }: { workspaceRef: string }) {
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            rename.mutate({ workspaceRef, data: { name: draft } }, { onSuccess: () => setName(null) });
+            rename.mutate({ orgId, workspaceRef, data: { name: draft } }, { onSuccess: () => setName(null) });
           }}
           className="flex items-end gap-3 max-w-md"
         >
@@ -93,13 +100,15 @@ function WorkspaceSettingsContent({ workspaceRef }: { workspaceRef: string }) {
             dialogTitle: 'Add Member',
             dialogDescription: 'Choose someone who already belongs to this organization.',
             placeholder: 'Select an org member',
-            onAdd: (userId) => addMember.mutateAsync({ workspaceRef, userId }),
+            roles: workspaceRoleOptions,
+            defaultRole: 'member',
+            onAdd: (userId, role) => addMember.mutateAsync({ orgId, workspaceRef, userId, data: { role: role as WorkspaceRole } }),
             pending: addMember.isPending || candidates === undefined,
           }}
           remove={{
             title: (member) => `Remove ${describe(member.user_id)?.name ?? 'this member'} from the workspace?`,
             description: 'They lose access to this workspace but stay in the organization.',
-            onRemove: (member) => removeMember.mutateAsync({ workspaceRef, userId: member.user_id }),
+            onRemove: (member) => removeMember.mutateAsync({ orgId, workspaceRef, userId: member.user_id }),
             pending: removeMember.isPending,
           }}
         />
@@ -119,7 +128,7 @@ function WorkspaceSettingsContent({ workspaceRef }: { workspaceRef: string }) {
           confirmLabel="Delete Workspace"
           pending={remove.isPending}
           onConfirm={async () => {
-            await remove.mutateAsync({ workspaceRef });
+            await remove.mutateAsync({ orgId, workspaceRef });
             setLocation('/org');
           }}
         >

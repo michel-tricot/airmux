@@ -202,9 +202,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <LogOut className="mr-2 h-4 w-4 shrink-0" />
             Sign out
           </Button>
-          {user?.instance_admin && (
+          {user?.instance_role && (
             <Button asChild variant="ghost" size="icon" className="h-8 w-8 shrink-0 text-muted-foreground hover:text-primary">
-              <Link href="/instance" onClick={close} title="Instance admin" aria-label="Instance admin">
+              <Link href="/instance" onClick={close} title="Instance console" aria-label="Instance console">
                 <Shield className="h-4 w-4" />
               </Link>
             </Button>
@@ -234,7 +234,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         schema={workspaceNameSchema}
         defaultValues={{ name: '' }}
         onSubmit={async (values) => {
-          const created = await createWorkspace.mutateAsync({ data: values });
+          const created = await createWorkspace.mutateAsync({ orgId, data: values });
           setLocation(`/org/workspaces/${created.slug}`);
         }}
         submitLabel="Create"

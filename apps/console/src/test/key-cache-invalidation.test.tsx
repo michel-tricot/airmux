@@ -5,14 +5,13 @@ import { http, HttpResponse } from 'msw';
 import type { ReactNode } from 'react';
 import { createQueryClient } from '@/App';
 import {
-  useAllManagementKeys,
+  useInstanceAccessKeys,
+  useOrgAccessKeys,
+  useCreateInstanceAccessKeyMutation,
   useCreateInferenceKeyMutation,
   useInferenceKeys,
-  useInstanceKeys,
-  useMintInstanceKeyMutation,
+  useRevokeOrgAccessKeyMutation,
   useRevokeInferenceKeyMutation,
-  useRevokeInstanceKeyMutation,
-  useRevokeManagementKeyMutation,
 } from '@/features/keys/hooks';
 import { ORG, server } from './msw';
 
@@ -27,15 +26,23 @@ function wrapper({ children }: { children: ReactNode }) {
   return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
 }
 
-function managementKey(status: string) {
+function accessKey(id: string, revokedAt: string | null = null) {
   return {
-    id: 'mk-1',
+    id,
+    user_id: 'user-1',
     org_id: ORG.id,
-    name: 'ci-bot',
-    status,
+    workspace_id: null,
+    parent_id: null,
+    prefix: 'sk-cp-abc',
+    permissions: ['workspaces.read'],
+    label: 'ci',
+    expires_at: null,
+    revoked_at: revokedAt,
     created_at: now,
     updated_at: now,
-    revoked_at: status === 'revoked' ? now : null,
+    deleted_at: null,
+    scope: { level: 'org', org_id: ORG.id, workspace_id: null },
+    status: revokedAt ? 'revoked' : 'active',
   };
 }
 
@@ -56,104 +63,52 @@ function inferenceKey(id: string, revoked: boolean) {
   };
 }
 
-function instanceKey(id: string, status: string) {
-  return {
-    id,
-    label: 'ci',
-    status,
-    created_at: now,
-    updated_at: now,
-    revoked_at: status === 'revoked' ? now : null,
-  };
-}
-
 describe('key cache invalidation across pages', () => {
-  it('revoking a management key via the org-scoped mutation refetches the instance-wide list', async () => {
-    let revoked = false;
-    let instanceListFetches = 0;
+  it('revoking an access key refreshes a filtered access-key list', async () => {
+    let key = accessKey('ak-1');
     server.use(
-      http.get('/v1/instance/management-keys', () => {
-        instanceListFetches += 1;
-        return HttpResponse.json([managementKey(revoked ? 'revoked' : 'active')]);
-      }),
-      http.delete('/v1/org/management-keys/:keyId', () => {
-        revoked = true;
-        return HttpResponse.json({ id: 'mk-1', status: 'revoked' });
+      http.get(`/v1/orgs/${ORG.id}/access-keys`, () => HttpResponse.json([key])),
+      http.delete('/v1/access-keys/:keyId', () => {
+        key = accessKey('ak-1', now);
+        return HttpResponse.json({ id: 'ak-1', status: 'revoked', revoked_at: now });
       }),
     );
 
-    const list = renderHook(() => useAllManagementKeys(), { wrapper });
+    const list = renderHook(() => useOrgAccessKeys(ORG.id), { wrapper });
     await waitFor(() => expect(list.result.current.isSuccess).toBe(true));
-    expect(list.result.current.data).toEqual([expect.objectContaining({ status: 'active' })]);
-    expect(instanceListFetches).toBe(1);
+    expect(list.result.current.data).toEqual([expect.objectContaining({ revoked_at: null })]);
 
-    const revoke = renderHook(() => useRevokeManagementKeyMutation(ORG.id), { wrapper });
-    await revoke.result.current.mutateAsync({ keyId: 'mk-1' });
+    const revoke = renderHook(() => useRevokeOrgAccessKeyMutation(ORG.id), { wrapper });
+    await revoke.result.current.mutateAsync({ keyId: 'ak-1' });
 
-    await waitFor(() => expect(instanceListFetches).toBe(2));
-    await waitFor(() => expect(list.result.current.data).toEqual([expect.objectContaining({ status: 'revoked' })]));
+    await waitFor(() => expect(list.result.current.data).toEqual([expect.objectContaining({ revoked_at: now })]));
   });
 
-  it('minting an instance key refetches the instance key list', async () => {
-    const keys = [instanceKey('ik-1', 'active')];
-    let listFetches = 0;
+  it('minting an access key refetches the access-key list', async () => {
+    const keys = [accessKey('ak-1')];
     server.use(
-      http.get('/v1/instance/instance-keys', () => {
-        listFetches += 1;
-        return HttpResponse.json(keys);
-      }),
-      http.post('/v1/instance/instance-keys', () => {
-        keys.push(instanceKey('ik-2', 'active'));
-        return HttpResponse.json({ ...instanceKey('ik-2', 'active'), token: 'tok-once' });
+      http.get('/v1/instance/access-keys', () => HttpResponse.json(keys)),
+      http.post('/v1/instance/access-keys', () => {
+        keys.push(accessKey('ak-2'));
+        return HttpResponse.json({ ...accessKey('ak-2'), token: 'tok-once' });
       }),
     );
 
-    const list = renderHook(() => useInstanceKeys(), { wrapper });
+    const list = renderHook(() => useInstanceAccessKeys(), { wrapper });
     await waitFor(() => expect(list.result.current.isSuccess).toBe(true));
     expect(list.result.current.data).toHaveLength(1);
-    expect(listFetches).toBe(1);
 
-    const mint = renderHook(() => useMintInstanceKeyMutation(), { wrapper });
-    await mint.result.current.mutateAsync({ data: { label: 'ci' } });
+    const mint = renderHook(() => useCreateInstanceAccessKeyMutation(), { wrapper });
+    await mint.result.current.mutateAsync({ data: { label: 'ci', permissions: ['workspaces.read'] } });
 
-    await waitFor(() => expect(listFetches).toBe(2));
     await waitFor(() => expect(list.result.current.data).toHaveLength(2));
-  });
-
-  it('revoking an instance key refetches the instance key list with fresh status', async () => {
-    let revoked = false;
-    let listFetches = 0;
-    server.use(
-      http.get('/v1/instance/instance-keys', () => {
-        listFetches += 1;
-        return HttpResponse.json([instanceKey('ik-1', revoked ? 'revoked' : 'active')]);
-      }),
-      http.delete('/v1/instance/instance-keys/:keyId', () => {
-        revoked = true;
-        return HttpResponse.json({ id: 'ik-1', status: 'revoked' });
-      }),
-    );
-
-    const list = renderHook(() => useInstanceKeys(), { wrapper });
-    await waitFor(() => expect(list.result.current.isSuccess).toBe(true));
-    expect(list.result.current.data).toEqual([expect.objectContaining({ status: 'active' })]);
-
-    const revoke = renderHook(() => useRevokeInstanceKeyMutation(), { wrapper });
-    await revoke.result.current.mutateAsync({ keyId: 'ik-1' });
-
-    await waitFor(() => expect(listFetches).toBe(2));
-    await waitFor(() => expect(list.result.current.data).toEqual([expect.objectContaining({ status: 'revoked' })]));
   });
 
   it('minting an inference key refetches the workspace inference key list', async () => {
     const keys = [inferenceKey('ifk-1', false)];
-    let listFetches = 0;
     server.use(
-      http.get(`/v1/org/workspaces/${WORKSPACE_REF}/inference-keys`, () => {
-        listFetches += 1;
-        return HttpResponse.json(keys);
-      }),
-      http.post(`/v1/org/workspaces/${WORKSPACE_REF}/inference-keys`, () => {
+      http.get(`/v1/orgs/${ORG.id}/workspaces/${WORKSPACE_REF}/inference-keys`, () => HttpResponse.json(keys)),
+      http.post(`/v1/orgs/${ORG.id}/workspaces/${WORKSPACE_REF}/inference-keys`, () => {
         keys.push(inferenceKey('ifk-2', false));
         return HttpResponse.json({ id: 'ifk-2', token: 'tok-once' });
       }),
@@ -162,24 +117,18 @@ describe('key cache invalidation across pages', () => {
     const list = renderHook(() => useInferenceKeys(ORG.id, WORKSPACE_REF), { wrapper });
     await waitFor(() => expect(list.result.current.isSuccess).toBe(true));
     expect(list.result.current.data).toHaveLength(1);
-    expect(listFetches).toBe(1);
 
     const mint = renderHook(() => useCreateInferenceKeyMutation(ORG.id, WORKSPACE_REF), { wrapper });
-    await mint.result.current.mutateAsync({ workspaceRef: WORKSPACE_REF, data: { label: 'app' } });
+    await mint.result.current.mutateAsync({ orgId: ORG.id, workspaceRef: WORKSPACE_REF, data: { label: 'app' } });
 
-    await waitFor(() => expect(listFetches).toBe(2));
     await waitFor(() => expect(list.result.current.data).toHaveLength(2));
   });
 
   it('revoking an inference key refetches the workspace inference key list with fresh status', async () => {
     let revoked = false;
-    let listFetches = 0;
     server.use(
-      http.get(`/v1/org/workspaces/${WORKSPACE_REF}/inference-keys`, () => {
-        listFetches += 1;
-        return HttpResponse.json([inferenceKey('ifk-1', revoked)]);
-      }),
-      http.delete(`/v1/org/workspaces/${WORKSPACE_REF}/inference-keys/:keyId`, () => {
+      http.get(`/v1/orgs/${ORG.id}/workspaces/${WORKSPACE_REF}/inference-keys`, () => HttpResponse.json([inferenceKey('ifk-1', revoked)])),
+      http.delete(`/v1/orgs/${ORG.id}/workspaces/${WORKSPACE_REF}/inference-keys/:keyId`, () => {
         revoked = true;
         return HttpResponse.json({ id: 'ifk-1', status: 'revoked' });
       }),
@@ -190,9 +139,8 @@ describe('key cache invalidation across pages', () => {
     expect(list.result.current.data).toEqual([expect.objectContaining({ revoked: false })]);
 
     const revoke = renderHook(() => useRevokeInferenceKeyMutation(ORG.id, WORKSPACE_REF), { wrapper });
-    await revoke.result.current.mutateAsync({ workspaceRef: WORKSPACE_REF, keyId: 'ifk-1' });
+    await revoke.result.current.mutateAsync({ orgId: ORG.id, workspaceRef: WORKSPACE_REF, keyId: 'ifk-1' });
 
-    await waitFor(() => expect(listFetches).toBe(2));
     await waitFor(() => expect(list.result.current.data).toEqual([expect.objectContaining({ revoked: true })]));
   });
 });

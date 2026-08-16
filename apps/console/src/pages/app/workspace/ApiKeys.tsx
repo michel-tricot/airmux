@@ -45,7 +45,7 @@ export default function WorkspaceApiKeys() {
         onRetry={() => keysQuery.refetch()}
         emptyText="No inference keys generated."
         revokeDescription="Requests using this inference key will stop working immediately. This cannot be undone."
-        onRevoke={(key) => revokeKey.mutateAsync({ workspaceRef, keyId: key.id })}
+        onRevoke={(key) => revokeKey.mutateAsync({ orgId, workspaceRef, keyId: key.id })}
         revokePending={revokeKey.isPending}
       />
 
@@ -57,7 +57,7 @@ export default function WorkspaceApiKeys() {
         schema={keyLabelSchema}
         defaultValues={{ label: '' }}
         onSubmit={async (values) => {
-          const minted = await createKey.mutateAsync({ workspaceRef, data: values });
+          const minted = await createKey.mutateAsync({ orgId, workspaceRef, data: values });
           setToken(minted.token);
         }}
         submitLabel="Generate"

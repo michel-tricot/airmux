@@ -16,7 +16,7 @@ def test_org_activity_reports_the_writes_in_that_org(tmp_path):
         other = make_org(c, root, "o2")
         make_workspace(c, cp.headers(other), "elsewhere")
 
-        activity = c.get("/v1/org/activity", headers=headers)
+        activity = c.get(f"/v1/orgs/{org}/activity", headers=headers)
         assert activity.status_code == 200, activity.text
         entries = activity.json()["data"]
 
@@ -33,9 +33,9 @@ def test_activity_never_serves_the_row_snapshots(tmp_path):
         org = make_org(c, root, "o1")
         headers = cp.headers(org)
         workspace = make_workspace(c, headers, "staging")
-        c.post(f"/v1/org/workspaces/{workspace}/inference-keys", json={"label": "k"}, headers=headers)
+        c.post(f"/v1/orgs/{org}/workspaces/{workspace}/inference-keys", json={"label": "k"}, headers=headers)
 
-        for entry in c.get("/v1/org/activity", headers=headers).json()["data"]:
+        for entry in c.get(f"/v1/orgs/{org}/activity", headers=headers).json()["data"]:
             assert "before" not in entry
             assert "after" not in entry
             assert "token_hash" not in str(entry)
@@ -62,9 +62,9 @@ def test_org_activity_is_limited_and_ordered_newest_first(tmp_path):
         for i in range(4):
             make_workspace(c, headers, f"ws{i}")
 
-        entries = c.get("/v1/org/activity", params={"limit": 2}, headers=headers).json()["data"]
+        entries = c.get(f"/v1/orgs/{org}/activity", params={"limit": 2}, headers=headers).json()["data"]
         assert len(entries) == 2
         assert entries[0]["id"] > entries[1]["id"]
-        assert c.get("/v1/org/activity", params={"limit": 0}, headers=headers).status_code == 422
-        assert c.get("/v1/org/activity", params={"limit": 201}, headers=headers).status_code == 422
+        assert c.get(f"/v1/orgs/{org}/activity", params={"limit": 0}, headers=headers).status_code == 422
+        assert c.get(f"/v1/orgs/{org}/activity", params={"limit": 201}, headers=headers).status_code == 422
         assert c.get("/v1/instance/activity", params={"limit": 201}, headers=root).status_code == 422

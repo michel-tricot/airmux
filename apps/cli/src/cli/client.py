@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 import typer
 
 from cli.common import console, invocation
-from cli.profiles import active_profile, admin_keys_url
+from cli.profiles import active_profile
 
 if TYPE_CHECKING:
     import httpx
@@ -44,25 +44,26 @@ def _bearer_client(token: str, control_plane_url: str) -> httpx.Client:
     return httpx.Client(base_url=resolve_control_plane_url(control_plane_url), headers={"authorization": f"Bearer {token}"}, timeout=10.0)
 
 
-def instance_client(control_plane_url: str = "") -> httpx.Client:
-    """Instance-scoped client for /instance routes; takes the raw --control-plane-url override and resolves it itself."""
-    token = os.environ.get("GW_INSTANCE_KEY")
-    if not token:
-        console.print(f"[red]This needs an admin key. Create one at {admin_keys_url()}, then set GW_INSTANCE_KEY.[/red]")
+def access_client(control_plane_url: str = "", token: str | None = None) -> httpx.Client:
+    profile = active_profile() or {}
+    environment_token = os.environ.get("GW_ACCESS_KEY")
+    selected_token = token or environment_token or profile.get("token")
+    if not selected_token:
+        console.print("[red]No access key available. Run [bold]airllm login[/bold] or set GW_ACCESS_KEY.[/red]")
         raise typer.Exit(1)
-    return _bearer_client(token, control_plane_url)
+    return _bearer_client(str(selected_token), control_plane_url)
 
 
-def org_client(control_plane_url: str = "", token: str | None = None) -> httpx.Client:
-    """Org-scoped client for /org routes: an explicit token, the env override, then the active login profile."""
-    token = token or os.environ.get("GW_ORG_MGMT_TOKEN")
-    if not token:
-        profile = active_profile()
-        token = str(profile["token"]) if profile and profile.get("token") else None
-    if not token:
-        console.print("[red]Not signed in. Run [bold]airllm login[/bold].[/red]")
-        raise typer.Exit(1)
-    return _bearer_client(token, control_plane_url)
+def resolve_org_id(override: str = "") -> str:
+    selected_org = override or os.environ.get("GW_ORG_ID") or (active_profile() or {}).get("org_id")
+    if selected_org:
+        return str(selected_org)
+    console.print("[red]No organization selected. Pass --org, set GW_ORG_ID, or sign in with [bold]airllm login[/bold].[/red]")
+    raise typer.Exit(1)
+
+
+def org_path(suffix: str, org_id: str = "") -> str:
+    return f"/v1/orgs/{resolve_org_id(org_id)}{suffix}"
 
 
 def api_error(resp: httpx.Response) -> str:
@@ -94,13 +95,8 @@ def payload_rows(resp: httpx.Response) -> list[dict]:
     return resp.json()["data"]
 
 
-def instance_get(path: str, control_plane_url: str, params: dict | None = None) -> list[dict]:
-    with instance_client(control_plane_url) as c:
-        return payload_rows(ensure_ok(c.get(path, params=params or {})))
-
-
-def org_get(path: str, control_plane_url: str, params: dict | None = None) -> list[dict]:
-    with org_client(control_plane_url) as c:
+def access_get(path: str, control_plane_url: str, params: dict | None = None) -> list[dict]:
+    with access_client(control_plane_url) as c:
         return payload_rows(ensure_ok(c.get(path, params=params or {})))
 
 

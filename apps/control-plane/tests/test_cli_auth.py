@@ -7,7 +7,8 @@ from threading import Barrier
 from fastapi.testclient import TestClient
 from helpers import make_org, run_in_db, setup_control_plane
 
-from control_plane.keys import MANAGEMENT_KEY_PREFIX
+from control_plane.authz import Permission
+from control_plane.keys import ACCESS_KEY_PREFIX
 from control_plane.models import CliAuthRequest
 
 CSRF = {"X-Requested-With": "fetch"}
@@ -51,12 +52,12 @@ def test_device_flow_end_to_end(tmp_path):
 
         done = c.post("/v1/auth/cli/poll", json={"poll_secret": started["poll_secret"]}).json()["data"]
         assert done["status"] == "complete"
-        assert done["token"].startswith(MANAGEMENT_KEY_PREFIX)
+        assert done["token"].startswith(ACCESS_KEY_PREFIX)
         assert done["org_id"] == org["id"]
         assert done["org_name"] == "mine"
 
         bearer = {"authorization": f"Bearer {done['token']}"}
-        assert c.get("/v1/org/workspaces", headers=bearer).status_code == 200
+        assert c.get(f"/v1/orgs/{org['id']}/workspaces", headers=bearer).status_code == 200
         assert c.post("/v1/auth/cli/poll", json={"poll_secret": started["poll_secret"]}).status_code == 404
 
 
@@ -78,10 +79,38 @@ def test_two_simultaneous_polls_deliver_one_key(tmp_path):
         assert sorted(response.status_code for response in responses) == [200, 404]
         complete = next(response.json()["data"] for response in responses if response.status_code == 200)
         assert complete["status"] == "complete"
-        assert complete["token"].startswith(MANAGEMENT_KEY_PREFIX)
+        assert complete["token"].startswith(ACCESS_KEY_PREFIX)
 
 
-def test_reapproving_from_the_same_client_replaces_the_previous_key(tmp_path):
+def test_reapproving_from_the_same_client_replaces_only_the_presented_key(tmp_path):
+    cp = setup_control_plane(tmp_path)
+    with _client(cp) as c:
+        user, org = _signup_with_org(c)
+
+        def login_once(replaced: str | None = None) -> str:
+            started = _start(c, client_name="mbp")
+            assert c.post("/v1/auth/cli/approve", json={"user_code": started["user_code"], "org_id": org["id"]}, headers=CSRF).status_code == 200
+            headers = {"authorization": f"Bearer {replaced}"} if replaced else {}
+            return c.post("/v1/auth/cli/poll", json={"poll_secret": started["poll_secret"]}, headers=headers).json()["data"]["token"]
+
+        first = login_once()
+        peer = c.post(
+            f"/v1/orgs/{org['id']}/access-keys",
+            json={
+                "user_id": user["user_id"],
+                "label": "mbp",
+                "permissions": [Permission.workspaces_read],
+            },
+            headers=CSRF,
+        ).json()["data"]["token"]
+        assert c.get(f"/v1/orgs/{org['id']}/workspaces", headers={"authorization": f"Bearer {first}"}).status_code == 200
+        second = login_once(first)
+        assert c.get(f"/v1/orgs/{org['id']}/workspaces", headers={"authorization": f"Bearer {second}"}).status_code == 200
+        assert c.get(f"/v1/orgs/{org['id']}/workspaces", headers={"authorization": f"Bearer {first}"}).status_code == 401
+        assert c.get(f"/v1/orgs/{org['id']}/workspaces", headers={"authorization": f"Bearer {peer}"}).status_code == 200
+
+
+def test_login_without_an_existing_key_does_not_retire_matching_labels(tmp_path):
     cp = setup_control_plane(tmp_path)
     with _client(cp) as c:
         _, org = _signup_with_org(c)
@@ -92,10 +121,10 @@ def test_reapproving_from_the_same_client_replaces_the_previous_key(tmp_path):
             return c.post("/v1/auth/cli/poll", json={"poll_secret": started["poll_secret"]}).json()["data"]["token"]
 
         first = login_once()
-        assert c.get("/v1/org/workspaces", headers={"authorization": f"Bearer {first}"}).status_code == 200
         second = login_once()
-        assert c.get("/v1/org/workspaces", headers={"authorization": f"Bearer {second}"}).status_code == 200
-        assert c.get("/v1/org/workspaces", headers={"authorization": f"Bearer {first}"}).status_code == 401
+
+        assert c.get(f"/v1/orgs/{org['id']}/workspaces", headers={"authorization": f"Bearer {first}"}).status_code == 200
+        assert c.get(f"/v1/orgs/{org['id']}/workspaces", headers={"authorization": f"Bearer {second}"}).status_code == 200
 
 
 def test_approval_requires_membership_and_a_browser_session(tmp_path):
@@ -138,7 +167,7 @@ def test_deleting_an_approved_org_removes_its_device_request(tmp_path):
     with _client(cp) as c:
         user = c.post("/v1/auth/signup", json={"email": "member@example.com", "password": PASSWORD}).json()["data"]
         org_id = make_org(c, root, "temporary")
-        assert c.put(f"/v1/org/users/{user['user_id']}", headers=cp.headers(org_id)).status_code == 200
+        assert c.put(f"/v1/orgs/{org_id}/users/{user['user_id']}", json={"role": "member"}, headers=cp.headers(org_id)).status_code == 200
         started = _start(c)
         assert c.post("/v1/auth/cli/approve", json={"user_code": started["user_code"], "org_id": str(org_id)}, headers=CSRF).status_code == 200
 
@@ -156,10 +185,10 @@ def test_deleting_an_approver_removes_their_device_request(tmp_path):
         user = c.post("/v1/auth/signup", json={"email": "member@example.com", "password": PASSWORD}).json()["data"]
         org_id = make_org(c, root, "kept")
         org = cp.headers(org_id)
-        assert c.put(f"/v1/org/users/{user['user_id']}", headers=org).status_code == 200
+        assert c.put(f"/v1/orgs/{org_id}/users/{user['user_id']}", json={"role": "member"}, headers=org).status_code == 200
         started = _start(c)
         assert c.post("/v1/auth/cli/approve", json={"user_code": started["user_code"], "org_id": str(org_id)}, headers=CSRF).status_code == 200
-        assert c.delete(f"/v1/org/users/{user['user_id']}", headers=org).status_code == 200
+        assert c.delete(f"/v1/orgs/{org_id}/users/{user['user_id']}", headers=org).status_code == 200
 
         deleted = c.delete(f"/v1/users/{user['user_id']}", headers=root)
 

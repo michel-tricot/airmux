@@ -9,6 +9,7 @@ from sqlalchemy import UniqueConstraint
 from sqlalchemy.dialects.postgresql import CITEXT
 from sqlmodel import Field
 
+from control_plane.models.access_key import AccessKey
 from control_plane.models.audit import audited
 from control_plane.models.common import Identified, OrgOwned, Tombstonable
 from control_plane.models.common.base import Record
@@ -99,6 +100,7 @@ class Workspace(Record, Identified, OrgOwned, Tombstonable, table=True):
         The usage it recorded is history rather than a scoped row, and stays.
         """
         await ProviderCredential.delete_scoped(store, ProviderCredential.workspace_id == self.id)
+        await AccessKey.delete_scoped(AccessKey.workspace_id == self.id)
         for key in await InferenceKey.find(InferenceKey.workspace_id == self.id):
             await key.delete()
         for membership in await WorkspaceMembership.find(WorkspaceMembership.workspace_id == self.id):
@@ -121,7 +123,7 @@ class WorkspaceCreate(RecordCreate[Workspace]):
 
 
 class WorkspaceUpdate(RecordUpdate[Workspace]):
-    name: str | None = Field(default=None, min_length=1, max_length=200)
+    name: str | None = Field(default=None, description="Replacement workspace name", min_length=1, max_length=200)
 
 
 class WorkspaceOut(RecordOut[Workspace]):

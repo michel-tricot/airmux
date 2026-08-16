@@ -10,13 +10,10 @@ from contract.secrets import SecretRef
 
 
 class KeyEntry(BaseModel):
-    """An API key as the data plane sees it: enough to authorize with zero I/O.
+    """An active inference key included in a policy bundle.
 
-    The caller's bearer is an opaque secret; the data plane hashes it (see
-    credentials.py) and looks the hash up here. Absence is invalidity, so
-    revocation is simply dropping out of the next bundle. key_id exists for
-    event attribution only. The bundle carries hashes of live secrets and
-    stays org-sensitive even though the hashes are not reversible.
+    The bundle contains a token hash for authorization and a key ID for usage attribution, never
+    the caller's secret token.
     """
 
     model_config = ConfigDict(frozen=True)
@@ -28,10 +25,7 @@ class KeyEntry(BaseModel):
 
 
 class ProviderEntry(BaseModel):
-    """An upstream LLM provider endpoint, plus its profile: declarative facts about what the
-    provider accepts, so onboarding quirks is a bundle edit rather than an adapter branch.
-    Profile fields are names, sets and flags, never predicates; a provider that needs a
-    predicate needs an adapter."""
+    """An upstream LLM provider endpoint and its supported request parameters."""
 
     model_config = ConfigDict(frozen=True)
 
@@ -61,14 +55,9 @@ class ModelEntry(BaseModel):
 
 
 class CredentialEntry(BaseModel):
-    """One provider key the data plane may spend against, named but not carried.
+    """A provider credential reference, priority, and version included in a policy bundle.
 
-    The ref says which secret; the data plane fetches the value from the store it is configured
-    with. Nothing here is a secret and nothing here is a location, so a bundle at rest and a bundle
-    on the wire are both safe to read.
-
-    version is the cache key: a rotation keeps the ref and bumps this, so a data plane refetches
-    within one poll rather than waiting out a TTL.
+    The secret value is not included. A version change tells data planes to refresh their cached value.
     """
 
     model_config = ConfigDict(frozen=True)
@@ -90,12 +79,7 @@ class Catalog(BaseModel):
 
 
 class BundleV1(BaseModel):
-    """The complete policy snapshot one data plane needs to serve requests with no database.
-
-    Compiled by the control plane as a pure function of database state, signed, and polled
-    by the data plane. If a feature seems to need a DB read on the request path, the bundle
-    is missing a field; add the field here instead.
-    """
+    """A complete, versioned policy snapshot for one organization's model traffic."""
 
     model_config = ConfigDict(frozen=True)
 

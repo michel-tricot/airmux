@@ -46,8 +46,9 @@ registry, the registry is wrong; fix the registry.
   Database triggers (audit_trigger_ddl_v1, versioned and installed by the migrations like the touch
   triggers) write before/after AuditLog rows for every write path including Core statements, excluding the
   database-owned timestamps. The acting user reaches the triggers through the transaction-local app.user_id GUC.
-  Stamping lives in deps (management_claims and acting_user call set_actor); the only route-level stamps are
-  account creation (signup) where the user exists only mid-handler, and setup/CLI steps stamp the admin.
+  Stamping lives in deps (`authority` for bearer or session routes and `cookie_user` for browser-only routes).
+  The route-level stamps are signup and CLI key delivery, where the principal becomes known only mid-handler;
+  setup and CLI work stamp explicitly.
   The trigger rejects writes with no stamped actor, so an audited write can never land unattributed; the stamp dies
   with the transaction, so every unit of work attributes explicitly. Never write AuditLog rows by hand.
 - Server-minted ids are UUIDv7: take the Identified mixin, which brings the pk (client-side contract.uuid7 so the id

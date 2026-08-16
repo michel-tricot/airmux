@@ -70,10 +70,7 @@ class AuditLog(Record, table=True):
 
 
 class ActivityOut(RecordOut[AuditLog]):
-    """One entry in the feed: what changed, who changed it, when. Never the snapshots themselves.
-
-    id mirrors the column, which the sequence fills: nullable in the table, never null once read.
-    """
+    """One audited change, identifying what changed, who changed it, and when."""
 
     id: int | None
     table_name: str

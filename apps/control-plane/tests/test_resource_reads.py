@@ -27,7 +27,7 @@ def test_get_user_by_id_carries_their_memberships(tmp_path):
         org = make_org(c, root, "o1")
         user = make_user(tmp_path, "one@example.com")
 
-        c.put(f"/v1/org/users/{user.id}", headers=cp.headers(org))
+        c.put(f"/v1/orgs/{org}/users/{user.id}", json={"role": "member"}, headers=cp.headers(org))
 
         fetched = c.get(f"/v1/users/{user.id}", headers=root)
         assert fetched.status_code == 200, fetched.text
@@ -43,9 +43,9 @@ def test_get_workspace_by_id_stays_inside_the_org(tmp_path):
         other = make_org(c, root, "o2")
         workspace = make_workspace(c, cp.headers(org), "staging")
 
-        fetched = c.get(f"/v1/org/workspaces/{workspace}", headers=cp.headers(org))
+        fetched = c.get(f"/v1/orgs/{org}/workspaces/{workspace}", headers=cp.headers(org))
         assert fetched.status_code == 200, fetched.text
         assert fetched.json()["data"]["name"] == "staging"
 
-        assert c.get(f"/v1/org/workspaces/{workspace}", headers=cp.headers(other)).status_code == 404
-        assert c.get(f"/v1/org/workspaces/{uuid7()}", headers=cp.headers(org)).status_code == 404
+        assert c.get(f"/v1/orgs/{other}/workspaces/{workspace}", headers=cp.headers(other)).status_code == 404
+        assert c.get(f"/v1/orgs/{org}/workspaces/{uuid7()}", headers=cp.headers(org)).status_code == 404

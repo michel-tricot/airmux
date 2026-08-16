@@ -8,22 +8,65 @@ from fastapi.testclient import TestClient
 from helpers import run_in_db, setup_control_plane
 
 from contract import INFERENCE_TOKEN_PREFIX, uuid7
-from control_plane.keys import INSTANCE_KEY_PREFIX, MANAGEMENT_KEY_PREFIX
-from control_plane.models import DataPlaneInstance
+from control_plane.authz import DATA_PLANE_PERMISSIONS, InstanceRole, OrgRole, Permission, Scope
+from control_plane.keys import ACCESS_KEY_PREFIX, AccessKeyGrant, mint_access_key
+from control_plane.models import DataPlaneInstance, Org, OrgMembership, User, set_actor
 from control_plane.routes import oss
-
-TOKEN = INSTANCE_KEY_PREFIX + "quickstart-token"
 
 
 @pytest.fixture
 def key_path(tmp_path, monkeypatch):
-    """The token lands at the one relative path the shipped config names, resolved from the working directory.
-
-    In the container that working directory is the shared /state volume, so the same
-    .airllm/dataplane.key reaches the co-mounted data plane there and in a checkout.
-    """
     monkeypatch.chdir(tmp_path)
     return tmp_path / oss.DATA_PLANE_KEY_DIR / oss.DATA_PLANE_KEY_FILE
+
+
+def _data_plane_token(
+    tmp_path,
+    *,
+    instance_role: InstanceRole | None = InstanceRole.data_plane,
+    permissions=DATA_PLANE_PERMISSIONS,
+    service_account: bool = True,
+) -> str:
+    async def mint() -> str:
+        user = User(
+            email=f"data-plane-{uuid7()}@example.com",
+            name="Data Plane",
+            instance_role=instance_role,
+            service_account=service_account,
+        )
+        await set_actor(user.id)
+        await user.save()
+        _, token = await mint_access_key(
+            AccessKeyGrant(
+                principal_id=user.id,
+                scope=Scope.instance(),
+                permissions=frozenset(permissions),
+                label="data-plane",
+            )
+        )
+        return token
+
+    return run_in_db(tmp_path, mint)
+
+
+def _org_data_plane_token(tmp_path, *, role: OrgRole = OrgRole.data_plane) -> str:
+    async def mint() -> str:
+        user = User(email=f"data-plane-{uuid7()}@example.com", name="Data Plane", service_account=True)
+        await set_actor(user.id)
+        await user.save()
+        org = await Org(name=f"Org {uuid7()}").save()
+        await OrgMembership(user_id=user.id, org_id=org.id, role=role).save()
+        _, token = await mint_access_key(
+            AccessKeyGrant(
+                principal_id=user.id,
+                scope=Scope.org(org.id),
+                permissions=DATA_PLANE_PERMISSIONS,
+                label="data-plane",
+            )
+        )
+        return token
+
+    return run_in_db(tmp_path, mint)
 
 
 def _register_instance(tmp_path) -> None:
@@ -34,54 +77,68 @@ def _register_instance(tmp_path) -> None:
     run_in_db(tmp_path, insert)
 
 
-def test_oss_quickstart_writes_the_token_on_a_virgin_instance(tmp_path, key_path):
+def test_oss_quickstart_writes_only_a_live_data_plane_key(tmp_path, key_path):
     cp = setup_control_plane(tmp_path)
-    with TestClient(cp.app) as c:
-        resp = c.post("/v1/instance/oss/quickstart", json={"token": TOKEN})
-        assert resp.status_code == 200, resp.text
-        assert resp.json()["data"]["path"] == str(key_path)
-        assert key_path.read_text(encoding="utf-8") == TOKEN
+    token = _data_plane_token(tmp_path)
+    with TestClient(cp.app) as client:
+        response = client.post("/v1/instance/oss/quickstart", json={"token": token})
+        assert response.status_code == 200, response.text
+        assert response.json()["data"]["path"] == str(key_path)
+        assert key_path.read_text(encoding="utf-8") == token
         assert stat.S_IMODE(key_path.stat().st_mode) == 0o600
 
 
 def test_oss_quickstart_is_public(tmp_path, key_path):
     cp = setup_control_plane(tmp_path)
-    with TestClient(cp.app) as c:
-        assert c.post("/v1/instance/oss/quickstart", json={"token": TOKEN}).status_code == 200
+    token = _data_plane_token(tmp_path)
+    with TestClient(cp.app) as client:
+        assert client.post("/v1/instance/oss/quickstart", json={"token": token}).status_code == 200
+
+
+def test_oss_quickstart_accepts_an_org_specific_data_plane_key(tmp_path, key_path):
+    cp = setup_control_plane(tmp_path)
+    token = _org_data_plane_token(tmp_path)
+    with TestClient(cp.app) as client:
+        assert client.post("/v1/instance/oss/quickstart", json={"token": token}).status_code == 200
+        assert key_path.read_text(encoding="utf-8") == token
+
+
+def test_oss_quickstart_accepts_exact_runtime_authority_from_any_service_account_role(tmp_path, key_path):
+    cp = setup_control_plane(tmp_path)
+    token = _data_plane_token(tmp_path, instance_role=InstanceRole.owner)
+    with TestClient(cp.app) as client:
+        assert client.post("/v1/instance/oss/quickstart", json={"token": token}).status_code == 200
+        assert key_path.read_text(encoding="utf-8") == token
 
 
 def test_oss_quickstart_closes_once_a_data_plane_has_registered(tmp_path, key_path):
     cp = setup_control_plane(tmp_path)
+    token = _data_plane_token(tmp_path)
     _register_instance(tmp_path)
-    with TestClient(cp.app) as c:
-        resp = c.post("/v1/instance/oss/quickstart", json={"token": TOKEN})
-        assert resp.status_code == 409
+    with TestClient(cp.app) as client:
+        response = client.post("/v1/instance/oss/quickstart", json={"token": token})
+        assert response.status_code == 409
         assert not key_path.exists()
 
 
-def test_oss_quickstart_rejects_a_token_that_could_never_drive_a_data_plane(tmp_path, key_path):
-    """Either control-plane key type is accepted; an inference key or a paste accident is not."""
+@pytest.mark.parametrize("token", ["not-a-key", INFERENCE_TOKEN_PREFIX + "caller-key", ACCESS_KEY_PREFIX + "unknown"])
+def test_oss_quickstart_rejects_unknown_credentials(tmp_path, key_path, token):
     cp = setup_control_plane(tmp_path)
-    with TestClient(cp.app) as c:
-        for token in ("not-a-key", INFERENCE_TOKEN_PREFIX + "caller-key", ""):
-            resp = c.post("/v1/instance/oss/quickstart", json={"token": token})
-            assert resp.status_code == 422, token
+    with TestClient(cp.app) as client:
+        response = client.post("/v1/instance/oss/quickstart", json={"token": token})
+        assert response.status_code == 422
+        assert not key_path.exists()
+
+
+def test_oss_quickstart_rejects_human_broad_and_unauthorized_keys(tmp_path, key_path):
+    cp = setup_control_plane(tmp_path)
+    tokens = [
+        _data_plane_token(tmp_path, service_account=False, instance_role=InstanceRole.owner),
+        _data_plane_token(tmp_path, permissions=DATA_PLANE_PERMISSIONS | {Permission.catalog_read}),
+        _data_plane_token(tmp_path, instance_role=None),
+        _org_data_plane_token(tmp_path, role=OrgRole.admin),
+    ]
+    with TestClient(cp.app) as client:
+        for token in tokens:
+            assert client.post("/v1/instance/oss/quickstart", json={"token": token}).status_code == 422
             assert not key_path.exists()
-
-
-def test_oss_quickstart_accepts_a_management_key_too(tmp_path, key_path):
-    """A single-org deployment hands its data plane an org key; quickstart writes it unchanged."""
-    cp = setup_control_plane(tmp_path)
-    with TestClient(cp.app) as c:
-        management_token = MANAGEMENT_KEY_PREFIX + "org-scoped-token"
-        assert c.post("/v1/instance/oss/quickstart", json={"token": management_token}).status_code == 200
-        assert key_path.read_text(encoding="utf-8") == management_token
-
-
-def test_oss_quickstart_creates_the_cache_directory(tmp_path, key_path):
-    """A deployment that brought its own signing key never ran keygen, so nothing made .airllm first."""
-    cp = setup_control_plane(tmp_path)
-    assert not key_path.parent.exists()
-    with TestClient(cp.app) as c:
-        assert c.post("/v1/instance/oss/quickstart", json={"token": TOKEN}).status_code == 200
-        assert key_path.read_text(encoding="utf-8") == TOKEN

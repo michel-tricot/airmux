@@ -1,10 +1,9 @@
 import { useState } from 'react';
-import * as z from 'zod';
 import { useRequiredOrgId } from '@/lib/session';
-import { useManagementKeys, useMintManagementKeyMutation, useRevokeManagementKeyMutation } from '@/features/keys/hooks';
+import { useOrgAccessKeys, useCreateOrgAccessKeyMutation, useRevokeOrgAccessKeyMutation } from '@/features/keys/hooks';
 import { useOrgMembers } from '@/features/members/hooks';
 import { useBundles, useCompileBundleMutation, useOrgActivity } from '@/features/telemetry/hooks';
-import { Avatar, AvatarFallback, Card, Button, Input, Badge, Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/elements';
+import { Avatar, AvatarFallback, Card, Button, Badge, Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/elements';
 import { Plus, Key, Settings, Package, RefreshCw, Users, Activity } from 'lucide-react';
 import { formatDate, formatRelative } from '@/lib/format';
 import { KeyRevealDialog } from '@/components/KeyRevealDialog';
@@ -12,14 +11,12 @@ import { PageShell } from '@/components/shared/page-shell';
 import { DataTable } from '@/components/shared/data-table';
 import { FormDialog } from '@/components/shared/form-dialog';
 import { ApiKeysTable } from '@/components/shared/api-keys-table';
-import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-
-const keyLabelSchema = z.object({ label: z.string().min(1, 'Label is required') });
+import { AccessKeyFormFields, accessKeyFormSchema, parsePermissions } from '@/components/shared/access-key-form';
 
 export default function AppOrgSettings() {
   const orgId = useRequiredOrgId();
 
-  const keysQuery = useManagementKeys(orgId);
+  const keysQuery = useOrgAccessKeys(orgId);
   const bundlesQuery = useBundles(orgId);
   const membersQuery = useOrgMembers(orgId);
   const activityQuery = useOrgActivity(orgId, { limit: 50 });
@@ -31,8 +28,8 @@ export default function AppOrgSettings() {
   const keyLabels = new Map(keysQuery.data?.map((key) => [key.id, key.label] as const) ?? []);
   const describeRecord = (entry: { record_id: string }) => keyLabels.get(entry.record_id) ?? null;
 
-  const mintKey = useMintManagementKeyMutation(orgId);
-  const revokeKey = useRevokeManagementKeyMutation(orgId);
+  const mintKey = useCreateOrgAccessKeyMutation(orgId);
+  const revokeKey = useRevokeOrgAccessKeyMutation(orgId);
   const compile = useCompileBundleMutation(orgId);
 
   return (
@@ -76,16 +73,17 @@ export default function AppOrgSettings() {
             isError={keysQuery.isError}
             error={keysQuery.error}
             onRetry={() => keysQuery.refetch()}
-            emptyText="No management keys generated."
+            emptyText="No access keys generated."
             extraColumns={[
               {
                 key: 'permissions',
                 header: 'Permissions',
                 cellClassName: 'font-mono text-xs text-muted-foreground',
-                cell: (key) => key.scopes?.join(', ') ?? 'All permissions',
+                cell: (key) => key.permissions.join(', '),
               },
+              { key: 'scope', header: 'Scope', cellClassName: 'text-muted-foreground text-sm', cell: (key) => key.scope.level },
             ]}
-            revokeDescription="Requests signed with this management key will stop working immediately. This cannot be undone."
+            revokeDescription="This key and every key delegated from it will stop working immediately."
             onRevoke={(key) => revokeKey.mutateAsync({ keyId: key.id })}
             revokePending={revokeKey.isPending}
           />
@@ -94,7 +92,7 @@ export default function AppOrgSettings() {
         <TabsContent value="bundles" className="space-y-4 mt-0">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-lg font-semibold">Access Policies</h2>
-            <Button onClick={() => compile.mutate()} size="sm" disabled={compile.isPending}>
+            <Button onClick={() => compile.mutate({ orgId })} size="sm" disabled={compile.isPending}>
               <RefreshCw className="w-4 h-4 mr-1" /> {compile.isPending ? 'Publishing...' : 'Publish policy'}
             </Button>
           </div>
@@ -158,6 +156,7 @@ export default function AppOrgSettings() {
                   ),
                 },
                 { key: 'email', header: 'Email', cellClassName: 'text-muted-foreground', cell: (member) => member.email },
+                { key: 'role', header: 'Role', cellClassName: 'text-muted-foreground', cell: (member) => member.role },
                 {
                   key: 'kind',
                   header: 'Account type',
@@ -236,32 +235,21 @@ export default function AppOrgSettings() {
       <FormDialog
         open={keyOpen}
         onOpenChange={setKeyOpen}
-        title="Create an automation key"
-        description="Use this key to authenticate automation tools."
-        schema={keyLabelSchema}
-        defaultValues={{ label: '' }}
+        title="Create an organization access key"
+        description="The key is bound to this organization and carries only the permissions you name."
+        schema={accessKeyFormSchema}
+        defaultValues={{ label: '', permissions: '' }}
         onSubmit={async (values) => {
-          const minted = await mintKey.mutateAsync({ data: values });
+          const minted = await mintKey.mutateAsync({
+            orgId,
+            data: { label: values.label, permissions: parsePermissions(values.permissions) },
+          });
           setToken(minted.token);
         }}
         submitLabel="Generate"
         pending={mintKey.isPending}
       >
-        {(form) => (
-          <FormField
-            control={form.control}
-            name="label"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Label</FormLabel>
-                <FormControl>
-                  <Input placeholder="e.g. ci-deploy" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        )}
+        {(form) => <AccessKeyFormFields form={form} />}
       </FormDialog>
 
       <KeyRevealDialog open={!!token} onOpenChange={(v) => !v && setToken(null)} token={token} />

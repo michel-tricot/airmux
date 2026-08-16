@@ -5,9 +5,9 @@ import { Building2, Plus, ArrowLeft, Key, TerminalSquare, Users, Pencil, Trash2 
 import { formatDate } from '@/lib/format';
 import { Link, useLocation } from 'wouter';
 import { useOrg, useRenameOrgMutation, useDeleteOrgMutation } from '@/features/orgs/hooks';
-import { useUsers, useAddUserToOrgMutation, useRemoveUserFromOrgMutation } from '@/features/users/hooks';
+import { useUsers, useAddUserToOrgMutation, useRemoveUserFromOrgMutation, orgRoleOptions } from '@/features/users/hooks';
 import { useWorkspaces, useCreateWorkspaceMutation } from '@/features/workspaces/hooks';
-import { useManagementKeys, useRevokeManagementKeyMutation } from '@/features/keys/hooks';
+import { useOrgAccessKeys, useRevokeOrgAccessKeyMutation } from '@/features/keys/hooks';
 import { useOrgMembers } from '@/features/members/hooks';
 import { LoadingState, ErrorState } from '@/components/shared/states';
 import { DataTable } from '@/components/shared/data-table';
@@ -17,6 +17,7 @@ import { ApiKeysTable } from '@/components/shared/api-keys-table';
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useRequiredParam } from '@/lib/route';
 import { PageShell } from '@/components/shared/page-shell';
+import type { OrgRole } from '@workspace/api-client-react';
 
 const nameSchema = z.object({ name: z.string().min(1, 'Name is required') });
 
@@ -28,7 +29,7 @@ export default function OrganizationDetail() {
   const org = orgQuery.data;
 
   const workspacesQuery = useWorkspaces(orgId);
-  const keysQuery = useManagementKeys(orgId);
+  const keysQuery = useOrgAccessKeys(orgId);
   const membersQuery = useOrgMembers(orgId);
   const usersQuery = useUsers();
   const users = usersQuery.data;
@@ -40,7 +41,7 @@ export default function OrganizationDetail() {
   const [renameOpen, setRenameOpen] = useState(false);
 
   const createWorkspace = useCreateWorkspaceMutation(orgId);
-  const revokeKey = useRevokeManagementKeyMutation(orgId);
+  const revokeKey = useRevokeOrgAccessKeyMutation(orgId);
   const addMember = useAddUserToOrgMutation();
   const removeMember = useRemoveUserFromOrgMutation();
   const rename = useRenameOrgMutation();
@@ -96,7 +97,7 @@ export default function OrganizationDetail() {
             <TerminalSquare className="w-4 h-4" /> Workspaces
           </TabsTrigger>
           <TabsTrigger value="keys" className="gap-2">
-            <Key className="w-4 h-4" /> Automation Keys
+            <Key className="w-4 h-4" /> Access Keys
           </TabsTrigger>
           <TabsTrigger value="members" className="gap-2">
             <Users className="w-4 h-4" /> Members
@@ -147,7 +148,7 @@ export default function OrganizationDetail() {
 
         <TabsContent value="keys" className="space-y-4 mt-0">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold">Automation Keys</h2>
+            <h2 className="text-lg font-semibold">Access Keys</h2>
           </div>
           <ApiKeysTable
             keys={keysQuery.data}
@@ -155,11 +156,11 @@ export default function OrganizationDetail() {
             isError={keysQuery.isError}
             error={keysQuery.error}
             onRetry={() => keysQuery.refetch()}
-            emptyText="No management keys for this org."
+            emptyText="No access keys for this organization."
             extraColumns={[
               {
                 key: 'user',
-                header: 'User',
+                header: 'Principal',
                 cellClassName: 'text-muted-foreground text-sm',
                 cell: (key) => {
                   const user = usersById.get(key.user_id);
@@ -172,8 +173,9 @@ export default function OrganizationDetail() {
                   );
                 },
               },
+              { key: 'scope', header: 'Scope', cellClassName: 'text-muted-foreground text-sm', cell: (key) => key.scope.level },
             ]}
-            revokeDescription="Requests signed with this management key will stop working immediately. This cannot be undone."
+            revokeDescription="This key and every key delegated from it will stop working immediately."
             onRevoke={(key) => revokeKey.mutateAsync({ keyId: key.id })}
             revokePending={revokeKey.isPending}
           />
@@ -197,7 +199,9 @@ export default function OrganizationDetail() {
               candidates: outsiders?.map((user) => ({ value: user.id, label: `${user.name} (${user.email})` })) ?? [],
               dialogTitle: 'Add Member',
               placeholder: 'Select a user',
-              onAdd: (userId) => addMember.mutateAsync({ userId, orgId: org.id }),
+              roles: orgRoleOptions,
+              defaultRole: 'member',
+              onAdd: (userId, role) => addMember.mutateAsync({ userId, orgId: org.id, role: role as OrgRole }),
               pending: addMember.isPending || outsiders === undefined,
             }}
             remove={{
@@ -216,7 +220,7 @@ export default function OrganizationDetail() {
         title="New Workspace"
         schema={nameSchema}
         defaultValues={{ name: '' }}
-        onSubmit={(values) => createWorkspace.mutateAsync({ data: values })}
+        onSubmit={(values) => createWorkspace.mutateAsync({ orgId, data: values })}
         submitLabel="Create"
         pending={createWorkspace.isPending}
       >

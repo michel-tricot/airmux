@@ -51,14 +51,3 @@ def set_active(name: str) -> None:
 
 
 DEFAULT_CONSOLE_URL = "http://localhost:5000"
-ADMIN_KEYS_PATH = "/instance/keys"
-
-
-def admin_keys_url() -> str:
-    """Where an instance admin mints their first admin key.
-
-    Held here rather than derived at the call site because the commands that refuse for want of one
-    are the commands with no credential to ask the control plane anything with.
-    """
-    profile = active_profile() or {}
-    return str(profile.get("console_url") or DEFAULT_CONSOLE_URL).rstrip("/") + ADMIN_KEYS_PATH

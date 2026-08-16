@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import typer
 
-from cli.common import ADMIN, ORG, SETUP, TESTING, app, console
+from cli.common import RESOURCES, SETUP, TESTING, app, console
 from cli.output import Col, FormatOption, OutputFormat, build_table, print_rows
 
 COMMAND_COLS = [
@@ -18,7 +18,7 @@ sentence do not fit a terminal and rich answers that by wrapping every summary o
 
 TABLE_COLS = [Col("command", "Command", style="bold", no_wrap=True), Col("summary", "What it does")]
 
-CATEGORY_ORDER = [SETUP, ORG, ADMIN, TESTING]
+CATEGORY_ORDER = [SETUP, RESOURCES, TESTING]
 UNCATEGORISED = "Other"
 
 
@@ -26,8 +26,7 @@ def _category(command: object, inherited: str) -> str:
     """A command's own category, or its group's.
 
     Typer leaves an unset panel as a placeholder rather than None, so anything that is not a string
-    means the command never chose one and takes the group's. That is what makes the override in the
-    mixed groups work: `orgs list` says Instance admin, `orgs mine` says nothing and is org scoped.
+    means the command never chose one and takes the group's.
     """
     panel = getattr(command, "rich_help_panel", None)
     return panel if isinstance(panel, str) else inherited

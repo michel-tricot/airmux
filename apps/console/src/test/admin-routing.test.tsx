@@ -10,31 +10,26 @@ const USER = {
   id: 'user-1',
   email: 'admin@example.com',
   name: 'Admin',
+  instance_role: 'owner',
   service_account: false,
   created_at: now,
   updated_at: now,
   deleted_at: null,
   orgs: [ORG.id],
 };
-const INSTANCE_KEY = {
-  id: 'instance-key-1',
+const ACCESS_KEY = {
+  id: 'access-key-1',
   user_id: USER.id,
-  revoked: false,
-  scopes: null,
+  org_id: null,
+  workspace_id: null,
+  parent_id: null,
+  revoked_at: null,
+  expires_at: null,
+  permissions: ['organizations.read'],
+  scope: { level: 'instance', org_id: null, workspace_id: null },
+  status: 'active',
   label: 'deploy',
-  prefix: 'inst_abc',
-  created_at: now,
-  updated_at: now,
-  deleted_at: null,
-};
-const MANAGEMENT_KEY = {
-  id: 'management-key-1',
-  org_id: ORG.id,
-  user_id: USER.id,
-  revoked: false,
-  scopes: null,
-  label: 'automation',
-  prefix: 'mgmt_abc',
+  prefix: 'sk-cp-abc',
   created_at: now,
   updated_at: now,
   deleted_at: null,
@@ -42,13 +37,14 @@ const MANAGEMENT_KEY = {
 
 function installAdminHandlers() {
   server.use(
-    http.get('/v1/auth/me', () => HttpResponse.json({ user_id: USER.id, email: USER.email, name: USER.name, instance_admin: true, orgs: USER.orgs })),
+    http.get('/v1/auth/me', () =>
+      HttpResponse.json({ user_id: USER.id, email: USER.email, name: USER.name, instance_role: 'owner', orgs: USER.orgs }),
+    ),
     http.get('/v1/orgs', () => HttpResponse.json([ORG])),
     http.get('/v1/orgs/:orgId', () => HttpResponse.json(ORG)),
     http.get('/v1/users', () => HttpResponse.json([USER])),
     http.get('/v1/users/:userId', () => HttpResponse.json(USER)),
-    http.get('/v1/instance/instance-keys', () => HttpResponse.json([INSTANCE_KEY])),
-    http.get('/v1/instance/management-keys', () => HttpResponse.json([MANAGEMENT_KEY])),
+    http.get('/v1/instance/access-keys', () => HttpResponse.json([ACCESS_KEY])),
     http.get('/v1/instance/data-planes', () =>
       HttpResponse.json([
         {
@@ -65,11 +61,10 @@ function installAdminHandlers() {
     http.get('/v1/instance/activity', () =>
       HttpResponse.json([{ id: 1, table_name: 'org', record_id: ORG.id, action: 'create', user_id: USER.id, occurred_at: now }]),
     ),
-    http.get('/v1/org/management-keys', () => HttpResponse.json([MANAGEMENT_KEY])),
-    http.get('/v1/org/users', () =>
-      HttpResponse.json([{ user_id: USER.id, email: USER.email, name: USER.name, service_account: false, status: 'member' }]),
+    http.get('/v1/orgs/:orgId/users', () =>
+      HttpResponse.json([{ user_id: USER.id, email: USER.email, name: USER.name, service_account: false, role: 'owner', status: 'member' }]),
     ),
-    http.get('/v1/org/workspaces', () => HttpResponse.json(WORKSPACES)),
+    http.get('/v1/orgs/:orgId/workspaces', () => HttpResponse.json(WORKSPACES)),
   );
 }
 
@@ -88,7 +83,7 @@ describe('instance administration routes', () => {
     [`/instance/organizations/${ORG.id}/workspaces/${WORKSPACES[0].slug}`, WORKSPACES[0].name],
     ['/instance/users', 'Global Users'],
     [`/instance/users/${USER.id}`, USER.name],
-    ['/instance/keys', 'Instance Keys'],
+    ['/instance/keys', 'Access Keys'],
   ])('renders %s', async (path, heading) => {
     renderAt(path);
     expect(await screen.findByRole('heading', { level: 1, name: heading })).toBeInTheDocument();
@@ -100,6 +95,22 @@ describe('instance administration routes', () => {
 
     expect(await screen.findByRole('alert', undefined, { timeout: 2_500 })).toHaveTextContent('Could not reach the control plane');
     expect(screen.queryByText('No users found.')).not.toBeInTheDocument();
+  });
+
+  it('counts only active access keys on the dashboard', async () => {
+    server.use(
+      http.get('/v1/instance/access-keys', () =>
+        HttpResponse.json([
+          ACCESS_KEY,
+          { ...ACCESS_KEY, id: 'access-key-2', status: 'expired' },
+          { ...ACCESS_KEY, id: 'access-key-3', status: 'revoked', revoked_at: now },
+        ]),
+      ),
+    );
+    renderAt('/instance');
+
+    const heading = await screen.findByRole('heading', { name: 'Access Keys' });
+    await waitFor(() => expect(within(heading.parentElement?.parentElement as HTMLElement).getByText('1')).toBeInTheDocument());
   });
 
   it('keeps service-account creation and directs humans through signup', async () => {

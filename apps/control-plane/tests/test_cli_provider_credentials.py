@@ -32,17 +32,18 @@ def cli(tmp_path, monkeypatch):
     cp = setup_control_plane(tmp_path)
     with TestClient(cp.app) as c:
         root = cp.headers()
-        c.post("/v1/taxonomy/providers", json=PROVIDER, headers=root)
-        c.post("/v1/taxonomy/models", json=MODEL, headers=root)
+        c.post("/v1/instance/taxonomy/providers", json=PROVIDER, headers=root)
+        c.post("/v1/instance/taxonomy/models", json=MODEL, headers=root)
         org_id = make_org(c, root)
         org = cp.headers(org_id)
-        workspace = c.post("/v1/org/workspaces", json={"name": "Staging"}, headers=org).json()["data"]
+        workspace = c.post(f"/v1/orgs/{org_id}/workspaces", json={"name": "Staging"}, headers=org).json()["data"]
 
         def _client(token: str, control_plane_url: str) -> TestClient:
             return TestClient(cp.app, headers=org)
 
         monkeypatch.setattr("cli.client._bearer_client", _client)
-        monkeypatch.setenv("GW_ORG_MGMT_TOKEN", org["authorization"].removeprefix("Bearer "))
+        monkeypatch.setenv("GW_ACCESS_KEY", org["authorization"].removeprefix("Bearer "))
+        monkeypatch.setenv("GW_ORG_ID", str(org_id))
         yield cp, workspace["slug"]
 
 

@@ -48,7 +48,7 @@ export default function WorkspaceByok() {
   const orgId = useRequiredOrgId();
 
   const credentialsQuery = useProviderCredentials(orgId, workspaceRef);
-  const taxonomy = useProviders(orgId);
+  const taxonomy = useProviders(orgId, workspaceRef);
   const providers = taxonomy.data?.providers ?? [];
 
   const [addOpen, setAddOpen] = useState(false);
@@ -101,7 +101,7 @@ export default function WorkspaceByok() {
                 aria-label={`${c.enabled ? 'Disable' : 'Enable'} ${c.name}`}
                 aria-pressed={c.enabled}
                 className={c.enabled ? '' : 'text-muted-foreground'}
-                onClick={() => updateCredential.mutate({ credentialId: c.id, data: { enabled: !c.enabled } })}
+                onClick={() => updateCredential.mutate({ orgId, credentialId: c.id, data: { enabled: !c.enabled } })}
               >
                 <Power className="w-4 h-4" />
               </Button>
@@ -118,7 +118,7 @@ export default function WorkspaceByok() {
                   confirmLabel="Delete"
                   pending={deleteCredential.isPending}
                   aria-label={`Delete ${c.name}`}
-                  onConfirm={() => deleteCredential.mutateAsync({ credentialId: c.id })}
+                  onConfirm={() => deleteCredential.mutateAsync({ orgId, credentialId: c.id })}
                 >
                   <Trash2 className="w-4 h-4" />
                 </ConfirmButton>
@@ -169,7 +169,7 @@ export default function WorkspaceByok() {
         description="Your key is stored encrypted and never exposed again. Paste it once, and we handle the rest."
         schema={addSchema}
         defaultValues={{ provider: providers[0]?.name ?? '', name: 'default', value: '', priority: 100 }}
-        onSubmit={(values) => addCredential.mutateAsync({ data: { ...values, workspace: workspaceRef } })}
+        onSubmit={(values) => addCredential.mutateAsync({ orgId, workspaceRef, data: values })}
         submitLabel="Add Key"
         pending={addCredential.isPending}
       >
@@ -256,7 +256,7 @@ export default function WorkspaceByok() {
         defaultValues={{ value: '' }}
         onSubmit={async (values) => {
           if (!rotating) return;
-          await rotateCredential.mutateAsync({ credentialId: rotating.id, data: values });
+          await rotateCredential.mutateAsync({ orgId, credentialId: rotating.id, data: values });
           setRotating(null);
         }}
         submitLabel="Rotate"

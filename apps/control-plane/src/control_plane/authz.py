@@ -2,53 +2,281 @@ from __future__ import annotations
 
 from enum import StrEnum
 from typing import TYPE_CHECKING
+from uuid import UUID
+
+from pydantic import BaseModel, ConfigDict, model_validator
 
 if TYPE_CHECKING:
-    from control_plane.keys import ManagementClaims
+    from typing import Self
 
 
-class Scope(StrEnum):
-    """What a management credential may do; org and instance row-scoping are a separate axis.
-
-    A scope restricts the credential, never expands it: a token minted without scopes carries the
-    owning user's full authority, an explicit list is a restriction that also excludes scopes
-    invented later. Roles arrive later as named bundles over these same values.
-
-    Orgs and workspaces split their lifecycle three ways because founding a tenant and destroying
-    one with everything inside it are each a different privilege from governing one day to day:
-    :create founds, :write governs, :delete destroys. Elsewhere :write still covers all three.
-    """
-
-    inference_keys_read = "inference-keys:read"
-    inference_keys_write = "inference-keys:write"
-    workspaces_read = "workspaces:read"
-    workspaces_create = "workspaces:create"
-    workspaces_write = "workspaces:write"
-    workspaces_delete = "workspaces:delete"
-    bundles_read = "bundles:read"
-    bundles_write = "bundles:write"
-    events_read = "events:read"
-    data_planes_read = "data-planes:read"
-    provider_credentials_read = "provider-credentials:read"
-    provider_credentials_write = "provider-credentials:write"
-    taxonomy_read = "taxonomy:read"
-    taxonomy_write = "taxonomy:write"
-    orgs_read = "orgs:read"
-    orgs_create = "orgs:create"
-    orgs_write = "orgs:write"
-    orgs_delete = "orgs:delete"
-    users_read = "users:read"
-    users_write = "users:write"
-    activity_read = "activity:read"
-    management_keys_read = "management-keys:read"
-    management_keys_write = "management-keys:write"
-    instance_keys_read = "instance-keys:read"
-    instance_keys_write = "instance-keys:write"
-    sync = "sync"
+class ScopeLevel(StrEnum):
+    instance = "instance"
+    org = "org"
+    workspace = "workspace"
 
 
-ALL_SCOPES: frozenset[str] = frozenset(scope.value for scope in Scope)
+class Permission(StrEnum):
+    organizations_read = "organizations.read"
+    organizations_create = "organizations.create"
+    organizations_update = "organizations.update"
+    organizations_delete = "organizations.delete"
+    principals_read = "principals.read"
+    principals_manage = "principals.manage"
+    members_read = "members.read"
+    members_manage = "members.manage"
+    workspaces_read = "workspaces.read"
+    workspaces_create = "workspaces.create"
+    workspaces_update = "workspaces.update"
+    workspaces_delete = "workspaces.delete"
+    catalog_read = "catalog.read"
+    catalog_manage = "catalog.manage"
+    provider_credentials_read = "provider-credentials.read"
+    provider_credentials_manage = "provider-credentials.manage"
+    inference_keys_read = "inference-keys.read"
+    inference_keys_manage = "inference-keys.manage"
+    bundles_read = "bundles.read"
+    bundles_publish = "bundles.publish"
+    usage_read = "usage.read"
+    usage_ingest = "usage.ingest"
+    data_planes_read = "data-planes.read"
+    data_planes_heartbeat = "data-planes.heartbeat"
+    audit_read = "audit.read"
+    access_keys_read = "access-keys.read"
+    access_keys_issue = "access-keys.issue"
+    access_keys_revoke = "access-keys.revoke"
 
 
-def allowed(claims: ManagementClaims, scope: Scope) -> bool:
-    return scope.value in claims.scopes
+class InstanceRole(StrEnum):
+    owner = "owner"
+    auditor = "auditor"
+    data_plane = "data_plane"
+
+
+class OrgRole(StrEnum):
+    owner = "owner"
+    admin = "admin"
+    member = "member"
+    data_plane = "data_plane"
+
+
+class WorkspaceRole(StrEnum):
+    admin = "admin"
+    member = "member"
+    viewer = "viewer"
+
+
+ALL_PERMISSIONS = frozenset(Permission)
+READ_PERMISSIONS = frozenset(
+    {
+        Permission.organizations_read,
+        Permission.principals_read,
+        Permission.members_read,
+        Permission.workspaces_read,
+        Permission.catalog_read,
+        Permission.provider_credentials_read,
+        Permission.inference_keys_read,
+        Permission.bundles_read,
+        Permission.usage_read,
+        Permission.data_planes_read,
+        Permission.audit_read,
+        Permission.access_keys_read,
+    }
+)
+DATA_PLANE_PERMISSIONS = frozenset(
+    {
+        Permission.bundles_read,
+        Permission.usage_ingest,
+        Permission.data_planes_heartbeat,
+    }
+)
+
+INSTANCE_ROLE_PERMISSIONS = {
+    InstanceRole.owner: ALL_PERMISSIONS,
+    InstanceRole.auditor: READ_PERMISSIONS,
+    InstanceRole.data_plane: DATA_PLANE_PERMISSIONS,
+}
+ORG_ROLE_PERMISSIONS = {
+    OrgRole.owner: frozenset(
+        {
+            Permission.organizations_read,
+            Permission.organizations_update,
+            Permission.organizations_delete,
+            Permission.members_read,
+            Permission.members_manage,
+            Permission.workspaces_read,
+            Permission.workspaces_create,
+            Permission.workspaces_update,
+            Permission.workspaces_delete,
+            Permission.catalog_read,
+            Permission.provider_credentials_read,
+            Permission.provider_credentials_manage,
+            Permission.inference_keys_read,
+            Permission.inference_keys_manage,
+            Permission.bundles_read,
+            Permission.bundles_publish,
+            Permission.usage_read,
+            Permission.audit_read,
+            Permission.access_keys_read,
+            Permission.access_keys_issue,
+            Permission.access_keys_revoke,
+        }
+    ),
+    OrgRole.admin: frozenset(
+        {
+            Permission.organizations_read,
+            Permission.organizations_update,
+            Permission.members_read,
+            Permission.members_manage,
+            Permission.workspaces_read,
+            Permission.workspaces_create,
+            Permission.workspaces_update,
+            Permission.workspaces_delete,
+            Permission.catalog_read,
+            Permission.provider_credentials_read,
+            Permission.provider_credentials_manage,
+            Permission.inference_keys_read,
+            Permission.inference_keys_manage,
+            Permission.bundles_read,
+            Permission.bundles_publish,
+            Permission.usage_read,
+            Permission.audit_read,
+            Permission.access_keys_read,
+            Permission.access_keys_issue,
+            Permission.access_keys_revoke,
+        }
+    ),
+    OrgRole.member: frozenset(
+        {
+            Permission.organizations_read,
+            Permission.workspaces_read,
+            Permission.workspaces_create,
+            Permission.catalog_read,
+        }
+    ),
+    OrgRole.data_plane: DATA_PLANE_PERMISSIONS,
+}
+WORKSPACE_ROLE_PERMISSIONS = {
+    WorkspaceRole.admin: frozenset(
+        {
+            Permission.workspaces_read,
+            Permission.workspaces_update,
+            Permission.workspaces_delete,
+            Permission.members_read,
+            Permission.members_manage,
+            Permission.catalog_read,
+            Permission.provider_credentials_read,
+            Permission.provider_credentials_manage,
+            Permission.inference_keys_read,
+            Permission.inference_keys_manage,
+            Permission.usage_read,
+            Permission.access_keys_read,
+            Permission.access_keys_issue,
+            Permission.access_keys_revoke,
+        }
+    ),
+    WorkspaceRole.member: frozenset(
+        {
+            Permission.workspaces_read,
+            Permission.members_read,
+            Permission.catalog_read,
+            Permission.provider_credentials_read,
+            Permission.inference_keys_read,
+            Permission.inference_keys_manage,
+            Permission.usage_read,
+        }
+    ),
+    WorkspaceRole.viewer: frozenset(
+        {
+            Permission.workspaces_read,
+            Permission.members_read,
+            Permission.catalog_read,
+            Permission.provider_credentials_read,
+            Permission.inference_keys_read,
+            Permission.usage_read,
+        }
+    ),
+}
+
+
+def permissions_for_org_role(role: OrgRole | str) -> frozenset[Permission]:
+    return ORG_ROLE_PERMISSIONS[OrgRole(role)]
+
+
+class Scope(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    level: ScopeLevel
+    org_id: UUID | None = None
+    workspace_id: UUID | None = None
+
+    @model_validator(mode="after")
+    def valid_level(self) -> Self:
+        expected = {
+            ScopeLevel.instance: (False, False),
+            ScopeLevel.org: (True, False),
+            ScopeLevel.workspace: (True, True),
+        }[self.level]
+        if (self.org_id is not None, self.workspace_id is not None) != expected:
+            msg = f"{self.level} scope has inconsistent tenant identifiers"
+            raise ValueError(msg)
+        return self
+
+    def covers(self, target: Scope) -> bool:
+        if self.level is ScopeLevel.instance:
+            return True
+        if self.level is ScopeLevel.org:
+            return self.org_id == target.org_id and target.level is not ScopeLevel.instance
+        return target.level is ScopeLevel.workspace and self.org_id == target.org_id and self.workspace_id == target.workspace_id
+
+    @classmethod
+    def instance(cls) -> Self:
+        return cls(level=ScopeLevel.instance)
+
+    @classmethod
+    def org(cls, org_id: UUID) -> Self:
+        return cls(level=ScopeLevel.org, org_id=org_id)
+
+    @classmethod
+    def workspace(cls, org_id: UUID, workspace_id: UUID) -> Self:
+        return cls(level=ScopeLevel.workspace, org_id=org_id, workspace_id=workspace_id)
+
+
+class Grant(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    scope: Scope
+    permissions: frozenset[Permission]
+
+
+class Actor(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    credential_id: UUID
+    principal_id: UUID
+    credential_kind: str
+    grant: Grant
+
+
+class AccessRequest(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    permission: Permission
+    target: Scope
+
+
+class Decision(StrEnum):
+    allow = "allow"
+    credential_scope = "credential_scope"
+    credential_ceiling = "credential_ceiling"
+    standing_authority = "standing_authority"
+
+
+def decide(actor: Actor, standing: tuple[Grant, ...], request: AccessRequest) -> Decision:
+    if not actor.grant.scope.covers(request.target):
+        return Decision.credential_scope
+    if request.permission not in actor.grant.permissions:
+        return Decision.credential_ceiling
+    if not any(grant.scope.covers(request.target) and request.permission in grant.permissions for grant in standing):
+        return Decision.standing_authority
+    return Decision.allow

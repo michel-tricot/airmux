@@ -5,6 +5,7 @@ from typing import ClassVar, Literal
 from uuid import UUID
 
 from pydantic import BaseModel
+from sqlalchemy import ForeignKeyConstraint
 from sqlmodel import Field
 
 from control_plane.models.common.base import Record
@@ -13,20 +14,22 @@ from control_plane.models.common.wire import RecordOut
 
 
 class DataPlaneInstance(Record, table=True):
-    """A data plane that has heartbeated, registered against the instance rather than any one org.
+    """A data plane that has heartbeated at either the global or organization scope.
 
-    A data plane polls whichever org's bundle its config names, so the registration itself carries
-    no org: liveness is derived from last_seen and the row survives as history.
+    Instance-scoped keys register global data planes. Organization-scoped keys register dedicated
+    data planes, and the org link is cleared on deletion while the row survives as history.
     """
 
+    __table_args__: ClassVar = (ForeignKeyConstraint(["org_id"], ["org.id"], ondelete="SET NULL"),)
+
     instance_id: UUID = Field(primary_key=True)
+    org_id: UUID | None = None
     version: str
     bundle_id: UUID | None = None
     address: str | None = None
     first_seen: datetime = Field(sa_type=UTCDateTime)
     last_seen: datetime = Field(sa_type=UTCDateTime)
 
-    # A data plane is considered offline after three missed heartbeats; the row itself is never deleted.
     STALE_AFTER: ClassVar[timedelta] = timedelta(seconds=90)
 
     def status(self, now: datetime) -> Literal["online", "offline"]:
@@ -36,6 +39,7 @@ class DataPlaneInstance(Record, table=True):
 
 class DataPlaneInstanceOut(RecordOut[DataPlaneInstance]):
     instance_id: UUID
+    org_id: UUID | None
     version: str
     bundle_id: UUID | None
     address: str | None

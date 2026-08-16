@@ -40,7 +40,7 @@ See `.env.example`. Key variables:
 | `OPENAI_API_KEY` | Route requests to OpenAI (and other providers) |
 | `GW_BUNDLE_SIGNING_KEY` | Ed25519 private key — signs bundles |
 | `GW_BUNDLE_PUBLIC_KEY` | Ed25519 public key — data plane verifies bundles |
-| `GW_INSTANCE_KEY` | Bearer for the instance API |
+| `GW_ACCESS_KEY` | Bearer for control-plane APIs |
 | `GW_DATAPLANE_TOKEN` | Data plane → control plane bearer |
 | `AIRLLM_API_KEY` | Caller inference key |
 
@@ -69,7 +69,7 @@ scripts/         # shell helpers + Bun workspace scripts package
 
 ## New admin console (Bun workspace)
 
-Tenancy model: organizations → (members, management keys, workspaces); workspaces → (workspace members, inference keys); users are top-level and can belong to multiple orgs.
+Tenancy model: access keys can be bound to the instance, an organization, or a workspace; roles grant standing authority and each key narrows it with explicit permissions.
 
 Replit only manages the console (`apps/console`, workspace package `@workspace/gateway-console`). The backend/API/proxy (control plane, data plane) are the Python apps under `apps/`, managed externally with uv — do not scaffold or run backends from Replit. The console already talks to the real backend: `lib/api-spec/openapi.yaml` is exported from the control plane routes, and the clients are generated from it.
 

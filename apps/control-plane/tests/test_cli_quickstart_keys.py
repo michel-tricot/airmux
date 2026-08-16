@@ -34,12 +34,21 @@ def stack(tmp_path, monkeypatch, secrets=None):
     client = TestClient(cp.app)
     client.__enter__()
     root = cp.headers()
-    client.post("/v1/taxonomy/providers", json=PROVIDER, headers=root)
-    client.post("/v1/taxonomy/providers", json=ANTHROPIC, headers=root)
-    client.post("/v1/taxonomy/models", json=MODEL, headers=root)
-    org = cp.headers(make_org(client, root))
-    workspace = client.post("/v1/org/workspaces", json={"name": "default"}, headers=org).json()["data"]
+    client.post("/v1/instance/taxonomy/providers", json=PROVIDER, headers=root)
+    client.post("/v1/instance/taxonomy/providers", json=ANTHROPIC, headers=root)
+    client.post("/v1/instance/taxonomy/models", json=MODEL, headers=root)
+    org_id = make_org(client, root)
+    org = cp.headers(org_id)
+    workspace = client.post(f"/v1/orgs/{org_id}/workspaces", json={"name": "default"}, headers=org).json()["data"]
     return cp, client, org, workspace
+
+
+def _seed(client, org: dict[str, str], workspace: dict, overrides: dict[str, str]):
+    return seed_provider_credentials(client, org, org["X-Test-Org-Id"], workspace["slug"], overrides)
+
+
+def _credentials(client, org: dict[str, str], workspace: dict):
+    return client.get(f"/v1/orgs/{org['X-Test-Org-Id']}/workspaces/{workspace['slug']}/provider-credentials", headers=org).json()["data"]
 
 
 def stored(cp, credential: dict) -> str:
@@ -61,10 +70,10 @@ def test_a_key_in_the_environment_becomes_a_workspace_credential(tmp_path, monke
     cp, client, org, workspace = stack(tmp_path, monkeypatch)
     monkeypatch.setenv("OPENAI_API_KEY", OPENAI_KEY)
 
-    seeded = seed_provider_credentials(client, org, workspace["slug"], {})
+    seeded = _seed(client, org, workspace, {})
 
     assert [(k.provider, k.source) for k in seeded] == [("openai", "found in OPENAI_API_KEY")]
-    credential = client.get("/v1/org/provider-credentials", headers=org).json()["data"][0]
+    credential = _credentials(client, org, workspace)[0]
     assert credential["scope"] == "workspace"
     assert credential["workspace_id"] == workspace["id"]
     assert credential["provider_name"] == "openai"
@@ -75,9 +84,9 @@ def test_an_explicit_key_wins_over_the_environment(tmp_path, monkeypatch):
     cp, client, org, workspace = stack(tmp_path, monkeypatch)
     monkeypatch.setenv("OPENAI_API_KEY", OPENAI_KEY)
 
-    seed_provider_credentials(client, org, workspace["slug"], {"openai": "sk-explicit-2222"})
+    _seed(client, org, workspace, {"openai": "sk-explicit-2222"})
 
-    credential = client.get("/v1/org/provider-credentials", headers=org).json()["data"][0]
+    credential = _credentials(client, org, workspace)[0]
     assert stored(cp, credential) == "sk-explicit-2222"
 
 
@@ -87,15 +96,15 @@ def test_providers_without_a_key_are_left_alone(tmp_path, monkeypatch):
     _, client, org, workspace = stack(tmp_path, monkeypatch)
     monkeypatch.setenv("OPENAI_API_KEY", OPENAI_KEY)
 
-    assert [k.provider for k in seed_provider_credentials(client, org, workspace["slug"], {})] == ["openai"]
-    assert [c["provider_name"] for c in client.get("/v1/org/provider-credentials", headers=org).json()["data"]] == ["openai"]
+    assert [k.provider for k in _seed(client, org, workspace, {})] == ["openai"]
+    assert [credential["provider_name"] for credential in _credentials(client, org, workspace)] == ["openai"]
 
 
 def test_a_key_for_a_provider_outside_the_catalog_is_ignored(tmp_path, monkeypatch):
     """The catalog decides what exists; an unknown provider would only 404 the create."""
     _, client, org, workspace = stack(tmp_path, monkeypatch)
 
-    assert seed_provider_credentials(client, org, workspace["slug"], {"nowhere": "sk-3333"}) == []
+    assert _seed(client, org, workspace, {"nowhere": "sk-3333"}) == []
 
 
 def test_an_env_backed_instance_records_the_key_it_already_has(tmp_path, monkeypatch):
@@ -104,8 +113,8 @@ def test_an_env_backed_instance_records_the_key_it_already_has(tmp_path, monkeyp
     cp, client, org, workspace = stack(tmp_path, monkeypatch, secrets=EnvStoreConfig())
     monkeypatch.setenv("OPENAI_API_KEY", OPENAI_KEY)
 
-    assert [k.provider for k in seed_provider_credentials(client, org, workspace["slug"], {})] == ["openai"]
-    credential = client.get("/v1/org/provider-credentials", headers=org).json()["data"][0]
+    assert [k.provider for k in _seed(client, org, workspace, {})] == ["openai"]
+    credential = _credentials(client, org, workspace)[0]
     assert credential["scope"] == "workspace"
     assert stored(cp, credential) == OPENAI_KEY
 
@@ -115,11 +124,11 @@ def test_an_env_backed_instance_seeds_nothing_it_cannot_resolve(tmp_path, monkey
     quickstart has already created an account and an org; the command reports and carries on."""
     _, client, org, workspace = stack(tmp_path, monkeypatch, secrets=EnvStoreConfig())
 
-    refused = seed_provider_credentials(client, org, workspace["slug"], {"openai": "sk-typed-not-exported"})
+    refused = _seed(client, org, workspace, {"openai": "sk-typed-not-exported"})
 
     assert [(k.provider, k.source) for k in refused] == [("openai", "given on the command line")]
     assert "OPENAI_API_KEY" in refused[0].error
-    assert client.get("/v1/org/provider-credentials", headers=org).json()["data"] == []
+    assert _credentials(client, org, workspace) == []
 
 
 def test_a_key_is_asked_for_when_the_environment_is_silent(tmp_path, monkeypatch):
@@ -130,8 +139,8 @@ def test_a_key_is_asked_for_when_the_environment_is_silent(tmp_path, monkeypatch
     answers = {"openai": "sk-typed-in-4444", "anthropic": ""}
     monkeypatch.setattr(typer, "prompt", lambda label, **_: next(v for k, v in answers.items() if k in label))
 
-    assert [k.provider for k in seed_provider_credentials(client, org, workspace["slug"], {})] == ["openai"]
-    assert stored(cp, client.get("/v1/org/provider-credentials", headers=org).json()["data"][0]) == "sk-typed-in-4444"
+    assert [k.provider for k in _seed(client, org, workspace, {})] == ["openai"]
+    assert stored(cp, _credentials(client, org, workspace)[0]) == "sk-typed-in-4444"
 
 
 def test_a_blank_answer_with_nothing_exported_skips_the_provider(tmp_path, monkeypatch):
@@ -140,7 +149,7 @@ def test_a_blank_answer_with_nothing_exported_skips_the_provider(tmp_path, monke
     monkeypatch.setattr("sys.stdin.isatty", lambda: True)
     monkeypatch.setattr(typer, "prompt", lambda label, **_: "")
 
-    assert seed_provider_credentials(client, org, workspace["slug"], {}) == []
+    assert _seed(client, org, workspace, {}) == []
 
 
 def test_nothing_is_asked_without_a_terminal(tmp_path, monkeypatch):
@@ -149,7 +158,7 @@ def test_nothing_is_asked_without_a_terminal(tmp_path, monkeypatch):
     monkeypatch.setattr("sys.stdin.isatty", lambda: False)
     monkeypatch.setattr(typer, "prompt", _refuse_to_prompt)
 
-    assert seed_provider_credentials(client, org, workspace["slug"], {}) == []
+    assert _seed(client, org, workspace, {}) == []
 
 
 def test_a_blank_answer_takes_the_exported_key(tmp_path, monkeypatch):
@@ -160,8 +169,8 @@ def test_a_blank_answer_takes_the_exported_key(tmp_path, monkeypatch):
     monkeypatch.setattr("sys.stdin.isatty", lambda: True)
     monkeypatch.setattr(typer, "prompt", lambda label, **_: "")
 
-    assert [(k.provider, k.source) for k in seed_provider_credentials(client, org, workspace["slug"], {})] == [("openai", "found in OPENAI_API_KEY")]
-    assert stored(cp, client.get("/v1/org/provider-credentials", headers=org).json()["data"][0]) == OPENAI_KEY
+    assert [(k.provider, k.source) for k in _seed(client, org, workspace, {})] == [("openai", "found in OPENAI_API_KEY")]
+    assert stored(cp, _credentials(client, org, workspace)[0]) == OPENAI_KEY
 
 
 def test_the_prompt_says_which_variable_a_blank_answer_takes(tmp_path, monkeypatch):
@@ -172,7 +181,7 @@ def test_the_prompt_says_which_variable_a_blank_answer_takes(tmp_path, monkeypat
     asked = []
     monkeypatch.setattr(typer, "prompt", lambda label, **_: asked.append(label) or "")
 
-    seed_provider_credentials(client, org, workspace["slug"], {})
+    _seed(client, org, workspace, {})
 
     assert any("openai" in label and "blank to use OPENAI_API_KEY" in label for label in asked)
     assert any("anthropic" in label and "blank to skip" in label for label in asked)
@@ -184,5 +193,5 @@ def test_a_typed_key_wins_over_the_exported_one(tmp_path, monkeypatch):
     monkeypatch.setattr("sys.stdin.isatty", lambda: True)
     monkeypatch.setattr(typer, "prompt", lambda label, **_: "sk-typed-5555" if "openai" in label else "")
 
-    assert [(k.provider, k.source) for k in seed_provider_credentials(client, org, workspace["slug"], {})] == [("openai", "entered")]
-    assert stored(cp, client.get("/v1/org/provider-credentials", headers=org).json()["data"][0]) == "sk-typed-5555"
+    assert [(k.provider, k.source) for k in _seed(client, org, workspace, {})] == [("openai", "entered")]
+    assert stored(cp, _credentials(client, org, workspace)[0]) == "sk-typed-5555"

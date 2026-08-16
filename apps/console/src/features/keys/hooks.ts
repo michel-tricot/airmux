@@ -1,101 +1,79 @@
 import { useQueryClient } from '@tanstack/react-query';
 import {
-  useListAllManagementKeys,
-  useListManagementKeys,
-  useMintOrgManagementKey,
-  useRevokeManagementKey,
-  useListInstanceKeys,
-  useCreateInstanceKey,
-  useRevokeInstanceKey,
+  useListInstanceAccessKeys,
+  useListOrgAccessKeys,
+  useCreateInstanceAccessKey,
+  useCreateOrgAccessKey,
+  useRevokeAccessKey,
   useListInferenceKeys,
   useCreateInferenceKey,
   useRevokeInferenceKey,
-  getListManagementKeysQueryKey,
-  getListAllManagementKeysQueryKey,
-  getListInstanceKeysQueryKey,
+  getListInstanceAccessKeysQueryKey,
+  getListOrgAccessKeysQueryKey,
   getListInferenceKeysQueryKey,
+  type ListInstanceAccessKeysParams,
+  type ListOrgAccessKeysParams,
 } from '@workspace/api-client-react';
-import { orgScope } from '@/lib/api';
-import { orgScopedKey } from '@/lib/query-keys';
 
-export function useAllManagementKeys() {
-  return useListAllManagementKeys();
+export function useInstanceAccessKeys(params?: ListInstanceAccessKeysParams) {
+  return useListInstanceAccessKeys(params);
 }
 
-export function useInstanceKeys() {
-  return useListInstanceKeys();
+export function useOrgAccessKeys(orgId: string, params?: ListOrgAccessKeysParams) {
+  return useListOrgAccessKeys(orgId, params);
 }
 
-export function useMintInstanceKeyMutation() {
+export function useCreateInstanceAccessKeyMutation(params?: ListInstanceAccessKeysParams) {
   const queryClient = useQueryClient();
-  return useCreateInstanceKey({
+  return useCreateInstanceAccessKey({
     mutation: {
-      onSuccess: () => queryClient.invalidateQueries({ queryKey: getListInstanceKeysQueryKey() }),
-      meta: { errorMessage: 'We couldn’t generate the instance key. Please try again.' },
+      onSuccess: () => queryClient.invalidateQueries({ queryKey: getListInstanceAccessKeysQueryKey(params) }),
+      meta: { errorMessage: 'We couldn’t generate the access key. Please try again.' },
     },
   });
 }
 
-export function useRevokeInstanceKeyMutation() {
+export function useCreateOrgAccessKeyMutation(orgId: string, params?: ListOrgAccessKeysParams) {
   const queryClient = useQueryClient();
-  return useRevokeInstanceKey({
+  return useCreateOrgAccessKey({
     mutation: {
-      onSuccess: () => queryClient.invalidateQueries({ queryKey: getListInstanceKeysQueryKey() }),
-      meta: { errorMessage: 'We couldn’t revoke the instance key. Please try again.' },
+      onSuccess: () => queryClient.invalidateQueries({ queryKey: getListOrgAccessKeysQueryKey(orgId, params) }),
+      meta: { errorMessage: 'We couldn’t generate the access key. Please try again.' },
     },
   });
 }
 
-export function useManagementKeys(orgId: string) {
-  return useListManagementKeys({
-    query: { queryKey: orgScopedKey(orgId, getListManagementKeysQueryKey()) },
-    request: orgScope(orgId),
+export function useRevokeInstanceAccessKeyMutation(params?: ListInstanceAccessKeysParams) {
+  const queryClient = useQueryClient();
+  return useRevokeAccessKey({
+    mutation: {
+      onSuccess: () => queryClient.invalidateQueries({ queryKey: getListInstanceAccessKeysQueryKey(params) }),
+      meta: { errorMessage: 'We couldn’t revoke the access key. Please try again.' },
+    },
   });
 }
 
-export function useMintManagementKeyMutation(orgId: string) {
+export function useRevokeOrgAccessKeyMutation(orgId: string, params?: ListOrgAccessKeysParams) {
   const queryClient = useQueryClient();
-  return useMintOrgManagementKey({
+  return useRevokeAccessKey({
     mutation: {
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: orgScopedKey(orgId, getListManagementKeysQueryKey()) });
-        queryClient.invalidateQueries({ queryKey: getListAllManagementKeysQueryKey() });
-      },
-      meta: { errorMessage: 'We couldn’t generate the key. Please try again.' },
+      onSuccess: () => queryClient.invalidateQueries({ queryKey: getListOrgAccessKeysQueryKey(orgId, params) }),
+      meta: { errorMessage: 'We couldn’t revoke the access key. Please try again.' },
     },
-    request: orgScope(orgId),
-  });
-}
-
-export function useRevokeManagementKeyMutation(orgId: string) {
-  const queryClient = useQueryClient();
-  return useRevokeManagementKey({
-    mutation: {
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: orgScopedKey(orgId, getListManagementKeysQueryKey()) });
-        queryClient.invalidateQueries({ queryKey: getListAllManagementKeysQueryKey() });
-      },
-      meta: { errorMessage: 'We couldn’t revoke the key. Please try again.' },
-    },
-    request: orgScope(orgId),
   });
 }
 
 export function useInferenceKeys(orgId: string, workspaceRef: string) {
-  return useListInferenceKeys(workspaceRef, {
-    query: { queryKey: orgScopedKey(orgId, getListInferenceKeysQueryKey(workspaceRef)) },
-    request: orgScope(orgId),
-  });
+  return useListInferenceKeys(orgId, workspaceRef);
 }
 
 export function useCreateInferenceKeyMutation(orgId: string, workspaceRef: string) {
   const queryClient = useQueryClient();
   return useCreateInferenceKey({
     mutation: {
-      onSuccess: () => queryClient.invalidateQueries({ queryKey: orgScopedKey(orgId, getListInferenceKeysQueryKey(workspaceRef)) }),
+      onSuccess: () => queryClient.invalidateQueries({ queryKey: getListInferenceKeysQueryKey(orgId, workspaceRef) }),
       meta: { errorMessage: 'We couldn’t generate the key. Please try again.' },
     },
-    request: orgScope(orgId),
   });
 }
 
@@ -103,9 +81,8 @@ export function useRevokeInferenceKeyMutation(orgId: string, workspaceRef: strin
   const queryClient = useQueryClient();
   return useRevokeInferenceKey({
     mutation: {
-      onSuccess: () => queryClient.invalidateQueries({ queryKey: orgScopedKey(orgId, getListInferenceKeysQueryKey(workspaceRef)) }),
+      onSuccess: () => queryClient.invalidateQueries({ queryKey: getListInferenceKeysQueryKey(orgId, workspaceRef) }),
       meta: { errorMessage: 'We couldn’t revoke the key. Please try again.' },
     },
-    request: orgScope(orgId),
   });
 }
