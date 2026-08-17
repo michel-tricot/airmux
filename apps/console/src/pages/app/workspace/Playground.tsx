@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Send, Trash2, KeyRound, Loader2, User, Bot, AlertCircle, Zap } from 'lucide-react';
+import { Send, Trash2, KeyRound, Loader2, User, Bot, AlertCircle, Zap, ChevronDown, Check, Search } from 'lucide-react';
 import { useRequiredOrgId } from '@/lib/session';
 import { useRequiredParam } from '@/lib/route';
 import { useProviders } from '@/features/credentials/hooks';
@@ -9,12 +9,123 @@ import { Textarea } from '@/components/ui/textarea';
 import { PageShell } from '@/components/shared/page-shell';
 import { LoadingState, ErrorState, EmptyState } from '@/components/shared/states';
 import { ProviderIcon } from '@/components/ProviderIcon';
-import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { ModelOut, ProviderOut } from '@workspace/api-client-react';
 import { cn } from '@/lib/utils';
 
 type Role = 'user' | 'assistant';
 type ChatMessage = { role: Role; content: string };
+
+function ModelPicker({
+  groups,
+  value,
+  onChange,
+}: {
+  groups: { provider: ProviderOut; models: ModelOut[] }[];
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const containerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const allModels = groups.flatMap((g) => g.models);
+  const selectedModel = allModels.find((m) => m.name === value);
+  const selectedProvider = selectedModel ? groups.find((g) => g.models.some((m) => m.id === selectedModel.id))?.provider : undefined;
+
+  const q = query.toLowerCase();
+  const filtered = groups
+    .map((g) => ({
+      ...g,
+      models: g.models.filter((m) => !q || m.name.toLowerCase().includes(q) || g.provider.name.toLowerCase().includes(q)),
+    }))
+    .filter((g) => g.models.length > 0);
+
+  useEffect(() => {
+    if (!open) { setQuery(''); return; }
+    setTimeout(() => inputRef.current?.focus(), 0);
+  }, [open]);
+
+  useEffect(() => {
+    function onDown(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) setOpen(false);
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') setOpen(false);
+    }
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => { document.removeEventListener('mousedown', onDown); document.removeEventListener('keydown', onKey); };
+  }, []);
+
+  return (
+    <div ref={containerRef} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex h-8 w-full items-center justify-between gap-2 rounded-md border border-input bg-background px-3 text-xs font-mono transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+      >
+        <span className="flex min-w-0 items-center gap-2">
+          {selectedProvider?.icon && <ProviderIcon markup={selectedProvider.icon} />}
+          <span className="truncate">{selectedModel?.name ?? 'Select model'}</span>
+        </span>
+        <ChevronDown className={cn('h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform', open && 'rotate-180')} />
+      </button>
+
+      {open && (
+        <div className="absolute left-0 right-0 top-full z-50 mt-1 overflow-hidden rounded-md border border-border bg-card shadow-lg">
+          <div className="flex items-center gap-2 border-b border-border px-3 py-2">
+            <Search className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+            <input
+              ref={inputRef}
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search models..."
+              className="flex-1 bg-transparent font-mono text-xs outline-none placeholder:text-muted-foreground"
+            />
+          </div>
+          <ul role="listbox" className="permission-scrollbar max-h-64 overflow-y-auto py-1">
+            {filtered.length === 0 && (
+              <li className="px-3 py-4 text-center font-mono text-xs text-muted-foreground">No models match</li>
+            )}
+            {filtered.map(({ provider, models }) => (
+              <li key={provider.id}>
+                <div className="flex items-center gap-2 px-3 py-1.5">
+                  {provider.icon && <ProviderIcon markup={provider.icon} />}
+                  <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{provider.name}</span>
+                </div>
+                <ul>
+                  {models.map((model) => {
+                    const active = model.name === value;
+                    return (
+                      <li key={model.id}>
+                        <button
+                          type="button"
+                          role="option"
+                          aria-selected={active}
+                          onClick={() => { onChange(model.name); setOpen(false); }}
+                          className={cn(
+                            'flex w-full items-center justify-between px-3 py-1.5 font-mono text-xs transition-colors',
+                            active ? 'bg-primary/10 text-primary' : 'hover:bg-accent hover:text-accent-foreground',
+                          )}
+                        >
+                          <span className="truncate pl-4">{model.name}</span>
+                          {active && <Check className="h-3 w-3 shrink-0" />}
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
 
 function groupByProvider(models: ModelOut[], providers: ProviderOut[]): { provider: ProviderOut; models: ModelOut[] }[] {
   const providerMap = new Map(providers.map((p) => [p.id, p]));
@@ -216,29 +327,7 @@ export default function Playground() {
 
           <div className="space-y-2">
             <label className="font-mono text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Model</label>
-            <Select value={selectedModel} onValueChange={setSelectedModel}>
-              <SelectTrigger className="h-8 text-xs font-mono">
-                <SelectValue placeholder="Select model" />
-              </SelectTrigger>
-              <SelectContent>
-                {groups.map(({ provider, models: groupModels }) => (
-                  <SelectGroup key={provider.id}>
-                    <SelectLabel className="flex items-center gap-2 text-[11px]">
-                      {provider.icon && <ProviderIcon markup={provider.icon} />}
-                      {provider.name}
-                    </SelectLabel>
-                    {groupModels.map((model) => (
-                      <SelectItem key={model.id} value={model.name} className="font-mono text-xs">
-                        {model.name}
-                        {model.capabilities.includes('streaming') && (
-                          <Zap className="ml-1 inline h-3 w-3 text-muted-foreground" />
-                        )}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                ))}
-              </SelectContent>
-            </Select>
+            <ModelPicker groups={groups} value={selectedModel} onChange={setSelectedModel} />
           </div>
 
           <div className="space-y-2">
