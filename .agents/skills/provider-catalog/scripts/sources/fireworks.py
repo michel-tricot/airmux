@@ -21,6 +21,10 @@ and the serverless flag is the real signal.
 Fireworks publishes no pricing on the API. It is tiered by parameter count on their pricing
 page, so pricing stays null here rather than being scraped into a number that will rot.
 
+Model ids on the wire are fully qualified, accounts/fireworks/models/<name>. The bare name
+is accepted for some models and 404s for others, so upstream_id always carries the
+qualified form while id stays short for the catalog.
+
 deprecationDate arrives as {year, month, day} rather than a string, and is worth carrying:
 with OpenAI's shutdown_date it is one of only two machine-readable deprecation signals in
 the whole catalog.
@@ -63,6 +67,10 @@ class Fireworks(ModelSource):
 
         return self.record(
             model_id,
+            # The wire id is the fully qualified name. The bare name works for some models
+            # and 404s for others, with nothing on the record to say which, so always send
+            # the qualified form: gpt-oss-120b answers bare, gpt-oss-20b does not.
+            upstream_id=item.get("name"),
             context_length=item.get("contextLength"),
             input_modalities=["text", "image"] if item.get("supportsImageInput") else ["text"],
             output_modalities=["text"],

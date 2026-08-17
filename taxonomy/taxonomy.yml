@@ -174,7 +174,7 @@ models:
   - vision
 - model_id: fireworks/deepseek-v4-flash-0731
   provider_id: fireworks
-  upstream_model: deepseek-v4-flash-0731
+  upstream_model: accounts/fireworks/models/deepseek-v4-flash-0731
   input_price_per_mtok: 0.14
   output_price_per_mtok: 0.28
   cache_read_price_per_mtok: 0.028
@@ -186,7 +186,7 @@ models:
   - tools
 - model_id: fireworks/deepseek-v4-pro
   provider_id: fireworks
-  upstream_model: deepseek-v4-pro
+  upstream_model: accounts/fireworks/models/deepseek-v4-pro
   input_price_per_mtok: 1.74
   output_price_per_mtok: 3.48
   cache_read_price_per_mtok: 0.145
@@ -198,7 +198,7 @@ models:
   - tools
 - model_id: fireworks/deepseek-v4-pro-0813
   provider_id: fireworks
-  upstream_model: deepseek-v4-pro-0813
+  upstream_model: accounts/fireworks/models/deepseek-v4-pro-0813
   input_price_per_mtok: 1.32
   output_price_per_mtok: 3.96
   cache_read_price_per_mtok: 0.044
@@ -210,7 +210,7 @@ models:
   - tools
 - model_id: fireworks/glm-5p2
   provider_id: fireworks
-  upstream_model: glm-5p2
+  upstream_model: accounts/fireworks/models/glm-5p2
   input_price_per_mtok: 1.4
   output_price_per_mtok: 4.4
   cache_read_price_per_mtok: 0.14
@@ -222,7 +222,7 @@ models:
   - tools
 - model_id: fireworks/gpt-oss-120b
   provider_id: fireworks
-  upstream_model: gpt-oss-120b
+  upstream_model: accounts/fireworks/models/gpt-oss-120b
   input_price_per_mtok: 0.15
   output_price_per_mtok: 0.6
   cache_read_price_per_mtok: 0.015
@@ -234,7 +234,7 @@ models:
   - tools
 - model_id: fireworks/gpt-oss-20b
   provider_id: fireworks
-  upstream_model: gpt-oss-20b
+  upstream_model: accounts/fireworks/models/gpt-oss-20b
   input_price_per_mtok: 0.07
   output_price_per_mtok: 0.3
   cache_read_price_per_mtok: 0.035
@@ -245,7 +245,7 @@ models:
   - streaming
 - model_id: fireworks/inkling
   provider_id: fireworks
-  upstream_model: inkling
+  upstream_model: accounts/fireworks/models/inkling
   input_price_per_mtok: 1.0
   output_price_per_mtok: 4.05
   cache_read_price_per_mtok: 0.17
@@ -258,7 +258,7 @@ models:
   - vision
 - model_id: fireworks/kimi-k2p6
   provider_id: fireworks
-  upstream_model: kimi-k2p6
+  upstream_model: accounts/fireworks/models/kimi-k2p6
   input_price_per_mtok: 0.95
   output_price_per_mtok: 4.0
   cache_read_price_per_mtok: 0.16
@@ -271,7 +271,7 @@ models:
   - vision
 - model_id: fireworks/kimi-k2p7-code
   provider_id: fireworks
-  upstream_model: kimi-k2p7-code
+  upstream_model: accounts/fireworks/models/kimi-k2p7-code
   input_price_per_mtok: 0.95
   output_price_per_mtok: 4.0
   cache_read_price_per_mtok: 0.19
@@ -284,7 +284,7 @@ models:
   - vision
 - model_id: fireworks/kimi-k3
   provider_id: fireworks
-  upstream_model: kimi-k3
+  upstream_model: accounts/fireworks/models/kimi-k3
   input_price_per_mtok: 3.0
   output_price_per_mtok: 15.0
   cache_read_price_per_mtok: 0.3
@@ -297,7 +297,7 @@ models:
   - vision
 - model_id: fireworks/minimax-m2p7
   provider_id: fireworks
-  upstream_model: minimax-m2p7
+  upstream_model: accounts/fireworks/models/minimax-m2p7
   input_price_per_mtok: 0.3
   output_price_per_mtok: 1.2
   cache_read_price_per_mtok: 0.06
@@ -309,7 +309,7 @@ models:
   - tools
 - model_id: fireworks/minimax-m3
   provider_id: fireworks
-  upstream_model: minimax-m3
+  upstream_model: accounts/fireworks/models/minimax-m3
   input_price_per_mtok: 0.3
   output_price_per_mtok: 1.2
   cache_read_price_per_mtok: 0.06
@@ -321,7 +321,7 @@ models:
   - tools
 - model_id: fireworks/muse-glimmer-30b
   provider_id: fireworks
-  upstream_model: muse-glimmer-30b
+  upstream_model: accounts/fireworks/models/muse-glimmer-30b
   input_price_per_mtok: 0.35
   output_price_per_mtok: 1.5
   cache_read_price_per_mtok: 0.04
@@ -334,7 +334,7 @@ models:
   - vision
 - model_id: fireworks/nemotron-3-ultra-nvfp4
   provider_id: fireworks
-  upstream_model: nemotron-3-ultra-nvfp4
+  upstream_model: accounts/fireworks/models/nemotron-3-ultra-nvfp4
   input_price_per_mtok: 0.6
   output_price_per_mtok: 2.4
   cache_read_price_per_mtok: 0.119
@@ -346,7 +346,7 @@ models:
   - tools
 - model_id: fireworks/nemotron-lightning-3p5-30b-a3b
   provider_id: fireworks
-  upstream_model: nemotron-lightning-3p5-30b-a3b
+  upstream_model: accounts/fireworks/models/nemotron-lightning-3p5-30b-a3b
   input_price_per_mtok: 0.05
   output_price_per_mtok: 0.2
   cache_read_price_per_mtok: 0.01
@@ -358,7 +358,7 @@ models:
   - tools
 - model_id: fireworks/qwen3p7-plus
   provider_id: fireworks
-  upstream_model: qwen3p7-plus
+  upstream_model: accounts/fireworks/models/qwen3p7-plus
   input_price_per_mtok: 0.4
   output_price_per_mtok: 1.6
   cache_read_price_per_mtok: 0.08
@@ -371,7 +371,7 @@ models:
   - vision
 - model_id: fireworks/qwen3p8-2p4t-a95b
   provider_id: fireworks
-  upstream_model: qwen3p8-2p4t-a95b
+  upstream_model: accounts/fireworks/models/qwen3p8-2p4t-a95b
   input_price_per_mtok: 0.0
   output_price_per_mtok: 0.0
   cache_read_price_per_mtok: 0.0
@@ -383,7 +383,7 @@ models:
   - tools
 - model_id: fireworks/qwen3p8-max
   provider_id: fireworks
-  upstream_model: qwen3p8-max
+  upstream_model: accounts/fireworks/models/qwen3p8-max
   input_price_per_mtok: 2.0
   output_price_per_mtok: 6.0
   cache_read_price_per_mtok: 0.25
@@ -427,30 +427,6 @@ models:
   max_output_tokens: 8192
   capabilities:
   - streaming
-- model_id: groq/llama-3.1-8b-instant
-  provider_id: groq
-  upstream_model: llama-3.1-8b-instant
-  input_price_per_mtok: 0.05
-  output_price_per_mtok: 0.08
-  cache_read_price_per_mtok: 0.025
-  cache_write_price_per_mtok: 0.0
-  context_window: 131072
-  max_output_tokens: 131072
-  capabilities:
-  - streaming
-  - tools
-- model_id: groq/llama-3.3-70b-versatile
-  provider_id: groq
-  upstream_model: llama-3.3-70b-versatile
-  input_price_per_mtok: 0.59
-  output_price_per_mtok: 0.79
-  cache_read_price_per_mtok: 0.295
-  cache_write_price_per_mtok: 0.0
-  context_window: 131072
-  max_output_tokens: 32768
-  capabilities:
-  - streaming
-  - tools
 - model_id: groq/openai/gpt-oss-120b
   provider_id: groq
   upstream_model: openai/gpt-oss-120b
@@ -697,17 +673,6 @@ models:
   max_output_tokens: 128000
   capabilities:
   - streaming
-- model_id: openai/gpt-5-codex
-  provider_id: openai
-  upstream_model: gpt-5-codex
-  input_price_per_mtok: 0.625
-  output_price_per_mtok: 5.0
-  cache_read_price_per_mtok: 0.0
-  cache_write_price_per_mtok: 0.0
-  context_window: 400000
-  max_output_tokens: 128000
-  capabilities:
-  - streaming
 - model_id: openai/gpt-5-mini
   provider_id: openai
   upstream_model: gpt-5-mini
@@ -754,29 +719,6 @@ models:
   max_output_tokens: 128000
   capabilities:
   - streaming
-- model_id: openai/gpt-5-pro
-  provider_id: openai
-  upstream_model: gpt-5-pro
-  input_price_per_mtok: 15.0
-  output_price_per_mtok: 120.0
-  cache_read_price_per_mtok: 0.0
-  cache_write_price_per_mtok: 0.0
-  context_window: 400000
-  max_output_tokens: 128000
-  capabilities:
-  - streaming
-  - tools
-- model_id: openai/gpt-5-pro-2025-10-06
-  provider_id: openai
-  upstream_model: gpt-5-pro-2025-10-06
-  input_price_per_mtok: 15.0
-  output_price_per_mtok: 120.0
-  cache_read_price_per_mtok: 0.0
-  cache_write_price_per_mtok: 0.0
-  context_window: 400000
-  max_output_tokens: 128000
-  capabilities:
-  - streaming
 - model_id: openai/gpt-5.1
   provider_id: openai
   upstream_model: gpt-5.1
@@ -789,101 +731,9 @@ models:
   capabilities:
   - streaming
   - tools
-- model_id: openai/gpt-5.1-codex
-  provider_id: openai
-  upstream_model: gpt-5.1-codex
-  input_price_per_mtok: 1.25
-  output_price_per_mtok: 10.0
-  cache_read_price_per_mtok: 0.0
-  cache_write_price_per_mtok: 0.0
-  context_window: 400000
-  max_output_tokens: 128000
-  capabilities:
-  - streaming
-- model_id: openai/gpt-5.1-codex-max
-  provider_id: openai
-  upstream_model: gpt-5.1-codex-max
-  input_price_per_mtok: 1.25
-  output_price_per_mtok: 10.0
-  cache_read_price_per_mtok: 0.0
-  cache_write_price_per_mtok: 0.0
-  context_window: 400000
-  max_output_tokens: 128000
-  capabilities:
-  - streaming
-- model_id: openai/gpt-5.1-codex-mini
-  provider_id: openai
-  upstream_model: gpt-5.1-codex-mini
-  input_price_per_mtok: 0.25
-  output_price_per_mtok: 2.0
-  cache_read_price_per_mtok: 0.0
-  cache_write_price_per_mtok: 0.0
-  context_window: 400000
-  max_output_tokens: 128000
-  capabilities:
-  - streaming
 - model_id: openai/gpt-5.2
   provider_id: openai
   upstream_model: gpt-5.2
-  input_price_per_mtok: 1.75
-  output_price_per_mtok: 14.0
-  cache_read_price_per_mtok: 0.175
-  cache_write_price_per_mtok: 0.0
-  context_window: 400000
-  max_output_tokens: 128000
-  capabilities:
-  - streaming
-  - tools
-- model_id: openai/gpt-5.2-chat-latest
-  provider_id: openai
-  upstream_model: gpt-5.2-chat-latest
-  input_price_per_mtok: 1.75
-  output_price_per_mtok: 14.0
-  cache_read_price_per_mtok: 0.175
-  cache_write_price_per_mtok: 0.0
-  context_window: 128000
-  max_output_tokens: 32000
-  capabilities:
-  - streaming
-  - tools
-- model_id: openai/gpt-5.2-codex
-  provider_id: openai
-  upstream_model: gpt-5.2-codex
-  input_price_per_mtok: 1.75
-  output_price_per_mtok: 14.0
-  cache_read_price_per_mtok: 0.0
-  cache_write_price_per_mtok: 0.0
-  context_window: 400000
-  max_output_tokens: 128000
-  capabilities:
-  - streaming
-- model_id: openai/gpt-5.2-pro
-  provider_id: openai
-  upstream_model: gpt-5.2-pro
-  input_price_per_mtok: 21.0
-  output_price_per_mtok: 168.0
-  cache_read_price_per_mtok: 0.0
-  cache_write_price_per_mtok: 0.0
-  context_window: 400000
-  max_output_tokens: 128000
-  capabilities:
-  - streaming
-  - tools
-- model_id: openai/gpt-5.3-chat-latest
-  provider_id: openai
-  upstream_model: gpt-5.3-chat-latest
-  input_price_per_mtok: 1.75
-  output_price_per_mtok: 14.0
-  cache_read_price_per_mtok: 0.175
-  cache_write_price_per_mtok: 0.0
-  context_window: 128000
-  max_output_tokens: 16384
-  capabilities:
-  - streaming
-  - tools
-- model_id: openai/gpt-5.3-codex
-  provider_id: openai
-  upstream_model: gpt-5.3-codex
   input_price_per_mtok: 1.75
   output_price_per_mtok: 14.0
   cache_read_price_per_mtok: 0.175
@@ -929,36 +779,12 @@ models:
   capabilities:
   - streaming
   - tools
-- model_id: openai/gpt-5.4-pro
-  provider_id: openai
-  upstream_model: gpt-5.4-pro
-  input_price_per_mtok: 30.0
-  output_price_per_mtok: 180.0
-  cache_read_price_per_mtok: 0.0
-  cache_write_price_per_mtok: 0.0
-  context_window: 1050000
-  max_output_tokens: 128000
-  capabilities:
-  - streaming
-  - tools
 - model_id: openai/gpt-5.5
   provider_id: openai
   upstream_model: gpt-5.5
   input_price_per_mtok: 5.0
   output_price_per_mtok: 30.0
   cache_read_price_per_mtok: 0.5
-  cache_write_price_per_mtok: 0.0
-  context_window: 1050000
-  max_output_tokens: 128000
-  capabilities:
-  - streaming
-  - tools
-- model_id: openai/gpt-5.5-pro
-  provider_id: openai
-  upstream_model: gpt-5.5-pro
-  input_price_per_mtok: 30.0
-  output_price_per_mtok: 180.0
-  cache_read_price_per_mtok: 0.0
   cache_write_price_per_mtok: 0.0
   context_window: 1050000
   max_output_tokens: 128000
@@ -1001,28 +827,6 @@ models:
   capabilities:
   - streaming
   - tools
-- model_id: openai/gpt-audio
-  provider_id: openai
-  upstream_model: gpt-audio
-  input_price_per_mtok: 2.5
-  output_price_per_mtok: 10.0
-  cache_read_price_per_mtok: 0.0
-  cache_write_price_per_mtok: 0.0
-  context_window: 128000
-  max_output_tokens: 16384
-  capabilities:
-  - streaming
-- model_id: openai/gpt-audio-mini
-  provider_id: openai
-  upstream_model: gpt-audio-mini
-  input_price_per_mtok: 0.6
-  output_price_per_mtok: 2.4
-  cache_read_price_per_mtok: 0.0
-  cache_write_price_per_mtok: 0.0
-  context_window: 128000
-  max_output_tokens: 16384
-  capabilities:
-  - streaming
 - model_id: openai/o1
   provider_id: openai
   upstream_model: o1
@@ -1046,18 +850,6 @@ models:
   max_output_tokens: 100000
   capabilities:
   - streaming
-- model_id: openai/o1-pro
-  provider_id: openai
-  upstream_model: o1-pro
-  input_price_per_mtok: 150.0
-  output_price_per_mtok: 600.0
-  cache_read_price_per_mtok: 0.0
-  cache_write_price_per_mtok: 0.0
-  context_window: 200000
-  max_output_tokens: 100000
-  capabilities:
-  - streaming
-  - tools
 - model_id: openai/o3
   provider_id: openai
   upstream_model: o3
@@ -1138,18 +930,6 @@ models:
   max_output_tokens: null
   capabilities:
   - streaming
-- model_id: together/MiniMaxAI/MiniMax-M2.7
-  provider_id: together
-  upstream_model: MiniMaxAI/MiniMax-M2.7
-  input_price_per_mtok: 0.3
-  output_price_per_mtok: 1.2
-  cache_read_price_per_mtok: 0.06
-  cache_write_price_per_mtok: 0.0
-  context_window: 196608
-  max_output_tokens: 131072
-  capabilities:
-  - streaming
-  - tools
 - model_id: together/MiniMaxAI/MiniMax-M3
   provider_id: together
   upstream_model: MiniMaxAI/MiniMax-M3
@@ -1162,94 +942,6 @@ models:
   capabilities:
   - streaming
   - tools
-- model_id: together/NousResearch/Nous-Hermes-2-Mixtral-8x7B-DPO
-  provider_id: together
-  upstream_model: NousResearch/Nous-Hermes-2-Mixtral-8x7B-DPO
-  input_price_per_mtok: 0.6
-  output_price_per_mtok: 0.6
-  cache_read_price_per_mtok: 0.0
-  cache_write_price_per_mtok: 0.0
-  context_window: 32768
-  max_output_tokens: null
-  capabilities:
-  - streaming
-- model_id: together/Qwen/QwQ-32B
-  provider_id: together
-  upstream_model: Qwen/QwQ-32B
-  input_price_per_mtok: 1.2
-  output_price_per_mtok: 1.2
-  cache_read_price_per_mtok: 0.0
-  cache_write_price_per_mtok: 0.0
-  context_window: 131072
-  max_output_tokens: null
-  capabilities:
-  - streaming
-- model_id: together/Qwen/Qwen2-1.5B-Instruct
-  provider_id: together
-  upstream_model: Qwen/Qwen2-1.5B-Instruct
-  input_price_per_mtok: 0.02
-  output_price_per_mtok: 0.02
-  cache_read_price_per_mtok: 0.0
-  cache_write_price_per_mtok: 0.0
-  context_window: 32768
-  max_output_tokens: null
-  capabilities:
-  - streaming
-- model_id: together/Qwen/Qwen2-72B-Instruct
-  provider_id: together
-  upstream_model: Qwen/Qwen2-72B-Instruct
-  input_price_per_mtok: 0.9
-  output_price_per_mtok: 0.9
-  cache_read_price_per_mtok: 0.0
-  cache_write_price_per_mtok: 0.0
-  context_window: 32768
-  max_output_tokens: null
-  capabilities:
-  - streaming
-- model_id: together/Qwen/Qwen2-VL-72B-Instruct
-  provider_id: together
-  upstream_model: Qwen/Qwen2-VL-72B-Instruct
-  input_price_per_mtok: 1.2
-  output_price_per_mtok: 1.2
-  cache_read_price_per_mtok: 0.0
-  cache_write_price_per_mtok: 0.0
-  context_window: 32768
-  max_output_tokens: null
-  capabilities:
-  - streaming
-- model_id: together/Qwen/Qwen2.5-14B-Instruct
-  provider_id: together
-  upstream_model: Qwen/Qwen2.5-14B-Instruct
-  input_price_per_mtok: 0.8
-  output_price_per_mtok: 0.8
-  cache_read_price_per_mtok: 0.0
-  cache_write_price_per_mtok: 0.0
-  context_window: 32768
-  max_output_tokens: null
-  capabilities:
-  - streaming
-- model_id: together/Qwen/Qwen2.5-72B-Instruct
-  provider_id: together
-  upstream_model: Qwen/Qwen2.5-72B-Instruct
-  input_price_per_mtok: 1.2
-  output_price_per_mtok: 1.2
-  cache_read_price_per_mtok: 0.0
-  cache_write_price_per_mtok: 0.0
-  context_window: 32768
-  max_output_tokens: 16384
-  capabilities:
-  - streaming
-- model_id: together/Qwen/Qwen2.5-72B-Instruct-Turbo
-  provider_id: together
-  upstream_model: Qwen/Qwen2.5-72B-Instruct-Turbo
-  input_price_per_mtok: 1.2
-  output_price_per_mtok: 1.2
-  cache_read_price_per_mtok: 0.0
-  cache_write_price_per_mtok: 0.0
-  context_window: 131072
-  max_output_tokens: null
-  capabilities:
-  - streaming
 - model_id: together/Qwen/Qwen2.5-7B-Instruct-Turbo
   provider_id: together
   upstream_model: Qwen/Qwen2.5-7B-Instruct-Turbo
@@ -1259,108 +951,6 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 32768
   max_output_tokens: 32768
-  capabilities:
-  - streaming
-  - tools
-- model_id: together/Qwen/Qwen2.5-Coder-32B-Instruct
-  provider_id: together
-  upstream_model: Qwen/Qwen2.5-Coder-32B-Instruct
-  input_price_per_mtok: 0.8
-  output_price_per_mtok: 0.8
-  cache_read_price_per_mtok: 0.0
-  cache_write_price_per_mtok: 0.0
-  context_window: 16384
-  max_output_tokens: 32768
-  capabilities:
-  - streaming
-- model_id: together/Qwen/Qwen2.5-VL-72B-Instruct
-  provider_id: together
-  upstream_model: Qwen/Qwen2.5-VL-72B-Instruct
-  input_price_per_mtok: 1.95
-  output_price_per_mtok: 8.0
-  cache_read_price_per_mtok: 0.0
-  cache_write_price_per_mtok: 0.0
-  context_window: 32768
-  max_output_tokens: null
-  capabilities:
-  - streaming
-- model_id: together/Qwen/Qwen3-Coder-480B-A35B-Instruct-FP8
-  provider_id: together
-  upstream_model: Qwen/Qwen3-Coder-480B-A35B-Instruct-FP8
-  input_price_per_mtok: 2.0
-  output_price_per_mtok: 2.0
-  cache_read_price_per_mtok: 0.0
-  cache_write_price_per_mtok: 0.0
-  context_window: 262144
-  max_output_tokens: 262144
-  capabilities:
-  - streaming
-  - tools
-- model_id: together/Qwen/Qwen3-Coder-Next-FP8
-  provider_id: together
-  upstream_model: Qwen/Qwen3-Coder-Next-FP8
-  input_price_per_mtok: 0.5
-  output_price_per_mtok: 1.2
-  cache_read_price_per_mtok: 0.0
-  cache_write_price_per_mtok: 0.0
-  context_window: 262144
-  max_output_tokens: 262144
-  capabilities:
-  - streaming
-  - tools
-- model_id: together/Qwen/Qwen3-Next-80B-A3B-Instruct
-  provider_id: together
-  upstream_model: Qwen/Qwen3-Next-80B-A3B-Instruct
-  input_price_per_mtok: 0.15
-  output_price_per_mtok: 1.5
-  cache_read_price_per_mtok: 0.0
-  cache_write_price_per_mtok: 0.0
-  context_window: 262144
-  max_output_tokens: 262144
-  capabilities:
-  - streaming
-- model_id: together/Qwen/Qwen3-Next-80B-A3B-Thinking
-  provider_id: together
-  upstream_model: Qwen/Qwen3-Next-80B-A3B-Thinking
-  input_price_per_mtok: 0.15
-  output_price_per_mtok: 1.5
-  cache_read_price_per_mtok: 0.0
-  cache_write_price_per_mtok: 0.0
-  context_window: 262144
-  max_output_tokens: 32768
-  capabilities:
-  - streaming
-- model_id: together/Qwen/Qwen3-VL-32B-Instruct
-  provider_id: together
-  upstream_model: Qwen/Qwen3-VL-32B-Instruct
-  input_price_per_mtok: 0.5
-  output_price_per_mtok: 1.5
-  cache_read_price_per_mtok: 0.0
-  cache_write_price_per_mtok: 0.0
-  context_window: 262144
-  max_output_tokens: 32768
-  capabilities:
-  - streaming
-- model_id: together/Qwen/Qwen3-VL-8B-Instruct
-  provider_id: together
-  upstream_model: Qwen/Qwen3-VL-8B-Instruct
-  input_price_per_mtok: 0.18
-  output_price_per_mtok: 0.68
-  cache_read_price_per_mtok: 0.0
-  cache_write_price_per_mtok: 0.0
-  context_window: 262144
-  max_output_tokens: 32768
-  capabilities:
-  - streaming
-- model_id: together/Qwen/Qwen3.5-397B-A17B
-  provider_id: together
-  upstream_model: Qwen/Qwen3.5-397B-A17B
-  input_price_per_mtok: 0.6
-  output_price_per_mtok: 3.6
-  cache_read_price_per_mtok: 0.35
-  cache_write_price_per_mtok: 0.0
-  context_window: 262144
-  max_output_tokens: 65536
   capabilities:
   - streaming
   - tools
@@ -1376,41 +966,6 @@ models:
   capabilities:
   - streaming
   - tools
-- model_id: together/Qwen/Qwen3.6-Plus
-  provider_id: together
-  upstream_model: Qwen/Qwen3.6-Plus
-  input_price_per_mtok: 0.5
-  output_price_per_mtok: 3.0
-  cache_read_price_per_mtok: 0.0
-  cache_write_price_per_mtok: 0.0
-  context_window: 1000000
-  max_output_tokens: 65536
-  capabilities:
-  - streaming
-  - tools
-- model_id: together/Qwen/Qwen3.7-Max
-  provider_id: together
-  upstream_model: Qwen/Qwen3.7-Max
-  input_price_per_mtok: 1.25
-  output_price_per_mtok: 3.75
-  cache_read_price_per_mtok: 0.125
-  cache_write_price_per_mtok: 0.0
-  context_window: 1000000
-  max_output_tokens: 131072
-  capabilities:
-  - streaming
-  - tools
-- model_id: together/Qwen/Qwen3.7-Plus
-  provider_id: together
-  upstream_model: Qwen/Qwen3.7-Plus
-  input_price_per_mtok: 0.32
-  output_price_per_mtok: 1.28
-  cache_read_price_per_mtok: 0.0
-  cache_write_price_per_mtok: 0.0
-  context_window: 1000000
-  max_output_tokens: 131072
-  capabilities:
-  - streaming
 - model_id: together/Qwen/Qwen3.8-2.4T-A95B
   provider_id: together
   upstream_model: Qwen/Qwen3.8-2.4T-A95B
@@ -1420,17 +975,6 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 1010000
   max_output_tokens: 262144
-  capabilities:
-  - streaming
-- model_id: together/arcee-ai/trinity-mini
-  provider_id: together
-  upstream_model: arcee-ai/trinity-mini
-  input_price_per_mtok: 0.045
-  output_price_per_mtok: 0.15
-  cache_read_price_per_mtok: 0.0
-  cache_write_price_per_mtok: 0.0
-  context_window: 128000
-  max_output_tokens: null
   capabilities:
   - streaming
 - model_id: together/arize-ai/qwen-2-1.5b-instruct
@@ -1453,61 +997,6 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 163840
   max_output_tokens: 128000
-  capabilities:
-  - streaming
-- model_id: together/deepseek-ai/DeepSeek-R1-0528
-  provider_id: together
-  upstream_model: deepseek-ai/DeepSeek-R1-0528
-  input_price_per_mtok: 3.0
-  output_price_per_mtok: 7.0
-  cache_read_price_per_mtok: 0.0
-  cache_write_price_per_mtok: 0.0
-  context_window: 163840
-  max_output_tokens: 32768
-  capabilities:
-  - streaming
-- model_id: together/deepseek-ai/DeepSeek-R1-Distill-Llama-70B
-  provider_id: together
-  upstream_model: deepseek-ai/DeepSeek-R1-Distill-Llama-70B
-  input_price_per_mtok: 2.0
-  output_price_per_mtok: 2.0
-  cache_read_price_per_mtok: 0.0
-  cache_write_price_per_mtok: 0.0
-  context_window: 131072
-  max_output_tokens: 8192
-  capabilities:
-  - streaming
-- model_id: together/deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B
-  provider_id: together
-  upstream_model: deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B
-  input_price_per_mtok: 0.18
-  output_price_per_mtok: 0.18
-  cache_read_price_per_mtok: 0.0
-  cache_write_price_per_mtok: 0.0
-  context_window: 131072
-  max_output_tokens: null
-  capabilities:
-  - streaming
-- model_id: together/deepseek-ai/DeepSeek-R1-Distill-Qwen-14B
-  provider_id: together
-  upstream_model: deepseek-ai/DeepSeek-R1-Distill-Qwen-14B
-  input_price_per_mtok: 1.6
-  output_price_per_mtok: 1.6
-  cache_read_price_per_mtok: 0.0
-  cache_write_price_per_mtok: 0.0
-  context_window: 131072
-  max_output_tokens: null
-  capabilities:
-  - streaming
-- model_id: together/deepseek-ai/DeepSeek-V3.1
-  provider_id: together
-  upstream_model: deepseek-ai/DeepSeek-V3.1
-  input_price_per_mtok: 0.6
-  output_price_per_mtok: 1.7
-  cache_read_price_per_mtok: 0.0
-  cache_write_price_per_mtok: 0.0
-  context_window: 131072
-  max_output_tokens: 32768
   capabilities:
   - streaming
 - model_id: together/deepseek-ai/DeepSeek-V4-Flash-0731
@@ -1534,28 +1023,6 @@ models:
   capabilities:
   - streaming
   - tools
-- model_id: together/deepseek-ai/deepseek-coder-33b-instruct
-  provider_id: together
-  upstream_model: deepseek-ai/deepseek-coder-33b-instruct
-  input_price_per_mtok: 0.8
-  output_price_per_mtok: 0.8
-  cache_read_price_per_mtok: 0.0
-  cache_write_price_per_mtok: 0.0
-  context_window: 16384
-  max_output_tokens: null
-  capabilities:
-  - streaming
-- model_id: together/google/gemma-2-27b-it
-  provider_id: together
-  upstream_model: google/gemma-2-27b-it
-  input_price_per_mtok: 0.8
-  output_price_per_mtok: 0.8
-  cache_read_price_per_mtok: 0.0
-  cache_write_price_per_mtok: 0.0
-  context_window: 8192
-  max_output_tokens: 2048
-  capabilities:
-  - streaming
 - model_id: together/google/gemma-3n-E4B-it
   provider_id: together
   upstream_model: google/gemma-3n-E4B-it
@@ -1578,50 +1045,6 @@ models:
   max_output_tokens: 262144
   capabilities:
   - streaming
-- model_id: together/meta-llama/Llama-3-8b-chat-hf
-  provider_id: together
-  upstream_model: meta-llama/Llama-3-8b-chat-hf
-  input_price_per_mtok: 0.2
-  output_price_per_mtok: 0.2
-  cache_read_price_per_mtok: 0.0
-  cache_write_price_per_mtok: 0.0
-  context_window: 8192
-  max_output_tokens: null
-  capabilities:
-  - streaming
-- model_id: together/meta-llama/Llama-3.1-405B-Instruct
-  provider_id: together
-  upstream_model: meta-llama/Llama-3.1-405B-Instruct
-  input_price_per_mtok: 3.5
-  output_price_per_mtok: 3.5
-  cache_read_price_per_mtok: 0.0
-  cache_write_price_per_mtok: 0.0
-  context_window: 4096
-  max_output_tokens: null
-  capabilities:
-  - streaming
-- model_id: together/meta-llama/Llama-3.2-1B-Instruct
-  provider_id: together
-  upstream_model: meta-llama/Llama-3.2-1B-Instruct
-  input_price_per_mtok: 0.06
-  output_price_per_mtok: 0.06
-  cache_read_price_per_mtok: 0.0
-  cache_write_price_per_mtok: 0.0
-  context_window: 131072
-  max_output_tokens: 60000
-  capabilities:
-  - streaming
-- model_id: together/meta-llama/Llama-3.2-3B-Instruct
-  provider_id: together
-  upstream_model: meta-llama/Llama-3.2-3B-Instruct
-  input_price_per_mtok: 0.06
-  output_price_per_mtok: 0.06
-  cache_read_price_per_mtok: 0.0
-  cache_write_price_per_mtok: 0.0
-  context_window: 131072
-  max_output_tokens: 131072
-  capabilities:
-  - streaming
 - model_id: together/meta-llama/Llama-3.3-70B-Instruct-Turbo
   provider_id: together
   upstream_model: meta-llama/Llama-3.3-70B-Instruct-Turbo
@@ -1634,61 +1057,6 @@ models:
   capabilities:
   - streaming
   - tools
-- model_id: together/meta-llama/Llama-4-Scout-17B-16E-Instruct
-  provider_id: together
-  upstream_model: meta-llama/Llama-4-Scout-17B-16E-Instruct
-  input_price_per_mtok: 0.18
-  output_price_per_mtok: 0.59
-  cache_read_price_per_mtok: 0.0
-  cache_write_price_per_mtok: 0.0
-  context_window: 1048576
-  max_output_tokens: 16384
-  capabilities:
-  - streaming
-- model_id: together/meta-llama/Meta-Llama-3-70B-Instruct-Turbo
-  provider_id: together
-  upstream_model: meta-llama/Meta-Llama-3-70B-Instruct-Turbo
-  input_price_per_mtok: 0.88
-  output_price_per_mtok: 0.88
-  cache_read_price_per_mtok: 0.0
-  cache_write_price_per_mtok: 0.0
-  context_window: 8192
-  max_output_tokens: null
-  capabilities:
-  - streaming
-- model_id: together/meta-llama/Meta-Llama-3-8B-Instruct
-  provider_id: together
-  upstream_model: meta-llama/Meta-Llama-3-8B-Instruct
-  input_price_per_mtok: 0.2
-  output_price_per_mtok: 0.2
-  cache_read_price_per_mtok: 0.0
-  cache_write_price_per_mtok: 0.0
-  context_window: 8192
-  max_output_tokens: null
-  capabilities:
-  - streaming
-- model_id: together/meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo
-  provider_id: together
-  upstream_model: meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo
-  input_price_per_mtok: 0.88
-  output_price_per_mtok: 0.88
-  cache_read_price_per_mtok: 0.0
-  cache_write_price_per_mtok: 0.0
-  context_window: 131072
-  max_output_tokens: null
-  capabilities:
-  - streaming
-- model_id: together/meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo
-  provider_id: together
-  upstream_model: meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo
-  input_price_per_mtok: 0.18
-  output_price_per_mtok: 0.18
-  cache_read_price_per_mtok: 0.0
-  cache_write_price_per_mtok: 0.0
-  context_window: 131072
-  max_output_tokens: null
-  capabilities:
-  - streaming
 - model_id: together/meta-models/Muse-Glimmer-30B
   provider_id: together
   upstream_model: meta-models/Muse-Glimmer-30B
@@ -1698,72 +1066,6 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 131072
   max_output_tokens: 131072
-  capabilities:
-  - streaming
-- model_id: together/mistralai/Ministral-3-14B-Instruct-2512
-  provider_id: together
-  upstream_model: mistralai/Ministral-3-14B-Instruct-2512
-  input_price_per_mtok: 0.2
-  output_price_per_mtok: 0.2
-  cache_read_price_per_mtok: 0.0
-  cache_write_price_per_mtok: 0.0
-  context_window: 262144
-  max_output_tokens: 262144
-  capabilities:
-  - streaming
-- model_id: together/mistralai/Mistral-7B-Instruct-v0.1
-  provider_id: together
-  upstream_model: mistralai/Mistral-7B-Instruct-v0.1
-  input_price_per_mtok: 0.2
-  output_price_per_mtok: 0.2
-  cache_read_price_per_mtok: 0.0
-  cache_write_price_per_mtok: 0.0
-  context_window: 32768
-  max_output_tokens: null
-  capabilities:
-  - streaming
-- model_id: together/mistralai/Mistral-7B-Instruct-v0.3
-  provider_id: together
-  upstream_model: mistralai/Mistral-7B-Instruct-v0.3
-  input_price_per_mtok: 0.2
-  output_price_per_mtok: 0.2
-  cache_read_price_per_mtok: 0.0
-  cache_write_price_per_mtok: 0.0
-  context_window: 32768
-  max_output_tokens: null
-  capabilities:
-  - streaming
-- model_id: together/mistralai/Mistral-Small-24B-Instruct-2501
-  provider_id: together
-  upstream_model: mistralai/Mistral-Small-24B-Instruct-2501
-  input_price_per_mtok: 0.1
-  output_price_per_mtok: 0.3
-  cache_read_price_per_mtok: 0.0
-  cache_write_price_per_mtok: 0.0
-  context_window: 32768
-  max_output_tokens: 16384
-  capabilities:
-  - streaming
-- model_id: together/mistralai/Mixtral-8x7B-Instruct-v0.1
-  provider_id: together
-  upstream_model: mistralai/Mixtral-8x7B-Instruct-v0.1
-  input_price_per_mtok: 0.6
-  output_price_per_mtok: 0.6
-  cache_read_price_per_mtok: 0.0
-  cache_write_price_per_mtok: 0.0
-  context_window: 32768
-  max_output_tokens: null
-  capabilities:
-  - streaming
-- model_id: together/moonshotai/Kimi-K2.5-fp4
-  provider_id: together
-  upstream_model: moonshotai/Kimi-K2.5-fp4
-  input_price_per_mtok: 0.5
-  output_price_per_mtok: 2.8
-  cache_read_price_per_mtok: 0.0
-  cache_write_price_per_mtok: 0.0
-  context_window: 262144
-  max_output_tokens: null
   capabilities:
   - streaming
 - model_id: together/moonshotai/Kimi-K2.6
@@ -1802,28 +1104,6 @@ models:
   capabilities:
   - streaming
   - tools
-- model_id: together/nvidia/Llama-3.1-Nemotron-70B-Instruct-HF
-  provider_id: together
-  upstream_model: nvidia/Llama-3.1-Nemotron-70B-Instruct-HF
-  input_price_per_mtok: 0.88
-  output_price_per_mtok: 0.88
-  cache_read_price_per_mtok: 0.0
-  cache_write_price_per_mtok: 0.0
-  context_window: 32768
-  max_output_tokens: null
-  capabilities:
-  - streaming
-- model_id: together/nvidia/NVIDIA-Nemotron-Nano-9B-v2
-  provider_id: together
-  upstream_model: nvidia/NVIDIA-Nemotron-Nano-9B-v2
-  input_price_per_mtok: 0.06
-  output_price_per_mtok: 0.25
-  cache_read_price_per_mtok: 0.0
-  cache_write_price_per_mtok: 0.0
-  context_window: 131072
-  max_output_tokens: 128000
-  capabilities:
-  - streaming
 - model_id: together/nvidia/nemotron-3-ultra-550b-a55b
   provider_id: together
   upstream_model: nvidia/nemotron-3-ultra-550b-a55b
@@ -1905,52 +1185,6 @@ models:
   max_output_tokens: 98304
   capabilities:
   - streaming
-- model_id: together/zai-org/GLM-4.6
-  provider_id: together
-  upstream_model: zai-org/GLM-4.6
-  input_price_per_mtok: 0.6
-  output_price_per_mtok: 2.2
-  cache_read_price_per_mtok: 0.0
-  cache_write_price_per_mtok: 0.0
-  context_window: 202752
-  max_output_tokens: 131072
-  capabilities:
-  - streaming
-- model_id: together/zai-org/GLM-4.7
-  provider_id: together
-  upstream_model: zai-org/GLM-4.7
-  input_price_per_mtok: 0.45
-  output_price_per_mtok: 2.0
-  cache_read_price_per_mtok: 0.0
-  cache_write_price_per_mtok: 0.0
-  context_window: 202752
-  max_output_tokens: 131072
-  capabilities:
-  - streaming
-- model_id: together/zai-org/GLM-5
-  provider_id: together
-  upstream_model: zai-org/GLM-5
-  input_price_per_mtok: 1.0
-  output_price_per_mtok: 3.2
-  cache_read_price_per_mtok: 0.0
-  cache_write_price_per_mtok: 0.0
-  context_window: 202752
-  max_output_tokens: 128000
-  capabilities:
-  - streaming
-  - tools
-- model_id: together/zai-org/GLM-5.1
-  provider_id: together
-  upstream_model: zai-org/GLM-5.1
-  input_price_per_mtok: 1.4
-  output_price_per_mtok: 4.4
-  cache_read_price_per_mtok: 0.26
-  cache_write_price_per_mtok: 0.0
-  context_window: 202752
-  max_output_tokens: 131072
-  capabilities:
-  - streaming
-  - tools
 - model_id: together/zai-org/GLM-5.2
   provider_id: together
   upstream_model: zai-org/GLM-5.2

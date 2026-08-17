@@ -49,7 +49,8 @@ UA = "airllm-taxonomy/1.0"
 # fetched stamp even when the vendor returned exactly what it returned last time.
 # provenance travels with the value it describes. Carrying "pricing" without
 # "pricing_source" lets the next enrichment restamp a borrowed price as provider-supplied
-DOWNSTREAM = ("kind", "limits_source", "pricing_source", "context_length", "max_output_tokens", "pricing")
+DOWNSTREAM = ("kind", "limits_source", "pricing_source", "context_length", "max_output_tokens", "pricing",
+              "reachable", "reachable_checked")
 
 
 def carry_forward(path: Path, models: list[dict]) -> list[dict]:
