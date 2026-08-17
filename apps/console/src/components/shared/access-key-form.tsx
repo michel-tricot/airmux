@@ -58,7 +58,7 @@ export function AccessKeyFormFields({
             ) : availablePermissions.length === 0 ? (
               <p className="text-xs text-muted-foreground">You have no permissions to delegate at this scope.</p>
             ) : (
-              <div className="max-h-64 space-y-3 overflow-y-auto rounded-md border border-border p-3">
+              <div className="permission-scrollbar max-h-64 space-y-3 overflow-y-auto rounded-md border border-border bg-card/30 p-3">
                 {groupPermissions(availablePermissions).map(([resource, permissions]) => (
                   <div key={resource} className="space-y-1">
                     <div className="font-mono text-[11px] font-bold uppercase tracking-wider text-muted-foreground">{resource}</div>
