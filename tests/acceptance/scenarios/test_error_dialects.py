@@ -18,7 +18,7 @@ def test_upstream_errors_return_in_the_callers_dialect(stack: Stack) -> None:
 
     for stream in (False, True):
         response = httpx.post(
-            f"{stack.dp_url}/v1/messages",
+            f"{stack.dp_url}/inf/v1/messages",
             headers={"authorization": f"Bearer {stack.caller_api_key}"},
             json={"model": "echo", "max_tokens": 8, "messages": [{"role": "user", "content": "rate-limited"}], "stream": stream},
             timeout=10.0,

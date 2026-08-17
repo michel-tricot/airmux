@@ -36,7 +36,7 @@ class RemoteBundleSource(BundleSource):
 
     async def once(self) -> None:
         response = await self._http_client.get(
-            f"{self._config.control_plane.url}/v1/bundle/latest",
+            f"{self._config.control_plane.url}/api/v1/bundle/latest",
             headers={"authorization": f"Bearer {self._config.control_plane.token}"},
             params={"org_id": str(self._config.org)} if self._config.org else {},
         )

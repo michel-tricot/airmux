@@ -15,7 +15,7 @@ const ORG2 = { id: 'org-2', name: 'Beta Corp', personal_for: null, created_at: n
 
 function withTwoOrgs() {
   server.use(
-    http.get('/v1/auth/me', () =>
+    http.get('/api/v1/auth/me', () =>
       HttpResponse.json({
         user_id: 'user-1',
         email: 'dev@example.com',
@@ -24,8 +24,8 @@ function withTwoOrgs() {
         orgs: [ORG.id, ORG2.id],
       }),
     ),
-    http.get('/v1/enroll', () => HttpResponse.json({ orgs: [ORG, ORG2], personal_org_id: ORG.id })),
-    http.get('/v1/orgs/:orgId/workspaces', ({ params }) => {
+    http.get('/api/v1/enroll', () => HttpResponse.json({ orgs: [ORG, ORG2], personal_org_id: ORG.id })),
+    http.get('/api/v1/orgs/:orgId/workspaces', ({ params }) => {
       if (params.orgId === ORG.id) {
         return HttpResponse.json([
           { id: 'ws-acme', org_id: ORG.id, name: 'Acme Production', slug: 'acme-production', created_at: now, updated_at: now, deleted_at: null },
@@ -38,7 +38,7 @@ function withTwoOrgs() {
       }
       return new HttpResponse(null, { status: 403 });
     }),
-    http.get('/v1/orgs/:orgId/workspaces/:workspaceRef', ({ params }) => {
+    http.get('/api/v1/orgs/:orgId/workspaces/:workspaceRef', ({ params }) => {
       const rows = {
         'ws-acme': {
           id: 'ws-acme',
@@ -78,8 +78,8 @@ function withTwoOrgs() {
 describe('sign-in gate', () => {
   it('shows the login page to unauthenticated users', async () => {
     server.use(
-      http.get('/v1/auth/me', () => new HttpResponse(null, { status: 401 })),
-      http.get('/v1/instance/oss/claim', () => HttpResponse.json({ claimed: true })),
+      http.get('/api/v1/auth/me', () => new HttpResponse(null, { status: 401 })),
+      http.get('/api/v1/instance/oss/claim', () => HttpResponse.json({ claimed: true })),
     );
     renderAt('/org');
     expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument();
@@ -88,8 +88,8 @@ describe('sign-in gate', () => {
 
   it('shows a service error when the session endpoint is unavailable', async () => {
     server.use(
-      http.get('/v1/auth/me', () => new HttpResponse(null, { status: 503 })),
-      http.get('/v1/instance/oss/claim', () => HttpResponse.json({ claimed: true })),
+      http.get('/api/v1/auth/me', () => new HttpResponse(null, { status: 503 })),
+      http.get('/api/v1/instance/oss/claim', () => HttpResponse.json({ claimed: true })),
     );
     renderAt('/org');
     expect(await screen.findByRole('alert')).toHaveTextContent('Control plane unreachable');
@@ -100,9 +100,9 @@ describe('sign-in gate', () => {
   it('signs in without requiring the signup-only name field', async () => {
     window.localStorage.setItem('airllm_org_id', ORG.id);
     server.use(
-      http.get('/v1/auth/me', () => new HttpResponse(null, { status: 401 })),
-      http.get('/v1/instance/oss/claim', () => HttpResponse.json({ claimed: true })),
-      http.post('/v1/auth/login', () =>
+      http.get('/api/v1/auth/me', () => new HttpResponse(null, { status: 401 })),
+      http.get('/api/v1/instance/oss/claim', () => HttpResponse.json({ claimed: true })),
+      http.post('/api/v1/auth/login', () =>
         HttpResponse.json({
           user_id: 'user-1',
           email: 'dev@example.com',
@@ -126,16 +126,16 @@ describe('sign-in gate', () => {
     let signedIn = true;
     window.localStorage.setItem('airllm_org_id', ORG.id);
     server.use(
-      http.get('/v1/auth/me', () =>
+      http.get('/api/v1/auth/me', () =>
         signedIn
           ? HttpResponse.json({ user_id: 'user-1', email: 'dev@example.com', name: 'Dev', instance_role: null, orgs: [ORG.id] })
           : new HttpResponse(null, { status: 401 }),
       ),
-      http.post('/v1/auth/logout', () => {
+      http.post('/api/v1/auth/logout', () => {
         signedIn = false;
         return HttpResponse.json({ id: 'session-1', status: 'deleted' });
       }),
-      http.get('/v1/instance/oss/claim', () => HttpResponse.json({ claimed: true })),
+      http.get('/api/v1/instance/oss/claim', () => HttpResponse.json({ claimed: true })),
     );
     const user = userEvent.setup();
     renderAt('/org');
@@ -173,7 +173,7 @@ describe('instance admin gate', () => {
 describe('organization picker', () => {
   it('shows an enrollment error instead of an empty organization picker', async () => {
     window.localStorage.setItem('airllm_org_id', ORG.id);
-    server.use(http.get('/v1/enroll', () => new HttpResponse(null, { status: 503 })));
+    server.use(http.get('/api/v1/enroll', () => new HttpResponse(null, { status: 503 })));
     renderAt('/org');
     expect(await screen.findByRole('alert')).toHaveTextContent('Could not load your organizations');
     expect(screen.queryByRole('heading', { name: 'Select Organization' })).not.toBeInTheDocument();

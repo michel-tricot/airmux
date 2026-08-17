@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Launch a coding agent against the airllm gateway, on any model registered in the catalog.
 #
-# Claude Code speaks the Anthropic Messages API, served at /v1/messages. Codex speaks the
-# OpenAI chat API, served at /v1/chat/completions. The gateway routes both through the same
+# Claude Code speaks the Anthropic Messages API, served at /inf/v1/messages. Codex speaks the
+# OpenAI Responses API, served at /inf/v1/responses. The gateway routes both through the same
 # canonical middle, so either agent runs any provider's model.
 #
 #   scripts/agent-gateway.sh claude gpt-5.2                # Claude Code on gpt-5.2
@@ -70,25 +70,25 @@ case "$agent" in
     # Claude Code appends /v1/messages to ANTHROPIC_BASE_URL and sends the auth token as a
     # bearer, which is what the gateway's Messages surface expects. x-api-key auth is unset so
     # it does not shadow the bearer.
-    export ANTHROPIC_BASE_URL="$gateway"
+    export ANTHROPIC_BASE_URL="$gateway/inf"
     export ANTHROPIC_AUTH_TOKEN="$api_key"
     export ANTHROPIC_MODEL="$model"
     export ANTHROPIC_SMALL_FAST_MODEL="$small"
     unset ANTHROPIC_API_KEY
-    echo "claude -> $gateway/v1/messages | model: $model | small: $small" >&2
+    echo "claude -> $gateway/inf/v1/messages | model: $model | small: $small" >&2
     exec claude "$@"
     ;;
   codex)
     command -v codex >/dev/null || die "codex not found on PATH (install Codex)"
     # Codex reaches custom providers through a model_providers entry; the -c overrides build it
     # per run, so no config file changes. Codex 0.147 dropped the chat wire, so this needs the
-    # gateway's /v1/responses surface (the Responses dialect); until it lands, requests 404.
+    # gateway's /inf/v1/responses surface (the Responses dialect).
     export AIRLLM_API_KEY="$api_key"
-    echo "codex -> $gateway/v1/responses | model: $model" >&2
+    echo "codex -> $gateway/inf/v1/responses | model: $model" >&2
     exec codex \
       -c model_provider=airllm \
       -c model_providers.airllm.name=airllm \
-      -c "model_providers.airllm.base_url=$gateway/v1" \
+      -c "model_providers.airllm.base_url=$gateway/inf/v1" \
       -c model_providers.airllm.env_key=AIRLLM_API_KEY \
       -c model_providers.airllm.wire_api=responses \
       -m "$model" "$@"

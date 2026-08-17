@@ -32,7 +32,7 @@ def enveloped(signed) -> str:
 async def test_poll_swaps_and_persists(tmp_path, http_client):
     private_key = Ed25519PrivateKey.generate()
     signed = make_signed(private_key)
-    respx.get("http://cp.test/v1/bundle/latest").mock(return_value=httpx.Response(200, content=enveloped(signed)))
+    respx.get("http://cp.test/api/v1/bundle/latest").mock(return_value=httpx.Response(200, content=enveloped(signed)))
     holder = BundleHolder()
     await _remote_source(tmp_path, holder, private_key, http_client).once()
     assert holder.snapshot is not None
@@ -47,7 +47,7 @@ async def test_poll_swaps_and_persists(tmp_path, http_client):
 async def test_poll_same_bundle_is_a_noop(tmp_path, http_client):
     private_key = Ed25519PrivateKey.generate()
     signed = make_signed(private_key)
-    respx.get("http://cp.test/v1/bundle/latest").mock(return_value=httpx.Response(200, content=enveloped(signed)))
+    respx.get("http://cp.test/api/v1/bundle/latest").mock(return_value=httpx.Response(200, content=enveloped(signed)))
     holder = BundleHolder()
     source = _remote_source(tmp_path, holder, private_key, http_client)
     await source.once()
@@ -61,7 +61,7 @@ async def test_poll_revocation_updates_holder(tmp_path, http_client):
     private_key = Ed25519PrivateKey.generate()
     first = make_signed(private_key, key_ids=("k1",))
     second = make_signed(private_key, key_ids=())
-    route = respx.get("http://cp.test/v1/bundle/latest").mock(return_value=httpx.Response(200, content=enveloped(first)))
+    route = respx.get("http://cp.test/api/v1/bundle/latest").mock(return_value=httpx.Response(200, content=enveloped(first)))
     holder = BundleHolder()
     source = _remote_source(tmp_path, holder, private_key, http_client)
     await source.once()
@@ -77,7 +77,7 @@ async def test_poll_signature_failure_identifies_the_bundle_and_signing_key(tmp_
     signing_key = Ed25519PrivateKey.generate()
     verify_key = Ed25519PrivateKey.generate()
     signed = make_signed(signing_key)
-    respx.get("http://cp.test/v1/bundle/latest").mock(return_value=httpx.Response(200, content=enveloped(signed)))
+    respx.get("http://cp.test/api/v1/bundle/latest").mock(return_value=httpx.Response(200, content=enveloped(signed)))
     holder = BundleHolder()
 
     with pytest.raises(InvalidSignature) as error:

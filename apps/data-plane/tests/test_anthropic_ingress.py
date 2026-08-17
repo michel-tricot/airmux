@@ -1,4 +1,4 @@
-"""The Anthropic-shaped surface at /v1/messages.
+"""The Anthropic-shaped surface at /inf/v1/messages.
 
 The official SDK's own models are the arbiter: they must parse every byte the route returns,
 buffered and streamed, including across providers, since a Messages caller routed to an
@@ -26,7 +26,7 @@ STREAM_EVENT: TypeAdapter[RawMessageStreamEvent] = TypeAdapter(RawMessageStreamE
 
 
 def _post(client: TestClient, api_key: str, body: dict, **kwargs):
-    return client.request("POST", "/v1/messages", headers={"Authorization": f"Bearer {api_key}"}, json=body, **kwargs)
+    return client.request("POST", "/inf/v1/messages", headers={"Authorization": f"Bearer {api_key}"}, json=body, **kwargs)
 
 
 def test_parse_hoists_system_and_keeps_the_rest_as_extras():

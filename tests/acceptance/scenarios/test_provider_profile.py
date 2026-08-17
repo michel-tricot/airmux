@@ -24,7 +24,7 @@ def test_a_quirky_provider_onboards_as_config(stack: Stack) -> None:
     stack.wait_dp_ready()
 
     response = httpx.post(
-        f"{stack.dp_url}/v1/chat/completions",
+        f"{stack.dp_url}/inf/v1/chat/completions",
         headers={"authorization": f"Bearer {stack.caller_api_key}"},
         json={
             "model": "quirk",

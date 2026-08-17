@@ -265,23 +265,23 @@ class Stack:
         afterwards is what lands the catalog and the credential in the same bundle v1.
         """
         with httpx.Client(base_url=self.cp_url, headers={"X-Requested-With": "XMLHttpRequest"}, timeout=10.0) as session:
-            me = _payload(session.post("/v1/auth/signup", json={"email": ADMIN_EMAIL, "name": "Acceptance Admin", "password": ADMIN_PASSWORD}))
+            me = _payload(session.post("/api/v1/auth/signup", json={"email": ADMIN_EMAIL, "name": "Acceptance Admin", "password": ADMIN_PASSWORD}))
             assert me["instance_role"] == "owner", "the first signup should have claimed the instance"
-            org = _payload(session.post("/v1/orgs", json={"name": ORG}))
+            org = _payload(session.post("/api/v1/orgs", json={"name": ORG}))
             self.org_id = org["id"]
-            _payload(session.put(f"/v1/orgs/{self.org_id}/users/{me['user_id']}", json={"role": "owner"}))
-            workspace = _payload(session.post(f"/v1/orgs/{self.org_id}/workspaces", json={"name": "acceptance"}))
-            caller = _payload(session.post(f"/v1/orgs/{self.org_id}/workspaces/{workspace['id']}/inference-keys", json={"label": "caller"}))
+            _payload(session.put(f"/api/v1/orgs/{self.org_id}/users/{me['user_id']}", json={"role": "owner"}))
+            workspace = _payload(session.post(f"/api/v1/orgs/{self.org_id}/workspaces", json={"name": "acceptance"}))
+            caller = _payload(session.post(f"/api/v1/orgs/{self.org_id}/workspaces/{workspace['id']}/inference-keys", json={"label": "caller"}))
             access_key = _payload(
                 session.post(
-                    f"/v1/orgs/{self.org_id}/access-keys",
+                    f"/api/v1/orgs/{self.org_id}/access-keys",
                     json={"label": "acceptance", "permissions": ["usage.read"]},
                 )
             )
-            data_plane = _payload(session.post("/v1/service-accounts", json={"name": "acceptance-data-plane", "instance_role": "data_plane"}))
+            data_plane = _payload(session.post("/api/v1/service-accounts", json={"name": "acceptance-data-plane", "instance_role": "data_plane"}))
             data_plane_key = _payload(
                 session.post(
-                    "/v1/instance/access-keys",
+                    "/api/v1/instance/access-keys",
                     json={
                         "label": "data-plane",
                         "user_id": data_plane["id"],
@@ -291,9 +291,9 @@ class Stack:
             )
 
             self._run([_bin("airllmcp"), "taxonomy", "--config", str(self.config_path)], self.env)
-            _payload(session.post(f"/v1/orgs/{self.org_id}/provider-credentials", json={"provider": "stub", "value": STUB_API_KEY}))
-            _payload(session.post(f"/v1/orgs/{self.org_id}/provider-credentials", json={"provider": "quirk", "value": STUB_API_KEY}))
-            _payload(session.post(f"/v1/orgs/{self.org_id}/bundles/compile"))
+            _payload(session.post(f"/api/v1/orgs/{self.org_id}/provider-credentials", json={"provider": "stub", "value": STUB_API_KEY}))
+            _payload(session.post(f"/api/v1/orgs/{self.org_id}/provider-credentials", json={"provider": "quirk", "value": STUB_API_KEY}))
+            _payload(session.post(f"/api/v1/orgs/{self.org_id}/bundles/compile"))
 
         secrets = {
             "AIRLLM_API_KEY": caller["token"],
@@ -425,7 +425,7 @@ class Stack:
 
     def request(self, content: str = "hi") -> httpx.Response:
         return httpx.post(
-            f"{self.dp_url}/v1/chat/completions",
+            f"{self.dp_url}/inf/v1/chat/completions",
             headers={"authorization": f"Bearer {self.caller_api_key}"},
             json={"model": MODEL, "messages": [{"role": "user", "content": content}]},
             timeout=10.0,
@@ -443,7 +443,7 @@ class Stack:
         page_query: dict[str, int | str] = {"limit": 200}
         while True:
             response = httpx.get(
-                f"{self.cp_url}/v1/orgs/{self.org_id}/events",
+                f"{self.cp_url}/api/v1/orgs/{self.org_id}/events",
                 headers={"authorization": f"Bearer {self.env['GW_ACCESS_KEY']}"},
                 params=page_query,
                 timeout=10.0,

@@ -1,4 +1,4 @@
-"""The request path behind POST /v1/chat/completions, per notes/design/DATAPLANE.md.
+"""The request path behind POST /inf/v1/chat/completions, per notes/design/DATAPLANE.md.
 
 One dialect-blind pass: resolve the caller's ingress adapter, parse to canonical, evaluate
 policy, resolve the credential, reconcile to the target model, translate through the egress

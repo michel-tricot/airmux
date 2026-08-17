@@ -1,7 +1,7 @@
 """The Anthropic Messages format, both directions the gateway needs.
 
 Two consumers, one spelling: the anthropic egress adapter renders upstream requests and parses
-provider responses; the /v1/messages ingress reads Anthropic-shaped requests and writes
+provider responses; the /inf/v1/messages ingress reads Anthropic-shaped requests and writes
 Anthropic-shaped replies. Lenient parse models where inputs vary; thinking signatures
 round-trip everywhere, because a later turn without one is rejected."""
 

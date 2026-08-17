@@ -71,7 +71,7 @@ const models = [
 
 beforeEach(() => {
   window.localStorage.setItem('airllm_org_id', ORG.id);
-  server.use(http.get(`/v1/orgs/${ORG.id}/taxonomy`, () => HttpResponse.json({ providers, models })));
+  server.use(http.get(`/api/v1/orgs/${ORG.id}/taxonomy`, () => HttpResponse.json({ providers, models })));
 });
 
 function renderModels() {

@@ -21,7 +21,7 @@ def test_the_unmodified_sdk_round_trips(stack: Stack) -> None:
     stack.start_dp()
     stack.wait_dp_ready()
 
-    client = OpenAI(base_url=f"{stack.dp_url}/v1", api_key=stack.caller_api_key)
+    client = OpenAI(base_url=f"{stack.dp_url}/inf/v1", api_key=stack.caller_api_key)
 
     completion = client.chat.completions.create(model="echo", messages=[{"role": "user", "content": "hi"}])
     assert completion.choices[0].message.content == "ok"

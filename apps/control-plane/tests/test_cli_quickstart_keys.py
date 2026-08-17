@@ -34,12 +34,12 @@ def stack(tmp_path, monkeypatch, secrets=None):
     client = TestClient(cp.app)
     client.__enter__()
     root = cp.headers()
-    client.post("/v1/instance/taxonomy/providers", json=PROVIDER, headers=root)
-    client.post("/v1/instance/taxonomy/providers", json=ANTHROPIC, headers=root)
-    client.post("/v1/instance/taxonomy/models", json=MODEL, headers=root)
+    client.post("/api/v1/instance/taxonomy/providers", json=PROVIDER, headers=root)
+    client.post("/api/v1/instance/taxonomy/providers", json=ANTHROPIC, headers=root)
+    client.post("/api/v1/instance/taxonomy/models", json=MODEL, headers=root)
     org_id = make_org(client, root)
     org = cp.headers(org_id)
-    workspace = client.post(f"/v1/orgs/{org_id}/workspaces", json={"name": "default"}, headers=org).json()["data"]
+    workspace = client.post(f"/api/v1/orgs/{org_id}/workspaces", json={"name": "default"}, headers=org).json()["data"]
     return cp, client, org, workspace
 
 
@@ -48,7 +48,7 @@ def _seed(client, org: dict[str, str], workspace: dict, overrides: dict[str, str
 
 
 def _credentials(client, org: dict[str, str], workspace: dict):
-    return client.get(f"/v1/orgs/{org['X-Test-Org-Id']}/workspaces/{workspace['slug']}/provider-credentials", headers=org).json()["data"]
+    return client.get(f"/api/v1/orgs/{org['X-Test-Org-Id']}/workspaces/{workspace['slug']}/provider-credentials", headers=org).json()["data"]
 
 
 def stored(cp, credential: dict) -> str:

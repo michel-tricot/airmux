@@ -23,7 +23,7 @@ def test_invalid_upstream_successes_are_rejected(stack: Stack) -> None:
 
     with httpx.stream(
         "POST",
-        f"{stack.dp_url}/v1/chat/completions",
+        f"{stack.dp_url}/inf/v1/chat/completions",
         headers={"authorization": f"Bearer {stack.caller_api_key}"},
         json={"model": "echo", "messages": [{"role": "user", "content": "truncated-stream"}], "stream": True},
         timeout=10.0,

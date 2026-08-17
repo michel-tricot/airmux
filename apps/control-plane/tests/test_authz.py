@@ -53,12 +53,12 @@ def test_routes_do_not_interpret_credential_or_standing_authority():
 def test_management_routes_name_their_scope_in_the_path():
     spec = make_app().openapi()
     paths = set(spec["paths"])
-    assert "/v1/orgs/{org_id}/workspaces" in paths
-    assert "/v1/orgs/{org_id}/users" in paths
-    assert "/v1/orgs/{org_id}/provider-credentials" in paths
-    assert "/v1/orgs/{org_id}/access-keys" in paths
-    assert "/v1/orgs/{org_id}/workspaces/{workspace_ref}/access-keys" in paths
-    assert "/v1/instance/access-keys" in paths
+    assert "/api/v1/orgs/{org_id}/workspaces" in paths
+    assert "/api/v1/orgs/{org_id}/users" in paths
+    assert "/api/v1/orgs/{org_id}/provider-credentials" in paths
+    assert "/api/v1/orgs/{org_id}/access-keys" in paths
+    assert "/api/v1/orgs/{org_id}/workspaces/{workspace_ref}/access-keys" in paths
+    assert "/api/v1/instance/access-keys" in paths
     assert not any(
         parameter.get("name") == "X-Org-Id"
         for item in spec["paths"].values()
@@ -70,14 +70,14 @@ def test_management_routes_name_their_scope_in_the_path():
 def test_access_markers_match_reality(tmp_path):
     cp = setup_control_plane(tmp_path)
     with TestClient(cp.app) as client:
-        assert client.get("/v1/auth/me").status_code == 401
-        assert client.post("/v1/auth/logout").status_code == 401
-        assert client.post("/v1/auth/password", json={"current_password": "x", "new_password": "password123"}).status_code == 401
+        assert client.get("/api/v1/auth/me").status_code == 401
+        assert client.post("/api/v1/auth/logout").status_code == 401
+        assert client.post("/api/v1/auth/password", json={"current_password": "x", "new_password": "password123"}).status_code == 401
 
 
 def test_permissions_docs_accept_any_authenticated_principal():
     spec = make_app().openapi()
-    operation = spec["paths"]["/v1/auth/permissions"]["get"]
+    operation = spec["paths"]["/api/v1/auth/permissions"]["get"]
     assert operation["security"] == [{"AccessKey": []}, {"SessionCookie": []}]
     assert "human account" not in operation["description"]
     assert operation["summary"] == "Get Effective Permissions"
@@ -96,7 +96,7 @@ def test_spec_advertises_the_enforced_permission():
         ]
         access = [access for dependency in route.dependant.dependencies if (access := getattr(dependency.call, "access", None)) is not None]
         for method in sorted(route.methods or ()):
-            operation = spec["paths"]["/v1" + route.path][method.lower()]
+            operation = spec["paths"]["/api/v1" + route.path][method.lower()]
             description = operation.get("description", "")
             if enforced and operation.get("security") != [{"AccessKey": []}, {"SessionCookie": []}]:
                 problems.append(f"{method} {route.path} does not advertise bearer-or-cookie authentication")
@@ -170,7 +170,7 @@ def test_openapi_is_written_for_external_consumers():
 
 
 def test_event_page_stays_flat_in_the_openapi_query_contract():
-    operation = make_app().openapi()["paths"]["/v1/orgs/{org_id}/events"]["get"]
+    operation = make_app().openapi()["paths"]["/api/v1/orgs/{org_id}/events"]["get"]
     query_parameters = {parameter["name"] for parameter in operation["parameters"] if parameter["in"] == "query"}
     assert query_parameters == {"before", "before_event_id", "after", "after_event_id", "limit"}
 
@@ -181,11 +181,12 @@ def test_permission_ceiling_restricts_actions_within_a_scope(tmp_path):
         org_id = make_org(client, cp.headers())
         workspace_id = make_workspace(client, cp.headers(org_id))
         reader = cp.headers(org_id, permissions=[Permission.workspaces_read, Permission.inference_keys_read])
-        assert client.get(f"/v1/orgs/{org_id}/workspaces", headers=reader).status_code == 200
-        assert client.post(f"/v1/orgs/{org_id}/workspaces", json={"name": "blocked"}, headers=reader).status_code == 403
-        assert client.get(f"/v1/orgs/{org_id}/workspaces/{workspace_id}/inference-keys", headers=reader).status_code == 200
+        assert client.get(f"/api/v1/orgs/{org_id}/workspaces", headers=reader).status_code == 200
+        assert client.post(f"/api/v1/orgs/{org_id}/workspaces", json={"name": "blocked"}, headers=reader).status_code == 403
+        assert client.get(f"/api/v1/orgs/{org_id}/workspaces/{workspace_id}/inference-keys", headers=reader).status_code == 200
         assert (
-            client.post(f"/v1/orgs/{org_id}/workspaces/{workspace_id}/inference-keys", json={"label": "blocked"}, headers=reader).status_code == 403
+            client.post(f"/api/v1/orgs/{org_id}/workspaces/{workspace_id}/inference-keys", json={"label": "blocked"}, headers=reader).status_code
+            == 403
         )
 
 
@@ -196,10 +197,10 @@ def test_org_scope_cannot_reach_instance_or_another_org(tmp_path):
         first = make_org(client, root, "first")
         second = make_org(client, root, "second")
         key = cp.headers(first)
-        assert client.get(f"/v1/orgs/{first}/workspaces", headers=key).status_code == 200
-        assert client.get("/v1/users", headers=key).status_code == 403
-        assert client.get(f"/v1/orgs/{first}", headers=key).status_code == 200
-        assert client.get(f"/v1/orgs/{second}", headers=key).status_code == 403
+        assert client.get(f"/api/v1/orgs/{first}/workspaces", headers=key).status_code == 200
+        assert client.get("/api/v1/users", headers=key).status_code == 403
+        assert client.get(f"/api/v1/orgs/{first}", headers=key).status_code == 200
+        assert client.get(f"/api/v1/orgs/{second}", headers=key).status_code == 403
 
 
 def test_workspace_scope_cannot_reach_its_org_or_sibling(tmp_path):
@@ -210,9 +211,9 @@ def test_workspace_scope_cannot_reach_its_org_or_sibling(tmp_path):
         first = make_workspace(client, org, "first")
         second = make_workspace(client, org, "second")
         key = cp.headers(org_id, workspace_id=first)
-        assert client.get(f"/v1/orgs/{org_id}/workspaces/{first}", headers=key).status_code == 200
-        assert client.get(f"/v1/orgs/{org_id}/workspaces/{second}", headers=key).status_code == 403
-        assert client.get(f"/v1/orgs/{org_id}/workspaces", headers=key).status_code == 403
+        assert client.get(f"/api/v1/orgs/{org_id}/workspaces/{first}", headers=key).status_code == 200
+        assert client.get(f"/api/v1/orgs/{org_id}/workspaces/{second}", headers=key).status_code == 403
+        assert client.get(f"/api/v1/orgs/{org_id}/workspaces", headers=key).status_code == 403
 
 
 def test_workspace_usage_reader_sees_only_that_workspace(tmp_path):
@@ -224,10 +225,10 @@ def test_workspace_usage_reader_sees_only_that_workspace(tmp_path):
         first = make_workspace(client, org, "first")
         second = make_workspace(client, org, "second")
         viewer = make_user(tmp_path, "viewer@example.com")
-        assert client.put(f"/v1/orgs/{org_id}/users/{viewer.id}", json={"role": "member"}, headers=org).status_code == 200
-        assert client.put(f"/v1/orgs/{org_id}/workspaces/{first}/members/{viewer.id}", json={"role": "viewer"}, headers=org).status_code == 200
+        assert client.put(f"/api/v1/orgs/{org_id}/users/{viewer.id}", json={"role": "member"}, headers=org).status_code == 200
+        assert client.put(f"/api/v1/orgs/{org_id}/workspaces/{first}/members/{viewer.id}", json={"role": "viewer"}, headers=org).status_code == 200
         minted = client.post(
-            f"/v1/orgs/{org_id}/workspaces/{first}/access-keys",
+            f"/api/v1/orgs/{org_id}/workspaces/{first}/access-keys",
             json={
                 "label": "workspace-usage",
                 "user_id": str(viewer.id),
@@ -255,10 +256,10 @@ def test_workspace_usage_reader_sees_only_that_workspace(tmp_path):
             }
             for workspace_id in (first, second)
         ]
-        assert client.post("/v1/events", json=events, headers=root).status_code == 200
+        assert client.post("/api/v1/events", json=events, headers=root).status_code == 200
 
         key = {"authorization": f"Bearer {minted['token']}"}
-        visible = client.get(f"/v1/orgs/{org_id}/workspaces/{first}/events", headers=key)
+        visible = client.get(f"/api/v1/orgs/{org_id}/workspaces/{first}/events", headers=key)
         assert visible.status_code == 200, visible.text
         assert {event["workspace_id"] for event in visible.json()["data"]} == {str(first)}
-        assert client.get(f"/v1/orgs/{org_id}/workspaces/{second}/events", headers=key).status_code == 403
+        assert client.get(f"/api/v1/orgs/{org_id}/workspaces/{second}/events", headers=key).status_code == 403

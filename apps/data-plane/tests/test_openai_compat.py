@@ -82,7 +82,7 @@ def test_parse_translates_the_openai_shapes_and_keeps_the_rest():
 
 
 def _sdk(client: TestClient, api_key: str) -> OpenAI:
-    return OpenAI(base_url="http://testserver/v1", api_key=api_key, http_client=client)
+    return OpenAI(base_url="http://testserver/inf/v1", api_key=api_key, http_client=client)
 
 
 @respx.mock
@@ -220,7 +220,7 @@ def test_a_canonical_caller_is_untouched_by_the_interpretation(api_key, dp_app):
     mock_control_plane()
     with TestClient(dp_app) as client:
         r = client.post(
-            "/v1/chat/completions",
+            "/inf/v1/chat/completions",
             headers={"Authorization": f"Bearer {api_key}"},
             json={"model": "gpt-test", "messages": [{"role": "user", "content": "hi"}]},
         )

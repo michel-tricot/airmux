@@ -33,7 +33,7 @@ def test_proxy_overhead_stays_small(stack: Stack, bench: Bench) -> None:
 
     body = {"model": "echo", "messages": [{"role": "user", "content": "hi"}]}
     direct_url = f"http://127.0.0.1:{stack.stub_port}/chat/completions"
-    gateway_url = f"{stack.dp_url}/v1/chat/completions"
+    gateway_url = f"{stack.dp_url}/inf/v1/chat/completions"
     auth = {"authorization": f"Bearer {stack.caller_api_key}"}
 
     with httpx.Client(timeout=10.0) as direct, httpx.Client(timeout=10.0) as gateway:

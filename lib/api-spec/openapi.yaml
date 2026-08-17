@@ -13,7 +13,7 @@ info:
     '
   version: 0.1.0
 paths:
-  /v1/instance/access-keys:
+  /api/v1/instance/access-keys:
     get:
       tags:
       - Instance Access Keys
@@ -89,7 +89,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-  /v1/orgs/{org_id}/access-keys:
+  /api/v1/orgs/{org_id}/access-keys:
     get:
       tags:
       - Organization Access Keys
@@ -182,7 +182,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-  /v1/orgs/{org_id}/workspaces/{workspace_ref}/access-keys:
+  /api/v1/orgs/{org_id}/workspaces/{workspace_ref}/access-keys:
     get:
       tags:
       - Workspace Access Keys
@@ -289,7 +289,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-  /v1/access-keys/{key_id}:
+  /api/v1/access-keys/{key_id}:
     delete:
       tags:
       - Instance Access Keys
@@ -330,7 +330,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-  /v1/auth/login:
+  /api/v1/auth/login:
     post:
       tags:
       - Auth
@@ -360,7 +360,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
       security: []
-  /v1/auth/signup:
+  /api/v1/auth/signup:
     post:
       tags:
       - Auth
@@ -395,7 +395,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
       security: []
-  /v1/auth/logout:
+  /api/v1/auth/logout:
     post:
       tags:
       - Auth
@@ -424,7 +424,7 @@ paths:
           description: The request failed browser security checks
       security:
       - SessionCookie: []
-  /v1/auth/me:
+  /api/v1/auth/me:
     get:
       tags:
       - Auth
@@ -452,7 +452,7 @@ paths:
       security:
       - AccessKey: []
       - SessionCookie: []
-  /v1/auth/permissions:
+  /api/v1/auth/permissions:
     get:
       tags:
       - Auth
@@ -491,7 +491,7 @@ paths:
                 $ref: '#/components/schemas/HTTPValidationError'
         '401':
           description: Authentication failed
-  /v1/auth/password:
+  /api/v1/auth/password:
     post:
       tags:
       - Auth
@@ -525,7 +525,7 @@ paths:
       security:
       - AccessKey: []
       - SessionCookie: []
-  /v1/auth/cli/start:
+  /api/v1/auth/cli/start:
     post:
       tags:
       - Auth
@@ -555,7 +555,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
       security: []
-  /v1/auth/cli/request:
+  /api/v1/auth/cli/request:
     get:
       tags:
       - Auth
@@ -592,7 +592,7 @@ paths:
           description: The request failed browser security checks
       security:
       - SessionCookie: []
-  /v1/auth/cli/approve:
+  /api/v1/auth/cli/approve:
     post:
       tags:
       - Auth
@@ -627,7 +627,7 @@ paths:
           description: The request failed browser security checks
       security:
       - SessionCookie: []
-  /v1/auth/cli/poll:
+  /api/v1/auth/cli/poll:
     post:
       tags:
       - Auth
@@ -662,7 +662,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
       security: []
-  /v1/enroll:
+  /api/v1/enroll:
     get:
       tags:
       - Enrollment
@@ -690,7 +690,7 @@ paths:
       security:
       - AccessKey: []
       - SessionCookie: []
-  /v1/enroll/org:
+  /api/v1/enroll/org:
     post:
       tags:
       - Enrollment
@@ -728,7 +728,7 @@ paths:
           description: The request failed browser security checks
       security:
       - SessionCookie: []
-  /v1/instance/oss/claim:
+  /api/v1/instance/oss/claim:
     get:
       tags:
       - OSS
@@ -746,7 +746,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Envelope_ClaimOut_'
       security: []
-  /v1/instance/oss/quickstart:
+  /api/v1/instance/oss/quickstart:
     post:
       tags:
       - OSS
@@ -781,7 +781,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
       security: []
-  /v1/instance/data-planes:
+  /api/v1/instance/data-planes:
     get:
       tags:
       - Data Plane Instances
@@ -820,7 +820,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-  /v1/instance/activity:
+  /api/v1/instance/activity:
     get:
       tags:
       - Instance Activity
@@ -861,7 +861,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-  /v1/service-accounts:
+  /api/v1/service-accounts:
     post:
       tags:
       - Instance Users
@@ -897,7 +897,7 @@ paths:
       security:
       - AccessKey: []
       - SessionCookie: []
-  /v1/users/{user_id}:
+  /api/v1/users/{user_id}:
     get:
       tags:
       - Instance Users
@@ -979,7 +979,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-  /v1/users:
+  /api/v1/users:
     get:
       tags:
       - Instance Users
@@ -1019,7 +1019,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-  /v1/orgs:
+  /api/v1/orgs:
     get:
       tags:
       - Instance Organizations
@@ -1084,7 +1084,7 @@ paths:
       security:
       - AccessKey: []
       - SessionCookie: []
-  /v1/orgs/{org_id}:
+  /api/v1/orgs/{org_id}:
     patch:
       tags:
       - Organization Settings
@@ -1208,7 +1208,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-  /v1/orgs/{org_id}/workspaces:
+  /api/v1/orgs/{org_id}/workspaces:
     post:
       tags:
       - Organization Workspaces
@@ -1294,7 +1294,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-  /v1/orgs/{org_id}/workspaces/{workspace_ref}:
+  /api/v1/orgs/{org_id}/workspaces/{workspace_ref}:
     get:
       tags:
       - Workspace Settings
@@ -1439,7 +1439,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-  /v1/orgs/{org_id}/workspaces/{workspace_ref}/members:
+  /api/v1/orgs/{org_id}/workspaces/{workspace_ref}/members:
     get:
       tags:
       - Workspace Members
@@ -1485,7 +1485,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-  /v1/orgs/{org_id}/workspaces/{workspace_ref}/members/{user_id}:
+  /api/v1/orgs/{org_id}/workspaces/{workspace_ref}/members/{user_id}:
     put:
       tags:
       - Workspace Members
@@ -1598,7 +1598,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-  /v1/orgs/{org_id}/workspaces/{workspace_ref}/inference-keys:
+  /api/v1/orgs/{org_id}/workspaces/{workspace_ref}/inference-keys:
     post:
       tags:
       - Workspace Inference Keys
@@ -1695,7 +1695,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-  /v1/orgs/{org_id}/workspaces/{workspace_ref}/inference-keys/{key_id}:
+  /api/v1/orgs/{org_id}/workspaces/{workspace_ref}/inference-keys/{key_id}:
     delete:
       tags:
       - Workspace Inference Keys
@@ -1749,7 +1749,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-  /v1/orgs/{org_id}/provider-credentials:
+  /api/v1/orgs/{org_id}/provider-credentials:
     post:
       tags:
       - Organization Provider Credentials
@@ -1832,7 +1832,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-  /v1/orgs/{org_id}/workspaces/{workspace_ref}/provider-credentials:
+  /api/v1/orgs/{org_id}/workspaces/{workspace_ref}/provider-credentials:
     post:
       tags:
       - Workspace Provider Credentials
@@ -1929,7 +1929,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-  /v1/orgs/{org_id}/provider-credentials/{credential_id}:
+  /api/v1/orgs/{org_id}/provider-credentials/{credential_id}:
     get:
       tags:
       - Organization Provider Credentials
@@ -2077,7 +2077,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-  /v1/orgs/{org_id}/provider-credentials/{credential_id}/value:
+  /api/v1/orgs/{org_id}/provider-credentials/{credential_id}/value:
     put:
       tags:
       - Organization Provider Credentials
@@ -2131,7 +2131,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-  /v1/orgs/{org_id}/users:
+  /api/v1/orgs/{org_id}/users:
     get:
       tags:
       - Organization Members
@@ -2170,7 +2170,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-  /v1/orgs/{org_id}/users/{user_id}:
+  /api/v1/orgs/{org_id}/users/{user_id}:
     put:
       tags:
       - Organization Members
@@ -2269,7 +2269,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-  /v1/orgs/{org_id}/bundles/compile:
+  /api/v1/orgs/{org_id}/bundles/compile:
     post:
       tags:
       - Organization Bundles
@@ -2308,7 +2308,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-  /v1/orgs/{org_id}/bundles:
+  /api/v1/orgs/{org_id}/bundles:
     get:
       tags:
       - Organization Bundles
@@ -2347,7 +2347,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-  /v1/orgs/{org_id}/events:
+  /api/v1/orgs/{org_id}/events:
     get:
       tags:
       - Organization Usage Events
@@ -2436,7 +2436,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-  /v1/orgs/{org_id}/workspaces/{workspace_ref}/events:
+  /api/v1/orgs/{org_id}/workspaces/{workspace_ref}/events:
     get:
       tags:
       - Workspace Usage Events
@@ -2532,7 +2532,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-  /v1/orgs/{org_id}/activity:
+  /api/v1/orgs/{org_id}/activity:
     get:
       tags:
       - Organization Activity
@@ -2581,7 +2581,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-  /v1/bundle/latest:
+  /api/v1/bundle/latest:
     get:
       tags:
       - Data Plane API
@@ -2622,7 +2622,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-  /v1/events:
+  /api/v1/events:
     post:
       tags:
       - Data Plane API
@@ -2662,7 +2662,7 @@ paths:
       security:
       - AccessKey: []
       - SessionCookie: []
-  /v1/heartbeat:
+  /api/v1/heartbeat:
     post:
       tags:
       - Data Plane API
@@ -2698,7 +2698,7 @@ paths:
       security:
       - AccessKey: []
       - SessionCookie: []
-  /v1/instance/taxonomy:
+  /api/v1/instance/taxonomy:
     get:
       tags:
       - Instance Model Catalog
@@ -2728,7 +2728,7 @@ paths:
       security:
       - AccessKey: []
       - SessionCookie: []
-  /v1/orgs/{org_id}/taxonomy:
+  /api/v1/orgs/{org_id}/taxonomy:
     get:
       tags:
       - Organization Model Catalog
@@ -2767,7 +2767,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-  /v1/orgs/{org_id}/workspaces/{workspace_ref}/taxonomy:
+  /api/v1/orgs/{org_id}/workspaces/{workspace_ref}/taxonomy:
     get:
       tags:
       - Workspace Model Catalog
@@ -2813,7 +2813,7 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-  /v1/instance/taxonomy/providers:
+  /api/v1/instance/taxonomy/providers:
     post:
       tags:
       - Instance Model Catalog
@@ -2849,7 +2849,7 @@ paths:
       security:
       - AccessKey: []
       - SessionCookie: []
-  /v1/instance/taxonomy/models:
+  /api/v1/instance/taxonomy/models:
     post:
       tags:
       - Instance Model Catalog

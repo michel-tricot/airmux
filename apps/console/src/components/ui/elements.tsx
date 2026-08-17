@@ -90,6 +90,33 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
 );
 Button.displayName = 'Button';
 
+export const Switch = forwardRef<
+  HTMLButtonElement,
+  Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'onChange' | 'onClick'> & { checked: boolean; onCheckedChange: (checked: boolean) => void }
+>(({ checked, className, onCheckedChange, type = 'button', ...props }, ref) => (
+  <button
+    ref={ref}
+    type={type}
+    role="switch"
+    aria-checked={checked}
+    className={cn(
+      'relative inline-flex h-5 w-9 shrink-0 items-center rounded-full bg-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50',
+      checked && 'bg-primary',
+      className,
+    )}
+    onClick={() => onCheckedChange(!checked)}
+    {...props}
+  >
+    <span
+      className={cn(
+        'pointer-events-none block h-3.5 w-3.5 translate-x-1 rounded-full bg-white shadow transition-transform',
+        checked && 'translate-x-4',
+      )}
+    />
+  </button>
+));
+Switch.displayName = 'Switch';
+
 export const Input = forwardRef<HTMLInputElement, React.ComponentPropsWithoutRef<typeof InputPrimitive>>(({ className, ...props }, ref) => (
   <InputPrimitive
     ref={ref}
@@ -129,6 +156,7 @@ export const Dropdown = ({
   placeholder = 'Select…',
   disabled,
   className,
+  id,
   'aria-label': ariaLabel,
 }: {
   value: string;
@@ -138,6 +166,7 @@ export const Dropdown = ({
   placeholder?: string;
   disabled?: boolean;
   className?: string;
+  id?: string;
   'aria-label'?: string;
 }) => (
   <Select
@@ -152,6 +181,7 @@ export const Dropdown = ({
     disabled={disabled}
   >
     <SelectTrigger
+      id={id}
       aria-label={ariaLabel}
       className={cn(
         'flex h-9 w-full items-center justify-between gap-2 rounded border border-input bg-background/50 px-3 text-[13px] font-mono shadow-sm transition-colors hover:border-primary/50 hover:bg-primary/5 focus:outline-none focus-visible:border-primary focus-visible:ring-1 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-50 data-[placeholder]:text-muted-foreground',

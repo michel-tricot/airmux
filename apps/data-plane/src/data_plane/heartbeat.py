@@ -43,7 +43,7 @@ class Heartbeat:
             bundle_id=snapshot.bundle.bundle_id if snapshot else None,
         )
         response = await self._http_client.post(
-            f"{self._control_plane.url}/v1/heartbeat",
+            f"{self._control_plane.url}/api/v1/heartbeat",
             headers={"authorization": f"Bearer {self._control_plane.token}"},
             json=body.model_dump(mode="json"),
         )

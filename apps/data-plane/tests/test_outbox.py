@@ -51,7 +51,7 @@ def test_record_is_idempotent_on_event_id(tmp_path, http_client):
 
 @respx.mock
 async def test_flush_sends_batch_and_deletes(tmp_path, http_client):
-    route = respx.post("http://cp.test/v1/events").mock(return_value=httpx.Response(200, json={"received": 2, "ingested": 2}))
+    route = respx.post("http://cp.test/api/v1/events").mock(return_value=httpx.Response(200, json={"received": 2, "ingested": 2}))
     outbox = make_outbox(tmp_path, http_client)
     first, second = uuid7(), uuid7()
     outbox.record(make_event(first))
@@ -65,7 +65,7 @@ async def test_flush_sends_batch_and_deletes(tmp_path, http_client):
 
 @respx.mock
 async def test_failed_flush_keeps_the_events(tmp_path, http_client):
-    respx.post("http://cp.test/v1/events").mock(return_value=httpx.Response(503))
+    respx.post("http://cp.test/api/v1/events").mock(return_value=httpx.Response(503))
     outbox = make_outbox(tmp_path, http_client)
     event = make_event(uuid7())
     outbox.record(event)

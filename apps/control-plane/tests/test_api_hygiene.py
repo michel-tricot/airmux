@@ -209,7 +209,9 @@ def test_response_schemas_are_pure_envelopes():
 def test_request_transactions_are_shared_without_polluting_route_signatures():
     app = make_app()
     v1 = [
-        router for route in app.routes if (router := getattr(route, "original_router", None)) is not None and getattr(router, "prefix", None) == "/v1"
+        router
+        for route in app.routes
+        if (router := getattr(route, "original_router", None)) is not None and getattr(router, "prefix", None) == "/api/v1"
     ]
     assert len(v1) == 1
     assert any(dependency.dependency is get_session and dependency.scope == "function" for dependency in v1[0].dependencies)

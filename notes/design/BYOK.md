@@ -171,7 +171,7 @@ Control-plane authority uses `provider-credentials.read` and `provider-credentia
 
 ## Control plane write path
 
-`POST /v1/orgs/{org}/workspaces/{ws}/provider-credentials` with `{provider, name, priority, value}`
+`POST /api/v1/orgs/{org}/workspaces/{ws}/provider-credentials` with `{provider, name, priority, value}`
 
 1. Refuse up front unless the configured store is `writable`
 2. Body carries plaintext once

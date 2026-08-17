@@ -103,13 +103,13 @@ class ControlPlane:
 
 def make_org(client, headers: dict[str, str], name: str = "org-test") -> UUID:
     """Create an org through the API and return its server-minted id."""
-    return UUID(client.post("/v1/orgs", json={"name": name}, headers=headers).json()["data"]["id"])
+    return UUID(client.post("/api/v1/orgs", json={"name": name}, headers=headers).json()["data"]["id"])
 
 
 def make_workspace(client, headers: dict[str, str], name: str = "ws-test") -> UUID:
     """Create a workspace in the caller's org scope and return its server-minted id; the slug derives from the name."""
     org_id = headers["X-Test-Org-Id"]
-    response = client.post(f"/v1/orgs/{org_id}/workspaces", json={"name": name}, headers=headers)
+    response = client.post(f"/api/v1/orgs/{org_id}/workspaces", json={"name": name}, headers=headers)
     assert response.status_code == 200, response.text
     return UUID(response.json()["data"]["id"])
 

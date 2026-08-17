@@ -119,7 +119,7 @@ def test_local_mode_serves_end_to_end(tmp_path, monkeypatch):
     with TestClient(create_app(config)) as client:
         assert client.get("/readyz").status_code == 200
         response = client.post(
-            "/v1/chat/completions",
+            "/inf/v1/chat/completions",
             headers={"Authorization": "Bearer sk-inf-local-dev"},
             json={"model": "gpt-test", "messages": [{"role": "user", "content": "hi"}]},
         )
@@ -138,7 +138,7 @@ def test_local_bundle_source_does_not_disable_event_export(tmp_path, monkeypatch
         exported.set()
         return httpx.Response(200, json={"received": 1, "ingested": 1})
 
-    respx.post("http://cp.test/v1/events").mock(side_effect=accept_events)
+    respx.post("http://cp.test/api/v1/events").mock(side_effect=accept_events)
     config = Config(
         bundle=LocalBundleConfig(kind="local", path=_write(tmp_path)),
         events=SqliteOutboxConfig(
@@ -150,7 +150,7 @@ def test_local_bundle_source_does_not_disable_event_export(tmp_path, monkeypatch
 
     with TestClient(create_app(config)) as client:
         response = client.post(
-            "/v1/chat/completions",
+            "/inf/v1/chat/completions",
             headers={"Authorization": "Bearer sk-inf-local-dev"},
             json={"model": "gpt-test", "messages": [{"role": "user", "content": "hi"}]},
         )
@@ -204,12 +204,12 @@ def test_app_instances_keep_their_own_runtime(tmp_path, http_client):
         assert not first_http_client.is_closed
         assert not second_http_client.is_closed
         first_response = first_client.post(
-            "/v1/chat/completions",
+            "/inf/v1/chat/completions",
             headers={"Authorization": "Bearer sk-inf-first"},
             json=body,
         )
         second_response = second_client.post(
-            "/v1/chat/completions",
+            "/inf/v1/chat/completions",
             headers={"Authorization": "Bearer sk-inf-second"},
             json=body,
         )

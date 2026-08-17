@@ -37,15 +37,15 @@ const ACCESS_KEY = {
 
 function installAdminHandlers() {
   server.use(
-    http.get('/v1/auth/me', () =>
+    http.get('/api/v1/auth/me', () =>
       HttpResponse.json({ user_id: USER.id, email: USER.email, name: USER.name, instance_role: 'owner', orgs: USER.orgs }),
     ),
-    http.get('/v1/orgs', () => HttpResponse.json([ORG])),
-    http.get('/v1/orgs/:orgId', () => HttpResponse.json(ORG)),
-    http.get('/v1/users', () => HttpResponse.json([USER])),
-    http.get('/v1/users/:userId', () => HttpResponse.json(USER)),
-    http.get('/v1/instance/access-keys', () => HttpResponse.json([ACCESS_KEY])),
-    http.get('/v1/instance/data-planes', () =>
+    http.get('/api/v1/orgs', () => HttpResponse.json([ORG])),
+    http.get('/api/v1/orgs/:orgId', () => HttpResponse.json(ORG)),
+    http.get('/api/v1/users', () => HttpResponse.json([USER])),
+    http.get('/api/v1/users/:userId', () => HttpResponse.json(USER)),
+    http.get('/api/v1/instance/access-keys', () => HttpResponse.json([ACCESS_KEY])),
+    http.get('/api/v1/instance/data-planes', () =>
       HttpResponse.json([
         {
           instance_id: 'data-plane-1',
@@ -58,13 +58,13 @@ function installAdminHandlers() {
         },
       ]),
     ),
-    http.get('/v1/instance/activity', () =>
+    http.get('/api/v1/instance/activity', () =>
       HttpResponse.json([{ id: 1, table_name: 'org', record_id: ORG.id, action: 'create', user_id: USER.id, occurred_at: now }]),
     ),
-    http.get('/v1/orgs/:orgId/users', () =>
+    http.get('/api/v1/orgs/:orgId/users', () =>
       HttpResponse.json([{ user_id: USER.id, email: USER.email, name: USER.name, service_account: false, role: 'owner', status: 'member' }]),
     ),
-    http.get('/v1/orgs/:orgId/workspaces', () => HttpResponse.json(WORKSPACES)),
+    http.get('/api/v1/orgs/:orgId/workspaces', () => HttpResponse.json(WORKSPACES)),
   );
 }
 
@@ -90,7 +90,7 @@ describe('instance administration routes', () => {
   });
 
   it('surfaces list failures instead of empty state copy', async () => {
-    server.use(http.get('/v1/users', () => new HttpResponse(null, { status: 503 })));
+    server.use(http.get('/api/v1/users', () => new HttpResponse(null, { status: 503 })));
     renderAt('/instance/users');
 
     expect(await screen.findByRole('alert', undefined, { timeout: 2_500 })).toHaveTextContent('Could not reach the control plane');
@@ -99,7 +99,7 @@ describe('instance administration routes', () => {
 
   it('counts only active access keys on the dashboard', async () => {
     server.use(
-      http.get('/v1/instance/access-keys', () =>
+      http.get('/api/v1/instance/access-keys', () =>
         HttpResponse.json([
           ACCESS_KEY,
           { ...ACCESS_KEY, id: 'access-key-2', status: 'expired' },
@@ -116,7 +116,7 @@ describe('instance administration routes', () => {
   it('mints an access key from the permissions returned by the control plane', async () => {
     let submitted: unknown;
     server.use(
-      http.post('/v1/instance/access-keys', async ({ request }) => {
+      http.post('/api/v1/instance/access-keys', async ({ request }) => {
         submitted = await request.json();
         return HttpResponse.json({ ...ACCESS_KEY, permissions: ['organizations.read'], token: 'sk-cp-secret' });
       }),
@@ -136,7 +136,7 @@ describe('instance administration routes', () => {
   });
 
   it('shows permission discovery failures and prevents key submission', async () => {
-    server.use(http.get('/v1/auth/permissions', () => new HttpResponse(null, { status: 503 })));
+    server.use(http.get('/api/v1/auth/permissions', () => new HttpResponse(null, { status: 503 })));
     const user = userEvent.setup();
     renderAt('/instance/keys');
 
@@ -148,7 +148,7 @@ describe('instance administration routes', () => {
   });
 
   it('prevents key submission without access-key issuance permission', async () => {
-    server.use(http.get('/v1/auth/permissions', () => HttpResponse.json({ permissions: ['organizations.read'] })));
+    server.use(http.get('/api/v1/auth/permissions', () => HttpResponse.json({ permissions: ['organizations.read'] })));
     const user = userEvent.setup();
     renderAt('/instance/keys');
 

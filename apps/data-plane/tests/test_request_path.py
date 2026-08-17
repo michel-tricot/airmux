@@ -23,13 +23,19 @@ OPENAI_RESPONSE = {
 }
 
 
+def test_inference_routes_use_the_inference_prefix(dp_app):
+    paths = {route.path for route in dp_app.routes}
+    assert {"/inf/v1/chat/completions", "/inf/v1/responses", "/inf/v1/messages"} <= paths
+    assert not any(path.startswith("/v1/") for path in paths)
+
+
 @respx.mock
 def test_chat_completion_end_to_end(api_key, dp_app, tmp_path, http_client):
     route = respx.post("https://api.openai.com/v1/chat/completions").mock(return_value=httpx.Response(200, json=OPENAI_RESPONSE))
     mock_control_plane()
     with TestClient(dp_app) as client:
         r = client.post(
-            "/v1/chat/completions",
+            "/inf/v1/chat/completions",
             headers={"Authorization": f"Bearer {api_key}"},
             json={"model": "gpt-test", "messages": [{"role": "user", "content": "say hi"}]},
         )
@@ -50,7 +56,7 @@ def test_malformed_buffered_provider_response_is_rejected(api_key, dp_app, tmp_p
     mock_control_plane()
     with TestClient(dp_app) as client:
         response = client.post(
-            "/v1/chat/completions",
+            "/inf/v1/chat/completions",
             headers={"Authorization": f"Bearer {api_key}"},
             json={"model": "gpt-test", "messages": [{"role": "user", "content": "say hi"}]},
         )
@@ -63,7 +69,7 @@ def test_malformed_buffered_provider_response_is_rejected(api_key, dp_app, tmp_p
 def test_missing_token_rejected(api_key, dp_app):
     mock_control_plane()
     with TestClient(dp_app) as client:
-        r = client.post("/v1/chat/completions", json={"model": "gpt-test", "messages": []})
+        r = client.post("/inf/v1/chat/completions", json={"model": "gpt-test", "messages": []})
     assert r.status_code == 401
 
 
@@ -73,7 +79,7 @@ def test_upstream_error_passed_through(api_key, dp_app):
     mock_control_plane()
     with TestClient(dp_app) as client:
         r = client.post(
-            "/v1/chat/completions",
+            "/inf/v1/chat/completions",
             headers={"Authorization": f"Bearer {api_key}"},
             json={"model": "gpt-test", "messages": [{"role": "user", "content": "hi"}]},
         )
@@ -85,7 +91,7 @@ def test_policy_denial_is_metered(api_key, dp_app, tmp_path, http_client):
     mock_control_plane()
     with TestClient(dp_app) as client:
         r = client.post(
-            "/v1/chat/completions",
+            "/inf/v1/chat/completions",
             headers={"Authorization": f"Bearer {api_key}"},
             json={"model": "ghost", "messages": [{"role": "user", "content": "hi"}]},
         )
@@ -100,7 +106,7 @@ def test_upstream_timeout_is_metered_as_timeout(api_key, dp_app, tmp_path, http_
     mock_control_plane()
     with TestClient(dp_app) as client:
         r = client.post(
-            "/v1/chat/completions",
+            "/inf/v1/chat/completions",
             headers={"Authorization": f"Bearer {api_key}"},
             json={"model": "gpt-test", "messages": [{"role": "user", "content": "hi"}]},
         )

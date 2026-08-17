@@ -53,7 +53,7 @@ def test_multiworker_shared_cache_dir_loses_no_events(stack: Stack) -> None:
     stack.wait_dp_ready()
     time.sleep(3)  # wait_dp_ready only proves one worker answered; let the rest boot and poll a bundle
 
-    url = f"{stack.dp_url}/v1/chat/completions"
+    url = f"{stack.dp_url}/inf/v1/chat/completions"
     headers = {"authorization": f"Bearer {stack.caller_api_key}"}
     body = {"model": "echo", "messages": [{"role": "user", "content": "hi"}]}
 

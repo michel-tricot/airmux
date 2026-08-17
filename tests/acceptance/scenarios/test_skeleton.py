@@ -69,12 +69,12 @@ def test_skeleton_syncs_bundle_heartbeat_and_events(stack: Stack) -> None:
     stack.wait_dp_ready()  # readyz turns 200 only once a signed bundle is verified and admitted
 
     with httpx.Client(base_url=stack.cp_url, headers={"X-Requested-With": "XMLHttpRequest"}, timeout=10.0) as admin:
-        login = admin.post("/v1/auth/login", json={"email": ADMIN_EMAIL, "password": ADMIN_PASSWORD})
+        login = admin.post("/api/v1/auth/login", json={"email": ADMIN_EMAIL, "password": ADMIN_PASSWORD})
         login.raise_for_status()
         org_id = login.json()["data"]["orgs"][0]
 
         def data_planes_online() -> bool:
-            resp = admin.get("/v1/instance/data-planes")
+            resp = admin.get("/api/v1/instance/data-planes")
             resp.raise_for_status()
             return len(resp.json()["data"]) >= 1
 

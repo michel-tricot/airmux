@@ -67,8 +67,8 @@ describe('key cache invalidation across pages', () => {
   it('revoking an access key refreshes a filtered access-key list', async () => {
     let key = accessKey('ak-1');
     server.use(
-      http.get(`/v1/orgs/${ORG.id}/access-keys`, () => HttpResponse.json([key])),
-      http.delete('/v1/access-keys/:keyId', () => {
+      http.get(`/api/v1/orgs/${ORG.id}/access-keys`, () => HttpResponse.json([key])),
+      http.delete('/api/v1/access-keys/:keyId', () => {
         key = accessKey('ak-1', now);
         return HttpResponse.json({ id: 'ak-1', status: 'revoked', revoked_at: now });
       }),
@@ -87,8 +87,8 @@ describe('key cache invalidation across pages', () => {
   it('minting an access key refetches the access-key list', async () => {
     const keys = [accessKey('ak-1')];
     server.use(
-      http.get('/v1/instance/access-keys', () => HttpResponse.json(keys)),
-      http.post('/v1/instance/access-keys', () => {
+      http.get('/api/v1/instance/access-keys', () => HttpResponse.json(keys)),
+      http.post('/api/v1/instance/access-keys', () => {
         keys.push(accessKey('ak-2'));
         return HttpResponse.json({ ...accessKey('ak-2'), token: 'tok-once' });
       }),
@@ -107,8 +107,8 @@ describe('key cache invalidation across pages', () => {
   it('minting an inference key refetches the workspace inference key list', async () => {
     const keys = [inferenceKey('ifk-1', false)];
     server.use(
-      http.get(`/v1/orgs/${ORG.id}/workspaces/${WORKSPACE_REF}/inference-keys`, () => HttpResponse.json(keys)),
-      http.post(`/v1/orgs/${ORG.id}/workspaces/${WORKSPACE_REF}/inference-keys`, () => {
+      http.get(`/api/v1/orgs/${ORG.id}/workspaces/${WORKSPACE_REF}/inference-keys`, () => HttpResponse.json(keys)),
+      http.post(`/api/v1/orgs/${ORG.id}/workspaces/${WORKSPACE_REF}/inference-keys`, () => {
         keys.push(inferenceKey('ifk-2', false));
         return HttpResponse.json({ id: 'ifk-2', token: 'tok-once' });
       }),
@@ -127,8 +127,8 @@ describe('key cache invalidation across pages', () => {
   it('revoking an inference key refetches the workspace inference key list with fresh status', async () => {
     let revoked = false;
     server.use(
-      http.get(`/v1/orgs/${ORG.id}/workspaces/${WORKSPACE_REF}/inference-keys`, () => HttpResponse.json([inferenceKey('ifk-1', revoked)])),
-      http.delete(`/v1/orgs/${ORG.id}/workspaces/${WORKSPACE_REF}/inference-keys/:keyId`, () => {
+      http.get(`/api/v1/orgs/${ORG.id}/workspaces/${WORKSPACE_REF}/inference-keys`, () => HttpResponse.json([inferenceKey('ifk-1', revoked)])),
+      http.delete(`/api/v1/orgs/${ORG.id}/workspaces/${WORKSPACE_REF}/inference-keys/:keyId`, () => {
         revoked = true;
         return HttpResponse.json({ id: 'ifk-1', status: 'revoked' });
       }),

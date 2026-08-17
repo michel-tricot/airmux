@@ -25,7 +25,7 @@ def _stream_request(stack: Stack) -> Iterator[httpx.Response]:
         httpx.Client(timeout=30.0) as client,
         client.stream(
             "POST",
-            f"{stack.dp_url}/v1/chat/completions",
+            f"{stack.dp_url}/inf/v1/chat/completions",
             headers={"authorization": f"Bearer {stack.caller_api_key}"},
             json={"model": "echo", "messages": [{"role": "user", "content": "go"}], "stream": True},
         ) as response,

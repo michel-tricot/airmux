@@ -29,7 +29,7 @@ def test_login_only_presents_the_current_control_planes_existing_key(tmp_path, m
             "token": "sk-cp-old",
         },
     )
-    respx.post("https://cp.example/v1/auth/cli/start").mock(
+    respx.post("https://cp.example/api/v1/auth/cli/start").mock(
         return_value=httpx.Response(
             200,
             json={
@@ -43,7 +43,7 @@ def test_login_only_presents_the_current_control_planes_existing_key(tmp_path, m
             },
         )
     )
-    poll = respx.post("https://cp.example/v1/auth/cli/poll").mock(
+    poll = respx.post("https://cp.example/api/v1/auth/cli/poll").mock(
         return_value=httpx.Response(
             200,
             json={

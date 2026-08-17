@@ -25,11 +25,11 @@ def test_api_requests_attribute_the_acting_user(tmp_path):
         user = make_user(tmp_path, "admin@example.com")
         make_admin(tmp_path, user.id)
         token = c.post(
-            "/v1/instance/access-keys",
+            "/api/v1/instance/access-keys",
             json={"user_id": str(user.id), "label": "t", "permissions": [Permission.organizations_create]},
             headers=root,
         ).json()["data"]["token"]
-        c.post("/v1/orgs", json={"name": "o2"}, headers={"authorization": f"Bearer {token}"})
+        c.post("/api/v1/orgs", json={"name": "o2"}, headers={"authorization": f"Bearer {token}"})
 
     rows = run_in_db(tmp_path, lambda: AuditLog.find(order_by=col(AuditLog.id)))
     org_creation = next(r for r in rows if (r.table_name, r.action) == ("org", "create"))
@@ -46,7 +46,7 @@ def test_failed_commit_is_not_reported_as_success(tmp_path):
     event.listen(Session, "before_commit", refuse_commit)
     try:
         with TestClient(cp.app, raise_server_exceptions=False) as c:
-            resp = c.post("/v1/orgs", json={"name": "o1"}, headers=root)
+            resp = c.post("/api/v1/orgs", json={"name": "o1"}, headers=root)
             assert resp.status_code == 500
     finally:
         event.remove(Session, "before_commit", refuse_commit)
@@ -62,27 +62,27 @@ def test_refused_requests_explain_themselves(tmp_path):
         org_headers = cp.headers(org_id=org_id)
 
         # Invalid bearer credential
-        resp = c.get("/v1/orgs", headers={"authorization": "Bearer sk-cp-bogus"})
+        resp = c.get("/api/v1/orgs", headers={"authorization": "Bearer sk-cp-bogus"})
         assert resp.status_code == 401
         assert resp.json()["detail"] == "Invalid, expired, or revoked credential"
 
         # No credential at all
-        resp = c.get("/v1/orgs")
+        resp = c.get("/api/v1/orgs")
         assert resp.status_code == 401
         assert resp.json()["detail"] == "Authentication required; sign in or provide a credential"
 
         # Org-scoped credential on an instance route
-        resp = c.get("/v1/orgs", headers=org_headers)
+        resp = c.get("/api/v1/orgs", headers=org_headers)
         assert resp.status_code == 403
         assert "instance scope" in resp.json()["detail"]
 
         limited = cp.headers(org_id=org_id, permissions=[Permission.organizations_read])
-        resp = c.get(f"/v1/orgs/{org_id}/workspaces", headers=limited)
+        resp = c.get(f"/api/v1/orgs/{org_id}/workspaces", headers=limited)
         assert resp.status_code == 403
         assert resp.json()["detail"] == "Missing workspaces.read permission for org scope"
 
         # Expired/invalid session cookie through the cookie door
         c.cookies.set("airllm_session", "bogus")
-        resp = c.get("/v1/auth/me", headers={"X-Requested-With": "fetch"})
+        resp = c.get("/api/v1/auth/me", headers={"X-Requested-With": "fetch"})
         assert resp.status_code == 401
         assert resp.json()["detail"] == "Your session has expired; sign in again"
