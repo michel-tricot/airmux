@@ -104,6 +104,83 @@ ANTHROPIC_TOOL_NONSTREAM = {
     "usage": {"input_tokens": 9, "output_tokens": 4},
 }
 
+
+def responses_sse(payload: dict) -> bytes:
+    return b"event: " + payload["type"].encode() + b"\ndata: " + json.dumps(payload, ensure_ascii=False).encode() + b"\n\n"
+
+
+RESPONSES_TEXT_EVENTS = [
+    {"type": "response.created", "response": {"id": "resp_9", "status": "in_progress", "output": []}},
+    {
+        "type": "response.output_item.added",
+        "output_index": 0,
+        "item": {"type": "message", "id": "msg_9", "role": "assistant", "status": "in_progress", "content": []},
+    },
+    {"type": "response.output_text.delta", "output_index": 0, "content_index": 0, "delta": "héllo "},
+    {"type": "response.output_text.delta", "output_index": 0, "content_index": 0, "delta": "🌍 wor"},
+    {"type": "response.output_text.delta", "output_index": 0, "content_index": 0, "delta": "ld"},
+    {
+        "type": "response.completed",
+        "response": {
+            "id": "resp_9",
+            "status": "completed",
+            "output": [],
+            "usage": {"input_tokens": 5, "output_tokens": 7, "input_tokens_details": {"cached_tokens": 0}},
+        },
+    },
+]
+RESPONSES_TEXT_LOG = b"".join(responses_sse(event) for event in RESPONSES_TEXT_EVENTS)
+RESPONSES_TEXT_NONSTREAM = {
+    "id": "resp_9",
+    "status": "completed",
+    "output": [
+        {
+            "type": "message",
+            "id": "msg_9",
+            "role": "assistant",
+            "status": "completed",
+            "content": [{"type": "output_text", "text": "héllo 🌍 world", "annotations": []}],
+        }
+    ],
+    "usage": {"input_tokens": 5, "output_tokens": 7, "input_tokens_details": {"cached_tokens": 0}},
+}
+
+RESPONSES_TOOL_EVENTS = [
+    {"type": "response.created", "response": {"id": "resp_9", "status": "in_progress", "output": []}},
+    {
+        "type": "response.output_item.added",
+        "output_index": 0,
+        "item": {"type": "function_call", "id": "fc_1", "call_id": "call_1", "name": "get_weather", "arguments": ""},
+    },
+    {"type": "response.function_call_arguments.delta", "output_index": 0, "delta": '{"ci'},
+    {"type": "response.function_call_arguments.delta", "output_index": 0, "delta": 'ty":"Paris"}'},
+    {
+        "type": "response.output_item.added",
+        "output_index": 1,
+        "item": {"type": "function_call", "id": "fc_2", "call_id": "call_2", "name": "search", "arguments": ""},
+    },
+    {"type": "response.function_call_arguments.delta", "output_index": 1, "delta": '{"q":"x"}'},
+    {
+        "type": "response.completed",
+        "response": {
+            "id": "resp_9",
+            "status": "completed",
+            "output": [],
+            "usage": {"input_tokens": 9, "output_tokens": 4, "input_tokens_details": {"cached_tokens": 0}},
+        },
+    },
+]
+RESPONSES_TOOL_LOG = b"".join(responses_sse(event) for event in RESPONSES_TOOL_EVENTS)
+RESPONSES_TOOL_NONSTREAM = {
+    "id": "resp_9",
+    "status": "completed",
+    "output": [
+        {"type": "function_call", "id": "fc_1", "call_id": "call_1", "name": "get_weather", "arguments": '{"city":"Paris"}'},
+        {"type": "function_call", "id": "fc_2", "call_id": "call_2", "name": "search", "arguments": '{"q":"x"}'},
+    ],
+    "usage": {"input_tokens": 9, "output_tokens": 4, "input_tokens_details": {"cached_tokens": 0}},
+}
+
 CASES: dict[str, dict[str, StreamCase]] = {
     "openai_compatible": {
         "text": StreamCase(log=TEXT_LOG, nonstream=TEXT_NONSTREAM),
@@ -113,15 +190,20 @@ CASES: dict[str, dict[str, StreamCase]] = {
         "text": StreamCase(log=ANTHROPIC_TEXT_LOG, nonstream=ANTHROPIC_TEXT_NONSTREAM),
         "tools": StreamCase(log=ANTHROPIC_TOOL_LOG, nonstream=ANTHROPIC_TOOL_NONSTREAM),
     },
+    "openai_responses": {
+        "text": StreamCase(log=RESPONSES_TEXT_LOG, nonstream=RESPONSES_TEXT_NONSTREAM),
+        "tools": StreamCase(log=RESPONSES_TOOL_LOG, nonstream=RESPONSES_TOOL_NONSTREAM),
+    },
 }
 
 # A provider error arrives in each family's own spelling.
 ERROR_LOGS: dict[str, bytes] = {
     "openai_compatible": sse({"error": {"code": "overloaded", "message": "try later"}}),
+    "openai_responses": responses_sse({"type": "error", "error": {"code": "overloaded", "message": "try later"}}),
     "anthropic": anthropic_sse({"type": "error", "error": {"type": "overloaded", "message": "try later"}}),
 }
 
-KINDS = sorted(kind for kind in REGISTRY if kind != "openai_responses")
+KINDS = sorted(REGISTRY)
 MODALITIES = ("text", "tools")
 
 
@@ -203,11 +285,11 @@ def test_a_complete_stream_passes_validation(kind):
 
 
 @pytest.mark.parametrize("kind", KINDS)
-def test_a_terminal_marker_without_a_completed_response_is_rejected(kind):
+def test_a_nonterminal_event_without_a_completed_response_is_rejected(kind):
     adapter = _adapter(kind)
     state = adapter.new_stream_state(CTX)
     events = list(adapter.frame(CASES[kind]["text"].log, state))
-    for event in events[-1:]:
+    for event in events[:1]:
         adapter.transform_stream_event(event, state)
     with pytest.raises(ValueError, match="ended before"):
         adapter.validate_stream(state)

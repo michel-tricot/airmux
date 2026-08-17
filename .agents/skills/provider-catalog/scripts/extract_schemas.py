@@ -29,6 +29,7 @@ SPECS = {
     ("openrouter", "anthropic"): ("https://openrouter.ai/openapi.json", r"^/messages$"),
     ("openrouter", "oai_responses"): ("https://openrouter.ai/openapi.json", r"^/responses$"),
     ("openai", "oai"): ("https://raw.githubusercontent.com/openai/openai-openapi/master/openapi.yaml", r"^/chat/completions$"),
+    ("openai", "oai_responses"): ("https://raw.githubusercontent.com/openai/openai-openapi/master/openapi.yaml", r"^/responses$"),
     ("anthropic", "anthropic"): ("https://storage.googleapis.com/stainless-sdk-openapi-specs/anthropic/anthropic-891ba7f96c3771e1e3ba6cb37fe8cb6d8615b8a06b6c435d9df66f4aad144bb4.yml", r"^/v1/messages$"),
     ("xai", "oai"): ("https://docs.x.ai/openapi.json", r"^/v1/chat/completions$"),
     ("xai", "anthropic"): ("https://docs.x.ai/openapi.json", r"^/v1/messages$"),

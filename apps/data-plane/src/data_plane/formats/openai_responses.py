@@ -25,8 +25,8 @@ if TYPE_CHECKING:
 
 def _image(part: ImagePart) -> dict[str, str]:
     if part.url is not None:
-        return {"type": "input_image", "image_url": part.url}
-    return {"type": "input_image", "image_url": f"data:{part.media_type};base64,{part.data}"}
+        return {"type": "input_image", "image_url": part.url, "detail": "auto"}
+    return {"type": "input_image", "image_url": f"data:{part.media_type};base64,{part.data}", "detail": "auto"}
 
 
 def input_of(messages: Sequence[CanonicalMessage]) -> list[dict[str, Any]]:
@@ -47,14 +47,17 @@ def input_of(messages: Sequence[CanonicalMessage]) -> list[dict[str, Any]]:
         items.extend({"type": "function_call", "call_id": call.id, "name": call.name, "arguments": call.arguments} for call in calls)
         reasoning = [part for part in rest if isinstance(part, ReasoningPart)]
         for part in reasoning:
-            item: dict[str, Any] = {"type": "reasoning", "summary": []}
+            if part.id is None:
+                error_message = "unsupported_feature: Responses reasoning history requires its original item id"
+                raise ValueError(error_message)
+            item: dict[str, Any] = {"type": "reasoning", "id": part.id, "summary": []}
             if part.signature:
                 item["encrypted_content"] = part.signature
             items.append(item)
         content: list[dict[str, str]] = []
         for part in rest:
             if isinstance(part, TextPart):
-                content.append({"type": "output_text" if message.role == "assistant" else "input_text", "text": part.text})
+                content.append({"type": "input_text", "text": part.text})
             elif isinstance(part, ImagePart):
                 content.append(_image(part))
         if content:
@@ -71,7 +74,7 @@ def tools_of(tools: Sequence[ToolDef] | None) -> list[dict[str, Any]] | None:
             "name": tool.name,
             **({"description": tool.description} if tool.description else {}),
             "parameters": tool.parameters,
-            **({"strict": tool.strict} if tool.strict is not None else {}),
+            "strict": tool.strict,
         }
         for tool in tools
     ]
@@ -84,8 +87,9 @@ def tool_choice_of(choice: object) -> object:
 
 
 def body_of(request: CanonicalRequest, upstream_model: str) -> dict[str, Any]:
-    if request.stop is not None or request.seed is not None:
-        message = "unsupported_feature: stop and seed are not representable by Responses"
+    unsupported = [name for name, value in (("stop", request.stop), ("seed", request.seed), *request.extra.items()) if value is not None]
+    if unsupported:
+        message = f"unsupported_feature: {', '.join(unsupported)} are not representable by Responses"
         raise ValueError(message)
     body: dict[str, Any] = {
         "model": upstream_model,
@@ -150,7 +154,16 @@ def messages_of(value: object) -> list[CanonicalMessage]:  # noqa: PLR0912 - eac
             )
         elif kind == "reasoning":
             messages.append(
-                CanonicalMessage(role="assistant", content=[ReasoningPart(text="", signature=_text(item.get("encrypted_content")) or None)])
+                CanonicalMessage(
+                    role="assistant",
+                    content=[
+                        ReasoningPart(
+                            id=_text(item.get("id")) or None,
+                            text="",
+                            signature=_text(item.get("encrypted_content")) or None,
+                        )
+                    ],
+                )
             )
         elif kind == "message":
             role = item.get("role")
@@ -185,7 +198,13 @@ def response_parts(response: dict[str, Any]) -> list[AssistantPart]:
                     parts.append(TextPart(text=_text(block.get("text"))))
         elif item.get("type") == "reasoning":
             text = "".join(_text(_mapping(summary).get("text")) for summary in _items(item.get("summary")))
-            parts.append(ReasoningPart(text=text, signature=_text(item.get("encrypted_content")) or None))
+            parts.append(
+                ReasoningPart(
+                    id=_text(item.get("id")) or None,
+                    text=text,
+                    signature=_text(item.get("encrypted_content")) or None,
+                )
+            )
         elif item.get("type") == "function_call":
             parts.append(ToolCallPart(id=_text(item.get("call_id")), name=_text(item.get("name")), arguments=_text(item.get("arguments"))))
     return parts

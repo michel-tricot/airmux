@@ -18,6 +18,7 @@ providers:
   models_url: https://api.openai.com/v1/models
   ingress:
   - oai
+  - oai_responses
   auth:
   - bearer
   env_var: OPENAI_API_KEY

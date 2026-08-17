@@ -137,7 +137,11 @@ class OpenAIResponsesAdapter(EgressAdapter):
                     "arguments": str(item.get("arguments") or ""),
                 }
                 if item.get("type") == "reasoning":
-                    state.reasoning[index] = {"text": "", "signature": str(item.get("encrypted_content") or "")}
+                    state.reasoning[index] = {
+                        "id": str(item.get("id") or ""),
+                        "text": "",
+                        "signature": str(item.get("encrypted_content") or ""),
+                    }
             return []
         if kind == "response.output_text.delta":
             delta = str(data.get("delta") or "")
@@ -145,7 +149,7 @@ class OpenAIResponsesAdapter(EgressAdapter):
             return [CanonicalChunk(id=state.chunk_id, delta=TextDelta(text=delta))] if delta else []
         if kind in {"response.reasoning_summary_text.delta", "response.reasoning_text.delta"}:
             delta = str(data.get("delta") or "")
-            draft = state.reasoning.setdefault(index, {"text": "", "signature": ""})
+            draft = state.reasoning.setdefault(index, {"id": "", "text": "", "signature": ""})
             draft["text"] += delta
             return [CanonicalChunk(id=state.chunk_id, delta=ReasoningDelta(text=delta))] if delta else []
         if kind == "response.function_call_arguments.delta":
@@ -174,7 +178,7 @@ class OpenAIResponsesAdapter(EgressAdapter):
         for index in sorted(set(state.output) | set(state.text) | set(state.reasoning)):
             if index in state.reasoning:
                 draft = state.reasoning[index]
-                parts.append(ReasoningPart(text=draft["text"], signature=draft["signature"] or None))
+                parts.append(ReasoningPart(id=draft["id"] or None, text=draft["text"], signature=draft["signature"] or None))
             if text := state.text.get(index):
                 parts.append(TextPart(text=text))
             output = state.output.get(index)

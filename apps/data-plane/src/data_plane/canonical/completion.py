@@ -62,6 +62,7 @@ class ReasoningPart(Part):
     later turn whose reasoning comes back without it."""
 
     type: Literal["reasoning"] = "reasoning"
+    id: str | None = None
     text: str
     signature: str | None = None
 
