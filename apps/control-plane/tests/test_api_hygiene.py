@@ -33,11 +33,11 @@ def test_every_endpoint_declares_an_envelope():
 
 
 def test_every_endpoint_is_tagged_for_docs():
-    """ReDoc renders one sidebar section per tag: every operation carries exactly one resource tag, every tag is declared with a
-    description, and x-tagGroups covers every tag so none drop out of the grouped sidebar."""
+    """ReDoc renders one sidebar section per tag: every operation carries a resource tag, every tag is declared with a description,
+    and x-tagGroups covers every tag so none drop out of the grouped sidebar."""
     app = make_app()
-    untagged = [f"{sorted(r.methods or ())} {r.path}" for r in _api_routes(app) if len(r.tags) != 1]
-    assert untagged == [], f"Give these operations exactly one resource tag: {untagged}"
+    untagged = [f"{sorted(r.methods or ())} {r.path}" for r in _api_routes(app) if not r.tags]
+    assert untagged == [], f"Give these operations at least one resource tag: {untagged}"
     schema = app.openapi()
     used = {str(tag) for r in _api_routes(app) for tag in r.tags}
     declared = {t["name"] for t in schema.get("tags", [])}
@@ -62,25 +62,60 @@ def test_access_key_docs_distinguish_tenant_scopes():
         "create_org_access_key": ["Organization Access Keys"],
         "list_workspace_access_keys": ["Workspace Access Keys"],
         "create_workspace_access_key": ["Workspace Access Keys"],
-        "revoke_access_key": ["Access Key Revocation"],
+        "revoke_access_key": ["Instance Access Keys", "Organization Access Keys", "Workspace Access Keys"],
     }
 
 
-def test_tenant_management_doc_groups_match_authority_scopes():
+def test_documentation_groups_follow_authority_scopes():
     app = make_app()
     groups = {tag: group["name"] for group in app.openapi()["x-tagGroups"] for tag in group["tags"]}
-    allowed = {
-        "Instance Administration": {"instance_scope"},
-        "Organization Management": {"org_scope", "workspace_scope", "credential_scope"},
+    expected_by_scope = {
+        "instance_scope": {"Instance"},
+        "org_scope": {"Organization"},
+        "workspace_scope": {"Workspace"},
+        "bundle_scope": {"Data Plane API"},
+    }
+    expected_by_operation = {
+        "revoke_access_key": {"Instance", "Organization", "Workspace"},
+        "get_provider_credential": {"Organization", "Workspace"},
+        "update_provider_credential": {"Organization", "Workspace"},
+        "rotate_provider_credential": {"Organization", "Workspace"},
+        "delete_provider_credential": {"Organization", "Workspace"},
+        "ingest_events": {"Data Plane API"},
+        "heartbeat": {"Data Plane API"},
     }
     offenders = sorted(
-        f"{route.name}: {scope} under {group}"
+        f"{route.name}: expected {sorted(expected)}, documented under {sorted(actual)}"
         for route in _api_routes(app)
-        if (group := groups[route.tags[0]]) in allowed
         for dependency in route.dependant.dependencies
-        if (scope := getattr(dependency.call, "required_scope", None)) is not None and scope not in allowed[group]
+        if (scope := getattr(dependency.call, "required_scope", None)) is not None
+        if (expected := expected_by_operation.get(route.name, expected_by_scope.get(scope))) is not None
+        if (actual := {groups[tag] for tag in route.tags}) != expected
     )
     assert offenders == []
+
+
+def test_membership_and_workspace_docs_are_resource_specific():
+    operations = {operation["operationId"]: operation["tags"] for methods in make_app().openapi()["paths"].values() for operation in methods.values()}
+    assert {operation: operations[operation] for operation in ("list_org_users", "add_org_user", "remove_org_user")} == {
+        "list_org_users": ["Organization Members"],
+        "add_org_user": ["Organization Members"],
+        "remove_org_user": ["Organization Members"],
+    }
+    assert {operation: operations[operation] for operation in ("create_workspace", "list_workspaces")} == {
+        "create_workspace": ["Organization Workspaces"],
+        "list_workspaces": ["Organization Workspaces"],
+    }
+    assert {operation: operations[operation] for operation in ("get_workspace", "update_workspace", "delete_workspace")} == {
+        "get_workspace": ["Workspace Settings"],
+        "update_workspace": ["Workspace Settings"],
+        "delete_workspace": ["Workspace Settings"],
+    }
+    assert {operation: operations[operation] for operation in ("list_members", "add_member", "remove_member")} == {
+        "list_members": ["Workspace Members"],
+        "add_member": ["Workspace Members"],
+        "remove_member": ["Workspace Members"],
+    }
 
 
 def test_operation_ids_are_the_handler_names():

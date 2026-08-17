@@ -292,7 +292,9 @@ paths:
   /v1/access-keys/{key_id}:
     delete:
       tags:
-      - Access Key Revocation
+      - Instance Access Keys
+      - Organization Access Keys
+      - Workspace Access Keys
       summary: Revoke Access Key
       description: 'Revoke an access key and every key delegated from it.
 
@@ -823,7 +825,7 @@ paths:
   /v1/service-accounts:
     post:
       tags:
-      - Users
+      - Instance Users
       summary: Create Service Account
       description: 'Create a machine principal with an optional instance role.
 
@@ -859,7 +861,7 @@ paths:
   /v1/users/{user_id}:
     get:
       tags:
-      - Users
+      - Instance Users
       summary: Get User
       description: 'Return one human user or service account and its organization memberships.
 
@@ -897,7 +899,7 @@ paths:
           description: The credential does not have the required permission
     delete:
       tags:
-      - Users
+      - Instance Users
       summary: Delete User
       description: 'Delete a principal and its login identities, sessions, and control-plane access keys.
 
@@ -941,7 +943,7 @@ paths:
   /v1/users:
     get:
       tags:
-      - Users
+      - Instance Users
       summary: List Users
       description: 'List human users and service accounts across the instance.
 
@@ -981,7 +983,7 @@ paths:
   /v1/orgs:
     get:
       tags:
-      - Orgs
+      - Instance Organizations
       summary: List Organizations
       description: 'List every organization on the instance.
 
@@ -1010,7 +1012,7 @@ paths:
       - SessionCookie: []
     post:
       tags:
-      - Orgs
+      - Instance Organizations
       summary: Create Organization
       description: 'Create an organization.
 
@@ -1170,7 +1172,7 @@ paths:
   /v1/orgs/{org_id}/workspaces:
     post:
       tags:
-      - Workspaces
+      - Organization Workspaces
       summary: Create Workspace
       description: 'Create a workspace and make the creator its first admin when they belong to the organization.
 
@@ -1217,7 +1219,7 @@ paths:
           description: The credential does not have the required permission
     get:
       tags:
-      - Workspaces
+      - Organization Workspaces
       summary: List Workspaces
       description: 'List workspaces in an organization.
 
@@ -1256,7 +1258,7 @@ paths:
   /v1/orgs/{org_id}/workspaces/{workspace_ref}:
     get:
       tags:
-      - Workspaces
+      - Workspace Settings
       summary: Get Workspace
       description: 'Return a workspace by ID or slug.
 
@@ -1301,7 +1303,7 @@ paths:
           description: The credential does not have the required permission
     delete:
       tags:
-      - Workspaces
+      - Workspace Settings
       summary: Delete Workspace
       description: 'Delete a workspace, its memberships, inference keys, and provider credentials.
 
@@ -1349,7 +1351,7 @@ paths:
           description: The credential does not have the required permission
     patch:
       tags:
-      - Workspaces
+      - Workspace Settings
       summary: Update Workspace
       description: 'Update a workspace''s name or slug.
 
@@ -1401,7 +1403,7 @@ paths:
   /v1/orgs/{org_id}/workspaces/{workspace_ref}/members:
     get:
       tags:
-      - Workspaces
+      - Workspace Members
       summary: List Workspace Members
       description: 'List the members of a workspace and their workspace roles.
 
@@ -1447,7 +1449,7 @@ paths:
   /v1/orgs/{org_id}/workspaces/{workspace_ref}/members/{user_id}:
     put:
       tags:
-      - Workspaces
+      - Workspace Members
       summary: Add Workspace Member
       description: 'Add or update a workspace member who already belongs to the organization.
 
@@ -1506,7 +1508,7 @@ paths:
           description: The credential does not have the required permission
     delete:
       tags:
-      - Workspaces
+      - Workspace Members
       summary: Remove Workspace Member
       description: 'Remove a member from a workspace without changing organization membership.
 
@@ -1560,7 +1562,7 @@ paths:
   /v1/orgs/{org_id}/workspaces/{workspace_ref}/inference-keys:
     post:
       tags:
-      - Inference Keys
+      - Workspace Inference Keys
       summary: Create Inference Key
       description: 'Issue an inference key for model requests to this workspace and return its token once.
 
@@ -1611,7 +1613,7 @@ paths:
           description: The credential does not have the required permission
     get:
       tags:
-      - Inference Keys
+      - Workspace Inference Keys
       summary: List Inference Keys
       description: 'List inference-key metadata for a workspace without returning secret tokens.
 
@@ -1657,7 +1659,7 @@ paths:
   /v1/orgs/{org_id}/workspaces/{workspace_ref}/inference-keys/{key_id}:
     delete:
       tags:
-      - Inference Keys
+      - Workspace Inference Keys
       summary: Revoke Inference Key
       description: 'Revoke an inference key in a workspace.
 
@@ -1711,7 +1713,7 @@ paths:
   /v1/orgs/{org_id}/provider-credentials:
     post:
       tags:
-      - Provider Credentials
+      - Organization Provider Credentials
       summary: Create Org Provider Credential
       description: 'Store a provider API key for every workspace in an organization.
 
@@ -1755,7 +1757,7 @@ paths:
           description: The credential does not have the required permission
     get:
       tags:
-      - Provider Credentials
+      - Organization Provider Credentials
       summary: List Org Provider Credentials
       description: 'List provider credentials owned by an organization, including its workspace credentials.
 
@@ -1794,7 +1796,7 @@ paths:
   /v1/orgs/{org_id}/workspaces/{workspace_ref}/provider-credentials:
     post:
       tags:
-      - Provider Credentials
+      - Workspace Provider Credentials
       summary: Create Workspace Provider Credential
       description: 'Store a provider API key for one workspace.
 
@@ -1845,7 +1847,7 @@ paths:
           description: The credential does not have the required permission
     get:
       tags:
-      - Provider Credentials
+      - Workspace Provider Credentials
       summary: List Workspace Provider Credentials
       description: 'List provider credentials stored specifically for one workspace.
 
@@ -1891,7 +1893,8 @@ paths:
   /v1/orgs/{org_id}/provider-credentials/{credential_id}:
     get:
       tags:
-      - Provider Credentials
+      - Organization Provider Credentials
+      - Workspace Provider Credentials
       summary: Get Provider Credential
       description: 'Return provider credential metadata without its secret value.
 
@@ -1937,7 +1940,8 @@ paths:
           description: The credential does not have the required permission
     patch:
       tags:
-      - Provider Credentials
+      - Organization Provider Credentials
+      - Workspace Provider Credentials
       summary: Update Provider Credential
       description: 'Update a provider credential''s priority or enabled state.
 
@@ -1989,7 +1993,8 @@ paths:
           description: The credential does not have the required permission
     delete:
       tags:
-      - Provider Credentials
+      - Organization Provider Credentials
+      - Workspace Provider Credentials
       summary: Delete Provider Credential
       description: 'Delete provider credential metadata and its stored secret value.
 
@@ -2036,7 +2041,8 @@ paths:
   /v1/orgs/{org_id}/provider-credentials/{credential_id}/value:
     put:
       tags:
-      - Provider Credentials
+      - Organization Provider Credentials
+      - Workspace Provider Credentials
       summary: Rotate Provider Credential
       description: 'Replace a provider credential''s secret value.
 
@@ -2089,7 +2095,7 @@ paths:
   /v1/orgs/{org_id}/users:
     get:
       tags:
-      - Org Users
+      - Organization Members
       summary: List Organization Members
       description: 'List the human users and service accounts that belong to an organization.
 
@@ -2128,7 +2134,7 @@ paths:
   /v1/orgs/{org_id}/users/{user_id}:
     put:
       tags:
-      - Org Users
+      - Organization Members
       summary: Add Organization Member
       description: 'Add a principal to an organization or update its organization role.
 
@@ -2180,7 +2186,7 @@ paths:
           description: The credential does not have the required permission
     delete:
       tags:
-      - Org Users
+      - Organization Members
       summary: Remove Organization Member
       description: 'Remove a principal from an organization and its workspaces.
 
@@ -2227,7 +2233,7 @@ paths:
   /v1/orgs/{org_id}/bundles/compile:
     post:
       tags:
-      - Bundles
+      - Organization Bundles
       summary: Compile Policy Bundle
       description: 'Compile and sign a new policy bundle from the organization''s current configuration.
 
@@ -2266,7 +2272,7 @@ paths:
   /v1/orgs/{org_id}/bundles:
     get:
       tags:
-      - Bundles
+      - Organization Bundles
       summary: List Bundles
       description: 'List policy bundle metadata for an organization.
 
@@ -2305,7 +2311,7 @@ paths:
   /v1/orgs/{org_id}/events:
     get:
       tags:
-      - Events
+      - Organization Usage Events
       summary: List Org Events
       description: 'List usage events across an organization with cursor pagination.
 
@@ -2394,7 +2400,7 @@ paths:
   /v1/orgs/{org_id}/workspaces/{workspace_ref}/events:
     get:
       tags:
-      - Events
+      - Workspace Usage Events
       summary: List Workspace Events
       description: 'List usage events for one workspace with cursor pagination.
 
@@ -2656,7 +2662,7 @@ paths:
   /v1/instance/taxonomy:
     get:
       tags:
-      - Taxonomy
+      - Instance Model Catalog
       summary: Get Instance Model Catalog
       description: 'Return the provider and model catalog at instance scope.
 
@@ -2686,7 +2692,7 @@ paths:
   /v1/orgs/{org_id}/taxonomy:
     get:
       tags:
-      - Taxonomy
+      - Organization Model Catalog
       summary: Get Organization Model Catalog
       description: 'Return the provider and model catalog available to an organization.
 
@@ -2725,7 +2731,7 @@ paths:
   /v1/orgs/{org_id}/workspaces/{workspace_ref}/taxonomy:
     get:
       tags:
-      - Taxonomy
+      - Workspace Model Catalog
       summary: Get Workspace Model Catalog
       description: 'Return the provider and model catalog available to a workspace.
 
@@ -2771,7 +2777,7 @@ paths:
   /v1/instance/taxonomy/providers:
     post:
       tags:
-      - Taxonomy
+      - Instance Model Catalog
       summary: Create or Update Provider
       description: 'Create a provider or replace the catalog entry with the same name.
 
@@ -2807,7 +2813,7 @@ paths:
   /v1/instance/taxonomy/models:
     post:
       tags:
-      - Taxonomy
+      - Instance Model Catalog
       summary: Create or Update Model
       description: 'Create a model or replace the catalog entry with the same name.
 
@@ -5428,83 +5434,117 @@ components:
       name: airllm_session
       description: Browser session cookie returned by login or signup. Browser requests must also send `X-Requested-With`.
 tags:
-- name: Orgs
-  description: Create and manage organizations on this AirLLM instance
+- name: Auth
+  description: Sign in human users, manage browser sessions, and authorize the CLI
+  x-displayName: Authentication
+- name: Enrollment
+  description: List a user's organizations and create their personal organization
+- name: Instance Organizations
+  description: List and create organizations on this AirLLM instance
   x-displayName: Organizations
-- name: Organization Settings
-  description: View, update, and delete one organization
-- name: Users
+- name: Instance Users
   description: Manage human users and service accounts across the instance
+  x-displayName: Users
 - name: Instance Access Keys
-  description: List access keys across the instance and issue instance-scoped credentials
-- name: Organization Access Keys
-  description: List access keys within an organization and issue organization-scoped credentials
-- name: Workspace Access Keys
-  description: List and issue access keys scoped to one workspace
-- name: Access Key Revocation
-  description: Revoke an access key at the scope recorded on that key
+  description: List access keys across the instance, issue instance-scoped credentials, and revoke keys
+  x-displayName: Access Keys
+- name: Instance Model Catalog
+  description: Manage the providers and models available through this AirLLM instance
+  x-displayName: Model Catalog
 - name: Data Plane Instances
-  description: Inspect data-plane instances connected to this AirLLM instance
-- name: Data Plane API
-  description: Poll bundles, ingest usage events, and record data-plane heartbeats
+  description: Inspect connected data-plane instances
+  x-displayName: Data Planes
+- name: Instance Activity
+  description: Inspect recent audited changes across the instance
+  x-displayName: Activity
 - name: OSS
   description: Bootstrap a new self-hosted AirLLM deployment
   x-displayName: Self-hosting
-- name: Org Users
+- name: Organization Settings
+  description: View, update, and delete one organization
+  x-displayName: Settings
+- name: Organization Members
   description: Manage organization membership and organization roles
-  x-displayName: Users
-- name: Workspaces
-  description: Manage isolated environments within an organization
-- name: Inference Keys
-  description: Issue and revoke credentials for model requests to a workspace
-- name: Auth
-  description: Sign in human users, manage browser sessions, and authorize the CLI
-- name: Enrollment
-  description: List a user's organizations and create their personal organization
-- name: Bundles
-  description: Compile and inspect signed policy bundles for an organization
-- name: Events
-  description: Inspect usage events reported by data planes
-- name: Taxonomy
-  description: Manage the providers and models available through AirLLM
-  x-displayName: Model Catalog
-- name: Provider Credentials
-  description: Manage provider API keys for an organization or workspace
-- name: Instance Activity
-  description: Inspect recent audited changes across the instance
+  x-displayName: Members
+- name: Organization Workspaces
+  description: List and create workspaces within an organization
+  x-displayName: Workspaces
+- name: Organization Access Keys
+  description: List access keys within an organization, issue organization-scoped credentials, and revoke keys
+  x-displayName: Access Keys
+- name: Organization Provider Credentials
+  description: Manage provider API keys available across an organization
+  x-displayName: Provider Credentials
+- name: Organization Bundles
+  description: Compile and inspect signed policy bundles
+  x-displayName: Bundles
+- name: Organization Usage Events
+  description: Inspect usage events across an organization
+  x-displayName: Usage Events
 - name: Organization Activity
-  description: Inspect recent audited changes in one organization
+  description: Inspect recent audited changes in an organization
+  x-displayName: Activity
+- name: Organization Model Catalog
+  description: Inspect the provider and model catalog available to an organization
+  x-displayName: Model Catalog
+- name: Workspace Settings
+  description: View, update, and delete one workspace
+  x-displayName: Settings
+- name: Workspace Members
+  description: Manage workspace membership and workspace roles
+  x-displayName: Members
+- name: Workspace Access Keys
+  description: List and issue access keys scoped to a workspace and revoke keys
+  x-displayName: Access Keys
+- name: Workspace Inference Keys
+  description: Issue and revoke credentials for model requests to a workspace
+  x-displayName: Inference Keys
+- name: Workspace Provider Credentials
+  description: Manage provider API keys available to one workspace
+  x-displayName: Provider Credentials
+- name: Workspace Usage Events
+  description: Inspect usage events for one workspace
+  x-displayName: Usage Events
+- name: Workspace Model Catalog
+  description: Inspect the provider and model catalog available to a workspace
+  x-displayName: Model Catalog
+- name: Data Plane API
+  description: Poll bundles, ingest usage events, and record data-plane heartbeats
+  x-displayName: Synchronization
 x-tagGroups:
-- name: Organization Management
-  tags:
-  - Organization Settings
-  - Org Users
-  - Workspaces
-  - Inference Keys
-  - Provider Credentials
-  - Bundles
-  - Events
-  - Organization Activity
 - name: Account
   tags:
   - Auth
   - Enrollment
-- name: Catalog
+- name: Instance
   tags:
-  - Taxonomy
-- name: Access Keys
-  tags:
+  - Instance Organizations
+  - Instance Users
   - Instance Access Keys
-  - Organization Access Keys
-  - Workspace Access Keys
-  - Access Key Revocation
-- name: Data Plane API
-  tags:
-  - Data Plane API
-- name: Instance Administration
-  tags:
-  - Orgs
-  - Users
+  - Instance Model Catalog
   - Data Plane Instances
   - Instance Activity
   - OSS
+- name: Organization
+  tags:
+  - Organization Settings
+  - Organization Members
+  - Organization Workspaces
+  - Organization Access Keys
+  - Organization Provider Credentials
+  - Organization Bundles
+  - Organization Usage Events
+  - Organization Activity
+  - Organization Model Catalog
+- name: Workspace
+  tags:
+  - Workspace Settings
+  - Workspace Members
+  - Workspace Access Keys
+  - Workspace Inference Keys
+  - Workspace Provider Credentials
+  - Workspace Usage Events
+  - Workspace Model Catalog
+- name: Data Plane API
+  tags:
+  - Data Plane API

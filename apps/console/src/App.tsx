@@ -27,6 +27,7 @@ const AccessKeys = lazy(() => import('@/pages/AccessKeys'));
 const CliApprove = lazy(() => import('@/pages/CliApprove'));
 const AppOrgPicker = lazy(() => import('@/pages/app/OrgPicker'));
 const AppDashboard = lazy(() => import('@/pages/app/Dashboard'));
+const AppModels = lazy(() => import('@/pages/app/Models'));
 const AppOrgSettings = lazy(() => import('@/pages/app/OrgSettings'));
 const WorkspaceOverview = lazy(() => import('@/pages/app/workspace/Overview'));
 const WorkspaceApiKeys = lazy(() => import('@/pages/app/workspace/ApiKeys'));
@@ -111,6 +112,7 @@ function AppSection() {
             </Route>
             <Route path="/org/workspaces/:workspaceRef/settings" component={WorkspaceSettings} />
             <Route path="/org/workspaces/:workspaceRef" component={WorkspaceOverview} />
+            <Route path="/org/models" component={AppModels} />
             <Route path="/org/settings" component={AppOrgSettings} />
             <Route component={NotFound} />
           </Switch>

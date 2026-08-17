@@ -118,7 +118,11 @@ async def create_workspace_access_key(body: AccessKeyIn, workspace: WorkspaceDep
     return await _create_access_key(body, actor, Scope.workspace(workspace.org_id, workspace.id))
 
 
-@router.delete("/access-keys/{key_id}", tags=["Access Key Revocation"], dependencies=[require(Permission.access_keys_revoke, access_key_scope)])
+@router.delete(
+    "/access-keys/{key_id}",
+    tags=["Instance Access Keys", "Organization Access Keys", "Workspace Access Keys"],
+    dependencies=[require(Permission.access_keys_revoke, access_key_scope)],
+)
 async def revoke_access_key(key: AccessKeyDep) -> Envelope[AccessKeyRevokedOut]:
     """Revoke an access key and every key delegated from it."""
     revoked_at = datetime.now(tz=UTC)

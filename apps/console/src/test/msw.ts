@@ -40,6 +40,7 @@ export const server = setupServer(
   http.get('/v1/orgs/:orgId/access-keys', () => HttpResponse.json([])),
   http.get('/v1/orgs/:orgId/bundles', () => HttpResponse.json([])),
   http.get('/v1/orgs/:orgId/activity', () => HttpResponse.json([])),
+  http.get('/v1/orgs/:orgId/taxonomy', () => HttpResponse.json({ providers: [], models: [] })),
   http.get('/v1/orgs/:orgId/workspaces/:workspaceRef/taxonomy', () => HttpResponse.json({ providers: [], models: [] })),
   http.get('/v1/orgs/:orgId/users', () => HttpResponse.json([])),
   http.get('/v1/orgs/:orgId/events', () => HttpResponse.json([])),

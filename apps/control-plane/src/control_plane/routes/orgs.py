@@ -15,7 +15,7 @@ from control_plane.routes.provider_credentials import secret_store
 router = APIRouter(prefix="/orgs")
 
 
-@router.post("", tags=["Orgs"], dependencies=[require(Permission.organizations_create, instance_scope)])
+@router.post("", tags=["Instance Organizations"], dependencies=[require(Permission.organizations_create, instance_scope)])
 async def create_org(body: OrgCreate) -> Envelope[OrgOut]:
     """Create an organization."""
     org = await Org(name=body.name).save()
@@ -31,7 +31,7 @@ async def update_org(org_id: UUID, body: OrgUpdate) -> Envelope[OrgOut]:
     return Envelope(data=OrgOut.model_validate(await org.apply(body).save()))
 
 
-@router.get("", tags=["Orgs"], dependencies=[require(Permission.organizations_read, instance_scope)])
+@router.get("", tags=["Instance Organizations"], dependencies=[require(Permission.organizations_read, instance_scope)])
 async def list_orgs() -> Envelope[list[OrgOut]]:
     """List every organization on the instance."""
     return Envelope(data=[OrgOut.model_validate(r) for r in await Org.find(order_by=col(Org.name))])
