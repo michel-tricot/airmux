@@ -28,13 +28,13 @@ const AccessKeys = lazy(() => import('@/pages/AccessKeys'));
 const CliApprove = lazy(() => import('@/pages/CliApprove'));
 const AppOrgPicker = lazy(() => import('@/pages/app/OrgPicker'));
 const AppDashboard = lazy(() => import('@/pages/app/Dashboard'));
-const AppModels = lazy(() => import('@/pages/app/Models'));
 const AppOrgSettings = lazy(() => import('@/pages/app/OrgSettings'));
 const WorkspaceOverview = lazy(() => import('@/pages/app/workspace/Overview'));
 const WorkspaceApiKeys = lazy(() => import('@/pages/app/workspace/ApiKeys'));
 const WorkspaceByok = lazy(() => import('@/pages/app/workspace/Byok'));
 const WorkspaceSettings = lazy(() => import('@/pages/app/workspace/Settings'));
 const WorkspaceComingSoon = lazy(() => import('@/pages/app/workspace/ComingSoon'));
+const WorkspacePlayground = lazy(() => import('@/pages/app/workspace/Playground'));
 
 function apiErrorDetail(error: unknown): string | undefined {
   if (!(error instanceof ApiError)) return undefined;
@@ -99,6 +99,7 @@ function AppSection() {
         <Suspense fallback={<LoadingState label="Loading page..." />}>
           <Switch>
             <Route path="/org" component={AppDashboard} />
+            <Route path="/org/workspaces/:workspaceRef/playground" component={WorkspacePlayground} />
             <Route path="/org/workspaces/:workspaceRef/keys" component={WorkspaceApiKeys} />
             <Route path="/org/workspaces/:workspaceRef/byok" component={WorkspaceByok} />
             <Route path="/org/workspaces/:workspaceRef/routing">
@@ -113,7 +114,6 @@ function AppSection() {
             </Route>
             <Route path="/org/workspaces/:workspaceRef/settings" component={WorkspaceSettings} />
             <Route path="/org/workspaces/:workspaceRef" component={WorkspaceOverview} />
-            <Route path="/org/models" component={AppModels} />
             <Route path="/org/settings" component={AppOrgSettings} />
             <Route component={NotFound} />
           </Switch>
