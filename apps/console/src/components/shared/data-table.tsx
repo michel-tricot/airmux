@@ -1,10 +1,11 @@
-import { type ReactNode } from 'react';
+import { type AriaAttributes, type ReactNode } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/elements';
 import { LoadingState, ErrorState, EmptyState } from '@/components/shared/states';
 
 export interface Column<T> {
   key: string;
   header: ReactNode;
+  sortDirection?: AriaAttributes['aria-sort'];
   headClassName?: string;
   cellClassName?: string;
   cell: (row: T) => ReactNode;
@@ -50,7 +51,7 @@ export function DataTable<T>({
       <TableHeader>
         <TableRow>
           {columns.map((col) => (
-            <TableHead key={col.key} className={col.headClassName}>
+            <TableHead key={col.key} className={col.headClassName} aria-sort={col.sortDirection}>
               {col.header}
             </TableHead>
           ))}

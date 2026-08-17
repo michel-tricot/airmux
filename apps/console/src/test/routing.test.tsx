@@ -42,6 +42,30 @@ describe('workspace section deep links', () => {
   });
 });
 
+describe('organization section deep links', () => {
+  it('renders models outside the workspace routes', async () => {
+    renderAt('/org/models');
+    expect(await screen.findByRole('heading', { level: 1, name: 'Models' })).toBeInTheDocument();
+    expect(await screen.findByRole('link', { name: 'Models' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.queryByRole('combobox', { name: 'Workspace' })).toBeInTheDocument();
+  });
+
+  it('keeps the current workspace selected while navigating organization pages', async () => {
+    const user = userEvent.setup();
+    renderAt(`/org/workspaces/${WS.slug}`);
+    await screen.findByRole('heading', { level: 1, name: WS.name });
+    expect(screen.getByRole('combobox', { name: 'Workspace' })).toHaveTextContent(WS.name);
+
+    await user.click(screen.getByRole('link', { name: 'Models' }));
+    expect(await screen.findByRole('heading', { level: 1, name: 'Models' })).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Workspace' })).toHaveTextContent(WS.name);
+
+    await user.click(screen.getByRole('link', { name: 'Org Settings' }));
+    expect(await screen.findByRole('heading', { level: 1, name: 'Organization Settings' })).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Workspace' })).toHaveTextContent(WS.name);
+  });
+});
+
 describe('default workspace selection', () => {
   it('redirects /org to the first workspace when none was selected before', async () => {
     renderAt('/org');

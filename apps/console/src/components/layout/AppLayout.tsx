@@ -14,6 +14,7 @@ import {
   Route as RouteIcon,
   ShieldCheck,
   Building2,
+  Boxes,
   Plus,
 } from 'lucide-react';
 import { useEnrollment } from '@workspace/api-client-react';
@@ -49,21 +50,22 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [createOpen, setCreateOpen] = useState(false);
 
   const match = location.match(/^\/org\/workspaces\/([^/]+)(\/[^/]+)?/);
-  const activeWorkspaceRef = match?.[1] ?? '';
+  const routedWorkspaceRef = match?.[1] ?? '';
   const activeSuffix = match?.[2] ?? '';
-  const activeWorkspace = workspaces?.find((workspace) => workspace.slug === activeWorkspaceRef || workspace.id === activeWorkspaceRef);
-  const activeWorkspaceSlug = activeWorkspace?.slug ?? activeWorkspaceRef;
   const lastWorkspaceKey = `airllm_last_ws_${orgId}`;
+  const selectedWorkspaceRef = routedWorkspaceRef || window.localStorage.getItem(lastWorkspaceKey) || '';
+  const activeWorkspace = workspaces?.find((workspace) => workspace.slug === selectedWorkspaceRef || workspace.id === selectedWorkspaceRef);
+  const activeWorkspaceSlug = activeWorkspace?.slug ?? routedWorkspaceRef;
 
   useEffect(() => {
     if (activeWorkspaceSlug) window.localStorage.setItem(lastWorkspaceKey, activeWorkspaceSlug);
   }, [activeWorkspaceSlug, lastWorkspaceKey]);
 
   useEffect(() => {
-    if (activeWorkspace && activeWorkspaceRef !== activeWorkspace.slug) {
+    if (routedWorkspaceRef && activeWorkspace && routedWorkspaceRef !== activeWorkspace.slug) {
       setLocation(`/org/workspaces/${activeWorkspace.slug}${activeSuffix}`, { replace: true });
     }
-  }, [activeSuffix, activeWorkspace, activeWorkspaceRef, setLocation]);
+  }, [activeSuffix, activeWorkspace, routedWorkspaceRef, setLocation]);
 
   const autoPickedOrg = useRef<string | null>(null);
   useEffect(() => {
@@ -162,6 +164,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <div className="mb-2 mt-6 px-3 font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Organization</div>
             {[
               { href: '/org', label: 'Overview', icon: Building2 },
+              { href: '/org/models', label: 'Models', icon: Boxes },
               { href: '/org/settings', label: 'Org Settings', icon: Settings },
             ].map((item) => {
               const isActive = location === item.href;
