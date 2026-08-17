@@ -11,13 +11,10 @@
  * OpenAPI spec version: 0.1.0
  */
 
-/**
- * Adapter kind
- */
-export type ProviderInKind = typeof ProviderInKind[keyof typeof ProviderInKind];
+export type ModelEntryEgressKind = typeof ModelEntryEgressKind[keyof typeof ModelEntryEgressKind] | null;
 
 
-export const ProviderInKind = {
+export const ModelEntryEgressKind = {
   openai_compatible: 'openai_compatible',
   openai_responses: 'openai_responses',
   anthropic: 'anthropic',

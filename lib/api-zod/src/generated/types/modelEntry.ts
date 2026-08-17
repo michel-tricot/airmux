@@ -10,6 +10,7 @@
  *
  * OpenAPI spec version: 0.1.0
  */
+import type { ModelEntryEgressKind } from './modelEntryEgressKind';
 
 /**
  * A routable model: the caller-facing id plus how to reach and bill it.
@@ -25,4 +26,5 @@ export interface ModelEntry {
   context_window: number;
   max_output_tokens?: number | null;
   capabilities: string[];
+  egress_kind?: ModelEntryEgressKind;
 }

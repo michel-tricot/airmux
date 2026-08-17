@@ -16,6 +16,7 @@ export interface ModelOut {
   name: string;
   provider_id: string;
   upstream_model: string;
+  egress_kind: string | null;
   input_price_per_mtok: number;
   output_price_per_mtok: number;
   cache_read_price_per_mtok: number;

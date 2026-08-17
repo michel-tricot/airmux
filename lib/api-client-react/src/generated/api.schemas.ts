@@ -177,6 +177,7 @@ export type ProviderEntryKind = typeof ProviderEntryKind[keyof typeof ProviderEn
 
 export const ProviderEntryKind = {
   openai_compatible: 'openai_compatible',
+  openai_responses: 'openai_responses',
   anthropic: 'anthropic',
 } as const;
 
@@ -198,6 +199,15 @@ export interface ProviderEntry {
   params_closed?: boolean;
 }
 
+export type ModelEntryEgressKind = typeof ModelEntryEgressKind[keyof typeof ModelEntryEgressKind] | null;
+
+
+export const ModelEntryEgressKind = {
+  openai_compatible: 'openai_compatible',
+  openai_responses: 'openai_responses',
+  anthropic: 'anthropic',
+} as const;
+
 /**
  * A routable model: the caller-facing id plus how to reach and bill it.
  */
@@ -212,6 +222,7 @@ export interface ModelEntry {
   context_window: number;
   max_output_tokens?: number | null;
   capabilities: string[];
+  egress_kind?: ModelEntryEgressKind;
 }
 
 /**
@@ -501,6 +512,18 @@ export interface MembershipOut {
   status: 'member';
 }
 
+/**
+ * Per-model egress adapter override
+ */
+export type ModelInEgressKind = typeof ModelInEgressKind[keyof typeof ModelInEgressKind] | null;
+
+
+export const ModelInEgressKind = {
+  openai_compatible: 'openai_compatible',
+  openai_responses: 'openai_responses',
+  anthropic: 'anthropic',
+} as const;
+
 export interface ModelIn {
   /**
      * Caller-facing model name
@@ -520,6 +543,8 @@ export interface ModelIn {
      * @maxLength 255
      */
   upstream_model?: string;
+  /** Per-model egress adapter override */
+  egress_kind?: ModelInEgressKind;
   /**
      * USD per million input tokens
      * @minimum 0
@@ -560,6 +585,7 @@ export interface ModelOut {
   name: string;
   provider_id: string;
   upstream_model: string;
+  egress_kind: string | null;
   input_price_per_mtok: number;
   output_price_per_mtok: number;
   cache_read_price_per_mtok: number;
@@ -715,6 +741,7 @@ export type ProviderInKind = typeof ProviderInKind[keyof typeof ProviderInKind];
 
 export const ProviderInKind = {
   openai_compatible: 'openai_compatible',
+  openai_responses: 'openai_responses',
   anthropic: 'anthropic',
 } as const;
 
