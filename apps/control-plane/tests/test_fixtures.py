@@ -28,7 +28,7 @@ NOW = datetime(2026, 8, 9, tzinfo=UTC)
 def test_apply_refuses_a_database_that_already_holds_accounts(tmp_path):
     cp = setup_control_plane(tmp_path)
     with TestClient(cp.app) as c:
-        c.post("/v1/auth/signup", json={"email": "real@example.com", "password": "hunter2hunter2", "name": "Real"}, headers=CSRF)
+        c.post("/api/v1/auth/signup", json={"email": "real@example.com", "password": "hunter2hunter2", "name": "Real"}, headers=CSRF)
 
     with pytest.raises(NotAnEmptyDatabaseError):
         run_in_db(tmp_path, lambda: apply_fixtures(NOW, MemoryStoreConfig().build()))
@@ -40,7 +40,7 @@ def test_cli_refuses_a_database_that_is_not_empty(tmp_path):
     cp = setup_control_plane(tmp_path)
     cfg = write_config(tmp_path, cp)
     with TestClient(cp.app) as c:
-        c.post("/v1/auth/signup", json={"email": "real@example.com", "password": "hunter2hunter2", "name": "Real"}, headers=CSRF)
+        c.post("/api/v1/auth/signup", json={"email": "real@example.com", "password": "hunter2hunter2", "name": "Real"}, headers=CSRF)
 
     refused = runner.invoke(cli_app, ["fixtures", "--config", cfg])
 

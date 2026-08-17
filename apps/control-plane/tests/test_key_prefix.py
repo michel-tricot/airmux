@@ -21,8 +21,8 @@ def test_inference_key_listing_carries_the_token_head(tmp_path):
         headers = cp.headers(org)
         workspace = make_workspace(c, headers, "staging")
 
-        minted = _one(c.post(f"/v1/orgs/{org}/workspaces/{workspace}/inference-keys", json={"label": "k"}, headers=headers))
-        listed = _one(c.get(f"/v1/orgs/{org}/workspaces/{workspace}/inference-keys", headers=headers))[0]
+        minted = _one(c.post(f"/api/v1/orgs/{org}/workspaces/{workspace}/inference-keys", json={"label": "k"}, headers=headers))
+        listed = _one(c.get(f"/api/v1/orgs/{org}/workspaces/{workspace}/inference-keys", headers=headers))[0]
 
         assert minted["token"].startswith(listed["prefix"])
         assert listed["prefix"] != minted["token"]
@@ -38,12 +38,12 @@ def test_access_key_listing_carries_the_token_head(tmp_path):
 
         minted = _one(
             c.post(
-                f"/v1/orgs/{org}/access-keys",
+                f"/api/v1/orgs/{org}/access-keys",
                 json={"label": "ci", "permissions": [Permission.workspaces_read]},
                 headers=headers,
             )
         )
-        listed = next(k for k in _one(c.get(f"/v1/orgs/{org}/access-keys", headers=headers)) if k["id"] == minted["id"])
+        listed = next(k for k in _one(c.get(f"/api/v1/orgs/{org}/access-keys", headers=headers)) if k["id"] == minted["id"])
 
         assert minted["token"].startswith(listed["prefix"])
         assert listed["prefix"].startswith("sk-cp-")
@@ -53,8 +53,8 @@ def test_instance_bound_access_key_uses_the_same_prefix(tmp_path):
     cp = setup_control_plane(tmp_path)
     root = cp.headers()
     with TestClient(cp.app) as c:
-        minted = _one(c.post("/v1/instance/access-keys", json={"label": "admin", "permissions": [Permission.organizations_read]}, headers=root))
-        listed = next(k for k in _one(c.get("/v1/instance/access-keys", headers=root)) if k["id"] == minted["id"])
+        minted = _one(c.post("/api/v1/instance/access-keys", json={"label": "admin", "permissions": [Permission.organizations_read]}, headers=root))
+        listed = next(k for k in _one(c.get("/api/v1/instance/access-keys", headers=root)) if k["id"] == minted["id"])
 
         assert minted["token"].startswith(listed["prefix"])
         assert listed["prefix"].startswith("sk-cp-")
@@ -68,8 +68,8 @@ def test_two_keys_of_a_kind_are_told_apart_by_their_prefix(tmp_path):
         headers = cp.headers(org)
 
         body = {"label": "same", "permissions": [Permission.workspaces_read]}
-        first = _one(c.post(f"/v1/orgs/{org}/access-keys", json=body, headers=headers))
-        second = _one(c.post(f"/v1/orgs/{org}/access-keys", json=body, headers=headers))
-        listed = {k["id"]: k["prefix"] for k in _one(c.get(f"/v1/orgs/{org}/access-keys", headers=headers))}
+        first = _one(c.post(f"/api/v1/orgs/{org}/access-keys", json=body, headers=headers))
+        second = _one(c.post(f"/api/v1/orgs/{org}/access-keys", json=body, headers=headers))
+        listed = {k["id"]: k["prefix"] for k in _one(c.get(f"/api/v1/orgs/{org}/access-keys", headers=headers))}
 
         assert listed[first["id"]] != listed[second["id"]]

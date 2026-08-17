@@ -247,7 +247,7 @@ class ControlPlaneApp(FastAPI):
             ]
             access = [kind for dependency in route.dependant.dependencies if (kind := getattr(dependency.call, "access", None)) is not None]
             for method in route.methods or ():
-                path = "/v1" + route.path
+                path = "/api/v1" + route.path
                 operation = schema["paths"][path][method.lower()]
                 operation["summary"] = OPERATION_SUMMARIES.get(route.name, operation["summary"])
                 for parameter in operation.get("parameters", []):

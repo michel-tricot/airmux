@@ -13,26 +13,26 @@ PASSWORD = "correct horse battery"
 
 
 def _signup(client, email):
-    return client.post("/v1/auth/signup", json={"email": email, "name": email, "password": PASSWORD})
+    return client.post("/api/v1/auth/signup", json={"email": email, "name": email, "password": PASSWORD})
 
 
 def test_the_first_human_claims_the_instance(tmp_path):
     cp = setup_control_plane(tmp_path)
     with TestClient(cp.app) as c:
-        assert c.get("/v1/instance/oss/claim").json()["data"]["claimed"] is False
+        assert c.get("/api/v1/instance/oss/claim").json()["data"]["claimed"] is False
 
         founder = _signup(c, "founder@example.com")
         assert founder.status_code == 200, founder.text
         assert founder.json()["data"]["instance_role"] == "owner"
 
-        assert c.get("/v1/instance/oss/claim").json()["data"]["claimed"] is True
+        assert c.get("/api/v1/instance/oss/claim").json()["data"]["claimed"] is True
 
 
 def test_later_signups_are_ordinary_accounts(tmp_path):
     cp = setup_control_plane(tmp_path)
     with TestClient(cp.app) as c:
         _signup(c, "founder@example.com")
-        c.post("/v1/auth/logout")
+        c.post("/api/v1/auth/logout")
 
         second = _signup(c, "later@example.com")
         assert second.status_code == 200, second.text
@@ -45,11 +45,11 @@ def test_the_founder_reaches_the_instance_endpoints_and_others_do_not(tmp_path):
     with TestClient(cp.app) as c:
         _signup(c, "founder@example.com")
         headers = {"X-Requested-With": "XMLHttpRequest"}
-        assert c.get("/v1/orgs", headers=headers).status_code == 200
+        assert c.get("/api/v1/orgs", headers=headers).status_code == 200
 
-        c.post("/v1/auth/logout", headers=headers)
+        c.post("/api/v1/auth/logout", headers=headers)
         _signup(c, "later@example.com")
-        assert c.get("/v1/orgs", headers=headers).status_code == 403
+        assert c.get("/api/v1/orgs", headers=headers).status_code == 403
 
 
 def test_racing_signups_produce_one_owner(tmp_path):
@@ -79,5 +79,5 @@ def test_a_service_account_does_not_claim_the_instance(tmp_path):
     run_in_db(tmp_path, add_robot)
 
     with TestClient(cp.app) as c:
-        assert c.get("/v1/instance/oss/claim").json()["data"]["claimed"] is False
+        assert c.get("/api/v1/instance/oss/claim").json()["data"]["claimed"] is False
         assert _signup(c, "founder@example.com").json()["data"]["instance_role"] == "owner"

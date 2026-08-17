@@ -193,7 +193,7 @@ def _complete(app, caller_token):
     mock_control_plane()
     with TestClient(app) as client:
         return client.post(
-            "/v1/chat/completions",
+            "/inf/v1/chat/completions",
             headers={"Authorization": f"Bearer {caller_token}"},
             json={"model": "gpt-test", "messages": [{"role": "user", "content": "hi"}]},
         )

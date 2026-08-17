@@ -32,19 +32,19 @@ describe('customFetch', () => {
     fetchMock.mockResolvedValue(jsonResponse({ data: { id: 'item-1' } }));
     vi.stubGlobal('fetch', fetchMock);
 
-    await expect(customFetch<{ id: string }>('/v1/items')).resolves.toEqual({ id: 'item-1' });
+    await expect(customFetch<{ id: string }>('/api/v1/items')).resolves.toEqual({ id: 'item-1' });
   });
 
   it('preserves error data and request context', async () => {
     fetchMock.mockResolvedValue(jsonResponse({ detail: 'Access denied' }, { status: 403, statusText: 'Forbidden' }));
     vi.stubGlobal('fetch', fetchMock);
 
-    const error = await rejectionOf(customFetch('/v1/items', { method: 'POST' }));
+    const error = await rejectionOf(customFetch('/api/v1/items', { method: 'POST' }));
     expect(error).toMatchObject({
       name: 'ApiError',
       status: 403,
       method: 'POST',
-      url: '/v1/items',
+      url: '/api/v1/items',
       data: { detail: 'Access denied' },
       message: 'HTTP 403 Forbidden: Access denied',
     });
@@ -57,7 +57,7 @@ describe('customFetch', () => {
     setDefaultHeaders(() => ({ 'X-Trace-Id': 'default-trace', 'X-Skip': null }));
     setAuthTokenGetter(() => 'default-token');
 
-    await customFetch('/v1/items', {
+    await customFetch('/api/v1/items', {
       headers: { Authorization: 'Bearer explicit-token', 'X-Trace-Id': 'selected-trace' },
     });
 
@@ -71,16 +71,16 @@ describe('customFetch', () => {
     fetchMock.mockResolvedValue(new Response(null, { status: 204 }));
     vi.stubGlobal('fetch', fetchMock);
 
-    await expect(customFetch('/v1/items', { method: 'DELETE' })).resolves.toBeNull();
+    await expect(customFetch('/api/v1/items', { method: 'DELETE' })).resolves.toBeNull();
   });
 
   it('reports malformed JSON with the raw response', async () => {
     fetchMock.mockResolvedValue(new Response('{broken', { headers: { 'content-type': 'application/json' } }));
     vi.stubGlobal('fetch', fetchMock);
 
-    const error = await rejectionOf(customFetch('/v1/items'));
+    const error = await rejectionOf(customFetch('/api/v1/items'));
     expect(error).toBeInstanceOf(ResponseParseError);
-    expect(error).toMatchObject({ rawBody: '{broken', method: 'GET', url: '/v1/items' });
+    expect(error).toMatchObject({ rawBody: '{broken', method: 'GET', url: '/api/v1/items' });
   });
 
   it('applies a configured base URL only to relative API paths', async () => {
@@ -88,10 +88,10 @@ describe('customFetch', () => {
     vi.stubGlobal('fetch', fetchMock);
     setBaseUrl('https://gateway.example/');
 
-    await customFetch('/v1/items');
+    await customFetch('/api/v1/items');
     await customFetch('https://other.example/v1/items');
 
-    expect(fetchMock.mock.calls[0]?.[0]).toBe('https://gateway.example/v1/items');
+    expect(fetchMock.mock.calls[0]?.[0]).toBe('https://gateway.example/api/v1/items');
     expect(fetchMock.mock.calls[1]?.[0]).toBe('https://other.example/v1/items');
   });
 });

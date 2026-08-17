@@ -137,7 +137,7 @@ export const getListInstanceAccessKeysUrl = (params?: ListInstanceAccessKeysPara
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/v1/instance/access-keys?${stringifiedParams}` : `/v1/instance/access-keys`
+  return stringifiedParams.length > 0 ? `/api/v1/instance/access-keys?${stringifiedParams}` : `/api/v1/instance/access-keys`
 }
 
 /**
@@ -163,7 +163,7 @@ export const listInstanceAccessKeys = async (params?: ListInstanceAccessKeysPara
 
 export const getListInstanceAccessKeysQueryKey = (params?: ListInstanceAccessKeysParams,) => {
     return [
-    `/v1/instance/access-keys`, ...(params ? [params] : [])
+    `/api/v1/instance/access-keys`, ...(params ? [params] : [])
     ] as const;
     }
 
@@ -217,7 +217,7 @@ export const getCreateInstanceAccessKeyUrl = () => {
 
 
 
-  return `/v1/instance/access-keys`
+  return `/api/v1/instance/access-keys`
 }
 
 /**
@@ -299,7 +299,7 @@ export const getListOrgAccessKeysUrl = (orgId: string,
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/v1/orgs/${orgId}/access-keys?${stringifiedParams}` : `/v1/orgs/${orgId}/access-keys`
+  return stringifiedParams.length > 0 ? `/api/v1/orgs/${orgId}/access-keys?${stringifiedParams}` : `/api/v1/orgs/${orgId}/access-keys`
 }
 
 /**
@@ -327,7 +327,7 @@ export const listOrgAccessKeys = async (orgId: string,
 export const getListOrgAccessKeysQueryKey = (orgId: string,
     params?: ListOrgAccessKeysParams,) => {
     return [
-    `/v1/orgs/${orgId}/access-keys`, ...(params ? [params] : [])
+    `/api/v1/orgs/${orgId}/access-keys`, ...(params ? [params] : [])
     ] as const;
     }
 
@@ -383,7 +383,7 @@ export const getCreateOrgAccessKeyUrl = (orgId: string,) => {
 
 
 
-  return `/v1/orgs/${orgId}/access-keys`
+  return `/api/v1/orgs/${orgId}/access-keys`
 }
 
 /**
@@ -467,7 +467,7 @@ export const getListWorkspaceAccessKeysUrl = (orgId: string,
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/v1/orgs/${orgId}/workspaces/${workspaceRef}/access-keys?${stringifiedParams}` : `/v1/orgs/${orgId}/workspaces/${workspaceRef}/access-keys`
+  return stringifiedParams.length > 0 ? `/api/v1/orgs/${orgId}/workspaces/${workspaceRef}/access-keys?${stringifiedParams}` : `/api/v1/orgs/${orgId}/workspaces/${workspaceRef}/access-keys`
 }
 
 /**
@@ -497,7 +497,7 @@ export const getListWorkspaceAccessKeysQueryKey = (orgId: string,
     workspaceRef: string,
     params?: ListWorkspaceAccessKeysParams,) => {
     return [
-    `/v1/orgs/${orgId}/workspaces/${workspaceRef}/access-keys`, ...(params ? [params] : [])
+    `/api/v1/orgs/${orgId}/workspaces/${workspaceRef}/access-keys`, ...(params ? [params] : [])
     ] as const;
     }
 
@@ -556,7 +556,7 @@ export const getCreateWorkspaceAccessKeyUrl = (orgId: string,
 
 
 
-  return `/v1/orgs/${orgId}/workspaces/${workspaceRef}/access-keys`
+  return `/api/v1/orgs/${orgId}/workspaces/${workspaceRef}/access-keys`
 }
 
 /**
@@ -632,7 +632,7 @@ export const getRevokeAccessKeyUrl = (keyId: string,) => {
 
 
 
-  return `/v1/access-keys/${keyId}`
+  return `/api/v1/access-keys/${keyId}`
 }
 
 /**
@@ -706,7 +706,7 @@ export const getLoginUrl = () => {
 
 
 
-  return `/v1/auth/login`
+  return `/api/v1/auth/login`
 }
 
 /**
@@ -780,7 +780,7 @@ export const getSignupUrl = () => {
 
 
 
-  return `/v1/auth/signup`
+  return `/api/v1/auth/signup`
 }
 
 /**
@@ -857,7 +857,7 @@ export const getLogoutUrl = () => {
 
 
 
-  return `/v1/auth/logout`
+  return `/api/v1/auth/logout`
 }
 
 /**
@@ -931,7 +931,7 @@ export const getMeUrl = () => {
 
 
 
-  return `/v1/auth/me`
+  return `/api/v1/auth/me`
 }
 
 /**
@@ -957,7 +957,7 @@ export const me = async ( options?: Parameters<typeof customFetch>[1]): Promise<
 
 export const getMeQueryKey = () => {
     return [
-    `/v1/auth/me`
+    `/api/v1/auth/me`
     ] as const;
     }
 
@@ -1018,7 +1018,7 @@ export const getMyPermissionsUrl = (params?: MyPermissionsParams,) => {
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/v1/auth/permissions?${stringifiedParams}` : `/v1/auth/permissions`
+  return stringifiedParams.length > 0 ? `/api/v1/auth/permissions?${stringifiedParams}` : `/api/v1/auth/permissions`
 }
 
 /**
@@ -1044,7 +1044,7 @@ export const myPermissions = async (params?: MyPermissionsParams, options?: Para
 
 export const getMyPermissionsQueryKey = (params?: MyPermissionsParams,) => {
     return [
-    `/v1/auth/permissions`, ...(params ? [params] : [])
+    `/api/v1/auth/permissions`, ...(params ? [params] : [])
     ] as const;
     }
 
@@ -1098,7 +1098,7 @@ export const getChangePasswordUrl = () => {
 
 
 
-  return `/v1/auth/password`
+  return `/api/v1/auth/password`
 }
 
 /**
@@ -1172,7 +1172,7 @@ export const getCliAuthStartUrl = () => {
 
 
 
-  return `/v1/auth/cli/start`
+  return `/api/v1/auth/cli/start`
 }
 
 /**
@@ -1253,7 +1253,7 @@ export const getCliAuthRequestDetailsUrl = (params: CliAuthRequestDetailsParams,
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/v1/auth/cli/request?${stringifiedParams}` : `/v1/auth/cli/request`
+  return stringifiedParams.length > 0 ? `/api/v1/auth/cli/request?${stringifiedParams}` : `/api/v1/auth/cli/request`
 }
 
 /**
@@ -1279,7 +1279,7 @@ export const cliAuthRequestDetails = async (params: CliAuthRequestDetailsParams,
 
 export const getCliAuthRequestDetailsQueryKey = (params?: CliAuthRequestDetailsParams,) => {
     return [
-    `/v1/auth/cli/request`, ...(params ? [params] : [])
+    `/api/v1/auth/cli/request`, ...(params ? [params] : [])
     ] as const;
     }
 
@@ -1333,7 +1333,7 @@ export const getCliAuthApproveUrl = () => {
 
 
 
-  return `/v1/auth/cli/approve`
+  return `/api/v1/auth/cli/approve`
 }
 
 /**
@@ -1407,7 +1407,7 @@ export const getCliAuthPollUrl = () => {
 
 
 
-  return `/v1/auth/cli/poll`
+  return `/api/v1/auth/cli/poll`
 }
 
 /**
@@ -1484,7 +1484,7 @@ export const getEnrollmentUrl = () => {
 
 
 
-  return `/v1/enroll`
+  return `/api/v1/enroll`
 }
 
 /**
@@ -1510,7 +1510,7 @@ export const enrollment = async ( options?: Parameters<typeof customFetch>[1]): 
 
 export const getEnrollmentQueryKey = () => {
     return [
-    `/v1/enroll`
+    `/api/v1/enroll`
     ] as const;
     }
 
@@ -1564,7 +1564,7 @@ export const getCreatePersonalOrgUrl = () => {
 
 
 
-  return `/v1/enroll/org`
+  return `/api/v1/enroll/org`
 }
 
 /**
@@ -1640,7 +1640,7 @@ export const getClaimUrl = () => {
 
 
 
-  return `/v1/instance/oss/claim`
+  return `/api/v1/instance/oss/claim`
 }
 
 /**
@@ -1666,7 +1666,7 @@ export const claim = async ( options?: Parameters<typeof customFetch>[1]): Promi
 
 export const getClaimQueryKey = () => {
     return [
-    `/v1/instance/oss/claim`
+    `/api/v1/instance/oss/claim`
     ] as const;
     }
 
@@ -1720,7 +1720,7 @@ export const getQuickstartUrl = () => {
 
 
 
-  return `/v1/instance/oss/quickstart`
+  return `/api/v1/instance/oss/quickstart`
 }
 
 /**
@@ -1804,7 +1804,7 @@ export const getListDataPlanesUrl = (params?: ListDataPlanesParams,) => {
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/v1/instance/data-planes?${stringifiedParams}` : `/v1/instance/data-planes`
+  return stringifiedParams.length > 0 ? `/api/v1/instance/data-planes?${stringifiedParams}` : `/api/v1/instance/data-planes`
 }
 
 /**
@@ -1830,7 +1830,7 @@ export const listDataPlanes = async (params?: ListDataPlanesParams, options?: Pa
 
 export const getListDataPlanesQueryKey = (params?: ListDataPlanesParams,) => {
     return [
-    `/v1/instance/data-planes`, ...(params ? [params] : [])
+    `/api/v1/instance/data-planes`, ...(params ? [params] : [])
     ] as const;
     }
 
@@ -1891,7 +1891,7 @@ export const getListInstanceActivityUrl = (params?: ListInstanceActivityParams,)
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/v1/instance/activity?${stringifiedParams}` : `/v1/instance/activity`
+  return stringifiedParams.length > 0 ? `/api/v1/instance/activity?${stringifiedParams}` : `/api/v1/instance/activity`
 }
 
 /**
@@ -1917,7 +1917,7 @@ export const listInstanceActivity = async (params?: ListInstanceActivityParams, 
 
 export const getListInstanceActivityQueryKey = (params?: ListInstanceActivityParams,) => {
     return [
-    `/v1/instance/activity`, ...(params ? [params] : [])
+    `/api/v1/instance/activity`, ...(params ? [params] : [])
     ] as const;
     }
 
@@ -1971,7 +1971,7 @@ export const getCreateServiceAccountUrl = () => {
 
 
 
-  return `/v1/service-accounts`
+  return `/api/v1/service-accounts`
 }
 
 /**
@@ -2045,7 +2045,7 @@ export const getGetUserUrl = (userId: string,) => {
 
 
 
-  return `/v1/users/${userId}`
+  return `/api/v1/users/${userId}`
 }
 
 /**
@@ -2071,7 +2071,7 @@ export const getUser = async (userId: string, options?: Parameters<typeof custom
 
 export const getGetUserQueryKey = (userId: string,) => {
     return [
-    `/v1/users/${userId}`
+    `/api/v1/users/${userId}`
     ] as const;
     }
 
@@ -2125,7 +2125,7 @@ export const getDeleteUserUrl = (userId: string,) => {
 
 
 
-  return `/v1/users/${userId}`
+  return `/api/v1/users/${userId}`
 }
 
 /**
@@ -2209,7 +2209,7 @@ export const getListUsersUrl = (params?: ListUsersParams,) => {
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/v1/users?${stringifiedParams}` : `/v1/users`
+  return stringifiedParams.length > 0 ? `/api/v1/users?${stringifiedParams}` : `/api/v1/users`
 }
 
 /**
@@ -2235,7 +2235,7 @@ export const listUsers = async (params?: ListUsersParams, options?: Parameters<t
 
 export const getListUsersQueryKey = (params?: ListUsersParams,) => {
     return [
-    `/v1/users`, ...(params ? [params] : [])
+    `/api/v1/users`, ...(params ? [params] : [])
     ] as const;
     }
 
@@ -2289,7 +2289,7 @@ export const getListOrgsUrl = () => {
 
 
 
-  return `/v1/orgs`
+  return `/api/v1/orgs`
 }
 
 /**
@@ -2315,7 +2315,7 @@ export const listOrgs = async ( options?: Parameters<typeof customFetch>[1]): Pr
 
 export const getListOrgsQueryKey = () => {
     return [
-    `/v1/orgs`
+    `/api/v1/orgs`
     ] as const;
     }
 
@@ -2369,7 +2369,7 @@ export const getCreateOrgUrl = () => {
 
 
 
-  return `/v1/orgs`
+  return `/api/v1/orgs`
 }
 
 /**
@@ -2443,7 +2443,7 @@ export const getUpdateOrgUrl = (orgId: string,) => {
 
 
 
-  return `/v1/orgs/${orgId}`
+  return `/api/v1/orgs/${orgId}`
 }
 
 /**
@@ -2518,7 +2518,7 @@ export const getGetOrgUrl = (orgId: string,) => {
 
 
 
-  return `/v1/orgs/${orgId}`
+  return `/api/v1/orgs/${orgId}`
 }
 
 /**
@@ -2544,7 +2544,7 @@ export const getOrg = async (orgId: string, options?: Parameters<typeof customFe
 
 export const getGetOrgQueryKey = (orgId: string,) => {
     return [
-    `/v1/orgs/${orgId}`
+    `/api/v1/orgs/${orgId}`
     ] as const;
     }
 
@@ -2598,7 +2598,7 @@ export const getDeleteOrgUrl = (orgId: string,) => {
 
 
 
-  return `/v1/orgs/${orgId}`
+  return `/api/v1/orgs/${orgId}`
 }
 
 /**
@@ -2674,7 +2674,7 @@ export const getCreateWorkspaceUrl = (orgId: string,) => {
 
 
 
-  return `/v1/orgs/${orgId}/workspaces`
+  return `/api/v1/orgs/${orgId}/workspaces`
 }
 
 /**
@@ -2751,7 +2751,7 @@ export const getListWorkspacesUrl = (orgId: string,) => {
 
 
 
-  return `/v1/orgs/${orgId}/workspaces`
+  return `/api/v1/orgs/${orgId}/workspaces`
 }
 
 /**
@@ -2777,7 +2777,7 @@ export const listWorkspaces = async (orgId: string, options?: Parameters<typeof 
 
 export const getListWorkspacesQueryKey = (orgId: string,) => {
     return [
-    `/v1/orgs/${orgId}/workspaces`
+    `/api/v1/orgs/${orgId}/workspaces`
     ] as const;
     }
 
@@ -2832,7 +2832,7 @@ export const getGetWorkspaceUrl = (orgId: string,
 
 
 
-  return `/v1/orgs/${orgId}/workspaces/${workspaceRef}`
+  return `/api/v1/orgs/${orgId}/workspaces/${workspaceRef}`
 }
 
 /**
@@ -2860,7 +2860,7 @@ export const getWorkspace = async (orgId: string,
 export const getGetWorkspaceQueryKey = (orgId: string,
     workspaceRef: string,) => {
     return [
-    `/v1/orgs/${orgId}/workspaces/${workspaceRef}`
+    `/api/v1/orgs/${orgId}/workspaces/${workspaceRef}`
     ] as const;
     }
 
@@ -2917,7 +2917,7 @@ export const getDeleteWorkspaceUrl = (orgId: string,
 
 
 
-  return `/v1/orgs/${orgId}/workspaces/${workspaceRef}`
+  return `/api/v1/orgs/${orgId}/workspaces/${workspaceRef}`
 }
 
 /**
@@ -2995,7 +2995,7 @@ export const getUpdateWorkspaceUrl = (orgId: string,
 
 
 
-  return `/v1/orgs/${orgId}/workspaces/${workspaceRef}`
+  return `/api/v1/orgs/${orgId}/workspaces/${workspaceRef}`
 }
 
 /**
@@ -3072,7 +3072,7 @@ export const getListMembersUrl = (orgId: string,
 
 
 
-  return `/v1/orgs/${orgId}/workspaces/${workspaceRef}/members`
+  return `/api/v1/orgs/${orgId}/workspaces/${workspaceRef}/members`
 }
 
 /**
@@ -3100,7 +3100,7 @@ export const listMembers = async (orgId: string,
 export const getListMembersQueryKey = (orgId: string,
     workspaceRef: string,) => {
     return [
-    `/v1/orgs/${orgId}/workspaces/${workspaceRef}/members`
+    `/api/v1/orgs/${orgId}/workspaces/${workspaceRef}/members`
     ] as const;
     }
 
@@ -3158,7 +3158,7 @@ export const getAddMemberUrl = (orgId: string,
 
 
 
-  return `/v1/orgs/${orgId}/workspaces/${workspaceRef}/members/${userId}`
+  return `/api/v1/orgs/${orgId}/workspaces/${workspaceRef}/members/${userId}`
 }
 
 /**
@@ -3237,7 +3237,7 @@ export const getRemoveMemberUrl = (orgId: string,
 
 
 
-  return `/v1/orgs/${orgId}/workspaces/${workspaceRef}/members/${userId}`
+  return `/api/v1/orgs/${orgId}/workspaces/${workspaceRef}/members/${userId}`
 }
 
 /**
@@ -3314,7 +3314,7 @@ export const getCreateInferenceKeyUrl = (orgId: string,
 
 
 
-  return `/v1/orgs/${orgId}/workspaces/${workspaceRef}/inference-keys`
+  return `/api/v1/orgs/${orgId}/workspaces/${workspaceRef}/inference-keys`
 }
 
 /**
@@ -3391,7 +3391,7 @@ export const getListInferenceKeysUrl = (orgId: string,
 
 
 
-  return `/v1/orgs/${orgId}/workspaces/${workspaceRef}/inference-keys`
+  return `/api/v1/orgs/${orgId}/workspaces/${workspaceRef}/inference-keys`
 }
 
 /**
@@ -3419,7 +3419,7 @@ export const listInferenceKeys = async (orgId: string,
 export const getListInferenceKeysQueryKey = (orgId: string,
     workspaceRef: string,) => {
     return [
-    `/v1/orgs/${orgId}/workspaces/${workspaceRef}/inference-keys`
+    `/api/v1/orgs/${orgId}/workspaces/${workspaceRef}/inference-keys`
     ] as const;
     }
 
@@ -3477,7 +3477,7 @@ export const getRevokeInferenceKeyUrl = (orgId: string,
 
 
 
-  return `/v1/orgs/${orgId}/workspaces/${workspaceRef}/inference-keys/${keyId}`
+  return `/api/v1/orgs/${orgId}/workspaces/${workspaceRef}/inference-keys/${keyId}`
 }
 
 /**
@@ -3553,7 +3553,7 @@ export const getCreateOrgProviderCredentialUrl = (orgId: string,) => {
 
 
 
-  return `/v1/orgs/${orgId}/provider-credentials`
+  return `/api/v1/orgs/${orgId}/provider-credentials`
 }
 
 /**
@@ -3628,7 +3628,7 @@ export const getListOrgProviderCredentialsUrl = (orgId: string,) => {
 
 
 
-  return `/v1/orgs/${orgId}/provider-credentials`
+  return `/api/v1/orgs/${orgId}/provider-credentials`
 }
 
 /**
@@ -3654,7 +3654,7 @@ export const listOrgProviderCredentials = async (orgId: string, options?: Parame
 
 export const getListOrgProviderCredentialsQueryKey = (orgId: string,) => {
     return [
-    `/v1/orgs/${orgId}/provider-credentials`
+    `/api/v1/orgs/${orgId}/provider-credentials`
     ] as const;
     }
 
@@ -3709,7 +3709,7 @@ export const getCreateWorkspaceProviderCredentialUrl = (orgId: string,
 
 
 
-  return `/v1/orgs/${orgId}/workspaces/${workspaceRef}/provider-credentials`
+  return `/api/v1/orgs/${orgId}/workspaces/${workspaceRef}/provider-credentials`
 }
 
 /**
@@ -3786,7 +3786,7 @@ export const getListWorkspaceProviderCredentialsUrl = (orgId: string,
 
 
 
-  return `/v1/orgs/${orgId}/workspaces/${workspaceRef}/provider-credentials`
+  return `/api/v1/orgs/${orgId}/workspaces/${workspaceRef}/provider-credentials`
 }
 
 /**
@@ -3814,7 +3814,7 @@ export const listWorkspaceProviderCredentials = async (orgId: string,
 export const getListWorkspaceProviderCredentialsQueryKey = (orgId: string,
     workspaceRef: string,) => {
     return [
-    `/v1/orgs/${orgId}/workspaces/${workspaceRef}/provider-credentials`
+    `/api/v1/orgs/${orgId}/workspaces/${workspaceRef}/provider-credentials`
     ] as const;
     }
 
@@ -3871,7 +3871,7 @@ export const getGetProviderCredentialUrl = (orgId: string,
 
 
 
-  return `/v1/orgs/${orgId}/provider-credentials/${credentialId}`
+  return `/api/v1/orgs/${orgId}/provider-credentials/${credentialId}`
 }
 
 /**
@@ -3899,7 +3899,7 @@ export const getProviderCredential = async (orgId: string,
 export const getGetProviderCredentialQueryKey = (orgId: string,
     credentialId: string,) => {
     return [
-    `/v1/orgs/${orgId}/provider-credentials/${credentialId}`
+    `/api/v1/orgs/${orgId}/provider-credentials/${credentialId}`
     ] as const;
     }
 
@@ -3956,7 +3956,7 @@ export const getUpdateProviderCredentialUrl = (orgId: string,
 
 
 
-  return `/v1/orgs/${orgId}/provider-credentials/${credentialId}`
+  return `/api/v1/orgs/${orgId}/provider-credentials/${credentialId}`
 }
 
 /**
@@ -4033,7 +4033,7 @@ export const getDeleteProviderCredentialUrl = (orgId: string,
 
 
 
-  return `/v1/orgs/${orgId}/provider-credentials/${credentialId}`
+  return `/api/v1/orgs/${orgId}/provider-credentials/${credentialId}`
 }
 
 /**
@@ -4109,7 +4109,7 @@ export const getRotateProviderCredentialUrl = (orgId: string,
 
 
 
-  return `/v1/orgs/${orgId}/provider-credentials/${credentialId}/value`
+  return `/api/v1/orgs/${orgId}/provider-credentials/${credentialId}/value`
 }
 
 /**
@@ -4185,7 +4185,7 @@ export const getListOrgUsersUrl = (orgId: string,) => {
 
 
 
-  return `/v1/orgs/${orgId}/users`
+  return `/api/v1/orgs/${orgId}/users`
 }
 
 /**
@@ -4211,7 +4211,7 @@ export const listOrgUsers = async (orgId: string, options?: Parameters<typeof cu
 
 export const getListOrgUsersQueryKey = (orgId: string,) => {
     return [
-    `/v1/orgs/${orgId}/users`
+    `/api/v1/orgs/${orgId}/users`
     ] as const;
     }
 
@@ -4266,7 +4266,7 @@ export const getAddOrgUserUrl = (orgId: string,
 
 
 
-  return `/v1/orgs/${orgId}/users/${userId}`
+  return `/api/v1/orgs/${orgId}/users/${userId}`
 }
 
 /**
@@ -4343,7 +4343,7 @@ export const getRemoveOrgUserUrl = (orgId: string,
 
 
 
-  return `/v1/orgs/${orgId}/users/${userId}`
+  return `/api/v1/orgs/${orgId}/users/${userId}`
 }
 
 /**
@@ -4418,7 +4418,7 @@ export const getCompileBundleUrl = (orgId: string,) => {
 
 
 
-  return `/v1/orgs/${orgId}/bundles/compile`
+  return `/api/v1/orgs/${orgId}/bundles/compile`
 }
 
 /**
@@ -4492,7 +4492,7 @@ export const getListBundlesUrl = (orgId: string,) => {
 
 
 
-  return `/v1/orgs/${orgId}/bundles`
+  return `/api/v1/orgs/${orgId}/bundles`
 }
 
 /**
@@ -4518,7 +4518,7 @@ export const listBundles = async (orgId: string, options?: Parameters<typeof cus
 
 export const getListBundlesQueryKey = (orgId: string,) => {
     return [
-    `/v1/orgs/${orgId}/bundles`
+    `/api/v1/orgs/${orgId}/bundles`
     ] as const;
     }
 
@@ -4580,7 +4580,7 @@ export const getListOrgEventsUrl = (orgId: string,
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/v1/orgs/${orgId}/events?${stringifiedParams}` : `/v1/orgs/${orgId}/events`
+  return stringifiedParams.length > 0 ? `/api/v1/orgs/${orgId}/events?${stringifiedParams}` : `/api/v1/orgs/${orgId}/events`
 }
 
 /**
@@ -4608,7 +4608,7 @@ export const listOrgEvents = async (orgId: string,
 export const getListOrgEventsQueryKey = (orgId: string,
     params?: ListOrgEventsParams,) => {
     return [
-    `/v1/orgs/${orgId}/events`, ...(params ? [params] : [])
+    `/api/v1/orgs/${orgId}/events`, ...(params ? [params] : [])
     ] as const;
     }
 
@@ -4673,7 +4673,7 @@ export const getListWorkspaceEventsUrl = (orgId: string,
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/v1/orgs/${orgId}/workspaces/${workspaceRef}/events?${stringifiedParams}` : `/v1/orgs/${orgId}/workspaces/${workspaceRef}/events`
+  return stringifiedParams.length > 0 ? `/api/v1/orgs/${orgId}/workspaces/${workspaceRef}/events?${stringifiedParams}` : `/api/v1/orgs/${orgId}/workspaces/${workspaceRef}/events`
 }
 
 /**
@@ -4703,7 +4703,7 @@ export const getListWorkspaceEventsQueryKey = (orgId: string,
     workspaceRef: string,
     params?: ListWorkspaceEventsParams,) => {
     return [
-    `/v1/orgs/${orgId}/workspaces/${workspaceRef}/events`, ...(params ? [params] : [])
+    `/api/v1/orgs/${orgId}/workspaces/${workspaceRef}/events`, ...(params ? [params] : [])
     ] as const;
     }
 
@@ -4769,7 +4769,7 @@ export const getListActivityUrl = (orgId: string,
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/v1/orgs/${orgId}/activity?${stringifiedParams}` : `/v1/orgs/${orgId}/activity`
+  return stringifiedParams.length > 0 ? `/api/v1/orgs/${orgId}/activity?${stringifiedParams}` : `/api/v1/orgs/${orgId}/activity`
 }
 
 /**
@@ -4797,7 +4797,7 @@ export const listActivity = async (orgId: string,
 export const getListActivityQueryKey = (orgId: string,
     params?: ListActivityParams,) => {
     return [
-    `/v1/orgs/${orgId}/activity`, ...(params ? [params] : [])
+    `/api/v1/orgs/${orgId}/activity`, ...(params ? [params] : [])
     ] as const;
     }
 
@@ -4860,7 +4860,7 @@ export const getBundleLatestUrl = (params?: BundleLatestParams,) => {
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/v1/bundle/latest?${stringifiedParams}` : `/v1/bundle/latest`
+  return stringifiedParams.length > 0 ? `/api/v1/bundle/latest?${stringifiedParams}` : `/api/v1/bundle/latest`
 }
 
 /**
@@ -4886,7 +4886,7 @@ export const bundleLatest = async (params?: BundleLatestParams, options?: Parame
 
 export const getBundleLatestQueryKey = (params?: BundleLatestParams,) => {
     return [
-    `/v1/bundle/latest`, ...(params ? [params] : [])
+    `/api/v1/bundle/latest`, ...(params ? [params] : [])
     ] as const;
     }
 
@@ -4940,7 +4940,7 @@ export const getIngestEventsUrl = () => {
 
 
 
-  return `/v1/events`
+  return `/api/v1/events`
 }
 
 /**
@@ -5014,7 +5014,7 @@ export const getHeartbeatUrl = () => {
 
 
 
-  return `/v1/heartbeat`
+  return `/api/v1/heartbeat`
 }
 
 /**
@@ -5088,7 +5088,7 @@ export const getGetInstanceTaxonomyUrl = () => {
 
 
 
-  return `/v1/instance/taxonomy`
+  return `/api/v1/instance/taxonomy`
 }
 
 /**
@@ -5114,7 +5114,7 @@ export const getInstanceTaxonomy = async ( options?: Parameters<typeof customFet
 
 export const getGetInstanceTaxonomyQueryKey = () => {
     return [
-    `/v1/instance/taxonomy`
+    `/api/v1/instance/taxonomy`
     ] as const;
     }
 
@@ -5168,7 +5168,7 @@ export const getGetOrgTaxonomyUrl = (orgId: string,) => {
 
 
 
-  return `/v1/orgs/${orgId}/taxonomy`
+  return `/api/v1/orgs/${orgId}/taxonomy`
 }
 
 /**
@@ -5194,7 +5194,7 @@ export const getOrgTaxonomy = async (orgId: string, options?: Parameters<typeof 
 
 export const getGetOrgTaxonomyQueryKey = (orgId: string,) => {
     return [
-    `/v1/orgs/${orgId}/taxonomy`
+    `/api/v1/orgs/${orgId}/taxonomy`
     ] as const;
     }
 
@@ -5249,7 +5249,7 @@ export const getGetWorkspaceTaxonomyUrl = (orgId: string,
 
 
 
-  return `/v1/orgs/${orgId}/workspaces/${workspaceRef}/taxonomy`
+  return `/api/v1/orgs/${orgId}/workspaces/${workspaceRef}/taxonomy`
 }
 
 /**
@@ -5277,7 +5277,7 @@ export const getWorkspaceTaxonomy = async (orgId: string,
 export const getGetWorkspaceTaxonomyQueryKey = (orgId: string,
     workspaceRef: string,) => {
     return [
-    `/v1/orgs/${orgId}/workspaces/${workspaceRef}/taxonomy`
+    `/api/v1/orgs/${orgId}/workspaces/${workspaceRef}/taxonomy`
     ] as const;
     }
 
@@ -5333,7 +5333,7 @@ export const getCreateProviderUrl = () => {
 
 
 
-  return `/v1/instance/taxonomy/providers`
+  return `/api/v1/instance/taxonomy/providers`
 }
 
 /**
@@ -5407,7 +5407,7 @@ export const getCreateModelUrl = () => {
 
 
 
-  return `/v1/instance/taxonomy/models`
+  return `/api/v1/instance/taxonomy/models`
 }
 
 /**

@@ -58,7 +58,7 @@ def test_streaming_end_to_end(api_key, dp_app):
         TestClient(dp_app) as client,
         client.stream(
             "POST",
-            "/v1/chat/completions",
+            "/inf/v1/chat/completions",
             headers={"Authorization": f"Bearer {api_key}"},
             json={"model": "gpt-test", "messages": [{"role": "user", "content": "hi"}], "stream": True},
         ) as r,
@@ -80,7 +80,7 @@ def test_streaming_upstream_error_status_passes_through(api_key, dp_app):
     mock_control_plane()
     with TestClient(dp_app) as client:
         r = client.post(
-            "/v1/chat/completions",
+            "/inf/v1/chat/completions",
             headers={"Authorization": f"Bearer {api_key}"},
             json={"model": "gpt-test", "messages": [{"role": "user", "content": "hi"}], "stream": True},
         )

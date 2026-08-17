@@ -60,8 +60,9 @@ Both cross the same canonical middle.
 
 | Route | Behavior |
 |---|---|
-| `POST /v1/chat/completions` | Canonical completion surface with OpenAI-compatible ingress detection |
-| `POST /v1/messages` | Anthropic Messages surface |
+| `POST /inf/v1/chat/completions` | Canonical completion surface with OpenAI-compatible ingress detection |
+| `POST /inf/v1/responses` | OpenAI Responses surface |
+| `POST /inf/v1/messages` | Anthropic Messages surface |
 | `GET /healthz` | Liveness, always `200` while the process can answer HTTP |
 | `GET /readyz` | `200` when this worker holds a bundle snapshot, otherwise `503` |
 
@@ -82,8 +83,8 @@ minted by the control plane, or declared as plaintext in a trusted local bundle.
 The bundle contains only token hashes. Revocation is absence from a later bundle, so a request made
 after the new bundle is admitted fails without a database or cache invalidation call.
 
-On `/v1/chat/completions`, authentication and JSON decoding happen before dialect resolution. An
-error at either stage therefore uses the canonical error envelope. `/v1/messages` binds the
+On `/inf/v1/chat/completions`, authentication and JSON decoding happen before dialect resolution. An
+error at either stage therefore uses the canonical error envelope. `/inf/v1/messages` binds the
 Anthropic ingress before those checks, so every error on that route is Anthropic-shaped.
 
 ### Canonical request
@@ -98,7 +99,7 @@ fields are:
 A minimal canonical call is:
 
 ```bash
-curl http://127.0.0.1:8080/v1/chat/completions \
+curl http://127.0.0.1:8080/inf/v1/chat/completions \
   -H 'Authorization: Bearer sk-inf-...' \
   -H 'Content-Type: application/json' \
   -H 'x-airllm-dialect: canonical' \
@@ -155,7 +156,7 @@ If an error occurs after the HTTP stream has opened, the status is already commi
 rendered as an SSE event in the caller's dialect. Canonical and OpenAI streams then emit `[DONE]`;
 Anthropic streams emit an Anthropic error event.
 
-### OpenAI compatibility on `/v1/chat/completions`
+### OpenAI compatibility on `/inf/v1/chat/completions`
 
 The chat route supports both the canonical shape and unmodified OpenAI SDKs. `resolve()` selects the
 ingress adapter in this order:
@@ -165,7 +166,7 @@ ingress adapter in this order:
 3. Canonical as the unclaimed default
 
 The recognized override values are `canonical`, `openai_native`, and `anthropic`. Anthropic clients
-normally use `/v1/messages`, which binds that ingress directly. An unrecognized override is ignored,
+normally use `/inf/v1/messages`, which binds that ingress directly. An unrecognized override is ignored,
 after which claims and canonical fallback proceed normally.
 
 The OpenAI ingress claims a request when either condition is true:
@@ -190,14 +191,14 @@ Pointing the official client at the gateway changes only its base URL and key:
 ```python
 from openai import OpenAI
 
-client = OpenAI(base_url="http://127.0.0.1:8080/v1", api_key=inference_key)
+client = OpenAI(base_url="http://127.0.0.1:8080/inf/v1", api_key=inference_key)
 completion = client.chat.completions.create(
     model="gpt-4o-mini",
     messages=[{"role": "user", "content": "hello"}],
 )
 ```
 
-### Anthropic compatibility on `/v1/messages`
+### Anthropic compatibility on `/inf/v1/messages`
 
 The Messages route binds `AnthropicIngress` directly. Buffered responses, named SSE events, usage,
 tool blocks, thinking blocks, signatures, stop reasons, and errors are rendered in Anthropic's
@@ -211,7 +212,7 @@ passed as `auth_token`:
 from anthropic import Anthropic
 
 client = Anthropic(
-    base_url="http://127.0.0.1:8080",
+    base_url="http://127.0.0.1:8080/inf",
     api_key="unused",
     auth_token=inference_key,
 )
@@ -422,13 +423,13 @@ Remote startup is designed to serve through a control-plane outage:
 3. Apply staleness policy and admit it if allowed
 4. Start the poll and heartbeat loops
 
-The poller immediately requests `GET /v1/bundle/latest`, unwraps the response envelope, ignores an
+The poller immediately requests `GET /api/v1/bundle/latest`, unwraps the response envelope, ignores an
 already-served bundle id, verifies a changed bundle, admits it, and atomically persists the signed
 form. Parse errors, signature failures, HTTP failures, and filesystem failures are recoverable. The
 last admitted snapshot remains in service while polling retries.
 
 The heartbeat posts a stable cache-directory instance id, package version, and current bundle id to
-`POST /v1/heartbeat`. A null bundle id means the process is alive but not ready.
+`POST /api/v1/heartbeat`. A null bundle id means the process is alive but not ready.
 
 ### Local source
 
@@ -638,7 +639,7 @@ does no network work. The export loop:
 
 1. Acquires or renews the single-row lease
 2. Reads up to 1,000 events in insertion order
-3. Posts them to `POST /v1/events`
+3. Posts them to `POST /api/v1/events`
 4. Deletes those event ids only after a successful HTTP response
 
 For committed rows, delivery is at least once. A crash after control-plane ingestion but before local

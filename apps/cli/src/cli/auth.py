@@ -115,7 +115,7 @@ def seed_provider_credentials(
     finish setting up, and a provider without a key is skipped in silence rather than reported as a
     failure. Nothing here aborts the command, which has already created the account and the org.
     """
-    catalog = client.get(f"/v1/orgs/{org_id}/taxonomy", headers=bearer)
+    catalog = client.get(f"/api/v1/orgs/{org_id}/taxonomy", headers=bearer)
     if not catalog.is_success:
         return []
     results = []
@@ -125,7 +125,7 @@ def seed_provider_credentials(
         if not value:
             continue
         body = {"provider": name, "value": value}
-        created = client.post(f"/v1/orgs/{org_id}/workspaces/{workspace}/provider-credentials", json=body, headers=bearer)
+        created = client.post(f"/api/v1/orgs/{org_id}/workspaces/{workspace}/provider-credentials", json=body, headers=bearer)
         error = "" if created.is_success else api_error(created)
         results.append(ProviderKey(name, source, error))
     return results
@@ -148,24 +148,24 @@ def quickstart(  # noqa: PLR0913, PLR0917 flags are the command's interface
     url, console_url = resolve_urls(control_plane_url, console_url)
     console.print("[bold]airllm quickstart[/bold]")
     with httpx.Client(base_url=url, timeout=10.0, headers=CSRF) as c:
-        if _payload_or_die(c.get("/v1/instance/oss/claim"), "claim check")["claimed"]:
+        if _payload_or_die(c.get("/api/v1/instance/oss/claim"), "claim check")["claimed"]:
             console.print(f"[red]{url} is already set up. Run [bold]airllm login[/bold] instead.[/red]")
             raise typer.Exit(1)
 
-        _payload_or_die(c.post("/v1/auth/signup", json={"email": email, "name": email, "password": password}), "sign up")
+        _payload_or_die(c.post("/api/v1/auth/signup", json={"email": email, "name": email, "password": password}), "sign up")
         _step(f"Account [bold]{email}[/bold]")
 
-        created = _payload_or_die(c.post("/v1/enroll/org", json={"name": org or email.split("@", maxsplit=1)[0]}), "org creation")
+        created = _payload_or_die(c.post("/api/v1/enroll/org", json={"name": org or email.split("@", maxsplit=1)[0]}), "org creation")
         org_id, org_name = created["id"], created["name"]
         _step(f"Organization [bold]{org_name}[/bold]")
 
         data_plane = _payload_or_die(
-            c.post("/v1/service-accounts", json={"name": "data-plane", "instance_role": "data_plane"}),
+            c.post("/api/v1/service-accounts", json={"name": "data-plane", "instance_role": "data_plane"}),
             "data-plane principal creation",
         )
         data_plane_key = _payload_or_die(
             c.post(
-                "/v1/instance/access-keys",
+                "/api/v1/instance/access-keys",
                 json={
                     "label": "data-plane",
                     "user_id": data_plane["id"],
@@ -175,12 +175,12 @@ def quickstart(  # noqa: PLR0913, PLR0917 flags are the command's interface
             "data-plane key creation",
         )
 
-        started = _payload_or_die(c.post("/v1/auth/cli/start", json={"client_name": _client_name()}), "access key request")
-        _payload_or_die(c.post("/v1/auth/cli/approve", json={"user_code": started["user_code"], "org_id": org_id}), "access key approval")
-        token = _payload_or_die(c.post("/v1/auth/cli/poll", json={"poll_secret": started["poll_secret"]}), "access key delivery")["token"]
+        started = _payload_or_die(c.post("/api/v1/auth/cli/start", json={"client_name": _client_name()}), "access key request")
+        _payload_or_die(c.post("/api/v1/auth/cli/approve", json={"user_code": started["user_code"], "org_id": org_id}), "access key approval")
+        token = _payload_or_die(c.post("/api/v1/auth/cli/poll", json={"poll_secret": started["poll_secret"]}), "access key delivery")["token"]
 
         bearer = {"authorization": f"Bearer {token}"}
-        workspace = _payload_or_die(c.post(f"/v1/orgs/{org_id}/workspaces", json={"name": "default"}, headers=bearer), "workspace creation")
+        workspace = _payload_or_die(c.post(f"/api/v1/orgs/{org_id}/workspaces", json={"name": "default"}, headers=bearer), "workspace creation")
         upsert_profile(
             org_name,
             {
@@ -195,7 +195,7 @@ def quickstart(  # noqa: PLR0913, PLR0917 flags are the command's interface
         )
         _step(f"Workspace [bold]{workspace['name']}[/bold], signed in and saved to {config_path()}")
 
-        quick = c.post("/v1/instance/oss/quickstart", json={"token": data_plane_key["token"]})
+        quick = c.post("/api/v1/instance/oss/quickstart", json={"token": data_plane_key["token"]})
         if quick.is_success:
             _step("Connected your gateway")
         else:
@@ -203,7 +203,7 @@ def quickstart(  # noqa: PLR0913, PLR0917 flags are the command's interface
             console.print(f"  Set GW_DATAPLANE_TOKEN={data_plane_key['token']}")
 
         key = _payload_or_die(
-            c.post(f"/v1/orgs/{org_id}/workspaces/{workspace['id']}/inference-keys", json={"label": "quickstart"}, headers=bearer), "key mint"
+            c.post(f"/api/v1/orgs/{org_id}/workspaces/{workspace['id']}/inference-keys", json={"label": "quickstart"}, headers=bearer), "key mint"
         )
         overrides = {name: value for name, value in (("openai", openai_key), ("anthropic", anthropic_key)) if value}
         console.print("\n[dim]Provider keys. Press enter to skip a provider.[/dim]")
@@ -216,11 +216,11 @@ def quickstart(  # noqa: PLR0913, PLR0917 flags are the command's interface
         if not any(not result.error for result in results):
             console.print("  [yellow]![/yellow] No provider key set. Add one with [bold]airllm provider-credentials add <provider>[/bold].")
 
-        _payload_or_die(c.post(f"/v1/orgs/{org_id}/bundles/compile", json={}, headers=bearer), "publishing configuration")
+        _payload_or_die(c.post(f"/api/v1/orgs/{org_id}/bundles/compile", json={}, headers=bearer), "publishing configuration")
         _step("API key created and published")
 
     curl = (
-        f"curl {gateway_url}/v1/chat/completions \\\n"
+        f"curl {gateway_url}/inf/v1/chat/completions \\\n"
         f"  -H 'Authorization: Bearer {key['token']}' \\\n"
         f"  -H 'Content-Type: application/json' \\\n"
         f'  -d \'{{"model": "openai/gpt-5-nano", "messages": [{{"role": "user", "content": "hi"}}]}}\''
@@ -245,7 +245,7 @@ def login(
     client_name = _client_name()
     existing_access_key = _existing_access_key(url)
     with httpx.Client(base_url=url, timeout=10.0) as c:
-        started = _payload_or_die(c.post("/v1/auth/cli/start", json={"client_name": client_name}), "Starting sign-in")
+        started = _payload_or_die(c.post("/api/v1/auth/cli/start", json={"client_name": client_name}), "Starting sign-in")
         console.print(f"Confirm code [bold]{started['user_code']}[/bold] at {started['verification_url']}")
         if not no_browser:
             webbrowser.open(started["verification_url"])
@@ -253,7 +253,7 @@ def login(
         while time.monotonic() < deadline:
             time.sleep(started["interval_seconds"])
             poll = c.post(
-                "/v1/auth/cli/poll",
+                "/api/v1/auth/cli/poll",
                 json={"poll_secret": started["poll_secret"]},
                 headers={"authorization": f"Bearer {existing_access_key}"} if existing_access_key else None,
             )
@@ -301,7 +301,7 @@ def orgs_mine(control_plane_url: str = "", fmt: FormatOption = OutputFormat.tabl
     from cli.client import access_client  # noqa: PLC0415 lazy import keeps CLI startup fast
 
     with access_client(control_plane_url) as c:
-        resp = c.get("/v1/enroll")
+        resp = c.get("/api/v1/enroll")
         ensure_ok(resp)
         standing = payload(resp)
         rows = [{**org, "kind": "personal" if org["id"] == standing["personal_org_id"] else "member"} for org in standing["orgs"]]

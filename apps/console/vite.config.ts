@@ -16,7 +16,7 @@ if (Number.isNaN(port) || port <= 0) {
 const basePath = process.env.BASE_PATH ?? '/';
 
 const controlPlaneUrl = process.env.CONTROL_PLANE_URL ?? 'http://127.0.0.1:8000';
-const dataplaneUrl = process.env.DATA_PLANE_URL ?? 'http://127.0.0.1:8080';
+const dataPlaneUrl = process.env.DATA_PLANE_URL ?? 'http://127.0.0.1:8080';
 // Replit's preview proxies through a dynamic *.replit.dev host, so host
 // filtering must be disabled in this environment; ALLOWED_HOSTS can still
 // pin an explicit list elsewhere.
@@ -71,8 +71,8 @@ export default defineConfig({
       strict: true,
     },
     proxy: {
-      '/v1': { target: controlPlaneUrl, changeOrigin: false },
-      '/dp': { target: dataplaneUrl, changeOrigin: true, rewrite: (path) => path.replace(/^\/dp/, '') },
+      '/api': { target: controlPlaneUrl, changeOrigin: false },
+      '/inf': { target: dataPlaneUrl, changeOrigin: true },
     },
   },
   preview: {

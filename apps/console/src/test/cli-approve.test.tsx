@@ -18,7 +18,7 @@ const REQUEST = {
 
 function withPendingRequest(expectedCode: string) {
   server.use(
-    http.get('/v1/auth/cli/request', ({ request }) => {
+    http.get('/api/v1/auth/cli/request', ({ request }) => {
       const code = new URL(request.url).searchParams.get('code');
       if (code !== expectedCode) return new HttpResponse(null, { status: 404 });
       return HttpResponse.json(REQUEST);
@@ -29,8 +29,8 @@ function withPendingRequest(expectedCode: string) {
 describe('CLI device sign-in approval', () => {
   it('shows the login page first when visiting /cli unauthenticated', async () => {
     server.use(
-      http.get('/v1/auth/me', () => new HttpResponse(null, { status: 401 })),
-      http.get('/v1/instance/oss/claim', () => HttpResponse.json({ claimed: true })),
+      http.get('/api/v1/auth/me', () => new HttpResponse(null, { status: 401 })),
+      http.get('/api/v1/instance/oss/claim', () => HttpResponse.json({ claimed: true })),
     );
     renderAt('/cli?code=ABCD-1234');
     expect(await screen.findByRole('heading', { name: 'Sign in' })).toBeInTheDocument();
@@ -51,7 +51,7 @@ describe('CLI device sign-in approval', () => {
     withPendingRequest('ABCD-1234');
     let approveBody: unknown = null;
     server.use(
-      http.post('/v1/auth/cli/approve', async ({ request }) => {
+      http.post('/api/v1/auth/cli/approve', async ({ request }) => {
         approveBody = await request.json();
         return HttpResponse.json({ ok: true });
       }),
@@ -72,7 +72,7 @@ describe('CLI device sign-in approval', () => {
 
   it('shows the expiry message for an expired code and recovers after re-entry', async () => {
     server.use(
-      http.get('/v1/auth/cli/request', ({ request }) => {
+      http.get('/api/v1/auth/cli/request', ({ request }) => {
         const code = new URL(request.url).searchParams.get('code');
         if (code === 'FRESH-CODE') return HttpResponse.json(REQUEST);
         return new HttpResponse(null, { status: 410 });

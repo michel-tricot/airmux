@@ -98,9 +98,9 @@ def create_app(config: Config) -> Starlette:
 
     return Starlette(
         routes=[
-            Route("/v1/chat/completions", complete, methods=["POST"]),
-            Route("/v1/responses", responses, methods=["POST"]),
-            Route("/v1/messages", messages, methods=["POST"]),
+            Route("/inf/v1/chat/completions", complete, methods=["POST"]),
+            Route("/inf/v1/responses", responses, methods=["POST"]),
+            Route("/inf/v1/messages", messages, methods=["POST"]),
             Route("/healthz", healthz),
             Route("/readyz", readyz),
         ],

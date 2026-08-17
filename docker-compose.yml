@@ -109,6 +109,8 @@ services:
     depends_on:
       control-plane:
         condition: service_healthy
+      data-plane:
+        condition: service_healthy
 
 volumes:
   state:

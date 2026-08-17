@@ -131,7 +131,7 @@ BUNDLE_COLS = [
 @orgs_app.command("list")
 def orgs_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
     """List every organization on this instance."""
-    print_rows("orgs", access_get("/v1/orgs", control_plane_url), ORG_COLS, fmt)
+    print_rows("orgs", access_get("/api/v1/orgs", control_plane_url), ORG_COLS, fmt)
 
 
 WorkspaceOption = Annotated[str, typer.Option("--workspace", "-w", help="Workspace name or id; defaults to your selected workspace")]
@@ -255,7 +255,7 @@ def service_accounts_create(
     if not name:
         name = typer.prompt("name")
     with access_client(control_plane_url) as c:
-        resp = payload(post_expecting(c, "/v1/service-accounts", {"name": name}, ok=(200,)))
+        resp = payload(post_expecting(c, "/api/v1/service-accounts", {"name": name}, ok=(200,)))
     console.print(f"Created service account [bold]{resp['email']}[/bold]")
     console.print(f"[dim]Add it to your organization: airllm orgs members add {resp['id']}[/dim]")
 
@@ -263,14 +263,14 @@ def service_accounts_create(
 @service_accounts_app.command("list")
 def service_accounts_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
     """List machine accounts."""
-    rows = access_get("/v1/users", control_plane_url, {"service_account": True})
+    rows = access_get("/api/v1/users", control_plane_url, {"service_account": True})
     print_rows("service accounts", rows, USER_COLS, fmt)
 
 
 @users_app.command("list")
 def users_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
     """List every account and the organizations it belongs to."""
-    print_rows("users", access_get("/v1/users", control_plane_url), USER_COLS, fmt)
+    print_rows("users", access_get("/api/v1/users", control_plane_url), USER_COLS, fmt)
 
 
 @org_members_app.command("list")
@@ -316,11 +316,11 @@ def access_keys_list(  # noqa: PLR0913, PLR0917 command flags define the CLI sur
         raise typer.Exit(1)
     selected_org = "" if instance else resolve_org_id(org_id)
     path = (
-        "/v1/instance/access-keys"
+        "/api/v1/instance/access-keys"
         if instance
-        else f"/v1/orgs/{selected_org}/workspaces/{workspace_id}/access-keys"
+        else f"/api/v1/orgs/{selected_org}/workspaces/{workspace_id}/access-keys"
         if workspace_id
-        else f"/v1/orgs/{selected_org}/access-keys"
+        else f"/api/v1/orgs/{selected_org}/access-keys"
     )
     print_rows("access keys", access_get(path, control_plane_url, {"user_id": user_id} if user_id else None), ACCESS_KEY_COLS, fmt)
 
@@ -345,11 +345,11 @@ def access_keys_mint(  # noqa: PLR0913, PLR0917 command flags define the CLI sur
         raise typer.Exit(1)
     selected_org = "" if instance else resolve_org_id(org_id)
     path = (
-        "/v1/instance/access-keys"
+        "/api/v1/instance/access-keys"
         if instance
-        else f"/v1/orgs/{selected_org}/workspaces/{workspace_id}/access-keys"
+        else f"/api/v1/orgs/{selected_org}/workspaces/{workspace_id}/access-keys"
         if workspace_id
-        else f"/v1/orgs/{selected_org}/access-keys"
+        else f"/api/v1/orgs/{selected_org}/access-keys"
     )
     body = {
         "label": label,
@@ -367,7 +367,7 @@ def access_keys_mint(  # noqa: PLR0913, PLR0917 command flags define the CLI sur
 def access_keys_revoke(key_id: str, control_plane_url: str = "") -> None:
     """Revoke an access key and all keys delegated from it."""
     with access_client(control_plane_url) as c:
-        resp = c.delete(f"/v1/access-keys/{key_id}")
+        resp = c.delete(f"/api/v1/access-keys/{key_id}")
         ensure_ok(resp)
     console.print(f"Revoked [bold]{key_id}[/bold]")
 
@@ -424,7 +424,7 @@ def data_planes_list(
     """List connected gateways."""
     load_dotenv(find_dotenv(usecwd=True))
     with access_client(control_plane_url) as c:
-        resp = c.get("/v1/instance/data-planes", params={"include_offline": all_})
+        resp = c.get("/api/v1/instance/data-planes", params={"include_offline": all_})
         ensure_ok(resp)
         print_rows("data planes", payload_rows(resp), INSTANCE_COLS, fmt)
 
@@ -489,7 +489,7 @@ def _key_created(resp: dict) -> None:
 register_create(
     orgs_app,
     OrgCreate,
-    "/v1/orgs",
+    "/api/v1/orgs",
     "Create an organization.",
     lambda resp: console.print(f"Created [bold]{resp['name']}[/bold]. Add people with airllm orgs members add <user>."),
     client=access_client,
@@ -525,7 +525,7 @@ def workspaces_create(
 register_create(
     providers_app,
     ProviderCreate,
-    "/v1/instance/taxonomy/providers",
+    "/api/v1/instance/taxonomy/providers",
     "Add an upstream provider for every organization on this instance.",
     lambda resp: console.print(f"Added [bold]{resp['name']}[/bold]. Add models, then airllm bundles compile."),
     client=access_client,
@@ -534,7 +534,7 @@ register_create(
 register_create(
     models_app,
     ModelCreate,
-    "/v1/instance/taxonomy/models",
+    "/api/v1/instance/taxonomy/models",
     "Add a routable model for every organization on this instance.",
     lambda resp: console.print(f"Added [bold]{resp['name']}[/bold]. Run airllm bundles compile to apply."),
     client=access_client,

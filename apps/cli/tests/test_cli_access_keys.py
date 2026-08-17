@@ -33,6 +33,6 @@ def test_instance_flag_overrides_the_active_org_for_access_key_mint(monkeypatch)
     result = runner.invoke(app, ["access-keys", "mint", "--label", "ci", "--permission", "bundles.read", "--instance"])
 
     assert result.exit_code == 0, result.output
-    assert submitted["path"] == "/v1/instance/access-keys"
+    assert submitted["path"] == "/api/v1/instance/access-keys"
     assert "org_id" not in submitted["body"]
     assert "workspace_id" not in submitted["body"]

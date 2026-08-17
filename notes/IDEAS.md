@@ -6,7 +6,7 @@ current architecture makes it irrelevant.
 
 ## Anthropic token counting
 
-Add `POST /v1/messages/count_tokens` to the Anthropic ingress so Claude Code can populate its
+Add `POST /inf/v1/messages/count_tokens` to the Anthropic ingress so Claude Code can populate its
 context meter without calling a provider. The data plane already estimates tokens for metering,
 but this endpoint needs a caller-facing accuracy contract and adapter-wide tests.
 

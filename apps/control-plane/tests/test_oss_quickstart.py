@@ -81,7 +81,7 @@ def test_oss_quickstart_writes_only_a_live_data_plane_key(tmp_path, key_path):
     cp = setup_control_plane(tmp_path)
     token = _data_plane_token(tmp_path)
     with TestClient(cp.app) as client:
-        response = client.post("/v1/instance/oss/quickstart", json={"token": token})
+        response = client.post("/api/v1/instance/oss/quickstart", json={"token": token})
         assert response.status_code == 200, response.text
         assert response.json()["data"]["path"] == str(key_path)
         assert key_path.read_text(encoding="utf-8") == token
@@ -92,14 +92,14 @@ def test_oss_quickstart_is_public(tmp_path, key_path):
     cp = setup_control_plane(tmp_path)
     token = _data_plane_token(tmp_path)
     with TestClient(cp.app) as client:
-        assert client.post("/v1/instance/oss/quickstart", json={"token": token}).status_code == 200
+        assert client.post("/api/v1/instance/oss/quickstart", json={"token": token}).status_code == 200
 
 
 def test_oss_quickstart_accepts_an_org_specific_data_plane_key(tmp_path, key_path):
     cp = setup_control_plane(tmp_path)
     token = _org_data_plane_token(tmp_path)
     with TestClient(cp.app) as client:
-        assert client.post("/v1/instance/oss/quickstart", json={"token": token}).status_code == 200
+        assert client.post("/api/v1/instance/oss/quickstart", json={"token": token}).status_code == 200
         assert key_path.read_text(encoding="utf-8") == token
 
 
@@ -107,7 +107,7 @@ def test_oss_quickstart_accepts_exact_runtime_authority_from_any_service_account
     cp = setup_control_plane(tmp_path)
     token = _data_plane_token(tmp_path, instance_role=InstanceRole.owner)
     with TestClient(cp.app) as client:
-        assert client.post("/v1/instance/oss/quickstart", json={"token": token}).status_code == 200
+        assert client.post("/api/v1/instance/oss/quickstart", json={"token": token}).status_code == 200
         assert key_path.read_text(encoding="utf-8") == token
 
 
@@ -116,7 +116,7 @@ def test_oss_quickstart_closes_once_a_data_plane_has_registered(tmp_path, key_pa
     token = _data_plane_token(tmp_path)
     _register_instance(tmp_path)
     with TestClient(cp.app) as client:
-        response = client.post("/v1/instance/oss/quickstart", json={"token": token})
+        response = client.post("/api/v1/instance/oss/quickstart", json={"token": token})
         assert response.status_code == 409
         assert not key_path.exists()
 
@@ -125,7 +125,7 @@ def test_oss_quickstart_closes_once_a_data_plane_has_registered(tmp_path, key_pa
 def test_oss_quickstart_rejects_unknown_credentials(tmp_path, key_path, token):
     cp = setup_control_plane(tmp_path)
     with TestClient(cp.app) as client:
-        response = client.post("/v1/instance/oss/quickstart", json={"token": token})
+        response = client.post("/api/v1/instance/oss/quickstart", json={"token": token})
         assert response.status_code == 422
         assert not key_path.exists()
 
@@ -140,5 +140,5 @@ def test_oss_quickstart_rejects_human_broad_and_unauthorized_keys(tmp_path, key_
     ]
     with TestClient(cp.app) as client:
         for token in tokens:
-            assert client.post("/v1/instance/oss/quickstart", json={"token": token}).status_code == 422
+            assert client.post("/api/v1/instance/oss/quickstart", json={"token": token}).status_code == 422
             assert not key_path.exists()

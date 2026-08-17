@@ -65,7 +65,7 @@ describe('console theme', () => {
 describe('provider icons', () => {
   it('removes active content from taxonomy SVG markup', async () => {
     server.use(
-      http.get(`/v1/orgs/${ORG.id}/workspaces/${WORKSPACES[0].slug}/taxonomy`, () =>
+      http.get(`/api/v1/orgs/${ORG.id}/workspaces/${WORKSPACES[0].slug}/taxonomy`, () =>
         HttpResponse.json({
           models: [],
           providers: [
@@ -92,7 +92,7 @@ describe('provider icons', () => {
 
   it('supports arrow-key navigation between providers', async () => {
     server.use(
-      http.get(`/v1/orgs/${ORG.id}/workspaces/${WORKSPACES[0].slug}/taxonomy`, () =>
+      http.get(`/api/v1/orgs/${ORG.id}/workspaces/${WORKSPACES[0].slug}/taxonomy`, () =>
         HttpResponse.json({
           models: [],
           providers: [taxonomyProvider('provider-1', 'first'), taxonomyProvider('provider-2', 'second')],
@@ -168,5 +168,50 @@ describe('shared controls', () => {
     await user.click(within(dialog).getByRole('button', { name: 'Delete' }));
 
     expect(screen.getByRole('alertdialog', { name: 'Delete organization' })).toBeInTheDocument();
+  });
+});
+
+describe('playground', () => {
+  it('mints a scoped key and streams a response through the inference prefix', async () => {
+    const provider = taxonomyProvider('provider-1', 'openai');
+    const model = {
+      id: 'model-1',
+      name: 'openai/gpt-test',
+      provider_id: provider.id,
+      upstream_model: 'gpt-test',
+      input_price_per_mtok: 1,
+      output_price_per_mtok: 2,
+      cache_read_price_per_mtok: 0,
+      cache_write_price_per_mtok: 0,
+      context_window: 128000,
+      max_output_tokens: 4096,
+      capabilities: ['streaming'],
+      created_at: now,
+      updated_at: now,
+      deleted_at: null,
+    };
+    let dialect = '';
+    server.use(
+      http.get(`/api/v1/orgs/${ORG.id}/workspaces/${WORKSPACES[0].slug}/taxonomy`, () =>
+        HttpResponse.json({ providers: [provider], models: [model] }),
+      ),
+      http.post(`/api/v1/orgs/${ORG.id}/workspaces/${WORKSPACES[0].slug}/inference-keys`, () => HttpResponse.json({ token: 'sk-inf-playground' })),
+      http.post('/inf/v1/chat/completions', ({ request }) => {
+        dialect = request.headers.get('x-airllm-dialect') ?? '';
+        return HttpResponse.text('data: {"choices":[{"delta":{"content":"hello from the gateway"}}]}\n\ndata: [DONE]\n\n', {
+          headers: { 'content-type': 'text/event-stream' },
+        });
+      }),
+    );
+    window.history.replaceState(null, '', `/org/workspaces/${WORKSPACES[0].slug}/playground`);
+    render(<App />);
+    const user = userEvent.setup();
+
+    await user.click(await screen.findByRole('button', { name: 'Generate playground key' }));
+    await user.type(screen.getByPlaceholderText('Send a message... (Shift+Enter for newline)'), 'hello');
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+
+    expect(await screen.findByText('hello from the gateway')).toBeInTheDocument();
+    expect(dialect).toBe('openai_native');
   });
 });

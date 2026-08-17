@@ -1,144 +1,19 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { Send, Trash2, KeyRound, Loader2, User, Bot, AlertCircle, Zap, ChevronDown, Check, Search } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Send, Trash2, KeyRound, Loader2, User, Bot, AlertCircle, Zap } from 'lucide-react';
 import { useRequiredOrgId } from '@/lib/session';
 import { useRequiredParam } from '@/lib/route';
 import { useProviders } from '@/features/credentials/hooks';
 import { useCreateInferenceKeyMutation } from '@/features/keys/hooks';
-import { Button, Input, Badge, Card } from '@/components/ui/elements';
+import { Alert, AlertDescription, AlertTitle, Badge, Button, Dropdown, Input, Label, Switch } from '@/components/ui/elements';
 import { Textarea } from '@/components/ui/textarea';
 import { PageShell } from '@/components/shared/page-shell';
 import { LoadingState, ErrorState, EmptyState } from '@/components/shared/states';
 import { ProviderIcon } from '@/components/ProviderIcon';
-import type { ModelOut, ProviderOut } from '@workspace/api-client-react';
 import { cn } from '@/lib/utils';
+import { chatCompletion, type InferenceMessage } from '@/lib/inference';
 
 type Role = 'user' | 'assistant';
 type ChatMessage = { role: Role; content: string };
-
-function ModelPicker({
-  groups,
-  value,
-  onChange,
-}: {
-  groups: { provider: ProviderOut; models: ModelOut[] }[];
-  value: string;
-  onChange: (v: string) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const [query, setQuery] = useState('');
-  const containerRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  const allModels = groups.flatMap((g) => g.models);
-  const selectedModel = allModels.find((m) => m.name === value);
-  const selectedProvider = selectedModel ? groups.find((g) => g.models.some((m) => m.id === selectedModel.id))?.provider : undefined;
-
-  const q = query.toLowerCase();
-  const filtered = groups
-    .map((g) => ({
-      ...g,
-      models: g.models.filter((m) => !q || m.name.toLowerCase().includes(q) || g.provider.name.toLowerCase().includes(q)),
-    }))
-    .filter((g) => g.models.length > 0);
-
-  useEffect(() => {
-    if (!open) { setQuery(''); return; }
-    setTimeout(() => inputRef.current?.focus(), 0);
-  }, [open]);
-
-  useEffect(() => {
-    function onDown(e: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) setOpen(false);
-    }
-    function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') setOpen(false);
-    }
-    document.addEventListener('mousedown', onDown);
-    document.addEventListener('keydown', onKey);
-    return () => { document.removeEventListener('mousedown', onDown); document.removeEventListener('keydown', onKey); };
-  }, []);
-
-  return (
-    <div ref={containerRef} className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="flex h-8 w-full items-center justify-between gap-2 rounded-md border border-input bg-background px-3 text-xs font-mono transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-        aria-haspopup="listbox"
-        aria-expanded={open}
-      >
-        <span className="flex min-w-0 items-center gap-2">
-          {selectedProvider?.icon && <ProviderIcon markup={selectedProvider.icon} />}
-          <span className="truncate">{selectedModel?.name ?? 'Select model'}</span>
-        </span>
-        <ChevronDown className={cn('h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform', open && 'rotate-180')} />
-      </button>
-
-      {open && (
-        <div className="absolute left-0 right-0 top-full z-50 mt-1 overflow-hidden rounded-md border border-border bg-card shadow-lg">
-          <div className="flex items-center gap-2 border-b border-border px-3 py-2">
-            <Search className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-            <input
-              ref={inputRef}
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search models..."
-              className="flex-1 bg-transparent font-mono text-xs outline-none placeholder:text-muted-foreground"
-            />
-          </div>
-          <ul role="listbox" className="permission-scrollbar max-h-64 overflow-y-auto py-1">
-            {filtered.length === 0 && (
-              <li className="px-3 py-4 text-center font-mono text-xs text-muted-foreground">No models match</li>
-            )}
-            {filtered.map(({ provider, models }) => (
-              <li key={provider.id}>
-                <div className="flex items-center gap-2 px-3 py-1.5">
-                  {provider.icon && <ProviderIcon markup={provider.icon} />}
-                  <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{provider.name}</span>
-                </div>
-                <ul>
-                  {models.map((model) => {
-                    const active = model.name === value;
-                    return (
-                      <li key={model.id}>
-                        <button
-                          type="button"
-                          role="option"
-                          aria-selected={active}
-                          onClick={() => { onChange(model.name); setOpen(false); }}
-                          className={cn(
-                            'flex w-full items-center justify-between px-3 py-1.5 font-mono text-xs transition-colors',
-                            active ? 'bg-primary/10 text-primary' : 'hover:bg-accent hover:text-accent-foreground',
-                          )}
-                        >
-                          <span className="truncate pl-4">{model.name}</span>
-                          {active && <Check className="h-3 w-3 shrink-0" />}
-                        </button>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function groupByProvider(models: ModelOut[], providers: ProviderOut[]): { provider: ProviderOut; models: ModelOut[] }[] {
-  const providerMap = new Map(providers.map((p) => [p.id, p]));
-  const groups = new Map<string, ModelOut[]>();
-  for (const model of models) {
-    const list = groups.get(model.provider_id) ?? [];
-    list.push(model);
-    groups.set(model.provider_id, list);
-  }
-  return [...groups.entries()]
-    .map(([providerId, groupModels]) => ({ provider: providerMap.get(providerId)!, models: groupModels }))
-    .filter((g) => g.provider != null);
-}
 
 function MessageBubble({ message }: { message: ChatMessage }) {
   const isUser = message.role === 'user';
@@ -178,15 +53,33 @@ function StreamingBubble({ content }: { content: string }) {
   );
 }
 
-export default function Playground() {
+export default function ScopedPlayground() {
   const workspaceRef = useRequiredParam('workspaceRef');
   const orgId = useRequiredOrgId();
+
+  return <Playground key={`${orgId}:${workspaceRef}`} orgId={orgId} workspaceRef={workspaceRef} />;
+}
+
+function Playground({ orgId, workspaceRef }: { orgId: string; workspaceRef: string }) {
   const taxonomyQuery = useProviders(orgId, workspaceRef);
   const createKey = useCreateInferenceKeyMutation(orgId, workspaceRef);
 
   const models = taxonomyQuery.data?.models ?? [];
   const providers = taxonomyQuery.data?.providers ?? [];
-  const groups = groupByProvider(models, providers);
+  const providerById = new Map(providers.map((provider) => [provider.id, provider]));
+  const modelOptions = models.map((model) => {
+    const provider = providerById.get(model.provider_id);
+    return {
+      value: model.name,
+      label: (
+        <span className="flex min-w-0 items-center gap-2">
+          {provider?.icon && <ProviderIcon markup={provider.icon} />}
+          <span className="truncate">{model.name}</span>
+          {provider && <span className="ml-auto text-[10px] text-muted-foreground">{provider.name}</span>}
+        </span>
+      ),
+    };
+  });
 
   const [token, setToken] = useState('');
   const [selectedModel, setSelectedModel] = useState('');
@@ -203,24 +96,27 @@ export default function Playground() {
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const activeModel = models.some((model) => model.name === selectedModel) ? selectedModel : (models[0]?.name ?? '');
 
   useEffect(() => {
-    if (models.length > 0 && !selectedModel) {
-      setSelectedModel(models[0].name);
-    }
-  }, [models, selectedModel]);
+    return () => {
+      const controller = abortRef.current;
+      abortRef.current = null;
+      controller?.abort();
+    };
+  }, []);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, streamingContent]);
 
-  const generateToken = useCallback(async () => {
+  const generateToken = async () => {
     const minted = await createKey.mutateAsync({ orgId, workspaceRef, data: { label: 'playground' } });
     setToken(minted.token);
-  }, [createKey, orgId, workspaceRef]);
+  };
 
-  const send = useCallback(async () => {
-    if (!input.trim() || !selectedModel || !token || sending) return;
+  const send = async () => {
+    if (!input.trim() || !activeModel || !token || sending) return;
     const userMessage: ChatMessage = { role: 'user', content: input.trim() };
     const history = [...messages, userMessage];
     setMessages(history);
@@ -229,78 +125,51 @@ export default function Playground() {
     setSending(true);
     setStreamingContent('');
 
-    const body = {
-      model: selectedModel,
-      messages: [
-        ...(systemPrompt.trim() ? [{ role: 'system', content: systemPrompt.trim() }] : []),
-        ...history.map((m) => ({ role: m.role, content: m.content })),
-      ],
-      temperature: parseFloat(temperature) || 1,
-      ...(maxTokens ? { max_tokens: parseInt(maxTokens, 10) } : {}),
-      stream: streamEnabled,
-    };
-
     const controller = new AbortController();
     abortRef.current = controller;
+    let partial = '';
 
     try {
-      const response = await fetch('/dp/v1/chat/completions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify(body),
+      const requestMessages: InferenceMessage[] = [
+        ...(systemPrompt.trim() ? [{ role: 'system' as const, content: systemPrompt.trim() }] : []),
+        ...history,
+      ];
+      const content = await chatCompletion({
+        token,
+        model: activeModel,
+        messages: requestMessages,
+        temperature: Number(temperature),
+        maxTokens: maxTokens ? Number.parseInt(maxTokens, 10) : undefined,
+        stream: streamEnabled,
         signal: controller.signal,
+        onDelta: (content) => {
+          partial = content;
+          setStreamingContent(content);
+        },
       });
-
-      if (!response.ok) {
-        const text = await response.text().catch(() => response.statusText);
-        throw new Error(`${response.status}: ${text}`);
-      }
-
-      if (streamEnabled && response.body) {
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        let accumulated = '';
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          const chunk = decoder.decode(value, { stream: true });
-          for (const line of chunk.split('\n')) {
-            const stripped = line.replace(/^data: /, '').trim();
-            if (!stripped || stripped === '[DONE]') continue;
-            try {
-              const parsed = JSON.parse(stripped);
-              const delta = parsed.choices?.[0]?.delta?.content;
-              if (delta) {
-                accumulated += delta;
-                setStreamingContent(accumulated);
-              }
-            } catch {
-              // partial chunk, ignore
-            }
-          }
-        }
-        setMessages((prev) => [...prev, { role: 'assistant', content: accumulated }]);
-      } else {
-        const data = await response.json();
-        const content = data.choices?.[0]?.message?.content ?? '';
-        setMessages((prev) => [...prev, { role: 'assistant', content }]);
-      }
+      if (abortRef.current !== controller) return;
+      setMessages((current) => [...current, { role: 'assistant', content }]);
     } catch (err) {
-      if ((err as Error).name !== 'AbortError') {
+      if (abortRef.current !== controller) return;
+      if ((err as Error).name === 'AbortError') {
+        if (partial) setMessages((current) => [...current, { role: 'assistant', content: partial }]);
+      } else {
         setError((err as Error).message);
-        setMessages((prev) => prev.slice(0, -1));
+        setMessages((current) => current.slice(0, -1));
         setInput(userMessage.content);
       }
     } finally {
-      setSending(false);
-      setStreamingContent('');
-      abortRef.current = null;
+      if (abortRef.current === controller) {
+        setSending(false);
+        setStreamingContent('');
+        abortRef.current = null;
+      }
     }
-  }, [input, selectedModel, token, sending, messages, systemPrompt, temperature, maxTokens, streamEnabled]);
+  };
 
-  const stop = useCallback(() => {
+  const stop = () => {
     abortRef.current?.abort();
-  }, []);
+  };
 
   if (taxonomyQuery.isLoading) return <LoadingState label="Loading workspace catalog..." />;
   if (taxonomyQuery.isError) return <ErrorState error={taxonomyQuery.error} resource="workspace catalog" onRetry={() => taxonomyQuery.refetch()} />;
@@ -315,7 +184,7 @@ export default function Playground() {
     );
   }
 
-  const canSend = !!input.trim() && !!selectedModel && !!token && !sending;
+  const canSend = !!input.trim() && !!activeModel && !!token && !sending;
 
   return (
     <PageShell className="h-[calc(100vh-2rem)] max-w-none flex flex-col gap-0 p-0 overflow-hidden">
@@ -326,13 +195,22 @@ export default function Playground() {
           </div>
 
           <div className="space-y-2">
-            <label className="font-mono text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Model</label>
-            <ModelPicker groups={groups} value={selectedModel} onChange={setSelectedModel} />
+            <Label htmlFor="playground-model">Model</Label>
+            <Dropdown
+              id="playground-model"
+              aria-label="Model"
+              className="h-8 text-xs"
+              value={activeModel}
+              onValueChange={setSelectedModel}
+              options={modelOptions}
+              placeholder="Select model"
+            />
           </div>
 
           <div className="space-y-2">
-            <label className="font-mono text-[11px] font-bold uppercase tracking-wider text-muted-foreground">System prompt</label>
+            <Label htmlFor="playground-system-prompt">System prompt</Label>
             <Textarea
+              id="playground-system-prompt"
               value={systemPrompt}
               onChange={(e) => setSystemPrompt(e.target.value)}
               placeholder="You are a helpful assistant."
@@ -341,10 +219,11 @@ export default function Playground() {
           </div>
 
           <div className="space-y-2">
-            <label className="font-mono text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+            <Label htmlFor="playground-temperature">
               Temperature <span className="text-foreground">{temperature}</span>
-            </label>
+            </Label>
             <input
+              id="playground-temperature"
               type="range"
               min="0"
               max="2"
@@ -361,8 +240,9 @@ export default function Playground() {
           </div>
 
           <div className="space-y-2">
-            <label className="font-mono text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Max tokens</label>
+            <Label htmlFor="playground-max-tokens">Max tokens</Label>
             <Input
+              id="playground-max-tokens"
               type="number"
               min={1}
               placeholder="Default"
@@ -373,51 +253,28 @@ export default function Playground() {
           </div>
 
           <div className="flex items-center justify-between">
-            <label className="font-mono text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Streaming</label>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={streamEnabled}
-              onClick={() => setStreamEnabled((v) => !v)}
-              className={cn(
-                'relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                streamEnabled ? 'bg-primary' : 'bg-muted',
-              )}
-            >
-              <span
-                className={cn(
-                  'inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform',
-                  streamEnabled ? 'translate-x-4' : 'translate-x-1',
-                )}
-              />
-            </button>
+            <Label htmlFor="playground-streaming">Streaming</Label>
+            <Switch id="playground-streaming" aria-label="Streaming" checked={streamEnabled} onCheckedChange={setStreamEnabled} />
           </div>
 
           <div className="space-y-2 border-t border-border pt-4">
-            <label className="font-mono text-[11px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+            <Label htmlFor="playground-key" className="flex items-center gap-1.5">
               <KeyRound className="h-3 w-3" />
               Inference key
-            </label>
+            </Label>
             <Input
+              id="playground-key"
               type="password"
               placeholder="sk-inf-..."
               value={token}
               onChange={(e) => setToken(e.target.value)}
               className="h-8 font-mono text-xs"
             />
-            <Button
-              variant="outline"
-              size="sm"
-              className="w-full text-xs"
-              onClick={generateToken}
-              disabled={createKey.isPending}
-            >
+            <Button variant="outline" size="sm" className="w-full text-xs" onClick={generateToken} disabled={createKey.isPending}>
               {createKey.isPending ? <Loader2 className="mr-1.5 h-3 w-3 animate-spin" /> : <KeyRound className="mr-1.5 h-3 w-3" />}
               Generate playground key
             </Button>
-            {!token && (
-              <p className="text-[10px] text-muted-foreground">Paste an existing key or generate one above.</p>
-            )}
+            {!token && <p className="text-[10px] text-muted-foreground">Paste an existing key or generate one above.</p>}
           </div>
         </aside>
 
@@ -430,9 +287,7 @@ export default function Playground() {
                     <Zap className="h-5 w-5 text-muted-foreground" />
                   </div>
                   <p className="font-mono text-sm text-muted-foreground">Send a message to start inferring</p>
-                  {!token && (
-                    <p className="text-xs text-destructive">Add an inference key in the sidebar first</p>
-                  )}
+                  {!token && <p className="text-xs text-destructive">Add an inference key in the sidebar first</p>}
                 </div>
               </div>
             )}
@@ -453,13 +308,11 @@ export default function Playground() {
               </div>
             )}
             {error && (
-              <Card className="flex items-start gap-3 border-destructive/30 bg-destructive/5 p-3">
+              <Alert variant="destructive" className="border-destructive/30 bg-destructive/5">
                 <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
-                <div className="space-y-0.5">
-                  <p className="text-xs font-medium text-destructive">Request failed</p>
-                  <p className="font-mono text-[11px] text-destructive/80">{error}</p>
-                </div>
-              </Card>
+                <AlertTitle>Request failed</AlertTitle>
+                <AlertDescription className="font-mono text-[11px]">{error}</AlertDescription>
+              </Alert>
             )}
             <div ref={bottomRef} />
           </div>
@@ -485,7 +338,10 @@ export default function Playground() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => { setMessages([]); setError(null); }}
+                    onClick={() => {
+                      setMessages([]);
+                      setError(null);
+                    }}
                     disabled={sending}
                     title="Clear conversation"
                     aria-label="Clear conversation"
@@ -504,12 +360,16 @@ export default function Playground() {
                 )}
               </div>
             </div>
-            {selectedModel && (
+            {activeModel && (
               <div className="mt-2 flex items-center gap-1.5">
                 <Badge variant="outline" className="font-mono text-[10px]">
-                  {selectedModel}
+                  {activeModel}
                 </Badge>
-                {streamEnabled && <Badge variant="secondary" className="text-[10px]">STREAMING</Badge>}
+                {streamEnabled && (
+                  <Badge variant="secondary" className="text-[10px]">
+                    STREAMING
+                  </Badge>
+                )}
               </div>
             )}
           </div>

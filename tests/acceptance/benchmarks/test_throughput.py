@@ -62,7 +62,7 @@ def test_single_data_plane_throughput(stack: Stack, bench: Bench) -> None:
     stack.start_dp()
     stack.wait_dp_ready()
 
-    url = f"{stack.dp_url}/v1/chat/completions"
+    url = f"{stack.dp_url}/inf/v1/chat/completions"
     headers = {"authorization": f"Bearer {stack.caller_api_key}"}
     body = {"model": "echo", "messages": [{"role": "user", "content": "hi"}]}
 

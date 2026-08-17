@@ -63,7 +63,7 @@ def resolve_org_id(override: str = "") -> str:
 
 
 def org_path(suffix: str, org_id: str = "") -> str:
-    return f"/v1/orgs/{resolve_org_id(org_id)}{suffix}"
+    return f"/api/v1/orgs/{resolve_org_id(org_id)}{suffix}"
 
 
 def api_error(resp: httpx.Response) -> str:

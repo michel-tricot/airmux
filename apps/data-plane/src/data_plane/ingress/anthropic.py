@@ -1,4 +1,4 @@
-"""The Anthropic dialect: the Messages surface at /v1/messages, routed to any provider.
+"""The Anthropic dialect: the Messages surface at /inf/v1/messages, routed to any provider.
 
 Claude Code and the Anthropic SDKs speak this. Requests parse through the same canonical
 middle as every other request; replies come back as Anthropic's shapes, buffered and as the
@@ -99,7 +99,7 @@ class AnthropicIngress(IngressAdapter):
     dialect = "anthropic"
 
     def claims(self, _headers: Headers, _body: dict[str, Any], /) -> bool:
-        """Never claims on the chat route: /v1/messages binds this dialect directly."""
+        """Never claims on the chat route: /inf/v1/messages binds this dialect directly."""
         return False
 
     def parse(self, body: dict[str, Any]) -> tuple[CanonicalRequest, list[Adjustment]]:

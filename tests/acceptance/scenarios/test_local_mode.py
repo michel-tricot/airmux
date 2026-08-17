@@ -69,7 +69,7 @@ data_plane:
     try:
         assert _poll(lambda: _ready(port), READY_TIMEOUT), (tmp_path / "dp.log").read_text(encoding="utf-8")
         response = httpx.post(
-            f"http://127.0.0.1:{port}/v1/chat/completions",
+            f"http://127.0.0.1:{port}/inf/v1/chat/completions",
             headers={"authorization": "Bearer sk-inf-local"},
             json={"model": "echo", "messages": [{"role": "user", "content": "hi"}]},
             timeout=10.0,

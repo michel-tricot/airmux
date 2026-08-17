@@ -46,7 +46,7 @@ uv run airllmdp serve --config airllm.standalone.yml
 In another terminal:
 
 ~~~bash
-curl http://127.0.0.1:8080/v1/chat/completions \
+curl http://127.0.0.1:8080/inf/v1/chat/completions \
   -H "Authorization: Bearer sk-inf-standalone-dev" \
   -H "Content-Type: application/json" \
   -d '{"model":"gpt-5-nano","messages":[{"role":"user","content":"Say hello in one sentence"}]}'
@@ -97,7 +97,7 @@ Try the managed gateway:
 ~~~bash
 export AIRLLM_API_KEY='the key printed by quickstart'
 
-curl http://localhost:8080/v1/chat/completions \
+curl http://localhost:8080/inf/v1/chat/completions \
   -H "Authorization: Bearer $AIRLLM_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{"model":"openai/gpt-4o-mini","messages":[{"role":"user","content":"Why use an LLM gateway?"}]}'
@@ -122,7 +122,7 @@ import os
 from openai import OpenAI
 
 client = OpenAI(
-    base_url="http://localhost:8080/v1",
+    base_url="http://localhost:8080/inf/v1",
     api_key=os.environ["AIRLLM_API_KEY"],
 )
 

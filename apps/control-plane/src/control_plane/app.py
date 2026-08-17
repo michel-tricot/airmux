@@ -121,7 +121,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.add_exception_handler(AuthorizationError, authorization_handler)
     app.add_exception_handler(CredentialError, credential_handler)
     app.add_route("/healthz", healthz)
-    v1 = APIRouter(prefix="/v1", dependencies=[Depends(get_session, scope="function")])
+    v1 = APIRouter(prefix="/api/v1", dependencies=[Depends(get_session, scope="function")])
     for router in (
         access_keys_router,
         auth_router,
