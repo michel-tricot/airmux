@@ -22,7 +22,7 @@ import {
   CardFooter as CardFooterPrimitive,
   CardHeader as CardHeaderPrimitive,
 } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input as InputPrimitive } from '@/components/ui/input';
 import { Label as LabelPrimitive } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectSeparator, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -272,24 +272,28 @@ export const SearchableDropdown = ({
       setActiveIndex(0);
       return;
     }
-    setActiveIndex(Math.max(0, options.findIndex((option) => option.value === value)));
+    setActiveIndex(
+      Math.max(
+        0,
+        options.findIndex((option) => option.value === value),
+      ),
+    );
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <Button
-        id={id}
-        variant="outline"
-        className={cn('h-9 w-full justify-between px-3 text-left text-[13px] normal-case', className)}
-        aria-label={ariaLabel}
-        aria-haspopup="dialog"
-        aria-expanded={open}
-        disabled={disabled}
-        onClick={() => onOpenChange(true)}
-      >
-        <span className="min-w-0 truncate">{selected?.label ?? placeholder}</span>
-        <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-      </Button>
+      <DialogTrigger asChild>
+        <Button
+          id={id}
+          variant="outline"
+          className={cn('h-9 w-full justify-between px-3 text-left text-[13px] normal-case', className)}
+          aria-label={ariaLabel}
+          disabled={disabled}
+        >
+          <span className="min-w-0 truncate">{selected?.label ?? placeholder}</span>
+          <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+        </Button>
+      </DialogTrigger>
       <DialogContent className="w-[calc(100%-2rem)] max-w-lg gap-4 border-border bg-card p-4 text-card-foreground">
         <DialogHeader className="space-y-1">
           <DialogTitle className="text-base">Select model</DialogTitle>
@@ -342,7 +346,10 @@ export const SearchableDropdown = ({
               role="option"
               aria-selected={option.value === value}
               tabIndex={-1}
-              className={cn('h-auto w-full justify-start px-3 py-2 text-left normal-case', index === highlightedIndex && 'bg-primary/10 text-primary')}
+              className={cn(
+                'h-auto w-full justify-start px-3 py-2 text-left normal-case',
+                index === highlightedIndex && 'bg-primary/10 text-primary',
+              )}
               onMouseEnter={() => setActiveIndex(index)}
               onClick={() => selectOption(option)}
             >

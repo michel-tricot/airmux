@@ -30,17 +30,10 @@ ERROR_BODY = {
     "openai_responses": ({"error": {"code": "rate_limit_exceeded", "message": "slow down"}}, "rate_limit_exceeded"),
     "anthropic": ({"type": "error", "error": {"type": "rate_limit_error", "message": "slow down"}}, "rate_limit_error"),
 }
-# Content part types a replayed assistant turn may carry. Every family renders assistant
-# text as a bare string, so the answer is "none" throughout, but only Responses makes it
-# load bearing: it types content by producer and rejects the input spelling on an assistant
-# turn with "Invalid value: 'input_text'. Supported values are: 'output_text' and
-# 'refusal'." The reference schema does not catch that on its own, because its overlapping
-# discriminator branches are relaxed to anyOf before validation.
 ASSISTANT_PART_TYPES = {kind: set() for kind in REGISTRY}
 
 
 def _assistant_part_types(body: object) -> set[str]:
-    """Every content part type appearing under an assistant-role message in a rendered body."""
     found: set[str] = set()
 
     def walk(node: object) -> None:
@@ -105,16 +98,11 @@ def test_every_corpus_case_renders_a_schema_valid_upstream_request(kind, case):
 
 @pytest.mark.parametrize("kind", sorted(REGISTRY))
 def test_a_replayed_assistant_turn_is_rendered_as_something_the_model_said(kind):
-    """History has to reach the provider as output, not as more input.
-
-    Every turn after the first carries one, so getting this wrong fails every multi-turn
-    conversation while a single question still works.
-    """
     case = next(c for c in CORPUS if c.name == "multi_turn_text")
     adapter, model = _adapter(kind)
     upstream = adapter.transform_request(request_of(case), model)
     assert _assistant_part_types(json.loads(upstream.body)) == ASSISTANT_PART_TYPES[kind]
-    assert "Paris" in upstream.body.decode()  # and the turn still reaches the provider
+    assert "Paris" in upstream.body.decode()
 
 
 @pytest.mark.parametrize("kind", sorted(REGISTRY))

@@ -1,11 +1,3 @@
-"""Reading the Responses input array.
-
-OpenAI accepts several spellings for the same conversation, and the SDKs emit the shortest
-one. A spelling this parser does not recognise is not rejected, it is dropped, so the model
-answers a question missing its history and the caller sees a confident wrong answer with no
-error anywhere. These pin every documented form to the messages it must produce.
-"""
-
 from __future__ import annotations
 
 import pytest
@@ -13,7 +5,6 @@ import pytest
 from data_plane.canonical import CanonicalMessage, TextPart
 from data_plane.formats.openai_responses import input_of, messages_of
 
-# (name, input item, the (role, text) pairs it has to become)
 SPELLINGS = [
     (
         "typed input parts",
@@ -58,7 +49,6 @@ def test_every_documented_input_spelling_survives_the_read(items, expected):
 
 
 def test_a_conversation_read_then_rewritten_keeps_every_turn():
-    """Round trip, because the gateway both reads this shape and writes it."""
     original = [
         {"role": "user", "content": "What is the capital of France?"},
         {"role": "assistant", "content": "Paris"},

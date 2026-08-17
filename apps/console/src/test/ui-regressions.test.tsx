@@ -225,14 +225,36 @@ describe('playground', () => {
     const secondProvider = taxonomyProvider('provider-2', 'anthropic');
     const models = [
       {
-        id: 'model-1', name: 'openai/gpt-test', provider_id: firstProvider.id, upstream_model: 'gpt-test', input_price_per_mtok: 1,
-        output_price_per_mtok: 2, cache_read_price_per_mtok: 0, cache_write_price_per_mtok: 0, context_window: 128000,
-        max_output_tokens: 4096, capabilities: ['streaming'], created_at: now, updated_at: now, deleted_at: null,
+        id: 'model-1',
+        name: 'openai/gpt-test',
+        provider_id: firstProvider.id,
+        upstream_model: 'gpt-test',
+        input_price_per_mtok: 1,
+        output_price_per_mtok: 2,
+        cache_read_price_per_mtok: 0,
+        cache_write_price_per_mtok: 0,
+        context_window: 128000,
+        max_output_tokens: 4096,
+        capabilities: ['streaming'],
+        created_at: now,
+        updated_at: now,
+        deleted_at: null,
       },
       {
-        id: 'model-2', name: 'anthropic/claude-test', provider_id: secondProvider.id, upstream_model: 'claude-test', input_price_per_mtok: 1,
-        output_price_per_mtok: 2, cache_read_price_per_mtok: 0, cache_write_price_per_mtok: 0, context_window: 128000,
-        max_output_tokens: 4096, capabilities: ['streaming'], created_at: now, updated_at: now, deleted_at: null,
+        id: 'model-2',
+        name: 'anthropic/claude-test',
+        provider_id: secondProvider.id,
+        upstream_model: 'claude-test',
+        input_price_per_mtok: 1,
+        output_price_per_mtok: 2,
+        cache_read_price_per_mtok: 0,
+        cache_write_price_per_mtok: 0,
+        context_window: 128000,
+        max_output_tokens: 4096,
+        capabilities: ['streaming'],
+        created_at: now,
+        updated_at: now,
+        deleted_at: null,
       },
     ];
     server.use(
@@ -249,6 +271,8 @@ describe('playground', () => {
     await user.type(within(dialog).getByPlaceholderText('Search models...'), 'anthropic');
     await user.keyboard('{ArrowDown}{Enter}');
 
-    expect(screen.getByRole('button', { name: 'Model' })).toHaveTextContent('anthropic/claude-test');
+    const modelSelector = screen.getByRole('button', { name: 'Model' });
+    expect(modelSelector).toHaveTextContent('anthropic/claude-test');
+    expect(modelSelector).toHaveFocus();
   });
 });
