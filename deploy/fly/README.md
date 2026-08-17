@@ -24,39 +24,44 @@ Machine, so the backend cannot scale horizontally without replacing local state 
 
 ## One-time provisioning
 
-Install `flyctl`, authenticate, and choose globally unique app names and a region:
+Install `flyctl` and `gh`, authenticate both CLIs, and run bootstrap with the public installation name:
 
 ```sh
-export FLY_ORG=your-org
-export FLY_REGION=sjc
-export FLY_BACKEND_APP=your-airllm-backend
-export FLY_CONSOLE_APP=your-airllm
-export AIRLLM_PUBLIC_URL="https://${FLY_CONSOLE_APP}.fly.dev"
-
-flyctl apps create "$FLY_BACKEND_APP" --org "$FLY_ORG"
-flyctl apps create "$FLY_CONSOLE_APP" --org "$FLY_ORG"
+flyctl auth login
+gh auth login
+./deploy/fly/bootstrap.sh airllm
 ```
 
-Create a Fly Managed Postgres cluster and attach it to the backend app:
+The name `airllm` derives every resource and setting:
+
+- Backend Fly app: `airllm-backend`
+- Frontend Fly app: `airllm-frontend`
+- Managed Postgres cluster: `airllm`
+- Public URL: `https://airllm-frontend.fly.dev`
+- GitHub deployment environment: `production`
+
+Bootstrap creates missing apps and a Basic 10 GB Managed Postgres cluster in `sjc`, attaches the
+database, installs its pooled and direct URLs as Fly secrets, creates missing app-scoped GitHub
+deploy tokens, writes the GitHub environment variables, and deploys both apps. It reuses matching
+resources and secrets on later runs, so the same command is safe to run again after a partial setup.
+
+Accounts with more than one Fly organization must select one explicitly. The region, Postgres plan
+and disk size, public URL, GitHub repository and environment, and deploy-token expiry can also be
+overridden:
 
 ```sh
-export FLY_MPG_CLUSTER_ID=your-cluster-id
-flyctl mpg attach "$FLY_MPG_CLUSTER_ID" --app "$FLY_BACKEND_APP"
+FLY_ORG=your-org \
+FLY_REGION=iad \
+FLY_MPG_PLAN=Starter \
+FLY_MPG_VOLUME_SIZE=20 \
+GH_REPO=owner/repository \
+GITHUB_ENVIRONMENT=production \
+FLY_TOKEN_EXPIRY=8760h \
+./deploy/fly/bootstrap.sh airllm
 ```
 
-The attachment installs the pooled `DATABASE_URL`. Copy the direct connection URL from the Managed
-Postgres Connect page and add it for migrations:
-
-```sh
-flyctl secrets set --app "$FLY_BACKEND_APP" DIRECT_DATABASE_URL='postgresql://user:password@direct.cluster.internal/database'
-```
-
-Deploy both apps. The checked-in backend configuration creates a 1 GB volume named `airllm_state`
-on the first deployment:
-
-```sh
-./deploy/fly/deploy.sh
-```
+Existing GitHub deploy secrets are preserved instead of generating additional Fly tokens on every
+run.
 
 Set up the first account, workspace, data-plane credential, provider credentials, and inference key:
 
@@ -81,22 +86,15 @@ The second request should reach the data plane and return `401 Unauthorized`.
 
 ## Subsequent deployments
 
-With the app and region variables still set:
+Use the `deploy-fly` workflow's **Run workflow** button in GitHub Actions. The local deployment script
+is also available when the app variables are set:
 
 ```sh
+export FLY_BACKEND_APP=airllm-backend
+export FLY_CONSOLE_APP=airllm-frontend
+export FLY_REGION=sjc
 ./deploy/fly/deploy.sh
 ```
-
-For GitHub Actions, create a `production` environment with these variables:
-
-- `FLY_BACKEND_APP`
-- `FLY_CONSOLE_APP`
-- `FLY_REGION`
-- `AIRLLM_PUBLIC_URL`, optional when using the console app's `fly.dev` URL
-
-Create one app-scoped deploy token for each app as `FLY_BACKEND_API_TOKEN` and
-`FLY_CONSOLE_API_TOKEN`. The `deploy-fly` workflow remains manual until initial provisioning is
-complete.
 
 ## Custom domain
 

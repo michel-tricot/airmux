@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: superfly/flyctl-actions/setup-flyctl@master
       - run: |
           AIRLLM_PUBLIC_URL=${AIRLLM_PUBLIC_URL:-https://${FLY_CONSOLE_APP}.fly.dev}
@@ -31,7 +31,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: superfly/flyctl-actions/setup-flyctl@master
       - run: |
           flyctl deploy . --config deploy/fly/console.toml --app "$FLY_CONSOLE_APP" --primary-region "$FLY_REGION" --remote-only \
