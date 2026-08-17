@@ -75,6 +75,7 @@ TAG_GROUPS = [
 OPERATION_SUMMARIES = {
     "signup": "Sign Up",
     "me": "Get Current User",
+    "my_permissions": "Get Effective Permissions",
     "cli_auth_start": "Start CLI Authorization",
     "cli_auth_request_details": "Get CLI Authorization Request",
     "cli_auth_approve": "Approve CLI Authorization",
@@ -179,6 +180,10 @@ class ControlPlaneApp(FastAPI):
                     operation["responses"].setdefault("401", {"description": "A valid browser session is required"})
                     operation["responses"].setdefault("403", {"description": "The request failed browser security checks"})
                     authentication = "Authentication: browser session."
+                elif "principal" in access:
+                    operation["security"] = [{"AccessKey": []}, {"SessionCookie": []}]
+                    operation["responses"].setdefault("401", {"description": "Authentication failed"})
+                    authentication = "Authentication: browser session or control-plane access key."
                 elif "user" in access:
                     operation["security"] = [{"AccessKey": []}, {"SessionCookie": []}]
                     operation["responses"].setdefault("401", {"description": "An authenticated human account is required"})

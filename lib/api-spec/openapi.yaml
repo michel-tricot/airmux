@@ -454,11 +454,11 @@ paths:
     get:
       tags:
       - Auth
-      summary: My Permissions
+      summary: Get Effective Permissions
       description: 'Return the effective permissions this credential can exercise at the requested scope.
 
 
-        Authentication: human account using a browser session or control-plane access key.'
+        Authentication: browser session or control-plane access key.'
       operationId: my_permissions
       security:
       - AccessKey: []
@@ -488,7 +488,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
         '401':
-          description: An authenticated human account is required
+          description: Authentication failed
   /v1/auth/password:
     post:
       tags:
@@ -4346,6 +4346,7 @@ components:
             $ref: '#/components/schemas/Permission'
           type: array
           title: Permissions
+          description: Permissions the credential can exercise at the requested scope
       type: object
       required:
       - permissions

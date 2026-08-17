@@ -49,6 +49,13 @@ def test_org_key_cannot_read_instance_or_other_org_permissions(tmp_path):
         assert resp.status_code == 200
         assert Permission.access_keys_issue.value in resp.json()["data"]["permissions"]
 
+        limited = c.get(
+            f"/v1/auth/permissions?org_id={org_a}",
+            headers=cp.headers(org_a, permissions=[Permission.workspaces_read]),
+        )
+        assert limited.status_code == 200
+        assert limited.json()["data"]["permissions"] == [Permission.workspaces_read]
+
         resp = c.get("/v1/auth/permissions", headers=org_headers)
         assert resp.status_code == 200
         assert resp.json()["data"]["permissions"] == []
@@ -67,3 +74,27 @@ def test_unknown_org_returns_404_and_anonymous_401(tmp_path):
 
         resp = c.get("/v1/auth/permissions", headers=CSRF)
         assert resp.status_code == 401
+
+
+def test_service_account_access_key_sees_its_effective_permissions(tmp_path):
+    cp = setup_control_plane(tmp_path)
+    root = cp.headers()
+    with _client(cp) as c:
+        service_account = c.post(
+            "/v1/service-accounts",
+            json={"name": "automation", "instance_role": "auditor"},
+            headers=root,
+        ).json()["data"]
+        key = c.post(
+            "/v1/instance/access-keys",
+            json={
+                "label": "automation",
+                "user_id": service_account["id"],
+                "permissions": [Permission.organizations_read],
+            },
+            headers=root,
+        ).json()["data"]
+
+        resp = c.get("/v1/auth/permissions", headers={"authorization": f"Bearer {key['token']}"})
+        assert resp.status_code == 200
+        assert resp.json()["data"]["permissions"] == [Permission.organizations_read]

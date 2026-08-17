@@ -1,37 +1,37 @@
 import type { UseFormReturn } from 'react-hook-form';
 import * as z from 'zod';
-import type { Permission as PermissionName } from '@workspace/api-client-react';
+import { Permission, type Permission as PermissionName } from '@workspace/api-client-react';
 import { Input } from '@/components/ui/elements';
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { cn } from '@/lib/utils';
+import { ErrorState } from '@/components/shared/states';
+import { groupPermissions } from '@/components/shared/permission-groups';
 
 export const accessKeyFormSchema = z.object({
   label: z.string().min(1, 'Label is required').max(80, 'Label must be 80 characters or fewer'),
-  permissions: z.array(z.custom<PermissionName>((value) => typeof value === 'string')).min(1, 'Select at least one permission'),
+  permissions: z.array(z.nativeEnum(Permission)).min(1, 'Select at least one permission'),
 });
 
 export type AccessKeyFormValues = z.infer<typeof accessKeyFormSchema>;
 
-function groupPermissions(permissions: readonly PermissionName[]): [string, PermissionName[]][] {
-  const groups = new Map<string, PermissionName[]>();
-  for (const permission of permissions) {
-    const resource = permission.split('.')[0];
-    const entries = groups.get(resource) ?? [];
-    entries.push(permission);
-    groups.set(resource, entries);
-  }
-  return [...groups.entries()];
+export function canIssueAccessKeys(permissions: readonly PermissionName[] | undefined): boolean {
+  return permissions?.includes('access-keys.issue') ?? false;
 }
 
 export function AccessKeyFormFields({
   form,
   availablePermissions,
   permissionsLoading,
+  permissionsError,
+  onPermissionsRetry,
 }: {
   form: UseFormReturn<AccessKeyFormValues>;
   availablePermissions: readonly PermissionName[];
   permissionsLoading?: boolean;
+  permissionsError?: unknown;
+  onPermissionsRetry?: () => void;
 }) {
+  const canIssue = canIssueAccessKeys(availablePermissions);
   return (
     <>
       <FormField
@@ -55,8 +55,15 @@ export function AccessKeyFormFields({
             <FormLabel>Permissions</FormLabel>
             {permissionsLoading ? (
               <p className="text-xs text-muted-foreground">Loading your permissions...</p>
-            ) : availablePermissions.length === 0 ? (
-              <p className="text-xs text-muted-foreground">You have no permissions to delegate at this scope.</p>
+            ) : permissionsError ? (
+              <ErrorState
+                error={permissionsError}
+                resource="permissions"
+                onRetry={onPermissionsRetry}
+                className="rounded-md border border-border p-3"
+              />
+            ) : !canIssue ? (
+              <p className="text-xs text-muted-foreground">You do not have permission to issue access keys at this scope.</p>
             ) : (
               <div className="permission-scrollbar max-h-64 space-y-3 overflow-y-auto rounded-md border border-border bg-card/30 p-3">
                 {groupPermissions(availablePermissions).map(([resource, permissions]) => (
@@ -92,7 +99,9 @@ export function AccessKeyFormFields({
                 ))}
               </div>
             )}
-            <p className="text-xs text-muted-foreground">Only permissions you currently hold are listed. The key can never exceed them.</p>
+            {!permissionsLoading && !permissionsError && canIssue && (
+              <p className="text-xs text-muted-foreground">Only permissions you currently hold are listed. The key can never exceed them.</p>
+            )}
             <FormMessage />
           </FormItem>
         )}

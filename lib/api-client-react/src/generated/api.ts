@@ -1024,8 +1024,8 @@ export const getMyPermissionsUrl = (params?: MyPermissionsParams,) => {
 /**
  * Return the effective permissions this credential can exercise at the requested scope.
  *
- * Authentication: human account using a browser session or control-plane access key.
- * @summary My Permissions
+ * Authentication: browser session or control-plane access key.
+ * @summary Get Effective Permissions
  */
 export const myPermissions = async (params?: MyPermissionsParams, options?: Parameters<typeof customFetch>[1]): Promise<MyPermissionsOut> => {
 
@@ -1072,7 +1072,7 @@ export type MyPermissionsQueryError = ErrorType<void | HTTPValidationError>
 
 
 /**
- * @summary My Permissions
+ * @summary Get Effective Permissions
  */
 
 export function useMyPermissions<TData = Awaited<ReturnType<typeof myPermissions>>, TError = ErrorType<void | HTTPValidationError>>(

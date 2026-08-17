@@ -1307,7 +1307,13 @@ class MembershipOut(BaseModel):
 
 
 class MyPermissionsOut(BaseModel):
-    permissions: Annotated[list[Permission], Field(title="Permissions")]
+    permissions: Annotated[
+        list[Permission],
+        Field(
+            description="Permissions the credential can exercise at the requested scope",
+            title="Permissions",
+        ),
+    ]
 
 
 class OrgMemberOut(BaseModel):

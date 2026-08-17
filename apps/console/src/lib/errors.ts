@@ -6,7 +6,7 @@ export function isApiErrorStatus(error: unknown, status: number): boolean {
 
 export function isControlPlaneUnreachable(error: unknown): boolean {
   if (error instanceof ApiError) return error.status === 502 || error.status === 503 || error.status === 504;
-  return error instanceof Error;
+  return error instanceof TypeError;
 }
 
 export function queryErrorMessage(error: unknown, resource = 'data'): string {

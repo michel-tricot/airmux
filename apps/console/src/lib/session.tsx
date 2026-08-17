@@ -39,9 +39,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, [logoutMutation, queryClient, setOrgId]);
 
   const user = session.isError ? undefined : session.data;
+  const { refetch } = session;
   const retry = useCallback(() => {
-    void session.refetch();
-  }, [session]);
+    void refetch();
+  }, [refetch]);
 
   return (
     <SessionContext.Provider

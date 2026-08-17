@@ -11,7 +11,7 @@ import { PageShell } from '@/components/shared/page-shell';
 import { DataTable } from '@/components/shared/data-table';
 import { FormDialog } from '@/components/shared/form-dialog';
 import { ApiKeysTable } from '@/components/shared/api-keys-table';
-import { AccessKeyFormFields, accessKeyFormSchema } from '@/components/shared/access-key-form';
+import { AccessKeyFormFields, accessKeyFormSchema, canIssueAccessKeys } from '@/components/shared/access-key-form';
 import { PermissionsCell } from '@/components/shared/permissions-cell';
 
 export default function AppOrgSettings() {
@@ -30,7 +30,8 @@ export default function AppOrgSettings() {
   const describeRecord = (entry: { record_id: string }) => keyLabels.get(entry.record_id) ?? null;
 
   const mintKey = useCreateOrgAccessKeyMutation(orgId);
-  const permissionsQuery = useGrantablePermissions(orgId);
+  const permissionsQuery = useGrantablePermissions({ orgId, enabled: keyOpen });
+  const canIssueKey = canIssueAccessKeys(permissionsQuery.data?.permissions);
   const revokeKey = useRevokeOrgAccessKeyMutation(orgId);
   const compile = useCompileBundleMutation(orgId);
 
@@ -249,9 +250,16 @@ export default function AppOrgSettings() {
         }}
         submitLabel="Generate"
         pending={mintKey.isPending}
+        submitDisabled={permissionsQuery.isFetching || permissionsQuery.isError || !canIssueKey}
       >
         {(form) => (
-          <AccessKeyFormFields form={form} availablePermissions={permissionsQuery.data?.permissions ?? []} permissionsLoading={permissionsQuery.isPending} />
+          <AccessKeyFormFields
+            form={form}
+            availablePermissions={permissionsQuery.data?.permissions ?? []}
+            permissionsLoading={permissionsQuery.isFetching}
+            permissionsError={permissionsQuery.isError ? permissionsQuery.error : undefined}
+            onPermissionsRetry={() => void permissionsQuery.refetch()}
+          />
         )}
       </FormDialog>
 

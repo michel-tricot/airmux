@@ -8,7 +8,7 @@ from uuid import UUID
 from fastapi import APIRouter, HTTPException, Request, Response
 from pydantic import BaseModel, Field, field_validator
 
-from control_plane.authority import principal_can_select_org, principal_permissions, visible_org_ids
+from control_plane.authority import effective_permissions, principal_can_select_org, visible_org_ids
 from control_plane.authz import Actor, InstanceRole, Permission, Scope
 from control_plane.deps import (
     ActingUserDep,
@@ -16,9 +16,11 @@ from control_plane.deps import (
     BearerDep,
     CookieUserDep,
     FetchSite,
+    PermissionScopeDep,
     RequestedWith,
     SessionCookie,
     browser_scoped,
+    principal_scoped,
     public,
     require_csrf,
     user_scoped,
@@ -64,7 +66,7 @@ class MeOut(BaseModel):
 
 
 class MyPermissionsOut(BaseModel):
-    permissions: list[Permission]
+    permissions: list[Permission] = Field(description="Permissions the credential can exercise at the requested scope")
 
 
 class PasswordChangeIn(RequestModel):
@@ -172,15 +174,10 @@ async def me(user: ActingUserDep, actor: ActorDep) -> Envelope[MeOut]:
     return Envelope(data=await _me_out(user, actor))
 
 
-@router.get("/permissions", tags=["Auth"], dependencies=[user_scoped()])
-async def my_permissions(actor: ActorDep, org_id: UUID | None = None) -> Envelope[MyPermissionsOut]:
+@router.get("/permissions", tags=["Auth"], dependencies=[principal_scoped()])
+async def my_permissions(actor: ActorDep, scope: PermissionScopeDep) -> Envelope[MyPermissionsOut]:
     """Return the effective permissions this credential can exercise at the requested scope."""
-    if org_id is not None and await Org.find_by_id(org_id) is None:
-        raise HTTPException(status_code=404, detail="Organization not found")
-    scope = Scope.org(org_id) if org_id is not None else Scope.instance()
-    if not actor.grant.scope.covers(scope):
-        return Envelope(data=MyPermissionsOut(permissions=[]))
-    permissions = await principal_permissions(actor.principal_id, scope) & actor.grant.permissions
+    permissions = await effective_permissions(actor, scope)
     return Envelope(data=MyPermissionsOut(permissions=sorted(permissions)))
 
 

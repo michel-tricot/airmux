@@ -4,22 +4,28 @@ import { Button } from '@/components/ui/elements';
 
 const RETRY_INTERVAL_SECONDS = 10;
 
-export function ControlPlaneDown({ onRetry, isRetrying }: { onRetry: () => void; isRetrying: boolean }) {
+function RetryCountdown({ onRetry }: { onRetry: () => void }) {
   const [secondsLeft, setSecondsLeft] = useState(RETRY_INTERVAL_SECONDS);
 
   useEffect(() => {
-    if (isRetrying) return;
-    setSecondsLeft(RETRY_INTERVAL_SECONDS);
     const timer = setInterval(() => {
       setSecondsLeft((current) => (current > 1 ? current - 1 : 0));
     }, 1000);
     return () => clearInterval(timer);
-  }, [isRetrying, onRetry]);
+  }, []);
 
   useEffect(() => {
-    if (secondsLeft === 0 && !isRetrying) onRetry();
-  }, [secondsLeft, isRetrying, onRetry]);
+    if (secondsLeft === 0) onRetry();
+  }, [secondsLeft, onRetry]);
 
+  return (
+    <p className="font-mono text-xs text-muted-foreground" role="status">
+      Retrying automatically in {secondsLeft}s
+    </p>
+  );
+}
+
+export function ControlPlaneDown({ onRetry, isRetrying }: { onRetry: () => void; isRetrying: boolean }) {
   return (
     <div role="alert" className="flex min-h-screen items-center justify-center bg-background p-6">
       <div className="w-full max-w-md space-y-6 text-center">
@@ -29,7 +35,7 @@ export function ControlPlaneDown({ onRetry, isRetrying }: { onRetry: () => void;
         <div className="space-y-2">
           <h1 className="font-mono text-lg font-semibold uppercase tracking-wide">Control plane unreachable</h1>
           <p className="text-sm text-muted-foreground">
-            The console could not reach the control plane. It may be restarting or temporarily offline. Your session and data are safe.
+            The console could not reach the control plane. It may be restarting or temporarily offline. We’ll keep trying to reconnect.
           </p>
         </div>
         <div className="space-y-3">
@@ -37,9 +43,13 @@ export function ControlPlaneDown({ onRetry, isRetrying }: { onRetry: () => void;
             <RefreshCw className={isRetrying ? 'h-4 w-4 animate-spin' : 'h-4 w-4'} aria-hidden="true" />
             {isRetrying ? 'Reconnecting...' : 'Retry now'}
           </Button>
-          <p className="font-mono text-xs text-muted-foreground" role="status">
-            {isRetrying ? 'Checking the connection...' : `Retrying automatically in ${secondsLeft}s`}
-          </p>
+          {isRetrying ? (
+            <p className="font-mono text-xs text-muted-foreground" role="status">
+              Checking the connection...
+            </p>
+          ) : (
+            <RetryCountdown onRetry={onRetry} />
+          )}
         </div>
       </div>
     </div>

@@ -10,7 +10,7 @@ import {
 } from '@/features/keys/hooks';
 import { useUsers } from '@/features/users/hooks';
 import { KeyRevealDialog } from '@/components/KeyRevealDialog';
-import { AccessKeyFormFields, accessKeyFormSchema } from '@/components/shared/access-key-form';
+import { AccessKeyFormFields, accessKeyFormSchema, canIssueAccessKeys } from '@/components/shared/access-key-form';
 import { PermissionsCell } from '@/components/shared/permissions-cell';
 import { ApiKeysTable } from '@/components/shared/api-keys-table';
 import { FormDialog } from '@/components/shared/form-dialog';
@@ -18,14 +18,15 @@ import { ErrorState } from '@/components/shared/states';
 import { PageShell } from '@/components/shared/page-shell';
 
 export default function AccessKeys() {
+  const [createOpen, setCreateOpen] = useState(false);
+  const [token, setToken] = useState<string | null>(null);
   const keysQuery = useInstanceAccessKeys();
   const usersQuery = useUsers();
   const usersById = new Map(usersQuery.data?.map((user) => [user.id, user]));
   const createKey = useCreateInstanceAccessKeyMutation();
-  const permissionsQuery = useGrantablePermissions();
+  const permissionsQuery = useGrantablePermissions({ enabled: createOpen });
+  const canIssueKey = canIssueAccessKeys(permissionsQuery.data?.permissions);
   const revokeKey = useRevokeInstanceAccessKeyMutation();
-  const [createOpen, setCreateOpen] = useState(false);
-  const [token, setToken] = useState<string | null>(null);
 
   return (
     <PageShell>
@@ -103,9 +104,16 @@ export default function AccessKeys() {
         submitLabel="Mint key"
         pendingLabel="Minting..."
         pending={createKey.isPending}
+        submitDisabled={permissionsQuery.isFetching || permissionsQuery.isError || !canIssueKey}
       >
         {(form) => (
-          <AccessKeyFormFields form={form} availablePermissions={permissionsQuery.data?.permissions ?? []} permissionsLoading={permissionsQuery.isPending} />
+          <AccessKeyFormFields
+            form={form}
+            availablePermissions={permissionsQuery.data?.permissions ?? []}
+            permissionsLoading={permissionsQuery.isFetching}
+            permissionsError={permissionsQuery.isError ? permissionsQuery.error : undefined}
+            onPermissionsRetry={() => void permissionsQuery.refetch()}
+          />
         )}
       </FormDialog>
 

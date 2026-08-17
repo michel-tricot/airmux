@@ -1,20 +1,10 @@
 import { Permission, type Permission as PermissionName } from '@workspace/api-client-react';
 import { Badge } from '@/components/ui/elements';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { groupPermissions } from '@/components/shared/permission-groups';
 
 const allPermissions = Object.values(Permission);
 const VISIBLE_GROUPS = 3;
-
-function groupByResource(permissions: readonly PermissionName[]): [string, string[]][] {
-  const groups = new Map<string, string[]>();
-  for (const permission of permissions) {
-    const [resource, action] = permission.split('.');
-    const actions = groups.get(resource) ?? [];
-    actions.push(action);
-    groups.set(resource, actions);
-  }
-  return [...groups.entries()];
-}
 
 export function PermissionsCell({ permissions }: { permissions: readonly PermissionName[] }) {
   if (permissions.length === 0) {
@@ -23,7 +13,9 @@ export function PermissionsCell({ permissions }: { permissions: readonly Permiss
   if (permissions.length >= allPermissions.length && allPermissions.every((permission) => permissions.includes(permission))) {
     return <Badge variant="secondary">FULL ACCESS</Badge>;
   }
-  const groups = groupByResource(permissions);
+  const groups = groupPermissions(permissions).map(
+    ([resource, grouped]) => [resource, grouped.map((permission) => permission.slice(resource.length + 1))] as const,
+  );
   const visible = groups.slice(0, VISIBLE_GROUPS);
   const hidden = groups.length - visible.length;
   return (
@@ -33,13 +25,13 @@ export function PermissionsCell({ permissions }: { permissions: readonly Permiss
         aria-label={`Show all ${permissions.length} permissions`}
         className="flex max-w-72 cursor-default flex-wrap items-center gap-1 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
-          {visible.map(([resource, actions]) => (
-            <Badge key={resource} variant="outline" className="gap-1 font-mono text-[10px]">
-              {resource}
-              <span className="text-muted-foreground">{actions.length}</span>
-            </Badge>
-          ))}
-          {hidden > 0 && <span className="text-xs text-muted-foreground">+{hidden} more</span>}
+        {visible.map(([resource, actions]) => (
+          <Badge key={resource} variant="outline" className="gap-1 font-mono text-[10px]">
+            {resource}
+            <span className="text-muted-foreground">{actions.length}</span>
+          </Badge>
+        ))}
+        {hidden > 0 && <span className="text-xs text-muted-foreground">+{hidden} groups</span>}
       </TooltipTrigger>
       <TooltipContent side="left" className="max-w-80">
         <div className="space-y-1 py-1">

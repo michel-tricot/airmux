@@ -13,5 +13,6 @@
 import type { Permission } from './permission';
 
 export interface MyPermissionsOut {
+  /** Permissions the credential can exercise at the requested scope */
   permissions: Permission[];
 }
