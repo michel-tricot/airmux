@@ -13,6 +13,7 @@ x-provider-keys: &provider-keys
 services:
   postgres:
     image: postgres:16
+    profiles: ["backend"]
     environment:
       POSTGRES_USER: airllm
       POSTGRES_PASSWORD: airllm
@@ -28,6 +29,7 @@ services:
 
   control-plane:
     build: .
+    profiles: ["backend"]
     # The one checked-in airllm.yml serves the checkout and this stack: the working directory is the shared
     # /state volume, so its relative refs land here, and the values that differ come in as variables below.
     # Bring your own GW_BUNDLE_SIGNING_KEY (then also pass the matching GW_BUNDLE_PUBLIC_KEY to the data
@@ -62,6 +64,7 @@ services:
       start_period: 10s
 
   data-plane:
+    profiles: ["backend"]
     build: .
     # Bring your own GW_BUNDLE_PUBLIC_KEY (must match the control plane's signing key), or leave it unset
     # and wait for the key keygen wrote to the shared volume. Then wait for the token airllm quickstart drops.
@@ -104,6 +107,7 @@ services:
     build:
       context: .
       dockerfile: apps/console/Dockerfile
+    profiles: ["frontend"]
     ports:
       - "5000:80"
     depends_on:

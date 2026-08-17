@@ -198,9 +198,10 @@ describe('playground', () => {
       http.post(`/api/v1/orgs/${ORG.id}/workspaces/${WORKSPACES[0].slug}/inference-keys`, () => HttpResponse.json({ token: 'sk-inf-playground' })),
       http.post('/inf/v1/chat/completions', ({ request }) => {
         dialect = request.headers.get('x-airllm-dialect') ?? '';
-        return HttpResponse.text('data: {"choices":[{"delta":{"content":"hello from the gateway"}}]}\n\ndata: [DONE]\n\n', {
-          headers: { 'content-type': 'text/event-stream' },
-        });
+        return HttpResponse.text(
+          'data: {"choices":[{"delta":{"content":"hello from the gateway"}}]}\n\ndata: {"choices":[{"finish_reason":"stop"}],"usage":{"prompt_tokens":12,"completion_tokens":4,"prompt_tokens_details":{"cached_tokens":2}}}\n\ndata: [DONE]\n\n',
+          { headers: { 'content-type': 'text/event-stream' } },
+        );
       }),
     );
     window.history.replaceState(null, '', `/org/workspaces/${WORKSPACES[0].slug}/playground`);
@@ -212,6 +213,66 @@ describe('playground', () => {
     await user.click(screen.getByRole('button', { name: 'Send message' }));
 
     expect(await screen.findByText('hello from the gateway')).toBeInTheDocument();
+    expect(screen.getByText('12 input')).toBeInTheDocument();
+    expect(screen.getByText('4 output')).toBeInTheDocument();
+    expect(screen.getByText('16 total')).toBeInTheDocument();
+    expect(screen.getByText('2 cached')).toBeInTheDocument();
     expect(dialect).toBe('openai_native');
+  });
+
+  it('filters the model selector by model and provider name', async () => {
+    const firstProvider = taxonomyProvider('provider-1', 'openai');
+    const secondProvider = taxonomyProvider('provider-2', 'anthropic');
+    const models = [
+      {
+        id: 'model-1',
+        name: 'openai/gpt-test',
+        provider_id: firstProvider.id,
+        upstream_model: 'gpt-test',
+        input_price_per_mtok: 1,
+        output_price_per_mtok: 2,
+        cache_read_price_per_mtok: 0,
+        cache_write_price_per_mtok: 0,
+        context_window: 128000,
+        max_output_tokens: 4096,
+        capabilities: ['streaming'],
+        created_at: now,
+        updated_at: now,
+        deleted_at: null,
+      },
+      {
+        id: 'model-2',
+        name: 'anthropic/claude-test',
+        provider_id: secondProvider.id,
+        upstream_model: 'claude-test',
+        input_price_per_mtok: 1,
+        output_price_per_mtok: 2,
+        cache_read_price_per_mtok: 0,
+        cache_write_price_per_mtok: 0,
+        context_window: 128000,
+        max_output_tokens: 4096,
+        capabilities: ['streaming'],
+        created_at: now,
+        updated_at: now,
+        deleted_at: null,
+      },
+    ];
+    server.use(
+      http.get(`/api/v1/orgs/${ORG.id}/workspaces/${WORKSPACES[0].slug}/taxonomy`, () =>
+        HttpResponse.json({ providers: [firstProvider, secondProvider], models }),
+      ),
+    );
+    window.history.replaceState(null, '', `/org/workspaces/${WORKSPACES[0].slug}/playground`);
+    render(<App />);
+    const user = userEvent.setup();
+
+    await user.click(await screen.findByRole('button', { name: 'Model' }));
+    const dialog = screen.getByRole('dialog', { name: 'Select model' });
+    await user.type(within(dialog).getByPlaceholderText('Search models...'), 'anthropic');
+    await user.keyboard('{ArrowDown}{Enter}');
+
+    const modelSelector = screen.getByRole('button', { name: 'Model' });
+    expect(modelSelector).toHaveTextContent('anthropic/claude-test');
+    expect(modelSelector).toHaveFocus();
   });
 });

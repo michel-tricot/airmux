@@ -4,7 +4,7 @@ import { useRequiredOrgId } from '@/lib/session';
 import { useRequiredParam } from '@/lib/route';
 import { useProviders } from '@/features/credentials/hooks';
 import { useCreateInferenceKeyMutation } from '@/features/keys/hooks';
-import { Alert, AlertDescription, AlertTitle, Badge, Button, Dropdown, Input, Label, Switch } from '@/components/ui/elements';
+import { Alert, AlertDescription, AlertTitle, Badge, Button, Input, Label, SearchableDropdown, Switch } from '@/components/ui/elements';
 import { Textarea } from '@/components/ui/textarea';
 import { PageShell } from '@/components/shared/page-shell';
 import { LoadingState, ErrorState, EmptyState } from '@/components/shared/states';
@@ -13,7 +13,26 @@ import { cn } from '@/lib/utils';
 import { chatCompletion, type InferenceMessage } from '@/lib/inference';
 
 type Role = 'user' | 'assistant';
-type ChatMessage = { role: Role; content: string };
+type Interaction = {
+  model: string;
+  provider: string | undefined;
+  inputTokens: number;
+  outputTokens: number;
+  cacheReadTokens: number;
+  estimatedCostUsd: number;
+  durationMs: number;
+  firstTokenMs: number | undefined;
+  finishReason: string | undefined;
+};
+type ChatMessage = { role: Role; content: string; interaction?: Interaction };
+
+function formatDuration(durationMs: number) {
+  return durationMs < 1_000 ? `${Math.round(durationMs)} ms` : `${(durationMs / 1_000).toFixed(1)} s`;
+}
+
+function formatCost(costUsd: number) {
+  return `$${costUsd.toFixed(costUsd < 0.01 ? 4 : 2)}`;
+}
 
 function MessageBubble({ message }: { message: ChatMessage }) {
   const isUser = message.role === 'user';
@@ -27,13 +46,29 @@ function MessageBubble({ message }: { message: ChatMessage }) {
       >
         {isUser ? <User className="h-3.5 w-3.5" /> : <Bot className="h-3.5 w-3.5" />}
       </div>
-      <div
-        className={cn(
-          'max-w-[80%] rounded-xl px-4 py-2.5 text-sm',
-          isUser ? 'rounded-tr-sm bg-primary text-primary-foreground' : 'rounded-tl-sm bg-card border border-border text-foreground',
+      <div className="max-w-[80%] space-y-2">
+        <div
+          className={cn(
+            'rounded-xl px-4 py-2.5 text-sm',
+            isUser ? 'rounded-tr-sm bg-primary text-primary-foreground' : 'rounded-tl-sm border border-border bg-card text-foreground',
+          )}
+        >
+          <pre className="whitespace-pre-wrap font-sans">{message.content}</pre>
+        </div>
+        {message.interaction && (
+          <div className="flex flex-wrap gap-x-3 gap-y-1 pl-1 font-mono text-[10px] text-muted-foreground">
+            <span>{message.interaction.model}</span>
+            {message.interaction.provider && <span>{message.interaction.provider}</span>}
+            <span>{message.interaction.inputTokens} input</span>
+            <span>{message.interaction.outputTokens} output</span>
+            <span>{message.interaction.inputTokens + message.interaction.outputTokens} total</span>
+            {message.interaction.cacheReadTokens > 0 && <span>{message.interaction.cacheReadTokens} cached</span>}
+            <span>Est. {formatCost(message.interaction.estimatedCostUsd)}</span>
+            <span>{formatDuration(message.interaction.durationMs)}</span>
+            {message.interaction.firstTokenMs !== undefined && <span>First token {formatDuration(message.interaction.firstTokenMs)}</span>}
+            {message.interaction.finishReason && <span>{message.interaction.finishReason}</span>}
+          </div>
         )}
-      >
-        <pre className="whitespace-pre-wrap font-sans">{message.content}</pre>
       </div>
     </div>
   );
@@ -71,6 +106,7 @@ function Playground({ orgId, workspaceRef }: { orgId: string; workspaceRef: stri
     const provider = providerById.get(model.provider_id);
     return {
       value: model.name,
+      searchText: `${model.name} ${provider?.name ?? ''}`,
       label: (
         <span className="flex min-w-0 items-center gap-2">
           {provider?.icon && <ProviderIcon markup={provider.icon} />}
@@ -97,6 +133,7 @@ function Playground({ orgId, workspaceRef }: { orgId: string; workspaceRef: stri
   const bottomRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const activeModel = models.some((model) => model.name === selectedModel) ? selectedModel : (models[0]?.name ?? '');
+  const activeModelDetails = models.find((model) => model.name === activeModel);
 
   useEffect(() => {
     return () => {
@@ -134,7 +171,7 @@ function Playground({ orgId, workspaceRef }: { orgId: string; workspaceRef: stri
         ...(systemPrompt.trim() ? [{ role: 'system' as const, content: systemPrompt.trim() }] : []),
         ...history,
       ];
-      const content = await chatCompletion({
+      const result = await chatCompletion({
         token,
         model: activeModel,
         messages: requestMessages,
@@ -148,7 +185,34 @@ function Playground({ orgId, workspaceRef }: { orgId: string; workspaceRef: stri
         },
       });
       if (abortRef.current !== controller) return;
-      setMessages((current) => [...current, { role: 'assistant', content }]);
+      const usage = result.usage;
+      const freshInputTokens = Math.max(0, (usage?.inputTokens ?? 0) - (usage?.cacheReadTokens ?? 0));
+      const estimatedCostUsd = activeModelDetails
+        ? (freshInputTokens * activeModelDetails.input_price_per_mtok +
+            (usage?.cacheReadTokens ?? 0) * activeModelDetails.cache_read_price_per_mtok +
+            (usage?.outputTokens ?? 0) * activeModelDetails.output_price_per_mtok) /
+          1_000_000
+        : 0;
+      setMessages((current) => [
+        ...current,
+        {
+          role: 'assistant',
+          content: result.content,
+          interaction: usage
+            ? {
+                model: activeModel,
+                provider: activeModelDetails ? providerById.get(activeModelDetails.provider_id)?.name : undefined,
+                inputTokens: usage.inputTokens,
+                outputTokens: usage.outputTokens,
+                cacheReadTokens: usage.cacheReadTokens,
+                estimatedCostUsd,
+                durationMs: result.durationMs,
+                firstTokenMs: result.firstTokenMs,
+                finishReason: result.finishReason,
+              }
+            : undefined,
+        },
+      ]);
     } catch (err) {
       if (abortRef.current !== controller) return;
       if ((err as Error).name === 'AbortError') {
@@ -196,7 +260,7 @@ function Playground({ orgId, workspaceRef }: { orgId: string; workspaceRef: stri
 
           <div className="space-y-2">
             <Label htmlFor="playground-model">Model</Label>
-            <Dropdown
+            <SearchableDropdown
               id="playground-model"
               aria-label="Model"
               className="h-8 text-xs"

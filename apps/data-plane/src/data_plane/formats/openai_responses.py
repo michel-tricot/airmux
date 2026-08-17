@@ -54,6 +54,11 @@ def input_of(messages: Sequence[CanonicalMessage]) -> list[dict[str, Any]]:
             if part.signature:
                 item["encrypted_content"] = part.signature
             items.append(item)
+        if message.role == "assistant":
+            said = "".join(part.text for part in rest if isinstance(part, TextPart))
+            if said:
+                items.append({"type": "message", "role": message.role, "content": said})
+            continue
         content: list[dict[str, str]] = []
         for part in rest:
             if isinstance(part, TextPart):
@@ -138,7 +143,7 @@ def messages_of(value: object) -> list[CanonicalMessage]:  # noqa: PLR0912 - eac
     messages: list[CanonicalMessage] = []
     pending_results: list[ToolResultPart] = []
     for item in raw_items:
-        kind = item.get("type")
+        kind = item.get("type") or ("message" if "role" in item else None)
         if kind == "function_call_output":
             pending_results.append(ToolResultPart(call_id=_text(item.get("call_id")), content=[TextPart(text=_text(item.get("output")))]))
             continue
@@ -168,8 +173,13 @@ def messages_of(value: object) -> list[CanonicalMessage]:  # noqa: PLR0912 - eac
         elif kind == "message":
             role = item.get("role")
             canonical_role = "system" if role in {"system", "developer"} else role if role in {"user", "assistant"} else "user"
+            raw_content = item.get("content")
+            if isinstance(raw_content, str):
+                if raw_content:
+                    messages.append(CanonicalMessage(role=canonical_role, content=[TextPart(text=raw_content)]))
+                continue
             parts = []
-            for content in _items(item.get("content")):
+            for content in _items(raw_content):
                 block = _mapping(content)
                 if block.get("type") in {"input_text", "output_text", "text"}:
                     parts.append(TextPart(text=_text(block.get("text"))))

@@ -30,6 +30,30 @@ ERROR_BODY = {
     "openai_responses": ({"error": {"code": "rate_limit_exceeded", "message": "slow down"}}, "rate_limit_exceeded"),
     "anthropic": ({"type": "error", "error": {"type": "rate_limit_error", "message": "slow down"}}, "rate_limit_error"),
 }
+ASSISTANT_PART_TYPES = {kind: set() for kind in REGISTRY}
+
+
+def _assistant_part_types(body: object) -> set[str]:
+    found: set[str] = set()
+
+    def walk(node: object) -> None:
+        if isinstance(node, list):
+            for item in node:
+                walk(item)
+            return
+        if not isinstance(node, dict):
+            return
+        content = node.get("content")
+        if node.get("role") == "assistant" and isinstance(content, list):
+            for part in content:
+                kind = part.get("type") if isinstance(part, dict) else None
+                if isinstance(kind, str):
+                    found.add(kind)
+        for value in node.values():
+            walk(value)
+
+    walk(body)
+    return found
 
 
 def _validator(kind: str) -> Validator:
@@ -70,6 +94,15 @@ def test_every_corpus_case_renders_a_schema_valid_upstream_request(kind, case):
     body = json.loads(upstream.body)
     errors = [f"{list(e.path)}: {e.message}" for e in _validator(kind).iter_errors(body)]
     assert not errors, "\n".join(errors)
+
+
+@pytest.mark.parametrize("kind", sorted(REGISTRY))
+def test_a_replayed_assistant_turn_is_rendered_as_something_the_model_said(kind):
+    case = next(c for c in CORPUS if c.name == "multi_turn_text")
+    adapter, model = _adapter(kind)
+    upstream = adapter.transform_request(request_of(case), model)
+    assert _assistant_part_types(json.loads(upstream.body)) == ASSISTANT_PART_TYPES[kind]
+    assert "Paris" in upstream.body.decode()
 
 
 @pytest.mark.parametrize("kind", sorted(REGISTRY))
