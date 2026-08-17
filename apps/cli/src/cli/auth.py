@@ -92,6 +92,18 @@ def _provider_key(name: str, overrides: dict[str, str]) -> tuple[str, str]:
     return (exported, f"found in {variable}") if exported else ("", "")
 
 
+def example_model(models: list[dict], seeded: set[str]) -> str:
+    """The model the closing curl example names.
+
+    The cheapest model a just-seeded provider serves: the printed command must work as pasted,
+    and the first trial request should cost as little as a request can. With nothing seeded no
+    model serves anyway, so the example settles for the cheapest spelling in the catalog."""
+    routable = [model for model in models if model["provider_id"] in seeded] or models
+    if not routable:
+        return "openai/gpt-4o-mini"
+    return min(routable, key=lambda model: (model.get("input_price_per_mtok") or 0.0, model["model_id"]))["model_id"]
+
+
 def seed_provider_credentials(
     client: httpx.Client,
     bearer: dict[str, str],
@@ -219,11 +231,15 @@ def quickstart(  # noqa: PLR0913, PLR0917 flags are the command's interface
         _payload_or_die(c.post(f"/v1/orgs/{org_id}/bundles/compile", json={}, headers=bearer), "publishing configuration")
         _step("API key created and published")
 
+        catalog = c.get(f"/v1/orgs/{org_id}/taxonomy", headers=bearer)
+        models = catalog.json()["data"]["models"] if catalog.is_success else []
+        example = example_model(models, {result.provider for result in results if not result.error})
+
     curl = (
         f"curl {gateway_url}/v1/chat/completions \\\n"
         f"  -H 'Authorization: Bearer {key['token']}' \\\n"
         f"  -H 'Content-Type: application/json' \\\n"
-        f'  -d \'{{"model": "gpt-4o", "messages": [{{"role": "user", "content": "hi"}}]}}\''
+        f'  -d \'{{"model": "{example}", "messages": [{{"role": "user", "content": "hi"}}]}}\''
     )
     console.print(f"\n[green]Ready.[/green] Your API key for [bold]{org_name}[/bold]:")
     console.print(Panel(key["token"], title="AIRLLM_API_KEY", border_style="cyan", expand=False))
