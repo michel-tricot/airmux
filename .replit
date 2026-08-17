@@ -1,4 +1,4 @@
-modules = ["bash", "web", "python-base-3.13", "nodejs-24", "bun-1.3", "postgresql-16"]
+modules = ["web", "bash", "python-base-3.13", "nodejs-24"]
 
 [deployment]
 router = "application"
@@ -56,3 +56,8 @@ channel = "stable-25_05"
 [[ports]]
 localPort = 20383
 externalPort = 80
+
+[userenv]
+
+[userenv.shared]
+CONTROL_PLANE_URL = "http://127.0.0.1:8101"

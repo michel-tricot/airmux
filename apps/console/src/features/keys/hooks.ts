@@ -11,9 +11,14 @@ import {
   getListInstanceAccessKeysQueryKey,
   getListOrgAccessKeysQueryKey,
   getListInferenceKeysQueryKey,
+  useMyPermissions,
   type ListInstanceAccessKeysParams,
   type ListOrgAccessKeysParams,
 } from '@workspace/api-client-react';
+
+export function useGrantablePermissions(orgId?: string) {
+  return useMyPermissions(orgId ? { org_id: orgId } : undefined);
+}
 
 export function useInstanceAccessKeys(params?: ListInstanceAccessKeysParams) {
   return useListInstanceAccessKeys(params);

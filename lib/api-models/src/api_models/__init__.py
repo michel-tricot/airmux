@@ -1306,6 +1306,10 @@ class MembershipOut(BaseModel):
     status: Annotated[Literal["member"], Field(title="Status")]
 
 
+class MyPermissionsOut(BaseModel):
+    permissions: Annotated[list[Permission], Field(title="Permissions")]
+
+
 class OrgMemberOut(BaseModel):
     """
     A human user or service account that belongs to an organization.
@@ -1400,6 +1404,10 @@ class EnvelopeAccessKeyMintedOut(BaseModel):
 
 class EnvelopeMembershipOut(BaseModel):
     data: MembershipOut
+
+
+class EnvelopeMyPermissionsOut(BaseModel):
+    data: MyPermissionsOut
 
 
 class EnvelopeWorkspaceMembershipOut(BaseModel):

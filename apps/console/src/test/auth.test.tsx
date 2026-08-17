@@ -92,7 +92,8 @@ describe('sign-in gate', () => {
       http.get('/v1/instance/oss/claim', () => HttpResponse.json({ claimed: true })),
     );
     renderAt('/org');
-    expect(await screen.findByRole('alert')).toHaveTextContent('Could not reach the control plane');
+    expect(await screen.findByRole('alert')).toHaveTextContent('Control plane unreachable');
+    expect(screen.getByRole('button', { name: /retry now/i })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Sign in' })).not.toBeInTheDocument();
   });
 

@@ -16,10 +16,14 @@ if (Number.isNaN(port) || port <= 0) {
 const basePath = process.env.BASE_PATH ?? '/';
 
 const controlPlaneUrl = process.env.CONTROL_PLANE_URL ?? 'http://127.0.0.1:8000';
-const allowedHosts = (process.env.ALLOWED_HOSTS ?? 'localhost,127.0.0.1')
-  .split(',')
-  .map((host) => host.trim())
-  .filter(Boolean);
+// Replit's preview proxies through a dynamic *.replit.dev host, so host
+// filtering must be disabled in this environment; ALLOWED_HOSTS can still
+// pin an explicit list elsewhere.
+const allowedHosts: string[] | true = process.env.ALLOWED_HOSTS
+  ? process.env.ALLOWED_HOSTS.split(',')
+      .map((host) => host.trim())
+      .filter(Boolean)
+  : true;
 
 export default defineConfig({
   base: basePath,

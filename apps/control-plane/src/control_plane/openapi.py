@@ -128,6 +128,8 @@ def _parameter_description(path: str, name: str, location: str) -> str:
     if name == "user_id" and location == "query":
         return "Return only access keys issued to this principal"
     if name == "org_id" and location == "query":
+        if "auth/permissions" in path:
+            return "Organization scope to evaluate; omit for instance scope"
         return "Organization whose latest bundle to return; omit to use the credential's scope"
     return PARAMETER_DESCRIPTIONS.get(name, name.replace("_", " ").capitalize())
 

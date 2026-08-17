@@ -15,7 +15,8 @@ import AppLayout from '@/components/layout/AppLayout';
 import Login from '@/pages/Login';
 import { Route as RouteIcon, ShieldCheck } from 'lucide-react';
 import { ErrorState, LoadingState } from '@/components/shared/states';
-import { isApiErrorStatus } from '@/lib/errors';
+import { isApiErrorStatus, isControlPlaneUnreachable } from '@/lib/errors';
+import { ControlPlaneDown } from '@/components/shared/control-plane-down';
 
 const Dashboard = lazy(() => import('@/pages/Dashboard'));
 const Organizations = lazy(() => import('@/pages/Organizations'));
@@ -143,9 +144,12 @@ function AdminSection() {
 
 function Router() {
   const [location] = useLocation();
-  const { user, isLoading, error, orgId } = useSession();
+  const { user, isLoading, error, orgId, retry, isRetrying } = useSession();
 
   if (isLoading) return <Splash>Loading your session...</Splash>;
+  if (error && !isApiErrorStatus(error, 401) && isControlPlaneUnreachable(error)) {
+    return <ControlPlaneDown onRetry={retry} isRetrying={isRetrying} />;
+  }
   if (error && !isApiErrorStatus(error, 401)) {
     return (
       <Splash>

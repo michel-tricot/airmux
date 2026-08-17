@@ -76,7 +76,7 @@ if ! uv run airllmcp migrate; then
   uv run airllmcp migrate
 fi
 
-uv run airllmcp taxonomy
+uv run airllmcp taxonomy --file taxonomy/taxonomy.yml
 
 # Fixtures are intentionally fresh-database-only. Keep the workflow restartable
 # after the first successful seed without hiding real fixture errors.
@@ -91,6 +91,6 @@ else
 fi
 
 # Loopback-only on purpose: the console's Vite proxy reaches the backend at
-# 127.0.0.1:8001, and keeping the port invisible to Replit's port detector
+# 127.0.0.1:8101, and keeping the port invisible to Replit's port detector
 # guarantees the preview can never route to the API instead of the console.
 exec uv run airllmcp serve --dev --host 127.0.0.1 --port 8101

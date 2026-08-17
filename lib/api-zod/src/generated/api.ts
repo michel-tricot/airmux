@@ -366,6 +366,21 @@ export const MeResponse = zod.object({
 
 
 /**
+ * Return the effective permissions this credential can exercise at the requested scope.
+ *
+ * Authentication: human account using a browser session or control-plane access key.
+ * @summary My Permissions
+ */
+export const MyPermissionsQueryParams = zod.object({
+  "org_id": zod.union([zod.uuid(),zod.null()]).optional().describe('Organization scope to evaluate; omit for instance scope')
+})
+
+export const MyPermissionsResponse = zod.object({
+  "permissions": zod.array(zod.enum(['organizations.read', 'organizations.create', 'organizations.update', 'organizations.delete', 'principals.read', 'principals.manage', 'members.read', 'members.manage', 'workspaces.read', 'workspaces.create', 'workspaces.update', 'workspaces.delete', 'catalog.read', 'catalog.manage', 'provider-credentials.read', 'provider-credentials.manage', 'inference-keys.read', 'inference-keys.manage', 'bundles.read', 'bundles.publish', 'usage.read', 'usage.ingest', 'data-planes.read', 'data-planes.heartbeat', 'audit.read', 'access-keys.read', 'access-keys.issue', 'access-keys.revoke']))
+})
+
+
+/**
  * Replace the authenticated user's password after verifying the current password.
  *
  * Authentication: human account using a browser session or control-plane access key.

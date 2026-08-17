@@ -8,8 +8,8 @@ from uuid import UUID
 from fastapi import APIRouter, HTTPException, Request, Response
 from pydantic import BaseModel, Field, field_validator
 
-from control_plane.authority import principal_can_select_org, visible_org_ids
-from control_plane.authz import Actor, InstanceRole, Scope
+from control_plane.authority import principal_can_select_org, principal_permissions, visible_org_ids
+from control_plane.authz import Actor, InstanceRole, Permission, Scope
 from control_plane.deps import (
     ActingUserDep,
     ActorDep,
@@ -61,6 +61,10 @@ class MeOut(BaseModel):
     name: str
     instance_role: InstanceRole | None
     orgs: list[UUID]
+
+
+class MyPermissionsOut(BaseModel):
+    permissions: list[Permission]
 
 
 class PasswordChangeIn(RequestModel):
@@ -166,6 +170,18 @@ async def logout(
 async def me(user: ActingUserDep, actor: ActorDep) -> Envelope[MeOut]:
     """Return the authenticated human user and the organizations visible to this credential."""
     return Envelope(data=await _me_out(user, actor))
+
+
+@router.get("/permissions", tags=["Auth"], dependencies=[user_scoped()])
+async def my_permissions(actor: ActorDep, org_id: UUID | None = None) -> Envelope[MyPermissionsOut]:
+    """Return the effective permissions this credential can exercise at the requested scope."""
+    if org_id is not None and await Org.find_by_id(org_id) is None:
+        raise HTTPException(status_code=404, detail="Organization not found")
+    scope = Scope.org(org_id) if org_id is not None else Scope.instance()
+    if not actor.grant.scope.covers(scope):
+        return Envelope(data=MyPermissionsOut(permissions=[]))
+    permissions = await principal_permissions(actor.principal_id, scope) & actor.grant.permissions
+    return Envelope(data=MyPermissionsOut(permissions=sorted(permissions)))
 
 
 @router.post("/password", tags=["Auth"], dependencies=[user_scoped()])

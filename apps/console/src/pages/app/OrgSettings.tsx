@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useRequiredOrgId } from '@/lib/session';
-import { useOrgAccessKeys, useCreateOrgAccessKeyMutation, useRevokeOrgAccessKeyMutation } from '@/features/keys/hooks';
+import { useOrgAccessKeys, useCreateOrgAccessKeyMutation, useRevokeOrgAccessKeyMutation, useGrantablePermissions } from '@/features/keys/hooks';
 import { useOrgMembers } from '@/features/members/hooks';
 import { useBundles, useCompileBundleMutation, useOrgActivity } from '@/features/telemetry/hooks';
 import { Avatar, AvatarFallback, Card, Button, Badge, Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/elements';
@@ -11,7 +11,8 @@ import { PageShell } from '@/components/shared/page-shell';
 import { DataTable } from '@/components/shared/data-table';
 import { FormDialog } from '@/components/shared/form-dialog';
 import { ApiKeysTable } from '@/components/shared/api-keys-table';
-import { AccessKeyFormFields, accessKeyFormSchema, parsePermissions } from '@/components/shared/access-key-form';
+import { AccessKeyFormFields, accessKeyFormSchema } from '@/components/shared/access-key-form';
+import { PermissionsCell } from '@/components/shared/permissions-cell';
 
 export default function AppOrgSettings() {
   const orgId = useRequiredOrgId();
@@ -29,6 +30,7 @@ export default function AppOrgSettings() {
   const describeRecord = (entry: { record_id: string }) => keyLabels.get(entry.record_id) ?? null;
 
   const mintKey = useCreateOrgAccessKeyMutation(orgId);
+  const permissionsQuery = useGrantablePermissions(orgId);
   const revokeKey = useRevokeOrgAccessKeyMutation(orgId);
   const compile = useCompileBundleMutation(orgId);
 
@@ -78,8 +80,7 @@ export default function AppOrgSettings() {
               {
                 key: 'permissions',
                 header: 'Permissions',
-                cellClassName: 'font-mono text-xs text-muted-foreground',
-                cell: (key) => key.permissions.join(', '),
+                cell: (key) => <PermissionsCell permissions={key.permissions} />,
               },
               { key: 'scope', header: 'Scope', cellClassName: 'text-muted-foreground text-sm', cell: (key) => key.scope.level },
             ]}
@@ -238,18 +239,20 @@ export default function AppOrgSettings() {
         title="Create an organization access key"
         description="The key is bound to this organization and carries only the permissions you name."
         schema={accessKeyFormSchema}
-        defaultValues={{ label: '', permissions: '' }}
+        defaultValues={{ label: '', permissions: [] }}
         onSubmit={async (values) => {
           const minted = await mintKey.mutateAsync({
             orgId,
-            data: { label: values.label, permissions: parsePermissions(values.permissions) },
+            data: { label: values.label, permissions: values.permissions },
           });
           setToken(minted.token);
         }}
         submitLabel="Generate"
         pending={mintKey.isPending}
       >
-        {(form) => <AccessKeyFormFields form={form} />}
+        {(form) => (
+          <AccessKeyFormFields form={form} availablePermissions={permissionsQuery.data?.permissions ?? []} permissionsLoading={permissionsQuery.isPending} />
+        )}
       </FormDialog>
 
       <KeyRevealDialog open={!!token} onOpenChange={(v) => !v && setToken(null)} token={token} />

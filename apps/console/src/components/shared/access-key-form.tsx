@@ -1,35 +1,37 @@
 import type { UseFormReturn } from 'react-hook-form';
 import * as z from 'zod';
-import { Permission, type Permission as PermissionName } from '@workspace/api-client-react';
+import type { Permission as PermissionName } from '@workspace/api-client-react';
 import { Input } from '@/components/ui/elements';
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-
-const knownPermissions = new Set<string>(Object.values(Permission));
-
-export function parsePermissions(value: string): PermissionName[] {
-  return value
-    .split(',')
-    .map((permission) => permission.trim())
-    .filter((permission): permission is PermissionName => knownPermissions.has(permission));
-}
+import { cn } from '@/lib/utils';
 
 export const accessKeyFormSchema = z.object({
   label: z.string().min(1, 'Label is required').max(80, 'Label must be 80 characters or fewer'),
-  permissions: z
-    .string()
-    .min(1, 'At least one permission is required')
-    .refine((value) => {
-      const submitted = value
-        .split(',')
-        .map((permission) => permission.trim())
-        .filter(Boolean);
-      return submitted.length > 0 && submitted.every((permission) => knownPermissions.has(permission));
-    }, 'Use comma-separated permission names from the authority catalog'),
+  permissions: z.array(z.custom<PermissionName>((value) => typeof value === 'string')).min(1, 'Select at least one permission'),
 });
 
 export type AccessKeyFormValues = z.infer<typeof accessKeyFormSchema>;
 
-export function AccessKeyFormFields({ form }: { form: UseFormReturn<AccessKeyFormValues> }) {
+function groupPermissions(permissions: readonly PermissionName[]): [string, PermissionName[]][] {
+  const groups = new Map<string, PermissionName[]>();
+  for (const permission of permissions) {
+    const resource = permission.split('.')[0];
+    const entries = groups.get(resource) ?? [];
+    entries.push(permission);
+    groups.set(resource, entries);
+  }
+  return [...groups.entries()];
+}
+
+export function AccessKeyFormFields({
+  form,
+  availablePermissions,
+  permissionsLoading,
+}: {
+  form: UseFormReturn<AccessKeyFormValues>;
+  availablePermissions: readonly PermissionName[];
+  permissionsLoading?: boolean;
+}) {
   return (
     <>
       <FormField
@@ -51,10 +53,46 @@ export function AccessKeyFormFields({ form }: { form: UseFormReturn<AccessKeyFor
         render={({ field }) => (
           <FormItem>
             <FormLabel>Permissions</FormLabel>
-            <FormControl>
-              <Input placeholder="e.g. workspaces.read, bundles.publish" {...field} />
-            </FormControl>
-            <p className="text-xs text-muted-foreground">Comma-separated permission names. The key can only narrow the principal’s current role.</p>
+            {permissionsLoading ? (
+              <p className="text-xs text-muted-foreground">Loading your permissions...</p>
+            ) : availablePermissions.length === 0 ? (
+              <p className="text-xs text-muted-foreground">You have no permissions to delegate at this scope.</p>
+            ) : (
+              <div className="max-h-64 space-y-3 overflow-y-auto rounded-md border border-border p-3">
+                {groupPermissions(availablePermissions).map(([resource, permissions]) => (
+                  <div key={resource} className="space-y-1">
+                    <div className="font-mono text-[11px] font-bold uppercase tracking-wider text-muted-foreground">{resource}</div>
+                    <div className="grid grid-cols-2 gap-x-3 gap-y-1">
+                      {permissions.map((permission) => {
+                        const checked = field.value.includes(permission);
+                        return (
+                          <label
+                            key={permission}
+                            className={cn(
+                              'flex cursor-pointer items-center gap-2 rounded-sm px-1.5 py-1 text-xs',
+                              checked ? 'text-foreground' : 'text-muted-foreground hover:text-foreground',
+                            )}
+                          >
+                            <input
+                              type="checkbox"
+                              className="size-3.5 accent-primary"
+                              checked={checked}
+                              onChange={(event) =>
+                                field.onChange(
+                                  event.target.checked ? [...field.value, permission] : field.value.filter((value) => value !== permission),
+                                )
+                              }
+                            />
+                            <span className="font-mono">{permission}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            <p className="text-xs text-muted-foreground">Only permissions you currently hold are listed. The key can never exceed them.</p>
             <FormMessage />
           </FormItem>
         )}
