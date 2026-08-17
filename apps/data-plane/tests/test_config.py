@@ -6,7 +6,7 @@ import pytest
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from pydantic import ValidationError
 
-from contract import public_key_to_b64
+from contract import FileStoreConfig, public_key_to_b64
 from data_plane.bundle import LocalBundleConfig, RemoteBundleConfig
 from data_plane.config import Config, DevNullOutboxConfig, SqliteOutboxConfig, load_config
 
@@ -173,3 +173,22 @@ def test_remote_intervals_must_be_positive():
 def test_local_reload_interval_must_be_positive():
     with pytest.raises(ValidationError, match="reload_interval_s"):
         Config.model_validate({"bundle": {"kind": "local", "path": "bundle.yml", "reload_interval_s": 0}})
+
+
+def test_the_fly_config_uses_shared_machine_state(tmp_path, monkeypatch):
+    fly_config = Path(__file__).resolve().parents[3] / "deploy" / "fly" / "airllm.yml"
+    signing_key = Ed25519PrivateKey.generate()
+    cache_dir = tmp_path / ".airllm"
+    cache_dir.mkdir()
+    (cache_dir / "signing.pub").write_text(public_key_to_b64(signing_key.public_key()), encoding="utf-8")
+    (cache_dir / "dataplane.key").write_text("data-plane-token", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("GW_CONFIG", str(fly_config))
+
+    config = load_config()
+
+    assert isinstance(config.bundle, RemoteBundleConfig)
+    assert config.bundle.control_plane.url == "http://127.0.0.1:8000"
+    assert config.bundle.cache_dir == Path(".airllm")
+    assert isinstance(config.events, SqliteOutboxConfig)
+    assert config.secrets == FileStoreConfig(root=Path(".airllm/secrets"))

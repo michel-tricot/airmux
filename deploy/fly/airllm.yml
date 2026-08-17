@@ -1,0 +1,33 @@
+vars:
+  cache_dir: .airllm
+
+control_plane:
+  database:
+    url: ${env:DATABASE_URL}
+  bundle:
+    signing_key: ${file:${var:cache_dir}/signing.key}
+    staleness_bound_hours: 24
+  console_url: ${env:GW_CONSOLE_URL}
+  secrets:
+    kind: file
+    root: ${var:cache_dir}/secrets
+
+data_plane:
+  bundle:
+    kind: remote
+    control_plane: &control_plane
+      url: http://127.0.0.1:8000
+      token: ${file:${var:cache_dir}/dataplane.key}
+    verify_key: ${file:${var:cache_dir}/signing.pub}
+    cache_dir: ${var:cache_dir}
+    staleness_policy: serve_and_warn
+    poll_interval_s: 5
+    heartbeat_interval_s: 30
+  events:
+    kind: sqlite
+    control_plane: *control_plane
+    cache_dir: ${var:cache_dir}
+    flush_interval_s: 5
+  secrets:
+    kind: file
+    root: ${var:cache_dir}/secrets

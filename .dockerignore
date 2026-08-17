@@ -3,11 +3,13 @@
 !uv.lock
 !lib
 !apps
+!deploy
 !package.json
 !bun.lock
 !bunfig.toml
 !tsconfig.json
 !tsconfig.base.json
+!taxonomy
 **/__pycache__
 **/*.pyc
 **/node_modules

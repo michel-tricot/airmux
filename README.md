@@ -192,6 +192,7 @@ resolution and isolation.
 - `airllm.standalone.yml` runs a local bundle with environment-backed provider secrets and no event export
 - `bundle.standalone.yml` is the editable local catalog, policy, and development inference-key bundle
 - `airllm.yml` configures the control plane and managed data plane used by Docker Compose
+- `deploy/fly` contains the two-image Fly.io deployment and bootstrap guide
 - `taxonomy/taxonomy.yml` is the provider and model catalog applied by the control plane
 - `.env` holds local secrets and is loaded automatically
 
