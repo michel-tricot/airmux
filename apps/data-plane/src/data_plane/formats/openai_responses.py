@@ -54,6 +54,18 @@ def input_of(messages: Sequence[CanonicalMessage]) -> list[dict[str, Any]]:
             if part.signature:
                 item["encrypted_content"] = part.signature
             items.append(item)
+        # Responses types a content part by who produced it: input_text is rejected on an
+        # assistant turn, which fails every conversation past its first. The typed output
+        # spelling is no good either, since an OutputMessage requires the id and status of
+        # the original item and replayed history has neither. A bare string is the one form
+        # that carries assistant text as history, and it is what EasyInputMessage documents
+        # for exactly this. ALLOWED_PARTS keeps images off assistant messages, so only the
+        # input branch below has to render them.
+        if message.role == "assistant":
+            said = "".join(part.text for part in rest if isinstance(part, TextPart))
+            if said:
+                items.append({"type": "message", "role": message.role, "content": said})
+            continue
         content: list[dict[str, str]] = []
         for part in rest:
             if isinstance(part, TextPart):
@@ -138,7 +150,10 @@ def messages_of(value: object) -> list[CanonicalMessage]:  # noqa: PLR0912 - eac
     messages: list[CanonicalMessage] = []
     pending_results: list[ToolResultPart] = []
     for item in raw_items:
-        kind = item.get("type")
+        # type is optional on EasyInputMessage and the SDKs leave it off, so an item with a
+        # role and nothing else is a message. Requiring the field drops the plainest spelling
+        # there is, {"role": "user", "content": "hi"}. No other item kind carries a role.
+        kind = item.get("type") or ("message" if "role" in item else None)
         if kind == "function_call_output":
             pending_results.append(ToolResultPart(call_id=_text(item.get("call_id")), content=[TextPart(text=_text(item.get("output")))]))
             continue
@@ -168,8 +183,18 @@ def messages_of(value: object) -> list[CanonicalMessage]:  # noqa: PLR0912 - eac
         elif kind == "message":
             role = item.get("role")
             canonical_role = "system" if role in {"system", "developer"} else role if role in {"user", "assistant"} else "user"
+            raw_content = item.get("content")
+            # EasyInputMessage lets any role carry its text as a bare string instead of a
+            # part list, and it is the only spelling that works for a replayed assistant
+            # turn. Reading only the list form drops those messages without a word, so a
+            # caller loses its conversation history and gets a plausible answer to the
+            # wrong question.
+            if isinstance(raw_content, str):
+                if raw_content:
+                    messages.append(CanonicalMessage(role=canonical_role, content=[TextPart(text=raw_content)]))
+                continue
             parts = []
-            for content in _items(item.get("content")):
+            for content in _items(raw_content):
                 block = _mapping(content)
                 if block.get("type") in {"input_text", "output_text", "text"}:
                     parts.append(TextPart(text=_text(block.get("text"))))
