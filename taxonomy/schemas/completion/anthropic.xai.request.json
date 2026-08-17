@@ -1,0 +1,577 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$ref": "#/$defs/components_schemas_MessageRequest",
+  "$defs": {
+    "components_schemas_MessageBody": {
+      "type": "object",
+      "description": "Anthropic compatible message body",
+      "required": [
+        "role",
+        "content"
+      ],
+      "properties": {
+        "content": {
+          "$ref": "#/$defs/components_schemas_MessageContent",
+          "description": "The content message."
+        },
+        "role": {
+          "type": "string",
+          "description": "The role that the message belongs to, `\"system\"` for system prompt, `\"user\"` for user prompt, and `\"assistant\"` for response from the model."
+        }
+      }
+    },
+    "components_schemas_MessageContent": {
+      "oneOf": [
+        {
+          "type": "string",
+          "description": "Text prompt."
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/components_schemas_MessageContentPart"
+          },
+          "description": "An array of message content parts."
+        }
+      ]
+    },
+    "components_schemas_MessageContentPart": {
+      "oneOf": [
+        {
+          "type": "object",
+          "description": "Text prompt message content part.",
+          "required": [
+            "text",
+            "type"
+          ],
+          "properties": {
+            "cache_control": {
+              "description": "(Unsupported) Cache control."
+            },
+            "text": {
+              "type": "string",
+              "description": "Text prompt."
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "text"
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "description": "Image prompt message content part.",
+          "required": [
+            "source",
+            "type"
+          ],
+          "properties": {
+            "cache_control": {
+              "description": "(Unsupported) Cache control."
+            },
+            "source": {
+              "$ref": "#/$defs/components_schemas_MessageImageContent",
+              "description": "Image source."
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "image"
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "description": "Tool call message content part. Received from model.",
+          "required": [
+            "id",
+            "name",
+            "input",
+            "type"
+          ],
+          "properties": {
+            "cache_control": {
+              "description": "(Unsupported) Cache control."
+            },
+            "id": {
+              "type": "string",
+              "description": "ID of the tool call."
+            },
+            "input": {
+              "description": "Input for tool call."
+            },
+            "name": {
+              "type": "string",
+              "description": "Name of the tool call."
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "tool_use"
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "description": "Tool call result.",
+          "required": [
+            "tool_use_id",
+            "content",
+            "type"
+          ],
+          "properties": {
+            "cache_control": {
+              "description": "(Unsupported) Cache control."
+            },
+            "content": {
+              "$ref": "#/$defs/components_schemas_ToolResultContent",
+              "description": "Result content of the tool call. Can be a string or an array of content blocks."
+            },
+            "is_error": {
+              "type": [
+                "boolean",
+                "null"
+              ],
+              "description": "Whether the tool call returns an error."
+            },
+            "tool_use_id": {
+              "type": "string",
+              "description": "ID of the tool call given by the model."
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "tool_result"
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "description": "(Redacted) Thinking of the model.",
+          "required": [
+            "data",
+            "type"
+          ],
+          "properties": {
+            "data": {
+              "type": "string",
+              "description": "Encrypted data of the redacted thinking."
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "redacted_thinking"
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "description": "Thinking of the model.",
+          "required": [
+            "thinking",
+            "type"
+          ],
+          "properties": {
+            "signature": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Signature of the thinking block (required by Anthropic SDK for round-tripping)."
+            },
+            "thinking": {
+              "type": "string",
+              "description": "Thinking."
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "thinking"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "components_schemas_MessageImageContent": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": [
+            "media_type",
+            "data",
+            "type"
+          ],
+          "properties": {
+            "data": {
+              "type": "string",
+              "description": "Base64 encoded image string."
+            },
+            "media_type": {
+              "type": "string",
+              "description": "Media type of the image source. Available options: `image/jpeg`, `image/png`, `image/webp`."
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "base64"
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "url",
+            "type"
+          ],
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": [
+                "url"
+              ]
+            },
+            "url": {
+              "type": "string",
+              "description": "URL of the image."
+            }
+          }
+        }
+      ]
+    },
+    "components_schemas_MessageMetadata": {
+      "type": "object",
+      "properties": {
+        "user_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "A unique identifier representing your end-user, which can help xAI to monitor and detect abuse."
+        }
+      }
+    },
+    "components_schemas_MessageRequest": {
+      "type": "object",
+      "description": "Request message for `/v1/messages`",
+      "properties": {
+        "max_tokens": {
+          "type": "integer",
+          "format": "int32",
+          "description": "The maximum number of tokens to generate before stopping. The model may stop before the max_tokens when it reaches the stop sequence."
+        },
+        "messages": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/components_schemas_MessageBody"
+          },
+          "description": "Input messages."
+        },
+        "metadata": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/components_schemas_MessageMetadata",
+              "description": "An object describing metadata about the request."
+            }
+          ]
+        },
+        "model": {
+          "type": "string",
+          "description": "Model name for the model to use.",
+          "example": "latest"
+        },
+        "stop_sequences": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          },
+          "description": "(Not supported by reasoning models) Up to 4 sequences where the API will stop generating further tokens."
+        },
+        "stream": {
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "description": "If set, partial message deltas will be sent. Tokens will be sent as data-only server-sent events as they become available, with the stream terminated by a `data: [DONE]` message."
+        },
+        "system": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/components_schemas_SystemMessageContent",
+              "description": "System prompt message for the model, defining how the model should behave to user messages."
+            }
+          ]
+        },
+        "temperature": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "float",
+          "description": "What sampling temperature to use, between 0 and 2. Higher values like 0.8 will make the output more random, while lower values like 0.2 will make it more focused and deterministic. It may not work well with reasoning models.",
+          "default": 1,
+          "maximum": 2,
+          "minimum": 0
+        },
+        "tool_choice": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/components_schemas_MessageToolChoice",
+              "description": "Controls which (if any) tool is called by the model. `\"none\"` means the model will not call any tool and instead generates a message. `\"auto\"` means the model can pick between generating a message or calling one or more tools. `\"any\"` means the model must call one or more tools. Specifying a particular tool via `{\"type\": \"tool\", \"function\": {\"name\": \"get_weather\"}}` forces the model to call that tool. `\"none\"` is the default when no tools are provided. `\"auto\"` is the default if tools are provided."
+            }
+          ]
+        },
+        "tools": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "$ref": "#/$defs/components_schemas_MessageTools"
+          },
+          "description": "A list of tools the model may call in JSON-schema. Currently, only functions are supported as a tool. Use this to provide a list of functions the model may generate JSON inputs for. A max of 128 functions are supported."
+        },
+        "top_k": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "int32",
+          "description": "(Unsupported) When generating next tokens, randomly selecting the next token from the k most likely options."
+        },
+        "top_p": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "format": "float",
+          "description": "An alternative to sampling with `temperature`, called nucleus sampling, where the model considers the results of the tokens with `top_p` probability mass. So 0.1 means only the tokens comprising the top 10% probability mass are considered. It is generally recommended to alter this or `temperature` but not both.",
+          "default": 1,
+          "maximum": 1,
+          "exclusiveMinimum": 0
+        }
+      }
+    },
+    "components_schemas_MessageToolChoice": {
+      "oneOf": [
+        {
+          "type": "object",
+          "description": "Allows the model to automatically decide whether to call the tool",
+          "required": [
+            "type"
+          ],
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": [
+                "auto"
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "description": "Forces the model to use at least one tool, without specifying the tool.",
+          "required": [
+            "type"
+          ],
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": [
+                "any"
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "description": "Forces the model to use the named tool",
+          "required": [
+            "name",
+            "type"
+          ],
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "Name of the tool to use."
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "tool"
+              ]
+            }
+          }
+        }
+      ],
+      "description": "Tool choice option."
+    },
+    "components_schemas_MessageToolInputSchema": {
+      "type": "object",
+      "required": [
+        "type",
+        "properties"
+      ],
+      "properties": {
+        "properties": {
+          "description": "JSON-object of the tool input schema."
+        },
+        "required": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          },
+          "description": "Required properties of the tool input schema, if any."
+        },
+        "type": {
+          "type": "string",
+          "description": "Type of the schema. This is always `\"object\"`."
+        }
+      }
+    },
+    "components_schemas_MessageTools": {
+      "type": "object",
+      "required": [
+        "name",
+        "description",
+        "input_schema"
+      ],
+      "properties": {
+        "cache_control": {
+          "description": "(Unsupported) Cache control."
+        },
+        "description": {
+          "type": "string",
+          "description": "Description of the tool."
+        },
+        "input_schema": {
+          "$ref": "#/$defs/components_schemas_MessageToolInputSchema",
+          "description": "Input schema allowed by the tool."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the tool."
+        }
+      }
+    },
+    "components_schemas_SystemMessageContent": {
+      "oneOf": [
+        {
+          "type": "string",
+          "description": "Text content of system prompt."
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/components_schemas_SystemMessagePart"
+          },
+          "description": "An array of system prompt parts."
+        }
+      ]
+    },
+    "components_schemas_SystemMessagePart": {
+      "type": "object",
+      "required": [
+        "type",
+        "text"
+      ],
+      "properties": {
+        "cache_control": {
+          "description": "(Unsupported) Cache control."
+        },
+        "text": {
+          "type": "string",
+          "description": "System prompt text."
+        },
+        "type": {
+          "type": "string",
+          "description": "Type of the object. This is always `\"text\"`."
+        }
+      }
+    },
+    "components_schemas_ToolResultContent": {
+      "oneOf": [
+        {
+          "type": "string",
+          "description": "Plain text content."
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/components_schemas_ToolResultContentBlock"
+          },
+          "description": "An array of content blocks (text, image, etc.)."
+        }
+      ],
+      "description": "Content of a tool_result block. The Anthropic SDK may send this as either a plain\nstring or an array of typed content blocks (e.g. `[{\"type\": \"text\", \"text\": \"...\"}]`)."
+    },
+    "components_schemas_ToolResultContentBlock": {
+      "oneOf": [
+        {
+          "type": "object",
+          "description": "Text content block.",
+          "required": [
+            "text",
+            "type"
+          ],
+          "properties": {
+            "text": {
+              "type": "string",
+              "description": "The text content."
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "text"
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "description": "Image content block.",
+          "required": [
+            "source",
+            "type"
+          ],
+          "properties": {
+            "source": {
+              "$ref": "#/$defs/components_schemas_MessageImageContent",
+              "description": "Image source."
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "image"
+              ]
+            }
+          }
+        }
+      ],
+      "description": "A single content block within a tool_result's array content."
+    }
+  }
+}

@@ -1,0 +1,61 @@
+{
+  "provider": "deepseek",
+  "source": "https://api.deepseek.com/models",
+  "source_type": "api",
+  "updated": "2026-08-17",
+  "count": 2,
+  "models": [
+    {
+      "id": "deepseek-v4-flash",
+      "kind": "text",
+      "context_length": 1000000,
+      "max_output_tokens": 384000,
+      "input_modalities": null,
+      "output_modalities": null,
+      "supports_tools": true,
+      "supports_structured_output": true,
+      "pricing": {
+        "input_per_mtok": 0.14,
+        "output_per_mtok": 0.28,
+        "cached_input_per_mtok": 0.0028
+      },
+      "limits_source": "models.dev",
+      "pricing_source": "models.dev",
+      "reachable": true,
+      "reachable_checked": "2026-08-17",
+      "endpoint_status": {
+        "chat/completions": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        }
+      },
+      "owned_by": "deepseek"
+    },
+    {
+      "id": "deepseek-v4-pro",
+      "kind": "text",
+      "context_length": 1000000,
+      "max_output_tokens": 384000,
+      "input_modalities": null,
+      "output_modalities": null,
+      "supports_tools": true,
+      "supports_structured_output": true,
+      "pricing": {
+        "input_per_mtok": 0.435,
+        "output_per_mtok": 0.87,
+        "cached_input_per_mtok": 0.0036
+      },
+      "limits_source": "models.dev",
+      "pricing_source": "models.dev",
+      "reachable": true,
+      "reachable_checked": "2026-08-17",
+      "endpoint_status": {
+        "chat/completions": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        }
+      },
+      "owned_by": "deepseek"
+    }
+  ]
+}

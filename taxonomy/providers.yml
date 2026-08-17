@@ -103,3 +103,87 @@ providers:
       oai:
         request: schemas/completion/oai.groq.request.json
         response: schemas/completion/oai.groq.response.json
+- id: xai
+  name: xAI
+  icon_mono: xai
+  icon_color: xai
+  homepage: https://x.ai
+  docs: https://docs.x.ai
+  base_url: https://api.x.ai/v1
+  openapi: https://docs.x.ai/openapi.json
+  models_url: https://api.x.ai/v1/language-models
+  ingress:
+  - oai
+  - anthropic
+  auth:
+  - bearer
+  env_var: XAI_API_KEY
+  schema:
+    completion:
+      oai:
+        request: schemas/completion/oai.xai.request.json
+        response: schemas/completion/oai.xai.response.json
+      anthropic:
+        request: schemas/completion/anthropic.xai.request.json
+        response: schemas/completion/anthropic.xai.response.json
+- id: deepseek
+  name: DeepSeek
+  icon_mono: deepseek
+  icon_color: deepseek-color
+  homepage: https://www.deepseek.com
+  docs: https://api-docs.deepseek.com
+  base_url: https://api.deepseek.com
+  openapi: null
+  models_url: https://api.deepseek.com/models
+  ingress:
+  - oai
+  - anthropic
+  auth:
+  - bearer
+  env_var: DEEPSEEK_API_KEY
+  schema:
+    completion:
+      oai:
+        request: schemas/completion/oai.deepseek.request.json
+      anthropic:
+        request: schemas/completion/anthropic.anthropic.request.json
+        response: schemas/completion/anthropic.anthropic.response.json
+- id: mistral
+  name: Mistral AI
+  icon_mono: mistral
+  icon_color: mistral-color
+  homepage: https://mistral.ai
+  docs: https://docs.mistral.ai
+  base_url: https://api.mistral.ai/v1
+  openapi: https://raw.githubusercontent.com/mistralai/platform-docs-public/main/openapi.yaml
+  models_url: https://api.mistral.ai/v1/models
+  ingress:
+  - oai
+  auth:
+  - bearer
+  env_var: MISTRAL_API_KEY
+  schema:
+    completion:
+      oai:
+        request: schemas/completion/oai.mistral.request.json
+        response: schemas/completion/oai.mistral.response.json
+        stream: schemas/completion/oai.mistral.stream.json
+- id: cerebras
+  name: Cerebras
+  icon_mono: cerebras
+  icon_color: cerebras-color
+  homepage: https://cerebras.ai
+  docs: https://inference-docs.cerebras.ai
+  base_url: https://api.cerebras.ai/v1
+  openapi: https://storage.googleapis.com/stainless-sdk-openapi-specs/cerebras/cerebras-cloud-5471bd6d34fdddff21977458788b979ce93f6b080e11ff0d35777182b6615baa.yml
+  models_url: https://api.cerebras.ai/public/v1/models
+  ingress:
+  - oai
+  auth:
+  - bearer
+  env_var: CEREBRAS_API_KEY
+  schema:
+    completion:
+      oai:
+        request: schemas/completion/oai.cerebras.request.json
+        response: schemas/completion/oai.cerebras.response.json

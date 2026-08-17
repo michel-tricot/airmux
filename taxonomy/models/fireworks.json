@@ -29,6 +29,12 @@
       "reachable": true,
       "reachable_checked": "2026-08-17",
       "display_name": "DeepSeek-V4-Flash-0731",
+      "endpoint_status": {
+        "chat/completions": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        }
+      },
       "hugging_face_id": "deepseek-ai/DeepSeek-V4-Flash-0731"
     },
     {
@@ -55,6 +61,12 @@
       "reachable": true,
       "reachable_checked": "2026-08-17",
       "display_name": "DeepSeek-V4-Pro",
+      "endpoint_status": {
+        "chat/completions": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        }
+      },
       "hugging_face_id": "deepseek-ai/DeepSeek-V4-Pro"
     },
     {
@@ -81,6 +93,12 @@
       "reachable": true,
       "reachable_checked": "2026-08-17",
       "display_name": "DeepSeek-V4-Pro-0813",
+      "endpoint_status": {
+        "chat/completions": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        }
+      },
       "hugging_face_id": "deepseek-ai/DeepSeek-V4-Pro-0813"
     },
     {
@@ -107,6 +125,12 @@
       "reachable": true,
       "reachable_checked": "2026-08-17",
       "display_name": "GLM 5.2",
+      "endpoint_status": {
+        "chat/completions": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        }
+      },
       "hugging_face_id": "zai-org/GLM-5.2"
     },
     {
@@ -133,6 +157,12 @@
       "reachable": true,
       "reachable_checked": "2026-08-17",
       "display_name": "OpenAI gpt-oss-120b",
+      "endpoint_status": {
+        "chat/completions": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        }
+      },
       "hugging_face_id": "openai/gpt-oss-120b"
     },
     {
@@ -159,6 +189,12 @@
       "reachable": true,
       "reachable_checked": "2026-08-17",
       "display_name": "OpenAI gpt-oss-20b",
+      "endpoint_status": {
+        "chat/completions": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        }
+      },
       "hugging_face_id": "openai/gpt-oss-20b"
     },
     {
@@ -186,6 +222,12 @@
       "reachable": true,
       "reachable_checked": "2026-08-17",
       "display_name": "Inkling",
+      "endpoint_status": {
+        "chat/completions": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        }
+      },
       "hugging_face_id": "thinkingmachines/Inkling"
     },
     {
@@ -213,6 +255,12 @@
       "reachable": true,
       "reachable_checked": "2026-08-17",
       "display_name": "Kimi K2.6",
+      "endpoint_status": {
+        "chat/completions": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        }
+      },
       "hugging_face_id": "moonshotai/Kimi-K2.6"
     },
     {
@@ -240,6 +288,12 @@
       "reachable": true,
       "reachable_checked": "2026-08-17",
       "display_name": "Kimi K2.7 Code",
+      "endpoint_status": {
+        "chat/completions": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        }
+      },
       "hugging_face_id": "moonshotai/Kimi-K2.7-Code"
     },
     {
@@ -267,6 +321,12 @@
       "reachable": true,
       "reachable_checked": "2026-08-17",
       "display_name": "Kimi K3",
+      "endpoint_status": {
+        "chat/completions": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        }
+      },
       "hugging_face_id": "moonshotai/Kimi-K3"
     },
     {
@@ -293,6 +353,12 @@
       "reachable": true,
       "reachable_checked": "2026-08-17",
       "display_name": "MiniMax M2.7",
+      "endpoint_status": {
+        "chat/completions": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        }
+      },
       "hugging_face_id": "MiniMaxAI/MiniMax-M2.7"
     },
     {
@@ -319,6 +385,12 @@
       "reachable": true,
       "reachable_checked": "2026-08-17",
       "display_name": "Minimax M3",
+      "endpoint_status": {
+        "chat/completions": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        }
+      },
       "hugging_face_id": "MiniMaxAI/MiniMax-M3"
     },
     {
@@ -346,6 +418,12 @@
       "reachable": true,
       "reachable_checked": "2026-08-17",
       "display_name": "Muse Glimmer 30B",
+      "endpoint_status": {
+        "chat/completions": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        }
+      },
       "hugging_face_id": "meta-models/Muse-Glimmer-30B"
     },
     {
@@ -372,6 +450,12 @@
       "reachable": true,
       "reachable_checked": "2026-08-17",
       "display_name": "NVIDIA Nemotron 3 Ultra NVFP4",
+      "endpoint_status": {
+        "chat/completions": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        }
+      },
       "hugging_face_id": "nvidia/NVIDIA-Nemotron-3-Ultra-550B-A55B-NVFP4"
     },
     {
@@ -398,6 +482,12 @@
       "reachable": true,
       "reachable_checked": "2026-08-17",
       "display_name": "Nemotron Lightning 3.5 30B A3B",
+      "endpoint_status": {
+        "chat/completions": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        }
+      },
       "hugging_face_id": "nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-BF16"
     },
     {
@@ -425,6 +515,12 @@
       "reachable": true,
       "reachable_checked": "2026-08-17",
       "display_name": "Qwen3.7 Plus",
+      "endpoint_status": {
+        "chat/completions": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        }
+      },
       "hugging_face_id": "Qwen/"
     },
     {
@@ -445,6 +541,12 @@
       "reachable": true,
       "reachable_checked": "2026-08-17",
       "display_name": "Qwen3.8-2.4T-A95B",
+      "endpoint_status": {
+        "chat/completions": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        }
+      },
       "hugging_face_id": "Qwen/Qwen3.8-2.4T-A95B"
     },
     {
@@ -472,6 +574,12 @@
       "reachable": true,
       "reachable_checked": "2026-08-17",
       "display_name": "Qwen 3.8 Max",
+      "endpoint_status": {
+        "chat/completions": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        }
+      },
       "hugging_face_id": "Qwen/Qwen3.8-2.4T-A95B"
     }
   ]

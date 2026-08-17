@@ -27,9 +27,18 @@ OUT = ROOT / "reports"
 INGRESS = sys.argv[1] if len(sys.argv) > 1 else "oai"
 MAXDEPTH = int(sys.argv[2]) if len(sys.argv) > 2 else 2
 
-# these point their schema at oai.openai.* or anthropic.anthropic.*, so their column is a
-# restatement of the canonical shape, not an independently documented surface
-STANDIN = {"nvidia", "hyperbolic", "lambda", "baseten", "bedrock", "vertex"}
+def is_standin(entry_id: str, request_path: str) -> bool:
+    """A column is a restatement when the schema it points at belongs to someone else.
+
+    Filenames are <ingress>.<owner>.<part>.json, so the owner is on the file rather than in
+    a list kept in step by hand. A provider pointing at oai.openai.* or anthropic.anthropic.*
+    is echoing the canonical shape, and its agreement is one fact repeated, not evidence.
+
+    Reading it off the path also gets the mixed case right, which a set of provider ids
+    cannot express: deepseek documents its own oai parameters and borrows anthropic's, so it
+    is evidence in one column and a stand-in in the other.
+    """
+    return Path(request_path).name.split(".")[1] != entry_id
 
 
 class MatrixRow(TypedDict):
@@ -104,7 +113,7 @@ def main() -> int:
             "id": entry["id"],
             "name": entry["name"],
             "kind": "router" if entry in routers else "provider",
-            "standin": entry["id"] in STANDIN,
+            "standin": is_standin(entry["id"], parts["request"]),
             "count": len(support[entry["id"]]),
         })
 
