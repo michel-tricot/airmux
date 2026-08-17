@@ -30,7 +30,7 @@ class ProviderEntry(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     provider_id: str
-    kind: Literal["openai_compatible", "anthropic"]  # selects the adapter
+    kind: Literal["openai_compatible", "openai_responses", "anthropic"]  # selects the adapter
     base_url: HttpUrl
     param_aliases: dict[str, str] = Field(default_factory=dict)  # canonical param -> this provider's spelling
     accepted_params: list[str] | None = None  # params known accepted beyond the core; consulted when params_closed
@@ -52,6 +52,7 @@ class ModelEntry(BaseModel):
     context_window: int
     max_output_tokens: int | None = None  # completion cap; requests are clamped to it, distinct from context_window
     capabilities: list[str]  # "streaming", "tools", "vision"
+    egress_kind: Literal["openai_compatible", "openai_responses", "anthropic"] | None = None
 
 
 class CredentialEntry(BaseModel):

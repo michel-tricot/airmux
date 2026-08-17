@@ -339,6 +339,10 @@ class ModelEntry(BaseModel):
     context_window: Annotated[int, Field(title="Context Window")]
     max_output_tokens: Annotated[int | None, Field(title="Max Output Tokens")] = None
     capabilities: Annotated[list[str], Field(title="Capabilities")]
+    egress_kind: Annotated[
+        Literal["openai_compatible", "openai_responses", "anthropic"] | None,
+        Field(title="Egress Kind"),
+    ] = None
 
 
 class MaxOutputTokens(RootModel[int]):
@@ -384,6 +388,10 @@ class ModelIn(BaseModel):
             title="Upstream Model",
         ),
     ] = ""
+    egress_kind: Annotated[
+        Literal["openai_compatible", "openai_responses", "anthropic"] | None,
+        Field(description="Per-model egress adapter override", title="Egress Kind"),
+    ] = None
     input_price_per_mtok: Annotated[
         float | None,
         Field(
@@ -447,6 +455,7 @@ class ModelOut(BaseModel):
     name: Annotated[str, Field(title="Name")]
     provider_id: Annotated[UUID, Field(title="Provider Id")]
     upstream_model: Annotated[str, Field(title="Upstream Model")]
+    egress_kind: Annotated[str | None, Field(title="Egress Kind")]
     input_price_per_mtok: Annotated[float, Field(title="Input Price Per Mtok")]
     output_price_per_mtok: Annotated[float, Field(title="Output Price Per Mtok")]
     cache_read_price_per_mtok: Annotated[float, Field(title="Cache Read Price Per Mtok")]
@@ -728,7 +737,10 @@ class ProviderEntry(BaseModel):
     """
 
     provider_id: Annotated[str, Field(title="Provider Id")]
-    kind: Annotated[Literal["openai_compatible", "anthropic"], Field(title="Kind")]
+    kind: Annotated[
+        Literal["openai_compatible", "openai_responses", "anthropic"],
+        Field(title="Kind"),
+    ]
     base_url: Annotated[AnyUrl, Field(title="Base Url")]
     param_aliases: Annotated[dict[str, str] | None, Field(title="Param Aliases")] = None
     accepted_params: Annotated[list[str] | None, Field(title="Accepted Params")] = None
@@ -765,7 +777,7 @@ class ProviderIn(BaseModel):
         ),
     ]
     kind: Annotated[
-        Literal["openai_compatible", "anthropic"] | None,
+        Literal["openai_compatible", "openai_responses", "anthropic"] | None,
         Field(description="Adapter kind", title="Kind"),
     ] = "openai_compatible"
     base_url: Annotated[

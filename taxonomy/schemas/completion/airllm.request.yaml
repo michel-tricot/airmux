@@ -213,6 +213,12 @@ $defs:
         - type: 'null'
         default: null
         title: Cache
+      strict:
+        anyOf:
+        - type: boolean
+        - type: 'null'
+        default: null
+        title: Strict
     required:
     - name
     title: ToolDef
@@ -334,6 +340,18 @@ properties:
     - $ref: '#/$defs/ResponseFormat'
     - type: 'null'
     default: null
+  reasoning_effort:
+    anyOf:
+    - type: string
+    - type: 'null'
+    default: null
+    title: Reasoning Effort
+  parallel_tool_calls:
+    anyOf:
+    - type: boolean
+    - type: 'null'
+    default: null
+    title: Parallel Tool Calls
 required:
 - model
 - messages

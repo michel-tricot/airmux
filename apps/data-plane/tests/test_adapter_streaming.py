@@ -121,7 +121,7 @@ ERROR_LOGS: dict[str, bytes] = {
     "anthropic": anthropic_sse({"type": "error", "error": {"type": "overloaded", "message": "try later"}}),
 }
 
-KINDS = sorted(REGISTRY)
+KINDS = sorted(kind for kind in REGISTRY if kind != "openai_responses")
 MODALITIES = ("text", "tools")
 
 

@@ -63,7 +63,7 @@ from paths import TAXONOMY
 CTX = ssl.create_default_context()
 PROMPT = "say ok"
 MAX_TOKENS = 16
-CONCURRENCY = 4          # per provider; hosts throttle per account, not per model
+CONCURRENCY = 4  # per provider; hosts throttle per account, not per model
 TIMEOUT = 60
 
 # outcomes that say something durable about the model rather than about this moment
@@ -85,15 +85,19 @@ def classify(status: int, body: str) -> str:
     return f"http_{status}"
 
 
-def request(provider: dict, upstream: str, key: str) -> tuple[str, str]:
+def request(provider: dict, endpoint: str, upstream: str, key: str) -> tuple[str, str]:
     base = provider["base_url"].rstrip("/")
     anthropic = provider["id"] == "anthropic"
-    url = f"{base}/messages" if anthropic else f"{base}/chat/completions"
-    body = {
-        "model": upstream,
-        "messages": [{"role": "user", "content": PROMPT}],
-        "max_tokens" if anthropic else "max_completion_tokens": MAX_TOKENS,
-    }
+    url = f"{base}/messages" if anthropic else f"{base}/{endpoint}"
+    body = (
+        {"model": upstream, "input": PROMPT, "max_output_tokens": MAX_TOKENS, "store": False}
+        if endpoint == "responses"
+        else {
+            "model": upstream,
+            "messages": [{"role": "user", "content": PROMPT}],
+            "max_tokens" if anthropic else "max_completion_tokens": MAX_TOKENS,
+        }
+    )
     # Groq and Together sit behind Cloudflare, which rejects urllib's default agent with
     # "error code: 1010" — a bot-detection block that reads exactly like an auth failure
     headers = {"Content-Type": "application/json", "User-Agent": "airllm-smoke/1.0", "Accept": "application/json"}
@@ -109,6 +113,8 @@ def request(provider: dict, upstream: str, key: str) -> tuple[str, str]:
             payload = json.loads(response.read().decode())
         if anthropic:
             text = "".join(b.get("text", "") for b in payload.get("content") or [])
+        elif endpoint == "responses":
+            text = "".join(block.get("text", "") for item in payload.get("output") or [] for block in item.get("content") or [])
         else:
             text = ((payload.get("choices") or [{}])[0].get("message") or {}).get("content") or ""
         return "ok", (text or "").strip()[:24]
@@ -125,11 +131,11 @@ async def run(models: list[tuple[dict, str, str, str]]) -> list[tuple]:
     semaphores: dict[str, asyncio.Semaphore] = {}
     results = []
 
-    async def one(provider, model_id, upstream, key):
+    async def one(provider, model_id, endpoint, upstream, key):
         sem = semaphores.setdefault(provider["id"], asyncio.Semaphore(CONCURRENCY))
         async with sem:
-            outcome, detail = await asyncio.to_thread(request, provider, upstream, key)
-        results.append((provider["id"], model_id, outcome, detail))
+            outcome, detail = await asyncio.to_thread(request, provider, endpoint, upstream, key)
+        results.append((provider["id"], model_id, endpoint, outcome, detail))
         mark = {"ok": ".", "not_found": "N", "rate_limit": "~"}.get(outcome, "x")
         print(mark, end="", flush=True)
 
@@ -144,14 +150,26 @@ def write_back(results: list[tuple]) -> None:
     from canonical import write_catalog
 
     stamp = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    verdicts = {(p, m.split("/", 1)[1]): o for p, m, o, _ in results}
+    verdicts = {(p, m.split("/", 1)[1], endpoint): outcome for p, m, endpoint, outcome, _ in results}
     changed = 0
     for path in sorted((TAXONOMY / "models").glob("*.json")):
         doc = json.loads(path.read_text())
         touched = False
         for model in doc["models"]:
-            outcome = verdicts.get((doc["provider"], model["id"]))
-            if outcome is None or outcome not in DEFINITIVE:
+            endpoints = (
+                ("chat/completions", "responses")
+                if doc["provider"] == "openai"
+                else ("messages" if doc["provider"] == "anthropic" else "chat/completions",)
+            )
+            endpoint_status = dict(model.get("endpoint_status") or {})
+            for endpoint in endpoints:
+                outcome = verdicts.get((doc["provider"], model["id"], endpoint))
+                if outcome in DEFINITIVE:
+                    endpoint_status[endpoint] = {"outcome": outcome, "checked": stamp}
+            if endpoint_status:
+                model["endpoint_status"] = endpoint_status
+            outcome = endpoint_status.get("chat/completions", {}).get("outcome") or endpoint_status.get("messages", {}).get("outcome")
+            if outcome not in DEFINITIVE:
                 continue
             reachable = outcome == "ok"
             # the stamp marks when the verdict last changed, not when it was last checked:
@@ -187,31 +205,32 @@ def main() -> int:
         if limit and seen[pid] >= limit:
             continue
         seen[pid] += 1
-        plan.append((provider, model["model_id"], model["upstream_model"], key))
+        endpoints = ("chat/completions", "responses") if pid == "openai" else ("messages" if pid == "anthropic" else "chat/completions",)
+        plan.extend((provider, model["model_id"], endpoint, model["upstream_model"], key) for endpoint in endpoints)
 
     print(f"calling {len(plan)} models across {len(seen)} providers, {MAX_TOKENS} output tokens each")
     print("  . ok   N id does not resolve   ~ throttled   x other\n  ", end="")
     results = asyncio.run(run(plan))
     print("\n")
 
-    by_outcome = Counter(r[2] for r in results)
+    by_outcome = Counter(r[3] for r in results)
     print("outcomes:", dict(by_outcome.most_common()))
     print()
     for pid in sorted(seen):
         rows = [r for r in results if r[0] == pid]
-        ok = sum(1 for r in rows if r[2] == "ok")
+        ok = sum(1 for r in rows if r[3] == "ok")
         print(f"  {pid:<11} {ok:>3}/{len(rows):<3} ok")
-    failures = [r for r in results if r[2] != "ok"]
+    failures = [r for r in results if r[3] != "ok"]
     if failures:
         print(f"\n{len(failures)} did not answer:")
-        for pid, mid, outcome, detail in sorted(failures, key=lambda r: (r[2], r[1])):
-            print(f"  {outcome:<11} {mid:<44} {detail[:70]}")
+        for pid, mid, endpoint, outcome, detail in sorted(failures, key=lambda r: (r[3], r[1], r[2])):
+            print(f"  {outcome:<11} {mid:<44} {endpoint:<18} {detail[:70]}")
     if skipped:
         print(f"\nskipped {len(skipped)} for a missing credential")
     write_back(results)
     (TAXONOMY / "reports").mkdir(exist_ok=True)
     (TAXONOMY / "reports" / "smoke.json").write_text(
-        json.dumps([{"provider": p, "model_id": m, "outcome": o, "detail": d} for p, m, o, d in sorted(results)], indent=2) + "\n"
+        json.dumps([{"provider": p, "model_id": m, "endpoint": e, "outcome": o, "detail": d} for p, m, e, o, d in sorted(results)], indent=2) + "\n"
     )
     return 0 if not failures else 1
 

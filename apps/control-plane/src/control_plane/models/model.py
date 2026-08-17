@@ -17,6 +17,7 @@ class Model(Record, Identified, Tombstonable, table=True):
     name: str = Field(unique=True)
     provider_id: UUID = Field(foreign_key="provider.id")
     upstream_model: str
+    egress_kind: str | None = None
     input_price_per_mtok: float
     output_price_per_mtok: float
     cache_read_price_per_mtok: float
@@ -31,6 +32,7 @@ class ModelOut(RecordOut[Model]):
     name: str
     provider_id: UUID
     upstream_model: str
+    egress_kind: str | None
     input_price_per_mtok: float
     output_price_per_mtok: float
     cache_read_price_per_mtok: float
