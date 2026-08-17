@@ -6,7 +6,7 @@ import pytest
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from pydantic import ValidationError
 
-from contract import private_key_to_b64
+from contract import FileStoreConfig, private_key_to_b64
 from control_plane.config import DEFAULT_CONSOLE_URL, DEFAULT_DATABASE_URL, database_url, load_settings
 
 
@@ -105,3 +105,27 @@ def test_the_shipped_config_serves_the_checkout_and_the_stack(tmp_path, monkeypa
     stack = load_settings()
     assert stack.console_url == "http://localhost:3000"
     assert stack.database.url == "postgresql+asyncpg://airllm:airllm@postgres:5432/airllm"
+
+
+def test_the_fly_config_uses_shared_machine_state(tmp_path, monkeypatch):
+    fly_config = Path(__file__).resolve().parents[3] / "deploy" / "fly" / "airllm.yml"
+    cache_dir = tmp_path / ".airllm"
+    cache_dir.mkdir()
+    (cache_dir / "signing.key").write_text(private_key_to_b64(Ed25519PrivateKey.generate()), encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("DATABASE_URL", "postgresql://someone:secret@db.internal:5432/app")
+    monkeypatch.setenv("GW_CONSOLE_URL", "https://console.example.com")
+
+    settings = load_settings(fly_config)
+
+    assert settings.database.url == "postgresql+asyncpg://someone:secret@db.internal:5432/app"
+    assert settings.console_url == "https://console.example.com"
+    assert settings.secrets == FileStoreConfig(root=Path(".airllm/secrets"))
+
+
+def test_the_fly_migration_config_uses_the_direct_database_url(monkeypatch):
+    migration_config = Path(__file__).resolve().parents[3] / "deploy" / "fly" / "migrate.yml"
+    monkeypatch.setenv("GW_CONFIG", str(migration_config))
+    monkeypatch.setenv("DIRECT_DATABASE_URL", "postgresql://someone:secret@direct.db.internal:5432/app")
+
+    assert database_url() == "postgresql+asyncpg://someone:secret@direct.db.internal:5432/app"
