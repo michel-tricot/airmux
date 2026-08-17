@@ -1,4 +1,6 @@
 export type InferenceMessage = { role: 'system' | 'user' | 'assistant'; content: string };
+export type InferenceUsage = { inputTokens: number; outputTokens: number; cacheReadTokens: number };
+export type ChatCompletionResult = { content: string; usage?: InferenceUsage; finishReason?: string; firstTokenMs?: number; durationMs: number };
 
 type ChatCompletionOptions = {
   token: string;
@@ -12,7 +14,8 @@ type ChatCompletionOptions = {
 };
 
 type OpenAIChunk = {
-  choices?: { delta?: { content?: unknown } }[];
+  choices?: { delta?: { content?: unknown }; finish_reason?: unknown }[];
+  usage?: { prompt_tokens?: unknown; completion_tokens?: unknown; prompt_tokens_details?: { cached_tokens?: unknown } };
   error?: { message?: unknown; code?: unknown };
 };
 
@@ -35,7 +38,16 @@ async function responseError(response: Response): Promise<Error> {
   return new Error(`${response.status}: ${response.statusText || 'Request failed'}`);
 }
 
-function parseChunk(data: string): string | null {
+function usageOf(value: OpenAIChunk['usage']): InferenceUsage | undefined {
+  if (!value || typeof value.prompt_tokens !== 'number' || typeof value.completion_tokens !== 'number') return undefined;
+  return {
+    inputTokens: value.prompt_tokens,
+    outputTokens: value.completion_tokens,
+    cacheReadTokens: typeof value.prompt_tokens_details?.cached_tokens === 'number' ? value.prompt_tokens_details.cached_tokens : 0,
+  };
+}
+
+function parseChunk(data: string): { content?: string; usage?: InferenceUsage; finishReason?: string } {
   let chunk: OpenAIChunk;
   try {
     chunk = JSON.parse(data) as OpenAIChunk;
@@ -44,18 +56,26 @@ function parseChunk(data: string): string | null {
   }
   if (chunk.error) throw new Error(errorMessage(chunk) ?? 'The gateway stream failed');
   const content = chunk.choices?.[0]?.delta?.content;
-  if (content == null) return null;
-  if (typeof content !== 'string') throw new Error('The gateway returned invalid streamed content');
-  return content;
+  if (content != null && typeof content !== 'string') throw new Error('The gateway returned invalid streamed content');
+  const finishReason = chunk.choices?.[0]?.finish_reason;
+  if (finishReason != null && typeof finishReason !== 'string') throw new Error('The gateway returned invalid streamed finish reason');
+  return {
+    content: typeof content === 'string' ? content : undefined,
+    usage: usageOf(chunk.usage),
+    finishReason: typeof finishReason === 'string' ? finishReason : undefined,
+  };
 }
 
-async function streamedContent(response: Response, onDelta?: (content: string) => void): Promise<string> {
+async function streamedContent(response: Response, startedAt: number, onDelta?: (content: string) => void): Promise<ChatCompletionResult> {
   if (!response.body) throw new Error('The gateway returned an empty stream');
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let pending = '';
   let dataLines: string[] = [];
   let content = '';
+  let usage: InferenceUsage | undefined;
+  let finishReason: string | undefined;
+  let firstTokenMs: number | undefined;
   let complete = false;
 
   const dispatch = () => {
@@ -66,9 +86,12 @@ async function streamedContent(response: Response, onDelta?: (content: string) =
       complete = true;
       return;
     }
-    const delta = parseChunk(data);
-    if (delta != null) {
-      content += delta;
+    const chunk = parseChunk(data);
+    usage = chunk.usage ?? usage;
+    finishReason = chunk.finishReason ?? finishReason;
+    if (chunk.content != null) {
+      content += chunk.content;
+      firstTokenMs ??= performance.now() - startedAt;
       onDelta?.(content);
     }
   };
@@ -98,10 +121,11 @@ async function streamedContent(response: Response, onDelta?: (content: string) =
       break;
     }
   }
-  return content;
+  return { content, usage, finishReason, firstTokenMs, durationMs: performance.now() - startedAt };
 }
 
-export async function chatCompletion(options: ChatCompletionOptions): Promise<string> {
+export async function chatCompletion(options: ChatCompletionOptions): Promise<ChatCompletionResult> {
+  const startedAt = performance.now();
   const response = await fetch('/inf/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -119,10 +143,17 @@ export async function chatCompletion(options: ChatCompletionOptions): Promise<st
     signal: options.signal,
   });
   if (!response.ok) throw await responseError(response);
-  if (options.stream) return streamedContent(response, options.onDelta);
+  if (options.stream) return streamedContent(response, startedAt, options.onDelta);
 
-  const body = (await response.json()) as { choices?: { message?: { content?: unknown } }[] };
+  const body = (await response.json()) as OpenAIChunk & { choices?: { message?: { content?: unknown }; finish_reason?: unknown }[] };
   const content = body.choices?.[0]?.message?.content;
   if (typeof content !== 'string') throw new Error('The gateway returned an invalid response');
-  return content;
+  const finishReason = body.choices?.[0]?.finish_reason;
+  if (finishReason != null && typeof finishReason !== 'string') throw new Error('The gateway returned an invalid finish reason');
+  return {
+    content,
+    usage: usageOf(body.usage),
+    finishReason: typeof finishReason === 'string' ? finishReason : undefined,
+    durationMs: performance.now() - startedAt,
+  };
 }

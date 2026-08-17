@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQueryClient } from '@tanstack/react-query';
 import { useLogin, useSignup, useClaim, getMeQueryKey, type MeOut } from '@workspace/api-client-react';
-import { Alert, AlertDescription, Card, Button, Input } from '@/components/ui/elements';
+import { Alert, AlertDescription, AlertTitle, Card, Button, Input } from '@/components/ui/elements';
 import { TerminalSquare } from 'lucide-react';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 
@@ -24,6 +24,7 @@ type Credentials = z.infer<typeof loginSchema>;
 export default function Login() {
   const queryClient = useQueryClient();
   const [mode, setMode] = useState<'login' | 'signup'>('login');
+  const [submissionError, setSubmissionError] = useState<string | null>(null);
   const { data: claim } = useClaim();
 
   const form = useForm<Credentials>({
@@ -32,19 +33,39 @@ export default function Login() {
   });
 
   const onSuccess = (me: MeOut) => queryClient.setQueryData(getMeQueryKey(), me);
-  const login = useLogin({ mutation: { onSuccess, meta: { silentError: true } } });
-  const signup = useSignup({ mutation: { onSuccess, meta: { silentError: true } } });
+  const login = useLogin({
+    mutation: {
+      onSuccess,
+    },
+  });
+  const signup = useSignup({
+    mutation: {
+      onSuccess,
+      meta: { silentError: true },
+    },
+  });
   const pending = login.isPending || signup.isPending;
-  const error = mode === 'login' ? login.error : signup.error;
 
-  const submit = form.handleSubmit((values) => {
-    if (mode === 'login') login.mutate({ data: { email: values.email, password: values.password } });
-    else signup.mutate({ data: { email: values.email, name: values.name, password: values.password } });
+  const submit = form.handleSubmit(async (values) => {
+    setSubmissionError(null);
+    form.clearErrors('password');
+    try {
+      if (mode === 'login') await login.mutateAsync({ data: { email: values.email, password: values.password } });
+      else await signup.mutateAsync({ data: { email: values.email, name: values.name, password: values.password } });
+    } catch {
+      if (mode === 'login') {
+        setSubmissionError('Sign in failed. Check your email and password.');
+        form.setError('password', { type: 'server', message: 'Incorrect email or password' });
+      } else {
+        setSubmissionError('We couldn’t create your account. Please check your details and try again.');
+      }
+    }
   });
 
   const switchMode = () => {
     setMode((m) => (m === 'login' ? 'signup' : 'login'));
     form.clearErrors();
+    setSubmissionError(null);
     login.reset();
     signup.reset();
   };
@@ -112,13 +133,12 @@ export default function Login() {
               )}
             />
 
-            {error && (
+            {submissionError && (
               <Alert variant="destructive">
-                <AlertDescription>
-                  {mode === 'login'
-                    ? 'Sign in failed. Check your email and password.'
-                    : 'We couldn’t create your account. Please check your details and try again.'}
-                </AlertDescription>
+                <div>
+                  <AlertTitle>{mode === 'login' ? 'Couldn’t sign in' : 'Couldn’t create account'}</AlertTitle>
+                  <AlertDescription>{submissionError}</AlertDescription>
+                </div>
               </Alert>
             )}
 

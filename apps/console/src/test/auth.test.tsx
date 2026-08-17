@@ -122,6 +122,23 @@ describe('sign-in gate', () => {
     expect(await screen.findByRole('heading', { level: 1, name: 'Production' })).toBeInTheDocument();
   });
 
+  it.each(['unknown account', 'incorrect password'])('keeps the sign-in error visible for an %s', async () => {
+    server.use(
+      http.get('/api/v1/auth/me', () => new HttpResponse(null, { status: 401 })),
+      http.get('/api/v1/instance/oss/claim', () => HttpResponse.json({ claimed: true })),
+      http.post('/api/v1/auth/login', () => HttpResponse.json({ detail: 'Invalid credentials' }, { status: 401 })),
+    );
+    const user = userEvent.setup();
+    renderAt('/');
+
+    await user.type(await screen.findByLabelText('Email'), 'unknown@example.com');
+    await user.type(screen.getByLabelText('Password'), 'incorrect-password');
+    await user.click(screen.getByRole('button', { name: 'Sign in' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Sign in failed. Check your email and password.');
+    expect(screen.getByText('Incorrect email or password')).toBeInTheDocument();
+  });
+
   it('clears the selected organization when signing out', async () => {
     let signedIn = true;
     window.localStorage.setItem('airllm_org_id', ORG.id);

@@ -21,7 +21,12 @@ afterEach(() => {
 
 describe('chatCompletion', () => {
   it('uses the inference prefix and requests the OpenAI response dialect', async () => {
-    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(Response.json({ choices: [{ message: { content: 'hello' } }] }));
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
+      Response.json({
+        choices: [{ message: { content: 'hello' }, finish_reason: 'stop' }],
+        usage: { prompt_tokens: 7, completion_tokens: 3, prompt_tokens_details: { cached_tokens: 2 } },
+      }),
+    );
     vi.stubGlobal('fetch', fetchMock);
 
     await expect(
@@ -32,7 +37,11 @@ describe('chatCompletion', () => {
         temperature: 0,
         stream: false,
       }),
-    ).resolves.toBe('hello');
+    ).resolves.toMatchObject({
+      content: 'hello',
+      usage: { inputTokens: 7, outputTokens: 3, cacheReadTokens: 2 },
+      finishReason: 'stop',
+    });
 
     expect(fetchMock).toHaveBeenCalledWith(
       '/inf/v1/chat/completions',
@@ -52,6 +61,7 @@ describe('chatCompletion', () => {
     const body = [
       'data: {"choices":[{"delta":{"content":"hé"}}]}\r\n\r\n',
       'data: {"choices":[{"delta":{"content":"llo 🌍"}}]}\n\n',
+      'data: {"choices":[{"finish_reason":"stop"}],"usage":{"prompt_tokens":7,"completion_tokens":3}}\n\n',
       'data: [DONE]\n\n',
     ].join('');
     const bytes = encoder.encode(body);
@@ -69,7 +79,7 @@ describe('chatCompletion', () => {
         stream: true,
         onDelta: (content) => deltas.push(content),
       }),
-    ).resolves.toBe('héllo 🌍');
+    ).resolves.toMatchObject({ content: 'héllo 🌍', usage: { inputTokens: 7, outputTokens: 3 }, finishReason: 'stop' });
     expect(deltas).toEqual(['hé', 'héllo 🌍']);
   });
 
