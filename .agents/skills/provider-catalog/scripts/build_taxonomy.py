@@ -21,6 +21,12 @@ The output is reviewed in a diff, so every ordering is fixed and total:
 Nothing is emitted in dict-insertion or filesystem order, and the file is written only when
 its content actually changes, so a no-op run leaves the mtime alone.
 
+## upstream_model is what goes on the wire, and is not always the catalog id
+
+Fireworks accepts only the fully qualified accounts/fireworks/models/<name> for some of its
+models, so its source sets upstream_id and this prefers it. A source that does not set one
+sends the catalog id unchanged.
+
 ## Model ids are always provider-prefixed
 
 `gpt-oss-120b` is served by Groq and Together at different prices and limits, so a bare id
@@ -30,6 +36,11 @@ model_id is `<provider>/<upstream>`, and upstream_model carries the name to send
 wire. Adding a provider can then never rename anything.
 
 ## What is dropped, and why
+
+A model marked unreachable by smoke.py is skipped. The catalog then holds what a provider
+advertises, and the applied taxonomy holds what actually answered, which is the number that
+matters for routing. Together advertises 74 chat models and serves 23; the rest need a
+dedicated endpoint provisioned.
 
 A model with no context window is skipped. ModelIn defaults context_window to 128000, and
 emitting that default for a model whose real window is unknown would be inventing a routing
@@ -76,7 +87,7 @@ def build() -> tuple[dict, list[str]]:
     providers = yaml.safe_load((TAXONOMY / "providers.yml").read_text())["providers"]
     providers = sorted(providers, key=lambda p: p["id"])
 
-    emitted_providers, emitted_models, skipped = [], [], []
+    emitted_providers, emitted_models, skipped, unreachable = [], [], [], []
     for provider in providers:
         icon = TAXONOMY / "icons" / f"{provider['icon_mono']}.svg"
         emitted_providers.append({
@@ -90,6 +101,9 @@ def build() -> tuple[dict, list[str]]:
         if not catalog.exists():
             continue
         for model in json.loads(catalog.read_text())["models"]:
+            if model.get("reachable") is False:
+                unreachable.append(f"{provider['id']}/{model['id']}")
+                continue
             if not model.get("context_length"):
                 skipped.append(f"{provider['id']}/{model['id']}")
                 continue
@@ -97,7 +111,7 @@ def build() -> tuple[dict, list[str]]:
             emitted_models.append({
                 "model_id": f"{provider['id']}/{model['id']}",
                 "provider_id": provider["id"],
-                "upstream_model": model["id"],
+                "upstream_model": model.get("upstream_id") or model["id"],
                 "input_price_per_mtok": float(price.get("input_per_mtok") or 0.0),
                 "output_price_per_mtok": float(price.get("output_per_mtok") or 0.0),
                 "cache_read_price_per_mtok": float(price.get("cached_input_per_mtok") or 0.0),
@@ -108,7 +122,7 @@ def build() -> tuple[dict, list[str]]:
             })
 
     emitted_models.sort(key=lambda m: (m["provider_id"], m["model_id"]))
-    return {"providers": emitted_providers, "models": emitted_models}, skipped
+    return {"providers": emitted_providers, "models": emitted_models}, skipped, unreachable
 
 
 def render(spec: dict) -> str:
@@ -116,7 +130,7 @@ def render(spec: dict) -> str:
 
 
 def main() -> int:
-    spec, skipped = build()
+    spec, skipped, unreachable = build()
     text = render(spec)
     check = "--check" in sys.argv
 
@@ -133,9 +147,12 @@ def main() -> int:
     else:
         APPLIED.write_text(text)
         print(f"wrote {APPLIED.name}: {len(spec['providers'])} providers, {len(spec['models'])} models")
+    if unreachable:
+        print(f"  {len(unreachable)} skipped as unreachable, proven by smoke.py: {', '.join(unreachable[:4])}"
+              f"{' ...' if len(unreachable) > 4 else ''}")
     if skipped:
-        print(f"  {len(skipped)} models skipped for having no context window: {', '.join(skipped[:5])}"
-              f"{' ...' if len(skipped) > 5 else ''}")
+        print(f"  {len(skipped)} skipped for having no context window: {', '.join(skipped[:4])}"
+              f"{' ...' if len(skipped) > 4 else ''}")
     return 0
 
 

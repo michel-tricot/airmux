@@ -53,6 +53,8 @@
       },
       "limits_source": "openrouter-index",
       "pricing_source": "models.dev",
+      "reachable": true,
+      "reachable_checked": "2026-08-17",
       "shutdown_date": "2026-10-23"
     },
     {
@@ -91,7 +93,9 @@
         "output_per_mtok": 4.0
       },
       "limits_source": "openrouter-index",
-      "pricing_source": "openrouter-index"
+      "pricing_source": "openrouter-index",
+      "reachable": true,
+      "reachable_checked": "2026-08-17"
     },
     {
       "id": "gpt-4",
@@ -108,6 +112,8 @@
       },
       "limits_source": "openrouter-index",
       "pricing_source": "models.dev",
+      "reachable": true,
+      "reachable_checked": "2026-08-17",
       "shutdown_date": "2026-10-23"
     },
     {
@@ -136,6 +142,8 @@
       },
       "limits_source": "openrouter-index",
       "pricing_source": "models.dev",
+      "reachable": true,
+      "reachable_checked": "2026-08-17",
       "shutdown_date": "2026-10-23"
     },
     {
@@ -164,7 +172,9 @@
         "cached_input_per_mtok": 0.5
       },
       "limits_source": "openrouter-index",
-      "pricing_source": "models.dev"
+      "pricing_source": "models.dev",
+      "reachable": true,
+      "reachable_checked": "2026-08-17"
     },
     {
       "id": "gpt-4.1-2025-04-14",
@@ -180,7 +190,9 @@
         "output_per_mtok": 8.0
       },
       "limits_source": "openrouter-index",
-      "pricing_source": "openrouter-index"
+      "pricing_source": "openrouter-index",
+      "reachable": true,
+      "reachable_checked": "2026-08-17"
     },
     {
       "id": "gpt-4.1-mini",
@@ -197,7 +209,9 @@
         "cached_input_per_mtok": 0.1
       },
       "limits_source": "openrouter-index",
-      "pricing_source": "models.dev"
+      "pricing_source": "models.dev",
+      "reachable": true,
+      "reachable_checked": "2026-08-17"
     },
     {
       "id": "gpt-4.1-mini-2025-04-14",
@@ -213,7 +227,9 @@
         "output_per_mtok": 1.6
       },
       "limits_source": "openrouter-index",
-      "pricing_source": "openrouter-index"
+      "pricing_source": "openrouter-index",
+      "reachable": true,
+      "reachable_checked": "2026-08-17"
     },
     {
       "id": "gpt-4.1-nano",
@@ -231,6 +247,8 @@
       },
       "limits_source": "openrouter-index",
       "pricing_source": "models.dev",
+      "reachable": true,
+      "reachable_checked": "2026-08-17",
       "shutdown_date": "2026-10-23"
     },
     {
@@ -248,6 +266,8 @@
       },
       "limits_source": "openrouter-index",
       "pricing_source": "openrouter-index",
+      "reachable": true,
+      "reachable_checked": "2026-08-17",
       "shutdown_date": "2026-10-23"
     },
     {
@@ -265,7 +285,9 @@
         "cached_input_per_mtok": 1.25
       },
       "limits_source": "openrouter-index",
-      "pricing_source": "models.dev"
+      "pricing_source": "models.dev",
+      "reachable": true,
+      "reachable_checked": "2026-08-17"
     },
     {
       "id": "gpt-4o-2024-05-13",
@@ -282,6 +304,8 @@
       },
       "limits_source": "openrouter-index",
       "pricing_source": "models.dev",
+      "reachable": true,
+      "reachable_checked": "2026-08-17",
       "shutdown_date": "2026-10-23"
     },
     {
@@ -299,7 +323,9 @@
         "cached_input_per_mtok": 1.25
       },
       "limits_source": "openrouter-index",
-      "pricing_source": "models.dev"
+      "pricing_source": "models.dev",
+      "reachable": true,
+      "reachable_checked": "2026-08-17"
     },
     {
       "id": "gpt-4o-2024-11-20",
@@ -316,7 +342,9 @@
         "cached_input_per_mtok": 1.25
       },
       "limits_source": "openrouter-index",
-      "pricing_source": "models.dev"
+      "pricing_source": "models.dev",
+      "reachable": true,
+      "reachable_checked": "2026-08-17"
     },
     {
       "id": "gpt-4o-mini",
@@ -333,7 +361,9 @@
         "cached_input_per_mtok": 0.075
       },
       "limits_source": "openrouter-index",
-      "pricing_source": "models.dev"
+      "pricing_source": "models.dev",
+      "reachable": true,
+      "reachable_checked": "2026-08-17"
     },
     {
       "id": "gpt-4o-mini-2024-07-18",
@@ -349,7 +379,9 @@
         "output_per_mtok": 0.6
       },
       "limits_source": "openrouter-index",
-      "pricing_source": "openrouter-index"
+      "pricing_source": "openrouter-index",
+      "reachable": true,
+      "reachable_checked": "2026-08-17"
     },
     {
       "id": "gpt-4o-mini-search-preview",
@@ -408,7 +440,9 @@
         "cached_input_per_mtok": 0.125
       },
       "limits_source": "openrouter-index",
-      "pricing_source": "models.dev"
+      "pricing_source": "models.dev",
+      "reachable": true,
+      "reachable_checked": "2026-08-17"
     },
     {
       "id": "gpt-5-2025-08-07",
@@ -425,6 +459,8 @@
       },
       "limits_source": "openrouter-index",
       "pricing_source": "openrouter-index",
+      "reachable": true,
+      "reachable_checked": "2026-08-17",
       "shutdown_date": "2026-12-11"
     },
     {
@@ -453,6 +489,8 @@
       },
       "limits_source": "openrouter-index",
       "pricing_source": "openrouter-index",
+      "reachable": false,
+      "reachable_checked": "2026-08-17",
       "shutdown_date": "2026-07-23"
     },
     {
@@ -470,7 +508,9 @@
         "cached_input_per_mtok": 0.025
       },
       "limits_source": "openrouter-index",
-      "pricing_source": "models.dev"
+      "pricing_source": "models.dev",
+      "reachable": true,
+      "reachable_checked": "2026-08-17"
     },
     {
       "id": "gpt-5-mini-2025-08-07",
@@ -487,6 +527,8 @@
       },
       "limits_source": "openrouter-index",
       "pricing_source": "openrouter-index",
+      "reachable": true,
+      "reachable_checked": "2026-08-17",
       "shutdown_date": "2026-12-11"
     },
     {
@@ -504,7 +546,9 @@
         "cached_input_per_mtok": 0.005
       },
       "limits_source": "openrouter-index",
-      "pricing_source": "models.dev"
+      "pricing_source": "models.dev",
+      "reachable": true,
+      "reachable_checked": "2026-08-17"
     },
     {
       "id": "gpt-5-nano-2025-08-07",
@@ -521,6 +565,8 @@
       },
       "limits_source": "openrouter-index",
       "pricing_source": "openrouter-index",
+      "reachable": true,
+      "reachable_checked": "2026-08-17",
       "shutdown_date": "2026-12-11"
     },
     {
@@ -537,7 +583,9 @@
         "output_per_mtok": 120
       },
       "limits_source": "openrouter-index",
-      "pricing_source": "models.dev"
+      "pricing_source": "models.dev",
+      "reachable": false,
+      "reachable_checked": "2026-08-17"
     },
     {
       "id": "gpt-5-pro-2025-10-06",
@@ -554,6 +602,8 @@
       },
       "limits_source": "openrouter-index",
       "pricing_source": "openrouter-index",
+      "reachable": false,
+      "reachable_checked": "2026-08-17",
       "shutdown_date": "2026-12-11"
     },
     {
@@ -591,7 +641,9 @@
         "cached_input_per_mtok": 0.125
       },
       "limits_source": "openrouter-index",
-      "pricing_source": "models.dev"
+      "pricing_source": "models.dev",
+      "reachable": true,
+      "reachable_checked": "2026-08-17"
     },
     {
       "id": "gpt-5.1-2025-11-13",
@@ -629,6 +681,8 @@
       },
       "limits_source": "openrouter-index",
       "pricing_source": "openrouter-index",
+      "reachable": false,
+      "reachable_checked": "2026-08-17",
       "shutdown_date": "2026-07-23"
     },
     {
@@ -646,6 +700,8 @@
       },
       "limits_source": "openrouter-index",
       "pricing_source": "openrouter-index",
+      "reachable": false,
+      "reachable_checked": "2026-08-17",
       "shutdown_date": "2026-07-23"
     },
     {
@@ -663,6 +719,8 @@
       },
       "limits_source": "openrouter-index",
       "pricing_source": "openrouter-index",
+      "reachable": false,
+      "reachable_checked": "2026-08-17",
       "shutdown_date": "2026-07-23"
     },
     {
@@ -680,7 +738,9 @@
         "cached_input_per_mtok": 0.175
       },
       "limits_source": "openrouter-index",
-      "pricing_source": "models.dev"
+      "pricing_source": "models.dev",
+      "reachable": true,
+      "reachable_checked": "2026-08-17"
     },
     {
       "id": "gpt-5.2-2025-12-11",
@@ -708,6 +768,8 @@
       },
       "limits_source": "openrouter-index",
       "pricing_source": "models.dev",
+      "reachable": false,
+      "reachable_checked": "2026-08-17",
       "shutdown_date": "2026-08-10"
     },
     {
@@ -725,6 +787,8 @@
       },
       "limits_source": "openrouter-index",
       "pricing_source": "openrouter-index",
+      "reachable": false,
+      "reachable_checked": "2026-08-17",
       "shutdown_date": "2026-07-23"
     },
     {
@@ -741,7 +805,9 @@
         "output_per_mtok": 168
       },
       "limits_source": "openrouter-index",
-      "pricing_source": "models.dev"
+      "pricing_source": "models.dev",
+      "reachable": false,
+      "reachable_checked": "2026-08-17"
     },
     {
       "id": "gpt-5.2-pro-2025-12-11",
@@ -769,6 +835,8 @@
       },
       "limits_source": "models.dev",
       "pricing_source": "models.dev",
+      "reachable": false,
+      "reachable_checked": "2026-08-17",
       "shutdown_date": "2026-08-10"
     },
     {
@@ -786,7 +854,9 @@
         "cached_input_per_mtok": 0.175
       },
       "limits_source": "openrouter-index",
-      "pricing_source": "models.dev"
+      "pricing_source": "models.dev",
+      "reachable": false,
+      "reachable_checked": "2026-08-17"
     },
     {
       "id": "gpt-5.4",
@@ -803,7 +873,9 @@
         "cached_input_per_mtok": 0.25
       },
       "limits_source": "openrouter-index",
-      "pricing_source": "models.dev"
+      "pricing_source": "models.dev",
+      "reachable": true,
+      "reachable_checked": "2026-08-17"
     },
     {
       "id": "gpt-5.4-2026-03-05",
@@ -830,7 +902,9 @@
         "cached_input_per_mtok": 0.075
       },
       "limits_source": "openrouter-index",
-      "pricing_source": "models.dev"
+      "pricing_source": "models.dev",
+      "reachable": true,
+      "reachable_checked": "2026-08-17"
     },
     {
       "id": "gpt-5.4-mini-2026-03-17",
@@ -857,7 +931,9 @@
         "cached_input_per_mtok": 0.02
       },
       "limits_source": "openrouter-index",
-      "pricing_source": "models.dev"
+      "pricing_source": "models.dev",
+      "reachable": true,
+      "reachable_checked": "2026-08-17"
     },
     {
       "id": "gpt-5.4-nano-2026-03-17",
@@ -883,7 +959,9 @@
         "output_per_mtok": 180
       },
       "limits_source": "openrouter-index",
-      "pricing_source": "models.dev"
+      "pricing_source": "models.dev",
+      "reachable": false,
+      "reachable_checked": "2026-08-17"
     },
     {
       "id": "gpt-5.4-pro-2026-03-05",
@@ -910,7 +988,9 @@
         "cached_input_per_mtok": 0.5
       },
       "limits_source": "openrouter-index",
-      "pricing_source": "models.dev"
+      "pricing_source": "models.dev",
+      "reachable": true,
+      "reachable_checked": "2026-08-17"
     },
     {
       "id": "gpt-5.5-2026-04-23",
@@ -936,7 +1016,9 @@
         "output_per_mtok": 180
       },
       "limits_source": "openrouter-index",
-      "pricing_source": "models.dev"
+      "pricing_source": "models.dev",
+      "reachable": false,
+      "reachable_checked": "2026-08-17"
     },
     {
       "id": "gpt-5.5-pro-2026-04-23",
@@ -964,7 +1046,9 @@
         "cache_write_per_mtok": 0.25
       },
       "limits_source": "openrouter-index",
-      "pricing_source": "models.dev"
+      "pricing_source": "models.dev",
+      "reachable": true,
+      "reachable_checked": "2026-08-17"
     },
     {
       "id": "gpt-5.6-sol",
@@ -982,7 +1066,9 @@
         "cache_write_per_mtok": 6.25
       },
       "limits_source": "openrouter-index",
-      "pricing_source": "models.dev"
+      "pricing_source": "models.dev",
+      "reachable": true,
+      "reachable_checked": "2026-08-17"
     },
     {
       "id": "gpt-5.6-terra",
@@ -1000,7 +1086,9 @@
         "cache_write_per_mtok": 2.5
       },
       "limits_source": "openrouter-index",
-      "pricing_source": "models.dev"
+      "pricing_source": "models.dev",
+      "reachable": true,
+      "reachable_checked": "2026-08-17"
     },
     {
       "id": "gpt-audio",
@@ -1017,6 +1105,8 @@
       },
       "limits_source": "openrouter-index",
       "pricing_source": "openrouter-index",
+      "reachable": false,
+      "reachable_checked": "2026-08-17",
       "shutdown_date": "2027-01-20"
     },
     {
@@ -1054,6 +1144,8 @@
       },
       "limits_source": "openrouter-index",
       "pricing_source": "openrouter-index",
+      "reachable": false,
+      "reachable_checked": "2026-08-17",
       "shutdown_date": "2027-01-20"
     },
     {
@@ -1093,6 +1185,8 @@
       },
       "limits_source": "openrouter-index",
       "pricing_source": "models.dev",
+      "reachable": true,
+      "reachable_checked": "2026-08-17",
       "shutdown_date": "2026-10-23"
     },
     {
@@ -1110,6 +1204,8 @@
       },
       "limits_source": "openrouter-index",
       "pricing_source": "openrouter-index",
+      "reachable": true,
+      "reachable_checked": "2026-08-17",
       "shutdown_date": "2026-10-23"
     },
     {
@@ -1127,6 +1223,8 @@
       },
       "limits_source": "openrouter-index",
       "pricing_source": "models.dev",
+      "reachable": false,
+      "reachable_checked": "2026-08-17",
       "shutdown_date": "2026-10-23"
     },
     {
@@ -1155,7 +1253,9 @@
         "cached_input_per_mtok": 0.5
       },
       "limits_source": "openrouter-index",
-      "pricing_source": "models.dev"
+      "pricing_source": "models.dev",
+      "reachable": true,
+      "reachable_checked": "2026-08-17"
     },
     {
       "id": "o3-2025-04-16",
@@ -1172,6 +1272,8 @@
       },
       "limits_source": "openrouter-index",
       "pricing_source": "openrouter-index",
+      "reachable": true,
+      "reachable_checked": "2026-08-17",
       "shutdown_date": "2026-12-11"
     },
     {
@@ -1190,6 +1292,8 @@
       },
       "limits_source": "openrouter-index",
       "pricing_source": "models.dev",
+      "reachable": true,
+      "reachable_checked": "2026-08-17",
       "shutdown_date": "2026-10-23"
     },
     {
@@ -1207,6 +1311,8 @@
       },
       "limits_source": "openrouter-index",
       "pricing_source": "openrouter-index",
+      "reachable": true,
+      "reachable_checked": "2026-08-17",
       "shutdown_date": "2026-10-23"
     },
     {
@@ -1225,6 +1331,8 @@
       },
       "limits_source": "openrouter-index",
       "pricing_source": "models.dev",
+      "reachable": true,
+      "reachable_checked": "2026-08-17",
       "shutdown_date": "2026-10-23"
     },
     {
@@ -1242,6 +1350,8 @@
       },
       "limits_source": "openrouter-index",
       "pricing_source": "openrouter-index",
+      "reachable": true,
+      "reachable_checked": "2026-08-17",
       "shutdown_date": "2026-10-23"
     },
     {

@@ -24,6 +24,8 @@
       },
       "limits_source": "provider",
       "pricing_source": "provider",
+      "reachable": true,
+      "reachable_checked": "2026-08-17",
       "display_name": "ALLaM-2-7b",
       "hugging_face_id": "ALLaM-AI/ALLaM-2.0-7B-Instruct"
     },
@@ -42,6 +44,8 @@
       "supports_structured_output": true,
       "pricing": null,
       "limits_source": "provider",
+      "reachable": true,
+      "reachable_checked": "2026-08-17",
       "display_name": "Compound",
       "hugging_face_id": "groq/compound-beta"
     },
@@ -60,6 +64,8 @@
       "supports_structured_output": true,
       "pricing": null,
       "limits_source": "provider",
+      "reachable": true,
+      "reachable_checked": "2026-08-17",
       "display_name": "Compound Mini",
       "hugging_face_id": "groq/compound-beta-mini"
     },
@@ -83,6 +89,8 @@
       },
       "limits_source": "provider",
       "pricing_source": "provider",
+      "reachable": false,
+      "reachable_checked": "2026-08-17",
       "display_name": "Llama 3.1 8B",
       "hugging_face_id": "meta-llama/Llama-3.1-8B-Instruct"
     },
@@ -106,6 +114,8 @@
       },
       "limits_source": "provider",
       "pricing_source": "provider",
+      "reachable": false,
+      "reachable_checked": "2026-08-17",
       "display_name": "Llama 3.3 70B",
       "hugging_face_id": "meta-llama/Llama-3.3-70B-Instruct"
     },
@@ -129,6 +139,8 @@
       },
       "limits_source": "provider",
       "pricing_source": "provider",
+      "reachable": true,
+      "reachable_checked": "2026-08-17",
       "display_name": "GPT OSS 120B",
       "hugging_face_id": "openai/gpt-oss-120b"
     },
@@ -152,6 +164,8 @@
       },
       "limits_source": "provider",
       "pricing_source": "provider",
+      "reachable": true,
+      "reachable_checked": "2026-08-17",
       "display_name": "GPT OSS 20B",
       "hugging_face_id": "openai/gpt-oss-20b"
     },
@@ -176,6 +190,8 @@
       },
       "limits_source": "provider",
       "pricing_source": "provider",
+      "reachable": true,
+      "reachable_checked": "2026-08-17",
       "display_name": "Qwen/Qwen3.6-27B",
       "hugging_face_id": "Qwen/Qwen3.6-27B"
     }

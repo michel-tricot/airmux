@@ -25,10 +25,10 @@ from typing import Any
 # not record it.
 CATALOG_ORDER = ("provider", "source", "source_type", "updated", "count", "models")
 MODEL_ORDER = (
-    "id", "kind", "context_length", "max_output_tokens",
+    "id", "upstream_id", "kind", "context_length", "max_output_tokens",
     "input_modalities", "output_modalities",
     "supports_tools", "supports_structured_output", "pricing",
-    "limits_source", "pricing_source",
+    "limits_source", "pricing_source", "reachable", "reachable_checked",
 )
 
 
