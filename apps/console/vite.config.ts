@@ -4,7 +4,6 @@ import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from 'vite';
 
 import runtimeErrorOverlay from '@replit/vite-plugin-runtime-error-modal';
-import { resolveAllowedHosts } from './src/lib/allowed-hosts';
 
 const rawPort = process.env.PORT ?? '5000';
 
@@ -17,7 +16,15 @@ if (Number.isNaN(port) || port <= 0) {
 const basePath = process.env.BASE_PATH ?? '/';
 
 const controlPlaneUrl = process.env.CONTROL_PLANE_URL ?? 'http://127.0.0.1:8000';
-const allowedHosts = resolveAllowedHosts(process.env.ALLOWED_HOSTS, process.env.REPL_ID !== undefined);
+const dataplaneUrl = process.env.DATA_PLANE_URL ?? 'http://127.0.0.1:8080';
+// Replit's preview proxies through a dynamic *.replit.dev host, so host
+// filtering must be disabled in this environment; ALLOWED_HOSTS can still
+// pin an explicit list elsewhere.
+const allowedHosts: string[] | true = process.env.ALLOWED_HOSTS
+  ? process.env.ALLOWED_HOSTS.split(',')
+      .map((host) => host.trim())
+      .filter(Boolean)
+  : true;
 
 export default defineConfig({
   base: basePath,
@@ -65,6 +72,7 @@ export default defineConfig({
     },
     proxy: {
       '/v1': { target: controlPlaneUrl, changeOrigin: false },
+      '/dp': { target: dataplaneUrl, changeOrigin: true, rewrite: (path) => path.replace(/^\/dp/, '') },
     },
   },
   preview: {
