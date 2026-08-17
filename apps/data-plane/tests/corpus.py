@@ -154,7 +154,7 @@ CORPUS: list[Case] = [
         messages=[
             user(TextPart(text="A bat and a ball cost $1.10. The bat costs $1.00 more. How much is the ball?")),
             assistant(
-                ReasoningPart(text="Let x be the ball. x + (x + 1) = 1.10, so x = 0.05", signature="sig_abc123"),
+                ReasoningPart(id="rs_abc123", text="Let x be the ball. x + (x + 1) = 1.10, so x = 0.05", signature="sig_abc123"),
                 TextPart(text="$0.05"),
             ),
             user(TextPart(text="Show the algebra again")),
@@ -165,7 +165,7 @@ CORPUS: list[Case] = [
         messages=[
             user(TextPart(text="What is the weather in Paris?")),
             assistant(
-                ReasoningPart(text="The user wants current weather; call the tool", signature="sig_def456"),
+                ReasoningPart(id="rs_def456", text="The user wants current weather; call the tool", signature="sig_def456"),
                 ToolCallPart(id="call_1", name="get_weather", arguments='{"city":"Paris"}'),
             ),
         ],

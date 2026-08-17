@@ -12,12 +12,12 @@
  */
 
 /**
- * Adapter kind
+ * Per-model egress adapter override
  */
-export type ProviderInKind = typeof ProviderInKind[keyof typeof ProviderInKind];
+export type ModelInEgressKind = typeof ModelInEgressKind[keyof typeof ModelInEgressKind] | null;
 
 
-export const ProviderInKind = {
+export const ModelInEgressKind = {
   openai_compatible: 'openai_compatible',
   openai_responses: 'openai_responses',
   anthropic: 'anthropic',

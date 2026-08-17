@@ -244,6 +244,7 @@ def upgrade() -> None:
         sa.Column("name", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("provider_id", sa.Uuid(), nullable=False),
         sa.Column("upstream_model", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+        sa.Column("egress_kind", sqlmodel.sql.sqltypes.AutoString(), nullable=True),
         sa.Column("input_price_per_mtok", sa.Float(), nullable=False),
         sa.Column("output_price_per_mtok", sa.Float(), nullable=False),
         sa.Column("cache_read_price_per_mtok", sa.Float(), nullable=False),

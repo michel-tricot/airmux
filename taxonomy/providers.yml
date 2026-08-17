@@ -13,6 +13,7 @@ providers:
   models_url: https://api.openai.com/v1/models
   ingress:
   - oai
+  - oai_responses
   auth:
   - bearer
   env_var: OPENAI_API_KEY
@@ -22,6 +23,10 @@ providers:
         request: schemas/completion/oai.openai.request.json
         response: schemas/completion/oai.openai.response.json
         stream: schemas/completion/oai.openai.stream.json
+      oai_responses:
+        request: schemas/completion/oai_responses.openai.request.json
+        response: schemas/completion/oai_responses.openai.response.json
+        stream: schemas/completion/oai_responses.openai.stream.json
 - id: anthropic
   name: Anthropic
   icon_mono: anthropic

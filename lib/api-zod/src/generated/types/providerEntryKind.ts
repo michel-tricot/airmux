@@ -16,5 +16,6 @@ export type ProviderEntryKind = typeof ProviderEntryKind[keyof typeof ProviderEn
 
 export const ProviderEntryKind = {
   openai_compatible: 'openai_compatible',
+  openai_responses: 'openai_responses',
   anthropic: 'anthropic',
 } as const;

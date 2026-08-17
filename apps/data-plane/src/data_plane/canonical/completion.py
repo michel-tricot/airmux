@@ -62,6 +62,7 @@ class ReasoningPart(Part):
     later turn whose reasoning comes back without it."""
 
     type: Literal["reasoning"] = "reasoning"
+    id: str | None = None
     text: str
     signature: str | None = None
 
@@ -134,6 +135,7 @@ class ToolDef(BaseModel):
     description: str | None = None
     parameters: dict[str, Any] = Field(default_factory=dict)  # JSON Schema
     cache: Literal["ephemeral"] | None = None
+    strict: bool | None = None
 
 
 class NamedTool(BaseModel):
@@ -168,6 +170,8 @@ class CanonicalRequest(BaseModel):
     tools: list[ToolDef] | None = None
     tool_choice: ToolChoice | None = None
     response_format: ResponseFormat | None = None
+    reasoning_effort: str | None = None
+    parallel_tool_calls: bool | None = None
 
     @property
     def extra(self) -> dict[str, Any]:

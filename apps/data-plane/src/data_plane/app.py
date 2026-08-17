@@ -16,7 +16,7 @@ from data_plane.bundle import BundleHolder, build_bundle_source
 from data_plane.config import Config, load_config
 from data_plane.credentials import CredentialResolver
 from data_plane.outbox import build_outbox
-from data_plane.proxy import complete, messages
+from data_plane.proxy import complete, messages, responses
 from data_plane.runtime import Runtime, runtime_of
 
 if TYPE_CHECKING:
@@ -99,6 +99,7 @@ def create_app(config: Config) -> Starlette:
     return Starlette(
         routes=[
             Route("/v1/chat/completions", complete, methods=["POST"]),
+            Route("/v1/responses", responses, methods=["POST"]),
             Route("/v1/messages", messages, methods=["POST"]),
             Route("/healthz", healthz),
             Route("/readyz", readyz),

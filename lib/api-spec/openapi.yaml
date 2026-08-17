@@ -4187,6 +4187,15 @@ components:
             type: string
           type: array
           title: Capabilities
+        egress_kind:
+          anyOf:
+          - type: string
+            enum:
+            - openai_compatible
+            - openai_responses
+            - anthropic
+          - type: 'null'
+          title: Egress Kind
       type: object
       required:
       - model_id
@@ -4221,6 +4230,16 @@ components:
           title: Upstream Model
           description: Model name sent to the provider, lets model_id be an alias; defaults to model_id
           default: ''
+        egress_kind:
+          anyOf:
+          - type: string
+            enum:
+            - openai_compatible
+            - openai_responses
+            - anthropic
+          - type: 'null'
+          title: Egress Kind
+          description: Per-model egress adapter override
         input_price_per_mtok:
           type: number
           minimum: 0.0
@@ -4289,6 +4308,11 @@ components:
         upstream_model:
           type: string
           title: Upstream Model
+        egress_kind:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Egress Kind
         input_price_per_mtok:
           type: number
           title: Input Price Per Mtok
@@ -4334,6 +4358,7 @@ components:
       - name
       - provider_id
       - upstream_model
+      - egress_kind
       - input_price_per_mtok
       - output_price_per_mtok
       - cache_read_price_per_mtok
@@ -4709,6 +4734,7 @@ components:
           type: string
           enum:
           - openai_compatible
+          - openai_responses
           - anthropic
           title: Kind
         base_url:
@@ -4753,6 +4779,7 @@ components:
           type: string
           enum:
           - openai_compatible
+          - openai_responses
           - anthropic
           title: Kind
           description: Adapter kind

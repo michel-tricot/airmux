@@ -1646,7 +1646,7 @@ export const BundleLatestResponse = zod.object({
   "catalog": zod.object({
   "providers": zod.array(zod.object({
   "provider_id": zod.string(),
-  "kind": zod.enum(['openai_compatible', 'anthropic']),
+  "kind": zod.enum(['openai_compatible', 'openai_responses', 'anthropic']),
   "base_url": zod.url().min(1).max(bundleLatestResponsePayloadCatalogProvidersItemBaseUrlMax),
   "param_aliases": zod.record(zod.string(), zod.string()).optional(),
   "accepted_params": zod.union([zod.array(zod.string()),zod.null()]).optional(),
@@ -1662,7 +1662,8 @@ export const BundleLatestResponse = zod.object({
   "cache_write_price_per_mtok": zod.number(),
   "context_window": zod.int(),
   "max_output_tokens": zod.union([zod.int(),zod.null()]).optional(),
-  "capabilities": zod.array(zod.string())
+  "capabilities": zod.array(zod.string()),
+  "egress_kind": zod.union([zod.enum(['openai_compatible', 'openai_responses', 'anthropic']),zod.null()]).optional()
 }).describe('A routable model: the caller-facing id plus how to reach and bill it.')),
   "credentials": zod.array(zod.object({
   "ref": zod.object({
@@ -1801,6 +1802,7 @@ export const GetInstanceTaxonomyResponse = zod.object({
   "name": zod.string(),
   "provider_id": zod.uuid(),
   "upstream_model": zod.string(),
+  "egress_kind": zod.union([zod.string(),zod.null()]),
   "input_price_per_mtok": zod.number(),
   "output_price_per_mtok": zod.number(),
   "cache_read_price_per_mtok": zod.number(),
@@ -1844,6 +1846,7 @@ export const GetOrgTaxonomyResponse = zod.object({
   "name": zod.string(),
   "provider_id": zod.uuid(),
   "upstream_model": zod.string(),
+  "egress_kind": zod.union([zod.string(),zod.null()]),
   "input_price_per_mtok": zod.number(),
   "output_price_per_mtok": zod.number(),
   "cache_read_price_per_mtok": zod.number(),
@@ -1888,6 +1891,7 @@ export const GetWorkspaceTaxonomyResponse = zod.object({
   "name": zod.string(),
   "provider_id": zod.uuid(),
   "upstream_model": zod.string(),
+  "egress_kind": zod.union([zod.string(),zod.null()]),
   "input_price_per_mtok": zod.number(),
   "output_price_per_mtok": zod.number(),
   "cache_read_price_per_mtok": zod.number(),
@@ -1924,7 +1928,7 @@ export const createProviderBodyParamsClosedDefault = false;
 
 export const CreateProviderBody = zod.object({
   "provider_id": zod.string().min(1).max(createProviderBodyProviderIdMax).regex(createProviderBodyProviderIdRegExp).describe('Provider name, e.g. openai'),
-  "kind": zod.enum(['openai_compatible', 'anthropic']).default(createProviderBodyKindDefault).describe('Adapter kind'),
+  "kind": zod.enum(['openai_compatible', 'openai_responses', 'anthropic']).default(createProviderBodyKindDefault).describe('Adapter kind'),
   "base_url": zod.url().min(1).max(createProviderBodyBaseUrlMax).describe('OpenAI-compatible endpoint, e.g. https:\/\/api.groq.com\/openai\/v1'),
   "icon": zod.string().max(createProviderBodyIconMax).default(createProviderBodyIconDefault).describe('Provider mark as a standalone 24x24 SVG document, or an empty string when no icon is available. Clients must sanitize this untrusted markup before rendering it'),
   "param_aliases": zod.record(zod.string(), zod.string()).optional().describe('Canonical param name to this provider\'s spelling'),
@@ -1987,6 +1991,7 @@ export const CreateModelBody = zod.object({
   "model_id": zod.string().min(1).max(createModelBodyModelIdMax).describe('Caller-facing model name'),
   "provider_id": zod.string().min(1).max(createModelBodyProviderIdMax).regex(createModelBodyProviderIdRegExp).describe('Provider id the model routes to'),
   "upstream_model": zod.string().max(createModelBodyUpstreamModelMax).default(createModelBodyUpstreamModelDefault).describe('Model name sent to the provider, lets model_id be an alias; defaults to model_id'),
+  "egress_kind": zod.union([zod.enum(['openai_compatible', 'openai_responses', 'anthropic']),zod.null()]).optional().describe('Per-model egress adapter override'),
   "input_price_per_mtok": zod.number().min(createModelBodyInputPricePerMtokMin).default(createModelBodyInputPricePerMtokDefault).describe('USD per million input tokens'),
   "output_price_per_mtok": zod.number().min(createModelBodyOutputPricePerMtokMin).default(createModelBodyOutputPricePerMtokDefault).describe('USD per million output tokens'),
   "cache_read_price_per_mtok": zod.number().min(createModelBodyCacheReadPricePerMtokMin).default(createModelBodyCacheReadPricePerMtokDefault).describe('USD per million cache-read input tokens'),
@@ -2001,6 +2006,7 @@ export const CreateModelResponse = zod.object({
   "name": zod.string(),
   "provider_id": zod.uuid(),
   "upstream_model": zod.string(),
+  "egress_kind": zod.union([zod.string(),zod.null()]),
   "input_price_per_mtok": zod.number(),
   "output_price_per_mtok": zod.number(),
   "cache_read_price_per_mtok": zod.number(),

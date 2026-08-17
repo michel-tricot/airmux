@@ -83,6 +83,20 @@ def capabilities(model: dict) -> list[str]:
     return caps
 
 
+def openai_egress_kind(model: dict) -> str | None:
+    """Choose only from endpoint-specific positive evidence.
+
+    `reachable` predates endpoint probes and is retained as Chat evidence so applying this
+    migration cannot discard an already proven model. Fresh probes write endpoint_status.
+    """
+    status = model.get("endpoint_status") or {}
+    if (status.get("responses") or {}).get("outcome") == "ok":
+        return "openai_responses"
+    if (status.get("chat") or {}).get("outcome") == "ok" or model.get("reachable") is True:
+        return "openai_compatible"
+    return None
+
+
 def build() -> tuple[dict, list[str]]:
     providers = yaml.safe_load((TAXONOMY / "providers.yml").read_text())["providers"]
     providers = sorted(providers, key=lambda p: p["id"])
@@ -107,6 +121,10 @@ def build() -> tuple[dict, list[str]]:
             if not model.get("context_length"):
                 skipped.append(f"{provider['id']}/{model['id']}")
                 continue
+            egress_kind = openai_egress_kind(model) if provider["id"] == "openai" else None
+            if provider["id"] == "openai" and egress_kind is None:
+                unreachable.append(f"{provider['id']}/{model['id']}")
+                continue
             price = model.get("pricing") or {}
             emitted_models.append({
                 "model_id": f"{provider['id']}/{model['id']}",
@@ -119,6 +137,7 @@ def build() -> tuple[dict, list[str]]:
                 "context_window": int(model["context_length"]),
                 "max_output_tokens": model.get("max_output_tokens"),
                 "capabilities": capabilities(model),
+                **({"egress_kind": egress_kind} if egress_kind else {}),
             })
 
     emitted_models.sort(key=lambda m: (m["provider_id"], m["model_id"]))

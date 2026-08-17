@@ -22,7 +22,7 @@ class ProviderIn(RequestModel):
     """An upstream provider endpoint and its request-profile settings."""
 
     provider_id: str = Field(description="Provider name, e.g. openai", min_length=1, max_length=63, pattern=r"^[a-z0-9][a-z0-9_-]*$")
-    kind: Literal["openai_compatible", "anthropic"] = Field("openai_compatible", description="Adapter kind")
+    kind: Literal["openai_compatible", "openai_responses", "anthropic"] = Field("openai_compatible", description="Adapter kind")
     base_url: HttpUrl = Field(description="OpenAI-compatible endpoint, e.g. https://api.groq.com/openai/v1")
     icon: str = Field(
         "",
@@ -46,6 +46,7 @@ class ModelIn(RequestModel):
     model_id: str = Field(description="Caller-facing model name", min_length=1, max_length=255)
     provider_id: str = Field(description="Provider id the model routes to", min_length=1, max_length=63, pattern=r"^[a-z0-9][a-z0-9_-]*$")
     upstream_model: str = Field("", max_length=255, description="Model name sent to the provider, lets model_id be an alias; defaults to model_id")
+    egress_kind: Literal["openai_compatible", "openai_responses", "anthropic"] | None = Field(None, description="Per-model egress adapter override")
     input_price_per_mtok: float = Field(0.0, ge=0, description="USD per million input tokens")
     output_price_per_mtok: float = Field(0.0, ge=0, description="USD per million output tokens")
     cache_read_price_per_mtok: float = Field(0.0, ge=0, description="USD per million cache-read input tokens")
@@ -100,6 +101,7 @@ async def upsert_model(m: ModelIn) -> Model:
             name=m.model_id,
             provider_id=provider.id,
             upstream_model=m.upstream_model or m.model_id,
+            egress_kind=m.egress_kind,
             input_price_per_mtok=m.input_price_per_mtok,
             output_price_per_mtok=m.output_price_per_mtok,
             cache_read_price_per_mtok=m.cache_read_price_per_mtok,
@@ -111,6 +113,7 @@ async def upsert_model(m: ModelIn) -> Model:
     else:
         model.provider_id = provider.id
         model.upstream_model = m.upstream_model or m.model_id
+        model.egress_kind = m.egress_kind
         model.input_price_per_mtok = m.input_price_per_mtok
         model.output_price_per_mtok = m.output_price_per_mtok
         model.cache_read_price_per_mtok = m.cache_read_price_per_mtok

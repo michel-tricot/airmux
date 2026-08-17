@@ -86,6 +86,18 @@ async def messages(request: Request) -> Response:
     return await _run(body, key, snapshot, ingress, runtime)
 
 
+async def responses(request: Request) -> Response:
+    """The Responses route is bound to its dialect so all failures retain its error shape."""
+    ingress = INGRESS["openai_responses"]
+    runtime = runtime_of(request)
+    try:
+        key, snapshot = _authenticate(request, runtime.holder)
+        body = await _body(request)
+    except RequestRejectedError as error:
+        return ingress.render_error(_rejection(error))
+    return await _run(body, key, snapshot, ingress, runtime)
+
+
 async def _body(request: Request) -> dict[str, Any]:
     try:
         body = json.loads(await request.body())
@@ -132,8 +144,10 @@ def _parse(body: dict[str, Any], ingress: IngressAdapter) -> tuple[CanonicalRequ
         return ingress.parse(body)
     except ValidationError as error:
         raise RequestRejectedError(400, "invalid_request", str(error.errors(include_url=False)[:3])) from error
-    except ValueError as error:
-        raise RequestRejectedError(400, "invalid_request", str(error)) from error
+    except (TypeError, ValueError) as error:
+        message = str(error)
+        code = "unsupported_feature" if message.startswith("unsupported_feature:") else "invalid_request"
+        raise RequestRejectedError(400, code, message) from error
 
 
 @dataclass(frozen=True)
@@ -220,8 +234,17 @@ class RequestExecution:
             raise RequestRejectedError(decision.status, decision.reason)
 
         entry = decision.candidates[0]
+        egress_kind = decision.model.egress_kind or decision.provider.kind
+        if egress_kind == "openai_responses" and (self.request.stop is not None or self.request.seed is not None):
+            raise RequestRejectedError(400, "unsupported_feature", "stop and seed are not representable by Responses")
+        if egress_kind != "openai_responses" and (
+            self.request.reasoning_effort is not None
+            or self.request.parallel_tool_calls is not None
+            or any(tool.strict is not None for tool in self.request.tools or [])
+        ):
+            raise RequestRejectedError(400, "unsupported_feature", "the selected egress cannot represent Responses-only request fields")
         credential = await _resolve_credential(decision, self.runtime.credentials)
-        adapter = REGISTRY[decision.provider.kind](decision.provider, credential)
+        adapter = REGISTRY[egress_kind](decision.provider, credential)
         ctx = Ctx(
             request_id=str(uuid7()),
             model=decision.model,
