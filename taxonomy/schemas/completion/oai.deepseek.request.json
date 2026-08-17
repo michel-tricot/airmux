@@ -1,0 +1,203 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "DeepSeek chat completion request",
+  "description": "Request body for the completion endpoint. Transcribed from https://api-docs.deepseek.com/api/create-chat-completion",
+  "type": "object",
+  "required": [
+    "model",
+    "messages"
+  ],
+  "properties": {
+    "model": {
+      "type": "string",
+      "enum": [
+        "deepseek-v4-flash",
+        "deepseek-v4-pro"
+      ]
+    },
+    "messages": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "role"
+        ],
+        "properties": {
+          "role": {
+            "type": "string",
+            "enum": [
+              "system",
+              "developer",
+              "user",
+              "assistant",
+              "tool"
+            ]
+          },
+          "content": {
+            "type": [
+              "string",
+              "array",
+              "null"
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "tool_calls": {
+            "type": "array"
+          },
+          "tool_call_id": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "thinking": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "enabled",
+            "disabled"
+          ],
+          "default": "enabled"
+        },
+        "reasoning_effort": {
+          "type": "string",
+          "enum": [
+            "low",
+            "high",
+            "max"
+          ],
+          "default": "high"
+        }
+      }
+    },
+    "max_tokens": {
+      "type": "integer"
+    },
+    "response_format": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "text",
+            "json_object"
+          ],
+          "default": "text"
+        }
+      }
+    },
+    "stop": {
+      "type": [
+        "string",
+        "array",
+        "null"
+      ],
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 16
+    },
+    "stream": {
+      "type": "boolean"
+    },
+    "stream_options": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "properties": {
+        "include_usage": {
+          "type": "boolean"
+        }
+      }
+    },
+    "temperature": {
+      "type": "number",
+      "maximum": 2,
+      "default": 1
+    },
+    "top_p": {
+      "type": "number",
+      "maximum": 1,
+      "default": 1
+    },
+    "tools": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "type",
+          "function"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "function"
+            ]
+          },
+          "function": {
+            "type": "object",
+            "required": [
+              "name"
+            ],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              },
+              "parameters": {
+                "type": "object"
+              },
+              "strict": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              }
+            }
+          }
+        }
+      },
+      "maxItems": 128
+    },
+    "tool_choice": {
+      "oneOf": [
+        {
+          "type": "string",
+          "enum": [
+            "none",
+            "auto",
+            "required"
+          ]
+        },
+        {
+          "type": "object"
+        }
+      ]
+    },
+    "logprobs": {
+      "type": "boolean"
+    },
+    "top_logprobs": {
+      "type": "integer",
+      "maximum": 20
+    },
+    "user_id": {
+      "type": "string",
+      "maxLength": 512
+    }
+  },
+  "additionalProperties": true,
+  "x-notes": [
+    "frequency_penalty and presence_penalty are documented as no longer supported and are ignored if sent",
+    "reasoning_effort maps medium and xhigh onto high rather than rejecting them"
+  ]
+}

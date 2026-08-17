@@ -33,8 +33,16 @@ INGRESS = {"oai", "oai_responses", "anthropic", "google", "other_standard", "cus
 WIRE = {"oai", "oai_responses", "anthropic", "custom"}
 AUTH_BARE = {"bearer", "sigv4", "oauth"}
 PARTS = {"request", "response", "stream"}
+# bare markers name a source; "alias:<model id>" names the sibling a value was inherited
+# from, so an inherited number stays traceable to the record it came from
 LIMITS_SOURCE = {"provider", "models.dev", "openrouter-index", "vendor-docs"}
 PRICING_SOURCE = LIMITS_SOURCE
+
+
+def known_source(value: str | None, vocabulary: set[str]) -> bool:
+    if value is None or value in vocabulary:
+        return True
+    return value.startswith("alias:") and len(value.split(":", 1)[1]) > 1
 ROOT_FORMS = {"properties", "$ref", "oneOf", "anyOf", "allOf", "type", "items"}
 
 # A wire ingress with no schema is normally a hole. These are the exceptions, recorded
@@ -190,12 +198,12 @@ def check_models(all_entries: list[dict]) -> None:
             if (kind := classify(mid, m)) != "text":
                 fail("models", f"{provider}/{mid} classifies as {kind}; the catalog is text-only")
             source = m.get("limits_source")
-            if source is not None and source not in LIMITS_SOURCE:
+            if not known_source(source, LIMITS_SOURCE):
                 fail("models", f"{provider}/{mid} has limits_source {source!r}")
             if source in LIMITS_SOURCE and not (m.get("context_length") and m.get("max_output_tokens")):
                 fail("models", f"{provider}/{mid} claims {source} but is missing a limit")
             psource = m.get("pricing_source")
-            if psource is not None and psource not in PRICING_SOURCE:
+            if not known_source(psource, PRICING_SOURCE):
                 fail("models", f"{provider}/{mid} has pricing_source {psource!r}")
             if psource and not m.get("pricing"):
                 fail("models", f"{provider}/{mid} claims a pricing source but carries no price")

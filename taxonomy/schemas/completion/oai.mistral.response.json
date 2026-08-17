@@ -1,0 +1,632 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$ref": "#/$defs/components_schemas_ChatCompletionResponse",
+  "$defs": {
+    "components_schemas_AssistantMessage": {
+      "type": "object",
+      "properties": {
+        "role": {
+          "type": "string",
+          "title": "Role",
+          "default": "assistant",
+          "const": "assistant"
+        },
+        "content": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            },
+            {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/components_schemas_ContentChunk"
+              }
+            }
+          ],
+          "title": "Content"
+        },
+        "tool_calls": {
+          "anyOf": [
+            {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/components_schemas_ToolCall"
+              }
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Tool Calls"
+        },
+        "prefix": {
+          "type": "boolean",
+          "title": "Prefix",
+          "description": "Set this to `true` when adding an assistant message as prefix to condition the model response. The role of the prefix message is to force the model to start its answer by the content of the message.",
+          "default": false
+        }
+      },
+      "title": "AssistantMessage",
+      "additionalProperties": false
+    },
+    "components_schemas_AudioChunk": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "title": "Type",
+          "default": "input_audio",
+          "const": "input_audio"
+        },
+        "input_audio": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "string",
+              "format": "binary"
+            }
+          ],
+          "title": "Input Audio"
+        }
+      },
+      "title": "AudioChunk",
+      "required": [
+        "input_audio"
+      ],
+      "additionalProperties": false
+    },
+    "components_schemas_BuiltInConnectors": {
+      "type": "string",
+      "title": "BuiltInConnectors",
+      "enum": [
+        "web_search",
+        "web_search_premium",
+        "code_interpreter",
+        "image_generation",
+        "document_library"
+      ]
+    },
+    "components_schemas_ChatCompletionChoice": {
+      "title": "ChatCompletionChoice",
+      "type": "object",
+      "required": [
+        "index",
+        "finish_reason",
+        "message"
+      ],
+      "properties": {
+        "index": {
+          "type": "integer",
+          "example": 0
+        },
+        "message": {
+          "$ref": "#/$defs/components_schemas_AssistantMessage"
+        },
+        "finish_reason": {
+          "type": "string",
+          "enum": [
+            "stop",
+            "length",
+            "model_length",
+            "error",
+            "tool_calls"
+          ],
+          "example": "stop"
+        }
+      }
+    },
+    "components_schemas_ChatCompletionResponse": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/components_schemas_ChatCompletionResponseBase"
+        },
+        {
+          "type": "object",
+          "title": "ChatCompletionResponse",
+          "properties": {
+            "choices": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/components_schemas_ChatCompletionChoice"
+              }
+            }
+          },
+          "required": [
+            "id",
+            "object",
+            "data",
+            "model",
+            "usage",
+            "created",
+            "choices"
+          ]
+        }
+      ]
+    },
+    "components_schemas_ChatCompletionResponseBase": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/components_schemas_ResponseBase"
+        },
+        {
+          "type": "object",
+          "title": "ChatCompletionResponseBase",
+          "properties": {
+            "created": {
+              "type": "integer",
+              "example": 1702256327
+            }
+          }
+        }
+      ]
+    },
+    "components_schemas_ContentChunk": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/components_schemas_TextChunk"
+        },
+        {
+          "$ref": "#/$defs/components_schemas_ImageURLChunk"
+        },
+        {
+          "$ref": "#/$defs/components_schemas_DocumentURLChunk"
+        },
+        {
+          "$ref": "#/$defs/components_schemas_ReferenceChunk"
+        },
+        {
+          "$ref": "#/$defs/components_schemas_FileChunk"
+        },
+        {
+          "$ref": "#/$defs/components_schemas_ThinkChunk"
+        },
+        {
+          "$ref": "#/$defs/components_schemas_AudioChunk"
+        }
+      ],
+      "discriminator": {
+        "propertyName": "type",
+        "mapping": {
+          "image_url": "#/components/schemas/ImageURLChunk",
+          "document_url": "#/components/schemas/DocumentURLChunk",
+          "text": "#/components/schemas/TextChunk",
+          "reference": "#/components/schemas/ReferenceChunk",
+          "file": "#/components/schemas/FileChunk",
+          "thinking": "#/components/schemas/ThinkChunk",
+          "input_audio": "#/components/schemas/AudioChunk"
+        }
+      },
+      "title": "ContentChunk"
+    },
+    "components_schemas_DocumentURLChunk": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "title": "Type",
+          "default": "document_url",
+          "const": "document_url"
+        },
+        "document_url": {
+          "type": "string",
+          "title": "Document Url"
+        },
+        "document_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Document Name",
+          "description": "The filename of the document"
+        }
+      },
+      "title": "DocumentURLChunk",
+      "required": [
+        "document_url"
+      ],
+      "additionalProperties": false
+    },
+    "components_schemas_FileChunk": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "title": "Type",
+          "default": "file",
+          "const": "file"
+        },
+        "file_id": {
+          "type": "string",
+          "title": "File Id",
+          "format": "uuid"
+        }
+      },
+      "title": "FileChunk",
+      "required": [
+        "file_id"
+      ],
+      "additionalProperties": false
+    },
+    "components_schemas_FunctionCall": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "title": "Name"
+        },
+        "arguments": {
+          "title": "Arguments",
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": true
+            },
+            {
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "title": "FunctionCall",
+      "required": [
+        "name",
+        "arguments"
+      ],
+      "additionalProperties": false
+    },
+    "components_schemas_ImageDetail": {
+      "type": "string",
+      "title": "ImageDetail",
+      "enum": [
+        "low",
+        "auto",
+        "high"
+      ]
+    },
+    "components_schemas_ImageURL": {
+      "type": "object",
+      "properties": {
+        "url": {
+          "type": "string",
+          "title": "Url"
+        },
+        "detail": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/components_schemas_ImageDetail"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "title": "ImageURL",
+      "required": [
+        "url"
+      ],
+      "additionalProperties": false
+    },
+    "components_schemas_ImageURLChunk": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "title": "Type",
+          "default": "image_url",
+          "const": "image_url"
+        },
+        "image_url": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/components_schemas_ImageURL"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "title": "Image Url"
+        }
+      },
+      "title": "ImageURLChunk",
+      "required": [
+        "image_url"
+      ],
+      "additionalProperties": false,
+      "description": "{\"type\":\"image_url\",\"image_url\":{\"url\":\"data:image/png;base64,iVBORw0"
+    },
+    "components_schemas_PromptTokensDetails": {
+      "properties": {
+        "cached_tokens": {
+          "type": "integer",
+          "title": "Cached Tokens",
+          "default": 0
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "title": "PromptTokensDetails",
+      "description": "Token usage details for the prompt."
+    },
+    "components_schemas_ReferenceChunk": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "title": "Type",
+          "default": "reference",
+          "const": "reference"
+        },
+        "reference_ids": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          },
+          "title": "Reference Ids"
+        }
+      },
+      "title": "ReferenceChunk",
+      "required": [
+        "reference_ids"
+      ],
+      "additionalProperties": false
+    },
+    "components_schemas_ResponseBase": {
+      "type": "object",
+      "title": "ResponseBase",
+      "properties": {
+        "id": {
+          "type": "string",
+          "example": "cmpl-e5cc70bb28c444948073e77776eb30ef"
+        },
+        "object": {
+          "type": "string",
+          "example": "chat.completion"
+        },
+        "model": {
+          "type": "string",
+          "example": "mistral-small-latest"
+        },
+        "usage": {
+          "$ref": "#/$defs/components_schemas_UsageInfo"
+        }
+      }
+    },
+    "components_schemas_TextChunk": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "title": "Type",
+          "default": "text",
+          "const": "text"
+        },
+        "text": {
+          "type": "string",
+          "title": "Text"
+        }
+      },
+      "title": "TextChunk",
+      "required": [
+        "text"
+      ],
+      "additionalProperties": false
+    },
+    "components_schemas_ThinkChunk": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "title": "Type",
+          "default": "thinking",
+          "const": "thinking"
+        },
+        "thinking": {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/components_schemas_TextChunk"
+              },
+              {
+                "$ref": "#/$defs/components_schemas_ToolReferenceChunk"
+              },
+              {
+                "$ref": "#/$defs/components_schemas_ReferenceChunk"
+              }
+            ]
+          },
+          "title": "Thinking"
+        },
+        "closed": {
+          "type": "boolean",
+          "title": "Closed",
+          "description": "Whether the thinking chunk is closed or not. Currently only used for prefixing.",
+          "default": true
+        }
+      },
+      "title": "ThinkChunk",
+      "required": [
+        "thinking"
+      ],
+      "additionalProperties": false
+    },
+    "components_schemas_ToolCall": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "title": "Id",
+          "default": "null"
+        },
+        "type": {
+          "$ref": "#/$defs/components_schemas_ToolTypes",
+          "default": "function"
+        },
+        "function": {
+          "$ref": "#/$defs/components_schemas_FunctionCall"
+        },
+        "index": {
+          "type": "integer",
+          "title": "Index",
+          "default": 0
+        }
+      },
+      "title": "ToolCall",
+      "required": [
+        "function"
+      ],
+      "additionalProperties": false
+    },
+    "components_schemas_ToolReferenceChunk": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "title": "Type",
+          "default": "tool_reference",
+          "const": "tool_reference"
+        },
+        "tool": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/components_schemas_BuiltInConnectors"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "title": "Tool"
+        },
+        "title": {
+          "type": "string",
+          "title": "Title"
+        },
+        "url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Url"
+        },
+        "favicon": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Favicon"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Description"
+        }
+      },
+      "title": "ToolReferenceChunk",
+      "required": [
+        "tool",
+        "title"
+      ],
+      "additionalProperties": false
+    },
+    "components_schemas_ToolTypes": {
+      "type": "string",
+      "title": "ToolTypes",
+      "enum": [
+        "function"
+      ]
+    },
+    "components_schemas_UsageInfo": {
+      "type": "object",
+      "properties": {
+        "prompt_tokens": {
+          "type": "integer",
+          "title": "Prompt Tokens",
+          "default": 0
+        },
+        "completion_tokens": {
+          "title": "Completion Tokens",
+          "default": 0,
+          "type": "integer"
+        },
+        "total_tokens": {
+          "type": "integer",
+          "title": "Total Tokens",
+          "default": 0
+        },
+        "prompt_audio_seconds": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Prompt Audio Seconds"
+        },
+        "num_cached_tokens": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Num Cached Tokens"
+        },
+        "prompt_tokens_details": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/components_schemas_PromptTokensDetails"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "prompt_token_details": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/components_schemas_PromptTokensDetails"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "title": "UsageInfo",
+      "additionalProperties": false,
+      "required": [
+        "prompt_tokens",
+        "completion_tokens",
+        "total_tokens"
+      ]
+    }
+  }
+}

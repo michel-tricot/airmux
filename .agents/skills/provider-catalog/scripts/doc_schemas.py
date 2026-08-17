@@ -71,6 +71,39 @@ def schema(title, source, required, props, extra=True, notes=None):
 
 BUILD = {}
 
+BUILD["deepseek.oai"] = schema(
+    "DeepSeek chat completion request",
+    "https://api-docs.deepseek.com/api/create-chat-completion",
+    ["model", "messages"],
+    {
+        "model": {"type": "string", "enum": ["deepseek-v4-flash", "deepseek-v4-pro"]},
+        "messages": MESSAGES,
+        "thinking": {
+            "type": "object",
+            "properties": {
+                "type": {"type": "string", "enum": ["enabled", "disabled"], "default": "enabled"},
+                "reasoning_effort": {"type": "string", "enum": ["low", "high", "max"], "default": "high"},
+            },
+        },
+        "max_tokens": {"type": "integer"},
+        "response_format": {"type": "object", "properties": {"type": {"type": "string", "enum": ["text", "json_object"], "default": "text"}}},
+        "stop": {"type": ["string", "array", "null"], "items": {"type": "string"}, "maxItems": 16},
+        "stream": {"type": "boolean"},
+        "stream_options": STREAM_OPTIONS,
+        "temperature": {"type": "number", "maximum": 2, "default": 1},
+        "top_p": {"type": "number", "maximum": 1, "default": 1},
+        "tools": dict(TOOLS, maxItems=128),
+        "tool_choice": TOOL_CHOICE,
+        "logprobs": {"type": "boolean"},
+        "top_logprobs": {"type": "integer", "maximum": 20},
+        "user_id": {"type": "string", "maxLength": 512},
+    },
+    notes=[
+        "frequency_penalty and presence_penalty are documented as no longer supported and are ignored if sent",
+        "reasoning_effort maps medium and xhigh onto high rather than rejecting them",
+    ],
+)
+
 BUILD["fireworks.oai"] = schema(
     "Fireworks AI chat completion request",
     "https://docs.fireworks.ai/api-reference/post-chatcompletions",

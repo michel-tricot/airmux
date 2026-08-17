@@ -49,8 +49,10 @@ UA = "airllm-taxonomy/1.0"
 # fetched stamp even when the vendor returned exactly what it returned last time.
 # provenance travels with the value it describes. Carrying "pricing" without
 # "pricing_source" lets the next enrichment restamp a borrowed price as provider-supplied
+# endpoint_status is written by smoke.py per endpoint and decides a model's egress_kind, so
+# dropping it here would silently demote every proven Responses model on the next refresh
 DOWNSTREAM = ("kind", "limits_source", "pricing_source", "context_length", "max_output_tokens", "pricing",
-              "reachable", "reachable_checked")
+              "reachable", "reachable_checked", "endpoint_status")
 
 
 def carry_forward(path: Path, models: list[dict]) -> list[dict]:

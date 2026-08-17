@@ -2,8 +2,8 @@
   "provider": "together",
   "source": "https://api.together.ai/v1/models",
   "source_type": "api",
-  "updated": "2026-08-15",
-  "count": 74,
+  "updated": "2026-08-17",
+  "count": 75,
   "models": [
     {
       "id": "arcee-ai/trinity-mini",
@@ -46,6 +46,12 @@
       "reachable": true,
       "reachable_checked": "2026-08-17",
       "display_name": "Arize AI Qwen 2 1.5B Instruct",
+      "endpoint_status": {
+        "chat/completions": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        }
+      },
       "hugging_face_id": "api/models/togethercomputer/arize-ai-qwen-2-1.5b-instruct",
       "organization": "Togethercomputer"
     },
@@ -69,6 +75,12 @@
       "reachable": true,
       "reachable_checked": "2026-08-17",
       "display_name": "Cogito v2.1 671B",
+      "endpoint_status": {
+        "chat/completions": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        }
+      },
       "hugging_face_id": "api/models/togethercomputer/cogito-671b-v2.1-exp-chkp-2",
       "organization": "Deepcogito"
     },
@@ -234,7 +246,13 @@
       "reachable": true,
       "reachable_checked": "2026-08-17",
       "display_name": "Deepseek V4 Flash 0731",
-      "organization": "Deepseek AI"
+      "endpoint_status": {
+        "chat/completions": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        }
+      },
+      "organization": "DeepSeek"
     },
     {
       "id": "deepseek-ai/DeepSeek-V4-Pro",
@@ -258,6 +276,35 @@
       "reachable_checked": "2026-08-17",
       "display_name": "Deepseek V4 Pro",
       "organization": "Deepseek"
+    },
+    {
+      "id": "deepseek-ai/DeepSeek-V4-Pro-0813",
+      "kind": "text",
+      "context_length": 1048576,
+      "max_output_tokens": 384000,
+      "input_modalities": null,
+      "output_modalities": [
+        "text"
+      ],
+      "supports_tools": true,
+      "supports_structured_output": true,
+      "pricing": {
+        "input_per_mtok": 1.32,
+        "output_per_mtok": 3.96,
+        "cached_input_per_mtok": 0.13
+      },
+      "limits_source": "models.dev",
+      "pricing_source": "provider",
+      "reachable": true,
+      "reachable_checked": "2026-08-17",
+      "display_name": "DeepSeek V4 Pro 0813",
+      "endpoint_status": {
+        "chat/completions": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        }
+      },
+      "organization": "DeepSeek"
     },
     {
       "id": "google/gemma-2-27b-it",
@@ -303,6 +350,12 @@
       "reachable": true,
       "reachable_checked": "2026-08-17",
       "display_name": "Gemma 3N E4B Instruct",
+      "endpoint_status": {
+        "chat/completions": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        }
+      },
       "hugging_face_id": "google/gemma-3n-E4B-it",
       "license": "gemma",
       "organization": "Google"
@@ -327,6 +380,12 @@
       "reachable": true,
       "reachable_checked": "2026-08-17",
       "display_name": "Gemma 4 31B-it FP8",
+      "endpoint_status": {
+        "chat/completions": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        }
+      },
       "hugging_face_id": "api/models/google/gemma-4-31B-it",
       "license": "apache-2.0",
       "organization": "Google"
@@ -350,6 +409,12 @@
       "reachable": true,
       "reachable_checked": "2026-08-17",
       "display_name": "LFM2.5-8B-A1B",
+      "endpoint_status": {
+        "chat/completions": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        }
+      },
       "hugging_face_id": "api/models/LiquidAI/LFM2.5-8B-A1B",
       "license": "other lfm1.0",
       "organization": "LiquidAI"
@@ -468,6 +533,12 @@
       "reachable": true,
       "reachable_checked": "2026-08-17",
       "display_name": "Meta Llama 3.3 70B Instruct Turbo",
+      "endpoint_status": {
+        "chat/completions": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        }
+      },
       "hugging_face_id": "meta-llama/Llama-3.3-70B-Instruct",
       "license": "Llama-3.3 (Other)",
       "organization": "Meta"
@@ -609,6 +680,12 @@
       "reachable": true,
       "reachable_checked": "2026-08-17",
       "display_name": "Muse Glimmer 30B",
+      "endpoint_status": {
+        "chat/completions": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        }
+      },
       "hugging_face_id": "api/models/togethercomputer/onyx_final_hf-fp8-mlp",
       "organization": "Meta"
     },
@@ -657,6 +734,12 @@
       "reachable": true,
       "reachable_checked": "2026-08-17",
       "display_name": "MiniMax M3",
+      "endpoint_status": {
+        "chat/completions": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        }
+      },
       "organization": "MiniMaxAI"
     },
     {
@@ -819,6 +902,12 @@
       "reachable": true,
       "reachable_checked": "2026-08-17",
       "display_name": "Kimi K2.6 Fp4",
+      "endpoint_status": {
+        "chat/completions": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        }
+      },
       "hugging_face_id": "api/models/togethercomputer/Kimi-K2.6-FP4",
       "organization": "Moonshot AI"
     },
@@ -843,6 +932,12 @@
       "reachable": true,
       "reachable_checked": "2026-08-17",
       "display_name": "Kimi K2.7 Code",
+      "endpoint_status": {
+        "chat/completions": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        }
+      },
       "hugging_face_id": "api/models/togethercomputer/Kimi-K2.7-Code-FP4",
       "organization": "Moonshot AI"
     },
@@ -867,6 +962,12 @@
       "reachable": true,
       "reachable_checked": "2026-08-17",
       "display_name": "Kimi K3",
+      "endpoint_status": {
+        "chat/completions": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        }
+      },
       "hugging_face_id": "moonshotai",
       "license": "other",
       "organization": "Moonshot AI"
@@ -938,6 +1039,12 @@
       "reachable": true,
       "reachable_checked": "2026-08-17",
       "display_name": "NVIDIA Nemotron 3 Ultra 550B A55B NVFP4",
+      "endpoint_status": {
+        "chat/completions": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        }
+      },
       "organization": "NVIDIA"
     },
     {
@@ -984,6 +1091,12 @@
       "reachable": true,
       "reachable_checked": "2026-08-17",
       "display_name": "OpenAI GPT-OSS 120B",
+      "endpoint_status": {
+        "chat/completions": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        }
+      },
       "hugging_face_id": "openai/gpt-oss-120b",
       "license": "other",
       "organization": "OpenAI"
@@ -1008,6 +1121,12 @@
       "reachable": true,
       "reachable_checked": "2026-08-17",
       "display_name": "OpenAI GPT-OSS 20B",
+      "endpoint_status": {
+        "chat/completions": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        }
+      },
       "hugging_face_id": "api/models/openai/gpt-oss-20b",
       "license": "apache-2.0",
       "organization": "OpenAI"
@@ -1032,6 +1151,12 @@
       "reachable": true,
       "reachable_checked": "2026-08-17",
       "display_name": "Pearl-ai Gemma-4-31B-it-pearl",
+      "endpoint_status": {
+        "chat/completions": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        }
+      },
       "hugging_face_id": "pearl-ai/Gemma-4-31B-it-pearl",
       "organization": "pearl.ai"
     },
@@ -1194,6 +1319,12 @@
       "reachable": true,
       "reachable_checked": "2026-08-17",
       "display_name": "Qwen2.5 7B Instruct Turbo",
+      "endpoint_status": {
+        "chat/completions": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        }
+      },
       "hugging_face_id": "Qwen/Qwen2.5-7B-Instruct",
       "license": "Qwen",
       "organization": "Qwen"
@@ -1435,6 +1566,12 @@
       "reachable": true,
       "reachable_checked": "2026-08-17",
       "display_name": "Qwen3.5 9B FP8",
+      "endpoint_status": {
+        "chat/completions": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        }
+      },
       "hugging_face_id": "api/models/togethercomputer/Qwen3.5-9B-FP8-MLP",
       "organization": "Qwen"
     },
@@ -1526,6 +1663,12 @@
       "reachable": true,
       "reachable_checked": "2026-08-17",
       "display_name": "Qwen3.8-2.4T-A95B",
+      "endpoint_status": {
+        "chat/completions": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        }
+      },
       "organization": "Qwen"
     },
     {
@@ -1572,6 +1715,12 @@
       "reachable": true,
       "reachable_checked": "2026-08-17",
       "display_name": "Inkling FP4",
+      "endpoint_status": {
+        "chat/completions": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        }
+      },
       "hugging_face_id": "api/models/thinkingmachines/Inkling-NVFP4",
       "license": "apache-2.0",
       "organization": "Thinking Machines"
@@ -1597,6 +1746,12 @@
       "reachable": true,
       "reachable_checked": "2026-08-17",
       "display_name": "Inkling Small",
+      "endpoint_status": {
+        "chat/completions": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        }
+      },
       "hugging_face_id": "api/models/thinkingmachines/Inkling-Small",
       "organization": "Thinking Machines"
     },
@@ -1738,6 +1893,12 @@
       "reachable": true,
       "reachable_checked": "2026-08-17",
       "display_name": "GLM 5.2",
+      "endpoint_status": {
+        "chat/completions": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        }
+      },
       "hugging_face_id": "api/models/nvidia/GLM-5.2-NVFP4",
       "organization": "Zai Org"
     }

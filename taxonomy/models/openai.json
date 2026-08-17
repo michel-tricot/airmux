@@ -2,7 +2,7 @@
   "provider": "openai",
   "source": "https://api.openai.com/v1/models",
   "source_type": "api",
-  "updated": "2026-08-15",
+  "updated": "2026-08-17",
   "count": 86,
   "models": [
     {
@@ -13,7 +13,8 @@
       "input_modalities": null,
       "output_modalities": null,
       "supports_tools": null,
-      "supports_structured_output": null
+      "supports_structured_output": null,
+      "pricing": null
     },
     {
       "id": "computer-use-preview",
@@ -24,6 +25,7 @@
       "output_modalities": null,
       "supports_tools": null,
       "supports_structured_output": null,
+      "pricing": null,
       "shutdown_date": "2026-07-23"
     },
     {
@@ -35,6 +37,7 @@
       "output_modalities": null,
       "supports_tools": null,
       "supports_structured_output": null,
+      "pricing": null,
       "shutdown_date": "2026-07-23"
     },
     {
@@ -55,6 +58,16 @@
       "pricing_source": "models.dev",
       "reachable": true,
       "reachable_checked": "2026-08-17",
+      "endpoint_status": {
+        "chat/completions": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        },
+        "responses": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        }
+      },
       "shutdown_date": "2026-10-23"
     },
     {
@@ -66,6 +79,7 @@
       "output_modalities": null,
       "supports_tools": null,
       "supports_structured_output": null,
+      "pricing": null,
       "shutdown_date": "2026-10-23"
     },
     {
@@ -77,6 +91,7 @@
       "output_modalities": null,
       "supports_tools": null,
       "supports_structured_output": null,
+      "pricing": null,
       "shutdown_date": "2026-09-28"
     },
     {
@@ -95,7 +110,17 @@
       "limits_source": "openrouter-index",
       "pricing_source": "openrouter-index",
       "reachable": true,
-      "reachable_checked": "2026-08-17"
+      "reachable_checked": "2026-08-17",
+      "endpoint_status": {
+        "chat/completions": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        },
+        "responses": {
+          "outcome": "not_found",
+          "checked": "2026-08-17"
+        }
+      }
     },
     {
       "id": "gpt-4",
@@ -114,6 +139,16 @@
       "pricing_source": "models.dev",
       "reachable": true,
       "reachable_checked": "2026-08-17",
+      "endpoint_status": {
+        "chat/completions": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        },
+        "responses": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        }
+      },
       "shutdown_date": "2026-10-23"
     },
     {
@@ -125,6 +160,7 @@
       "output_modalities": null,
       "supports_tools": null,
       "supports_structured_output": null,
+      "pricing": null,
       "shutdown_date": "2026-10-23"
     },
     {
@@ -144,6 +180,16 @@
       "pricing_source": "models.dev",
       "reachable": true,
       "reachable_checked": "2026-08-17",
+      "endpoint_status": {
+        "chat/completions": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        },
+        "responses": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        }
+      },
       "shutdown_date": "2026-10-23"
     },
     {
@@ -155,6 +201,7 @@
       "output_modalities": null,
       "supports_tools": null,
       "supports_structured_output": null,
+      "pricing": null,
       "shutdown_date": "2026-10-23"
     },
     {
@@ -174,7 +221,17 @@
       "limits_source": "openrouter-index",
       "pricing_source": "models.dev",
       "reachable": true,
-      "reachable_checked": "2026-08-17"
+      "reachable_checked": "2026-08-17",
+      "endpoint_status": {
+        "chat/completions": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        },
+        "responses": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        }
+      }
     },
     {
       "id": "gpt-4.1-2025-04-14",
@@ -192,7 +249,17 @@
       "limits_source": "openrouter-index",
       "pricing_source": "openrouter-index",
       "reachable": true,
-      "reachable_checked": "2026-08-17"
+      "reachable_checked": "2026-08-17",
+      "endpoint_status": {
+        "chat/completions": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        },
+        "responses": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        }
+      }
     },
     {
       "id": "gpt-4.1-mini",
@@ -211,7 +278,17 @@
       "limits_source": "openrouter-index",
       "pricing_source": "models.dev",
       "reachable": true,
-      "reachable_checked": "2026-08-17"
+      "reachable_checked": "2026-08-17",
+      "endpoint_status": {
+        "chat/completions": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        },
+        "responses": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        }
+      }
     },
     {
       "id": "gpt-4.1-mini-2025-04-14",
@@ -229,7 +306,17 @@
       "limits_source": "openrouter-index",
       "pricing_source": "openrouter-index",
       "reachable": true,
-      "reachable_checked": "2026-08-17"
+      "reachable_checked": "2026-08-17",
+      "endpoint_status": {
+        "chat/completions": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        },
+        "responses": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        }
+      }
     },
     {
       "id": "gpt-4.1-nano",
@@ -249,6 +336,16 @@
       "pricing_source": "models.dev",
       "reachable": true,
       "reachable_checked": "2026-08-17",
+      "endpoint_status": {
+        "chat/completions": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        },
+        "responses": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        }
+      },
       "shutdown_date": "2026-10-23"
     },
     {
@@ -268,6 +365,16 @@
       "pricing_source": "openrouter-index",
       "reachable": true,
       "reachable_checked": "2026-08-17",
+      "endpoint_status": {
+        "chat/completions": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        },
+        "responses": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        }
+      },
       "shutdown_date": "2026-10-23"
     },
     {
@@ -287,7 +394,17 @@
       "limits_source": "openrouter-index",
       "pricing_source": "models.dev",
       "reachable": true,
-      "reachable_checked": "2026-08-17"
+      "reachable_checked": "2026-08-17",
+      "endpoint_status": {
+        "chat/completions": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        },
+        "responses": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        }
+      }
     },
     {
       "id": "gpt-4o-2024-05-13",
@@ -306,6 +423,16 @@
       "pricing_source": "models.dev",
       "reachable": true,
       "reachable_checked": "2026-08-17",
+      "endpoint_status": {
+        "chat/completions": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        },
+        "responses": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        }
+      },
       "shutdown_date": "2026-10-23"
     },
     {
@@ -325,7 +452,17 @@
       "limits_source": "openrouter-index",
       "pricing_source": "models.dev",
       "reachable": true,
-      "reachable_checked": "2026-08-17"
+      "reachable_checked": "2026-08-17",
+      "endpoint_status": {
+        "chat/completions": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        },
+        "responses": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        }
+      }
     },
     {
       "id": "gpt-4o-2024-11-20",
@@ -344,7 +481,17 @@
       "limits_source": "openrouter-index",
       "pricing_source": "models.dev",
       "reachable": true,
-      "reachable_checked": "2026-08-17"
+      "reachable_checked": "2026-08-17",
+      "endpoint_status": {
+        "chat/completions": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        },
+        "responses": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        }
+      }
     },
     {
       "id": "gpt-4o-mini",
@@ -363,7 +510,17 @@
       "limits_source": "openrouter-index",
       "pricing_source": "models.dev",
       "reachable": true,
-      "reachable_checked": "2026-08-17"
+      "reachable_checked": "2026-08-17",
+      "endpoint_status": {
+        "chat/completions": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        },
+        "responses": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        }
+      }
     },
     {
       "id": "gpt-4o-mini-2024-07-18",
@@ -381,7 +538,17 @@
       "limits_source": "openrouter-index",
       "pricing_source": "openrouter-index",
       "reachable": true,
-      "reachable_checked": "2026-08-17"
+      "reachable_checked": "2026-08-17",
+      "endpoint_status": {
+        "chat/completions": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        },
+        "responses": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        }
+      }
     },
     {
       "id": "gpt-4o-mini-search-preview",
@@ -391,7 +558,8 @@
       "input_modalities": null,
       "output_modalities": null,
       "supports_tools": null,
-      "supports_structured_output": null
+      "supports_structured_output": null,
+      "pricing": null
     },
     {
       "id": "gpt-4o-mini-search-preview-2025-03-11",
@@ -402,6 +570,7 @@
       "output_modalities": null,
       "supports_tools": null,
       "supports_structured_output": null,
+      "pricing": null,
       "shutdown_date": "2026-07-23"
     },
     {
@@ -412,7 +581,8 @@
       "input_modalities": null,
       "output_modalities": null,
       "supports_tools": null,
-      "supports_structured_output": null
+      "supports_structured_output": null,
+      "pricing": null
     },
     {
       "id": "gpt-4o-search-preview-2025-03-11",
@@ -423,6 +593,7 @@
       "output_modalities": null,
       "supports_tools": null,
       "supports_structured_output": null,
+      "pricing": null,
       "shutdown_date": "2026-07-23"
     },
     {
@@ -442,7 +613,17 @@
       "limits_source": "openrouter-index",
       "pricing_source": "models.dev",
       "reachable": true,
-      "reachable_checked": "2026-08-17"
+      "reachable_checked": "2026-08-17",
+      "endpoint_status": {
+        "chat/completions": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        },
+        "responses": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        }
+      }
     },
     {
       "id": "gpt-5-2025-08-07",
@@ -461,6 +642,16 @@
       "pricing_source": "openrouter-index",
       "reachable": true,
       "reachable_checked": "2026-08-17",
+      "endpoint_status": {
+        "chat/completions": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        },
+        "responses": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        }
+      },
       "shutdown_date": "2026-12-11"
     },
     {
@@ -472,6 +663,7 @@
       "output_modalities": null,
       "supports_tools": null,
       "supports_structured_output": null,
+      "pricing": null,
       "shutdown_date": "2026-07-23"
     },
     {
@@ -510,7 +702,17 @@
       "limits_source": "openrouter-index",
       "pricing_source": "models.dev",
       "reachable": true,
-      "reachable_checked": "2026-08-17"
+      "reachable_checked": "2026-08-17",
+      "endpoint_status": {
+        "chat/completions": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        },
+        "responses": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        }
+      }
     },
     {
       "id": "gpt-5-mini-2025-08-07",
@@ -529,6 +731,16 @@
       "pricing_source": "openrouter-index",
       "reachable": true,
       "reachable_checked": "2026-08-17",
+      "endpoint_status": {
+        "chat/completions": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        },
+        "responses": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        }
+      },
       "shutdown_date": "2026-12-11"
     },
     {
@@ -548,7 +760,17 @@
       "limits_source": "openrouter-index",
       "pricing_source": "models.dev",
       "reachable": true,
-      "reachable_checked": "2026-08-17"
+      "reachable_checked": "2026-08-17",
+      "endpoint_status": {
+        "chat/completions": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        },
+        "responses": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        }
+      }
     },
     {
       "id": "gpt-5-nano-2025-08-07",
@@ -567,6 +789,16 @@
       "pricing_source": "openrouter-index",
       "reachable": true,
       "reachable_checked": "2026-08-17",
+      "endpoint_status": {
+        "chat/completions": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        },
+        "responses": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        }
+      },
       "shutdown_date": "2026-12-11"
     },
     {
@@ -614,7 +846,8 @@
       "input_modalities": null,
       "output_modalities": null,
       "supports_tools": null,
-      "supports_structured_output": null
+      "supports_structured_output": null,
+      "pricing": null
     },
     {
       "id": "gpt-5-search-api-2025-10-14",
@@ -624,7 +857,8 @@
       "input_modalities": null,
       "output_modalities": null,
       "supports_tools": null,
-      "supports_structured_output": null
+      "supports_structured_output": null,
+      "pricing": null
     },
     {
       "id": "gpt-5.1",
@@ -643,7 +877,17 @@
       "limits_source": "openrouter-index",
       "pricing_source": "models.dev",
       "reachable": true,
-      "reachable_checked": "2026-08-17"
+      "reachable_checked": "2026-08-17",
+      "endpoint_status": {
+        "chat/completions": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        },
+        "responses": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        }
+      }
     },
     {
       "id": "gpt-5.1-2025-11-13",
@@ -653,7 +897,8 @@
       "input_modalities": null,
       "output_modalities": null,
       "supports_tools": null,
-      "supports_structured_output": null
+      "supports_structured_output": null,
+      "pricing": null
     },
     {
       "id": "gpt-5.1-chat-latest",
@@ -664,6 +909,7 @@
       "output_modalities": null,
       "supports_tools": null,
       "supports_structured_output": null,
+      "pricing": null,
       "shutdown_date": "2026-07-23"
     },
     {
@@ -740,7 +986,17 @@
       "limits_source": "openrouter-index",
       "pricing_source": "models.dev",
       "reachable": true,
-      "reachable_checked": "2026-08-17"
+      "reachable_checked": "2026-08-17",
+      "endpoint_status": {
+        "chat/completions": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        },
+        "responses": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        }
+      }
     },
     {
       "id": "gpt-5.2-2025-12-11",
@@ -750,7 +1006,8 @@
       "input_modalities": null,
       "output_modalities": null,
       "supports_tools": null,
-      "supports_structured_output": null
+      "supports_structured_output": null,
+      "pricing": null
     },
     {
       "id": "gpt-5.2-chat-latest",
@@ -817,7 +1074,8 @@
       "input_modalities": null,
       "output_modalities": null,
       "supports_tools": null,
-      "supports_structured_output": null
+      "supports_structured_output": null,
+      "pricing": null
     },
     {
       "id": "gpt-5.3-chat-latest",
@@ -875,7 +1133,17 @@
       "limits_source": "openrouter-index",
       "pricing_source": "models.dev",
       "reachable": true,
-      "reachable_checked": "2026-08-17"
+      "reachable_checked": "2026-08-17",
+      "endpoint_status": {
+        "chat/completions": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        },
+        "responses": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        }
+      }
     },
     {
       "id": "gpt-5.4-2026-03-05",
@@ -885,7 +1153,8 @@
       "input_modalities": null,
       "output_modalities": null,
       "supports_tools": null,
-      "supports_structured_output": null
+      "supports_structured_output": null,
+      "pricing": null
     },
     {
       "id": "gpt-5.4-mini",
@@ -904,7 +1173,17 @@
       "limits_source": "openrouter-index",
       "pricing_source": "models.dev",
       "reachable": true,
-      "reachable_checked": "2026-08-17"
+      "reachable_checked": "2026-08-17",
+      "endpoint_status": {
+        "chat/completions": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        },
+        "responses": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        }
+      }
     },
     {
       "id": "gpt-5.4-mini-2026-03-17",
@@ -914,7 +1193,8 @@
       "input_modalities": null,
       "output_modalities": null,
       "supports_tools": null,
-      "supports_structured_output": null
+      "supports_structured_output": null,
+      "pricing": null
     },
     {
       "id": "gpt-5.4-nano",
@@ -933,7 +1213,17 @@
       "limits_source": "openrouter-index",
       "pricing_source": "models.dev",
       "reachable": true,
-      "reachable_checked": "2026-08-17"
+      "reachable_checked": "2026-08-17",
+      "endpoint_status": {
+        "chat/completions": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        },
+        "responses": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        }
+      }
     },
     {
       "id": "gpt-5.4-nano-2026-03-17",
@@ -943,7 +1233,8 @@
       "input_modalities": null,
       "output_modalities": null,
       "supports_tools": null,
-      "supports_structured_output": null
+      "supports_structured_output": null,
+      "pricing": null
     },
     {
       "id": "gpt-5.4-pro",
@@ -971,7 +1262,8 @@
       "input_modalities": null,
       "output_modalities": null,
       "supports_tools": null,
-      "supports_structured_output": null
+      "supports_structured_output": null,
+      "pricing": null
     },
     {
       "id": "gpt-5.5",
@@ -990,7 +1282,17 @@
       "limits_source": "openrouter-index",
       "pricing_source": "models.dev",
       "reachable": true,
-      "reachable_checked": "2026-08-17"
+      "reachable_checked": "2026-08-17",
+      "endpoint_status": {
+        "chat/completions": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        },
+        "responses": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        }
+      }
     },
     {
       "id": "gpt-5.5-2026-04-23",
@@ -1000,7 +1302,8 @@
       "input_modalities": null,
       "output_modalities": null,
       "supports_tools": null,
-      "supports_structured_output": null
+      "supports_structured_output": null,
+      "pricing": null
     },
     {
       "id": "gpt-5.5-pro",
@@ -1028,7 +1331,8 @@
       "input_modalities": null,
       "output_modalities": null,
       "supports_tools": null,
-      "supports_structured_output": null
+      "supports_structured_output": null,
+      "pricing": null
     },
     {
       "id": "gpt-5.6-luna",
@@ -1048,7 +1352,17 @@
       "limits_source": "openrouter-index",
       "pricing_source": "models.dev",
       "reachable": true,
-      "reachable_checked": "2026-08-17"
+      "reachable_checked": "2026-08-17",
+      "endpoint_status": {
+        "chat/completions": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        },
+        "responses": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        }
+      }
     },
     {
       "id": "gpt-5.6-sol",
@@ -1068,7 +1382,17 @@
       "limits_source": "openrouter-index",
       "pricing_source": "models.dev",
       "reachable": true,
-      "reachable_checked": "2026-08-17"
+      "reachable_checked": "2026-08-17",
+      "endpoint_status": {
+        "chat/completions": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        },
+        "responses": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        }
+      }
     },
     {
       "id": "gpt-5.6-terra",
@@ -1088,7 +1412,17 @@
       "limits_source": "openrouter-index",
       "pricing_source": "models.dev",
       "reachable": true,
-      "reachable_checked": "2026-08-17"
+      "reachable_checked": "2026-08-17",
+      "endpoint_status": {
+        "chat/completions": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        },
+        "responses": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        }
+      }
     },
     {
       "id": "gpt-audio",
@@ -1117,7 +1451,8 @@
       "input_modalities": null,
       "output_modalities": null,
       "supports_tools": null,
-      "supports_structured_output": null
+      "supports_structured_output": null,
+      "pricing": null
     },
     {
       "id": "gpt-audio-2025-08-28",
@@ -1127,7 +1462,8 @@
       "input_modalities": null,
       "output_modalities": null,
       "supports_tools": null,
-      "supports_structured_output": null
+      "supports_structured_output": null,
+      "pricing": null
     },
     {
       "id": "gpt-audio-mini",
@@ -1157,6 +1493,7 @@
       "output_modalities": null,
       "supports_tools": null,
       "supports_structured_output": null,
+      "pricing": null,
       "shutdown_date": "2026-07-23"
     },
     {
@@ -1167,7 +1504,8 @@
       "input_modalities": null,
       "output_modalities": null,
       "supports_tools": null,
-      "supports_structured_output": null
+      "supports_structured_output": null,
+      "pricing": null
     },
     {
       "id": "o1",
@@ -1187,6 +1525,16 @@
       "pricing_source": "models.dev",
       "reachable": true,
       "reachable_checked": "2026-08-17",
+      "endpoint_status": {
+        "chat/completions": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        },
+        "responses": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        }
+      },
       "shutdown_date": "2026-10-23"
     },
     {
@@ -1206,6 +1554,16 @@
       "pricing_source": "openrouter-index",
       "reachable": true,
       "reachable_checked": "2026-08-17",
+      "endpoint_status": {
+        "chat/completions": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        },
+        "responses": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        }
+      },
       "shutdown_date": "2026-10-23"
     },
     {
@@ -1236,6 +1594,7 @@
       "output_modalities": null,
       "supports_tools": null,
       "supports_structured_output": null,
+      "pricing": null,
       "shutdown_date": "2026-10-23"
     },
     {
@@ -1255,7 +1614,17 @@
       "limits_source": "openrouter-index",
       "pricing_source": "models.dev",
       "reachable": true,
-      "reachable_checked": "2026-08-17"
+      "reachable_checked": "2026-08-17",
+      "endpoint_status": {
+        "chat/completions": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        },
+        "responses": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        }
+      }
     },
     {
       "id": "o3-2025-04-16",
@@ -1274,6 +1643,16 @@
       "pricing_source": "openrouter-index",
       "reachable": true,
       "reachable_checked": "2026-08-17",
+      "endpoint_status": {
+        "chat/completions": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        },
+        "responses": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        }
+      },
       "shutdown_date": "2026-12-11"
     },
     {
@@ -1294,6 +1673,16 @@
       "pricing_source": "models.dev",
       "reachable": true,
       "reachable_checked": "2026-08-17",
+      "endpoint_status": {
+        "chat/completions": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        },
+        "responses": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        }
+      },
       "shutdown_date": "2026-10-23"
     },
     {
@@ -1313,6 +1702,16 @@
       "pricing_source": "openrouter-index",
       "reachable": true,
       "reachable_checked": "2026-08-17",
+      "endpoint_status": {
+        "chat/completions": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        },
+        "responses": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        }
+      },
       "shutdown_date": "2026-10-23"
     },
     {
@@ -1333,6 +1732,16 @@
       "pricing_source": "models.dev",
       "reachable": true,
       "reachable_checked": "2026-08-17",
+      "endpoint_status": {
+        "chat/completions": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        },
+        "responses": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        }
+      },
       "shutdown_date": "2026-10-23"
     },
     {
@@ -1352,6 +1761,16 @@
       "pricing_source": "openrouter-index",
       "reachable": true,
       "reachable_checked": "2026-08-17",
+      "endpoint_status": {
+        "chat/completions": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        },
+        "responses": {
+          "outcome": "ok",
+          "checked": "2026-08-17"
+        }
+      },
       "shutdown_date": "2026-10-23"
     },
     {
@@ -1363,6 +1782,7 @@
       "output_modalities": null,
       "supports_tools": null,
       "supports_structured_output": null,
+      "pricing": null,
       "shutdown_date": "2026-07-23"
     },
     {
@@ -1374,6 +1794,7 @@
       "output_modalities": null,
       "supports_tools": null,
       "supports_structured_output": null,
+      "pricing": null,
       "shutdown_date": "2026-07-23"
     }
   ]

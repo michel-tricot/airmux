@@ -10,6 +10,7 @@ differs per vendor, so it is recorded rather than guessed.
 import json
 import re
 import ssl
+import sys
 import urllib.request
 from pathlib import Path
 
@@ -128,8 +129,64 @@ def body(op, kind):
     return None
 
 
+def modernize_recursion(out: dict) -> None:
+    """Translate draft 2019-09 recursion keywords into their 2020-12 replacements.
+
+    OpenAI's spec marks its self-referential CompoundFilter with `$recursiveAnchor: true`
+    and points back at it with `$recursiveRef: "#"`. Both were replaced in 2020-12 by
+    `$dynamicAnchor` and `$dynamicRef`, which take a name rather than a boolean, so copying
+    them verbatim into a document declaring the 2020-12 metaschema produces a schema that is
+    not a valid schema. validate.py catches it; the fix belongs here.
+
+    `$recursiveRef: "#"` resolves against the innermost enclosing anchor, which a flattened
+    $defs no longer expresses. That is unambiguous only while the document has exactly one
+    anchor, so anything else is left alone for validate.py to report rather than guessed at.
+    """
+    anchored = [key for key, node in (out.get("$defs") or {}).items()
+                if isinstance(node, dict) and node.get("$recursiveAnchor") is True]
+    if len(anchored) != 1:
+        return
+    name = anchored[0]
+    out["$defs"][name].pop("$recursiveAnchor")
+    out["$defs"][name]["$dynamicAnchor"] = name
+
+    def retarget(node):
+        if isinstance(node, list):
+            return [retarget(item) for item in node]
+        if not isinstance(node, dict):
+            return node
+        if node.get("$recursiveRef") == "#":
+            node = {k: v for k, v in node.items() if k != "$recursiveRef"} | {"$dynamicRef": f"#{name}"}
+        return {k: retarget(v) for k, v in node.items()}
+
+    out["$defs"] = retarget(out["$defs"])
+
+
+def active() -> set[str]:
+    """Ids in providers.yml and routers.yml.
+
+    SPECS keeps an entry for every provider whose spec has been located, candidates
+    included, because finding the spec is the expensive half of promoting one later. Only
+    active ids are written though: a candidate carries no derived data, so extracting its
+    schema leaves an orphan that validate.py rejects and someone deletes by hand.
+    """
+    ids: set[str] = set()
+    for filename, key in (("providers.yml", "providers"), ("routers.yml", "routers")):
+        path = TAXONOMY / filename
+        if path.exists():
+            ids |= {entry["id"] for entry in yaml.safe_load(path.read_text())[key]}
+    return ids
+
+
 rows = []
+live = active()
+selected = set(sys.argv[1:])
 for (provider, ingress), (url, path_re) in SPECS.items():
+    if selected and provider not in selected and f"{provider}:{ingress}" not in selected:
+        continue
+    if provider not in live:
+        rows.append((provider, ingress, "candidate, spec recorded but not extracted"))
+        continue
     try:
         doc = fetch(url)
     except Exception as e:
@@ -151,6 +208,7 @@ for (provider, ingress), (url, path_re) in SPECS.items():
         out.update(root)
         if defs:
             out["$defs"] = defs
+            modernize_recursion(out)
         f = OUT / f"{ingress}.{provider}.{kind}.json"
         write_schema(f, out)
         got.append(f"{kind}:{f.stat().st_size // 1024}k")

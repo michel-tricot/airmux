@@ -2340,6 +2340,26 @@
         "status": {
           "$ref": "#/$defs/components_schemas_ToolCallStatus"
         },
+        "subagent_id": {
+          "description": "EXPERIMENTAL — subject to change without notice. String id that matches the `call_id` of the `openrouter:subagent` server tool call that spawned the subagent. Present on every `function_call` item the subagent projects; absent on ordinary function calls.",
+          "type": "string"
+        },
+        "subagent_items": {
+          "description": "EXPERIMENTAL — subject to change without notice. The subagent's output items produced on this turn. Treat this as an opaque object; you must replay it in the request so that the subagent can continue execution of the tool with the same context. If a subagent created multiple parallel tool calls, only the first tool call will have this field. The other tool calls will only have `subagent_id`. Present only if the tool call originates from a subagent spawned by the `openrouter:subagent` server tool.",
+          "items": {
+            "additionalProperties": {},
+            "properties": {
+              "type": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "type"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
         "type": {
           "enum": [
             "function_call"
@@ -3012,11 +3032,17 @@
       "properties": {
         "arguments": {
           "description": "The raw tool-call arguments string as emitted by the model.",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "call_id": {
           "description": "The model-generated tool call id from the originating turn.",
-          "type": "string"
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "command": {
           "type": "string"
@@ -3366,6 +3392,20 @@
         "type": "openrouter:files"
       },
       "properties": {
+        "arguments": {
+          "description": "The raw tool-call arguments string as emitted by the model.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "call_id": {
+          "description": "The model-generated tool call id from the originating turn.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "error": {
           "description": "Error message when the file operation failed.",
           "type": "string"
@@ -3411,7 +3451,28 @@
           "$ref": "#/$defs/components_schemas_OutputItemFunctionCall"
         },
         {
-          "properties": {},
+          "properties": {
+            "subagent_id": {
+              "description": "EXPERIMENTAL — subject to change without notice. String id that matches the `call_id` of the `openrouter:subagent` server tool call that spawned the subagent. Present on every `function_call` item the subagent projects; absent on ordinary function calls.",
+              "type": "string"
+            },
+            "subagent_items": {
+              "description": "EXPERIMENTAL — subject to change without notice. The subagent's output items produced on this turn. Treat this as an opaque object; you must replay it in the request so that the subagent can continue execution of the tool with the same context. If a subagent created multiple parallel tool calls, only the first tool call will have this field. The other tool calls will only have `subagent_id`. Present only if the tool call originates from a subagent spawned by the `openrouter:subagent` server tool.",
+              "items": {
+                "additionalProperties": {},
+                "properties": {
+                  "type": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "type"
+                ],
+                "type": "object"
+              },
+              "type": "array"
+            }
+          },
           "type": "object"
         }
       ],
@@ -3465,7 +3526,7 @@
           "type": "array"
         },
         "failure_reason": {
-          "description": "Typed failure reason when the fusion run failed. Possible values include: all_panels_failed, insufficient_credits, rate_limited, invalid_model, judge_not_valid_json, judge_schema_mismatch, judge_upstream_error, judge_empty_completion. The four analysis-stage codes keep their pre-rename `judge_` spelling so existing consumers keep matching.",
+          "description": "Typed failure reason when the fusion run failed. Possible values include: all_panels_failed, insufficient_credits, rate_limited, invalid_model, judge_not_valid_json, judge_schema_mismatch, judge_upstream_error, judge_empty_completion. The four analysis-stage codes keep their pre-rename `judge_` spelling so existing consumers keep matching. The consumer-cancellation code is `cancelled`.",
           "type": "string"
         },
         "id": {
@@ -4106,6 +4167,7 @@
           "openrouter:image_generation": "#/components/schemas/OutputImageGenerationServerToolItem",
           "openrouter:mcp": "#/components/schemas/OutputMcpServerToolItem",
           "openrouter:memory": "#/components/schemas/OutputMemoryServerToolItem",
+          "openrouter:shell": "#/components/schemas/OutputShellServerToolItem",
           "openrouter:subagent": "#/components/schemas/OutputSubagentServerToolItem",
           "openrouter:text_editor": "#/components/schemas/OutputTextEditorServerToolItem",
           "openrouter:tool_search": "#/components/schemas/OutputToolSearchServerToolItem",
@@ -4190,6 +4252,9 @@
         },
         {
           "$ref": "#/$defs/components_schemas_OutputShellCallOutputItem"
+        },
+        {
+          "$ref": "#/$defs/components_schemas_OutputShellServerToolItem"
         },
         {
           "$ref": "#/$defs/components_schemas_OutputWebFetchServerToolItem"
@@ -4550,6 +4615,13 @@
           ],
           "type": "object"
         },
+        "arguments": {
+          "description": "The raw tool-call arguments string as emitted by the model. Echo back unchanged when replaying history; used verbatim to preserve provider prompt-cache prefixes.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
         "call_id": {
           "type": "string"
         },
@@ -4607,56 +4679,7 @@
         },
         "output": {
           "items": {
-            "properties": {
-              "outcome": {
-                "oneOf": [
-                  {
-                    "properties": {
-                      "exit_code": {
-                        "type": "integer"
-                      },
-                      "type": {
-                        "enum": [
-                          "exit"
-                        ],
-                        "type": "string"
-                      }
-                    },
-                    "required": [
-                      "type",
-                      "exit_code"
-                    ],
-                    "type": "object"
-                  },
-                  {
-                    "properties": {
-                      "type": {
-                        "enum": [
-                          "timeout"
-                        ],
-                        "type": "string"
-                      }
-                    },
-                    "required": [
-                      "type"
-                    ],
-                    "type": "object"
-                  }
-                ]
-              },
-              "stderr": {
-                "type": "string"
-              },
-              "stdout": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "stdout",
-              "stderr",
-              "outcome"
-            ],
-            "type": "object"
+            "$ref": "#/$defs/components_schemas_ShellCallOutputContent"
           },
           "type": "array"
         },
@@ -4679,6 +4702,97 @@
       ],
       "type": "object"
     },
+    "components_schemas_OutputShellServerToolItem": {
+      "description": "An openrouter:shell server tool output item",
+      "example": {
+        "action": {
+          "commands": [
+            "echo hello"
+          ],
+          "max_output_length": null,
+          "timeout_ms": null
+        },
+        "call_id": "call_abc123",
+        "id": "st_tmp_abc123",
+        "output": [
+          {
+            "outcome": {
+              "exit_code": 0,
+              "type": "exit"
+            },
+            "stderr": "",
+            "stdout": "hello\n"
+          }
+        ],
+        "status": "completed",
+        "type": "openrouter:shell"
+      },
+      "properties": {
+        "action": {
+          "properties": {
+            "commands": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "max_output_length": {
+              "type": [
+                "integer",
+                "null"
+              ]
+            },
+            "timeout_ms": {
+              "type": [
+                "integer",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "commands"
+          ],
+          "type": "object"
+        },
+        "arguments": {
+          "description": "The raw tool-call arguments string as emitted by the model.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "call_id": {
+          "description": "The model-generated tool call id from the originating turn.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "id": {
+          "type": "string"
+        },
+        "output": {
+          "items": {
+            "$ref": "#/$defs/components_schemas_ShellCallOutputContent"
+          },
+          "type": "array"
+        },
+        "status": {
+          "$ref": "#/$defs/components_schemas_ToolCallStatus"
+        },
+        "type": {
+          "enum": [
+            "openrouter:shell"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "status",
+        "type"
+      ],
+      "type": "object"
+    },
     "components_schemas_OutputSubagentServerToolItem": {
       "description": "An openrouter:subagent server tool output item",
       "example": {
@@ -4687,6 +4801,10 @@
         "type": "openrouter:subagent"
       },
       "properties": {
+        "call_id": {
+          "description": "EXPERIMENTAL — subject to change without notice. The `call_id` of the tool call that spawned this subagent. This id will also be included as the `subagent_id` on any `function_call` items created by the subagent. This must be returned in the request so the `function_call` can be matched with the correct subagent. A suspended `in_progress` item is announced once and never re-emitted or terminally closed — completion arrives as a new item with the same `call_id`.",
+          "type": "string"
+        },
         "error": {
           "description": "Error message when the subagent task did not produce an outcome.",
           "type": "string"
@@ -5588,6 +5706,70 @@
       ],
       "x-speakeasy-unknown-values": "allow"
     },
+    "components_schemas_ShellCallOutputContent": {
+      "additionalProperties": {},
+      "description": "Captured stdout and stderr for one command of a shell call, with its exit or timeout outcome.",
+      "example": {
+        "outcome": {
+          "exit_code": 0,
+          "type": "exit"
+        },
+        "stderr": "",
+        "stdout": "total 0\n"
+      },
+      "properties": {
+        "outcome": {
+          "oneOf": [
+            {
+              "additionalProperties": {},
+              "properties": {
+                "exit_code": {
+                  "type": "integer"
+                },
+                "type": {
+                  "enum": [
+                    "exit"
+                  ],
+                  "type": "string"
+                }
+              },
+              "required": [
+                "type",
+                "exit_code"
+              ],
+              "type": "object"
+            },
+            {
+              "additionalProperties": {},
+              "properties": {
+                "type": {
+                  "enum": [
+                    "timeout"
+                  ],
+                  "type": "string"
+                }
+              },
+              "required": [
+                "type"
+              ],
+              "type": "object"
+            }
+          ]
+        },
+        "stderr": {
+          "type": "string"
+        },
+        "stdout": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "stdout",
+        "stderr",
+        "outcome"
+      ],
+      "type": "object"
+    },
     "components_schemas_ShellCallStatus": {
       "description": "Status of a shell call or its output.",
       "enum": [
@@ -5971,7 +6153,7 @@
       "x-speakeasy-unknown-values": "allow"
     },
     "components_schemas_WebSearchMode": {
-      "description": "Engine-native search mode. Exa supports instant, fast, auto (default), deep-lite, deep, and deep-reasoning. Parallel supports turbo, basic (default), and advanced. Modes unsupported by the selected engine are ignored.",
+      "description": "Engine-native search mode. Exa supports instant, fast, auto (default), deep-lite, deep, and deep-reasoning. Parallel supports turbo, fast, basic (default), and advanced. Modes unsupported by the selected engine are ignored.",
       "enum": [
         "instant",
         "fast",

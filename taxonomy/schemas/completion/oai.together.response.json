@@ -80,6 +80,10 @@
         "reasoning": {
           "type": "string",
           "nullable": true
+        },
+        "reasoning_content": {
+          "type": "string",
+          "nullable": true
         }
       }
     },

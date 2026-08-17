@@ -15,16 +15,6 @@ candidates:
   homepage: https://ai.google.dev
   docs: https://ai.google.dev/gemini-api/docs
   env_var: GEMINI_API_KEY
-- id: xai
-  name: xAI
-  homepage: https://x.ai
-  docs: https://docs.x.ai
-  env_var: XAI_API_KEY
-- id: mistral
-  name: Mistral AI
-  homepage: https://mistral.ai
-  docs: https://docs.mistral.ai
-  env_var: MISTRAL_API_KEY
 - id: cohere
   name: Cohere
   homepage: https://cohere.com
@@ -55,11 +45,6 @@ candidates:
   homepage: https://build.nvidia.com
   docs: https://docs.api.nvidia.com/nim
   env_var: NVIDIA_API_KEY
-- id: deepseek
-  name: DeepSeek
-  homepage: https://www.deepseek.com
-  docs: https://api-docs.deepseek.com
-  env_var: DEEPSEEK_API_KEY
 - id: moonshot
   name: Moonshot AI
   homepage: https://www.moonshot.ai
@@ -75,11 +60,6 @@ candidates:
   homepage: https://www.minimax.io
   docs: https://platform.minimax.io/docs
   env_var: MINIMAX_API_KEY
-- id: cerebras
-  name: Cerebras
-  homepage: https://www.cerebras.ai
-  docs: https://inference-docs.cerebras.ai
-  env_var: CEREBRAS_API_KEY
 - id: sambanova
   name: SambaNova
   homepage: https://sambanova.ai

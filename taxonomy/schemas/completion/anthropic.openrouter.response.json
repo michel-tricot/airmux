@@ -1113,6 +1113,9 @@
           "enum": [
             "cyber",
             "bio",
+            "frontier_llm",
+            "reasoning_extraction",
+            "general_harms",
             null
           ],
           "type": [
@@ -2836,6 +2839,7 @@
         "Crucible",
         "Crusoe",
         "Darkbloom",
+        "Databricks",
         "Decart",
         "Deepgram",
         "DeepInfra",

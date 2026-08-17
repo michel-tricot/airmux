@@ -891,6 +891,9 @@
               "$ref": "#/$defs/components_schemas_ModelIdsShared",
               "description": "Model ID used to generate the response, like `gpt-4o` or `o3`. OpenAI\noffers a wide range of models with different capabilities, performance\ncharacteristics, and price points. Refer to the [model guide](/docs/models)\nto browse and compare available models.\n"
             },
+            "service_tier": {
+              "$ref": "#/$defs/components_schemas_ServiceTier"
+            },
             "modalities": {
               "$ref": "#/$defs/components_schemas_ResponseModalities"
             },
@@ -1328,6 +1331,7 @@
             "gpt-5.6-terra",
             "gpt-5.6-luna",
             "gpt-5.5",
+            "gpt-5.5-2026-04-23",
             "gpt-5.4",
             "gpt-5.4-mini",
             "gpt-5.4-nano",
@@ -1489,9 +1493,6 @@
               "type": "null"
             }
           ]
-        },
-        "service_tier": {
-          "$ref": "#/$defs/components_schemas_ServiceTier"
         },
         "prompt_cache_retention": {
           "deprecated": true,

@@ -49,11 +49,11 @@ UA = {"User-Agent": "airllm-taxonomy/1.0", "Accept": "application/json"}
 MODELS_DEV = "https://models.dev/api.json"
 OPENROUTER = "https://openrouter.ai/api/v1/models"
 
-# our provider id -> the id models.dev uses
+# our provider id -> the id models.dev uses, listed only where the two disagree. Everything
+# else is looked up under its own id, so promoting a provider needs no edit here. A full map
+# was one: it silently enriched nothing for any provider missing from it, and a model with
+# no context window is dropped from the applied taxonomy without ever naming the reason.
 MODELS_DEV_ID = {
-    "openai": "openai",
-    "anthropic": "anthropic",
-    "groq": "groq",
     "fireworks": "fireworks-ai",
     "together": "togetherai",
 }
@@ -77,11 +77,15 @@ def per_mtok(value) -> float | None:
         return None
 
 
-def load_models_dev() -> dict[tuple[str, str], dict]:
+def load_models_dev(providers: list[str]) -> dict[tuple[str, str], dict]:
     """Provider-scoped, so the key is (our provider id, normalized model id)."""
     payload = get(MODELS_DEV)
     table: dict[tuple[str, str], dict] = {}
-    for ours, theirs in MODELS_DEV_ID.items():
+    for ours in providers:
+        theirs = MODELS_DEV_ID.get(ours, ours)
+        if theirs not in payload:
+            # say so rather than enrich nothing quietly; the effect is otherwise invisible
+            print(f"  models.dev has no catalog for {ours} (looked under {theirs!r})")
         for model_id, model in ((payload.get(theirs) or {}).get("models") or {}).items():
             cost, limit = model.get("cost") or {}, model.get("limit") or {}
             table[(ours, norm(model_id))] = {
@@ -135,8 +139,43 @@ def apply(model: dict, candidate: dict, source: str, counts: dict) -> None:
             model[flag] = candidate[flag]
 
 
+def fill_from_aliases(models: list[dict], counts: dict) -> None:
+    """Last resort: inherit from a sibling the provider itself calls the same model.
+
+    Mistral and xAI publish an `aliases` list per model, and the listing returns each alias
+    as its own entry: mistral-medium, mistral-medium-latest, mistral-medium-2604 and five
+    more are one model behind eight ids. Prices frequently land on some of those ids and not
+    the others, purely by which spelling a secondary catalog happened to index.
+
+    An alias is the strongest equivalence in the catalog. It is the same weights on the same
+    host at the same price, asserted by the provider, so inheriting across one is not the
+    cross-host guesswork that makes the openrouter index a last resort. It still ranks below
+    every direct source, because a value indexed against this exact id beats one reached
+    through a sibling.
+
+    The source is recorded as alias:<sibling> rather than a bare marker, so a reader can see
+    which record the number was taken from and check it.
+    """
+    by_id = {model["id"]: model for model in models}
+    for model in models:
+        if model.get("pricing"):
+            continue
+        for name in model.get("aliases") or []:
+            sibling = by_id.get(name)
+            if not sibling or not sibling.get("pricing"):
+                continue
+            model["pricing"] = sibling["pricing"]
+            model["pricing_source"] = f"alias:{name}"
+            counts["price:alias"] = counts.get("price:alias", 0) + 1
+            if not model.get("max_output_tokens") and sibling.get("max_output_tokens"):
+                model["max_output_tokens"] = sibling["max_output_tokens"]
+                model.setdefault("limits_source", f"alias:{name}")
+            break
+
+
 def main() -> int:
-    scoped, cross = load_models_dev(), load_openrouter()
+    catalogued = sorted(path.stem for path in (TAXONOMY / "models").glob("*.json"))
+    scoped, cross = load_models_dev(catalogued), load_openrouter()
     counts: dict[str, int] = {}
     totals = {"models": 0, "limits": 0, "priced": 0}
     gaps: list[tuple[str, str]] = []
@@ -159,6 +198,10 @@ def main() -> int:
             if key in cross:
                 apply(model, cross[key], "openrouter-index", counts)
 
+        # after every direct source, so a sibling only lends what nothing indexed directly
+        fill_from_aliases(doc["models"], counts)
+
+        for model in doc["models"]:
             totals["models"] += 1
             totals["limits"] += bool(model.get("context_length") and model.get("max_output_tokens"))
             totals["priced"] += bool(model.get("pricing"))

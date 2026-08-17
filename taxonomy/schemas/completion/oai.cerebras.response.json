@@ -1,0 +1,1010 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$ref": "#/$defs/components_schemas_CreateChatCompletionResponse",
+  "$defs": {
+    "components_schemas_ChatChunkChoice": {
+      "additionalProperties": false,
+      "properties": {
+        "delta": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/components_schemas_ChunkResponseMessage"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "finish_reason": {
+          "anyOf": [
+            {
+              "enum": [
+                "stop",
+                "length",
+                "content_filter",
+                "tool_calls"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Finish Reason"
+        },
+        "index": {
+          "title": "Index",
+          "type": "integer"
+        },
+        "logprobs": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/components_schemas_ChatCompletionLogProbs"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "reasoning_logprobs": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/components_schemas_ChatCompletionLogProbs"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "text": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "deprecated": true,
+          "title": "Text"
+        },
+        "tokens": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "integer"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "deprecated": true,
+          "title": "Tokens"
+        }
+      },
+      "required": [
+        "index"
+      ],
+      "title": "ChatChunkChoice",
+      "type": "object"
+    },
+    "components_schemas_ChatChunkResponse": {
+      "additionalProperties": false,
+      "examples": [
+        {
+          "choices": [
+            {
+              "delta": {
+                "role": "assistant"
+              },
+              "index": 0
+            }
+          ],
+          "created": 1721088719,
+          "id": "response_1721",
+          "model": "llama3.1-8b",
+          "object": "chat.completion.chunk",
+          "system_fingerprint": "88719"
+        },
+        {
+          "choices": [
+            {
+              "delta": {
+                "content": "Generative "
+              },
+              "index": 0
+            }
+          ],
+          "created": 1721088719,
+          "id": "response_1721",
+          "model": "llama3.1-8b",
+          "object": "chat.completion.chunk",
+          "system_fingerprint": "88719"
+        },
+        {
+          "choices": [
+            {
+              "delta": {},
+              "finish_reason": "stop",
+              "index": 0
+            }
+          ],
+          "created": 1721088719,
+          "id": "response_1721",
+          "model": "llama3.1-8b",
+          "object": "chat.completion.chunk",
+          "system_fingerprint": "88719",
+          "time_info": {
+            "completion_time": 0.44,
+            "prompt_time": 0.02,
+            "queue_time": 0.0,
+            "total_time": 0.46
+          },
+          "usage": {
+            "completion_tokens": 1020,
+            "prompt_tokens": 40,
+            "prompt_tokens_details": {
+              "cached_tokens": 1020
+            },
+            "total_tokens": 1060
+          }
+        }
+      ],
+      "properties": {
+        "choices": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/components_schemas_ChatChunkChoice"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Choices"
+        },
+        "created": {
+          "title": "Created",
+          "type": "integer"
+        },
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "model": {
+          "title": "Model",
+          "type": "string"
+        },
+        "object": {
+          "const": "chat.completion.chunk",
+          "title": "Object",
+          "type": "string"
+        },
+        "service_tier": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Service Tier"
+        },
+        "system_fingerprint": {
+          "title": "System Fingerprint",
+          "type": "string"
+        },
+        "time_info": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/components_schemas_TimeInfo"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "usage": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/components_schemas_Usage"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "created",
+        "model",
+        "system_fingerprint",
+        "object"
+      ],
+      "title": "ChatChunkResponse",
+      "type": "object"
+    },
+    "components_schemas_ChatCompletionChoice": {
+      "additionalProperties": false,
+      "properties": {
+        "finish_reason": {
+          "anyOf": [
+            {
+              "enum": [
+                "stop",
+                "length",
+                "content_filter",
+                "tool_calls"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Finish Reason"
+        },
+        "index": {
+          "title": "Index",
+          "type": "integer"
+        },
+        "logprobs": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/components_schemas_ChatCompletionLogProbs"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "message": {
+          "$ref": "#/$defs/components_schemas_ChatCompletionResponseMessage"
+        },
+        "reasoning_logprobs": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/components_schemas_ChatCompletionLogProbs"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "index",
+        "message"
+      ],
+      "title": "ChatCompletionChoice",
+      "type": "object"
+    },
+    "components_schemas_ChatCompletionLogProbs": {
+      "additionalProperties": false,
+      "properties": {
+        "content": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/components_schemas_LogProbsContent"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Content"
+        },
+        "refusal": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/components_schemas_LogProbsContent"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Refusal"
+        }
+      },
+      "title": "ChatCompletionLogProbs",
+      "type": "object"
+    },
+    "components_schemas_ChatCompletionResponse": {
+      "additionalProperties": false,
+      "examples": [
+        {
+          "choices": [
+            {
+              "finish_reason": "stop",
+              "index": 0,
+              "message": {
+                "content": "Generative AI is a subfield of artificial intelligence that focuses on generating new, original content, such as images, music, text, or videos. These models are trained on large datasets and learn to recognize patterns, relationships, and structures within the data, allowing them to generate new content that is similar in style, tone, or characteristics to the training data. \n \n Generative AI models can be categorized into two main types: Generative Adversarial Networks (GANs) and Variational Autoencoders (VAEs). GANs consist of two neural networks: a generator and a discriminator. The generator creates new content, while the discriminator evaluates the generated content and tells the generator whether it's realistic or not. VAEs are neural networks that learn to compress and reconstruct data. \n \n Generative AI has numerous applications across various industries, including art and design, content generation, data augmentation, and recommendation systems. Some examples of Generative AI in action include Deep Dream Generator, Amper Music, and DALL-E. \n \n In summary, Generative AI is a powerful technology that enables the creation of new, original content using machine learning models. It has the potential to revolutionize various industries and create new opportunities for artists, designers, and content creators.",
+                "role": "assistant"
+              }
+            }
+          ],
+          "created": 1721088719,
+          "id": "response_1721",
+          "model": "llama3.1-8b",
+          "object": "chat.completion",
+          "system_fingerprint": "88719",
+          "time_info": {
+            "completion_time": 0.44,
+            "prompt_time": 0.02,
+            "queue_time": 0.0,
+            "total_time": 0.46
+          },
+          "usage": {
+            "completion_tokens": 1020,
+            "prompt_tokens": 40,
+            "prompt_tokens_details": {
+              "cached_tokens": 1020
+            },
+            "total_tokens": 1060
+          }
+        }
+      ],
+      "properties": {
+        "choices": {
+          "items": {
+            "$ref": "#/$defs/components_schemas_ChatCompletionChoice"
+          },
+          "minItems": 1,
+          "title": "Choices",
+          "type": "array"
+        },
+        "created": {
+          "title": "Created",
+          "type": "integer"
+        },
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "model": {
+          "title": "Model",
+          "type": "string"
+        },
+        "object": {
+          "const": "chat.completion",
+          "title": "Object",
+          "type": "string"
+        },
+        "service_tier": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Service Tier"
+        },
+        "system_fingerprint": {
+          "title": "System Fingerprint",
+          "type": "string"
+        },
+        "time_info": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/components_schemas_TimeInfo"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "usage": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/components_schemas_Usage"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "choices",
+        "created",
+        "model",
+        "system_fingerprint",
+        "object"
+      ],
+      "title": "ChatCompletionResponse",
+      "type": "object"
+    },
+    "components_schemas_ChatCompletionResponseMessage": {
+      "additionalProperties": false,
+      "properties": {
+        "content": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Content"
+        },
+        "reasoning": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Reasoning"
+        },
+        "role": {
+          "enum": [
+            "assistant",
+            "user",
+            "system",
+            "tool"
+          ],
+          "title": "Role",
+          "type": "string"
+        },
+        "tool_calls": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/components_schemas_ChunkAssistantToolCall"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Tool Calls"
+        }
+      },
+      "required": [
+        "role"
+      ],
+      "title": "ChatCompletionResponseMessage",
+      "type": "object"
+    },
+    "components_schemas_ChunkAssistantToolCall": {
+      "additionalProperties": false,
+      "description": "Streaming only. Represents a function call in an assistant tool call.",
+      "properties": {
+        "function": {
+          "$ref": "#/$defs/components_schemas_ChunkAssistantToolCallFunction"
+        },
+        "id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Id"
+        },
+        "index": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Index"
+        },
+        "type": {
+          "const": "function",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "function",
+        "type"
+      ],
+      "title": "ChunkAssistantToolCall",
+      "type": "object"
+    },
+    "components_schemas_ChunkAssistantToolCallFunction": {
+      "additionalProperties": false,
+      "description": "Streaming only. Represents a function in an assistant tool call.",
+      "properties": {
+        "arguments": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Arguments"
+        },
+        "name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Name"
+        }
+      },
+      "title": "ChunkAssistantToolCallFunction",
+      "type": "object"
+    },
+    "components_schemas_ChunkResponseMessage": {
+      "additionalProperties": false,
+      "properties": {
+        "content": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Content"
+        },
+        "reasoning": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Reasoning"
+        },
+        "role": {
+          "anyOf": [
+            {
+              "enum": [
+                "assistant",
+                "user",
+                "system",
+                "tool"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Role"
+        },
+        "tokens": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "integer"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "deprecated": true,
+          "title": "Tokens"
+        },
+        "tool_calls": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/components_schemas_ChunkAssistantToolCall"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Tool Calls"
+        }
+      },
+      "title": "ChunkResponseMessage",
+      "type": "object"
+    },
+    "components_schemas_CompletionTokensDetails": {
+      "additionalProperties": false,
+      "examples": [
+        {
+          "accepted_prediction_tokens": 900,
+          "rejected_prediction_tokens": 100
+        }
+      ],
+      "properties": {
+        "accepted_prediction_tokens": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Accepted Prediction Tokens"
+        },
+        "reasoning_tokens": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Reasoning Tokens"
+        },
+        "rejected_prediction_tokens": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Rejected Prediction Tokens"
+        }
+      },
+      "title": "CompletionTokensDetails",
+      "type": "object"
+    },
+    "components_schemas_CreateChatCompletionResponse": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/components_schemas_ChatCompletionResponse"
+        },
+        {
+          "$ref": "#/$defs/components_schemas_ChatChunkResponse"
+        },
+        {
+          "$ref": "#/$defs/components_schemas_ErrorChunkResponse"
+        }
+      ],
+      "title": "CreateChatCompletionResponse"
+    },
+    "components_schemas_ErrorChunkContent": {
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": "",
+          "title": "Code"
+        },
+        "id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": "",
+          "title": "Id"
+        },
+        "message": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": "",
+          "title": "Message"
+        },
+        "param": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": "",
+          "title": "Param"
+        },
+        "type": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": "",
+          "title": "Type"
+        }
+      },
+      "title": "ErrorChunkContent",
+      "type": "object"
+    },
+    "components_schemas_ErrorChunkResponse": {
+      "additionalProperties": false,
+      "properties": {
+        "error": {
+          "$ref": "#/$defs/components_schemas_ErrorChunkContent"
+        },
+        "status_code": {
+          "title": "Status Code",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "status_code",
+        "error"
+      ],
+      "title": "ErrorChunkResponse",
+      "type": "object"
+    },
+    "components_schemas_LogProbsContent": {
+      "additionalProperties": false,
+      "properties": {
+        "bytes": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "integer"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Bytes"
+        },
+        "logprob": {
+          "title": "Logprob",
+          "type": "number"
+        },
+        "token": {
+          "title": "Token",
+          "type": "string"
+        },
+        "top_logprobs": {
+          "items": {
+            "$ref": "#/$defs/components_schemas_TopLogProbs"
+          },
+          "title": "Top Logprobs",
+          "type": "array"
+        }
+      },
+      "required": [
+        "token",
+        "logprob",
+        "top_logprobs"
+      ],
+      "title": "LogProbsContent",
+      "type": "object"
+    },
+    "components_schemas_PromptTokensDetails": {
+      "additionalProperties": false,
+      "examples": [
+        {
+          "cached_tokens": 1020
+        }
+      ],
+      "properties": {
+        "cached_tokens": {
+          "default": 0,
+          "title": "Cached Tokens",
+          "type": "integer"
+        }
+      },
+      "title": "PromptTokensDetails",
+      "type": "object"
+    },
+    "components_schemas_TimeInfo": {
+      "additionalProperties": false,
+      "description": "Time information for different phases of request processing.\n\nAll times are measured in seconds.",
+      "examples": [
+        {
+          "completion_time": 0.44,
+          "prompt_time": 0.02,
+          "queue_time": 0.0,
+          "total_time": 0.46
+        }
+      ],
+      "properties": {
+        "completion_time": {
+          "anyOf": [
+            {
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Completion Time"
+        },
+        "created": {
+          "anyOf": [
+            {
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Created"
+        },
+        "prompt_time": {
+          "anyOf": [
+            {
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Prompt Time"
+        },
+        "queue_time": {
+          "anyOf": [
+            {
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Queue Time"
+        },
+        "total_time": {
+          "anyOf": [
+            {
+              "minimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Total Time"
+        }
+      },
+      "title": "TimeInfo",
+      "type": "object"
+    },
+    "components_schemas_TopLogProbs": {
+      "additionalProperties": false,
+      "properties": {
+        "bytes": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "integer"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Bytes"
+        },
+        "logprob": {
+          "title": "Logprob",
+          "type": "number"
+        },
+        "token": {
+          "title": "Token",
+          "type": "string"
+        }
+      },
+      "required": [
+        "token",
+        "logprob"
+      ],
+      "title": "TopLogProbs",
+      "type": "object"
+    },
+    "components_schemas_Usage": {
+      "additionalProperties": false,
+      "examples": [
+        {
+          "completion_tokens": 1020,
+          "prompt_tokens": 40,
+          "prompt_tokens_details": {
+            "cached_tokens": 1020
+          },
+          "total_tokens": 1060
+        }
+      ],
+      "properties": {
+        "completion_tokens": {
+          "default": 0,
+          "title": "Completion Tokens",
+          "type": "integer"
+        },
+        "completion_tokens_details": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/components_schemas_CompletionTokensDetails"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "image_tokens": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Image Tokens"
+        },
+        "prompt_tokens": {
+          "default": 0,
+          "title": "Prompt Tokens",
+          "type": "integer"
+        },
+        "prompt_tokens_details": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/components_schemas_PromptTokensDetails"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "total_tokens": {
+          "default": 0,
+          "title": "Total Tokens",
+          "type": "integer"
+        }
+      },
+      "title": "Usage",
+      "type": "object"
+    }
+  }
+}
