@@ -572,6 +572,11 @@ export interface ModelOut {
   deleted_at: string | null;
 }
 
+export interface MyPermissionsOut {
+  /** Permissions the credential can exercise at the requested scope */
+  permissions: Permission[];
+}
+
 export interface OrgCreate {
   /**
      * Org name, e.g. My Org
@@ -1052,6 +1057,13 @@ export type ListWorkspaceAccessKeysParams = {
  * Return only access keys issued to this principal
  */
 user_id?: string | null;
+};
+
+export type MyPermissionsParams = {
+/**
+ * Organization scope to evaluate; omit for instance scope
+ */
+org_id?: string | null;
 };
 
 export type CliAuthRequestDetailsParams = {

@@ -4,6 +4,7 @@ import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from 'vite';
 
 import runtimeErrorOverlay from '@replit/vite-plugin-runtime-error-modal';
+import { resolveAllowedHosts } from './src/lib/allowed-hosts';
 
 const rawPort = process.env.PORT ?? '5000';
 
@@ -16,10 +17,7 @@ if (Number.isNaN(port) || port <= 0) {
 const basePath = process.env.BASE_PATH ?? '/';
 
 const controlPlaneUrl = process.env.CONTROL_PLANE_URL ?? 'http://127.0.0.1:8000';
-const allowedHosts = (process.env.ALLOWED_HOSTS ?? 'localhost,127.0.0.1')
-  .split(',')
-  .map((host) => host.trim())
-  .filter(Boolean);
+const allowedHosts = resolveAllowedHosts(process.env.ALLOWED_HOSTS, process.env.REPL_ID !== undefined);
 
 export default defineConfig({
   base: basePath,

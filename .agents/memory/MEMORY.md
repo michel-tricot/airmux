@@ -1,3 +1,4 @@
+- [Backend setup quirks](backend-setup-quirks.md) — Python 3.13 module, taxonomy --file path, port 8101 + CONTROL_PLANE_URL, signing keys are files not env vars.
 - [Orval zod v4 import](orval-zod-v4.md) — codegen script rewrites generated zod import to 'zod/v4' after orval; keep that step when touching codegen.
 - [Replit workflow host binding](replit-workflow-host-binding.md) — waitForPort needs 0.0.0.0; internal services should bind loopback with no waitForPort.
 - [Preview port routing pinning](preview-port-routing.md) — only the .replit [[ports]] pin (20383→80) keeps the preview on the console; loopback binding alone doesn't; post-merge.sh restores it.
@@ -5,4 +6,5 @@
 - [Managed Postgres reset](managed-postgres-reset.md) — dropdb/createdb silently no-op on managed Postgres; reset via DROP SCHEMA public CASCADE instead.
 - [Browser e2e harness](browser-e2e-harness.md) — puppeteer-core + Nix-store chromium for console browser passes; uppercase labels and Radix tab quirks.
 - [zod vitest interop](zod-vitest-interop.md) — use `import * as z from 'zod'` in console; named `z` export vanishes under vitest when the generated api client loads first.
+- [OpenAPI param descriptions](openapi-param-descriptions.md) — query param descriptions are centralized by name in the control plane's openapi module; new endpoints can inherit wrong text.
 - [Bun lockfile validation](bun-lockfile-validation.md) — Bun lockfiles allow trailing commas; validate with Bun's frozen install instead of a strict JSON parser.

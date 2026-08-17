@@ -75,6 +75,15 @@ def test_access_markers_match_reality(tmp_path):
         assert client.post("/v1/auth/password", json={"current_password": "x", "new_password": "password123"}).status_code == 401
 
 
+def test_permissions_docs_accept_any_authenticated_principal():
+    spec = make_app().openapi()
+    operation = spec["paths"]["/v1/auth/permissions"]["get"]
+    assert operation["security"] == [{"AccessKey": []}, {"SessionCookie": []}]
+    assert "human account" not in operation["description"]
+    assert operation["summary"] == "Get Effective Permissions"
+    assert spec["components"]["schemas"]["MyPermissionsOut"]["properties"]["permissions"]["description"]
+
+
 def test_spec_advertises_the_enforced_permission():
     app = make_app()
     spec = app.openapi()

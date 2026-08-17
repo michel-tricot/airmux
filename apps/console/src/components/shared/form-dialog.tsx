@@ -16,6 +16,7 @@ interface FormDialogProps<T extends FieldValues> {
   submitLabel: string;
   pendingLabel?: string;
   pending?: boolean;
+  submitDisabled?: boolean;
   children: (form: UseFormReturn<T>) => ReactNode;
 }
 
@@ -30,6 +31,7 @@ export function FormDialog<T extends FieldValues>({
   submitLabel,
   pendingLabel,
   pending,
+  submitDisabled,
   children,
 }: FormDialogProps<T>) {
   const defaultValuesRef = useRef(defaultValues);
@@ -64,7 +66,7 @@ export function FormDialog<T extends FieldValues>({
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={pending}>
+            <Button type="submit" disabled={pending || submitDisabled}>
               {pending && pendingLabel ? pendingLabel : submitLabel}
             </Button>
           </div>

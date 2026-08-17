@@ -4,6 +4,11 @@ export function isApiErrorStatus(error: unknown, status: number): boolean {
   return error instanceof ApiError && error.status === status;
 }
 
+export function isControlPlaneUnreachable(error: unknown): boolean {
+  if (error instanceof ApiError) return error.status === 502 || error.status === 503 || error.status === 504;
+  return error instanceof TypeError;
+}
+
 export function queryErrorMessage(error: unknown, resource = 'data'): string {
   if (isApiErrorStatus(error, 401)) return 'Your session has expired. Sign in again.';
   if (isApiErrorStatus(error, 403)) return `You do not have access to this ${resource}.`;

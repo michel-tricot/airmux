@@ -113,6 +113,52 @@ describe('instance administration routes', () => {
     await waitFor(() => expect(within(heading.parentElement?.parentElement as HTMLElement).getByText('1')).toBeInTheDocument());
   });
 
+  it('mints an access key from the permissions returned by the control plane', async () => {
+    let submitted: unknown;
+    server.use(
+      http.post('/v1/instance/access-keys', async ({ request }) => {
+        submitted = await request.json();
+        return HttpResponse.json({ ...ACCESS_KEY, permissions: ['organizations.read'], token: 'sk-cp-secret' });
+      }),
+    );
+    const user = userEvent.setup();
+    renderAt('/instance/keys');
+
+    await user.click(await screen.findByRole('button', { name: 'Mint Access Key' }));
+    const dialog = screen.getByRole('dialog', { name: 'Mint an instance access key' });
+    await user.type(within(dialog).getByLabelText('Label'), 'deploy');
+    await user.click(await within(dialog).findByRole('checkbox', { name: 'organizations.read' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Mint key' }));
+
+    await waitFor(() => expect(submitted).toEqual({ label: 'deploy', permissions: ['organizations.read'] }));
+    const keyDialog = await screen.findByRole('dialog', { name: 'Key Generated Successfully' });
+    expect(within(keyDialog).getByLabelText('Key Secret')).toHaveValue('sk-cp-secret');
+  });
+
+  it('shows permission discovery failures and prevents key submission', async () => {
+    server.use(http.get('/v1/auth/permissions', () => new HttpResponse(null, { status: 503 })));
+    const user = userEvent.setup();
+    renderAt('/instance/keys');
+
+    await user.click(await screen.findByRole('button', { name: 'Mint Access Key' }));
+    const dialog = screen.getByRole('dialog', { name: 'Mint an instance access key' });
+    expect(await within(dialog).findByRole('alert', undefined, { timeout: 2_500 })).toHaveTextContent('Could not reach the control plane');
+    expect(within(dialog).getByRole('button', { name: 'Mint key' })).toBeDisabled();
+    expect(within(dialog).queryByText('You have no permissions to delegate at this scope.')).not.toBeInTheDocument();
+  });
+
+  it('prevents key submission without access-key issuance permission', async () => {
+    server.use(http.get('/v1/auth/permissions', () => HttpResponse.json({ permissions: ['organizations.read'] })));
+    const user = userEvent.setup();
+    renderAt('/instance/keys');
+
+    await user.click(await screen.findByRole('button', { name: 'Mint Access Key' }));
+    const dialog = screen.getByRole('dialog', { name: 'Mint an instance access key' });
+    expect(await within(dialog).findByText('You do not have permission to issue access keys at this scope.')).toBeInTheDocument();
+    expect(within(dialog).getByRole('button', { name: 'Mint key' })).toBeDisabled();
+    expect(within(dialog).queryByRole('checkbox')).not.toBeInTheDocument();
+  });
+
   it('keeps service-account creation and directs humans through signup', async () => {
     const user = userEvent.setup();
     renderAt('/instance/users');

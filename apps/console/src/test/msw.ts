@@ -36,6 +36,7 @@ export const server = setupServer(
   http.get('/v1/orgs/:orgId/workspaces/:workspaceRef/inference-keys', () => HttpResponse.json([])),
   http.get('/v1/orgs/:orgId/workspaces/:workspaceRef/members', () => HttpResponse.json([])),
   http.get('/v1/orgs/:orgId/workspaces/:workspaceRef/provider-credentials', () => HttpResponse.json([])),
+  http.get('/v1/auth/permissions', () => HttpResponse.json({ permissions: ['organizations.read', 'access-keys.issue'] })),
   http.get('/v1/instance/access-keys', () => HttpResponse.json([])),
   http.get('/v1/orgs/:orgId/access-keys', () => HttpResponse.json([])),
   http.get('/v1/orgs/:orgId/bundles', () => HttpResponse.json([])),

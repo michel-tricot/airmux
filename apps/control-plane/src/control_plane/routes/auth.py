@@ -8,17 +8,19 @@ from uuid import UUID
 from fastapi import APIRouter, HTTPException, Request, Response
 from pydantic import BaseModel, Field, field_validator
 
-from control_plane.authority import principal_can_select_org, visible_org_ids
-from control_plane.authz import Actor, InstanceRole, Scope
+from control_plane.authority import effective_permissions, principal_can_select_org, visible_org_ids
+from control_plane.authz import Actor, InstanceRole, Permission, Scope
 from control_plane.deps import (
     ActingUserDep,
     ActorDep,
     BearerDep,
     CookieUserDep,
     FetchSite,
+    PermissionScopeDep,
     RequestedWith,
     SessionCookie,
     browser_scoped,
+    principal_scoped,
     public,
     require_csrf,
     user_scoped,
@@ -61,6 +63,10 @@ class MeOut(BaseModel):
     name: str
     instance_role: InstanceRole | None
     orgs: list[UUID]
+
+
+class MyPermissionsOut(BaseModel):
+    permissions: list[Permission] = Field(description="Permissions the credential can exercise at the requested scope")
 
 
 class PasswordChangeIn(RequestModel):
@@ -166,6 +172,13 @@ async def logout(
 async def me(user: ActingUserDep, actor: ActorDep) -> Envelope[MeOut]:
     """Return the authenticated human user and the organizations visible to this credential."""
     return Envelope(data=await _me_out(user, actor))
+
+
+@router.get("/permissions", tags=["Auth"], dependencies=[principal_scoped()])
+async def my_permissions(actor: ActorDep, scope: PermissionScopeDep) -> Envelope[MyPermissionsOut]:
+    """Return the effective permissions this credential can exercise at the requested scope."""
+    permissions = await effective_permissions(actor, scope)
+    return Envelope(data=MyPermissionsOut(permissions=sorted(permissions)))
 
 
 @router.post("/password", tags=["Auth"], dependencies=[user_scoped()])

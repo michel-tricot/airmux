@@ -2,23 +2,31 @@ import { useState } from 'react';
 import { KeyRound, Plus } from 'lucide-react';
 import { Link } from 'wouter';
 import { Badge, Button } from '@/components/ui/elements';
-import { useInstanceAccessKeys, useCreateInstanceAccessKeyMutation, useRevokeInstanceAccessKeyMutation } from '@/features/keys/hooks';
+import {
+  useInstanceAccessKeys,
+  useCreateInstanceAccessKeyMutation,
+  useRevokeInstanceAccessKeyMutation,
+  useGrantablePermissions,
+} from '@/features/keys/hooks';
 import { useUsers } from '@/features/users/hooks';
 import { KeyRevealDialog } from '@/components/KeyRevealDialog';
-import { AccessKeyFormFields, accessKeyFormSchema, parsePermissions } from '@/components/shared/access-key-form';
+import { AccessKeyFormFields, accessKeyFormSchema, canIssueAccessKeys } from '@/components/shared/access-key-form';
+import { PermissionsCell } from '@/components/shared/permissions-cell';
 import { ApiKeysTable } from '@/components/shared/api-keys-table';
 import { FormDialog } from '@/components/shared/form-dialog';
 import { ErrorState } from '@/components/shared/states';
 import { PageShell } from '@/components/shared/page-shell';
 
 export default function AccessKeys() {
+  const [createOpen, setCreateOpen] = useState(false);
+  const [token, setToken] = useState<string | null>(null);
   const keysQuery = useInstanceAccessKeys();
   const usersQuery = useUsers();
   const usersById = new Map(usersQuery.data?.map((user) => [user.id, user]));
   const createKey = useCreateInstanceAccessKeyMutation();
+  const permissionsQuery = useGrantablePermissions({ enabled: createOpen });
+  const canIssueKey = canIssueAccessKeys(permissionsQuery.data?.permissions);
   const revokeKey = useRevokeInstanceAccessKeyMutation();
-  const [createOpen, setCreateOpen] = useState(false);
-  const [token, setToken] = useState<string | null>(null);
 
   return (
     <PageShell>
@@ -74,8 +82,7 @@ export default function AccessKeys() {
           {
             key: 'permissions',
             header: 'Permissions',
-            cellClassName: 'text-xs text-muted-foreground',
-            cell: (key) => key.permissions.join(', '),
+            cell: (key) => <PermissionsCell permissions={key.permissions} />,
           },
         ]}
         revokeDescription="This key and every key delegated from it will stop working immediately."
@@ -89,16 +96,25 @@ export default function AccessKeys() {
         title="Mint an instance access key"
         description="The key is bound to this instance. Its permission ceiling is stored as an explicit snapshot and the secret is shown only once."
         schema={accessKeyFormSchema}
-        defaultValues={{ label: '', permissions: '' }}
+        defaultValues={{ label: '', permissions: [] }}
         onSubmit={async (values) => {
-          const minted = await createKey.mutateAsync({ data: { label: values.label, permissions: parsePermissions(values.permissions) } });
+          const minted = await createKey.mutateAsync({ data: { label: values.label, permissions: values.permissions } });
           setToken(minted.token);
         }}
         submitLabel="Mint key"
         pendingLabel="Minting..."
         pending={createKey.isPending}
+        submitDisabled={permissionsQuery.isFetching || permissionsQuery.isError || !canIssueKey}
       >
-        {(form) => <AccessKeyFormFields form={form} />}
+        {(form) => (
+          <AccessKeyFormFields
+            form={form}
+            availablePermissions={permissionsQuery.data?.permissions ?? []}
+            permissionsLoading={permissionsQuery.isFetching}
+            permissionsError={permissionsQuery.isError ? permissionsQuery.error : undefined}
+            onPermissionsRetry={() => void permissionsQuery.refetch()}
+          />
+        )}
       </FormDialog>
 
       <KeyRevealDialog open={!!token} onOpenChange={(open) => !open && setToken(null)} token={token} />

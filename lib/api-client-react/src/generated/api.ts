@@ -67,6 +67,8 @@ import type {
   MembershipOut,
   ModelIn,
   ModelOut,
+  MyPermissionsOut,
+  MyPermissionsParams,
   OrgCreate,
   OrgMemberOut,
   OrgMembershipIn,
@@ -992,6 +994,93 @@ export function useMe<TData = Awaited<ReturnType<typeof me>>, TError = ErrorType
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getMeQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getMyPermissionsUrl = (params?: MyPermissionsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/v1/auth/permissions?${stringifiedParams}` : `/v1/auth/permissions`
+}
+
+/**
+ * Return the effective permissions this credential can exercise at the requested scope.
+ *
+ * Authentication: browser session or control-plane access key.
+ * @summary Get Effective Permissions
+ */
+export const myPermissions = async (params?: MyPermissionsParams, options?: Parameters<typeof customFetch>[1]): Promise<MyPermissionsOut> => {
+
+  return customFetch<MyPermissionsOut>(getMyPermissionsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getMyPermissionsQueryKey = (params?: MyPermissionsParams,) => {
+    return [
+    `/v1/auth/permissions`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getMyPermissionsQueryOptions = <TData = Awaited<ReturnType<typeof myPermissions>>, TError = ErrorType<void | HTTPValidationError>>(params?: MyPermissionsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof myPermissions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getMyPermissionsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof myPermissions>>> = ({ signal }) => myPermissions(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof myPermissions>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type MyPermissionsQueryResult = NonNullable<Awaited<ReturnType<typeof myPermissions>>>
+export type MyPermissionsQueryError = ErrorType<void | HTTPValidationError>
+
+
+/**
+ * @summary Get Effective Permissions
+ */
+
+export function useMyPermissions<TData = Awaited<ReturnType<typeof myPermissions>>, TError = ErrorType<void | HTTPValidationError>>(
+ params?: MyPermissionsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof myPermissions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getMyPermissionsQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

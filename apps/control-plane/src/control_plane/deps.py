@@ -152,6 +152,17 @@ async def bundle_scope(resolved: ActorDep, org_id: UUID | None = None) -> Scope:
 BundleScopeDep = Annotated[Scope, Depends(bundle_scope)]
 
 
+async def permission_scope(org_id: UUID | None = None) -> Scope:
+    if org_id is None:
+        return Scope.instance()
+    if await Org.find_by_id(org_id) is None:
+        raise HTTPException(status_code=404, detail="Organization not found")
+    return Scope.org(org_id)
+
+
+PermissionScopeDep = Annotated[Scope, Depends(permission_scope)]
+
+
 async def authorize(resolved: Actor, permission: Permission, scope: Scope) -> None:
     result = await decision(resolved, permission, scope)
     if result is not Decision.allow:
@@ -198,6 +209,10 @@ def public() -> params.Depends:
 
 def user_scoped() -> params.Depends:
     return _access_marker("user")
+
+
+def principal_scoped() -> params.Depends:
+    return _access_marker("principal")
 
 
 def browser_scoped() -> params.Depends:

@@ -11,6 +11,8 @@ interface SessionContextType {
   orgId: string | null;
   setOrgId: (id: string | null) => void;
   logout: () => void;
+  retry: () => void;
+  isRetrying: boolean;
 }
 
 const SessionContext = createContext<SessionContextType | null>(null);
@@ -37,9 +39,15 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, [logoutMutation, queryClient, setOrgId]);
 
   const user = session.isError ? undefined : session.data;
+  const { refetch } = session;
+  const retry = useCallback(() => {
+    void refetch();
+  }, [refetch]);
 
   return (
-    <SessionContext.Provider value={{ user, isLoading: session.isLoading, error: session.error, orgId, setOrgId, logout }}>
+    <SessionContext.Provider
+      value={{ user, isLoading: session.isLoading, error: session.error, orgId, setOrgId, logout, retry, isRetrying: session.isRefetching }}
+    >
       {children}
     </SessionContext.Provider>
   );

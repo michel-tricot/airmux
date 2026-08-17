@@ -452,6 +452,45 @@ paths:
       security:
       - AccessKey: []
       - SessionCookie: []
+  /v1/auth/permissions:
+    get:
+      tags:
+      - Auth
+      summary: Get Effective Permissions
+      description: 'Return the effective permissions this credential can exercise at the requested scope.
+
+
+        Authentication: browser session or control-plane access key.'
+      operationId: my_permissions
+      security:
+      - AccessKey: []
+      - SessionCookie: []
+      parameters:
+      - name: org_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Org Id
+        description: Organization scope to evaluate; omit for instance scope
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_MyPermissionsOut_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: Authentication failed
   /v1/auth/password:
     post:
       tags:
@@ -3628,6 +3667,14 @@ components:
       required:
       - data
       title: Envelope[ModelOut]
+    Envelope_MyPermissionsOut_:
+      properties:
+        data:
+          $ref: '#/components/schemas/MyPermissionsOut'
+      type: object
+      required:
+      - data
+      title: Envelope[MyPermissionsOut]
     Envelope_OrgOut_:
       properties:
         data:
@@ -4298,6 +4345,18 @@ components:
       - updated_at
       - deleted_at
       title: ModelOut
+    MyPermissionsOut:
+      properties:
+        permissions:
+          items:
+            $ref: '#/components/schemas/Permission'
+          type: array
+          title: Permissions
+          description: Permissions the credential can exercise at the requested scope
+      type: object
+      required:
+      - permissions
+      title: MyPermissionsOut
     OrgCreate:
       properties:
         name:

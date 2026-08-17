@@ -104,6 +104,12 @@ async def principal_permissions(principal_id: UUID, target: Scope) -> frozenset[
     return frozenset(permission for grant in grants if grant.scope.covers(target) for permission in grant.permissions)
 
 
+async def effective_permissions(actor: Actor, target: Scope) -> frozenset[Permission]:
+    if not actor.grant.scope.covers(target):
+        return frozenset()
+    return await principal_permissions(actor.principal_id, target) & actor.grant.permissions
+
+
 async def can_assign_org_role(actor: Actor, org_id: UUID, current: str | None, desired: OrgRole) -> bool:
     user = await User.find_by_id(actor.principal_id)
     if user is None:

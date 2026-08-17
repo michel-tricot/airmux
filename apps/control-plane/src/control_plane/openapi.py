@@ -160,6 +160,7 @@ TAG_GROUPS = [
 OPERATION_SUMMARIES = {
     "signup": "Sign Up",
     "me": "Get Current User",
+    "my_permissions": "Get Effective Permissions",
     "cli_auth_start": "Start CLI Authorization",
     "cli_auth_request_details": "Get CLI Authorization Request",
     "cli_auth_approve": "Approve CLI Authorization",
@@ -213,6 +214,8 @@ def _parameter_description(path: str, name: str, location: str) -> str:
     if name == "user_id" and location == "query":
         return "Return only access keys issued to this principal"
     if name == "org_id" and location == "query":
+        if "auth/permissions" in path:
+            return "Organization scope to evaluate; omit for instance scope"
         return "Organization whose latest bundle to return; omit to use the credential's scope"
     return PARAMETER_DESCRIPTIONS.get(name, name.replace("_", " ").capitalize())
 
@@ -262,6 +265,10 @@ class ControlPlaneApp(FastAPI):
                     operation["responses"].setdefault("401", {"description": "A valid browser session is required"})
                     operation["responses"].setdefault("403", {"description": "The request failed browser security checks"})
                     authentication = "Authentication: browser session."
+                elif "principal" in access:
+                    operation["security"] = [{"AccessKey": []}, {"SessionCookie": []}]
+                    operation["responses"].setdefault("401", {"description": "Authentication failed"})
+                    authentication = "Authentication: browser session or control-plane access key."
                 elif "user" in access:
                     operation["security"] = [{"AccessKey": []}, {"SessionCookie": []}]
                     operation["responses"].setdefault("401", {"description": "An authenticated human account is required"})
