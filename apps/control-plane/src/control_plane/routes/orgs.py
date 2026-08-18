@@ -15,14 +15,14 @@ from control_plane.routes.provider_credentials import secret_store
 router = APIRouter(prefix="/orgs")
 
 
-@router.post("", tags=["Instance Organizations"], dependencies=[require(Permission.organizations_create, instance_scope)])
+@router.post("", tags=["Instance Organizations"], dependencies=[require(instance_scope, Permission.organizations_create)])
 async def create_org(body: OrgCreate) -> Envelope[OrgOut]:
     """Create an organization."""
     org = await Org(name=body.name).save()
     return Envelope(data=OrgOut.model_validate(org))
 
 
-@router.patch("/{org_id}", tags=["Organization Settings"], dependencies=[require(Permission.organizations_update, org_scope)])
+@router.patch("/{org_id}", tags=["Organization Settings"], dependencies=[require(org_scope, Permission.organizations_update)])
 async def update_org(org_id: UUID, body: OrgUpdate) -> Envelope[OrgOut]:
     """Update an organization's mutable fields."""
     org = await Org.find_by_id(org_id)
@@ -31,13 +31,13 @@ async def update_org(org_id: UUID, body: OrgUpdate) -> Envelope[OrgOut]:
     return Envelope(data=OrgOut.model_validate(await org.apply(body).save()))
 
 
-@router.get("", tags=["Instance Organizations"], dependencies=[require(Permission.organizations_read, instance_scope)])
+@router.get("", tags=["Instance Organizations"], dependencies=[require(instance_scope, Permission.organizations_read)])
 async def list_orgs() -> Envelope[list[OrgOut]]:
     """List every organization on the instance."""
     return Envelope(data=[OrgOut.model_validate(r) for r in await Org.find(order_by=col(Org.name))])
 
 
-@router.get("/{org_id}", tags=["Organization Settings"], dependencies=[require(Permission.organizations_read, org_scope)])
+@router.get("/{org_id}", tags=["Organization Settings"], dependencies=[require(org_scope, Permission.organizations_read)])
 async def get_org(org_id: UUID) -> Envelope[OrgOut]:
     """Return one organization."""
     org = await Org.find_by_id(org_id)
@@ -46,7 +46,7 @@ async def get_org(org_id: UUID) -> Envelope[OrgOut]:
     return Envelope(data=OrgOut.model_validate(org))
 
 
-@router.delete("/{org_id}", tags=["Organization Settings"], dependencies=[require(Permission.organizations_delete, org_scope)])
+@router.delete("/{org_id}", tags=["Organization Settings"], dependencies=[require(org_scope, Permission.organizations_delete)])
 async def delete_org(org_id: UUID, request: Request) -> Envelope[DeletedOut[UUID]]:
     """Delete an organization and its workspaces, keys, credentials, memberships, and bundles.
 

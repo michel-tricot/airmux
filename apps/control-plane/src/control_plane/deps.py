@@ -18,7 +18,7 @@ RequestedWith = Annotated[str | None, params.Header(alias="X-Requested-With", in
 FetchSite = Annotated[str | None, params.Header(alias="Sec-Fetch-Site", include_in_schema=False)]
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterator, Awaitable, Callable, Sequence
+    from collections.abc import AsyncIterator, Awaitable, Callable
 
     from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -175,11 +175,8 @@ class PermissionCheck(Protocol):
     def __call__(self, actor: Actor) -> Awaitable[None]: ...
 
 
-def require(permissions: Permission | Sequence[Permission], scope_resolver: Callable[..., Awaitable[Scope]]) -> params.Depends:
-    required = (permissions,) if isinstance(permissions, Permission) else tuple(permissions)
-    if not required:
-        detail = "at least one permission is required"
-        raise ValueError(detail)
+def require(scope_resolver: Callable[..., Awaitable[Scope]], permission: Permission, *additional_permissions: Permission) -> params.Depends:
+    required = (permission, *additional_permissions)
     scope_dependency = Depends(scope_resolver)
 
     async def check_permission(resolved: ActorDep, scope: Scope = scope_dependency) -> None:
