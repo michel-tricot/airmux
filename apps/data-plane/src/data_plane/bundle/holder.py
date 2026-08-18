@@ -2,8 +2,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from datetime import UTC, datetime
-from typing import TYPE_CHECKING, Literal, Self
+from typing import TYPE_CHECKING, Self
 
 from data_plane.auth import index_keys
 from data_plane.credentials import index_credentials
@@ -49,14 +48,7 @@ class BundleHolder:
     def __init__(self) -> None:
         self.snapshot: BundleSnapshot | None = None
 
-    def admit(self, bundle: BundleV1, staleness_policy: Literal["serve_and_warn", "refuse"], source: str) -> bool:
-        """The one place bundles are accepted: staleness policy, index build, atomic swap."""
-        expired = bundle.expires_at <= datetime.now(tz=UTC)
-        if expired and staleness_policy == "refuse":
-            logger.error("%s bundle %s expired at %s and policy is refuse, not loading", source, bundle.bundle_id, bundle.expires_at)
-            return False
-        if expired:
-            logger.warning("%s bundle %s expired at %s, serving stale per policy", source, bundle.bundle_id, bundle.expires_at)
+    def admit(self, bundle: BundleV1, source: str) -> None:
+        """Build the request indexes and atomically swap in a verified bundle."""
         self.snapshot = BundleSnapshot.from_bundle(bundle)
         logger.info("adopted %s bundle %s issued %s", source, bundle.bundle_id, bundle.issued_at)
-        return True

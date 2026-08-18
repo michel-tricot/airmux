@@ -137,10 +137,7 @@ def fixtures(config: str = "airllm.yml") -> None:
             seeded = await apply_fixtures(datetime.now(tz=UTC), settings.secrets.build())
             now = datetime.now(tz=UTC)
             orgs = {org.id: org.name for org in await Org.find()}
-            versions = [
-                (orgs[bundle.org_id], bundle.version)
-                for bundle in await publish_changes(now, settings.bundle.staleness_bound, settings.bundle.signing_key)
-            ]
+            versions = [(orgs[bundle.org_id], bundle.version) for bundle in await publish_changes(now, settings.bundle.signing_key)]
             return seeded, versions, len(await Model.find())
 
     try:
@@ -215,10 +212,7 @@ def taxonomy(
             providers, models = await apply_taxonomy(spec)
             now = datetime.now(tz=UTC)
             orgs = {org.id: org.name for org in await Org.find()}
-            versions = [
-                (orgs[bundle.org_id], bundle.version)
-                for bundle in await publish_changes(now, settings.bundle.staleness_bound, settings.bundle.signing_key)
-            ]
+            versions = [(orgs[bundle.org_id], bundle.version) for bundle in await publish_changes(now, settings.bundle.signing_key)]
             return providers, models, versions
 
     providers, models, versions = asyncio.run(run())

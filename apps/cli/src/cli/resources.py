@@ -123,7 +123,6 @@ BUNDLE_COLS = [
     Col("org_id", "Org"),
     Col("version", "Version"),
     Col("issued_at", "Issued", no_wrap=True, fmt=fmt_when),
-    Col("expires_at", "Expires", no_wrap=True, fmt=fmt_when),
     Col("signing_key_id", "Key", style="dim"),
 ]
 

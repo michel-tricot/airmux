@@ -21,7 +21,6 @@ export interface BundleV1 {
   bundle_id: string;
   org_id: string;
   issued_at: Date;
-  expires_at: Date;
   keys: KeyEntry[];
   catalog: Catalog;
 }

@@ -17,7 +17,6 @@ class Bundle(Record, OrgOwned, table=True):
     org_id: UUID = Field(foreign_key="org.id")
     version: int
     issued_at: datetime = Field(sa_type=UTCDateTime)
-    expires_at: datetime = Field(sa_type=UTCDateTime)
     configuration_revision: int = 0
     payload: str
     signature: str
@@ -31,5 +30,4 @@ class BundleOut(RecordOut[Bundle]):
     org_id: UUID
     version: int
     issued_at: datetime
-    expires_at: datetime
     signing_key_id: str

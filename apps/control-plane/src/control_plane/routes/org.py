@@ -78,7 +78,7 @@ async def republish_bundle(org_id: OrgDep, request: Request) -> Envelope[BundleO
     settings = request.app.state.settings
     now = datetime.now(tz=UTC)
     await RuntimeConfiguration.request_republication(org_id)
-    published = await publish_pending(now, settings.bundle.staleness_bound, settings.bundle.signing_key)
+    published = await publish_pending(now, settings.bundle.signing_key)
     bundle = next(bundle for bundle in published if bundle.org_id == org_id)
     return Envelope(data=BundleOut.model_validate(bundle))
 

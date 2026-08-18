@@ -278,6 +278,7 @@ def test_list_endpoints_read_back(tmp_path):
         bundles = c.get(f"/api/v1/orgs/{org_id}/bundles", headers=org).json()["data"]
         assert [b["version"] for b in bundles] == [1, 2, 3]
         assert "payload" not in bundles[0]
+        assert "expires_at" not in bundles[0]
 
 
 def test_bundle_latest_filters_by_org(tmp_path):
@@ -309,47 +310,13 @@ def test_concurrent_publications_allocate_distinct_versions(tmp_path):
     async def publish() -> int:
         async with standalone_transaction(cp.db_url):
             await RuntimeConfiguration.request_republication(org_id)
-            bundles = await publish_pending(datetime.now(tz=UTC), timedelta(hours=1), cp.bundle_key)
+            bundles = await publish_pending(datetime.now(tz=UTC), cp.bundle_key)
             return bundles[0].version
 
     async def publish_both() -> list[int]:
         return list(await asyncio.gather(publish(), publish()))
 
     assert sorted(asyncio.run(publish_both())) == [1, 2]
-
-
-def test_expiring_configuration_is_republished_through_the_pending_queue(tmp_path):
-    cp = setup_control_plane(tmp_path)
-    with TestClient(cp.app) as c:
-        org_id = make_org(c, cp.headers(), "o1")
-        assert c.post(f"/api/v1/orgs/{org_id}/bundles/republish", headers=cp.headers(org_id)).status_code == 200
-
-    async def renew() -> list[int]:
-        now = datetime.now(tz=UTC) + timedelta(hours=23)
-        async with standalone_transaction(cp.db_url):
-            await RuntimeConfiguration.renew_before(now + timedelta(hours=2))
-            bundles = await publish_pending(now, timedelta(hours=24), cp.bundle_key)
-            return [bundle.version for bundle in bundles]
-
-    assert asyncio.run(renew()) == [2]
-
-
-def test_concurrent_renewals_publish_once(tmp_path):
-    cp = setup_control_plane(tmp_path)
-    with TestClient(cp.app) as c:
-        org_id = make_org(c, cp.headers(), "o1")
-        assert c.post(f"/api/v1/orgs/{org_id}/bundles/republish", headers=cp.headers(org_id)).status_code == 200
-
-    async def renew() -> tuple[int, ...]:
-        now = datetime.now(tz=UTC) + timedelta(hours=23)
-        async with standalone_transaction(cp.db_url):
-            await RuntimeConfiguration.renew_before(now + timedelta(hours=2))
-            return tuple(bundle.version for bundle in await publish_pending(now, timedelta(hours=24), cp.bundle_key))
-
-    async def renew_both() -> list[int]:
-        return [version for versions in await asyncio.gather(renew(), renew()) for version in versions]
-
-    assert asyncio.run(renew_both()) == [2]
 
 
 def test_compile_endpoint_is_removed(tmp_path):

@@ -1661,7 +1661,6 @@ export const RepublishBundleResponse = zod.object({
   "org_id": zod.uuid(),
   "version": zod.int(),
   "issued_at": zod.coerce.date(),
-  "expires_at": zod.coerce.date(),
   "signing_key_id": zod.string()
 })
 
@@ -1681,7 +1680,6 @@ export const ListBundlesResponseItem = zod.object({
   "org_id": zod.uuid(),
   "version": zod.int(),
   "issued_at": zod.coerce.date(),
-  "expires_at": zod.coerce.date(),
   "signing_key_id": zod.string()
 })
 export const ListBundlesResponse = zod.array(ListBundlesResponseItem)
@@ -1838,7 +1836,6 @@ export const BundleLatestResponse = zod.object({
   "bundle_id": zod.uuid(),
   "org_id": zod.uuid(),
   "issued_at": zod.coerce.date(),
-  "expires_at": zod.coerce.date(),
   "keys": zod.array(zod.object({
   "key_id": zod.string(),
   "org_id": zod.uuid(),

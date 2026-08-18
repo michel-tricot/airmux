@@ -20,7 +20,6 @@ class RemoteBundleConfig(BaseModel):
     verify_key: Ed25519PublicKeyB64  # the public half of the control plane's signing key; verifies bundle signatures
     org: UUID | None = None  # which org's bundle this data plane serves; None takes the newest across orgs
     cache_dir: Path = Path(".airllm")
-    staleness_policy: Literal["serve_and_warn", "refuse"] = "serve_and_warn"
     poll_interval_s: float = Field(default=30.0, gt=0)
     heartbeat_interval_s: float = Field(default=30.0, gt=0)
 

@@ -170,6 +170,10 @@ def test_remote_intervals_must_be_positive():
     assert {issue["loc"][-1] for issue in error.value.errors()} == {"heartbeat_interval_s", "poll_interval_s", "flush_interval_s"}
 
 
+def test_remote_bundle_has_no_staleness_policy():
+    assert "staleness_policy" not in RemoteBundleConfig.model_fields
+
+
 def test_local_reload_interval_must_be_positive():
     with pytest.raises(ValidationError, match="reload_interval_s"):
         Config.model_validate({"bundle": {"kind": "local", "path": "bundle.yml", "reload_interval_s": 0}})

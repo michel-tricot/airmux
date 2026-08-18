@@ -3477,10 +3477,6 @@ components:
           type: string
           format: date-time
           title: Issued At
-        expires_at:
-          type: string
-          format: date-time
-          title: Expires At
         signing_key_id:
           type: string
           title: Signing Key Id
@@ -3490,7 +3486,6 @@ components:
       - org_id
       - version
       - issued_at
-      - expires_at
       - signing_key_id
       title: BundleOut
     BundleV1:
@@ -3512,10 +3507,6 @@ components:
           type: string
           format: date-time
           title: Issued At
-        expires_at:
-          type: string
-          format: date-time
-          title: Expires At
         keys:
           items:
             $ref: '#/components/schemas/KeyEntry'
@@ -3528,7 +3519,6 @@ components:
       - bundle_id
       - org_id
       - issued_at
-      - expires_at
       - keys
       - catalog
       title: BundleV1

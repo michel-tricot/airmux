@@ -16,7 +16,7 @@ from data_plane.heartbeat import Heartbeat
 async def test_heartbeat_owns_transport_and_reports_the_current_bundle(http_client):
     holder = BundleHolder()
     bundle = make_bundle()
-    holder.admit(bundle, "refuse", source="test")
+    holder.admit(bundle, source="test")
     instance_id = uuid7()
     route = respx.post("http://cp.test/api/v1/heartbeat").mock(return_value=httpx.Response(200))
     heartbeat = Heartbeat(

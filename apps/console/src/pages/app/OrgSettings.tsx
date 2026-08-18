@@ -163,13 +163,6 @@ export default function AppOrgSettings() {
                     cellClassName: 'text-muted-foreground text-sm',
                     cell: (bundle) => formatDate(bundle.issued_at),
                   },
-                  {
-                    key: 'expires',
-                    header: 'Expires',
-                    headClassName: 'text-right',
-                    cellClassName: 'text-right text-muted-foreground text-sm',
-                    cell: (bundle) => formatDate(bundle.expires_at),
-                  },
                 ]}
               />
             </Card>

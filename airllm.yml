@@ -10,7 +10,6 @@ control_plane:
   bundle:
     # Generate these files with: uv run airllmcp keygen
     signing_key: ${file:${var:cache_dir}/signing.key}
-    staleness_bound_hours: 24
   console_url: ${env:GW_CONSOLE_URL:-http://127.0.0.1:5000}
   secrets:
     # One file per credential under root, owner-readable only. Both planes must name the same
@@ -30,7 +29,6 @@ data_plane:
     # signing.pub is generated alongside signing.key by: uv run airllmcp keygen
     verify_key: ${file:${var:cache_dir}/signing.pub}
     cache_dir: ${var:cache_dir}
-    staleness_policy: serve_and_warn # or refuse
     poll_interval_s: 5
   events:
     kind: sqlite

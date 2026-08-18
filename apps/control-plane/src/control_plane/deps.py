@@ -239,7 +239,7 @@ async def get_session(request: Request) -> AsyncIterator[AsyncSession]:
 
             settings = request.app.state.settings
             await RuntimeConfiguration.advance(changes)
-            await publish_pending(datetime.now(tz=UTC), settings.bundle.staleness_bound, settings.bundle.signing_key)
+            await publish_pending(datetime.now(tz=UTC), settings.bundle.signing_key)
 
 
 SessionDep = Annotated["AsyncSession", Depends(get_session, scope="function")]

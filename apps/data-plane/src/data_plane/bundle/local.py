@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 from uuid import UUID, uuid5
 
@@ -29,8 +29,6 @@ logger = logging.getLogger("data_plane")
 
 LOCAL_ORG = UUID(int=0)
 LOCAL_WORKSPACE = UUID(int=0)
-LIFETIME = timedelta(days=36500)  # a local bundle does not expire; freshness is the file's mtime
-
 # Fixed namespace for uuid5, so ids are stable across reloads. A stable secret_id keeps the
 # credential resolver cache warm; a content-derived bundle_id changes only when the file does.
 _NAMESPACE = UUID("6c1a8f7e-4b62-4b8e-9f0d-2a52e07f1a11")
@@ -75,7 +73,6 @@ def compile_local(spec: LocalBundleSpec, raw: str, now: datetime) -> BundleV1:
         bundle_id=uuid5(_NAMESPACE, raw),
         org_id=LOCAL_ORG,
         issued_at=now,
-        expires_at=now + LIFETIME,
         keys=keys,
         catalog=Catalog(providers=spec.providers, models=spec.models, credentials=credentials),
     )
@@ -100,7 +97,7 @@ class LocalBundleSource(BundleSource):
         if mtime == self._served_mtime:
             return
         bundle = load_local(self._config.path, datetime.now(tz=UTC))
-        self._holder.admit(bundle, "serve_and_warn", source="local")
+        self._holder.admit(bundle, source="local")
         self._served_mtime = mtime
 
     async def once(self) -> None:

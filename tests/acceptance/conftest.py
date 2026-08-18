@@ -333,8 +333,6 @@ class Stack:
     def write_config(
         self,
         *,
-        staleness_bound_hours: float = 24,
-        staleness_policy: str = "serve_and_warn",
         poll_interval_s: int = 1,
         flush_interval_s: int = 1,
         outbox_kind: Literal["sqlite", "devnull"] = "sqlite",
@@ -355,7 +353,7 @@ class Stack:
         cfg = {
             "control_plane": {
                 "database": {"url": self.db_url},
-                "bundle": {"signing_key": "env:GW_BUNDLE_SIGNING_KEY", "staleness_bound_hours": staleness_bound_hours},
+                "bundle": {"signing_key": "env:GW_BUNDLE_SIGNING_KEY"},
                 "secrets": secrets_store,
             },
             "data_plane": {
@@ -365,7 +363,6 @@ class Stack:
                     "control_plane": dict(control_plane_link),
                     "verify_key": "env:GW_BUNDLE_PUBLIC_KEY",
                     "cache_dir": str(self.cache_dir),
-                    "staleness_policy": staleness_policy,
                     "poll_interval_s": poll_interval_s,
                     "heartbeat_interval_s": 2,
                 },
