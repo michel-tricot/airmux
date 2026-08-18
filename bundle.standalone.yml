@@ -58,6 +58,10 @@ models:
     context_window: 272000
     max_output_tokens: 128000
     capabilities: [streaming, tools, vision]
+    parameter_support:
+      temperature: unsupported
+      top_p: unsupported
+      logprobs: unsupported
 
   - model_id: claude-opus-5
     provider_id: anthropic

@@ -11,6 +11,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { ModelInEgressKind } from './modelInEgressKind';
+import type { ModelInParameterSupport } from './modelInParameterSupport';
 
 export interface ModelIn {
   /**
@@ -66,4 +67,6 @@ export interface ModelIn {
      * @maxItems 128
      */
   capabilities?: string[];
+  /** Known support for canonical request parameters; an absent parameter is unknown */
+  parameter_support?: ModelInParameterSupport;
 }

@@ -371,4 +371,55 @@ describe('playground', () => {
     expect(modelSelector).toHaveTextContent('anthropic/claude-test');
     expect(screen.getByPlaceholderText('Send a message... (Shift+Enter for newline)')).toHaveFocus();
   });
+
+  it('does not send temperature when the selected model rejects it', async () => {
+    const provider = taxonomyProvider('provider-1', 'openai');
+    const model = {
+      id: 'model-1',
+      name: 'openai/gpt-5-nano',
+      provider_id: provider.id,
+      upstream_model: 'gpt-5-nano',
+      input_price_per_mtok: 1,
+      output_price_per_mtok: 2,
+      cache_read_price_per_mtok: 0,
+      cache_write_price_per_mtok: 0,
+      context_window: 128000,
+      max_output_tokens: 4096,
+      capabilities: ['streaming'],
+      parameter_support: { temperature: 'unsupported' },
+      created_at: now,
+      updated_at: now,
+      deleted_at: null,
+    };
+    let requestBody: Record<string, unknown> = {};
+    server.use(
+      http.get(`/api/v1/orgs/${ORG.id}/workspaces/${WORKSPACES[0].slug}/taxonomy`, () =>
+        HttpResponse.json({ providers: [provider], models: [model] }),
+      ),
+      http.put(`/api/v1/orgs/${ORG.id}/workspaces/${WORKSPACES[0].slug}/playground-session`, () =>
+        HttpResponse.json({ id: 'session-1', expires_at: '2026-01-01T01:00:00Z', status: 'ready' }),
+      ),
+      http.post('/inf/v1/chat/completions', async ({ request }) => {
+        requestBody = (await request.json()) as Record<string, unknown>;
+        return HttpResponse.text(
+          'data: {"choices":[{"delta":{"content":"ok"}}]}\n\ndata: {"choices":[{"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n',
+          {
+            headers: { 'content-type': 'text/event-stream' },
+          },
+        );
+      }),
+    );
+    window.history.replaceState(null, '', `/org/workspaces/${WORKSPACES[0].slug}/playground`);
+    render(<App />);
+    const user = userEvent.setup();
+
+    const temperature = await screen.findByRole('slider', { name: /Temperature/ });
+    expect(temperature).toBeDisabled();
+    expect(screen.getByText('Not supported by this model')).toBeInTheDocument();
+    await user.type(screen.getByPlaceholderText('Send a message... (Shift+Enter for newline)'), 'hello');
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+    await screen.findByText('ok');
+
+    expect(requestBody).not.toHaveProperty('temperature');
+  });
 });

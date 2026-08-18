@@ -122,6 +122,7 @@ function Playground({ orgId, workspaceRef }: { orgId: string; workspaceRef: stri
   const abortRef = useRef<AbortController | null>(null);
   const activeModel = models.some((model) => model.name === selectedModel) ? selectedModel : (models[0]?.name ?? '');
   const activeModelDetails = models.find((model) => model.name === activeModel);
+  const temperatureUnsupported = activeModelDetails?.parameter_support?.temperature === 'unsupported';
 
   useEffect(() => {
     return () => {
@@ -162,7 +163,7 @@ function Playground({ orgId, workspaceRef }: { orgId: string; workspaceRef: stri
       const result = await chatCompletion({
         model: activeModel,
         messages: requestMessages,
-        temperature: Number(temperature),
+        temperature: temperatureUnsupported ? undefined : Number(temperature),
         maxTokens: maxTokens ? Number.parseInt(maxTokens, 10) : undefined,
         stream: streamEnabled,
         signal: controller.signal,
@@ -283,7 +284,12 @@ function Playground({ orgId, workspaceRef }: { orgId: string; workspaceRef: stri
 
           <div className="space-y-2">
             <Label htmlFor="playground-temperature">
-              Temperature <span className="text-foreground">{temperature}</span>
+              Temperature{' '}
+              {temperatureUnsupported ? (
+                <span className="font-normal text-muted-foreground">Not supported by this model</span>
+              ) : (
+                <span className="text-foreground">{temperature}</span>
+              )}
             </Label>
             <input
               id="playground-temperature"
@@ -292,8 +298,9 @@ function Playground({ orgId, workspaceRef }: { orgId: string; workspaceRef: stri
               max="2"
               step="0.1"
               value={temperature}
+              disabled={temperatureUnsupported}
               onChange={(event) => updatePlayground({ temperature: event.target.value })}
-              className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-muted accent-primary"
+              className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-muted accent-primary disabled:cursor-not-allowed disabled:opacity-50"
             />
             <div className="flex justify-between font-mono text-[10px] text-muted-foreground">
               <span>0</span>

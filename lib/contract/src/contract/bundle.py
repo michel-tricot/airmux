@@ -8,6 +8,8 @@ from pydantic import BaseModel, ConfigDict, Field, HttpUrl
 
 from contract.secrets import SecretRef
 
+ParameterSupport = Literal["supported", "unsupported"]
+
 
 class KeyEntry(BaseModel):
     """An active inference key included in a policy bundle.
@@ -53,6 +55,7 @@ class ModelEntry(BaseModel):
     context_window: int
     max_output_tokens: int | None = None  # completion cap; requests are clamped to it, distinct from context_window
     capabilities: list[str]  # "streaming", "tools", "vision"
+    parameter_support: dict[str, ParameterSupport] = Field(default_factory=dict)
     egress_kind: Literal["openai_compatible", "openai_responses", "anthropic"] | None = None
 
 

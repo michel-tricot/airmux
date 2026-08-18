@@ -97,8 +97,8 @@ HTML = """<title>Completion request field support</title>
 <div class="wrap">
   <header>
     <div class="eyebrow">airllm taxonomy &middot; completion request surface</div>
-    <h1>Which providers accept which request fields</h1>
-    <p class="lede">Every JSONPath found in a provider's own published completion request schema, to two levels of nesting. Green means the field appears in that provider's schema; red means it does not. Absence is evidence about the schema, not proof the API rejects the field.</p>
+    <h1>Which request fields AirLLM and providers support</h1>
+    <p class="lede">Every JSONPath found in AirLLM's canonical request schema or a provider's published completion request schema, to two levels of nesting. Green means the field appears in that schema; red means it does not. Absence is evidence about the schema, not proof the API rejects the field.</p>
   </header>
 
   <div class="stats" id="stats"></div>
@@ -109,7 +109,7 @@ HTML = """<title>Completion request field support</title>
       <button data-ingress="anthropic" aria-pressed="false">Anthropic shape</button>
     </div>
     <input type="search" id="q" placeholder="Filter paths, e.g. tool" aria-label="Filter paths">
-    <label class="check"><input type="checkbox" id="shared"> Shared only (2+ providers)</label>
+    <label class="check"><input type="checkbox" id="shared"> Shared only (2+ columns)</label>
     <label class="check"><input type="checkbox" id="toplevel"> Top level only</label>
     <label class="check"><input type="checkbox" id="hidestandin"> Hide canonical stand-ins</label>
   </div>
@@ -158,7 +158,7 @@ function renderStats() {
     [rows.length, "paths shown"],
     [cols.length, "columns"],
     [universal, "accepted by all"],
-    [solo, "single provider"],
+    [solo, "single column"],
     [d.columns.filter(c => c.standin).length, "canonical stand-ins"],
   ];
   const host = document.getElementById("stats");
@@ -178,7 +178,7 @@ function renderMatrix() {
   const thead = el("thead"), htr = el("tr");
   htr.append(el("th", "path", "JSONPath"), el("th", "num", "n"));
   cols.forEach(c => {
-    const th = el("th", "rot" + (c.kind === "router" ? " lead" : "") + (c.standin ? " standin" : ""));
+    const th = el("th", "rot" + (c.kind === "gateway" ? " lead" : "") + (c.standin ? " standin" : ""));
     th.append(el("div", null, c.name + (c.standin ? "  \\u25B3" : "")));
     th.title = c.standin ? c.name + " restates the canonical schema" : c.name;
     htr.append(th);
@@ -224,7 +224,7 @@ function renderNotes() {
   notes.push([
     "The shared core",
     universal.length
-      ? `${universal.length} paths are accepted by all ${cols.length} columns, led by ${universal.slice(0, 4).map(r => code(r.path)).join(", ")}. Those are the fields an adapter can rely on without a per-provider branch.`
+      ? `${universal.length} paths are accepted by all ${cols.length} columns, led by ${universal.slice(0, 4).map(r => code(r.path)).join(", ")}. Those are the fields an adapter can rely on without a per-column branch.`
       : `No path is accepted by all ${cols.length} columns, so every field needs a per-provider decision.`,
   ]);
   notes.push([

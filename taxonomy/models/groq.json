@@ -26,6 +26,48 @@
       "pricing_source": "provider",
       "reachable": true,
       "reachable_checked": "2026-08-17",
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.groq.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "seed": "supported",
+              "stop": "supported",
+              "reasoning_effort": "unsupported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "unsupported"
+            }
+          }
+        }
+      },
       "display_name": "ALLaM-2-7b",
       "endpoint_status": {
         "chat/completions": {
@@ -52,6 +94,45 @@
       "limits_source": "provider",
       "reachable": true,
       "reachable_checked": "2026-08-17",
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.groq.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "unsupported",
+              "logprobs": "unsupported"
+            }
+          }
+        }
+      },
       "display_name": "Compound",
       "endpoint_status": {
         "chat/completions": {
@@ -78,6 +159,45 @@
       "limits_source": "provider",
       "reachable": true,
       "reachable_checked": "2026-08-17",
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.groq.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "seed": "supported",
+              "reasoning_effort": "unsupported",
+              "logprobs": "unsupported",
+              "temperature": "supported"
+            }
+          }
+        }
+      },
       "display_name": "Compound Mini",
       "endpoint_status": {
         "chat/completions": {
@@ -109,6 +229,48 @@
       "pricing_source": "provider",
       "reachable": true,
       "reachable_checked": "2026-08-17",
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.groq.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "seed": "supported",
+              "stop": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "unsupported"
+            }
+          }
+        }
+      },
       "display_name": "GPT OSS 120B",
       "endpoint_status": {
         "chat/completions": {
@@ -140,6 +302,48 @@
       "pricing_source": "provider",
       "reachable": true,
       "reachable_checked": "2026-08-17",
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.groq.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "seed": "supported",
+              "stop": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "unsupported"
+            }
+          }
+        }
+      },
       "display_name": "GPT OSS 20B",
       "endpoint_status": {
         "chat/completions": {
@@ -172,6 +376,47 @@
       "pricing_source": "provider",
       "reachable": true,
       "reachable_checked": "2026-08-17",
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.groq.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "seed": "supported",
+              "stop": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "unsupported"
+            }
+          }
+        }
+      },
       "display_name": "Qwen/Qwen3.6-27B",
       "endpoint_status": {
         "chat/completions": {

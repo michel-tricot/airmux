@@ -1,6 +1,17 @@
 from __future__ import annotations
 
-from contract.bundle import BundleManifest, BundleManifestEntry, BundleV1, Catalog, CredentialEntry, KeyEntry, ModelEntry, ProviderEntry, SignedBundle
+from contract.bundle import (
+    BundleManifest,
+    BundleManifestEntry,
+    BundleV1,
+    Catalog,
+    CredentialEntry,
+    KeyEntry,
+    ModelEntry,
+    ParameterSupport,
+    ProviderEntry,
+    SignedBundle,
+)
 from contract.credentials import INFERENCE_TOKEN_PREFIX, PLAYGROUND_COOKIE, token_hash
 from contract.events import HeartbeatV1, UsageEventV1, UsageStatus
 from contract.ids import uuid7
@@ -53,6 +64,7 @@ __all__ = [
     "MemorySecretStore",
     "MemoryStoreConfig",
     "ModelEntry",
+    "ParameterSupport",
     "ProviderEntry",
     "Secret",
     "SecretNotFoundError",

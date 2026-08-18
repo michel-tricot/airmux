@@ -2127,6 +2127,7 @@ export const GetInstanceTaxonomyResponse = zod.object({
   "context_window": zod.int(),
   "max_output_tokens": zod.union([zod.int(),zod.null()]),
   "capabilities": zod.array(zod.string()),
+  "parameter_support": zod.record(zod.string(), zod.enum(['supported', 'unsupported'])),
   "created_at": zod.coerce.date(),
   "updated_at": zod.coerce.date(),
   "deleted_at": zod.union([zod.coerce.date(),zod.null()])
@@ -2171,6 +2172,7 @@ export const GetOrgTaxonomyResponse = zod.object({
   "context_window": zod.int(),
   "max_output_tokens": zod.union([zod.int(),zod.null()]),
   "capabilities": zod.array(zod.string()),
+  "parameter_support": zod.record(zod.string(), zod.enum(['supported', 'unsupported'])),
   "created_at": zod.coerce.date(),
   "updated_at": zod.coerce.date(),
   "deleted_at": zod.union([zod.coerce.date(),zod.null()])
@@ -2216,6 +2218,7 @@ export const GetWorkspaceTaxonomyResponse = zod.object({
   "context_window": zod.int(),
   "max_output_tokens": zod.union([zod.int(),zod.null()]),
   "capabilities": zod.array(zod.string()),
+  "parameter_support": zod.record(zod.string(), zod.enum(['supported', 'unsupported'])),
   "created_at": zod.coerce.date(),
   "updated_at": zod.coerce.date(),
   "deleted_at": zod.union([zod.coerce.date(),zod.null()])
@@ -2315,7 +2318,8 @@ export const CreateModelBody = zod.object({
   "cache_write_price_per_mtok": zod.number().min(createModelBodyCacheWritePricePerMtokMin).default(createModelBodyCacheWritePricePerMtokDefault).describe('USD per million cache-write input tokens'),
   "context_window": zod.int().min(1).max(createModelBodyContextWindowMax).default(createModelBodyContextWindowDefault).describe('Context window in tokens'),
   "max_output_tokens": zod.union([zod.int().min(1).max(createModelBodyMaxOutputTokensOneMax),zod.null()]).optional().describe('Max completion tokens; requests are clamped to it'),
-  "capabilities": zod.array(zod.string()).max(createModelBodyCapabilitiesMax).optional().describe('Capabilities supported by the model')
+  "capabilities": zod.array(zod.string()).max(createModelBodyCapabilitiesMax).optional().describe('Capabilities supported by the model'),
+  "parameter_support": zod.record(zod.string(), zod.enum(['supported', 'unsupported'])).optional().describe('Known support for canonical request parameters; an absent parameter is unknown')
 })
 
 export const CreateModelResponse = zod.object({
@@ -2331,6 +2335,7 @@ export const CreateModelResponse = zod.object({
   "context_window": zod.int(),
   "max_output_tokens": zod.union([zod.int(),zod.null()]),
   "capabilities": zod.array(zod.string()),
+  "parameter_support": zod.record(zod.string(), zod.enum(['supported', 'unsupported'])),
   "created_at": zod.coerce.date(),
   "updated_at": zod.coerce.date(),
   "deleted_at": zod.union([zod.coerce.date(),zod.null()])

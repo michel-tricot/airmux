@@ -9,9 +9,12 @@ if TYPE_CHECKING:
     from data_plane.profiles import CompiledProfile
 
 GATEWAY_HELD = frozenset({"n"})
+MODEL_TUNING_PARAMS = ("temperature", "top_p", "stop", "seed", "reasoning_effort", "parallel_tool_calls")
 
 
-def _drop_reason(request: CanonicalRequest, profile: CompiledProfile, param: str) -> str | None:
+def _drop_reason(request: CanonicalRequest, model: ModelEntry, profile: CompiledProfile, param: str) -> str | None:
+    if model.parameter_support.get(param) == "unsupported":
+        return f"{model.model_id} does not support this parameter"
     if param in GATEWAY_HELD:
         return "the response carries one completion; a sampling fan-out cannot forward"
     source = profile.respelled.get(param)
@@ -23,11 +26,16 @@ def _drop_reason(request: CanonicalRequest, profile: CompiledProfile, param: str
 
 
 def reconcile(request: CanonicalRequest, model: ModelEntry, profile: CompiledProfile) -> tuple[CanonicalRequest, list[Adjustment]]:
-    adjustments = []
+    unsupported = {
+        param: None for param in MODEL_TUNING_PARAMS if model.parameter_support.get(param) == "unsupported" and getattr(request, param) is not None
+    }
+    adjustments = [Adjustment(param=param, action="dropped", detail=f"{model.model_id} does not support this parameter") for param in unsupported]
+    if unsupported:
+        request = request.model_copy(update=unsupported)
     forwarded: dict[str, object] = {}
     extra = request.extra
     for param, value in extra.items():
-        reason = _drop_reason(request, profile, param)
+        reason = _drop_reason(request, model, profile, param)
         if reason is None:
             forwarded[param] = value
         else:

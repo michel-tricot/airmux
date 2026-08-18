@@ -28,6 +28,48 @@
       "pricing_source": "models.dev",
       "reachable": true,
       "reachable_checked": "2026-08-17",
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.fireworks.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "seed": "supported",
+              "stop": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            }
+          }
+        }
+      },
       "display_name": "DeepSeek-V4-Flash-0731",
       "endpoint_status": {
         "chat/completions": {
@@ -60,6 +102,48 @@
       "pricing_source": "models.dev",
       "reachable": true,
       "reachable_checked": "2026-08-17",
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.fireworks.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "seed": "supported",
+              "stop": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            }
+          }
+        }
+      },
       "display_name": "DeepSeek-V4-Pro",
       "endpoint_status": {
         "chat/completions": {
@@ -92,6 +176,48 @@
       "pricing_source": "models.dev",
       "reachable": true,
       "reachable_checked": "2026-08-17",
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.fireworks.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "seed": "supported",
+              "stop": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            }
+          }
+        }
+      },
       "display_name": "DeepSeek-V4-Pro-0813",
       "endpoint_status": {
         "chat/completions": {
@@ -124,6 +250,48 @@
       "pricing_source": "models.dev",
       "reachable": true,
       "reachable_checked": "2026-08-17",
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.fireworks.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "seed": "supported",
+              "stop": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            }
+          }
+        }
+      },
       "display_name": "GLM 5.2",
       "endpoint_status": {
         "chat/completions": {
@@ -156,6 +324,48 @@
       "pricing_source": "models.dev",
       "reachable": true,
       "reachable_checked": "2026-08-17",
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.fireworks.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "seed": "supported",
+              "stop": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            }
+          }
+        }
+      },
       "display_name": "OpenAI gpt-oss-120b",
       "endpoint_status": {
         "chat/completions": {
@@ -188,6 +398,48 @@
       "pricing_source": "models.dev",
       "reachable": true,
       "reachable_checked": "2026-08-17",
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.fireworks.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "seed": "supported",
+              "stop": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            }
+          }
+        }
+      },
       "display_name": "OpenAI gpt-oss-20b",
       "endpoint_status": {
         "chat/completions": {
@@ -221,6 +473,48 @@
       "pricing_source": "models.dev",
       "reachable": true,
       "reachable_checked": "2026-08-17",
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.fireworks.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "seed": "supported",
+              "stop": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            }
+          }
+        }
+      },
       "display_name": "Inkling",
       "endpoint_status": {
         "chat/completions": {
@@ -254,6 +548,48 @@
       "pricing_source": "models.dev",
       "reachable": true,
       "reachable_checked": "2026-08-17",
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.fireworks.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "seed": "supported",
+              "stop": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            }
+          }
+        }
+      },
       "display_name": "Kimi K2.6",
       "endpoint_status": {
         "chat/completions": {
@@ -287,6 +623,48 @@
       "pricing_source": "models.dev",
       "reachable": true,
       "reachable_checked": "2026-08-17",
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.fireworks.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "seed": "supported",
+              "stop": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            }
+          }
+        }
+      },
       "display_name": "Kimi K2.7 Code",
       "endpoint_status": {
         "chat/completions": {
@@ -320,6 +698,48 @@
       "pricing_source": "models.dev",
       "reachable": true,
       "reachable_checked": "2026-08-17",
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.fireworks.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "seed": "supported",
+              "stop": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            }
+          }
+        }
+      },
       "display_name": "Kimi K3",
       "endpoint_status": {
         "chat/completions": {
@@ -352,6 +772,48 @@
       "pricing_source": "models.dev",
       "reachable": true,
       "reachable_checked": "2026-08-17",
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.fireworks.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "seed": "supported",
+              "stop": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            }
+          }
+        }
+      },
       "display_name": "MiniMax M2.7",
       "endpoint_status": {
         "chat/completions": {
@@ -384,6 +846,48 @@
       "pricing_source": "models.dev",
       "reachable": true,
       "reachable_checked": "2026-08-17",
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.fireworks.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "seed": "supported",
+              "stop": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            }
+          }
+        }
+      },
       "display_name": "Minimax M3",
       "endpoint_status": {
         "chat/completions": {
@@ -417,6 +921,48 @@
       "pricing_source": "models.dev",
       "reachable": true,
       "reachable_checked": "2026-08-17",
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.fireworks.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "seed": "supported",
+              "stop": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            }
+          }
+        }
+      },
       "display_name": "Muse Glimmer 30B",
       "endpoint_status": {
         "chat/completions": {
@@ -449,6 +995,48 @@
       "pricing_source": "models.dev",
       "reachable": true,
       "reachable_checked": "2026-08-17",
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.fireworks.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "seed": "supported",
+              "stop": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            }
+          }
+        }
+      },
       "display_name": "NVIDIA Nemotron 3 Ultra NVFP4",
       "endpoint_status": {
         "chat/completions": {
@@ -481,6 +1069,48 @@
       "pricing_source": "models.dev",
       "reachable": true,
       "reachable_checked": "2026-08-17",
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.fireworks.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "seed": "supported",
+              "stop": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            }
+          }
+        }
+      },
       "display_name": "Nemotron Lightning 3.5 30B A3B",
       "endpoint_status": {
         "chat/completions": {
@@ -514,6 +1144,48 @@
       "pricing_source": "models.dev",
       "reachable": true,
       "reachable_checked": "2026-08-17",
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.fireworks.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "seed": "supported",
+              "stop": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            }
+          }
+        }
+      },
       "display_name": "Qwen3.7 Plus",
       "endpoint_status": {
         "chat/completions": {
@@ -540,6 +1212,48 @@
       "pricing": null,
       "reachable": true,
       "reachable_checked": "2026-08-17",
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.fireworks.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "seed": "supported",
+              "stop": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            }
+          }
+        }
+      },
       "display_name": "Qwen3.8-2.4T-A95B",
       "endpoint_status": {
         "chat/completions": {
@@ -573,6 +1287,48 @@
       "pricing_source": "models.dev",
       "reachable": true,
       "reachable_checked": "2026-08-17",
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.fireworks.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "seed": "supported",
+              "stop": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            }
+          }
+        }
+      },
       "display_name": "Qwen 3.8 Max",
       "endpoint_status": {
         "chat/completions": {

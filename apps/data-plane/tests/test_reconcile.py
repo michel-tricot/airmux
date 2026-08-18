@@ -64,3 +64,17 @@ def test_the_clamp_still_reports():
     req, adjustments = reconcile(_request(max_tokens=100), model, compile_profile(PROVIDER))
     assert req.max_tokens == 50
     assert [(a.param, a.action) for a in adjustments] == [("max_tokens", "clamped")]
+
+
+def test_an_unsupported_model_parameter_is_dropped_with_an_adjustment():
+    model = MODEL.model_copy(update={"parameter_support": {"temperature": "unsupported"}})
+    req, adjustments = reconcile(_request(temperature=0.7), model, compile_profile(PROVIDER))
+    assert req.temperature is None
+    assert [(a.param, a.action) for a in adjustments] == [("temperature", "dropped")]
+    assert model.model_id in adjustments[0].detail
+
+
+def test_unknown_model_parameter_support_preserves_the_parameter():
+    req, adjustments = reconcile(_request(temperature=0.7), MODEL, compile_profile(PROVIDER))
+    assert req.temperature == 0.7
+    assert adjustments == []

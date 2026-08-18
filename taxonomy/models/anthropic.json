@@ -30,6 +30,35 @@
       "pricing_source": "models.dev",
       "reachable": true,
       "reachable_checked": "2026-08-17",
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/anthropic.anthropic.request.json"
+          ],
+          "support": {
+            "messages": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "attempted": {
+            "messages": [
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "messages": {
+              "temperature": "supported",
+              "stop": "supported"
+            }
+          }
+        }
+      },
       "display_name": "Claude Fable 5",
       "endpoint_status": {
         "messages": {
@@ -65,6 +94,36 @@
       "pricing_source": "models.dev",
       "reachable": true,
       "reachable_checked": "2026-08-17",
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/anthropic.anthropic.request.json"
+          ],
+          "support": {
+            "messages": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "attempted": {
+            "messages": [
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "messages": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported"
+            }
+          }
+        }
+      },
       "display_name": "Claude Haiku 4.5",
       "endpoint_status": {
         "messages": {
@@ -100,6 +159,36 @@
       "pricing_source": "models.dev",
       "reachable": true,
       "reachable_checked": "2026-08-17",
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/anthropic.anthropic.request.json"
+          ],
+          "support": {
+            "messages": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "attempted": {
+            "messages": [
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "messages": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported"
+            }
+          }
+        }
+      },
       "display_name": "Claude Opus 4.5",
       "endpoint_status": {
         "messages": {
@@ -135,6 +224,36 @@
       "pricing_source": "models.dev",
       "reachable": true,
       "reachable_checked": "2026-08-17",
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/anthropic.anthropic.request.json"
+          ],
+          "support": {
+            "messages": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "attempted": {
+            "messages": [
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "messages": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported"
+            }
+          }
+        }
+      },
       "display_name": "Claude Opus 4.6",
       "endpoint_status": {
         "messages": {
@@ -170,6 +289,35 @@
       "pricing_source": "models.dev",
       "reachable": true,
       "reachable_checked": "2026-08-17",
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/anthropic.anthropic.request.json"
+          ],
+          "support": {
+            "messages": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "attempted": {
+            "messages": [
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "messages": {
+              "temperature": "supported",
+              "stop": "supported"
+            }
+          }
+        }
+      },
       "display_name": "Claude Opus 4.7",
       "endpoint_status": {
         "messages": {
@@ -205,6 +353,35 @@
       "pricing_source": "models.dev",
       "reachable": true,
       "reachable_checked": "2026-08-17",
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/anthropic.anthropic.request.json"
+          ],
+          "support": {
+            "messages": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "attempted": {
+            "messages": [
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "messages": {
+              "temperature": "supported",
+              "stop": "supported"
+            }
+          }
+        }
+      },
       "display_name": "Claude Opus 4.8",
       "endpoint_status": {
         "messages": {
@@ -240,6 +417,35 @@
       "pricing_source": "models.dev",
       "reachable": true,
       "reachable_checked": "2026-08-17",
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/anthropic.anthropic.request.json"
+          ],
+          "support": {
+            "messages": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "attempted": {
+            "messages": [
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "messages": {
+              "temperature": "supported",
+              "stop": "supported"
+            }
+          }
+        }
+      },
       "display_name": "Claude Opus 5",
       "endpoint_status": {
         "messages": {
@@ -275,6 +481,36 @@
       "pricing_source": "models.dev",
       "reachable": true,
       "reachable_checked": "2026-08-17",
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/anthropic.anthropic.request.json"
+          ],
+          "support": {
+            "messages": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "attempted": {
+            "messages": [
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "messages": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported"
+            }
+          }
+        }
+      },
       "display_name": "Claude Sonnet 4.5",
       "endpoint_status": {
         "messages": {
@@ -310,6 +546,36 @@
       "pricing_source": "models.dev",
       "reachable": true,
       "reachable_checked": "2026-08-17",
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/anthropic.anthropic.request.json"
+          ],
+          "support": {
+            "messages": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "attempted": {
+            "messages": [
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "messages": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported"
+            }
+          }
+        }
+      },
       "display_name": "Claude Sonnet 4.6",
       "endpoint_status": {
         "messages": {
@@ -345,6 +611,35 @@
       "pricing_source": "models.dev",
       "reachable": true,
       "reachable_checked": "2026-08-17",
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/anthropic.anthropic.request.json"
+          ],
+          "support": {
+            "messages": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "attempted": {
+            "messages": [
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "messages": {
+              "temperature": "supported",
+              "stop": "supported"
+            }
+          }
+        }
+      },
       "display_name": "Claude Sonnet 5",
       "endpoint_status": {
         "messages": {

@@ -5042,6 +5042,16 @@ components:
           maxItems: 128
           title: Capabilities
           description: Capabilities supported by the model
+        parameter_support:
+          additionalProperties:
+            type: string
+            enum:
+            - supported
+            - unsupported
+          type: object
+          maxProperties: 128
+          title: Parameter Support
+          description: Known support for canonical request parameters; an absent parameter is unknown
       additionalProperties: false
       type: object
       required:
@@ -5094,6 +5104,14 @@ components:
             type: string
           type: array
           title: Capabilities
+        parameter_support:
+          additionalProperties:
+            type: string
+            enum:
+            - supported
+            - unsupported
+          type: object
+          title: Parameter Support
         created_at:
           type: string
           format: date-time
@@ -5122,6 +5140,7 @@ components:
       - context_window
       - max_output_tokens
       - capabilities
+      - parameter_support
       - created_at
       - updated_at
       - deleted_at

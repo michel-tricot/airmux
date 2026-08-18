@@ -6,6 +6,7 @@ from uuid import UUID
 from sqlalchemy import JSON
 from sqlmodel import Field
 
+from contract import ParameterSupport
 from control_plane.models.audit import audited
 from control_plane.models.common import Identified, Tombstonable
 from control_plane.models.common.base import Record
@@ -28,6 +29,7 @@ from control_plane.models.runtime_configuration import runtime_configured
         "context_window",
         "max_output_tokens",
         "capabilities",
+        "parameter_support",
     ),
 )
 class Model(Record, Identified, Tombstonable, table=True):
@@ -42,6 +44,7 @@ class Model(Record, Identified, Tombstonable, table=True):
     context_window: int
     max_output_tokens: int | None = None
     capabilities: list[str] = Field(default_factory=list, sa_type=JSON)
+    parameter_support: dict[str, ParameterSupport] = Field(default_factory=dict, sa_type=JSON)
 
 
 class ModelOut(RecordOut[Model]):
@@ -57,6 +60,7 @@ class ModelOut(RecordOut[Model]):
     context_window: int
     max_output_tokens: int | None
     capabilities: list[str]
+    parameter_support: dict[str, ParameterSupport]
     created_at: datetime
     updated_at: datetime
     deleted_at: datetime | None

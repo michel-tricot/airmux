@@ -124,6 +124,7 @@ def test_full_flow_to_verified_bundle(tmp_path):
         assert model.output_price_per_mtok == 2.0
         assert model.cache_read_price_per_mtok == 0.1
         assert model.cache_write_price_per_mtok == 1.25
+        assert model.parameter_support == {"temperature": "unsupported"}
 
 
 def test_revocation_lands_in_next_bundle(tmp_path):

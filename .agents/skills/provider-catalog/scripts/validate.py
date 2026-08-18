@@ -25,6 +25,7 @@ HAS_JSONSCHEMA = find_spec("jsonschema") is not None
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from canonical import MODEL_ORDER, sort_models
 from model_kind import classify
+from parameter_support import ENDPOINTS, PARAMETERS, SUPPORT, discovery_evidence
 
 ROOT = TAXONOMY
 FIELDS = {"id", "name", "icon_mono", "icon_color", "homepage", "docs", "base_url", "openapi", "models_url", "ingress", "auth", "env_var", "schema"}
@@ -168,7 +169,7 @@ def check_schemas(all_entries: list[dict]) -> None:
 
 
 def check_models(all_entries: list[dict]) -> None:
-    known = {e["id"] for e in all_entries}
+    known = {entry["id"]: entry for entry in all_entries}
     for f in sorted((ROOT / "models").glob("*.json")):
         doc = json.loads(f.read_text())
         provider = doc.get("provider")
@@ -181,6 +182,7 @@ def check_models(all_entries: list[dict]) -> None:
         models = doc.get("models") or []
         if [m.get("id") for m in models] != [m.get("id") for m in sort_models([dict(m) for m in models])]:
             fail("models", f"{provider} is not sorted by id; regenerate so diffs stay reviewable")
+        expected_discovery = discovery_evidence(known[provider], ROOT) if provider in known else None
         for m in models:
             leading = [k for k in m if k in MODEL_ORDER]
             if leading != [k for k in MODEL_ORDER if k in m]:
@@ -209,6 +211,35 @@ def check_models(all_entries: list[dict]) -> None:
                 fail("models", f"{provider}/{mid} claims a pricing source but carries no price")
             if m.get("pricing") and not psource:
                 fail("models", f"{provider}/{mid} has a price with no pricing_source")
+            evidence = m.get("parameter_evidence") or {}
+            if extra_sources := set(evidence) - {"model_discovery", "live_probe"}:
+                fail("models", f"{provider}/{mid} has unknown parameter evidence {sorted(extra_sources)}")
+            if evidence.get("model_discovery") != expected_discovery:
+                fail("models", f"{provider}/{mid} has stale or missing model-discovery parameter evidence; run discover_parameters.py")
+            for source_type, source_evidence in evidence.items():
+                if source_type == "model_discovery" and not source_evidence.get("sources"):
+                    fail("models", f"{provider}/{mid} has model-discovery parameter evidence without a request schema")
+                if source_type == "live_probe":
+                    if extra_fields := set(source_evidence) - {"attempted", "support"}:
+                        fail("models", f"{provider}/{mid} has unknown live-probe fields {sorted(extra_fields)}")
+                    attempted = source_evidence.get("attempted") or {}
+                    if not attempted:
+                        fail("models", f"{provider}/{mid} has live-probe evidence without attempted parameters")
+                    if bad_endpoints := set(attempted) - ENDPOINTS:
+                        fail("models", f"{provider}/{mid} has live-probe attempts for {sorted(bad_endpoints)}")
+                    for endpoint, parameters in attempted.items():
+                        if bad_parameters := set(parameters) - PARAMETERS:
+                            fail("models", f"{provider}/{mid}/{endpoint} attempted unknown parameters {sorted(bad_parameters)}")
+                support = source_evidence.get("support") or {}
+                if bad_endpoints := set(support) - ENDPOINTS:
+                    fail("models", f"{provider}/{mid} has parameter evidence for {sorted(bad_endpoints)}")
+                for endpoint, parameters in support.items():
+                    if bad_statuses := set(parameters.values()) - SUPPORT:
+                        fail("models", f"{provider}/{mid}/{endpoint} has parameter statuses {sorted(bad_statuses)}")
+                    if source_type == "live_probe":
+                        missing_attempts = set(parameters) - set((source_evidence.get("attempted") or {}).get(endpoint) or [])
+                        if missing_attempts:
+                            fail("models", f"{provider}/{mid}/{endpoint} has unattempted live results {sorted(missing_attempts)}")
 
 
 CANDIDATE_FIELDS = {"id", "name", "homepage", "docs", "env_var"}

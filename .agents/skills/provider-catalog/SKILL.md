@@ -64,6 +64,8 @@ The tooling lives with this skill; the catalog is its output. Nothing executable
       fireworks.py         serverless-only, control plane, UNVERIFIED
       openai_shaped.py     novita, deepinfra, sambanova, huggingface, nvidia
     enrich.py              fills limits and pricing from secondary sources
+    discover_parameters.py derives each model's parameter baseline from its provider request schemas
+    probe_parameters.py    tests parameters against live model endpoints; conclusive probes win
     fetch_icons.py         vendors provider marks as SVG
     field_matrix.py        field support matrix, per ingress
     build_report.py        renders the matrix to HTML
@@ -160,18 +162,18 @@ python field_matrix.py anthropic 2
 python build_report.py
 ```
 
-`field_matrix.py` flattens every provider's request schema into JSONPaths and writes, per
-ingress, a CSV for spreadsheet use and a JSON blob. `build_report.py` renders both into one
-self-contained HTML page at `taxonomy/reports/field-matrix.html`, green for accepted and red
-for absent, sortable and filterable, with OpenRouter as the leading column because a router
-accepts the widest surface.
+`field_matrix.py` flattens AirLLM's canonical request schema and every provider's request
+schema into JSONPaths and writes, per ingress, a CSV for spreadsheet use and a JSON blob.
+`build_report.py` renders both into one self-contained HTML page at
+`taxonomy/reports/field-matrix.html`, green for accepted and red for absent, sortable and
+filterable, with AirLLM as the leading column.
 
 Two columns count support: `supported_by`, and `supported_by_excluding_standins` which drops
-the six providers that borrow the canonical schema. Use the second for any claim about
-consensus; six providers echoing OpenAI is one fact repeated, not six providers agreeing.
+AirLLM and providers that borrow another provider's canonical schema. Use the second for any
+claim about provider consensus; repeated schemas are one fact, not independent agreement.
 
-Depth 2 is the useful default. Depth 1 gives 255 paths and reads as a summary; depth 3 gives
-521 and is mostly OpenRouter's nested routing options.
+Depth 2 is the useful default. Depth 1 reads as a summary, while depth 3 expands deeply nested
+request objects.
 
 Rerun after any schema change. It is not automatic.
 
@@ -185,6 +187,36 @@ python build_taxonomy.py --check    # fail if stale, for CI
 `taxonomy/` holds both halves: providers.yml and the derived data are research, and
 `taxonomy/taxonomy.yml` is what `airllmcp taxonomy` applies to the database. The second is generated from the first, so never hand-edit it.
 `validate.py` fails when the two have drifted, and `bootstrap.py` regenerates it last.
+
+### Refreshing parameter support
+
+Parameter support is part of model discovery, never a hand-maintained model list. A model
+record receives its baseline from the provider request schemas used by the gateway. Schema
+presence means supported; schema absence stays unknown. `fetch_models.py` applies that
+baseline before writing and probes newly returned models when its provider credential is
+available. `validate.py` recomputes the baseline and rejects every stale or unclassified
+model, so adding a model by any other path cannot bypass the workflow.
+
+To backfill existing catalogs or refresh live evidence explicitly:
+
+```
+cd .agents/skills/provider-catalog/scripts
+python discover_parameters.py
+python probe_parameters.py openai --parameter=temperature
+python build_taxonomy.py
+python validate.py
+```
+
+The manual probe command selects only models emitted in `taxonomy.yml`. Probe values are
+deliberately non-default so a model that merely permits a fixed default is not classified
+as supporting a configurable parameter.
+
+The model catalog keeps schema-discovery and live-probe evidence separately. Probe attempts
+are recorded even when their result is inconclusive, while only conclusive results affect
+runtime support. A conclusive live probe always wins for the same model, endpoint and
+canonical parameter. Success means supported; only an explicit unsupported-parameter
+response means unsupported. Authentication, access, rate-limit, timeout and generic
+bad-request results leave support unknown.
 
 Model ids are always `<provider>/<upstream>`. `gpt-oss-120b` is served by both Groq and
 Together at different prices and limits, so a bare id cannot be the caller-facing key, and
