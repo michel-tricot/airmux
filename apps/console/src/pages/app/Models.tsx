@@ -1,11 +1,11 @@
 import { useState } from 'react';
-import { ArrowDown, ArrowUp, ArrowUpDown, Boxes, Building2, Search, Wrench } from 'lucide-react';
+import { ArrowDown, ArrowUp, ArrowUpDown, Boxes, Building2, Wrench } from 'lucide-react';
 import { type ModelOut, type ProviderOut, useGetOrgTaxonomy } from '@workspace/api-client-react';
 import { ProviderIcon } from '@/components/ProviderIcon';
 import { DataTable, type Column } from '@/components/shared/data-table';
-import { PageShell } from '@/components/shared/page-shell';
+import { PageHeader, PageShell } from '@/components/shared/page-shell';
+import { SearchField } from '@/components/shared/search-field';
 import { Badge, Button, Card, Dropdown } from '@/components/ui/elements';
-import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group';
 import { useRequiredOrgId } from '@/lib/session';
 import { cn } from '@/lib/utils';
 
@@ -229,10 +229,7 @@ export default function Models() {
 
   return (
     <PageShell className="max-w-[100rem]">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Models</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Models available across this organization, with limits and prices per million tokens.</p>
-      </div>
+      <PageHeader title="Models" description="Models available across this organization, with limits and prices per million tokens." />
 
       {catalog && (
         <Card aria-label="Catalog summary" className="grid overflow-hidden sm:grid-cols-3">
@@ -275,18 +272,13 @@ export default function Models() {
       <Card className="overflow-hidden">
         <div className="flex flex-col gap-3 border-b border-border bg-primary/[0.025] p-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:flex-wrap">
-            <InputGroup className="w-full bg-background/50 sm:max-w-sm sm:flex-1">
-              <InputGroupAddon>
-                <Search />
-              </InputGroupAddon>
-              <InputGroupInput
-                aria-label="Filter models"
-                placeholder="Search models..."
-                value={filter}
-                onChange={(event) => setFilter(event.target.value)}
-                className="font-mono"
-              />
-            </InputGroup>
+            <SearchField
+              value={filter}
+              onValueChange={setFilter}
+              label="Filter models"
+              placeholder="Search models..."
+              className="w-full sm:max-w-sm sm:flex-1"
+            />
             <Dropdown
               aria-label="Filter by provider"
               value={providerFilter}

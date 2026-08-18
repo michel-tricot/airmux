@@ -11,8 +11,9 @@ import {
   useReissueInvitation,
   useRevokeInvitation,
 } from '@workspace/api-client-react';
+import type { EnabledQueryOptions } from '@/features/query-options';
 
-export function useInvitations(orgId: string, enabled = true) {
+export function useInvitations(orgId: string, { enabled = true }: EnabledQueryOptions = {}) {
   return useListInvitations(orgId, { query: { enabled, queryKey: getListInvitationsQueryKey(orgId) } });
 }
 

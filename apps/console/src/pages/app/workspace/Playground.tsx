@@ -3,7 +3,7 @@ import { Send, Trash2, Loader2, User, Bot, AlertCircle, Zap, ShieldCheck } from 
 import { useRequiredOrgId } from '@/lib/session';
 import { useRequiredParam } from '@/lib/route';
 import { useProviders } from '@/features/credentials/hooks';
-import { Alert, AlertDescription, AlertTitle, Badge, Button, Input, Label, SearchableDropdown, Switch } from '@/components/ui/elements';
+import { Alert, AlertDescription, AlertTitle, Badge, Button, Input, Label, Switch } from '@/components/ui/elements';
 import { Textarea } from '@/components/ui/textarea';
 import { PageShell } from '@/components/shared/page-shell';
 import { LoadingState, ErrorState, EmptyState } from '@/components/shared/states';
@@ -14,6 +14,7 @@ import { useAuthorization } from '@/features/permissions/hooks';
 import { catalogAccess } from '@/features/catalog/policy';
 import { useEndPlaygroundSessionMutation, useEnsurePlaygroundSessionMutation } from '@/features/playground/hooks';
 import { usePlaygroundState, type PlaygroundMessage } from '@/features/playground/state';
+import { ModelPicker } from '@/components/shared/model-picker';
 
 function formatDuration(durationMs: number) {
   return durationMs < 1_000 ? `${Math.round(durationMs)} ms` : `${(durationMs / 1_000).toFixed(1)} s`;
@@ -87,7 +88,7 @@ export default function ScopedPlayground() {
 function Playground({ orgId, workspaceRef }: { orgId: string; workspaceRef: string }) {
   const authorization = useAuthorization('workspace');
   const canReadCatalog = authorization.can(catalogAccess.workspace.read);
-  const taxonomyQuery = useProviders(orgId, workspaceRef, canReadCatalog);
+  const taxonomyQuery = useProviders(orgId, workspaceRef, { enabled: canReadCatalog });
   const ensureSession = useEnsurePlaygroundSessionMutation();
   const endSession = useEndPlaygroundSessionMutation();
   const [playground, setPlayground] = usePlaygroundState(`${orgId}:${workspaceRef}`);
@@ -232,10 +233,6 @@ function Playground({ orgId, workspaceRef }: { orgId: string; workspaceRef: stri
     updatePlayground({ sessionExpiresAt: null });
   };
 
-  if (authorization.isLoading) return <LoadingState label="Loading workspace permissions..." />;
-  if (authorization.isError)
-    return <ErrorState error={authorization.error} resource="workspace permissions" onRetry={() => authorization.refetch()} />;
-  if (!canReadCatalog) return <ErrorState message="You do not have access to the catalog in this workspace." />;
   if (taxonomyQuery.isLoading) return <LoadingState label="Loading workspace catalog..." />;
   if (taxonomyQuery.isError) return <ErrorState error={taxonomyQuery.error} resource="workspace catalog" onRetry={() => taxonomyQuery.refetch()} />;
 
@@ -261,7 +258,7 @@ function Playground({ orgId, workspaceRef }: { orgId: string; workspaceRef: stri
 
           <div className="space-y-2">
             <Label htmlFor="playground-model">Model</Label>
-            <SearchableDropdown
+            <ModelPicker
               id="playground-model"
               aria-label="Model"
               className="h-8 text-xs"

@@ -33,6 +33,19 @@ function installPermissionHandler(workspacePermissions: string[]) {
 beforeEach(() => window.localStorage.setItem('airllm_org_id', ORG.id));
 
 describe('permission-aware organization console', () => {
+  it('blocks direct model-catalog navigation before requesting the catalog', async () => {
+    const taxonomy = vi.fn(() => new HttpResponse(null, { status: 403 }));
+    server.use(
+      http.get('/api/v1/auth/permissions', () => HttpResponse.json({ permissions: ['organizations.read'] })),
+      http.get('/api/v1/orgs/:orgId/taxonomy', taxonomy),
+    );
+
+    renderAt('/org/models');
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('You do not have access to this organization page.');
+    await waitFor(() => expect(taxonomy).not.toHaveBeenCalled());
+  });
+
   it('keeps workspace members visible without requesting organization members', async () => {
     installPermissionHandler(WORKSPACE_MEMBER_PERMISSIONS);
     const orgMembers = vi.fn(() => new HttpResponse(null, { status: 403 }));

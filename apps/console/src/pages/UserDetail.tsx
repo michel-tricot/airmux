@@ -37,7 +37,7 @@ export default function UserDetail() {
   const canReadKeys = authorization.can(accessKeyAccess.instance.read);
   const orgsQuery = useOrgs();
   const orgs = orgsQuery.data;
-  const accessKeysQuery = useInstanceAccessKeys({ user_id: userId }, canReadKeys);
+  const accessKeysQuery = useInstanceAccessKeys({ user_id: userId }, { enabled: canReadKeys });
 
   const [addOpen, setAddOpen] = useState(false);
 

@@ -9,14 +9,15 @@ import {
   getListWorkspaceProviderCredentialsQueryKey,
   getGetWorkspaceTaxonomyQueryKey,
 } from '@workspace/api-client-react';
+import type { EnabledQueryOptions } from '@/features/query-options';
 
-export function useProviderCredentials(orgId: string, workspaceRef: string, enabled = true) {
+export function useProviderCredentials(orgId: string, workspaceRef: string, { enabled = true }: EnabledQueryOptions = {}) {
   return useListWorkspaceProviderCredentials(orgId, workspaceRef, {
     query: { enabled, queryKey: getListWorkspaceProviderCredentialsQueryKey(orgId, workspaceRef) },
   });
 }
 
-export function useProviders(orgId: string, workspaceRef: string, enabled = true) {
+export function useProviders(orgId: string, workspaceRef: string, { enabled = true }: EnabledQueryOptions = {}) {
   return useGetWorkspaceTaxonomy(orgId, workspaceRef, { query: { enabled, queryKey: getGetWorkspaceTaxonomyQueryKey(orgId, workspaceRef) } });
 }
 

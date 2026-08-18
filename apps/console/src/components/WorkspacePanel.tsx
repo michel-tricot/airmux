@@ -38,9 +38,10 @@ interface WorkspacePanelProps {
 export function WorkspacePanel({ orgId, workspaceRef, backHref, backLabel }: WorkspacePanelProps) {
   const [, setLocation] = useLocation();
 
-  const workspaceQuery = useWorkspace(orgId, workspaceRef);
-  const workspace = workspaceQuery.data;
   const authorization = useScopedAuthorization({ level: 'workspace', orgId, workspaceRef });
+  const canReadWorkspace = authorization.can(workspaceAccess.read);
+  const workspaceQuery = useWorkspace(orgId, workspaceRef, { enabled: canReadWorkspace });
+  const workspace = workspaceQuery.data;
   const canReadKeys = authorization.can(inferenceKeyAccess.read);
   const canCreateKeys = authorization.can(inferenceKeyAccess.create);
   const canRevokeKeys = authorization.can(inferenceKeyAccess.revoke);
@@ -50,9 +51,9 @@ export function WorkspacePanel({ orgId, workspaceRef, backHref, backLabel }: Wor
   const canRemoveMembers = authorization.can(workspaceMemberAccess.remove);
   const canUpdate = authorization.can(workspaceAccess.update);
   const canDelete = authorization.can(workspaceAccess.delete);
-  const keysQuery = useInferenceKeys(orgId, workspaceRef, canReadKeys);
-  const membersQuery = useWorkspaceMembers(orgId, workspaceRef, canReadMembers);
-  const candidatesQuery = useWorkspaceMemberCandidates(orgId, workspaceRef, canListCandidates);
+  const keysQuery = useInferenceKeys(orgId, workspaceRef, { enabled: canReadKeys });
+  const membersQuery = useWorkspaceMembers(orgId, workspaceRef, { enabled: canReadMembers });
+  const candidatesQuery = useWorkspaceMemberCandidates(orgId, workspaceRef, { enabled: canListCandidates });
   const members = membersQuery.data;
   const candidates = candidatesQuery.data;
 
@@ -68,11 +69,12 @@ export function WorkspacePanel({ orgId, workspaceRef, backHref, backLabel }: Wor
   const remove = useDeleteWorkspaceMutation(orgId);
   const defaultTab = canReadKeys ? 'keys' : 'members';
 
-  if (workspaceQuery.isLoading) return <LoadingState label="Loading workspace..." />;
-  if (workspaceQuery.isError) return <ErrorState error={workspaceQuery.error} resource="workspace" onRetry={() => workspaceQuery.refetch()} />;
   if (authorization.isLoading) return <LoadingState label="Loading workspace permissions..." />;
   if (authorization.isError)
     return <ErrorState error={authorization.error} resource="workspace permissions" onRetry={() => authorization.refetch()} />;
+  if (!canReadWorkspace) return <ErrorState message="You do not have access to this workspace." />;
+  if (workspaceQuery.isLoading) return <LoadingState label="Loading workspace..." />;
+  if (workspaceQuery.isError) return <ErrorState error={workspaceQuery.error} resource="workspace" onRetry={() => workspaceQuery.refetch()} />;
   if (!workspace) return <ErrorState message="Workspace not found" />;
 
   return (

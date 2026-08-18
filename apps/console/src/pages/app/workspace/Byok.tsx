@@ -18,8 +18,8 @@ import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/comp
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useRequiredParam } from '@/lib/route';
 import { ProviderIcon } from '@/components/ProviderIcon';
-import { PageShell } from '@/components/shared/page-shell';
-import { ErrorState, LoadingState } from '@/components/shared/states';
+import { PageHeader, PageShell } from '@/components/shared/page-shell';
+import { ErrorState } from '@/components/shared/states';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useAuthorization } from '@/features/permissions/hooks';
 import { catalogAccess } from '@/features/catalog/policy';
@@ -58,8 +58,8 @@ export default function WorkspaceByok() {
   const canRotate = authorization.can(providerCredentialAccess.rotate);
   const canDelete = authorization.can(providerCredentialAccess.delete);
   const canUseActions = canUpdate || canRotate || canDelete;
-  const credentialsQuery = useProviderCredentials(orgId, workspaceRef, canRead);
-  const taxonomy = useProviders(orgId, workspaceRef, canReadCatalog);
+  const credentialsQuery = useProviderCredentials(orgId, workspaceRef, { enabled: canRead });
+  const taxonomy = useProviders(orgId, workspaceRef, { enabled: canReadCatalog });
   const providers = taxonomy.data?.providers ?? [];
 
   const [addOpen, setAddOpen] = useState(false);
@@ -152,26 +152,20 @@ export default function WorkspaceByok() {
       : []),
   ];
 
-  if (authorization.isLoading) return <LoadingState label="Loading workspace permissions..." />;
-  if (authorization.isError)
-    return <ErrorState error={authorization.error} resource="workspace permissions" onRetry={() => authorization.refetch()} />;
-  if (!canRead) return <ErrorState message="You do not have access to provider keys in this workspace." />;
-
   return (
     <PageShell>
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Provider Keys</h1>
-          <p className="text-muted-foreground mt-1 text-sm">
-            Use your own API keys for this workspace. Keys are tried in priority order. If one fails, the next takes over automatically.
-          </p>
-        </div>
-        {canCreate && canReadCatalog && (
-          <Button onClick={() => setAddOpen(true)} disabled={taxonomy.isLoading || taxonomy.isError || providers.length === 0}>
-            <Plus className="w-4 h-4 mr-1" /> Add Key
-          </Button>
-        )}
-      </div>
+      <PageHeader
+        title="Provider Keys"
+        description="Use your own API keys for this workspace. Keys are tried in priority order. If one fails, the next takes over automatically."
+        actions={
+          canCreate &&
+          canReadCatalog && (
+            <Button onClick={() => setAddOpen(true)} disabled={taxonomy.isLoading || taxonomy.isError || providers.length === 0}>
+              <Plus className="w-4 h-4 mr-1" /> Add Key
+            </Button>
+          )
+        }
+      />
 
       {canReadCatalog && taxonomy.isError && <ErrorState error={taxonomy.error} resource="provider catalog" onRetry={() => taxonomy.refetch()} />}
 

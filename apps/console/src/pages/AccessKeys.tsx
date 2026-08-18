@@ -9,10 +9,11 @@ import { AccessKeyFormFields, accessKeyFormSchema } from '@/components/shared/ac
 import { PermissionsCell } from '@/components/shared/permissions-cell';
 import { ApiKeysTable } from '@/components/shared/api-keys-table';
 import { FormDialog } from '@/components/shared/form-dialog';
-import { ErrorState, LoadingState } from '@/components/shared/states';
-import { PageShell } from '@/components/shared/page-shell';
+import { ErrorState } from '@/components/shared/states';
+import { PageHeader, PageShell } from '@/components/shared/page-shell';
 import { useAuthorization } from '@/features/permissions/hooks';
 import { accessKeyAccess } from '@/features/keys/policy';
+import { userAccess } from '@/features/users/policy';
 
 export default function AccessKeys() {
   const [createOpen, setCreateOpen] = useState(false);
@@ -21,36 +22,29 @@ export default function AccessKeys() {
   const canRead = authorization.can(accessKeyAccess.instance.read);
   const canIssueKey = authorization.can(accessKeyAccess.instance.issue);
   const canRevoke = authorization.can(accessKeyAccess.instance.revoke);
-  const keysQuery = useInstanceAccessKeys(undefined, canRead);
-  const usersQuery = useUsers();
+  const canReadUsers = authorization.can(userAccess.list);
+  const keysQuery = useInstanceAccessKeys(undefined, { enabled: canRead });
+  const usersQuery = useUsers({ enabled: canReadUsers });
   const usersById = new Map(usersQuery.data?.map((user) => [user.id, user]));
   const createKey = useCreateInstanceAccessKeyMutation();
   const revokeKey = useRevokeInstanceAccessKeyMutation();
 
-  if (authorization.isLoading) return <LoadingState label="Loading instance permissions..." />;
-  if (authorization.isError) {
-    return <ErrorState error={authorization.error} resource="instance permissions" onRetry={() => authorization.refetch()} />;
-  }
-  if (!canRead) return <ErrorState message="You do not have access to instance access keys." />;
-
   return (
     <PageShell>
-      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-        <div>
-          <div className="flex items-center gap-3">
-            <KeyRound className="h-6 w-6 text-primary" />
-            <h1 className="text-3xl font-bold tracking-tight">Access Keys</h1>
-          </div>
-          <p className="mt-1 text-sm text-muted-foreground">Credentials limited by principal, tenant scope, and explicit permissions.</p>
-        </div>
-        {canIssueKey && (
-          <Button onClick={() => setCreateOpen(true)} className="gap-2">
-            <Plus className="h-4 w-4" /> Mint Access Key
-          </Button>
-        )}
-      </div>
+      <PageHeader
+        title="Access Keys"
+        description="Credentials limited by principal, tenant scope, and explicit permissions."
+        icon={KeyRound}
+        actions={
+          canIssueKey && (
+            <Button onClick={() => setCreateOpen(true)} className="gap-2">
+              <Plus className="h-4 w-4" /> Mint Access Key
+            </Button>
+          )
+        }
+      />
 
-      {usersQuery.isError && <ErrorState error={usersQuery.error} resource="key principals" onRetry={() => usersQuery.refetch()} />}
+      {canReadUsers && usersQuery.isError && <ErrorState error={usersQuery.error} resource="key principals" onRetry={() => usersQuery.refetch()} />}
 
       <ApiKeysTable
         keys={keysQuery.data}

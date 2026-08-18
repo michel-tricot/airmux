@@ -8,13 +8,14 @@ import {
   getListWorkspacesQueryKey,
   getGetWorkspaceQueryKey,
 } from '@workspace/api-client-react';
+import type { EnabledQueryOptions } from '@/features/query-options';
 
-export function useWorkspaces(orgId: string) {
-  return useListWorkspaces(orgId);
+export function useWorkspaces(orgId: string, { enabled = true }: EnabledQueryOptions = {}) {
+  return useListWorkspaces(orgId, { query: { enabled, queryKey: getListWorkspacesQueryKey(orgId) } });
 }
 
-export function useWorkspace(orgId: string, workspaceRef: string) {
-  return useGetWorkspace(orgId, workspaceRef, { query: { queryKey: getGetWorkspaceQueryKey(orgId, workspaceRef), retry: false } });
+export function useWorkspace(orgId: string, workspaceRef: string, { enabled = true }: EnabledQueryOptions = {}) {
+  return useGetWorkspace(orgId, workspaceRef, { query: { enabled, queryKey: getGetWorkspaceQueryKey(orgId, workspaceRef), retry: false } });
 }
 
 export function useCreateWorkspaceMutation(orgId: string) {
@@ -31,10 +32,11 @@ export function useRenameWorkspaceMutation(orgId: string, workspaceRef: string) 
   const queryClient = useQueryClient();
   return useUpdateWorkspace({
     mutation: {
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: getListWorkspacesQueryKey(orgId) });
-        queryClient.invalidateQueries({ queryKey: getGetWorkspaceQueryKey(orgId, workspaceRef) });
-      },
+      onSuccess: () =>
+        Promise.all([
+          queryClient.invalidateQueries({ queryKey: getListWorkspacesQueryKey(orgId) }),
+          queryClient.invalidateQueries({ queryKey: getGetWorkspaceQueryKey(orgId, workspaceRef) }),
+        ]),
       meta: { errorMessage: 'We couldn’t rename the workspace. Please try again.' },
     },
   });

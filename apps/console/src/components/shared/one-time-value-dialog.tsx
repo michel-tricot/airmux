@@ -26,6 +26,7 @@ export function OneTimeValueDialog({
   const [copyErrorValue, setCopyErrorValue] = useState<string | null>(null);
   const copyTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const copyAttempt = useRef(0);
+  const valueInput = useRef<HTMLInputElement>(null);
   const copied = copiedValue === value;
   const copyError = copyErrorValue === value;
 
@@ -52,6 +53,8 @@ export function OneTimeValueDialog({
       if (copyAttempt.current !== attempt) return;
       setCopiedValue(null);
       setCopyErrorValue(value);
+      valueInput.current?.focus();
+      valueInput.current?.select();
     }
   };
 
@@ -66,7 +69,14 @@ export function OneTimeValueDialog({
         <div className="space-y-2">
           <Label htmlFor="one-time-value">{label}</Label>
           <InputGroup className="min-w-0 gap-1 bg-muted p-1">
-            <InputGroupInput id="one-time-value" readOnly tabIndex={-1} value={value} className="h-7 min-w-0 px-2 font-mono text-muted-foreground" />
+            <InputGroupInput
+              ref={valueInput}
+              id="one-time-value"
+              readOnly
+              tabIndex={-1}
+              value={value}
+              className="h-7 min-w-0 px-2 font-mono text-muted-foreground"
+            />
             <Button onClick={copyToClipboard} variant="secondary" className="h-7 shrink-0 gap-2 px-3" aria-label={copied ? 'Copied' : copyLabel}>
               {copied ? (
                 <>
