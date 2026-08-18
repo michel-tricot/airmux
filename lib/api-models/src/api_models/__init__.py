@@ -513,6 +513,15 @@ class OrgCreate(BaseModel):
             title="Name",
         ),
     ]
+    slug: Annotated[
+        str | None,
+        Field(
+            description="Organization handle, globally unique and usable in place of the id; derived from the name when omitted",
+            max_length=63,
+            pattern="^[a-z0-9]+(?:-[a-z0-9]+)*$",
+            title="Slug",
+        ),
+    ] = ""
 
 
 class WorkspaceRole(RootModel[str]):
@@ -587,6 +596,7 @@ class OrgInvitationRevokedOut(BaseModel):
 class OrgOut(BaseModel):
     id: Annotated[UUID, Field(title="Id")]
     name: Annotated[str, Field(title="Name")]
+    slug: Annotated[str, Field(title="Slug")]
     personal_for: Annotated[UUID | None, Field(title="Personal For")]
     created_at: Annotated[AwareDatetime, Field(title="Created At")]
     updated_at: Annotated[AwareDatetime, Field(title="Updated At")]
