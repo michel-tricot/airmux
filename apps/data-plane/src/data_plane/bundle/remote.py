@@ -26,10 +26,6 @@ if TYPE_CHECKING:
 logger = logging.getLogger("data_plane")
 
 
-class BundleManifestMismatchError(ValueError):
-    pass
-
-
 class RemoteBundleSource(BundleSource):
     def __init__(
         self,
@@ -49,15 +45,11 @@ class RemoteBundleSource(BundleSource):
         )
         response.raise_for_status()
         manifest = BundleManifest.model_validate(response.json()["data"])
-        current = tuple(sorted((org_id, signed.payload.bundle_id) for org_id, signed in self._signed_by_org.items()))
-        if _bundle_ids(manifest) == current:
+        current_refs = tuple(sorted((org_id, signed.payload.bundle_id) for org_id, signed in self._signed_by_org.items()))
+        if _manifest_refs(manifest) == current_refs:
             return
         signed_bundles = list(await asyncio.gather(*(self._resolve(entry) for entry in manifest.bundles)))
-        bundles = tuple(self._verify(signed) for signed in signed_bundles)
-        bundle_set = BundleSet.from_bundles(bundles)
-        write_cached_bundles(self._config.cache_dir, signed_bundles)
-        self._holder.swap(bundle_set, source="polled")
-        self._signed_by_org = {signed.payload.org_id: signed for signed in signed_bundles}
+        self._adopt(signed_bundles, source="polled", persist=True)
 
     async def run(self) -> None:
         await run_periodic(
@@ -87,12 +79,17 @@ class RemoteBundleSource(BundleSource):
             if cached is None:
                 logger.warning("no cached bundles in %s, serving 503 until one arrives", self._config.cache_dir)
                 return
-            bundles = tuple(self._verify(signed) for signed in cached)
-            self._holder.swap(BundleSet.from_bundles(bundles), source="cached")
+            self._adopt(cached, source="cached", persist=False)
         except (InvalidSignature, ValidationError, ValueError):
             logger.exception("cached bundles in %s are invalid, ignoring them", self._config.cache_dir)
-            return
-        self._signed_by_org = {signed.payload.org_id: signed for signed in cached}
+
+    def _adopt(self, signed_bundles: list[SignedBundle], source: str, *, persist: bool) -> None:
+        bundles = tuple(self._verify(signed) for signed in signed_bundles)
+        bundle_set = BundleSet.from_bundles(bundles)
+        if persist:
+            write_cached_bundles(self._config.cache_dir, signed_bundles)
+        self._holder.swap(bundle_set, source)
+        self._signed_by_org = {signed.payload.org_id: signed for signed in signed_bundles}
 
     async def _resolve(self, entry: BundleManifestEntry) -> SignedBundle:
         existing = self._signed_by_org.get(entry.org_id)
@@ -105,7 +102,11 @@ class RemoteBundleSource(BundleSource):
         response.raise_for_status()
         signed = SignedBundle.model_validate(response.json()["data"])
         if (signed.payload.org_id, signed.payload.bundle_id) != (entry.org_id, entry.bundle_id):
-            raise BundleManifestMismatchError
+            message = (
+                f"bundle {signed.payload.bundle_id} for org {signed.payload.org_id} "
+                f"does not match manifest entry {entry.bundle_id} for org {entry.org_id}"
+            )
+            raise ValueError(message)
         return signed
 
     def _verify(self, signed: SignedBundle) -> BundleV1:
@@ -119,5 +120,5 @@ class RemoteBundleSource(BundleSource):
             raise InvalidSignature(message) from error
 
 
-def _bundle_ids(manifest: BundleManifest) -> tuple[tuple[UUID, UUID], ...]:
+def _manifest_refs(manifest: BundleManifest) -> tuple[tuple[UUID, UUID], ...]:
     return tuple(sorted((entry.org_id, entry.bundle_id) for entry in manifest.bundles))

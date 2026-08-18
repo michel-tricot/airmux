@@ -1,8 +1,7 @@
 """The bundle: how policy reaches the data plane.
 
-One internal type, two sources. remote polls the control plane and verifies signatures; local
-compiles a hand-written file. Both replace the holder's immutable bundle set, so the request path
-never learns the source."""
+One immutable request-path bundle set, two sources. remote polls the control plane and verifies
+signatures; local compiles a hand-written file. The request path never learns the source."""
 
 from __future__ import annotations
 

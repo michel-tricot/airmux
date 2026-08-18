@@ -19,14 +19,6 @@ if TYPE_CHECKING:
 logger = logging.getLogger("data_plane")
 
 
-class DuplicateOrgBundleError(ValueError):
-    pass
-
-
-class DuplicateInferenceTokenError(ValueError):
-    pass
-
-
 @dataclass(frozen=True)
 class BundleSnapshot:
     """Everything a request needs from one organization's bundle.
@@ -62,11 +54,13 @@ class BundleSet:
         bundle_list = tuple(bundles)
         snapshots = {bundle.org_id: BundleSnapshot.from_bundle(bundle) for bundle in bundle_list}
         if len(snapshots) != len(bundle_list):
-            raise DuplicateOrgBundleError
+            message = "bundle set contains more than one bundle for an organization"
+            raise ValueError(message)
         keys = [(key.token_hash, key) for bundle in bundle_list for key in bundle.keys]
         key_index = dict(keys)
         if len(key_index) != len(keys):
-            raise DuplicateInferenceTokenError
+            message = "inference token hash appears in more than one bundle"
+            raise ValueError(message)
         return cls(snapshots=MappingProxyType(snapshots), key_index=MappingProxyType(key_index))
 
 

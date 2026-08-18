@@ -455,16 +455,16 @@ With the environment secret store, a synthesized provider ref resolves through t
 
 ### Admission and snapshots
 
-`BundleHolder` is the only bundle admission point. It:
+`BundleSet.from_bundles()` prepares a complete request-path state before `BundleHolder.swap()` publishes it. Preparation:
 
 1. Builds one `BundleSnapshot` per organization
-2. Builds a global inference-token index from token hash to key and organization snapshot
-3. Replaces the complete bundle set with one reference
+2. Builds a global inference-token index from token hash to `KeyEntry`
+3. Rejects duplicate organizations and token hashes
 
-Each snapshot contains its bundle plus key, model, provider, credential, and compiled-profile indexes.
-A handler hashes the bearer once, resolves both its key and snapshot from the global index, and uses
-that snapshot for the entire request. A concurrent manifest swap therefore cannot mix an old key
-index with a new catalog or price table.
+Each snapshot contains its bundle plus model, provider, credential, and compiled-profile indexes. A
+handler captures one `BundleSet`, hashes the bearer once, resolves its key from the global index, and
+uses the key's organization id to select the snapshot. A concurrent manifest swap therefore cannot
+mix an old key index with a new catalog or price table.
 
 ## The canonical waist and adapter model
 
