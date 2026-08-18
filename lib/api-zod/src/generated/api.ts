@@ -1348,6 +1348,83 @@ export const RevokeInferenceKeyResponse = zod.object({
 
 
 /**
+ * List provider credentials owned by the instance.
+ *
+ * Required permission: `provider-credentials.read`.
+ * @summary List Instance Provider Credentials
+ */
+export const ListInstanceProviderCredentialsResponseItem = zod.object({
+  "id": zod.uuid(),
+  "org_id": zod.union([zod.uuid(),zod.null()]),
+  "workspace_id": zod.union([zod.uuid(),zod.null()]),
+  "provider_id": zod.uuid(),
+  "provider_name": zod.string(),
+  "name": zod.string(),
+  "priority": zod.int(),
+  "enabled": zod.boolean(),
+  "version": zod.int(),
+  "status": zod.string(),
+  "status_at": zod.union([zod.coerce.date(),zod.null()]),
+  "fingerprint": zod.string(),
+  "created_at": zod.coerce.date(),
+  "updated_at": zod.coerce.date(),
+  "deleted_at": zod.union([zod.coerce.date(),zod.null()]),
+  "scope": zod.enum(['platform', 'org', 'workspace'])
+})
+export const ListInstanceProviderCredentialsResponse = zod.array(ListInstanceProviderCredentialsResponseItem)
+
+
+/**
+ * Store a provider API key available to every organization on the instance.
+ *
+ * Required permission: `provider-credentials.manage`.
+ * @summary Create Instance Provider Credential
+ */
+export const createInstanceProviderCredentialBodyProviderMax = 63;
+
+
+export const createInstanceProviderCredentialBodyProviderRegExp = new RegExp('^[a-z0-9][a-z0-9_-]*$');
+export const createInstanceProviderCredentialBodyNameDefault = `default`;
+export const createInstanceProviderCredentialBodyNameMax = 80;
+
+
+export const createInstanceProviderCredentialBodyNameRegExp = new RegExp('^[A-Za-z0-9][A-Za-z0-9_.-]*$');
+export const createInstanceProviderCredentialBodyValueMax = 16384;
+
+export const createInstanceProviderCredentialBodyPriorityDefault = 100;
+export const createInstanceProviderCredentialBodyPriorityMin = 0;
+export const createInstanceProviderCredentialBodyPriorityMax = 1000000;
+
+
+
+export const CreateInstanceProviderCredentialBody = zod.object({
+  "provider": zod.string().min(1).max(createInstanceProviderCredentialBodyProviderMax).regex(createInstanceProviderCredentialBodyProviderRegExp).describe('Provider name from the catalog, e.g. openai'),
+  "name": zod.string().min(1).max(createInstanceProviderCredentialBodyNameMax).regex(createInstanceProviderCredentialBodyNameRegExp).default(createInstanceProviderCredentialBodyNameDefault).describe('Handle for this key within the provider and scope, e.g. prod or backup'),
+  "value": zod.string().min(1).max(createInstanceProviderCredentialBodyValueMax).describe('The provider API key; stored securely and never returned'),
+  "priority": zod.int().min(createInstanceProviderCredentialBodyPriorityMin).max(createInstanceProviderCredentialBodyPriorityMax).default(createInstanceProviderCredentialBodyPriorityDefault).describe('Lower is tried first; ties break by name')
+}).describe('A provider API key and the metadata used to select it.')
+
+export const CreateInstanceProviderCredentialResponse = zod.object({
+  "id": zod.uuid(),
+  "org_id": zod.union([zod.uuid(),zod.null()]),
+  "workspace_id": zod.union([zod.uuid(),zod.null()]),
+  "provider_id": zod.uuid(),
+  "provider_name": zod.string(),
+  "name": zod.string(),
+  "priority": zod.int(),
+  "enabled": zod.boolean(),
+  "version": zod.int(),
+  "status": zod.string(),
+  "status_at": zod.union([zod.coerce.date(),zod.null()]),
+  "fingerprint": zod.string(),
+  "created_at": zod.coerce.date(),
+  "updated_at": zod.coerce.date(),
+  "deleted_at": zod.union([zod.coerce.date(),zod.null()]),
+  "scope": zod.enum(['platform', 'org', 'workspace'])
+})
+
+
+/**
  * Store a provider API key for every workspace in an organization.
  *
  * Required permission: `provider-credentials.manage`.

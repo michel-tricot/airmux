@@ -1,7 +1,8 @@
 import { lazy, type ComponentType } from 'react';
-import { Building2, KeyRound, LayoutDashboard, Users, type LucideIcon } from 'lucide-react';
+import { Building2, KeyRound, LayoutDashboard, ShieldCheck, Users, type LucideIcon } from 'lucide-react';
 import { anyOf, type AccessPolicy } from '@/features/permissions/authorization';
 import { accessKeyAccess } from '@/features/keys/policy';
+import { providerCredentialAccess } from '@/features/credentials/policy';
 import { orgAccess } from '@/features/orgs/policy';
 import { telemetryAccess } from '@/features/telemetry/policy';
 import { userAccess } from '@/features/users/policy';
@@ -14,6 +15,7 @@ const WorkspaceDetail = lazy(() => import('@/pages/WorkspaceDetail'));
 const UsersPage = lazy(() => import('@/pages/Users'));
 const UserDetail = lazy(() => import('@/pages/UserDetail'));
 const AccessKeys = lazy(() => import('@/pages/AccessKeys'));
+const ProviderKeys = lazy(() => import('@/pages/ProviderKeys'));
 
 export interface InstanceRouteDefinition {
   readonly path: string;
@@ -49,5 +51,11 @@ export const instanceRoutes: readonly InstanceRouteDefinition[] = [
     component: AccessKeys,
     access: accessKeyAccess.instance.read,
     navigation: { label: 'Access Keys', icon: KeyRound },
+  },
+  {
+    path: '/instance/provider-keys',
+    component: ProviderKeys,
+    access: providerCredentialAccess.instance.read,
+    navigation: { label: 'Provider Keys', icon: ShieldCheck },
   },
 ];

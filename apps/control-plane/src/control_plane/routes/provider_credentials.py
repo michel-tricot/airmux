@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 
 from contract import Secret, SecretRejectedError, SecretStore
 from control_plane.authz import Permission, Scope
-from control_plane.deps import OrgDep, WorkspaceDep, org_scope, require, workspace_scope
+from control_plane.deps import OrgDep, WorkspaceDep, instance_scope, org_scope, require, workspace_scope
 from control_plane.models import Provider, ProviderCredential, Workspace
 from control_plane.models.common.wire import DeletedOut, Envelope
 from control_plane.models.provider_credential import (
@@ -18,6 +18,7 @@ from control_plane.models.provider_credential import (
 )
 
 router = APIRouter(prefix="/orgs/{org_id}")
+instance_router = APIRouter(prefix="/instance/provider-credentials")
 
 
 def secret_store(request: Request) -> SecretStore:
@@ -50,7 +51,7 @@ async def credential_scope(credential: CredentialDep) -> Scope:
 
 async def _create_provider_credential(
     body: ProviderCredentialIn,
-    org_id: UUID,
+    org_id: UUID | None,
     workspace: Workspace | None,
     request: Request,
 ) -> Envelope[ProviderCredentialOut]:
@@ -78,6 +79,27 @@ async def _hold(store: SecretStore, credential: ProviderCredential, secret: Secr
     except SecretRejectedError as e:
         raise HTTPException(status_code=501, detail=str(e)) from e
     return held.fingerprint
+
+
+@instance_router.post(
+    "",
+    tags=["Instance Provider Credentials"],
+    dependencies=[require(instance_scope, Permission.provider_credentials_manage)],
+)
+async def create_instance_provider_credential(body: ProviderCredentialIn, request: Request) -> Envelope[ProviderCredentialOut]:
+    """Store a provider API key available to every organization on the instance."""
+    return await _create_provider_credential(body, None, None, request)
+
+
+@instance_router.get(
+    "",
+    tags=["Instance Provider Credentials"],
+    dependencies=[require(instance_scope, Permission.provider_credentials_read)],
+)
+async def list_instance_provider_credentials() -> Envelope[list[ProviderCredentialOut]]:
+    """List provider credentials owned by the instance."""
+    credentials = await ProviderCredential.for_instance()
+    return Envelope(data=[ProviderCredentialOut.model_validate(credential) for credential in credentials])
 
 
 @router.post(

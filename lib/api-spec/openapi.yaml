@@ -2257,6 +2257,79 @@ paths:
       - scope: workspace_scope
         anyOf:
         - inference-keys.manage
+  /api/v1/instance/provider-credentials:
+    get:
+      tags:
+      - Instance Provider Credentials
+      summary: List Instance Provider Credentials
+      description: 'List provider credentials owned by the instance.
+
+
+        Required permission: `provider-credentials.read`.'
+      operationId: list_instance_provider_credentials
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_list_ProviderCredentialOut__'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
+      security:
+      - AccessKey: []
+      - SessionCookie: []
+      x-airllm-authority:
+      - scope: instance_scope
+        anyOf:
+        - provider-credentials.read
+    post:
+      tags:
+      - Instance Provider Credentials
+      summary: Create Instance Provider Credential
+      description: 'Store a provider API key available to every organization on the instance.
+
+
+        Required permission: `provider-credentials.manage`.'
+      operationId: create_instance_provider_credential
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProviderCredentialIn'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_ProviderCredentialOut_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
+      security:
+      - AccessKey: []
+      - SessionCookie: []
+      x-airllm-authority:
+      - scope: instance_scope
+        anyOf:
+        - provider-credentials.manage
   /api/v1/orgs/{org_id}/provider-credentials:
     post:
       tags:
@@ -6517,6 +6590,9 @@ tags:
 - name: Instance Model Catalog
   description: Manage the providers and models available through this AirLLM instance
   x-displayName: Model Catalog
+- name: Instance Provider Credentials
+  description: Manage provider API keys available across the AirLLM instance
+  x-displayName: Provider Credentials
 - name: Data Plane Instances
   description: Inspect connected data-plane instances
   x-displayName: Data Planes
@@ -6594,6 +6670,7 @@ x-tagGroups:
   - Instance Users
   - Instance Access Keys
   - Instance Model Catalog
+  - Instance Provider Credentials
   - Data Plane Instances
   - Instance Activity
   - OSS

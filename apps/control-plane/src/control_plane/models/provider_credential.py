@@ -120,6 +120,11 @@ class ProviderCredential(Record, Identified, Tombstonable, table=True):
         scoped = (cls.workspace_id == workspace_id,) if workspace_id is not None else ()
         return await cls.find(cls.org_id == org_id, *scoped, order_by=(cls.priority, cls.name))  # ty: ignore[invalid-argument-type] sqlmodel columns type as their python values
 
+    @classmethod
+    async def for_instance(cls) -> list[Self]:
+        """Instance credentials in the order the data plane tries them."""
+        return await cls.find(col(cls.org_id).is_(None), order_by=(cls.priority, cls.name))  # ty: ignore[invalid-argument-type] sqlmodel columns type as their python values
+
     async def delete_with_value(self, store: SecretStore) -> None:
         """Delete the credential and the value behind it.
 
