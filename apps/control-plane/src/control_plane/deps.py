@@ -6,7 +6,7 @@ from uuid import UUID
 from fastapi import Cookie, Depends, HTTPException, Request, params
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
-from control_plane.authority import decision
+from control_plane.authority import decision, effective_permissions
 from control_plane.authz import ALL_PERMISSIONS, Actor, Decision, Grant, Permission, Scope
 from control_plane.db import transaction
 from control_plane.keys import verify_bearer
@@ -176,6 +176,7 @@ async def authorize(resolved: Actor, permission: Permission, scope: Scope) -> No
 
 class PermissionCheck(Protocol):
     required_permission: Permission
+    required_permissions: tuple[Permission, ...]
     required_scope: str
 
     def __call__(self, actor: Actor) -> Awaitable[None]: ...
@@ -189,6 +190,24 @@ def require(permission: Permission, scope_resolver: Callable[..., Awaitable[Scop
 
     checker = cast("PermissionCheck", check_permission)
     checker.required_permission = permission
+    checker.required_permissions = (permission,)
+    scope_name = getattr(scope_resolver, "__name__", "")
+    checker.required_scope = scope_name if isinstance(scope_name, str) else type(scope_resolver).__name__
+    return Depends(checker)
+
+
+def require_any(permissions: tuple[Permission, ...], scope_resolver: Callable[..., Awaitable[Scope]]) -> params.Depends:
+    scope_dependency = Depends(scope_resolver)
+
+    async def check_permission(resolved: ActorDep, scope: Scope = scope_dependency) -> None:
+        effective = await effective_permissions(resolved, scope)
+        if not any(permission in effective for permission in permissions):
+            names = ", ".join(permission.value for permission in permissions)
+            raise HTTPException(status_code=403, detail=f"Missing one of {names} permissions for {scope.level.value} scope")
+
+    checker = cast("PermissionCheck", check_permission)
+    checker.required_permission = permissions[0]
+    checker.required_permissions = permissions
     scope_name = getattr(scope_resolver, "__name__", "")
     checker.required_scope = scope_name if isinstance(scope_name, str) else type(scope_resolver).__name__
     return Depends(checker)

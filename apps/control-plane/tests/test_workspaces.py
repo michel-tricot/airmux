@@ -11,6 +11,8 @@ from contract import SignedBundle, uuid7, verify_bundle
 from control_plane.authz import OrgRole
 from control_plane.models import AuditLog
 
+CSRF = {"X-Requested-With": "fetch"}
+
 
 def _member(c, cp, org_id, email, role: OrgRole = OrgRole.member):
     created = c.post("/api/v1/auth/signup", json={"email": email, "name": email, "password": "hunter2-hunter2"})
@@ -18,6 +20,32 @@ def _member(c, cp, org_id, email, role: OrgRole = OrgRole.member):
     uid = created.json()["data"]["user_id"]
     assert c.put(f"/api/v1/orgs/{org_id}/users/{uid}", json={"role": role}, headers=cp.headers(org_id)).status_code == 200
     return uid, cp.headers_for(org_id, uid)
+
+
+def test_org_member_only_sees_joined_workspaces(tmp_path):
+    cp = setup_control_plane(tmp_path)
+    root = cp.headers()
+    with TestClient(cp.app, base_url="https://testserver") as c:
+        org_id = make_org(c, root, "o1")
+        org = cp.headers(org_id)
+        joined = make_workspace(c, org, "joined")
+        sibling = make_workspace(c, org, "sibling")
+        member_id, _ = _member(c, cp, org_id, "member@example.com")
+        assert (
+            c.put(
+                f"/api/v1/orgs/{org_id}/workspaces/{joined}/members/{member_id}",
+                json={"role": "viewer"},
+                headers=org,
+            ).status_code
+            == 200
+        )
+
+        listed = c.get(f"/api/v1/orgs/{org_id}/workspaces", headers=CSRF)
+
+        assert listed.status_code == 200
+        assert [workspace["id"] for workspace in listed.json()["data"]] == [str(joined)]
+        assert c.get(f"/api/v1/orgs/{org_id}/workspaces/{joined}", headers=CSRF).status_code == 200
+        assert c.get(f"/api/v1/orgs/{org_id}/workspaces/{sibling}", headers=CSRF).status_code == 403
 
 
 def test_workspace_lifecycle_and_creator_auto_enrollment(tmp_path):

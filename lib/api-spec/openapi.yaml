@@ -1511,10 +1511,10 @@ paths:
       tags:
       - Organization Workspaces
       summary: List Workspaces
-      description: 'List workspaces in an organization.
+      description: 'List workspaces the caller can read in an organization.
 
 
-        Required permission: `workspaces.read`.'
+        Required permission: one of `workspaces.read`, `organizations.read`.'
       operationId: list_workspaces
       security:
       - AccessKey: []

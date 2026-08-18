@@ -256,11 +256,12 @@ class ControlPlaneApp(FastAPI):
             "description": "Browser session cookie returned by login or signup. Browser requests must also send `X-Requested-With`.",
         }
         for route in _api_routes(self.routes):
-            permissions = [
-                str(permission)
+            permission_rules = [
+                getattr(dependency.call, "required_permissions", (permission,))
                 for dependency in route.dependant.dependencies
                 if (permission := getattr(dependency.call, "required_permission", None))
             ]
+            permissions = [str(permission) for rule in permission_rules for permission in rule]
             access = [kind for dependency in route.dependant.dependencies if (kind := getattr(dependency.call, "access", None)) is not None]
             for method in route.methods or ():
                 path = "/api/v1" + route.path
@@ -272,7 +273,11 @@ class ControlPlaneApp(FastAPI):
                     operation["security"] = [{"AccessKey": []}, {"SessionCookie": []}]
                     operation["responses"].setdefault("401", {"description": "Authentication failed"})
                     operation["responses"].setdefault("403", {"description": "The credential does not have the required permission"})
-                    authentication = f"Required permission: `{'`, `'.join(permissions)}`."
+                    authentication = (
+                        f"Required permission: one of `{'`, `'.join(permissions)}`."
+                        if len(permission_rules) == 1 and len(permission_rules[0]) > 1
+                        else f"Required permission: `{'`, `'.join(permissions)}`."
+                    )
                 elif "public" in access:
                     operation["security"] = []
                     authentication = "Authentication: none."

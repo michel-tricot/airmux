@@ -4,9 +4,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import App from '@/App';
 import { ORG, WORKSPACES, server } from './msw';
 
-const ORG_MEMBER_PERMISSIONS = ['organizations.read', 'workspaces.read', 'workspaces.create', 'catalog.read'];
+const ORG_MEMBER_PERMISSIONS = ['organizations.read', 'workspaces.create', 'catalog.read'];
 const WORKSPACE_MEMBER_PERMISSIONS = [
   ...ORG_MEMBER_PERMISSIONS,
+  'workspaces.read',
   'members.read',
   'provider-credentials.read',
   'inference-keys.read',

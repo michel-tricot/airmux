@@ -1036,9 +1036,9 @@ export const CreateWorkspaceResponse = zod.object({
 
 
 /**
- * List workspaces in an organization.
+ * List workspaces the caller can read in an organization.
  *
- * Required permission: `workspaces.read`.
+ * Required permission: one of `workspaces.read`, `organizations.read`.
  * @summary List Workspaces
  */
 export const ListWorkspacesParams = zod.object({

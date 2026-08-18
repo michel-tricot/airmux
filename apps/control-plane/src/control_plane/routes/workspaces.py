@@ -5,8 +5,9 @@ from uuid import UUID  # noqa: TC003 fastapi resolves path param annotations at 
 from fastapi import APIRouter, HTTPException, Request
 from sqlmodel import col
 
+from control_plane.authority import readable_workspaces
 from control_plane.authz import Permission, WorkspaceRole
-from control_plane.deps import ActorDep, OrgDep, WorkspaceDep, org_scope, require, workspace_scope
+from control_plane.deps import ActorDep, OrgDep, WorkspaceDep, org_scope, require, require_any, workspace_scope
 from control_plane.keys import mint_inference_key
 from control_plane.models import InferenceKey, Org, OrgMembership, User, Workspace, WorkspaceMembership
 from control_plane.models.common.wire import DeletedOut, Envelope
@@ -35,11 +36,16 @@ async def create_workspace(body: WorkspaceCreate, org_id: OrgDep, actor: ActorDe
     return Envelope(data=WorkspaceOut.model_validate(workspace))
 
 
-@router.get("", tags=["Organization Workspaces"], dependencies=[require(Permission.workspaces_read, org_scope)])
-async def list_workspaces(org_id: OrgDep) -> Envelope[list[WorkspaceOut]]:
-    """List workspaces in an organization."""
+@router.get(
+    "",
+    tags=["Organization Workspaces"],
+    dependencies=[require_any((Permission.workspaces_read, Permission.organizations_read), org_scope)],
+)
+async def list_workspaces(org_id: OrgDep, actor: ActorDep) -> Envelope[list[WorkspaceOut]]:
+    """List workspaces the caller can read in an organization."""
     workspaces = await Workspace.find(Workspace.org_id == org_id, order_by=col(Workspace.name))
-    return Envelope(data=[WorkspaceOut.model_validate(w) for w in workspaces])
+    visible = await readable_workspaces(actor, workspaces)
+    return Envelope(data=[WorkspaceOut.model_validate(workspace) for workspace in visible])
 
 
 @router.get("/{workspace_ref}", tags=["Workspace Settings"], dependencies=[require(Permission.workspaces_read, workspace_scope)])

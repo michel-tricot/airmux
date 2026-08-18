@@ -28,6 +28,8 @@ if TYPE_CHECKING:
     from datetime import datetime
     from uuid import UUID
 
+    from control_plane.models import Workspace
+
 
 class AuthorizationError(Exception):
     def __init__(self, detail: str) -> None:
@@ -79,6 +81,13 @@ async def decisions(actor: Actor, permission: Permission, targets: Iterable[Scop
     scopes = frozenset(targets)
     grants = await standing_grants(actor.principal_id, scopes)
     return {scope: decide(actor, grants, AccessRequest(permission=permission, target=scope)) for scope in scopes}
+
+
+async def readable_workspaces(actor: Actor, workspaces: Iterable[Workspace]) -> list[Workspace]:
+    candidates = tuple(workspaces)
+    scopes = {workspace.id: Scope.workspace(workspace.org_id, workspace.id) for workspace in candidates}
+    results = await decisions(actor, Permission.workspaces_read, scopes.values())
+    return [workspace for workspace in candidates if results[scopes[workspace.id]] is Decision.allow]
 
 
 async def is_allowed(actor: Actor, permission: Permission, target: Scope) -> bool:

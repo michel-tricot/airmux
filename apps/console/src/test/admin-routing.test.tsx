@@ -93,7 +93,10 @@ describe('instance administration routes', () => {
     server.use(http.get('/api/v1/users', () => new HttpResponse(null, { status: 503 })));
     renderAt('/instance/users');
 
-    expect(await screen.findByRole('alert', undefined, { timeout: 2_500 })).toHaveTextContent('Could not reach the control plane');
+    const alert = await screen.findByRole('alert', undefined, { timeout: 2_500 });
+    expect(alert).toHaveTextContent('Control plane unavailable');
+    expect(alert).toHaveTextContent('Could not reach the control plane');
+    expect(screen.getByRole('button', { name: /retry/i })).toBeInTheDocument();
     expect(screen.queryByText('No users found.')).not.toBeInTheDocument();
   });
 

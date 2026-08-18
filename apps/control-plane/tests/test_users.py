@@ -204,7 +204,7 @@ def test_org_access_key_requires_standing_membership(tmp_path):
         body = {
             "user_id": user_id,
             "label": "member",
-            "permissions": [Permission.workspaces_read],
+            "permissions": [Permission.organizations_read],
         }
         assert client.post(f"/api/v1/orgs/{org_id}/access-keys", json=body, headers=root).status_code == 403
         client.put(f"/api/v1/orgs/{org_id}/users/{user_id}", json={"role": "member"}, headers=cp.headers(org_id))
@@ -265,7 +265,7 @@ def test_removing_membership_removes_effective_key_authority(tmp_path):
             json={
                 "user_id": user_id,
                 "label": "member",
-                "permissions": [Permission.workspaces_read],
+                "permissions": [Permission.organizations_read],
             },
             headers=root,
         ).json()["data"]
@@ -287,7 +287,7 @@ def test_access_key_listing_shows_the_principal(tmp_path):
             json={
                 "user_id": user_id,
                 "label": "member",
-                "permissions": [Permission.workspaces_read],
+                "permissions": [Permission.organizations_read],
             },
             headers=root,
         ).json()["data"]

@@ -149,7 +149,6 @@ ORG_ROLE_PERMISSIONS = {
     OrgRole.member: frozenset(
         {
             Permission.organizations_read,
-            Permission.workspaces_read,
             Permission.workspaces_create,
             Permission.catalog_read,
         }

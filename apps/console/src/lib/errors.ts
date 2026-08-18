@@ -16,3 +16,11 @@ export function queryErrorMessage(error: unknown, resource = 'data'): string {
   if (error instanceof ApiError && error.status >= 500) return 'Could not reach the control plane. Try again.';
   return `Could not load ${resource}. Try again.`;
 }
+
+export function queryErrorTitle(error: unknown, message?: string): string {
+  if (isApiErrorStatus(error, 401)) return 'Session expired';
+  if (isApiErrorStatus(error, 403) || message?.startsWith('You do not have access')) return 'Access restricted';
+  if (isApiErrorStatus(error, 404) || message?.toLocaleLowerCase().includes('not found')) return 'Not found';
+  if ((error instanceof ApiError && error.status >= 500) || error instanceof TypeError) return 'Control plane unavailable';
+  return 'Unable to load';
+}

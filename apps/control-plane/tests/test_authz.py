@@ -94,13 +94,25 @@ def test_spec_advertises_the_enforced_permission():
             for dependency in route.dependant.dependencies
             if (permission := getattr(dependency.call, "required_permission", None)) is not None
         ]
+        alternatives = [
+            tuple(str(permission) for permission in getattr(dependency.call, "required_permissions", ()))
+            for dependency in route.dependant.dependencies
+            if len(getattr(dependency.call, "required_permissions", ())) > 1
+        ]
         access = [access for dependency in route.dependant.dependencies if (access := getattr(dependency.call, "access", None)) is not None]
         for method in sorted(route.methods or ()):
             operation = spec["paths"]["/api/v1" + route.path][method.lower()]
             description = operation.get("description", "")
             if enforced and operation.get("security") != [{"AccessKey": []}, {"SessionCookie": []}]:
                 problems.append(f"{method} {route.path} does not advertise bearer-or-cookie authentication")
-            if enforced and f"Required permission: `{enforced[0]}`." not in description:
+            documented = (
+                f"Required permission: one of `{'`, `'.join(alternatives[0])}`."
+                if alternatives
+                else f"Required permission: `{enforced[0]}`."
+                if enforced
+                else ""
+            )
+            if enforced and documented not in description:
                 problems.append(f"{method} {route.path} does not state its permission")
             if "public" in access and (operation.get("security") != [] or "Authentication: none." not in description):
                 problems.append(f"{method} {route.path} does not advertise public access")

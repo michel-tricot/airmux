@@ -3218,9 +3218,9 @@ export const getListWorkspacesUrl = (orgId: string,) => {
 }
 
 /**
- * List workspaces in an organization.
+ * List workspaces the caller can read in an organization.
  *
- * Required permission: `workspaces.read`.
+ * Required permission: one of `workspaces.read`, `organizations.read`.
  * @summary List Workspaces
  */
 export const listWorkspaces = async (orgId: string, options?: Parameters<typeof customFetch>[1]): Promise<WorkspaceOut[]> => {
