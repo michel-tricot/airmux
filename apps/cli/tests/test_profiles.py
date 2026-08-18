@@ -63,3 +63,23 @@ def test_url_profile_keeps_the_same_name_on_different_deployments(tmp_path, monk
     assert config["active"] == "michel@airllm-example.fly.dev"
     assert config["profiles"]["michel"]["token"] == "local"
     assert config["profiles"]["michel@airllm-example.fly.dev"]["token"] == "fly-new"
+
+
+def test_instance_profile_does_not_replace_an_organization_named_instance(tmp_path, monkeypatch):
+    monkeypatch.setenv("GW_CLI_CONFIG", str(tmp_path / "config.toml"))
+    organization = {
+        "control_plane_url": "https://airllm.example.com",
+        "scope": "org",
+        "org_id": "org-1",
+        "org_name": "instance",
+        "token": "org",
+    }
+    instance = {
+        "control_plane_url": "https://airllm.example.com",
+        "scope": "instance",
+        "token": "instance",
+    }
+
+    assert upsert_url_profile("instance", organization) == "instance"
+    assert upsert_url_profile("instance", instance) == "instance@airllm.example.com"
+    assert len(load_config()["profiles"]) == 2

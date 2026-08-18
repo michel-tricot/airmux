@@ -1348,7 +1348,7 @@ export const getCliAuthApproveUrl = () => {
 }
 
 /**
- * Approve a device authorization for one organization visible to the current user.
+ * Approve a device authorization for instance access or one visible organization.
  *
  * Authentication: browser session.
  * @summary Approve CLI Authorization

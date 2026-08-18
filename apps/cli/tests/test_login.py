@@ -76,3 +76,48 @@ def test_login_only_presents_the_current_control_planes_existing_key(tmp_path, m
     assert profile is not None
     assert profile["control_plane_url"] == "https://cp.example"
     assert profile["console_url"] == "https://cp.example"
+
+
+@respx.mock
+def test_login_saves_instance_access_without_an_organization(tmp_path, monkeypatch):
+    monkeypatch.setenv("GW_CLI_CONFIG", str(tmp_path / "config.toml"))
+    monkeypatch.setattr("cli.auth.time.sleep", lambda _: None)
+    respx.post("https://cp.example/api/v1/auth/cli/start").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "data": {
+                    "user_code": "ABCD-EFGH",
+                    "verification_url": "https://cp.example/cli?code=ABCD-EFGH",
+                    "poll_secret": "sk-cli-poll",
+                    "interval_seconds": 0,
+                    "expires_in_seconds": 30,
+                }
+            },
+        )
+    )
+    respx.post("https://cp.example/api/v1/auth/cli/poll").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "data": {
+                    "status": "complete",
+                    "interval_seconds": 0,
+                    "scope": "instance",
+                    "token": "sk-cp-instance",
+                    "org_id": None,
+                    "org_name": None,
+                }
+            },
+        )
+    )
+
+    result = runner.invoke(app, ["login", "--url", "https://cp.example", "--no-browser"])
+
+    assert result.exit_code == 0, result.output
+    profile = active_profile()
+    assert profile is not None
+    assert profile["name"] == "instance"
+    assert profile["scope"] == "instance"
+    assert "org_id" not in profile
+    assert "org_name" not in profile

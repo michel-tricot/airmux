@@ -13,6 +13,8 @@ import { TerminalSquare, CheckCircle2 } from 'lucide-react';
 import { formatRelative } from '@/lib/format';
 import { ErrorState, LoadingState } from '@/components/shared/states';
 
+const INSTANCE_SCOPE = 'instance';
+
 function lookupError(error: unknown): string {
   if (error instanceof ApiError) {
     if (error.status === 404) return 'No pending login with this code. Check your terminal, or run airllm login again.';
@@ -25,7 +27,7 @@ function lookupError(error: unknown): string {
 export default function CliApprove() {
   const [code, setCode] = useState(new URLSearchParams(window.location.search).get('code') ?? '');
   const [submitted, setSubmitted] = useState<string | null>(() => new URLSearchParams(window.location.search).get('code'));
-  const [orgId, setOrgId] = useState('');
+  const [target, setTarget] = useState('');
   const [name, setName] = useState('');
 
   const details = useCliAuthRequestDetails(
@@ -35,10 +37,15 @@ export default function CliApprove() {
   const enrollment = useEnrollment({ query: { queryKey: getEnrollmentQueryKey(), enabled: submitted !== null, retry: false } });
   const approve = useCliAuthApprove();
   const createPersonalOrg = useCreatePersonalOrgMutation();
-  const submitPersonalOrg = (name: string) => createPersonalOrg.mutate({ data: { name } }, { onSuccess: (org) => setOrgId(org.id) });
+  const submitPersonalOrg = (name: string) => createPersonalOrg.mutate({ data: { name } }, { onSuccess: (org) => setTarget(org.id) });
 
   const orgs = enrollment.data?.orgs ?? [];
-  const selected = orgId || orgs[0]?.id || '';
+  const canApproveInstance = details.data?.can_approve_instance ?? false;
+  const selected = target || (canApproveInstance ? INSTANCE_SCOPE : orgs[0]?.id) || '';
+  const targets = [
+    ...(canApproveInstance ? [{ value: INSTANCE_SCOPE, label: 'Instance' }] : []),
+    ...orgs.map((org) => ({ value: org.id, label: `Organization: ${org.name}` })),
+  ];
 
   return (
     <div className="min-h-[100dvh] flex items-center justify-center bg-muted/30 p-4">
@@ -100,15 +107,10 @@ export default function CliApprove() {
               <LoadingState label="Loading organizations..." />
             ) : enrollment.isError ? (
               <ErrorState message="Could not load your organizations. Try again." onRetry={() => enrollment.refetch()} />
-            ) : orgs.length > 0 ? (
+            ) : canApproveInstance || orgs.length > 0 ? (
               <div className="space-y-2">
-                <Label htmlFor="org">Organization for CLI access</Label>
-                <Dropdown
-                  aria-label="Organization"
-                  value={selected}
-                  onValueChange={setOrgId}
-                  options={orgs.map((org) => ({ value: org.id, label: org.name }))}
-                />
+                <Label htmlFor="cli-scope">Access scope</Label>
+                <Dropdown id="cli-scope" aria-label="Access scope" value={selected} onValueChange={setTarget} options={targets} />
               </div>
             ) : (
               <form
@@ -137,7 +139,14 @@ export default function CliApprove() {
             <Button
               className="w-full"
               disabled={!selected || approve.isPending || enrollment.isLoading || enrollment.isError}
-              onClick={() => approve.mutate({ data: { user_code: submitted, org_id: selected } })}
+              onClick={() =>
+                approve.mutate({
+                  data:
+                    selected === INSTANCE_SCOPE
+                      ? { user_code: submitted, scope: 'instance' }
+                      : { user_code: submitted, scope: 'org', org_id: selected },
+                })
+              }
             >
               {approve.isPending ? 'Approving...' : 'Authorize'}
             </Button>

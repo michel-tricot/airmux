@@ -6,10 +6,10 @@ from urllib.parse import quote
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Request, Response
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from contract import PLAYGROUND_COOKIE
-from control_plane.authority import effective_permissions, principal_can_select_org, visible_org_ids
+from control_plane.authority import effective_permissions, principal_can_select_org, principal_permissions, visible_org_ids
 from control_plane.authz import Actor, InstanceRole, Permission, Scope
 from control_plane.deps import (
     ActingUserDep,
@@ -216,11 +216,23 @@ class CliAuthRequestOut(BaseModel):
     client_name: str
     requester: str
     expires_at: datetime
+    can_approve_instance: bool
 
 
 class CliAuthApproveIn(RequestModel):
     user_code: str = Field(description="Device code shown by the CLI", min_length=8, max_length=16)
-    org_id: UUID = Field(description="Organization the CLI access key should use")
+    scope: Literal["instance", "org"] = Field("org", description="Scope the CLI access key should use")
+    org_id: UUID | None = Field(default=None, description="Organization the CLI access key should use for organization scope")
+
+    @model_validator(mode="after")
+    def valid_scope(self) -> CliAuthApproveIn:
+        if self.scope == "org" and self.org_id is None:
+            msg = "org_id is required for organization scope"
+            raise ValueError(msg)
+        if self.scope == "instance" and self.org_id is not None:
+            msg = "org_id is not accepted for instance scope"
+            raise ValueError(msg)
+        return self
 
 
 class CliAuthApprovedOut(BaseModel):
@@ -235,6 +247,7 @@ class CliAuthPollIn(RequestModel):
 class CliAuthPollOut(BaseModel):
     status: Literal["pending", "complete"]
     interval_seconds: int
+    scope: Literal["instance", "org"] | None = None
     token: str | None = None
     org_id: UUID | None = None
     org_name: str | None = None
@@ -265,26 +278,38 @@ async def cli_auth_start(body: CliAuthStartIn, request: Request) -> Envelope[Cli
 
 
 @router.get("/cli/request", tags=["Auth"], dependencies=[browser_scoped()])
-async def cli_auth_request_details(code: str, _user: CookieUserDep) -> Envelope[CliAuthRequestOut]:
+async def cli_auth_request_details(code: str, user: CookieUserDep) -> Envelope[CliAuthRequestOut]:
     """Return the client and expiry details for a device authorization code."""
     auth_request = _live(await CliAuthRequest.by_user_code(code))
     if auth_request.approved_user_id is not None:
         raise HTTPException(status_code=409, detail="This sign-in request was already approved")
     return Envelope(
-        data=CliAuthRequestOut(client_name=auth_request.client_name, requester=auth_request.requester, expires_at=auth_request.expires_at)
+        data=CliAuthRequestOut(
+            client_name=auth_request.client_name,
+            requester=auth_request.requester,
+            expires_at=auth_request.expires_at,
+            can_approve_instance=Permission.access_keys_issue in await principal_permissions(user.id, Scope.instance()),
+        )
     )
 
 
 @router.post("/cli/approve", tags=["Auth"], dependencies=[browser_scoped()])
 async def cli_auth_approve(body: CliAuthApproveIn, user: CookieUserDep) -> Envelope[CliAuthApprovedOut]:
-    """Approve a device authorization for one organization visible to the current user."""
+    """Approve a device authorization for instance access or one visible organization."""
     auth_request = _live(await CliAuthRequest.for_approval(body.user_code))
     if auth_request.approved_user_id is not None:
         raise HTTPException(status_code=409, detail="This sign-in request was already approved")
-    if await Org.find_by_id(body.org_id) is None:
-        raise HTTPException(status_code=403, detail="That organization no longer exists")
-    if not await principal_can_select_org(user.id, body.org_id):
-        raise HTTPException(status_code=403, detail="You are not a member of that organization")
+    if body.scope == "instance":
+        if Permission.access_keys_issue not in await principal_permissions(user.id, Scope.instance()):
+            raise HTTPException(status_code=403, detail="You cannot approve instance CLI access")
+    else:
+        org_id = body.org_id
+        if org_id is None:
+            raise HTTPException(status_code=422, detail="Organization scope requires an organization")
+        if await Org.find_by_id(org_id) is None:
+            raise HTTPException(status_code=403, detail="That organization no longer exists")
+        if not await principal_can_select_org(user.id, org_id):
+            raise HTTPException(status_code=403, detail="You are not a member of that organization")
     auth_request.approved_user_id = user.id
     auth_request.approved_org_id = body.org_id
     await auth_request.save()
@@ -293,23 +318,32 @@ async def cli_auth_approve(body: CliAuthApproveIn, user: CookieUserDep) -> Envel
 
 @router.post("/cli/poll", tags=["Auth"], dependencies=[public()])
 async def cli_auth_poll(body: CliAuthPollIn, credentials: BearerDep) -> Envelope[CliAuthPollOut]:
-    """Return pending status or deliver the approved organization-scoped access key once.
+    """Return pending status or deliver the approved scoped access key once.
 
-    When the request includes the CLI's current access key for the same user and organization, that
+    When the request includes the CLI's current access key for the same user and scope, that
     key is revoked as part of replacement. Labels do not participate in matching.
     """
     auth_request = _live(await CliAuthRequest.for_delivery(body.poll_secret))
-    if auth_request.approved_user_id is None or auth_request.approved_org_id is None:
+    if auth_request.approved_user_id is None:
         return Envelope(data=CliAuthPollOut(status="pending", interval_seconds=CLI_POLL_INTERVAL_SECONDS))
-    org = await Org.find_by_id(auth_request.approved_org_id)
-    if org is None:
+    org = await Org.find_by_id(auth_request.approved_org_id) if auth_request.approved_org_id is not None else None
+    if auth_request.approved_org_id is not None and org is None:
         raise HTTPException(status_code=410, detail="The approved organization no longer exists; start again")
     await set_actor(auth_request.approved_user_id)
-    scope = Scope.org(org.id)
+    scope = Scope.org(org.id) if org is not None else Scope.instance()
     now = datetime.now(tz=UTC)
     replaced = await verify_access_key(credentials.credentials) if credentials is not None else None
     if replaced is not None:
         await AccessKey.retire_replaced(replaced.credential_id, auth_request.approved_user_id, scope, now)
     _, token = await mint_standing_access_key(auth_request.approved_user_id, scope, auth_request.client_name)
     await auth_request.delete()
-    return Envelope(data=CliAuthPollOut(status="complete", interval_seconds=CLI_POLL_INTERVAL_SECONDS, token=token, org_id=org.id, org_name=org.name))
+    return Envelope(
+        data=CliAuthPollOut(
+            status="complete",
+            interval_seconds=CLI_POLL_INTERVAL_SECONDS,
+            scope="org" if org is not None else "instance",
+            token=token,
+            org_id=org.id if org is not None else None,
+            org_name=org.name if org is not None else None,
+        )
+    )

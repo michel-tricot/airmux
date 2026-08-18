@@ -441,12 +441,13 @@ export const CliAuthRequestDetailsQueryParams = zod.object({
 export const CliAuthRequestDetailsResponse = zod.object({
   "client_name": zod.string(),
   "requester": zod.string(),
-  "expires_at": zod.coerce.date()
+  "expires_at": zod.coerce.date(),
+  "can_approve_instance": zod.boolean()
 })
 
 
 /**
- * Approve a device authorization for one organization visible to the current user.
+ * Approve a device authorization for instance access or one visible organization.
  *
  * Authentication: browser session.
  * @summary Approve CLI Authorization
@@ -454,11 +455,12 @@ export const CliAuthRequestDetailsResponse = zod.object({
 export const cliAuthApproveBodyUserCodeMin = 8;
 export const cliAuthApproveBodyUserCodeMax = 16;
 
-
+export const cliAuthApproveBodyScopeDefault = `org`;
 
 export const CliAuthApproveBody = zod.object({
   "user_code": zod.string().min(cliAuthApproveBodyUserCodeMin).max(cliAuthApproveBodyUserCodeMax).describe('Device code shown by the CLI'),
-  "org_id": zod.uuid().describe('Organization the CLI access key should use')
+  "scope": zod.enum(['instance', 'org']).default(cliAuthApproveBodyScopeDefault).describe('Scope the CLI access key should use'),
+  "org_id": zod.union([zod.uuid(),zod.null()]).optional().describe('Organization the CLI access key should use for organization scope')
 })
 
 export const CliAuthApproveResponse = zod.object({
@@ -487,6 +489,7 @@ export const CliAuthPollBody = zod.object({
 export const CliAuthPollResponse = zod.object({
   "status": zod.enum(['pending', 'complete']),
   "interval_seconds": zod.int(),
+  "scope": zod.union([zod.enum(['instance', 'org']),zod.null()]).optional(),
   "token": zod.union([zod.string(),zod.null()]).optional(),
   "org_id": zod.union([zod.uuid(),zod.null()]).optional(),
   "org_name": zod.union([zod.string(),zod.null()]).optional()

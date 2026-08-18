@@ -47,6 +47,14 @@ def upsert_profile(name: str, values: dict[str, Any], *, activate: bool = True) 
     save_config(updated)
 
 
+def _profile_scope(profile: dict[str, Any]) -> str | None:
+    if scope := profile.get("scope"):
+        return str(scope)
+    if profile.get("org_id"):
+        return "org"
+    return None
+
+
 def upsert_url_profile(name: str, values: dict[str, Any], *, activate: bool = True) -> str:
     config = load_config()
     profiles = dict(config.get("profiles") or {})
@@ -57,6 +65,7 @@ def upsert_url_profile(name: str, values: dict[str, Any], *, activate: bool = Tr
             for profile_name, profile in profiles.items()
             if (profile_name == name or profile.get("org_name") == name)
             and str(profile.get("control_plane_url", "")).rstrip("/") == control_plane_url
+            and _profile_scope(profile) == _profile_scope(values)
         ),
         None,
     )
