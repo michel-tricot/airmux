@@ -13,10 +13,10 @@ from pg import db_name_for, ensure_database
 from contract import INFERENCE_TOKEN_PREFIX, SignedBundle, private_key_to_b64, token_hash, uuid7, verify_bundle
 from control_plane.app import create_app
 from control_plane.authz import Permission
-from control_plane.compiler import compile_and_store
+from control_plane.compiler import publish_pending
 from control_plane.config import BundlePolicy, DatabaseConfig, Settings
 from control_plane.db import standalone_transaction
-from control_plane.models import DataPlaneInstance
+from control_plane.models import DataPlaneInstance, RuntimeConfiguration
 
 
 def test_management_routes_use_the_api_prefix():
@@ -167,7 +167,7 @@ def test_cross_org_key_revocation_is_not_found(tmp_path):
         ws = make_workspace(c, cp.headers(o1))
         key = c.post(f"/api/v1/orgs/{o1}/workspaces/{ws}/inference-keys", json={"label": "k"}, headers=cp.headers(o1)).json()["data"]
         assert c.delete(f"/api/v1/orgs/{o2}/workspaces/{ws}/inference-keys/{key['id']}", headers=cp.headers(o2)).status_code == 404
-        c.post(f"/api/v1/orgs/{o1}/bundles/compile", headers=cp.headers(o1))
+        c.post(f"/api/v1/orgs/{o1}/bundles/republish", headers=cp.headers(o1))
         bundle = verify_bundle(
             SignedBundle.model_validate(c.get("/api/v1/bundle/latest", params={"org_id": str(o1)}, headers=root).json()["data"]),
             cp.bundle_key.public_key(),
@@ -217,7 +217,7 @@ def test_org_scoped_keys_cannot_use_instance_permissions(tmp_path):
         assert c.get(f"/api/v1/orgs/{org_id}/taxonomy", headers=org).status_code == 200
         assert c.get("/api/v1/instance/taxonomy", headers=root).status_code == 200
 
-        assert c.post(f"/api/v1/orgs/{org_id}/bundles/compile", headers=root).status_code == 200
+        assert c.post(f"/api/v1/orgs/{org_id}/bundles/republish", headers=root).status_code == 200
         for path in (f"/api/v1/orgs/{org_id}/workspaces", f"/api/v1/orgs/{org_id}/bundles", f"/api/v1/orgs/{org_id}/events"):
             assert c.get(path, headers=root).status_code == 200
 
@@ -286,8 +286,8 @@ def test_bundle_latest_filters_by_org(tmp_path):
     with TestClient(cp.app) as c:
         o1 = make_org(c, root, "o1")
         o2 = make_org(c, root, "o2")
-        c.post(f"/api/v1/orgs/{o1}/bundles/compile", headers=cp.headers(o1))
-        c.post(f"/api/v1/orgs/{o2}/bundles/compile", headers=cp.headers(o2))
+        c.post(f"/api/v1/orgs/{o1}/bundles/republish", headers=cp.headers(o1))
+        c.post(f"/api/v1/orgs/{o2}/bundles/republish", headers=cp.headers(o2))
         global_latest = verify_bundle(
             SignedBundle.model_validate(c.get("/api/v1/bundle/latest", headers=root).json()["data"]), cp.bundle_key.public_key()
         )
@@ -308,13 +308,55 @@ def test_concurrent_publications_allocate_distinct_versions(tmp_path):
 
     async def publish() -> int:
         async with standalone_transaction(cp.db_url):
-            bundle = await compile_and_store(org_id, uuid7(), datetime.now(tz=UTC), timedelta(hours=1), cp.bundle_key)
-            return bundle.version
+            await RuntimeConfiguration.request_republication(org_id)
+            bundles = await publish_pending(datetime.now(tz=UTC), timedelta(hours=1), cp.bundle_key)
+            return bundles[0].version
 
     async def publish_both() -> list[int]:
         return list(await asyncio.gather(publish(), publish()))
 
     assert sorted(asyncio.run(publish_both())) == [1, 2]
+
+
+def test_expiring_configuration_is_republished_through_the_pending_queue(tmp_path):
+    cp = setup_control_plane(tmp_path)
+    with TestClient(cp.app) as c:
+        org_id = make_org(c, cp.headers(), "o1")
+        assert c.post(f"/api/v1/orgs/{org_id}/bundles/republish", headers=cp.headers(org_id)).status_code == 200
+
+    async def renew() -> list[int]:
+        now = datetime.now(tz=UTC) + timedelta(hours=23)
+        async with standalone_transaction(cp.db_url):
+            await RuntimeConfiguration.renew_before(now + timedelta(hours=2))
+            bundles = await publish_pending(now, timedelta(hours=24), cp.bundle_key)
+            return [bundle.version for bundle in bundles]
+
+    assert asyncio.run(renew()) == [2]
+
+
+def test_concurrent_renewals_publish_once(tmp_path):
+    cp = setup_control_plane(tmp_path)
+    with TestClient(cp.app) as c:
+        org_id = make_org(c, cp.headers(), "o1")
+        assert c.post(f"/api/v1/orgs/{org_id}/bundles/republish", headers=cp.headers(org_id)).status_code == 200
+
+    async def renew() -> tuple[int, ...]:
+        now = datetime.now(tz=UTC) + timedelta(hours=23)
+        async with standalone_transaction(cp.db_url):
+            await RuntimeConfiguration.renew_before(now + timedelta(hours=2))
+            return tuple(bundle.version for bundle in await publish_pending(now, timedelta(hours=24), cp.bundle_key))
+
+    async def renew_both() -> list[int]:
+        return [version for versions in await asyncio.gather(renew(), renew()) for version in versions]
+
+    assert asyncio.run(renew_both()) == [2]
+
+
+def test_compile_endpoint_is_removed(tmp_path):
+    cp = setup_control_plane(tmp_path)
+    with TestClient(cp.app) as c:
+        org_id = make_org(c, cp.headers(), "o1")
+        assert c.post(f"/api/v1/orgs/{org_id}/bundles/compile", headers=cp.headers(org_id)).status_code == 404
 
 
 def test_model_and_provider_upsert_converge(tmp_path):

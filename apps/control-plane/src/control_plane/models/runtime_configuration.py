@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Literal, cast
 from uuid import UUID
 
-from sqlalchemy import Table, event, inspect
+from sqlalchemy import Table, event, func, inspect
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import Session
 from sqlmodel import Field, col, literal, select
@@ -14,6 +14,7 @@ from control_plane.models.common.base import Record
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+    from datetime import datetime
 
     from sqlalchemy.orm import InstanceState
 
@@ -107,6 +108,33 @@ class RuntimeConfiguration(Record, table=True):
             set_={"desired_revision": col(cls.desired_revision) + 1},
         )
         await current_session().execute(statement)
+
+    @classmethod
+    async def request_republication(cls, org_id: UUID) -> None:
+        await cls.advance(RuntimeConfigurationChanges(org_ids=frozenset({org_id})))
+
+    @classmethod
+    async def renew_before(cls, expires_before: datetime) -> None:
+        from control_plane.models.bundle import Bundle  # noqa: PLC0415 runtime configuration depends on the completed model graph
+
+        latest_versions = select(Bundle.org_id, func.max(Bundle.version).label("version")).group_by(col(Bundle.org_id)).subquery()
+        due_orgs = (
+            select(Bundle.org_id)
+            .join(
+                latest_versions,
+                (col(Bundle.org_id) == latest_versions.c.org_id) & (col(Bundle.version) == latest_versions.c.version),
+            )
+            .where(col(Bundle.expires_at) <= expires_before)
+        )
+        query = (
+            select(cls)
+            .where(col(cls.org_id).in_(due_orgs), col(cls.desired_revision) == col(cls.published_revision))
+            .with_for_update(skip_locked=True)
+        )
+        configurations = (await current_session().execute(query)).scalars().all()
+        for configuration in configurations:
+            configuration.desired_revision += 1
+        await current_session().flush()
 
     @classmethod
     async def for_update(cls, org_id: UUID) -> RuntimeConfiguration:

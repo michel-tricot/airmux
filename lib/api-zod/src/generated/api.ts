@@ -1647,16 +1647,16 @@ export const RemoveOrgUserResponse = zod.object({
 
 
 /**
- * Compile and sign a new policy bundle from the organization's current configuration.
+ * Request a fresh signed bundle for the organization's current configuration.
  *
  * Required permission: `bundles.publish`.
- * @summary Compile Policy Bundle
+ * @summary Republish Policy Bundle
  */
-export const CompileBundleParams = zod.object({
+export const RepublishBundleParams = zod.object({
   "org_id": zod.uuid().describe('Organization ID')
 })
 
-export const CompileBundleResponse = zod.object({
+export const RepublishBundleResponse = zod.object({
   "id": zod.uuid(),
   "org_id": zod.uuid(),
   "version": zod.int(),

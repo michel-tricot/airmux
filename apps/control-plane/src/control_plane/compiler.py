@@ -24,23 +24,21 @@ class UnknownOrgError(LookupError):
         super().__init__(str(org_id))
 
 
-async def compile_and_store(org_id: UUID, bundle_id: UUID, now: datetime, staleness_bound: timedelta, signing_key: Ed25519PrivateKey) -> Bundle:
-    """Compile, sign, and persist the next bundle version for an org; returns the stored row."""
+async def publish_changes(now: datetime, staleness_bound: timedelta, signing_key: Ed25519PrivateKey) -> tuple[Bundle, ...]:
     await RuntimeConfiguration.advance(runtime_configuration_changes(current_session().sync_session))
-    if await Org.find_by_id(org_id) is None:
-        raise UnknownOrgError(org_id)
-    configuration = await RuntimeConfiguration.for_update(org_id)
-    return await _compile_and_store(configuration, bundle_id, now, staleness_bound, signing_key)
+    return await publish_pending(now, staleness_bound, signing_key)
 
 
-async def publish_pending(now: datetime, staleness_bound: timedelta, signing_key: Ed25519PrivateKey) -> None:
+async def publish_pending(now: datetime, staleness_bound: timedelta, signing_key: Ed25519PrivateKey) -> tuple[Bundle, ...]:
+    published: tuple[Bundle, ...] = ()
     configuration = await RuntimeConfiguration.next_pending()
     while configuration is not None:
-        await _compile_and_store(configuration, uuid7(), now, staleness_bound, signing_key)
+        published = (*published, await _publish_revision(configuration, uuid7(), now, staleness_bound, signing_key))
         configuration = await RuntimeConfiguration.next_pending()
+    return published
 
 
-async def _compile_and_store(
+async def _publish_revision(
     configuration: RuntimeConfiguration,
     bundle_id: UUID,
     now: datetime,

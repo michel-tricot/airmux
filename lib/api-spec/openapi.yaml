@@ -2566,16 +2566,16 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-  /api/v1/orgs/{org_id}/bundles/compile:
+  /api/v1/orgs/{org_id}/bundles/republish:
     post:
       tags:
       - Organization Bundles
-      summary: Compile Policy Bundle
-      description: 'Compile and sign a new policy bundle from the organization''s current configuration.
+      summary: Republish Policy Bundle
+      description: 'Request a fresh signed bundle for the organization''s current configuration.
 
 
         Required permission: `bundles.publish`.'
-      operationId: compile_bundle
+      operationId: republish_bundle
       security:
       - AccessKey: []
       - SessionCookie: []
@@ -6196,7 +6196,7 @@ tags:
   description: Manage provider API keys available across an organization
   x-displayName: Provider Credentials
 - name: Organization Bundles
-  description: Compile and inspect signed policy bundles
+  description: Republish and inspect signed policy bundles
   x-displayName: Bundles
 - name: Organization Usage Events
   description: Inspect usage events across an organization

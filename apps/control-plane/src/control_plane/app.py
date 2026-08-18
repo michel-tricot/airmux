@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import asyncio
 import contextlib
+import logging
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING, cast
 
 from fastapi import APIRouter, Depends, FastAPI
@@ -11,11 +14,12 @@ from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError, ProgrammingError, SQLAlchemyError
 
 from control_plane.authority import AuthorizationError, CredentialError
+from control_plane.compiler import publish_pending
 from control_plane.config import load_settings
-from control_plane.db import make_engine, make_session_factory
+from control_plane.db import make_engine, make_session_factory, transaction
 from control_plane.deps import get_session
 from control_plane.migrate import head_revision
-from control_plane.models import NotOwnedError
+from control_plane.models import NotOwnedError, RuntimeConfiguration
 from control_plane.openapi import API_DESCRIPTION, API_TAGS, ControlPlaneApp, operation_id
 from control_plane.routes.access_keys import router as access_keys_router
 from control_plane.routes.auth import router as auth_router
@@ -39,6 +43,8 @@ if TYPE_CHECKING:
 
     from control_plane.config import Settings
 
+logger = logging.getLogger(__name__)
+
 
 async def _require_migrated_schema(engine: AsyncEngine) -> None:
     """Refuse to serve a database that is empty or behind: one clear startup error beats one 500 per request."""
@@ -54,6 +60,21 @@ async def _require_migrated_schema(engine: AsyncEngine) -> None:
         raise RuntimeError(msg)
 
 
+async def _renew_bundles(app: FastAPI) -> None:
+    settings = app.state.settings
+    renewal_window = settings.bundle.staleness_bound / 4
+    interval = 60.0 if renewal_window.total_seconds() <= 0 else max(1.0, min(3600.0, renewal_window.total_seconds()))
+    while True:
+        try:
+            now = datetime.now(tz=UTC)
+            async with transaction(app.state.session_factory):
+                await RuntimeConfiguration.renew_before(now + renewal_window)
+                await publish_pending(now, settings.bundle.staleness_bound, settings.bundle.signing_key)
+        except Exception:
+            logger.exception("bundle renewal failed")
+        await asyncio.sleep(interval)
+
+
 @contextlib.asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     settings = app.state.settings
@@ -61,7 +82,13 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     try:
         await _require_migrated_schema(engine)
         app.state.session_factory = make_session_factory(engine)
-        yield
+        renewal = asyncio.create_task(_renew_bundles(app))
+        try:
+            yield
+        finally:
+            renewal.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await renewal
     finally:
         await engine.dispose()
 

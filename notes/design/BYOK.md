@@ -177,7 +177,7 @@ Control-plane authority uses `provider-credentials.read` and `provider-credentia
 2. Body carries plaintext once
 3. Take the fingerprint
 4. Insert the row so the credential id exists, then `store.put(ref, secret)`
-5. Recompile the bundle
+5. Commit the row and publish its pending bundle revision
 
 Rotate is `PUT .../{name}`: `put` against the same ref, bump `version`, same row, so the bundle diff
 is one integer and every data plane refetches within one poll. Delete is `store.delete(ref)` then the

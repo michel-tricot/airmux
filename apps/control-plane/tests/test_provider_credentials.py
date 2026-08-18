@@ -474,7 +474,7 @@ def test_a_platform_credential_reaches_every_org(tmp_path):
 
         org_id = make_org(c, root)
         org = cp.headers(org_id)
-        c.post(f"/api/v1/orgs/{org_id}/bundles/compile", headers=org)
+        c.post(f"/api/v1/orgs/{org_id}/bundles/republish", headers=org)
         entries = c.get("/api/v1/bundle/latest", headers=org).json()["data"]["payload"]["catalog"]["credentials"]
         assert [e["ref"]["name"] for e in entries] == ["platform"]
         assert entries[0]["ref"]["org_id"] is None

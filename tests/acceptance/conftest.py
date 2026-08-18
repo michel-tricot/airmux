@@ -261,8 +261,7 @@ class Stack:
         The taxonomy runs in the middle rather than last, because a provider credential names a
         provider that has to exist first. The credential is what a workspace brings, so the deployment
         is not provisioned until it has one: without it every request is denied for having no key to
-        spend, which is the shape of the failure this ordering exists to prevent. The explicit compile
-        afterwards is what lands the catalog and the credential in the same bundle v1.
+        spend, which is the shape of the failure this ordering exists to prevent.
         """
         with httpx.Client(base_url=self.cp_url, headers={"X-Requested-With": "XMLHttpRequest"}, timeout=10.0) as session:
             me = _payload(session.post("/api/v1/auth/signup", json={"email": ADMIN_EMAIL, "name": "Acceptance Admin", "password": ADMIN_PASSWORD}))
@@ -293,7 +292,6 @@ class Stack:
             self._run([_bin("airllmcp"), "taxonomy", "--config", str(self.config_path)], self.env)
             _payload(session.post(f"/api/v1/orgs/{self.org_id}/provider-credentials", json={"provider": "stub", "value": STUB_API_KEY}))
             _payload(session.post(f"/api/v1/orgs/{self.org_id}/provider-credentials", json={"provider": "quirk", "value": STUB_API_KEY}))
-            _payload(session.post(f"/api/v1/orgs/{self.org_id}/bundles/compile"))
 
         secrets = {
             "AIRLLM_API_KEY": caller["token"],

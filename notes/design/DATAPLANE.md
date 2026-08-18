@@ -659,7 +659,7 @@ conventions:
 
 1. Add the provider and models to taxonomy
 2. Set `kind`, `base_url`, aliases, `accepted_params`, and `params_closed`
-3. Apply taxonomy and compile a new bundle
+3. Apply taxonomy, which publishes changed bundle revisions automatically
 4. Prove the actual upstream body and response through a running data plane
 
 No data-plane registry or adapter edit is needed for spelling-only differences.

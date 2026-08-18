@@ -397,12 +397,12 @@ def bundles_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat.t
     print_rows("bundles", access_get(org_path("/bundles"), control_plane_url), BUNDLE_COLS, fmt)
 
 
-@bundles_app.command("compile")
-def bundles_compile(control_plane_url: str = "") -> None:
-    """Publish your current configuration to your gateways."""
+@bundles_app.command("republish")
+def bundles_republish(control_plane_url: str = "") -> None:
+    """Republish your current configuration for recovery or key rotation."""
     with access_client(control_plane_url) as c:
-        compiled = payload(post_expecting(c, org_path("/bundles/compile"), {}, ok=(200,)))
-    console.print(f"Published v{compiled['version']}")
+        published = payload(post_expecting(c, org_path("/bundles/republish"), {}, ok=(200,)))
+    console.print(f"Published v{published['version']}")
 
 
 INSTANCE_COLS = [
@@ -483,7 +483,6 @@ def events_tail(interval: float = 2.0, keep: int = 30, control_plane_url: str = 
 def _key_created(resp: dict) -> None:
     console.print("Your new key, shown once:")
     console.print(resp["token"])
-    console.print("[dim]Run airllm bundles compile to apply.[/dim]")
 
 
 register_create(
@@ -527,7 +526,7 @@ register_create(
     ProviderCreate,
     "/api/v1/instance/taxonomy/providers",
     "Add an upstream provider for every organization on this instance.",
-    lambda resp: console.print(f"Added [bold]{resp['name']}[/bold]. Add models, then airllm bundles compile."),
+    lambda resp: console.print(f"Added [bold]{resp['name']}[/bold]. Add models to make it routable."),
     client=access_client,
     panel=RESOURCES,
 )
@@ -536,7 +535,7 @@ register_create(
     ModelCreate,
     "/api/v1/instance/taxonomy/models",
     "Add a routable model for every organization on this instance.",
-    lambda resp: console.print(f"Added [bold]{resp['name']}[/bold]. Run airllm bundles compile to apply."),
+    lambda resp: console.print(f"Added [bold]{resp['name']}[/bold]."),
     client=access_client,
     panel=RESOURCES,
 )
@@ -589,7 +588,6 @@ def provider_credentials_add(  # noqa: PLR0913, PLR0917 flags are the command's 
         credential = payload(post_expecting(c, path, body, ok=(200,)))
     scope = credential["scope"]
     console.print(f"Added [bold]{provider}[/bold] key [bold]{credential['name']}[/bold] to this {scope} (...{credential['fingerprint']})")
-    console.print("[dim]Run airllm bundles compile to apply.[/dim]")
 
 
 @provider_credentials_app.command("list")
@@ -618,9 +616,8 @@ def provider_credentials_rotate(
     with access_client(control_plane_url) as c:
         resp = c.put(org_path(f"/provider-credentials/{credential_id}/value"), json={"value": secret})
         ensure_ok(resp)
-        credential = payload(resp)
+    credential = payload(resp)
     console.print(f"Rotated [bold]{credential['name']}[/bold] to ...{credential['fingerprint']}")
-    console.print("[dim]Run airllm bundles compile to apply.[/dim]")
 
 
 @provider_credentials_app.command("rm")
@@ -632,7 +629,7 @@ def provider_credentials_rm(
     with access_client(control_plane_url) as c:
         resp = c.delete(org_path(f"/provider-credentials/{credential_id}"))
         ensure_ok(resp)
-    console.print(f"Deleted [bold]{credential_id}[/bold]. Run [bold]airllm bundles compile[/bold] to apply.")
+    console.print(f"Deleted [bold]{credential_id}[/bold].")
 
 
 @provider_credentials_app.command("disable")
@@ -647,4 +644,4 @@ def provider_credentials_disable(
         ensure_ok(resp)
         credential = payload(resp)
     state = "Enabled" if credential["enabled"] else "Disabled"
-    console.print(f"{state} [bold]{credential['name']}[/bold]. Run [bold]airllm bundles compile[/bold] to apply.")
+    console.print(f"{state} [bold]{credential['name']}[/bold].")

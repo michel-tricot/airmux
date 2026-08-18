@@ -16,11 +16,11 @@ from rich.console import Console
 from rich.table import Table
 from sqlalchemy.engine import make_url
 
-from contract import private_key_to_b64, public_key_to_b64, uuid7
+from contract import private_key_to_b64, public_key_to_b64
 from contract.secrets.file import write_private_text
 from control_plane.app import create_app
 from control_plane.authz import InstanceRole
-from control_plane.compiler import compile_and_store
+from control_plane.compiler import publish_changes
 from control_plane.config import BundlePolicy, Settings, database_url, load_settings
 from control_plane.db import standalone_transaction
 from control_plane.fixtures import Fixtures, apply_fixtures
@@ -136,9 +136,10 @@ def fixtures(config: str = "airllm.yml") -> None:
         async with standalone_transaction(settings.database.url):
             seeded = await apply_fixtures(datetime.now(tz=UTC), settings.secrets.build())
             now = datetime.now(tz=UTC)
+            orgs = {org.id: org.name for org in await Org.find()}
             versions = [
-                (org.name, (await compile_and_store(org.id, uuid7(), now, settings.bundle.staleness_bound, settings.bundle.signing_key)).version)
-                for org in await Org.find()
+                (orgs[bundle.org_id], bundle.version)
+                for bundle in await publish_changes(now, settings.bundle.staleness_bound, settings.bundle.signing_key)
             ]
             return seeded, versions, len(await Model.find())
 
@@ -200,7 +201,7 @@ def taxonomy(
     config: str = "airllm.yml",
     file: str = typer.Option("taxonomy.yml", "--file", help="Models taxonomy path, resolved next to the config"),
 ) -> None:
-    """Apply the models taxonomy to the instance catalog and compile a new bundle per org; run after editing the taxonomy file."""
+    """Apply the models taxonomy to the instance catalog and publish changed organization configurations."""
     settings = load_settings(config)
     taxonomy_path = Path(config).parent / file
     if not taxonomy_path.exists():
@@ -213,12 +214,13 @@ def taxonomy(
             await set_actor("root")
             providers, models = await apply_taxonomy(spec)
             now = datetime.now(tz=UTC)
+            orgs = {org.id: org.name for org in await Org.find()}
             versions = [
-                (org.name, (await compile_and_store(org.id, uuid7(), now, settings.bundle.staleness_bound, settings.bundle.signing_key)).version)
-                for org in await Org.find()
+                (orgs[bundle.org_id], bundle.version)
+                for bundle in await publish_changes(now, settings.bundle.staleness_bound, settings.bundle.signing_key)
             ]
             return providers, models, versions
 
     providers, models, versions = asyncio.run(run())
-    bundles_part = ", ".join(f"{org_id} v{version}" for org_id, version in versions) or "no orgs yet"
-    typer.echo(f"applied {taxonomy_path.name}: {providers} providers, {models} models; compiled bundles: {bundles_part}")
+    bundles_part = ", ".join(f"{org_id} v{version}" for org_id, version in versions) or "no bundle changes"
+    typer.echo(f"applied {taxonomy_path.name}: {providers} providers, {models} models; published: {bundles_part}")
