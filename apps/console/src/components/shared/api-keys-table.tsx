@@ -14,6 +14,7 @@ interface ApiKeyRow {
 }
 
 interface ApiKeysTableProps<T extends ApiKeyRow> {
+  resource: string;
   keys: T[] | undefined;
   isLoading?: boolean;
   isError?: boolean;
@@ -27,6 +28,7 @@ interface ApiKeysTableProps<T extends ApiKeyRow> {
 }
 
 export function ApiKeysTable<T extends ApiKeyRow>({
+  resource,
   keys,
   isLoading,
   isError,
@@ -95,7 +97,7 @@ export function ApiKeysTable<T extends ApiKeyRow>({
         isLoading={isLoading}
         isError={isError}
         error={error}
-        resource="API keys"
+        resource={resource}
         onRetry={onRetry}
         empty={emptyText}
       />

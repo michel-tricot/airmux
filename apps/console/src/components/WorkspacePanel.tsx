@@ -148,6 +148,7 @@ export function WorkspacePanel({ orgId, workspaceRef, backHref, backLabel }: Wor
               )}
             </div>
             <ApiKeysTable
+              resource="inference keys"
               keys={keysQuery.data}
               isLoading={keysQuery.isLoading}
               isError={keysQuery.isError}

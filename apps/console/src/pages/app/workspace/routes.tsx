@@ -33,7 +33,7 @@ export const workspaceRoutes: readonly WorkspaceRouteDefinition[] = [
     access: allOf(catalogAccess.workspace.read, playgroundAccess.execute),
     component: Playground,
   },
-  { suffix: '/keys', label: 'API Keys', icon: KeyRound, access: inferenceKeyAccess.read, component: ApiKeys },
+  { suffix: '/keys', label: 'Inference Keys', icon: KeyRound, access: inferenceKeyAccess.read, component: ApiKeys },
   { suffix: '/byok', label: 'BYOK', icon: Database, access: providerCredentialAccess.workspace.read, component: Byok },
   {
     suffix: '/routing',

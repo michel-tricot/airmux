@@ -121,7 +121,7 @@ export default function WorkspaceOverview() {
 
       {(canReadKeys || canReadMembers || canReadCredentials || canReadUsage) && (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {canReadKeys && <MetricCard icon={KeyRound} label="API Keys" value={activeKeys ?? '-'} hint="active inference keys" />}
+          {canReadKeys && <MetricCard icon={KeyRound} label="Inference Keys" value={activeKeys ?? '-'} hint="active inference keys" />}
           {canReadMembers && <MetricCard icon={Users} label="Members" value={membersQuery.data?.length ?? '-'} hint="with workspace access" />}
           {canReadCredentials && (
             <MetricCard icon={Database} label="BYOK" value={credentialsQuery.data?.length ?? '-'} hint="provider keys configured" />

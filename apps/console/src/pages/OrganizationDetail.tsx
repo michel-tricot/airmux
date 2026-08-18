@@ -191,6 +191,7 @@ export default function OrganizationDetail() {
               <h2 className="text-lg font-semibold">Access Keys</h2>
             </div>
             <ApiKeysTable
+              resource="access keys"
               keys={keysQuery.data}
               isLoading={keysQuery.isLoading}
               isError={keysQuery.isError}

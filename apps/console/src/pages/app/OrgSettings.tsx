@@ -109,6 +109,7 @@ export default function AppOrgSettings() {
               )}
             </div>
             <ApiKeysTable
+              resource="access keys"
               keys={keysQuery.data}
               isLoading={keysQuery.isLoading}
               isError={keysQuery.isError}

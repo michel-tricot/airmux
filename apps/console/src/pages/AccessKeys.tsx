@@ -47,6 +47,7 @@ export default function AccessKeys() {
       {canReadUsers && usersQuery.isError && <ErrorState error={usersQuery.error} resource="key principals" onRetry={() => usersQuery.refetch()} />}
 
       <ApiKeysTable
+        resource="access keys"
         keys={keysQuery.data}
         isLoading={keysQuery.isLoading}
         isError={keysQuery.isError}

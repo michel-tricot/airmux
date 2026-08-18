@@ -6,6 +6,7 @@ describe('access-key status', () => {
   it('shows an expired key as expired', () => {
     render(
       <ApiKeysTable
+        resource="access keys"
         keys={[
           {
             id: 'key-1',
