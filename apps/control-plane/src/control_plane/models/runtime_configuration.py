@@ -99,10 +99,14 @@ class RuntimeConfiguration(Record, table=True):
             return
         from control_plane.models.org import Org  # noqa: PLC0415 runtime configuration depends on the completed model graph
 
-        orgs = select(Org.id, literal(1), literal(0))
+        revisions = select(
+            col(Org.id).label("org_id"),
+            literal(1).label("desired_revision"),
+            literal(0).label("published_revision"),
+        )
         if not changes.global_scope:
-            orgs = orgs.where(col(Org.id).in_(changes.org_ids))
-        statement = pg_insert(cls).from_select(("org_id", "desired_revision", "published_revision"), orgs)
+            revisions = revisions.where(col(Org.id).in_(changes.org_ids))
+        statement = pg_insert(cls).from_select(("org_id", "desired_revision", "published_revision"), revisions)
         statement = statement.on_conflict_do_update(
             index_elements=["org_id"],
             set_={"desired_revision": col(cls.desired_revision) + 1},
