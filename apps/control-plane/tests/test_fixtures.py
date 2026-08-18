@@ -15,9 +15,16 @@ from helpers import run_in_db, setup_control_plane, write_config
 from typer.testing import CliRunner
 
 from contract import EnvStoreConfig, MemoryStoreConfig
-from control_plane.fixtures import FIXTURE_PROVIDER_KEY, MissingProvidersError, NotAnEmptyDatabaseError, apply_fixtures
+from control_plane.fixtures import (
+    ACME_MEMBER_INVITE_TOKEN,
+    ACME_PRODUCTION_INVITE_TOKEN,
+    FIXTURE_PROVIDER_KEY,
+    MissingProvidersError,
+    NotAnEmptyDatabaseError,
+    apply_fixtures,
+)
 from control_plane.main import app as cli_app
-from control_plane.models import Org, Provider, ProviderCredential, set_actor
+from control_plane.models import Org, OrgInvitation, Provider, ProviderCredential, set_actor
 
 runner = CliRunner()
 
@@ -125,6 +132,30 @@ def test_a_writable_store_gets_placeholder_values(tmp_path):
         assert asyncio.run(store.get(credential.secret_ref())).reveal() == FIXTURE_PROVIDER_KEY
 
 
+def test_invitation_fixtures_include_org_and_workspace_share_links(tmp_path):
+    setup_control_plane(tmp_path)
+    seed_catalog(tmp_path)
+
+    seeded = run_in_db(tmp_path, lambda: apply_fixtures(NOW, MemoryStoreConfig().build()))
+    invitations = run_in_db(tmp_path, OrgInvitation.find)
+    member_invitation = run_in_db(tmp_path, lambda: OrgInvitation.for_token(ACME_MEMBER_INVITE_TOKEN))
+    production_invitation = run_in_db(tmp_path, lambda: OrgInvitation.for_token(ACME_PRODUCTION_INVITE_TOKEN))
+
+    assert seeded.invitation_tokens == [
+        ("new.member@example.com", ACME_MEMBER_INVITE_TOKEN),
+        ("production.viewer@example.com", ACME_PRODUCTION_INVITE_TOKEN),
+    ]
+    assert len(invitations) == 3
+    assert member_invitation is not None
+    assert member_invitation.workspace_id is None
+    assert member_invitation.status(NOW) == "pending"
+    assert production_invitation is not None
+    assert production_invitation.workspace_id is not None
+    assert production_invitation.workspace_role == "viewer"
+    assert production_invitation.status(NOW) == "pending"
+    assert next(invitation for invitation in invitations if invitation.email == "expired.invite@example.com").status(NOW) == "expired"
+
+
 def test_the_cli_names_the_credentials_with_no_key_behind_them(tmp_path, monkeypatch):
     """Silent success reads as failure: the command already names an empty catalog, and a pool that
     reaches nothing until a key is supplied is the same kind of thing to say out loud.
@@ -140,3 +171,5 @@ def test_the_cli_names_the_credentials_with_no_key_behind_them(tmp_path, monkeyp
 
     assert seeded.exit_code == 0, seeded.output
     assert "openai" in seeded.output
+    assert "invitations" in seeded.output
+    assert "new.member@example.com" in seeded.output

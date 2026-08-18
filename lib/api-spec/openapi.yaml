@@ -728,6 +728,71 @@ paths:
           description: The request failed browser security checks
       security:
       - SessionCookie: []
+  /api/v1/enroll/invitations/preview:
+    post:
+      tags:
+      - Enrollment
+      summary: Preview Invitation
+      description: 'Preview the organization and optional workspace named by a shared invitation secret.
+
+
+        Authentication: none.'
+      operationId: preview_invitation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InvitationTokenIn'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_InvitationPreviewOut_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+      security: []
+  /api/v1/enroll/invitations/accept:
+    post:
+      tags:
+      - Enrollment
+      summary: Accept Invitation
+      description: 'Accept an invitation whose email matches the signed-in human account.
+
+
+        Authentication: browser session.'
+      operationId: accept_invitation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InvitationTokenIn'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_InvitationAcceptedOut_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: A valid browser session is required
+        '403':
+          description: The request failed browser security checks
+      security:
+      - SessionCookie: []
   /api/v1/instance/oss/claim:
     get:
       tags:
@@ -1198,6 +1263,183 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Envelope_DeletedOut_UUID__'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
+  /api/v1/orgs/{org_id}/invitations:
+    post:
+      tags:
+      - Organization Invitations
+      summary: Create Organization Invitation
+      description: 'Create an email-bound organization invitation and return its shareable URL once.
+
+
+        Required permission: `members.manage`.'
+      operationId: create_invitation
+      security:
+      - AccessKey: []
+      - SessionCookie: []
+      parameters:
+      - name: org_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Org Id
+        description: Organization ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrgInvitationCreate'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_OrgInvitationMintedOut_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
+    get:
+      tags:
+      - Organization Invitations
+      summary: List Organization Invitations
+      description: 'List pending and expired invitations without returning their secret URLs.
+
+
+        Required permission: `members.read`.'
+      operationId: list_invitations
+      security:
+      - AccessKey: []
+      - SessionCookie: []
+      parameters:
+      - name: org_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Org Id
+        description: Organization ID
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_list_OrgInvitationOut__'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
+  /api/v1/orgs/{org_id}/invitations/{invitation_id}/reissue:
+    post:
+      tags:
+      - Organization Invitations
+      summary: Reissue Organization Invitation
+      description: 'Replace a pending or expired invitation URL and invalidate its previous secret.
+
+
+        Required permission: `members.manage`.'
+      operationId: reissue_invitation
+      security:
+      - AccessKey: []
+      - SessionCookie: []
+      parameters:
+      - name: invitation_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Invitation Id
+        description: Organization invitation ID
+      - name: org_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Org Id
+        description: Organization ID
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_OrgInvitationMintedOut_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
+  /api/v1/orgs/{org_id}/invitations/{invitation_id}/revoke:
+    post:
+      tags:
+      - Organization Invitations
+      summary: Revoke Organization Invitation
+      description: 'Revoke an invitation without changing any membership already granted.
+
+
+        Required permission: `members.manage`.'
+      operationId: revoke_invitation
+      security:
+      - AccessKey: []
+      - SessionCookie: []
+      parameters:
+      - name: invitation_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Invitation Id
+        description: Organization invitation ID
+      - name: org_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Org Id
+        description: Organization ID
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_OrgInvitationRevokedOut_'
         '422':
           description: Validation Error
           content:
@@ -3643,6 +3885,22 @@ components:
       required:
       - data
       title: Envelope[InferenceKeyRevokedOut]
+    Envelope_InvitationAcceptedOut_:
+      properties:
+        data:
+          $ref: '#/components/schemas/InvitationAcceptedOut'
+      type: object
+      required:
+      - data
+      title: Envelope[InvitationAcceptedOut]
+    Envelope_InvitationPreviewOut_:
+      properties:
+        data:
+          $ref: '#/components/schemas/InvitationPreviewOut'
+      type: object
+      required:
+      - data
+      title: Envelope[InvitationPreviewOut]
     Envelope_MeOut_:
       properties:
         data:
@@ -3675,6 +3933,22 @@ components:
       required:
       - data
       title: Envelope[MyPermissionsOut]
+    Envelope_OrgInvitationMintedOut_:
+      properties:
+        data:
+          $ref: '#/components/schemas/OrgInvitationMintedOut'
+      type: object
+      required:
+      - data
+      title: Envelope[OrgInvitationMintedOut]
+    Envelope_OrgInvitationRevokedOut_:
+      properties:
+        data:
+          $ref: '#/components/schemas/OrgInvitationRevokedOut'
+      type: object
+      required:
+      - data
+      title: Envelope[OrgInvitationRevokedOut]
     Envelope_OrgOut_:
       properties:
         data:
@@ -3810,6 +4084,17 @@ components:
       required:
       - data
       title: Envelope[list[InferenceKeyOut]]
+    Envelope_list_OrgInvitationOut__:
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/OrgInvitationOut'
+          type: array
+          title: Data
+      type: object
+      required:
+      - data
+      title: Envelope[list[OrgInvitationOut]]
     Envelope_list_OrgMemberOut__:
       properties:
         data:
@@ -4049,6 +4334,92 @@ components:
       - auditor
       - data_plane
       title: InstanceRole
+    InvitationAcceptedOut:
+      properties:
+        invitation_id:
+          type: string
+          format: uuid
+          title: Invitation Id
+        org_id:
+          type: string
+          format: uuid
+          title: Org Id
+        workspace_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Workspace Id
+        status:
+          type: string
+          const: accepted
+          title: Status
+      type: object
+      required:
+      - invitation_id
+      - org_id
+      - workspace_id
+      - status
+      title: InvitationAcceptedOut
+    InvitationPreviewOut:
+      properties:
+        email:
+          type: string
+          title: Email
+        org_id:
+          type: string
+          format: uuid
+          title: Org Id
+        org_name:
+          type: string
+          title: Org Name
+        org_role:
+          type: string
+          title: Org Role
+        workspace_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Workspace Id
+        workspace_name:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Workspace Name
+        workspace_role:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Workspace Role
+        expires_at:
+          type: string
+          format: date-time
+          title: Expires At
+      type: object
+      required:
+      - email
+      - org_id
+      - org_name
+      - org_role
+      - workspace_id
+      - workspace_name
+      - workspace_role
+      - expires_at
+      title: InvitationPreviewOut
+    InvitationTokenIn:
+      properties:
+        token:
+          type: string
+          maxLength: 256
+          minLength: 1
+          title: Token
+          description: Secret from the shared invitation link
+      additionalProperties: false
+      type: object
+      required:
+      - token
+      title: InvitationTokenIn
     KeyEntry:
       properties:
         key_id:
@@ -4395,6 +4766,166 @@ components:
       required:
       - name
       title: OrgCreate
+    OrgInvitationCreate:
+      properties:
+        email:
+          type: string
+          maxLength: 320
+          minLength: 3
+          title: Email
+          description: Email address that must match the account accepting the invitation
+        org_role:
+          type: string
+          pattern: ^(admin|member)$
+          title: Org Role
+          description: Organization role to grant
+        workspace_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Workspace Id
+          description: Optional workspace to join
+        workspace_role:
+          anyOf:
+          - type: string
+            pattern: ^(admin|member|viewer)$
+          - type: 'null'
+          title: Workspace Role
+          description: Role to grant in the selected workspace
+      additionalProperties: false
+      type: object
+      required:
+      - email
+      - org_role
+      title: OrgInvitationCreate
+    OrgInvitationMintedOut:
+      properties:
+        invitation:
+          $ref: '#/components/schemas/OrgInvitationOut'
+        url:
+          type: string
+          title: Url
+      type: object
+      required:
+      - invitation
+      - url
+      title: OrgInvitationMintedOut
+    OrgInvitationOut:
+      properties:
+        id:
+          type: string
+          format: uuid
+          title: Id
+        org_id:
+          type: string
+          format: uuid
+          title: Org Id
+        email:
+          type: string
+          title: Email
+        org_role:
+          type: string
+          title: Org Role
+        workspace_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Workspace Id
+        workspace_role:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Workspace Role
+        created_by_user_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Created By User Id
+        expires_at:
+          type: string
+          format: date-time
+          title: Expires At
+        accepted_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Accepted At
+        accepted_by_user_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Accepted By User Id
+        revoked_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Revoked At
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        updated_at:
+          type: string
+          format: date-time
+          title: Updated At
+        deleted_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Deleted At
+        status:
+          type: string
+          enum:
+          - pending
+          - expired
+          - accepted
+          - revoked
+          title: Status
+      type: object
+      required:
+      - id
+      - org_id
+      - email
+      - org_role
+      - workspace_id
+      - workspace_role
+      - created_by_user_id
+      - expires_at
+      - accepted_at
+      - accepted_by_user_id
+      - revoked_at
+      - created_at
+      - updated_at
+      - deleted_at
+      - status
+      title: OrgInvitationOut
+    OrgInvitationRevokedOut:
+      properties:
+        id:
+          type: string
+          format: uuid
+          title: Id
+        status:
+          type: string
+          const: revoked
+          title: Status
+        revoked_at:
+          type: string
+          format: date-time
+          title: Revoked At
+      type: object
+      required:
+      - id
+      - status
+      - revoked_at
+      title: OrgInvitationRevokedOut
     OrgMemberOut:
       properties:
         user_id:
@@ -5552,6 +6083,9 @@ tags:
 - name: Organization Members
   description: Manage organization membership and organization roles
   x-displayName: Members
+- name: Organization Invitations
+  description: Invite human users to an organization and optionally one workspace
+  x-displayName: Invitations
 - name: Organization Workspaces
   description: List and create workspaces within an organization
   x-displayName: Workspaces
@@ -5615,6 +6149,7 @@ x-tagGroups:
   tags:
   - Organization Settings
   - Organization Members
+  - Organization Invitations
   - Organization Workspaces
   - Organization Access Keys
   - Organization Provider Credentials

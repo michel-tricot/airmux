@@ -5,6 +5,7 @@ import os
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
+from urllib.parse import quote
 
 import typer
 import uvicorn
@@ -160,8 +161,10 @@ def fixtures(config: str = "airllm.yml") -> None:
         ("access (Acme)", seeded.org_access_token),
         ("access (instance)", seeded.instance_access_token),
     ]
+    invitations = [(email, f"{settings.console_url.rstrip('/')}/invite#token={quote(token, safe='')}") for email, token in seeded.invitation_tokens]
     console.print(_table("logins", ("Email", "Password", "Role"), logins))
     console.print(_table("keys", ("Key", "Token"), keys))
+    console.print(_table("invitations", ("Email", "Share link"), invitations))
 
 
 @app.command()

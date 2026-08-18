@@ -16,6 +16,11 @@ import { LoadingState, ErrorState } from '@/components/shared/states';
 import { MembersPanel } from '@/components/shared/members-panel';
 import { useRequiredParam } from '@/lib/route';
 import { PageShell } from '@/components/shared/page-shell';
+import { useGrantablePermissions } from '@/features/keys/hooks';
+import { useCreateInvitationMutation } from '@/features/invitations/hooks';
+import { InvitationDialog, invitationRequest } from '@/components/shared/invitation-dialog';
+import { OneTimeValueDialog } from '@/components/shared/one-time-value-dialog';
+import { UserPlus } from 'lucide-react';
 
 export default function WorkspaceSettings() {
   const workspaceRef = useRequiredParam('workspaceRef');
@@ -30,6 +35,8 @@ function WorkspaceSettingsContent({ workspaceRef }: { workspaceRef: string }) {
   const workspace = workspaceQuery.data;
 
   const [name, setName] = useState<string | null>(null);
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [invitationUrl, setInvitationUrl] = useState<string | null>(null);
 
   const membersQuery = useWorkspaceMembers(orgId, workspaceRef);
   const orgUsersQuery = useOrgMembers(orgId);
@@ -42,6 +49,9 @@ function WorkspaceSettingsContent({ workspaceRef }: { workspaceRef: string }) {
   const removeMember = useRemoveWorkspaceMemberMutation(orgId, workspaceRef);
   const rename = useRenameWorkspaceMutation(orgId, workspaceRef);
   const remove = useDeleteWorkspaceMutation(orgId);
+  const createInvitation = useCreateInvitationMutation(orgId);
+  const permissionsQuery = useGrantablePermissions({ orgId, enabled: true });
+  const canInvite = permissionsQuery.data?.permissions.includes('members.manage') ?? false;
 
   if (workspaceQuery.isLoading) return <LoadingState label="Loading workspace..." />;
   if (workspaceQuery.isError) return <ErrorState error={workspaceQuery.error} resource="workspace" onRetry={() => workspaceQuery.refetch()} />;
@@ -95,6 +105,13 @@ function WorkspaceSettingsContent({ workspaceRef }: { workspaceRef: string }) {
           emptyText="No members in this workspace."
           renderName={(member) => describe(member.user_id)?.name ?? 'Member'}
           renderEmail={(member) => describe(member.user_id)?.email ?? member.user_id}
+          actions={
+            canInvite ? (
+              <Button size="sm" variant="outline" onClick={() => setInviteOpen(true)}>
+                <UserPlus className="w-4 h-4 mr-1" /> Invite by email
+              </Button>
+            ) : undefined
+          }
           add={{
             candidates: candidates?.map((user) => ({ value: user.user_id, label: `${user.name} (${user.email})` })) ?? [],
             dialogTitle: 'Add Member',
@@ -135,6 +152,28 @@ function WorkspaceSettingsContent({ workspaceRef }: { workspaceRef: string }) {
           <Trash2 className="w-4 h-4 mr-2" /> Delete Workspace
         </ConfirmButton>
       </Card>
+
+      <InvitationDialog
+        open={inviteOpen}
+        onOpenChange={setInviteOpen}
+        workspaces={[workspace]}
+        initialWorkspaceId={workspace.id}
+        pending={createInvitation.isPending}
+        onSubmit={async (values) => {
+          const minted = await createInvitation.mutateAsync({ orgId, data: invitationRequest(values) });
+          setInvitationUrl(minted.url);
+        }}
+      />
+
+      <OneTimeValueDialog
+        open={invitationUrl !== null}
+        onOpenChange={(open) => !open && setInvitationUrl(null)}
+        value={invitationUrl}
+        title="Invitation link created"
+        warning="Share this link through a trusted channel. It will not be shown again."
+        label="Invitation link"
+        copyLabel="Copy link"
+      />
     </PageShell>
   );
 }

@@ -472,6 +472,33 @@ export const InstanceRole = {
   data_plane: 'data_plane',
 } as const;
 
+export interface InvitationAcceptedOut {
+  invitation_id: string;
+  org_id: string;
+  workspace_id: string | null;
+  status: 'accepted';
+}
+
+export interface InvitationPreviewOut {
+  email: string;
+  org_id: string;
+  org_name: string;
+  org_role: string;
+  workspace_id: string | null;
+  workspace_name: string | null;
+  workspace_role: string | null;
+  expires_at: string;
+}
+
+export interface InvitationTokenIn {
+  /**
+     * Secret from the shared invitation link
+     * @minLength 1
+     * @maxLength 256
+     */
+  token: string;
+}
+
 export interface LoginIn {
   /**
      * Account email address
@@ -610,6 +637,63 @@ export interface OrgCreate {
      * @maxLength 200
      */
   name: string;
+}
+
+export interface OrgInvitationCreate {
+  /**
+     * Email address that must match the account accepting the invitation
+     * @minLength 3
+     * @maxLength 320
+     */
+  email: string;
+  /**
+     * Organization role to grant
+     * @pattern ^(admin|member)$
+     */
+  org_role: string;
+  /** Optional workspace to join */
+  workspace_id?: string | null;
+  /** Role to grant in the selected workspace */
+  workspace_role?: string | null;
+}
+
+export type OrgInvitationOutStatus = typeof OrgInvitationOutStatus[keyof typeof OrgInvitationOutStatus];
+
+
+export const OrgInvitationOutStatus = {
+  pending: 'pending',
+  expired: 'expired',
+  accepted: 'accepted',
+  revoked: 'revoked',
+} as const;
+
+export interface OrgInvitationOut {
+  id: string;
+  org_id: string;
+  email: string;
+  org_role: string;
+  workspace_id: string | null;
+  workspace_role: string | null;
+  created_by_user_id: string | null;
+  expires_at: string;
+  accepted_at: string | null;
+  accepted_by_user_id: string | null;
+  revoked_at: string | null;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+  status: OrgInvitationOutStatus;
+}
+
+export interface OrgInvitationMintedOut {
+  invitation: OrgInvitationOut;
+  url: string;
+}
+
+export interface OrgInvitationRevokedOut {
+  id: string;
+  status: 'revoked';
+  revoked_at: string;
 }
 
 /**

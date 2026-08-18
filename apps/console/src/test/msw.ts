@@ -44,6 +44,7 @@ export const server = setupServer(
   http.get('/api/v1/orgs/:orgId/taxonomy', () => HttpResponse.json({ providers: [], models: [] })),
   http.get('/api/v1/orgs/:orgId/workspaces/:workspaceRef/taxonomy', () => HttpResponse.json({ providers: [], models: [] })),
   http.get('/api/v1/orgs/:orgId/users', () => HttpResponse.json([])),
+  http.get('/api/v1/orgs/:orgId/invitations', () => HttpResponse.json([])),
   http.get('/api/v1/orgs/:orgId/events', () => HttpResponse.json([])),
   http.get('/api/v1/orgs/:orgId/workspaces/:workspaceRef/events', () => HttpResponse.json([])),
 );

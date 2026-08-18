@@ -36,6 +36,7 @@ from control_plane.models import (
     AuthIdentity,
     InferenceKey,
     Org,
+    OrgInvitation,
     OrgMembership,
     Provider,
     ProviderCredential,
@@ -45,6 +46,7 @@ from control_plane.models import (
     WorkspaceMembership,
     set_actor,
 )
+from control_plane.models.org_invitation import INVITATION_TOKEN_PREFIX
 
 if TYPE_CHECKING:
     from datetime import datetime
@@ -59,6 +61,9 @@ ACME_RETIRED_TOKEN = f"{INFERENCE_TOKEN_PREFIX}fixture-acme-retired"
 SOLO_TOKEN = f"{INFERENCE_TOKEN_PREFIX}fixture-solo-default"
 ACME_ACCESS_TOKEN = f"{ACCESS_KEY_PREFIX}fixture-acme"
 INSTANCE_ACCESS_TOKEN = f"{ACCESS_KEY_PREFIX}fixture-admin"
+ACME_MEMBER_INVITE_TOKEN = f"{INVITATION_TOKEN_PREFIX}fixture-acme-member"
+ACME_PRODUCTION_INVITE_TOKEN = f"{INVITATION_TOKEN_PREFIX}fixture-acme-production-viewer"
+ACME_EXPIRED_INVITE_TOKEN = f"{INVITATION_TOKEN_PREFIX}fixture-acme-expired"
 
 MODELS = [("gpt-4o-mini", "openai"), ("gpt-4o", "openai"), ("claude-opus-4-5", "anthropic")]
 
@@ -104,6 +109,7 @@ class Fixtures:
     inference_token: str
     org_access_token: str
     instance_access_token: str
+    invitation_tokens: list[tuple[str, str]]
     unresolved_providers: list[str]  # seeded credentials whose store holds no value, so nothing routes through them yet
 
 
@@ -244,6 +250,38 @@ async def apply_fixtures(now: datetime, store: SecretStore) -> Fixtures:
     await WorkspaceMembership(user_id=michel.id, workspace_id=staging.id, org_id=acme.id, role=WorkspaceRole.admin).save()
     await WorkspaceMembership(user_id=dana.id, workspace_id=default.id, org_id=solo.id, role=WorkspaceRole.admin).save()
 
+    await OrgInvitation(
+        id=fixture_id("org-invitation:acme:new-member"),
+        org_id=acme.id,
+        email="new.member@example.com",
+        org_role=OrgRole.member,
+        token_hash=token_hash(ACME_MEMBER_INVITE_TOKEN),
+        created_by_user_id=michel.id,
+        expires_at=now + timedelta(days=7),
+    ).save()
+    await OrgInvitation(
+        id=fixture_id("org-invitation:acme:production-viewer"),
+        org_id=acme.id,
+        email="production.viewer@example.com",
+        org_role=OrgRole.member,
+        workspace_id=production.id,
+        workspace_role=WorkspaceRole.viewer,
+        token_hash=token_hash(ACME_PRODUCTION_INVITE_TOKEN),
+        created_by_user_id=michel.id,
+        expires_at=now + timedelta(days=7),
+    ).save()
+    await OrgInvitation(
+        id=fixture_id("org-invitation:acme:expired"),
+        org_id=acme.id,
+        email="expired.invite@example.com",
+        org_role=OrgRole.admin,
+        workspace_id=staging.id,
+        workspace_role=WorkspaceRole.admin,
+        token_hash=token_hash(ACME_EXPIRED_INVITE_TOKEN),
+        created_by_user_id=michel.id,
+        expires_at=now - timedelta(days=1),
+    ).save()
+
     checkout = await inference_key(ACME_PROD_TOKEN, production, michel, label="checkout-service").save()
     ci = await inference_key(ACME_STAGING_TOKEN, staging, michel, label="ci").save()
     solo_key = await inference_key(SOLO_TOKEN, default, dana, label="default").save()
@@ -288,5 +326,9 @@ async def apply_fixtures(now: datetime, store: SecretStore) -> Fixtures:
         inference_token=ACME_PROD_TOKEN,
         org_access_token=ACME_ACCESS_TOKEN,
         instance_access_token=INSTANCE_ACCESS_TOKEN,
+        invitation_tokens=[
+            ("new.member@example.com", ACME_MEMBER_INVITE_TOKEN),
+            ("production.viewer@example.com", ACME_PRODUCTION_INVITE_TOKEN),
+        ],
         unresolved_providers=sorted({key.provider_name for key in keys if not key.fingerprint}),
     )

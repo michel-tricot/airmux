@@ -2,9 +2,11 @@ import { useState } from 'react';
 import { useRequiredOrgId } from '@/lib/session';
 import { useOrgAccessKeys, useCreateOrgAccessKeyMutation, useRevokeOrgAccessKeyMutation, useGrantablePermissions } from '@/features/keys/hooks';
 import { useOrgMembers } from '@/features/members/hooks';
+import { useCreateInvitationMutation, useInvitations, useReissueInvitationMutation, useRevokeInvitationMutation } from '@/features/invitations/hooks';
+import { useWorkspaces } from '@/features/workspaces/hooks';
 import { useBundles, useCompileBundleMutation, useOrgActivity } from '@/features/telemetry/hooks';
-import { Avatar, AvatarFallback, Card, Button, Badge, Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/elements';
-import { Plus, Key, Settings, Package, RefreshCw, Users, Activity } from 'lucide-react';
+import { Avatar, AvatarFallback, Card, Button, Badge, ConfirmButton, Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/elements';
+import { Plus, Key, Settings, Package, RefreshCw, Users, Activity, UserPlus, Ban } from 'lucide-react';
 import { formatDate, formatRelative } from '@/lib/format';
 import { KeyRevealDialog } from '@/components/KeyRevealDialog';
 import { PageShell } from '@/components/shared/page-shell';
@@ -13,6 +15,8 @@ import { FormDialog } from '@/components/shared/form-dialog';
 import { ApiKeysTable } from '@/components/shared/api-keys-table';
 import { AccessKeyFormFields, accessKeyFormSchema, canIssueAccessKeys } from '@/components/shared/access-key-form';
 import { PermissionsCell } from '@/components/shared/permissions-cell';
+import { InvitationDialog, invitationRequest } from '@/components/shared/invitation-dialog';
+import { OneTimeValueDialog } from '@/components/shared/one-time-value-dialog';
 
 export default function AppOrgSettings() {
   const orgId = useRequiredOrgId();
@@ -21,19 +25,28 @@ export default function AppOrgSettings() {
   const bundlesQuery = useBundles(orgId);
   const membersQuery = useOrgMembers(orgId);
   const activityQuery = useOrgActivity(orgId, { limit: 50 });
+  const workspacesQuery = useWorkspaces(orgId);
+  const invitationsQuery = useInvitations(orgId);
   const members = membersQuery.data;
 
   const [keyOpen, setKeyOpen] = useState(false);
   const [token, setToken] = useState<string | null>(null);
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [invitationUrl, setInvitationUrl] = useState<string | null>(null);
 
   const keyLabels = new Map(keysQuery.data?.map((key) => [key.id, key.label] as const) ?? []);
   const describeRecord = (entry: { record_id: string }) => keyLabels.get(entry.record_id) ?? null;
 
   const mintKey = useCreateOrgAccessKeyMutation(orgId);
-  const permissionsQuery = useGrantablePermissions({ orgId, enabled: keyOpen });
+  const permissionsQuery = useGrantablePermissions({ orgId, enabled: true });
   const canIssueKey = canIssueAccessKeys(permissionsQuery.data?.permissions);
   const revokeKey = useRevokeOrgAccessKeyMutation(orgId);
   const compile = useCompileBundleMutation(orgId);
+  const createInvitation = useCreateInvitationMutation(orgId);
+  const reissueInvitation = useReissueInvitationMutation(orgId);
+  const revokeInvitation = useRevokeInvitationMutation(orgId);
+  const canManageInvitations = permissionsQuery.data?.permissions.includes('members.manage') ?? false;
+  const workspaceNames = new Map(workspacesQuery.data?.map((workspace) => [workspace.id, workspace.name] as const) ?? []);
 
   return (
     <PageShell className="max-w-5xl">
@@ -132,6 +145,11 @@ export default function AppOrgSettings() {
         <TabsContent value="members" className="space-y-4 mt-0">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-lg font-semibold">Organization Members</h2>
+            {canManageInvitations && (
+              <Button size="sm" onClick={() => setInviteOpen(true)} disabled={workspacesQuery.isLoading || workspacesQuery.isError}>
+                <UserPlus className="w-4 h-4 mr-1" /> Invite by email
+              </Button>
+            )}
           </div>
           <Card>
             <DataTable
@@ -167,6 +185,81 @@ export default function AppOrgSettings() {
                   cell: (member) => (
                     <Badge variant={member.service_account ? 'secondary' : 'outline'}>{member.service_account ? 'Service account' : 'User'}</Badge>
                   ),
+                },
+              ]}
+            />
+          </Card>
+
+          <div className="flex justify-between items-center pt-4">
+            <div>
+              <h2 className="text-lg font-semibold">Pending Invitations</h2>
+              <p className="text-sm text-muted-foreground">Links expire after seven days and can be revoked or replaced.</p>
+            </div>
+          </div>
+          <Card>
+            <DataTable
+              rows={invitationsQuery.data}
+              rowKey={(invitation) => invitation.id}
+              isLoading={invitationsQuery.isLoading}
+              isError={invitationsQuery.isError}
+              error={invitationsQuery.error}
+              resource="invitations"
+              onRetry={() => invitationsQuery.refetch()}
+              empty="No pending invitations."
+              columns={[
+                { key: 'email', header: 'Email', cellClassName: 'font-medium', cell: (invitation) => invitation.email },
+                {
+                  key: 'access',
+                  header: 'Access',
+                  cellClassName: 'text-muted-foreground',
+                  cell: (invitation) =>
+                    invitation.workspace_id
+                      ? `${invitation.org_role} · ${workspaceNames.get(invitation.workspace_id) ?? 'Workspace'} ${invitation.workspace_role}`
+                      : invitation.org_role,
+                },
+                {
+                  key: 'expires',
+                  header: 'Expires',
+                  cellClassName: 'text-muted-foreground text-sm',
+                  cell: (invitation) => formatDate(invitation.expires_at),
+                },
+                {
+                  key: 'status',
+                  header: 'Status',
+                  cell: (invitation) => <Badge variant={invitation.status === 'expired' ? 'destructive' : 'outline'}>{invitation.status}</Badge>,
+                },
+                {
+                  key: 'actions',
+                  header: 'Actions',
+                  headClassName: 'text-right',
+                  cellClassName: 'text-right',
+                  cell: (invitation) =>
+                    canManageInvitations ? (
+                      <span className="inline-flex items-center gap-1">
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          aria-label={`Reissue invitation for ${invitation.email}`}
+                          disabled={reissueInvitation.isPending}
+                          onClick={async () => {
+                            const minted = await reissueInvitation.mutateAsync({ orgId, invitationId: invitation.id });
+                            setInvitationUrl(minted.url);
+                          }}
+                        >
+                          <RefreshCw className="w-4 h-4" />
+                        </Button>
+                        <ConfirmButton
+                          title={`Revoke invitation for ${invitation.email}?`}
+                          description="The shared link will stop working immediately."
+                          confirmLabel="Revoke invitation"
+                          pending={revokeInvitation.isPending}
+                          aria-label={`Revoke invitation for ${invitation.email}`}
+                          onConfirm={() => revokeInvitation.mutateAsync({ orgId, invitationId: invitation.id })}
+                        >
+                          <Ban className="w-4 h-4" />
+                        </ConfirmButton>
+                      </span>
+                    ) : null,
                 },
               ]}
             />
@@ -264,6 +357,27 @@ export default function AppOrgSettings() {
       </FormDialog>
 
       <KeyRevealDialog open={!!token} onOpenChange={(v) => !v && setToken(null)} token={token} />
+
+      <InvitationDialog
+        open={inviteOpen}
+        onOpenChange={setInviteOpen}
+        workspaces={workspacesQuery.data ?? []}
+        pending={createInvitation.isPending}
+        onSubmit={async (values) => {
+          const minted = await createInvitation.mutateAsync({ orgId, data: invitationRequest(values) });
+          setInvitationUrl(minted.url);
+        }}
+      />
+
+      <OneTimeValueDialog
+        open={invitationUrl !== null}
+        onOpenChange={(open) => !open && setInvitationUrl(null)}
+        value={invitationUrl}
+        title="Invitation link created"
+        warning="Share this link through a trusted channel. It will not be shown again."
+        label="Invitation link"
+        copyLabel="Copy link"
+      />
     </PageShell>
   );
 }

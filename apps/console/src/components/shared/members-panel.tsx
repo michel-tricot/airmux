@@ -25,6 +25,7 @@ interface MembersPanelProps<T extends MemberRow> {
   emptyText: string;
   renderName?: (member: T) => ReactNode;
   renderEmail?: (member: T) => ReactNode;
+  actions?: ReactNode;
   add?: {
     candidates: Array<{ value: string; label: string }>;
     dialogTitle: string;
@@ -53,6 +54,7 @@ export function MembersPanel<T extends MemberRow>({
   emptyText,
   renderName,
   renderEmail,
+  actions,
   add,
   remove,
 }: MembersPanelProps<T>) {
@@ -98,11 +100,14 @@ export function MembersPanel<T extends MemberRow>({
     <>
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-lg font-semibold">{heading}</h2>
-        {add && (
-          <Button onClick={() => setAddOpen(true)} size="sm" disabled={add.pending || add.candidates.length === 0}>
-            <Plus className="w-4 h-4 mr-1" /> Add Member
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          {actions}
+          {add && (
+            <Button onClick={() => setAddOpen(true)} size="sm" disabled={add.pending || add.candidates.length === 0}>
+              <Plus className="w-4 h-4 mr-1" /> Add Member
+            </Button>
+          )}
+        </div>
       </div>
       <Card>
         <DataTable
