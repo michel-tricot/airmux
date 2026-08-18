@@ -372,6 +372,10 @@ class ModelEntry(BaseModel):
     context_window: Annotated[int, Field(title="Context Window")]
     max_output_tokens: Annotated[int | None, Field(title="Max Output Tokens")] = None
     capabilities: Annotated[list[str], Field(title="Capabilities")]
+    parameter_support: Annotated[
+        dict[str, Literal["supported", "unsupported"]] | None,
+        Field(title="Parameter Support"),
+    ] = None
     egress_kind: Annotated[
         Literal["openai_compatible", "openai_responses", "anthropic"] | None,
         Field(title="Egress Kind"),
@@ -481,6 +485,14 @@ class ModelIn(BaseModel):
             title="Capabilities",
         ),
     ] = None
+    parameter_support: Annotated[
+        dict[str, Literal["supported", "unsupported"]] | None,
+        Field(
+            description="Known support for canonical request parameters; an absent parameter is unknown",
+            max_length=128,
+            title="Parameter Support",
+        ),
+    ] = None
 
 
 class ModelOut(BaseModel):
@@ -496,6 +508,7 @@ class ModelOut(BaseModel):
     context_window: Annotated[int, Field(title="Context Window")]
     max_output_tokens: Annotated[int | None, Field(title="Max Output Tokens")]
     capabilities: Annotated[list[str], Field(title="Capabilities")]
+    parameter_support: Annotated[dict[str, Literal["supported", "unsupported"]], Field(title="Parameter Support")]
     created_at: Annotated[AwareDatetime, Field(title="Created At")]
     updated_at: Annotated[AwareDatetime, Field(title="Updated At")]
     deleted_at: Annotated[AwareDatetime | None, Field(title="Deleted At")]
