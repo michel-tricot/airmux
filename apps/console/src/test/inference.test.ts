@@ -16,6 +16,7 @@ function streamResponse(chunks: Uint8Array[]) {
 }
 
 afterEach(() => {
+  vi.useRealTimers();
   vi.unstubAllGlobals();
 });
 
@@ -31,7 +32,6 @@ describe('chatCompletion', () => {
 
     await expect(
       chatCompletion({
-        token: 'secret',
         model: 'model-1',
         messages: [{ role: 'user', content: 'hi' }],
         temperature: 0,
@@ -48,8 +48,8 @@ describe('chatCompletion', () => {
       expect.objectContaining({
         method: 'POST',
         headers: {
-          Authorization: 'Bearer secret',
           'Content-Type': 'application/json',
+          'X-Requested-With': 'fetch',
           'x-airllm-dialect': 'openai_native',
         },
       }),
@@ -73,7 +73,6 @@ describe('chatCompletion', () => {
 
     await expect(
       chatCompletion({
-        token: 'secret',
         model: 'model-1',
         messages: [{ role: 'user', content: 'hi' }],
         stream: true,
@@ -95,8 +94,23 @@ describe('chatCompletion', () => {
       ),
     );
 
-    await expect(chatCompletion({ token: 'secret', model: 'model-1', messages: [{ role: 'user', content: 'hi' }], stream: false })).rejects.toThrow(
+    await expect(chatCompletion({ model: 'model-1', messages: [{ role: 'user', content: 'hi' }], stream: false })).rejects.toThrow(
       '405: Method Not Allowed',
     );
+  });
+
+  it('waits for a newly published playground session to reach the data plane', async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(Response.json({ error: { code: 'invalid_token' } }, { status: 401 }))
+      .mockResolvedValueOnce(Response.json({ choices: [{ message: { content: 'ready' } }] }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const completion = chatCompletion({ model: 'model-1', messages: [{ role: 'user', content: 'hi' }], stream: false });
+    await vi.advanceTimersByTimeAsync(250);
+
+    await expect(completion).resolves.toMatchObject({ content: 'ready' });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 });

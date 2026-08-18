@@ -8,6 +8,7 @@ from uuid import UUID
 from fastapi import APIRouter, HTTPException, Request, Response
 from pydantic import BaseModel, Field, field_validator
 
+from contract import PLAYGROUND_COOKIE
 from control_plane.authority import effective_permissions, principal_can_select_org, visible_org_ids
 from control_plane.authz import Actor, InstanceRole, Permission, Scope
 from control_plane.deps import (
@@ -26,7 +27,7 @@ from control_plane.deps import (
     user_scoped,
 )
 from control_plane.keys import mint_standing_access_key, verify_access_key
-from control_plane.models import AccessKey, AuthIdentity, CliAuthRequest, Org, OrgMembership, User, set_actor
+from control_plane.models import AccessKey, AuthIdentity, CliAuthRequest, Org, OrgMembership, PlaygroundSession, User, set_actor
 from control_plane.models.auth_identity import IdentityConflictError
 from control_plane.models.cli_auth_request import AUTH_REQUEST_TTL
 from control_plane.models.common.wire import DeletedOut, Envelope, RequestModel
@@ -163,8 +164,13 @@ async def logout(
     auth_session = await verify_session(session_cookie)
     if auth_session is None:
         raise HTTPException(status_code=401, detail="Your session has expired; sign in again")
+    playground_session = await PlaygroundSession.by_credential(auth_session.id)
+    if playground_session is not None:
+        playground_session.revoked = True
+        await playground_session.save()
     await auth_session.delete()
     response.delete_cookie(SESSION_COOKIE, path="/")
+    response.delete_cookie(PLAYGROUND_COOKIE, path="/")
     return Envelope(data=DeletedOut.of(auth_session.id))
 
 

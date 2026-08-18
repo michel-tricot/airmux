@@ -3,7 +3,6 @@ export type InferenceUsage = { inputTokens: number; outputTokens: number; cacheR
 export type ChatCompletionResult = { content: string; usage?: InferenceUsage; finishReason?: string; firstTokenMs?: number; durationMs: number };
 
 type ChatCompletionOptions = {
-  token: string;
   model: string;
   messages: InferenceMessage[];
   temperature?: number;
@@ -18,6 +17,22 @@ type OpenAIChunk = {
   usage?: { prompt_tokens?: unknown; completion_tokens?: unknown; prompt_tokens_details?: { cached_tokens?: unknown } };
   error?: { message?: unknown; code?: unknown };
 };
+
+const SESSION_PROPAGATION_DELAYS_MS = [250, 500, 1_000, 1_500, 2_000];
+
+function wait(delayMs: number, signal?: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const timeout = window.setTimeout(resolve, delayMs);
+    signal?.addEventListener(
+      'abort',
+      () => {
+        window.clearTimeout(timeout);
+        reject(new DOMException('The operation was aborted', 'AbortError'));
+      },
+      { once: true },
+    );
+  });
+}
 
 function errorMessage(value: unknown): string | null {
   if (!value || typeof value !== 'object') return null;
@@ -126,11 +141,11 @@ async function streamedContent(response: Response, startedAt: number, onDelta?: 
 
 export async function chatCompletion(options: ChatCompletionOptions): Promise<ChatCompletionResult> {
   const startedAt = performance.now();
-  const response = await fetch('/inf/v1/chat/completions', {
+  const request = {
     method: 'POST',
     headers: {
-      Authorization: `Bearer ${options.token}`,
       'Content-Type': 'application/json',
+      'X-Requested-With': 'fetch',
       'x-airllm-dialect': 'openai_native',
     },
     body: JSON.stringify({
@@ -141,7 +156,14 @@ export async function chatCompletion(options: ChatCompletionOptions): Promise<Ch
       stream: options.stream,
     }),
     signal: options.signal,
-  });
+  } satisfies RequestInit;
+  let response = await fetch('/inf/v1/chat/completions', request);
+  for (const delayMs of SESSION_PROPAGATION_DELAYS_MS) {
+    if (response.status !== 401) break;
+    await response.body?.cancel();
+    await wait(delayMs, options.signal);
+    response = await fetch('/inf/v1/chat/completions', request);
+  }
   if (!response.ok) throw await responseError(response);
   if (options.stream) return streamedContent(response, startedAt, options.onDelta);
 

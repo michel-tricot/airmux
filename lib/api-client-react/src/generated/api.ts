@@ -83,6 +83,8 @@ import type {
   OrgUpdate,
   PasswordChangeIn,
   PasswordChangedOut,
+  PlaygroundSessionEndedOut,
+  PlaygroundSessionReadyOut,
   ProviderCredentialIn,
   ProviderCredentialOut,
   ProviderCredentialUpdate,
@@ -3854,6 +3856,158 @@ export const useRemoveMember = <TError = ErrorType<void | HTTPValidationError>,
         TContext
       > => {
       return useMutation(getRemoveMemberMutationOptions(options));
+    }
+
+export const getEnsurePlaygroundSessionUrl = (orgId: string,
+    workspaceRef: string,) => {
+
+
+
+
+  return `/api/v1/orgs/${orgId}/workspaces/${workspaceRef}/playground-session`
+}
+
+/**
+ * Reuse the browser's short-lived playground session or rotate it into this workspace.
+ *
+ * Required permission: `playground.execute`.
+ * @summary Prepare Playground Session
+ */
+export const ensurePlaygroundSession = async (orgId: string,
+    workspaceRef: string, options?: Parameters<typeof customFetch>[1]): Promise<PlaygroundSessionReadyOut> => {
+
+  return customFetch<PlaygroundSessionReadyOut>(getEnsurePlaygroundSessionUrl(orgId,workspaceRef),
+  {
+    ...options,
+    method: 'PUT'
+
+
+  }
+);}
+
+
+
+
+
+export const getEnsurePlaygroundSessionMutationOptions = <TError = ErrorType<void | HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof ensurePlaygroundSession>>, TError,{orgId: string;workspaceRef: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof ensurePlaygroundSession>>, TError,{orgId: string;workspaceRef: string}, TContext> => {
+
+const mutationKey = ['ensurePlaygroundSession'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof ensurePlaygroundSession>>, {orgId: string;workspaceRef: string}> = (props) => {
+          const {orgId,workspaceRef} = props ?? {};
+
+          return  ensurePlaygroundSession(orgId,workspaceRef,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type EnsurePlaygroundSessionMutationResult = NonNullable<Awaited<ReturnType<typeof ensurePlaygroundSession>>>
+
+    export type EnsurePlaygroundSessionMutationError = ErrorType<void | HTTPValidationError>
+
+    /**
+ * @summary Prepare Playground Session
+ */
+export const useEnsurePlaygroundSession = <TError = ErrorType<void | HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof ensurePlaygroundSession>>, TError,{orgId: string;workspaceRef: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof ensurePlaygroundSession>>,
+        TError,
+        {orgId: string;workspaceRef: string},
+        TContext
+      > => {
+      return useMutation(getEnsurePlaygroundSessionMutationOptions(options));
+    }
+
+export const getEndPlaygroundSessionUrl = (orgId: string,
+    workspaceRef: string,) => {
+
+
+
+
+  return `/api/v1/orgs/${orgId}/workspaces/${workspaceRef}/playground-session`
+}
+
+/**
+ * Revoke the current browser playground session and clear its credential cookie.
+ *
+ * Required permission: `playground.execute`.
+ * @summary End Playground Session
+ */
+export const endPlaygroundSession = async (orgId: string,
+    workspaceRef: string, options?: Parameters<typeof customFetch>[1]): Promise<PlaygroundSessionEndedOut> => {
+
+  return customFetch<PlaygroundSessionEndedOut>(getEndPlaygroundSessionUrl(orgId,workspaceRef),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getEndPlaygroundSessionMutationOptions = <TError = ErrorType<void | HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof endPlaygroundSession>>, TError,{orgId: string;workspaceRef: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof endPlaygroundSession>>, TError,{orgId: string;workspaceRef: string}, TContext> => {
+
+const mutationKey = ['endPlaygroundSession'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof endPlaygroundSession>>, {orgId: string;workspaceRef: string}> = (props) => {
+          const {orgId,workspaceRef} = props ?? {};
+
+          return  endPlaygroundSession(orgId,workspaceRef,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type EndPlaygroundSessionMutationResult = NonNullable<Awaited<ReturnType<typeof endPlaygroundSession>>>
+
+    export type EndPlaygroundSessionMutationError = ErrorType<void | HTTPValidationError>
+
+    /**
+ * @summary End Playground Session
+ */
+export const useEndPlaygroundSession = <TError = ErrorType<void | HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof endPlaygroundSession>>, TError,{orgId: string;workspaceRef: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof endPlaygroundSession>>,
+        TError,
+        {orgId: string;workspaceRef: string},
+        TContext
+      > => {
+      return useMutation(getEndPlaygroundSessionMutationOptions(options));
     }
 
 export const getCreateInferenceKeyUrl = (orgId: string,

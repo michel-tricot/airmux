@@ -35,6 +35,7 @@ class Permission(StrEnum):
     provider_credentials_manage = "provider-credentials.manage"
     inference_keys_read = "inference-keys.read"
     inference_keys_manage = "inference-keys.manage"
+    playground_execute = "playground.execute"
     bundles_read = "bundles.read"
     bundles_publish = "bundles.publish"
     usage_read = "usage.read"
@@ -113,6 +114,7 @@ ORG_ROLE_PERMISSIONS = {
             Permission.provider_credentials_manage,
             Permission.inference_keys_read,
             Permission.inference_keys_manage,
+            Permission.playground_execute,
             Permission.bundles_read,
             Permission.bundles_publish,
             Permission.usage_read,
@@ -137,6 +139,7 @@ ORG_ROLE_PERMISSIONS = {
             Permission.provider_credentials_manage,
             Permission.inference_keys_read,
             Permission.inference_keys_manage,
+            Permission.playground_execute,
             Permission.bundles_read,
             Permission.bundles_publish,
             Permission.usage_read,
@@ -168,6 +171,7 @@ WORKSPACE_ROLE_PERMISSIONS = {
             Permission.provider_credentials_manage,
             Permission.inference_keys_read,
             Permission.inference_keys_manage,
+            Permission.playground_execute,
             Permission.usage_read,
             Permission.access_keys_read,
             Permission.access_keys_issue,
@@ -182,6 +186,7 @@ WORKSPACE_ROLE_PERMISSIONS = {
             Permission.provider_credentials_read,
             Permission.inference_keys_read,
             Permission.inference_keys_manage,
+            Permission.playground_execute,
             Permission.usage_read,
         }
     ),

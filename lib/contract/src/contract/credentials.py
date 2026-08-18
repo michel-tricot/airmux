@@ -11,6 +11,7 @@ from __future__ import annotations
 import hashlib
 
 INFERENCE_TOKEN_PREFIX = "sk-inf-"  # noqa: S105 token prefix, not a secret
+PLAYGROUND_COOKIE = "airllm_playground"
 
 
 def token_hash(token: str) -> str:

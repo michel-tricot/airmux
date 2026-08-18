@@ -2,18 +2,19 @@ from __future__ import annotations
 
 import secrets
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
 
 from contract import INFERENCE_TOKEN_PREFIX, token_hash
 from control_plane.authz import Actor, Grant, Permission, Scope
-from control_plane.models import AccessKey, InferenceKey
+from control_plane.models import AccessKey, InferenceKey, PlaygroundSession
 
 if TYPE_CHECKING:
     from uuid import UUID
 
 ACCESS_KEY_PREFIX = "sk-cp-"
 PREFIX_SECRET_CHARS = 6
+PLAYGROUND_SESSION_TTL = timedelta(hours=1)
 
 
 def key_prefix(token: str, kind: str) -> str:
@@ -76,6 +77,35 @@ async def mint_inference_key(org_id: UUID, workspace_id: UUID, user_id: UUID, *,
         label=label,
     ).save()
     return key.id, token
+
+
+async def rotate_playground_session(
+    org_id: UUID,
+    workspace_id: UUID,
+    user_id: UUID,
+    credential_id: UUID,
+    now: datetime,
+) -> tuple[PlaygroundSession, str]:
+    token, _ = _new_key(INFERENCE_TOKEN_PREFIX)
+    playground_session = await PlaygroundSession.for_rotation(credential_id)
+    if playground_session is None:
+        playground_session = PlaygroundSession(
+            org_id=org_id,
+            workspace_id=workspace_id,
+            user_id=user_id,
+            credential_id=credential_id,
+            token_hash=token_hash(token),
+            expires_at=now + PLAYGROUND_SESSION_TTL,
+            revoked=False,
+        )
+    else:
+        playground_session.org_id = org_id
+        playground_session.workspace_id = workspace_id
+        playground_session.user_id = user_id
+        playground_session.token_hash = token_hash(token)
+        playground_session.expires_at = now + PLAYGROUND_SESSION_TTL
+        playground_session.revoked = False
+    return await playground_session.save(), token
 
 
 def _live(key: AccessKey, now: datetime) -> bool:

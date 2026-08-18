@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from contract.bundle import BundleV1, Catalog, CredentialEntry, KeyEntry, ModelEntry, ProviderEntry, SignedBundle
-from contract.credentials import INFERENCE_TOKEN_PREFIX, token_hash
+from contract.credentials import INFERENCE_TOKEN_PREFIX, PLAYGROUND_COOKIE, token_hash
 from contract.events import HeartbeatV1, UsageEventV1, UsageStatus
 from contract.ids import uuid7
 from contract.refs import UnknownVarError, UnsupportedRefSchemeError, load_config_section, resolve_ref, try_resolve_ref
@@ -36,6 +36,7 @@ from contract.signing import (
 
 __all__ = [
     "INFERENCE_TOKEN_PREFIX",
+    "PLAYGROUND_COOKIE",
     "BundleV1",
     "Catalog",
     "CredentialEntry",

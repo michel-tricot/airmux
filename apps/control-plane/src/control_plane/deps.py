@@ -7,6 +7,7 @@ from uuid import UUID
 from fastapi import Cookie, Depends, HTTPException, Request, params
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
+from contract import PLAYGROUND_COOKIE
 from control_plane.authority import effective_permissions
 from control_plane.authz import ALL_PERMISSIONS, Actor, Grant, Permission, Scope
 from control_plane.db import transaction
@@ -16,6 +17,7 @@ from control_plane.models.runtime_configuration import RuntimeConfiguration, run
 from control_plane.sessions import SESSION_COOKIE, verify_session
 
 SessionCookie = Annotated[str | None, Cookie(alias=SESSION_COOKIE, include_in_schema=False)]
+PlaygroundCookie = Annotated[str | None, Cookie(alias=PLAYGROUND_COOKIE, include_in_schema=False)]
 RequestedWith = Annotated[str | None, params.Header(alias="X-Requested-With", include_in_schema=False)]
 FetchSite = Annotated[str | None, params.Header(alias="Sec-Fetch-Site", include_in_schema=False)]
 

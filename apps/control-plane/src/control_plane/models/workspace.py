@@ -18,6 +18,7 @@ from control_plane.models.common.slugs import SLUG_MAX_LENGTH, Slug, slugify
 from control_plane.models.common.wire import RecordCreate, RecordOut, RecordUpdate
 from control_plane.models.inference_key import InferenceKey
 from control_plane.models.org_membership import OrgMembership
+from control_plane.models.playground_session import PlaygroundSession
 from control_plane.models.provider_credential import ProviderCredential
 from control_plane.models.user import User
 from control_plane.models.workspace_membership import WorkspaceMembership
@@ -136,6 +137,8 @@ class Workspace(Record, Identified, OrgOwned, Tombstonable, table=True):
         await AccessKey.delete_scoped(AccessKey.workspace_id == self.id)
         for key in await InferenceKey.find(InferenceKey.workspace_id == self.id):
             await key.delete()
+        for playground_session in await PlaygroundSession.find(PlaygroundSession.workspace_id == self.id):
+            await playground_session.delete()
         for membership in await WorkspaceMembership.find(WorkspaceMembership.workspace_id == self.id):
             await membership.delete()
         await self.delete()

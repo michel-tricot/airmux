@@ -95,6 +95,11 @@ API_TAGS = [
         "description": "List and issue access keys scoped to a workspace and revoke keys",
     },
     {
+        "name": "Workspace Playground",
+        "x-displayName": "Playground",
+        "description": "Create and end short-lived browser sessions for playground model requests",
+    },
+    {
         "name": "Workspace Inference Keys",
         "x-displayName": "Inference Keys",
         "description": "Issue and revoke credentials for model requests to a workspace",
@@ -156,6 +161,7 @@ TAG_GROUPS = [
             "Workspace Settings",
             "Workspace Members",
             "Workspace Access Keys",
+            "Workspace Playground",
             "Workspace Inference Keys",
             "Workspace Provider Credentials",
             "Workspace Usage Events",
@@ -195,6 +201,8 @@ OPERATION_SUMMARIES = {
     "list_member_candidates": "List Workspace Member Candidates",
     "add_member": "Add Workspace Member",
     "remove_member": "Remove Workspace Member",
+    "ensure_playground_session": "Prepare Playground Session",
+    "end_playground_session": "End Playground Session",
     "republish_bundle": "Republish Policy Bundle",
     "list_activity": "List Organization Activity",
     "bundle_latest": "Get Latest Bundle",

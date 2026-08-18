@@ -20,6 +20,7 @@ import { AuthorizationProvider, useAuthorization } from '@/features/permissions/
 import type { AccessPolicy } from '@/features/permissions/authorization';
 import { workspaceRoutes } from '@/pages/app/workspace/routes';
 import { useRequiredParam } from '@/lib/route';
+import { PlaygroundProvider } from '@/features/playground/state';
 
 const Dashboard = lazy(() => import('@/pages/Dashboard'));
 const Organizations = lazy(() => import('@/pages/Organizations'));
@@ -94,23 +95,25 @@ function AppSection() {
 
   return (
     <AuthorizationProvider scope={{ level: 'org', orgId }}>
-      <AppLayout>
-        <RoutedErrorBoundary>
-          <Suspense fallback={<LoadingState label="Loading page..." />}>
-            <Switch>
-              <Route path="/org" component={AppDashboard} />
-              {workspaceRoutes.map(({ suffix, component, access }) => (
-                <Route key={suffix} path={`/org/workspaces/:workspaceRef${suffix}`}>
-                  <AuthorizedWorkspaceRoute component={component} access={access} />
-                </Route>
-              ))}
-              <Route path="/org/models" component={AppModels} />
-              <Route path="/org/settings" component={AppOrgSettings} />
-              <Route component={NotFound} />
-            </Switch>
-          </Suspense>
-        </RoutedErrorBoundary>
-      </AppLayout>
+      <PlaygroundProvider key={orgId}>
+        <AppLayout>
+          <RoutedErrorBoundary>
+            <Suspense fallback={<LoadingState label="Loading page..." />}>
+              <Switch>
+                <Route path="/org" component={AppDashboard} />
+                {workspaceRoutes.map(({ suffix, component, access }) => (
+                  <Route key={suffix} path={`/org/workspaces/:workspaceRef${suffix}`}>
+                    <AuthorizedWorkspaceRoute component={component} access={access} />
+                  </Route>
+                ))}
+                <Route path="/org/models" component={AppModels} />
+                <Route path="/org/settings" component={AppOrgSettings} />
+                <Route component={NotFound} />
+              </Switch>
+            </Suspense>
+          </RoutedErrorBoundary>
+        </AppLayout>
+      </PlaygroundProvider>
     </AuthorizationProvider>
   );
 }

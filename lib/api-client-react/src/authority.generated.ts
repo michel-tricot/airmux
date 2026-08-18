@@ -258,6 +258,22 @@ export const operationAuthority = {
       },
     ],
   },
+  ensurePlaygroundSession: {
+    checks: [
+      {
+        scope: "workspace_scope",
+        anyOf: ["playground.execute"],
+      },
+    ],
+  },
+  endPlaygroundSession: {
+    checks: [
+      {
+        scope: "workspace_scope",
+        anyOf: ["playground.execute"],
+      },
+    ],
+  },
   createInferenceKey: {
     checks: [
       {

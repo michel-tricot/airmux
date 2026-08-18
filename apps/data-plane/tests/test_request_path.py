@@ -74,6 +74,33 @@ def test_missing_token_rejected(api_key, dp_app):
 
 
 @respx.mock
+def test_same_origin_playground_cookie_authenticates(api_key, dp_app):
+    respx.post("https://api.openai.com/v1/chat/completions").mock(return_value=httpx.Response(200, json=OPENAI_RESPONSE))
+    mock_control_plane()
+    with TestClient(dp_app) as client:
+        client.cookies.set("airllm_playground", api_key)
+        response = client.post(
+            "/inf/v1/chat/completions",
+            headers={"X-Requested-With": "airllm-console", "Sec-Fetch-Site": "same-origin"},
+            json={"model": "gpt-test", "messages": [{"role": "user", "content": "say hi"}]},
+        )
+    assert response.status_code == 200
+
+
+@respx.mock
+def test_playground_cookie_rejects_cross_site_requests(api_key, dp_app):
+    mock_control_plane()
+    with TestClient(dp_app) as client:
+        client.cookies.set("airllm_playground", api_key)
+        response = client.post(
+            "/inf/v1/chat/completions",
+            headers={"X-Requested-With": "airllm-console", "Sec-Fetch-Site": "cross-site"},
+            json={"model": "gpt-test", "messages": []},
+        )
+    assert response.status_code == 403
+
+
+@respx.mock
 def test_upstream_error_passed_through(api_key, dp_app):
     respx.post("https://api.openai.com/v1/chat/completions").mock(return_value=httpx.Response(429, json={"error": {"code": "rate_limited"}}))
     mock_control_plane()

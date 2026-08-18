@@ -11,16 +11,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
-/**
- * An active inference key included in a policy bundle.
- *
- * The bundle contains a token hash for authorization and a key ID for usage attribution, never
- * the caller's secret token.
- */
-export interface KeyEntry {
-  key_id: string;
-  org_id: string;
-  workspace_id: string;
-  token_hash: string;
-  expires_at?: Date | null;
-}
+export const PlaygroundSessionEndedOutValue = {
+  status: 'ended',
+} as const;
+export type PlaygroundSessionEndedOut = typeof PlaygroundSessionEndedOutValue;

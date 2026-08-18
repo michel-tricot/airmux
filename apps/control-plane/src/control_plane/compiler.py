@@ -7,7 +7,7 @@ from sqlmodel import col, or_, select
 
 from contract import BundleV1, Catalog, CredentialEntry, KeyEntry, ModelEntry, ProviderEntry, canonical_json, sign_bundle, uuid7
 from control_plane.db import current_session
-from control_plane.models import Bundle, InferenceKey, Model, Org, Provider, ProviderCredential, RuntimeConfiguration
+from control_plane.models import Bundle, InferenceKey, Model, Org, PlaygroundSession, Provider, ProviderCredential, RuntimeConfiguration
 from control_plane.models.runtime_configuration import runtime_configuration_changes
 
 if TYPE_CHECKING:
@@ -69,6 +69,7 @@ async def compile_bundle(org_id: UUID, bundle_id: UUID, now: datetime) -> Bundle
     if org is None:
         raise UnknownOrgError(org_id)
     key_rows = await InferenceKey.find(InferenceKey.org_id == org_id, order_by=col(InferenceKey.id))
+    playground_sessions = await PlaygroundSession.find(PlaygroundSession.org_id == org_id, order_by=col(PlaygroundSession.id))
     provider_rows = await Provider.find(order_by=col(Provider.name))
     model_rows = await Model.find(order_by=col(Model.name))
     provider_names = {p.id: p.name for p in provider_rows}
@@ -80,7 +81,24 @@ async def compile_bundle(org_id: UUID, bundle_id: UUID, now: datetime) -> Bundle
         bundle_id=bundle_id,
         org_id=org_id,
         issued_at=now,
-        keys=[KeyEntry(key_id=str(r.id), org_id=r.org_id, workspace_id=r.workspace_id, token_hash=r.token_hash) for r in key_rows if not r.revoked],
+        keys=[
+            *[
+                KeyEntry(key_id=str(key.id), org_id=key.org_id, workspace_id=key.workspace_id, token_hash=key.token_hash)
+                for key in key_rows
+                if not key.revoked
+            ],
+            *[
+                KeyEntry(
+                    key_id=str(playground_session.id),
+                    org_id=playground_session.org_id,
+                    workspace_id=playground_session.workspace_id,
+                    token_hash=playground_session.token_hash,
+                    expires_at=playground_session.expires_at,
+                )
+                for playground_session in playground_sessions
+                if playground_session.active(now)
+            ],
+        ],
         catalog=Catalog(
             providers=[
                 ProviderEntry.model_validate(
