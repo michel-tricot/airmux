@@ -10,7 +10,7 @@ SCRIPTS = Path(__file__).resolve().parents[1] / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 
 from parameter_support import apply_discovery_evidence, classify_parameter_response, discovery_evidence, resolve_parameter_support
-from probe_parameters import probe_models, request_body
+from probe_parameters import PROBES, probe_models, request_body, routable_models
 
 
 def test_live_probe_wins_over_model_discovery():
@@ -98,11 +98,23 @@ def test_model_discovery_probe_records_attempts_and_conclusive_results(monkeypat
 
 
 def test_chat_probe_isolates_the_parameter_under_test():
-    assert request_body("chat/completions", "new-model", "temperature", 1.0) == {
+    assert request_body("chat/completions", "new-model", "temperature", 0.7) == {
         "model": "new-model",
         "messages": [{"role": "user", "content": "say ok"}],
-        "temperature": 1.0,
+        "temperature": 0.7,
     }
+
+
+def test_temperature_probe_uses_a_non_default_value():
+    assert PROBES["chat/completions"]["temperature"] == 0.7
+    assert PROBES["responses"]["temperature"] == 0.7
+
+
+def test_manual_probe_selects_only_models_in_the_applied_taxonomy():
+    catalog = {"models": [{"id": "advertised"}, {"id": "routable"}, {"id": "also-routable"}]}
+    applied_model_ids = {"example/routable", "example/also-routable"}
+
+    assert routable_models(catalog, "example", applied_model_ids, limit=1) == [{"id": "routable"}]
 
 
 def test_every_cataloged_model_contains_discovery_evidence():

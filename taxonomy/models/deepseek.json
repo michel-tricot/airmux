@@ -42,6 +42,35 @@
               "stop": "supported"
             }
           }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ],
+            "messages": [
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "seed": "supported",
+              "stop": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            }
+          }
         }
       },
       "endpoint_status": {
@@ -87,6 +116,35 @@
               "temperature": "supported",
               "top_p": "supported",
               "stop": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ],
+            "messages": [
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "seed": "supported",
+              "stop": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
             }
           }
         }

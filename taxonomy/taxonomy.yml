@@ -297,6 +297,9 @@ models:
   - tools
   parameter_support:
     logprobs: supported
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    seed: supported
     stop: supported
     temperature: supported
     top_p: supported
@@ -314,6 +317,9 @@ models:
   - tools
   parameter_support:
     logprobs: supported
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    seed: supported
     stop: supported
     temperature: supported
     top_p: supported
@@ -695,9 +701,9 @@ models:
   capabilities:
   - streaming
   parameter_support:
-    logprobs: supported
+    logprobs: unsupported
     parallel_tool_calls: supported
-    reasoning_effort: supported
+    reasoning_effort: unsupported
     seed: supported
     stop: supported
     temperature: supported
@@ -714,9 +720,9 @@ models:
   capabilities:
   - streaming
   parameter_support:
-    logprobs: supported
+    logprobs: unsupported
     parallel_tool_calls: supported
-    reasoning_effort: supported
+    reasoning_effort: unsupported
     seed: supported
     stop: supported
     temperature: supported
@@ -733,9 +739,9 @@ models:
   capabilities:
   - streaming
   parameter_support:
-    logprobs: supported
+    logprobs: unsupported
     parallel_tool_calls: supported
-    reasoning_effort: supported
+    reasoning_effort: unsupported
     seed: supported
     stop: supported
     temperature: supported
@@ -753,7 +759,7 @@ models:
   - streaming
   - tools
   parameter_support:
-    logprobs: supported
+    logprobs: unsupported
     parallel_tool_calls: supported
     reasoning_effort: supported
     seed: supported
@@ -773,7 +779,7 @@ models:
   - streaming
   - tools
   parameter_support:
-    logprobs: supported
+    logprobs: unsupported
     parallel_tool_calls: supported
     reasoning_effort: supported
     seed: supported
@@ -794,7 +800,7 @@ models:
   - tools
   - vision
   parameter_support:
-    logprobs: supported
+    logprobs: unsupported
     parallel_tool_calls: supported
     reasoning_effort: supported
     seed: supported
@@ -904,6 +910,7 @@ models:
   - streaming
   - tools
   parameter_support:
+    logprobs: supported
     parallel_tool_calls: supported
     reasoning_effort: supported
     stop: supported
@@ -924,7 +931,7 @@ models:
   - vision
   parameter_support:
     parallel_tool_calls: supported
-    reasoning_effort: supported
+    reasoning_effort: unsupported
     stop: supported
     temperature: supported
     top_p: supported
@@ -1149,7 +1156,7 @@ models:
   - vision
   parameter_support:
     parallel_tool_calls: supported
-    reasoning_effort: supported
+    reasoning_effort: unsupported
     stop: supported
     temperature: supported
     top_p: supported
@@ -1206,7 +1213,7 @@ models:
   - vision
   parameter_support:
     parallel_tool_calls: supported
-    reasoning_effort: supported
+    reasoning_effort: unsupported
     stop: supported
     temperature: supported
     top_p: supported
@@ -1225,7 +1232,7 @@ models:
   - vision
   parameter_support:
     parallel_tool_calls: supported
-    reasoning_effort: supported
+    reasoning_effort: unsupported
     stop: supported
     temperature: supported
     top_p: supported
@@ -1244,7 +1251,7 @@ models:
   - vision
   parameter_support:
     parallel_tool_calls: supported
-    reasoning_effort: supported
+    reasoning_effort: unsupported
     stop: supported
     temperature: supported
     top_p: supported
@@ -1263,7 +1270,7 @@ models:
   - vision
   parameter_support:
     parallel_tool_calls: supported
-    reasoning_effort: supported
+    reasoning_effort: unsupported
     stop: supported
     temperature: supported
     top_p: supported
@@ -1282,7 +1289,7 @@ models:
   - vision
   parameter_support:
     parallel_tool_calls: supported
-    reasoning_effort: supported
+    reasoning_effort: unsupported
     stop: supported
     temperature: supported
     top_p: supported
@@ -1301,7 +1308,7 @@ models:
   - vision
   parameter_support:
     parallel_tool_calls: supported
-    reasoning_effort: supported
+    reasoning_effort: unsupported
     stop: supported
     temperature: supported
     top_p: supported
@@ -1320,7 +1327,7 @@ models:
   - vision
   parameter_support:
     parallel_tool_calls: supported
-    reasoning_effort: supported
+    reasoning_effort: unsupported
     stop: supported
     temperature: supported
     top_p: supported
@@ -1339,7 +1346,7 @@ models:
   - vision
   parameter_support:
     parallel_tool_calls: supported
-    reasoning_effort: supported
+    reasoning_effort: unsupported
     stop: supported
     temperature: supported
     top_p: supported
@@ -1358,7 +1365,7 @@ models:
   - vision
   parameter_support:
     parallel_tool_calls: supported
-    reasoning_effort: supported
+    reasoning_effort: unsupported
     stop: supported
     temperature: supported
     top_p: supported
@@ -1377,7 +1384,7 @@ models:
   - vision
   parameter_support:
     parallel_tool_calls: supported
-    reasoning_effort: supported
+    reasoning_effort: unsupported
     stop: supported
     temperature: supported
     top_p: supported
@@ -1430,6 +1437,7 @@ models:
   - streaming
   - tools
   parameter_support:
+    logprobs: supported
     parallel_tool_calls: supported
     reasoning_effort: supported
     stop: supported
@@ -1448,7 +1456,7 @@ models:
   - streaming
   parameter_support:
     parallel_tool_calls: supported
-    reasoning_effort: supported
+    reasoning_effort: unsupported
     temperature: supported
     top_p: supported
   egress_kind: openai_responses
@@ -1486,7 +1494,7 @@ models:
   - tools
   parameter_support:
     parallel_tool_calls: supported
-    reasoning_effort: supported
+    reasoning_effort: unsupported
     temperature: supported
     top_p: supported
   egress_kind: openai_responses
@@ -1504,7 +1512,7 @@ models:
   - tools
   parameter_support:
     parallel_tool_calls: supported
-    reasoning_effort: supported
+    reasoning_effort: unsupported
     temperature: supported
     top_p: supported
   egress_kind: openai_responses
@@ -1522,7 +1530,7 @@ models:
   - tools
   parameter_support:
     parallel_tool_calls: supported
-    reasoning_effort: supported
+    reasoning_effort: unsupported
     temperature: supported
     top_p: supported
   egress_kind: openai_responses
@@ -1539,7 +1547,7 @@ models:
   - streaming
   parameter_support:
     parallel_tool_calls: supported
-    reasoning_effort: supported
+    reasoning_effort: unsupported
     temperature: supported
     top_p: supported
   egress_kind: openai_responses
@@ -1557,7 +1565,7 @@ models:
   - tools
   parameter_support:
     parallel_tool_calls: supported
-    reasoning_effort: supported
+    reasoning_effort: unsupported
     temperature: supported
     top_p: supported
   egress_kind: openai_responses
@@ -1574,7 +1582,7 @@ models:
   - streaming
   parameter_support:
     parallel_tool_calls: supported
-    reasoning_effort: supported
+    reasoning_effort: unsupported
     temperature: supported
     top_p: supported
   egress_kind: openai_responses
@@ -1592,7 +1600,7 @@ models:
   - tools
   parameter_support:
     parallel_tool_calls: supported
-    reasoning_effort: supported
+    reasoning_effort: unsupported
     temperature: supported
     top_p: supported
   egress_kind: openai_responses
@@ -1609,7 +1617,7 @@ models:
   - streaming
   parameter_support:
     parallel_tool_calls: supported
-    reasoning_effort: supported
+    reasoning_effort: unsupported
     temperature: supported
     top_p: supported
   egress_kind: openai_responses
@@ -1627,7 +1635,7 @@ models:
   - tools
   parameter_support:
     parallel_tool_calls: supported
-    reasoning_effort: supported
+    reasoning_effort: unsupported
     temperature: supported
     top_p: supported
   egress_kind: openai_responses
@@ -1645,7 +1653,7 @@ models:
   - tools
   parameter_support:
     parallel_tool_calls: supported
-    reasoning_effort: supported
+    reasoning_effort: unsupported
     temperature: supported
     top_p: supported
   egress_kind: openai_responses
@@ -1663,7 +1671,7 @@ models:
   - tools
   parameter_support:
     parallel_tool_calls: supported
-    reasoning_effort: supported
+    reasoning_effort: unsupported
     temperature: supported
     top_p: supported
   egress_kind: openai_responses
@@ -1681,7 +1689,7 @@ models:
   - tools
   parameter_support:
     parallel_tool_calls: supported
-    reasoning_effort: supported
+    reasoning_effort: unsupported
     temperature: supported
     top_p: supported
   egress_kind: openai_responses
@@ -1699,7 +1707,7 @@ models:
   - tools
   parameter_support:
     parallel_tool_calls: supported
-    reasoning_effort: supported
+    reasoning_effort: unsupported
     temperature: supported
     top_p: supported
   egress_kind: openai_responses
@@ -1716,7 +1724,7 @@ models:
   - streaming
   parameter_support:
     parallel_tool_calls: supported
-    reasoning_effort: supported
+    reasoning_effort: unsupported
     temperature: supported
     top_p: supported
   egress_kind: openai_responses
@@ -1735,8 +1743,8 @@ models:
   parameter_support:
     parallel_tool_calls: supported
     reasoning_effort: supported
-    temperature: supported
-    top_p: supported
+    temperature: unsupported
+    top_p: unsupported
   egress_kind: openai_responses
 - model_id: openai/gpt-5-2025-08-07
   provider_id: openai
@@ -1752,8 +1760,8 @@ models:
   parameter_support:
     parallel_tool_calls: supported
     reasoning_effort: supported
-    temperature: supported
-    top_p: supported
+    temperature: unsupported
+    top_p: unsupported
   egress_kind: openai_responses
 - model_id: openai/gpt-5-mini
   provider_id: openai
@@ -1770,8 +1778,8 @@ models:
   parameter_support:
     parallel_tool_calls: supported
     reasoning_effort: supported
-    temperature: supported
-    top_p: supported
+    temperature: unsupported
+    top_p: unsupported
   egress_kind: openai_responses
 - model_id: openai/gpt-5-mini-2025-08-07
   provider_id: openai
@@ -1787,8 +1795,8 @@ models:
   parameter_support:
     parallel_tool_calls: supported
     reasoning_effort: supported
-    temperature: supported
-    top_p: supported
+    temperature: unsupported
+    top_p: unsupported
   egress_kind: openai_responses
 - model_id: openai/gpt-5-nano
   provider_id: openai
@@ -1806,7 +1814,7 @@ models:
     parallel_tool_calls: supported
     reasoning_effort: supported
     temperature: unsupported
-    top_p: supported
+    top_p: unsupported
   egress_kind: openai_responses
 - model_id: openai/gpt-5-nano-2025-08-07
   provider_id: openai
@@ -1822,8 +1830,8 @@ models:
   parameter_support:
     parallel_tool_calls: supported
     reasoning_effort: supported
-    temperature: supported
-    top_p: supported
+    temperature: unsupported
+    top_p: unsupported
   egress_kind: openai_responses
 - model_id: openai/gpt-5.1
   provider_id: openai
@@ -1930,8 +1938,8 @@ models:
   parameter_support:
     parallel_tool_calls: supported
     reasoning_effort: supported
-    temperature: supported
-    top_p: supported
+    temperature: unsupported
+    top_p: unsupported
   egress_kind: openai_responses
 - model_id: openai/gpt-5.6-luna
   provider_id: openai
@@ -1948,8 +1956,8 @@ models:
   parameter_support:
     parallel_tool_calls: supported
     reasoning_effort: supported
-    temperature: supported
-    top_p: supported
+    temperature: unsupported
+    top_p: unsupported
   egress_kind: openai_responses
 - model_id: openai/gpt-5.6-sol
   provider_id: openai
@@ -1966,8 +1974,8 @@ models:
   parameter_support:
     parallel_tool_calls: supported
     reasoning_effort: supported
-    temperature: supported
-    top_p: supported
+    temperature: unsupported
+    top_p: unsupported
   egress_kind: openai_responses
 - model_id: openai/gpt-5.6-terra
   provider_id: openai
@@ -1984,8 +1992,8 @@ models:
   parameter_support:
     parallel_tool_calls: supported
     reasoning_effort: supported
-    temperature: supported
-    top_p: supported
+    temperature: unsupported
+    top_p: unsupported
   egress_kind: openai_responses
 - model_id: openai/o1
   provider_id: openai
@@ -2002,8 +2010,8 @@ models:
   parameter_support:
     parallel_tool_calls: supported
     reasoning_effort: supported
-    temperature: supported
-    top_p: supported
+    temperature: unsupported
+    top_p: unsupported
   egress_kind: openai_responses
 - model_id: openai/o1-2024-12-17
   provider_id: openai
@@ -2019,8 +2027,8 @@ models:
   parameter_support:
     parallel_tool_calls: supported
     reasoning_effort: supported
-    temperature: supported
-    top_p: supported
+    temperature: unsupported
+    top_p: unsupported
   egress_kind: openai_responses
 - model_id: openai/o3
   provider_id: openai
@@ -2037,8 +2045,8 @@ models:
   parameter_support:
     parallel_tool_calls: supported
     reasoning_effort: supported
-    temperature: supported
-    top_p: supported
+    temperature: unsupported
+    top_p: unsupported
   egress_kind: openai_responses
 - model_id: openai/o3-2025-04-16
   provider_id: openai
@@ -2054,8 +2062,8 @@ models:
   parameter_support:
     parallel_tool_calls: supported
     reasoning_effort: supported
-    temperature: supported
-    top_p: supported
+    temperature: unsupported
+    top_p: unsupported
   egress_kind: openai_responses
 - model_id: openai/o3-mini
   provider_id: openai
@@ -2072,8 +2080,8 @@ models:
   parameter_support:
     parallel_tool_calls: supported
     reasoning_effort: supported
-    temperature: supported
-    top_p: supported
+    temperature: unsupported
+    top_p: unsupported
   egress_kind: openai_responses
 - model_id: openai/o3-mini-2025-01-31
   provider_id: openai
@@ -2089,8 +2097,8 @@ models:
   parameter_support:
     parallel_tool_calls: supported
     reasoning_effort: supported
-    temperature: supported
-    top_p: supported
+    temperature: unsupported
+    top_p: unsupported
   egress_kind: openai_responses
 - model_id: openai/o4-mini
   provider_id: openai
@@ -2107,8 +2115,8 @@ models:
   parameter_support:
     parallel_tool_calls: supported
     reasoning_effort: supported
-    temperature: supported
-    top_p: supported
+    temperature: unsupported
+    top_p: unsupported
   egress_kind: openai_responses
 - model_id: openai/o4-mini-2025-04-16
   provider_id: openai
@@ -2124,8 +2132,8 @@ models:
   parameter_support:
     parallel_tool_calls: supported
     reasoning_effort: supported
-    temperature: supported
-    top_p: supported
+    temperature: unsupported
+    top_p: unsupported
   egress_kind: openai_responses
 - model_id: together/LiquidAI/LFM2.5-8B-A1B
   provider_id: together
@@ -2140,6 +2148,7 @@ models:
   - streaming
   parameter_support:
     logprobs: supported
+    parallel_tool_calls: supported
     reasoning_effort: supported
     seed: supported
     stop: supported
@@ -2159,6 +2168,7 @@ models:
   - tools
   parameter_support:
     logprobs: supported
+    parallel_tool_calls: supported
     reasoning_effort: supported
     seed: supported
     stop: supported
@@ -2178,6 +2188,7 @@ models:
   - tools
   parameter_support:
     logprobs: supported
+    parallel_tool_calls: supported
     reasoning_effort: supported
     seed: supported
     stop: supported
@@ -2197,6 +2208,7 @@ models:
   - tools
   parameter_support:
     logprobs: supported
+    parallel_tool_calls: supported
     reasoning_effort: supported
     seed: supported
     stop: supported
@@ -2215,6 +2227,7 @@ models:
   - streaming
   parameter_support:
     logprobs: supported
+    parallel_tool_calls: supported
     reasoning_effort: supported
     seed: supported
     stop: supported
@@ -2233,6 +2246,7 @@ models:
   - streaming
   parameter_support:
     logprobs: supported
+    parallel_tool_calls: supported
     reasoning_effort: supported
     seed: supported
     stop: supported
@@ -2251,6 +2265,7 @@ models:
   - streaming
   parameter_support:
     logprobs: supported
+    parallel_tool_calls: supported
     reasoning_effort: supported
     seed: supported
     stop: supported
@@ -2270,6 +2285,7 @@ models:
   - tools
   parameter_support:
     logprobs: supported
+    parallel_tool_calls: supported
     reasoning_effort: supported
     seed: supported
     stop: supported
@@ -2289,6 +2305,7 @@ models:
   - tools
   parameter_support:
     logprobs: supported
+    parallel_tool_calls: supported
     reasoning_effort: supported
     seed: supported
     stop: supported
@@ -2308,6 +2325,7 @@ models:
   - tools
   parameter_support:
     logprobs: supported
+    parallel_tool_calls: supported
     reasoning_effort: supported
     seed: supported
     stop: supported
@@ -2326,6 +2344,7 @@ models:
   - streaming
   parameter_support:
     logprobs: supported
+    parallel_tool_calls: supported
     reasoning_effort: supported
     seed: supported
     stop: supported
@@ -2344,6 +2363,7 @@ models:
   - streaming
   parameter_support:
     logprobs: supported
+    parallel_tool_calls: supported
     reasoning_effort: supported
     seed: supported
     stop: supported
@@ -2363,6 +2383,7 @@ models:
   - tools
   parameter_support:
     logprobs: supported
+    parallel_tool_calls: supported
     reasoning_effort: supported
     seed: supported
     stop: supported
@@ -2381,6 +2402,7 @@ models:
   - streaming
   parameter_support:
     logprobs: supported
+    parallel_tool_calls: supported
     reasoning_effort: supported
     seed: supported
     stop: supported
@@ -2400,6 +2422,7 @@ models:
   - tools
   parameter_support:
     logprobs: supported
+    parallel_tool_calls: supported
     reasoning_effort: supported
     seed: supported
     stop: supported
@@ -2419,6 +2442,7 @@ models:
   - tools
   parameter_support:
     logprobs: supported
+    parallel_tool_calls: supported
     reasoning_effort: supported
     seed: supported
     stop: supported
@@ -2438,6 +2462,7 @@ models:
   - tools
   parameter_support:
     logprobs: supported
+    parallel_tool_calls: supported
     reasoning_effort: supported
     seed: supported
     stop: supported
@@ -2476,6 +2501,7 @@ models:
   - tools
   parameter_support:
     logprobs: supported
+    parallel_tool_calls: supported
     reasoning_effort: supported
     seed: supported
     stop: supported
@@ -2495,6 +2521,7 @@ models:
   - tools
   parameter_support:
     logprobs: supported
+    parallel_tool_calls: supported
     reasoning_effort: supported
     seed: supported
     stop: supported
@@ -2513,6 +2540,7 @@ models:
   - streaming
   parameter_support:
     logprobs: supported
+    parallel_tool_calls: supported
     reasoning_effort: supported
     seed: supported
     stop: supported
@@ -2532,6 +2560,7 @@ models:
   - tools
   parameter_support:
     logprobs: supported
+    parallel_tool_calls: supported
     reasoning_effort: supported
     seed: supported
     stop: supported
@@ -2550,6 +2579,7 @@ models:
   - streaming
   parameter_support:
     logprobs: supported
+    parallel_tool_calls: supported
     reasoning_effort: supported
     seed: supported
     stop: supported
@@ -2587,6 +2617,7 @@ models:
   - tools
   parameter_support:
     logprobs: supported
+    parallel_tool_calls: supported
     reasoning_effort: supported
     seed: supported
     stop: supported
@@ -2631,7 +2662,7 @@ models:
     parallel_tool_calls: supported
     reasoning_effort: supported
     seed: supported
-    stop: supported
+    stop: unsupported
     temperature: supported
     top_p: supported
 - model_id: xai/grok-4.3
@@ -2652,7 +2683,7 @@ models:
     parallel_tool_calls: supported
     reasoning_effort: supported
     seed: supported
-    stop: supported
+    stop: unsupported
     temperature: supported
     top_p: supported
 - model_id: xai/grok-4.5
@@ -2673,7 +2704,7 @@ models:
     parallel_tool_calls: supported
     reasoning_effort: supported
     seed: supported
-    stop: supported
+    stop: unsupported
     temperature: supported
     top_p: supported
 - model_id: xai/grok-4.6
@@ -2694,7 +2725,7 @@ models:
     parallel_tool_calls: supported
     reasoning_effort: supported
     seed: supported
-    stop: supported
+    stop: unsupported
     temperature: supported
     top_p: supported
 - model_id: xai/grok-build-0.1
@@ -2715,6 +2746,6 @@ models:
     parallel_tool_calls: supported
     reasoning_effort: supported
     seed: supported
-    stop: supported
+    stop: unsupported
     temperature: supported
     top_p: supported

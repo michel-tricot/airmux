@@ -20,7 +20,7 @@ TIMEOUT = 60
 MAX_TOKENS = 16
 PROBES = {
     "chat/completions": {
-        "temperature": 1.0,
+        "temperature": 0.7,
         "top_p": 0.9,
         "seed": 1,
         "stop": ["END"],
@@ -29,14 +29,14 @@ PROBES = {
         "logprobs": True,
     },
     "responses": {
-        "temperature": 1.0,
+        "temperature": 0.7,
         "top_p": 0.9,
         "reasoning_effort": "medium",
         "parallel_tool_calls": False,
         "logprobs": True,
     },
     "messages": {
-        "temperature": 1.0,
+        "temperature": 0.7,
         "top_p": 0.9,
         "stop": ["END"],
     },
@@ -65,7 +65,9 @@ def probe(provider: dict, model_id: str, endpoint: str, parameter: str, value: o
         headers["anthropic-version"] = "2023-06-01"
     else:
         headers["Authorization"] = f"Bearer {key}"
-    request = urllib.request.Request(url, data=json.dumps(request_body(endpoint, model_id, parameter, value)).encode(), headers=headers, method="POST")
+    request = urllib.request.Request(
+        url, data=json.dumps(request_body(endpoint, model_id, parameter, value)).encode(), headers=headers, method="POST"
+    )
     try:
         with urllib.request.urlopen(request, timeout=TIMEOUT, context=CTX) as response:
             return classify_parameter_response(response.status, response.read().decode(), parameter)
@@ -93,7 +95,9 @@ def probe_models(provider: dict, models: list[dict], key: str, parameter_filter:
         support: dict[str, dict[str, str]] = {}
         attempts: dict[str, list[str]] = {}
         for endpoint in endpoints(provider):
-            selected = {parameter: value for parameter, value in PROBES[endpoint].items() if parameter_filter is None or parameter == parameter_filter}
+            selected = {
+                parameter: value for parameter, value in PROBES[endpoint].items() if parameter_filter is None or parameter == parameter_filter
+            }
             endpoint_support = {
                 parameter: status
                 for parameter, value in selected.items()
@@ -117,12 +121,15 @@ def probe_models(provider: dict, models: list[dict], key: str, parameter_filter:
                 for endpoint, parameters in {**previous_attempts, **attempts}.items()
             },
             "support": {
-                endpoint: {**(previous_support.get(endpoint) or {}), **statuses}
-                for endpoint, statuses in {**previous_support, **support}.items()
+                endpoint: {**(previous_support.get(endpoint) or {}), **statuses} for endpoint, statuses in {**previous_support, **support}.items()
             },
         }
         model["parameter_evidence"] = parameter_evidence
     return attempted, conclusive
+
+
+def routable_models(catalog: dict, provider_id: str, applied_model_ids: set[str], limit: int | None = None) -> list[dict]:
+    return [model for model in catalog["models"] if f"{provider_id}/{model['id']}" in applied_model_ids][:limit]
 
 
 def main() -> int:
@@ -130,6 +137,8 @@ def main() -> int:
     parameter_filter = next((argument.split("=", 1)[1] for argument in sys.argv[1:] if argument.startswith("--parameter=")), None)
     limit = next((int(argument.split("=", 1)[1]) for argument in sys.argv[1:] if argument.startswith("--limit=")), None)
     providers = {provider["id"]: provider for provider in yaml.safe_load((TAXONOMY / "providers.yml").read_text())["providers"]}
+    applied = yaml.safe_load((TAXONOMY / "taxonomy.yml").read_text())
+    applied_model_ids = {model["model_id"] for model in applied["models"]}
     changed = 0
     attempted = 0
     conclusive = 0
@@ -142,7 +151,7 @@ def main() -> int:
         if not key:
             print(f"skip {provider['id']}: no {provider['env_var']}")
             continue
-        models = [model for model in catalog["models"] if model.get("reachable") is not False][:limit]
+        models = routable_models(catalog, provider["id"], applied_model_ids, limit)
         model_attempted, model_conclusive = probe_models(provider, models, key, parameter_filter)
         attempted += model_attempted
         conclusive += model_conclusive

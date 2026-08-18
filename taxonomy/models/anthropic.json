@@ -42,6 +42,21 @@
               "stop": "supported"
             }
           }
+        },
+        "live_probe": {
+          "attempted": {
+            "messages": [
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "messages": {
+              "temperature": "supported",
+              "stop": "supported"
+            }
+          }
         }
       },
       "display_name": "Claude Fable 5",
@@ -84,6 +99,22 @@
           "sources": [
             "schemas/completion/anthropic.anthropic.request.json"
           ],
+          "support": {
+            "messages": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "attempted": {
+            "messages": [
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
           "support": {
             "messages": {
               "temperature": "supported",
@@ -140,6 +171,22 @@
               "stop": "supported"
             }
           }
+        },
+        "live_probe": {
+          "attempted": {
+            "messages": [
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "messages": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported"
+            }
+          }
         }
       },
       "display_name": "Claude Opus 4.5",
@@ -182,6 +229,22 @@
           "sources": [
             "schemas/completion/anthropic.anthropic.request.json"
           ],
+          "support": {
+            "messages": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "attempted": {
+            "messages": [
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
           "support": {
             "messages": {
               "temperature": "supported",
@@ -238,6 +301,21 @@
               "stop": "supported"
             }
           }
+        },
+        "live_probe": {
+          "attempted": {
+            "messages": [
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "messages": {
+              "temperature": "supported",
+              "stop": "supported"
+            }
+          }
         }
       },
       "display_name": "Claude Opus 4.7",
@@ -284,6 +362,21 @@
             "messages": {
               "temperature": "supported",
               "top_p": "supported",
+              "stop": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "attempted": {
+            "messages": [
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "messages": {
+              "temperature": "supported",
               "stop": "supported"
             }
           }
@@ -336,6 +429,21 @@
               "stop": "supported"
             }
           }
+        },
+        "live_probe": {
+          "attempted": {
+            "messages": [
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "messages": {
+              "temperature": "supported",
+              "stop": "supported"
+            }
+          }
         }
       },
       "display_name": "Claude Opus 5",
@@ -378,6 +486,22 @@
           "sources": [
             "schemas/completion/anthropic.anthropic.request.json"
           ],
+          "support": {
+            "messages": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "attempted": {
+            "messages": [
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
           "support": {
             "messages": {
               "temperature": "supported",
@@ -434,6 +558,22 @@
               "stop": "supported"
             }
           }
+        },
+        "live_probe": {
+          "attempted": {
+            "messages": [
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "messages": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported"
+            }
+          }
         }
       },
       "display_name": "Claude Sonnet 4.6",
@@ -480,6 +620,21 @@
             "messages": {
               "temperature": "supported",
               "top_p": "supported",
+              "stop": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "attempted": {
+            "messages": [
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "messages": {
+              "temperature": "supported",
               "stop": "supported"
             }
           }

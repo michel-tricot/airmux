@@ -162,18 +162,18 @@ python field_matrix.py anthropic 2
 python build_report.py
 ```
 
-`field_matrix.py` flattens every provider's request schema into JSONPaths and writes, per
-ingress, a CSV for spreadsheet use and a JSON blob. `build_report.py` renders both into one
-self-contained HTML page at `taxonomy/reports/field-matrix.html`, green for accepted and red
-for absent, sortable and filterable, with OpenRouter as the leading column because a router
-accepts the widest surface.
+`field_matrix.py` flattens AirLLM's canonical request schema and every provider's request
+schema into JSONPaths and writes, per ingress, a CSV for spreadsheet use and a JSON blob.
+`build_report.py` renders both into one self-contained HTML page at
+`taxonomy/reports/field-matrix.html`, green for accepted and red for absent, sortable and
+filterable, with AirLLM as the leading column.
 
 Two columns count support: `supported_by`, and `supported_by_excluding_standins` which drops
-the six providers that borrow the canonical schema. Use the second for any claim about
-consensus; six providers echoing OpenAI is one fact repeated, not six providers agreeing.
+AirLLM and providers that borrow another provider's canonical schema. Use the second for any
+claim about provider consensus; repeated schemas are one fact, not independent agreement.
 
-Depth 2 is the useful default. Depth 1 gives 255 paths and reads as a summary; depth 3 gives
-521 and is mostly OpenRouter's nested routing options.
+Depth 2 is the useful default. Depth 1 reads as a summary, while depth 3 expands deeply nested
+request objects.
 
 Rerun after any schema change. It is not automatic.
 
@@ -206,6 +206,10 @@ python probe_parameters.py openai --parameter=temperature
 python build_taxonomy.py
 python validate.py
 ```
+
+The manual probe command selects only models emitted in `taxonomy.yml`. Probe values are
+deliberately non-default so a model that merely permits a fixed default is not classified
+as supporting a configurable parameter.
 
 The model catalog keeps schema-discovery and live-probe evidence separately. Probe attempts
 are recorded even when their result is inconclusive, while only conclusive results affect

@@ -39,6 +39,27 @@
               "parallel_tool_calls": "supported"
             }
           }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
         }
       },
       "aliases": [
@@ -90,6 +111,27 @@
               "parallel_tool_calls": "supported"
             }
           }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
         }
       },
       "aliases": [
@@ -138,6 +180,27 @@
               "top_p": "supported",
               "stop": "supported",
               "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
               "parallel_tool_calls": "supported"
             }
           }
@@ -194,6 +257,27 @@
               "parallel_tool_calls": "supported"
             }
           }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
         }
       },
       "aliases": [
@@ -247,6 +331,27 @@
               "parallel_tool_calls": "supported"
             }
           }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
         }
       },
       "aliases": [
@@ -293,6 +398,29 @@
               "stop": "supported",
               "reasoning_effort": "supported",
               "parallel_tool_calls": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
             }
           }
         }
@@ -422,6 +550,28 @@
               "parallel_tool_calls": "supported"
             }
           }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "reasoning_effort": "unsupported",
+              "parallel_tool_calls": "supported"
+            }
+          }
         }
       },
       "aliases": [
@@ -470,6 +620,27 @@
               "top_p": "supported",
               "stop": "supported",
               "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
               "parallel_tool_calls": "supported"
             }
           }
@@ -522,6 +693,27 @@
               "parallel_tool_calls": "supported"
             }
           }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
         }
       },
       "aliases": [
@@ -568,6 +760,27 @@
               "top_p": "supported",
               "stop": "supported",
               "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
               "parallel_tool_calls": "supported"
             }
           }
@@ -621,6 +834,27 @@
               "parallel_tool_calls": "supported"
             }
           }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
         }
       },
       "aliases": [
@@ -667,6 +901,27 @@
               "top_p": "supported",
               "stop": "supported",
               "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
               "parallel_tool_calls": "supported"
             }
           }
@@ -720,6 +975,27 @@
               "parallel_tool_calls": "supported"
             }
           }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
         }
       },
       "aliases": [
@@ -766,6 +1042,27 @@
               "top_p": "supported",
               "stop": "supported",
               "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
               "parallel_tool_calls": "supported"
             }
           }
@@ -821,6 +1118,27 @@
               "parallel_tool_calls": "supported"
             }
           }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
         }
       },
       "aliases": [
@@ -868,6 +1186,27 @@
               "top_p": "supported",
               "stop": "supported",
               "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
               "parallel_tool_calls": "supported"
             }
           }
@@ -923,6 +1262,27 @@
               "parallel_tool_calls": "supported"
             }
           }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
         }
       },
       "aliases": [
@@ -973,6 +1333,27 @@
               "parallel_tool_calls": "supported"
             }
           }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
         }
       },
       "aliases": [
@@ -1020,6 +1401,28 @@
               "top_p": "supported",
               "stop": "supported",
               "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "reasoning_effort": "unsupported",
               "parallel_tool_calls": "supported"
             }
           }
@@ -1079,6 +1482,27 @@
               "parallel_tool_calls": "supported"
             }
           }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
         }
       },
       "default_temperature": 0.3,
@@ -1128,6 +1552,27 @@
               "parallel_tool_calls": "supported"
             }
           }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
         }
       },
       "default_temperature": 0.3,
@@ -1174,6 +1619,28 @@
               "top_p": "supported",
               "stop": "supported",
               "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "reasoning_effort": "unsupported",
               "parallel_tool_calls": "supported"
             }
           }
@@ -1232,6 +1699,28 @@
               "parallel_tool_calls": "supported"
             }
           }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "reasoning_effort": "unsupported",
+              "parallel_tool_calls": "supported"
+            }
+          }
         }
       },
       "aliases": [
@@ -1284,6 +1773,28 @@
               "top_p": "supported",
               "stop": "supported",
               "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "reasoning_effort": "unsupported",
               "parallel_tool_calls": "supported"
             }
           }
@@ -1343,6 +1854,28 @@
               "parallel_tool_calls": "supported"
             }
           }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "reasoning_effort": "unsupported",
+              "parallel_tool_calls": "supported"
+            }
+          }
         }
       },
       "aliases": [
@@ -1396,6 +1929,28 @@
               "top_p": "supported",
               "stop": "supported",
               "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "reasoning_effort": "unsupported",
               "parallel_tool_calls": "supported"
             }
           }
@@ -1455,6 +2010,28 @@
               "parallel_tool_calls": "supported"
             }
           }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "reasoning_effort": "unsupported",
+              "parallel_tool_calls": "supported"
+            }
+          }
         }
       },
       "aliases": [
@@ -1504,6 +2081,28 @@
               "top_p": "supported",
               "stop": "supported",
               "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "reasoning_effort": "unsupported",
               "parallel_tool_calls": "supported"
             }
           }
@@ -1559,6 +2158,28 @@
               "parallel_tool_calls": "supported"
             }
           }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "reasoning_effort": "unsupported",
+              "parallel_tool_calls": "supported"
+            }
+          }
         }
       },
       "aliases": [
@@ -1608,6 +2229,28 @@
               "top_p": "supported",
               "stop": "supported",
               "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "reasoning_effort": "unsupported",
               "parallel_tool_calls": "supported"
             }
           }
@@ -1667,6 +2310,28 @@
               "parallel_tool_calls": "supported"
             }
           }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "reasoning_effort": "unsupported",
+              "parallel_tool_calls": "supported"
+            }
+          }
         }
       },
       "aliases": [
@@ -1722,6 +2387,27 @@
               "parallel_tool_calls": "supported"
             }
           }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
         }
       },
       "aliases": [
@@ -1771,6 +2457,27 @@
               "parallel_tool_calls": "supported"
             }
           }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
         }
       },
       "aliases": [
@@ -1813,6 +2520,29 @@
               "stop": "supported",
               "reasoning_effort": "supported",
               "parallel_tool_calls": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
             }
           }
         }

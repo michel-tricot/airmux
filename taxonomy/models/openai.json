@@ -38,6 +38,41 @@
               "parallel_tool_calls": "supported"
             }
           }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ],
+            "responses": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "unsupported",
+              "seed": "supported",
+              "stop": "unsupported",
+              "reasoning_effort": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "unsupported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
         }
       }
     },
@@ -153,6 +188,41 @@
               "temperature": "supported",
               "top_p": "supported",
               "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ],
+            "responses": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "seed": "supported",
+              "stop": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "unsupported",
               "parallel_tool_calls": "supported"
             }
           }
@@ -284,6 +354,35 @@
               "parallel_tool_calls": "supported"
             }
           }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ],
+            "responses": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "seed": "supported",
+              "stop": "supported",
+              "logprobs": "supported"
+            }
+          }
         }
       },
       "endpoint_status": {
@@ -334,6 +433,41 @@
               "temperature": "supported",
               "top_p": "supported",
               "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ],
+            "responses": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "seed": "supported",
+              "stop": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "unsupported",
               "parallel_tool_calls": "supported"
             }
           }
@@ -425,6 +559,41 @@
               "temperature": "supported",
               "top_p": "supported",
               "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ],
+            "responses": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "seed": "supported",
+              "stop": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "unsupported",
               "parallel_tool_calls": "supported"
             }
           }
@@ -520,6 +689,41 @@
               "parallel_tool_calls": "supported"
             }
           }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ],
+            "responses": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "seed": "supported",
+              "stop": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "unsupported",
+              "parallel_tool_calls": "supported"
+            }
+          }
         }
       },
       "endpoint_status": {
@@ -570,6 +774,41 @@
               "temperature": "supported",
               "top_p": "supported",
               "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ],
+            "responses": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "seed": "supported",
+              "stop": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "unsupported",
               "parallel_tool_calls": "supported"
             }
           }
@@ -627,6 +866,41 @@
               "parallel_tool_calls": "supported"
             }
           }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ],
+            "responses": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "seed": "supported",
+              "stop": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "unsupported",
+              "parallel_tool_calls": "supported"
+            }
+          }
         }
       },
       "endpoint_status": {
@@ -677,6 +951,41 @@
               "temperature": "supported",
               "top_p": "supported",
               "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ],
+            "responses": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "seed": "supported",
+              "stop": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "unsupported",
               "parallel_tool_calls": "supported"
             }
           }
@@ -734,6 +1043,41 @@
               "parallel_tool_calls": "supported"
             }
           }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ],
+            "responses": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "seed": "supported",
+              "stop": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "unsupported",
+              "parallel_tool_calls": "supported"
+            }
+          }
         }
       },
       "endpoint_status": {
@@ -785,6 +1129,41 @@
               "temperature": "supported",
               "top_p": "supported",
               "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ],
+            "responses": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "seed": "supported",
+              "stop": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "unsupported",
               "parallel_tool_calls": "supported"
             }
           }
@@ -843,6 +1222,41 @@
               "parallel_tool_calls": "supported"
             }
           }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ],
+            "responses": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "seed": "supported",
+              "stop": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "unsupported",
+              "parallel_tool_calls": "supported"
+            }
+          }
         }
       },
       "endpoint_status": {
@@ -893,6 +1307,41 @@
               "temperature": "supported",
               "top_p": "supported",
               "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ],
+            "responses": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "seed": "supported",
+              "stop": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "unsupported",
               "parallel_tool_calls": "supported"
             }
           }
@@ -951,6 +1400,41 @@
               "parallel_tool_calls": "supported"
             }
           }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ],
+            "responses": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "seed": "supported",
+              "stop": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "unsupported",
+              "parallel_tool_calls": "supported"
+            }
+          }
         }
       },
       "endpoint_status": {
@@ -1002,6 +1486,41 @@
               "temperature": "supported",
               "top_p": "supported",
               "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ],
+            "responses": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "seed": "supported",
+              "stop": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "unsupported",
               "parallel_tool_calls": "supported"
             }
           }
@@ -1059,6 +1578,41 @@
               "parallel_tool_calls": "supported"
             }
           }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ],
+            "responses": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "seed": "supported",
+              "stop": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "unsupported",
+              "parallel_tool_calls": "supported"
+            }
+          }
         }
       },
       "endpoint_status": {
@@ -1109,6 +1663,41 @@
               "temperature": "supported",
               "top_p": "supported",
               "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ],
+            "responses": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "seed": "supported",
+              "stop": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "unsupported",
               "parallel_tool_calls": "supported"
             }
           }
@@ -1312,6 +1901,41 @@
               "parallel_tool_calls": "supported"
             }
           }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ],
+            "responses": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "unsupported",
+              "top_p": "unsupported",
+              "seed": "supported",
+              "stop": "unsupported",
+              "reasoning_effort": "supported"
+            },
+            "responses": {
+              "temperature": "unsupported",
+              "top_p": "unsupported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
         }
       },
       "endpoint_status": {
@@ -1361,6 +1985,41 @@
             "responses": {
               "temperature": "supported",
               "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ],
+            "responses": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "unsupported",
+              "top_p": "unsupported",
+              "seed": "supported",
+              "stop": "unsupported",
+              "reasoning_effort": "supported"
+            },
+            "responses": {
+              "temperature": "unsupported",
+              "top_p": "unsupported",
               "reasoning_effort": "supported",
               "parallel_tool_calls": "supported"
             }
@@ -1501,6 +2160,41 @@
               "parallel_tool_calls": "supported"
             }
           }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ],
+            "responses": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "unsupported",
+              "top_p": "unsupported",
+              "seed": "supported",
+              "stop": "unsupported",
+              "reasoning_effort": "supported"
+            },
+            "responses": {
+              "temperature": "unsupported",
+              "top_p": "unsupported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
         }
       },
       "endpoint_status": {
@@ -1550,6 +2244,41 @@
             "responses": {
               "temperature": "supported",
               "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ],
+            "responses": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "unsupported",
+              "top_p": "unsupported",
+              "seed": "supported",
+              "stop": "unsupported",
+              "reasoning_effort": "supported"
+            },
+            "responses": {
+              "temperature": "unsupported",
+              "top_p": "unsupported",
               "reasoning_effort": "supported",
               "parallel_tool_calls": "supported"
             }
@@ -1613,12 +2342,35 @@
         "live_probe": {
           "attempted": {
             "responses": [
-              "temperature"
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "temperature",
+              "top_p"
+            ],
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
             ]
           },
           "support": {
             "responses": {
-              "temperature": "unsupported"
+              "temperature": "unsupported",
+              "top_p": "unsupported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            },
+            "chat/completions": {
+              "temperature": "unsupported",
+              "top_p": "unsupported",
+              "seed": "supported",
+              "stop": "unsupported",
+              "reasoning_effort": "supported"
             }
           }
         }
@@ -1670,6 +2422,41 @@
             "responses": {
               "temperature": "supported",
               "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ],
+            "responses": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "unsupported",
+              "top_p": "unsupported",
+              "seed": "supported",
+              "stop": "unsupported",
+              "reasoning_effort": "supported"
+            },
+            "responses": {
+              "temperature": "unsupported",
+              "top_p": "unsupported",
               "reasoning_effort": "supported",
               "parallel_tool_calls": "supported"
             }
@@ -1879,6 +2666,42 @@
               "seed": "supported",
               "reasoning_effort": "supported",
               "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ],
+            "responses": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "seed": "supported",
+              "stop": "unsupported",
+              "reasoning_effort": "supported",
               "logprobs": "supported"
             },
             "responses": {
@@ -2138,6 +2961,42 @@
               "seed": "supported",
               "reasoning_effort": "supported",
               "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ],
+            "responses": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "seed": "supported",
+              "stop": "unsupported",
+              "reasoning_effort": "supported",
               "logprobs": "supported"
             },
             "responses": {
@@ -2494,6 +3353,42 @@
               "parallel_tool_calls": "supported"
             }
           }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ],
+            "responses": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "seed": "supported",
+              "stop": "unsupported",
+              "reasoning_effort": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
         }
       },
       "endpoint_status": {
@@ -2584,6 +3479,42 @@
               "parallel_tool_calls": "supported"
             }
           }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ],
+            "responses": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "seed": "supported",
+              "stop": "unsupported",
+              "reasoning_effort": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
         }
       },
       "endpoint_status": {
@@ -2665,6 +3596,42 @@
               "seed": "supported",
               "reasoning_effort": "supported",
               "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ],
+            "responses": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "seed": "supported",
+              "stop": "unsupported",
+              "reasoning_effort": "supported",
               "logprobs": "supported"
             },
             "responses": {
@@ -2843,6 +3810,42 @@
               "parallel_tool_calls": "supported"
             }
           }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ],
+            "responses": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "unsupported",
+              "top_p": "unsupported",
+              "seed": "supported",
+              "stop": "unsupported",
+              "reasoning_effort": "supported",
+              "logprobs": "unsupported"
+            },
+            "responses": {
+              "temperature": "unsupported",
+              "top_p": "unsupported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
         }
       },
       "endpoint_status": {
@@ -3013,6 +4016,42 @@
               "parallel_tool_calls": "supported"
             }
           }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ],
+            "responses": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "unsupported",
+              "top_p": "unsupported",
+              "seed": "supported",
+              "stop": "unsupported",
+              "reasoning_effort": "supported",
+              "logprobs": "unsupported"
+            },
+            "responses": {
+              "temperature": "unsupported",
+              "top_p": "unsupported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
         }
       },
       "endpoint_status": {
@@ -3068,6 +4107,42 @@
               "parallel_tool_calls": "supported"
             }
           }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ],
+            "responses": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "unsupported",
+              "top_p": "unsupported",
+              "seed": "supported",
+              "stop": "unsupported",
+              "reasoning_effort": "supported",
+              "logprobs": "unsupported"
+            },
+            "responses": {
+              "temperature": "unsupported",
+              "top_p": "unsupported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
         }
       },
       "endpoint_status": {
@@ -3119,6 +4194,42 @@
             "responses": {
               "temperature": "supported",
               "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ],
+            "responses": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "unsupported",
+              "top_p": "unsupported",
+              "seed": "supported",
+              "stop": "unsupported",
+              "reasoning_effort": "supported",
+              "logprobs": "unsupported"
+            },
+            "responses": {
+              "temperature": "unsupported",
+              "top_p": "unsupported",
               "reasoning_effort": "supported",
               "parallel_tool_calls": "supported"
             }
@@ -3410,6 +4521,42 @@
               "parallel_tool_calls": "supported"
             }
           }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ],
+            "responses": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "unsupported",
+              "top_p": "unsupported",
+              "seed": "supported",
+              "stop": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "unsupported"
+            },
+            "responses": {
+              "temperature": "unsupported",
+              "top_p": "unsupported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
         }
       },
       "endpoint_status": {
@@ -3460,6 +4607,42 @@
             "responses": {
               "temperature": "supported",
               "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ],
+            "responses": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "unsupported",
+              "top_p": "unsupported",
+              "seed": "supported",
+              "stop": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "unsupported"
+            },
+            "responses": {
+              "temperature": "unsupported",
+              "top_p": "unsupported",
               "reasoning_effort": "supported",
               "parallel_tool_calls": "supported"
             }
@@ -3600,6 +4783,42 @@
               "parallel_tool_calls": "supported"
             }
           }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ],
+            "responses": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "unsupported",
+              "top_p": "unsupported",
+              "seed": "supported",
+              "stop": "unsupported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "unsupported"
+            },
+            "responses": {
+              "temperature": "unsupported",
+              "top_p": "unsupported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
         }
       },
       "endpoint_status": {
@@ -3649,6 +4868,42 @@
             "responses": {
               "temperature": "supported",
               "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ],
+            "responses": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "unsupported",
+              "top_p": "unsupported",
+              "seed": "supported",
+              "stop": "unsupported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "unsupported"
+            },
+            "responses": {
+              "temperature": "unsupported",
+              "top_p": "unsupported",
               "reasoning_effort": "supported",
               "parallel_tool_calls": "supported"
             }
@@ -3708,6 +4963,42 @@
               "parallel_tool_calls": "supported"
             }
           }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ],
+            "responses": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "unsupported",
+              "top_p": "unsupported",
+              "seed": "supported",
+              "stop": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "unsupported"
+            },
+            "responses": {
+              "temperature": "unsupported",
+              "top_p": "unsupported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
         }
       },
       "endpoint_status": {
@@ -3758,6 +5049,42 @@
             "responses": {
               "temperature": "supported",
               "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ],
+            "responses": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "unsupported",
+              "top_p": "unsupported",
+              "seed": "supported",
+              "stop": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "unsupported"
+            },
+            "responses": {
+              "temperature": "unsupported",
+              "top_p": "unsupported",
               "reasoning_effort": "supported",
               "parallel_tool_calls": "supported"
             }
@@ -3817,6 +5144,42 @@
               "parallel_tool_calls": "supported"
             }
           }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ],
+            "responses": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "unsupported",
+              "top_p": "unsupported",
+              "seed": "supported",
+              "stop": "unsupported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "unsupported"
+            },
+            "responses": {
+              "temperature": "unsupported",
+              "top_p": "unsupported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
         }
       },
       "endpoint_status": {
@@ -3867,6 +5230,42 @@
             "responses": {
               "temperature": "supported",
               "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ],
+            "responses": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "unsupported",
+              "top_p": "unsupported",
+              "seed": "supported",
+              "stop": "unsupported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "unsupported"
+            },
+            "responses": {
+              "temperature": "unsupported",
+              "top_p": "unsupported",
               "reasoning_effort": "supported",
               "parallel_tool_calls": "supported"
             }

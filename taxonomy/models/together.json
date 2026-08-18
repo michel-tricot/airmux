@@ -77,6 +77,30 @@
               "logprobs": "supported"
             }
           }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "seed": "supported",
+              "stop": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            }
+          }
         }
       },
       "display_name": "Arize AI Qwen 2 1.5B Instruct",
@@ -120,6 +144,30 @@
               "stop": "supported",
               "seed": "supported",
               "reasoning_effort": "supported",
+              "logprobs": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "seed": "supported",
+              "stop": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
               "logprobs": "supported"
             }
           }
@@ -413,6 +461,30 @@
               "logprobs": "supported"
             }
           }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "seed": "supported",
+              "stop": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            }
+          }
         }
       },
       "display_name": "Deepseek V4 Flash 0731",
@@ -459,6 +531,30 @@
               "logprobs": "supported"
             }
           }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "seed": "supported",
+              "stop": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            }
+          }
         }
       },
       "display_name": "Deepseek V4 Pro",
@@ -496,6 +592,30 @@
               "stop": "supported",
               "seed": "supported",
               "reasoning_effort": "supported",
+              "logprobs": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "seed": "supported",
+              "stop": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
               "logprobs": "supported"
             }
           }
@@ -585,6 +705,30 @@
               "logprobs": "supported"
             }
           }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "seed": "supported",
+              "stop": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            }
+          }
         }
       },
       "display_name": "Gemma 3N E4B Instruct",
@@ -632,6 +776,30 @@
               "logprobs": "supported"
             }
           }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "seed": "supported",
+              "stop": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            }
+          }
         }
       },
       "display_name": "Gemma 4 31B-it FP8",
@@ -675,6 +843,30 @@
               "stop": "supported",
               "seed": "supported",
               "reasoning_effort": "supported",
+              "logprobs": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "seed": "supported",
+              "stop": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
               "logprobs": "supported"
             }
           }
@@ -884,6 +1076,30 @@
               "stop": "supported",
               "seed": "supported",
               "reasoning_effort": "supported",
+              "logprobs": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "seed": "supported",
+              "stop": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
               "logprobs": "supported"
             }
           }
@@ -1136,6 +1352,30 @@
               "logprobs": "supported"
             }
           }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "seed": "supported",
+              "stop": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            }
+          }
         }
       },
       "display_name": "Muse Glimmer 30B",
@@ -1221,6 +1461,30 @@
               "stop": "supported",
               "seed": "supported",
               "reasoning_effort": "supported",
+              "logprobs": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "seed": "supported",
+              "stop": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
               "logprobs": "supported"
             }
           }
@@ -1511,6 +1775,29 @@
               "logprobs": "supported"
             }
           }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "seed": "supported",
+              "stop": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
         }
       },
       "display_name": "Kimi K2.6 Fp4",
@@ -1558,6 +1845,29 @@
               "logprobs": "supported"
             }
           }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "seed": "supported",
+              "stop": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
         }
       },
       "display_name": "Kimi K2.7 Code",
@@ -1602,6 +1912,29 @@
               "stop": "supported",
               "seed": "supported",
               "reasoning_effort": "supported",
+              "logprobs": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "seed": "supported",
+              "stop": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
               "logprobs": "supported"
             }
           }
@@ -1733,6 +2066,29 @@
               "logprobs": "supported"
             }
           }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "seed": "supported",
+              "stop": "supported",
+              "reasoning_effort": "supported",
+              "logprobs": "supported"
+            }
+          }
         }
       },
       "display_name": "NVIDIA Nemotron 3 Ultra 550B A55B NVFP4",
@@ -1819,6 +2175,30 @@
               "logprobs": "supported"
             }
           }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "seed": "supported",
+              "stop": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            }
+          }
         }
       },
       "display_name": "OpenAI GPT-OSS 120B",
@@ -1866,6 +2246,30 @@
               "logprobs": "supported"
             }
           }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "seed": "supported",
+              "stop": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            }
+          }
         }
       },
       "display_name": "OpenAI GPT-OSS 20B",
@@ -1910,6 +2314,30 @@
               "stop": "supported",
               "seed": "supported",
               "reasoning_effort": "supported",
+              "logprobs": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "seed": "supported",
+              "stop": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
               "logprobs": "supported"
             }
           }
@@ -2197,6 +2625,30 @@
               "stop": "supported",
               "seed": "supported",
               "reasoning_effort": "supported",
+              "logprobs": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "seed": "supported",
+              "stop": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
               "logprobs": "supported"
             }
           }
@@ -2617,6 +3069,30 @@
               "logprobs": "supported"
             }
           }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "seed": "supported",
+              "stop": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            }
+          }
         }
       },
       "display_name": "Qwen3.5 9B FP8",
@@ -2782,6 +3258,28 @@
               "logprobs": "supported"
             }
           }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "top_p": "supported",
+              "seed": "supported",
+              "stop": "supported",
+              "parallel_tool_calls": "supported",
+              "temperature": "supported"
+            }
+          }
         }
       },
       "display_name": "Qwen3.8-2.4T-A95B",
@@ -2868,6 +3366,30 @@
               "logprobs": "supported"
             }
           }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "seed": "supported",
+              "stop": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            }
+          }
         }
       },
       "display_name": "Inkling FP4",
@@ -2916,6 +3438,30 @@
               "logprobs": "supported"
             }
           }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "seed": "supported",
+              "stop": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            }
+          }
         }
       },
       "display_name": "Inkling Small",
@@ -2960,6 +3506,20 @@
               "logprobs": "supported"
             }
           }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {}
         }
       },
       "display_name": "Glm 4.5 Air Fp8",
@@ -3163,6 +3723,30 @@
               "seed": "supported",
               "reasoning_effort": "supported",
               "logprobs": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "top_p": "supported",
+              "seed": "supported",
+              "stop": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported",
+              "temperature": "supported"
             }
           }
         }

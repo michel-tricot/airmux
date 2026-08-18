@@ -50,6 +50,39 @@
               "stop": "supported"
             }
           }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ],
+            "messages": [
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "seed": "supported",
+              "stop": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            },
+            "messages": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported"
+            }
+          }
         }
       },
       "aliases": [
@@ -115,6 +148,39 @@
               "temperature": "supported",
               "top_p": "supported",
               "stop": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ],
+            "messages": [
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "seed": "supported",
+              "stop": "unsupported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            },
+            "messages": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "unsupported"
             }
           }
         }
@@ -250,6 +316,40 @@
               "stop": "supported"
             }
           }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ],
+            "messages": [
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "seed": "supported",
+              "stop": "unsupported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            },
+            "messages": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "unsupported"
+            }
+          }
         }
       },
       "aliases": [
@@ -308,6 +408,40 @@
               "temperature": "supported",
               "top_p": "supported",
               "stop": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ],
+            "messages": [
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "seed": "supported",
+              "stop": "unsupported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            },
+            "messages": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "unsupported"
             }
           }
         }
@@ -371,6 +505,40 @@
               "stop": "supported"
             }
           }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ],
+            "messages": [
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "seed": "supported",
+              "stop": "unsupported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            },
+            "messages": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "unsupported"
+            }
+          }
         }
       },
       "endpoint_status": {
@@ -426,6 +594,39 @@
               "temperature": "supported",
               "top_p": "supported",
               "stop": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ],
+            "messages": [
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "seed": "supported",
+              "stop": "unsupported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            },
+            "messages": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "unsupported"
             }
           }
         }
