@@ -10,11 +10,13 @@
  *
  * OpenAPI spec version: 0.1.0
  */
+import type { CliAuthPollOutScope } from './cliAuthPollOutScope';
 import type { CliAuthPollOutStatus } from './cliAuthPollOutStatus';
 
 export interface CliAuthPollOut {
   status: CliAuthPollOutStatus;
   interval_seconds: number;
+  scope?: CliAuthPollOutScope;
   token?: string | null;
   org_id?: string | null;
   org_name?: string | null;

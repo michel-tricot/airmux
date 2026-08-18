@@ -14,6 +14,7 @@ const REQUEST = {
   client_name: 'airllm CLI',
   requester: 'devbox.local',
   expires_at: '2030-01-01T00:00:00Z',
+  can_approve_instance: false,
 };
 
 function withPendingRequest(expectedCode: string) {
@@ -43,7 +44,7 @@ describe('CLI device sign-in approval', () => {
     expect(await screen.findByRole('heading', { name: 'Authorize CLI login' })).toBeInTheDocument();
     expect(await screen.findByText(REQUEST.client_name)).toBeInTheDocument();
     expect(screen.getByText(REQUEST.requester)).toBeInTheDocument();
-    expect(screen.getByLabelText('Organization')).toHaveTextContent(ORG.name);
+    expect(screen.getByLabelText('Access scope')).toHaveTextContent(`Organization: ${ORG.name}`);
     expect(screen.getByRole('button', { name: 'Authorize' })).toBeEnabled();
   });
 
@@ -60,7 +61,26 @@ describe('CLI device sign-in approval', () => {
     renderAt('/cli?code=ABCD-1234');
     await user.click(await screen.findByRole('button', { name: 'Authorize' }));
     expect(await screen.findByText(/Approved\. Return to your terminal/)).toBeInTheDocument();
-    expect(approveBody).toEqual({ user_code: 'ABCD-1234', org_id: ORG.id });
+    expect(approveBody).toEqual({ user_code: 'ABCD-1234', scope: 'org', org_id: ORG.id });
+  });
+
+  it('allows an instance admin to approve instance access', async () => {
+    server.use(http.get('/api/v1/auth/cli/request', () => HttpResponse.json({ ...REQUEST, can_approve_instance: true })));
+    let approveBody: unknown = null;
+    server.use(
+      http.post('/api/v1/auth/cli/approve', async ({ request }) => {
+        approveBody = await request.json();
+        return HttpResponse.json({ ok: true });
+      }),
+    );
+    const user = userEvent.setup();
+    renderAt('/cli?code=ABCD-1234');
+
+    expect(await screen.findByLabelText('Access scope')).toHaveTextContent('Instance');
+    await user.click(screen.getByRole('button', { name: 'Authorize' }));
+
+    expect(await screen.findByText(/Approved\. Return to your terminal/)).toBeInTheDocument();
+    expect(approveBody).toEqual({ user_code: 'ABCD-1234', scope: 'instance' });
   });
 
   it('shows a clear error and the code form for an unknown code', async () => {

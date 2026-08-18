@@ -267,17 +267,20 @@ def login(
                 raise typer.Exit(1)
             done = _payload_or_die(poll, "Sign-in")
             if done["status"] == "complete":
+                scope = done.get("scope") or ("org" if done.get("org_id") else "instance")
+                target_name = str(done["org_name"]) if scope == "org" else "instance"
+                scoped_values = {"org_id": done["org_id"], "org_name": done["org_name"]} if scope == "org" else {}
                 profile_name = upsert_url_profile(
-                    done["org_name"],
+                    target_name,
                     {
                         "control_plane_url": control_plane_url,
                         "console_url": console_url,
-                        "org_id": done["org_id"],
-                        "org_name": done["org_name"],
+                        "scope": scope,
                         "token": done["token"],
+                        **scoped_values,
                     },
                 )
-                console.print(f"Signed in to [bold]{done['org_name']}[/bold] as profile [bold]{profile_name}[/bold]. Saved to {config_path()}.")
+                console.print(f"Signed in to [bold]{target_name}[/bold] as profile [bold]{profile_name}[/bold]. Saved to {config_path()}.")
                 return
     console.print("[red]Login timed out. Run [bold]airllm login[/bold] again.[/red]")
     raise typer.Exit(1)

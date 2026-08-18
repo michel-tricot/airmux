@@ -15,4 +15,5 @@ export interface CliAuthRequestOut {
   client_name: string;
   requester: string;
   expires_at: Date;
+  can_approve_instance: boolean;
 }

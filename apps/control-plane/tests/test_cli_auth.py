@@ -61,6 +61,65 @@ def test_device_flow_end_to_end(tmp_path):
         assert c.post("/api/v1/auth/cli/poll", json={"poll_secret": started["poll_secret"]}).status_code == 404
 
 
+def test_instance_owner_can_approve_instance_cli_access(tmp_path):
+    cp = setup_control_plane(tmp_path)
+    with _client(cp) as c:
+        _signup_with_org(c)
+        started = _start(c)
+
+        details = c.get(f"/api/v1/auth/cli/request?code={started['user_code']}", headers=CSRF)
+        assert details.json()["data"]["can_approve_instance"] is True
+
+        approved = c.post(
+            "/api/v1/auth/cli/approve",
+            json={"user_code": started["user_code"], "scope": "instance"},
+            headers=CSRF,
+        )
+        assert approved.status_code == 200, approved.text
+
+        done = c.post("/api/v1/auth/cli/poll", json={"poll_secret": started["poll_secret"]}).json()["data"]
+        assert done["status"] == "complete"
+        assert done["scope"] == "instance"
+        assert done["org_id"] is None
+        assert done["org_name"] is None
+        assert c.get("/api/v1/users", headers={"authorization": f"Bearer {done['token']}"}).status_code == 200
+
+
+def test_non_admin_cannot_approve_instance_cli_access(tmp_path):
+    cp = setup_control_plane(tmp_path)
+    with _client(cp) as c:
+        _signup_with_org(c, email="owner@example.com", org_name="owner")
+        assert c.post("/api/v1/auth/logout", headers=CSRF).status_code == 200
+        _signup_with_org(c, email="member@example.com", org_name="member")
+        started = _start(c)
+
+        details = c.get(f"/api/v1/auth/cli/request?code={started['user_code']}", headers=CSRF)
+        assert details.json()["data"]["can_approve_instance"] is False
+
+        denied = c.post(
+            "/api/v1/auth/cli/approve",
+            json={"user_code": started["user_code"], "scope": "instance"},
+            headers=CSRF,
+        )
+        assert denied.status_code == 403
+        assert denied.json()["detail"] == "You cannot approve instance CLI access"
+
+
+def test_instance_cli_approval_rejects_an_organization(tmp_path):
+    cp = setup_control_plane(tmp_path)
+    with _client(cp) as c:
+        _, org = _signup_with_org(c)
+        started = _start(c)
+
+        response = c.post(
+            "/api/v1/auth/cli/approve",
+            json={"user_code": started["user_code"], "scope": "instance", "org_id": org["id"]},
+            headers=CSRF,
+        )
+
+        assert response.status_code == 422
+
+
 def test_two_simultaneous_polls_deliver_one_key(tmp_path):
     cp = setup_control_plane(tmp_path)
     with _client(cp) as c:

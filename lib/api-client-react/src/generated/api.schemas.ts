@@ -178,6 +178,17 @@ export interface ClaimOut {
   claimed: boolean;
 }
 
+/**
+ * Scope the CLI access key should use
+ */
+export type CliAuthApproveInScope = typeof CliAuthApproveInScope[keyof typeof CliAuthApproveInScope];
+
+
+export const CliAuthApproveInScope = {
+  instance: 'instance',
+  org: 'org',
+} as const;
+
 export interface CliAuthApproveIn {
   /**
      * Device code shown by the CLI
@@ -185,8 +196,10 @@ export interface CliAuthApproveIn {
      * @maxLength 16
      */
   user_code: string;
-  /** Organization the CLI access key should use */
-  org_id: string;
+  /** Scope the CLI access key should use */
+  scope?: CliAuthApproveInScope;
+  /** Organization the CLI access key should use for organization scope */
+  org_id?: string | null;
 }
 
 export interface CliAuthApprovedOut {
@@ -211,9 +224,18 @@ export const CliAuthPollOutStatus = {
   complete: 'complete',
 } as const;
 
+export type CliAuthPollOutScope = typeof CliAuthPollOutScope[keyof typeof CliAuthPollOutScope] | null;
+
+
+export const CliAuthPollOutScope = {
+  instance: 'instance',
+  org: 'org',
+} as const;
+
 export interface CliAuthPollOut {
   status: CliAuthPollOutStatus;
   interval_seconds: number;
+  scope?: CliAuthPollOutScope;
   token?: string | null;
   org_id?: string | null;
   org_name?: string | null;
@@ -223,6 +245,7 @@ export interface CliAuthRequestOut {
   client_name: string;
   requester: string;
   expires_at: string;
+  can_approve_instance: boolean;
 }
 
 export interface CliAuthStartIn {

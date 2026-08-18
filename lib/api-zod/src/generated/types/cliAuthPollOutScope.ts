@@ -10,17 +10,11 @@
  *
  * OpenAPI spec version: 0.1.0
  */
-import type { CliAuthApproveInScope } from './cliAuthApproveInScope';
 
-export interface CliAuthApproveIn {
-  /**
-     * Device code shown by the CLI
-     * @minLength 8
-     * @maxLength 16
-     */
-  user_code: string;
-  /** Scope the CLI access key should use */
-  scope?: CliAuthApproveInScope;
-  /** Organization the CLI access key should use for organization scope */
-  org_id?: string | null;
-}
+export type CliAuthPollOutScope = typeof CliAuthPollOutScope[keyof typeof CliAuthPollOutScope] | null;
+
+
+export const CliAuthPollOutScope = {
+  instance: 'instance',
+  org: 'org',
+} as const;

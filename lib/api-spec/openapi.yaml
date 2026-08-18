@@ -630,7 +630,7 @@ paths:
       tags:
       - Auth
       summary: Approve CLI Authorization
-      description: 'Approve a device authorization for one organization visible to the current user.
+      description: 'Approve a device authorization for instance access or one visible organization.
 
 
         Authentication: browser session.'
@@ -3972,16 +3972,25 @@ components:
           minLength: 8
           title: User Code
           description: Device code shown by the CLI
-        org_id:
+        scope:
           type: string
-          format: uuid
+          enum:
+          - instance
+          - org
+          title: Scope
+          description: Scope the CLI access key should use
+          default: org
+        org_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
           title: Org Id
-          description: Organization the CLI access key should use
+          description: Organization the CLI access key should use for organization scope
       additionalProperties: false
       type: object
       required:
       - user_code
-      - org_id
       title: CliAuthApproveIn
     CliAuthApprovedOut:
       properties:
@@ -4021,6 +4030,14 @@ components:
         interval_seconds:
           type: integer
           title: Interval Seconds
+        scope:
+          anyOf:
+          - type: string
+            enum:
+            - instance
+            - org
+          - type: 'null'
+          title: Scope
         token:
           anyOf:
           - type: string
@@ -4054,11 +4071,15 @@ components:
           type: string
           format: date-time
           title: Expires At
+        can_approve_instance:
+          type: boolean
+          title: Can Approve Instance
       type: object
       required:
       - client_name
       - requester
       - expires_at
+      - can_approve_instance
       title: CliAuthRequestOut
     CliAuthStartIn:
       properties:
