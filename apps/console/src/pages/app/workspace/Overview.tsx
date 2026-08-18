@@ -66,9 +66,6 @@ export default function WorkspaceOverview() {
 
   if (workspaceQuery.isLoading) return <LoadingState label="Loading workspace..." />;
   if (workspaceQuery.isError) return <ErrorState error={workspaceQuery.error} resource="workspace" onRetry={() => workspaceQuery.refetch()} />;
-  if (authorization.isLoading) return <LoadingState label="Loading workspace permissions..." />;
-  if (authorization.isError)
-    return <ErrorState error={authorization.error} resource="workspace permissions" onRetry={() => authorization.refetch()} />;
   if (!workspace) return <ErrorState message="Workspace not found" />;
 
   const activeKeys = keysQuery.data?.filter((key) => !key.revoked).length;

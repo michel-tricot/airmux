@@ -15,7 +15,7 @@ import { Trash2, UserPlus, Users } from 'lucide-react';
 import { LoadingState, ErrorState } from '@/components/shared/states';
 import { MembersPanel } from '@/components/shared/members-panel';
 import { useRequiredParam } from '@/lib/route';
-import { PageShell } from '@/components/shared/page-shell';
+import { PageHeader, PageShell } from '@/components/shared/page-shell';
 import { useCreateInvitationMutation } from '@/features/invitations/hooks';
 import { InvitationDialog, invitationRequest } from '@/components/shared/invitation-dialog';
 import { OneTimeValueDialog } from '@/components/shared/one-time-value-dialog';
@@ -61,20 +61,13 @@ function WorkspaceSettingsContent({ workspaceRef }: { workspaceRef: string }) {
 
   if (workspaceQuery.isLoading) return <LoadingState label="Loading workspace..." />;
   if (workspaceQuery.isError) return <ErrorState error={workspaceQuery.error} resource="workspace" onRetry={() => workspaceQuery.refetch()} />;
-  if (workspaceAuthorization.isLoading) return <LoadingState label="Loading workspace permissions..." />;
-  if (workspaceAuthorization.isError) {
-    return <ErrorState error={workspaceAuthorization.error} resource="workspace permissions" onRetry={() => workspaceAuthorization.refetch()} />;
-  }
   if (!workspace) return <ErrorState message="Workspace not found" />;
 
   const draft = name ?? workspace.name;
 
   return (
     <PageShell className="max-w-4xl">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Workspace Settings</h1>
-        <p className="text-muted-foreground mt-1 text-sm font-mono">{workspace.slug}</p>
-      </div>
+      <PageHeader title="Workspace Settings" description={<span className="font-mono">{workspace.slug}</span>} />
 
       {canUpdate && (
         <Card className="p-6 space-y-4">

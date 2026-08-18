@@ -1,7 +1,7 @@
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import App from '@/App';
 import { ORG, WORKSPACES, server } from './msw';
 
@@ -182,6 +182,57 @@ describe('instance administration routes', () => {
 
     expect(await screen.findByRole('heading', { name: 'Organizations' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'New Organization' })).not.toBeInTheDocument();
+  });
+
+  it('hides management routes from data-plane principals without requesting protected resources', async () => {
+    const organizations = vi.fn(() => new HttpResponse(null, { status: 403 }));
+    const users = vi.fn(() => new HttpResponse(null, { status: 403 }));
+    const keys = vi.fn(() => new HttpResponse(null, { status: 403 }));
+    const dataPlanes = vi.fn(() => new HttpResponse(null, { status: 403 }));
+    const activity = vi.fn(() => new HttpResponse(null, { status: 403 }));
+    server.use(
+      http.get('/api/v1/auth/me', () =>
+        HttpResponse.json({ user_id: USER.id, email: USER.email, name: USER.name, instance_role: 'data_plane', orgs: USER.orgs }),
+      ),
+      http.get('/api/v1/auth/permissions', () => HttpResponse.json({ permissions: ['bundles.read', 'usage.ingest', 'data-planes.heartbeat'] })),
+      http.get('/api/v1/orgs', organizations),
+      http.get('/api/v1/users', users),
+      http.get('/api/v1/instance/access-keys', keys),
+      http.get('/api/v1/instance/data-planes', dataPlanes),
+      http.get('/api/v1/instance/activity', activity),
+    );
+
+    renderAt('/instance');
+
+    expect(await screen.findByText('Data plane')).toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent('You do not have access to this instance page.');
+    const navigation = screen.getByRole('navigation', { name: 'Instance navigation' });
+    expect(within(navigation).queryByRole('link', { name: 'Organizations' })).not.toBeInTheDocument();
+    expect(within(navigation).queryByRole('link', { name: 'Users' })).not.toBeInTheDocument();
+    expect(within(navigation).queryByRole('link', { name: 'Access Keys' })).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(organizations).not.toHaveBeenCalled();
+      expect(users).not.toHaveBeenCalled();
+      expect(keys).not.toHaveBeenCalled();
+      expect(dataPlanes).not.toHaveBeenCalled();
+      expect(activity).not.toHaveBeenCalled();
+    });
+  });
+
+  it('waits for organization authorization before requesting organization details', async () => {
+    const organization = vi.fn(() => new HttpResponse(null, { status: 403 }));
+    server.use(
+      http.get('/api/v1/auth/permissions', ({ request }) => {
+        const scoped = new URL(request.url).searchParams.has('org_id');
+        return HttpResponse.json({ permissions: scoped ? [] : ['organizations.read'] });
+      }),
+      http.get('/api/v1/orgs/:orgId', organization),
+    );
+
+    renderAt(`/instance/organizations/${ORG.id}`);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('You do not have access to this organization.');
+    await waitFor(() => expect(organization).not.toHaveBeenCalled());
   });
 
   it('keeps service-account creation and directs humans through signup', async () => {

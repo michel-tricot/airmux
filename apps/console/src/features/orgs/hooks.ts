@@ -13,12 +13,12 @@ import {
   type OrgOut,
 } from '@workspace/api-client-react';
 
-export function useOrgs() {
-  return useListOrgs();
+export function useOrgs(enabled = true) {
+  return useListOrgs({ query: { enabled, queryKey: getListOrgsQueryKey() } });
 }
 
-export function useOrg(orgId: string) {
-  return useGetOrg(orgId, { query: { queryKey: getGetOrgQueryKey(orgId) } });
+export function useOrg(orgId: string, enabled = true) {
+  return useGetOrg(orgId, { query: { enabled, queryKey: getGetOrgQueryKey(orgId) } });
 }
 
 export function useCreateOrgMutation() {

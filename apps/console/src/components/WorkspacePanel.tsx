@@ -38,9 +38,10 @@ interface WorkspacePanelProps {
 export function WorkspacePanel({ orgId, workspaceRef, backHref, backLabel }: WorkspacePanelProps) {
   const [, setLocation] = useLocation();
 
-  const workspaceQuery = useWorkspace(orgId, workspaceRef);
-  const workspace = workspaceQuery.data;
   const authorization = useScopedAuthorization({ level: 'workspace', orgId, workspaceRef });
+  const canReadWorkspace = authorization.can(workspaceAccess.read);
+  const workspaceQuery = useWorkspace(orgId, workspaceRef, canReadWorkspace);
+  const workspace = workspaceQuery.data;
   const canReadKeys = authorization.can(inferenceKeyAccess.read);
   const canCreateKeys = authorization.can(inferenceKeyAccess.create);
   const canRevokeKeys = authorization.can(inferenceKeyAccess.revoke);
@@ -68,11 +69,12 @@ export function WorkspacePanel({ orgId, workspaceRef, backHref, backLabel }: Wor
   const remove = useDeleteWorkspaceMutation(orgId);
   const defaultTab = canReadKeys ? 'keys' : 'members';
 
-  if (workspaceQuery.isLoading) return <LoadingState label="Loading workspace..." />;
-  if (workspaceQuery.isError) return <ErrorState error={workspaceQuery.error} resource="workspace" onRetry={() => workspaceQuery.refetch()} />;
   if (authorization.isLoading) return <LoadingState label="Loading workspace permissions..." />;
   if (authorization.isError)
     return <ErrorState error={authorization.error} resource="workspace permissions" onRetry={() => authorization.refetch()} />;
+  if (!canReadWorkspace) return <ErrorState message="You do not have access to this workspace." />;
+  if (workspaceQuery.isLoading) return <LoadingState label="Loading workspace..." />;
+  if (workspaceQuery.isError) return <ErrorState error={workspaceQuery.error} resource="workspace" onRetry={() => workspaceQuery.refetch()} />;
   if (!workspace) return <ErrorState message="Workspace not found" />;
 
   return (

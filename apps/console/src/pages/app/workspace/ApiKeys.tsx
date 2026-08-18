@@ -9,8 +9,7 @@ import { FormDialog } from '@/components/shared/form-dialog';
 import { ApiKeysTable } from '@/components/shared/api-keys-table';
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useRequiredParam } from '@/lib/route';
-import { PageShell } from '@/components/shared/page-shell';
-import { ErrorState, LoadingState } from '@/components/shared/states';
+import { PageHeader, PageShell } from '@/components/shared/page-shell';
 import { useAuthorization } from '@/features/permissions/hooks';
 import { inferenceKeyAccess } from '@/features/keys/policy';
 
@@ -32,24 +31,19 @@ export default function WorkspaceApiKeys() {
   const createKey = useCreateInferenceKeyMutation(orgId, workspaceRef);
   const revokeKey = useRevokeInferenceKeyMutation(orgId, workspaceRef);
 
-  if (authorization.isLoading) return <LoadingState label="Loading workspace permissions..." />;
-  if (authorization.isError)
-    return <ErrorState error={authorization.error} resource="workspace permissions" onRetry={() => authorization.refetch()} />;
-  if (!canRead) return <ErrorState message="You do not have access to inference keys in this workspace." />;
-
   return (
     <PageShell>
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">API Keys</h1>
-          <p className="text-muted-foreground mt-1 text-sm">Keys let applications send requests to the models available to this workspace.</p>
-        </div>
-        {canCreate && (
-          <Button onClick={() => setKeyOpen(true)}>
-            <Plus className="w-4 h-4 mr-1" /> Generate Key
-          </Button>
-        )}
-      </div>
+      <PageHeader
+        title="API Keys"
+        description="Keys let applications send requests to the models available to this workspace."
+        actions={
+          canCreate && (
+            <Button onClick={() => setKeyOpen(true)}>
+              <Plus className="w-4 h-4 mr-1" /> Generate Key
+            </Button>
+          )
+        }
+      />
 
       <ApiKeysTable
         keys={keysQuery.data}

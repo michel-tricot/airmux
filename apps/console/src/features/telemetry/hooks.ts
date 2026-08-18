@@ -11,6 +11,7 @@ import {
   getListWorkspaceEventsQueryKey,
   getListBundlesQueryKey,
   getListDataPlanesQueryKey,
+  getListInstanceActivityQueryKey,
   getListActivityQueryKey,
   type ListOrgEventsParams,
   type ListWorkspaceEventsParams,
@@ -45,10 +46,10 @@ export function useRepublishBundleMutation(orgId: string) {
   });
 }
 
-export function useDataPlanes() {
-  return useListDataPlanes(undefined, { query: { queryKey: getListDataPlanesQueryKey(), refetchInterval: 10_000 } });
+export function useDataPlanes(enabled = true) {
+  return useListDataPlanes(undefined, { query: { enabled, queryKey: getListDataPlanesQueryKey(), refetchInterval: 10_000 } });
 }
 
-export function useInstanceActivity(params: { limit?: number }) {
-  return useListInstanceActivity(params);
+export function useInstanceActivity(params: { limit?: number }, enabled = true) {
+  return useListInstanceActivity(params, { query: { enabled, queryKey: getListInstanceActivityQueryKey(params) } });
 }

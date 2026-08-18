@@ -57,8 +57,8 @@ describe('console theme', () => {
       </>,
     );
 
-    expect(screen.getByRole('button', { name: 'Save' })).toHaveClass('shadow-[0_0_15px_rgba(97,94,255,0.4)]');
-    expect(screen.getByText('Active')).toHaveClass('shadow-[0_0_8px_rgba(97,94,255,0.15)]');
+    expect(screen.getByRole('button', { name: 'Save' })).toHaveClass('shadow-primary/40');
+    expect(screen.getByText('Active')).toHaveClass('shadow-primary/15');
   });
 });
 
@@ -156,7 +156,7 @@ describe('show-once keys', () => {
     await user.click(screen.getByRole('button', { name: 'Copy key' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Could not copy the key');
-    expect(screen.getByDisplayValue('secret-token')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('secret-token')).toHaveFocus();
   });
 
   it('clears stale clipboard feedback before revealing a different key', async () => {

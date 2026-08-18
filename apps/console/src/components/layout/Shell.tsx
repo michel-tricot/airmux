@@ -1,20 +1,20 @@
 import { Link, useLocation } from 'wouter';
-import { LayoutDashboard, Building2, Users, KeyRound, LogOut } from 'lucide-react';
+import { Users, LogOut } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, Button } from '@/components/ui/elements';
 import { useSession } from '@/lib/session';
 import { GatewayBrand, ResponsiveShell } from '@/components/layout/responsive-shell';
-
-const NAV_ITEMS = [
-  { href: '/instance', label: 'Overview', icon: LayoutDashboard },
-  { href: '/instance/organizations', label: 'Organizations', icon: Building2 },
-  { href: '/instance/users', label: 'Users', icon: Users },
-  { href: '/instance/keys', label: 'Access Keys', icon: KeyRound },
-];
+import { useAuthorization } from '@/features/permissions/hooks';
+import { instanceRoutes } from '@/pages/instance-routes';
 
 export function Shell({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
   const { user, logout } = useSession();
+  const authorization = useAuthorization('instance');
+  const navigation = instanceRoutes.flatMap((route) =>
+    route.navigation && authorization.can(route.access) ? [{ path: route.path, ...route.navigation }] : [],
+  );
+  const roleLabel = user?.instance_role === 'owner' ? 'Owner' : user?.instance_role === 'auditor' ? 'Auditor' : 'Data plane';
 
   const sidebar = (close: () => void) => (
     <div className="flex min-h-full flex-col bg-sidebar text-sidebar-foreground">
@@ -23,12 +23,12 @@ export function Shell({ children }: { children: React.ReactNode }) {
       </div>
       <nav aria-label="Instance navigation" className="flex-1 space-y-1 px-4 py-6">
         <div className="mb-4 px-2 font-mono text-[10px] font-bold uppercase tracking-widest text-sidebar-foreground/50">Administration</div>
-        {NAV_ITEMS.map((item) => {
-          const isActive = location === item.href || (item.href !== '/instance' && location.startsWith(item.href));
+        {navigation.map((item) => {
+          const isActive = location === item.path || (item.path !== '/instance' && location.startsWith(item.path));
           return (
             <Link
-              key={item.href}
-              href={item.href}
+              key={item.path}
+              href={item.path}
               onClick={close}
               aria-current={isActive ? 'page' : undefined}
               className={cn(
@@ -53,7 +53,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
           </Avatar>
           <div className="flex min-w-0 flex-col">
             <span className="truncate text-sm font-medium text-foreground">{user?.name}</span>
-            <span className="text-xs text-sidebar-foreground/50">{user?.instance_role === 'owner' ? 'Owner' : 'Auditor'}</span>
+            <span className="text-xs text-sidebar-foreground/50">{roleLabel}</span>
           </div>
         </div>
         <Link

@@ -18,11 +18,12 @@ import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/comp
 import { useRequiredParam } from '@/lib/route';
 import { PageShell } from '@/components/shared/page-shell';
 import type { OrgRole } from '@workspace/api-client-react';
-import { useScopedAuthorization } from '@/features/permissions/hooks';
+import { useAuthorization, useScopedAuthorization } from '@/features/permissions/hooks';
 import { accessKeyAccess } from '@/features/keys/policy';
 import { orgMemberAccess } from '@/features/members/policy';
 import { orgAccess } from '@/features/orgs/policy';
 import { workspaceAccess } from '@/features/workspaces/policy';
+import { userAccess } from '@/features/users/policy';
 
 const nameSchema = z.object({ name: z.string().min(1, 'Name is required') });
 
@@ -30,9 +31,12 @@ export default function OrganizationDetail() {
   const orgId = useRequiredParam('orgId');
   const [, setLocation] = useLocation();
 
-  const orgQuery = useOrg(orgId);
-  const org = orgQuery.data;
+  const instanceAuthorization = useAuthorization('instance');
   const authorization = useScopedAuthorization({ level: 'org', orgId });
+  const canReadOrg = authorization.can(orgAccess.read);
+  const orgQuery = useOrg(orgId, canReadOrg);
+  const org = orgQuery.data;
+  const canListWorkspaces = authorization.can(workspaceAccess.list);
   const canCreateWorkspace = authorization.can(workspaceAccess.create);
   const canReadKeys = authorization.can(accessKeyAccess.org.read);
   const canRevokeKeys = authorization.can(accessKeyAccess.org.revoke);
@@ -42,10 +46,11 @@ export default function OrganizationDetail() {
   const canUpdate = authorization.can(orgAccess.update);
   const canDelete = authorization.can(orgAccess.delete);
 
-  const workspacesQuery = useWorkspaces(orgId);
+  const canListUsers = instanceAuthorization.can(userAccess.list);
+  const workspacesQuery = useWorkspaces(orgId, canListWorkspaces);
   const keysQuery = useOrgAccessKeys(orgId, undefined, canReadKeys);
   const membersQuery = useOrgMembers(orgId, canReadMembers);
-  const usersQuery = useUsers();
+  const usersQuery = useUsers(canListUsers);
   const users = usersQuery.data;
   const usersById = new Map(users?.map((user) => [user.id, user]));
   const members = membersQuery.data;
@@ -60,8 +65,13 @@ export default function OrganizationDetail() {
   const removeMember = useRemoveUserFromOrgMutation();
   const rename = useRenameOrgMutation();
   const deleteOrg = useDeleteOrgMutation();
-  const defaultTab = canReadKeys ? 'keys' : canReadMembers ? 'members' : 'workspaces';
+  const defaultTab = canListWorkspaces ? 'workspaces' : canReadKeys ? 'keys' : 'members';
 
+  if (authorization.isLoading) return <LoadingState label="Loading organization permissions..." />;
+  if (authorization.isError) {
+    return <ErrorState error={authorization.error} resource="organization permissions" onRetry={() => authorization.refetch()} />;
+  }
+  if (!canReadOrg) return <ErrorState message="You do not have access to this organization." />;
   if (orgQuery.isLoading) return <LoadingState label="Loading organization..." />;
   if (orgQuery.isError) return <ErrorState error={orgQuery.error} resource="organization" onRetry={() => orgQuery.refetch()} />;
   if (!org) return <ErrorState message="Organization not found" />;
@@ -112,9 +122,11 @@ export default function OrganizationDetail() {
 
       <Tabs defaultValue={defaultTab} className="w-full">
         <TabsList className="mb-4">
-          <TabsTrigger value="workspaces" className="gap-2">
-            <TerminalSquare className="w-4 h-4" /> Workspaces
-          </TabsTrigger>
+          {canListWorkspaces && (
+            <TabsTrigger value="workspaces" className="gap-2">
+              <TerminalSquare className="w-4 h-4" /> Workspaces
+            </TabsTrigger>
+          )}
           {canReadKeys && (
             <TabsTrigger value="keys" className="gap-2">
               <Key className="w-4 h-4" /> Access Keys
@@ -127,49 +139,51 @@ export default function OrganizationDetail() {
           )}
         </TabsList>
 
-        <TabsContent value="workspaces" className="space-y-4 mt-0">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold">Workspaces</h2>
-            {canCreateWorkspace && (
-              <Button onClick={() => setWsOpen(true)} size="sm">
-                <Plus className="w-4 h-4 mr-1" /> New Workspace
-              </Button>
-            )}
-          </div>
-          <Card>
-            <DataTable
-              rows={workspacesQuery.data}
-              rowKey={(ws) => ws.id}
-              isLoading={workspacesQuery.isLoading}
-              isError={workspacesQuery.isError}
-              error={workspacesQuery.error}
-              resource="workspaces"
-              onRetry={() => workspacesQuery.refetch()}
-              empty="No workspaces yet."
-              columns={[
-                {
-                  key: 'name',
-                  header: 'Name',
-                  cellClassName: 'font-medium',
-                  cell: (ws) => (
-                    <Link href={`/instance/organizations/${org.id}/workspaces/${ws.slug}`} className="hover:text-primary transition-colors">
-                      {ws.name}
-                    </Link>
-                  ),
-                },
-                { key: 'slug', header: 'Slug', cell: (ws) => <Badge variant="mono">{ws.slug}</Badge> },
-                { key: 'id', header: 'Technical ID', cellClassName: 'font-mono text-xs text-muted-foreground', cell: (ws) => ws.id },
-                {
-                  key: 'created',
-                  header: 'Created',
-                  headClassName: 'text-right',
-                  cellClassName: 'text-right text-muted-foreground text-sm',
-                  cell: (ws) => formatDate(ws.created_at),
-                },
-              ]}
-            />
-          </Card>
-        </TabsContent>
+        {canListWorkspaces && (
+          <TabsContent value="workspaces" className="space-y-4 mt-0">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-semibold">Workspaces</h2>
+              {canCreateWorkspace && (
+                <Button onClick={() => setWsOpen(true)} size="sm">
+                  <Plus className="w-4 h-4 mr-1" /> New Workspace
+                </Button>
+              )}
+            </div>
+            <Card>
+              <DataTable
+                rows={workspacesQuery.data}
+                rowKey={(ws) => ws.id}
+                isLoading={workspacesQuery.isLoading}
+                isError={workspacesQuery.isError}
+                error={workspacesQuery.error}
+                resource="workspaces"
+                onRetry={() => workspacesQuery.refetch()}
+                empty="No workspaces yet."
+                columns={[
+                  {
+                    key: 'name',
+                    header: 'Name',
+                    cellClassName: 'font-medium',
+                    cell: (ws) => (
+                      <Link href={`/instance/organizations/${org.id}/workspaces/${ws.slug}`} className="hover:text-primary transition-colors">
+                        {ws.name}
+                      </Link>
+                    ),
+                  },
+                  { key: 'slug', header: 'Slug', cell: (ws) => <Badge variant="mono">{ws.slug}</Badge> },
+                  { key: 'id', header: 'Technical ID', cellClassName: 'font-mono text-xs text-muted-foreground', cell: (ws) => ws.id },
+                  {
+                    key: 'created',
+                    header: 'Created',
+                    headClassName: 'text-right',
+                    cellClassName: 'text-right text-muted-foreground text-sm',
+                    cell: (ws) => formatDate(ws.created_at),
+                  },
+                ]}
+              />
+            </Card>
+          </TabsContent>
+        )}
 
         {canReadKeys && (
           <TabsContent value="keys" className="space-y-4 mt-0">

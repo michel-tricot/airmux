@@ -14,8 +14,8 @@ import {
   type OrgRole,
 } from '@workspace/api-client-react';
 
-export function useUsers() {
-  return useListUsers();
+export function useUsers(enabled = true) {
+  return useListUsers(undefined, { query: { enabled, queryKey: getListUsersQueryKey() } });
 }
 
 export function useUser(userId: string) {
