@@ -3137,6 +3137,83 @@ paths:
       - scope: org_scope
         anyOf:
         - audit.read
+  /api/v1/bundles/manifest:
+    get:
+      tags:
+      - Data Plane API
+      summary: Get Authorized Bundle Manifest
+      description: 'Return every latest organization bundle visible to the authenticated data plane credential.
+
+
+        Required permission: `bundles.read`.'
+      operationId: bundle_manifest
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_BundleManifest_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
+      security:
+      - AccessKey: []
+      - SessionCookie: []
+      x-airllm-authority:
+      - scope: credential_scope
+        anyOf:
+        - bundles.read
+  /api/v1/bundles/{bundle_id}:
+    get:
+      tags:
+      - Data Plane API
+      summary: Get Bundle
+      description: 'Return one immutable signed bundle visible to the authenticated data plane credential.
+
+
+        Required permission: `bundles.read`.'
+      operationId: get_bundle
+      security:
+      - AccessKey: []
+      - SessionCookie: []
+      parameters:
+      - name: bundle_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Bundle Id
+        description: Policy bundle ID
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_SignedBundle_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
+      x-airllm-authority:
+      - scope: selected_bundle_scope
+        anyOf:
+        - bundles.read
   /api/v1/bundle/latest:
     get:
       tags:
@@ -3749,6 +3826,34 @@ components:
       - occurred_at
       title: ActivityOut
       description: One audited change, identifying what changed, who changed it, and when.
+    BundleManifest:
+      properties:
+        bundles:
+          items:
+            $ref: '#/components/schemas/BundleManifestEntry'
+          type: array
+          title: Bundles
+      type: object
+      required:
+      - bundles
+      title: BundleManifest
+      description: The complete set of organization bundles one data plane may serve.
+    BundleManifestEntry:
+      properties:
+        org_id:
+          type: string
+          format: uuid
+          title: Org Id
+        bundle_id:
+          type: string
+          format: uuid
+          title: Bundle Id
+      type: object
+      required:
+      - org_id
+      - bundle_id
+      title: BundleManifestEntry
+      description: The immutable identity of one organization bundle available to a data plane.
     BundleOut:
       properties:
         id:
@@ -4121,6 +4226,14 @@ components:
       required:
       - data
       title: Envelope[AccessKeyRevokedOut]
+    Envelope_BundleManifest_:
+      properties:
+        data:
+          $ref: '#/components/schemas/BundleManifest'
+      type: object
+      required:
+      - data
+      title: Envelope[BundleManifest]
     Envelope_BundleOut_:
       properties:
         data:
@@ -4590,14 +4703,14 @@ components:
             format: uuid
           - type: 'null'
           title: Bundle Id
-          description: Policy bundle currently served, if one is loaded
+          description: Policy bundle served when exactly one is loaded; otherwise absent
       additionalProperties: false
       type: object
       required:
       - instance_id
       - version
       title: HeartbeatV1
-      description: The identity, software version, and active bundle reported by a data plane.
+      description: The identity, software version, and single active bundle reported by a data plane.
     InferenceKeyIn:
       properties:
         label:

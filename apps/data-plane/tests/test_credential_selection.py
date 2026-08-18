@@ -12,8 +12,9 @@ from starlette.testclient import TestClient
 from contract import Catalog, FileStoreConfig, MemoryStoreConfig, Secret, SecretStore, SecretStoreUnavailableError, sign_bundle, uuid7
 from data_plane.app import create_app
 from data_plane.bundle import BundleSnapshot, RemoteBundleConfig
+from data_plane.cache import write_cached_bundles
 from data_plane.canonical import CanonicalRequest
-from data_plane.config import Config, SqliteOutboxConfig
+from data_plane.config import Config, DevNullOutboxConfig, SqliteOutboxConfig
 from data_plane.control_plane_link import ControlPlaneLink
 from data_plane.credentials import CredentialResolver
 from data_plane.policy import Allow, Deny, evaluate
@@ -178,7 +179,7 @@ def _byok_app(tmp_path, credentials):
     caller_token, entry = make_key(org=ORG, workspace=WORKSPACE)
     catalog = Catalog(providers=[PROVIDER], models=[MODEL], credentials=list(credentials))
     bundle = make_bundle(keys=[entry], catalog=catalog, org=ORG)
-    (tmp_path / "bundle.json").write_text(sign_bundle(bundle, bundle_key, "k1").model_dump_json(), encoding="utf-8")
+    write_cached_bundles(tmp_path, [sign_bundle(bundle, bundle_key, "k1")])
     store_config = FileStoreConfig(root=tmp_path / "secrets")
     control_plane = ControlPlaneLink(url="http://cp.test", token="dp-token")
     config = Config(
@@ -197,6 +198,40 @@ def _complete(app, caller_token):
             headers={"Authorization": f"Bearer {caller_token}"},
             json={"model": "gpt-test", "messages": [{"role": "user", "content": "hi"}]},
         )
+
+
+@respx.mock
+def test_one_data_plane_serves_two_org_bundles(tmp_path):
+    bundle_key = Ed25519PrivateKey.generate()
+    other_org = uuid7()
+    other_workspace = uuid7()
+    first_token, first_key = make_key("first", org=ORG, workspace=WORKSPACE)
+    second_token, second_key = make_key("second", org=other_org, workspace=other_workspace)
+    platform = make_credential(org=None, name="platform")
+    catalog = Catalog(providers=[PROVIDER], models=[MODEL], credentials=[platform])
+    write_cached_bundles(
+        tmp_path,
+        [
+            sign_bundle(make_bundle(keys=[first_key], catalog=catalog, org=ORG), bundle_key, "k1"),
+            sign_bundle(make_bundle(keys=[second_key], catalog=catalog, org=other_org), bundle_key, "k1"),
+        ],
+    )
+    store_config = FileStoreConfig(root=tmp_path / "secrets")
+    asyncio.run(store_config.build().put(platform.ref, Secret("sk-platform")))
+    control_plane = ControlPlaneLink(url="http://cp.test", token="dp-token")
+    config = Config(
+        bundle=RemoteBundleConfig(control_plane=control_plane, verify_key=bundle_key.public_key(), cache_dir=tmp_path),
+        secrets=store_config,
+        events=DevNullOutboxConfig(),
+    )
+    mock_control_plane()
+    route = respx.post("https://api.openai.com/v1/chat/completions").mock(return_value=httpx.Response(200, json=BYOK_RESPONSE))
+
+    with TestClient(create_app(config)) as client:
+        body = {"model": "gpt-test", "messages": [{"role": "user", "content": "hi"}]}
+        assert client.post("/inf/v1/chat/completions", headers={"Authorization": f"Bearer {first_token}"}, json=body).status_code == 200
+        assert client.post("/inf/v1/chat/completions", headers={"Authorization": f"Bearer {second_token}"}, json=body).status_code == 200
+    assert [call.request.headers["authorization"] for call in route.calls] == ["Bearer sk-platform", "Bearer sk-platform"]
 
 
 @respx.mock

@@ -10,19 +10,11 @@
  *
  * OpenAPI spec version: 0.1.0
  */
+import type { BundleManifestEntry } from './bundleManifestEntry';
 
 /**
- * The identity, software version, and single active bundle reported by a data plane.
+ * The complete set of organization bundles one data plane may serve.
  */
-export interface HeartbeatV1 {
-  /** Stable ID for this data-plane installation */
-  instance_id: string;
-  /**
-     * Running data-plane software version
-     * @minLength 1
-     * @maxLength 100
-     */
-  version: string;
-  /** Policy bundle served when exactly one is loaded; otherwise absent */
-  bundle_id?: string | null;
+export interface BundleManifest {
+  bundles: BundleManifestEntry[];
 }

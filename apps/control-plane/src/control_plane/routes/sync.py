@@ -4,14 +4,14 @@ from datetime import UTC, datetime
 from typing import Annotated
 from uuid import UUID  # noqa: TC003 fastapi resolves path param annotations at runtime
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import Field
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlmodel import col
 
-from contract import BundleV1, HeartbeatV1, SignedBundle, UsageEventV1
+from contract import BundleManifest, BundleManifestEntry, BundleV1, HeartbeatV1, SignedBundle, UsageEventV1
 from control_plane.authority import ensure_allowed_for_scopes
-from control_plane.authz import Permission, Scope
+from control_plane.authz import Permission, Scope, ScopeLevel
 from control_plane.deps import ActorDep, BundleScopeDep, CredentialScopeDep, SessionDep, bundle_scope, credential_scope, require
 from control_plane.models import Bundle, DataPlaneInstance, ProviderCredential, UsageEvent
 from control_plane.models.common.wire import Envelope
@@ -25,6 +25,43 @@ EventBatch = Annotated[list[UsageEventV1], Field(max_length=1000)]
 CREDENTIAL_HEALTH = {"ok": "live", "credential_rejected": "invalid", "rate_limited": "rate_limited"}
 
 
+def _signed(bundle: Bundle) -> SignedBundle:
+    return SignedBundle(
+        payload=BundleV1.model_validate_json(bundle.payload),
+        signature=bundle.signature,
+        signing_key_id=bundle.signing_key_id,
+    )
+
+
+@router.get("/bundles/manifest", dependencies=[require(credential_scope, Permission.bundles_read)])
+async def bundle_manifest(scope: CredentialScopeDep) -> Envelope[BundleManifest]:
+    """Return every latest organization bundle visible to the authenticated data plane credential."""
+    if scope.level is ScopeLevel.workspace:
+        raise HTTPException(status_code=403, detail="workspace credentials cannot read organization bundles")
+    bundles = await Bundle.latest_per_org(scope.org_id)
+    return Envelope(data=BundleManifest(bundles=[BundleManifestEntry(org_id=bundle.org_id, bundle_id=bundle.id) for bundle in bundles]))
+
+
+async def selected_bundle(bundle_id: UUID) -> Bundle:
+    bundle = await Bundle.get(bundle_id)
+    if bundle is None:
+        raise HTTPException(status_code=404, detail="Bundle not found")
+    return bundle
+
+
+BundleDep = Annotated[Bundle, Depends(selected_bundle)]
+
+
+async def selected_bundle_scope(bundle: BundleDep) -> Scope:
+    return Scope.org(bundle.org_id)
+
+
+@router.get("/bundles/{bundle_id}", dependencies=[require(selected_bundle_scope, Permission.bundles_read)])
+async def get_bundle(bundle: BundleDep) -> Envelope[SignedBundle]:
+    """Return one immutable signed bundle visible to the authenticated data plane credential."""
+    return Envelope(data=_signed(bundle))
+
+
 @router.get("/bundle/latest", dependencies=[require(bundle_scope, Permission.bundles_read)])
 async def bundle_latest(scope: BundleScopeDep) -> Envelope[SignedBundle]:
     """Return the newest signed policy bundle available at the requested organization scope."""
@@ -32,8 +69,7 @@ async def bundle_latest(scope: BundleScopeDep) -> Envelope[SignedBundle]:
     bundle = await Bundle.first(*conditions, order_by=(col(Bundle.issued_at).desc(), col(Bundle.version).desc()))
     if bundle is None:
         raise HTTPException(status_code=404, detail="No bundle has been compiled yet for this scope")
-    signed = SignedBundle(payload=BundleV1.model_validate_json(bundle.payload), signature=bundle.signature, signing_key_id=bundle.signing_key_id)
-    return Envelope(data=signed)
+    return Envelope(data=_signed(bundle))
 
 
 @router.post("/events", dependencies=[require(credential_scope, Permission.usage_ingest)])

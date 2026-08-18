@@ -36,6 +36,15 @@ class ActivityOut(BaseModel):
     occurred_at: Annotated[AwareDatetime, Field(title="Occurred At")]
 
 
+class BundleManifestEntry(BaseModel):
+    """
+    The immutable identity of one organization bundle available to a data plane.
+    """
+
+    org_id: Annotated[UUID, Field(title="Org Id")]
+    bundle_id: Annotated[UUID, Field(title="Bundle Id")]
+
+
 class BundleOut(BaseModel):
     id: Annotated[UUID, Field(title="Id")]
     org_id: Annotated[UUID, Field(title="Org Id")]
@@ -204,7 +213,7 @@ class HeartbeatOut(BaseModel):
 
 class HeartbeatV1(BaseModel):
     """
-    The identity, software version, and active bundle reported by a data plane.
+    The identity, software version, and single active bundle reported by a data plane.
     """
 
     model_config = ConfigDict(
@@ -229,7 +238,7 @@ class HeartbeatV1(BaseModel):
     bundle_id: Annotated[
         UUID | None,
         Field(
-            description="Policy bundle currently served, if one is loaded",
+            description="Policy bundle served when exactly one is loaded; otherwise absent",
             title="Bundle Id",
         ),
     ] = None
@@ -1337,6 +1346,14 @@ class AccessKeyIn(BaseModel):
     ] = None
 
 
+class BundleManifest(BaseModel):
+    """
+    The complete set of organization bundles one data plane may serve.
+    """
+
+    bundles: Annotated[list[BundleManifestEntry], Field(title="Bundles")]
+
+
 class CredentialEntry(BaseModel):
     """
     A provider credential reference, priority, and version included in a policy bundle.
@@ -1353,6 +1370,10 @@ class EnrollOut(BaseModel):
     orgs: Annotated[list[OrgOut], Field(title="Orgs")]
     personal_org_id: Annotated[UUID | None, Field(title="Personal Org Id")]
     pending_invitations: Annotated[list[InvitationPreviewOut], Field(title="Pending Invitations")]
+
+
+class EnvelopeBundleManifest(BaseModel):
+    data: BundleManifest
 
 
 class EnvelopeEnrollOut(BaseModel):

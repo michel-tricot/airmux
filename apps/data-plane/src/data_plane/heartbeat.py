@@ -36,11 +36,11 @@ class Heartbeat:
         self._http_client = http_client
 
     async def once(self) -> None:
-        snapshot = self._holder.snapshot
+        snapshots = tuple(self._holder.snapshots.values())
         body = HeartbeatV1(
             instance_id=self._instance_id,
             version=VERSION,
-            bundle_id=snapshot.bundle.bundle_id if snapshot else None,
+            bundle_id=snapshots[0].bundle.bundle_id if len(snapshots) == 1 else None,
         )
         response = await self._http_client.post(
             f"{self._control_plane.url}/api/v1/heartbeat",

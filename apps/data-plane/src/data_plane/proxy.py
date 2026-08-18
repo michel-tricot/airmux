@@ -127,8 +127,7 @@ async def _run(body: dict[str, Any], key: KeyEntry, snapshot: BundleSnapshot, in
 
 def _authenticate(request: Request, holder: BundleHolder) -> tuple[KeyEntry, BundleSnapshot]:
     """The caller against the bundle, before the body is even read; raises RequestRejectedError on every no."""
-    snapshot = holder.snapshot
-    if snapshot is None:
+    if not holder.snapshots:
         raise RequestRejectedError(503, "bundle_unavailable")
     auth_header = request.headers.get("authorization", "")
     if auth_header.startswith("Bearer "):
@@ -141,10 +140,10 @@ def _authenticate(request: Request, holder: BundleHolder) -> tuple[KeyEntry, Bun
             raise RequestRejectedError(403, "missing_requested_with")
         if request.headers.get("sec-fetch-site") not in (None, "same-origin", "none"):
             raise RequestRejectedError(403, "cross_site_request")
-    key = authenticate(token, snapshot.key_index, datetime.now(tz=UTC))
-    if key is None:
+    route = authenticate(token, holder.key_index, datetime.now(tz=UTC))
+    if route is None:
         raise RequestRejectedError(401, "invalid_token")
-    return key, snapshot
+    return route.key, route.snapshot
 
 
 def _parse(body: dict[str, Any], ingress: IngressAdapter) -> tuple[CanonicalRequest, list[Adjustment]]:

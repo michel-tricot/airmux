@@ -151,6 +151,21 @@ export interface ActivityOut {
   occurred_at: string;
 }
 
+/**
+ * The immutable identity of one organization bundle available to a data plane.
+ */
+export interface BundleManifestEntry {
+  org_id: string;
+  bundle_id: string;
+}
+
+/**
+ * The complete set of organization bundles one data plane may serve.
+ */
+export interface BundleManifest {
+  bundles: BundleManifestEntry[];
+}
+
 export interface BundleOut {
   id: string;
   org_id: string;
@@ -429,7 +444,7 @@ export interface HeartbeatOut {
 }
 
 /**
- * The identity, software version, and active bundle reported by a data plane.
+ * The identity, software version, and single active bundle reported by a data plane.
  */
 export interface HeartbeatV1 {
   /** Stable ID for this data-plane installation */
@@ -440,7 +455,7 @@ export interface HeartbeatV1 {
      * @maxLength 100
      */
   version: string;
-  /** Policy bundle currently served, if one is loaded */
+  /** Policy bundle served when exactly one is loaded; otherwise absent */
   bundle_id?: string | null;
 }
 

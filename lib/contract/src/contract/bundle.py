@@ -104,3 +104,20 @@ class SignedBundle(BaseModel):
     payload: BundleV1
     signature: str  # Ed25519 over canonical_json(payload), base64
     signing_key_id: str  # selects the public key the data plane verifies with
+
+
+class BundleManifestEntry(BaseModel):
+    """The immutable identity of one organization bundle available to a data plane."""
+
+    model_config = ConfigDict(frozen=True)
+
+    org_id: UUID
+    bundle_id: UUID
+
+
+class BundleManifest(BaseModel):
+    """The complete set of organization bundles one data plane may serve."""
+
+    model_config = ConfigDict(frozen=True)
+
+    bundles: list[BundleManifestEntry]

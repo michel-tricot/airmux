@@ -13,7 +13,7 @@ from data_plane.heartbeat import Heartbeat
 
 
 @respx.mock
-async def test_heartbeat_owns_transport_and_reports_the_current_bundle(http_client):
+async def test_heartbeat_reports_a_bundle_only_when_the_manifest_contains_one(http_client):
     holder = BundleHolder()
     bundle = make_bundle()
     holder.admit(bundle, source="test")
@@ -33,3 +33,8 @@ async def test_heartbeat_owns_transport_and_reports_the_current_bundle(http_clie
     assert sent["instance_id"] == str(instance_id)
     assert sent["bundle_id"] == str(bundle.bundle_id)
     assert route.calls.last.request.headers["authorization"] == "Bearer dp-token"
+
+    holder.admit(make_bundle().model_copy(update={"org_id": uuid7()}), source="test")
+    await heartbeat.once()
+    sent = json.loads(route.calls.last.request.content)
+    assert sent["bundle_id"] is None

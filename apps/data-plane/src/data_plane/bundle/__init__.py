@@ -1,8 +1,8 @@
 """The bundle: how policy reaches the data plane.
 
 One internal type, two sources. remote polls the control plane and verifies signatures; local
-compiles a hand-written file. Both feed holder.admit(), the single admission point, so the
-request path never learns the source."""
+compiles a hand-written file. Both replace the holder's immutable bundle set, so the request path
+never learns the source."""
 
 from __future__ import annotations
 

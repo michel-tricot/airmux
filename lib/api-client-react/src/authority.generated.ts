@@ -426,6 +426,22 @@ export const operationAuthority = {
       },
     ],
   },
+  bundleManifest: {
+    checks: [
+      {
+        scope: "credential_scope",
+        anyOf: ["bundles.read"],
+      },
+    ],
+  },
+  getBundle: {
+    checks: [
+      {
+        scope: "selected_bundle_scope",
+        anyOf: ["bundles.read"],
+      },
+    ],
+  },
   bundleLatest: {
     checks: [
       {

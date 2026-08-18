@@ -31,6 +31,7 @@ import type {
   AccessKeyRevokedOut,
   ActivityOut,
   BundleLatestParams,
+  BundleManifest,
   BundleOut,
   ClaimOut,
   CliAuthApproveIn,
@@ -5538,6 +5539,166 @@ export function useListActivity<TData = Awaited<ReturnType<typeof listActivity>>
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getListActivityQueryOptions(orgId,params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getBundleManifestUrl = () => {
+
+
+
+
+  return `/api/v1/bundles/manifest`
+}
+
+/**
+ * Return every latest organization bundle visible to the authenticated data plane credential.
+ *
+ * Required permission: `bundles.read`.
+ * @summary Get Authorized Bundle Manifest
+ */
+export const bundleManifest = async ( options?: Parameters<typeof customFetch>[1]): Promise<BundleManifest> => {
+
+  return customFetch<BundleManifest>(getBundleManifestUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getBundleManifestQueryKey = () => {
+    return [
+    `/api/v1/bundles/manifest`
+    ] as const;
+    }
+
+
+export const getBundleManifestQueryOptions = <TData = Awaited<ReturnType<typeof bundleManifest>>, TError = ErrorType<void | HTTPValidationError>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof bundleManifest>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getBundleManifestQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof bundleManifest>>> = ({ signal }) => bundleManifest({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof bundleManifest>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type BundleManifestQueryResult = NonNullable<Awaited<ReturnType<typeof bundleManifest>>>
+export type BundleManifestQueryError = ErrorType<void | HTTPValidationError>
+
+
+/**
+ * @summary Get Authorized Bundle Manifest
+ */
+
+export function useBundleManifest<TData = Awaited<ReturnType<typeof bundleManifest>>, TError = ErrorType<void | HTTPValidationError>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof bundleManifest>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getBundleManifestQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetBundleUrl = (bundleId: string,) => {
+
+
+
+
+  return `/api/v1/bundles/${bundleId}`
+}
+
+/**
+ * Return one immutable signed bundle visible to the authenticated data plane credential.
+ *
+ * Required permission: `bundles.read`.
+ * @summary Get Bundle
+ */
+export const getBundle = async (bundleId: string, options?: Parameters<typeof customFetch>[1]): Promise<SignedBundle> => {
+
+  return customFetch<SignedBundle>(getGetBundleUrl(bundleId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetBundleQueryKey = (bundleId: string,) => {
+    return [
+    `/api/v1/bundles/${bundleId}`
+    ] as const;
+    }
+
+
+export const getGetBundleQueryOptions = <TData = Awaited<ReturnType<typeof getBundle>>, TError = ErrorType<void | HTTPValidationError>>(bundleId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getBundle>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetBundleQueryKey(bundleId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getBundle>>> = ({ signal }) => getBundle(bundleId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: bundleId !== null && bundleId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getBundle>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetBundleQueryResult = NonNullable<Awaited<ReturnType<typeof getBundle>>>
+export type GetBundleQueryError = ErrorType<void | HTTPValidationError>
+
+
+/**
+ * @summary Get Bundle
+ */
+
+export function useGetBundle<TData = Awaited<ReturnType<typeof getBundle>>, TError = ErrorType<void | HTTPValidationError>>(
+ bundleId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getBundle>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetBundleQueryOptions(bundleId,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
