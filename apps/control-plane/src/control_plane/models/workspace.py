@@ -5,9 +5,9 @@ from typing import TYPE_CHECKING, ClassVar, Self
 from uuid import UUID
 
 from pydantic import field_validator
-from sqlalchemy import UniqueConstraint
+from sqlalchemy import UniqueConstraint, or_
 from sqlalchemy.dialects.postgresql import CITEXT
-from sqlmodel import Field
+from sqlmodel import Field, col, select
 
 from control_plane.models.access_key import AccessKey
 from control_plane.models.audit import audited
@@ -17,7 +17,9 @@ from control_plane.models.common.org_owned import NotOwnedError
 from control_plane.models.common.slugs import SLUG_MAX_LENGTH, Slug, slugify
 from control_plane.models.common.wire import RecordCreate, RecordOut, RecordUpdate
 from control_plane.models.inference_key import InferenceKey
+from control_plane.models.org_membership import OrgMembership
 from control_plane.models.provider_credential import ProviderCredential
+from control_plane.models.user import User
 from control_plane.models.workspace_membership import WorkspaceMembership
 
 if TYPE_CHECKING:
@@ -89,6 +91,37 @@ class Workspace(Record, Identified, OrgOwned, Tombstonable, table=True):
         while f"{stem}-{suffix}" in taken:
             suffix += 1
         return f"{stem}-{suffix}"
+
+    @classmethod
+    async def readable_by(
+        cls,
+        principal_id: UUID,
+        org_id: UUID,
+        *,
+        instance_roles: tuple[str, ...],
+        org_roles: tuple[str, ...],
+        workspace_roles: tuple[str, ...],
+    ) -> list[Self]:
+        instance_access = select(User.id).where(col(User.id) == principal_id, col(User.instance_role).in_(instance_roles)).exists()
+        org_access = (
+            select(OrgMembership.user_id)
+            .where(
+                col(OrgMembership.user_id) == principal_id,
+                col(OrgMembership.org_id) == org_id,
+                col(OrgMembership.role).in_(org_roles),
+            )
+            .exists()
+        )
+        workspace_access = (
+            select(WorkspaceMembership.user_id)
+            .where(
+                col(WorkspaceMembership.user_id) == principal_id,
+                col(WorkspaceMembership.workspace_id) == col(cls.id),
+                col(WorkspaceMembership.role).in_(workspace_roles),
+            )
+            .exists()
+        )
+        return await cls.find(cls.org_id == org_id, or_(instance_access, org_access, workspace_access), order_by=col(cls.name))
 
     async def delete_with_contents(self, store: SecretStore) -> None:
         """Delete the workspace with the rows scoped to it: its inference keys, its members, and the

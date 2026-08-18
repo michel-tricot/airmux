@@ -4,7 +4,7 @@ from datetime import UTC, datetime, timedelta
 from urllib.parse import unquote, urlparse
 
 from fastapi.testclient import TestClient
-from helpers import make_org, make_workspace, run_in_db, setup_control_plane
+from helpers import captured_sql, make_org, make_workspace, run_in_db, setup_control_plane
 
 from control_plane.models import OrgInvitation, set_actor
 
@@ -56,8 +56,10 @@ def test_invitation_preview_and_accept_create_both_memberships_atomically(tmp_pa
         minted = _issue(client, cp, org_id, workspace_id=str(workspace_id), workspace_role="viewer")
         token = _token(minted["url"])
 
-        preview = client.post("/api/v1/enroll/invitations/preview", json={"token": token})
+        with captured_sql(cp.app) as statements:
+            preview = client.post("/api/v1/enroll/invitations/preview", json={"token": token})
         assert preview.status_code == 200, preview.text
+        assert len([statement for statement in statements if statement.lstrip().startswith("SELECT")]) <= 1
         assert preview.json()["data"] == {
             "email": "invitee@example.com",
             "org_id": str(org_id),
@@ -75,8 +77,21 @@ def test_invitation_preview_and_accept_create_both_memberships_atomically(tmp_pa
         )
         assert signup.status_code == 200, signup.text
         user_id = signup.json()["data"]["user_id"]
-        accepted = client.post("/api/v1/enroll/invitations/accept", json={"token": token}, headers=CSRF)
+        with captured_sql(cp.app) as acceptance_statements:
+            accepted = client.post("/api/v1/enroll/invitations/accept", json={"token": token}, headers=CSRF)
         assert accepted.status_code == 200, accepted.text
+        assert not [
+            statement
+            for statement in acceptance_statements
+            if statement.lstrip().startswith("SELECT") and ("FROM org_membership" in statement or "FROM workspace_membership" in statement)
+        ]
+        membership_inserts = [
+            statement
+            for statement in acceptance_statements
+            if statement.startswith(("INSERT INTO org_membership", "INSERT INTO workspace_membership"))
+        ]
+        assert len(membership_inserts) == 2
+        assert all("ON CONFLICT" in statement and "DO NOTHING" in statement for statement in membership_inserts)
         assert accepted.json()["data"] == {
             "invitation_id": minted["invitation"]["id"],
             "org_id": str(org_id),

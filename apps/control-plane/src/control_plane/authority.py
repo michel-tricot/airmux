@@ -21,14 +21,12 @@ from control_plane.authz import (
     WorkspaceRole,
     decide,
 )
-from control_plane.models import AccessKey, OrgMembership, User, WorkspaceMembership
+from control_plane.models import AccessKey, OrgMembership, User, Workspace, WorkspaceMembership
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
     from datetime import datetime
     from uuid import UUID
-
-    from control_plane.models import Workspace
 
 
 class AuthorizationError(Exception):
@@ -83,11 +81,16 @@ async def decisions(actor: Actor, permission: Permission, targets: Iterable[Scop
     return {scope: decide(actor, grants, AccessRequest(permission=permission, target=scope)) for scope in scopes}
 
 
-async def readable_workspaces(actor: Actor, workspaces: Iterable[Workspace]) -> list[Workspace]:
-    candidates = tuple(workspaces)
-    scopes = {workspace.id: Scope.workspace(workspace.org_id, workspace.id) for workspace in candidates}
-    results = await decisions(actor, Permission.workspaces_read, scopes.values())
-    return [workspace for workspace in candidates if results[scopes[workspace.id]] is Decision.allow]
+async def readable_workspaces(actor: Actor, org_id: UUID) -> list[Workspace]:
+    if Permission.workspaces_read not in actor.grant.permissions or not actor.grant.scope.covers(Scope.org(org_id)):
+        return []
+    return await Workspace.readable_by(
+        actor.principal_id,
+        org_id,
+        instance_roles=tuple(role.value for role, permissions in INSTANCE_ROLE_PERMISSIONS.items() if Permission.workspaces_read in permissions),
+        org_roles=tuple(role.value for role, permissions in ORG_ROLE_PERMISSIONS.items() if Permission.workspaces_read in permissions),
+        workspace_roles=tuple(role.value for role, permissions in WORKSPACE_ROLE_PERMISSIONS.items() if Permission.workspaces_read in permissions),
+    )
 
 
 async def is_allowed(actor: Actor, permission: Permission, target: Scope) -> bool:

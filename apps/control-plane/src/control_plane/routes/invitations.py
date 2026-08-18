@@ -10,7 +10,7 @@ from sqlmodel import col
 from control_plane.authority import ensure_org_role_change
 from control_plane.authz import OrgRole, Permission
 from control_plane.deps import ActorDep, OrgDep, org_scope, require
-from control_plane.models import OrgInvitation, OrgMembership, User, Workspace
+from control_plane.models import OrgInvitation, User, Workspace
 from control_plane.models.common.wire import Envelope
 from control_plane.models.org_invitation import (
     InvitationUnavailableError,
@@ -43,8 +43,7 @@ async def create_invitation(
     await ensure_org_role_change(actor, org_id, None, OrgRole(body.org_role))
     if body.workspace_id is not None:
         await Workspace.owned_by(org_id, body.workspace_id)
-    user = await User.first(User.email == body.email)
-    if user is not None and await OrgMembership.get((user.id, org_id)) is not None:
+    if await User.org_member_for_email(org_id, body.email) is not None:
         raise HTTPException(status_code=409, detail="This account already belongs to the organization")
     if await OrgInvitation.active_for_email(org_id, body.email) is not None:
         raise HTTPException(status_code=409, detail="A pending invitation already exists for this email")

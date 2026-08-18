@@ -9,7 +9,7 @@ from pydantic import BaseModel
 from control_plane.authority import visible_org_ids
 from control_plane.authz import OrgRole
 from control_plane.deps import ActingUserDep, ActorDep, CookieUserDep, browser_scoped, public, user_scoped
-from control_plane.models import Org, OrgInvitation, OrgMembership, Workspace
+from control_plane.models import Org, OrgInvitation, OrgMembership
 from control_plane.models.common.wire import Envelope
 from control_plane.models.org import OrgCreate, OrgOut
 from control_plane.models.org_invitation import (
@@ -57,23 +57,20 @@ async def create_personal_org(body: OrgCreate, user: CookieUserDep) -> Envelope[
 @router.post("/invitations/preview", tags=["Enrollment"], dependencies=[public()])
 async def preview_invitation(body: InvitationTokenIn) -> Envelope[InvitationPreviewOut]:
     """Preview the organization and optional workspace named by a shared invitation secret."""
-    invitation = await OrgInvitation.for_token(body.token)
-    if invitation is None:
+    preview = await OrgInvitation.preview_for_token(body.token)
+    if preview is None:
         raise HTTPException(status_code=404, detail="Invitation not found")
+    invitation, org_name, workspace_name = preview
     if invitation.status(datetime.now(tz=UTC)) != "pending":
-        raise HTTPException(status_code=410, detail="Invitation is no longer available")
-    org = await Org.find_by_id(invitation.org_id)
-    workspace = await Workspace.find_by_id(invitation.workspace_id) if invitation.workspace_id is not None else None
-    if org is None or (invitation.workspace_id is not None and workspace is None):
         raise HTTPException(status_code=410, detail="Invitation is no longer available")
     return Envelope(
         data=InvitationPreviewOut(
             email=invitation.email,
             org_id=invitation.org_id,
-            org_name=org.name,
+            org_name=org_name,
             org_role=invitation.org_role,
             workspace_id=invitation.workspace_id,
-            workspace_name=workspace.name if workspace is not None else None,
+            workspace_name=workspace_name,
             workspace_role=invitation.workspace_role,
             expires_at=invitation.expires_at,
         )

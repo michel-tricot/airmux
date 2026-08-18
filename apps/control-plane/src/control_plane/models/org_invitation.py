@@ -18,8 +18,10 @@ from control_plane.models.common import Identified, OrgOwned, Tombstonable
 from control_plane.models.common.base import Record
 from control_plane.models.common.column_types import UTCDateTime
 from control_plane.models.common.wire import RecordCreate, RecordOut, RequestModel
+from control_plane.models.org import Org
 from control_plane.models.org_membership import OrgMembership
 from control_plane.models.user import User
+from control_plane.models.workspace import Workspace
 from control_plane.models.workspace_membership import WorkspaceMembership
 
 INVITATION_TOKEN_PREFIX = "invite_"  # noqa: S105 token discriminator, not a secret
@@ -126,6 +128,19 @@ class OrgInvitation(Record, Identified, OrgOwned, Tombstonable, table=True):
         return (await current_session().execute(query)).scalar_one_or_none()
 
     @classmethod
+    async def preview_for_token(cls, token: str) -> tuple[Self, str, str | None] | None:
+        if not token.startswith(INVITATION_TOKEN_PREFIX):
+            return None
+        query = (
+            select(cls, Org.name, Workspace.name)
+            .join(Org, col(Org.id) == col(cls.org_id))
+            .outerjoin(Workspace, col(Workspace.id) == col(cls.workspace_id))
+            .where(cls.token_hash == token_hash(token))
+        )
+        result = (await current_session().execute(query)).one_or_none()
+        return None if result is None else (result[0], result[1], result[2])
+
+    @classmethod
     async def for_update(cls, org_id: UUID, invitation_id: UUID) -> Self | None:
         query = select(cls).where(cls.id == invitation_id, cls.org_id == org_id).with_for_update()
         return (await current_session().execute(query)).scalar_one_or_none()
@@ -163,18 +178,14 @@ class OrgInvitation(Record, Identified, OrgOwned, Tombstonable, table=True):
             raise InvitationUnavailableError
         if self.email != User.normalize_email(user.email):
             raise InvitationEmailMismatchError
-        org_membership = await OrgMembership.get((user.id, self.org_id))
-        if org_membership is None:
-            await OrgMembership(user_id=user.id, org_id=self.org_id, role=self.org_role).save()
+        await OrgMembership.ensure(user_id=user.id, org_id=self.org_id, role=self.org_role)
         if self.workspace_id is not None and self.workspace_role is not None:
-            workspace_membership = await WorkspaceMembership.get((user.id, self.workspace_id))
-            if workspace_membership is None:
-                await WorkspaceMembership(
-                    user_id=user.id,
-                    workspace_id=self.workspace_id,
-                    org_id=self.org_id,
-                    role=self.workspace_role,
-                ).save()
+            await WorkspaceMembership.ensure(
+                user_id=user.id,
+                workspace_id=self.workspace_id,
+                org_id=self.org_id,
+                role=self.workspace_role,
+            )
         self.accepted_at = now
         self.accepted_by_user_id = user.id
         return await self.save()

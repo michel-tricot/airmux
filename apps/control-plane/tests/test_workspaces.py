@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 from fastapi.testclient import TestClient
-from helpers import make_org, make_workspace, run_in_db, setup_control_plane
+from helpers import captured_sql, make_org, make_workspace, run_in_db, setup_control_plane
 from sqlmodel import col
 
 from contract import SignedBundle, uuid7, verify_bundle
@@ -40,9 +40,11 @@ def test_org_member_only_sees_joined_workspaces(tmp_path):
             == 200
         )
 
-        listed = c.get(f"/api/v1/orgs/{org_id}/workspaces", headers=CSRF)
+        with captured_sql(cp.app) as statements:
+            listed = c.get(f"/api/v1/orgs/{org_id}/workspaces", headers=CSRF)
 
         assert listed.status_code == 200
+        assert len([statement for statement in statements if statement.lstrip().startswith("SELECT")]) <= 7
         assert [workspace["id"] for workspace in listed.json()["data"]] == [str(joined)]
         assert c.get(f"/api/v1/orgs/{org_id}/workspaces/{joined}", headers=CSRF).status_code == 200
         assert c.get(f"/api/v1/orgs/{org_id}/workspaces/{sibling}", headers=CSRF).status_code == 403
@@ -87,6 +89,27 @@ def test_workspace_admin_can_list_org_member_candidates_without_org_member_read(
         ]
 
         assert admin_id != candidate_id
+
+
+def test_workspace_member_lists_each_use_one_resource_query(tmp_path):
+    cp = setup_control_plane(tmp_path)
+    root = cp.headers()
+    with TestClient(cp.app) as c:
+        org_id = make_org(c, root, "o1")
+        admin_id, admin = _member(c, cp, org_id, "admin@example.com")
+        _member(c, cp, org_id, "candidate@example.com")
+        workspace_id = make_workspace(c, admin, "staging")
+        workspace_admin = cp.headers_for(org_id, admin_id, workspace_id)
+
+        with captured_sql(cp.app) as member_statements:
+            members = c.get(f"/api/v1/orgs/{org_id}/workspaces/{workspace_id}/members", headers=workspace_admin)
+        with captured_sql(cp.app) as candidate_statements:
+            candidates = c.get(f"/api/v1/orgs/{org_id}/workspaces/{workspace_id}/member-candidates", headers=workspace_admin)
+
+        assert members.status_code == 200
+        assert candidates.status_code == 200
+        assert len([statement for statement in member_statements if statement.lstrip().startswith("SELECT")]) <= 8
+        assert len([statement for statement in candidate_statements if statement.lstrip().startswith("SELECT")]) <= 8
 
 
 def test_slug_is_unique_within_the_org_and_free_across_orgs(tmp_path):

@@ -62,9 +62,31 @@ class User(Record, Identified, Tombstonable, table=True):
         )
 
     @classmethod
-    async def members_of_workspace(cls, workspace_id: UUID) -> list[Self]:
+    async def org_member_for_email(cls, org_id: UUID, email: str) -> OrgMembership | None:
+        query = (
+            select(OrgMembership)
+            .join(cls, col(cls.id) == col(OrgMembership.user_id))
+            .where(OrgMembership.org_id == org_id, cls.email == cls.normalize_email(email))
+        )
+        return (await current_session().execute(query)).scalar_one_or_none()
+
+    @classmethod
+    async def workspace_members(cls, workspace_id: UUID) -> list[tuple[WorkspaceMembership, Self]]:
+        query = (
+            select(WorkspaceMembership, cls)
+            .join(cls, col(cls.id) == col(WorkspaceMembership.user_id))
+            .where(WorkspaceMembership.workspace_id == workspace_id)
+            .order_by(col(cls.email))
+        )
+        return [(membership, user) for membership, user in (await current_session().execute(query)).all()]
+
+    @classmethod
+    async def candidates_for_workspace(cls, org_id: UUID, workspace_id: UUID) -> list[Self]:
         return await cls.find(
-            col(cls.id).in_(select(WorkspaceMembership.user_id).where(WorkspaceMembership.workspace_id == workspace_id)),
+            col(cls.id).in_(select(OrgMembership.user_id).where(OrgMembership.org_id == org_id)),
+            ~select(WorkspaceMembership.user_id)
+            .where(WorkspaceMembership.user_id == cls.id, WorkspaceMembership.workspace_id == workspace_id)
+            .exists(),
             order_by=col(cls.email),
         )
 

@@ -43,8 +43,7 @@ async def create_workspace(body: WorkspaceCreate, org_id: OrgDep, actor: ActorDe
 )
 async def list_workspaces(org_id: OrgDep, actor: ActorDep) -> Envelope[list[WorkspaceOut]]:
     """List workspaces the caller can read in an organization."""
-    workspaces = await Workspace.find(Workspace.org_id == org_id, order_by=col(Workspace.name))
-    visible = await readable_workspaces(actor, workspaces)
+    visible = await readable_workspaces(actor, org_id)
     return Envelope(data=[WorkspaceOut.model_validate(workspace) for workspace in visible])
 
 
@@ -73,9 +72,7 @@ async def update_workspace(body: WorkspaceUpdate, workspace: WorkspaceDep) -> En
 @router.get("/{workspace_ref}/members", tags=["Workspace Members"], dependencies=[require(workspace_scope, Permission.members_read)])
 async def list_members(workspace: WorkspaceDep) -> Envelope[list[WorkspaceMembershipOut]]:
     """List the members of a workspace and their workspace roles."""
-    memberships = await WorkspaceMembership.find(WorkspaceMembership.workspace_id == workspace.id, order_by=col(WorkspaceMembership.user_id))
-    memberships_by_user = {membership.user_id: membership for membership in memberships}
-    users = await User.members_of_workspace(workspace.id)
+    memberships = await User.workspace_members(workspace.id)
     return Envelope(
         data=[
             WorkspaceMembershipOut(
@@ -84,10 +81,10 @@ async def list_members(workspace: WorkspaceDep) -> Envelope[list[WorkspaceMember
                 email=user.email,
                 name=user.name,
                 service_account=user.service_account,
-                role=memberships_by_user[user.id].role,
+                role=membership.role,
                 status="member",
             )
-            for user in users
+            for membership, user in memberships
         ]
     )
 
@@ -99,9 +96,7 @@ async def list_members(workspace: WorkspaceDep) -> Envelope[list[WorkspaceMember
 )
 async def list_member_candidates(workspace: WorkspaceDep) -> Envelope[list[WorkspaceMemberCandidateOut]]:
     """List organization members who can be added to a workspace."""
-    memberships = await WorkspaceMembership.find(WorkspaceMembership.workspace_id == workspace.id)
-    member_ids = frozenset(membership.user_id for membership in memberships)
-    candidates = [user for user in await User.members_of(workspace.org_id) if user.id not in member_ids]
+    candidates = await User.candidates_for_workspace(workspace.org_id, workspace.id)
     return Envelope(
         data=[
             WorkspaceMemberCandidateOut(user_id=user.id, email=user.email, name=user.name, service_account=user.service_account)
