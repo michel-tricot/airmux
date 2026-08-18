@@ -117,6 +117,7 @@ function Playground({ orgId, workspaceRef }: { orgId: string; workspaceRef: stri
   const [error, setError] = useState<string | null>(null);
 
   const bottomRef = useRef<HTMLDivElement>(null);
+  const composerRef = useRef<HTMLTextAreaElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const activeModel = models.some((model) => model.name === selectedModel) ? selectedModel : (models[0]?.name ?? '');
   const activeModelDetails = models.find((model) => model.name === activeModel);
@@ -137,6 +138,8 @@ function Playground({ orgId, workspaceRef }: { orgId: string; workspaceRef: stri
     if (!input.trim() || !activeModel || sending) return;
     const userMessage: PlaygroundMessage = { role: 'user', content: input.trim() };
     const history = [...messages, userMessage];
+    updatePlayground({ input: '' });
+    composerRef.current?.focus();
     setError(null);
     setSending(true);
     setStreamingContent('');
@@ -149,7 +152,7 @@ function Playground({ orgId, workspaceRef }: { orgId: string; workspaceRef: stri
     try {
       const playgroundSession = await ensureSession.mutateAsync({ orgId, workspaceRef });
       if (abortRef.current !== controller) return;
-      updatePlayground({ messages: history, input: '', sessionExpiresAt: playgroundSession.expires_at });
+      updatePlayground({ messages: history, sessionExpiresAt: playgroundSession.expires_at });
       requestStarted = true;
       const requestMessages: InferenceMessage[] = [
         ...(systemPrompt.trim() ? [{ role: 'system' as const, content: systemPrompt.trim() }] : []),
@@ -205,9 +208,11 @@ function Playground({ orgId, workspaceRef }: { orgId: string; workspaceRef: stri
         if (partial) setPlayground((current) => ({ ...current, messages: [...current.messages, { role: 'assistant', content: partial }] }));
       } else {
         setError((err as Error).message);
-        if (requestStarted) {
-          setPlayground((current) => ({ ...current, messages: current.messages.slice(0, -1), input: userMessage.content }));
-        }
+        setPlayground((current) => ({
+          ...current,
+          messages: requestStarted ? current.messages.slice(0, -1) : current.messages,
+          input: current.input || userMessage.content,
+        }));
       }
     } finally {
       if (abortRef.current === controller) {
@@ -262,6 +267,7 @@ function Playground({ orgId, workspaceRef }: { orgId: string; workspaceRef: stri
               className="h-8 text-xs"
               value={activeModel}
               onValueChange={(selectedModel) => updatePlayground({ selectedModel })}
+              onSelectionComplete={() => composerRef.current?.focus()}
               options={modelOptions}
               placeholder="Select model"
             />
@@ -394,6 +400,7 @@ function Playground({ orgId, workspaceRef }: { orgId: string; workspaceRef: stri
           <div className="border-t border-border bg-card/40 p-4">
             <div className="flex items-end gap-2">
               <Textarea
+                ref={composerRef}
                 value={input}
                 onChange={(event) => updatePlayground({ input: event.target.value })}
                 onKeyDown={(e) => {
@@ -405,7 +412,6 @@ function Playground({ orgId, workspaceRef }: { orgId: string; workspaceRef: stri
                 placeholder="Send a message... (Shift+Enter for newline)"
                 className="permission-scrollbar max-h-40 min-h-[2.75rem] flex-1 resize-none text-sm"
                 rows={1}
-                disabled={sending}
               />
               <div className="flex shrink-0 gap-1.5">
                 {messages.length > 0 && (

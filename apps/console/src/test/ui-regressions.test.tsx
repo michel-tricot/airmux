@@ -115,6 +115,39 @@ describe('provider icons', () => {
 });
 
 describe('show-once keys', () => {
+  it('shows copied feedback before the clipboard write finishes', async () => {
+    const user = userEvent.setup();
+    let finishCopy: (() => void) | undefined;
+    vi.spyOn(navigator.clipboard, 'writeText').mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          finishCopy = resolve;
+        }),
+    );
+    render(<KeyRevealDialog open onOpenChange={() => undefined} token="secret-token" />);
+
+    await user.click(screen.getByRole('button', { name: 'Copy key' }));
+
+    expect(screen.getByRole('button', { name: 'Copied' })).toHaveTextContent('Copied');
+    finishCopy?.();
+  });
+
+  it('presents an explicit copy action without focusing the secret text', async () => {
+    const user = userEvent.setup();
+    const writeText = vi.spyOn(navigator.clipboard, 'writeText').mockResolvedValue();
+    render(<KeyRevealDialog open onOpenChange={() => undefined} token="secret-token" />);
+
+    const secret = screen.getByDisplayValue('secret-token');
+    const copy = screen.getByRole('button', { name: 'Copy key' });
+    expect(secret).not.toHaveFocus();
+    expect(copy).toHaveTextContent('Copy key');
+
+    await user.click(copy);
+
+    expect(writeText).toHaveBeenCalledWith('secret-token');
+    expect(screen.getByRole('button', { name: 'Copied' })).toHaveTextContent('Copied');
+  });
+
   it('reports clipboard failures and keeps manual copy available', async () => {
     const user = userEvent.setup();
     vi.spyOn(navigator.clipboard, 'writeText').mockRejectedValue(new Error('blocked'));
@@ -214,10 +247,14 @@ describe('playground', () => {
     render(<App />);
     const user = userEvent.setup();
 
-    await user.type(await screen.findByPlaceholderText('Send a message... (Shift+Enter for newline)'), 'hello');
+    const composer = await screen.findByPlaceholderText('Send a message... (Shift+Enter for newline)');
+    await user.type(composer, 'hello');
     await user.click(screen.getByRole('button', { name: 'Send message' }));
 
+    expect(composer).toHaveFocus();
+
     expect(await screen.findByText('hello from the gateway')).toBeInTheDocument();
+    expect(composer).toHaveFocus();
     expect(screen.getByText('12 input')).toBeInTheDocument();
     expect(screen.getByText('4 output')).toBeInTheDocument();
     expect(screen.getByText('16 total')).toBeInTheDocument();
@@ -292,6 +329,6 @@ describe('playground', () => {
 
     const modelSelector = screen.getByRole('button', { name: 'Model' });
     expect(modelSelector).toHaveTextContent('anthropic/claude-test');
-    expect(modelSelector).toHaveFocus();
+    expect(screen.getByPlaceholderText('Send a message... (Shift+Enter for newline)')).toHaveFocus();
   });
 });

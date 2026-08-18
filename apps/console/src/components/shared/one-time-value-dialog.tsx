@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Alert, AlertDescription, Modal, Button, Label } from '@/components/ui/elements';
 import { Copy, CheckCircle2, AlertTriangle } from 'lucide-react';
-import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group';
+import { InputGroup, InputGroupInput } from '@/components/ui/input-group';
 
 export function OneTimeValueDialog({
   open,
@@ -25,21 +25,31 @@ export function OneTimeValueDialog({
   const [copiedValue, setCopiedValue] = useState<string | null>(null);
   const [copyErrorValue, setCopyErrorValue] = useState<string | null>(null);
   const copyTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const copyAttempt = useRef(0);
   const copied = copiedValue === value;
   const copyError = copyErrorValue === value;
 
-  useEffect(() => () => clearTimeout(copyTimer.current), []);
+  useEffect(
+    () => () => {
+      copyAttempt.current += 1;
+      clearTimeout(copyTimer.current);
+    },
+    [],
+  );
 
   if (!value) return null;
 
   const copyToClipboard = async () => {
+    const attempt = ++copyAttempt.current;
+    setCopiedValue(value);
+    setCopyErrorValue(null);
+    clearTimeout(copyTimer.current);
     try {
       await navigator.clipboard.writeText(value);
-      setCopiedValue(value);
-      setCopyErrorValue(null);
-      clearTimeout(copyTimer.current);
+      if (copyAttempt.current !== attempt) return;
       copyTimer.current = setTimeout(() => setCopiedValue(null), 2000);
     } catch {
+      if (copyAttempt.current !== attempt) return;
       setCopiedValue(null);
       setCopyErrorValue(value);
     }
@@ -55,21 +65,19 @@ export function OneTimeValueDialog({
 
         <div className="space-y-2">
           <Label htmlFor="one-time-value">{label}</Label>
-          <InputGroup className="bg-muted">
-            <InputGroupInput id="one-time-value" readOnly value={value} className="font-mono text-muted-foreground" />
-            <InputGroupAddon align="inline-end" className="pr-1">
-              <Button onClick={copyToClipboard} variant="secondary" className="h-7 w-28" aria-label={copied ? 'Copied' : copyLabel}>
-                {copied ? (
-                  <>
-                    <CheckCircle2 className="mr-2 h-4 w-4 text-success" /> Copied
-                  </>
-                ) : (
-                  <>
-                    <Copy className="mr-2 h-4 w-4" /> Copy
-                  </>
-                )}
-              </Button>
-            </InputGroupAddon>
+          <InputGroup className="min-w-0 gap-1 bg-muted p-1">
+            <InputGroupInput id="one-time-value" readOnly tabIndex={-1} value={value} className="h-7 min-w-0 px-2 font-mono text-muted-foreground" />
+            <Button onClick={copyToClipboard} variant="secondary" className="h-7 shrink-0 gap-2 px-3" aria-label={copied ? 'Copied' : copyLabel}>
+              {copied ? (
+                <>
+                  <CheckCircle2 className="h-4 w-4 text-success" /> Copied
+                </>
+              ) : (
+                <>
+                  <Copy className="h-4 w-4" /> {copyLabel}
+                </>
+              )}
+            </Button>
           </InputGroup>
           {copyError && (
             <p role="alert" className="text-sm text-destructive">

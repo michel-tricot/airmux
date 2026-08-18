@@ -231,6 +231,7 @@ type SearchableDropdownOption = DropdownOption & { searchText: string };
 export const SearchableDropdown = ({
   value,
   onValueChange,
+  onSelectionComplete,
   options,
   placeholder = 'Select…',
   disabled,
@@ -240,6 +241,7 @@ export const SearchableDropdown = ({
 }: {
   value: string;
   onValueChange: (value: string) => void;
+  onSelectionComplete?: () => void;
   options: SearchableDropdownOption[];
   placeholder?: string;
   disabled?: boolean;
@@ -250,6 +252,7 @@ export const SearchableDropdown = ({
   const [open, setOpen] = React.useState(false);
   const [query, setQuery] = React.useState('');
   const [activeIndex, setActiveIndex] = React.useState(0);
+  const selectionCompleted = React.useRef(false);
   const listboxId = React.useId();
   const selected = options.find((option) => option.value === value);
   const visibleOptions = options.filter((option) => option.searchText.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()));
@@ -261,6 +264,7 @@ export const SearchableDropdown = ({
   }, [highlightedIndex, listboxId, open]);
 
   const selectOption = (option: SearchableDropdownOption) => {
+    selectionCompleted.current = true;
     onValueChange(option.value);
     onOpenChange(false);
   };
@@ -294,7 +298,16 @@ export const SearchableDropdown = ({
           <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
         </Button>
       </DialogTrigger>
-      <DialogContent className="w-[calc(100%-2rem)] max-w-lg gap-4 border-border bg-card p-4 text-card-foreground">
+      <DialogContent
+        className="w-[calc(100%-2rem)] max-w-lg gap-4 border-border bg-card p-4 text-card-foreground"
+        onCloseAutoFocus={(event) => {
+          const selectedOption = selectionCompleted.current;
+          selectionCompleted.current = false;
+          if (!selectedOption || !onSelectionComplete) return;
+          event.preventDefault();
+          onSelectionComplete();
+        }}
+      >
         <DialogHeader className="space-y-1">
           <DialogTitle className="text-base">Select model</DialogTitle>
           <DialogDescription>Search by model or provider name</DialogDescription>
