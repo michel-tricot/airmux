@@ -5,12 +5,13 @@ from typing import TYPE_CHECKING, Literal, cast
 from sqlalchemy import func
 from sqlmodel import col, or_, select
 
-from contract import BundleV1, Catalog, CredentialEntry, KeyEntry, ModelEntry, ProviderEntry, canonical_json, sign_bundle
+from contract import BundleV1, Catalog, CredentialEntry, KeyEntry, ModelEntry, ProviderEntry, canonical_json, sign_bundle, uuid7
 from control_plane.db import current_session
-from control_plane.models import Bundle, InferenceKey, Model, Org, Provider, ProviderCredential
+from control_plane.models import Bundle, InferenceKey, Model, Org, Provider, ProviderCredential, RuntimeConfiguration
+from control_plane.models.runtime_configuration import runtime_configuration_changes
 
 if TYPE_CHECKING:
-    from datetime import datetime, timedelta
+    from datetime import datetime
     from uuid import UUID
 
     from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
@@ -23,24 +24,46 @@ class UnknownOrgError(LookupError):
         super().__init__(str(org_id))
 
 
-async def compile_and_store(org_id: UUID, bundle_id: UUID, now: datetime, staleness_bound: timedelta, signing_key: Ed25519PrivateKey) -> Bundle:
-    """Compile, sign, and persist the next bundle version for an org; returns the stored row."""
-    bundle = await compile_bundle(org_id, bundle_id, now, staleness_bound)
+async def publish_changes(now: datetime, signing_key: Ed25519PrivateKey) -> tuple[Bundle, ...]:
+    await RuntimeConfiguration.advance(runtime_configuration_changes(current_session().sync_session))
+    return await publish_pending(now, signing_key)
+
+
+async def publish_pending(now: datetime, signing_key: Ed25519PrivateKey) -> tuple[Bundle, ...]:
+    published: tuple[Bundle, ...] = ()
+    configuration = await RuntimeConfiguration.next_pending()
+    while configuration is not None:
+        published = (*published, await _publish_revision(configuration, uuid7(), now, signing_key))
+        configuration = await RuntimeConfiguration.next_pending()
+    return published
+
+
+async def _publish_revision(
+    configuration: RuntimeConfiguration,
+    bundle_id: UUID,
+    now: datetime,
+    signing_key: Ed25519PrivateKey,
+) -> Bundle:
+    org_id = configuration.org_id
+    bundle = await compile_bundle(org_id, bundle_id, now)
     signed = sign_bundle(bundle, signing_key, SIGNING_KEY_ID)
     version = (await current_session().execute(select(func.max(Bundle.version)).where(Bundle.org_id == org_id))).scalar() or 0
-    return await Bundle(
+    stored = await Bundle(
         id=bundle_id,
         org_id=org_id,
         version=version + 1,
         issued_at=now,
-        expires_at=bundle.expires_at,
+        configuration_revision=configuration.desired_revision,
         payload=canonical_json(bundle),
         signature=signed.signature,
         signing_key_id=signed.signing_key_id,
     ).save()
+    configuration.published_revision = configuration.desired_revision
+    await configuration.save()
+    return stored
 
 
-async def compile_bundle(org_id: UUID, bundle_id: UUID, now: datetime, staleness_bound: timedelta) -> BundleV1:
+async def compile_bundle(org_id: UUID, bundle_id: UUID, now: datetime) -> BundleV1:
     """Compile the current transaction's visible state with caller-supplied identity and time."""
     org = await Org.find_by_id(org_id)
     if org is None:
@@ -57,7 +80,6 @@ async def compile_bundle(org_id: UUID, bundle_id: UUID, now: datetime, staleness
         bundle_id=bundle_id,
         org_id=org_id,
         issued_at=now,
-        expires_at=now + staleness_bound,
         keys=[KeyEntry(key_id=str(r.id), org_id=r.org_id, workspace_id=r.workspace_id, token_hash=r.token_hash) for r in key_rows if not r.revoked],
         catalog=Catalog(
             providers=[

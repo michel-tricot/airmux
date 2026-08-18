@@ -193,7 +193,6 @@ def test_the_bundle_names_the_credential_and_carries_no_secret(tmp_path):
         org_id = make_org(c, root)
         org = cp.headers(org_id)
         c.post(_collection(org), json={"provider": "openai", "value": KEY}, headers=org)
-        c.post(f"/api/v1/orgs/{org_id}/bundles/compile", headers=org)
         payload = c.get("/api/v1/bundle/latest", headers=org).text
         assert KEY not in payload
         entry = c.get("/api/v1/bundle/latest", headers=org).json()["data"]["payload"]["catalog"]["credentials"][0]
@@ -212,7 +211,6 @@ def test_a_disabled_credential_drops_out_of_the_bundle(tmp_path):
         org = cp.headers(org_id)
         created = c.post(_collection(org), json={"provider": "openai", "value": KEY}, headers=org).json()["data"]
         c.patch(_credential_path(created), json={"enabled": False}, headers=org)
-        c.post(f"/api/v1/orgs/{org_id}/bundles/compile", headers=org)
         payload = c.get("/api/v1/bundle/latest", headers=org).json()["data"]["payload"]
         assert payload["catalog"]["credentials"] == []
 
@@ -336,9 +334,12 @@ def test_a_rejected_key_shows_up_as_invalid(tmp_path):
     with TestClient(cp.app) as c:
         m = _with_credential(cp, c)
         assert m.credential["status"] == "unknown"
+        before = c.get(f"/api/v1/orgs/{m.org_id}/bundles", headers=m.org).json()["data"]
         event = _usage_event(m, "credential_rejected", datetime.now(tz=UTC))
         assert c.post("/api/v1/events", json=[event], headers=m.root).status_code == 200
         assert _status_of(c, m) == "invalid"
+        after = c.get(f"/api/v1/orgs/{m.org_id}/bundles", headers=m.org).json()["data"]
+        assert [bundle["id"] for bundle in after] == [bundle["id"] for bundle in before]
 
 
 def test_an_org_data_plane_cannot_change_another_orgs_credential_health(tmp_path):
@@ -473,7 +474,7 @@ def test_a_platform_credential_reaches_every_org(tmp_path):
 
         org_id = make_org(c, root)
         org = cp.headers(org_id)
-        c.post(f"/api/v1/orgs/{org_id}/bundles/compile", headers=org)
+        c.post(f"/api/v1/orgs/{org_id}/bundles/republish", headers=org)
         entries = c.get("/api/v1/bundle/latest", headers=org).json()["data"]["payload"]["catalog"]["credentials"]
         assert [e["ref"]["name"] for e in entries] == ["platform"]
         assert entries[0]["ref"]["org_id"] is None

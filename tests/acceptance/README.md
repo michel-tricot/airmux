@@ -11,7 +11,7 @@ categories below use it, so a new test in either place gets the same one-line se
 ## Categories
 
 - `scenarios/` - correctness and resilience. Does the system do the right thing under failure:
-  control plane down, event replay, bundle staleness. Asserts on behaviour and observable output.
+  control plane down and event replay. Asserts on behaviour and observable output.
 - `benchmarks/` - performance. Measures a cost and guards it against regression. Reports
   percentiles and asserts a lenient ceiling, so a gross regression fails but normal runner noise
   does not.

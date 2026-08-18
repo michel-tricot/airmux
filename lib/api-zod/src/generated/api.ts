@@ -1647,21 +1647,20 @@ export const RemoveOrgUserResponse = zod.object({
 
 
 /**
- * Compile and sign a new policy bundle from the organization's current configuration.
+ * Request a fresh signed bundle for the organization's current configuration.
  *
  * Required permission: `bundles.publish`.
- * @summary Compile Policy Bundle
+ * @summary Republish Policy Bundle
  */
-export const CompileBundleParams = zod.object({
+export const RepublishBundleParams = zod.object({
   "org_id": zod.uuid().describe('Organization ID')
 })
 
-export const CompileBundleResponse = zod.object({
+export const RepublishBundleResponse = zod.object({
   "id": zod.uuid(),
   "org_id": zod.uuid(),
   "version": zod.int(),
   "issued_at": zod.coerce.date(),
-  "expires_at": zod.coerce.date(),
   "signing_key_id": zod.string()
 })
 
@@ -1681,7 +1680,6 @@ export const ListBundlesResponseItem = zod.object({
   "org_id": zod.uuid(),
   "version": zod.int(),
   "issued_at": zod.coerce.date(),
-  "expires_at": zod.coerce.date(),
   "signing_key_id": zod.string()
 })
 export const ListBundlesResponse = zod.array(ListBundlesResponseItem)
@@ -1838,7 +1836,6 @@ export const BundleLatestResponse = zod.object({
   "bundle_id": zod.uuid(),
   "org_id": zod.uuid(),
   "issued_at": zod.coerce.date(),
-  "expires_at": zod.coerce.date(),
   "keys": zod.array(zod.object({
   "key_id": zod.string(),
   "org_id": zod.uuid(),

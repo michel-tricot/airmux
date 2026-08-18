@@ -7,12 +7,11 @@ from uuid import UUID  # noqa: TC003 fastapi resolves path param annotations at 
 from fastapi import APIRouter, HTTPException, Query, Request
 from sqlmodel import col
 
-from contract import uuid7
 from control_plane.authority import ensure_org_role_change
 from control_plane.authz import OrgRole, Permission
-from control_plane.compiler import UnknownOrgError, compile_and_store
+from control_plane.compiler import publish_pending
 from control_plane.deps import ActorDep, OrgDep, WorkspaceDep, org_scope, require, workspace_scope
-from control_plane.models import AuditLog, Bundle, OrgMembership, UsageEvent, User
+from control_plane.models import AuditLog, Bundle, OrgMembership, RuntimeConfiguration, UsageEvent, User
 from control_plane.models.audit import ActivityOut
 from control_plane.models.bundle import BundleOut
 from control_plane.models.common.wire import DeletedOut, Envelope
@@ -73,15 +72,14 @@ async def remove_org_user(user_id: UUID, org_id: OrgDep, actor: ActorDep) -> Env
     return Envelope(data=DeletedOut.of(f"{user_id}/{org_id}"))
 
 
-@router.post("/bundles/compile", tags=["Organization Bundles"], dependencies=[require(org_scope, Permission.bundles_publish)])
-async def compile_bundle(org_id: OrgDep, request: Request) -> Envelope[BundleOut]:
-    """Compile and sign a new policy bundle from the organization's current configuration."""
+@router.post("/bundles/republish", tags=["Organization Bundles"], dependencies=[require(org_scope, Permission.bundles_publish)])
+async def republish_bundle(org_id: OrgDep, request: Request) -> Envelope[BundleOut]:
+    """Request a fresh signed bundle for the organization's current configuration."""
     settings = request.app.state.settings
     now = datetime.now(tz=UTC)
-    try:
-        bundle = await compile_and_store(org_id, uuid7(), now, settings.bundle.staleness_bound, settings.bundle.signing_key)
-    except UnknownOrgError as e:
-        raise HTTPException(status_code=404, detail="Organization not found") from e
+    await RuntimeConfiguration.request_republication(org_id)
+    published = await publish_pending(now, settings.bundle.signing_key)
+    bundle = next(bundle for bundle in published if bundle.org_id == org_id)
     return Envelope(data=BundleOut.model_validate(bundle))
 
 

@@ -155,7 +155,6 @@ export interface BundleOut {
   org_id: string;
   version: number;
   issued_at: string;
-  expires_at: string;
   signing_key_id: string;
 }
 
@@ -276,7 +275,6 @@ export interface BundleV1 {
   bundle_id: string;
   org_id: string;
   issued_at: string;
-  expires_at: string;
   keys: KeyEntry[];
   catalog: Catalog;
 }

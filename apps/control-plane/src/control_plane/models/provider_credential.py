@@ -19,12 +19,17 @@ from control_plane.models.common.base import Record
 from control_plane.models.common.column_types import UTCDateTime
 from control_plane.models.common.org_owned import NotOwnedError
 from control_plane.models.common.wire import RecordOut, RecordUpdate, RequestModel
+from control_plane.models.runtime_configuration import runtime_configured
 
 DEFAULT_PRIORITY = 100
 CredentialScope = Literal["platform", "org", "workspace"]
 
 
 @audited
+@runtime_configured(
+    scope="nullable_org",
+    columns=("org_id", "workspace_id", "provider_name", "name", "priority", "enabled", "version"),
+)
 class ProviderCredential(Record, Identified, Tombstonable, table=True):
     """One provider API key the platform holds on someone's behalf. The value is not here.
 

@@ -27,6 +27,9 @@ def test_every_command_is_listed_once():
     for path in ("airllm quickstart", "airllm orgs mine", "airllm provider-credentials add", "airllm access-keys mint"):
         assert path in paths
 
+    assert "airllm bundles republish" in paths
+    assert "airllm bundles compile" not in paths
+
 
 def test_the_listing_does_not_list_itself():
     assert "airllm commands" not in [row["command"] for row in listed()]

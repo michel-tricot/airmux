@@ -2566,16 +2566,16 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-  /api/v1/orgs/{org_id}/bundles/compile:
+  /api/v1/orgs/{org_id}/bundles/republish:
     post:
       tags:
       - Organization Bundles
-      summary: Compile Policy Bundle
-      description: 'Compile and sign a new policy bundle from the organization''s current configuration.
+      summary: Republish Policy Bundle
+      description: 'Request a fresh signed bundle for the organization''s current configuration.
 
 
         Required permission: `bundles.publish`.'
-      operationId: compile_bundle
+      operationId: republish_bundle
       security:
       - AccessKey: []
       - SessionCookie: []
@@ -3477,10 +3477,6 @@ components:
           type: string
           format: date-time
           title: Issued At
-        expires_at:
-          type: string
-          format: date-time
-          title: Expires At
         signing_key_id:
           type: string
           title: Signing Key Id
@@ -3490,7 +3486,6 @@ components:
       - org_id
       - version
       - issued_at
-      - expires_at
       - signing_key_id
       title: BundleOut
     BundleV1:
@@ -3512,10 +3507,6 @@ components:
           type: string
           format: date-time
           title: Issued At
-        expires_at:
-          type: string
-          format: date-time
-          title: Expires At
         keys:
           items:
             $ref: '#/components/schemas/KeyEntry'
@@ -3528,7 +3519,6 @@ components:
       - bundle_id
       - org_id
       - issued_at
-      - expires_at
       - keys
       - catalog
       title: BundleV1
@@ -6196,7 +6186,7 @@ tags:
   description: Manage provider API keys available across an organization
   x-displayName: Provider Credentials
 - name: Organization Bundles
-  description: Compile and inspect signed policy bundles
+  description: Republish and inspect signed policy bundles
   x-displayName: Bundles
 - name: Organization Usage Events
   description: Inspect usage events across an organization

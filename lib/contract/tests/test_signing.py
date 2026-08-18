@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from uuid import uuid4
 
 import pytest
@@ -27,7 +27,6 @@ def make_bundle() -> BundleV1:
         bundle_id=uuid4(),
         org_id=uuid7(),
         issued_at=now,
-        expires_at=now + timedelta(hours=24),
         keys=[],
         catalog=Catalog(providers=[], models=[]),
     )

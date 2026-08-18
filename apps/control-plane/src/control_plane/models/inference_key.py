@@ -12,9 +12,11 @@ from control_plane.models.audit import audited
 from control_plane.models.common import Identified, OrgOwned, Tombstonable
 from control_plane.models.common.base import Record
 from control_plane.models.common.wire import RecordOut, RequestModel
+from control_plane.models.runtime_configuration import runtime_configured
 
 
 @audited
+@runtime_configured(scope="org", columns=("org_id", "workspace_id", "token_hash", "revoked"))
 class InferenceKey(Record, Identified, OrgOwned, Tombstonable, table=True):
     """org_id stays denormalized beside workspace_id so the compiler collects an org's keys in one
     query and owned_by keeps working; the composite foreign key keeps the pair from disagreeing."""
