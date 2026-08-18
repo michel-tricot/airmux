@@ -190,6 +190,7 @@ OPERATION_SUMMARIES = {
     "reissue_invitation": "Reissue Organization Invitation",
     "revoke_invitation": "Revoke Organization Invitation",
     "list_members": "List Workspace Members",
+    "list_member_candidates": "List Workspace Member Candidates",
     "add_member": "Add Workspace Member",
     "remove_member": "Remove Workspace Member",
     "compile_bundle": "Compile Policy Bundle",
@@ -230,6 +231,8 @@ def _parameter_description(path: str, name: str, location: str) -> str:
         if "auth/permissions" in path:
             return "Organization scope to evaluate; omit for instance scope"
         return "Organization whose latest bundle to return; omit to use the credential's scope"
+    if name == "workspace_ref" and location == "query" and "auth/permissions" in path:
+        return "Workspace ID or slug to evaluate within org_id; omit for organization scope"
     return PARAMETER_DESCRIPTIONS.get(name, name.replace("_", " ").capitalize())
 
 

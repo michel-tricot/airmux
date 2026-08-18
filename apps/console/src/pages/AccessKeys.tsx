@@ -2,31 +2,36 @@ import { useState } from 'react';
 import { KeyRound, Plus } from 'lucide-react';
 import { Link } from 'wouter';
 import { Badge, Button } from '@/components/ui/elements';
-import {
-  useInstanceAccessKeys,
-  useCreateInstanceAccessKeyMutation,
-  useRevokeInstanceAccessKeyMutation,
-  useGrantablePermissions,
-} from '@/features/keys/hooks';
+import { useInstanceAccessKeys, useCreateInstanceAccessKeyMutation, useRevokeInstanceAccessKeyMutation } from '@/features/keys/hooks';
 import { useUsers } from '@/features/users/hooks';
 import { KeyRevealDialog } from '@/components/KeyRevealDialog';
 import { AccessKeyFormFields, accessKeyFormSchema, canIssueAccessKeys } from '@/components/shared/access-key-form';
 import { PermissionsCell } from '@/components/shared/permissions-cell';
 import { ApiKeysTable } from '@/components/shared/api-keys-table';
 import { FormDialog } from '@/components/shared/form-dialog';
-import { ErrorState } from '@/components/shared/states';
+import { ErrorState, LoadingState } from '@/components/shared/states';
 import { PageShell } from '@/components/shared/page-shell';
+import { hasPermission, useEffectivePermissions } from '@/features/permissions/hooks';
 
 export default function AccessKeys() {
   const [createOpen, setCreateOpen] = useState(false);
   const [token, setToken] = useState<string | null>(null);
-  const keysQuery = useInstanceAccessKeys();
+  const permissionsQuery = useEffectivePermissions({});
+  const permissions = permissionsQuery.data?.permissions;
+  const canRead = hasPermission(permissions, 'access-keys.read');
+  const canIssueKey = canIssueAccessKeys(permissions);
+  const canRevoke = hasPermission(permissions, 'access-keys.revoke');
+  const keysQuery = useInstanceAccessKeys(undefined, canRead);
   const usersQuery = useUsers();
   const usersById = new Map(usersQuery.data?.map((user) => [user.id, user]));
   const createKey = useCreateInstanceAccessKeyMutation();
-  const permissionsQuery = useGrantablePermissions({ enabled: createOpen });
-  const canIssueKey = canIssueAccessKeys(permissionsQuery.data?.permissions);
   const revokeKey = useRevokeInstanceAccessKeyMutation();
+
+  if (permissionsQuery.isLoading) return <LoadingState label="Loading instance permissions..." />;
+  if (permissionsQuery.isError) {
+    return <ErrorState error={permissionsQuery.error} resource="instance permissions" onRetry={() => permissionsQuery.refetch()} />;
+  }
+  if (!canRead) return <ErrorState message="You do not have access to instance access keys." />;
 
   return (
     <PageShell>
@@ -38,9 +43,11 @@ export default function AccessKeys() {
           </div>
           <p className="mt-1 text-sm text-muted-foreground">Credentials limited by principal, tenant scope, and explicit permissions.</p>
         </div>
-        <Button onClick={() => setCreateOpen(true)} className="gap-2">
-          <Plus className="h-4 w-4" /> Mint Access Key
-        </Button>
+        {canIssueKey && (
+          <Button onClick={() => setCreateOpen(true)} className="gap-2">
+            <Plus className="h-4 w-4" /> Mint Access Key
+          </Button>
+        )}
       </div>
 
       {usersQuery.isError && <ErrorState error={usersQuery.error} resource="key principals" onRetry={() => usersQuery.refetch()} />}
@@ -86,36 +93,36 @@ export default function AccessKeys() {
           },
         ]}
         revokeDescription="This key and every key delegated from it will stop working immediately."
-        onRevoke={(key) => revokeKey.mutateAsync({ keyId: key.id })}
-        revokePending={revokeKey.isPending}
+        onRevoke={canRevoke ? (key) => revokeKey.mutateAsync({ keyId: key.id }) : undefined}
+        revokePending={canRevoke ? revokeKey.isPending : undefined}
       />
 
-      <FormDialog
-        open={createOpen}
-        onOpenChange={setCreateOpen}
-        title="Mint an instance access key"
-        description="The key is bound to this instance. Its permission ceiling is stored as an explicit snapshot and the secret is shown only once."
-        schema={accessKeyFormSchema}
-        defaultValues={{ label: '', permissions: [] }}
-        onSubmit={async (values) => {
-          const minted = await createKey.mutateAsync({ data: { label: values.label, permissions: values.permissions } });
-          setToken(minted.token);
-        }}
-        submitLabel="Mint key"
-        pendingLabel="Minting..."
-        pending={createKey.isPending}
-        submitDisabled={permissionsQuery.isFetching || permissionsQuery.isError || !canIssueKey}
-      >
-        {(form) => (
-          <AccessKeyFormFields
-            form={form}
-            availablePermissions={permissionsQuery.data?.permissions ?? []}
-            permissionsLoading={permissionsQuery.isFetching}
-            permissionsError={permissionsQuery.isError ? permissionsQuery.error : undefined}
-            onPermissionsRetry={() => void permissionsQuery.refetch()}
-          />
-        )}
-      </FormDialog>
+      {canIssueKey && (
+        <FormDialog
+          open={createOpen}
+          onOpenChange={setCreateOpen}
+          title="Mint an instance access key"
+          description="The key is bound to this instance. Its permission ceiling is stored as an explicit snapshot and the secret is shown only once."
+          schema={accessKeyFormSchema}
+          defaultValues={{ label: '', permissions: [] }}
+          onSubmit={async (values) => {
+            const minted = await createKey.mutateAsync({ data: { label: values.label, permissions: values.permissions } });
+            setToken(minted.token);
+          }}
+          submitLabel="Mint key"
+          pendingLabel="Minting..."
+          pending={createKey.isPending}
+          submitDisabled={permissionsQuery.isFetching || permissionsQuery.isError || !canIssueKey}
+        >
+          {(form) => (
+            <AccessKeyFormFields
+              form={form}
+              availablePermissions={permissionsQuery.data?.permissions ?? []}
+              permissionsLoading={permissionsQuery.isFetching}
+            />
+          )}
+        </FormDialog>
+      )}
 
       <KeyRevealDialog open={!!token} onOpenChange={(open) => !open && setToken(null)} token={token} />
     </PageShell>

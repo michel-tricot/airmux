@@ -1113,6 +1113,13 @@ export interface WorkspaceCreate {
   slug?: string;
 }
 
+export interface WorkspaceMemberCandidateOut {
+  user_id: string;
+  email: string;
+  name: string;
+  service_account: boolean;
+}
+
 export type WorkspaceRole = typeof WorkspaceRole[keyof typeof WorkspaceRole];
 
 
@@ -1130,6 +1137,9 @@ export interface WorkspaceMembershipIn {
 export interface WorkspaceMembershipOut {
   user_id: string;
   workspace_id: string;
+  email: string;
+  name: string;
+  service_account: boolean;
   role: WorkspaceRole;
   status: 'member';
 }
@@ -1175,6 +1185,10 @@ export type MyPermissionsParams = {
  * Organization scope to evaluate; omit for instance scope
  */
 org_id?: string | null;
+/**
+ * Workspace ID or slug to evaluate within org_id; omit for organization scope
+ */
+workspace_ref?: string | null;
 };
 
 export type CliAuthRequestDetailsParams = {

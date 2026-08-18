@@ -43,5 +43,15 @@ class WorkspaceMembershipIn(RequestModel):
 class WorkspaceMembershipOut(BaseModel):
     user_id: UUID
     workspace_id: UUID
+    email: str
+    name: str
+    service_account: bool
     role: WorkspaceRole
     status: Literal["member"]
+
+
+class WorkspaceMemberCandidateOut(BaseModel):
+    user_id: UUID
+    email: str
+    name: str
+    service_account: bool

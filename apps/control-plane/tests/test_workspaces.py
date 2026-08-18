@@ -37,7 +37,28 @@ def test_workspace_lifecycle_and_creator_auto_enrollment(tmp_path):
         assert [w["name"] for w in c.get(f"/api/v1/orgs/{o1}/workspaces", headers=member).json()["data"]] == ["prod"]
 
         members = c.get(f"/api/v1/orgs/{o1}/workspaces/{created['id']}/members", headers=member).json()["data"]
-        assert [(m["user_id"], m["status"]) for m in members] == [(uid, "member")]
+        assert [(m["user_id"], m["email"], m["name"], m["service_account"], m["status"]) for m in members] == [
+            (uid, "m@example.com", "m@example.com", False, "member")
+        ]
+
+
+def test_workspace_admin_can_list_org_member_candidates_without_org_member_read(tmp_path):
+    cp = setup_control_plane(tmp_path)
+    root = cp.headers()
+    with TestClient(cp.app) as c:
+        org_id = make_org(c, root, "o1")
+        admin_id, admin = _member(c, cp, org_id, "admin@example.com")
+        candidate_id, _ = _member(c, cp, org_id, "candidate@example.com")
+        workspace_id = make_workspace(c, admin, "staging")
+        workspace_admin = cp.headers_for(org_id, admin_id, workspace_id)
+
+        candidates = c.get(f"/api/v1/orgs/{org_id}/workspaces/{workspace_id}/member-candidates", headers=workspace_admin)
+        assert candidates.status_code == 200
+        assert candidates.json()["data"] == [
+            {"user_id": candidate_id, "email": "candidate@example.com", "name": "candidate@example.com", "service_account": False}
+        ]
+
+        assert admin_id != candidate_id
 
 
 def test_slug_is_unique_within_the_org_and_free_across_orgs(tmp_path):

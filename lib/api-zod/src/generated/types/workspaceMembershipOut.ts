@@ -15,6 +15,9 @@ import type { WorkspaceRole } from './workspaceRole';
 export interface WorkspaceMembershipOut {
   user_id: string;
   workspace_id: string;
+  email: string;
+  name: string;
+  service_account: boolean;
   role: WorkspaceRole;
   status: 'member';
 }

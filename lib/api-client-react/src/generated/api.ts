@@ -99,6 +99,7 @@ import type {
   UsageEventV1,
   UserOut,
   WorkspaceCreate,
+  WorkspaceMemberCandidateOut,
   WorkspaceMembershipIn,
   WorkspaceMembershipOut,
   WorkspaceOut,
@@ -3601,6 +3602,91 @@ export function useListMembers<TData = Awaited<ReturnType<typeof listMembers>>, 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getListMembersQueryOptions(orgId,workspaceRef,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListMemberCandidatesUrl = (orgId: string,
+    workspaceRef: string,) => {
+
+
+
+
+  return `/api/v1/orgs/${orgId}/workspaces/${workspaceRef}/member-candidates`
+}
+
+/**
+ * List organization members who can be added to a workspace.
+ *
+ * Required permission: `members.manage`.
+ * @summary List Workspace Member Candidates
+ */
+export const listMemberCandidates = async (orgId: string,
+    workspaceRef: string, options?: Parameters<typeof customFetch>[1]): Promise<WorkspaceMemberCandidateOut[]> => {
+
+  return customFetch<WorkspaceMemberCandidateOut[]>(getListMemberCandidatesUrl(orgId,workspaceRef),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListMemberCandidatesQueryKey = (orgId: string,
+    workspaceRef: string,) => {
+    return [
+    `/api/v1/orgs/${orgId}/workspaces/${workspaceRef}/member-candidates`
+    ] as const;
+    }
+
+
+export const getListMemberCandidatesQueryOptions = <TData = Awaited<ReturnType<typeof listMemberCandidates>>, TError = ErrorType<void | HTTPValidationError>>(orgId: string,
+    workspaceRef: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMemberCandidates>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListMemberCandidatesQueryKey(orgId,workspaceRef);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listMemberCandidates>>> = ({ signal }) => listMemberCandidates(orgId,workspaceRef, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: orgId !== null && orgId !== undefined && workspaceRef !== null && workspaceRef !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listMemberCandidates>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListMemberCandidatesQueryResult = NonNullable<Awaited<ReturnType<typeof listMemberCandidates>>>
+export type ListMemberCandidatesQueryError = ErrorType<void | HTTPValidationError>
+
+
+/**
+ * @summary List Workspace Member Candidates
+ */
+
+export function useListMemberCandidates<TData = Awaited<ReturnType<typeof listMemberCandidates>>, TError = ErrorType<void | HTTPValidationError>>(
+ orgId: string,
+    workspaceRef: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMemberCandidates>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListMemberCandidatesQueryOptions(orgId,workspaceRef,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

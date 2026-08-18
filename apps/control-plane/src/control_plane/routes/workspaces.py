@@ -12,7 +12,7 @@ from control_plane.models import InferenceKey, Org, OrgMembership, User, Workspa
 from control_plane.models.common.wire import DeletedOut, Envelope
 from control_plane.models.inference_key import InferenceKeyIn, InferenceKeyMintedOut, InferenceKeyOut, InferenceKeyRevokedOut
 from control_plane.models.workspace import WorkspaceCreate, WorkspaceOut, WorkspaceUpdate
-from control_plane.models.workspace_membership import WorkspaceMembershipIn, WorkspaceMembershipOut
+from control_plane.models.workspace_membership import WorkspaceMemberCandidateOut, WorkspaceMembershipIn, WorkspaceMembershipOut
 from control_plane.routes.provider_credentials import secret_store
 
 router = APIRouter(prefix="/orgs/{org_id}/workspaces")
@@ -68,10 +68,38 @@ async def update_workspace(body: WorkspaceUpdate, workspace: WorkspaceDep) -> En
 async def list_members(workspace: WorkspaceDep) -> Envelope[list[WorkspaceMembershipOut]]:
     """List the members of a workspace and their workspace roles."""
     memberships = await WorkspaceMembership.find(WorkspaceMembership.workspace_id == workspace.id, order_by=col(WorkspaceMembership.user_id))
+    memberships_by_user = {membership.user_id: membership for membership in memberships}
+    users = await User.members_of_workspace(workspace.id)
     return Envelope(
         data=[
-            WorkspaceMembershipOut(user_id=membership.user_id, workspace_id=workspace.id, role=membership.role, status="member")
-            for membership in memberships
+            WorkspaceMembershipOut(
+                user_id=user.id,
+                workspace_id=workspace.id,
+                email=user.email,
+                name=user.name,
+                service_account=user.service_account,
+                role=memberships_by_user[user.id].role,
+                status="member",
+            )
+            for user in users
+        ]
+    )
+
+
+@router.get(
+    "/{workspace_ref}/member-candidates",
+    tags=["Workspace Members"],
+    dependencies=[require(Permission.members_manage, workspace_scope)],
+)
+async def list_member_candidates(workspace: WorkspaceDep) -> Envelope[list[WorkspaceMemberCandidateOut]]:
+    """List organization members who can be added to a workspace."""
+    memberships = await WorkspaceMembership.find(WorkspaceMembership.workspace_id == workspace.id)
+    member_ids = frozenset(membership.user_id for membership in memberships)
+    candidates = [user for user in await User.members_of(workspace.org_id) if user.id not in member_ids]
+    return Envelope(
+        data=[
+            WorkspaceMemberCandidateOut(user_id=user.id, email=user.email, name=user.name, service_account=user.service_account)
+            for user in candidates
         ]
     )
 
@@ -79,7 +107,8 @@ async def list_members(workspace: WorkspaceDep) -> Envelope[list[WorkspaceMember
 @router.put("/{workspace_ref}/members/{user_id}", tags=["Workspace Members"], dependencies=[require(Permission.members_manage, workspace_scope)])
 async def add_member(user_id: UUID, body: WorkspaceMembershipIn, workspace: WorkspaceDep) -> Envelope[WorkspaceMembershipOut]:
     """Add or update a workspace member who already belongs to the organization."""
-    if await User.find_by_id(user_id) is None:
+    user = await User.find_by_id(user_id)
+    if user is None:
         raise HTTPException(status_code=404, detail="User not found")
     if await OrgMembership.get((user_id, workspace.org_id)) is None:
         raise HTTPException(status_code=409, detail="user is not a member of the org")
@@ -89,7 +118,17 @@ async def add_member(user_id: UUID, body: WorkspaceMembershipIn, workspace: Work
     else:
         membership.role = body.role
     await membership.save()
-    return Envelope(data=WorkspaceMembershipOut(user_id=user_id, workspace_id=workspace.id, role=membership.role, status="member"))
+    return Envelope(
+        data=WorkspaceMembershipOut(
+            user_id=user_id,
+            workspace_id=workspace.id,
+            email=user.email,
+            name=user.name,
+            service_account=user.service_account,
+            role=membership.role,
+            status="member",
+        )
+    )
 
 
 @router.delete("/{workspace_ref}/members/{user_id}", tags=["Workspace Members"], dependencies=[require(Permission.members_manage, workspace_scope)])

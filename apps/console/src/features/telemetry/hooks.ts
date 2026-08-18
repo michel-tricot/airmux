@@ -11,6 +11,7 @@ import {
   getListWorkspaceEventsQueryKey,
   getListBundlesQueryKey,
   getListDataPlanesQueryKey,
+  getListActivityQueryKey,
   type ListOrgEventsParams,
   type ListWorkspaceEventsParams,
   type ListActivityParams,
@@ -26,12 +27,12 @@ export function useWorkspaceEvents(orgId: string, workspaceRef: string, params: 
   });
 }
 
-export function useOrgActivity(orgId: string, params: ListActivityParams) {
-  return useListActivity(orgId, params);
+export function useOrgActivity(orgId: string, params: ListActivityParams, enabled = true) {
+  return useListActivity(orgId, params, { query: { enabled, queryKey: getListActivityQueryKey(orgId, params) } });
 }
 
-export function useBundles(orgId: string) {
-  return useListBundles(orgId);
+export function useBundles(orgId: string, enabled = true) {
+  return useListBundles(orgId, { query: { enabled, queryKey: getListBundlesQueryKey(orgId) } });
 }
 
 export function useCompileBundleMutation(orgId: string) {

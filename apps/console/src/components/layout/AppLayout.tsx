@@ -25,6 +25,7 @@ import { FormDialog } from '@/components/shared/form-dialog';
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { ErrorState } from '@/components/shared/states';
 import { GatewayBrand, ResponsiveShell } from '@/components/layout/responsive-shell';
+import { hasPermission, useEffectivePermissions } from '@/features/permissions/hooks';
 
 const workspaceNameSchema = z.object({ name: z.string().min(1, 'Name is required') });
 
@@ -46,6 +47,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const orgId = useRequiredOrgId();
   const workspacesQuery = useWorkspaces(orgId);
   const workspaces = workspacesQuery.data;
+  const orgPermissionsQuery = useEffectivePermissions({ orgId });
+  const orgPermissions = orgPermissionsQuery.data?.permissions;
   const enrollment = useEnrollment();
   const canSwitchOrg = (enrollment.data?.orgs.length ?? 0) > 1;
   const [location, setLocation] = useLocation();
@@ -58,6 +61,29 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const selectedWorkspaceRef = routedWorkspaceRef || window.localStorage.getItem(lastWorkspaceKey) || '';
   const activeWorkspace = workspaces?.find((workspace) => workspace.slug === selectedWorkspaceRef || workspace.id === selectedWorkspaceRef);
   const activeWorkspaceSlug = activeWorkspace?.slug ?? routedWorkspaceRef;
+  const workspacePermissionsQuery = useEffectivePermissions({ orgId, workspaceRef: activeWorkspaceSlug, enabled: activeWorkspaceSlug !== '' });
+  const workspacePermissions = workspacePermissionsQuery.data?.permissions;
+  const canCreateWorkspace = hasPermission(orgPermissions, 'workspaces.create');
+  const canOpenOrgSettings =
+    hasPermission(orgPermissions, 'access-keys.read') ||
+    hasPermission(orgPermissions, 'bundles.read') ||
+    hasPermission(orgPermissions, 'members.read') ||
+    hasPermission(orgPermissions, 'audit.read');
+  const canOpenWorkspaceSection = (suffix: string) => {
+    if (suffix === '/keys') return hasPermission(workspacePermissions, 'inference-keys.read');
+    if (suffix === '/byok') return hasPermission(workspacePermissions, 'provider-credentials.read');
+    if (suffix === '/settings') {
+      return (
+        hasPermission(workspacePermissions, 'members.read') ||
+        hasPermission(workspacePermissions, 'workspaces.update') ||
+        hasPermission(workspacePermissions, 'workspaces.delete')
+      );
+    }
+    if (suffix === '/playground' || suffix === '/routing' || suffix === '/policies') {
+      return hasPermission(workspacePermissions, 'catalog.read');
+    }
+    return hasPermission(workspacePermissions, 'workspaces.read');
+  };
 
   useEffect(() => {
     if (activeWorkspaceSlug) window.localStorage.setItem(lastWorkspaceKey, activeWorkspaceSlug);
@@ -116,16 +142,20 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           disabled={workspacesQuery.isLoading || workspacesQuery.isError}
           className="bg-muted font-medium"
           options={(workspaces ?? []).map((workspace) => ({ value: workspace.slug, label: workspace.name }))}
-          actions={[
-            {
-              label: 'Create Workspace',
-              icon: <Plus className="h-4 w-4" />,
-              onSelect: () => {
-                close();
-                setCreateOpen(true);
-              },
-            },
-          ]}
+          actions={
+            canCreateWorkspace
+              ? [
+                  {
+                    label: 'Create Workspace',
+                    icon: <Plus className="h-4 w-4" />,
+                    onSelect: () => {
+                      close();
+                      setCreateOpen(true);
+                    },
+                  },
+                ]
+              : []
+          }
         />
       </div>
 
@@ -134,7 +164,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       ) : (
         <nav aria-label="Workspace navigation" className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
           {activeWorkspaceSlug ? (
-            SECTIONS.map(({ label, suffix, icon: Icon, soon }) => {
+            SECTIONS.filter(({ suffix }) => canOpenWorkspaceSection(suffix)).map(({ label, suffix, icon: Icon, soon }) => {
               const href = `/org/workspaces/${activeWorkspaceSlug}${suffix}`;
               const isActive = location === href;
               return (
@@ -166,8 +196,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <div className="mb-2 mt-6 px-3 font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Organization</div>
             {[
               { href: '/org', label: 'Overview', icon: Building2 },
-              { href: '/org/models', label: 'Models', icon: Boxes },
-              { href: '/org/settings', label: 'Org Settings', icon: Settings },
+              ...(hasPermission(orgPermissions, 'catalog.read') ? [{ href: '/org/models', label: 'Models', icon: Boxes }] : []),
+              ...(canOpenOrgSettings ? [{ href: '/org/settings', label: 'Org Settings', icon: Settings }] : []),
             ].map((item) => {
               const isActive = location === item.href;
               return (

@@ -22,8 +22,8 @@ interface ApiKeysTableProps<T extends ApiKeyRow> {
   emptyText: string;
   extraColumns?: Array<Column<T>>;
   revokeDescription: string;
-  onRevoke: (key: T) => Promise<unknown>;
-  revokePending: boolean;
+  onRevoke?: (key: T) => Promise<unknown>;
+  revokePending?: boolean;
 }
 
 export function ApiKeysTable<T extends ApiKeyRow>({
@@ -63,7 +63,9 @@ export function ApiKeysTable<T extends ApiKeyRow>({
       cellClassName: 'text-muted-foreground text-sm',
       cell: (key) => formatDate(key.created_at),
     },
-    {
+  ];
+  if (onRevoke) {
+    columns.push({
       key: 'actions',
       header: 'Actions',
       headClassName: 'text-right',
@@ -81,8 +83,8 @@ export function ApiKeysTable<T extends ApiKeyRow>({
             <Ban className="w-4 h-4 mr-1" /> Revoke
           </ConfirmButton>
         ),
-    },
-  ];
+    });
+  }
 
   return (
     <Card>

@@ -11,23 +11,15 @@ import {
   getListInstanceAccessKeysQueryKey,
   getListOrgAccessKeysQueryKey,
   getListInferenceKeysQueryKey,
-  getMyPermissionsQueryKey,
-  useMyPermissions,
   type ListInstanceAccessKeysParams,
   type ListOrgAccessKeysParams,
 } from '@workspace/api-client-react';
-
-export function useGrantablePermissions({ orgId, enabled }: { orgId?: string; enabled: boolean }) {
-  const params = orgId ? { org_id: orgId } : undefined;
-  return useMyPermissions(params, { query: { enabled, queryKey: getMyPermissionsQueryKey(params) } });
+export function useInstanceAccessKeys(params?: ListInstanceAccessKeysParams, enabled = true) {
+  return useListInstanceAccessKeys(params, { query: { enabled, queryKey: getListInstanceAccessKeysQueryKey(params) } });
 }
 
-export function useInstanceAccessKeys(params?: ListInstanceAccessKeysParams) {
-  return useListInstanceAccessKeys(params);
-}
-
-export function useOrgAccessKeys(orgId: string, params?: ListOrgAccessKeysParams) {
-  return useListOrgAccessKeys(orgId, params);
+export function useOrgAccessKeys(orgId: string, params?: ListOrgAccessKeysParams, enabled = true) {
+  return useListOrgAccessKeys(orgId, params, { query: { enabled, queryKey: getListOrgAccessKeysQueryKey(orgId, params) } });
 }
 
 export function useCreateInstanceAccessKeyMutation(params?: ListInstanceAccessKeysParams) {
@@ -70,8 +62,8 @@ export function useRevokeOrgAccessKeyMutation(orgId: string, params?: ListOrgAcc
   });
 }
 
-export function useInferenceKeys(orgId: string, workspaceRef: string) {
-  return useListInferenceKeys(orgId, workspaceRef);
+export function useInferenceKeys(orgId: string, workspaceRef: string, enabled = true) {
+  return useListInferenceKeys(orgId, workspaceRef, { query: { enabled, queryKey: getListInferenceKeysQueryKey(orgId, workspaceRef) } });
 }
 
 export function useCreateInferenceKeyMutation(orgId: string, workspaceRef: string) {

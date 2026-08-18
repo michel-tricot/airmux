@@ -19,8 +19,9 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { useRequiredParam } from '@/lib/route';
 import { ProviderIcon } from '@/components/ProviderIcon';
 import { PageShell } from '@/components/shared/page-shell';
-import { ErrorState } from '@/components/shared/states';
+import { ErrorState, LoadingState } from '@/components/shared/states';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { hasPermission, useEffectivePermissions } from '@/features/permissions/hooks';
 
 const addSchema = z.object({
   provider: z.string().min(1, 'Pick a provider'),
@@ -47,8 +48,12 @@ export default function WorkspaceByok() {
   const workspaceRef = useRequiredParam('workspaceRef');
   const orgId = useRequiredOrgId();
 
-  const credentialsQuery = useProviderCredentials(orgId, workspaceRef);
-  const taxonomy = useProviders(orgId, workspaceRef);
+  const permissionsQuery = useEffectivePermissions({ orgId, workspaceRef });
+  const permissions = permissionsQuery.data?.permissions;
+  const canRead = hasPermission(permissions, 'provider-credentials.read');
+  const canManage = hasPermission(permissions, 'provider-credentials.manage');
+  const credentialsQuery = useProviderCredentials(orgId, workspaceRef, canRead);
+  const taxonomy = useProviders(orgId, workspaceRef, canRead);
   const providers = taxonomy.data?.providers ?? [];
 
   const [addOpen, setAddOpen] = useState(false);
@@ -77,59 +82,68 @@ export default function WorkspaceByok() {
         return <Badge variant={variant}>{label}</Badge>;
       },
     },
-    {
-      key: 'actions',
-      header: '',
-      headClassName: 'w-px',
-      cellClassName: 'w-px',
-      cell: (c) => (
-        <div className="flex items-center gap-1">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button aria-label={`Rotate ${c.name}`} size="icon" variant="ghost" onClick={() => setRotating(c)}>
-                <RefreshCw className="w-4 h-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Rotate key</TooltipContent>
-          </Tooltip>
+    ...(canManage
+      ? [
+          {
+            key: 'actions',
+            header: '',
+            headClassName: 'w-px',
+            cellClassName: 'w-px',
+            cell: (c) => (
+              <div className="flex items-center gap-1">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button aria-label={`Rotate ${c.name}`} size="icon" variant="ghost" onClick={() => setRotating(c)}>
+                      <RefreshCw className="w-4 h-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Rotate key</TooltipContent>
+                </Tooltip>
 
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                size="icon"
-                variant="ghost"
-                aria-label={`${c.enabled ? 'Disable' : 'Enable'} ${c.name}`}
-                aria-pressed={c.enabled}
-                className={c.enabled ? '' : 'text-muted-foreground'}
-                onClick={() => updateCredential.mutate({ orgId, credentialId: c.id, data: { enabled: !c.enabled } })}
-              >
-                <Power className="w-4 h-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>{c.enabled ? 'Disable' : 'Enable'}</TooltipContent>
-          </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      aria-label={`${c.enabled ? 'Disable' : 'Enable'} ${c.name}`}
+                      aria-pressed={c.enabled}
+                      className={c.enabled ? '' : 'text-muted-foreground'}
+                      onClick={() => updateCredential.mutate({ orgId, credentialId: c.id, data: { enabled: !c.enabled } })}
+                    >
+                      <Power className="w-4 h-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>{c.enabled ? 'Disable' : 'Enable'}</TooltipContent>
+                </Tooltip>
 
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span>
-                <ConfirmButton
-                  title={`Delete "${c.name}"?`}
-                  description="Permanently removes this key. Traffic will fall back to the next available key in priority order. This cannot be undone."
-                  confirmLabel="Delete"
-                  pending={deleteCredential.isPending}
-                  aria-label={`Delete ${c.name}`}
-                  onConfirm={() => deleteCredential.mutateAsync({ orgId, credentialId: c.id })}
-                >
-                  <Trash2 className="w-4 h-4" />
-                </ConfirmButton>
-              </span>
-            </TooltipTrigger>
-            <TooltipContent>Delete</TooltipContent>
-          </Tooltip>
-        </div>
-      ),
-    },
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span>
+                      <ConfirmButton
+                        title={`Delete "${c.name}"?`}
+                        description="Permanently removes this key. Traffic will fall back to the next available key in priority order. This cannot be undone."
+                        confirmLabel="Delete"
+                        pending={deleteCredential.isPending}
+                        aria-label={`Delete ${c.name}`}
+                        onConfirm={() => deleteCredential.mutateAsync({ orgId, credentialId: c.id })}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </ConfirmButton>
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent>Delete</TooltipContent>
+                </Tooltip>
+              </div>
+            ),
+          } satisfies Column<ProviderCredentialOut>,
+        ]
+      : []),
   ];
+
+  if (permissionsQuery.isLoading) return <LoadingState label="Loading workspace permissions..." />;
+  if (permissionsQuery.isError)
+    return <ErrorState error={permissionsQuery.error} resource="workspace permissions" onRetry={() => permissionsQuery.refetch()} />;
+  if (!canRead) return <ErrorState message="You do not have access to provider keys in this workspace." />;
 
   return (
     <PageShell>
@@ -140,9 +154,11 @@ export default function WorkspaceByok() {
             Use your own API keys for this workspace. Keys are tried in priority order. If one fails, the next takes over automatically.
           </p>
         </div>
-        <Button onClick={() => setAddOpen(true)} disabled={taxonomy.isLoading || taxonomy.isError || providers.length === 0}>
-          <Plus className="w-4 h-4 mr-1" /> Add Key
-        </Button>
+        {canManage && (
+          <Button onClick={() => setAddOpen(true)} disabled={taxonomy.isLoading || taxonomy.isError || providers.length === 0}>
+            <Plus className="w-4 h-4 mr-1" /> Add Key
+          </Button>
+        )}
       </div>
 
       {taxonomy.isError && <ErrorState error={taxonomy.error} resource="provider catalog" onRetry={() => taxonomy.refetch()} />}
@@ -162,67 +178,116 @@ export default function WorkspaceByok() {
         />
       </Card>
 
-      <FormDialog
-        open={addOpen}
-        onOpenChange={setAddOpen}
-        title="Add Provider Key"
-        description="Your key is stored encrypted and never exposed again. Paste it once, and we handle the rest."
-        schema={addSchema}
-        defaultValues={{ provider: providers[0]?.name ?? '', name: 'default', value: '', priority: 100 }}
-        onSubmit={(values) => addCredential.mutateAsync({ orgId, workspaceRef, data: values })}
-        submitLabel="Add Key"
-        pending={addCredential.isPending}
-      >
-        {(form) => (
-          <>
-            <FormField
-              control={form.control}
-              name="provider"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Provider</FormLabel>
-                  <FormControl>
-                    <RadioGroup value={field.value} onValueChange={field.onChange} aria-label="Provider" className="flex flex-wrap gap-2">
-                      {providers.map((p) => {
-                        const optionId = `provider-${p.id}`;
-                        return (
-                          <div key={p.id} className="relative">
-                            <RadioGroupItem id={optionId} value={p.name} className="peer sr-only" />
-                            <Label
-                              htmlFor={optionId}
-                              className="inline-flex h-8 cursor-pointer items-center justify-center gap-2 rounded border border-input bg-background/50 px-3 shadow-sm transition-colors hover:border-primary/50 hover:bg-primary/10 hover:text-primary peer-data-[state=checked]:border-border/50 peer-data-[state=checked]:bg-secondary peer-data-[state=checked]:text-secondary-foreground peer-focus-visible:outline-none peer-focus-visible:ring-2 peer-focus-visible:ring-ring peer-focus-visible:ring-offset-2"
-                            >
-                              {p.icon ? <ProviderIcon markup={p.icon} /> : null}
-                              {p.name}
-                            </Label>
-                          </div>
-                        );
-                      })}
-                    </RadioGroup>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Name</FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g. prod or backup" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+      {canManage && (
+        <FormDialog
+          open={addOpen}
+          onOpenChange={setAddOpen}
+          title="Add Provider Key"
+          description="Your key is stored encrypted and never exposed again. Paste it once, and we handle the rest."
+          schema={addSchema}
+          defaultValues={{ provider: providers[0]?.name ?? '', name: 'default', value: '', priority: 100 }}
+          onSubmit={(values) => addCredential.mutateAsync({ orgId, workspaceRef, data: values })}
+          submitLabel="Add Key"
+          pending={addCredential.isPending}
+        >
+          {(form) => (
+            <>
+              <FormField
+                control={form.control}
+                name="provider"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Provider</FormLabel>
+                    <FormControl>
+                      <RadioGroup value={field.value} onValueChange={field.onChange} aria-label="Provider" className="flex flex-wrap gap-2">
+                        {providers.map((p) => {
+                          const optionId = `provider-${p.id}`;
+                          return (
+                            <div key={p.id} className="relative">
+                              <RadioGroupItem id={optionId} value={p.name} className="peer sr-only" />
+                              <Label
+                                htmlFor={optionId}
+                                className="inline-flex h-8 cursor-pointer items-center justify-center gap-2 rounded border border-input bg-background/50 px-3 shadow-sm transition-colors hover:border-primary/50 hover:bg-primary/10 hover:text-primary peer-data-[state=checked]:border-border/50 peer-data-[state=checked]:bg-secondary peer-data-[state=checked]:text-secondary-foreground peer-focus-visible:outline-none peer-focus-visible:ring-2 peer-focus-visible:ring-ring peer-focus-visible:ring-offset-2"
+                              >
+                                {p.icon ? <ProviderIcon markup={p.icon} /> : null}
+                                {p.name}
+                              </Label>
+                            </div>
+                          );
+                        })}
+                      </RadioGroup>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g. prod or backup" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="value"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>API key</FormLabel>
+                    <FormControl>
+                      <Input type="password" autoComplete="off" placeholder="sk-..." {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="priority"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Priority</FormLabel>
+                    <FormControl>
+                      <Input type="number" min={1} {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </>
+          )}
+        </FormDialog>
+      )}
+
+      {canManage && (
+        <FormDialog
+          open={!!rotating}
+          onOpenChange={(v) => !v && setRotating(null)}
+          title={rotating ? `Rotate "${rotating.name}"` : 'Rotate'}
+          description="Replaces the existing key immediately. Any in-flight requests will finish with the old key."
+          schema={rotateSchema}
+          defaultValues={{ value: '' }}
+          onSubmit={async (values) => {
+            if (!rotating) return;
+            await rotateCredential.mutateAsync({ orgId, credentialId: rotating.id, data: values });
+            setRotating(null);
+          }}
+          submitLabel="Rotate"
+          pending={rotateCredential.isPending}
+        >
+          {(form) => (
             <FormField
               control={form.control}
               name="value"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>API key</FormLabel>
+                  <FormLabel>New API key</FormLabel>
                   <FormControl>
                     <Input type="password" autoComplete="off" placeholder="sk-..." {...field} />
                   </FormControl>
@@ -230,54 +295,9 @@ export default function WorkspaceByok() {
                 </FormItem>
               )}
             />
-            <FormField
-              control={form.control}
-              name="priority"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Priority</FormLabel>
-                  <FormControl>
-                    <Input type="number" min={1} {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </>
-        )}
-      </FormDialog>
-
-      <FormDialog
-        open={!!rotating}
-        onOpenChange={(v) => !v && setRotating(null)}
-        title={rotating ? `Rotate "${rotating.name}"` : 'Rotate'}
-        description="Replaces the existing key immediately. Any in-flight requests will finish with the old key."
-        schema={rotateSchema}
-        defaultValues={{ value: '' }}
-        onSubmit={async (values) => {
-          if (!rotating) return;
-          await rotateCredential.mutateAsync({ orgId, credentialId: rotating.id, data: values });
-          setRotating(null);
-        }}
-        submitLabel="Rotate"
-        pending={rotateCredential.isPending}
-      >
-        {(form) => (
-          <FormField
-            control={form.control}
-            name="value"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>New API key</FormLabel>
-                <FormControl>
-                  <Input type="password" autoComplete="off" placeholder="sk-..." {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        )}
-      </FormDialog>
+          )}
+        </FormDialog>
+      )}
     </PageShell>
   );
 }

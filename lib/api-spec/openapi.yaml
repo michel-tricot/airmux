@@ -476,6 +476,15 @@ paths:
           - type: 'null'
           title: Org Id
         description: Organization scope to evaluate; omit for instance scope
+      - name: workspace_ref
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Workspace Ref
+        description: Workspace ID or slug to evaluate within org_id; omit for organization scope
       responses:
         '200':
           description: Successful Response
@@ -1717,6 +1726,52 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Envelope_list_WorkspaceMembershipOut__'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
+  /api/v1/orgs/{org_id}/workspaces/{workspace_ref}/member-candidates:
+    get:
+      tags:
+      - Workspace Members
+      summary: List Workspace Member Candidates
+      description: 'List organization members who can be added to a workspace.
+
+
+        Required permission: `members.manage`.'
+      operationId: list_member_candidates
+      security:
+      - AccessKey: []
+      - SessionCookie: []
+      parameters:
+      - name: workspace_ref
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Workspace Ref
+        description: Workspace ID or slug
+      - name: org_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Org Id
+        description: Organization ID
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_list_WorkspaceMemberCandidateOut__'
         '422':
           description: Validation Error
           content:
@@ -4150,6 +4205,17 @@ components:
       required:
       - data
       title: Envelope[list[UserOut]]
+    Envelope_list_WorkspaceMemberCandidateOut__:
+      properties:
+        data:
+          items:
+            $ref: '#/components/schemas/WorkspaceMemberCandidateOut'
+          type: array
+          title: Data
+      type: object
+      required:
+      - data
+      title: Envelope[list[WorkspaceMemberCandidateOut]]
     Envelope_list_WorkspaceMembershipOut__:
       properties:
         data:
@@ -5946,6 +6012,28 @@ components:
       required:
       - name
       title: WorkspaceCreate
+    WorkspaceMemberCandidateOut:
+      properties:
+        user_id:
+          type: string
+          format: uuid
+          title: User Id
+        email:
+          type: string
+          title: Email
+        name:
+          type: string
+          title: Name
+        service_account:
+          type: boolean
+          title: Service Account
+      type: object
+      required:
+      - user_id
+      - email
+      - name
+      - service_account
+      title: WorkspaceMemberCandidateOut
     WorkspaceMembershipIn:
       properties:
         role:
@@ -5966,6 +6054,15 @@ components:
           type: string
           format: uuid
           title: Workspace Id
+        email:
+          type: string
+          title: Email
+        name:
+          type: string
+          title: Name
+        service_account:
+          type: boolean
+          title: Service Account
         role:
           $ref: '#/components/schemas/WorkspaceRole'
         status:
@@ -5976,6 +6073,9 @@ components:
       required:
       - user_id
       - workspace_id
+      - email
+      - name
+      - service_account
       - role
       - status
       title: WorkspaceMembershipOut

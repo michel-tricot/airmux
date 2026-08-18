@@ -13,7 +13,8 @@ import { FormDialog } from '@/components/shared/form-dialog';
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useRequiredParam } from '@/lib/route';
 import { PageShell } from '@/components/shared/page-shell';
-import type { OrgRole } from '@workspace/api-client-react';
+import type { OrgOut, OrgRole } from '@workspace/api-client-react';
+import { hasPermission, useEffectivePermissions } from '@/features/permissions/hooks';
 
 const addToOrgSchema = z.object({
   orgId: z.string().min(1, 'Select an organization'),
@@ -26,9 +27,14 @@ export default function UserDetail() {
 
   const userQuery = useUser(userId);
   const user = userQuery.data;
+  const permissionsQuery = useEffectivePermissions({});
+  const permissions = permissionsQuery.data?.permissions;
+  const canManagePrincipals = hasPermission(permissions, 'principals.manage');
+  const canManageMembers = hasPermission(permissions, 'members.manage');
+  const canReadKeys = hasPermission(permissions, 'access-keys.read');
   const orgsQuery = useOrgs();
   const orgs = orgsQuery.data;
-  const accessKeysQuery = useInstanceAccessKeys({ user_id: userId });
+  const accessKeysQuery = useInstanceAccessKeys({ user_id: userId }, canReadKeys);
 
   const [addOpen, setAddOpen] = useState(false);
 
@@ -63,21 +69,23 @@ export default function UserDetail() {
         </div>
         <div className="flex items-center gap-3">
           <Badge variant={user.service_account ? 'secondary' : 'outline'}>{user.service_account ? 'SERVICE ACCOUNT' : 'HUMAN'}</Badge>
-          <ConfirmButton
-            variant="outline"
-            size="default"
-            className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
-            title="Delete User"
-            description="Their sign-in identities, sessions, and personal keys go with them. Users who still hold memberships, own a personal organization, or minted inference keys must be cleared first."
-            confirmLabel="Delete User"
-            pending={deleteUser.isPending}
-            onConfirm={async () => {
-              await deleteUser.mutateAsync({ userId: user.id });
-              setLocation('/instance/users');
-            }}
-          >
-            <Trash2 className="w-4 h-4 mr-2" /> Delete
-          </ConfirmButton>
+          {canManagePrincipals && (
+            <ConfirmButton
+              variant="outline"
+              size="default"
+              className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
+              title="Delete User"
+              description="Their sign-in identities, sessions, and personal keys go with them. Users who still hold memberships, own a personal organization, or minted inference keys must be cleared first."
+              confirmLabel="Delete User"
+              pending={deleteUser.isPending}
+              onConfirm={async () => {
+                await deleteUser.mutateAsync({ userId: user.id });
+                setLocation('/instance/users');
+              }}
+            >
+              <Trash2 className="w-4 h-4 mr-2" /> Delete
+            </ConfirmButton>
+          )}
         </div>
       </div>
 
@@ -87,9 +95,11 @@ export default function UserDetail() {
             <Building2 className="w-5 h-5 text-muted-foreground" />
             Organization Memberships
           </h2>
-          <Button onClick={() => setAddOpen(true)} size="sm" disabled={orgsQuery.isLoading || orgsQuery.isError || available?.length === 0}>
-            <Plus className="w-4 h-4 mr-1" /> Add to Organization
-          </Button>
+          {canManageMembers && (
+            <Button onClick={() => setAddOpen(true)} size="sm" disabled={orgsQuery.isLoading || orgsQuery.isError || available?.length === 0}>
+              <Plus className="w-4 h-4 mr-1" /> Add to Organization
+            </Button>
+          )}
         </div>
         <Card>
           <DataTable
@@ -114,107 +124,115 @@ export default function UserDetail() {
               },
               { key: 'id', header: 'ID', cellClassName: 'font-mono text-xs text-muted-foreground', cell: (org) => org.id },
               { key: 'created', header: 'Created', cellClassName: 'text-muted-foreground text-sm', cell: (org) => formatDate(org.created_at) },
-              {
-                key: 'actions',
-                header: 'Actions',
-                headClassName: 'text-right',
-                cellClassName: 'text-right',
-                cell: (org) => (
-                  <ConfirmButton
-                    title={`Remove ${user.name} from ${org.name}?`}
-                    description="They lose access to this organization and all of its workspaces."
-                    confirmLabel="Remove membership"
-                    pending={removeMember.isPending}
-                    aria-label="Remove membership"
-                    onConfirm={() => removeMember.mutateAsync({ userId: user.id, orgId: org.id })}
-                  >
-                    <UserMinus className="w-4 h-4" />
-                  </ConfirmButton>
-                ),
-              },
+              ...(canManageMembers
+                ? [
+                    {
+                      key: 'actions',
+                      header: 'Actions',
+                      headClassName: 'text-right',
+                      cellClassName: 'text-right',
+                      cell: (org: OrgOut) => (
+                        <ConfirmButton
+                          title={`Remove ${user.name} from ${org.name}?`}
+                          description="They lose access to this organization and all of its workspaces."
+                          confirmLabel="Remove membership"
+                          pending={removeMember.isPending}
+                          aria-label="Remove membership"
+                          onConfirm={() => removeMember.mutateAsync({ userId: user.id, orgId: org.id })}
+                        >
+                          <UserMinus className="w-4 h-4" />
+                        </ConfirmButton>
+                      ),
+                    },
+                  ]
+                : []),
             ]}
           />
         </Card>
       </div>
 
-      <div className="mt-8">
-        <h2 className="text-lg font-semibold flex items-center gap-2 mb-4">
-          <KeyRound className="w-5 h-5 text-muted-foreground" />
-          Keys owned by this user
-        </h2>
+      {canReadKeys && (
+        <div className="mt-8">
+          <h2 className="text-lg font-semibold flex items-center gap-2 mb-4">
+            <KeyRound className="w-5 h-5 text-muted-foreground" />
+            Keys owned by this user
+          </h2>
 
-        <Card>
-          <DataTable
-            rows={accessKeysQuery.data}
-            rowKey={(key) => key.id}
-            isLoading={accessKeysQuery.isLoading}
-            isError={accessKeysQuery.isError}
-            error={accessKeysQuery.error}
-            resource="access keys"
-            onRetry={() => accessKeysQuery.refetch()}
-            empty="This user does not own any access keys."
-            columns={[
-              { key: 'scope', header: 'Scope', cell: (key) => <Badge variant="secondary">{key.scope.level}</Badge> },
-              { key: 'label', header: 'Label', cellClassName: 'font-medium', cell: (key) => key.label },
-              { key: 'key', header: 'Key', cellClassName: 'font-mono text-xs text-muted-foreground', cell: (key) => <>{key.prefix}…</> },
-              {
-                key: 'status',
-                header: 'Status',
-                cell: (key) => <Badge variant={key.status === 'active' ? 'success' : 'outline'}>{key.status.toUpperCase()}</Badge>,
-              },
-              { key: 'created', header: 'Created', cellClassName: 'text-muted-foreground text-sm', cell: (key) => formatDate(key.created_at) },
-            ]}
-          />
-        </Card>
-      </div>
+          <Card>
+            <DataTable
+              rows={accessKeysQuery.data}
+              rowKey={(key) => key.id}
+              isLoading={accessKeysQuery.isLoading}
+              isError={accessKeysQuery.isError}
+              error={accessKeysQuery.error}
+              resource="access keys"
+              onRetry={() => accessKeysQuery.refetch()}
+              empty="This user does not own any access keys."
+              columns={[
+                { key: 'scope', header: 'Scope', cell: (key) => <Badge variant="secondary">{key.scope.level}</Badge> },
+                { key: 'label', header: 'Label', cellClassName: 'font-medium', cell: (key) => key.label },
+                { key: 'key', header: 'Key', cellClassName: 'font-mono text-xs text-muted-foreground', cell: (key) => <>{key.prefix}…</> },
+                {
+                  key: 'status',
+                  header: 'Status',
+                  cell: (key) => <Badge variant={key.status === 'active' ? 'success' : 'outline'}>{key.status.toUpperCase()}</Badge>,
+                },
+                { key: 'created', header: 'Created', cellClassName: 'text-muted-foreground text-sm', cell: (key) => formatDate(key.created_at) },
+              ]}
+            />
+          </Card>
+        </div>
+      )}
 
-      <FormDialog
-        open={addOpen}
-        onOpenChange={setAddOpen}
-        title="Add to Organization"
-        schema={addToOrgSchema}
-        defaultValues={{ orgId: '', role: 'member' }}
-        onSubmit={(values) => addMember.mutateAsync({ userId: user.id, orgId: values.orgId, role: values.role as OrgRole })}
-        submitLabel="Add"
-        pending={addMember.isPending}
-      >
-        {(form) => (
-          <>
-            <FormField
-              control={form.control}
-              name="orgId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Organization</FormLabel>
-                  <FormControl>
-                    <Dropdown
-                      aria-label="Organization"
-                      value={field.value}
-                      onValueChange={field.onChange}
-                      placeholder="Select an organization"
-                      options={(available ?? []).map((org) => ({ value: org.id, label: org.name }))}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="role"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Role</FormLabel>
-                  <FormControl>
-                    <Dropdown aria-label="Role" value={field.value} onValueChange={field.onChange} options={orgRoleOptions} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </>
-        )}
-      </FormDialog>
+      {canManageMembers && (
+        <FormDialog
+          open={addOpen}
+          onOpenChange={setAddOpen}
+          title="Add to Organization"
+          schema={addToOrgSchema}
+          defaultValues={{ orgId: '', role: 'member' }}
+          onSubmit={(values) => addMember.mutateAsync({ userId: user.id, orgId: values.orgId, role: values.role as OrgRole })}
+          submitLabel="Add"
+          pending={addMember.isPending}
+        >
+          {(form) => (
+            <>
+              <FormField
+                control={form.control}
+                name="orgId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Organization</FormLabel>
+                    <FormControl>
+                      <Dropdown
+                        aria-label="Organization"
+                        value={field.value}
+                        onValueChange={field.onChange}
+                        placeholder="Select an organization"
+                        options={(available ?? []).map((org) => ({ value: org.id, label: org.name }))}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="role"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Role</FormLabel>
+                    <FormControl>
+                      <Dropdown aria-label="Role" value={field.value} onValueChange={field.onChange} options={orgRoleOptions} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </>
+          )}
+        </FormDialog>
+      )}
     </PageShell>
   );
 }

@@ -152,11 +152,16 @@ async def bundle_scope(resolved: ActorDep, org_id: UUID | None = None) -> Scope:
 BundleScopeDep = Annotated[Scope, Depends(bundle_scope)]
 
 
-async def permission_scope(org_id: UUID | None = None) -> Scope:
+async def permission_scope(org_id: UUID | None = None, workspace_ref: str | None = None) -> Scope:
+    if workspace_ref is not None and org_id is None:
+        raise HTTPException(status_code=422, detail="workspace_ref requires org_id")
     if org_id is None:
         return Scope.instance()
     if await Org.find_by_id(org_id) is None:
         raise HTTPException(status_code=404, detail="Organization not found")
+    if workspace_ref is not None:
+        workspace = await Workspace.by_ref(org_id, workspace_ref)
+        return Scope.workspace(org_id, workspace.id)
     return Scope.org(org_id)
 
 

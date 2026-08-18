@@ -16,6 +16,7 @@ from control_plane.models.common import Identified, Tombstonable, slugify
 from control_plane.models.common.base import Record
 from control_plane.models.common.wire import RecordOut, RequestModel
 from control_plane.models.org_membership import OrgMembership
+from control_plane.models.workspace_membership import WorkspaceMembership
 
 SERVICE_ACCOUNT_EMAIL_DOMAIN = "service-account.airllm.invalid"
 EMAIL_MAX_LENGTH = 320
@@ -57,6 +58,13 @@ class User(Record, Identified, Tombstonable, table=True):
         """
         return await cls.find(
             col(cls.id).in_(select(OrgMembership.user_id).where(OrgMembership.org_id == org_id)),
+            order_by=col(cls.email),
+        )
+
+    @classmethod
+    async def members_of_workspace(cls, workspace_id: UUID) -> list[Self]:
+        return await cls.find(
+            col(cls.id).in_(select(WorkspaceMembership.user_id).where(WorkspaceMembership.workspace_id == workspace_id)),
             order_by=col(cls.email),
         )
 

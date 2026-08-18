@@ -10,6 +10,7 @@ import { FormDialog } from '@/components/shared/form-dialog';
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group';
 import { PageShell } from '@/components/shared/page-shell';
+import { hasPermission, useEffectivePermissions } from '@/features/permissions/hooks';
 
 const createOrgSchema = z.object({ name: z.string().min(1, 'Name is required') });
 
@@ -19,6 +20,8 @@ export default function Organizations() {
   const [search, setSearch] = useState('');
   const [createOpen, setCreateOpen] = useState(false);
   const createOrg = useCreateOrgMutation();
+  const permissionsQuery = useEffectivePermissions({});
+  const canCreate = hasPermission(permissionsQuery.data?.permissions, 'organizations.create');
 
   const filteredOrgs = orgs?.filter((o) => o.name.toLowerCase().includes(search.toLowerCase()));
 
@@ -29,9 +32,11 @@ export default function Organizations() {
           <h1 className="text-3xl font-bold tracking-tight">Organizations</h1>
           <p className="text-muted-foreground mt-1 text-sm">Organizations group your keys, policies, and usage.</p>
         </div>
-        <Button onClick={() => setCreateOpen(true)} className="gap-2">
-          <Plus className="w-4 h-4" /> New Organization
-        </Button>
+        {canCreate && (
+          <Button onClick={() => setCreateOpen(true)} className="gap-2">
+            <Plus className="w-4 h-4" /> New Organization
+          </Button>
+        )}
       </div>
 
       <Card>
@@ -91,34 +96,36 @@ export default function Organizations() {
         />
       </Card>
 
-      <FormDialog
-        open={createOpen}
-        onOpenChange={setCreateOpen}
-        title="Create Organization"
-        description="Set up a new organization."
-        schema={createOrgSchema}
-        defaultValues={{ name: '' }}
-        onSubmit={(values) => createOrg.mutateAsync({ data: values })}
-        submitLabel="Create Organization"
-        pendingLabel="Creating..."
-        pending={createOrg.isPending}
-      >
-        {(form) => (
-          <FormField
-            control={form.control}
-            name="name"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Name</FormLabel>
-                <FormControl>
-                  <Input placeholder="Acme Corp" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        )}
-      </FormDialog>
+      {canCreate && (
+        <FormDialog
+          open={createOpen}
+          onOpenChange={setCreateOpen}
+          title="Create Organization"
+          description="Set up a new organization."
+          schema={createOrgSchema}
+          defaultValues={{ name: '' }}
+          onSubmit={(values) => createOrg.mutateAsync({ data: values })}
+          submitLabel="Create Organization"
+          pendingLabel="Creating..."
+          pending={createOrg.isPending}
+        >
+          {(form) => (
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Name</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Acme Corp" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          )}
+        </FormDialog>
+      )}
     </PageShell>
   );
 }

@@ -3,9 +3,9 @@ from __future__ import annotations
 from uuid import uuid4
 
 from fastapi.testclient import TestClient
-from helpers import make_org, setup_control_plane
+from helpers import make_org, make_workspace, setup_control_plane
 
-from control_plane.authz import ORG_ROLE_PERMISSIONS, OrgRole, Permission
+from control_plane.authz import ORG_ROLE_PERMISSIONS, WORKSPACE_ROLE_PERMISSIONS, OrgRole, Permission, WorkspaceRole
 
 CSRF = {"X-Requested-With": "fetch"}
 PASSWORD = "hunter2-hunter2"
@@ -35,6 +35,38 @@ def test_session_user_sees_org_role_permissions(tmp_path):
         resp = c.get("/api/v1/auth/permissions", headers=CSRF)
         assert resp.status_code == 200
         assert resp.json()["data"]["permissions"] == []
+
+
+def test_session_user_sees_effective_workspace_permissions(tmp_path):
+    cp = setup_control_plane(tmp_path)
+    root = cp.headers()
+    with _client(cp) as c:
+        org_id = make_org(c, root, "o1")
+        workspace_id = make_workspace(c, cp.headers(org_id), "staging")
+        user_id = _signup(c, "viewer@example.com")
+        assert c.put(f"/api/v1/orgs/{org_id}/users/{user_id}", json={"role": "member"}, headers=cp.headers(org_id)).status_code == 200
+        assert (
+            c.put(
+                f"/api/v1/orgs/{org_id}/workspaces/{workspace_id}/members/{user_id}",
+                json={"role": "viewer"},
+                headers=cp.headers(org_id),
+            ).status_code
+            == 200
+        )
+
+        resp = c.get(f"/api/v1/auth/permissions?org_id={org_id}&workspace_ref={workspace_id}", headers=CSRF)
+        assert resp.status_code == 200
+        expected = ORG_ROLE_PERMISSIONS[OrgRole.member] | WORKSPACE_ROLE_PERMISSIONS[WorkspaceRole.viewer]
+        assert set(resp.json()["data"]["permissions"]) == {permission.value for permission in expected}
+
+
+def test_workspace_permission_scope_requires_an_org_and_existing_workspace(tmp_path):
+    cp = setup_control_plane(tmp_path)
+    root = cp.headers()
+    with _client(cp) as c:
+        org_id = make_org(c, root, "o1")
+        assert c.get("/api/v1/auth/permissions?workspace_ref=staging", headers=root).status_code == 422
+        assert c.get(f"/api/v1/auth/permissions?org_id={org_id}&workspace_ref=missing", headers=root).status_code == 404
 
 
 def test_org_key_cannot_read_instance_or_other_org_permissions(tmp_path):

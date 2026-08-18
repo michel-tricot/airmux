@@ -12,8 +12,8 @@ import {
   useRevokeInvitation,
 } from '@workspace/api-client-react';
 
-export function useInvitations(orgId: string) {
-  return useListInvitations(orgId);
+export function useInvitations(orgId: string, enabled = true) {
+  return useListInvitations(orgId, { query: { enabled, queryKey: getListInvitationsQueryKey(orgId) } });
 }
 
 export function useCreateInvitationMutation(orgId: string) {

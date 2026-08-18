@@ -372,7 +372,8 @@ export const MeResponse = zod.object({
  * @summary Get Effective Permissions
  */
 export const MyPermissionsQueryParams = zod.object({
-  "org_id": zod.union([zod.uuid(),zod.null()]).optional().describe('Organization scope to evaluate; omit for instance scope')
+  "org_id": zod.union([zod.uuid(),zod.null()]).optional().describe('Organization scope to evaluate; omit for instance scope'),
+  "workspace_ref": zod.union([zod.coerce.string(),zod.null()]).optional().describe('Workspace ID or slug to evaluate within org_id; omit for organization scope')
 })
 
 export const MyPermissionsResponse = zod.object({
@@ -1141,10 +1142,33 @@ export const ListMembersParams = zod.object({
 export const ListMembersResponseItem = zod.object({
   "user_id": zod.uuid(),
   "workspace_id": zod.uuid(),
+  "email": zod.string(),
+  "name": zod.string(),
+  "service_account": zod.boolean(),
   "role": zod.enum(['admin', 'member', 'viewer']),
   "status": zod.literal("member")
 })
 export const ListMembersResponse = zod.array(ListMembersResponseItem)
+
+
+/**
+ * List organization members who can be added to a workspace.
+ *
+ * Required permission: `members.manage`.
+ * @summary List Workspace Member Candidates
+ */
+export const ListMemberCandidatesParams = zod.object({
+  "workspace_ref": zod.coerce.string().describe('Workspace ID or slug'),
+  "org_id": zod.uuid().describe('Organization ID')
+})
+
+export const ListMemberCandidatesResponseItem = zod.object({
+  "user_id": zod.uuid(),
+  "email": zod.string(),
+  "name": zod.string(),
+  "service_account": zod.boolean()
+})
+export const ListMemberCandidatesResponse = zod.array(ListMemberCandidatesResponseItem)
 
 
 /**
@@ -1166,6 +1190,9 @@ export const AddMemberBody = zod.object({
 export const AddMemberResponse = zod.object({
   "user_id": zod.uuid(),
   "workspace_id": zod.uuid(),
+  "email": zod.string(),
+  "name": zod.string(),
+  "service_account": zod.boolean(),
   "role": zod.enum(['admin', 'member', 'viewer']),
   "status": zod.literal("member")
 })
