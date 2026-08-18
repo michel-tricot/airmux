@@ -26,7 +26,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const orgId = useRequiredOrgId();
   const orgAuthorization = useAuthorization('org');
   const canListWorkspaces = orgAuthorization.can(workspaceAccess.list);
-  const workspacesQuery = useWorkspaces(orgId, canListWorkspaces);
+  const workspacesQuery = useWorkspaces(orgId, { enabled: canListWorkspaces });
   const workspaces = workspacesQuery.data;
   const enrollment = useEnrollment();
   const canSwitchOrg = (enrollment.data?.orgs.length ?? 0) > 1;
@@ -40,7 +40,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const selectedWorkspaceRef = routedWorkspaceRef || window.localStorage.getItem(lastWorkspaceKey) || '';
   const activeWorkspace = workspaces?.find((workspace) => workspace.slug === selectedWorkspaceRef || workspace.id === selectedWorkspaceRef);
   const activeWorkspaceSlug = activeWorkspace?.slug ?? routedWorkspaceRef;
-  const workspaceAuthorization = useScopedAuthorization({ level: 'workspace', orgId, workspaceRef: activeWorkspaceSlug }, activeWorkspaceSlug !== '');
+  const workspaceAuthorization = useScopedAuthorization(
+    { level: 'workspace', orgId, workspaceRef: activeWorkspaceSlug },
+    { enabled: activeWorkspaceSlug !== '' },
+  );
   const canCreateWorkspace = orgAuthorization.can(workspaceAccess.create);
 
   useEffect(() => {

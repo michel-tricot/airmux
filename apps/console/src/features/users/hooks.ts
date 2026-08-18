@@ -13,8 +13,9 @@ import {
   getMeQueryKey,
   type OrgRole,
 } from '@workspace/api-client-react';
+import type { EnabledQueryOptions } from '@/features/query-options';
 
-export function useUsers(enabled = true) {
+export function useUsers({ enabled = true }: EnabledQueryOptions = {}) {
   return useListUsers(undefined, { query: { enabled, queryKey: getListUsersQueryKey() } });
 }
 

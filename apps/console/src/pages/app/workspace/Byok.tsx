@@ -58,8 +58,8 @@ export default function WorkspaceByok() {
   const canRotate = authorization.can(providerCredentialAccess.rotate);
   const canDelete = authorization.can(providerCredentialAccess.delete);
   const canUseActions = canUpdate || canRotate || canDelete;
-  const credentialsQuery = useProviderCredentials(orgId, workspaceRef, canRead);
-  const taxonomy = useProviders(orgId, workspaceRef, canReadCatalog);
+  const credentialsQuery = useProviderCredentials(orgId, workspaceRef, { enabled: canRead });
+  const taxonomy = useProviders(orgId, workspaceRef, { enabled: canReadCatalog });
   const providers = taxonomy.data?.providers ?? [];
 
   const [addOpen, setAddOpen] = useState(false);

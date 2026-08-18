@@ -23,8 +23,8 @@ export default function AccessKeys() {
   const canIssueKey = authorization.can(accessKeyAccess.instance.issue);
   const canRevoke = authorization.can(accessKeyAccess.instance.revoke);
   const canReadUsers = authorization.can(userAccess.list);
-  const keysQuery = useInstanceAccessKeys(undefined, canRead);
-  const usersQuery = useUsers(canReadUsers);
+  const keysQuery = useInstanceAccessKeys(undefined, { enabled: canRead });
+  const usersQuery = useUsers({ enabled: canReadUsers });
   const usersById = new Map(usersQuery.data?.map((user) => [user.id, user]));
   const createKey = useCreateInstanceAccessKeyMutation();
   const revokeKey = useRevokeInstanceAccessKeyMutation();

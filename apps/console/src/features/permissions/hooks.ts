@@ -1,6 +1,7 @@
 import { createContext, createElement, useContext, type ReactNode } from 'react';
 import { getMyPermissionsQueryKey, useMyPermissions } from '@workspace/api-client-react';
 import { allows, anyOf, type AccessPolicy } from './authorization';
+import type { EnabledQueryOptions } from '@/features/query-options';
 
 export type AuthorizationScope =
   | { readonly level: 'instance' }
@@ -14,7 +15,7 @@ export function useEffectivePermissions({ orgId, workspaceRef, enabled = true }:
   return useMyPermissions(params, { query: { enabled, queryKey: getMyPermissionsQueryKey(params) } });
 }
 
-export function useScopedAuthorization(scope: AuthorizationScope, enabled = true) {
+export function useScopedAuthorization(scope: AuthorizationScope, { enabled = true }: EnabledQueryOptions = {}) {
   const query = useEffectivePermissions({
     orgId: scope.level === 'instance' ? undefined : scope.orgId,
     workspaceRef: scope.level === 'workspace' ? scope.workspaceRef : undefined,
@@ -36,7 +37,7 @@ const AuthorizationContext = createContext<AuthorizationContexts>({});
 
 export function AuthorizationProvider({ scope, enabled = true, children }: { scope: AuthorizationScope; enabled?: boolean; children: ReactNode }) {
   const parent = useContext(AuthorizationContext);
-  const authorization = useScopedAuthorization(scope, enabled);
+  const authorization = useScopedAuthorization(scope, { enabled });
   return createElement(AuthorizationContext.Provider, { value: { ...parent, [scope.level]: authorization } }, children);
 }
 

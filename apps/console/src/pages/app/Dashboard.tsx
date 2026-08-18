@@ -17,8 +17,8 @@ export default function AppDashboard() {
   const canReadWorkspaces = authorization.can(workspaceAccess.list);
   const canReadUsage = authorization.can(telemetryAccess.orgUsage);
 
-  const workspacesQuery = useWorkspaces(orgId, canReadWorkspaces);
-  const eventsQuery = useOrgEvents(orgId, { limit: 10 }, canReadUsage);
+  const workspacesQuery = useWorkspaces(orgId, { enabled: canReadWorkspaces });
+  const eventsQuery = useOrgEvents(orgId, { limit: 10 }, { enabled: canReadUsage });
 
   return (
     <PageShell className="max-w-5xl">

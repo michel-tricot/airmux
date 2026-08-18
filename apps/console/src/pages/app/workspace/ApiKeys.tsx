@@ -23,7 +23,7 @@ export default function WorkspaceApiKeys() {
   const canRead = authorization.can(inferenceKeyAccess.read);
   const canCreate = authorization.can(inferenceKeyAccess.create);
   const canRevoke = authorization.can(inferenceKeyAccess.revoke);
-  const keysQuery = useInferenceKeys(orgId, workspaceRef, canRead);
+  const keysQuery = useInferenceKeys(orgId, workspaceRef, { enabled: canRead });
 
   const [keyOpen, setKeyOpen] = useState(false);
   const [token, setToken] = useState<string | null>(null);

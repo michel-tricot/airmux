@@ -88,7 +88,7 @@ export default function ScopedPlayground() {
 function Playground({ orgId, workspaceRef }: { orgId: string; workspaceRef: string }) {
   const authorization = useAuthorization('workspace');
   const canReadCatalog = authorization.can(catalogAccess.workspace.read);
-  const taxonomyQuery = useProviders(orgId, workspaceRef, canReadCatalog);
+  const taxonomyQuery = useProviders(orgId, workspaceRef, { enabled: canReadCatalog });
   const ensureSession = useEnsurePlaygroundSessionMutation();
   const endSession = useEndPlaygroundSessionMutation();
   const [playground, setPlayground] = usePlaygroundState(`${orgId}:${workspaceRef}`);

@@ -58,10 +58,10 @@ export default function WorkspaceOverview() {
   const canReadKeys = authorization.can(inferenceKeyAccess.read);
   const canReadCredentials = authorization.can(providerCredentialAccess.workspace.read);
   const canReadUsage = authorization.can(telemetryAccess.workspaceUsage);
-  const membersQuery = useWorkspaceMembers(orgId, workspaceRef, canReadMembers);
-  const keysQuery = useInferenceKeys(orgId, workspaceRef, canReadKeys);
-  const credentialsQuery = useProviderCredentials(orgId, workspaceRef, canReadCredentials);
-  const eventsQuery = useWorkspaceEvents(orgId, workspaceRef, { limit: EVENTS_WINDOW }, workspace !== undefined && canReadUsage);
+  const membersQuery = useWorkspaceMembers(orgId, workspaceRef, { enabled: canReadMembers });
+  const keysQuery = useInferenceKeys(orgId, workspaceRef, { enabled: canReadKeys });
+  const credentialsQuery = useProviderCredentials(orgId, workspaceRef, { enabled: canReadCredentials });
+  const eventsQuery = useWorkspaceEvents(orgId, workspaceRef, { limit: EVENTS_WINDOW }, { enabled: workspace !== undefined && canReadUsage });
   const events = eventsQuery.data;
 
   if (workspaceQuery.isLoading) return <LoadingState label="Loading workspace..." />;

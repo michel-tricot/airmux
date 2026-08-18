@@ -21,11 +21,11 @@ export default function Dashboard() {
   const canReadKeys = authorization.can(accessKeyAccess.instance.read);
   const canReadDataPlanes = authorization.can(telemetryAccess.dataPlanes);
   const canReadActivity = authorization.can(telemetryAccess.instanceActivity);
-  const orgsQuery = useOrgs(canListOrgs);
-  const usersQuery = useUsers(canListUsers);
-  const dataPlanesQuery = useDataPlanes(canReadDataPlanes);
-  const keysQuery = useInstanceAccessKeys(undefined, canReadKeys);
-  const activityQuery = useInstanceActivity({ limit: 25 }, canReadActivity);
+  const orgsQuery = useOrgs({ enabled: canListOrgs });
+  const usersQuery = useUsers({ enabled: canListUsers });
+  const dataPlanesQuery = useDataPlanes({ enabled: canReadDataPlanes });
+  const keysQuery = useInstanceAccessKeys(undefined, { enabled: canReadKeys });
+  const activityQuery = useInstanceActivity({ limit: 25 }, { enabled: canReadActivity });
   const usersById = new Map(usersQuery.data?.map((user) => [user.id, user]));
   const actor = (userId: string) => usersById.get(userId)?.email ?? userId;
 

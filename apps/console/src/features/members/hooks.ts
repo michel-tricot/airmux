@@ -10,6 +10,7 @@ import {
   getListMemberCandidatesQueryKey,
   type WorkspaceRole,
 } from '@workspace/api-client-react';
+import type { EnabledQueryOptions } from '@/features/query-options';
 
 export const workspaceRoleOptions: Array<{ value: WorkspaceRole; label: string }> = [
   { value: 'admin', label: 'Admin' },
@@ -17,15 +18,15 @@ export const workspaceRoleOptions: Array<{ value: WorkspaceRole; label: string }
   { value: 'viewer', label: 'Viewer' },
 ];
 
-export function useOrgMembers(orgId: string, enabled = true) {
+export function useOrgMembers(orgId: string, { enabled = true }: EnabledQueryOptions = {}) {
   return useListOrgUsers(orgId, { query: { enabled, queryKey: getListOrgUsersQueryKey(orgId) } });
 }
 
-export function useWorkspaceMembers(orgId: string, workspaceRef: string, enabled = true) {
+export function useWorkspaceMembers(orgId: string, workspaceRef: string, { enabled = true }: EnabledQueryOptions = {}) {
   return useListMembers(orgId, workspaceRef, { query: { enabled, queryKey: getListMembersQueryKey(orgId, workspaceRef) } });
 }
 
-export function useWorkspaceMemberCandidates(orgId: string, workspaceRef: string, enabled = true) {
+export function useWorkspaceMemberCandidates(orgId: string, workspaceRef: string, { enabled = true }: EnabledQueryOptions = {}) {
   return useListMemberCandidates(orgId, workspaceRef, { query: { enabled, queryKey: getListMemberCandidatesQueryKey(orgId, workspaceRef) } });
 }
 

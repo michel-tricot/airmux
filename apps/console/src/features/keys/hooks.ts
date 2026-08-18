@@ -14,11 +14,13 @@ import {
   type ListInstanceAccessKeysParams,
   type ListOrgAccessKeysParams,
 } from '@workspace/api-client-react';
-export function useInstanceAccessKeys(params?: ListInstanceAccessKeysParams, enabled = true) {
+import type { EnabledQueryOptions } from '@/features/query-options';
+
+export function useInstanceAccessKeys(params?: ListInstanceAccessKeysParams, { enabled = true }: EnabledQueryOptions = {}) {
   return useListInstanceAccessKeys(params, { query: { enabled, queryKey: getListInstanceAccessKeysQueryKey(params) } });
 }
 
-export function useOrgAccessKeys(orgId: string, params?: ListOrgAccessKeysParams, enabled = true) {
+export function useOrgAccessKeys(orgId: string, params?: ListOrgAccessKeysParams, { enabled = true }: EnabledQueryOptions = {}) {
   return useListOrgAccessKeys(orgId, params, { query: { enabled, queryKey: getListOrgAccessKeysQueryKey(orgId, params) } });
 }
 
@@ -62,7 +64,7 @@ export function useRevokeOrgAccessKeyMutation(orgId: string, params?: ListOrgAcc
   });
 }
 
-export function useInferenceKeys(orgId: string, workspaceRef: string, enabled = true) {
+export function useInferenceKeys(orgId: string, workspaceRef: string, { enabled = true }: EnabledQueryOptions = {}) {
   return useListInferenceKeys(orgId, workspaceRef, { query: { enabled, queryKey: getListInferenceKeysQueryKey(orgId, workspaceRef) } });
 }
 

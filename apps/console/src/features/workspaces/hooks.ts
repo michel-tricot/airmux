@@ -8,12 +8,13 @@ import {
   getListWorkspacesQueryKey,
   getGetWorkspaceQueryKey,
 } from '@workspace/api-client-react';
+import type { EnabledQueryOptions } from '@/features/query-options';
 
-export function useWorkspaces(orgId: string, enabled = true) {
+export function useWorkspaces(orgId: string, { enabled = true }: EnabledQueryOptions = {}) {
   return useListWorkspaces(orgId, { query: { enabled, queryKey: getListWorkspacesQueryKey(orgId) } });
 }
 
-export function useWorkspace(orgId: string, workspaceRef: string, enabled = true) {
+export function useWorkspace(orgId: string, workspaceRef: string, { enabled = true }: EnabledQueryOptions = {}) {
   return useGetWorkspace(orgId, workspaceRef, { query: { enabled, queryKey: getGetWorkspaceQueryKey(orgId, workspaceRef), retry: false } });
 }
 

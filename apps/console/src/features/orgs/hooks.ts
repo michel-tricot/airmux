@@ -12,12 +12,13 @@ import {
   getMeQueryKey,
   type OrgOut,
 } from '@workspace/api-client-react';
+import type { EnabledQueryOptions } from '@/features/query-options';
 
-export function useOrgs(enabled = true) {
+export function useOrgs({ enabled = true }: EnabledQueryOptions = {}) {
   return useListOrgs({ query: { enabled, queryKey: getListOrgsQueryKey() } });
 }
 
-export function useOrg(orgId: string, enabled = true) {
+export function useOrg(orgId: string, { enabled = true }: EnabledQueryOptions = {}) {
   return useGetOrg(orgId, { query: { enabled, queryKey: getGetOrgQueryKey(orgId) } });
 }
 

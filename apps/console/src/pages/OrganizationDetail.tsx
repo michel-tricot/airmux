@@ -34,7 +34,7 @@ export default function OrganizationDetail() {
   const instanceAuthorization = useAuthorization('instance');
   const authorization = useScopedAuthorization({ level: 'org', orgId });
   const canReadOrg = authorization.can(orgAccess.read);
-  const orgQuery = useOrg(orgId, canReadOrg);
+  const orgQuery = useOrg(orgId, { enabled: canReadOrg });
   const org = orgQuery.data;
   const canListWorkspaces = authorization.can(workspaceAccess.list);
   const canCreateWorkspace = authorization.can(workspaceAccess.create);
@@ -47,10 +47,10 @@ export default function OrganizationDetail() {
   const canDelete = authorization.can(orgAccess.delete);
 
   const canListUsers = instanceAuthorization.can(userAccess.list);
-  const workspacesQuery = useWorkspaces(orgId, canListWorkspaces);
-  const keysQuery = useOrgAccessKeys(orgId, undefined, canReadKeys);
-  const membersQuery = useOrgMembers(orgId, canReadMembers);
-  const usersQuery = useUsers(canListUsers);
+  const workspacesQuery = useWorkspaces(orgId, { enabled: canListWorkspaces });
+  const keysQuery = useOrgAccessKeys(orgId, undefined, { enabled: canReadKeys });
+  const membersQuery = useOrgMembers(orgId, { enabled: canReadMembers });
+  const usersQuery = useUsers({ enabled: canListUsers });
   const users = usersQuery.data;
   const usersById = new Map(users?.map((user) => [user.id, user]));
   const members = membersQuery.data;

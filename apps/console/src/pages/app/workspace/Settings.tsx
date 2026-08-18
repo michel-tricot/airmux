@@ -47,8 +47,8 @@ function WorkspaceSettingsContent({ workspaceRef }: { workspaceRef: string }) {
   const [inviteOpen, setInviteOpen] = useState(false);
   const [invitationUrl, setInvitationUrl] = useState<string | null>(null);
 
-  const membersQuery = useWorkspaceMembers(orgId, workspaceRef, canReadMembers);
-  const candidatesQuery = useWorkspaceMemberCandidates(orgId, workspaceRef, canListCandidates);
+  const membersQuery = useWorkspaceMembers(orgId, workspaceRef, { enabled: canReadMembers });
+  const candidatesQuery = useWorkspaceMemberCandidates(orgId, workspaceRef, { enabled: canListCandidates });
   const members = membersQuery.data;
   const candidates = candidatesQuery.data;
 

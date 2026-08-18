@@ -37,12 +37,12 @@ export default function AppOrgSettings() {
   const canRevokeInvitations = authorization.can(orgMemberAccess.revokeInvitation);
   const canReadActivity = authorization.can(telemetryAccess.orgActivity);
 
-  const keysQuery = useOrgAccessKeys(orgId, undefined, canReadKeys);
-  const bundlesQuery = useBundles(orgId, canReadBundles);
-  const membersQuery = useOrgMembers(orgId, canReadMembers);
-  const activityQuery = useOrgActivity(orgId, { limit: 50 }, canReadActivity);
-  const workspacesQuery = useWorkspaces(orgId, canListInvitations || canCreateInvitations);
-  const invitationsQuery = useInvitations(orgId, canListInvitations);
+  const keysQuery = useOrgAccessKeys(orgId, undefined, { enabled: canReadKeys });
+  const bundlesQuery = useBundles(orgId, { enabled: canReadBundles });
+  const membersQuery = useOrgMembers(orgId, { enabled: canReadMembers });
+  const activityQuery = useOrgActivity(orgId, { limit: 50 }, { enabled: canReadActivity });
+  const workspacesQuery = useWorkspaces(orgId, { enabled: canListInvitations || canCreateInvitations });
+  const invitationsQuery = useInvitations(orgId, { enabled: canListInvitations });
   const members = membersQuery.data;
 
   const [keyOpen, setKeyOpen] = useState(false);
