@@ -6,9 +6,19 @@ import respx
 from typer.testing import CliRunner
 
 from cli.main import app
-from cli.profiles import upsert_profile
+from cli.profiles import active_profile, upsert_profile
 
 runner = CliRunner()
+
+
+@pytest.mark.parametrize("split_option", ["--control-plane-url", "--console-url"])
+def test_login_url_is_exclusive_with_split_urls(split_option):
+    result = runner.invoke(app, ["login", "--url", "https://airllm.example.com", split_option, "https://other.example.com"])
+
+    assert result.exit_code == 2
+    assert "--url cannot be combined" in result.output
+    assert "--control-plane-url" in result.output
+    assert "--console-url" in result.output
 
 
 @pytest.mark.parametrize(
@@ -58,7 +68,11 @@ def test_login_only_presents_the_current_control_planes_existing_key(tmp_path, m
         )
     )
 
-    result = runner.invoke(app, ["login", "--control-plane-url", "https://cp.example", "--no-browser"])
+    result = runner.invoke(app, ["login", "--url", "https://cp.example", "--no-browser"])
 
     assert result.exit_code == 0, result.output
     assert poll.calls.last.request.headers.get("authorization") == expected_authorization
+    profile = active_profile()
+    assert profile is not None
+    assert profile["control_plane_url"] == "https://cp.example"
+    assert profile["console_url"] == "https://cp.example"

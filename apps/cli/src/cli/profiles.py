@@ -4,6 +4,7 @@ import os
 import tomllib
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit
 
 import tomli_w
 
@@ -44,6 +45,37 @@ def upsert_profile(name: str, values: dict[str, Any], *, activate: bool = True) 
     profiles[name] = values
     updated = {**config, "profiles": profiles, **({"active": name} if activate else {})}
     save_config(updated)
+
+
+def upsert_url_profile(name: str, values: dict[str, Any], *, activate: bool = True) -> str:
+    config = load_config()
+    profiles = dict(config.get("profiles") or {})
+    control_plane_url = str(values.get("control_plane_url", "")).rstrip("/")
+    matching = next(
+        (
+            profile_name
+            for profile_name, profile in profiles.items()
+            if (profile_name == name or profile.get("org_name") == name)
+            and str(profile.get("control_plane_url", "")).rstrip("/") == control_plane_url
+        ),
+        None,
+    )
+    if matching is not None:
+        profile_name = matching
+    elif name not in profiles:
+        profile_name = name
+    else:
+        host = urlsplit(control_plane_url).hostname or "deployment"
+        candidate = f"{name}@{host}"
+        suffix = 2
+        while candidate in profiles:
+            candidate = f"{name}@{host}-{suffix}"
+            suffix += 1
+        profile_name = candidate
+    updated_profiles = {**profiles, profile_name: values}
+    updated = {**config, "profiles": updated_profiles, **({"active": profile_name} if activate else {})}
+    save_config(updated)
+    return profile_name
 
 
 def set_active(name: str) -> None:

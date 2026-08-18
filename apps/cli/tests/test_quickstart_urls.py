@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from cli.auth import DEFAULT_CONSOLE_URL, resolve_urls
+from cli.auth import DEFAULT_CONSOLE_URL, resolve_login_urls, resolve_urls
 from cli.client import LOCAL_CONTROL_PLANE_URL, resolve_control_plane_url
 from cli.common import invocation
 
@@ -69,6 +69,14 @@ def test_explicit_urls_win_over_everything():
     assert resolve_urls("https://cp.example.com", "https://console.example.com") == (
         "https://cp.example.com",
         "https://console.example.com",
+    )
+
+
+@pytest.mark.usefixtures("_no_ambient_config")
+def test_login_url_uses_one_origin_for_the_control_plane_and_console():
+    assert resolve_login_urls("https://airllm.example.com/", "", "") == (
+        "https://airllm.example.com",
+        "https://airllm.example.com",
     )
 
 

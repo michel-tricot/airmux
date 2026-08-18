@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 from cli.client import api_error, ensure_ok, payload, resolve_control_plane_url
 from cli.common import SETUP, app, console, orgs_app
 from cli.output import Col, FormatOption, OutputFormat, print_rows
-from cli.profiles import DEFAULT_CONSOLE_URL, active_profile, config_path, load_config, set_active, upsert_profile
+from cli.profiles import DEFAULT_CONSOLE_URL, active_profile, config_path, load_config, set_active, upsert_url_profile
 
 MINE_COLS = [
     Col("id", "ID", style="dim", no_wrap=True),
@@ -57,6 +57,16 @@ def _step(done: str) -> None:
 def resolve_urls(control_plane_url: str, console_url: str) -> tuple[str, str]:
     """The control plane and the console, for the commands that print where the console lives."""
     return resolve_control_plane_url(control_plane_url), console_url or DEFAULT_CONSOLE_URL
+
+
+def resolve_login_urls(url: str, control_plane_url: str, console_url: str) -> tuple[str, str]:
+    if url and (control_plane_url or console_url):
+        msg = "--url cannot be combined with --control-plane-url or --console-url"
+        raise typer.BadParameter(msg)
+    if url:
+        normalized = url.rstrip("/")
+        return normalized, normalized
+    return resolve_urls(control_plane_url, console_url)
 
 
 class ProviderKey(NamedTuple):
@@ -176,7 +186,7 @@ def quickstart(  # noqa: PLR0913, PLR0917 flags are the command's interface
 
         bearer = {"authorization": f"Bearer {token}"}
         workspace = _payload_or_die(c.post(f"/api/v1/orgs/{org_id}/workspaces", json={"name": "default"}, headers=bearer), "workspace creation")
-        upsert_profile(
+        upsert_url_profile(
             org_name,
             {
                 "control_plane_url": url,
@@ -228,17 +238,18 @@ def quickstart(  # noqa: PLR0913, PLR0917 flags are the command's interface
 
 @app.command(rich_help_panel=SETUP)
 def login(
-    control_plane_url: str = "",
+    url: str = typer.Option("", "--url", help="URL serving both the control plane API and web console"),
+    control_plane_url: str = typer.Option("", help="Control plane API URL, for split development deployments"),
     no_browser: bool = typer.Option(False, "--no-browser", help="Print the URL instead of opening a browser"),
-    console_url: str = typer.Option("", help="Web console URL"),
+    console_url: str = typer.Option("", help="Web console URL, for split development deployments"),
 ) -> None:
     """Sign in through your browser. Creates an account and organization if you do not have one."""
     import httpx  # noqa: PLC0415 lazy import keeps CLI startup fast
 
-    url, console_url = resolve_urls(control_plane_url, console_url)
+    control_plane_url, console_url = resolve_login_urls(url, control_plane_url, console_url)
     client_name = _client_name()
-    existing_access_key = _existing_access_key(url)
-    with httpx.Client(base_url=url, timeout=10.0) as c:
+    existing_access_key = _existing_access_key(control_plane_url)
+    with httpx.Client(base_url=control_plane_url, timeout=10.0) as c:
         started = _payload_or_die(c.post("/api/v1/auth/cli/start", json={"client_name": client_name}), "Starting sign-in")
         console.print(f"Confirm code [bold]{started['user_code']}[/bold] at {started['verification_url']}")
         if not no_browser:
@@ -256,17 +267,17 @@ def login(
                 raise typer.Exit(1)
             done = _payload_or_die(poll, "Sign-in")
             if done["status"] == "complete":
-                upsert_profile(
+                profile_name = upsert_url_profile(
                     done["org_name"],
                     {
-                        "control_plane_url": url,
+                        "control_plane_url": control_plane_url,
                         "console_url": console_url,
                         "org_id": done["org_id"],
                         "org_name": done["org_name"],
                         "token": done["token"],
                     },
                 )
-                console.print(f"Signed in to [bold]{done['org_name']}[/bold]. Saved to {config_path()}.")
+                console.print(f"Signed in to [bold]{done['org_name']}[/bold] as profile [bold]{profile_name}[/bold]. Saved to {config_path()}.")
                 return
     console.print("[red]Login timed out. Run [bold]airllm login[/bold] again.[/red]")
     raise typer.Exit(1)
@@ -283,7 +294,7 @@ def orgs_switch(name: str, control_plane_url: str = "") -> None:
         console.print(f"Switched to [bold]{name}[/bold]")
         return
     console.print(f"Not signed in to [bold]{name}[/bold]. Opening browser login, pick [bold]{name}[/bold] to approve.")
-    login(control_plane_url=control_plane_url)
+    login(url="", control_plane_url=control_plane_url, no_browser=False, console_url="")
     active = load_config().get("active")
     if active != name:
         console.print(f"[yellow]You approved [bold]{active}[/bold], not {name}. It is now active.[/yellow]")
