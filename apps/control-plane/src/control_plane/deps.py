@@ -6,8 +6,8 @@ from uuid import UUID
 from fastapi import Cookie, Depends, HTTPException, Request, params
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
-from control_plane.authority import decision, effective_permissions
-from control_plane.authz import ALL_PERMISSIONS, Actor, Decision, Grant, Permission, Scope
+from control_plane.authority import effective_permissions
+from control_plane.authz import ALL_PERMISSIONS, Actor, Grant, Permission, Scope
 from control_plane.db import transaction
 from control_plane.keys import verify_bearer
 from control_plane.models import Org, User, Workspace, set_actor
@@ -18,7 +18,7 @@ RequestedWith = Annotated[str | None, params.Header(alias="X-Requested-With", in
 FetchSite = Annotated[str | None, params.Header(alias="Sec-Fetch-Site", include_in_schema=False)]
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterator, Awaitable, Callable
+    from collections.abc import AsyncIterator, Awaitable, Callable, Sequence
 
     from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -168,46 +168,34 @@ async def permission_scope(org_id: UUID | None = None, workspace_ref: str | None
 PermissionScopeDep = Annotated[Scope, Depends(permission_scope)]
 
 
-async def authorize(resolved: Actor, permission: Permission, scope: Scope) -> None:
-    result = await decision(resolved, permission, scope)
-    if result is not Decision.allow:
-        raise HTTPException(status_code=403, detail=f"Missing {permission.value} permission for {scope.level.value} scope")
-
-
 class PermissionCheck(Protocol):
-    required_permission: Permission
     required_permissions: tuple[Permission, ...]
     required_scope: str
 
     def __call__(self, actor: Actor) -> Awaitable[None]: ...
 
 
-def require(permission: Permission, scope_resolver: Callable[..., Awaitable[Scope]]) -> params.Depends:
-    scope_dependency = Depends(scope_resolver)
-
-    async def check_permission(resolved: ActorDep, scope: Scope = scope_dependency) -> None:
-        await authorize(resolved, permission, scope)
-
-    checker = cast("PermissionCheck", check_permission)
-    checker.required_permission = permission
-    checker.required_permissions = (permission,)
-    scope_name = getattr(scope_resolver, "__name__", "")
-    checker.required_scope = scope_name if isinstance(scope_name, str) else type(scope_resolver).__name__
-    return Depends(checker)
-
-
-def require_any(permissions: tuple[Permission, ...], scope_resolver: Callable[..., Awaitable[Scope]]) -> params.Depends:
+def require(permissions: Permission | Sequence[Permission], scope_resolver: Callable[..., Awaitable[Scope]]) -> params.Depends:
+    required = (permissions,) if isinstance(permissions, Permission) else tuple(permissions)
+    if not required:
+        detail = "at least one permission is required"
+        raise ValueError(detail)
     scope_dependency = Depends(scope_resolver)
 
     async def check_permission(resolved: ActorDep, scope: Scope = scope_dependency) -> None:
         effective = await effective_permissions(resolved, scope)
-        if not any(permission in effective for permission in permissions):
-            names = ", ".join(permission.value for permission in permissions)
-            raise HTTPException(status_code=403, detail=f"Missing one of {names} permissions for {scope.level.value} scope")
+        if any(permission in effective for permission in required):
+            return
+        names = ", ".join(permission.value for permission in required)
+        detail = (
+            f"Missing {names} permission for {scope.level.value} scope"
+            if len(required) == 1
+            else f"Missing one of {names} permissions for {scope.level.value} scope"
+        )
+        raise HTTPException(status_code=403, detail=detail)
 
     checker = cast("PermissionCheck", check_permission)
-    checker.required_permission = permissions[0]
-    checker.required_permissions = permissions
+    checker.required_permissions = required
     scope_name = getattr(scope_resolver, "__name__", "")
     checker.required_scope = scope_name if isinstance(scope_name, str) else type(scope_resolver).__name__
     return Depends(checker)

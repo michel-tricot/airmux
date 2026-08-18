@@ -7,7 +7,7 @@ from sqlmodel import col
 
 from control_plane.authority import readable_workspaces
 from control_plane.authz import Permission, WorkspaceRole
-from control_plane.deps import ActorDep, OrgDep, WorkspaceDep, org_scope, require, require_any, workspace_scope
+from control_plane.deps import ActorDep, OrgDep, WorkspaceDep, org_scope, require, workspace_scope
 from control_plane.keys import mint_inference_key
 from control_plane.models import InferenceKey, Org, OrgMembership, User, Workspace, WorkspaceMembership
 from control_plane.models.common.wire import DeletedOut, Envelope
@@ -39,7 +39,7 @@ async def create_workspace(body: WorkspaceCreate, org_id: OrgDep, actor: ActorDe
 @router.get(
     "",
     tags=["Organization Workspaces"],
-    dependencies=[require_any((Permission.workspaces_read, Permission.organizations_read), org_scope)],
+    dependencies=[require((Permission.workspaces_read, Permission.organizations_read), org_scope)],
 )
 async def list_workspaces(org_id: OrgDep, actor: ActorDep) -> Envelope[list[WorkspaceOut]]:
     """List workspaces the caller can read in an organization."""

@@ -13,13 +13,13 @@ from control_plane.authz import Permission
 
 
 def _markers(route) -> list[str]:
-    permissions = [
-        str(permission)
+    permission_rules = [
+        tuple(str(permission) for permission in permissions)
         for dependency in route.dependant.dependencies
-        if (permission := getattr(dependency.call, "required_permission", None)) is not None
+        if (permissions := getattr(dependency.call, "required_permissions", None)) is not None
     ]
     access = [access for dependency in route.dependant.dependencies if (access := getattr(dependency.call, "access", None)) is not None]
-    return [*permissions, *access]
+    return [*(", ".join(rule) for rule in permission_rules), *access]
 
 
 def test_every_route_declares_one_authorization_rule_and_every_permission_names_a_scope():
@@ -28,7 +28,7 @@ def test_every_route_declares_one_authorization_rule_and_every_permission_names_
         for method in sorted(route.methods or ()):
             if len(_markers(route)) != 1:
                 problems.append(f"{method} {route.path} carries {len(_markers(route))} authorization markers")
-            permission_checks = [dependency.call for dependency in route.dependant.dependencies if hasattr(dependency.call, "required_permission")]
+            permission_checks = [dependency.call for dependency in route.dependant.dependencies if hasattr(dependency.call, "required_permissions")]
             if permission_checks and not all(getattr(check, "required_scope", "") for check in permission_checks):
                 problems.append(f"{method} {route.path} has a permission without a tenant scope")
     assert problems == []
@@ -90,14 +90,9 @@ def test_spec_advertises_the_enforced_permission():
     problems = []
     for route in _api_routes(app):
         enforced = [
-            str(permission)
+            tuple(str(permission) for permission in permissions)
             for dependency in route.dependant.dependencies
-            if (permission := getattr(dependency.call, "required_permission", None)) is not None
-        ]
-        alternatives = [
-            tuple(str(permission) for permission in getattr(dependency.call, "required_permissions", ()))
-            for dependency in route.dependant.dependencies
-            if len(getattr(dependency.call, "required_permissions", ())) > 1
+            if (permissions := getattr(dependency.call, "required_permissions", None)) is not None
         ]
         access = [access for dependency in route.dependant.dependencies if (access := getattr(dependency.call, "access", None)) is not None]
         for method in sorted(route.methods or ()):
@@ -106,10 +101,10 @@ def test_spec_advertises_the_enforced_permission():
             if enforced and operation.get("security") != [{"AccessKey": []}, {"SessionCookie": []}]:
                 problems.append(f"{method} {route.path} does not advertise bearer-or-cookie authentication")
             documented = (
-                f"Required permission: one of `{'`, `'.join(alternatives[0])}`."
-                if alternatives
-                else f"Required permission: `{enforced[0]}`."
-                if enforced
+                f"Required permission: one of `{'`, `'.join(enforced[0])}`."
+                if enforced and len(enforced[0]) > 1
+                else f"Required permission: `{enforced[0][0]}`."
+                if enforced and enforced[0]
                 else ""
             )
             if enforced and documented not in description:

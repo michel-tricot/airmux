@@ -257,9 +257,7 @@ class ControlPlaneApp(FastAPI):
         }
         for route in _api_routes(self.routes):
             permission_rules = [
-                getattr(dependency.call, "required_permissions", (permission,))
-                for dependency in route.dependant.dependencies
-                if (permission := getattr(dependency.call, "required_permission", None))
+                permissions for dependency in route.dependant.dependencies if (permissions := getattr(dependency.call, "required_permissions", None))
             ]
             permissions = [str(permission) for rule in permission_rules for permission in rule]
             access = [kind for dependency in route.dependant.dependencies if (kind := getattr(dependency.call, "access", None)) is not None]
