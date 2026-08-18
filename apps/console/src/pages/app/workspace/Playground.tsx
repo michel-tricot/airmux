@@ -388,9 +388,9 @@ function Playground({ orgId, workspaceRef }: { orgId: string; workspaceRef: stri
               </div>
             )}
             {error && (
-              <Alert variant="destructive" className="border-destructive/30 bg-destructive/5">
-                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
-                <AlertTitle>Request failed</AlertTitle>
+              <Alert variant="destructive" className="items-center border-destructive/30 bg-destructive/5 [&>svg]:mt-0">
+                <AlertCircle className="h-4 w-4 shrink-0 text-destructive" />
+                <AlertTitle className="mb-0 shrink-0">Request failed</AlertTitle>
                 <AlertDescription className="font-mono text-[11px]">{error}</AlertDescription>
               </Alert>
             )}
@@ -410,7 +410,7 @@ function Playground({ orgId, workspaceRef }: { orgId: string; workspaceRef: stri
                   }
                 }}
                 placeholder="Send a message... (Shift+Enter for newline)"
-                className="permission-scrollbar max-h-40 min-h-[2.75rem] flex-1 resize-none text-sm"
+                className="permission-scrollbar max-h-40 min-h-[2.75rem] flex-1 resize-none py-2.5 text-sm leading-5"
                 rows={1}
               />
               <div className="flex shrink-0 gap-1.5">

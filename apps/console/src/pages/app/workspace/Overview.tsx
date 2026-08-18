@@ -78,6 +78,7 @@ export default function WorkspaceOverview() {
   const costUsd = events?.reduce((sum, event) => sum + event.cost_usd, 0);
   const recent = events?.slice(0, 8);
   const keyLabels = new Map(keysQuery.data?.map((key) => [key.id, key.label] as const) ?? []);
+  const describeKey = (keyId: string) => keyLabels.get(keyId) ?? (canReadKeys && keysQuery.isSuccess ? 'Playground' : null);
 
   const topModels = events
     ? [...new Set(events.map((event) => event.model_id))]
@@ -232,7 +233,12 @@ export default function WorkspaceOverview() {
                     key: 'key',
                     header: 'Key',
                     cellClassName: 'text-xs',
-                    cell: (e) => keyLabels.get(e.key_id) ?? <span className="font-mono text-muted-foreground">{e.key_id}</span>,
+                    cell: (e) => {
+                      const label = describeKey(e.key_id);
+                      if (label) return label;
+                      if (canReadKeys && keysQuery.isLoading) return <span className="text-muted-foreground">...</span>;
+                      return <span className="font-mono text-muted-foreground">{e.key_id}</span>;
+                    },
                   },
                   {
                     key: 'tokens',
