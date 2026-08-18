@@ -71,6 +71,48 @@ def test_a_credential_keeps_its_value_out_of_the_api(tmp_path):
         assert _stored(cp, credential) == KEY
 
 
+def test_an_instance_credential_can_be_created_and_listed(tmp_path):
+    cp = setup_control_plane(tmp_path)
+    with TestClient(cp.app) as c:
+        root = cp.headers()
+        _catalog(c, root)
+        response = c.post(
+            "/api/v1/instance/provider-credentials",
+            json={"provider": "openai", "name": "platform", "value": KEY, "priority": 10},
+            headers=root,
+        )
+
+        assert response.status_code == 200, response.text
+        credential = response.json()["data"]
+        assert KEY not in response.text
+        assert credential["scope"] == "platform"
+        assert credential["org_id"] is None
+        assert credential["workspace_id"] is None
+        assert credential["status"] == "unknown"
+        assert _stored(cp, credential) == KEY
+
+        listed = c.get("/api/v1/instance/provider-credentials", headers=root)
+        assert listed.status_code == 200, listed.text
+        assert [(item["id"], item["status"]) for item in listed.json()["data"]] == [(credential["id"], "unknown")]
+
+
+def test_instance_provider_credentials_exclude_tenant_credentials(tmp_path):
+    cp = setup_control_plane(tmp_path)
+    with TestClient(cp.app) as c:
+        root = cp.headers()
+        _catalog(c, root)
+        org = cp.headers(make_org(c, root))
+        c.post(_collection(org), json={"provider": "openai", "name": "tenant", "value": KEY}, headers=org)
+        c.post(
+            "/api/v1/instance/provider-credentials",
+            json={"provider": "openai", "name": "platform", "value": KEY},
+            headers=root,
+        )
+
+        listed = c.get("/api/v1/instance/provider-credentials", headers=root).json()["data"]
+        assert [(credential["scope"], credential["name"]) for credential in listed] == [("platform", "platform")]
+
+
 def test_a_workspace_brings_its_own_key(tmp_path):
     cp = setup_control_plane(tmp_path)
     with TestClient(cp.app) as c:

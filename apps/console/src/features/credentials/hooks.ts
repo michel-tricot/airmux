@@ -1,15 +1,38 @@
 import { useQueryClient } from '@tanstack/react-query';
 import {
+  useListInstanceProviderCredentials,
+  useCreateInstanceProviderCredential,
   useListWorkspaceProviderCredentials,
   useCreateWorkspaceProviderCredential,
   useRotateProviderCredential,
   useUpdateProviderCredential,
   useDeleteProviderCredential,
+  useGetInstanceTaxonomy,
   useGetWorkspaceTaxonomy,
+  getListInstanceProviderCredentialsQueryKey,
   getListWorkspaceProviderCredentialsQueryKey,
+  getGetInstanceTaxonomyQueryKey,
   getGetWorkspaceTaxonomyQueryKey,
 } from '@workspace/api-client-react';
 import type { EnabledQueryOptions } from '@/features/query-options';
+
+export function useInstanceProviderCredentials({ enabled = true }: EnabledQueryOptions = {}) {
+  return useListInstanceProviderCredentials({ query: { enabled, queryKey: getListInstanceProviderCredentialsQueryKey() } });
+}
+
+export function useInstanceProviders({ enabled = true }: EnabledQueryOptions = {}) {
+  return useGetInstanceTaxonomy({ query: { enabled, queryKey: getGetInstanceTaxonomyQueryKey() } });
+}
+
+export function useAddInstanceCredentialMutation() {
+  const queryClient = useQueryClient();
+  return useCreateInstanceProviderCredential({
+    mutation: {
+      onSuccess: () => queryClient.invalidateQueries({ queryKey: getListInstanceProviderCredentialsQueryKey() }),
+      meta: { errorMessage: 'We couldn’t store the key. Please try again.' },
+    },
+  });
+}
 
 export function useProviderCredentials(orgId: string, workspaceRef: string, { enabled = true }: EnabledQueryOptions = {}) {
   return useListWorkspaceProviderCredentials(orgId, workspaceRef, {

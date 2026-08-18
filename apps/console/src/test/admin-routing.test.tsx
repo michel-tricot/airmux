@@ -34,6 +34,37 @@ const ACCESS_KEY = {
   updated_at: now,
   deleted_at: null,
 };
+const PROVIDER = {
+  id: 'provider-1',
+  name: 'openai',
+  kind: 'openai_compatible',
+  base_url: 'https://api.openai.com/v1',
+  icon: '',
+  param_aliases: {},
+  accepted_params: null,
+  params_closed: false,
+  created_at: now,
+  updated_at: now,
+  deleted_at: null,
+};
+const PROVIDER_CREDENTIAL = {
+  id: 'provider-credential-1',
+  org_id: null,
+  workspace_id: null,
+  provider_id: PROVIDER.id,
+  provider_name: PROVIDER.name,
+  name: 'platform',
+  priority: 100,
+  enabled: true,
+  version: 1,
+  status: 'unknown',
+  status_at: null,
+  fingerprint: '1234',
+  created_at: now,
+  updated_at: now,
+  deleted_at: null,
+  scope: 'platform',
+};
 
 function installAdminHandlers() {
   server.use(
@@ -45,6 +76,8 @@ function installAdminHandlers() {
     http.get('/api/v1/users', () => HttpResponse.json([USER])),
     http.get('/api/v1/users/:userId', () => HttpResponse.json(USER)),
     http.get('/api/v1/instance/access-keys', () => HttpResponse.json([ACCESS_KEY])),
+    http.get('/api/v1/instance/taxonomy', () => HttpResponse.json({ providers: [PROVIDER], models: [] })),
+    http.get('/api/v1/instance/provider-credentials', () => HttpResponse.json([PROVIDER_CREDENTIAL])),
     http.get('/api/v1/instance/data-planes', () =>
       HttpResponse.json([
         {
@@ -84,9 +117,42 @@ describe('instance administration routes', () => {
     ['/instance/users', 'Global Users'],
     [`/instance/users/${USER.id}`, USER.name],
     ['/instance/keys', 'Access Keys'],
+    ['/instance/provider-keys', 'Provider Keys'],
   ])('renders %s', async (path, heading) => {
     renderAt(path);
     expect(await screen.findByRole('heading', { level: 1, name: heading })).toBeInTheDocument();
+  });
+
+  it('creates an instance provider key and shows its status', async () => {
+    let submitted: unknown;
+    server.use(
+      http.post('/api/v1/instance/provider-credentials', async ({ request }) => {
+        submitted = await request.json();
+        return HttpResponse.json({ ...PROVIDER_CREDENTIAL, name: 'backup', priority: 200 });
+      }),
+      http.get('/api/v1/instance/provider-credentials', () =>
+        HttpResponse.json(
+          submitted
+            ? [PROVIDER_CREDENTIAL, { ...PROVIDER_CREDENTIAL, id: 'provider-credential-2', name: 'backup', priority: 200 }]
+            : [PROVIDER_CREDENTIAL],
+        ),
+      ),
+    );
+    const user = userEvent.setup();
+    renderAt('/instance/provider-keys');
+
+    expect(await screen.findByText('UNUSED')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Add Key' }));
+    const dialog = screen.getByRole('dialog', { name: 'Add Provider Key' });
+    await user.clear(within(dialog).getByLabelText('Name'));
+    await user.type(within(dialog).getByLabelText('Name'), 'backup');
+    await user.type(within(dialog).getByLabelText('API key'), 'sk-provider-secret');
+    await user.clear(within(dialog).getByLabelText('Priority'));
+    await user.type(within(dialog).getByLabelText('Priority'), '200');
+    await user.click(within(dialog).getByRole('button', { name: 'Add Key' }));
+
+    await waitFor(() => expect(submitted).toEqual({ provider: 'openai', name: 'backup', value: 'sk-provider-secret', priority: 200 }));
+    expect(await screen.findByText('backup')).toBeInTheDocument();
   });
 
   it('surfaces list failures instead of empty state copy', async () => {
@@ -182,6 +248,19 @@ describe('instance administration routes', () => {
 
     expect(await screen.findByRole('heading', { name: 'Organizations' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'New Organization' })).not.toBeInTheDocument();
+  });
+
+  it('lets instance auditors inspect provider key status without creating keys', async () => {
+    server.use(
+      http.get('/api/v1/auth/me', () =>
+        HttpResponse.json({ user_id: USER.id, email: USER.email, name: USER.name, instance_role: 'auditor', orgs: USER.orgs }),
+      ),
+      http.get('/api/v1/auth/permissions', () => HttpResponse.json({ permissions: ['catalog.read', 'provider-credentials.read'] })),
+    );
+    renderAt('/instance/provider-keys');
+
+    expect(await screen.findByText('UNUSED')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Add Key' })).not.toBeInTheDocument();
   });
 
   it('hides management routes from data-plane principals without requesting protected resources', async () => {

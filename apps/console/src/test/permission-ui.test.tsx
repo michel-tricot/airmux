@@ -107,6 +107,16 @@ describe('permission-aware organization console', () => {
     expect(screen.queryByRole('button', { name: /delete/i })).not.toBeInTheDocument();
   });
 
+  it('explains the global provider key fallback when a workspace has no key', async () => {
+    installPermissionHandler(WORKSPACE_MEMBER_PERMISSIONS);
+
+    renderAt(`/org/workspaces/${WORKSPACES[0].slug}/byok`);
+
+    expect(
+      await screen.findByText('No workspace keys configured. Requests use organization provider keys when available, then global provider keys.'),
+    ).toBeInTheDocument();
+  });
+
   it('renders inference keys read-only for workspace viewers', async () => {
     installPermissionHandler(WORKSPACE_VIEWER_PERMISSIONS);
     server.use(

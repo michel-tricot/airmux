@@ -4251,6 +4251,160 @@ export const useRevokeInferenceKey = <TError = ErrorType<void | HTTPValidationEr
       return useMutation(getRevokeInferenceKeyMutationOptions(options));
     }
 
+export const getListInstanceProviderCredentialsUrl = () => {
+
+
+
+
+  return `/api/v1/instance/provider-credentials`
+}
+
+/**
+ * List provider credentials owned by the instance.
+ *
+ * Required permission: `provider-credentials.read`.
+ * @summary List Instance Provider Credentials
+ */
+export const listInstanceProviderCredentials = async ( options?: Parameters<typeof customFetch>[1]): Promise<ProviderCredentialOut[]> => {
+
+  return customFetch<ProviderCredentialOut[]>(getListInstanceProviderCredentialsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListInstanceProviderCredentialsQueryKey = () => {
+    return [
+    `/api/v1/instance/provider-credentials`
+    ] as const;
+    }
+
+
+export const getListInstanceProviderCredentialsQueryOptions = <TData = Awaited<ReturnType<typeof listInstanceProviderCredentials>>, TError = ErrorType<void | HTTPValidationError>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listInstanceProviderCredentials>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListInstanceProviderCredentialsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listInstanceProviderCredentials>>> = ({ signal }) => listInstanceProviderCredentials({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listInstanceProviderCredentials>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListInstanceProviderCredentialsQueryResult = NonNullable<Awaited<ReturnType<typeof listInstanceProviderCredentials>>>
+export type ListInstanceProviderCredentialsQueryError = ErrorType<void | HTTPValidationError>
+
+
+/**
+ * @summary List Instance Provider Credentials
+ */
+
+export function useListInstanceProviderCredentials<TData = Awaited<ReturnType<typeof listInstanceProviderCredentials>>, TError = ErrorType<void | HTTPValidationError>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listInstanceProviderCredentials>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListInstanceProviderCredentialsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateInstanceProviderCredentialUrl = () => {
+
+
+
+
+  return `/api/v1/instance/provider-credentials`
+}
+
+/**
+ * Store a provider API key available to every organization on the instance.
+ *
+ * Required permission: `provider-credentials.manage`.
+ * @summary Create Instance Provider Credential
+ */
+export const createInstanceProviderCredential = async (providerCredentialIn: ProviderCredentialIn, options?: Parameters<typeof customFetch>[1]): Promise<ProviderCredentialOut> => {
+
+  return customFetch<ProviderCredentialOut>(getCreateInstanceProviderCredentialUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(providerCredentialIn)
+  }
+);}
+
+
+
+
+
+export const getCreateInstanceProviderCredentialMutationOptions = <TError = ErrorType<void | HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createInstanceProviderCredential>>, TError,{data: BodyType<ProviderCredentialIn>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createInstanceProviderCredential>>, TError,{data: BodyType<ProviderCredentialIn>}, TContext> => {
+
+const mutationKey = ['createInstanceProviderCredential'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createInstanceProviderCredential>>, {data: BodyType<ProviderCredentialIn>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createInstanceProviderCredential(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateInstanceProviderCredentialMutationResult = NonNullable<Awaited<ReturnType<typeof createInstanceProviderCredential>>>
+    export type CreateInstanceProviderCredentialMutationBody = BodyType<ProviderCredentialIn>
+    export type CreateInstanceProviderCredentialMutationError = ErrorType<void | HTTPValidationError>
+
+    /**
+ * @summary Create Instance Provider Credential
+ */
+export const useCreateInstanceProviderCredential = <TError = ErrorType<void | HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createInstanceProviderCredential>>, TError,{data: BodyType<ProviderCredentialIn>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createInstanceProviderCredential>>,
+        TError,
+        {data: BodyType<ProviderCredentialIn>},
+        TContext
+      > => {
+      return useMutation(getCreateInstanceProviderCredentialMutationOptions(options));
+    }
+
 export const getCreateOrgProviderCredentialUrl = (orgId: string,) => {
 
 
