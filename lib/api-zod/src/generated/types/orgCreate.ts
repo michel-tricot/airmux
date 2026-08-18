@@ -18,4 +18,10 @@ export interface OrgCreate {
      * @maxLength 200
      */
   name: string;
+  /**
+     * Organization handle, globally unique and usable in place of the id; derived from the name when omitted
+     * @maxLength 63
+     * @pattern ^[a-z0-9]+(?:-[a-z0-9]+)*$
+     */
+  slug?: string;
 }

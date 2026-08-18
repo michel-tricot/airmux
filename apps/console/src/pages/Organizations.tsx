@@ -10,7 +10,8 @@ import { FormDialog } from '@/components/shared/form-dialog';
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group';
 import { PageShell } from '@/components/shared/page-shell';
-import { hasPermission, useEffectivePermissions } from '@/features/permissions/hooks';
+import { useAuthorization } from '@/features/permissions/hooks';
+import { orgAccess } from '@/features/orgs/policy';
 
 const createOrgSchema = z.object({ name: z.string().min(1, 'Name is required') });
 
@@ -20,8 +21,8 @@ export default function Organizations() {
   const [search, setSearch] = useState('');
   const [createOpen, setCreateOpen] = useState(false);
   const createOrg = useCreateOrgMutation();
-  const permissionsQuery = useEffectivePermissions({});
-  const canCreate = hasPermission(permissionsQuery.data?.permissions, 'organizations.create');
+  const authorization = useAuthorization('instance');
+  const canCreate = authorization.can(orgAccess.create);
 
   const filteredOrgs = orgs?.filter((o) => o.name.toLowerCase().includes(search.toLowerCase()));
 

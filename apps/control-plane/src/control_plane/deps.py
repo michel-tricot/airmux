@@ -105,10 +105,11 @@ async def cookie_user(
 CookieUserDep = Annotated[User, Depends(cookie_user)]
 
 
-async def selected_org(org_id: UUID) -> UUID:
-    if await Org.find_by_id(org_id) is None:
+async def selected_org(org_id: str) -> UUID:
+    org = await Org.by_ref(org_id)
+    if org is None:
         raise HTTPException(status_code=404, detail="Organization not found")
-    return org_id
+    return org.id
 
 
 OrgDep = Annotated[UUID, Depends(selected_org)]

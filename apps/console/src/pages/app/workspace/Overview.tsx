@@ -12,7 +12,11 @@ import { LoadingState, ErrorState } from '@/components/shared/states';
 import { DataTable } from '@/components/shared/data-table';
 import { useRequiredParam } from '@/lib/route';
 import { PageShell } from '@/components/shared/page-shell';
-import { hasPermission, useEffectivePermissions } from '@/features/permissions/hooks';
+import { useAuthorization } from '@/features/permissions/hooks';
+import { providerCredentialAccess } from '@/features/credentials/policy';
+import { inferenceKeyAccess } from '@/features/keys/policy';
+import { workspaceMemberAccess } from '@/features/members/policy';
+import { telemetryAccess } from '@/features/telemetry/policy';
 
 const EVENTS_WINDOW = 200;
 
@@ -49,12 +53,11 @@ export default function WorkspaceOverview() {
 
   const workspaceQuery = useWorkspace(orgId, workspaceRef);
   const workspace = workspaceQuery.data;
-  const permissionsQuery = useEffectivePermissions({ orgId, workspaceRef });
-  const permissions = permissionsQuery.data?.permissions;
-  const canReadMembers = hasPermission(permissions, 'members.read');
-  const canReadKeys = hasPermission(permissions, 'inference-keys.read');
-  const canReadCredentials = hasPermission(permissions, 'provider-credentials.read');
-  const canReadUsage = hasPermission(permissions, 'usage.read');
+  const authorization = useAuthorization('workspace');
+  const canReadMembers = authorization.can(workspaceMemberAccess.read);
+  const canReadKeys = authorization.can(inferenceKeyAccess.read);
+  const canReadCredentials = authorization.can(providerCredentialAccess.workspace.read);
+  const canReadUsage = authorization.can(telemetryAccess.workspaceUsage);
   const membersQuery = useWorkspaceMembers(orgId, workspaceRef, canReadMembers);
   const keysQuery = useInferenceKeys(orgId, workspaceRef, canReadKeys);
   const credentialsQuery = useProviderCredentials(orgId, workspaceRef, canReadCredentials);
@@ -63,9 +66,9 @@ export default function WorkspaceOverview() {
 
   if (workspaceQuery.isLoading) return <LoadingState label="Loading workspace..." />;
   if (workspaceQuery.isError) return <ErrorState error={workspaceQuery.error} resource="workspace" onRetry={() => workspaceQuery.refetch()} />;
-  if (permissionsQuery.isLoading) return <LoadingState label="Loading workspace permissions..." />;
-  if (permissionsQuery.isError)
-    return <ErrorState error={permissionsQuery.error} resource="workspace permissions" onRetry={() => permissionsQuery.refetch()} />;
+  if (authorization.isLoading) return <LoadingState label="Loading workspace permissions..." />;
+  if (authorization.isError)
+    return <ErrorState error={authorization.error} resource="workspace permissions" onRetry={() => authorization.refetch()} />;
   if (!workspace) return <ErrorState message="Workspace not found" />;
 
   const activeKeys = keysQuery.data?.filter((key) => !key.revoked).length;

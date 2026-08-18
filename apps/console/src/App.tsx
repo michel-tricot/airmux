@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react';
+import { lazy, Suspense, useEffect, useState, type ComponentType, type ReactNode } from 'react';
 import { hashKey, MutationCache, QueryCache, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
 import { ErrorBoundary } from '@/components/error-boundary';
@@ -10,13 +10,16 @@ import { Shell } from '@/components/layout/Shell';
 import '@/lib/api';
 import { ApiError } from '@workspace/api-client-react';
 import { getEnrollmentQueryKey, getMeQueryKey, useEnrollment } from '@workspace/api-client-react';
-import { SessionProvider, useSession } from '@/lib/session';
+import { SessionProvider, useRequiredOrgId, useSession } from '@/lib/session';
 import AppLayout from '@/components/layout/AppLayout';
 import Login from '@/pages/Login';
-import { Route as RouteIcon, ShieldCheck } from 'lucide-react';
 import { ErrorState, LoadingState } from '@/components/shared/states';
 import { isApiErrorStatus, isControlPlaneUnreachable } from '@/lib/errors';
 import { ControlPlaneDown } from '@/components/shared/control-plane-down';
+import { AuthorizationProvider, useAuthorization } from '@/features/permissions/hooks';
+import type { AccessPolicy } from '@/features/permissions/authorization';
+import { workspaceRoutes } from '@/pages/app/workspace/routes';
+import { useRequiredParam } from '@/lib/route';
 
 const Dashboard = lazy(() => import('@/pages/Dashboard'));
 const Organizations = lazy(() => import('@/pages/Organizations'));
@@ -31,12 +34,6 @@ const AppOrgPicker = lazy(() => import('@/pages/app/OrgPicker'));
 const AppDashboard = lazy(() => import('@/pages/app/Dashboard'));
 const AppModels = lazy(() => import('@/pages/app/Models'));
 const AppOrgSettings = lazy(() => import('@/pages/app/OrgSettings'));
-const WorkspaceOverview = lazy(() => import('@/pages/app/workspace/Overview'));
-const WorkspaceApiKeys = lazy(() => import('@/pages/app/workspace/ApiKeys'));
-const WorkspaceByok = lazy(() => import('@/pages/app/workspace/Byok'));
-const WorkspaceSettings = lazy(() => import('@/pages/app/workspace/Settings'));
-const WorkspaceComingSoon = lazy(() => import('@/pages/app/workspace/ComingSoon'));
-const WorkspacePlayground = lazy(() => import('@/pages/app/workspace/Playground'));
 
 function apiErrorDetail(error: unknown): string | undefined {
   if (!(error instanceof ApiError)) return undefined;
@@ -96,54 +93,68 @@ function AppSection() {
   if (!orgId || !enrollment.data.orgs.some((o) => o.id === orgId)) return <Redirect to="/orgs" />;
 
   return (
-    <AppLayout>
-      <RoutedErrorBoundary>
-        <Suspense fallback={<LoadingState label="Loading page..." />}>
-          <Switch>
-            <Route path="/org" component={AppDashboard} />
-            <Route path="/org/workspaces/:workspaceRef/playground" component={WorkspacePlayground} />
-            <Route path="/org/workspaces/:workspaceRef/keys" component={WorkspaceApiKeys} />
-            <Route path="/org/workspaces/:workspaceRef/byok" component={WorkspaceByok} />
-            <Route path="/org/workspaces/:workspaceRef/routing">
-              <WorkspaceComingSoon title="Routing" icon={RouteIcon} description="Model routing rules, fallbacks, and load balancing." />
-            </Route>
-            <Route path="/org/workspaces/:workspaceRef/policies">
-              <WorkspaceComingSoon
-                title="Policies"
-                icon={ShieldCheck}
-                description="Guardrails, rate limits, and usage policies for this workspace."
-              />
-            </Route>
-            <Route path="/org/workspaces/:workspaceRef/settings" component={WorkspaceSettings} />
-            <Route path="/org/workspaces/:workspaceRef" component={WorkspaceOverview} />
-            <Route path="/org/models" component={AppModels} />
-            <Route path="/org/settings" component={AppOrgSettings} />
-            <Route component={NotFound} />
-          </Switch>
-        </Suspense>
-      </RoutedErrorBoundary>
-    </AppLayout>
+    <AuthorizationProvider scope={{ level: 'org', orgId }}>
+      <AppLayout>
+        <RoutedErrorBoundary>
+          <Suspense fallback={<LoadingState label="Loading page..." />}>
+            <Switch>
+              <Route path="/org" component={AppDashboard} />
+              {workspaceRoutes.map(({ suffix, component, access }) => (
+                <Route key={suffix} path={`/org/workspaces/:workspaceRef${suffix}`}>
+                  <AuthorizedWorkspaceRoute component={component} access={access} />
+                </Route>
+              ))}
+              <Route path="/org/models" component={AppModels} />
+              <Route path="/org/settings" component={AppOrgSettings} />
+              <Route component={NotFound} />
+            </Switch>
+          </Suspense>
+        </RoutedErrorBoundary>
+      </AppLayout>
+    </AuthorizationProvider>
   );
+}
+
+function AuthorizedWorkspaceRoute({ component: Component, access }: { component: ComponentType; access: AccessPolicy }) {
+  const orgId = useRequiredOrgId();
+  const workspaceRef = useRequiredParam('workspaceRef');
+  return (
+    <AuthorizationProvider scope={{ level: 'workspace', orgId, workspaceRef }}>
+      <AuthorizedWorkspaceContent component={Component} access={access} />
+    </AuthorizationProvider>
+  );
+}
+
+function AuthorizedWorkspaceContent({ component: Component, access }: { component: ComponentType; access: AccessPolicy }) {
+  const authorization = useAuthorization('workspace');
+  if (authorization.isLoading) return <LoadingState label="Loading workspace permissions..." />;
+  if (authorization.isError) {
+    return <ErrorState error={authorization.error} resource="workspace permissions" onRetry={() => authorization.refetch()} />;
+  }
+  if (!authorization.can(access)) return <ErrorState message="You do not have access to this workspace page." />;
+  return <Component />;
 }
 
 function AdminSection() {
   return (
-    <Shell>
-      <RoutedErrorBoundary>
-        <Suspense fallback={<LoadingState label="Loading page..." />}>
-          <Switch>
-            <Route path="/instance" component={Dashboard} />
-            <Route path="/instance/organizations" component={Organizations} />
-            <Route path="/instance/organizations/:orgId" component={OrganizationDetail} />
-            <Route path="/instance/organizations/:orgId/workspaces/:workspaceRef" component={WorkspaceDetail} />
-            <Route path="/instance/users" component={Users} />
-            <Route path="/instance/users/:userId" component={UserDetail} />
-            <Route path="/instance/keys" component={AccessKeys} />
-            <Route component={NotFound} />
-          </Switch>
-        </Suspense>
-      </RoutedErrorBoundary>
-    </Shell>
+    <AuthorizationProvider scope={{ level: 'instance' }}>
+      <Shell>
+        <RoutedErrorBoundary>
+          <Suspense fallback={<LoadingState label="Loading page..." />}>
+            <Switch>
+              <Route path="/instance" component={Dashboard} />
+              <Route path="/instance/organizations" component={Organizations} />
+              <Route path="/instance/organizations/:orgId" component={OrganizationDetail} />
+              <Route path="/instance/organizations/:orgId/workspaces/:workspaceRef" component={WorkspaceDetail} />
+              <Route path="/instance/users" component={Users} />
+              <Route path="/instance/users/:userId" component={UserDetail} />
+              <Route path="/instance/keys" component={AccessKeys} />
+              <Route component={NotFound} />
+            </Switch>
+          </Suspense>
+        </RoutedErrorBoundary>
+      </Shell>
+    </AuthorizationProvider>
   );
 }
 

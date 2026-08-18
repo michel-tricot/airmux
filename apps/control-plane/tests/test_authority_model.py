@@ -117,7 +117,7 @@ def test_role_loss_removes_authority_without_changing_the_key(tmp_path):
         owner = User(email="owner@example.com", name="Owner")
         await set_actor(owner.id)
         await owner.save()
-        org = await Org(name="Org").save()
+        org = await Org.create("Org")
         membership = await OrgMembership(user_id=owner.id, org_id=org.id, role=OrgRole.owner).save()
         workspace = await Workspace(org_id=org.id, name="Workspace", slug="workspace").save()
         await WorkspaceMembership(user_id=owner.id, workspace_id=workspace.id, org_id=org.id, role="admin").save()

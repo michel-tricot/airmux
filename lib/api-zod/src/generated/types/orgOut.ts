@@ -14,6 +14,7 @@
 export interface OrgOut {
   id: string;
   name: string;
+  slug: string;
   personal_for: string | null;
   created_at: Date;
   updated_at: Date;

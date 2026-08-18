@@ -379,6 +379,7 @@ export interface DeletedOutStr {
 export interface OrgOut {
   id: string;
   name: string;
+  slug: string;
   personal_for: string | null;
   created_at: string;
   updated_at: string;
@@ -635,6 +636,12 @@ export interface OrgCreate {
      * @maxLength 200
      */
   name: string;
+  /**
+     * Organization handle, globally unique and usable in place of the id; derived from the name when omitted
+     * @maxLength 63
+     * @pattern ^[a-z0-9]+(?:-[a-z0-9]+)*$
+     */
+  slug?: string;
 }
 
 export interface OrgInvitationCreate {

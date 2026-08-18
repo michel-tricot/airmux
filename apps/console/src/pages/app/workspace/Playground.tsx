@@ -11,7 +11,9 @@ import { LoadingState, ErrorState, EmptyState } from '@/components/shared/states
 import { ProviderIcon } from '@/components/ProviderIcon';
 import { cn } from '@/lib/utils';
 import { chatCompletion, type InferenceMessage } from '@/lib/inference';
-import { hasPermission, useEffectivePermissions } from '@/features/permissions/hooks';
+import { useAuthorization } from '@/features/permissions/hooks';
+import { catalogAccess } from '@/features/catalog/policy';
+import { inferenceKeyAccess } from '@/features/keys/policy';
 
 type Role = 'user' | 'assistant';
 type Interaction = {
@@ -97,10 +99,9 @@ export default function ScopedPlayground() {
 }
 
 function Playground({ orgId, workspaceRef }: { orgId: string; workspaceRef: string }) {
-  const permissionsQuery = useEffectivePermissions({ orgId, workspaceRef });
-  const permissions = permissionsQuery.data?.permissions;
-  const canReadCatalog = hasPermission(permissions, 'catalog.read');
-  const canManageKeys = hasPermission(permissions, 'inference-keys.manage');
+  const authorization = useAuthorization('workspace');
+  const canReadCatalog = authorization.can(catalogAccess.workspace.read);
+  const canCreateKeys = authorization.can(inferenceKeyAccess.create);
   const taxonomyQuery = useProviders(orgId, workspaceRef, canReadCatalog);
   const createKey = useCreateInferenceKeyMutation(orgId, workspaceRef);
 
@@ -240,9 +241,9 @@ function Playground({ orgId, workspaceRef }: { orgId: string; workspaceRef: stri
     abortRef.current?.abort();
   };
 
-  if (permissionsQuery.isLoading) return <LoadingState label="Loading workspace permissions..." />;
-  if (permissionsQuery.isError)
-    return <ErrorState error={permissionsQuery.error} resource="workspace permissions" onRetry={() => permissionsQuery.refetch()} />;
+  if (authorization.isLoading) return <LoadingState label="Loading workspace permissions..." />;
+  if (authorization.isError)
+    return <ErrorState error={authorization.error} resource="workspace permissions" onRetry={() => authorization.refetch()} />;
   if (!canReadCatalog) return <ErrorState message="You do not have access to the catalog in this workspace." />;
   if (taxonomyQuery.isLoading) return <LoadingState label="Loading workspace catalog..." />;
   if (taxonomyQuery.isError) return <ErrorState error={taxonomyQuery.error} resource="workspace catalog" onRetry={() => taxonomyQuery.refetch()} />;
@@ -343,7 +344,7 @@ function Playground({ orgId, workspaceRef }: { orgId: string; workspaceRef: stri
               onChange={(e) => setToken(e.target.value)}
               className="h-8 font-mono text-xs"
             />
-            {canManageKeys && (
+            {canCreateKeys && (
               <Button variant="outline" size="sm" className="w-full text-xs" onClick={generateToken} disabled={createKey.isPending}>
                 {createKey.isPending ? <Loader2 className="mr-1.5 h-3 w-3 animate-spin" /> : <KeyRound className="mr-1.5 h-3 w-3" />}
                 Generate playground key

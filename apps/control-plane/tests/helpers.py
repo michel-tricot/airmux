@@ -230,6 +230,6 @@ async def seed_member(email: str = "member@example.com", org_name: str = "o1") -
     user = User(email=email, name=email)
     await set_actor(user.id)
     await user.save()
-    org = await Org(name=org_name).save()
+    org = await Org.create(org_name)
     await OrgMembership(user_id=user.id, org_id=org.id, role=OrgRole.member).save()
     return user, org.id

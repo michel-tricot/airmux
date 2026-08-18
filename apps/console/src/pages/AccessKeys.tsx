@@ -5,31 +5,31 @@ import { Badge, Button } from '@/components/ui/elements';
 import { useInstanceAccessKeys, useCreateInstanceAccessKeyMutation, useRevokeInstanceAccessKeyMutation } from '@/features/keys/hooks';
 import { useUsers } from '@/features/users/hooks';
 import { KeyRevealDialog } from '@/components/KeyRevealDialog';
-import { AccessKeyFormFields, accessKeyFormSchema, canIssueAccessKeys } from '@/components/shared/access-key-form';
+import { AccessKeyFormFields, accessKeyFormSchema } from '@/components/shared/access-key-form';
 import { PermissionsCell } from '@/components/shared/permissions-cell';
 import { ApiKeysTable } from '@/components/shared/api-keys-table';
 import { FormDialog } from '@/components/shared/form-dialog';
 import { ErrorState, LoadingState } from '@/components/shared/states';
 import { PageShell } from '@/components/shared/page-shell';
-import { hasPermission, useEffectivePermissions } from '@/features/permissions/hooks';
+import { useAuthorization } from '@/features/permissions/hooks';
+import { accessKeyAccess } from '@/features/keys/policy';
 
 export default function AccessKeys() {
   const [createOpen, setCreateOpen] = useState(false);
   const [token, setToken] = useState<string | null>(null);
-  const permissionsQuery = useEffectivePermissions({});
-  const permissions = permissionsQuery.data?.permissions;
-  const canRead = hasPermission(permissions, 'access-keys.read');
-  const canIssueKey = canIssueAccessKeys(permissions);
-  const canRevoke = hasPermission(permissions, 'access-keys.revoke');
+  const authorization = useAuthorization('instance');
+  const canRead = authorization.can(accessKeyAccess.instance.read);
+  const canIssueKey = authorization.can(accessKeyAccess.instance.issue);
+  const canRevoke = authorization.can(accessKeyAccess.instance.revoke);
   const keysQuery = useInstanceAccessKeys(undefined, canRead);
   const usersQuery = useUsers();
   const usersById = new Map(usersQuery.data?.map((user) => [user.id, user]));
   const createKey = useCreateInstanceAccessKeyMutation();
   const revokeKey = useRevokeInstanceAccessKeyMutation();
 
-  if (permissionsQuery.isLoading) return <LoadingState label="Loading instance permissions..." />;
-  if (permissionsQuery.isError) {
-    return <ErrorState error={permissionsQuery.error} resource="instance permissions" onRetry={() => permissionsQuery.refetch()} />;
+  if (authorization.isLoading) return <LoadingState label="Loading instance permissions..." />;
+  if (authorization.isError) {
+    return <ErrorState error={authorization.error} resource="instance permissions" onRetry={() => authorization.refetch()} />;
   }
   if (!canRead) return <ErrorState message="You do not have access to instance access keys." />;
 
@@ -112,13 +112,14 @@ export default function AccessKeys() {
           submitLabel="Mint key"
           pendingLabel="Minting..."
           pending={createKey.isPending}
-          submitDisabled={permissionsQuery.isFetching || permissionsQuery.isError || !canIssueKey}
+          submitDisabled={authorization.isFetching || authorization.isError || !canIssueKey}
         >
           {(form) => (
             <AccessKeyFormFields
               form={form}
-              availablePermissions={permissionsQuery.data?.permissions ?? []}
-              permissionsLoading={permissionsQuery.isFetching}
+              availablePermissions={authorization.permissions}
+              canIssue={canIssueKey}
+              permissionsLoading={authorization.isFetching}
             />
           )}
         </FormDialog>

@@ -84,7 +84,7 @@ def test_composite_primary_keys_join_in_record_id(tmp_path):
         await set_actor(ACTOR)
         user = User(email="m@example.com", name="m")
         await user.save()
-        org = await Org(name="O1").save()
+        org = await Org.create("O1")
         await OrgMembership(user_id=user.id, org_id=org.id).save()
         return user.id, org.id
 
@@ -124,5 +124,5 @@ def test_writes_without_an_actor_are_rejected(tmp_path):
     """The trigger closes the audit gap: an audited write with no stamped actor fails, never lands silently."""
     setup_db(tmp_path)
     with pytest.raises(DBAPIError, match="unattributed write to audited table"):
-        run_in_db(tmp_path, lambda: Org(name="Ghost").save())
+        run_in_db(tmp_path, lambda: Org.create("Ghost"))
     assert run_in_db(tmp_path, Org.find) == []

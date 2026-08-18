@@ -18,7 +18,11 @@ import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/comp
 import { useRequiredParam } from '@/lib/route';
 import { PageShell } from '@/components/shared/page-shell';
 import type { OrgRole } from '@workspace/api-client-react';
-import { hasPermission, useEffectivePermissions } from '@/features/permissions/hooks';
+import { useScopedAuthorization } from '@/features/permissions/hooks';
+import { accessKeyAccess } from '@/features/keys/policy';
+import { orgMemberAccess } from '@/features/members/policy';
+import { orgAccess } from '@/features/orgs/policy';
+import { workspaceAccess } from '@/features/workspaces/policy';
 
 const nameSchema = z.object({ name: z.string().min(1, 'Name is required') });
 
@@ -28,15 +32,15 @@ export default function OrganizationDetail() {
 
   const orgQuery = useOrg(orgId);
   const org = orgQuery.data;
-  const permissionsQuery = useEffectivePermissions({ orgId });
-  const permissions = permissionsQuery.data?.permissions;
-  const canCreateWorkspace = hasPermission(permissions, 'workspaces.create');
-  const canReadKeys = hasPermission(permissions, 'access-keys.read');
-  const canRevokeKeys = hasPermission(permissions, 'access-keys.revoke');
-  const canReadMembers = hasPermission(permissions, 'members.read');
-  const canManageMembers = hasPermission(permissions, 'members.manage');
-  const canUpdate = hasPermission(permissions, 'organizations.update');
-  const canDelete = hasPermission(permissions, 'organizations.delete');
+  const authorization = useScopedAuthorization({ level: 'org', orgId });
+  const canCreateWorkspace = authorization.can(workspaceAccess.create);
+  const canReadKeys = authorization.can(accessKeyAccess.org.read);
+  const canRevokeKeys = authorization.can(accessKeyAccess.org.revoke);
+  const canReadMembers = authorization.can(orgMemberAccess.read);
+  const canAddMembers = authorization.can(orgMemberAccess.add);
+  const canRemoveMembers = authorization.can(orgMemberAccess.remove);
+  const canUpdate = authorization.can(orgAccess.update);
+  const canDelete = authorization.can(orgAccess.delete);
 
   const workspacesQuery = useWorkspaces(orgId);
   const keysQuery = useOrgAccessKeys(orgId, undefined, canReadKeys);
@@ -220,7 +224,7 @@ export default function OrganizationDetail() {
                 </Link>
               )}
               add={
-                canManageMembers
+                canAddMembers
                   ? {
                       candidates: outsiders?.map((user) => ({ value: user.id, label: `${user.name} (${user.email})` })) ?? [],
                       dialogTitle: 'Add Member',
@@ -233,7 +237,7 @@ export default function OrganizationDetail() {
                   : undefined
               }
               remove={
-                canManageMembers
+                canRemoveMembers
                   ? {
                       title: (member) => `Remove ${member.name} from the organization?`,
                       description: 'They lose access to this organization and all of its workspaces.',

@@ -14,7 +14,10 @@ import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/comp
 import { useRequiredParam } from '@/lib/route';
 import { PageShell } from '@/components/shared/page-shell';
 import type { OrgOut, OrgRole } from '@workspace/api-client-react';
-import { hasPermission, useEffectivePermissions } from '@/features/permissions/hooks';
+import { useAuthorization } from '@/features/permissions/hooks';
+import { accessKeyAccess } from '@/features/keys/policy';
+import { orgMemberAccess } from '@/features/members/policy';
+import { userAccess } from '@/features/users/policy';
 
 const addToOrgSchema = z.object({
   orgId: z.string().min(1, 'Select an organization'),
@@ -27,11 +30,11 @@ export default function UserDetail() {
 
   const userQuery = useUser(userId);
   const user = userQuery.data;
-  const permissionsQuery = useEffectivePermissions({});
-  const permissions = permissionsQuery.data?.permissions;
-  const canManagePrincipals = hasPermission(permissions, 'principals.manage');
-  const canManageMembers = hasPermission(permissions, 'members.manage');
-  const canReadKeys = hasPermission(permissions, 'access-keys.read');
+  const authorization = useAuthorization('instance');
+  const canDeleteUser = authorization.can(userAccess.delete);
+  const canAddMember = authorization.can(orgMemberAccess.add);
+  const canRemoveMember = authorization.can(orgMemberAccess.remove);
+  const canReadKeys = authorization.can(accessKeyAccess.instance.read);
   const orgsQuery = useOrgs();
   const orgs = orgsQuery.data;
   const accessKeysQuery = useInstanceAccessKeys({ user_id: userId }, canReadKeys);
@@ -69,7 +72,7 @@ export default function UserDetail() {
         </div>
         <div className="flex items-center gap-3">
           <Badge variant={user.service_account ? 'secondary' : 'outline'}>{user.service_account ? 'SERVICE ACCOUNT' : 'HUMAN'}</Badge>
-          {canManagePrincipals && (
+          {canDeleteUser && (
             <ConfirmButton
               variant="outline"
               size="default"
@@ -95,7 +98,7 @@ export default function UserDetail() {
             <Building2 className="w-5 h-5 text-muted-foreground" />
             Organization Memberships
           </h2>
-          {canManageMembers && (
+          {canAddMember && (
             <Button onClick={() => setAddOpen(true)} size="sm" disabled={orgsQuery.isLoading || orgsQuery.isError || available?.length === 0}>
               <Plus className="w-4 h-4 mr-1" /> Add to Organization
             </Button>
@@ -124,7 +127,7 @@ export default function UserDetail() {
               },
               { key: 'id', header: 'ID', cellClassName: 'font-mono text-xs text-muted-foreground', cell: (org) => org.id },
               { key: 'created', header: 'Created', cellClassName: 'text-muted-foreground text-sm', cell: (org) => formatDate(org.created_at) },
-              ...(canManageMembers
+              ...(canRemoveMember
                 ? [
                     {
                       key: 'actions',
@@ -184,7 +187,7 @@ export default function UserDetail() {
         </div>
       )}
 
-      {canManageMembers && (
+      {canAddMember && (
         <FormDialog
           open={addOpen}
           onOpenChange={setAddOpen}

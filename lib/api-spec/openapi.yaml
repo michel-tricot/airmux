@@ -54,6 +54,10 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
+      x-airllm-authority:
+      - scope: instance_scope
+        anyOf:
+        - access-keys.read
     post:
       tags:
       - Instance Access Keys
@@ -89,6 +93,10 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
+      x-airllm-authority:
+      - scope: instance_scope
+        anyOf:
+        - access-keys.issue
   /api/v1/orgs/{org_id}/access-keys:
     get:
       tags:
@@ -108,9 +116,8 @@ paths:
         required: true
         schema:
           type: string
-          format: uuid
           title: Org Id
-        description: Organization ID
+        description: Organization ID or slug
       - name: user_id
         in: query
         required: false
@@ -138,6 +145,10 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
+      x-airllm-authority:
+      - scope: org_scope
+        anyOf:
+        - access-keys.read
     post:
       tags:
       - Organization Access Keys
@@ -156,9 +167,8 @@ paths:
         required: true
         schema:
           type: string
-          format: uuid
           title: Org Id
-        description: Organization ID
+        description: Organization ID or slug
       requestBody:
         required: true
         content:
@@ -182,6 +192,10 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
+      x-airllm-authority:
+      - scope: org_scope
+        anyOf:
+        - access-keys.issue
   /api/v1/orgs/{org_id}/workspaces/{workspace_ref}/access-keys:
     get:
       tags:
@@ -208,9 +222,8 @@ paths:
         required: true
         schema:
           type: string
-          format: uuid
           title: Org Id
-        description: Organization ID
+        description: Organization ID or slug
       - name: user_id
         in: query
         required: false
@@ -238,6 +251,10 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
+      x-airllm-authority:
+      - scope: workspace_scope
+        anyOf:
+        - access-keys.read
     post:
       tags:
       - Workspace Access Keys
@@ -263,9 +280,8 @@ paths:
         required: true
         schema:
           type: string
-          format: uuid
           title: Org Id
-        description: Organization ID
+        description: Organization ID or slug
       requestBody:
         required: true
         content:
@@ -289,6 +305,10 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
+      x-airllm-authority:
+      - scope: workspace_scope
+        anyOf:
+        - access-keys.issue
   /api/v1/access-keys/{key_id}:
     delete:
       tags:
@@ -330,6 +350,10 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
+      x-airllm-authority:
+      - scope: access_key_scope
+        anyOf:
+        - access-keys.revoke
   /api/v1/auth/login:
     post:
       tags:
@@ -894,6 +918,10 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
+      x-airllm-authority:
+      - scope: instance_scope
+        anyOf:
+        - data-planes.read
   /api/v1/instance/activity:
     get:
       tags:
@@ -935,6 +963,10 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
+      x-airllm-authority:
+      - scope: instance_scope
+        anyOf:
+        - audit.read
   /api/v1/service-accounts:
     post:
       tags:
@@ -971,6 +1003,10 @@ paths:
       security:
       - AccessKey: []
       - SessionCookie: []
+      x-airllm-authority:
+      - scope: instance_scope
+        anyOf:
+        - principals.manage
   /api/v1/users/{user_id}:
     get:
       tags:
@@ -1010,6 +1046,10 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
+      x-airllm-authority:
+      - scope: instance_scope
+        anyOf:
+        - principals.read
     delete:
       tags:
       - Instance Users
@@ -1053,6 +1093,10 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
+      x-airllm-authority:
+      - scope: instance_scope
+        anyOf:
+        - principals.manage
   /api/v1/users:
     get:
       tags:
@@ -1093,6 +1137,10 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
+      x-airllm-authority:
+      - scope: instance_scope
+        anyOf:
+        - principals.read
   /api/v1/orgs:
     get:
       tags:
@@ -1123,6 +1171,10 @@ paths:
       security:
       - AccessKey: []
       - SessionCookie: []
+      x-airllm-authority:
+      - scope: instance_scope
+        anyOf:
+        - organizations.read
     post:
       tags:
       - Instance Organizations
@@ -1158,6 +1210,10 @@ paths:
       security:
       - AccessKey: []
       - SessionCookie: []
+      x-airllm-authority:
+      - scope: instance_scope
+        anyOf:
+        - organizations.create
   /api/v1/orgs/{org_id}:
     patch:
       tags:
@@ -1177,9 +1233,8 @@ paths:
         required: true
         schema:
           type: string
-          format: uuid
           title: Org Id
-        description: Organization ID
+        description: Organization ID or slug
       requestBody:
         required: true
         content:
@@ -1203,6 +1258,10 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
+      x-airllm-authority:
+      - scope: org_scope
+        anyOf:
+        - organizations.update
     get:
       tags:
       - Organization Settings
@@ -1221,9 +1280,8 @@ paths:
         required: true
         schema:
           type: string
-          format: uuid
           title: Org Id
-        description: Organization ID
+        description: Organization ID or slug
       responses:
         '200':
           description: Successful Response
@@ -1241,6 +1299,10 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
+      x-airllm-authority:
+      - scope: org_scope
+        anyOf:
+        - organizations.read
     delete:
       tags:
       - Organization Settings
@@ -1262,9 +1324,8 @@ paths:
         required: true
         schema:
           type: string
-          format: uuid
           title: Org Id
-        description: Organization ID
+        description: Organization ID or slug
       responses:
         '200':
           description: Successful Response
@@ -1282,6 +1343,10 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
+      x-airllm-authority:
+      - scope: org_scope
+        anyOf:
+        - organizations.delete
   /api/v1/orgs/{org_id}/invitations:
     post:
       tags:
@@ -1301,9 +1366,8 @@ paths:
         required: true
         schema:
           type: string
-          format: uuid
           title: Org Id
-        description: Organization ID
+        description: Organization ID or slug
       requestBody:
         required: true
         content:
@@ -1327,6 +1391,10 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
+      x-airllm-authority:
+      - scope: org_scope
+        anyOf:
+        - members.manage
     get:
       tags:
       - Organization Invitations
@@ -1345,9 +1413,8 @@ paths:
         required: true
         schema:
           type: string
-          format: uuid
           title: Org Id
-        description: Organization ID
+        description: Organization ID or slug
       responses:
         '200':
           description: Successful Response
@@ -1365,6 +1432,10 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
+      x-airllm-authority:
+      - scope: org_scope
+        anyOf:
+        - members.read
   /api/v1/orgs/{org_id}/invitations/{invitation_id}/reissue:
     post:
       tags:
@@ -1392,9 +1463,8 @@ paths:
         required: true
         schema:
           type: string
-          format: uuid
           title: Org Id
-        description: Organization ID
+        description: Organization ID or slug
       responses:
         '200':
           description: Successful Response
@@ -1412,6 +1482,10 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
+      x-airllm-authority:
+      - scope: org_scope
+        anyOf:
+        - members.manage
   /api/v1/orgs/{org_id}/invitations/{invitation_id}/revoke:
     post:
       tags:
@@ -1439,9 +1513,8 @@ paths:
         required: true
         schema:
           type: string
-          format: uuid
           title: Org Id
-        description: Organization ID
+        description: Organization ID or slug
       responses:
         '200':
           description: Successful Response
@@ -1459,6 +1532,10 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
+      x-airllm-authority:
+      - scope: org_scope
+        anyOf:
+        - members.manage
   /api/v1/orgs/{org_id}/workspaces:
     post:
       tags:
@@ -1481,9 +1558,8 @@ paths:
         required: true
         schema:
           type: string
-          format: uuid
           title: Org Id
-        description: Organization ID
+        description: Organization ID or slug
       requestBody:
         required: true
         content:
@@ -1507,6 +1583,10 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
+      x-airllm-authority:
+      - scope: org_scope
+        anyOf:
+        - workspaces.create
     get:
       tags:
       - Organization Workspaces
@@ -1525,9 +1605,8 @@ paths:
         required: true
         schema:
           type: string
-          format: uuid
           title: Org Id
-        description: Organization ID
+        description: Organization ID or slug
       responses:
         '200':
           description: Successful Response
@@ -1545,6 +1624,11 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
+      x-airllm-authority:
+      - scope: org_scope
+        anyOf:
+        - workspaces.read
+        - organizations.read
   /api/v1/orgs/{org_id}/workspaces/{workspace_ref}:
     get:
       tags:
@@ -1571,9 +1655,8 @@ paths:
         required: true
         schema:
           type: string
-          format: uuid
           title: Org Id
-        description: Organization ID
+        description: Organization ID or slug
       responses:
         '200':
           description: Successful Response
@@ -1591,6 +1674,10 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
+      x-airllm-authority:
+      - scope: workspace_scope
+        anyOf:
+        - workspaces.read
     delete:
       tags:
       - Workspace Settings
@@ -1619,9 +1706,8 @@ paths:
         required: true
         schema:
           type: string
-          format: uuid
           title: Org Id
-        description: Organization ID
+        description: Organization ID or slug
       responses:
         '200':
           description: Successful Response
@@ -1639,6 +1725,10 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
+      x-airllm-authority:
+      - scope: workspace_scope
+        anyOf:
+        - workspaces.delete
     patch:
       tags:
       - Workspace Settings
@@ -1664,9 +1754,8 @@ paths:
         required: true
         schema:
           type: string
-          format: uuid
           title: Org Id
-        description: Organization ID
+        description: Organization ID or slug
       requestBody:
         required: true
         content:
@@ -1690,6 +1779,10 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
+      x-airllm-authority:
+      - scope: workspace_scope
+        anyOf:
+        - workspaces.update
   /api/v1/orgs/{org_id}/workspaces/{workspace_ref}/members:
     get:
       tags:
@@ -1716,9 +1809,8 @@ paths:
         required: true
         schema:
           type: string
-          format: uuid
           title: Org Id
-        description: Organization ID
+        description: Organization ID or slug
       responses:
         '200':
           description: Successful Response
@@ -1736,6 +1828,10 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
+      x-airllm-authority:
+      - scope: workspace_scope
+        anyOf:
+        - members.read
   /api/v1/orgs/{org_id}/workspaces/{workspace_ref}/member-candidates:
     get:
       tags:
@@ -1762,9 +1858,8 @@ paths:
         required: true
         schema:
           type: string
-          format: uuid
           title: Org Id
-        description: Organization ID
+        description: Organization ID or slug
       responses:
         '200':
           description: Successful Response
@@ -1782,6 +1877,10 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
+      x-airllm-authority:
+      - scope: workspace_scope
+        anyOf:
+        - members.manage
   /api/v1/orgs/{org_id}/workspaces/{workspace_ref}/members/{user_id}:
     put:
       tags:
@@ -1816,9 +1915,8 @@ paths:
         required: true
         schema:
           type: string
-          format: uuid
           title: Org Id
-        description: Organization ID
+        description: Organization ID or slug
       requestBody:
         required: true
         content:
@@ -1842,6 +1940,10 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
+      x-airllm-authority:
+      - scope: workspace_scope
+        anyOf:
+        - members.manage
     delete:
       tags:
       - Workspace Members
@@ -1875,9 +1977,8 @@ paths:
         required: true
         schema:
           type: string
-          format: uuid
           title: Org Id
-        description: Organization ID
+        description: Organization ID or slug
       responses:
         '200':
           description: Successful Response
@@ -1895,6 +1996,10 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
+      x-airllm-authority:
+      - scope: workspace_scope
+        anyOf:
+        - members.manage
   /api/v1/orgs/{org_id}/workspaces/{workspace_ref}/inference-keys:
     post:
       tags:
@@ -1921,9 +2026,8 @@ paths:
         required: true
         schema:
           type: string
-          format: uuid
           title: Org Id
-        description: Organization ID
+        description: Organization ID or slug
       requestBody:
         required: true
         content:
@@ -1947,6 +2051,10 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
+      x-airllm-authority:
+      - scope: workspace_scope
+        anyOf:
+        - inference-keys.manage
     get:
       tags:
       - Workspace Inference Keys
@@ -1972,9 +2080,8 @@ paths:
         required: true
         schema:
           type: string
-          format: uuid
           title: Org Id
-        description: Organization ID
+        description: Organization ID or slug
       responses:
         '200':
           description: Successful Response
@@ -1992,6 +2099,10 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
+      x-airllm-authority:
+      - scope: workspace_scope
+        anyOf:
+        - inference-keys.read
   /api/v1/orgs/{org_id}/workspaces/{workspace_ref}/inference-keys/{key_id}:
     delete:
       tags:
@@ -2026,9 +2137,8 @@ paths:
         required: true
         schema:
           type: string
-          format: uuid
           title: Org Id
-        description: Organization ID
+        description: Organization ID or slug
       responses:
         '200':
           description: Successful Response
@@ -2046,6 +2156,10 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
+      x-airllm-authority:
+      - scope: workspace_scope
+        anyOf:
+        - inference-keys.manage
   /api/v1/orgs/{org_id}/provider-credentials:
     post:
       tags:
@@ -2065,9 +2179,8 @@ paths:
         required: true
         schema:
           type: string
-          format: uuid
           title: Org Id
-        description: Organization ID
+        description: Organization ID or slug
       requestBody:
         required: true
         content:
@@ -2091,6 +2204,10 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
+      x-airllm-authority:
+      - scope: org_scope
+        anyOf:
+        - provider-credentials.manage
     get:
       tags:
       - Organization Provider Credentials
@@ -2109,9 +2226,8 @@ paths:
         required: true
         schema:
           type: string
-          format: uuid
           title: Org Id
-        description: Organization ID
+        description: Organization ID or slug
       responses:
         '200':
           description: Successful Response
@@ -2129,6 +2245,10 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
+      x-airllm-authority:
+      - scope: org_scope
+        anyOf:
+        - provider-credentials.read
   /api/v1/orgs/{org_id}/workspaces/{workspace_ref}/provider-credentials:
     post:
       tags:
@@ -2155,9 +2275,8 @@ paths:
         required: true
         schema:
           type: string
-          format: uuid
           title: Org Id
-        description: Organization ID
+        description: Organization ID or slug
       requestBody:
         required: true
         content:
@@ -2181,6 +2300,10 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
+      x-airllm-authority:
+      - scope: workspace_scope
+        anyOf:
+        - provider-credentials.manage
     get:
       tags:
       - Workspace Provider Credentials
@@ -2206,9 +2329,8 @@ paths:
         required: true
         schema:
           type: string
-          format: uuid
           title: Org Id
-        description: Organization ID
+        description: Organization ID or slug
       responses:
         '200':
           description: Successful Response
@@ -2226,6 +2348,10 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
+      x-airllm-authority:
+      - scope: workspace_scope
+        anyOf:
+        - provider-credentials.read
   /api/v1/orgs/{org_id}/provider-credentials/{credential_id}:
     get:
       tags:
@@ -2254,9 +2380,8 @@ paths:
         required: true
         schema:
           type: string
-          format: uuid
           title: Org Id
-        description: Organization ID
+        description: Organization ID or slug
       responses:
         '200':
           description: Successful Response
@@ -2274,6 +2399,10 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
+      x-airllm-authority:
+      - scope: credential_scope
+        anyOf:
+        - provider-credentials.read
     patch:
       tags:
       - Organization Provider Credentials
@@ -2301,9 +2430,8 @@ paths:
         required: true
         schema:
           type: string
-          format: uuid
           title: Org Id
-        description: Organization ID
+        description: Organization ID or slug
       requestBody:
         required: true
         content:
@@ -2327,6 +2455,10 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
+      x-airllm-authority:
+      - scope: credential_scope
+        anyOf:
+        - provider-credentials.manage
     delete:
       tags:
       - Organization Provider Credentials
@@ -2354,9 +2486,8 @@ paths:
         required: true
         schema:
           type: string
-          format: uuid
           title: Org Id
-        description: Organization ID
+        description: Organization ID or slug
       responses:
         '200':
           description: Successful Response
@@ -2374,6 +2505,10 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
+      x-airllm-authority:
+      - scope: credential_scope
+        anyOf:
+        - provider-credentials.manage
   /api/v1/orgs/{org_id}/provider-credentials/{credential_id}/value:
     put:
       tags:
@@ -2402,9 +2537,8 @@ paths:
         required: true
         schema:
           type: string
-          format: uuid
           title: Org Id
-        description: Organization ID
+        description: Organization ID or slug
       requestBody:
         required: true
         content:
@@ -2428,6 +2562,10 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
+      x-airllm-authority:
+      - scope: credential_scope
+        anyOf:
+        - provider-credentials.manage
   /api/v1/orgs/{org_id}/users:
     get:
       tags:
@@ -2447,9 +2585,8 @@ paths:
         required: true
         schema:
           type: string
-          format: uuid
           title: Org Id
-        description: Organization ID
+        description: Organization ID or slug
       responses:
         '200':
           description: Successful Response
@@ -2467,6 +2604,10 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
+      x-airllm-authority:
+      - scope: org_scope
+        anyOf:
+        - members.read
   /api/v1/orgs/{org_id}/users/{user_id}:
     put:
       tags:
@@ -2494,9 +2635,8 @@ paths:
         required: true
         schema:
           type: string
-          format: uuid
           title: Org Id
-        description: Organization ID
+        description: Organization ID or slug
       requestBody:
         required: true
         content:
@@ -2520,6 +2660,10 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
+      x-airllm-authority:
+      - scope: org_scope
+        anyOf:
+        - members.manage
     delete:
       tags:
       - Organization Members
@@ -2546,9 +2690,8 @@ paths:
         required: true
         schema:
           type: string
-          format: uuid
           title: Org Id
-        description: Organization ID
+        description: Organization ID or slug
       responses:
         '200':
           description: Successful Response
@@ -2566,6 +2709,10 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
+      x-airllm-authority:
+      - scope: org_scope
+        anyOf:
+        - members.manage
   /api/v1/orgs/{org_id}/bundles/republish:
     post:
       tags:
@@ -2585,9 +2732,8 @@ paths:
         required: true
         schema:
           type: string
-          format: uuid
           title: Org Id
-        description: Organization ID
+        description: Organization ID or slug
       responses:
         '200':
           description: Successful Response
@@ -2605,6 +2751,10 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
+      x-airllm-authority:
+      - scope: org_scope
+        anyOf:
+        - bundles.publish
   /api/v1/orgs/{org_id}/bundles:
     get:
       tags:
@@ -2624,9 +2774,8 @@ paths:
         required: true
         schema:
           type: string
-          format: uuid
           title: Org Id
-        description: Organization ID
+        description: Organization ID or slug
       responses:
         '200':
           description: Successful Response
@@ -2644,6 +2793,10 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
+      x-airllm-authority:
+      - scope: org_scope
+        anyOf:
+        - bundles.read
   /api/v1/orgs/{org_id}/events:
     get:
       tags:
@@ -2663,9 +2816,8 @@ paths:
         required: true
         schema:
           type: string
-          format: uuid
           title: Org Id
-        description: Organization ID
+        description: Organization ID or slug
       - name: before
         in: query
         required: false
@@ -2733,6 +2885,10 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
+      x-airllm-authority:
+      - scope: org_scope
+        anyOf:
+        - usage.read
   /api/v1/orgs/{org_id}/workspaces/{workspace_ref}/events:
     get:
       tags:
@@ -2759,9 +2915,8 @@ paths:
         required: true
         schema:
           type: string
-          format: uuid
           title: Org Id
-        description: Organization ID
+        description: Organization ID or slug
       - name: before
         in: query
         required: false
@@ -2829,6 +2984,10 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
+      x-airllm-authority:
+      - scope: workspace_scope
+        anyOf:
+        - usage.read
   /api/v1/orgs/{org_id}/activity:
     get:
       tags:
@@ -2848,9 +3007,8 @@ paths:
         required: true
         schema:
           type: string
-          format: uuid
           title: Org Id
-        description: Organization ID
+        description: Organization ID or slug
       - name: limit
         in: query
         required: false
@@ -2878,6 +3036,10 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
+      x-airllm-authority:
+      - scope: org_scope
+        anyOf:
+        - audit.read
   /api/v1/bundle/latest:
     get:
       tags:
@@ -2919,6 +3081,10 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
+      x-airllm-authority:
+      - scope: bundle_scope
+        anyOf:
+        - bundles.read
   /api/v1/events:
     post:
       tags:
@@ -2959,6 +3125,10 @@ paths:
       security:
       - AccessKey: []
       - SessionCookie: []
+      x-airllm-authority:
+      - scope: credential_scope
+        anyOf:
+        - usage.ingest
   /api/v1/heartbeat:
     post:
       tags:
@@ -2995,6 +3165,10 @@ paths:
       security:
       - AccessKey: []
       - SessionCookie: []
+      x-airllm-authority:
+      - scope: credential_scope
+        anyOf:
+        - data-planes.heartbeat
   /api/v1/instance/taxonomy:
     get:
       tags:
@@ -3025,6 +3199,10 @@ paths:
       security:
       - AccessKey: []
       - SessionCookie: []
+      x-airllm-authority:
+      - scope: instance_scope
+        anyOf:
+        - catalog.read
   /api/v1/orgs/{org_id}/taxonomy:
     get:
       tags:
@@ -3044,9 +3222,8 @@ paths:
         required: true
         schema:
           type: string
-          format: uuid
           title: Org Id
-        description: Organization ID
+        description: Organization ID or slug
       responses:
         '200':
           description: Successful Response
@@ -3064,6 +3241,10 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
+      x-airllm-authority:
+      - scope: org_scope
+        anyOf:
+        - catalog.read
   /api/v1/orgs/{org_id}/workspaces/{workspace_ref}/taxonomy:
     get:
       tags:
@@ -3090,9 +3271,8 @@ paths:
         required: true
         schema:
           type: string
-          format: uuid
           title: Org Id
-        description: Organization ID
+        description: Organization ID or slug
       responses:
         '200':
           description: Successful Response
@@ -3110,6 +3290,10 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
+      x-airllm-authority:
+      - scope: workspace_scope
+        anyOf:
+        - catalog.read
   /api/v1/instance/taxonomy/providers:
     post:
       tags:
@@ -3146,6 +3330,10 @@ paths:
       security:
       - AccessKey: []
       - SessionCookie: []
+      x-airllm-authority:
+      - scope: instance_scope
+        anyOf:
+        - catalog.manage
   /api/v1/instance/taxonomy/models:
     post:
       tags:
@@ -3182,6 +3370,10 @@ paths:
       security:
       - AccessKey: []
       - SessionCookie: []
+      x-airllm-authority:
+      - scope: instance_scope
+        anyOf:
+        - catalog.manage
 components:
   schemas:
     AccessKeyIn:
@@ -4817,6 +5009,13 @@ components:
           minLength: 1
           title: Name
           description: Org name, e.g. My Org
+        slug:
+          type: string
+          maxLength: 63
+          pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
+          title: Slug
+          description: Organization handle, globally unique and usable in place of the id; derived from the name when omitted
+          default: ''
       additionalProperties: false
       type: object
       required:
@@ -5032,6 +5231,9 @@ components:
         name:
           type: string
           title: Name
+        slug:
+          type: string
+          title: Slug
         personal_for:
           anyOf:
           - type: string
@@ -5056,6 +5258,7 @@ components:
       required:
       - id
       - name
+      - slug
       - personal_for
       - created_at
       - updated_at

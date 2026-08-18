@@ -96,7 +96,7 @@ export const CreateInstanceAccessKeyResponse = zod.object({
  * @summary List Org Access Keys
  */
 export const ListOrgAccessKeysParams = zod.object({
-  "org_id": zod.uuid().describe('Organization ID')
+  "org_id": zod.coerce.string().describe('Organization ID or slug')
 })
 
 export const ListOrgAccessKeysQueryParams = zod.object({
@@ -134,7 +134,7 @@ export const ListOrgAccessKeysResponse = zod.array(ListOrgAccessKeysResponseItem
  * @summary Create Org Access Key
  */
 export const CreateOrgAccessKeyParams = zod.object({
-  "org_id": zod.uuid().describe('Organization ID')
+  "org_id": zod.coerce.string().describe('Organization ID or slug')
 })
 
 export const createOrgAccessKeyBodyLabelMax = 80;
@@ -181,7 +181,7 @@ export const CreateOrgAccessKeyResponse = zod.object({
  */
 export const ListWorkspaceAccessKeysParams = zod.object({
   "workspace_ref": zod.coerce.string().describe('Workspace ID or slug'),
-  "org_id": zod.uuid().describe('Organization ID')
+  "org_id": zod.coerce.string().describe('Organization ID or slug')
 })
 
 export const ListWorkspaceAccessKeysQueryParams = zod.object({
@@ -220,7 +220,7 @@ export const ListWorkspaceAccessKeysResponse = zod.array(ListWorkspaceAccessKeys
  */
 export const CreateWorkspaceAccessKeyParams = zod.object({
   "workspace_ref": zod.coerce.string().describe('Workspace ID or slug'),
-  "org_id": zod.uuid().describe('Organization ID')
+  "org_id": zod.coerce.string().describe('Organization ID or slug')
 })
 
 export const createWorkspaceAccessKeyBodyLabelMax = 80;
@@ -503,6 +503,7 @@ export const EnrollmentResponse = zod.object({
   "orgs": zod.array(zod.object({
   "id": zod.uuid(),
   "name": zod.string(),
+  "slug": zod.string(),
   "personal_for": zod.union([zod.uuid(),zod.null()]),
   "created_at": zod.coerce.date(),
   "updated_at": zod.coerce.date(),
@@ -522,15 +523,22 @@ export const EnrollmentResponse = zod.object({
  */
 export const createPersonalOrgBodyNameMax = 200;
 
+export const createPersonalOrgBodySlugDefault = ``;
+export const createPersonalOrgBodySlugMax = 63;
+
+
+export const createPersonalOrgBodySlugRegExp = new RegExp('^[a-z0-9]+(?:-[a-z0-9]+)*$');
 
 
 export const CreatePersonalOrgBody = zod.object({
-  "name": zod.string().min(1).max(createPersonalOrgBodyNameMax).describe('Org name, e.g. My Org')
+  "name": zod.string().min(1).max(createPersonalOrgBodyNameMax).describe('Org name, e.g. My Org'),
+  "slug": zod.string().max(createPersonalOrgBodySlugMax).regex(createPersonalOrgBodySlugRegExp).default(createPersonalOrgBodySlugDefault).describe('Organization handle, globally unique and usable in place of the id; derived from the name when omitted')
 })
 
 export const CreatePersonalOrgResponse = zod.object({
   "id": zod.uuid(),
   "name": zod.string(),
+  "slug": zod.string(),
   "personal_for": zod.union([zod.uuid(),zod.null()]),
   "created_at": zod.coerce.date(),
   "updated_at": zod.coerce.date(),
@@ -773,6 +781,7 @@ export const ListUsersResponse = zod.array(ListUsersResponseItem)
 export const ListOrgsResponseItem = zod.object({
   "id": zod.uuid(),
   "name": zod.string(),
+  "slug": zod.string(),
   "personal_for": zod.union([zod.uuid(),zod.null()]),
   "created_at": zod.coerce.date(),
   "updated_at": zod.coerce.date(),
@@ -789,15 +798,22 @@ export const ListOrgsResponse = zod.array(ListOrgsResponseItem)
  */
 export const createOrgBodyNameMax = 200;
 
+export const createOrgBodySlugDefault = ``;
+export const createOrgBodySlugMax = 63;
+
+
+export const createOrgBodySlugRegExp = new RegExp('^[a-z0-9]+(?:-[a-z0-9]+)*$');
 
 
 export const CreateOrgBody = zod.object({
-  "name": zod.string().min(1).max(createOrgBodyNameMax).describe('Org name, e.g. My Org')
+  "name": zod.string().min(1).max(createOrgBodyNameMax).describe('Org name, e.g. My Org'),
+  "slug": zod.string().max(createOrgBodySlugMax).regex(createOrgBodySlugRegExp).default(createOrgBodySlugDefault).describe('Organization handle, globally unique and usable in place of the id; derived from the name when omitted')
 })
 
 export const CreateOrgResponse = zod.object({
   "id": zod.uuid(),
   "name": zod.string(),
+  "slug": zod.string(),
   "personal_for": zod.union([zod.uuid(),zod.null()]),
   "created_at": zod.coerce.date(),
   "updated_at": zod.coerce.date(),
@@ -812,7 +828,7 @@ export const CreateOrgResponse = zod.object({
  * @summary Update Organization
  */
 export const UpdateOrgParams = zod.object({
-  "org_id": zod.uuid().describe('Organization ID')
+  "org_id": zod.coerce.string().describe('Organization ID or slug')
 })
 
 export const updateOrgBodyNameOneMax = 200;
@@ -826,6 +842,7 @@ export const UpdateOrgBody = zod.object({
 export const UpdateOrgResponse = zod.object({
   "id": zod.uuid(),
   "name": zod.string(),
+  "slug": zod.string(),
   "personal_for": zod.union([zod.uuid(),zod.null()]),
   "created_at": zod.coerce.date(),
   "updated_at": zod.coerce.date(),
@@ -840,12 +857,13 @@ export const UpdateOrgResponse = zod.object({
  * @summary Get Organization
  */
 export const GetOrgParams = zod.object({
-  "org_id": zod.uuid().describe('Organization ID')
+  "org_id": zod.coerce.string().describe('Organization ID or slug')
 })
 
 export const GetOrgResponse = zod.object({
   "id": zod.uuid(),
   "name": zod.string(),
+  "slug": zod.string(),
   "personal_for": zod.union([zod.uuid(),zod.null()]),
   "created_at": zod.coerce.date(),
   "updated_at": zod.coerce.date(),
@@ -862,7 +880,7 @@ export const GetOrgResponse = zod.object({
  * @summary Delete Organization
  */
 export const DeleteOrgParams = zod.object({
-  "org_id": zod.uuid().describe('Organization ID')
+  "org_id": zod.coerce.string().describe('Organization ID or slug')
 })
 
 export const DeleteOrgResponse = zod.object({
@@ -878,7 +896,7 @@ export const DeleteOrgResponse = zod.object({
  * @summary Create Organization Invitation
  */
 export const CreateInvitationParams = zod.object({
-  "org_id": zod.uuid().describe('Organization ID')
+  "org_id": zod.coerce.string().describe('Organization ID or slug')
 })
 
 export const createInvitationBodyEmailMin = 3;
@@ -924,7 +942,7 @@ export const CreateInvitationResponse = zod.object({
  * @summary List Organization Invitations
  */
 export const ListInvitationsParams = zod.object({
-  "org_id": zod.uuid().describe('Organization ID')
+  "org_id": zod.coerce.string().describe('Organization ID or slug')
 })
 
 export const ListInvitationsResponseItem = zod.object({
@@ -955,7 +973,7 @@ export const ListInvitationsResponse = zod.array(ListInvitationsResponseItem)
  */
 export const ReissueInvitationParams = zod.object({
   "invitation_id": zod.uuid().describe('Organization invitation ID'),
-  "org_id": zod.uuid().describe('Organization ID')
+  "org_id": zod.coerce.string().describe('Organization ID or slug')
 })
 
 export const ReissueInvitationResponse = zod.object({
@@ -988,7 +1006,7 @@ export const ReissueInvitationResponse = zod.object({
  */
 export const RevokeInvitationParams = zod.object({
   "invitation_id": zod.uuid().describe('Organization invitation ID'),
-  "org_id": zod.uuid().describe('Organization ID')
+  "org_id": zod.coerce.string().describe('Organization ID or slug')
 })
 
 export const RevokeInvitationResponse = zod.object({
@@ -1007,7 +1025,7 @@ export const RevokeInvitationResponse = zod.object({
  * @summary Create Workspace
  */
 export const CreateWorkspaceParams = zod.object({
-  "org_id": zod.uuid().describe('Organization ID')
+  "org_id": zod.coerce.string().describe('Organization ID or slug')
 })
 
 export const createWorkspaceBodyNameMax = 200;
@@ -1042,7 +1060,7 @@ export const CreateWorkspaceResponse = zod.object({
  * @summary List Workspaces
  */
 export const ListWorkspacesParams = zod.object({
-  "org_id": zod.uuid().describe('Organization ID')
+  "org_id": zod.coerce.string().describe('Organization ID or slug')
 })
 
 export const ListWorkspacesResponseItem = zod.object({
@@ -1065,7 +1083,7 @@ export const ListWorkspacesResponse = zod.array(ListWorkspacesResponseItem)
  */
 export const GetWorkspaceParams = zod.object({
   "workspace_ref": zod.coerce.string().describe('Workspace ID or slug'),
-  "org_id": zod.uuid().describe('Organization ID')
+  "org_id": zod.coerce.string().describe('Organization ID or slug')
 })
 
 export const GetWorkspaceResponse = zod.object({
@@ -1089,7 +1107,7 @@ export const GetWorkspaceResponse = zod.object({
  */
 export const DeleteWorkspaceParams = zod.object({
   "workspace_ref": zod.coerce.string().describe('Workspace ID or slug'),
-  "org_id": zod.uuid().describe('Organization ID')
+  "org_id": zod.coerce.string().describe('Organization ID or slug')
 })
 
 export const DeleteWorkspaceResponse = zod.object({
@@ -1106,7 +1124,7 @@ export const DeleteWorkspaceResponse = zod.object({
  */
 export const UpdateWorkspaceParams = zod.object({
   "workspace_ref": zod.coerce.string().describe('Workspace ID or slug'),
-  "org_id": zod.uuid().describe('Organization ID')
+  "org_id": zod.coerce.string().describe('Organization ID or slug')
 })
 
 export const updateWorkspaceBodyNameOneMax = 200;
@@ -1136,7 +1154,7 @@ export const UpdateWorkspaceResponse = zod.object({
  */
 export const ListMembersParams = zod.object({
   "workspace_ref": zod.coerce.string().describe('Workspace ID or slug'),
-  "org_id": zod.uuid().describe('Organization ID')
+  "org_id": zod.coerce.string().describe('Organization ID or slug')
 })
 
 export const ListMembersResponseItem = zod.object({
@@ -1159,7 +1177,7 @@ export const ListMembersResponse = zod.array(ListMembersResponseItem)
  */
 export const ListMemberCandidatesParams = zod.object({
   "workspace_ref": zod.coerce.string().describe('Workspace ID or slug'),
-  "org_id": zod.uuid().describe('Organization ID')
+  "org_id": zod.coerce.string().describe('Organization ID or slug')
 })
 
 export const ListMemberCandidatesResponseItem = zod.object({
@@ -1180,7 +1198,7 @@ export const ListMemberCandidatesResponse = zod.array(ListMemberCandidatesRespon
 export const AddMemberParams = zod.object({
   "user_id": zod.uuid().describe('User or service-account ID'),
   "workspace_ref": zod.coerce.string().describe('Workspace ID or slug'),
-  "org_id": zod.uuid().describe('Organization ID')
+  "org_id": zod.coerce.string().describe('Organization ID or slug')
 })
 
 export const AddMemberBody = zod.object({
@@ -1207,7 +1225,7 @@ export const AddMemberResponse = zod.object({
 export const RemoveMemberParams = zod.object({
   "user_id": zod.uuid().describe('User or service-account ID'),
   "workspace_ref": zod.coerce.string().describe('Workspace ID or slug'),
-  "org_id": zod.uuid().describe('Organization ID')
+  "org_id": zod.coerce.string().describe('Organization ID or slug')
 })
 
 export const RemoveMemberResponse = zod.object({
@@ -1224,7 +1242,7 @@ export const RemoveMemberResponse = zod.object({
  */
 export const CreateInferenceKeyParams = zod.object({
   "workspace_ref": zod.coerce.string().describe('Workspace ID or slug'),
-  "org_id": zod.uuid().describe('Organization ID')
+  "org_id": zod.coerce.string().describe('Organization ID or slug')
 })
 
 export const createInferenceKeyBodyLabelMax = 80;
@@ -1249,7 +1267,7 @@ export const CreateInferenceKeyResponse = zod.object({
  */
 export const ListInferenceKeysParams = zod.object({
   "workspace_ref": zod.coerce.string().describe('Workspace ID or slug'),
-  "org_id": zod.uuid().describe('Organization ID')
+  "org_id": zod.coerce.string().describe('Organization ID or slug')
 })
 
 export const ListInferenceKeysResponseItem = zod.object({
@@ -1276,7 +1294,7 @@ export const ListInferenceKeysResponse = zod.array(ListInferenceKeysResponseItem
 export const RevokeInferenceKeyParams = zod.object({
   "key_id": zod.uuid().describe('Inference key ID'),
   "workspace_ref": zod.coerce.string().describe('Workspace ID or slug'),
-  "org_id": zod.uuid().describe('Organization ID')
+  "org_id": zod.coerce.string().describe('Organization ID or slug')
 })
 
 export const RevokeInferenceKeyResponse = zod.object({
@@ -1292,7 +1310,7 @@ export const RevokeInferenceKeyResponse = zod.object({
  * @summary Create Org Provider Credential
  */
 export const CreateOrgProviderCredentialParams = zod.object({
-  "org_id": zod.uuid().describe('Organization ID')
+  "org_id": zod.coerce.string().describe('Organization ID or slug')
 })
 
 export const createOrgProviderCredentialBodyProviderMax = 63;
@@ -1346,7 +1364,7 @@ export const CreateOrgProviderCredentialResponse = zod.object({
  * @summary List Org Provider Credentials
  */
 export const ListOrgProviderCredentialsParams = zod.object({
-  "org_id": zod.uuid().describe('Organization ID')
+  "org_id": zod.coerce.string().describe('Organization ID or slug')
 })
 
 export const ListOrgProviderCredentialsResponseItem = zod.object({
@@ -1378,7 +1396,7 @@ export const ListOrgProviderCredentialsResponse = zod.array(ListOrgProviderCrede
  */
 export const CreateWorkspaceProviderCredentialParams = zod.object({
   "workspace_ref": zod.coerce.string().describe('Workspace ID or slug'),
-  "org_id": zod.uuid().describe('Organization ID')
+  "org_id": zod.coerce.string().describe('Organization ID or slug')
 })
 
 export const createWorkspaceProviderCredentialBodyProviderMax = 63;
@@ -1433,7 +1451,7 @@ export const CreateWorkspaceProviderCredentialResponse = zod.object({
  */
 export const ListWorkspaceProviderCredentialsParams = zod.object({
   "workspace_ref": zod.coerce.string().describe('Workspace ID or slug'),
-  "org_id": zod.uuid().describe('Organization ID')
+  "org_id": zod.coerce.string().describe('Organization ID or slug')
 })
 
 export const ListWorkspaceProviderCredentialsResponseItem = zod.object({
@@ -1465,7 +1483,7 @@ export const ListWorkspaceProviderCredentialsResponse = zod.array(ListWorkspaceP
  */
 export const GetProviderCredentialParams = zod.object({
   "credential_id": zod.uuid().describe('Provider credential ID'),
-  "org_id": zod.uuid().describe('Organization ID')
+  "org_id": zod.coerce.string().describe('Organization ID or slug')
 })
 
 export const GetProviderCredentialResponse = zod.object({
@@ -1496,7 +1514,7 @@ export const GetProviderCredentialResponse = zod.object({
  */
 export const UpdateProviderCredentialParams = zod.object({
   "credential_id": zod.uuid().describe('Provider credential ID'),
-  "org_id": zod.uuid().describe('Organization ID')
+  "org_id": zod.coerce.string().describe('Organization ID or slug')
 })
 
 export const updateProviderCredentialBodyPriorityOneMin = 0;
@@ -1537,7 +1555,7 @@ export const UpdateProviderCredentialResponse = zod.object({
  */
 export const DeleteProviderCredentialParams = zod.object({
   "credential_id": zod.uuid().describe('Provider credential ID'),
-  "org_id": zod.uuid().describe('Organization ID')
+  "org_id": zod.coerce.string().describe('Organization ID or slug')
 })
 
 export const DeleteProviderCredentialResponse = zod.object({
@@ -1554,7 +1572,7 @@ export const DeleteProviderCredentialResponse = zod.object({
  */
 export const RotateProviderCredentialParams = zod.object({
   "credential_id": zod.uuid().describe('Provider credential ID'),
-  "org_id": zod.uuid().describe('Organization ID')
+  "org_id": zod.coerce.string().describe('Organization ID or slug')
 })
 
 export const rotateProviderCredentialBodyValueMax = 16384;
@@ -1592,7 +1610,7 @@ export const RotateProviderCredentialResponse = zod.object({
  * @summary List Organization Members
  */
 export const ListOrgUsersParams = zod.object({
-  "org_id": zod.uuid().describe('Organization ID')
+  "org_id": zod.coerce.string().describe('Organization ID or slug')
 })
 
 export const ListOrgUsersResponseItem = zod.object({
@@ -1614,7 +1632,7 @@ export const ListOrgUsersResponse = zod.array(ListOrgUsersResponseItem)
  */
 export const AddOrgUserParams = zod.object({
   "user_id": zod.uuid().describe('User or service-account ID'),
-  "org_id": zod.uuid().describe('Organization ID')
+  "org_id": zod.coerce.string().describe('Organization ID or slug')
 })
 
 export const AddOrgUserBody = zod.object({
@@ -1637,7 +1655,7 @@ export const AddOrgUserResponse = zod.object({
  */
 export const RemoveOrgUserParams = zod.object({
   "user_id": zod.uuid().describe('User or service-account ID'),
-  "org_id": zod.uuid().describe('Organization ID')
+  "org_id": zod.coerce.string().describe('Organization ID or slug')
 })
 
 export const RemoveOrgUserResponse = zod.object({
@@ -1653,7 +1671,7 @@ export const RemoveOrgUserResponse = zod.object({
  * @summary Republish Policy Bundle
  */
 export const RepublishBundleParams = zod.object({
-  "org_id": zod.uuid().describe('Organization ID')
+  "org_id": zod.coerce.string().describe('Organization ID or slug')
 })
 
 export const RepublishBundleResponse = zod.object({
@@ -1672,7 +1690,7 @@ export const RepublishBundleResponse = zod.object({
  * @summary List Bundles
  */
 export const ListBundlesParams = zod.object({
-  "org_id": zod.uuid().describe('Organization ID')
+  "org_id": zod.coerce.string().describe('Organization ID or slug')
 })
 
 export const ListBundlesResponseItem = zod.object({
@@ -1692,7 +1710,7 @@ export const ListBundlesResponse = zod.array(ListBundlesResponseItem)
  * @summary List Org Events
  */
 export const ListOrgEventsParams = zod.object({
-  "org_id": zod.uuid().describe('Organization ID')
+  "org_id": zod.coerce.string().describe('Organization ID or slug')
 })
 
 export const listOrgEventsQueryLimitDefault = 50;
@@ -1742,7 +1760,7 @@ export const ListOrgEventsResponse = zod.array(ListOrgEventsResponseItem)
  */
 export const ListWorkspaceEventsParams = zod.object({
   "workspace_ref": zod.coerce.string().describe('Workspace ID or slug'),
-  "org_id": zod.uuid().describe('Organization ID')
+  "org_id": zod.coerce.string().describe('Organization ID or slug')
 })
 
 export const listWorkspaceEventsQueryLimitDefault = 50;
@@ -1791,7 +1809,7 @@ export const ListWorkspaceEventsResponse = zod.array(ListWorkspaceEventsResponse
  * @summary List Organization Activity
  */
 export const ListActivityParams = zod.object({
-  "org_id": zod.uuid().describe('Organization ID')
+  "org_id": zod.coerce.string().describe('Organization ID or slug')
 })
 
 export const listActivityQueryLimitDefault = 50;
@@ -2023,7 +2041,7 @@ export const GetInstanceTaxonomyResponse = zod.object({
  * @summary Get Organization Model Catalog
  */
 export const GetOrgTaxonomyParams = zod.object({
-  "org_id": zod.uuid().describe('Organization ID')
+  "org_id": zod.coerce.string().describe('Organization ID or slug')
 })
 
 export const GetOrgTaxonomyResponse = zod.object({
@@ -2068,7 +2086,7 @@ export const GetOrgTaxonomyResponse = zod.object({
  */
 export const GetWorkspaceTaxonomyParams = zod.object({
   "workspace_ref": zod.coerce.string().describe('Workspace ID or slug'),
-  "org_id": zod.uuid().describe('Organization ID')
+  "org_id": zod.coerce.string().describe('Organization ID or slug')
 })
 
 export const GetWorkspaceTaxonomyResponse = zod.object({

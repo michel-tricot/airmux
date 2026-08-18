@@ -234,8 +234,8 @@ async def apply_fixtures(now: datetime, store: SecretStore) -> Fixtures:
     dana = await User(id=fixture_id("user:dana"), email="b@airbyte.com", name="Dana Reeves").save()
     await AuthIdentity.set_password(dana, FIXTURE_PASSWORD)
 
-    acme = await Org(id=fixture_id("org:acme"), name="Acme", personal_for=michel.id).save()
-    solo = await Org(id=fixture_id("org:solo"), name="Solo Shop").save()
+    acme = await Org(id=fixture_id("org:acme"), name="Acme", slug="acme", personal_for=michel.id).save()
+    solo = await Org(id=fixture_id("org:solo"), name="Solo Shop", slug="solo-shop").save()
 
     await OrgMembership(user_id=michel.id, org_id=acme.id, role=OrgRole.owner).save()
     await OrgMembership(user_id=dana.id, org_id=acme.id, role=OrgRole.member).save()
