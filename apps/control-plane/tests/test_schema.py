@@ -23,11 +23,7 @@ import control_plane
 from control_plane.models.audit import audit_trigger_ddl_v1, audited_tables
 from control_plane.models.common.identified import UUIDV7_SHIM_DDL_V1, needs_uuidv7_shim
 from control_plane.models.common.tombstone import TOMBSTONE_COLUMNS, tombstoned_models, tombstoned_tables, touch_trigger_ddl_v1
-from control_plane.models.runtime_configuration import (
-    runtime_configuration_inputs,
-    runtime_configuration_seed_trigger_ddl_v1,
-    runtime_configuration_trigger_ddl_v1,
-)
+from control_plane.models.runtime_configuration import runtime_configuration_inputs
 
 CONTROL_PLANE_DIR = Path(control_plane.__file__).resolve().parents[2]
 
@@ -128,10 +124,7 @@ def _triggers(conn) -> dict[str, str]:
     """Trigger and trigger-function definitions, keyed by name; our trigger names embed the table."""
     triggers = conn.execute(text("SELECT tgname, pg_get_triggerdef(oid) FROM pg_trigger WHERE NOT tgisinternal"))
     functions = conn.execute(
-        text(
-            "SELECT proname, pg_get_functiondef(oid) FROM pg_proc "
-            "WHERE proname LIKE 'touch_timestamps%' OR proname LIKE 'audit_row%' OR proname LIKE 'runtime_configuration_%'"
-        )
+        text("SELECT proname, pg_get_functiondef(oid) FROM pg_proc WHERE proname LIKE 'touch_timestamps%' OR proname LIKE 'audit_row%'")
     )
     return {row[0]: row[1] for row in [*triggers, *functions]}
 
@@ -144,12 +137,7 @@ def _current_trigger_ddl() -> list[str]:
         for table in audited_tables()
         for statement in audit_trigger_ddl_v1(table.name, tuple(column.name for column in table.primary_key.columns))
     ]
-    runtime_configuration = [
-        statement
-        for table, configuration_input in runtime_configuration_inputs()
-        for statement in runtime_configuration_trigger_ddl_v1(table.name, configuration_input.scope, configuration_input.columns)
-    ]
-    return [*touch, *audit, *runtime_configuration_seed_trigger_ddl_v1(), *runtime_configuration]
+    return [*touch, *audit]
 
 
 def _created_triggers(url: str) -> dict[str, str]:
@@ -202,10 +190,8 @@ def test_audit_triggers_cover_every_audited_table(pg_db):
         assert f"{table.name}_audit" in created_triggers, table.name
 
 
-def test_runtime_configuration_triggers_cover_every_projected_table(pg_db):
-    created_triggers = _created_triggers(pg_db("created"))
+def test_runtime_configuration_registry_names_real_columns():
     inputs = runtime_configuration_inputs()
     assert inputs
-    for table, _ in inputs:
-        assert f"{table.name}_runtime_configuration" in created_triggers, table.name
-    assert "org_runtime_configuration_seed" in created_triggers
+    for table, configuration_input in inputs:
+        assert set(configuration_input.columns) <= set(table.c.keys()), table.name

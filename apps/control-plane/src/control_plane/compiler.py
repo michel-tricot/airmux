@@ -8,6 +8,7 @@ from sqlmodel import col, or_, select
 from contract import BundleV1, Catalog, CredentialEntry, KeyEntry, ModelEntry, ProviderEntry, canonical_json, sign_bundle, uuid7
 from control_plane.db import current_session
 from control_plane.models import Bundle, InferenceKey, Model, Org, Provider, ProviderCredential, RuntimeConfiguration
+from control_plane.models.runtime_configuration import runtime_configuration_changes
 
 if TYPE_CHECKING:
     from datetime import datetime, timedelta
@@ -25,6 +26,7 @@ class UnknownOrgError(LookupError):
 
 async def compile_and_store(org_id: UUID, bundle_id: UUID, now: datetime, staleness_bound: timedelta, signing_key: Ed25519PrivateKey) -> Bundle:
     """Compile, sign, and persist the next bundle version for an org; returns the stored row."""
+    await RuntimeConfiguration.advance(runtime_configuration_changes(current_session().sync_session))
     if await Org.find_by_id(org_id) is None:
         raise UnknownOrgError(org_id)
     configuration = await RuntimeConfiguration.for_update(org_id)

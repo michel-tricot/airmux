@@ -12,7 +12,7 @@ from control_plane.authz import ALL_PERMISSIONS, Actor, Grant, Permission, Scope
 from control_plane.db import transaction
 from control_plane.keys import verify_bearer
 from control_plane.models import Org, User, Workspace, set_actor
-from control_plane.models.runtime_configuration import runtime_configuration_changed
+from control_plane.models.runtime_configuration import RuntimeConfiguration, runtime_configuration_changes
 from control_plane.sessions import SESSION_COOKIE, verify_session
 
 SessionCookie = Annotated[str | None, Cookie(alias=SESSION_COOKIE, include_in_schema=False)]
@@ -233,10 +233,12 @@ def browser_scoped() -> params.Depends:
 async def get_session(request: Request) -> AsyncIterator[AsyncSession]:
     async with transaction(request.app.state.session_factory) as session:
         yield session
-        if runtime_configuration_changed(session.sync_session):
+        changes = runtime_configuration_changes(session.sync_session)
+        if changes:
             from control_plane.compiler import publish_pending  # noqa: PLC0415 compiler loads every projected model
 
             settings = request.app.state.settings
+            await RuntimeConfiguration.advance(changes)
             await publish_pending(datetime.now(tz=UTC), settings.bundle.staleness_bound, settings.bundle.signing_key)
 
 

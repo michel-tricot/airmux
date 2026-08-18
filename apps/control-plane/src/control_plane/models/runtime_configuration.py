@@ -1,19 +1,21 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Literal, cast
 from uuid import UUID
 
 from sqlalchemy import Table, event, inspect
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import Session
-from sqlmodel import Field, col, select
+from sqlmodel import Field, col, literal, select
 
 from control_plane.db import current_session
 from control_plane.models.common.base import Record
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+
+    from sqlalchemy.orm import InstanceState
 
 
 type RuntimeConfigurationScope = Literal["global", "org", "nullable_org"]
@@ -27,7 +29,22 @@ class RuntimeConfigurationInput:
 
 
 _RUNTIME_CONFIGURATION_INPUTS: dict[type[Record], RuntimeConfigurationInput] = {}
-_RUNTIME_CONFIGURATION_CHANGED = "runtime_configuration_changed"
+_RUNTIME_CONFIGURATION_CHANGES = "runtime_configuration_changes"
+
+
+@dataclass(frozen=True)
+class RuntimeConfigurationChanges:
+    global_scope: bool = False
+    org_ids: frozenset[UUID] = frozenset()
+
+    def merged(self, other: RuntimeConfigurationChanges) -> RuntimeConfigurationChanges:
+        return RuntimeConfigurationChanges(
+            global_scope=self.global_scope or other.global_scope,
+            org_ids=self.org_ids | other.org_ids,
+        )
+
+    def __bool__(self) -> bool:
+        return self.global_scope or bool(self.org_ids)
 
 
 def runtime_configured[T: Record](*, scope: RuntimeConfigurationScope, columns: tuple[str, ...]) -> Callable[[type[T]], type[T]]:
@@ -41,27 +58,55 @@ def runtime_configured[T: Record](*, scope: RuntimeConfigurationScope, columns: 
 @event.listens_for(Session, "before_flush")
 def _remember_runtime_configuration_changes(session: Session, _flush_context: object, _instances: object) -> None:
     created_or_deleted = session.new.union(session.deleted)
-    if any(type(entity) in _RUNTIME_CONFIGURATION_INPUTS for entity in created_or_deleted):
-        session.info[_RUNTIME_CONFIGURATION_CHANGED] = True
-        return
-    for entity in session.dirty:
+    changes = RuntimeConfigurationChanges()
+    for entity in created_or_deleted.union(session.dirty):
         configuration_input = _RUNTIME_CONFIGURATION_INPUTS.get(type(entity))
         if configuration_input is None:
             continue
         state = inspect(entity)
-        if any(state.attrs[column].history.has_changes() for column in configuration_input.columns):
-            session.info[_RUNTIME_CONFIGURATION_CHANGED] = True
-            return
+        if entity not in created_or_deleted and not any(state.attrs[column].history.has_changes() for column in configuration_input.columns):
+            continue
+        changes = changes.merged(_changes_for(entity, configuration_input))
+    if changes:
+        previous = session.info.get(_RUNTIME_CONFIGURATION_CHANGES, RuntimeConfigurationChanges())
+        session.info[_RUNTIME_CONFIGURATION_CHANGES] = previous.merged(changes)
 
 
-def runtime_configuration_changed(session: Session) -> bool:
-    return bool(session.info.pop(_RUNTIME_CONFIGURATION_CHANGED, False))
+def _changes_for(entity: Record, configuration_input: RuntimeConfigurationInput) -> RuntimeConfigurationChanges:
+    if configuration_input.scope == "global":
+        return RuntimeConfigurationChanges(global_scope=True)
+    state = cast("InstanceState[Record]", inspect(entity))
+    owner_history = state.attrs.org_id.history
+    owners = (*owner_history.deleted, *owner_history.added, *owner_history.unchanged)
+    if configuration_input.scope == "nullable_org" and None in owners:
+        return RuntimeConfigurationChanges(global_scope=True)
+    return RuntimeConfigurationChanges(org_ids=frozenset(owner for owner in owners if owner is not None))
+
+
+def runtime_configuration_changes(session: Session) -> RuntimeConfigurationChanges:
+    return session.info.pop(_RUNTIME_CONFIGURATION_CHANGES, RuntimeConfigurationChanges())
 
 
 class RuntimeConfiguration(Record, table=True):
     org_id: UUID = Field(primary_key=True, foreign_key="org.id", ondelete="CASCADE")
     desired_revision: int = 0
     published_revision: int = 0
+
+    @classmethod
+    async def advance(cls, changes: RuntimeConfigurationChanges) -> None:
+        if not changes:
+            return
+        from control_plane.models.org import Org  # noqa: PLC0415 runtime configuration depends on the completed model graph
+
+        orgs = select(Org.id, literal(1), literal(0))
+        if not changes.global_scope:
+            orgs = orgs.where(col(Org.id).in_(changes.org_ids))
+        statement = pg_insert(cls).from_select(("org_id", "desired_revision", "published_revision"), orgs)
+        statement = statement.on_conflict_do_update(
+            index_elements=["org_id"],
+            set_={"desired_revision": col(cls.desired_revision) + 1},
+        )
+        await current_session().execute(statement)
 
     @classmethod
     async def for_update(cls, org_id: UUID) -> RuntimeConfiguration:
@@ -91,56 +136,3 @@ def runtime_configuration_inputs() -> list[tuple[Table, RuntimeConfigurationInpu
         ),
         key=lambda entry: entry[0].name,
     )
-
-
-def runtime_configuration_trigger_ddl_v1(table: str, scope: RuntimeConfigurationScope, columns: tuple[str, ...]) -> tuple[str, str]:
-    function = (
-        "CREATE OR REPLACE FUNCTION runtime_configuration_changed_v1() RETURNS trigger LANGUAGE plpgsql AS $$ "
-        "DECLARE old_org uuid; new_org uuid; BEGIN "
-        "IF TG_ARGV[0] = 'global' THEN "
-        "UPDATE runtime_configuration SET desired_revision = desired_revision + 1; RETURN NULL; END IF; "
-        "IF TG_OP <> 'INSERT' THEN old_org := NULLIF(to_jsonb(OLD) ->> TG_ARGV[1], '')::uuid; END IF; "
-        "IF TG_OP <> 'DELETE' THEN new_org := NULLIF(to_jsonb(NEW) ->> TG_ARGV[1], '')::uuid; END IF; "
-        "IF TG_ARGV[0] = 'nullable_org' AND ((TG_OP <> 'INSERT' AND old_org IS NULL) OR (TG_OP <> 'DELETE' AND new_org IS NULL)) THEN "
-        "UPDATE runtime_configuration SET desired_revision = desired_revision + 1; RETURN NULL; END IF; "
-        "IF old_org IS NOT NULL THEN "
-        "INSERT INTO runtime_configuration (org_id, desired_revision, published_revision) VALUES (old_org, 1, 0) "
-        "ON CONFLICT (org_id) DO UPDATE SET desired_revision = runtime_configuration.desired_revision + 1; END IF; "
-        "IF new_org IS NOT NULL AND new_org IS DISTINCT FROM old_org THEN "
-        "INSERT INTO runtime_configuration (org_id, desired_revision, published_revision) VALUES (new_org, 1, 0) "
-        "ON CONFLICT (org_id) DO UPDATE SET desired_revision = runtime_configuration.desired_revision + 1; END IF; "
-        "RETURN NULL; END $$"
-    )
-    update_columns = ", ".join(f'"{column}"' for column in columns)
-    owner_column = "org_id" if scope != "global" else ""
-    trigger = (
-        f'CREATE OR REPLACE TRIGGER {table}_runtime_configuration AFTER INSERT OR DELETE OR UPDATE OF {update_columns} ON "{table}" '
-        f"FOR EACH ROW EXECUTE FUNCTION runtime_configuration_changed_v1('{scope}', '{owner_column}')"
-    )
-    return function, trigger
-
-
-def runtime_configuration_trigger_drop_ddl_v1(table: str) -> tuple[str, str]:
-    drop_trigger = f'DROP TRIGGER IF EXISTS {table}_runtime_configuration ON "{table}"'
-    drop_function = (
-        "DO $$ BEGIN IF NOT EXISTS (SELECT FROM pg_trigger t JOIN pg_proc p ON t.tgfoid = p.oid "
-        "WHERE p.proname = 'runtime_configuration_changed_v1' AND NOT t.tgisinternal) "
-        "THEN DROP FUNCTION IF EXISTS runtime_configuration_changed_v1(); END IF; END $$"
-    )
-    return drop_trigger, drop_function
-
-
-def runtime_configuration_seed_trigger_ddl_v1() -> tuple[str, str]:
-    function = (
-        "CREATE OR REPLACE FUNCTION runtime_configuration_seed_v1() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN "
-        "INSERT INTO runtime_configuration (org_id, desired_revision, published_revision) VALUES (NEW.id, 0, 0) "
-        "ON CONFLICT (org_id) DO NOTHING; RETURN NULL; END $$"
-    )
-    trigger = (
-        'CREATE OR REPLACE TRIGGER org_runtime_configuration_seed AFTER INSERT ON "org" FOR EACH ROW EXECUTE FUNCTION runtime_configuration_seed_v1()'
-    )
-    return function, trigger
-
-
-def runtime_configuration_seed_trigger_drop_ddl_v1() -> tuple[str, str]:
-    return 'DROP TRIGGER IF EXISTS org_runtime_configuration_seed ON "org"', "DROP FUNCTION IF EXISTS runtime_configuration_seed_v1()"
