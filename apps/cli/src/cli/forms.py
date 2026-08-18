@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import inspect
+import json
 import sys
 from types import UnionType
 from typing import TYPE_CHECKING, Union, get_args, get_origin
@@ -26,8 +27,15 @@ def _base_annotation(ann: object) -> object:
     return ann
 
 
-def _is_list_field(field: FieldInfo) -> bool:
-    return get_origin(_base_annotation(field.annotation)) is list
+def _coerce_value(field: FieldInfo, value: object) -> object:
+    if value is None:
+        return None
+    origin = get_origin(_base_annotation(field.annotation))
+    if origin is list:
+        return [part.strip() for part in str(value).split(",") if part.strip()]
+    if origin is dict and isinstance(value, str):
+        return json.loads(value)
+    return value
 
 
 _FLAG_TYPES: dict[object, object] = {str: str | None, float: float | None, int: int | None}
@@ -55,7 +63,12 @@ def fill_spec[M: BaseModel](spec_cls: type[M], provided: dict) -> M:
         label = field.description or name.replace("_", " ")
         default = field.get_default(call_default_factory=True) if has_default else None
         raw = typer.prompt(label, default=",".join(default) if isinstance(default, list) else default)
-        values[name] = [part.strip() for part in str(raw).split(",") if part.strip()] if _is_list_field(field) else raw
+        values[name] = raw
+    try:
+        values = {name: _coerce_value(spec_cls.model_fields[name], value) for name, value in values.items()}
+    except json.JSONDecodeError as e:
+        console.print(f"[red]Expected a JSON object: {e.msg}[/red]")
+        raise typer.Exit(1) from e
     try:
         return spec_cls.model_validate(values)
     except ValidationError as e:
