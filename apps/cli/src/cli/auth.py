@@ -71,10 +71,10 @@ def _provider_key(name: str, overrides: dict[str, str]) -> tuple[str, str]:
     """The key for one provider and where it came from.
 
     Every provider is asked about, because the operator is the one who decides which of them this
-    org spends against and an exported variable is a convenience rather than that decision. What is
+    instance spends against and an exported variable is a convenience rather than that decision. What is
     typed wins; blank falls back to the variable, so the common case is one keystroke and the
     prompt says which one it will take. Blank with nothing exported means no credential: a provider
-    the org does not use should not have a key it cannot resolve.
+    the instance does not use should not have a key it cannot resolve.
 
     A flag answers ahead of the prompt, and without a terminal there is nobody to ask, so the
     variable stands on its own in scripts and containers.
@@ -94,28 +94,23 @@ def _provider_key(name: str, overrides: dict[str, str]) -> tuple[str, str]:
 
 def seed_provider_credentials(
     client: httpx.Client,
-    bearer: dict[str, str],
-    org_id: str,
-    workspace: str,
     overrides: dict[str, str],
 ) -> list[ProviderKey]:
-    """Give the workspace a key for every catalog provider one can be found for, and say what happened.
+    """Give the instance a key for every catalog provider one can be found for, and say what happened.
 
     A fresh install has a catalog and no credentials, which is a gateway that routes nothing, so
     this is what decides whether the command ends with something that serves. It reports per
     provider rather than in total, because which key came from where is what an operator needs to
     check, and a store that would not hold one has something to say about why.
 
-    Scoped to the workspace the command just made, which is where the inference key it prints lives.
-    The org tier is what a workspace falls back to when it brought nothing, so putting the first key
-    there would make the fallback the only path and leave the tier the caller resolves through
-    empty. A second workspace starts without a key, which is the question BYOK exists to ask.
+    Scoped to the instance so the first provider keys are global defaults. Every organization and
+    workspace can use them unless it configures provider credentials at a more specific tier.
 
     Seeds what it can: a deployment using only openai should not have to supply an anthropic key to
     finish setting up, and a provider without a key is skipped in silence rather than reported as a
     failure. Nothing here aborts the command, which has already created the account and the org.
     """
-    catalog = client.get(f"/api/v1/orgs/{org_id}/taxonomy", headers=bearer)
+    catalog = client.get("/api/v1/instance/taxonomy")
     if not catalog.is_success:
         return []
     results = []
@@ -125,7 +120,7 @@ def seed_provider_credentials(
         if not value:
             continue
         body = {"provider": name, "value": value}
-        created = client.post(f"/api/v1/orgs/{org_id}/workspaces/{workspace}/provider-credentials", json=body, headers=bearer)
+        created = client.post("/api/v1/instance/provider-credentials", json=body)
         error = "" if created.is_success else api_error(created)
         results.append(ProviderKey(name, source, error))
     return results
@@ -142,7 +137,7 @@ def quickstart(  # noqa: PLR0913, PLR0917 flags are the command's interface
     anthropic_key: str = typer.Option("", help="Anthropic key; otherwise read from ANTHROPIC_API_KEY or prompted for"),
     console_url: str = typer.Option("", help="Web console URL, printed at the end"),
 ) -> None:
-    """Set up a new instance: account, organization, workspace, provider keys, and an API key you can call."""
+    """Set up a new instance: account, organization, workspace, global provider keys, and an API key you can call."""
     import httpx  # noqa: PLC0415 lazy import keeps CLI startup fast
 
     url, console_url = resolve_urls(control_plane_url, console_url)
@@ -206,15 +201,15 @@ def quickstart(  # noqa: PLR0913, PLR0917 flags are the command's interface
             c.post(f"/api/v1/orgs/{org_id}/workspaces/{workspace['id']}/inference-keys", json={"label": "quickstart"}, headers=bearer), "key mint"
         )
         overrides = {name: value for name, value in (("openai", openai_key), ("anthropic", anthropic_key)) if value}
-        console.print("\n[dim]Provider keys. Press enter to skip a provider.[/dim]")
-        results = seed_provider_credentials(c, bearer, org_id, workspace["slug"], overrides)
+        console.print("\n[dim]Global provider keys. Press enter to skip a provider.[/dim]")
+        results = seed_provider_credentials(c, overrides)
         for result in results:
             if result.error:
                 console.print(f"  [yellow]![/yellow] {result.provider}: {result.error}")
             else:
                 _step(f"[bold]{result.provider}[/bold] key {result.source}")
         if not any(not result.error for result in results):
-            console.print("  [yellow]![/yellow] No provider key set. Add one with [bold]airllm provider-credentials add <provider>[/bold].")
+            console.print("  [yellow]![/yellow] No global provider key set. Add one in the instance console.")
 
         _step("API key created and published")
 

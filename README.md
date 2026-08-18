@@ -83,8 +83,9 @@ docker compose up -d --wait
 ~~~
 
 `quickstart` creates the first account, an organization, a default workspace, an inference key,
-and the first signed bundle. It reads keys from `.env`, prompts for anything it still needs, and
-lets you skip providers you do not use. Save the `AIRLLM_API_KEY` it prints.
+and the first signed bundle. It stores provider keys from `.env` as global defaults available to
+every organization, prompts for anything it still needs, and lets you skip providers you do not
+use. Save the `AIRLLM_API_KEY` it prints.
 
 The stack is now available at:
 

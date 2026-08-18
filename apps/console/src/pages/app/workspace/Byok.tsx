@@ -73,7 +73,7 @@ export default function WorkspaceByok() {
         isError={credentialsQuery.isError}
         error={credentialsQuery.error}
         onRetry={() => void credentialsQuery.refetch()}
-        empty="No keys yet. Add one to route this workspace's traffic through your own provider accounts."
+        empty="No workspace keys configured. Requests use organization provider keys when available, then global provider keys."
         actions={
           canUseActions
             ? (credential) => (
