@@ -1,4 +1,4 @@
-"""org invitations
+"""org invitations and workspace membership lookup
 
 Revision ID: c7d8e9f0a1b2
 Revises: a9f3c6e1d8b4
@@ -75,9 +75,11 @@ def upgrade() -> None:
         op.execute(statement)
     for statement in audit_trigger_ddl_v1("org_invitation", ("id",)):
         op.execute(statement)
+    op.create_index("ix_workspace_membership_workspace_id", "workspace_membership", ["workspace_id"])
 
 
 def downgrade() -> None:
+    op.drop_index("ix_workspace_membership_workspace_id", table_name="workspace_membership")
     for statement in audit_trigger_drop_ddl_v1("org_invitation"):
         op.execute(statement)
     for statement in touch_trigger_drop_ddl_v1("org_invitation"):
