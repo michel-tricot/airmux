@@ -119,6 +119,22 @@ class OrgInvitation(Record, Identified, OrgOwned, Tombstonable, table=True):
         )
 
     @classmethod
+    async def pending_for_email(cls, email: str, now: datetime) -> list[tuple[Self, str, str | None]]:
+        query = (
+            select(cls, Org.name, Workspace.name)
+            .join(Org, col(Org.id) == col(cls.org_id))
+            .outerjoin(Workspace, col(Workspace.id) == col(cls.workspace_id))
+            .where(
+                cls.email == User.normalize_email(email),
+                col(cls.accepted_at).is_(None),
+                col(cls.revoked_at).is_(None),
+                col(cls.expires_at) > now,
+            )
+            .order_by(col(cls.created_at), col(cls.id))
+        )
+        return [(result[0], result[1], result[2]) for result in (await current_session().execute(query)).all()]
+
+    @classmethod
     async def for_token(cls, token: str, *, lock: bool = False) -> Self | None:
         if not token.startswith(INVITATION_TOKEN_PREFIX):
             return None

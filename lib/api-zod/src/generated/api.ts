@@ -494,7 +494,7 @@ export const CliAuthPollResponse = zod.object({
 
 
 /**
- * List the organizations visible to the current user and identify their personal organization.
+ * List the current user's visible organizations, personal organization, and pending invitations.
  *
  * Authentication: human account using a browser session or control-plane access key.
  * @summary Get Current Enrollment
@@ -509,7 +509,17 @@ export const EnrollmentResponse = zod.object({
   "updated_at": zod.coerce.date(),
   "deleted_at": zod.union([zod.coerce.date(),zod.null()])
 })),
-  "personal_org_id": zod.union([zod.uuid(),zod.null()])
+  "personal_org_id": zod.union([zod.uuid(),zod.null()]),
+  "pending_invitations": zod.array(zod.object({
+  "email": zod.string(),
+  "org_id": zod.uuid(),
+  "org_name": zod.string(),
+  "org_role": zod.string(),
+  "workspace_id": zod.union([zod.uuid(),zod.null()]),
+  "workspace_name": zod.union([zod.string(),zod.null()]),
+  "workspace_role": zod.union([zod.string(),zod.null()]),
+  "expires_at": zod.coerce.date()
+}))
 })
 
 

@@ -1498,7 +1498,7 @@ export const getEnrollmentUrl = () => {
 }
 
 /**
- * List the organizations visible to the current user and identify their personal organization.
+ * List the current user's visible organizations, personal organization, and pending invitations.
  *
  * Authentication: human account using a browser session or control-plane access key.
  * @summary Get Current Enrollment

@@ -700,7 +700,7 @@ paths:
       tags:
       - Enrollment
       summary: Get Current Enrollment
-      description: 'List the organizations visible to the current user and identify their personal organization.
+      description: 'List the current user''s visible organizations, personal organization, and pending invitations.
 
 
         Authentication: human account using a browser session or control-plane access key.'
@@ -4094,10 +4094,16 @@ components:
             format: uuid
           - type: 'null'
           title: Personal Org Id
+        pending_invitations:
+          items:
+            $ref: '#/components/schemas/InvitationPreviewOut'
+          type: array
+          title: Pending Invitations
       type: object
       required:
       - orgs
       - personal_org_id
+      - pending_invitations
       title: EnrollOut
     Envelope_AccessKeyMintedOut_:
       properties:

@@ -6,9 +6,10 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { getEnrollmentQueryKey, useEnrollment } from '@workspace/api-client-react';
 import { useCreatePersonalOrgMutation } from '@/features/orgs/hooks';
 import { useSession } from '@/lib/session';
-import { Card, Button, Input, Label } from '@/components/ui/elements';
-import { Building2 } from 'lucide-react';
+import { Badge, Card, Button, Input, Label } from '@/components/ui/elements';
+import { Building2, Mail } from 'lucide-react';
 import { EmptyState, ErrorState, LoadingState } from '@/components/shared/states';
+import { formatDate } from '@/lib/format';
 
 const personalOrgSchema = z.object({ name: z.string().min(1, 'Name is required') });
 
@@ -26,6 +27,7 @@ export default function AppOrgPicker() {
   });
 
   const orgs = enrollment.data?.orgs;
+  const pendingInvitations = enrollment.data?.pending_invitations ?? [];
   const single = orgs?.length === 1 ? orgs[0].id : null;
 
   useEffect(() => {
@@ -62,6 +64,35 @@ export default function AppOrgPicker() {
       <Card className="w-full max-w-lg p-8 shadow-xl shadow-black/40 border-border/50">
         <h1 className="text-xl font-mono font-bold tracking-widest uppercase mb-2">Select Organization</h1>
         <p className="text-muted-foreground text-sm mb-6">Choose an organization to continue.</p>
+
+        {pendingInvitations.length > 0 && (
+          <section aria-labelledby="pending-invitations" className="mb-8 space-y-3">
+            <div>
+              <h2 id="pending-invitations" className="font-mono text-sm font-bold uppercase tracking-wider">
+                Pending invitations
+              </h2>
+              <p className="mt-1 text-xs text-muted-foreground">Open the invitation link you received to accept access.</p>
+            </div>
+            {pendingInvitations.map((invitation) => (
+              <div key={invitation.org_id} className="rounded border border-primary/30 bg-primary/5 p-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex min-w-0 items-start gap-3">
+                    <Mail className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
+                    <div className="min-w-0">
+                      <p className="font-medium">{invitation.org_name}</p>
+                      {invitation.workspace_name && <p className="text-sm text-muted-foreground">{invitation.workspace_name}</p>}
+                    </div>
+                  </div>
+                  <Badge variant="outline">
+                    {invitation.org_role}
+                    {invitation.workspace_role ? ` · ${invitation.workspace_role}` : ''}
+                  </Badge>
+                </div>
+                <p className="mt-3 text-xs text-muted-foreground">Expires {formatDate(invitation.expires_at)}</p>
+              </div>
+            ))}
+          </section>
+        )}
 
         <div className="space-y-3 mb-8">
           {orgs?.map((org) => (

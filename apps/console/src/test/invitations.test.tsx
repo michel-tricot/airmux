@@ -34,6 +34,35 @@ function invitation(id = 'invite-1'): OrgInvitationOut {
 }
 
 describe('organization invitations', () => {
+  it('shows matching pending invitations after signup', async () => {
+    server.use(
+      http.get('/api/v1/enroll', () =>
+        HttpResponse.json({
+          orgs: [],
+          personal_org_id: null,
+          pending_invitations: [
+            {
+              email: 'dev@example.com',
+              org_id: ORG.id,
+              org_name: ORG.name,
+              org_role: 'member',
+              workspace_id: WORKSPACES[0].id,
+              workspace_name: WORKSPACES[0].name,
+              workspace_role: 'viewer',
+              expires_at: '2026-08-24T12:00:00Z',
+            },
+          ],
+        }),
+      ),
+    );
+    renderAt('/orgs');
+
+    expect(await screen.findByRole('heading', { name: 'Pending invitations' })).toBeInTheDocument();
+    expect(screen.getByText(ORG.name)).toBeInTheDocument();
+    expect(screen.getByText(WORKSPACES[0].name)).toBeInTheDocument();
+    expect(screen.getByText('member · viewer')).toBeInTheDocument();
+  });
+
   it('creates a share link once and refreshes the pending list', async () => {
     window.localStorage.setItem('airllm_org_id', ORG.id);
     let invitations: OrgInvitationOut[] = [];

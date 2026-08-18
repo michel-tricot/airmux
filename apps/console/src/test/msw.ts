@@ -28,7 +28,7 @@ export const server = setupServer(
       orgs: [ORG.id],
     }),
   ),
-  http.get('/api/v1/enroll', () => HttpResponse.json({ orgs: [ORG], personal_org_id: null })),
+  http.get('/api/v1/enroll', () => HttpResponse.json({ orgs: [ORG], personal_org_id: null, pending_invitations: [] })),
   http.get('/api/v1/orgs/:orgId/workspaces', () => HttpResponse.json(WORKSPACES)),
   http.get('/api/v1/orgs/:orgId/workspaces/:workspaceRef', ({ params }) => {
     const ws = WORKSPACES.find((w) => w.id === params.workspaceRef || w.slug === params.workspaceRef);
