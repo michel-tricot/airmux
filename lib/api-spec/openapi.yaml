@@ -3882,67 +3882,6 @@ components:
       - issued_at
       - signing_key_id
       title: BundleOut
-    BundleV1:
-      properties:
-        schema_version:
-          type: integer
-          const: 1
-          title: Schema Version
-          default: 1
-        bundle_id:
-          type: string
-          format: uuid
-          title: Bundle Id
-        org_id:
-          type: string
-          format: uuid
-          title: Org Id
-        issued_at:
-          type: string
-          format: date-time
-          title: Issued At
-        keys:
-          items:
-            $ref: '#/components/schemas/KeyEntry'
-          type: array
-          title: Keys
-        catalog:
-          $ref: '#/components/schemas/Catalog'
-      type: object
-      required:
-      - bundle_id
-      - org_id
-      - issued_at
-      - keys
-      - catalog
-      title: BundleV1
-      description: A complete, versioned policy snapshot for one organization's model traffic.
-    Catalog:
-      properties:
-        providers:
-          items:
-            $ref: '#/components/schemas/ProviderEntry'
-          type: array
-          title: Providers
-        models:
-          items:
-            $ref: '#/components/schemas/ModelEntry'
-          type: array
-          title: Models
-        credentials:
-          items:
-            $ref: '#/components/schemas/CredentialEntry'
-          type: array
-          title: Credentials
-          default: []
-      type: object
-      required:
-      - providers
-      - models
-      title: Catalog
-      description: 'Everything routable in one org: providers, the models that point at them, and the credentials
-
-        they are reached with.'
     ClaimOut:
       properties:
         claimed:
@@ -4086,26 +4025,6 @@ components:
       - interval_seconds
       - expires_in_seconds
       title: CliAuthStartOut
-    CredentialEntry:
-      properties:
-        ref:
-          $ref: '#/components/schemas/SecretRef'
-        priority:
-          type: integer
-          title: Priority
-        version:
-          type: integer
-          title: Version
-      type: object
-      required:
-      - ref
-      - priority
-      - version
-      title: CredentialEntry
-      description: 'A provider credential reference, priority, and version included in a policy bundle.
-
-
-        The secret value is not included. A version change tells data planes to refresh their cached value.'
     DataPlaneInstanceOut:
       properties:
         instance_id:
@@ -4900,41 +4819,6 @@ components:
       required:
       - token
       title: InvitationTokenIn
-    KeyEntry:
-      properties:
-        key_id:
-          type: string
-          title: Key Id
-        org_id:
-          type: string
-          format: uuid
-          title: Org Id
-        workspace_id:
-          type: string
-          format: uuid
-          title: Workspace Id
-        token_hash:
-          type: string
-          title: Token Hash
-        expires_at:
-          anyOf:
-          - type: string
-            format: date-time
-          - type: 'null'
-          title: Expires At
-      type: object
-      required:
-      - key_id
-      - org_id
-      - workspace_id
-      - token_hash
-      title: KeyEntry
-      description: 'An active inference key included in a policy bundle.
-
-
-        The bundle contains a token hash for authorization and a key ID for usage attribution, never
-
-        the caller''s secret token.'
     LoginIn:
       properties:
         email:
@@ -5008,64 +4892,6 @@ components:
       - role
       - status
       title: MembershipOut
-    ModelEntry:
-      properties:
-        model_id:
-          type: string
-          title: Model Id
-        provider_id:
-          type: string
-          title: Provider Id
-        upstream_model:
-          type: string
-          title: Upstream Model
-        input_price_per_mtok:
-          type: number
-          title: Input Price Per Mtok
-        output_price_per_mtok:
-          type: number
-          title: Output Price Per Mtok
-        cache_read_price_per_mtok:
-          type: number
-          title: Cache Read Price Per Mtok
-        cache_write_price_per_mtok:
-          type: number
-          title: Cache Write Price Per Mtok
-        context_window:
-          type: integer
-          title: Context Window
-        max_output_tokens:
-          anyOf:
-          - type: integer
-          - type: 'null'
-          title: Max Output Tokens
-        capabilities:
-          items:
-            type: string
-          type: array
-          title: Capabilities
-        egress_kind:
-          anyOf:
-          - type: string
-            enum:
-            - openai_compatible
-            - openai_responses
-            - anthropic
-          - type: 'null'
-          title: Egress Kind
-      type: object
-      required:
-      - model_id
-      - provider_id
-      - upstream_model
-      - input_price_per_mtok
-      - output_price_per_mtok
-      - cache_read_price_per_mtok
-      - cache_write_price_per_mtok
-      - context_window
-      - capabilities
-      title: ModelEntry
-      description: 'A routable model: the caller-facing id plus how to reach and bill it.'
     ModelIn:
       properties:
         model_id:
@@ -5784,47 +5610,6 @@ components:
       - value
       title: ProviderCredentialValueIn
       description: 'A rotation: the same credential, a new value.'
-    ProviderEntry:
-      properties:
-        provider_id:
-          type: string
-          title: Provider Id
-        kind:
-          type: string
-          enum:
-          - openai_compatible
-          - openai_responses
-          - anthropic
-          title: Kind
-        base_url:
-          type: string
-          maxLength: 2083
-          minLength: 1
-          format: uri
-          title: Base Url
-        param_aliases:
-          additionalProperties:
-            type: string
-          type: object
-          title: Param Aliases
-        accepted_params:
-          anyOf:
-          - items:
-              type: string
-            type: array
-          - type: 'null'
-          title: Accepted Params
-        params_closed:
-          type: boolean
-          title: Params Closed
-          default: false
-      type: object
-      required:
-      - provider_id
-      - kind
-      - base_url
-      title: ProviderEntry
-      description: An upstream LLM provider endpoint and its supported request parameters.
     ProviderIn:
       properties:
         provider_id:
@@ -5995,46 +5780,6 @@ components:
       - org
       - workspace
       title: ScopeLevel
-    SecretPurpose:
-      type: string
-      enum:
-      - provider
-      title: SecretPurpose
-      description: The kind of credential addressed by a secret reference.
-    SecretRef:
-      properties:
-        purpose:
-          $ref: '#/components/schemas/SecretPurpose'
-        service:
-          type: string
-          title: Service
-        name:
-          type: string
-          title: Name
-        secret_id:
-          type: string
-          format: uuid
-          title: Secret Id
-        org_id:
-          anyOf:
-          - type: string
-            format: uuid
-          - type: 'null'
-          title: Org Id
-        workspace_id:
-          anyOf:
-          - type: string
-            format: uuid
-          - type: 'null'
-          title: Workspace Id
-      type: object
-      required:
-      - purpose
-      - service
-      - name
-      - secret_id
-      title: SecretRef
-      description: A stable reference to a secret value and the scope that owns it.
     ServiceAccountIn:
       properties:
         name:
@@ -6056,7 +5801,8 @@ components:
     SignedBundle:
       properties:
         payload:
-          $ref: '#/components/schemas/BundleV1'
+          type: string
+          title: Payload
         signature:
           type: string
           title: Signature
@@ -6069,10 +5815,10 @@ components:
       - signature
       - signing_key_id
       title: SignedBundle
-      description: 'A BundleV1 as it crosses the wire and rests on disk.
+      description: 'A serialized BundleV1 as it crosses the wire and rests on disk.
 
 
-        A bundle that fails verification is rejected and the previous one keeps serving.'
+        The signature covers the payload''s exact UTF-8 bytes. Consumers verify before parsing.'
     SignupIn:
       properties:
         email:

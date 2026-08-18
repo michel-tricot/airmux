@@ -358,7 +358,10 @@ def test_bundle_manifest_follows_the_access_key_scope(tmp_path):
         assert {bundle.org_id for bundle in instance.bundles} == {o1, o2}
         assert [bundle.org_id for bundle in org.bundles] == [o1]
         by_org = {bundle.org_id: bundle for bundle in instance.bundles}
-        assert c.get(f"/api/v1/bundles/{by_org[o1].bundle_id}", headers=cp.headers(o1)).status_code == 200
+        response = c.get(f"/api/v1/bundles/{by_org[o1].bundle_id}", headers=cp.headers(o1))
+        assert response.status_code == 200
+        assert isinstance(response.json()["data"]["payload"], str)
+        assert verify_bundle(SignedBundle.model_validate(response.json()["data"]), cp.bundle_key.public_key()).org_id == o1
         assert c.get(f"/api/v1/bundles/{by_org[o2].bundle_id}", headers=cp.headers(o1)).status_code == 403
         workspace_id = make_workspace(c, cp.headers(o1))
         assert c.get("/api/v1/bundles/manifest", headers=cp.headers(o1, workspace_id=workspace_id)).status_code == 403

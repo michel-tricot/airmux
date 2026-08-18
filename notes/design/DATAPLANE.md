@@ -420,8 +420,8 @@ live inference-key hashes, but reading it does not reveal the original keys.
 Remote startup is designed to serve through a control-plane outage:
 
 1. Read `bundles.json` from the configured cache directory
-2. Parse and verify every Ed25519 signature with the configured public key
-3. Admit the complete bundle set
+2. Verify each serialized payload's exact UTF-8 bytes with the configured Ed25519 public key
+3. Parse the verified payloads and admit the complete bundle set
 4. Start the poll and heartbeat loops
 
 The poller immediately requests `GET /api/v1/bundles/manifest`. The control plane derives the
@@ -430,6 +430,11 @@ entries by immutable bundle id, verifies the complete result, admits it, and ato
 signed set. Organizations absent from the next successfully admitted manifest are removed. Parse
 errors, signature failures, HTTP failures, and filesystem failures are recoverable. The last admitted
 bundle set remains in service while polling retries.
+
+`SignedBundle.payload` is the serialized `BundleV1` string covered by the signature. The control
+plane serializes once and stores, signs, and serves that exact text. The data plane verifies it before
+parsing, so signature validity does not depend on reproducing the control plane's serializer and a
+lagging parser can ignore additive fields only after authenticating them.
 
 The heartbeat posts a stable cache-directory instance id, package version, and the current bundle id
 to `POST /api/v1/heartbeat` when exactly one bundle is loaded. A null bundle id means the process has

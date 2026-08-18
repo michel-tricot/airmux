@@ -174,128 +174,6 @@ export interface BundleOut {
   signing_key_id: string;
 }
 
-/**
- * An active inference key included in a policy bundle.
- *
- * The bundle contains a token hash for authorization and a key ID for usage attribution, never
- * the caller's secret token.
- */
-export interface KeyEntry {
-  key_id: string;
-  org_id: string;
-  workspace_id: string;
-  token_hash: string;
-  expires_at?: string | null;
-}
-
-export type ProviderEntryKind = typeof ProviderEntryKind[keyof typeof ProviderEntryKind];
-
-
-export const ProviderEntryKind = {
-  openai_compatible: 'openai_compatible',
-  openai_responses: 'openai_responses',
-  anthropic: 'anthropic',
-} as const;
-
-export type ProviderEntryParamAliases = {[key: string]: string};
-
-/**
- * An upstream LLM provider endpoint and its supported request parameters.
- */
-export interface ProviderEntry {
-  provider_id: string;
-  kind: ProviderEntryKind;
-  /**
-     * @minLength 1
-     * @maxLength 2083
-     */
-  base_url: string;
-  param_aliases?: ProviderEntryParamAliases;
-  accepted_params?: string[] | null;
-  params_closed?: boolean;
-}
-
-export type ModelEntryEgressKind = typeof ModelEntryEgressKind[keyof typeof ModelEntryEgressKind] | null;
-
-
-export const ModelEntryEgressKind = {
-  openai_compatible: 'openai_compatible',
-  openai_responses: 'openai_responses',
-  anthropic: 'anthropic',
-} as const;
-
-/**
- * A routable model: the caller-facing id plus how to reach and bill it.
- */
-export interface ModelEntry {
-  model_id: string;
-  provider_id: string;
-  upstream_model: string;
-  input_price_per_mtok: number;
-  output_price_per_mtok: number;
-  cache_read_price_per_mtok: number;
-  cache_write_price_per_mtok: number;
-  context_window: number;
-  max_output_tokens?: number | null;
-  capabilities: string[];
-  egress_kind?: ModelEntryEgressKind;
-}
-
-/**
- * The kind of credential addressed by a secret reference.
- */
-export type SecretPurpose = typeof SecretPurpose[keyof typeof SecretPurpose];
-
-
-export const SecretPurpose = {
-  provider: 'provider',
-} as const;
-
-/**
- * A stable reference to a secret value and the scope that owns it.
- */
-export interface SecretRef {
-  purpose: SecretPurpose;
-  service: string;
-  name: string;
-  secret_id: string;
-  org_id?: string | null;
-  workspace_id?: string | null;
-}
-
-/**
- * A provider credential reference, priority, and version included in a policy bundle.
- *
- * The secret value is not included. A version change tells data planes to refresh their cached value.
- */
-export interface CredentialEntry {
-  ref: SecretRef;
-  priority: number;
-  version: number;
-}
-
-/**
- * Everything routable in one org: providers, the models that point at them, and the credentials
- * they are reached with.
- */
-export interface Catalog {
-  providers: ProviderEntry[];
-  models: ModelEntry[];
-  credentials?: CredentialEntry[];
-}
-
-/**
- * A complete, versioned policy snapshot for one organization's model traffic.
- */
-export interface BundleV1 {
-  schema_version?: 1;
-  bundle_id: string;
-  org_id: string;
-  issued_at: string;
-  keys: KeyEntry[];
-  catalog: Catalog;
-}
-
 export interface ClaimOut {
   claimed: boolean;
 }
@@ -941,12 +819,12 @@ export interface ServiceAccountIn {
 }
 
 /**
- * A BundleV1 as it crosses the wire and rests on disk.
+ * A serialized BundleV1 as it crosses the wire and rests on disk.
  *
- * A bundle that fails verification is rejected and the previous one keeps serving.
+ * The signature covers the payload's exact UTF-8 bytes. Consumers verify before parsing.
  */
 export interface SignedBundle {
-  payload: BundleV1;
+  payload: string;
   signature: string;
   signing_key_id: string;
 }

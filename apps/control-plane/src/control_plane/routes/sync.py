@@ -9,7 +9,7 @@ from pydantic import Field
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlmodel import col
 
-from contract import BundleManifest, BundleManifestEntry, BundleV1, HeartbeatV1, SignedBundle, UsageEventV1
+from contract import BundleManifest, BundleManifestEntry, HeartbeatV1, SignedBundle, UsageEventV1
 from control_plane.authority import ensure_allowed_for_scopes
 from control_plane.authz import Permission, Scope, ScopeLevel
 from control_plane.deps import ActorDep, BundleScopeDep, CredentialScopeDep, SessionDep, bundle_scope, credential_scope, require
@@ -27,7 +27,7 @@ CREDENTIAL_HEALTH = {"ok": "live", "credential_rejected": "invalid", "rate_limit
 
 def _signed(bundle: Bundle) -> SignedBundle:
     return SignedBundle(
-        payload=BundleV1.model_validate_json(bundle.payload),
+        payload=bundle.payload,
         signature=bundle.signature,
         signing_key_id=bundle.signing_key_id,
     )
