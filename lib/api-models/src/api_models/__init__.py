@@ -322,6 +322,7 @@ class KeyEntry(BaseModel):
     org_id: Annotated[UUID, Field(title="Org Id")]
     workspace_id: Annotated[UUID, Field(title="Workspace Id")]
     token_hash: Annotated[str, Field(title="Token Hash")]
+    expires_at: Annotated[AwareDatetime | None, Field(title="Expires At")] = None
 
 
 class LoginIn(BaseModel):
@@ -676,6 +677,7 @@ class Permission(
             "provider-credentials.manage",
             "inference-keys.read",
             "inference-keys.manage",
+            "playground.execute",
             "bundles.read",
             "bundles.publish",
             "usage.read",
@@ -709,6 +711,7 @@ class Permission(
             "provider-credentials.manage",
             "inference-keys.read",
             "inference-keys.manage",
+            "playground.execute",
             "bundles.read",
             "bundles.publish",
             "usage.read",
@@ -722,6 +725,16 @@ class Permission(
         ],
         Field(title="Permission"),
     ]
+
+
+class PlaygroundSessionEndedOut(BaseModel):
+    status: Annotated[Literal["ended"], Field(title="Status")]
+
+
+class PlaygroundSessionReadyOut(BaseModel):
+    id: Annotated[UUID, Field(title="Id")]
+    expires_at: Annotated[AwareDatetime, Field(title="Expires At")]
+    status: Annotated[Literal["ready"], Field(title="Status")]
 
 
 class ProviderCredentialIn(BaseModel):
@@ -1387,6 +1400,14 @@ class EnvelopeOrgOut(BaseModel):
 
 class EnvelopePasswordChangedOut(BaseModel):
     data: PasswordChangedOut
+
+
+class EnvelopePlaygroundSessionEndedOut(BaseModel):
+    data: PlaygroundSessionEndedOut
+
+
+class EnvelopePlaygroundSessionReadyOut(BaseModel):
+    data: PlaygroundSessionReadyOut
 
 
 class EnvelopeProviderCredentialOut(BaseModel):
