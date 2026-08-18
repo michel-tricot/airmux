@@ -67,10 +67,10 @@ class UsageEventV1(BaseModel):
 
 
 class HeartbeatV1(BaseModel):
-    """The identity, software version, and active bundle reported by a data plane."""
+    """The identity, software version, and single active bundle reported by a data plane."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     instance_id: UUID = Field(description="Stable ID for this data-plane installation")
     version: str = Field(description="Running data-plane software version", min_length=1, max_length=100)
-    bundle_id: UUID | None = Field(default=None, description="Policy bundle currently served, if one is loaded")
+    bundle_id: UUID | None = Field(default=None, description="Policy bundle served when exactly one is loaded; otherwise absent")

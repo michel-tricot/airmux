@@ -58,17 +58,14 @@ export default function WorkspaceOverview() {
   const canReadKeys = authorization.can(inferenceKeyAccess.read);
   const canReadCredentials = authorization.can(providerCredentialAccess.workspace.read);
   const canReadUsage = authorization.can(telemetryAccess.workspaceUsage);
-  const membersQuery = useWorkspaceMembers(orgId, workspaceRef, canReadMembers);
-  const keysQuery = useInferenceKeys(orgId, workspaceRef, canReadKeys);
-  const credentialsQuery = useProviderCredentials(orgId, workspaceRef, canReadCredentials);
-  const eventsQuery = useWorkspaceEvents(orgId, workspaceRef, { limit: EVENTS_WINDOW }, workspace !== undefined && canReadUsage);
+  const membersQuery = useWorkspaceMembers(orgId, workspaceRef, { enabled: canReadMembers });
+  const keysQuery = useInferenceKeys(orgId, workspaceRef, { enabled: canReadKeys });
+  const credentialsQuery = useProviderCredentials(orgId, workspaceRef, { enabled: canReadCredentials });
+  const eventsQuery = useWorkspaceEvents(orgId, workspaceRef, { limit: EVENTS_WINDOW }, { enabled: workspace !== undefined && canReadUsage });
   const events = eventsQuery.data;
 
   if (workspaceQuery.isLoading) return <LoadingState label="Loading workspace..." />;
   if (workspaceQuery.isError) return <ErrorState error={workspaceQuery.error} resource="workspace" onRetry={() => workspaceQuery.refetch()} />;
-  if (authorization.isLoading) return <LoadingState label="Loading workspace permissions..." />;
-  if (authorization.isError)
-    return <ErrorState error={authorization.error} resource="workspace permissions" onRetry={() => authorization.refetch()} />;
   if (!workspace) return <ErrorState message="Workspace not found" />;
 
   const activeKeys = keysQuery.data?.filter((key) => !key.revoked).length;
@@ -78,6 +75,7 @@ export default function WorkspaceOverview() {
   const costUsd = events?.reduce((sum, event) => sum + event.cost_usd, 0);
   const recent = events?.slice(0, 8);
   const keyLabels = new Map(keysQuery.data?.map((key) => [key.id, key.label] as const) ?? []);
+  const describeKey = (keyId: string) => keyLabels.get(keyId) ?? (canReadKeys && keysQuery.isSuccess ? 'Playground' : null);
 
   const topModels = events
     ? [...new Set(events.map((event) => event.model_id))]
@@ -232,7 +230,12 @@ export default function WorkspaceOverview() {
                     key: 'key',
                     header: 'Key',
                     cellClassName: 'text-xs',
-                    cell: (e) => keyLabels.get(e.key_id) ?? <span className="font-mono text-muted-foreground">{e.key_id}</span>,
+                    cell: (e) => {
+                      const label = describeKey(e.key_id);
+                      if (label) return label;
+                      if (canReadKeys && keysQuery.isLoading) return <span className="text-muted-foreground">...</span>;
+                      return <span className="font-mono text-muted-foreground">{e.key_id}</span>;
+                    },
                   },
                   {
                     key: 'tokens',

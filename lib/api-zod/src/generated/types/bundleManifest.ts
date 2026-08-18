@@ -10,17 +10,11 @@
  *
  * OpenAPI spec version: 0.1.0
  */
-import type { Catalog } from './catalog';
-import type { KeyEntry } from './keyEntry';
+import type { BundleManifestEntry } from './bundleManifestEntry';
 
 /**
- * A complete, versioned policy snapshot for one organization's model traffic.
+ * The complete set of organization bundles one data plane may serve.
  */
-export interface BundleV1 {
-  schema_version?: 1;
-  bundle_id: string;
-  org_id: string;
-  issued_at: Date;
-  keys: KeyEntry[];
-  catalog: Catalog;
+export interface BundleManifest {
+  bundles: BundleManifestEntry[];
 }

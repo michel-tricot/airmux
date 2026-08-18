@@ -1,15 +1,15 @@
 import { useState } from 'react';
 import * as z from 'zod';
 import { Card, Button, Input, Badge } from '@/components/ui/elements';
-import { Building2, Plus, Search } from 'lucide-react';
+import { Building2, Plus } from 'lucide-react';
 import { formatDate } from '@/lib/format';
 import { Link } from 'wouter';
 import { useOrgs, useCreateOrgMutation } from '@/features/orgs/hooks';
 import { DataTable } from '@/components/shared/data-table';
 import { FormDialog } from '@/components/shared/form-dialog';
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group';
-import { PageShell } from '@/components/shared/page-shell';
+import { PageHeader, PageShell } from '@/components/shared/page-shell';
+import { SearchField } from '@/components/shared/search-field';
 import { useAuthorization } from '@/features/permissions/hooks';
 import { orgAccess } from '@/features/orgs/policy';
 
@@ -28,32 +28,21 @@ export default function Organizations() {
 
   return (
     <PageShell>
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Organizations</h1>
-          <p className="text-muted-foreground mt-1 text-sm">Organizations group your keys, policies, and usage.</p>
-        </div>
-        {canCreate && (
-          <Button onClick={() => setCreateOpen(true)} className="gap-2">
-            <Plus className="w-4 h-4" /> New Organization
-          </Button>
-        )}
-      </div>
+      <PageHeader
+        title="Organizations"
+        description="Organizations group your keys, policies, and usage."
+        actions={
+          canCreate && (
+            <Button onClick={() => setCreateOpen(true)} className="gap-2">
+              <Plus className="w-4 h-4" /> New Organization
+            </Button>
+          )
+        }
+      />
 
       <Card>
         <div className="p-4 border-b border-border flex items-center gap-4">
-          <InputGroup className="max-w-sm flex-1 bg-background/50">
-            <InputGroupAddon>
-              <Search />
-            </InputGroupAddon>
-            <InputGroupInput
-              aria-label="Search organizations"
-              placeholder="Search organizations..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="font-mono"
-            />
-          </InputGroup>
+          <SearchField value={search} onValueChange={setSearch} label="Search organizations" placeholder="Search organizations..." />
         </div>
 
         <DataTable

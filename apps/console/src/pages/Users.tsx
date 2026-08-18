@@ -1,15 +1,15 @@
 import { useState } from 'react';
 import * as z from 'zod';
 import { Avatar, AvatarFallback, Card, Button, Input, Badge } from '@/components/ui/elements';
-import { Users, Search, Bot } from 'lucide-react';
+import { Users, Bot } from 'lucide-react';
 import { formatDate } from '@/lib/format';
 import { Link } from 'wouter';
 import { useUsers, useCreateServiceAccountMutation } from '@/features/users/hooks';
 import { DataTable } from '@/components/shared/data-table';
 import { FormDialog } from '@/components/shared/form-dialog';
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group';
-import { PageShell } from '@/components/shared/page-shell';
+import { PageHeader, PageShell } from '@/components/shared/page-shell';
+import { SearchField } from '@/components/shared/search-field';
 import { useAuthorization } from '@/features/permissions/hooks';
 import { userAccess } from '@/features/users/policy';
 
@@ -36,34 +36,21 @@ export default function UsersList() {
 
   return (
     <PageShell>
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Global Users</h1>
-          <p className="text-muted-foreground mt-1 text-sm">
-            Every account on the instance, with the orgs it belongs to. Human accounts sign up themselves.
-          </p>
-        </div>
-        {canCreateServiceAccount && (
-          <Button onClick={() => setServiceAccountOpen(true)} variant="outline" className="gap-2">
-            <Bot className="w-4 h-4" /> Create Service Account
-          </Button>
-        )}
-      </div>
+      <PageHeader
+        title="Global Users"
+        description="Every account on the instance, with the orgs it belongs to. Human accounts sign up themselves."
+        actions={
+          canCreateServiceAccount && (
+            <Button onClick={() => setServiceAccountOpen(true)} variant="outline" className="gap-2">
+              <Bot className="w-4 h-4" /> Create Service Account
+            </Button>
+          )
+        }
+      />
 
       <Card>
         <div className="p-4 border-b border-border flex items-center gap-4">
-          <InputGroup className="max-w-sm flex-1 bg-background/50">
-            <InputGroupAddon>
-              <Search />
-            </InputGroupAddon>
-            <InputGroupInput
-              aria-label="Search users"
-              placeholder="Search users..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="font-mono"
-            />
-          </InputGroup>
+          <SearchField value={search} onValueChange={setSearch} label="Search users" placeholder="Search users..." />
         </div>
 
         <DataTable

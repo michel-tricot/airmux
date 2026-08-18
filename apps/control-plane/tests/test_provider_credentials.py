@@ -10,7 +10,7 @@ from fastapi.testclient import TestClient
 from helpers import MODEL, PROVIDER, make_org, make_workspace, run_in_db, setup_control_plane
 from sqlalchemy.exc import IntegrityError
 
-from contract import EnvStoreConfig, SecretNotFoundError, SecretPurpose, SecretRef, uuid7
+from contract import BundleV1, EnvStoreConfig, SecretNotFoundError, SecretPurpose, SecretRef, uuid7
 from control_plane.authz import Permission
 from control_plane.models import Provider, ProviderCredential, set_actor
 
@@ -34,6 +34,11 @@ def _collection(headers: dict[str, str], workspace: UUID | str | None = None) ->
 
 def _credential_path(credential: dict, org_id: UUID | str | None = None) -> str:
     return f"/api/v1/orgs/{org_id or credential['org_id']}/provider-credentials/{credential['id']}"
+
+
+def _latest_bundle(client: TestClient, headers: dict[str, str]) -> BundleV1:
+    payload = client.get("/api/v1/bundle/latest", headers=headers).json()["data"]["payload"]
+    return BundleV1.model_validate_json(payload)
 
 
 def _stored(cp, credential: dict) -> str:
@@ -64,6 +69,48 @@ def test_a_credential_keeps_its_value_out_of_the_api(tmp_path):
         assert credential["scope"] == "org"
         assert credential["version"] == 1
         assert _stored(cp, credential) == KEY
+
+
+def test_an_instance_credential_can_be_created_and_listed(tmp_path):
+    cp = setup_control_plane(tmp_path)
+    with TestClient(cp.app) as c:
+        root = cp.headers()
+        _catalog(c, root)
+        response = c.post(
+            "/api/v1/instance/provider-credentials",
+            json={"provider": "openai", "name": "platform", "value": KEY, "priority": 10},
+            headers=root,
+        )
+
+        assert response.status_code == 200, response.text
+        credential = response.json()["data"]
+        assert KEY not in response.text
+        assert credential["scope"] == "platform"
+        assert credential["org_id"] is None
+        assert credential["workspace_id"] is None
+        assert credential["status"] == "unknown"
+        assert _stored(cp, credential) == KEY
+
+        listed = c.get("/api/v1/instance/provider-credentials", headers=root)
+        assert listed.status_code == 200, listed.text
+        assert [(item["id"], item["status"]) for item in listed.json()["data"]] == [(credential["id"], "unknown")]
+
+
+def test_instance_provider_credentials_exclude_tenant_credentials(tmp_path):
+    cp = setup_control_plane(tmp_path)
+    with TestClient(cp.app) as c:
+        root = cp.headers()
+        _catalog(c, root)
+        org = cp.headers(make_org(c, root))
+        c.post(_collection(org), json={"provider": "openai", "name": "tenant", "value": KEY}, headers=org)
+        c.post(
+            "/api/v1/instance/provider-credentials",
+            json={"provider": "openai", "name": "platform", "value": KEY},
+            headers=root,
+        )
+
+        listed = c.get("/api/v1/instance/provider-credentials", headers=root).json()["data"]
+        assert [(credential["scope"], credential["name"]) for credential in listed] == [("platform", "platform")]
 
 
 def test_a_workspace_brings_its_own_key(tmp_path):
@@ -195,10 +242,10 @@ def test_the_bundle_names_the_credential_and_carries_no_secret(tmp_path):
         c.post(_collection(org), json={"provider": "openai", "value": KEY}, headers=org)
         payload = c.get("/api/v1/bundle/latest", headers=org).text
         assert KEY not in payload
-        entry = c.get("/api/v1/bundle/latest", headers=org).json()["data"]["payload"]["catalog"]["credentials"][0]
-        assert entry["ref"]["service"] == "openai"
-        assert entry["ref"]["purpose"] == "provider"
-        assert entry["version"] == 1
+        entry = _latest_bundle(c, org).catalog.credentials[0]
+        assert entry.ref.service == "openai"
+        assert entry.ref.purpose == "provider"
+        assert entry.version == 1
 
 
 def test_a_disabled_credential_drops_out_of_the_bundle(tmp_path):
@@ -211,8 +258,7 @@ def test_a_disabled_credential_drops_out_of_the_bundle(tmp_path):
         org = cp.headers(org_id)
         created = c.post(_collection(org), json={"provider": "openai", "value": KEY}, headers=org).json()["data"]
         c.patch(_credential_path(created), json={"enabled": False}, headers=org)
-        payload = c.get("/api/v1/bundle/latest", headers=org).json()["data"]["payload"]
-        assert payload["catalog"]["credentials"] == []
+        assert _latest_bundle(c, org).catalog.credentials == []
 
 
 def test_a_rejected_body_does_not_echo_the_key(tmp_path):
@@ -475,6 +521,6 @@ def test_a_platform_credential_reaches_every_org(tmp_path):
         org_id = make_org(c, root)
         org = cp.headers(org_id)
         c.post(f"/api/v1/orgs/{org_id}/bundles/republish", headers=org)
-        entries = c.get("/api/v1/bundle/latest", headers=org).json()["data"]["payload"]["catalog"]["credentials"]
-        assert [e["ref"]["name"] for e in entries] == ["platform"]
-        assert entries[0]["ref"]["org_id"] is None
+        entries = _latest_bundle(c, org).catalog.credentials
+        assert [entry.ref.name for entry in entries] == ["platform"]
+        assert entries[0].ref.org_id is None

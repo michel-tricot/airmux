@@ -12,13 +12,14 @@ import {
   getMeQueryKey,
   type OrgOut,
 } from '@workspace/api-client-react';
+import type { EnabledQueryOptions } from '@/features/query-options';
 
-export function useOrgs() {
-  return useListOrgs();
+export function useOrgs({ enabled = true }: EnabledQueryOptions = {}) {
+  return useListOrgs({ query: { enabled, queryKey: getListOrgsQueryKey() } });
 }
 
-export function useOrg(orgId: string) {
-  return useGetOrg(orgId, { query: { queryKey: getGetOrgQueryKey(orgId) } });
+export function useOrg(orgId: string, { enabled = true }: EnabledQueryOptions = {}) {
+  return useGetOrg(orgId, { query: { enabled, queryKey: getGetOrgQueryKey(orgId) } });
 }
 
 export function useCreateOrgMutation() {

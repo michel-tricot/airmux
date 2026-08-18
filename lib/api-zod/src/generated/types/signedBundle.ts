@@ -10,15 +10,14 @@
  *
  * OpenAPI spec version: 0.1.0
  */
-import type { BundleV1 } from './bundleV1';
 
 /**
- * A BundleV1 as it crosses the wire and rests on disk.
+ * A serialized BundleV1 as it crosses the wire and rests on disk.
  *
- * A bundle that fails verification is rejected and the previous one keeps serving.
+ * The signature covers the payload's exact UTF-8 bytes. Consumers verify before parsing.
  */
 export interface SignedBundle {
-  payload: BundleV1;
+  payload: string;
   signature: string;
   signing_key_id: string;
 }

@@ -10,7 +10,7 @@ from fastapi.testclient import TestClient
 from helpers import MODEL, PROVIDER, make_admin, make_org, make_user, make_workspace, run_in_db, setup_control_plane
 from pg import db_name_for, ensure_database
 
-from contract import INFERENCE_TOKEN_PREFIX, SignedBundle, private_key_to_b64, token_hash, uuid7, verify_bundle
+from contract import INFERENCE_TOKEN_PREFIX, BundleManifest, SignedBundle, private_key_to_b64, token_hash, uuid7, verify_bundle
 from control_plane.app import create_app
 from control_plane.authz import Permission
 from control_plane.compiler import publish_pending
@@ -342,6 +342,30 @@ def test_bundle_latest_filters_by_org(tmp_path):
         scoped = c.get("/api/v1/bundle/latest", headers=root, params={"org_id": str(o1)})
         bundle = verify_bundle(SignedBundle.model_validate(scoped.json()["data"]), cp.bundle_key.public_key())
         assert bundle.org_id == o1
+
+
+def test_bundle_manifest_follows_the_access_key_scope(tmp_path):
+    cp = setup_control_plane(tmp_path)
+    root = cp.headers()
+    with TestClient(cp.app) as c:
+        o1 = make_org(c, root, "o1")
+        o2 = make_org(c, root, "o2")
+        c.post(f"/api/v1/orgs/{o1}/bundles/republish", headers=cp.headers(o1))
+        c.post(f"/api/v1/orgs/{o2}/bundles/republish", headers=cp.headers(o2))
+
+        instance = BundleManifest.model_validate(c.get("/api/v1/bundles/manifest", headers=root).json()["data"])
+        org = BundleManifest.model_validate(c.get("/api/v1/bundles/manifest", headers=cp.headers(o1)).json()["data"])
+
+        assert {bundle.org_id for bundle in instance.bundles} == {o1, o2}
+        assert [bundle.org_id for bundle in org.bundles] == [o1]
+        by_org = {bundle.org_id: bundle for bundle in instance.bundles}
+        response = c.get(f"/api/v1/bundles/{by_org[o1].bundle_id}", headers=cp.headers(o1))
+        assert response.status_code == 200
+        assert isinstance(response.json()["data"]["payload"], str)
+        assert verify_bundle(SignedBundle.model_validate(response.json()["data"]), cp.bundle_key.public_key()).org_id == o1
+        assert c.get(f"/api/v1/bundles/{by_org[o2].bundle_id}", headers=cp.headers(o1)).status_code == 403
+        workspace_id = make_workspace(c, cp.headers(o1))
+        assert c.get("/api/v1/bundles/manifest", headers=cp.headers(o1, workspace_id=workspace_id)).status_code == 403
 
 
 def test_concurrent_publications_allocate_distinct_versions(tmp_path):

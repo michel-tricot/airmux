@@ -1348,6 +1348,83 @@ export const RevokeInferenceKeyResponse = zod.object({
 
 
 /**
+ * List provider credentials owned by the instance.
+ *
+ * Required permission: `provider-credentials.read`.
+ * @summary List Instance Provider Credentials
+ */
+export const ListInstanceProviderCredentialsResponseItem = zod.object({
+  "id": zod.uuid(),
+  "org_id": zod.union([zod.uuid(),zod.null()]),
+  "workspace_id": zod.union([zod.uuid(),zod.null()]),
+  "provider_id": zod.uuid(),
+  "provider_name": zod.string(),
+  "name": zod.string(),
+  "priority": zod.int(),
+  "enabled": zod.boolean(),
+  "version": zod.int(),
+  "status": zod.string(),
+  "status_at": zod.union([zod.coerce.date(),zod.null()]),
+  "fingerprint": zod.string(),
+  "created_at": zod.coerce.date(),
+  "updated_at": zod.coerce.date(),
+  "deleted_at": zod.union([zod.coerce.date(),zod.null()]),
+  "scope": zod.enum(['platform', 'org', 'workspace'])
+})
+export const ListInstanceProviderCredentialsResponse = zod.array(ListInstanceProviderCredentialsResponseItem)
+
+
+/**
+ * Store a provider API key available to every organization on the instance.
+ *
+ * Required permission: `provider-credentials.manage`.
+ * @summary Create Instance Provider Credential
+ */
+export const createInstanceProviderCredentialBodyProviderMax = 63;
+
+
+export const createInstanceProviderCredentialBodyProviderRegExp = new RegExp('^[a-z0-9][a-z0-9_-]*$');
+export const createInstanceProviderCredentialBodyNameDefault = `default`;
+export const createInstanceProviderCredentialBodyNameMax = 80;
+
+
+export const createInstanceProviderCredentialBodyNameRegExp = new RegExp('^[A-Za-z0-9][A-Za-z0-9_.-]*$');
+export const createInstanceProviderCredentialBodyValueMax = 16384;
+
+export const createInstanceProviderCredentialBodyPriorityDefault = 100;
+export const createInstanceProviderCredentialBodyPriorityMin = 0;
+export const createInstanceProviderCredentialBodyPriorityMax = 1000000;
+
+
+
+export const CreateInstanceProviderCredentialBody = zod.object({
+  "provider": zod.string().min(1).max(createInstanceProviderCredentialBodyProviderMax).regex(createInstanceProviderCredentialBodyProviderRegExp).describe('Provider name from the catalog, e.g. openai'),
+  "name": zod.string().min(1).max(createInstanceProviderCredentialBodyNameMax).regex(createInstanceProviderCredentialBodyNameRegExp).default(createInstanceProviderCredentialBodyNameDefault).describe('Handle for this key within the provider and scope, e.g. prod or backup'),
+  "value": zod.string().min(1).max(createInstanceProviderCredentialBodyValueMax).describe('The provider API key; stored securely and never returned'),
+  "priority": zod.int().min(createInstanceProviderCredentialBodyPriorityMin).max(createInstanceProviderCredentialBodyPriorityMax).default(createInstanceProviderCredentialBodyPriorityDefault).describe('Lower is tried first; ties break by name')
+}).describe('A provider API key and the metadata used to select it.')
+
+export const CreateInstanceProviderCredentialResponse = zod.object({
+  "id": zod.uuid(),
+  "org_id": zod.union([zod.uuid(),zod.null()]),
+  "workspace_id": zod.union([zod.uuid(),zod.null()]),
+  "provider_id": zod.uuid(),
+  "provider_name": zod.string(),
+  "name": zod.string(),
+  "priority": zod.int(),
+  "enabled": zod.boolean(),
+  "version": zod.int(),
+  "status": zod.string(),
+  "status_at": zod.union([zod.coerce.date(),zod.null()]),
+  "fingerprint": zod.string(),
+  "created_at": zod.coerce.date(),
+  "updated_at": zod.coerce.date(),
+  "deleted_at": zod.union([zod.coerce.date(),zod.null()]),
+  "scope": zod.enum(['platform', 'org', 'workspace'])
+})
+
+
+/**
  * Store a provider API key for every workspace in an organization.
  *
  * Required permission: `provider-credentials.manage`.
@@ -1877,6 +1954,37 @@ export const ListActivityResponse = zod.array(ListActivityResponseItem)
 
 
 /**
+ * Return every latest organization bundle visible to the authenticated data plane credential.
+ *
+ * Required permission: `bundles.read`.
+ * @summary Get Authorized Bundle Manifest
+ */
+export const BundleManifestResponse = zod.object({
+  "bundles": zod.array(zod.object({
+  "org_id": zod.uuid(),
+  "bundle_id": zod.uuid()
+}).describe('The immutable identity of one organization bundle available to a data plane.'))
+}).describe('The complete set of organization bundles one data plane may serve.')
+
+
+/**
+ * Return one immutable signed bundle visible to the authenticated data plane credential.
+ *
+ * Required permission: `bundles.read`.
+ * @summary Get Bundle
+ */
+export const GetBundleParams = zod.object({
+  "bundle_id": zod.uuid().describe('Policy bundle ID')
+})
+
+export const GetBundleResponse = zod.object({
+  "payload": zod.string(),
+  "signature": zod.string(),
+  "signing_key_id": zod.string()
+}).describe('A serialized BundleV1 as it crosses the wire and rests on disk.\n\nThe signature covers the payload\'s exact UTF-8 bytes. Consumers verify before parsing.')
+
+
+/**
  * Return the newest signed policy bundle available at the requested organization scope.
  *
  * Required permission: `bundles.read`.
@@ -1886,65 +1994,11 @@ export const BundleLatestQueryParams = zod.object({
   "org_id": zod.union([zod.uuid(),zod.null()]).optional().describe('Organization whose latest bundle to return; omit to use the credential\'s scope')
 })
 
-export const bundleLatestResponsePayloadSchemaVersionDefault = 1;
-export const bundleLatestResponsePayloadCatalogProvidersItemBaseUrlMax = 2083;
-
-export const bundleLatestResponsePayloadCatalogProvidersItemParamsClosedDefault = false;
-export const bundleLatestResponsePayloadCatalogCredentialsDefault = [];
-
 export const BundleLatestResponse = zod.object({
-  "payload": zod.object({
-  "schema_version": zod.literal(1).default(bundleLatestResponsePayloadSchemaVersionDefault),
-  "bundle_id": zod.uuid(),
-  "org_id": zod.uuid(),
-  "issued_at": zod.coerce.date(),
-  "keys": zod.array(zod.object({
-  "key_id": zod.string(),
-  "org_id": zod.uuid(),
-  "workspace_id": zod.uuid(),
-  "token_hash": zod.string(),
-  "expires_at": zod.union([zod.coerce.date(),zod.null()]).optional()
-}).describe('An active inference key included in a policy bundle.\n\nThe bundle contains a token hash for authorization and a key ID for usage attribution, never\nthe caller\'s secret token.')),
-  "catalog": zod.object({
-  "providers": zod.array(zod.object({
-  "provider_id": zod.string(),
-  "kind": zod.enum(['openai_compatible', 'openai_responses', 'anthropic']),
-  "base_url": zod.url().min(1).max(bundleLatestResponsePayloadCatalogProvidersItemBaseUrlMax),
-  "param_aliases": zod.record(zod.string(), zod.string()).optional(),
-  "accepted_params": zod.union([zod.array(zod.string()),zod.null()]).optional(),
-  "params_closed": zod.boolean().default(bundleLatestResponsePayloadCatalogProvidersItemParamsClosedDefault)
-}).describe('An upstream LLM provider endpoint and its supported request parameters.')),
-  "models": zod.array(zod.object({
-  "model_id": zod.string(),
-  "provider_id": zod.string(),
-  "upstream_model": zod.string(),
-  "input_price_per_mtok": zod.number(),
-  "output_price_per_mtok": zod.number(),
-  "cache_read_price_per_mtok": zod.number(),
-  "cache_write_price_per_mtok": zod.number(),
-  "context_window": zod.int(),
-  "max_output_tokens": zod.union([zod.int(),zod.null()]).optional(),
-  "capabilities": zod.array(zod.string()),
-  "parameter_support": zod.record(zod.string(), zod.enum(['supported', 'unsupported'])).optional(),
-  "egress_kind": zod.union([zod.enum(['openai_compatible', 'openai_responses', 'anthropic']),zod.null()]).optional()
-}).describe('A routable model: the caller-facing id plus how to reach and bill it.')),
-  "credentials": zod.array(zod.object({
-  "ref": zod.object({
-  "purpose": zod.enum(['provider']).describe('The kind of credential addressed by a secret reference.'),
-  "service": zod.string(),
-  "name": zod.string(),
-  "secret_id": zod.uuid(),
-  "org_id": zod.union([zod.uuid(),zod.null()]).optional(),
-  "workspace_id": zod.union([zod.uuid(),zod.null()]).optional()
-}).describe('A stable reference to a secret value and the scope that owns it.'),
-  "priority": zod.int(),
-  "version": zod.int()
-}).describe('A provider credential reference, priority, and version included in a policy bundle.\n\nThe secret value is not included. A version change tells data planes to refresh their cached value.')).default(bundleLatestResponsePayloadCatalogCredentialsDefault)
-}).describe('Everything routable in one org: providers, the models that point at them, and the credentials\nthey are reached with.')
-}).describe('A complete, versioned policy snapshot for one organization\'s model traffic.'),
+  "payload": zod.string(),
   "signature": zod.string(),
   "signing_key_id": zod.string()
-}).describe('A BundleV1 as it crosses the wire and rests on disk.\n\nA bundle that fails verification is rejected and the previous one keeps serving.')
+}).describe('A serialized BundleV1 as it crosses the wire and rests on disk.\n\nThe signature covers the payload\'s exact UTF-8 bytes. Consumers verify before parsing.')
 
 
 /**
@@ -2032,8 +2086,8 @@ export const heartbeatBodyVersionMax = 100;
 export const HeartbeatBody = zod.object({
   "instance_id": zod.uuid().describe('Stable ID for this data-plane installation'),
   "version": zod.string().min(1).max(heartbeatBodyVersionMax).describe('Running data-plane software version'),
-  "bundle_id": zod.union([zod.uuid(),zod.null()]).optional().describe('Policy bundle currently served, if one is loaded')
-}).describe('The identity, software version, and active bundle reported by a data plane.')
+  "bundle_id": zod.union([zod.uuid(),zod.null()]).optional().describe('Policy bundle served when exactly one is loaded; otherwise absent')
+}).describe('The identity, software version, and single active bundle reported by a data plane.')
 
 export const HeartbeatResponse = zod.object({
   "instance_id": zod.uuid()

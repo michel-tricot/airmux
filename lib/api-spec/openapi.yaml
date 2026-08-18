@@ -2257,6 +2257,79 @@ paths:
       - scope: workspace_scope
         anyOf:
         - inference-keys.manage
+  /api/v1/instance/provider-credentials:
+    get:
+      tags:
+      - Instance Provider Credentials
+      summary: List Instance Provider Credentials
+      description: 'List provider credentials owned by the instance.
+
+
+        Required permission: `provider-credentials.read`.'
+      operationId: list_instance_provider_credentials
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_list_ProviderCredentialOut__'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
+      security:
+      - AccessKey: []
+      - SessionCookie: []
+      x-airllm-authority:
+      - scope: instance_scope
+        anyOf:
+        - provider-credentials.read
+    post:
+      tags:
+      - Instance Provider Credentials
+      summary: Create Instance Provider Credential
+      description: 'Store a provider API key available to every organization on the instance.
+
+
+        Required permission: `provider-credentials.manage`.'
+      operationId: create_instance_provider_credential
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProviderCredentialIn'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_ProviderCredentialOut_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
+      security:
+      - AccessKey: []
+      - SessionCookie: []
+      x-airllm-authority:
+      - scope: instance_scope
+        anyOf:
+        - provider-credentials.manage
   /api/v1/orgs/{org_id}/provider-credentials:
     post:
       tags:
@@ -3137,6 +3210,83 @@ paths:
       - scope: org_scope
         anyOf:
         - audit.read
+  /api/v1/bundles/manifest:
+    get:
+      tags:
+      - Data Plane API
+      summary: Get Authorized Bundle Manifest
+      description: 'Return every latest organization bundle visible to the authenticated data plane credential.
+
+
+        Required permission: `bundles.read`.'
+      operationId: bundle_manifest
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_BundleManifest_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
+      security:
+      - AccessKey: []
+      - SessionCookie: []
+      x-airllm-authority:
+      - scope: credential_scope
+        anyOf:
+        - bundles.read
+  /api/v1/bundles/{bundle_id}:
+    get:
+      tags:
+      - Data Plane API
+      summary: Get Bundle
+      description: 'Return one immutable signed bundle visible to the authenticated data plane credential.
+
+
+        Required permission: `bundles.read`.'
+      operationId: get_bundle
+      security:
+      - AccessKey: []
+      - SessionCookie: []
+      parameters:
+      - name: bundle_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Bundle Id
+        description: Policy bundle ID
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_SignedBundle_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
+      x-airllm-authority:
+      - scope: selected_bundle_scope
+        anyOf:
+        - bundles.read
   /api/v1/bundle/latest:
     get:
       tags:
@@ -3749,6 +3899,34 @@ components:
       - occurred_at
       title: ActivityOut
       description: One audited change, identifying what changed, who changed it, and when.
+    BundleManifest:
+      properties:
+        bundles:
+          items:
+            $ref: '#/components/schemas/BundleManifestEntry'
+          type: array
+          title: Bundles
+      type: object
+      required:
+      - bundles
+      title: BundleManifest
+      description: The complete set of organization bundles one data plane may serve.
+    BundleManifestEntry:
+      properties:
+        org_id:
+          type: string
+          format: uuid
+          title: Org Id
+        bundle_id:
+          type: string
+          format: uuid
+          title: Bundle Id
+      type: object
+      required:
+      - org_id
+      - bundle_id
+      title: BundleManifestEntry
+      description: The immutable identity of one organization bundle available to a data plane.
     BundleOut:
       properties:
         id:
@@ -3777,67 +3955,6 @@ components:
       - issued_at
       - signing_key_id
       title: BundleOut
-    BundleV1:
-      properties:
-        schema_version:
-          type: integer
-          const: 1
-          title: Schema Version
-          default: 1
-        bundle_id:
-          type: string
-          format: uuid
-          title: Bundle Id
-        org_id:
-          type: string
-          format: uuid
-          title: Org Id
-        issued_at:
-          type: string
-          format: date-time
-          title: Issued At
-        keys:
-          items:
-            $ref: '#/components/schemas/KeyEntry'
-          type: array
-          title: Keys
-        catalog:
-          $ref: '#/components/schemas/Catalog'
-      type: object
-      required:
-      - bundle_id
-      - org_id
-      - issued_at
-      - keys
-      - catalog
-      title: BundleV1
-      description: A complete, versioned policy snapshot for one organization's model traffic.
-    Catalog:
-      properties:
-        providers:
-          items:
-            $ref: '#/components/schemas/ProviderEntry'
-          type: array
-          title: Providers
-        models:
-          items:
-            $ref: '#/components/schemas/ModelEntry'
-          type: array
-          title: Models
-        credentials:
-          items:
-            $ref: '#/components/schemas/CredentialEntry'
-          type: array
-          title: Credentials
-          default: []
-      type: object
-      required:
-      - providers
-      - models
-      title: Catalog
-      description: 'Everything routable in one org: providers, the models that point at them, and the credentials
-
-        they are reached with.'
     ClaimOut:
       properties:
         claimed:
@@ -3981,26 +4098,6 @@ components:
       - interval_seconds
       - expires_in_seconds
       title: CliAuthStartOut
-    CredentialEntry:
-      properties:
-        ref:
-          $ref: '#/components/schemas/SecretRef'
-        priority:
-          type: integer
-          title: Priority
-        version:
-          type: integer
-          title: Version
-      type: object
-      required:
-      - ref
-      - priority
-      - version
-      title: CredentialEntry
-      description: 'A provider credential reference, priority, and version included in a policy bundle.
-
-
-        The secret value is not included. A version change tells data planes to refresh their cached value.'
     DataPlaneInstanceOut:
       properties:
         instance_id:
@@ -4121,6 +4218,14 @@ components:
       required:
       - data
       title: Envelope[AccessKeyRevokedOut]
+    Envelope_BundleManifest_:
+      properties:
+        data:
+          $ref: '#/components/schemas/BundleManifest'
+      type: object
+      required:
+      - data
+      title: Envelope[BundleManifest]
     Envelope_BundleOut_:
       properties:
         data:
@@ -4590,14 +4695,14 @@ components:
             format: uuid
           - type: 'null'
           title: Bundle Id
-          description: Policy bundle currently served, if one is loaded
+          description: Policy bundle served when exactly one is loaded; otherwise absent
       additionalProperties: false
       type: object
       required:
       - instance_id
       - version
       title: HeartbeatV1
-      description: The identity, software version, and active bundle reported by a data plane.
+      description: The identity, software version, and single active bundle reported by a data plane.
     InferenceKeyIn:
       properties:
         label:
@@ -4787,41 +4892,6 @@ components:
       required:
       - token
       title: InvitationTokenIn
-    KeyEntry:
-      properties:
-        key_id:
-          type: string
-          title: Key Id
-        org_id:
-          type: string
-          format: uuid
-          title: Org Id
-        workspace_id:
-          type: string
-          format: uuid
-          title: Workspace Id
-        token_hash:
-          type: string
-          title: Token Hash
-        expires_at:
-          anyOf:
-          - type: string
-            format: date-time
-          - type: 'null'
-          title: Expires At
-      type: object
-      required:
-      - key_id
-      - org_id
-      - workspace_id
-      - token_hash
-      title: KeyEntry
-      description: 'An active inference key included in a policy bundle.
-
-
-        The bundle contains a token hash for authorization and a key ID for usage attribution, never
-
-        the caller''s secret token.'
     LoginIn:
       properties:
         email:
@@ -4895,72 +4965,6 @@ components:
       - role
       - status
       title: MembershipOut
-    ModelEntry:
-      properties:
-        model_id:
-          type: string
-          title: Model Id
-        provider_id:
-          type: string
-          title: Provider Id
-        upstream_model:
-          type: string
-          title: Upstream Model
-        input_price_per_mtok:
-          type: number
-          title: Input Price Per Mtok
-        output_price_per_mtok:
-          type: number
-          title: Output Price Per Mtok
-        cache_read_price_per_mtok:
-          type: number
-          title: Cache Read Price Per Mtok
-        cache_write_price_per_mtok:
-          type: number
-          title: Cache Write Price Per Mtok
-        context_window:
-          type: integer
-          title: Context Window
-        max_output_tokens:
-          anyOf:
-          - type: integer
-          - type: 'null'
-          title: Max Output Tokens
-        capabilities:
-          items:
-            type: string
-          type: array
-          title: Capabilities
-        parameter_support:
-          additionalProperties:
-            type: string
-            enum:
-            - supported
-            - unsupported
-          type: object
-          title: Parameter Support
-        egress_kind:
-          anyOf:
-          - type: string
-            enum:
-            - openai_compatible
-            - openai_responses
-            - anthropic
-          - type: 'null'
-          title: Egress Kind
-      type: object
-      required:
-      - model_id
-      - provider_id
-      - upstream_model
-      - input_price_per_mtok
-      - output_price_per_mtok
-      - cache_read_price_per_mtok
-      - cache_write_price_per_mtok
-      - context_window
-      - capabilities
-      title: ModelEntry
-      description: 'A routable model: the caller-facing id plus how to reach and bill it.'
     ModelIn:
       properties:
         model_id:
@@ -5698,47 +5702,6 @@ components:
       - value
       title: ProviderCredentialValueIn
       description: 'A rotation: the same credential, a new value.'
-    ProviderEntry:
-      properties:
-        provider_id:
-          type: string
-          title: Provider Id
-        kind:
-          type: string
-          enum:
-          - openai_compatible
-          - openai_responses
-          - anthropic
-          title: Kind
-        base_url:
-          type: string
-          maxLength: 2083
-          minLength: 1
-          format: uri
-          title: Base Url
-        param_aliases:
-          additionalProperties:
-            type: string
-          type: object
-          title: Param Aliases
-        accepted_params:
-          anyOf:
-          - items:
-              type: string
-            type: array
-          - type: 'null'
-          title: Accepted Params
-        params_closed:
-          type: boolean
-          title: Params Closed
-          default: false
-      type: object
-      required:
-      - provider_id
-      - kind
-      - base_url
-      title: ProviderEntry
-      description: An upstream LLM provider endpoint and its supported request parameters.
     ProviderIn:
       properties:
         provider_id:
@@ -5909,46 +5872,6 @@ components:
       - org
       - workspace
       title: ScopeLevel
-    SecretPurpose:
-      type: string
-      enum:
-      - provider
-      title: SecretPurpose
-      description: The kind of credential addressed by a secret reference.
-    SecretRef:
-      properties:
-        purpose:
-          $ref: '#/components/schemas/SecretPurpose'
-        service:
-          type: string
-          title: Service
-        name:
-          type: string
-          title: Name
-        secret_id:
-          type: string
-          format: uuid
-          title: Secret Id
-        org_id:
-          anyOf:
-          - type: string
-            format: uuid
-          - type: 'null'
-          title: Org Id
-        workspace_id:
-          anyOf:
-          - type: string
-            format: uuid
-          - type: 'null'
-          title: Workspace Id
-      type: object
-      required:
-      - purpose
-      - service
-      - name
-      - secret_id
-      title: SecretRef
-      description: A stable reference to a secret value and the scope that owns it.
     ServiceAccountIn:
       properties:
         name:
@@ -5970,7 +5893,8 @@ components:
     SignedBundle:
       properties:
         payload:
-          $ref: '#/components/schemas/BundleV1'
+          type: string
+          title: Payload
         signature:
           type: string
           title: Signature
@@ -5983,10 +5907,10 @@ components:
       - signature
       - signing_key_id
       title: SignedBundle
-      description: 'A BundleV1 as it crosses the wire and rests on disk.
+      description: 'A serialized BundleV1 as it crosses the wire and rests on disk.
 
 
-        A bundle that fails verification is rejected and the previous one keeps serving.'
+        The signature covers the payload''s exact UTF-8 bytes. Consumers verify before parsing.'
     SignupIn:
       properties:
         email:
@@ -6544,6 +6468,9 @@ tags:
 - name: Instance Model Catalog
   description: Manage the providers and models available through this AirLLM instance
   x-displayName: Model Catalog
+- name: Instance Provider Credentials
+  description: Manage provider API keys available across the AirLLM instance
+  x-displayName: Provider Credentials
 - name: Data Plane Instances
   description: Inspect connected data-plane instances
   x-displayName: Data Planes
@@ -6621,6 +6548,7 @@ x-tagGroups:
   - Instance Users
   - Instance Access Keys
   - Instance Model Catalog
+  - Instance Provider Credentials
   - Data Plane Instances
   - Instance Activity
   - OSS

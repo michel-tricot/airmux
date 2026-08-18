@@ -17,7 +17,7 @@ from contract import FileStoreConfig, Secret
 from data_plane.app import create_app
 from data_plane.auth import authenticate, index_keys
 from data_plane.bundle import BundleHolder, LocalBundleConfig
-from data_plane.bundle.local import LocalBundleSource, load_local
+from data_plane.bundle.local import LOCAL_ORG, LocalBundleSource, load_local
 from data_plane.config import Config, SqliteOutboxConfig
 from data_plane.control_plane_link import ControlPlaneLink
 
@@ -99,17 +99,17 @@ async def test_a_reload_swaps_on_change_and_survives_a_broken_edit(tmp_path):
     holder = BundleHolder()
     source = LocalBundleSource(config, holder)
     await source.once()
-    assert holder.snapshot is not None
-    served = holder.snapshot.bundle.bundle_id
-    snapshot = holder.snapshot
+    assert holder.current.snapshots
+    served = holder.current.snapshots[LOCAL_ORG].bundle.bundle_id
+    snapshot = holder.current.snapshots[LOCAL_ORG]
 
     await source.once()
-    assert holder.snapshot is snapshot
+    assert holder.current.snapshots[LOCAL_ORG] is snapshot
 
     path.write_text("keys: []\n", encoding="utf-8")
     with pytest.raises(ValidationError):
         await source.once()
-    assert holder.snapshot.bundle.bundle_id == served  # the last good bundle keeps serving
+    assert holder.current.snapshots[LOCAL_ORG].bundle.bundle_id == served  # the last good bundle keeps serving
 
 
 @respx.mock

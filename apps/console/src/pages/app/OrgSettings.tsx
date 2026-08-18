@@ -17,7 +17,6 @@ import { AccessKeyFormFields, accessKeyFormSchema } from '@/components/shared/ac
 import { PermissionsCell } from '@/components/shared/permissions-cell';
 import { InvitationDialog, invitationRequest } from '@/components/shared/invitation-dialog';
 import { OneTimeValueDialog } from '@/components/shared/one-time-value-dialog';
-import { ErrorState, LoadingState } from '@/components/shared/states';
 import { useAuthorization } from '@/features/permissions/hooks';
 import { accessKeyAccess } from '@/features/keys/policy';
 import { orgMemberAccess } from '@/features/members/policy';
@@ -36,15 +35,14 @@ export default function AppOrgSettings() {
   const canCreateInvitations = authorization.can(orgMemberAccess.invite);
   const canReissueInvitations = authorization.can(orgMemberAccess.reissueInvitation);
   const canRevokeInvitations = authorization.can(orgMemberAccess.revokeInvitation);
-  const canOpenMembers = canReadMembers || canListInvitations;
   const canReadActivity = authorization.can(telemetryAccess.orgActivity);
 
-  const keysQuery = useOrgAccessKeys(orgId, undefined, canReadKeys);
-  const bundlesQuery = useBundles(orgId, canReadBundles);
-  const membersQuery = useOrgMembers(orgId, canReadMembers);
-  const activityQuery = useOrgActivity(orgId, { limit: 50 }, canReadActivity);
-  const workspacesQuery = useWorkspaces(orgId);
-  const invitationsQuery = useInvitations(orgId, canListInvitations);
+  const keysQuery = useOrgAccessKeys(orgId, undefined, { enabled: canReadKeys });
+  const bundlesQuery = useBundles(orgId, { enabled: canReadBundles });
+  const membersQuery = useOrgMembers(orgId, { enabled: canReadMembers });
+  const activityQuery = useOrgActivity(orgId, { limit: 50 }, { enabled: canReadActivity });
+  const workspacesQuery = useWorkspaces(orgId, { enabled: canListInvitations || canCreateInvitations });
+  const invitationsQuery = useInvitations(orgId, { enabled: canListInvitations });
   const members = membersQuery.data;
 
   const [keyOpen, setKeyOpen] = useState(false);
@@ -62,15 +60,7 @@ export default function AppOrgSettings() {
   const reissueInvitation = useReissueInvitationMutation(orgId);
   const revokeInvitation = useRevokeInvitationMutation(orgId);
   const workspaceNames = new Map(workspacesQuery.data?.map((workspace) => [workspace.id, workspace.name] as const) ?? []);
-  const defaultTab = canReadKeys ? 'keys' : canReadBundles ? 'bundles' : canOpenMembers ? 'members' : 'activity';
-
-  if (authorization.isLoading) return <LoadingState label="Loading organization permissions..." />;
-  if (authorization.isError) {
-    return <ErrorState error={authorization.error} resource="organization permissions" onRetry={() => authorization.refetch()} />;
-  }
-  if (!canReadKeys && !canReadBundles && !canOpenMembers && !canReadActivity) {
-    return <ErrorState message="You do not have access to organization settings." />;
-  }
+  const defaultTab = canReadKeys ? 'keys' : canReadBundles ? 'bundles' : canReadMembers || canListInvitations ? 'members' : 'activity';
 
   return (
     <PageShell className="max-w-5xl">
@@ -96,7 +86,7 @@ export default function AppOrgSettings() {
               <Package className="w-4 h-4" /> Policies
             </TabsTrigger>
           )}
-          {canOpenMembers && (
+          {(canReadMembers || canListInvitations) && (
             <TabsTrigger value="members" className="gap-2">
               <Users className="w-4 h-4" /> Members
             </TabsTrigger>
@@ -175,7 +165,7 @@ export default function AppOrgSettings() {
           </TabsContent>
         )}
 
-        {canOpenMembers && (
+        {(canReadMembers || canListInvitations) && (
           <TabsContent value="members" className="space-y-4 mt-0">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-lg font-semibold">{canReadMembers ? 'Organization Members' : 'Organization Invitations'}</h2>

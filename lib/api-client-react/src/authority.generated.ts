@@ -298,6 +298,22 @@ export const operationAuthority = {
       },
     ],
   },
+  listInstanceProviderCredentials: {
+    checks: [
+      {
+        scope: "instance_scope",
+        anyOf: ["provider-credentials.read"],
+      },
+    ],
+  },
+  createInstanceProviderCredential: {
+    checks: [
+      {
+        scope: "instance_scope",
+        anyOf: ["provider-credentials.manage"],
+      },
+    ],
+  },
   createOrgProviderCredential: {
     checks: [
       {
@@ -423,6 +439,22 @@ export const operationAuthority = {
       {
         scope: "org_scope",
         anyOf: ["audit.read"],
+      },
+    ],
+  },
+  bundleManifest: {
+    checks: [
+      {
+        scope: "credential_scope",
+        anyOf: ["bundles.read"],
+      },
+    ],
+  },
+  getBundle: {
+    checks: [
+      {
+        scope: "selected_bundle_scope",
+        anyOf: ["bundles.read"],
       },
     ],
   },

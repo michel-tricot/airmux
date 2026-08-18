@@ -316,7 +316,7 @@ Workers configured with the same cache directory cooperate through local files:
 
 | File | Purpose |
 |---|---|
-| `bundle.json` | Last admitted signed remote bundle, written atomically |
+| `bundles.json` | Last admitted set of signed remote bundles, written atomically |
 | `instance_id` | Stable logical data-plane id shared by workers and reported in heartbeats |
 | `events.db` | SQLite WAL outbox shared by all workers |
 
@@ -366,9 +366,11 @@ The anchor is YAML reuse only. Both nested configs validate their own complete l
 constraint is applied after parsing. The omitted secret-store setting defaults to environment
 variables.
 
-`RemoteBundleConfig.org` optionally narrows the poll to one organization. Without it, the request is
-made without `org_id` and the control plane chooses the latest bundle according to its endpoint
-semantics. One worker holds one admitted bundle at a time.
+The control-plane access key defines the bundle set. An instance-scoped key receives the latest
+bundle for every organization, while an organization-scoped key receives only that organization's
+latest bundle. The data plane consumes the same manifest shape in both cases and carries no separate
+organization selector. The removed `bundle.org` setting is rejected so an old narrowed deployment
+cannot silently broaden; mint an organization-scoped data-plane key instead.
 
 ### Local mode
 
@@ -417,18 +419,26 @@ live inference-key hashes, but reading it does not reveal the original keys.
 
 Remote startup is designed to serve through a control-plane outage:
 
-1. Read `bundle.json` from the configured cache directory
-2. Parse and verify its Ed25519 signature with the configured public key
-3. Admit it
+1. Read `bundles.json` from the configured cache directory
+2. Verify each serialized payload's exact UTF-8 bytes with the configured Ed25519 public key
+3. Parse the verified payloads and admit the complete bundle set
 4. Start the poll and heartbeat loops
 
-The poller immediately requests `GET /api/v1/bundle/latest`, unwraps the response envelope, ignores an
-already-served bundle id, verifies a changed bundle, admits it, and atomically persists the signed
-form. Parse errors, signature failures, HTTP failures, and filesystem failures are recoverable. The
-last admitted snapshot remains in service while polling retries.
+The poller immediately requests `GET /api/v1/bundles/manifest`. The control plane derives the
+manifest from the access key's scope. The poller reuses unchanged signed bundles, fetches changed
+entries by immutable bundle id, verifies the complete result, admits it, and atomically persists the
+signed set. Organizations absent from the next successfully admitted manifest are removed. Parse
+errors, signature failures, HTTP failures, and filesystem failures are recoverable. The last admitted
+bundle set remains in service while polling retries.
 
-The heartbeat posts a stable cache-directory instance id, package version, and current bundle id to
-`POST /api/v1/heartbeat`. A null bundle id means the process is alive but not ready.
+`SignedBundle.payload` is the serialized `BundleV1` string covered by the signature. The control
+plane serializes once and stores, signs, and serves that exact text. The data plane verifies it before
+parsing, so signature validity does not depend on reproducing the control plane's serializer and a
+lagging parser can ignore additive fields only after authenticating them.
+
+The heartbeat posts a stable cache-directory instance id, package version, and the current bundle id
+to `POST /api/v1/heartbeat` when exactly one bundle is loaded. A null bundle id means the process has
+zero or multiple bundles; readiness remains the authority for whether it can serve.
 
 ### Local source
 
@@ -450,14 +460,16 @@ With the environment secret store, a synthesized provider ref resolves through t
 
 ### Admission and snapshots
 
-`BundleHolder.admit()` is the only bundle admission point. It:
+`BundleSet.from_bundles()` prepares a complete request-path state before `BundleHolder.swap()` publishes it. Preparation:
 
-1. Builds all request-path indexes once
-2. Replaces `holder.snapshot` with one new `BundleSnapshot` reference
+1. Builds one `BundleSnapshot` per organization
+2. Builds a global inference-token index from token hash to `KeyEntry`
+3. Rejects duplicate organizations and token hashes
 
-The snapshot contains the bundle plus key, model, provider, credential, and compiled-profile indexes.
-A handler captures one snapshot before reading the request body and uses it for the entire request.
-A concurrent bundle swap therefore cannot mix an old key index with a new catalog or price table.
+Each snapshot contains its bundle plus model, provider, credential, and compiled-profile indexes. A
+handler captures one `BundleSet`, hashes the bearer once, resolves its key from the global index, and
+uses the key's organization id to select the snapshot. A concurrent manifest swap therefore cannot
+mix an old key index with a new catalog or price table.
 
 ## The canonical waist and adapter model
 
@@ -756,7 +768,6 @@ These are properties of the current implementation, not promises that another la
 - Core-field support is not yet symmetric across egress families; for example Anthropic egress
   does not render canonical `seed` or `response_format`, and those losses are not adjustments
 - OpenAI egress does not replay canonical reasoning parts in prior messages
-- One worker holds one bundle snapshot at a time; this is not a multi-bundle router
 - `readyz` reports bundle presence only
 - Local mode synthesizes one platform credential per provider and trusts plaintext inference keys on disk
 - SQLite durability and leasing coordinate processes on one compatible filesystem, not a distributed cluster

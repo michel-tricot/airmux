@@ -3,7 +3,7 @@ import * as z from 'zod';
 import { useRequiredOrgId, useSession } from '@/lib/session';
 import { useWorkspaces, useCreateWorkspaceMutation } from '@/features/workspaces/hooks';
 import { Link, useLocation } from 'wouter';
-import { Settings, LogOut, Shield, ArrowLeftRight, Building2, Boxes, Plus } from 'lucide-react';
+import { LogOut, Shield, ArrowLeftRight, Plus } from 'lucide-react';
 import { useEnrollment } from '@workspace/api-client-react';
 import { Avatar, AvatarFallback, Badge, Button, Input, Dropdown } from '@/components/ui/elements';
 import { cn } from '@/lib/utils';
@@ -12,12 +12,9 @@ import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/comp
 import { ErrorState } from '@/components/shared/states';
 import { GatewayBrand, ResponsiveShell } from '@/components/layout/responsive-shell';
 import { useAuthorization, useScopedAuthorization } from '@/features/permissions/hooks';
-import { catalogAccess } from '@/features/catalog/policy';
-import { accessKeyAccess } from '@/features/keys/policy';
-import { orgMemberAccess } from '@/features/members/policy';
-import { telemetryAccess } from '@/features/telemetry/policy';
 import { workspaceAccess } from '@/features/workspaces/policy';
 import { workspaceRoutes } from '@/pages/app/workspace/routes';
+import { orgRoutes } from '@/pages/app/routes';
 
 const workspaceNameSchema = z.object({ name: z.string().min(1, 'Name is required') });
 
@@ -27,9 +24,10 @@ const navigationClassName =
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, setOrgId, logout } = useSession();
   const orgId = useRequiredOrgId();
-  const workspacesQuery = useWorkspaces(orgId);
-  const workspaces = workspacesQuery.data;
   const orgAuthorization = useAuthorization('org');
+  const canListWorkspaces = orgAuthorization.can(workspaceAccess.list);
+  const workspacesQuery = useWorkspaces(orgId, { enabled: canListWorkspaces });
+  const workspaces = workspacesQuery.data;
   const enrollment = useEnrollment();
   const canSwitchOrg = (enrollment.data?.orgs.length ?? 0) > 1;
   const [location, setLocation] = useLocation();
@@ -42,15 +40,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const selectedWorkspaceRef = routedWorkspaceRef || window.localStorage.getItem(lastWorkspaceKey) || '';
   const activeWorkspace = workspaces?.find((workspace) => workspace.slug === selectedWorkspaceRef || workspace.id === selectedWorkspaceRef);
   const activeWorkspaceSlug = activeWorkspace?.slug ?? routedWorkspaceRef;
-  const workspaceAuthorization = useScopedAuthorization({ level: 'workspace', orgId, workspaceRef: activeWorkspaceSlug }, activeWorkspaceSlug !== '');
-  const canCreateWorkspace = orgAuthorization.can(workspaceAccess.create);
-  const canOpenOrgSettings = orgAuthorization.canAny(
-    accessKeyAccess.org.read,
-    telemetryAccess.bundles.read,
-    orgMemberAccess.read,
-    orgMemberAccess.listInvitations,
-    telemetryAccess.orgActivity,
+  const workspaceAuthorization = useScopedAuthorization(
+    { level: 'workspace', orgId, workspaceRef: activeWorkspaceSlug },
+    { enabled: activeWorkspaceSlug !== '' },
   );
+  const canCreateWorkspace = orgAuthorization.can(workspaceAccess.create);
 
   useEffect(() => {
     if (activeWorkspaceSlug) window.localStorage.setItem(lastWorkspaceKey, activeWorkspaceSlug);
@@ -163,30 +157,28 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
           <div className="mt-8">
             <div className="mb-2 mt-6 px-3 font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Organization</div>
-            {[
-              { href: '/org', label: 'Overview', icon: Building2 },
-              ...(orgAuthorization.can(catalogAccess.org.read) ? [{ href: '/org/models', label: 'Models', icon: Boxes }] : []),
-              ...(canOpenOrgSettings ? [{ href: '/org/settings', label: 'Org Settings', icon: Settings }] : []),
-            ].map((item) => {
-              const isActive = location === item.href;
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={close}
-                  aria-current={isActive ? 'page' : undefined}
-                  className={cn(
-                    navigationClassName,
-                    isActive
-                      ? 'border-primary bg-primary/10 text-primary'
-                      : 'border-transparent text-muted-foreground hover:bg-muted hover:text-foreground',
-                  )}
-                >
-                  <item.icon className="h-4 w-4 shrink-0" />
-                  {item.label}
-                </Link>
-              );
-            })}
+            {orgRoutes
+              .filter(({ access }) => orgAuthorization.can(access))
+              .map((item) => {
+                const isActive = location === item.path;
+                return (
+                  <Link
+                    key={item.path}
+                    href={item.path}
+                    onClick={close}
+                    aria-current={isActive ? 'page' : undefined}
+                    className={cn(
+                      navigationClassName,
+                      isActive
+                        ? 'border-primary bg-primary/10 text-primary'
+                        : 'border-transparent text-muted-foreground hover:bg-muted hover:text-foreground',
+                    )}
+                  >
+                    <item.icon className="h-4 w-4 shrink-0" />
+                    {item.label}
+                  </Link>
+                );
+              })}
           </div>
         </nav>
       )}

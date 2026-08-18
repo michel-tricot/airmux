@@ -57,8 +57,8 @@ describe('console theme', () => {
       </>,
     );
 
-    expect(screen.getByRole('button', { name: 'Save' })).toHaveClass('shadow-[0_0_15px_rgba(97,94,255,0.4)]');
-    expect(screen.getByText('Active')).toHaveClass('shadow-[0_0_8px_rgba(97,94,255,0.15)]');
+    expect(screen.getByRole('button', { name: 'Save' })).toHaveClass('shadow-primary/40');
+    expect(screen.getByText('Active')).toHaveClass('shadow-primary/15');
   });
 });
 
@@ -156,7 +156,7 @@ describe('show-once keys', () => {
     await user.click(screen.getByRole('button', { name: 'Copy key' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Could not copy the key');
-    expect(screen.getByDisplayValue('secret-token')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('secret-token')).toHaveFocus();
   });
 
   it('clears stale clipboard feedback before revealing a different key', async () => {
@@ -205,6 +205,46 @@ describe('shared controls', () => {
 });
 
 describe('playground', () => {
+  it('labels playground sessions in recent activity without exposing their ids', async () => {
+    const playgroundSessionId = '01941f29-7c00-7000-8000-000000000001';
+    server.use(
+      http.get(`/api/v1/orgs/${ORG.id}/workspaces/${WORKSPACES[0].slug}/events`, () =>
+        HttpResponse.json([
+          {
+            event_id: '01941f29-7c00-7000-8000-000000000002',
+            request_id: '01941f29-7c00-7000-8000-000000000003',
+            occurred_at: now,
+            org_id: ORG.id,
+            workspace_id: WORKSPACES[0].id,
+            key_id: playgroundSessionId,
+            model_id: 'openai/gpt-test',
+            provider_id: 'provider-1',
+            bundle_id: '01941f29-7c00-7000-8000-000000000004',
+            input_tokens: 12,
+            output_tokens: 4,
+            cost_usd: 0.001,
+            cost_input_usd: 0.0005,
+            cost_output_usd: 0.0005,
+            cache_read_tokens: 0,
+            cache_write_tokens: 0,
+            latency_ms: 100,
+            status: 'ok',
+            stream: true,
+            credential_id: null,
+            credential_scope: null,
+          },
+        ]),
+      ),
+    );
+    window.history.replaceState(null, '', `/org/workspaces/${WORKSPACES[0].slug}`);
+    render(<App />);
+
+    const activity = await screen.findByRole('row', { name: /openai\/gpt-test Playground/ });
+
+    expect(within(activity).getByText('Playground')).toBeInTheDocument();
+    expect(within(activity).queryByText(playgroundSessionId)).not.toBeInTheDocument();
+  });
+
   it('starts a session automatically and streams a response through the inference prefix', async () => {
     const provider = taxonomyProvider('provider-1', 'openai');
     const model = {
