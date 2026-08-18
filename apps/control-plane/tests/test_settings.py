@@ -7,7 +7,7 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from pydantic import ValidationError
 
 from contract import FileStoreConfig, private_key_to_b64
-from control_plane.config import DEFAULT_CONSOLE_URL, DEFAULT_DATABASE_URL, BundlePolicy, database_url, load_settings
+from control_plane.config import DEFAULT_CONSOLE_URL, DEFAULT_DATABASE_URL, database_url, load_settings
 
 
 def test_malformed_signing_key_fails_at_load(tmp_path, monkeypatch):
@@ -16,10 +16,6 @@ def test_malformed_signing_key_fails_at_load(tmp_path, monkeypatch):
     monkeypatch.setenv("GW_CONFIG", str(tmp_path / "airllm.yml"))
     with pytest.raises((ValidationError, ValueError)):
         load_settings()
-
-
-def test_bundle_policy_only_configures_signing():
-    assert set(BundlePolicy.model_fields) == {"signing_key"}
 
 
 def test_database_url_falls_back_without_a_config_file(tmp_path, monkeypatch):

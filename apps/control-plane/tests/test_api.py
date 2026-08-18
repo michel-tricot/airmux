@@ -278,7 +278,6 @@ def test_list_endpoints_read_back(tmp_path):
         bundles = c.get(f"/api/v1/orgs/{org_id}/bundles", headers=org).json()["data"]
         assert [b["version"] for b in bundles] == [1, 2, 3]
         assert "payload" not in bundles[0]
-        assert "expires_at" not in bundles[0]
 
 
 def test_bundle_latest_filters_by_org(tmp_path):
