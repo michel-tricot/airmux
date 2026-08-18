@@ -4,7 +4,7 @@ import {
   useListWorkspaceEvents,
   useListActivity,
   useListBundles,
-  useCompileBundle,
+  useRepublishBundle,
   useListDataPlanes,
   useListInstanceActivity,
   getListOrgEventsQueryKey,
@@ -35,9 +35,9 @@ export function useBundles(orgId: string, enabled = true) {
   return useListBundles(orgId, { query: { enabled, queryKey: getListBundlesQueryKey(orgId) } });
 }
 
-export function useCompileBundleMutation(orgId: string) {
+export function useRepublishBundleMutation(orgId: string) {
   const queryClient = useQueryClient();
-  return useCompileBundle({
+  return useRepublishBundle({
     mutation: {
       onSuccess: () => queryClient.invalidateQueries({ queryKey: getListBundlesQueryKey(orgId) }),
       meta: { errorMessage: 'We couldn’t publish the policy. Please try again.' },

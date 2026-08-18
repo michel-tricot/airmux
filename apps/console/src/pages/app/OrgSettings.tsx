@@ -4,7 +4,7 @@ import { useOrgAccessKeys, useCreateOrgAccessKeyMutation, useRevokeOrgAccessKeyM
 import { useOrgMembers } from '@/features/members/hooks';
 import { useCreateInvitationMutation, useInvitations, useReissueInvitationMutation, useRevokeInvitationMutation } from '@/features/invitations/hooks';
 import { useWorkspaces } from '@/features/workspaces/hooks';
-import { useBundles, useCompileBundleMutation, useOrgActivity } from '@/features/telemetry/hooks';
+import { useBundles, useOrgActivity, useRepublishBundleMutation } from '@/features/telemetry/hooks';
 import { Avatar, AvatarFallback, Card, Button, Badge, ConfirmButton, Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/elements';
 import { Plus, Key, Settings, Package, RefreshCw, Users, Activity, UserPlus, Ban } from 'lucide-react';
 import { formatDate, formatRelative } from '@/lib/format';
@@ -57,7 +57,7 @@ export default function AppOrgSettings() {
 
   const mintKey = useCreateOrgAccessKeyMutation(orgId);
   const revokeKey = useRevokeOrgAccessKeyMutation(orgId);
-  const compile = useCompileBundleMutation(orgId);
+  const republish = useRepublishBundleMutation(orgId);
   const createInvitation = useCreateInvitationMutation(orgId);
   const reissueInvitation = useReissueInvitationMutation(orgId);
   const revokeInvitation = useRevokeInvitationMutation(orgId);
@@ -145,8 +145,8 @@ export default function AppOrgSettings() {
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-lg font-semibold">Access Policies</h2>
               {canPublishBundles && (
-                <Button onClick={() => compile.mutate({ orgId })} size="sm" disabled={compile.isPending}>
-                  <RefreshCw className="w-4 h-4 mr-1" /> {compile.isPending ? 'Publishing...' : 'Publish policy'}
+                <Button onClick={() => republish.mutate({ orgId })} size="sm" disabled={republish.isPending}>
+                  <RefreshCw className="w-4 h-4 mr-1" /> {republish.isPending ? 'Republishing...' : 'Republish policy'}
                 </Button>
               )}
             </div>
@@ -168,13 +168,6 @@ export default function AppOrgSettings() {
                     header: 'Published',
                     cellClassName: 'text-muted-foreground text-sm',
                     cell: (bundle) => formatDate(bundle.issued_at),
-                  },
-                  {
-                    key: 'expires',
-                    header: 'Expires',
-                    headClassName: 'text-right',
-                    cellClassName: 'text-right text-muted-foreground text-sm',
-                    cell: (bundle) => formatDate(bundle.expires_at),
                   },
                 ]}
               />

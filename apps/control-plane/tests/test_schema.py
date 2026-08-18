@@ -23,6 +23,7 @@ import control_plane
 from control_plane.models.audit import audit_trigger_ddl_v1, audited_tables
 from control_plane.models.common.identified import UUIDV7_SHIM_DDL_V1, needs_uuidv7_shim
 from control_plane.models.common.tombstone import TOMBSTONE_COLUMNS, tombstoned_models, tombstoned_tables, touch_trigger_ddl_v1
+from control_plane.models.runtime_configuration import runtime_configuration_inputs
 
 CONTROL_PLANE_DIR = Path(control_plane.__file__).resolve().parents[2]
 
@@ -213,3 +214,10 @@ def test_audit_triggers_cover_every_audited_table(pg_db):
     assert tables
     for table in tables:
         assert f"{table.name}_audit" in created_triggers, table.name
+
+
+def test_runtime_configuration_registry_names_real_columns():
+    inputs = runtime_configuration_inputs()
+    assert inputs
+    for table, configuration_input in inputs:
+        assert set(configuration_input.columns) <= set(table.c.keys()), table.name

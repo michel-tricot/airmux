@@ -353,7 +353,6 @@ data_plane:
       token: ${file:${var:cache_dir}/dataplane.key}
     verify_key: ${file:${var:cache_dir}/signing.pub}
     cache_dir: ${var:cache_dir}
-    staleness_policy: serve_and_warn
     poll_interval_s: 5
 
   events:
@@ -409,7 +408,7 @@ credentials.
 - Providers with adapter kind, base URL, parameter aliases, and extra-parameter policy
 - Models with caller id, upstream id, provider, prices, context limits, output limits, and capability declarations
 - Provider credential references, scope, priority, and rotation version
-- Bundle identity, issue time, expiration time, and organization
+- Bundle identity, issue time, and organization
 
 Provider credential values are never in the bundle. The bundle is org-sensitive because it contains
 live inference-key hashes, but reading it does not reveal the original keys.
@@ -420,7 +419,7 @@ Remote startup is designed to serve through a control-plane outage:
 
 1. Read `bundle.json` from the configured cache directory
 2. Parse and verify its Ed25519 signature with the configured public key
-3. Apply staleness policy and admit it if allowed
+3. Admit it
 4. Start the poll and heartbeat loops
 
 The poller immediately requests `GET /api/v1/bundle/latest`, unwraps the response envelope, ignores an
@@ -453,17 +452,12 @@ With the environment secret store, a synthesized provider ref resolves through t
 
 `BundleHolder.admit()` is the only bundle admission point. It:
 
-1. Checks expiration against `staleness_policy`
-2. Builds all request-path indexes once
-3. Replaces `holder.snapshot` with one new `BundleSnapshot` reference
+1. Builds all request-path indexes once
+2. Replaces `holder.snapshot` with one new `BundleSnapshot` reference
 
 The snapshot contains the bundle plus key, model, provider, credential, and compiled-profile indexes.
 A handler captures one snapshot before reading the request body and uses it for the entire request.
 A concurrent bundle swap therefore cannot mix an old key index with a new catalog or price table.
-
-Staleness is checked when a bundle is admitted, not continuously on every request. `serve_and_warn`
-admits an expired bundle with a warning. `refuse` rejects it and leaves the previous snapshot intact,
-or leaves a cold worker unready if no previous snapshot exists.
 
 ## The canonical waist and adapter model
 
@@ -659,7 +653,7 @@ conventions:
 
 1. Add the provider and models to taxonomy
 2. Set `kind`, `base_url`, aliases, `accepted_params`, and `params_closed`
-3. Apply taxonomy and compile a new bundle
+3. Apply taxonomy, which publishes changed bundle revisions automatically
 4. Prove the actual upstream body and response through a running data plane
 
 No data-plane registry or adapter edit is needed for spelling-only differences.
@@ -733,7 +727,7 @@ The data-plane suite is organized around behavior and boundaries:
 - Acceptance tests launch real control plane, data plane, Postgres, and stub-provider processes
 
 The black-box acceptance suite proves control-plane outage and cold restart, event replay,
-multi-worker event safety, local mode, staleness policy, SDK compatibility, provider profiles,
+multi-worker event safety, local mode, SDK compatibility, provider profiles,
 stream cancellation accounting, and malformed upstream handling.
 
 Run the relevant checks from the repository root:
@@ -762,7 +756,6 @@ These are properties of the current implementation, not promises that another la
 - Core-field support is not yet symmetric across egress families; for example Anthropic egress
   does not render canonical `seed` or `response_format`, and those losses are not adjustments
 - OpenAI egress does not replay canonical reasoning parts in prior messages
-- Staleness is evaluated on bundle admission, not continuously after admission
 - One worker holds one bundle snapshot at a time; this is not a multi-bundle router
 - `readyz` reports bundle presence only
 - Local mode synthesizes one platform credential per provider and trusts plaintext inference keys on disk

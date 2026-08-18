@@ -71,7 +71,7 @@ API_TAGS = [
         "x-displayName": "Provider Credentials",
         "description": "Manage provider API keys available across an organization",
     },
-    {"name": "Organization Bundles", "x-displayName": "Bundles", "description": "Compile and inspect signed policy bundles"},
+    {"name": "Organization Bundles", "x-displayName": "Bundles", "description": "Republish and inspect signed policy bundles"},
     {
         "name": "Organization Usage Events",
         "x-displayName": "Usage Events",
@@ -195,7 +195,7 @@ OPERATION_SUMMARIES = {
     "list_member_candidates": "List Workspace Member Candidates",
     "add_member": "Add Workspace Member",
     "remove_member": "Remove Workspace Member",
-    "compile_bundle": "Compile Policy Bundle",
+    "republish_bundle": "Republish Policy Bundle",
     "list_activity": "List Organization Activity",
     "bundle_latest": "Get Latest Bundle",
     "ingest_events": "Ingest Usage Events",

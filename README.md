@@ -197,7 +197,7 @@ resolution and isolation.
 - `.env` holds local secrets and is loaded automatically
 
 Do not commit real provider or AirLLM keys. In managed mode, add provider credentials through
-`quickstart`, the CLI, or the web console, then compile a bundle to publish the change.
+`quickstart`, the CLI, or the web console. Configuration changes publish automatically.
 
 ## Contributing
 

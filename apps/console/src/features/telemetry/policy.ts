@@ -8,6 +8,6 @@ export const telemetryAccess = {
   dataPlanes: operationAuthority.listDataPlanes,
   bundles: {
     read: operationAuthority.listBundles,
-    publish: operationAuthority.compileBundle,
+    publish: operationAuthority.republishBundle,
   },
 } as const;

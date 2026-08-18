@@ -41,7 +41,6 @@ class BundleOut(BaseModel):
     org_id: Annotated[UUID, Field(title="Org Id")]
     version: Annotated[int, Field(title="Version")]
     issued_at: Annotated[AwareDatetime, Field(title="Issued At")]
-    expires_at: Annotated[AwareDatetime, Field(title="Expires At")]
     signing_key_id: Annotated[str, Field(title="Signing Key Id")]
 
 
@@ -1594,7 +1593,6 @@ class BundleV1(BaseModel):
     bundle_id: Annotated[UUID, Field(title="Bundle Id")]
     org_id: Annotated[UUID, Field(title="Org Id")]
     issued_at: Annotated[AwareDatetime, Field(title="Issued At")]
-    expires_at: Annotated[AwareDatetime, Field(title="Expires At")]
     keys: Annotated[list[KeyEntry], Field(title="Keys")]
     catalog: Catalog
 

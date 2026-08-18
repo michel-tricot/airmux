@@ -1,7 +1,7 @@
 """organization slugs
 
 Revision ID: d9e0f1a2b3c4
-Revises: c7d8e9f0a1b2
+Revises: d1e2f3a4b5c6
 Create Date: 2026-08-17
 """
 
@@ -14,7 +14,7 @@ from alembic import op
 from sqlalchemy.dialects import postgresql
 
 revision = "d9e0f1a2b3c4"
-down_revision = "c7d8e9f0a1b2"
+down_revision = "d1e2f3a4b5c6"
 branch_labels = None
 depends_on = None
 

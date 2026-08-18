@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from datetime import timedelta
 from typing import TYPE_CHECKING
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -38,11 +37,6 @@ class BundlePolicy(BaseModel):
     model_config = ConfigDict(frozen=True, arbitrary_types_allowed=True)
 
     signing_key: Ed25519PrivateKeyB64  # parsed once from base64 at load; signs bundles
-    staleness_bound_hours: float = 24.0
-
-    @property
-    def staleness_bound(self) -> timedelta:
-        return timedelta(hours=self.staleness_bound_hours)
 
 
 class Settings(BaseModel):

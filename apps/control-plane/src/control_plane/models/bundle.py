@@ -17,12 +17,12 @@ class Bundle(Record, OrgOwned, table=True):
     org_id: UUID = Field(foreign_key="org.id")
     version: int
     issued_at: datetime = Field(sa_type=UTCDateTime)
-    expires_at: datetime = Field(sa_type=UTCDateTime)
+    configuration_revision: int = 0
     payload: str
     signature: str
     signing_key_id: str
 
-    api_hidden: ClassVar[frozenset[str]] = frozenset({"payload", "signature"})
+    api_hidden: ClassVar[frozenset[str]] = frozenset({"configuration_revision", "payload", "signature"})
 
 
 class BundleOut(RecordOut[Bundle]):
@@ -30,5 +30,4 @@ class BundleOut(RecordOut[Bundle]):
     org_id: UUID
     version: int
     issued_at: datetime
-    expires_at: datetime
     signing_key_id: str

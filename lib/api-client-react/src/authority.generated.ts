@@ -370,7 +370,7 @@ export const operationAuthority = {
       },
     ],
   },
-  compileBundle: {
+  republishBundle: {
     checks: [
       {
         scope: "org_scope",

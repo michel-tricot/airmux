@@ -27,7 +27,7 @@ uv run airllmcp keygen          # bundle signing key pair
 # add OPENAI_API_KEY to .env
 uv run airllmcp serve --dev     # control plane on :8000
 # sign up at the console: the first account claims the instance
-uv run airllmcp taxonomy        # load the catalog, compile bundle v1
+uv run airllmcp taxonomy        # load and publish the catalog
 uv run airllmdp --dev           # data plane on :8080
 ```
 

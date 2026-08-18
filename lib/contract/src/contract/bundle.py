@@ -88,7 +88,6 @@ class BundleV1(BaseModel):
     bundle_id: UUID
     org_id: UUID
     issued_at: datetime
-    expires_at: datetime  # staleness bound: issued_at + STALENESS_BOUND, checked on every swap
     keys: list[KeyEntry]
     catalog: Catalog
 

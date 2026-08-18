@@ -16,6 +16,5 @@ export interface BundleOut {
   org_id: string;
   version: number;
   issued_at: Date;
-  expires_at: Date;
   signing_key_id: string;
 }

@@ -4961,23 +4961,23 @@ export const useRemoveOrgUser = <TError = ErrorType<void | HTTPValidationError>,
       return useMutation(getRemoveOrgUserMutationOptions(options));
     }
 
-export const getCompileBundleUrl = (orgId: string,) => {
+export const getRepublishBundleUrl = (orgId: string,) => {
 
 
 
 
-  return `/api/v1/orgs/${orgId}/bundles/compile`
+  return `/api/v1/orgs/${orgId}/bundles/republish`
 }
 
 /**
- * Compile and sign a new policy bundle from the organization's current configuration.
+ * Request a fresh signed bundle for the organization's current configuration.
  *
  * Required permission: `bundles.publish`.
- * @summary Compile Policy Bundle
+ * @summary Republish Policy Bundle
  */
-export const compileBundle = async (orgId: string, options?: Parameters<typeof customFetch>[1]): Promise<BundleOut> => {
+export const republishBundle = async (orgId: string, options?: Parameters<typeof customFetch>[1]): Promise<BundleOut> => {
 
-  return customFetch<BundleOut>(getCompileBundleUrl(orgId),
+  return customFetch<BundleOut>(getRepublishBundleUrl(orgId),
   {
     ...options,
     method: 'POST'
@@ -4990,11 +4990,11 @@ export const compileBundle = async (orgId: string, options?: Parameters<typeof c
 
 
 
-export const getCompileBundleMutationOptions = <TError = ErrorType<void | HTTPValidationError>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof compileBundle>>, TError,{orgId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof compileBundle>>, TError,{orgId: string}, TContext> => {
+export const getRepublishBundleMutationOptions = <TError = ErrorType<void | HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof republishBundle>>, TError,{orgId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof republishBundle>>, TError,{orgId: string}, TContext> => {
 
-const mutationKey = ['compileBundle'];
+const mutationKey = ['republishBundle'];
 const {mutation: mutationOptions, request: requestOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
@@ -5004,10 +5004,10 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof compileBundle>>, {orgId: string}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof republishBundle>>, {orgId: string}> = (props) => {
           const {orgId} = props ?? {};
 
-          return  compileBundle(orgId,requestOptions)
+          return  republishBundle(orgId,requestOptions)
         }
 
 
@@ -5017,22 +5017,22 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
   return  { mutationFn, ...mutationOptions }}
 
-    export type CompileBundleMutationResult = NonNullable<Awaited<ReturnType<typeof compileBundle>>>
+    export type RepublishBundleMutationResult = NonNullable<Awaited<ReturnType<typeof republishBundle>>>
 
-    export type CompileBundleMutationError = ErrorType<void | HTTPValidationError>
+    export type RepublishBundleMutationError = ErrorType<void | HTTPValidationError>
 
     /**
- * @summary Compile Policy Bundle
+ * @summary Republish Policy Bundle
  */
-export const useCompileBundle = <TError = ErrorType<void | HTTPValidationError>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof compileBundle>>, TError,{orgId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+export const useRepublishBundle = <TError = ErrorType<void | HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof republishBundle>>, TError,{orgId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
-        Awaited<ReturnType<typeof compileBundle>>,
+        Awaited<ReturnType<typeof republishBundle>>,
         TError,
         {orgId: string},
         TContext
       > => {
-      return useMutation(getCompileBundleMutationOptions(options));
+      return useMutation(getRepublishBundleMutationOptions(options));
     }
 
 export const getListBundlesUrl = (orgId: string,) => {

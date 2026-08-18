@@ -52,8 +52,8 @@ class RemoteBundleSource(BundleSource):
                 f"failed verification with public key {public_key_to_b64(self._config.verify_key)}"
             )
             raise InvalidSignature(message) from error
-        if self._holder.admit(bundle, self._config.staleness_policy, source="polled"):
-            write_cached_bundle(self._config.cache_dir, signed)
+        self._holder.admit(bundle, source="polled")
+        write_cached_bundle(self._config.cache_dir, signed)
 
     async def run(self) -> None:
         await run_periodic(
@@ -91,4 +91,4 @@ class RemoteBundleSource(BundleSource):
         except InvalidSignature:
             logger.exception("cached bundle failed signature verification, ignoring it")
             return
-        self._holder.admit(bundle, self._config.staleness_policy, source="cached")
+        self._holder.admit(bundle, source="cached")

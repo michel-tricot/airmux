@@ -216,7 +216,6 @@ def quickstart(  # noqa: PLR0913, PLR0917 flags are the command's interface
         if not any(not result.error for result in results):
             console.print("  [yellow]![/yellow] No provider key set. Add one with [bold]airllm provider-credentials add <provider>[/bold].")
 
-        _payload_or_die(c.post(f"/api/v1/orgs/{org_id}/bundles/compile", json={}, headers=bearer), "publishing configuration")
         _step("API key created and published")
 
     curl = (

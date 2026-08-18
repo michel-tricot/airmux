@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Literal
 from uuid import uuid4
 
@@ -88,7 +88,6 @@ def make_bundle(keys=(), catalog=None, org=ORG):
         bundle_id=uuid4(),
         org_id=org,
         issued_at=NOW,
-        expires_at=NOW + timedelta(hours=24),
         keys=list(keys),
         catalog=catalog or Catalog(providers=[], models=[]),
     )
