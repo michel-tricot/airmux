@@ -10,9 +10,11 @@
  *
  * OpenAPI spec version: 0.1.0
  */
+import type { InvitationPreviewOut } from './invitationPreviewOut';
 import type { OrgOut } from './orgOut';
 
 export interface EnrollOut {
   orgs: OrgOut[];
   personal_org_id: string | null;
+  pending_invitations: InvitationPreviewOut[];
 }

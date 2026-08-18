@@ -26,18 +26,37 @@ router = APIRouter(prefix="/enroll")
 class EnrollOut(BaseModel):
     orgs: list[OrgOut]
     personal_org_id: UUID | None
+    pending_invitations: list[InvitationPreviewOut]
+
+
+def _invitation_preview(invitation: OrgInvitation, org_name: str, workspace_name: str | None) -> InvitationPreviewOut:
+    return InvitationPreviewOut(
+        email=invitation.email,
+        org_id=invitation.org_id,
+        org_name=org_name,
+        org_role=invitation.org_role,
+        workspace_id=invitation.workspace_id,
+        workspace_name=workspace_name,
+        workspace_role=invitation.workspace_role,
+        expires_at=invitation.expires_at,
+    )
 
 
 @router.get("", tags=["Enrollment"], dependencies=[user_scoped()])
 async def enrollment(user: ActingUserDep, actor: ActorDep) -> Envelope[EnrollOut]:
-    """List the organizations visible to the current user and identify their personal organization."""
+    """List the current user's visible organizations, personal organization, and pending invitations."""
     orgs = await Org.joined_by(user.id)
     visible = frozenset(visible_org_ids(actor, (org.id for org in orgs)))
     orgs = [org for org in orgs if org.id in visible]
     personal = await Org.personal_of(user.id)
     personal_visible = personal is not None and bool(visible_org_ids(actor, (personal.id,)))
+    invitations = await OrgInvitation.pending_for_email(user.email, datetime.now(tz=UTC))
     return Envelope(
-        data=EnrollOut(orgs=[OrgOut.model_validate(org) for org in orgs], personal_org_id=personal.id if personal_visible and personal else None)
+        data=EnrollOut(
+            orgs=[OrgOut.model_validate(org) for org in orgs],
+            personal_org_id=personal.id if personal_visible and personal else None,
+            pending_invitations=[_invitation_preview(invitation, org_name, workspace_name) for invitation, org_name, workspace_name in invitations],
+        )
     )
 
 
@@ -66,18 +85,7 @@ async def preview_invitation(body: InvitationTokenIn) -> Envelope[InvitationPrev
     invitation, org_name, workspace_name = preview
     if invitation.status(datetime.now(tz=UTC)) != "pending":
         raise HTTPException(status_code=410, detail="Invitation is no longer available")
-    return Envelope(
-        data=InvitationPreviewOut(
-            email=invitation.email,
-            org_id=invitation.org_id,
-            org_name=org_name,
-            org_role=invitation.org_role,
-            workspace_id=invitation.workspace_id,
-            workspace_name=workspace_name,
-            workspace_role=invitation.workspace_role,
-            expires_at=invitation.expires_at,
-        )
-    )
+    return Envelope(data=_invitation_preview(invitation, org_name, workspace_name))
 
 
 @router.post("/invitations/accept", tags=["Enrollment"], dependencies=[browser_scoped()])

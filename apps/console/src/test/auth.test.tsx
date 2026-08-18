@@ -24,7 +24,7 @@ function withTwoOrgs() {
         orgs: [ORG.id, ORG2.id],
       }),
     ),
-    http.get('/api/v1/enroll', () => HttpResponse.json({ orgs: [ORG, ORG2], personal_org_id: ORG.id })),
+    http.get('/api/v1/enroll', () => HttpResponse.json({ orgs: [ORG, ORG2], personal_org_id: ORG.id, pending_invitations: [] })),
     http.get('/api/v1/orgs/:orgId/workspaces', ({ params }) => {
       if (params.orgId === ORG.id) {
         return HttpResponse.json([

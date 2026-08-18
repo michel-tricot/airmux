@@ -388,9 +388,21 @@ export interface OrgOut {
   deleted_at: string | null;
 }
 
+export interface InvitationPreviewOut {
+  email: string;
+  org_id: string;
+  org_name: string;
+  org_role: string;
+  workspace_id: string | null;
+  workspace_name: string | null;
+  workspace_role: string | null;
+  expires_at: string;
+}
+
 export interface EnrollOut {
   orgs: OrgOut[];
   personal_org_id: string | null;
+  pending_invitations: InvitationPreviewOut[];
 }
 
 export interface EventsIngestedOut {
@@ -478,17 +490,6 @@ export interface InvitationAcceptedOut {
   org_id: string;
   workspace_id: string | null;
   status: 'accepted';
-}
-
-export interface InvitationPreviewOut {
-  email: string;
-  org_id: string;
-  org_name: string;
-  org_role: string;
-  workspace_id: string | null;
-  workspace_name: string | null;
-  workspace_role: string | null;
-  expires_at: string;
 }
 
 export interface InvitationTokenIn {

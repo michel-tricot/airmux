@@ -1352,6 +1352,7 @@ class CredentialEntry(BaseModel):
 class EnrollOut(BaseModel):
     orgs: Annotated[list[OrgOut], Field(title="Orgs")]
     personal_org_id: Annotated[UUID | None, Field(title="Personal Org Id")]
+    pending_invitations: Annotated[list[InvitationPreviewOut], Field(title="Pending Invitations")]
 
 
 class EnvelopeEnrollOut(BaseModel):

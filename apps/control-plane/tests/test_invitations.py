@@ -109,6 +109,59 @@ def test_invitation_preview_and_accept_create_both_memberships_atomically(tmp_pa
         assert client.post("/api/v1/enroll/invitations/accept", json={"token": token}, headers=CSRF).status_code == 200
 
 
+def test_new_account_sees_its_pending_invitations_in_enrollment(tmp_path):
+    cp = setup_control_plane(tmp_path)
+    with _client(cp) as client:
+        org_id = make_org(client, cp.headers(), "Acme")
+        workspace_id = make_workspace(client, cp.headers(org_id), "Production")
+        minted = _issue(
+            client,
+            cp,
+            org_id,
+            email=" Invitee@Example.COM ",
+            workspace_id=str(workspace_id),
+            workspace_role="viewer",
+        )
+        token = _token(minted["url"])
+        _issue(client, cp, org_id, email="someone-else@example.com")
+        expired_org_id = make_org(client, cp.headers(), "Expired")
+        _issue(client, cp, expired_org_id, email="invitee@example.com")
+
+        async def expire_invitation():
+            invitation = await OrgInvitation.active_for_email(expired_org_id, "invitee@example.com")
+            assert invitation is not None
+            assert invitation.created_by_user_id is not None
+            await set_actor(invitation.created_by_user_id)
+            invitation.expires_at = datetime.now(tz=UTC) - timedelta(minutes=1)
+            await invitation.save()
+
+        run_in_db(tmp_path, expire_invitation)
+
+        signup = client.post(
+            "/api/v1/auth/signup",
+            json={"email": "INVITEE@example.com", "name": "Invitee", "password": PASSWORD},
+        )
+        assert signup.status_code == 200, signup.text
+
+        enrollment = client.get("/api/v1/enroll", headers=CSRF)
+        assert enrollment.status_code == 200, enrollment.text
+        assert enrollment.json()["data"]["pending_invitations"] == [
+            {
+                "email": "invitee@example.com",
+                "org_id": str(org_id),
+                "org_name": "Acme",
+                "org_role": "member",
+                "workspace_id": str(workspace_id),
+                "workspace_name": "Production",
+                "workspace_role": "viewer",
+                "expires_at": minted["invitation"]["expires_at"],
+            }
+        ]
+
+        assert client.post("/api/v1/enroll/invitations/accept", json={"token": token}, headers=CSRF).status_code == 200
+        assert client.get("/api/v1/enroll", headers=CSRF).json()["data"]["pending_invitations"] == []
+
+
 def test_wrong_account_cannot_accept_and_does_not_consume_the_invitation(tmp_path):
     cp = setup_control_plane(tmp_path)
     with _client(cp) as client:

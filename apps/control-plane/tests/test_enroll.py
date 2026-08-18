@@ -21,7 +21,7 @@ def test_personal_org_is_born_with_its_creator_as_member(tmp_path):
     cp = setup_control_plane(tmp_path)
     with _client(cp) as c:
         me = _signup(c)
-        assert c.get("/api/v1/enroll", headers=CSRF).json()["data"] == {"orgs": [], "personal_org_id": None}
+        assert c.get("/api/v1/enroll", headers=CSRF).json()["data"] == {"orgs": [], "personal_org_id": None, "pending_invitations": []}
 
         created = c.post("/api/v1/enroll/org", json={"name": "michels"}, headers=CSRF)
         assert created.status_code == 200, created.text
@@ -65,7 +65,7 @@ def test_bearer_can_read_enrollment_but_cannot_found_a_personal_org(tmp_path):
     with _client(cp) as c:
         assert c.post("/api/v1/enroll/org", json={"name": "admins-own"}, headers=root).status_code == 401
         standing = c.get("/api/v1/enroll", headers=root).json()["data"]
-        assert standing == {"orgs": [], "personal_org_id": None}
+        assert standing == {"orgs": [], "personal_org_id": None, "pending_invitations": []}
 
 
 def test_org_bound_bearer_does_not_disclose_other_memberships(tmp_path):
