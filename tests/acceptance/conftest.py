@@ -326,6 +326,12 @@ class Stack:
             "models": [
                 {"model_id": MODEL, "provider_id": "stub", "upstream_model": MODEL},
                 {"model_id": "quirk", "provider_id": "quirk", "upstream_model": ECHO_MODEL},
+                {
+                    "model_id": "no-temperature",
+                    "provider_id": "stub",
+                    "upstream_model": ECHO_MODEL,
+                    "parameter_support": {"temperature": "unsupported"},
+                },
             ],
         }
         (self.tmp / "taxonomy.yml").write_text(yaml.safe_dump(spec), encoding="utf-8")

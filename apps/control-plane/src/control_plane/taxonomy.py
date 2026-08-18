@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Literal
 import yaml
 from pydantic import BaseModel, Field, HttpUrl, field_validator
 
+from contract import ParameterSupport  # noqa: TC001 pydantic resolves this enum annotation at runtime
 from control_plane.models import Model, Provider
 from control_plane.models.common.wire import RequestModel
 from control_plane.models.model import ModelOut
@@ -54,6 +55,11 @@ class ModelIn(RequestModel):
     context_window: int = Field(128000, ge=1, le=100_000_000, description="Context window in tokens")
     max_output_tokens: int | None = Field(None, ge=1, le=100_000_000, description="Max completion tokens; requests are clamped to it")
     capabilities: list[str] = Field(default_factory=lambda: ["streaming", "tools"], max_length=128, description="Capabilities supported by the model")
+    parameter_support: dict[str, ParameterSupport] = Field(
+        default_factory=dict,
+        max_length=128,
+        description="Known support for canonical request parameters; an absent parameter is unknown",
+    )
 
     @field_validator("provider_id", mode="before")
     @classmethod
@@ -109,6 +115,7 @@ async def upsert_model(m: ModelIn) -> Model:
             context_window=m.context_window,
             max_output_tokens=m.max_output_tokens,
             capabilities=m.capabilities,
+            parameter_support=m.parameter_support,
         )
     else:
         model.provider_id = provider.id
@@ -121,6 +128,7 @@ async def upsert_model(m: ModelIn) -> Model:
         model.context_window = m.context_window
         model.max_output_tokens = m.max_output_tokens
         model.capabilities = m.capabilities
+        model.parameter_support = m.parameter_support
     return await model.save()
 
 

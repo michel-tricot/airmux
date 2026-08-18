@@ -209,6 +209,8 @@ export const ModelEntryEgressKind = {
   anthropic: 'anthropic',
 } as const;
 
+export type ModelEntryParameterSupport = {[key: string]: 'supported' | 'unsupported'};
+
 /**
  * A routable model: the caller-facing id plus how to reach and bill it.
  */
@@ -223,6 +225,7 @@ export interface ModelEntry {
   context_window: number;
   max_output_tokens?: number | null;
   capabilities: string[];
+  parameter_support?: ModelEntryParameterSupport;
   egress_kind?: ModelEntryEgressKind;
 }
 
@@ -553,6 +556,11 @@ export const ModelInEgressKind = {
   anthropic: 'anthropic',
 } as const;
 
+/**
+ * Known support for canonical request parameters; an absent parameter is unknown
+ */
+export type ModelInParameterSupport = {[key: string]: 'supported' | 'unsupported'};
+
 export interface ModelIn {
   /**
      * Caller-facing model name
@@ -607,7 +615,11 @@ export interface ModelIn {
      * @maxItems 128
      */
   capabilities?: string[];
+  /** Known support for canonical request parameters; an absent parameter is unknown */
+  parameter_support?: ModelInParameterSupport;
 }
+
+export type ModelOutParameterSupport = {[key: string]: 'supported' | 'unsupported'};
 
 export interface ModelOut {
   id: string;
@@ -622,6 +634,7 @@ export interface ModelOut {
   context_window: number;
   max_output_tokens: number | null;
   capabilities: string[];
+  parameter_support: ModelOutParameterSupport;
   created_at: string;
   updated_at: string;
   deleted_at: string | null;

@@ -614,6 +614,25 @@
       "pricing_source": "models.dev",
       "reachable": true,
       "reachable_checked": "2026-08-17",
+      "parameter_evidence": {
+        "vendor_docs": {
+          "sources": [
+            "https://developers.openai.com/api/docs/guides/latest-model?model=gpt-5.2"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "unsupported",
+              "top_p": "unsupported",
+              "logprobs": "unsupported"
+            },
+            "responses": {
+              "temperature": "unsupported",
+              "top_p": "unsupported",
+              "logprobs": "unsupported"
+            }
+          }
+        }
+      },
       "endpoint_status": {
         "chat/completions": {
           "outcome": "ok",
@@ -703,6 +722,25 @@
       "pricing_source": "models.dev",
       "reachable": true,
       "reachable_checked": "2026-08-17",
+      "parameter_evidence": {
+        "vendor_docs": {
+          "sources": [
+            "https://developers.openai.com/api/docs/guides/latest-model?model=gpt-5.2"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "unsupported",
+              "top_p": "unsupported",
+              "logprobs": "unsupported"
+            },
+            "responses": {
+              "temperature": "unsupported",
+              "top_p": "unsupported",
+              "logprobs": "unsupported"
+            }
+          }
+        }
+      },
       "endpoint_status": {
         "chat/completions": {
           "outcome": "ok",
@@ -761,6 +799,25 @@
       "pricing_source": "models.dev",
       "reachable": true,
       "reachable_checked": "2026-08-17",
+      "parameter_evidence": {
+        "vendor_docs": {
+          "sources": [
+            "https://developers.openai.com/api/docs/guides/latest-model?model=gpt-5.2"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "unsupported",
+              "top_p": "unsupported",
+              "logprobs": "unsupported"
+            },
+            "responses": {
+              "temperature": "unsupported",
+              "top_p": "unsupported",
+              "logprobs": "unsupported"
+            }
+          }
+        }
+      },
       "endpoint_status": {
         "chat/completions": {
           "outcome": "ok",

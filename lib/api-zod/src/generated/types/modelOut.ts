@@ -10,6 +10,7 @@
  *
  * OpenAPI spec version: 0.1.0
  */
+import type { ModelOutParameterSupport } from './modelOutParameterSupport';
 
 export interface ModelOut {
   id: string;
@@ -24,6 +25,7 @@ export interface ModelOut {
   context_window: number;
   max_output_tokens: number | null;
   capabilities: string[];
+  parameter_support: ModelOutParameterSupport;
   created_at: Date;
   updated_at: Date;
   deleted_at: Date | null;

@@ -32,6 +32,14 @@ The distinction matters because serving limits differ per host. The same open-we
 is served at different context lengths by different providers, so a borrowed limit is a
 good default and a bad guarantee.
 
+## Parameter support carries separate evidence
+
+`parameter_evidence.vendor_docs` records explicit claims with their source URLs.
+`parameter_evidence.live_probe` records only conclusive results from the exact model endpoint.
+The applied taxonomy resolves each canonical parameter independently, with a live probe
+winning over documentation. A successful request means supported; only an explicit
+unsupported-parameter response means unsupported. Every other outcome remains unknown.
+
 ## Schemas carry provenance in the filename
 
 `<ingress>.<id>.<part>.json`. A file named for the provider is that provider's own schema.

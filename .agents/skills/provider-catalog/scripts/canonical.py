@@ -29,6 +29,7 @@ MODEL_ORDER = (
     "input_modalities", "output_modalities",
     "supports_tools", "supports_structured_output", "pricing",
     "limits_source", "pricing_source", "reachable", "reachable_checked",
+    "parameter_evidence",
 )
 
 

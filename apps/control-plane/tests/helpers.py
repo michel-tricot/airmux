@@ -40,6 +40,7 @@ MODEL = {
     "output_price_per_mtok": 2.0,
     "cache_read_price_per_mtok": 0.1,
     "cache_write_price_per_mtok": 1.25,
+    "parameter_support": {"temperature": "unsupported"},
 }
 
 EMAIL = "michel@example.com"

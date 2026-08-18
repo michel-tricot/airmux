@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import threading
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, cast
@@ -126,6 +127,28 @@ def test_local_mode_serves_end_to_end(tmp_path, monkeypatch):
     assert response.status_code == 200, response.text
     assert response.json()["content"] == [{"type": "text", "text": "hi"}]
     assert route.calls.last.request.headers["authorization"] == "Bearer sk-upstream"
+
+
+@respx.mock
+def test_local_mode_drops_a_model_parameter_before_the_upstream_request(tmp_path, monkeypatch):
+    monkeypatch.setenv("P1_API_KEY", "sk-upstream")
+    route = respx.post("https://api.openai.com/v1/chat/completions").mock(return_value=httpx.Response(200, json=UPSTREAM_REPLY))
+    bundle = BUNDLE_YML.replace(
+        "    capabilities: [streaming]\n",
+        "    capabilities: [streaming]\n    parameter_support: {temperature: unsupported}\n",
+    )
+    config = Config(bundle=LocalBundleConfig(kind="local", path=_write(tmp_path, bundle)))
+    with TestClient(create_app(config)) as client:
+        response = client.post(
+            "/inf/v1/chat/completions",
+            headers={"Authorization": "Bearer sk-inf-local-dev"},
+            json={"model": "gpt-test", "messages": [{"role": "user", "content": "hi"}], "temperature": 0.7},
+        )
+    assert response.status_code == 200, response.text
+    assert "temperature" not in json.loads(route.calls.last.request.content)
+    assert response.json()["gateway"]["adjustments"] == [
+        {"param": "temperature", "action": "dropped", "detail": "gpt-test does not support this parameter"}
+    ]
 
 
 @respx.mock

@@ -52,7 +52,7 @@ UA = "airllm-taxonomy/1.0"
 # endpoint_status is written by smoke.py per endpoint and decides a model's egress_kind, so
 # dropping it here would silently demote every proven Responses model on the next refresh
 DOWNSTREAM = ("kind", "limits_source", "pricing_source", "context_length", "max_output_tokens", "pricing",
-              "reachable", "reachable_checked", "endpoint_status")
+              "reachable", "reachable_checked", "endpoint_status", "parameter_evidence")
 
 
 def carry_forward(path: Path, models: list[dict]) -> list[dict]:

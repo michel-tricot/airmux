@@ -1187,6 +1187,10 @@ models:
   capabilities:
   - streaming
   - tools
+  parameter_support:
+    logprobs: unsupported
+    temperature: unsupported
+    top_p: unsupported
   egress_kind: openai_responses
 - model_id: openai/gpt-5-2025-08-07
   provider_id: openai
@@ -1212,6 +1216,10 @@ models:
   capabilities:
   - streaming
   - tools
+  parameter_support:
+    logprobs: unsupported
+    temperature: unsupported
+    top_p: unsupported
   egress_kind: openai_responses
 - model_id: openai/gpt-5-mini-2025-08-07
   provider_id: openai
@@ -1237,6 +1245,10 @@ models:
   capabilities:
   - streaming
   - tools
+  parameter_support:
+    logprobs: unsupported
+    temperature: unsupported
+    top_p: unsupported
   egress_kind: openai_responses
 - model_id: openai/gpt-5-nano-2025-08-07
   provider_id: openai

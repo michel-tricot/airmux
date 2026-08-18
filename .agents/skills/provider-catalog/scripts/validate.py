@@ -25,6 +25,7 @@ HAS_JSONSCHEMA = find_spec("jsonschema") is not None
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from canonical import MODEL_ORDER, sort_models
 from model_kind import classify
+from parameter_support import ENDPOINTS, SUPPORT
 
 ROOT = TAXONOMY
 FIELDS = {"id", "name", "icon_mono", "icon_color", "homepage", "docs", "base_url", "openapi", "models_url", "ingress", "auth", "env_var", "schema"}
@@ -209,6 +210,18 @@ def check_models(all_entries: list[dict]) -> None:
                 fail("models", f"{provider}/{mid} claims a pricing source but carries no price")
             if m.get("pricing") and not psource:
                 fail("models", f"{provider}/{mid} has a price with no pricing_source")
+            evidence = m.get("parameter_evidence") or {}
+            if extra_sources := set(evidence) - {"vendor_docs", "live_probe"}:
+                fail("models", f"{provider}/{mid} has unknown parameter evidence {sorted(extra_sources)}")
+            for source_type, source_evidence in evidence.items():
+                if source_type == "vendor_docs" and not source_evidence.get("sources"):
+                    fail("models", f"{provider}/{mid} has parameter documentation without a source")
+                support = source_evidence.get("support") or {}
+                if bad_endpoints := set(support) - ENDPOINTS:
+                    fail("models", f"{provider}/{mid} has parameter evidence for {sorted(bad_endpoints)}")
+                for endpoint, parameters in support.items():
+                    if bad_statuses := set(parameters.values()) - SUPPORT:
+                        fail("models", f"{provider}/{mid}/{endpoint} has parameter statuses {sorted(bad_statuses)}")
 
 
 CANDIDATE_FIELDS = {"id", "name", "homepage", "docs", "env_var"}

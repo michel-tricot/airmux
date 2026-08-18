@@ -11,6 +11,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { ModelEntryEgressKind } from './modelEntryEgressKind';
+import type { ModelEntryParameterSupport } from './modelEntryParameterSupport';
 
 /**
  * A routable model: the caller-facing id plus how to reach and bill it.
@@ -26,5 +27,6 @@ export interface ModelEntry {
   context_window: number;
   max_output_tokens?: number | null;
   capabilities: string[];
+  parameter_support?: ModelEntryParameterSupport;
   egress_kind?: ModelEntryEgressKind;
 }

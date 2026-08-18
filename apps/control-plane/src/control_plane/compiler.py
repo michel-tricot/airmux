@@ -127,6 +127,7 @@ async def compile_bundle(org_id: UUID, bundle_id: UUID, now: datetime) -> Bundle
                     context_window=r.context_window,
                     max_output_tokens=r.max_output_tokens,
                     capabilities=r.capabilities,
+                    parameter_support=r.parameter_support,
                 )
                 for r in model_rows
             ],

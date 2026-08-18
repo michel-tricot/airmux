@@ -64,6 +64,8 @@ The tooling lives with this skill; the catalog is its output. Nothing executable
       fireworks.py         serverless-only, control plane, UNVERIFIED
       openai_shaped.py     novita, deepinfra, sambanova, huggingface, nvidia
     enrich.py              fills limits and pricing from secondary sources
+    apply_parameter_docs.py applies explicit parameter claims with their vendor documentation source
+    probe_parameters.py    tests parameters against live model endpoints; conclusive probes win
     fetch_icons.py         vendors provider marks as SVG
     field_matrix.py        field support matrix, per ingress
     build_report.py        renders the matrix to HTML
@@ -185,6 +187,24 @@ python build_taxonomy.py --check    # fail if stale, for CI
 `taxonomy/` holds both halves: providers.yml and the derived data are research, and
 `taxonomy/taxonomy.yml` is what `airllmcp taxonomy` applies to the database. The second is generated from the first, so never hand-edit it.
 `validate.py` fails when the two have drifted, and `bootstrap.py` regenerates it last.
+
+### Refreshing parameter support
+
+`parameter-docs.yml` carries explicit vendor-documentation claims and their source URLs.
+Apply them, then probe the exact live model endpoint where credentials are available:
+
+```
+cd .agents/skills/provider-catalog/scripts
+python apply_parameter_docs.py
+python probe_parameters.py openai --parameter=temperature
+python build_taxonomy.py
+python validate.py
+```
+
+The model catalog keeps documentation and live-probe evidence separately. A conclusive live
+probe always wins for the same model, endpoint and canonical parameter. Success means supported;
+only an explicit unsupported-parameter response means unsupported. Authentication, access,
+rate-limit, timeout and generic bad-request results leave the previous evidence unchanged.
 
 Model ids are always `<provider>/<upstream>`. `gpt-oss-120b` is served by both Groq and
 Together at different prices and limits, so a bare id cannot be the caller-facing key, and

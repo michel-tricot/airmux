@@ -47,3 +47,34 @@ def test_a_quirky_provider_onboards_as_config(stack: Stack) -> None:
     (adjustment,) = body["gateway"]["adjustments"]
     assert (adjustment["param"], adjustment["action"]) == ("min_p", "dropped")
     assert "quirk" in adjustment["detail"]
+
+
+def test_model_parameter_support_changes_the_live_upstream_request(stack: Stack) -> None:
+    stack.write_config()
+    stack.start_cp()
+    stack.collect_credentials()
+    stack.start_dp()
+    stack.wait_dp_ready()
+
+    response = httpx.post(
+        f"{stack.dp_url}/inf/v1/chat/completions",
+        headers={"authorization": f"Bearer {stack.caller_api_key}"},
+        json={
+            "model": "no-temperature",
+            "messages": [{"role": "user", "content": "hi"}],
+            "temperature": 0.7,
+        },
+        timeout=10.0,
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+
+    wire = json.loads(body["content"][0]["text"])
+    assert "temperature" not in wire
+    assert body["gateway"]["adjustments"] == [
+        {
+            "param": "temperature",
+            "action": "dropped",
+            "detail": "no-temperature does not support this parameter",
+        }
+    ]
