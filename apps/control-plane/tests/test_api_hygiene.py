@@ -111,8 +111,9 @@ def test_membership_and_workspace_docs_are_resource_specific():
         "update_workspace": ["Workspace Settings"],
         "delete_workspace": ["Workspace Settings"],
     }
-    assert {operation: operations[operation] for operation in ("list_members", "add_member", "remove_member")} == {
+    assert {operation: operations[operation] for operation in ("list_members", "list_member_candidates", "add_member", "remove_member")} == {
         "list_members": ["Workspace Members"],
+        "list_member_candidates": ["Workspace Members"],
         "add_member": ["Workspace Members"],
         "remove_member": ["Workspace Members"],
     }

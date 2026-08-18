@@ -12,6 +12,7 @@ from control_plane.models.data_plane_instance import DataPlaneInstance
 from control_plane.models.inference_key import InferenceKey
 from control_plane.models.model import Model
 from control_plane.models.org import Org
+from control_plane.models.org_invitation import OrgInvitation
 from control_plane.models.org_membership import OrgMembership
 from control_plane.models.provider import Provider
 from control_plane.models.provider_credential import ProviderCredential
@@ -33,6 +34,7 @@ __all__ = [
     "Model",
     "NotOwnedError",
     "Org",
+    "OrgInvitation",
     "OrgMembership",
     "OrgOwned",
     "Provider",

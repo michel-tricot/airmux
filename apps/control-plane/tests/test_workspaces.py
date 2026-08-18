@@ -4,12 +4,14 @@ from __future__ import annotations
 
 import pytest
 from fastapi.testclient import TestClient
-from helpers import make_org, make_workspace, run_in_db, setup_control_plane
+from helpers import captured_sql, make_org, make_workspace, run_in_db, setup_control_plane
 from sqlmodel import col
 
 from contract import SignedBundle, uuid7, verify_bundle
 from control_plane.authz import OrgRole
 from control_plane.models import AuditLog
+
+CSRF = {"X-Requested-With": "fetch"}
 
 
 def _member(c, cp, org_id, email, role: OrgRole = OrgRole.member):
@@ -18,6 +20,34 @@ def _member(c, cp, org_id, email, role: OrgRole = OrgRole.member):
     uid = created.json()["data"]["user_id"]
     assert c.put(f"/api/v1/orgs/{org_id}/users/{uid}", json={"role": role}, headers=cp.headers(org_id)).status_code == 200
     return uid, cp.headers_for(org_id, uid)
+
+
+def test_org_member_only_sees_joined_workspaces(tmp_path):
+    cp = setup_control_plane(tmp_path)
+    root = cp.headers()
+    with TestClient(cp.app, base_url="https://testserver") as c:
+        org_id = make_org(c, root, "o1")
+        org = cp.headers(org_id)
+        joined = make_workspace(c, org, "joined")
+        sibling = make_workspace(c, org, "sibling")
+        member_id, _ = _member(c, cp, org_id, "member@example.com")
+        assert (
+            c.put(
+                f"/api/v1/orgs/{org_id}/workspaces/{joined}/members/{member_id}",
+                json={"role": "viewer"},
+                headers=org,
+            ).status_code
+            == 200
+        )
+
+        with captured_sql(cp.app) as statements:
+            listed = c.get(f"/api/v1/orgs/{org_id}/workspaces", headers=CSRF)
+
+        assert listed.status_code == 200
+        assert len([statement for statement in statements if statement.lstrip().startswith("SELECT")]) <= 7
+        assert [workspace["id"] for workspace in listed.json()["data"]] == [str(joined)]
+        assert c.get(f"/api/v1/orgs/{org_id}/workspaces/{joined}", headers=CSRF).status_code == 200
+        assert c.get(f"/api/v1/orgs/{org_id}/workspaces/{sibling}", headers=CSRF).status_code == 403
 
 
 def test_workspace_lifecycle_and_creator_auto_enrollment(tmp_path):
@@ -37,7 +67,49 @@ def test_workspace_lifecycle_and_creator_auto_enrollment(tmp_path):
         assert [w["name"] for w in c.get(f"/api/v1/orgs/{o1}/workspaces", headers=member).json()["data"]] == ["prod"]
 
         members = c.get(f"/api/v1/orgs/{o1}/workspaces/{created['id']}/members", headers=member).json()["data"]
-        assert [(m["user_id"], m["status"]) for m in members] == [(uid, "member")]
+        assert [(m["user_id"], m["email"], m["name"], m["service_account"], m["status"]) for m in members] == [
+            (uid, "m@example.com", "m@example.com", False, "member")
+        ]
+
+
+def test_workspace_admin_can_list_org_member_candidates_without_org_member_read(tmp_path):
+    cp = setup_control_plane(tmp_path)
+    root = cp.headers()
+    with TestClient(cp.app) as c:
+        org_id = make_org(c, root, "o1")
+        admin_id, admin = _member(c, cp, org_id, "admin@example.com")
+        candidate_id, _ = _member(c, cp, org_id, "candidate@example.com")
+        workspace_id = make_workspace(c, admin, "staging")
+        workspace_admin = cp.headers_for(org_id, admin_id, workspace_id)
+
+        candidates = c.get(f"/api/v1/orgs/{org_id}/workspaces/{workspace_id}/member-candidates", headers=workspace_admin)
+        assert candidates.status_code == 200
+        assert candidates.json()["data"] == [
+            {"user_id": candidate_id, "email": "candidate@example.com", "name": "candidate@example.com", "service_account": False}
+        ]
+
+        assert admin_id != candidate_id
+
+
+def test_workspace_member_lists_each_use_one_resource_query(tmp_path):
+    cp = setup_control_plane(tmp_path)
+    root = cp.headers()
+    with TestClient(cp.app) as c:
+        org_id = make_org(c, root, "o1")
+        admin_id, admin = _member(c, cp, org_id, "admin@example.com")
+        _member(c, cp, org_id, "candidate@example.com")
+        workspace_id = make_workspace(c, admin, "staging")
+        workspace_admin = cp.headers_for(org_id, admin_id, workspace_id)
+
+        with captured_sql(cp.app) as member_statements:
+            members = c.get(f"/api/v1/orgs/{org_id}/workspaces/{workspace_id}/members", headers=workspace_admin)
+        with captured_sql(cp.app) as candidate_statements:
+            candidates = c.get(f"/api/v1/orgs/{org_id}/workspaces/{workspace_id}/member-candidates", headers=workspace_admin)
+
+        assert members.status_code == 200
+        assert candidates.status_code == 200
+        assert len([statement for statement in member_statements if statement.lstrip().startswith("SELECT")]) <= 8
+        assert len([statement for statement in candidate_statements if statement.lstrip().startswith("SELECT")]) <= 8
 
 
 def test_slug_is_unique_within_the_org_and_free_across_orgs(tmp_path):

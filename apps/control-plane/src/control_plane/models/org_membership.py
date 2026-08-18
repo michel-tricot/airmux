@@ -5,9 +5,11 @@ from uuid import UUID
 
 from pydantic import BaseModel
 from sqlalchemy import CheckConstraint
+from sqlalchemy.dialects.postgresql import insert
 from sqlmodel import Field
 
 from control_plane.authz import OrgRole
+from control_plane.db import current_session
 from control_plane.models.audit import audited
 from control_plane.models.common import Tombstonable
 from control_plane.models.common.base import Record
@@ -24,6 +26,11 @@ class OrgMembership(Record, Tombstonable, table=True):
     user_id: UUID = Field(primary_key=True, foreign_key="user.id")
     org_id: UUID = Field(primary_key=True, foreign_key="org.id", index=True)
     role: str = OrgRole.member
+
+    @classmethod
+    async def ensure(cls, *, user_id: UUID, org_id: UUID, role: str) -> None:
+        statement = insert(cls).values(user_id=user_id, org_id=org_id, role=role).on_conflict_do_nothing(index_elements=["user_id", "org_id"])
+        await current_session().execute(statement)
 
     async def is_only_owner(self) -> bool:
         if self.role != OrgRole.owner:

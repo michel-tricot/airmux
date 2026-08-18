@@ -372,7 +372,8 @@ export const MeResponse = zod.object({
  * @summary Get Effective Permissions
  */
 export const MyPermissionsQueryParams = zod.object({
-  "org_id": zod.union([zod.uuid(),zod.null()]).optional().describe('Organization scope to evaluate; omit for instance scope')
+  "org_id": zod.union([zod.uuid(),zod.null()]).optional().describe('Organization scope to evaluate; omit for instance scope'),
+  "workspace_ref": zod.union([zod.coerce.string(),zod.null()]).optional().describe('Workspace ID or slug to evaluate within org_id; omit for organization scope')
 })
 
 export const MyPermissionsResponse = zod.object({
@@ -534,6 +535,54 @@ export const CreatePersonalOrgResponse = zod.object({
   "created_at": zod.coerce.date(),
   "updated_at": zod.coerce.date(),
   "deleted_at": zod.union([zod.coerce.date(),zod.null()])
+})
+
+
+/**
+ * Preview the organization and optional workspace named by a shared invitation secret.
+ *
+ * Authentication: none.
+ * @summary Preview Invitation
+ */
+export const previewInvitationBodyTokenMax = 256;
+
+
+
+export const PreviewInvitationBody = zod.object({
+  "token": zod.string().min(1).max(previewInvitationBodyTokenMax).describe('Secret from the shared invitation link')
+})
+
+export const PreviewInvitationResponse = zod.object({
+  "email": zod.string(),
+  "org_id": zod.uuid(),
+  "org_name": zod.string(),
+  "org_role": zod.string(),
+  "workspace_id": zod.union([zod.uuid(),zod.null()]),
+  "workspace_name": zod.union([zod.string(),zod.null()]),
+  "workspace_role": zod.union([zod.string(),zod.null()]),
+  "expires_at": zod.coerce.date()
+})
+
+
+/**
+ * Accept an invitation whose email matches the signed-in human account.
+ *
+ * Authentication: browser session.
+ * @summary Accept Invitation
+ */
+export const acceptInvitationBodyTokenMax = 256;
+
+
+
+export const AcceptInvitationBody = zod.object({
+  "token": zod.string().min(1).max(acceptInvitationBodyTokenMax).describe('Secret from the shared invitation link')
+})
+
+export const AcceptInvitationResponse = zod.object({
+  "invitation_id": zod.uuid(),
+  "org_id": zod.uuid(),
+  "workspace_id": zod.union([zod.uuid(),zod.null()]),
+  "status": zod.literal("accepted")
 })
 
 
@@ -823,6 +872,133 @@ export const DeleteOrgResponse = zod.object({
 
 
 /**
+ * Create an email-bound organization invitation and return its shareable URL once.
+ *
+ * Required permission: `members.manage`.
+ * @summary Create Organization Invitation
+ */
+export const CreateInvitationParams = zod.object({
+  "org_id": zod.uuid().describe('Organization ID')
+})
+
+export const createInvitationBodyEmailMin = 3;
+export const createInvitationBodyEmailMax = 320;
+
+export const createInvitationBodyOrgRoleRegExp = new RegExp('^(admin|member)$');
+export const createInvitationBodyWorkspaceRoleOneRegExp = new RegExp('^(admin|member|viewer)$');
+
+
+export const CreateInvitationBody = zod.object({
+  "email": zod.string().min(createInvitationBodyEmailMin).max(createInvitationBodyEmailMax).describe('Email address that must match the account accepting the invitation'),
+  "org_role": zod.string().regex(createInvitationBodyOrgRoleRegExp).describe('Organization role to grant'),
+  "workspace_id": zod.union([zod.uuid(),zod.null()]).optional().describe('Optional workspace to join'),
+  "workspace_role": zod.union([zod.string().regex(createInvitationBodyWorkspaceRoleOneRegExp),zod.null()]).optional().describe('Role to grant in the selected workspace')
+})
+
+export const CreateInvitationResponse = zod.object({
+  "invitation": zod.object({
+  "id": zod.uuid(),
+  "org_id": zod.uuid(),
+  "email": zod.string(),
+  "org_role": zod.string(),
+  "workspace_id": zod.union([zod.uuid(),zod.null()]),
+  "workspace_role": zod.union([zod.string(),zod.null()]),
+  "created_by_user_id": zod.union([zod.uuid(),zod.null()]),
+  "expires_at": zod.coerce.date(),
+  "accepted_at": zod.union([zod.coerce.date(),zod.null()]),
+  "accepted_by_user_id": zod.union([zod.uuid(),zod.null()]),
+  "revoked_at": zod.union([zod.coerce.date(),zod.null()]),
+  "created_at": zod.coerce.date(),
+  "updated_at": zod.coerce.date(),
+  "deleted_at": zod.union([zod.coerce.date(),zod.null()]),
+  "status": zod.enum(['pending', 'expired', 'accepted', 'revoked'])
+}),
+  "url": zod.string()
+})
+
+
+/**
+ * List pending and expired invitations without returning their secret URLs.
+ *
+ * Required permission: `members.read`.
+ * @summary List Organization Invitations
+ */
+export const ListInvitationsParams = zod.object({
+  "org_id": zod.uuid().describe('Organization ID')
+})
+
+export const ListInvitationsResponseItem = zod.object({
+  "id": zod.uuid(),
+  "org_id": zod.uuid(),
+  "email": zod.string(),
+  "org_role": zod.string(),
+  "workspace_id": zod.union([zod.uuid(),zod.null()]),
+  "workspace_role": zod.union([zod.string(),zod.null()]),
+  "created_by_user_id": zod.union([zod.uuid(),zod.null()]),
+  "expires_at": zod.coerce.date(),
+  "accepted_at": zod.union([zod.coerce.date(),zod.null()]),
+  "accepted_by_user_id": zod.union([zod.uuid(),zod.null()]),
+  "revoked_at": zod.union([zod.coerce.date(),zod.null()]),
+  "created_at": zod.coerce.date(),
+  "updated_at": zod.coerce.date(),
+  "deleted_at": zod.union([zod.coerce.date(),zod.null()]),
+  "status": zod.enum(['pending', 'expired', 'accepted', 'revoked'])
+})
+export const ListInvitationsResponse = zod.array(ListInvitationsResponseItem)
+
+
+/**
+ * Replace a pending or expired invitation URL and invalidate its previous secret.
+ *
+ * Required permission: `members.manage`.
+ * @summary Reissue Organization Invitation
+ */
+export const ReissueInvitationParams = zod.object({
+  "invitation_id": zod.uuid().describe('Organization invitation ID'),
+  "org_id": zod.uuid().describe('Organization ID')
+})
+
+export const ReissueInvitationResponse = zod.object({
+  "invitation": zod.object({
+  "id": zod.uuid(),
+  "org_id": zod.uuid(),
+  "email": zod.string(),
+  "org_role": zod.string(),
+  "workspace_id": zod.union([zod.uuid(),zod.null()]),
+  "workspace_role": zod.union([zod.string(),zod.null()]),
+  "created_by_user_id": zod.union([zod.uuid(),zod.null()]),
+  "expires_at": zod.coerce.date(),
+  "accepted_at": zod.union([zod.coerce.date(),zod.null()]),
+  "accepted_by_user_id": zod.union([zod.uuid(),zod.null()]),
+  "revoked_at": zod.union([zod.coerce.date(),zod.null()]),
+  "created_at": zod.coerce.date(),
+  "updated_at": zod.coerce.date(),
+  "deleted_at": zod.union([zod.coerce.date(),zod.null()]),
+  "status": zod.enum(['pending', 'expired', 'accepted', 'revoked'])
+}),
+  "url": zod.string()
+})
+
+
+/**
+ * Revoke an invitation without changing any membership already granted.
+ *
+ * Required permission: `members.manage`.
+ * @summary Revoke Organization Invitation
+ */
+export const RevokeInvitationParams = zod.object({
+  "invitation_id": zod.uuid().describe('Organization invitation ID'),
+  "org_id": zod.uuid().describe('Organization ID')
+})
+
+export const RevokeInvitationResponse = zod.object({
+  "id": zod.uuid(),
+  "status": zod.literal("revoked"),
+  "revoked_at": zod.coerce.date()
+})
+
+
+/**
  * Create a workspace and make the creator its first admin when they belong to the organization.
  *
  * The slug is derived from the name when omitted and must be unique within the organization.
@@ -860,9 +1036,9 @@ export const CreateWorkspaceResponse = zod.object({
 
 
 /**
- * List workspaces in an organization.
+ * List workspaces the caller can read in an organization.
  *
- * Required permission: `workspaces.read`.
+ * Required permission: one of `workspaces.read`, `organizations.read`.
  * @summary List Workspaces
  */
 export const ListWorkspacesParams = zod.object({
@@ -966,10 +1142,33 @@ export const ListMembersParams = zod.object({
 export const ListMembersResponseItem = zod.object({
   "user_id": zod.uuid(),
   "workspace_id": zod.uuid(),
+  "email": zod.string(),
+  "name": zod.string(),
+  "service_account": zod.boolean(),
   "role": zod.enum(['admin', 'member', 'viewer']),
   "status": zod.literal("member")
 })
 export const ListMembersResponse = zod.array(ListMembersResponseItem)
+
+
+/**
+ * List organization members who can be added to a workspace.
+ *
+ * Required permission: `members.manage`.
+ * @summary List Workspace Member Candidates
+ */
+export const ListMemberCandidatesParams = zod.object({
+  "workspace_ref": zod.coerce.string().describe('Workspace ID or slug'),
+  "org_id": zod.uuid().describe('Organization ID')
+})
+
+export const ListMemberCandidatesResponseItem = zod.object({
+  "user_id": zod.uuid(),
+  "email": zod.string(),
+  "name": zod.string(),
+  "service_account": zod.boolean()
+})
+export const ListMemberCandidatesResponse = zod.array(ListMemberCandidatesResponseItem)
 
 
 /**
@@ -991,6 +1190,9 @@ export const AddMemberBody = zod.object({
 export const AddMemberResponse = zod.object({
   "user_id": zod.uuid(),
   "workspace_id": zod.uuid(),
+  "email": zod.string(),
+  "name": zod.string(),
+  "service_account": zod.boolean(),
   "role": zod.enum(['admin', 'member', 'viewer']),
   "status": zod.literal("member")
 })

@@ -5,9 +5,11 @@ from uuid import UUID
 
 from pydantic import BaseModel
 from sqlalchemy import CheckConstraint, ForeignKeyConstraint
+from sqlalchemy.dialects.postgresql import insert
 from sqlmodel import Field
 
 from control_plane.authz import WorkspaceRole
+from control_plane.db import current_session
 from control_plane.models.audit import audited
 from control_plane.models.common import Tombstonable
 from control_plane.models.common.base import Record
@@ -31,9 +33,18 @@ class WorkspaceMembership(Record, Tombstonable, table=True):
     )
 
     user_id: UUID = Field(primary_key=True)
-    workspace_id: UUID = Field(primary_key=True)
+    workspace_id: UUID = Field(primary_key=True, index=True)
     org_id: UUID
     role: str = WorkspaceRole.member
+
+    @classmethod
+    async def ensure(cls, *, user_id: UUID, workspace_id: UUID, org_id: UUID, role: str) -> None:
+        statement = (
+            insert(cls)
+            .values(user_id=user_id, workspace_id=workspace_id, org_id=org_id, role=role)
+            .on_conflict_do_nothing(index_elements=["user_id", "workspace_id"])
+        )
+        await current_session().execute(statement)
 
 
 class WorkspaceMembershipIn(RequestModel):
@@ -43,5 +54,15 @@ class WorkspaceMembershipIn(RequestModel):
 class WorkspaceMembershipOut(BaseModel):
     user_id: UUID
     workspace_id: UUID
+    email: str
+    name: str
+    service_account: bool
     role: WorkspaceRole
     status: Literal["member"]
+
+
+class WorkspaceMemberCandidateOut(BaseModel):
+    user_id: UUID
+    email: str
+    name: str
+    service_account: bool

@@ -11,6 +11,7 @@ import { LoadingState, ErrorState, EmptyState } from '@/components/shared/states
 import { ProviderIcon } from '@/components/ProviderIcon';
 import { cn } from '@/lib/utils';
 import { chatCompletion, type InferenceMessage } from '@/lib/inference';
+import { hasPermission, useEffectivePermissions } from '@/features/permissions/hooks';
 
 type Role = 'user' | 'assistant';
 type Interaction = {
@@ -96,7 +97,11 @@ export default function ScopedPlayground() {
 }
 
 function Playground({ orgId, workspaceRef }: { orgId: string; workspaceRef: string }) {
-  const taxonomyQuery = useProviders(orgId, workspaceRef);
+  const permissionsQuery = useEffectivePermissions({ orgId, workspaceRef });
+  const permissions = permissionsQuery.data?.permissions;
+  const canReadCatalog = hasPermission(permissions, 'catalog.read');
+  const canManageKeys = hasPermission(permissions, 'inference-keys.manage');
+  const taxonomyQuery = useProviders(orgId, workspaceRef, canReadCatalog);
   const createKey = useCreateInferenceKeyMutation(orgId, workspaceRef);
 
   const models = taxonomyQuery.data?.models ?? [];
@@ -235,6 +240,10 @@ function Playground({ orgId, workspaceRef }: { orgId: string; workspaceRef: stri
     abortRef.current?.abort();
   };
 
+  if (permissionsQuery.isLoading) return <LoadingState label="Loading workspace permissions..." />;
+  if (permissionsQuery.isError)
+    return <ErrorState error={permissionsQuery.error} resource="workspace permissions" onRetry={() => permissionsQuery.refetch()} />;
+  if (!canReadCatalog) return <ErrorState message="You do not have access to the catalog in this workspace." />;
   if (taxonomyQuery.isLoading) return <LoadingState label="Loading workspace catalog..." />;
   if (taxonomyQuery.isError) return <ErrorState error={taxonomyQuery.error} resource="workspace catalog" onRetry={() => taxonomyQuery.refetch()} />;
 
@@ -334,10 +343,12 @@ function Playground({ orgId, workspaceRef }: { orgId: string; workspaceRef: stri
               onChange={(e) => setToken(e.target.value)}
               className="h-8 font-mono text-xs"
             />
-            <Button variant="outline" size="sm" className="w-full text-xs" onClick={generateToken} disabled={createKey.isPending}>
-              {createKey.isPending ? <Loader2 className="mr-1.5 h-3 w-3 animate-spin" /> : <KeyRound className="mr-1.5 h-3 w-3" />}
-              Generate playground key
-            </Button>
+            {canManageKeys && (
+              <Button variant="outline" size="sm" className="w-full text-xs" onClick={generateToken} disabled={createKey.isPending}>
+                {createKey.isPending ? <Loader2 className="mr-1.5 h-3 w-3 animate-spin" /> : <KeyRound className="mr-1.5 h-3 w-3" />}
+                Generate playground key
+              </Button>
+            )}
             {!token && <p className="text-[10px] text-muted-foreground">Paste an existing key or generate one above.</p>}
           </div>
         </aside>

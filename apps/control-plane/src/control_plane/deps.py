@@ -6,8 +6,8 @@ from uuid import UUID
 from fastapi import Cookie, Depends, HTTPException, Request, params
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
-from control_plane.authority import decision
-from control_plane.authz import ALL_PERMISSIONS, Actor, Decision, Grant, Permission, Scope
+from control_plane.authority import effective_permissions
+from control_plane.authz import ALL_PERMISSIONS, Actor, Grant, Permission, Scope
 from control_plane.db import transaction
 from control_plane.keys import verify_bearer
 from control_plane.models import Org, User, Workspace, set_actor
@@ -152,38 +152,47 @@ async def bundle_scope(resolved: ActorDep, org_id: UUID | None = None) -> Scope:
 BundleScopeDep = Annotated[Scope, Depends(bundle_scope)]
 
 
-async def permission_scope(org_id: UUID | None = None) -> Scope:
+async def permission_scope(org_id: UUID | None = None, workspace_ref: str | None = None) -> Scope:
+    if workspace_ref is not None and org_id is None:
+        raise HTTPException(status_code=422, detail="workspace_ref requires org_id")
     if org_id is None:
         return Scope.instance()
     if await Org.find_by_id(org_id) is None:
         raise HTTPException(status_code=404, detail="Organization not found")
+    if workspace_ref is not None:
+        workspace = await Workspace.by_ref(org_id, workspace_ref)
+        return Scope.workspace(org_id, workspace.id)
     return Scope.org(org_id)
 
 
 PermissionScopeDep = Annotated[Scope, Depends(permission_scope)]
 
 
-async def authorize(resolved: Actor, permission: Permission, scope: Scope) -> None:
-    result = await decision(resolved, permission, scope)
-    if result is not Decision.allow:
-        raise HTTPException(status_code=403, detail=f"Missing {permission.value} permission for {scope.level.value} scope")
-
-
 class PermissionCheck(Protocol):
-    required_permission: Permission
+    required_permissions: tuple[Permission, ...]
     required_scope: str
 
     def __call__(self, actor: Actor) -> Awaitable[None]: ...
 
 
-def require(permission: Permission, scope_resolver: Callable[..., Awaitable[Scope]]) -> params.Depends:
+def require(scope_resolver: Callable[..., Awaitable[Scope]], permission: Permission, *additional_permissions: Permission) -> params.Depends:
+    required = (permission, *additional_permissions)
     scope_dependency = Depends(scope_resolver)
 
     async def check_permission(resolved: ActorDep, scope: Scope = scope_dependency) -> None:
-        await authorize(resolved, permission, scope)
+        effective = await effective_permissions(resolved, scope)
+        if any(permission in effective for permission in required):
+            return
+        names = ", ".join(permission.value for permission in required)
+        detail = (
+            f"Missing {names} permission for {scope.level.value} scope"
+            if len(required) == 1
+            else f"Missing one of {names} permissions for {scope.level.value} scope"
+        )
+        raise HTTPException(status_code=403, detail=detail)
 
     checker = cast("PermissionCheck", check_permission)
-    checker.required_permission = permission
+    checker.required_permissions = required
     scope_name = getattr(scope_resolver, "__name__", "")
     checker.required_scope = scope_name if isinstance(scope_name, str) else type(scope_resolver).__name__
     return Depends(checker)

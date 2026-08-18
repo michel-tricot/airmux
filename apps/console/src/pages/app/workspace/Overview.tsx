@@ -12,6 +12,7 @@ import { LoadingState, ErrorState } from '@/components/shared/states';
 import { DataTable } from '@/components/shared/data-table';
 import { useRequiredParam } from '@/lib/route';
 import { PageShell } from '@/components/shared/page-shell';
+import { hasPermission, useEffectivePermissions } from '@/features/permissions/hooks';
 
 const EVENTS_WINDOW = 200;
 
@@ -48,14 +49,23 @@ export default function WorkspaceOverview() {
 
   const workspaceQuery = useWorkspace(orgId, workspaceRef);
   const workspace = workspaceQuery.data;
-  const membersQuery = useWorkspaceMembers(orgId, workspaceRef);
-  const keysQuery = useInferenceKeys(orgId, workspaceRef);
-  const credentialsQuery = useProviderCredentials(orgId, workspaceRef);
-  const eventsQuery = useWorkspaceEvents(orgId, workspaceRef, { limit: EVENTS_WINDOW }, workspace !== undefined);
+  const permissionsQuery = useEffectivePermissions({ orgId, workspaceRef });
+  const permissions = permissionsQuery.data?.permissions;
+  const canReadMembers = hasPermission(permissions, 'members.read');
+  const canReadKeys = hasPermission(permissions, 'inference-keys.read');
+  const canReadCredentials = hasPermission(permissions, 'provider-credentials.read');
+  const canReadUsage = hasPermission(permissions, 'usage.read');
+  const membersQuery = useWorkspaceMembers(orgId, workspaceRef, canReadMembers);
+  const keysQuery = useInferenceKeys(orgId, workspaceRef, canReadKeys);
+  const credentialsQuery = useProviderCredentials(orgId, workspaceRef, canReadCredentials);
+  const eventsQuery = useWorkspaceEvents(orgId, workspaceRef, { limit: EVENTS_WINDOW }, workspace !== undefined && canReadUsage);
   const events = eventsQuery.data;
 
   if (workspaceQuery.isLoading) return <LoadingState label="Loading workspace..." />;
   if (workspaceQuery.isError) return <ErrorState error={workspaceQuery.error} resource="workspace" onRetry={() => workspaceQuery.refetch()} />;
+  if (permissionsQuery.isLoading) return <LoadingState label="Loading workspace permissions..." />;
+  if (permissionsQuery.isError)
+    return <ErrorState error={permissionsQuery.error} resource="workspace permissions" onRetry={() => permissionsQuery.refetch()} />;
   if (!workspace) return <ErrorState message="Workspace not found" />;
 
   const activeKeys = keysQuery.data?.filter((key) => !key.revoked).length;
@@ -80,7 +90,8 @@ export default function WorkspaceOverview() {
         .sort((a, b) => b.requests - a.requests)
         .slice(0, 5)
     : undefined;
-  const detailsFailed = membersQuery.isError || keysQuery.isError || credentialsQuery.isError;
+  const detailsFailed =
+    (canReadMembers && membersQuery.isError) || (canReadKeys && keysQuery.isError) || (canReadCredentials && credentialsQuery.isError);
 
   return (
     <PageShell>
@@ -97,135 +108,149 @@ export default function WorkspaceOverview() {
       {detailsFailed && (
         <ErrorState
           message="Some workspace details could not be loaded. Try again."
-          onRetry={() => Promise.all([membersQuery.refetch(), keysQuery.refetch(), credentialsQuery.refetch()])}
+          onRetry={() =>
+            Promise.all([
+              ...(canReadMembers ? [membersQuery.refetch()] : []),
+              ...(canReadKeys ? [keysQuery.refetch()] : []),
+              ...(canReadCredentials ? [credentialsQuery.refetch()] : []),
+            ])
+          }
         />
       )}
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <MetricCard icon={KeyRound} label="API Keys" value={activeKeys ?? '-'} hint="active inference keys" />
-        <MetricCard icon={Users} label="Members" value={membersQuery.data?.length ?? '-'} hint="with workspace access" />
-        <MetricCard icon={Database} label="BYOK" value={credentialsQuery.data?.length ?? '-'} hint="provider keys configured" />
-        <MetricCard icon={Activity} label="Requests" value={requests ?? '-'} hint={`latest ${EVENTS_WINDOW} requests`} />
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <MetricCard
-          icon={ArrowDownToLine}
-          label="Input Tokens"
-          value={inputTokens === undefined ? '-' : formatTokens(inputTokens)}
-          hint={`latest ${EVENTS_WINDOW} requests`}
-        />
-        <MetricCard
-          icon={ArrowUpFromLine}
-          label="Output Tokens"
-          value={outputTokens === undefined ? '-' : formatTokens(outputTokens)}
-          hint={`latest ${EVENTS_WINDOW} requests`}
-        />
-        <MetricCard
-          icon={Coins}
-          label="Spend"
-          value={costUsd === undefined ? '-' : `$${costUsd.toFixed(costUsd >= 1 ? 2 : 4)}`}
-          hint={`latest ${EVENTS_WINDOW} requests`}
-        />
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-        <div className="space-y-3">
-          <h2 className="text-lg font-semibold">Top Models</h2>
-          <Card>
-            <DataTable
-              rows={topModels}
-              rowKey={(row) => row.model}
-              isLoading={eventsQuery.isLoading}
-              isError={eventsQuery.isError}
-              error={eventsQuery.error}
-              resource="usage"
-              onRetry={() => eventsQuery.refetch()}
-              empty="No usage recorded yet."
-              columns={[
-                {
-                  key: 'model',
-                  header: 'Model',
-                  cell: (row) => (
-                    <Badge variant="outline" className="font-mono">
-                      {row.model}
-                    </Badge>
-                  ),
-                },
-                {
-                  key: 'requests',
-                  header: 'Requests',
-                  headClassName: 'text-right',
-                  cellClassName: 'text-right tabular-nums',
-                  cell: (row) => row.requests,
-                },
-                {
-                  key: 'tokens',
-                  header: 'Tokens',
-                  headClassName: 'text-right',
-                  cellClassName: 'text-right tabular-nums',
-                  cell: (row) => formatTokens(row.tokens),
-                },
-                {
-                  key: 'cost',
-                  header: 'Cost',
-                  headClassName: 'text-right',
-                  cellClassName: 'text-right tabular-nums',
-                  cell: (row) => `$${row.cost.toFixed(row.cost >= 1 ? 2 : 4)}`,
-                },
-              ]}
-            />
-          </Card>
+      {(canReadKeys || canReadMembers || canReadCredentials || canReadUsage) && (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {canReadKeys && <MetricCard icon={KeyRound} label="API Keys" value={activeKeys ?? '-'} hint="active inference keys" />}
+          {canReadMembers && <MetricCard icon={Users} label="Members" value={membersQuery.data?.length ?? '-'} hint="with workspace access" />}
+          {canReadCredentials && (
+            <MetricCard icon={Database} label="BYOK" value={credentialsQuery.data?.length ?? '-'} hint="provider keys configured" />
+          )}
+          {canReadUsage && <MetricCard icon={Activity} label="Requests" value={requests ?? '-'} hint={`latest ${EVENTS_WINDOW} requests`} />}
         </div>
+      )}
 
-        <div className="space-y-3">
-          <h2 className="text-lg font-semibold">Recent Activity</h2>
-          <Card>
-            <DataTable
-              rows={recent}
-              rowKey={(e) => e.event_id}
-              isLoading={eventsQuery.isLoading}
-              isError={eventsQuery.isError}
-              error={eventsQuery.error}
-              resource="usage"
-              onRetry={() => eventsQuery.refetch()}
-              empty="No events for this workspace yet."
-              columns={[
-                {
-                  key: 'model',
-                  header: 'Model',
-                  cellClassName: 'font-mono text-xs',
-                  cell: (e) => (
-                    <Badge variant="outline" className="font-mono">
-                      {e.model_id}
-                    </Badge>
-                  ),
-                },
-                {
-                  key: 'key',
-                  header: 'Key',
-                  cellClassName: 'text-xs',
-                  cell: (e) => keyLabels.get(e.key_id) ?? <span className="font-mono text-muted-foreground">{e.key_id}</span>,
-                },
-                {
-                  key: 'tokens',
-                  header: 'Tokens',
-                  headClassName: 'text-right',
-                  cellClassName: 'text-right tabular-nums',
-                  cell: (e) => formatTokens(e.input_tokens + e.output_tokens),
-                },
-                {
-                  key: 'when',
-                  header: 'When',
-                  headClassName: 'text-right',
-                  cellClassName: 'text-right text-muted-foreground text-xs',
-                  cell: (e) => formatRelative(e.occurred_at),
-                },
-              ]}
-            />
-          </Card>
+      {canReadUsage && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <MetricCard
+            icon={ArrowDownToLine}
+            label="Input Tokens"
+            value={inputTokens === undefined ? '-' : formatTokens(inputTokens)}
+            hint={`latest ${EVENTS_WINDOW} requests`}
+          />
+          <MetricCard
+            icon={ArrowUpFromLine}
+            label="Output Tokens"
+            value={outputTokens === undefined ? '-' : formatTokens(outputTokens)}
+            hint={`latest ${EVENTS_WINDOW} requests`}
+          />
+          <MetricCard
+            icon={Coins}
+            label="Spend"
+            value={costUsd === undefined ? '-' : `$${costUsd.toFixed(costUsd >= 1 ? 2 : 4)}`}
+            hint={`latest ${EVENTS_WINDOW} requests`}
+          />
         </div>
-      </div>
+      )}
+
+      {canReadUsage && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+          <div className="space-y-3">
+            <h2 className="text-lg font-semibold">Top Models</h2>
+            <Card>
+              <DataTable
+                rows={topModels}
+                rowKey={(row) => row.model}
+                isLoading={eventsQuery.isLoading}
+                isError={eventsQuery.isError}
+                error={eventsQuery.error}
+                resource="usage"
+                onRetry={() => eventsQuery.refetch()}
+                empty="No usage recorded yet."
+                columns={[
+                  {
+                    key: 'model',
+                    header: 'Model',
+                    cell: (row) => (
+                      <Badge variant="outline" className="font-mono">
+                        {row.model}
+                      </Badge>
+                    ),
+                  },
+                  {
+                    key: 'requests',
+                    header: 'Requests',
+                    headClassName: 'text-right',
+                    cellClassName: 'text-right tabular-nums',
+                    cell: (row) => row.requests,
+                  },
+                  {
+                    key: 'tokens',
+                    header: 'Tokens',
+                    headClassName: 'text-right',
+                    cellClassName: 'text-right tabular-nums',
+                    cell: (row) => formatTokens(row.tokens),
+                  },
+                  {
+                    key: 'cost',
+                    header: 'Cost',
+                    headClassName: 'text-right',
+                    cellClassName: 'text-right tabular-nums',
+                    cell: (row) => `$${row.cost.toFixed(row.cost >= 1 ? 2 : 4)}`,
+                  },
+                ]}
+              />
+            </Card>
+          </div>
+
+          <div className="space-y-3">
+            <h2 className="text-lg font-semibold">Recent Activity</h2>
+            <Card>
+              <DataTable
+                rows={recent}
+                rowKey={(e) => e.event_id}
+                isLoading={eventsQuery.isLoading}
+                isError={eventsQuery.isError}
+                error={eventsQuery.error}
+                resource="usage"
+                onRetry={() => eventsQuery.refetch()}
+                empty="No events for this workspace yet."
+                columns={[
+                  {
+                    key: 'model',
+                    header: 'Model',
+                    cellClassName: 'font-mono text-xs',
+                    cell: (e) => (
+                      <Badge variant="outline" className="font-mono">
+                        {e.model_id}
+                      </Badge>
+                    ),
+                  },
+                  {
+                    key: 'key',
+                    header: 'Key',
+                    cellClassName: 'text-xs',
+                    cell: (e) => keyLabels.get(e.key_id) ?? <span className="font-mono text-muted-foreground">{e.key_id}</span>,
+                  },
+                  {
+                    key: 'tokens',
+                    header: 'Tokens',
+                    headClassName: 'text-right',
+                    cellClassName: 'text-right tabular-nums',
+                    cell: (e) => formatTokens(e.input_tokens + e.output_tokens),
+                  },
+                  {
+                    key: 'when',
+                    header: 'When',
+                    headClassName: 'text-right',
+                    cellClassName: 'text-right text-muted-foreground text-xs',
+                    cell: (e) => formatRelative(e.occurred_at),
+                  },
+                ]}
+              />
+            </Card>
+          </div>
+        </div>
+      )}
     </PageShell>
   );
 }

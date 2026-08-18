@@ -76,10 +76,10 @@ def test_refused_requests_explain_themselves(tmp_path):
         assert resp.status_code == 403
         assert "instance scope" in resp.json()["detail"]
 
-        limited = cp.headers(org_id=org_id, permissions=[Permission.organizations_read])
+        limited = cp.headers(org_id=org_id, permissions=[Permission.catalog_read])
         resp = c.get(f"/api/v1/orgs/{org_id}/workspaces", headers=limited)
         assert resp.status_code == 403
-        assert resp.json()["detail"] == "Missing workspaces.read permission for org scope"
+        assert resp.json()["detail"] == "Missing one of workspaces.read, organizations.read permissions for org scope"
 
         # Expired/invalid session cookie through the cookie door
         c.cookies.set("airllm_session", "bogus")

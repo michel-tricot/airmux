@@ -278,6 +278,39 @@ class InstanceRole(RootModel[Literal["owner", "auditor", "data_plane"]]):
     root: Annotated[Literal["owner", "auditor", "data_plane"], Field(title="InstanceRole")]
 
 
+class InvitationAcceptedOut(BaseModel):
+    invitation_id: Annotated[UUID, Field(title="Invitation Id")]
+    org_id: Annotated[UUID, Field(title="Org Id")]
+    workspace_id: Annotated[UUID | None, Field(title="Workspace Id")]
+    status: Annotated[Literal["accepted"], Field(title="Status")]
+
+
+class InvitationPreviewOut(BaseModel):
+    email: Annotated[str, Field(title="Email")]
+    org_id: Annotated[UUID, Field(title="Org Id")]
+    org_name: Annotated[str, Field(title="Org Name")]
+    org_role: Annotated[str, Field(title="Org Role")]
+    workspace_id: Annotated[UUID | None, Field(title="Workspace Id")]
+    workspace_name: Annotated[str | None, Field(title="Workspace Name")]
+    workspace_role: Annotated[str | None, Field(title="Workspace Role")]
+    expires_at: Annotated[AwareDatetime, Field(title="Expires At")]
+
+
+class InvitationTokenIn(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    token: Annotated[
+        str,
+        Field(
+            description="Secret from the shared invitation link",
+            max_length=256,
+            min_length=1,
+            title="Token",
+        ),
+    ]
+
+
 class KeyEntry(BaseModel):
     """
     An active inference key included in a policy bundle.
@@ -481,6 +514,75 @@ class OrgCreate(BaseModel):
             title="Name",
         ),
     ]
+
+
+class WorkspaceRole(RootModel[str]):
+    root: Annotated[
+        str,
+        Field(
+            description="Role to grant in the selected workspace",
+            pattern="^(admin|member|viewer)$",
+            title="Workspace Role",
+        ),
+    ]
+
+
+class OrgInvitationCreate(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    email: Annotated[
+        str,
+        Field(
+            description="Email address that must match the account accepting the invitation",
+            max_length=320,
+            min_length=3,
+            title="Email",
+        ),
+    ]
+    org_role: Annotated[
+        str,
+        Field(
+            description="Organization role to grant",
+            pattern="^(admin|member)$",
+            title="Org Role",
+        ),
+    ]
+    workspace_id: Annotated[
+        UUID | None,
+        Field(description="Optional workspace to join", title="Workspace Id"),
+    ] = None
+    workspace_role: Annotated[
+        WorkspaceRole | None,
+        Field(
+            description="Role to grant in the selected workspace",
+            title="Workspace Role",
+        ),
+    ] = None
+
+
+class OrgInvitationOut(BaseModel):
+    id: Annotated[UUID, Field(title="Id")]
+    org_id: Annotated[UUID, Field(title="Org Id")]
+    email: Annotated[str, Field(title="Email")]
+    org_role: Annotated[str, Field(title="Org Role")]
+    workspace_id: Annotated[UUID | None, Field(title="Workspace Id")]
+    workspace_role: Annotated[str | None, Field(title="Workspace Role")]
+    created_by_user_id: Annotated[UUID | None, Field(title="Created By User Id")]
+    expires_at: Annotated[AwareDatetime, Field(title="Expires At")]
+    accepted_at: Annotated[AwareDatetime | None, Field(title="Accepted At")]
+    accepted_by_user_id: Annotated[UUID | None, Field(title="Accepted By User Id")]
+    revoked_at: Annotated[AwareDatetime | None, Field(title="Revoked At")]
+    created_at: Annotated[AwareDatetime, Field(title="Created At")]
+    updated_at: Annotated[AwareDatetime, Field(title="Updated At")]
+    deleted_at: Annotated[AwareDatetime | None, Field(title="Deleted At")]
+    status: Annotated[Literal["pending", "expired", "accepted", "revoked"], Field(title="Status")]
+
+
+class OrgInvitationRevokedOut(BaseModel):
+    id: Annotated[UUID, Field(title="Id")]
+    status: Annotated[Literal["revoked"], Field(title="Status")]
+    revoked_at: Annotated[AwareDatetime, Field(title="Revoked At")]
 
 
 class OrgOut(BaseModel):
@@ -1136,6 +1238,13 @@ class WorkspaceCreate(BaseModel):
     ] = ""
 
 
+class WorkspaceMemberCandidateOut(BaseModel):
+    user_id: Annotated[UUID, Field(title="User Id")]
+    email: Annotated[str, Field(title="Email")]
+    name: Annotated[str, Field(title="Name")]
+    service_account: Annotated[bool, Field(title="Service Account")]
+
+
 class WorkspaceOut(BaseModel):
     id: Annotated[UUID, Field(title="Id")]
     org_id: Annotated[UUID, Field(title="Org Id")]
@@ -1146,7 +1255,7 @@ class WorkspaceOut(BaseModel):
     deleted_at: Annotated[AwareDatetime | None, Field(title="Deleted At")]
 
 
-class WorkspaceRole(RootModel[Literal["admin", "member", "viewer"]]):
+class WorkspaceRoleModel(RootModel[Literal["admin", "member", "viewer"]]):
     root: Annotated[Literal["admin", "member", "viewer"], Field(title="WorkspaceRole")]
 
 
@@ -1243,12 +1352,24 @@ class EnvelopeInferenceKeyRevokedOut(BaseModel):
     data: InferenceKeyRevokedOut
 
 
+class EnvelopeInvitationAcceptedOut(BaseModel):
+    data: InvitationAcceptedOut
+
+
+class EnvelopeInvitationPreviewOut(BaseModel):
+    data: InvitationPreviewOut
+
+
 class EnvelopeMeOut(BaseModel):
     data: MeOut
 
 
 class EnvelopeModelOut(BaseModel):
     data: ModelOut
+
+
+class EnvelopeOrgInvitationRevokedOut(BaseModel):
+    data: OrgInvitationRevokedOut
 
 
 class EnvelopeOrgOut(BaseModel):
@@ -1287,6 +1408,10 @@ class EnvelopeListInferenceKeyOut(BaseModel):
     data: Annotated[list[InferenceKeyOut], Field(title="Data")]
 
 
+class EnvelopeListOrgInvitationOut(BaseModel):
+    data: Annotated[list[OrgInvitationOut], Field(title="Data")]
+
+
 class EnvelopeListOrgOut(BaseModel):
     data: Annotated[list[OrgOut], Field(title="Data")]
 
@@ -1301,6 +1426,10 @@ class EnvelopeListUsageEventOut(BaseModel):
 
 class EnvelopeListUserOut(BaseModel):
     data: Annotated[list[UserOut], Field(title="Data")]
+
+
+class EnvelopeListWorkspaceMemberCandidateOut(BaseModel):
+    data: Annotated[list[WorkspaceMemberCandidateOut], Field(title="Data")]
 
 
 class EnvelopeListWorkspaceOut(BaseModel):
@@ -1326,6 +1455,11 @@ class MyPermissionsOut(BaseModel):
             title="Permissions",
         ),
     ]
+
+
+class OrgInvitationMintedOut(BaseModel):
+    invitation: OrgInvitationOut
+    url: Annotated[str, Field(title="Url")]
 
 
 class OrgMemberOut(BaseModel):
@@ -1358,13 +1492,16 @@ class WorkspaceMembershipIn(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
     )
-    role: Annotated[WorkspaceRole, Field(description="Workspace role to grant")]
+    role: Annotated[WorkspaceRoleModel, Field(description="Workspace role to grant")]
 
 
 class WorkspaceMembershipOut(BaseModel):
     user_id: Annotated[UUID, Field(title="User Id")]
     workspace_id: Annotated[UUID, Field(title="Workspace Id")]
-    role: WorkspaceRole
+    email: Annotated[str, Field(title="Email")]
+    name: Annotated[str, Field(title="Name")]
+    service_account: Annotated[bool, Field(title="Service Account")]
+    role: WorkspaceRoleModel
     status: Annotated[Literal["member"], Field(title="Status")]
 
 
@@ -1426,6 +1563,10 @@ class EnvelopeMembershipOut(BaseModel):
 
 class EnvelopeMyPermissionsOut(BaseModel):
     data: MyPermissionsOut
+
+
+class EnvelopeOrgInvitationMintedOut(BaseModel):
+    data: OrgInvitationMintedOut
 
 
 class EnvelopeWorkspaceMembershipOut(BaseModel):

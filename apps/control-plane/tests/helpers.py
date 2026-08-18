@@ -1,15 +1,20 @@
 from __future__ import annotations
 
 import asyncio
+from contextlib import contextmanager
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 from uuid import UUID
 
 import yaml
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+from sqlalchemy import event
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator
+
     from fastapi import FastAPI
+    from sqlalchemy.ext.asyncio import AsyncEngine
 
 from pg import TEMPLATE_DB, db_name_for, db_url_for, ensure_database
 
@@ -40,6 +45,28 @@ MODEL = {
 EMAIL = "michel@example.com"
 
 FIXTURE_ADMIN_EMAIL = "fixture-admin@example.com"
+
+
+@contextmanager
+def captured_sql(app: FastAPI) -> Iterator[list[str]]:
+    engine = cast("AsyncEngine", app.state.session_factory.kw["bind"])
+    statements: list[str] = []
+
+    def capture(
+        _connection: object,
+        _cursor: object,
+        statement: str,
+        _parameters: object,
+        _context: object,
+        _executemany: bool,
+    ) -> None:
+        statements.append(statement)
+
+    event.listen(engine.sync_engine, "before_cursor_execute", capture)
+    try:
+        yield statements
+    finally:
+        event.remove(engine.sync_engine, "before_cursor_execute", capture)
 
 
 @dataclass(frozen=True)

@@ -10,6 +10,7 @@ import { FormDialog } from '@/components/shared/form-dialog';
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group';
 import { PageShell } from '@/components/shared/page-shell';
+import { hasPermission, useEffectivePermissions } from '@/features/permissions/hooks';
 
 const createServiceAccountSchema = z.object({
   name: z
@@ -25,6 +26,8 @@ export default function UsersList() {
   const [search, setSearch] = useState('');
   const [serviceAccountOpen, setServiceAccountOpen] = useState(false);
   const createServiceAccount = useCreateServiceAccountMutation();
+  const permissionsQuery = useEffectivePermissions({});
+  const canManage = hasPermission(permissionsQuery.data?.permissions, 'principals.manage');
 
   const filteredUsers = users?.filter(
     (u) => u.name.toLowerCase().includes(search.toLowerCase()) || u.email.toLowerCase().includes(search.toLowerCase()),
@@ -39,9 +42,11 @@ export default function UsersList() {
             Every account on the instance, with the orgs it belongs to. Human accounts sign up themselves.
           </p>
         </div>
-        <Button onClick={() => setServiceAccountOpen(true)} variant="outline" className="gap-2">
-          <Bot className="w-4 h-4" /> Create Service Account
-        </Button>
+        {canManage && (
+          <Button onClick={() => setServiceAccountOpen(true)} variant="outline" className="gap-2">
+            <Bot className="w-4 h-4" /> Create Service Account
+          </Button>
+        )}
       </div>
 
       <Card>
@@ -114,34 +119,36 @@ export default function UsersList() {
         />
       </Card>
 
-      <FormDialog
-        open={serviceAccountOpen}
-        onOpenChange={setServiceAccountOpen}
-        title="Create Service Account"
-        description="Service accounts cannot sign in. Use them for automation and machine access."
-        schema={createServiceAccountSchema}
-        defaultValues={{ name: '' }}
-        onSubmit={(values) => createServiceAccount.mutateAsync({ data: values })}
-        submitLabel="Create Account"
-        pendingLabel="Creating..."
-        pending={createServiceAccount.isPending}
-      >
-        {(form) => (
-          <FormField
-            control={form.control}
-            name="name"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Name</FormLabel>
-                <FormControl>
-                  <Input placeholder="e.g. Production Worker" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        )}
-      </FormDialog>
+      {canManage && (
+        <FormDialog
+          open={serviceAccountOpen}
+          onOpenChange={setServiceAccountOpen}
+          title="Create Service Account"
+          description="Service accounts cannot sign in. Use them for automation and machine access."
+          schema={createServiceAccountSchema}
+          defaultValues={{ name: '' }}
+          onSubmit={(values) => createServiceAccount.mutateAsync({ data: values })}
+          submitLabel="Create Account"
+          pendingLabel="Creating..."
+          pending={createServiceAccount.isPending}
+        >
+          {(form) => (
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Name</FormLabel>
+                  <FormControl>
+                    <Input placeholder="e.g. Production Worker" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          )}
+        </FormDialog>
+      )}
     </PageShell>
   );
 }

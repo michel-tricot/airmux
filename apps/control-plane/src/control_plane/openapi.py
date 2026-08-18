@@ -50,6 +50,11 @@ API_TAGS = [
         "description": "Manage organization membership and organization roles",
     },
     {
+        "name": "Organization Invitations",
+        "x-displayName": "Invitations",
+        "description": "Invite human users to an organization and optionally one workspace",
+    },
+    {
         "name": "Organization Workspaces",
         "x-displayName": "Workspaces",
         "description": "List and create workspaces within an organization",
@@ -133,6 +138,7 @@ TAG_GROUPS = [
         "tags": [
             "Organization Settings",
             "Organization Members",
+            "Organization Invitations",
             "Organization Workspaces",
             "Organization Access Keys",
             "Organization Provider Credentials",
@@ -167,6 +173,8 @@ OPERATION_SUMMARIES = {
     "cli_auth_poll": "Poll CLI Authorization",
     "enrollment": "Get Current Enrollment",
     "create_personal_org": "Create Personal Organization",
+    "preview_invitation": "Preview Invitation",
+    "accept_invitation": "Accept Invitation",
     "claim": "Get Instance Claim Status",
     "quickstart": "Install First Data Plane Credential",
     "list_orgs": "List Organizations",
@@ -177,7 +185,12 @@ OPERATION_SUMMARIES = {
     "list_org_users": "List Organization Members",
     "add_org_user": "Add Organization Member",
     "remove_org_user": "Remove Organization Member",
+    "create_invitation": "Create Organization Invitation",
+    "list_invitations": "List Organization Invitations",
+    "reissue_invitation": "Reissue Organization Invitation",
+    "revoke_invitation": "Revoke Organization Invitation",
     "list_members": "List Workspace Members",
+    "list_member_candidates": "List Workspace Member Candidates",
     "add_member": "Add Workspace Member",
     "remove_member": "Remove Workspace Member",
     "compile_bundle": "Compile Policy Bundle",
@@ -196,6 +209,7 @@ PARAMETER_DESCRIPTIONS = {
     "org_id": "Organization ID",
     "workspace_ref": "Workspace ID or slug",
     "user_id": "User or service-account ID",
+    "invitation_id": "Organization invitation ID",
     "credential_id": "Provider credential ID",
     "code": "Device authorization code shown by the CLI",
     "include_offline": "Include data planes whose most recent heartbeat is outside the online window",
@@ -217,6 +231,8 @@ def _parameter_description(path: str, name: str, location: str) -> str:
         if "auth/permissions" in path:
             return "Organization scope to evaluate; omit for instance scope"
         return "Organization whose latest bundle to return; omit to use the credential's scope"
+    if name == "workspace_ref" and location == "query" and "auth/permissions" in path:
+        return "Workspace ID or slug to evaluate within org_id; omit for organization scope"
     return PARAMETER_DESCRIPTIONS.get(name, name.replace("_", " ").capitalize())
 
 
@@ -240,11 +256,10 @@ class ControlPlaneApp(FastAPI):
             "description": "Browser session cookie returned by login or signup. Browser requests must also send `X-Requested-With`.",
         }
         for route in _api_routes(self.routes):
-            permissions = [
-                str(permission)
-                for dependency in route.dependant.dependencies
-                if (permission := getattr(dependency.call, "required_permission", None))
+            permission_rules = [
+                permissions for dependency in route.dependant.dependencies if (permissions := getattr(dependency.call, "required_permissions", None))
             ]
+            permissions = [str(permission) for rule in permission_rules for permission in rule]
             access = [kind for dependency in route.dependant.dependencies if (kind := getattr(dependency.call, "access", None)) is not None]
             for method in route.methods or ():
                 path = "/api/v1" + route.path
@@ -256,7 +271,11 @@ class ControlPlaneApp(FastAPI):
                     operation["security"] = [{"AccessKey": []}, {"SessionCookie": []}]
                     operation["responses"].setdefault("401", {"description": "Authentication failed"})
                     operation["responses"].setdefault("403", {"description": "The credential does not have the required permission"})
-                    authentication = f"Required permission: `{'`, `'.join(permissions)}`."
+                    authentication = (
+                        f"Required permission: one of `{'`, `'.join(permissions)}`."
+                        if len(permission_rules) == 1 and len(permission_rules[0]) > 1
+                        else f"Required permission: `{'`, `'.join(permissions)}`."
+                    )
                 elif "public" in access:
                     operation["security"] = []
                     authentication = "Authentication: none."

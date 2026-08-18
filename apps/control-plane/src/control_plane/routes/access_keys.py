@@ -74,25 +74,25 @@ async def _create_access_key(body: AccessKeyIn, actor: Actor, scope: Scope) -> E
     return Envelope(data=AccessKeyMintedOut.model_validate({**key.model_dump(), "scope": key.scope, "status": key.status(now), "token": token}))
 
 
-@router.get("/instance/access-keys", tags=["Instance Access Keys"], dependencies=[require(Permission.access_keys_read, instance_scope)])
+@router.get("/instance/access-keys", tags=["Instance Access Keys"], dependencies=[require(instance_scope, Permission.access_keys_read)])
 async def list_instance_access_keys(user_id: UUID | None = None) -> Envelope[list[AccessKeyOut]]:
     """List access keys across all scopes, optionally filtered by principal."""
     return await _list_access_keys(Scope.instance(), user_id)
 
 
-@router.post("/instance/access-keys", tags=["Instance Access Keys"], dependencies=[require(Permission.access_keys_issue, instance_scope)])
+@router.post("/instance/access-keys", tags=["Instance Access Keys"], dependencies=[require(instance_scope, Permission.access_keys_issue)])
 async def create_instance_access_key(body: AccessKeyIn, actor: ActorDep) -> Envelope[AccessKeyMintedOut]:
     """Issue an instance-scoped access key and return its token once."""
     return await _create_access_key(body, actor, Scope.instance())
 
 
-@router.get("/orgs/{org_id}/access-keys", tags=["Organization Access Keys"], dependencies=[require(Permission.access_keys_read, org_scope)])
+@router.get("/orgs/{org_id}/access-keys", tags=["Organization Access Keys"], dependencies=[require(org_scope, Permission.access_keys_read)])
 async def list_org_access_keys(org_id: OrgDep, user_id: UUID | None = None) -> Envelope[list[AccessKeyOut]]:
     """List organization- and workspace-scoped access keys within an organization."""
     return await _list_access_keys(Scope.org(org_id), user_id)
 
 
-@router.post("/orgs/{org_id}/access-keys", tags=["Organization Access Keys"], dependencies=[require(Permission.access_keys_issue, org_scope)])
+@router.post("/orgs/{org_id}/access-keys", tags=["Organization Access Keys"], dependencies=[require(org_scope, Permission.access_keys_issue)])
 async def create_org_access_key(body: AccessKeyIn, org_id: OrgDep, actor: ActorDep) -> Envelope[AccessKeyMintedOut]:
     """Issue an organization-scoped access key and return its token once."""
     return await _create_access_key(body, actor, Scope.org(org_id))
@@ -101,7 +101,7 @@ async def create_org_access_key(body: AccessKeyIn, org_id: OrgDep, actor: ActorD
 @router.get(
     "/orgs/{org_id}/workspaces/{workspace_ref}/access-keys",
     tags=["Workspace Access Keys"],
-    dependencies=[require(Permission.access_keys_read, workspace_scope)],
+    dependencies=[require(workspace_scope, Permission.access_keys_read)],
 )
 async def list_workspace_access_keys(workspace: WorkspaceDep, user_id: UUID | None = None) -> Envelope[list[AccessKeyOut]]:
     """List access keys scoped to one workspace."""
@@ -111,7 +111,7 @@ async def list_workspace_access_keys(workspace: WorkspaceDep, user_id: UUID | No
 @router.post(
     "/orgs/{org_id}/workspaces/{workspace_ref}/access-keys",
     tags=["Workspace Access Keys"],
-    dependencies=[require(Permission.access_keys_issue, workspace_scope)],
+    dependencies=[require(workspace_scope, Permission.access_keys_issue)],
 )
 async def create_workspace_access_key(body: AccessKeyIn, workspace: WorkspaceDep, actor: ActorDep) -> Envelope[AccessKeyMintedOut]:
     """Issue a workspace-scoped access key and return its token once."""
@@ -121,7 +121,7 @@ async def create_workspace_access_key(body: AccessKeyIn, workspace: WorkspaceDep
 @router.delete(
     "/access-keys/{key_id}",
     tags=["Instance Access Keys", "Organization Access Keys", "Workspace Access Keys"],
-    dependencies=[require(Permission.access_keys_revoke, access_key_scope)],
+    dependencies=[require(access_key_scope, Permission.access_keys_revoke)],
 )
 async def revoke_access_key(key: AccessKeyDep) -> Envelope[AccessKeyRevokedOut]:
     """Revoke an access key and every key delegated from it."""

@@ -16,7 +16,7 @@ from control_plane.models.data_plane_instance import DataPlaneInstanceOut
 router = APIRouter(prefix="/instance")
 
 
-@router.get("/data-planes", tags=["Data Plane Instances"], dependencies=[require(Permission.data_planes_read, instance_scope)])
+@router.get("/data-planes", tags=["Data Plane Instances"], dependencies=[require(instance_scope, Permission.data_planes_read)])
 async def list_data_planes(include_offline: bool = False) -> Envelope[list[DataPlaneInstanceOut]]:
     """List data-plane instances by most recent heartbeat."""
     now = datetime.now(tz=UTC)
@@ -29,7 +29,7 @@ async def list_data_planes(include_offline: bool = False) -> Envelope[list[DataP
     return Envelope(data=out)
 
 
-@router.get("/activity", tags=["Instance Activity"], dependencies=[require(Permission.audit_read, instance_scope)])
+@router.get("/activity", tags=["Instance Activity"], dependencies=[require(instance_scope, Permission.audit_read)])
 async def list_instance_activity(limit: Annotated[int, Query(ge=1, le=200)] = 50) -> Envelope[list[ActivityOut]]:
     """List the most recent audited changes across the instance."""
     return Envelope(data=[ActivityOut.model_validate(entry) for entry in await AuditLog.recent(limit)])

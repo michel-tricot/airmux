@@ -1,5 +1,6 @@
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
+import { Permission } from '@workspace/api-client-react';
 
 const now = '2026-01-01T00:00:00Z';
 
@@ -36,7 +37,7 @@ export const server = setupServer(
   http.get('/api/v1/orgs/:orgId/workspaces/:workspaceRef/inference-keys', () => HttpResponse.json([])),
   http.get('/api/v1/orgs/:orgId/workspaces/:workspaceRef/members', () => HttpResponse.json([])),
   http.get('/api/v1/orgs/:orgId/workspaces/:workspaceRef/provider-credentials', () => HttpResponse.json([])),
-  http.get('/api/v1/auth/permissions', () => HttpResponse.json({ permissions: ['organizations.read', 'access-keys.issue'] })),
+  http.get('/api/v1/auth/permissions', () => HttpResponse.json({ permissions: Object.values(Permission) })),
   http.get('/api/v1/instance/access-keys', () => HttpResponse.json([])),
   http.get('/api/v1/orgs/:orgId/access-keys', () => HttpResponse.json([])),
   http.get('/api/v1/orgs/:orgId/bundles', () => HttpResponse.json([])),
@@ -44,6 +45,7 @@ export const server = setupServer(
   http.get('/api/v1/orgs/:orgId/taxonomy', () => HttpResponse.json({ providers: [], models: [] })),
   http.get('/api/v1/orgs/:orgId/workspaces/:workspaceRef/taxonomy', () => HttpResponse.json({ providers: [], models: [] })),
   http.get('/api/v1/orgs/:orgId/users', () => HttpResponse.json([])),
+  http.get('/api/v1/orgs/:orgId/invitations', () => HttpResponse.json([])),
   http.get('/api/v1/orgs/:orgId/events', () => HttpResponse.json([])),
   http.get('/api/v1/orgs/:orgId/workspaces/:workspaceRef/events', () => HttpResponse.json([])),
 );

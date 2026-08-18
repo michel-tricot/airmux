@@ -16,4 +16,8 @@ export type MyPermissionsParams = {
  * Organization scope to evaluate; omit for instance scope
  */
 org_id?: string | null;
+/**
+ * Workspace ID or slug to evaluate within org_id; omit for organization scope
+ */
+workspace_ref?: string | null;
 };

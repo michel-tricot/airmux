@@ -93,7 +93,10 @@ describe('instance administration routes', () => {
     server.use(http.get('/api/v1/users', () => new HttpResponse(null, { status: 503 })));
     renderAt('/instance/users');
 
-    expect(await screen.findByRole('alert', undefined, { timeout: 2_500 })).toHaveTextContent('Could not reach the control plane');
+    const alert = await screen.findByRole('alert', undefined, { timeout: 2_500 });
+    expect(alert).toHaveTextContent('Control plane unavailable');
+    expect(alert).toHaveTextContent('Could not reach the control plane');
+    expect(screen.getByRole('button', { name: /retry/i })).toBeInTheDocument();
     expect(screen.queryByText('No users found.')).not.toBeInTheDocument();
   });
 
@@ -137,26 +140,48 @@ describe('instance administration routes', () => {
 
   it('shows permission discovery failures and prevents key submission', async () => {
     server.use(http.get('/api/v1/auth/permissions', () => new HttpResponse(null, { status: 503 })));
-    const user = userEvent.setup();
     renderAt('/instance/keys');
 
-    await user.click(await screen.findByRole('button', { name: 'Mint Access Key' }));
-    const dialog = screen.getByRole('dialog', { name: 'Mint an instance access key' });
-    expect(await within(dialog).findByRole('alert', undefined, { timeout: 2_500 })).toHaveTextContent('Could not reach the control plane');
-    expect(within(dialog).getByRole('button', { name: 'Mint key' })).toBeDisabled();
-    expect(within(dialog).queryByText('You have no permissions to delegate at this scope.')).not.toBeInTheDocument();
+    expect(await screen.findByRole('alert', undefined, { timeout: 2_500 })).toHaveTextContent('Could not reach the control plane');
+    expect(screen.queryByRole('button', { name: 'Mint Access Key' })).not.toBeInTheDocument();
   });
 
   it('prevents key submission without access-key issuance permission', async () => {
-    server.use(http.get('/api/v1/auth/permissions', () => HttpResponse.json({ permissions: ['organizations.read'] })));
-    const user = userEvent.setup();
+    server.use(http.get('/api/v1/auth/permissions', () => HttpResponse.json({ permissions: ['access-keys.read'] })));
     renderAt('/instance/keys');
 
-    await user.click(await screen.findByRole('button', { name: 'Mint Access Key' }));
-    const dialog = screen.getByRole('dialog', { name: 'Mint an instance access key' });
-    expect(await within(dialog).findByText('You do not have permission to issue access keys at this scope.')).toBeInTheDocument();
-    expect(within(dialog).getByRole('button', { name: 'Mint key' })).toBeDisabled();
-    expect(within(dialog).queryByRole('checkbox')).not.toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Access Keys' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Mint Access Key' })).not.toBeInTheDocument();
+  });
+
+  it('keeps instance auditors read-only', async () => {
+    server.use(
+      http.get('/api/v1/auth/me', () =>
+        HttpResponse.json({ user_id: USER.id, email: USER.email, name: USER.name, instance_role: 'auditor', orgs: USER.orgs }),
+      ),
+      http.get('/api/v1/auth/permissions', () =>
+        HttpResponse.json({
+          permissions: [
+            'organizations.read',
+            'principals.read',
+            'members.read',
+            'workspaces.read',
+            'catalog.read',
+            'provider-credentials.read',
+            'inference-keys.read',
+            'bundles.read',
+            'usage.read',
+            'data-planes.read',
+            'audit.read',
+            'access-keys.read',
+          ],
+        }),
+      ),
+    );
+    renderAt('/instance/organizations');
+
+    expect(await screen.findByRole('heading', { name: 'Organizations' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'New Organization' })).not.toBeInTheDocument();
   });
 
   it('keeps service-account creation and directs humans through signup', async () => {
@@ -166,7 +191,7 @@ describe('instance administration routes', () => {
 
     expect(screen.getByText(/Human accounts sign up themselves/)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Add User' })).not.toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Create Service Account' }));
+    await user.click(await screen.findByRole('button', { name: 'Create Service Account' }));
     expect(screen.getByRole('dialog', { name: 'Create Service Account' })).toBeInTheDocument();
   });
 

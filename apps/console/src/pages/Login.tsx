@@ -21,7 +21,17 @@ const signupSchema = loginSchema.extend({
 
 type Credentials = z.infer<typeof loginSchema>;
 
-export default function Login() {
+export default function Login({
+  initialEmail = '',
+  emailReadOnly = false,
+  heading,
+  description,
+}: {
+  initialEmail?: string;
+  emailReadOnly?: boolean;
+  heading?: string;
+  description?: string;
+} = {}) {
   const queryClient = useQueryClient();
   const [mode, setMode] = useState<'login' | 'signup'>('login');
   const [submissionError, setSubmissionError] = useState<string | null>(null);
@@ -29,7 +39,7 @@ export default function Login() {
 
   const form = useForm<Credentials>({
     resolver: zodResolver(mode === 'login' ? loginSchema : signupSchema),
-    defaultValues: { email: '', name: '', password: '' },
+    defaultValues: { email: initialEmail, name: '', password: '' },
   });
 
   const onSuccess = (me: MeOut) => queryClient.setQueryData(getMeQueryKey(), me);
@@ -77,13 +87,14 @@ export default function Login() {
           <div className="w-12 h-12 rounded bg-primary text-primary-foreground flex items-center justify-center mb-4 shadow-md">
             <TerminalSquare className="w-6 h-6" />
           </div>
-          <h1 className="text-xl font-mono font-bold tracking-widest uppercase">{mode === 'login' ? 'Sign in' : 'Create an account'}</h1>
+          <h1 className="text-xl font-mono font-bold tracking-widest uppercase">{heading ?? (mode === 'login' ? 'Sign in' : 'Create an account')}</h1>
           <p className="text-muted-foreground text-sm mt-2 text-center max-w-sm">
-            {mode === 'login'
-              ? 'Sign in with your account credentials.'
-              : claim?.claimed === false
-                ? 'The first account becomes the administrator.'
-                : 'You can join or create an organization after signing up.'}
+            {description ??
+              (mode === 'login'
+                ? 'Sign in with your account credentials.'
+                : claim?.claimed === false
+                  ? 'The first account becomes the administrator.'
+                  : 'You can join or create an organization after signing up.')}
           </p>
         </div>
 
@@ -96,7 +107,7 @@ export default function Login() {
                 <FormItem>
                   <FormLabel>Email</FormLabel>
                   <FormControl>
-                    <Input type="email" autoComplete="username" placeholder="you@example.com" {...field} />
+                    <Input type="email" autoComplete="username" placeholder="you@example.com" readOnly={emailReadOnly} {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

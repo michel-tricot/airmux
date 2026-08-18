@@ -26,6 +26,7 @@ const Users = lazy(() => import('@/pages/Users'));
 const UserDetail = lazy(() => import('@/pages/UserDetail'));
 const AccessKeys = lazy(() => import('@/pages/AccessKeys'));
 const CliApprove = lazy(() => import('@/pages/CliApprove'));
+const Invite = lazy(() => import('@/pages/Invite'));
 const AppOrgPicker = lazy(() => import('@/pages/app/OrgPicker'));
 const AppDashboard = lazy(() => import('@/pages/app/Dashboard'));
 const AppModels = lazy(() => import('@/pages/app/Models'));
@@ -159,6 +160,14 @@ function Router() {
       <Splash>
         <ErrorState error={error} resource="session" />
       </Splash>
+    );
+  }
+
+  if (location === '/invite' || location.startsWith('/invite/')) {
+    return (
+      <RoutedErrorBoundary>
+        <Invite />
+      </RoutedErrorBoundary>
     );
   }
 

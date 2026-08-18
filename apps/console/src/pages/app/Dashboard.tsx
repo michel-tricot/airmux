@@ -7,12 +7,15 @@ import { Link } from 'wouter';
 import { formatDate, formatRelative } from '@/lib/format';
 import { DataTable } from '@/components/shared/data-table';
 import { PageShell } from '@/components/shared/page-shell';
+import { hasPermission, useEffectivePermissions } from '@/features/permissions/hooks';
 
 export default function AppDashboard() {
   const orgId = useRequiredOrgId();
+  const permissionsQuery = useEffectivePermissions({ orgId });
+  const canReadUsage = hasPermission(permissionsQuery.data?.permissions, 'usage.read');
 
   const workspacesQuery = useWorkspaces(orgId);
-  const eventsQuery = useOrgEvents(orgId, { limit: 10 });
+  const eventsQuery = useOrgEvents(orgId, { limit: 10 }, canReadUsage);
 
   return (
     <PageShell className="max-w-5xl">
@@ -21,49 +24,51 @@ export default function AppDashboard() {
         <p className="text-muted-foreground mt-1 text-sm">Select a workspace to manage its keys and access.</p>
       </div>
 
-      <Card>
-        <div className="p-4 border-b border-border bg-muted/20">
-          <h2 className="text-lg font-semibold flex items-center gap-2">
-            <TerminalSquare className="w-5 h-5 text-muted-foreground" />
-            Workspaces
-          </h2>
-        </div>
+      {canReadUsage && (
+        <Card>
+          <div className="p-4 border-b border-border bg-muted/20">
+            <h2 className="text-lg font-semibold flex items-center gap-2">
+              <TerminalSquare className="w-5 h-5 text-muted-foreground" />
+              Workspaces
+            </h2>
+          </div>
 
-        <DataTable
-          rows={workspacesQuery.data}
-          rowKey={(ws) => ws.id}
-          rowClassName="group"
-          isLoading={workspacesQuery.isLoading}
-          isError={workspacesQuery.isError}
-          error={workspacesQuery.error}
-          resource="workspaces"
-          onRetry={() => workspacesQuery.refetch()}
-          loadingLabel="Loading workspaces..."
-          empty="No workspaces in this organization yet."
-          emptyIcon={TerminalSquare}
-          columns={[
-            {
-              key: 'workspace',
-              header: 'Workspace',
-              cellClassName: 'font-medium',
-              cell: (ws) => (
-                <Link href={`/org/workspaces/${ws.slug}`} className="flex items-center gap-2 hover:text-primary transition-colors">
-                  <FolderGit2 className="w-4 h-4 text-muted-foreground group-hover:text-primary" />
-                  {ws.name}
-                </Link>
-              ),
-            },
-            { key: 'slug', header: 'Slug', cell: (ws) => <Badge variant="mono">{ws.slug}</Badge> },
-            {
-              key: 'created',
-              header: 'Created',
-              headClassName: 'text-right',
-              cellClassName: 'text-right text-muted-foreground text-sm',
-              cell: (ws) => formatDate(ws.created_at),
-            },
-          ]}
-        />
-      </Card>
+          <DataTable
+            rows={workspacesQuery.data}
+            rowKey={(ws) => ws.id}
+            rowClassName="group"
+            isLoading={workspacesQuery.isLoading}
+            isError={workspacesQuery.isError}
+            error={workspacesQuery.error}
+            resource="workspaces"
+            onRetry={() => workspacesQuery.refetch()}
+            loadingLabel="Loading workspaces..."
+            empty="No workspaces in this organization yet."
+            emptyIcon={TerminalSquare}
+            columns={[
+              {
+                key: 'workspace',
+                header: 'Workspace',
+                cellClassName: 'font-medium',
+                cell: (ws) => (
+                  <Link href={`/org/workspaces/${ws.slug}`} className="flex items-center gap-2 hover:text-primary transition-colors">
+                    <FolderGit2 className="w-4 h-4 text-muted-foreground group-hover:text-primary" />
+                    {ws.name}
+                  </Link>
+                ),
+              },
+              { key: 'slug', header: 'Slug', cell: (ws) => <Badge variant="mono">{ws.slug}</Badge> },
+              {
+                key: 'created',
+                header: 'Created',
+                headClassName: 'text-right',
+                cellClassName: 'text-right text-muted-foreground text-sm',
+                cell: (ws) => formatDate(ws.created_at),
+              },
+            ]}
+          />
+        </Card>
+      )}
 
       <Card>
         <div className="p-4 border-b border-border bg-muted/20">

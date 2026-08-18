@@ -21,6 +21,7 @@ from control_plane.routes.access_keys import router as access_keys_router
 from control_plane.routes.auth import router as auth_router
 from control_plane.routes.enroll import router as enroll_router
 from control_plane.routes.instance import router as instance_router
+from control_plane.routes.invitations import router as invitations_router
 from control_plane.routes.org import router as org_router
 from control_plane.routes.orgs import router as orgs_router
 from control_plane.routes.oss import router as oss_router
@@ -130,6 +131,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         instance_router,
         users_router,
         orgs_router,
+        invitations_router,
         workspaces_router,
         provider_credentials_router,
         org_router,

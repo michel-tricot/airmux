@@ -25,7 +25,7 @@ EventBatch = Annotated[list[UsageEventV1], Field(max_length=1000)]
 CREDENTIAL_HEALTH = {"ok": "live", "credential_rejected": "invalid", "rate_limited": "rate_limited"}
 
 
-@router.get("/bundle/latest", dependencies=[require(Permission.bundles_read, bundle_scope)])
+@router.get("/bundle/latest", dependencies=[require(bundle_scope, Permission.bundles_read)])
 async def bundle_latest(scope: BundleScopeDep) -> Envelope[SignedBundle]:
     """Return the newest signed policy bundle available at the requested organization scope."""
     conditions = (Bundle.org_id == scope.org_id,) if scope.org_id is not None else ()
@@ -36,7 +36,7 @@ async def bundle_latest(scope: BundleScopeDep) -> Envelope[SignedBundle]:
     return Envelope(data=signed)
 
 
-@router.post("/events", dependencies=[require(Permission.usage_ingest, credential_scope)])
+@router.post("/events", dependencies=[require(credential_scope, Permission.usage_ingest)])
 async def ingest_events(actor: ActorDep, scope: CredentialScopeDep, events: EventBatch, session: SessionDep) -> Envelope[EventsIngestedOut]:
     """Ingest up to 1,000 usage events; repeated event IDs are ignored."""
     if not events:
@@ -65,7 +65,7 @@ def _credential_health(events: list[UsageEventV1]) -> dict[UUID, tuple[datetime,
     return health
 
 
-@router.post("/heartbeat", dependencies=[require(Permission.data_planes_heartbeat, credential_scope)])
+@router.post("/heartbeat", dependencies=[require(credential_scope, Permission.data_planes_heartbeat)])
 async def heartbeat(scope: CredentialScopeDep, body: HeartbeatV1, session: SessionDep, request: Request) -> Envelope[HeartbeatOut]:
     """Create or refresh a data-plane instance at the access key's scope."""
     now = datetime.now(tz=UTC)

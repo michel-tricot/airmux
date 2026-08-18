@@ -98,6 +98,7 @@ def test_case_insensitive_identifiers_use_citext_in_models_and_migrations(pg_db)
     expected = {
         ("provider", "name"),
         ("provider_credential", "name"),
+        ("org_invitation", "email"),
         ("user", "email"),
         ("workspace", "slug"),
     }
