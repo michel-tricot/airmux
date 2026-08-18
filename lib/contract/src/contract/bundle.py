@@ -22,6 +22,7 @@ class KeyEntry(BaseModel):
     org_id: UUID
     workspace_id: UUID  # the workspace the key was minted in, stamped onto usage events
     token_hash: str  # sha256 hex of the caller's bearer, the lookup key
+    expires_at: datetime | None = None
 
 
 class ProviderEntry(BaseModel):

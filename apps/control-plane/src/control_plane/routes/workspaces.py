@@ -1,22 +1,37 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from uuid import UUID  # noqa: TC003 fastapi resolves path param annotations at runtime
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request, Response
 from sqlmodel import col
 
+from contract import PLAYGROUND_COOKIE, token_hash
 from control_plane.authority import readable_workspaces
 from control_plane.authz import Permission, WorkspaceRole
-from control_plane.deps import ActorDep, OrgDep, WorkspaceDep, org_scope, require, workspace_scope
-from control_plane.keys import mint_inference_key
-from control_plane.models import InferenceKey, Org, OrgMembership, User, Workspace, WorkspaceMembership
+from control_plane.deps import ActorDep, OrgDep, PlaygroundCookie, WorkspaceDep, org_scope, require, workspace_scope
+from control_plane.keys import PLAYGROUND_SESSION_TTL, mint_inference_key, rotate_playground_session
+from control_plane.models import InferenceKey, Org, OrgMembership, PlaygroundSession, User, Workspace, WorkspaceMembership
 from control_plane.models.common.wire import DeletedOut, Envelope
 from control_plane.models.inference_key import InferenceKeyIn, InferenceKeyMintedOut, InferenceKeyOut, InferenceKeyRevokedOut
+from control_plane.models.playground_session import PlaygroundSessionEndedOut, PlaygroundSessionReadyOut
 from control_plane.models.workspace import WorkspaceCreate, WorkspaceOut, WorkspaceUpdate
 from control_plane.models.workspace_membership import WorkspaceMemberCandidateOut, WorkspaceMembershipIn, WorkspaceMembershipOut
 from control_plane.routes.provider_credentials import secret_store
 
 router = APIRouter(prefix="/orgs/{org_id}/workspaces")
+
+
+def _set_playground_cookie(response: Response, token: str, request: Request) -> None:
+    response.set_cookie(
+        PLAYGROUND_COOKIE,
+        token,
+        httponly=True,
+        samesite="strict",
+        secure=request.url.scheme == "https",
+        path="/",
+        max_age=int(PLAYGROUND_SESSION_TTL.total_seconds()),
+    )
 
 
 @router.post("", tags=["Organization Workspaces"], dependencies=[require(org_scope, Permission.workspaces_create)])
@@ -140,6 +155,57 @@ async def remove_member(user_id: UUID, workspace: WorkspaceDep) -> Envelope[Dele
         raise HTTPException(status_code=404, detail="User is not a member of this workspace")
     await membership.delete()
     return Envelope(data=DeletedOut.of(f"{user_id}/{workspace.id}"))
+
+
+@router.put(
+    "/{workspace_ref}/playground-session",
+    tags=["Workspace Playground"],
+    dependencies=[require(workspace_scope, Permission.playground_execute)],
+)
+async def ensure_playground_session(
+    workspace: WorkspaceDep,
+    actor: ActorDep,
+    request: Request,
+    response: Response,
+    playground_cookie: PlaygroundCookie = None,
+) -> Envelope[PlaygroundSessionReadyOut]:
+    """Reuse the browser's short-lived playground session or rotate it into this workspace."""
+    now = datetime.now(tz=UTC)
+    playground_session = (
+        await PlaygroundSession.by_token(actor.credential_id, token_hash(playground_cookie)) if playground_cookie is not None else None
+    )
+    if playground_session is None or playground_session.workspace_id != workspace.id or not playground_session.active(now):
+        playground_session, token = await rotate_playground_session(
+            workspace.org_id,
+            workspace.id,
+            actor.principal_id,
+            actor.credential_id,
+            now,
+        )
+        _set_playground_cookie(response, token, request)
+    return Envelope(data=PlaygroundSessionReadyOut(id=playground_session.id, expires_at=playground_session.expires_at, status="ready"))
+
+
+@router.delete(
+    "/{workspace_ref}/playground-session",
+    tags=["Workspace Playground"],
+    dependencies=[require(workspace_scope, Permission.playground_execute)],
+)
+async def end_playground_session(
+    workspace: WorkspaceDep,
+    actor: ActorDep,
+    response: Response,
+    playground_cookie: PlaygroundCookie = None,
+) -> Envelope[PlaygroundSessionEndedOut]:
+    """Revoke the current browser playground session and clear its credential cookie."""
+    playground_session = (
+        await PlaygroundSession.by_token(actor.credential_id, token_hash(playground_cookie)) if playground_cookie is not None else None
+    )
+    if playground_session is not None and playground_session.workspace_id == workspace.id:
+        playground_session.revoked = True
+        await playground_session.save()
+    response.delete_cookie(PLAYGROUND_COOKIE, path="/")
+    return Envelope(data=PlaygroundSessionEndedOut(status="ended"))
 
 
 @router.post(

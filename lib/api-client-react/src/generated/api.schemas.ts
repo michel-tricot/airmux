@@ -32,6 +32,7 @@ export const Permission = {
   'provider-credentialsmanage': 'provider-credentials.manage',
   'inference-keysread': 'inference-keys.read',
   'inference-keysmanage': 'inference-keys.manage',
+  playgroundexecute: 'playground.execute',
   bundlesread: 'bundles.read',
   bundlespublish: 'bundles.publish',
   usageread: 'usage.read',
@@ -169,6 +170,7 @@ export interface KeyEntry {
   org_id: string;
   workspace_id: string;
   token_hash: string;
+  expires_at?: string | null;
 }
 
 export type ProviderEntryKind = typeof ProviderEntryKind[keyof typeof ProviderEntryKind];
@@ -741,6 +743,17 @@ export interface PasswordChangeIn {
 export interface PasswordChangedOut {
   user_id: string;
   status: 'changed';
+}
+
+export const PlaygroundSessionEndedOutValue = {
+  status: 'ended',
+} as const;
+export type PlaygroundSessionEndedOut = typeof PlaygroundSessionEndedOutValue;
+
+export interface PlaygroundSessionReadyOut {
+  id: string;
+  expires_at: string;
+  status: 'ready';
 }
 
 /**

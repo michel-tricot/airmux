@@ -14,6 +14,7 @@ from control_plane.models.model import Model
 from control_plane.models.org import Org
 from control_plane.models.org_invitation import OrgInvitation
 from control_plane.models.org_membership import OrgMembership
+from control_plane.models.playground_session import PlaygroundSession
 from control_plane.models.provider import Provider
 from control_plane.models.provider_credential import ProviderCredential
 from control_plane.models.runtime_configuration import RuntimeConfiguration, runtime_configured
@@ -38,6 +39,7 @@ __all__ = [
     "OrgInvitation",
     "OrgMembership",
     "OrgOwned",
+    "PlaygroundSession",
     "Provider",
     "ProviderCredential",
     "Record",

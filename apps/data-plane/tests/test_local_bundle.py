@@ -67,9 +67,9 @@ def _recorded(cache_dir, http_client):
 
 def test_the_compiled_bundle_authenticates_the_plaintext_key(tmp_path):
     bundle = load_local(_write(tmp_path), NOW)
-    key = authenticate("sk-inf-local-dev", index_keys(bundle))
+    key = authenticate("sk-inf-local-dev", index_keys(bundle), NOW)
     assert key is not None
-    assert authenticate("sk-inf-wrong", index_keys(bundle)) is None
+    assert authenticate("sk-inf-wrong", index_keys(bundle), NOW) is None
 
 
 def test_one_platform_credential_per_provider_with_stable_ids(tmp_path):

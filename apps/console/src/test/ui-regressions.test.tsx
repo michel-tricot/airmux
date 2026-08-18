@@ -172,7 +172,7 @@ describe('shared controls', () => {
 });
 
 describe('playground', () => {
-  it('mints a scoped key and streams a response through the inference prefix', async () => {
+  it('starts a session automatically and streams a response through the inference prefix', async () => {
     const provider = taxonomyProvider('provider-1', 'openai');
     const model = {
       id: 'model-1',
@@ -191,13 +191,19 @@ describe('playground', () => {
       deleted_at: null,
     };
     let dialect = '';
+    let requestedWith = '';
+    let sessions = 0;
     server.use(
       http.get(`/api/v1/orgs/${ORG.id}/workspaces/${WORKSPACES[0].slug}/taxonomy`, () =>
         HttpResponse.json({ providers: [provider], models: [model] }),
       ),
-      http.post(`/api/v1/orgs/${ORG.id}/workspaces/${WORKSPACES[0].slug}/inference-keys`, () => HttpResponse.json({ token: 'sk-inf-playground' })),
+      http.put(`/api/v1/orgs/${ORG.id}/workspaces/${WORKSPACES[0].slug}/playground-session`, () => {
+        sessions += 1;
+        return HttpResponse.json({ id: 'session-1', expires_at: '2026-01-01T01:00:00Z', status: 'ready' });
+      }),
       http.post('/inf/v1/chat/completions', ({ request }) => {
         dialect = request.headers.get('x-airllm-dialect') ?? '';
+        requestedWith = request.headers.get('x-requested-with') ?? '';
         return HttpResponse.text(
           'data: {"choices":[{"delta":{"content":"hello from the gateway"}}]}\n\ndata: {"choices":[{"finish_reason":"stop"}],"usage":{"prompt_tokens":12,"completion_tokens":4,"prompt_tokens_details":{"cached_tokens":2}}}\n\ndata: [DONE]\n\n',
           { headers: { 'content-type': 'text/event-stream' } },
@@ -208,8 +214,7 @@ describe('playground', () => {
     render(<App />);
     const user = userEvent.setup();
 
-    await user.click(await screen.findByRole('button', { name: 'Generate playground key' }));
-    await user.type(screen.getByPlaceholderText('Send a message... (Shift+Enter for newline)'), 'hello');
+    await user.type(await screen.findByPlaceholderText('Send a message... (Shift+Enter for newline)'), 'hello');
     await user.click(screen.getByRole('button', { name: 'Send message' }));
 
     expect(await screen.findByText('hello from the gateway')).toBeInTheDocument();
@@ -217,7 +222,21 @@ describe('playground', () => {
     expect(screen.getByText('4 output')).toBeInTheDocument();
     expect(screen.getByText('16 total')).toBeInTheDocument();
     expect(screen.getByText('2 cached')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Generate playground key' })).not.toBeInTheDocument();
+    expect(sessions).toBe(1);
     expect(dialect).toBe('openai_native');
+    expect(requestedWith).toBe('fetch');
+
+    const workspaceNavigation = screen.getByRole('navigation', { name: 'Workspace navigation' });
+    const workspaceOverview = within(workspaceNavigation)
+      .getAllByRole('link', { name: 'Overview' })
+      .find((link) => link.getAttribute('href')?.includes('/workspaces/'));
+    expect(workspaceOverview).toBeDefined();
+    await user.click(workspaceOverview!);
+    await user.click(within(workspaceNavigation).getByRole('link', { name: 'Playground' }));
+    expect(await screen.findByText('hello from the gateway')).toBeInTheDocument();
+    expect(screen.getByText(/Active until/)).toBeInTheDocument();
+    expect(sessions).toBe(1);
   });
 
   it('filters the model selector by model and provider name', async () => {

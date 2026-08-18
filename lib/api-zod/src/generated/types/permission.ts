@@ -33,6 +33,7 @@ export const Permission = {
   'provider-credentialsmanage': 'provider-credentials.manage',
   'inference-keysread': 'inference-keys.read',
   'inference-keysmanage': 'inference-keys.manage',
+  playgroundexecute: 'playground.execute',
   bundlesread: 'bundles.read',
   bundlespublish: 'bundles.publish',
   usageread: 'usage.read',

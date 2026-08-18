@@ -11,6 +11,7 @@ import contextlib
 import json
 import logging
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any, Literal
 
 import anyio
@@ -18,7 +19,7 @@ import httpx
 from pydantic import ValidationError
 from starlette.responses import Response, StreamingResponse
 
-from contract import SecretStoreUnavailableError, uuid7
+from contract import PLAYGROUND_COOKIE, SecretStoreUnavailableError, uuid7
 from data_plane.auth import authenticate
 from data_plane.canonical import Adjustment, CanonicalRequest, CanonicalResponse, GatewayInfo, Usage
 from data_plane.egress import REGISTRY
@@ -130,9 +131,17 @@ def _authenticate(request: Request, holder: BundleHolder) -> tuple[KeyEntry, Bun
     if snapshot is None:
         raise RequestRejectedError(503, "bundle_unavailable")
     auth_header = request.headers.get("authorization", "")
-    if not auth_header.startswith("Bearer "):
-        raise RequestRejectedError(401, "missing_bearer_token")
-    key = authenticate(auth_header.removeprefix("Bearer "), snapshot.key_index)
+    if auth_header.startswith("Bearer "):
+        token = auth_header.removeprefix("Bearer ")
+    else:
+        token = request.cookies.get(PLAYGROUND_COOKIE, "")
+        if not token:
+            raise RequestRejectedError(401, "missing_bearer_token")
+        if request.headers.get("x-requested-with") is None:
+            raise RequestRejectedError(403, "missing_requested_with")
+        if request.headers.get("sec-fetch-site") not in (None, "same-origin", "none"):
+            raise RequestRejectedError(403, "cross_site_request")
+    key = authenticate(token, snapshot.key_index, datetime.now(tz=UTC))
     if key is None:
         raise RequestRejectedError(401, "invalid_token")
     return key, snapshot

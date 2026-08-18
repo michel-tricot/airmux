@@ -30,7 +30,7 @@ export const ListInstanceAccessKeysResponseItem = zod.object({
   "workspace_id": zod.union([zod.uuid(),zod.null()]),
   "parent_id": zod.union([zod.uuid(),zod.null()]),
   "prefix": zod.string(),
-  "permissions": zod.array(zod.enum(['organizations.read', 'organizations.create', 'organizations.update', 'organizations.delete', 'principals.read', 'principals.manage', 'members.read', 'members.manage', 'workspaces.read', 'workspaces.create', 'workspaces.update', 'workspaces.delete', 'catalog.read', 'catalog.manage', 'provider-credentials.read', 'provider-credentials.manage', 'inference-keys.read', 'inference-keys.manage', 'bundles.read', 'bundles.publish', 'usage.read', 'usage.ingest', 'data-planes.read', 'data-planes.heartbeat', 'audit.read', 'access-keys.read', 'access-keys.issue', 'access-keys.revoke'])),
+  "permissions": zod.array(zod.enum(['organizations.read', 'organizations.create', 'organizations.update', 'organizations.delete', 'principals.read', 'principals.manage', 'members.read', 'members.manage', 'workspaces.read', 'workspaces.create', 'workspaces.update', 'workspaces.delete', 'catalog.read', 'catalog.manage', 'provider-credentials.read', 'provider-credentials.manage', 'inference-keys.read', 'inference-keys.manage', 'playground.execute', 'bundles.read', 'bundles.publish', 'usage.read', 'usage.ingest', 'data-planes.read', 'data-planes.heartbeat', 'audit.read', 'access-keys.read', 'access-keys.issue', 'access-keys.revoke'])),
   "label": zod.string(),
   "expires_at": zod.union([zod.coerce.date(),zod.null()]),
   "revoked_at": zod.union([zod.coerce.date(),zod.null()]),
@@ -61,7 +61,7 @@ export const createInstanceAccessKeyBodyLabelMax = 80;
 export const CreateInstanceAccessKeyBody = zod.object({
   "label": zod.string().min(1).max(createInstanceAccessKeyBodyLabelMax).describe('Where this key lives, such as ci, laptop, or data-plane'),
   "user_id": zod.union([zod.uuid(),zod.null()]).optional().describe('Principal the key authenticates; defaults to the authenticated principal'),
-  "permissions": zod.array(zod.enum(['organizations.read', 'organizations.create', 'organizations.update', 'organizations.delete', 'principals.read', 'principals.manage', 'members.read', 'members.manage', 'workspaces.read', 'workspaces.create', 'workspaces.update', 'workspaces.delete', 'catalog.read', 'catalog.manage', 'provider-credentials.read', 'provider-credentials.manage', 'inference-keys.read', 'inference-keys.manage', 'bundles.read', 'bundles.publish', 'usage.read', 'usage.ingest', 'data-planes.read', 'data-planes.heartbeat', 'audit.read', 'access-keys.read', 'access-keys.issue', 'access-keys.revoke'])).min(1).describe('Explicit maximum permissions carried by the key'),
+  "permissions": zod.array(zod.enum(['organizations.read', 'organizations.create', 'organizations.update', 'organizations.delete', 'principals.read', 'principals.manage', 'members.read', 'members.manage', 'workspaces.read', 'workspaces.create', 'workspaces.update', 'workspaces.delete', 'catalog.read', 'catalog.manage', 'provider-credentials.read', 'provider-credentials.manage', 'inference-keys.read', 'inference-keys.manage', 'playground.execute', 'bundles.read', 'bundles.publish', 'usage.read', 'usage.ingest', 'data-planes.read', 'data-planes.heartbeat', 'audit.read', 'access-keys.read', 'access-keys.issue', 'access-keys.revoke'])).min(1).describe('Explicit maximum permissions carried by the key'),
   "expires_at": zod.union([zod.coerce.date(),zod.null()]).optional().describe('Optional expiration timestamp with a timezone')
 })
 
@@ -72,7 +72,7 @@ export const CreateInstanceAccessKeyResponse = zod.object({
   "workspace_id": zod.union([zod.uuid(),zod.null()]),
   "parent_id": zod.union([zod.uuid(),zod.null()]),
   "prefix": zod.string(),
-  "permissions": zod.array(zod.enum(['organizations.read', 'organizations.create', 'organizations.update', 'organizations.delete', 'principals.read', 'principals.manage', 'members.read', 'members.manage', 'workspaces.read', 'workspaces.create', 'workspaces.update', 'workspaces.delete', 'catalog.read', 'catalog.manage', 'provider-credentials.read', 'provider-credentials.manage', 'inference-keys.read', 'inference-keys.manage', 'bundles.read', 'bundles.publish', 'usage.read', 'usage.ingest', 'data-planes.read', 'data-planes.heartbeat', 'audit.read', 'access-keys.read', 'access-keys.issue', 'access-keys.revoke'])),
+  "permissions": zod.array(zod.enum(['organizations.read', 'organizations.create', 'organizations.update', 'organizations.delete', 'principals.read', 'principals.manage', 'members.read', 'members.manage', 'workspaces.read', 'workspaces.create', 'workspaces.update', 'workspaces.delete', 'catalog.read', 'catalog.manage', 'provider-credentials.read', 'provider-credentials.manage', 'inference-keys.read', 'inference-keys.manage', 'playground.execute', 'bundles.read', 'bundles.publish', 'usage.read', 'usage.ingest', 'data-planes.read', 'data-planes.heartbeat', 'audit.read', 'access-keys.read', 'access-keys.issue', 'access-keys.revoke'])),
   "label": zod.string(),
   "expires_at": zod.union([zod.coerce.date(),zod.null()]),
   "revoked_at": zod.union([zod.coerce.date(),zod.null()]),
@@ -110,7 +110,7 @@ export const ListOrgAccessKeysResponseItem = zod.object({
   "workspace_id": zod.union([zod.uuid(),zod.null()]),
   "parent_id": zod.union([zod.uuid(),zod.null()]),
   "prefix": zod.string(),
-  "permissions": zod.array(zod.enum(['organizations.read', 'organizations.create', 'organizations.update', 'organizations.delete', 'principals.read', 'principals.manage', 'members.read', 'members.manage', 'workspaces.read', 'workspaces.create', 'workspaces.update', 'workspaces.delete', 'catalog.read', 'catalog.manage', 'provider-credentials.read', 'provider-credentials.manage', 'inference-keys.read', 'inference-keys.manage', 'bundles.read', 'bundles.publish', 'usage.read', 'usage.ingest', 'data-planes.read', 'data-planes.heartbeat', 'audit.read', 'access-keys.read', 'access-keys.issue', 'access-keys.revoke'])),
+  "permissions": zod.array(zod.enum(['organizations.read', 'organizations.create', 'organizations.update', 'organizations.delete', 'principals.read', 'principals.manage', 'members.read', 'members.manage', 'workspaces.read', 'workspaces.create', 'workspaces.update', 'workspaces.delete', 'catalog.read', 'catalog.manage', 'provider-credentials.read', 'provider-credentials.manage', 'inference-keys.read', 'inference-keys.manage', 'playground.execute', 'bundles.read', 'bundles.publish', 'usage.read', 'usage.ingest', 'data-planes.read', 'data-planes.heartbeat', 'audit.read', 'access-keys.read', 'access-keys.issue', 'access-keys.revoke'])),
   "label": zod.string(),
   "expires_at": zod.union([zod.coerce.date(),zod.null()]),
   "revoked_at": zod.union([zod.coerce.date(),zod.null()]),
@@ -145,7 +145,7 @@ export const createOrgAccessKeyBodyLabelMax = 80;
 export const CreateOrgAccessKeyBody = zod.object({
   "label": zod.string().min(1).max(createOrgAccessKeyBodyLabelMax).describe('Where this key lives, such as ci, laptop, or data-plane'),
   "user_id": zod.union([zod.uuid(),zod.null()]).optional().describe('Principal the key authenticates; defaults to the authenticated principal'),
-  "permissions": zod.array(zod.enum(['organizations.read', 'organizations.create', 'organizations.update', 'organizations.delete', 'principals.read', 'principals.manage', 'members.read', 'members.manage', 'workspaces.read', 'workspaces.create', 'workspaces.update', 'workspaces.delete', 'catalog.read', 'catalog.manage', 'provider-credentials.read', 'provider-credentials.manage', 'inference-keys.read', 'inference-keys.manage', 'bundles.read', 'bundles.publish', 'usage.read', 'usage.ingest', 'data-planes.read', 'data-planes.heartbeat', 'audit.read', 'access-keys.read', 'access-keys.issue', 'access-keys.revoke'])).min(1).describe('Explicit maximum permissions carried by the key'),
+  "permissions": zod.array(zod.enum(['organizations.read', 'organizations.create', 'organizations.update', 'organizations.delete', 'principals.read', 'principals.manage', 'members.read', 'members.manage', 'workspaces.read', 'workspaces.create', 'workspaces.update', 'workspaces.delete', 'catalog.read', 'catalog.manage', 'provider-credentials.read', 'provider-credentials.manage', 'inference-keys.read', 'inference-keys.manage', 'playground.execute', 'bundles.read', 'bundles.publish', 'usage.read', 'usage.ingest', 'data-planes.read', 'data-planes.heartbeat', 'audit.read', 'access-keys.read', 'access-keys.issue', 'access-keys.revoke'])).min(1).describe('Explicit maximum permissions carried by the key'),
   "expires_at": zod.union([zod.coerce.date(),zod.null()]).optional().describe('Optional expiration timestamp with a timezone')
 })
 
@@ -156,7 +156,7 @@ export const CreateOrgAccessKeyResponse = zod.object({
   "workspace_id": zod.union([zod.uuid(),zod.null()]),
   "parent_id": zod.union([zod.uuid(),zod.null()]),
   "prefix": zod.string(),
-  "permissions": zod.array(zod.enum(['organizations.read', 'organizations.create', 'organizations.update', 'organizations.delete', 'principals.read', 'principals.manage', 'members.read', 'members.manage', 'workspaces.read', 'workspaces.create', 'workspaces.update', 'workspaces.delete', 'catalog.read', 'catalog.manage', 'provider-credentials.read', 'provider-credentials.manage', 'inference-keys.read', 'inference-keys.manage', 'bundles.read', 'bundles.publish', 'usage.read', 'usage.ingest', 'data-planes.read', 'data-planes.heartbeat', 'audit.read', 'access-keys.read', 'access-keys.issue', 'access-keys.revoke'])),
+  "permissions": zod.array(zod.enum(['organizations.read', 'organizations.create', 'organizations.update', 'organizations.delete', 'principals.read', 'principals.manage', 'members.read', 'members.manage', 'workspaces.read', 'workspaces.create', 'workspaces.update', 'workspaces.delete', 'catalog.read', 'catalog.manage', 'provider-credentials.read', 'provider-credentials.manage', 'inference-keys.read', 'inference-keys.manage', 'playground.execute', 'bundles.read', 'bundles.publish', 'usage.read', 'usage.ingest', 'data-planes.read', 'data-planes.heartbeat', 'audit.read', 'access-keys.read', 'access-keys.issue', 'access-keys.revoke'])),
   "label": zod.string(),
   "expires_at": zod.union([zod.coerce.date(),zod.null()]),
   "revoked_at": zod.union([zod.coerce.date(),zod.null()]),
@@ -195,7 +195,7 @@ export const ListWorkspaceAccessKeysResponseItem = zod.object({
   "workspace_id": zod.union([zod.uuid(),zod.null()]),
   "parent_id": zod.union([zod.uuid(),zod.null()]),
   "prefix": zod.string(),
-  "permissions": zod.array(zod.enum(['organizations.read', 'organizations.create', 'organizations.update', 'organizations.delete', 'principals.read', 'principals.manage', 'members.read', 'members.manage', 'workspaces.read', 'workspaces.create', 'workspaces.update', 'workspaces.delete', 'catalog.read', 'catalog.manage', 'provider-credentials.read', 'provider-credentials.manage', 'inference-keys.read', 'inference-keys.manage', 'bundles.read', 'bundles.publish', 'usage.read', 'usage.ingest', 'data-planes.read', 'data-planes.heartbeat', 'audit.read', 'access-keys.read', 'access-keys.issue', 'access-keys.revoke'])),
+  "permissions": zod.array(zod.enum(['organizations.read', 'organizations.create', 'organizations.update', 'organizations.delete', 'principals.read', 'principals.manage', 'members.read', 'members.manage', 'workspaces.read', 'workspaces.create', 'workspaces.update', 'workspaces.delete', 'catalog.read', 'catalog.manage', 'provider-credentials.read', 'provider-credentials.manage', 'inference-keys.read', 'inference-keys.manage', 'playground.execute', 'bundles.read', 'bundles.publish', 'usage.read', 'usage.ingest', 'data-planes.read', 'data-planes.heartbeat', 'audit.read', 'access-keys.read', 'access-keys.issue', 'access-keys.revoke'])),
   "label": zod.string(),
   "expires_at": zod.union([zod.coerce.date(),zod.null()]),
   "revoked_at": zod.union([zod.coerce.date(),zod.null()]),
@@ -231,7 +231,7 @@ export const createWorkspaceAccessKeyBodyLabelMax = 80;
 export const CreateWorkspaceAccessKeyBody = zod.object({
   "label": zod.string().min(1).max(createWorkspaceAccessKeyBodyLabelMax).describe('Where this key lives, such as ci, laptop, or data-plane'),
   "user_id": zod.union([zod.uuid(),zod.null()]).optional().describe('Principal the key authenticates; defaults to the authenticated principal'),
-  "permissions": zod.array(zod.enum(['organizations.read', 'organizations.create', 'organizations.update', 'organizations.delete', 'principals.read', 'principals.manage', 'members.read', 'members.manage', 'workspaces.read', 'workspaces.create', 'workspaces.update', 'workspaces.delete', 'catalog.read', 'catalog.manage', 'provider-credentials.read', 'provider-credentials.manage', 'inference-keys.read', 'inference-keys.manage', 'bundles.read', 'bundles.publish', 'usage.read', 'usage.ingest', 'data-planes.read', 'data-planes.heartbeat', 'audit.read', 'access-keys.read', 'access-keys.issue', 'access-keys.revoke'])).min(1).describe('Explicit maximum permissions carried by the key'),
+  "permissions": zod.array(zod.enum(['organizations.read', 'organizations.create', 'organizations.update', 'organizations.delete', 'principals.read', 'principals.manage', 'members.read', 'members.manage', 'workspaces.read', 'workspaces.create', 'workspaces.update', 'workspaces.delete', 'catalog.read', 'catalog.manage', 'provider-credentials.read', 'provider-credentials.manage', 'inference-keys.read', 'inference-keys.manage', 'playground.execute', 'bundles.read', 'bundles.publish', 'usage.read', 'usage.ingest', 'data-planes.read', 'data-planes.heartbeat', 'audit.read', 'access-keys.read', 'access-keys.issue', 'access-keys.revoke'])).min(1).describe('Explicit maximum permissions carried by the key'),
   "expires_at": zod.union([zod.coerce.date(),zod.null()]).optional().describe('Optional expiration timestamp with a timezone')
 })
 
@@ -242,7 +242,7 @@ export const CreateWorkspaceAccessKeyResponse = zod.object({
   "workspace_id": zod.union([zod.uuid(),zod.null()]),
   "parent_id": zod.union([zod.uuid(),zod.null()]),
   "prefix": zod.string(),
-  "permissions": zod.array(zod.enum(['organizations.read', 'organizations.create', 'organizations.update', 'organizations.delete', 'principals.read', 'principals.manage', 'members.read', 'members.manage', 'workspaces.read', 'workspaces.create', 'workspaces.update', 'workspaces.delete', 'catalog.read', 'catalog.manage', 'provider-credentials.read', 'provider-credentials.manage', 'inference-keys.read', 'inference-keys.manage', 'bundles.read', 'bundles.publish', 'usage.read', 'usage.ingest', 'data-planes.read', 'data-planes.heartbeat', 'audit.read', 'access-keys.read', 'access-keys.issue', 'access-keys.revoke'])),
+  "permissions": zod.array(zod.enum(['organizations.read', 'organizations.create', 'organizations.update', 'organizations.delete', 'principals.read', 'principals.manage', 'members.read', 'members.manage', 'workspaces.read', 'workspaces.create', 'workspaces.update', 'workspaces.delete', 'catalog.read', 'catalog.manage', 'provider-credentials.read', 'provider-credentials.manage', 'inference-keys.read', 'inference-keys.manage', 'playground.execute', 'bundles.read', 'bundles.publish', 'usage.read', 'usage.ingest', 'data-planes.read', 'data-planes.heartbeat', 'audit.read', 'access-keys.read', 'access-keys.issue', 'access-keys.revoke'])),
   "label": zod.string(),
   "expires_at": zod.union([zod.coerce.date(),zod.null()]),
   "revoked_at": zod.union([zod.coerce.date(),zod.null()]),
@@ -377,7 +377,7 @@ export const MyPermissionsQueryParams = zod.object({
 })
 
 export const MyPermissionsResponse = zod.object({
-  "permissions": zod.array(zod.enum(['organizations.read', 'organizations.create', 'organizations.update', 'organizations.delete', 'principals.read', 'principals.manage', 'members.read', 'members.manage', 'workspaces.read', 'workspaces.create', 'workspaces.update', 'workspaces.delete', 'catalog.read', 'catalog.manage', 'provider-credentials.read', 'provider-credentials.manage', 'inference-keys.read', 'inference-keys.manage', 'bundles.read', 'bundles.publish', 'usage.read', 'usage.ingest', 'data-planes.read', 'data-planes.heartbeat', 'audit.read', 'access-keys.read', 'access-keys.issue', 'access-keys.revoke'])).describe('Permissions the credential can exercise at the requested scope')
+  "permissions": zod.array(zod.enum(['organizations.read', 'organizations.create', 'organizations.update', 'organizations.delete', 'principals.read', 'principals.manage', 'members.read', 'members.manage', 'workspaces.read', 'workspaces.create', 'workspaces.update', 'workspaces.delete', 'catalog.read', 'catalog.manage', 'provider-credentials.read', 'provider-credentials.manage', 'inference-keys.read', 'inference-keys.manage', 'playground.execute', 'bundles.read', 'bundles.publish', 'usage.read', 'usage.ingest', 'data-planes.read', 'data-planes.heartbeat', 'audit.read', 'access-keys.read', 'access-keys.issue', 'access-keys.revoke'])).describe('Permissions the credential can exercise at the requested scope')
 })
 
 
@@ -1235,6 +1235,40 @@ export const RemoveMemberResponse = zod.object({
 
 
 /**
+ * Reuse the browser's short-lived playground session or rotate it into this workspace.
+ *
+ * Required permission: `playground.execute`.
+ * @summary Prepare Playground Session
+ */
+export const EnsurePlaygroundSessionParams = zod.object({
+  "workspace_ref": zod.coerce.string().describe('Workspace ID or slug'),
+  "org_id": zod.coerce.string().describe('Organization ID or slug')
+})
+
+export const EnsurePlaygroundSessionResponse = zod.object({
+  "id": zod.uuid(),
+  "expires_at": zod.coerce.date(),
+  "status": zod.literal("ready")
+})
+
+
+/**
+ * Revoke the current browser playground session and clear its credential cookie.
+ *
+ * Required permission: `playground.execute`.
+ * @summary End Playground Session
+ */
+export const EndPlaygroundSessionParams = zod.object({
+  "workspace_ref": zod.coerce.string().describe('Workspace ID or slug'),
+  "org_id": zod.coerce.string().describe('Organization ID or slug')
+})
+
+export const EndPlaygroundSessionResponse = zod.object({
+  "status": zod.literal("ended")
+})
+
+
+/**
  * Issue an inference key for model requests to this workspace and return its token once.
  *
  * Required permission: `inference-keys.manage`.
@@ -1858,7 +1892,8 @@ export const BundleLatestResponse = zod.object({
   "key_id": zod.string(),
   "org_id": zod.uuid(),
   "workspace_id": zod.uuid(),
-  "token_hash": zod.string()
+  "token_hash": zod.string(),
+  "expires_at": zod.union([zod.coerce.date(),zod.null()]).optional()
 }).describe('An active inference key included in a policy bundle.\n\nThe bundle contains a token hash for authorization and a key ID for usage attribution, never\nthe caller\'s secret token.')),
   "catalog": zod.object({
   "providers": zod.array(zod.object({

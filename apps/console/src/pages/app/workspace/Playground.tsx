@@ -1,9 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import { Send, Trash2, KeyRound, Loader2, User, Bot, AlertCircle, Zap } from 'lucide-react';
+import { Send, Trash2, Loader2, User, Bot, AlertCircle, Zap, ShieldCheck } from 'lucide-react';
 import { useRequiredOrgId } from '@/lib/session';
 import { useRequiredParam } from '@/lib/route';
 import { useProviders } from '@/features/credentials/hooks';
-import { useCreateInferenceKeyMutation } from '@/features/keys/hooks';
 import { Alert, AlertDescription, AlertTitle, Badge, Button, Input, Label, SearchableDropdown, Switch } from '@/components/ui/elements';
 import { Textarea } from '@/components/ui/textarea';
 import { PageShell } from '@/components/shared/page-shell';
@@ -13,21 +12,8 @@ import { cn } from '@/lib/utils';
 import { chatCompletion, type InferenceMessage } from '@/lib/inference';
 import { useAuthorization } from '@/features/permissions/hooks';
 import { catalogAccess } from '@/features/catalog/policy';
-import { inferenceKeyAccess } from '@/features/keys/policy';
-
-type Role = 'user' | 'assistant';
-type Interaction = {
-  model: string;
-  provider: string | undefined;
-  inputTokens: number;
-  outputTokens: number;
-  cacheReadTokens: number;
-  estimatedCostUsd: number;
-  durationMs: number;
-  firstTokenMs: number | undefined;
-  finishReason: string | undefined;
-};
-type ChatMessage = { role: Role; content: string; interaction?: Interaction };
+import { useEndPlaygroundSessionMutation, useEnsurePlaygroundSessionMutation } from '@/features/playground/hooks';
+import { usePlaygroundState, type PlaygroundMessage } from '@/features/playground/state';
 
 function formatDuration(durationMs: number) {
   return durationMs < 1_000 ? `${Math.round(durationMs)} ms` : `${(durationMs / 1_000).toFixed(1)} s`;
@@ -37,7 +23,7 @@ function formatCost(costUsd: number) {
   return `$${costUsd.toFixed(costUsd < 0.01 ? 4 : 2)}`;
 }
 
-function MessageBubble({ message }: { message: ChatMessage }) {
+function MessageBubble({ message }: { message: PlaygroundMessage }) {
   const isUser = message.role === 'user';
   return (
     <div className={cn('flex gap-3', isUser && 'flex-row-reverse')}>
@@ -101,9 +87,12 @@ export default function ScopedPlayground() {
 function Playground({ orgId, workspaceRef }: { orgId: string; workspaceRef: string }) {
   const authorization = useAuthorization('workspace');
   const canReadCatalog = authorization.can(catalogAccess.workspace.read);
-  const canCreateKeys = authorization.can(inferenceKeyAccess.create);
   const taxonomyQuery = useProviders(orgId, workspaceRef, canReadCatalog);
-  const createKey = useCreateInferenceKeyMutation(orgId, workspaceRef);
+  const ensureSession = useEnsurePlaygroundSessionMutation();
+  const endSession = useEndPlaygroundSessionMutation();
+  const [playground, setPlayground] = usePlaygroundState(`${orgId}:${workspaceRef}`);
+  const { selectedModel, systemPrompt, temperature, maxTokens, streamEnabled, messages, input, sessionExpiresAt } = playground;
+  const updatePlayground = (update: Partial<typeof playground>) => setPlayground((current) => ({ ...current, ...update }));
 
   const models = taxonomyQuery.data?.models ?? [];
   const providers = taxonomyQuery.data?.providers ?? [];
@@ -123,15 +112,6 @@ function Playground({ orgId, workspaceRef }: { orgId: string; workspaceRef: stri
     };
   });
 
-  const [token, setToken] = useState('');
-  const [selectedModel, setSelectedModel] = useState('');
-  const [systemPrompt, setSystemPrompt] = useState('');
-  const [temperature, setTemperature] = useState('1');
-  const [maxTokens, setMaxTokens] = useState('');
-  const [streamEnabled, setStreamEnabled] = useState(true);
-
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const [streamingContent, setStreamingContent] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -153,17 +133,10 @@ function Playground({ orgId, workspaceRef }: { orgId: string; workspaceRef: stri
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, streamingContent]);
 
-  const generateToken = async () => {
-    const minted = await createKey.mutateAsync({ orgId, workspaceRef, data: { label: 'playground' } });
-    setToken(minted.token);
-  };
-
   const send = async () => {
-    if (!input.trim() || !activeModel || !token || sending) return;
-    const userMessage: ChatMessage = { role: 'user', content: input.trim() };
+    if (!input.trim() || !activeModel || sending) return;
+    const userMessage: PlaygroundMessage = { role: 'user', content: input.trim() };
     const history = [...messages, userMessage];
-    setMessages(history);
-    setInput('');
     setError(null);
     setSending(true);
     setStreamingContent('');
@@ -171,14 +144,18 @@ function Playground({ orgId, workspaceRef }: { orgId: string; workspaceRef: stri
     const controller = new AbortController();
     abortRef.current = controller;
     let partial = '';
+    let requestStarted = false;
 
     try {
+      const playgroundSession = await ensureSession.mutateAsync({ orgId, workspaceRef });
+      if (abortRef.current !== controller) return;
+      updatePlayground({ messages: history, input: '', sessionExpiresAt: playgroundSession.expires_at });
+      requestStarted = true;
       const requestMessages: InferenceMessage[] = [
         ...(systemPrompt.trim() ? [{ role: 'system' as const, content: systemPrompt.trim() }] : []),
         ...history,
       ];
       const result = await chatCompletion({
-        token,
         model: activeModel,
         messages: requestMessages,
         temperature: Number(temperature),
@@ -199,34 +176,38 @@ function Playground({ orgId, workspaceRef }: { orgId: string; workspaceRef: stri
             (usage?.outputTokens ?? 0) * activeModelDetails.output_price_per_mtok) /
           1_000_000
         : 0;
-      setMessages((current) => [
+      setPlayground((current) => ({
         ...current,
-        {
-          role: 'assistant',
-          content: result.content,
-          interaction: usage
-            ? {
-                model: activeModel,
-                provider: activeModelDetails ? providerById.get(activeModelDetails.provider_id)?.name : undefined,
-                inputTokens: usage.inputTokens,
-                outputTokens: usage.outputTokens,
-                cacheReadTokens: usage.cacheReadTokens,
-                estimatedCostUsd,
-                durationMs: result.durationMs,
-                firstTokenMs: result.firstTokenMs,
-                finishReason: result.finishReason,
-              }
-            : undefined,
-        },
-      ]);
+        messages: [
+          ...current.messages,
+          {
+            role: 'assistant',
+            content: result.content,
+            interaction: usage
+              ? {
+                  model: activeModel,
+                  provider: activeModelDetails ? providerById.get(activeModelDetails.provider_id)?.name : undefined,
+                  inputTokens: usage.inputTokens,
+                  outputTokens: usage.outputTokens,
+                  cacheReadTokens: usage.cacheReadTokens,
+                  estimatedCostUsd,
+                  durationMs: result.durationMs,
+                  firstTokenMs: result.firstTokenMs,
+                  finishReason: result.finishReason,
+                }
+              : undefined,
+          },
+        ],
+      }));
     } catch (err) {
       if (abortRef.current !== controller) return;
       if ((err as Error).name === 'AbortError') {
-        if (partial) setMessages((current) => [...current, { role: 'assistant', content: partial }]);
+        if (partial) setPlayground((current) => ({ ...current, messages: [...current.messages, { role: 'assistant', content: partial }] }));
       } else {
         setError((err as Error).message);
-        setMessages((current) => current.slice(0, -1));
-        setInput(userMessage.content);
+        if (requestStarted) {
+          setPlayground((current) => ({ ...current, messages: current.messages.slice(0, -1), input: userMessage.content }));
+        }
       }
     } finally {
       if (abortRef.current === controller) {
@@ -239,6 +220,11 @@ function Playground({ orgId, workspaceRef }: { orgId: string; workspaceRef: stri
 
   const stop = () => {
     abortRef.current?.abort();
+  };
+
+  const endPlaygroundSession = async () => {
+    await endSession.mutateAsync({ orgId, workspaceRef });
+    updatePlayground({ sessionExpiresAt: null });
   };
 
   if (authorization.isLoading) return <LoadingState label="Loading workspace permissions..." />;
@@ -258,7 +244,7 @@ function Playground({ orgId, workspaceRef }: { orgId: string; workspaceRef: stri
     );
   }
 
-  const canSend = !!input.trim() && !!activeModel && !!token && !sending;
+  const canSend = !!input.trim() && !!activeModel && !sending;
 
   return (
     <PageShell className="h-[calc(100vh-2rem)] max-w-none flex flex-col gap-0 p-0 overflow-hidden">
@@ -275,7 +261,7 @@ function Playground({ orgId, workspaceRef }: { orgId: string; workspaceRef: stri
               aria-label="Model"
               className="h-8 text-xs"
               value={activeModel}
-              onValueChange={setSelectedModel}
+              onValueChange={(selectedModel) => updatePlayground({ selectedModel })}
               options={modelOptions}
               placeholder="Select model"
             />
@@ -286,7 +272,7 @@ function Playground({ orgId, workspaceRef }: { orgId: string; workspaceRef: stri
             <Textarea
               id="playground-system-prompt"
               value={systemPrompt}
-              onChange={(e) => setSystemPrompt(e.target.value)}
+              onChange={(event) => updatePlayground({ systemPrompt: event.target.value })}
               placeholder="You are a helpful assistant."
               className="permission-scrollbar h-24 resize-none text-xs"
             />
@@ -303,7 +289,7 @@ function Playground({ orgId, workspaceRef }: { orgId: string; workspaceRef: stri
               max="2"
               step="0.1"
               value={temperature}
-              onChange={(e) => setTemperature(e.target.value)}
+              onChange={(event) => updatePlayground({ temperature: event.target.value })}
               className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-muted accent-primary"
             />
             <div className="flex justify-between font-mono text-[10px] text-muted-foreground">
@@ -321,36 +307,48 @@ function Playground({ orgId, workspaceRef }: { orgId: string; workspaceRef: stri
               min={1}
               placeholder="Default"
               value={maxTokens}
-              onChange={(e) => setMaxTokens(e.target.value)}
+              onChange={(event) => updatePlayground({ maxTokens: event.target.value })}
               className="h-8 text-xs font-mono"
             />
           </div>
 
           <div className="flex items-center justify-between">
             <Label htmlFor="playground-streaming">Streaming</Label>
-            <Switch id="playground-streaming" aria-label="Streaming" checked={streamEnabled} onCheckedChange={setStreamEnabled} />
+            <Switch
+              id="playground-streaming"
+              aria-label="Streaming"
+              checked={streamEnabled}
+              onCheckedChange={(streamEnabled) => updatePlayground({ streamEnabled })}
+            />
           </div>
 
           <div className="space-y-2 border-t border-border pt-4">
-            <Label htmlFor="playground-key" className="flex items-center gap-1.5">
-              <KeyRound className="h-3 w-3" />
-              Inference key
-            </Label>
-            <Input
-              id="playground-key"
-              type="password"
-              placeholder="sk-inf-..."
-              value={token}
-              onChange={(e) => setToken(e.target.value)}
-              className="h-8 font-mono text-xs"
-            />
-            {canCreateKeys && (
-              <Button variant="outline" size="sm" className="w-full text-xs" onClick={generateToken} disabled={createKey.isPending}>
-                {createKey.isPending ? <Loader2 className="mr-1.5 h-3 w-3 animate-spin" /> : <KeyRound className="mr-1.5 h-3 w-3" />}
-                Generate playground key
+            <div className="flex items-center justify-between gap-2">
+              <span className="flex items-center gap-1.5 font-mono text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                <ShieldCheck className="h-3 w-3" />
+                Session
+              </span>
+              <Badge variant={sessionExpiresAt ? 'secondary' : 'outline'} className="text-[10px]">
+                {sessionExpiresAt ? 'READY' : 'ON DEMAND'}
+              </Badge>
+            </div>
+            <p className="text-[10px] leading-relaxed text-muted-foreground">
+              {sessionExpiresAt
+                ? `Active until ${new Date(sessionExpiresAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}. It stays available across pages.`
+                : 'A private one-hour session starts automatically when you send a message.'}
+            </p>
+            {sessionExpiresAt && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full text-xs"
+                onClick={() => void endPlaygroundSession()}
+                disabled={sending || endSession.isPending}
+              >
+                {endSession.isPending && <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />}
+                End session
               </Button>
             )}
-            {!token && <p className="text-[10px] text-muted-foreground">Paste an existing key or generate one above.</p>}
           </div>
         </aside>
 
@@ -363,7 +361,7 @@ function Playground({ orgId, workspaceRef }: { orgId: string; workspaceRef: stri
                     <Zap className="h-5 w-5 text-muted-foreground" />
                   </div>
                   <p className="font-mono text-sm text-muted-foreground">Send a message to start inferring</p>
-                  {!token && <p className="text-xs text-destructive">Add an inference key in the sidebar first</p>}
+                  <p className="text-xs text-muted-foreground">Your playground session is prepared automatically.</p>
                 </div>
               </div>
             )}
@@ -397,7 +395,7 @@ function Playground({ orgId, workspaceRef }: { orgId: string; workspaceRef: stri
             <div className="flex items-end gap-2">
               <Textarea
                 value={input}
-                onChange={(e) => setInput(e.target.value)}
+                onChange={(event) => updatePlayground({ input: event.target.value })}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
@@ -415,7 +413,7 @@ function Playground({ orgId, workspaceRef }: { orgId: string; workspaceRef: stri
                     variant="ghost"
                     size="icon"
                     onClick={() => {
-                      setMessages([]);
+                      updatePlayground({ messages: [] });
                       setError(null);
                     }}
                     disabled={sending}

@@ -2000,6 +2000,103 @@ paths:
       - scope: workspace_scope
         anyOf:
         - members.manage
+  /api/v1/orgs/{org_id}/workspaces/{workspace_ref}/playground-session:
+    put:
+      tags:
+      - Workspace Playground
+      summary: Prepare Playground Session
+      description: 'Reuse the browser''s short-lived playground session or rotate it into this workspace.
+
+
+        Required permission: `playground.execute`.'
+      operationId: ensure_playground_session
+      security:
+      - AccessKey: []
+      - SessionCookie: []
+      parameters:
+      - name: workspace_ref
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Workspace Ref
+        description: Workspace ID or slug
+      - name: org_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Org Id
+        description: Organization ID or slug
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_PlaygroundSessionReadyOut_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
+      x-airllm-authority:
+      - scope: workspace_scope
+        anyOf:
+        - playground.execute
+    delete:
+      tags:
+      - Workspace Playground
+      summary: End Playground Session
+      description: 'Revoke the current browser playground session and clear its credential cookie.
+
+
+        Required permission: `playground.execute`.'
+      operationId: end_playground_session
+      security:
+      - AccessKey: []
+      - SessionCookie: []
+      parameters:
+      - name: workspace_ref
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Workspace Ref
+        description: Workspace ID or slug
+      - name: org_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Org Id
+        description: Organization ID or slug
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_PlaygroundSessionEndedOut_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
+      x-airllm-authority:
+      - scope: workspace_scope
+        anyOf:
+        - playground.execute
   /api/v1/orgs/{org_id}/workspaces/{workspace_ref}/inference-keys:
     post:
       tags:
@@ -4202,6 +4299,22 @@ components:
       required:
       - data
       title: Envelope[PasswordChangedOut]
+    Envelope_PlaygroundSessionEndedOut_:
+      properties:
+        data:
+          $ref: '#/components/schemas/PlaygroundSessionEndedOut'
+      type: object
+      required:
+      - data
+      title: Envelope[PlaygroundSessionEndedOut]
+    Envelope_PlaygroundSessionReadyOut_:
+      properties:
+        data:
+          $ref: '#/components/schemas/PlaygroundSessionReadyOut'
+      type: object
+      required:
+      - data
+      title: Envelope[PlaygroundSessionReadyOut]
     Envelope_ProviderCredentialOut_:
       properties:
         data:
@@ -4684,6 +4797,12 @@ components:
         token_hash:
           type: string
           title: Token Hash
+        expires_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Expires At
       type: object
       required:
       - key_id
@@ -5341,6 +5460,7 @@ components:
       - provider-credentials.manage
       - inference-keys.read
       - inference-keys.manage
+      - playground.execute
       - bundles.read
       - bundles.publish
       - usage.read
@@ -5352,6 +5472,36 @@ components:
       - access-keys.issue
       - access-keys.revoke
       title: Permission
+    PlaygroundSessionEndedOut:
+      properties:
+        status:
+          type: string
+          const: ended
+          title: Status
+      type: object
+      required:
+      - status
+      title: PlaygroundSessionEndedOut
+    PlaygroundSessionReadyOut:
+      properties:
+        id:
+          type: string
+          format: uuid
+          title: Id
+        expires_at:
+          type: string
+          format: date-time
+          title: Expires At
+        status:
+          type: string
+          const: ready
+          title: Status
+      type: object
+      required:
+      - id
+      - expires_at
+      - status
+      title: PlaygroundSessionReadyOut
     ProviderCredentialIn:
       properties:
         provider:
@@ -6409,6 +6559,9 @@ tags:
 - name: Workspace Access Keys
   description: List and issue access keys scoped to a workspace and revoke keys
   x-displayName: Access Keys
+- name: Workspace Playground
+  description: Create and end short-lived browser sessions for playground model requests
+  x-displayName: Playground
 - name: Workspace Inference Keys
   description: Issue and revoke credentials for model requests to a workspace
   x-displayName: Inference Keys
@@ -6455,6 +6608,7 @@ x-tagGroups:
   - Workspace Settings
   - Workspace Members
   - Workspace Access Keys
+  - Workspace Playground
   - Workspace Inference Keys
   - Workspace Provider Credentials
   - Workspace Usage Events
