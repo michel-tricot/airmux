@@ -34,11 +34,21 @@ good default and a bad guarantee.
 
 ## Parameter support carries separate evidence
 
-`parameter_evidence.vendor_docs` records explicit claims with their source URLs.
-`parameter_evidence.live_probe` records only conclusive results from the exact model endpoint.
-The applied taxonomy resolves each canonical parameter independently, with a live probe
-winning over documentation. A successful request means supported; only an explicit
-unsupported-parameter response means unsupported. Every other outcome remains unknown.
+`parameter_evidence.model_discovery` is generated for every model from the request schemas
+declared by its provider. Its source list points to those exact schema files. A field present
+in a schema is supported; an absent field remains unknown because permissive and
+documentation-derived schemas cannot prove rejection.
+
+`parameter_evidence.live_probe` records the parameters attempted against the exact provider,
+model and endpoint, plus only the conclusive results. The applied taxonomy resolves each
+canonical parameter independently, with a conclusive live probe winning over model
+discovery. A successful request means supported; only an explicit unsupported-parameter
+response means unsupported. Every other outcome remains unknown.
+
+`fetch_models.py` adds discovery evidence before writing every returned model and probes new
+models when it has a provider credential. `validate.py` independently regenerates the
+schema-derived evidence and rejects missing or stale model records. There is no maintained
+list of model ids or parameter claims in the skill.
 
 ## Schemas carry provenance in the filename
 

@@ -14,7 +14,32 @@
       "output_modalities": null,
       "supports_tools": null,
       "supports_structured_output": null,
-      "pricing": null
+      "pricing": null,
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.openai.request.json",
+            "schemas/completion/oai_responses.openai.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        }
+      }
     },
     {
       "id": "computer-use-preview",
@@ -26,6 +51,31 @@
       "supports_tools": null,
       "supports_structured_output": null,
       "pricing": null,
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.openai.request.json",
+            "schemas/completion/oai_responses.openai.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        }
+      },
       "shutdown_date": "2026-07-23"
     },
     {
@@ -38,6 +88,31 @@
       "supports_tools": null,
       "supports_structured_output": null,
       "pricing": null,
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.openai.request.json",
+            "schemas/completion/oai_responses.openai.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        }
+      },
       "shutdown_date": "2026-07-23"
     },
     {
@@ -58,6 +133,31 @@
       "pricing_source": "models.dev",
       "reachable": true,
       "reachable_checked": "2026-08-17",
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.openai.request.json",
+            "schemas/completion/oai_responses.openai.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        }
+      },
       "endpoint_status": {
         "chat/completions": {
           "outcome": "ok",
@@ -80,6 +180,31 @@
       "supports_tools": null,
       "supports_structured_output": null,
       "pricing": null,
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.openai.request.json",
+            "schemas/completion/oai_responses.openai.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        }
+      },
       "shutdown_date": "2026-10-23"
     },
     {
@@ -92,6 +217,31 @@
       "supports_tools": null,
       "supports_structured_output": null,
       "pricing": null,
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.openai.request.json",
+            "schemas/completion/oai_responses.openai.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        }
+      },
       "shutdown_date": "2026-09-28"
     },
     {
@@ -111,6 +261,31 @@
       "pricing_source": "openrouter-index",
       "reachable": true,
       "reachable_checked": "2026-08-17",
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.openai.request.json",
+            "schemas/completion/oai_responses.openai.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        }
+      },
       "endpoint_status": {
         "chat/completions": {
           "outcome": "ok",
@@ -139,6 +314,31 @@
       "pricing_source": "models.dev",
       "reachable": true,
       "reachable_checked": "2026-08-17",
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.openai.request.json",
+            "schemas/completion/oai_responses.openai.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        }
+      },
       "endpoint_status": {
         "chat/completions": {
           "outcome": "ok",
@@ -161,6 +361,31 @@
       "supports_tools": null,
       "supports_structured_output": null,
       "pricing": null,
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.openai.request.json",
+            "schemas/completion/oai_responses.openai.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        }
+      },
       "shutdown_date": "2026-10-23"
     },
     {
@@ -180,6 +405,31 @@
       "pricing_source": "models.dev",
       "reachable": true,
       "reachable_checked": "2026-08-17",
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.openai.request.json",
+            "schemas/completion/oai_responses.openai.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        }
+      },
       "endpoint_status": {
         "chat/completions": {
           "outcome": "ok",
@@ -202,6 +452,31 @@
       "supports_tools": null,
       "supports_structured_output": null,
       "pricing": null,
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.openai.request.json",
+            "schemas/completion/oai_responses.openai.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        }
+      },
       "shutdown_date": "2026-10-23"
     },
     {
@@ -222,6 +497,31 @@
       "pricing_source": "models.dev",
       "reachable": true,
       "reachable_checked": "2026-08-17",
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.openai.request.json",
+            "schemas/completion/oai_responses.openai.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        }
+      },
       "endpoint_status": {
         "chat/completions": {
           "outcome": "ok",
@@ -250,6 +550,31 @@
       "pricing_source": "openrouter-index",
       "reachable": true,
       "reachable_checked": "2026-08-17",
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.openai.request.json",
+            "schemas/completion/oai_responses.openai.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        }
+      },
       "endpoint_status": {
         "chat/completions": {
           "outcome": "ok",
@@ -279,6 +604,31 @@
       "pricing_source": "models.dev",
       "reachable": true,
       "reachable_checked": "2026-08-17",
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.openai.request.json",
+            "schemas/completion/oai_responses.openai.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        }
+      },
       "endpoint_status": {
         "chat/completions": {
           "outcome": "ok",
@@ -307,6 +657,31 @@
       "pricing_source": "openrouter-index",
       "reachable": true,
       "reachable_checked": "2026-08-17",
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.openai.request.json",
+            "schemas/completion/oai_responses.openai.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        }
+      },
       "endpoint_status": {
         "chat/completions": {
           "outcome": "ok",
@@ -336,6 +711,31 @@
       "pricing_source": "models.dev",
       "reachable": true,
       "reachable_checked": "2026-08-17",
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.openai.request.json",
+            "schemas/completion/oai_responses.openai.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        }
+      },
       "endpoint_status": {
         "chat/completions": {
           "outcome": "ok",
@@ -365,6 +765,31 @@
       "pricing_source": "openrouter-index",
       "reachable": true,
       "reachable_checked": "2026-08-17",
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.openai.request.json",
+            "schemas/completion/oai_responses.openai.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        }
+      },
       "endpoint_status": {
         "chat/completions": {
           "outcome": "ok",
@@ -395,6 +820,31 @@
       "pricing_source": "models.dev",
       "reachable": true,
       "reachable_checked": "2026-08-17",
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.openai.request.json",
+            "schemas/completion/oai_responses.openai.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        }
+      },
       "endpoint_status": {
         "chat/completions": {
           "outcome": "ok",
@@ -423,6 +873,31 @@
       "pricing_source": "models.dev",
       "reachable": true,
       "reachable_checked": "2026-08-17",
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.openai.request.json",
+            "schemas/completion/oai_responses.openai.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        }
+      },
       "endpoint_status": {
         "chat/completions": {
           "outcome": "ok",
@@ -453,6 +928,31 @@
       "pricing_source": "models.dev",
       "reachable": true,
       "reachable_checked": "2026-08-17",
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.openai.request.json",
+            "schemas/completion/oai_responses.openai.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        }
+      },
       "endpoint_status": {
         "chat/completions": {
           "outcome": "ok",
@@ -482,6 +982,31 @@
       "pricing_source": "models.dev",
       "reachable": true,
       "reachable_checked": "2026-08-17",
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.openai.request.json",
+            "schemas/completion/oai_responses.openai.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        }
+      },
       "endpoint_status": {
         "chat/completions": {
           "outcome": "ok",
@@ -511,6 +1036,31 @@
       "pricing_source": "models.dev",
       "reachable": true,
       "reachable_checked": "2026-08-17",
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.openai.request.json",
+            "schemas/completion/oai_responses.openai.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        }
+      },
       "endpoint_status": {
         "chat/completions": {
           "outcome": "ok",
@@ -539,6 +1089,31 @@
       "pricing_source": "openrouter-index",
       "reachable": true,
       "reachable_checked": "2026-08-17",
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.openai.request.json",
+            "schemas/completion/oai_responses.openai.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        }
+      },
       "endpoint_status": {
         "chat/completions": {
           "outcome": "ok",
@@ -559,7 +1134,32 @@
       "output_modalities": null,
       "supports_tools": null,
       "supports_structured_output": null,
-      "pricing": null
+      "pricing": null,
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.openai.request.json",
+            "schemas/completion/oai_responses.openai.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        }
+      }
     },
     {
       "id": "gpt-4o-mini-search-preview-2025-03-11",
@@ -571,6 +1171,31 @@
       "supports_tools": null,
       "supports_structured_output": null,
       "pricing": null,
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.openai.request.json",
+            "schemas/completion/oai_responses.openai.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        }
+      },
       "shutdown_date": "2026-07-23"
     },
     {
@@ -582,7 +1207,32 @@
       "output_modalities": null,
       "supports_tools": null,
       "supports_structured_output": null,
-      "pricing": null
+      "pricing": null,
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.openai.request.json",
+            "schemas/completion/oai_responses.openai.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        }
+      }
     },
     {
       "id": "gpt-4o-search-preview-2025-03-11",
@@ -594,6 +1244,31 @@
       "supports_tools": null,
       "supports_structured_output": null,
       "pricing": null,
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.openai.request.json",
+            "schemas/completion/oai_responses.openai.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        }
+      },
       "shutdown_date": "2026-07-23"
     },
     {
@@ -615,20 +1290,26 @@
       "reachable": true,
       "reachable_checked": "2026-08-17",
       "parameter_evidence": {
-        "vendor_docs": {
+        "model_discovery": {
           "sources": [
-            "https://developers.openai.com/api/docs/guides/latest-model?model=gpt-5.2"
+            "schemas/completion/oai.openai.request.json",
+            "schemas/completion/oai_responses.openai.request.json"
           ],
           "support": {
             "chat/completions": {
-              "temperature": "unsupported",
-              "top_p": "unsupported",
-              "logprobs": "unsupported"
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
             },
             "responses": {
-              "temperature": "unsupported",
-              "top_p": "unsupported",
-              "logprobs": "unsupported"
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
             }
           }
         }
@@ -661,6 +1342,31 @@
       "pricing_source": "openrouter-index",
       "reachable": true,
       "reachable_checked": "2026-08-17",
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.openai.request.json",
+            "schemas/completion/oai_responses.openai.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        }
+      },
       "endpoint_status": {
         "chat/completions": {
           "outcome": "ok",
@@ -683,6 +1389,31 @@
       "supports_tools": null,
       "supports_structured_output": null,
       "pricing": null,
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.openai.request.json",
+            "schemas/completion/oai_responses.openai.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        }
+      },
       "shutdown_date": "2026-07-23"
     },
     {
@@ -702,6 +1433,31 @@
       "pricing_source": "openrouter-index",
       "reachable": false,
       "reachable_checked": "2026-08-17",
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.openai.request.json",
+            "schemas/completion/oai_responses.openai.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        }
+      },
       "shutdown_date": "2026-07-23"
     },
     {
@@ -723,20 +1479,26 @@
       "reachable": true,
       "reachable_checked": "2026-08-17",
       "parameter_evidence": {
-        "vendor_docs": {
+        "model_discovery": {
           "sources": [
-            "https://developers.openai.com/api/docs/guides/latest-model?model=gpt-5.2"
+            "schemas/completion/oai.openai.request.json",
+            "schemas/completion/oai_responses.openai.request.json"
           ],
           "support": {
             "chat/completions": {
-              "temperature": "unsupported",
-              "top_p": "unsupported",
-              "logprobs": "unsupported"
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
             },
             "responses": {
-              "temperature": "unsupported",
-              "top_p": "unsupported",
-              "logprobs": "unsupported"
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
             }
           }
         }
@@ -769,6 +1531,31 @@
       "pricing_source": "openrouter-index",
       "reachable": true,
       "reachable_checked": "2026-08-17",
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.openai.request.json",
+            "schemas/completion/oai_responses.openai.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        }
+      },
       "endpoint_status": {
         "chat/completions": {
           "outcome": "ok",
@@ -800,20 +1587,38 @@
       "reachable": true,
       "reachable_checked": "2026-08-17",
       "parameter_evidence": {
-        "vendor_docs": {
+        "model_discovery": {
           "sources": [
-            "https://developers.openai.com/api/docs/guides/latest-model?model=gpt-5.2"
+            "schemas/completion/oai.openai.request.json",
+            "schemas/completion/oai_responses.openai.request.json"
           ],
           "support": {
             "chat/completions": {
-              "temperature": "unsupported",
-              "top_p": "unsupported",
-              "logprobs": "unsupported"
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
             },
             "responses": {
-              "temperature": "unsupported",
-              "top_p": "unsupported",
-              "logprobs": "unsupported"
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "attempted": {
+            "responses": [
+              "temperature"
+            ]
+          },
+          "support": {
+            "responses": {
+              "temperature": "unsupported"
             }
           }
         }
@@ -846,6 +1651,31 @@
       "pricing_source": "openrouter-index",
       "reachable": true,
       "reachable_checked": "2026-08-17",
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.openai.request.json",
+            "schemas/completion/oai_responses.openai.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        }
+      },
       "endpoint_status": {
         "chat/completions": {
           "outcome": "ok",
@@ -874,7 +1704,32 @@
       "limits_source": "openrouter-index",
       "pricing_source": "models.dev",
       "reachable": false,
-      "reachable_checked": "2026-08-17"
+      "reachable_checked": "2026-08-17",
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.openai.request.json",
+            "schemas/completion/oai_responses.openai.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        }
+      }
     },
     {
       "id": "gpt-5-pro-2025-10-06",
@@ -893,6 +1748,31 @@
       "pricing_source": "openrouter-index",
       "reachable": false,
       "reachable_checked": "2026-08-17",
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.openai.request.json",
+            "schemas/completion/oai_responses.openai.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        }
+      },
       "shutdown_date": "2026-12-11"
     },
     {
@@ -904,7 +1784,32 @@
       "output_modalities": null,
       "supports_tools": null,
       "supports_structured_output": null,
-      "pricing": null
+      "pricing": null,
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.openai.request.json",
+            "schemas/completion/oai_responses.openai.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        }
+      }
     },
     {
       "id": "gpt-5-search-api-2025-10-14",
@@ -915,7 +1820,32 @@
       "output_modalities": null,
       "supports_tools": null,
       "supports_structured_output": null,
-      "pricing": null
+      "pricing": null,
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.openai.request.json",
+            "schemas/completion/oai_responses.openai.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        }
+      }
     },
     {
       "id": "gpt-5.1",
@@ -935,6 +1865,31 @@
       "pricing_source": "models.dev",
       "reachable": true,
       "reachable_checked": "2026-08-17",
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.openai.request.json",
+            "schemas/completion/oai_responses.openai.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        }
+      },
       "endpoint_status": {
         "chat/completions": {
           "outcome": "ok",
@@ -955,7 +1910,32 @@
       "output_modalities": null,
       "supports_tools": null,
       "supports_structured_output": null,
-      "pricing": null
+      "pricing": null,
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.openai.request.json",
+            "schemas/completion/oai_responses.openai.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        }
+      }
     },
     {
       "id": "gpt-5.1-chat-latest",
@@ -967,6 +1947,31 @@
       "supports_tools": null,
       "supports_structured_output": null,
       "pricing": null,
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.openai.request.json",
+            "schemas/completion/oai_responses.openai.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        }
+      },
       "shutdown_date": "2026-07-23"
     },
     {
@@ -986,6 +1991,31 @@
       "pricing_source": "openrouter-index",
       "reachable": false,
       "reachable_checked": "2026-08-17",
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.openai.request.json",
+            "schemas/completion/oai_responses.openai.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        }
+      },
       "shutdown_date": "2026-07-23"
     },
     {
@@ -1005,6 +2035,31 @@
       "pricing_source": "openrouter-index",
       "reachable": false,
       "reachable_checked": "2026-08-17",
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.openai.request.json",
+            "schemas/completion/oai_responses.openai.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        }
+      },
       "shutdown_date": "2026-07-23"
     },
     {
@@ -1024,6 +2079,31 @@
       "pricing_source": "openrouter-index",
       "reachable": false,
       "reachable_checked": "2026-08-17",
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.openai.request.json",
+            "schemas/completion/oai_responses.openai.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        }
+      },
       "shutdown_date": "2026-07-23"
     },
     {
@@ -1044,6 +2124,31 @@
       "pricing_source": "models.dev",
       "reachable": true,
       "reachable_checked": "2026-08-17",
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.openai.request.json",
+            "schemas/completion/oai_responses.openai.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        }
+      },
       "endpoint_status": {
         "chat/completions": {
           "outcome": "ok",
@@ -1064,7 +2169,32 @@
       "output_modalities": null,
       "supports_tools": null,
       "supports_structured_output": null,
-      "pricing": null
+      "pricing": null,
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.openai.request.json",
+            "schemas/completion/oai_responses.openai.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        }
+      }
     },
     {
       "id": "gpt-5.2-chat-latest",
@@ -1084,6 +2214,31 @@
       "pricing_source": "models.dev",
       "reachable": false,
       "reachable_checked": "2026-08-17",
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.openai.request.json",
+            "schemas/completion/oai_responses.openai.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        }
+      },
       "shutdown_date": "2026-08-10"
     },
     {
@@ -1103,6 +2258,31 @@
       "pricing_source": "openrouter-index",
       "reachable": false,
       "reachable_checked": "2026-08-17",
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.openai.request.json",
+            "schemas/completion/oai_responses.openai.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        }
+      },
       "shutdown_date": "2026-07-23"
     },
     {
@@ -1121,7 +2301,32 @@
       "limits_source": "openrouter-index",
       "pricing_source": "models.dev",
       "reachable": false,
-      "reachable_checked": "2026-08-17"
+      "reachable_checked": "2026-08-17",
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.openai.request.json",
+            "schemas/completion/oai_responses.openai.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        }
+      }
     },
     {
       "id": "gpt-5.2-pro-2025-12-11",
@@ -1132,7 +2337,32 @@
       "output_modalities": null,
       "supports_tools": null,
       "supports_structured_output": null,
-      "pricing": null
+      "pricing": null,
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.openai.request.json",
+            "schemas/completion/oai_responses.openai.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        }
+      }
     },
     {
       "id": "gpt-5.3-chat-latest",
@@ -1152,6 +2382,31 @@
       "pricing_source": "models.dev",
       "reachable": false,
       "reachable_checked": "2026-08-17",
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.openai.request.json",
+            "schemas/completion/oai_responses.openai.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        }
+      },
       "shutdown_date": "2026-08-10"
     },
     {
@@ -1171,7 +2426,32 @@
       "limits_source": "openrouter-index",
       "pricing_source": "models.dev",
       "reachable": false,
-      "reachable_checked": "2026-08-17"
+      "reachable_checked": "2026-08-17",
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.openai.request.json",
+            "schemas/completion/oai_responses.openai.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        }
+      }
     },
     {
       "id": "gpt-5.4",
@@ -1191,6 +2471,31 @@
       "pricing_source": "models.dev",
       "reachable": true,
       "reachable_checked": "2026-08-17",
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.openai.request.json",
+            "schemas/completion/oai_responses.openai.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        }
+      },
       "endpoint_status": {
         "chat/completions": {
           "outcome": "ok",
@@ -1211,7 +2516,32 @@
       "output_modalities": null,
       "supports_tools": null,
       "supports_structured_output": null,
-      "pricing": null
+      "pricing": null,
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.openai.request.json",
+            "schemas/completion/oai_responses.openai.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        }
+      }
     },
     {
       "id": "gpt-5.4-mini",
@@ -1231,6 +2561,31 @@
       "pricing_source": "models.dev",
       "reachable": true,
       "reachable_checked": "2026-08-17",
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.openai.request.json",
+            "schemas/completion/oai_responses.openai.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        }
+      },
       "endpoint_status": {
         "chat/completions": {
           "outcome": "ok",
@@ -1251,7 +2606,32 @@
       "output_modalities": null,
       "supports_tools": null,
       "supports_structured_output": null,
-      "pricing": null
+      "pricing": null,
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.openai.request.json",
+            "schemas/completion/oai_responses.openai.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        }
+      }
     },
     {
       "id": "gpt-5.4-nano",
@@ -1271,6 +2651,31 @@
       "pricing_source": "models.dev",
       "reachable": true,
       "reachable_checked": "2026-08-17",
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.openai.request.json",
+            "schemas/completion/oai_responses.openai.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        }
+      },
       "endpoint_status": {
         "chat/completions": {
           "outcome": "ok",
@@ -1291,7 +2696,32 @@
       "output_modalities": null,
       "supports_tools": null,
       "supports_structured_output": null,
-      "pricing": null
+      "pricing": null,
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.openai.request.json",
+            "schemas/completion/oai_responses.openai.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        }
+      }
     },
     {
       "id": "gpt-5.4-pro",
@@ -1309,7 +2739,32 @@
       "limits_source": "openrouter-index",
       "pricing_source": "models.dev",
       "reachable": false,
-      "reachable_checked": "2026-08-17"
+      "reachable_checked": "2026-08-17",
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.openai.request.json",
+            "schemas/completion/oai_responses.openai.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        }
+      }
     },
     {
       "id": "gpt-5.4-pro-2026-03-05",
@@ -1320,7 +2775,32 @@
       "output_modalities": null,
       "supports_tools": null,
       "supports_structured_output": null,
-      "pricing": null
+      "pricing": null,
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.openai.request.json",
+            "schemas/completion/oai_responses.openai.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        }
+      }
     },
     {
       "id": "gpt-5.5",
@@ -1340,6 +2820,31 @@
       "pricing_source": "models.dev",
       "reachable": true,
       "reachable_checked": "2026-08-17",
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.openai.request.json",
+            "schemas/completion/oai_responses.openai.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        }
+      },
       "endpoint_status": {
         "chat/completions": {
           "outcome": "ok",
@@ -1360,7 +2865,32 @@
       "output_modalities": null,
       "supports_tools": null,
       "supports_structured_output": null,
-      "pricing": null
+      "pricing": null,
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.openai.request.json",
+            "schemas/completion/oai_responses.openai.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        }
+      }
     },
     {
       "id": "gpt-5.5-pro",
@@ -1378,7 +2908,32 @@
       "limits_source": "openrouter-index",
       "pricing_source": "models.dev",
       "reachable": false,
-      "reachable_checked": "2026-08-17"
+      "reachable_checked": "2026-08-17",
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.openai.request.json",
+            "schemas/completion/oai_responses.openai.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        }
+      }
     },
     {
       "id": "gpt-5.5-pro-2026-04-23",
@@ -1389,7 +2944,32 @@
       "output_modalities": null,
       "supports_tools": null,
       "supports_structured_output": null,
-      "pricing": null
+      "pricing": null,
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.openai.request.json",
+            "schemas/completion/oai_responses.openai.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        }
+      }
     },
     {
       "id": "gpt-5.6-luna",
@@ -1410,6 +2990,31 @@
       "pricing_source": "models.dev",
       "reachable": true,
       "reachable_checked": "2026-08-17",
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.openai.request.json",
+            "schemas/completion/oai_responses.openai.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        }
+      },
       "endpoint_status": {
         "chat/completions": {
           "outcome": "ok",
@@ -1440,6 +3045,31 @@
       "pricing_source": "models.dev",
       "reachable": true,
       "reachable_checked": "2026-08-17",
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.openai.request.json",
+            "schemas/completion/oai_responses.openai.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        }
+      },
       "endpoint_status": {
         "chat/completions": {
           "outcome": "ok",
@@ -1470,6 +3100,31 @@
       "pricing_source": "models.dev",
       "reachable": true,
       "reachable_checked": "2026-08-17",
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.openai.request.json",
+            "schemas/completion/oai_responses.openai.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        }
+      },
       "endpoint_status": {
         "chat/completions": {
           "outcome": "ok",
@@ -1498,6 +3153,31 @@
       "pricing_source": "openrouter-index",
       "reachable": false,
       "reachable_checked": "2026-08-17",
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.openai.request.json",
+            "schemas/completion/oai_responses.openai.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        }
+      },
       "shutdown_date": "2027-01-20"
     },
     {
@@ -1509,7 +3189,32 @@
       "output_modalities": null,
       "supports_tools": null,
       "supports_structured_output": null,
-      "pricing": null
+      "pricing": null,
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.openai.request.json",
+            "schemas/completion/oai_responses.openai.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        }
+      }
     },
     {
       "id": "gpt-audio-2025-08-28",
@@ -1520,7 +3225,32 @@
       "output_modalities": null,
       "supports_tools": null,
       "supports_structured_output": null,
-      "pricing": null
+      "pricing": null,
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.openai.request.json",
+            "schemas/completion/oai_responses.openai.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        }
+      }
     },
     {
       "id": "gpt-audio-mini",
@@ -1539,6 +3269,31 @@
       "pricing_source": "openrouter-index",
       "reachable": false,
       "reachable_checked": "2026-08-17",
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.openai.request.json",
+            "schemas/completion/oai_responses.openai.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        }
+      },
       "shutdown_date": "2027-01-20"
     },
     {
@@ -1551,6 +3306,31 @@
       "supports_tools": null,
       "supports_structured_output": null,
       "pricing": null,
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.openai.request.json",
+            "schemas/completion/oai_responses.openai.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        }
+      },
       "shutdown_date": "2026-07-23"
     },
     {
@@ -1562,7 +3342,32 @@
       "output_modalities": null,
       "supports_tools": null,
       "supports_structured_output": null,
-      "pricing": null
+      "pricing": null,
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.openai.request.json",
+            "schemas/completion/oai_responses.openai.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        }
+      }
     },
     {
       "id": "o1",
@@ -1582,6 +3387,31 @@
       "pricing_source": "models.dev",
       "reachable": true,
       "reachable_checked": "2026-08-17",
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.openai.request.json",
+            "schemas/completion/oai_responses.openai.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        }
+      },
       "endpoint_status": {
         "chat/completions": {
           "outcome": "ok",
@@ -1611,6 +3441,31 @@
       "pricing_source": "openrouter-index",
       "reachable": true,
       "reachable_checked": "2026-08-17",
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.openai.request.json",
+            "schemas/completion/oai_responses.openai.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        }
+      },
       "endpoint_status": {
         "chat/completions": {
           "outcome": "ok",
@@ -1640,6 +3495,31 @@
       "pricing_source": "models.dev",
       "reachable": false,
       "reachable_checked": "2026-08-17",
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.openai.request.json",
+            "schemas/completion/oai_responses.openai.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        }
+      },
       "shutdown_date": "2026-10-23"
     },
     {
@@ -1652,6 +3532,31 @@
       "supports_tools": null,
       "supports_structured_output": null,
       "pricing": null,
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.openai.request.json",
+            "schemas/completion/oai_responses.openai.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        }
+      },
       "shutdown_date": "2026-10-23"
     },
     {
@@ -1672,6 +3577,31 @@
       "pricing_source": "models.dev",
       "reachable": true,
       "reachable_checked": "2026-08-17",
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.openai.request.json",
+            "schemas/completion/oai_responses.openai.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        }
+      },
       "endpoint_status": {
         "chat/completions": {
           "outcome": "ok",
@@ -1700,6 +3630,31 @@
       "pricing_source": "openrouter-index",
       "reachable": true,
       "reachable_checked": "2026-08-17",
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.openai.request.json",
+            "schemas/completion/oai_responses.openai.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        }
+      },
       "endpoint_status": {
         "chat/completions": {
           "outcome": "ok",
@@ -1730,6 +3685,31 @@
       "pricing_source": "models.dev",
       "reachable": true,
       "reachable_checked": "2026-08-17",
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.openai.request.json",
+            "schemas/completion/oai_responses.openai.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        }
+      },
       "endpoint_status": {
         "chat/completions": {
           "outcome": "ok",
@@ -1759,6 +3739,31 @@
       "pricing_source": "openrouter-index",
       "reachable": true,
       "reachable_checked": "2026-08-17",
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.openai.request.json",
+            "schemas/completion/oai_responses.openai.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        }
+      },
       "endpoint_status": {
         "chat/completions": {
           "outcome": "ok",
@@ -1789,6 +3794,31 @@
       "pricing_source": "models.dev",
       "reachable": true,
       "reachable_checked": "2026-08-17",
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.openai.request.json",
+            "schemas/completion/oai_responses.openai.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        }
+      },
       "endpoint_status": {
         "chat/completions": {
           "outcome": "ok",
@@ -1818,6 +3848,31 @@
       "pricing_source": "openrouter-index",
       "reachable": true,
       "reachable_checked": "2026-08-17",
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.openai.request.json",
+            "schemas/completion/oai_responses.openai.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        }
+      },
       "endpoint_status": {
         "chat/completions": {
           "outcome": "ok",
@@ -1840,6 +3895,31 @@
       "supports_tools": null,
       "supports_structured_output": null,
       "pricing": null,
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.openai.request.json",
+            "schemas/completion/oai_responses.openai.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        }
+      },
       "shutdown_date": "2026-07-23"
     },
     {
@@ -1852,6 +3932,31 @@
       "supports_tools": null,
       "supports_structured_output": null,
       "pricing": null,
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.openai.request.json",
+            "schemas/completion/oai_responses.openai.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        }
+      },
       "shutdown_date": "2026-07-23"
     }
   ]

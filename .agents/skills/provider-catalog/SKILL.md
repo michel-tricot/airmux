@@ -64,7 +64,7 @@ The tooling lives with this skill; the catalog is its output. Nothing executable
       fireworks.py         serverless-only, control plane, UNVERIFIED
       openai_shaped.py     novita, deepinfra, sambanova, huggingface, nvidia
     enrich.py              fills limits and pricing from secondary sources
-    apply_parameter_docs.py applies explicit parameter claims with their vendor documentation source
+    discover_parameters.py derives each model's parameter baseline from its provider request schemas
     probe_parameters.py    tests parameters against live model endpoints; conclusive probes win
     fetch_icons.py         vendors provider marks as SVG
     field_matrix.py        field support matrix, per ingress
@@ -190,21 +190,29 @@ python build_taxonomy.py --check    # fail if stale, for CI
 
 ### Refreshing parameter support
 
-`parameter-docs.yml` carries explicit vendor-documentation claims and their source URLs.
-Apply them, then probe the exact live model endpoint where credentials are available:
+Parameter support is part of model discovery, never a hand-maintained model list. A model
+record receives its baseline from the provider request schemas used by the gateway. Schema
+presence means supported; schema absence stays unknown. `fetch_models.py` applies that
+baseline before writing and probes newly returned models when its provider credential is
+available. `validate.py` recomputes the baseline and rejects every stale or unclassified
+model, so adding a model by any other path cannot bypass the workflow.
+
+To backfill existing catalogs or refresh live evidence explicitly:
 
 ```
 cd .agents/skills/provider-catalog/scripts
-python apply_parameter_docs.py
+python discover_parameters.py
 python probe_parameters.py openai --parameter=temperature
 python build_taxonomy.py
 python validate.py
 ```
 
-The model catalog keeps documentation and live-probe evidence separately. A conclusive live
-probe always wins for the same model, endpoint and canonical parameter. Success means supported;
-only an explicit unsupported-parameter response means unsupported. Authentication, access,
-rate-limit, timeout and generic bad-request results leave the previous evidence unchanged.
+The model catalog keeps schema-discovery and live-probe evidence separately. Probe attempts
+are recorded even when their result is inconclusive, while only conclusive results affect
+runtime support. A conclusive live probe always wins for the same model, endpoint and
+canonical parameter. Success means supported; only an explicit unsupported-parameter
+response means unsupported. Authentication, access, rate-limit, timeout and generic
+bad-request results leave support unknown.
 
 Model ids are always `<provider>/<upstream>`. `gpt-oss-120b` is served by both Groq and
 Together at different prices and limits, so a bare id cannot be the caller-facing key, and

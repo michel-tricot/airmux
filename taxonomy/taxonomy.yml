@@ -85,6 +85,10 @@ models:
   - streaming
   - tools
   - vision
+  parameter_support:
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: anthropic/claude-haiku-4-5-20251001
   provider_id: anthropic
   upstream_model: claude-haiku-4-5-20251001
@@ -98,6 +102,10 @@ models:
   - streaming
   - tools
   - vision
+  parameter_support:
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: anthropic/claude-opus-4-5-20251101
   provider_id: anthropic
   upstream_model: claude-opus-4-5-20251101
@@ -111,6 +119,10 @@ models:
   - streaming
   - tools
   - vision
+  parameter_support:
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: anthropic/claude-opus-4-6
   provider_id: anthropic
   upstream_model: claude-opus-4-6
@@ -124,6 +136,10 @@ models:
   - streaming
   - tools
   - vision
+  parameter_support:
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: anthropic/claude-opus-4-7
   provider_id: anthropic
   upstream_model: claude-opus-4-7
@@ -137,6 +153,10 @@ models:
   - streaming
   - tools
   - vision
+  parameter_support:
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: anthropic/claude-opus-4-8
   provider_id: anthropic
   upstream_model: claude-opus-4-8
@@ -150,6 +170,10 @@ models:
   - streaming
   - tools
   - vision
+  parameter_support:
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: anthropic/claude-opus-5
   provider_id: anthropic
   upstream_model: claude-opus-5
@@ -163,6 +187,10 @@ models:
   - streaming
   - tools
   - vision
+  parameter_support:
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: anthropic/claude-sonnet-4-5-20250929
   provider_id: anthropic
   upstream_model: claude-sonnet-4-5-20250929
@@ -176,6 +204,10 @@ models:
   - streaming
   - tools
   - vision
+  parameter_support:
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: anthropic/claude-sonnet-4-6
   provider_id: anthropic
   upstream_model: claude-sonnet-4-6
@@ -189,6 +221,10 @@ models:
   - streaming
   - tools
   - vision
+  parameter_support:
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: anthropic/claude-sonnet-5
   provider_id: anthropic
   upstream_model: claude-sonnet-5
@@ -202,6 +238,10 @@ models:
   - streaming
   - tools
   - vision
+  parameter_support:
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: cerebras/gemma-4-31b
   provider_id: cerebras
   upstream_model: gemma-4-31b
@@ -215,6 +255,14 @@ models:
   - streaming
   - tools
   - vision
+  parameter_support:
+    logprobs: supported
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    seed: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: cerebras/gpt-oss-120b
   provider_id: cerebras
   upstream_model: gpt-oss-120b
@@ -227,6 +275,14 @@ models:
   capabilities:
   - streaming
   - tools
+  parameter_support:
+    logprobs: supported
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    seed: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: deepseek/deepseek-v4-flash
   provider_id: deepseek
   upstream_model: deepseek-v4-flash
@@ -239,6 +295,11 @@ models:
   capabilities:
   - streaming
   - tools
+  parameter_support:
+    logprobs: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: deepseek/deepseek-v4-pro
   provider_id: deepseek
   upstream_model: deepseek-v4-pro
@@ -251,6 +312,11 @@ models:
   capabilities:
   - streaming
   - tools
+  parameter_support:
+    logprobs: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: fireworks/deepseek-v4-flash-0731
   provider_id: fireworks
   upstream_model: accounts/fireworks/models/deepseek-v4-flash-0731
@@ -263,6 +329,14 @@ models:
   capabilities:
   - streaming
   - tools
+  parameter_support:
+    logprobs: supported
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    seed: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: fireworks/deepseek-v4-pro
   provider_id: fireworks
   upstream_model: accounts/fireworks/models/deepseek-v4-pro
@@ -275,6 +349,14 @@ models:
   capabilities:
   - streaming
   - tools
+  parameter_support:
+    logprobs: supported
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    seed: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: fireworks/deepseek-v4-pro-0813
   provider_id: fireworks
   upstream_model: accounts/fireworks/models/deepseek-v4-pro-0813
@@ -287,6 +369,14 @@ models:
   capabilities:
   - streaming
   - tools
+  parameter_support:
+    logprobs: supported
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    seed: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: fireworks/glm-5p2
   provider_id: fireworks
   upstream_model: accounts/fireworks/models/glm-5p2
@@ -299,6 +389,14 @@ models:
   capabilities:
   - streaming
   - tools
+  parameter_support:
+    logprobs: supported
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    seed: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: fireworks/gpt-oss-120b
   provider_id: fireworks
   upstream_model: accounts/fireworks/models/gpt-oss-120b
@@ -311,6 +409,14 @@ models:
   capabilities:
   - streaming
   - tools
+  parameter_support:
+    logprobs: supported
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    seed: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: fireworks/gpt-oss-20b
   provider_id: fireworks
   upstream_model: accounts/fireworks/models/gpt-oss-20b
@@ -322,6 +428,14 @@ models:
   max_output_tokens: 131072
   capabilities:
   - streaming
+  parameter_support:
+    logprobs: supported
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    seed: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: fireworks/inkling
   provider_id: fireworks
   upstream_model: accounts/fireworks/models/inkling
@@ -335,6 +449,14 @@ models:
   - streaming
   - tools
   - vision
+  parameter_support:
+    logprobs: supported
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    seed: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: fireworks/kimi-k2p6
   provider_id: fireworks
   upstream_model: accounts/fireworks/models/kimi-k2p6
@@ -348,6 +470,14 @@ models:
   - streaming
   - tools
   - vision
+  parameter_support:
+    logprobs: supported
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    seed: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: fireworks/kimi-k2p7-code
   provider_id: fireworks
   upstream_model: accounts/fireworks/models/kimi-k2p7-code
@@ -361,6 +491,14 @@ models:
   - streaming
   - tools
   - vision
+  parameter_support:
+    logprobs: supported
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    seed: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: fireworks/kimi-k3
   provider_id: fireworks
   upstream_model: accounts/fireworks/models/kimi-k3
@@ -374,6 +512,14 @@ models:
   - streaming
   - tools
   - vision
+  parameter_support:
+    logprobs: supported
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    seed: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: fireworks/minimax-m2p7
   provider_id: fireworks
   upstream_model: accounts/fireworks/models/minimax-m2p7
@@ -386,6 +532,14 @@ models:
   capabilities:
   - streaming
   - tools
+  parameter_support:
+    logprobs: supported
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    seed: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: fireworks/minimax-m3
   provider_id: fireworks
   upstream_model: accounts/fireworks/models/minimax-m3
@@ -398,6 +552,14 @@ models:
   capabilities:
   - streaming
   - tools
+  parameter_support:
+    logprobs: supported
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    seed: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: fireworks/muse-glimmer-30b
   provider_id: fireworks
   upstream_model: accounts/fireworks/models/muse-glimmer-30b
@@ -411,6 +573,14 @@ models:
   - streaming
   - tools
   - vision
+  parameter_support:
+    logprobs: supported
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    seed: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: fireworks/nemotron-3-ultra-nvfp4
   provider_id: fireworks
   upstream_model: accounts/fireworks/models/nemotron-3-ultra-nvfp4
@@ -423,6 +593,14 @@ models:
   capabilities:
   - streaming
   - tools
+  parameter_support:
+    logprobs: supported
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    seed: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: fireworks/nemotron-lightning-3p5-30b-a3b
   provider_id: fireworks
   upstream_model: accounts/fireworks/models/nemotron-lightning-3p5-30b-a3b
@@ -435,6 +613,14 @@ models:
   capabilities:
   - streaming
   - tools
+  parameter_support:
+    logprobs: supported
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    seed: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: fireworks/qwen3p7-plus
   provider_id: fireworks
   upstream_model: accounts/fireworks/models/qwen3p7-plus
@@ -448,6 +634,14 @@ models:
   - streaming
   - tools
   - vision
+  parameter_support:
+    logprobs: supported
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    seed: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: fireworks/qwen3p8-2p4t-a95b
   provider_id: fireworks
   upstream_model: accounts/fireworks/models/qwen3p8-2p4t-a95b
@@ -460,6 +654,14 @@ models:
   capabilities:
   - streaming
   - tools
+  parameter_support:
+    logprobs: supported
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    seed: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: fireworks/qwen3p8-max
   provider_id: fireworks
   upstream_model: accounts/fireworks/models/qwen3p8-max
@@ -473,6 +675,14 @@ models:
   - streaming
   - tools
   - vision
+  parameter_support:
+    logprobs: supported
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    seed: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: groq/allam-2-7b
   provider_id: groq
   upstream_model: allam-2-7b
@@ -484,6 +694,14 @@ models:
   max_output_tokens: 4096
   capabilities:
   - streaming
+  parameter_support:
+    logprobs: supported
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    seed: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: groq/groq/compound
   provider_id: groq
   upstream_model: groq/compound
@@ -495,6 +713,14 @@ models:
   max_output_tokens: 8192
   capabilities:
   - streaming
+  parameter_support:
+    logprobs: supported
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    seed: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: groq/groq/compound-mini
   provider_id: groq
   upstream_model: groq/compound-mini
@@ -506,6 +732,14 @@ models:
   max_output_tokens: 8192
   capabilities:
   - streaming
+  parameter_support:
+    logprobs: supported
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    seed: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: groq/openai/gpt-oss-120b
   provider_id: groq
   upstream_model: openai/gpt-oss-120b
@@ -518,6 +752,14 @@ models:
   capabilities:
   - streaming
   - tools
+  parameter_support:
+    logprobs: supported
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    seed: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: groq/openai/gpt-oss-20b
   provider_id: groq
   upstream_model: openai/gpt-oss-20b
@@ -530,6 +772,14 @@ models:
   capabilities:
   - streaming
   - tools
+  parameter_support:
+    logprobs: supported
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    seed: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: groq/qwen/qwen3.6-27b
   provider_id: groq
   upstream_model: qwen/qwen3.6-27b
@@ -543,6 +793,14 @@ models:
   - streaming
   - tools
   - vision
+  parameter_support:
+    logprobs: supported
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    seed: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: mistral/codestral-2508
   provider_id: mistral
   upstream_model: codestral-2508
@@ -555,6 +813,12 @@ models:
   capabilities:
   - streaming
   - tools
+  parameter_support:
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: mistral/codestral-latest
   provider_id: mistral
   upstream_model: codestral-latest
@@ -567,6 +831,12 @@ models:
   capabilities:
   - streaming
   - tools
+  parameter_support:
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: mistral/devstral-2512
   provider_id: mistral
   upstream_model: devstral-2512
@@ -579,6 +849,12 @@ models:
   capabilities:
   - streaming
   - tools
+  parameter_support:
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: mistral/devstral-latest
   provider_id: mistral
   upstream_model: devstral-latest
@@ -591,6 +867,12 @@ models:
   capabilities:
   - streaming
   - tools
+  parameter_support:
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: mistral/devstral-medium-latest
   provider_id: mistral
   upstream_model: devstral-medium-latest
@@ -603,6 +885,12 @@ models:
   capabilities:
   - streaming
   - tools
+  parameter_support:
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: mistral/glm-5-2
   provider_id: mistral
   upstream_model: glm-5-2
@@ -615,6 +903,12 @@ models:
   capabilities:
   - streaming
   - tools
+  parameter_support:
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: mistral/magistral-small-latest
   provider_id: mistral
   upstream_model: magistral-small-latest
@@ -628,6 +922,12 @@ models:
   - streaming
   - tools
   - vision
+  parameter_support:
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: mistral/ministral-14b-2512
   provider_id: mistral
   upstream_model: ministral-14b-2512
@@ -641,6 +941,12 @@ models:
   - streaming
   - tools
   - vision
+  parameter_support:
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: mistral/ministral-14b-latest
   provider_id: mistral
   upstream_model: ministral-14b-latest
@@ -654,6 +960,12 @@ models:
   - streaming
   - tools
   - vision
+  parameter_support:
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: mistral/ministral-3b-2512
   provider_id: mistral
   upstream_model: ministral-3b-2512
@@ -667,6 +979,12 @@ models:
   - streaming
   - tools
   - vision
+  parameter_support:
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: mistral/ministral-3b-latest
   provider_id: mistral
   upstream_model: ministral-3b-latest
@@ -680,6 +998,12 @@ models:
   - streaming
   - tools
   - vision
+  parameter_support:
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: mistral/ministral-8b-2512
   provider_id: mistral
   upstream_model: ministral-8b-2512
@@ -693,6 +1017,12 @@ models:
   - streaming
   - tools
   - vision
+  parameter_support:
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: mistral/ministral-8b-latest
   provider_id: mistral
   upstream_model: ministral-8b-latest
@@ -706,6 +1036,12 @@ models:
   - streaming
   - tools
   - vision
+  parameter_support:
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: mistral/mistral-code-agent-latest
   provider_id: mistral
   upstream_model: mistral-code-agent-latest
@@ -718,6 +1054,12 @@ models:
   capabilities:
   - streaming
   - tools
+  parameter_support:
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: mistral/mistral-code-fim-latest
   provider_id: mistral
   upstream_model: mistral-code-fim-latest
@@ -730,6 +1072,12 @@ models:
   capabilities:
   - streaming
   - tools
+  parameter_support:
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: mistral/mistral-code-latest
   provider_id: mistral
   upstream_model: mistral-code-latest
@@ -742,6 +1090,12 @@ models:
   capabilities:
   - streaming
   - tools
+  parameter_support:
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: mistral/mistral-large-2512
   provider_id: mistral
   upstream_model: mistral-large-2512
@@ -755,6 +1109,12 @@ models:
   - streaming
   - tools
   - vision
+  parameter_support:
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: mistral/mistral-large-latest
   provider_id: mistral
   upstream_model: mistral-large-latest
@@ -768,6 +1128,12 @@ models:
   - streaming
   - tools
   - vision
+  parameter_support:
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: mistral/mistral-medium
   provider_id: mistral
   upstream_model: mistral-medium
@@ -781,6 +1147,12 @@ models:
   - streaming
   - tools
   - vision
+  parameter_support:
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: mistral/mistral-medium-2505
   provider_id: mistral
   upstream_model: mistral-medium-2505
@@ -794,6 +1166,12 @@ models:
   - streaming
   - tools
   - vision
+  parameter_support:
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: mistral/mistral-medium-2508
   provider_id: mistral
   upstream_model: mistral-medium-2508
@@ -807,6 +1185,12 @@ models:
   - streaming
   - tools
   - vision
+  parameter_support:
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: mistral/mistral-medium-2604
   provider_id: mistral
   upstream_model: mistral-medium-2604
@@ -820,6 +1204,12 @@ models:
   - streaming
   - tools
   - vision
+  parameter_support:
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: mistral/mistral-medium-3
   provider_id: mistral
   upstream_model: mistral-medium-3
@@ -833,6 +1223,12 @@ models:
   - streaming
   - tools
   - vision
+  parameter_support:
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: mistral/mistral-medium-3-5
   provider_id: mistral
   upstream_model: mistral-medium-3-5
@@ -846,6 +1242,12 @@ models:
   - streaming
   - tools
   - vision
+  parameter_support:
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: mistral/mistral-medium-3.5
   provider_id: mistral
   upstream_model: mistral-medium-3.5
@@ -859,6 +1261,12 @@ models:
   - streaming
   - tools
   - vision
+  parameter_support:
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: mistral/mistral-medium-latest
   provider_id: mistral
   upstream_model: mistral-medium-latest
@@ -872,6 +1280,12 @@ models:
   - streaming
   - tools
   - vision
+  parameter_support:
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: mistral/mistral-small-2603
   provider_id: mistral
   upstream_model: mistral-small-2603
@@ -885,6 +1299,12 @@ models:
   - streaming
   - tools
   - vision
+  parameter_support:
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: mistral/mistral-small-latest
   provider_id: mistral
   upstream_model: mistral-small-latest
@@ -898,6 +1318,12 @@ models:
   - streaming
   - tools
   - vision
+  parameter_support:
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: mistral/mistral-vibe-cli-fast
   provider_id: mistral
   upstream_model: mistral-vibe-cli-fast
@@ -911,6 +1337,12 @@ models:
   - streaming
   - tools
   - vision
+  parameter_support:
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: mistral/mistral-vibe-cli-latest
   provider_id: mistral
   upstream_model: mistral-vibe-cli-latest
@@ -924,6 +1356,12 @@ models:
   - streaming
   - tools
   - vision
+  parameter_support:
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: mistral/mistral-vibe-cli-with-tools
   provider_id: mistral
   upstream_model: mistral-vibe-cli-with-tools
@@ -937,6 +1375,12 @@ models:
   - streaming
   - tools
   - vision
+  parameter_support:
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: mistral/voxtral-small-2507
   provider_id: mistral
   upstream_model: voxtral-small-2507
@@ -949,6 +1393,12 @@ models:
   capabilities:
   - streaming
   - tools
+  parameter_support:
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: mistral/voxtral-small-latest
   provider_id: mistral
   upstream_model: voxtral-small-latest
@@ -961,6 +1411,12 @@ models:
   capabilities:
   - streaming
   - tools
+  parameter_support:
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: mistral/zai-glm-5-2
   provider_id: mistral
   upstream_model: zai-glm-5-2
@@ -973,6 +1429,12 @@ models:
   capabilities:
   - streaming
   - tools
+  parameter_support:
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: openai/gpt-3.5-turbo
   provider_id: openai
   upstream_model: gpt-3.5-turbo
@@ -984,6 +1446,11 @@ models:
   max_output_tokens: 4096
   capabilities:
   - streaming
+  parameter_support:
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    temperature: supported
+    top_p: supported
   egress_kind: openai_responses
 - model_id: openai/gpt-3.5-turbo-16k
   provider_id: openai
@@ -996,6 +1463,14 @@ models:
   max_output_tokens: 4096
   capabilities:
   - streaming
+  parameter_support:
+    logprobs: supported
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    seed: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
   egress_kind: openai_compatible
 - model_id: openai/gpt-4
   provider_id: openai
@@ -1009,6 +1484,11 @@ models:
   capabilities:
   - streaming
   - tools
+  parameter_support:
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    temperature: supported
+    top_p: supported
   egress_kind: openai_responses
 - model_id: openai/gpt-4-turbo
   provider_id: openai
@@ -1022,6 +1502,11 @@ models:
   capabilities:
   - streaming
   - tools
+  parameter_support:
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    temperature: supported
+    top_p: supported
   egress_kind: openai_responses
 - model_id: openai/gpt-4.1
   provider_id: openai
@@ -1035,6 +1520,11 @@ models:
   capabilities:
   - streaming
   - tools
+  parameter_support:
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    temperature: supported
+    top_p: supported
   egress_kind: openai_responses
 - model_id: openai/gpt-4.1-2025-04-14
   provider_id: openai
@@ -1047,6 +1537,11 @@ models:
   max_output_tokens: 32768
   capabilities:
   - streaming
+  parameter_support:
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    temperature: supported
+    top_p: supported
   egress_kind: openai_responses
 - model_id: openai/gpt-4.1-mini
   provider_id: openai
@@ -1060,6 +1555,11 @@ models:
   capabilities:
   - streaming
   - tools
+  parameter_support:
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    temperature: supported
+    top_p: supported
   egress_kind: openai_responses
 - model_id: openai/gpt-4.1-mini-2025-04-14
   provider_id: openai
@@ -1072,6 +1572,11 @@ models:
   max_output_tokens: 32768
   capabilities:
   - streaming
+  parameter_support:
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    temperature: supported
+    top_p: supported
   egress_kind: openai_responses
 - model_id: openai/gpt-4.1-nano
   provider_id: openai
@@ -1085,6 +1590,11 @@ models:
   capabilities:
   - streaming
   - tools
+  parameter_support:
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    temperature: supported
+    top_p: supported
   egress_kind: openai_responses
 - model_id: openai/gpt-4.1-nano-2025-04-14
   provider_id: openai
@@ -1097,6 +1607,11 @@ models:
   max_output_tokens: 32768
   capabilities:
   - streaming
+  parameter_support:
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    temperature: supported
+    top_p: supported
   egress_kind: openai_responses
 - model_id: openai/gpt-4o
   provider_id: openai
@@ -1110,6 +1625,11 @@ models:
   capabilities:
   - streaming
   - tools
+  parameter_support:
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    temperature: supported
+    top_p: supported
   egress_kind: openai_responses
 - model_id: openai/gpt-4o-2024-05-13
   provider_id: openai
@@ -1123,6 +1643,11 @@ models:
   capabilities:
   - streaming
   - tools
+  parameter_support:
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    temperature: supported
+    top_p: supported
   egress_kind: openai_responses
 - model_id: openai/gpt-4o-2024-08-06
   provider_id: openai
@@ -1136,6 +1661,11 @@ models:
   capabilities:
   - streaming
   - tools
+  parameter_support:
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    temperature: supported
+    top_p: supported
   egress_kind: openai_responses
 - model_id: openai/gpt-4o-2024-11-20
   provider_id: openai
@@ -1149,6 +1679,11 @@ models:
   capabilities:
   - streaming
   - tools
+  parameter_support:
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    temperature: supported
+    top_p: supported
   egress_kind: openai_responses
 - model_id: openai/gpt-4o-mini
   provider_id: openai
@@ -1162,6 +1697,11 @@ models:
   capabilities:
   - streaming
   - tools
+  parameter_support:
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    temperature: supported
+    top_p: supported
   egress_kind: openai_responses
 - model_id: openai/gpt-4o-mini-2024-07-18
   provider_id: openai
@@ -1174,6 +1714,11 @@ models:
   max_output_tokens: 16384
   capabilities:
   - streaming
+  parameter_support:
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    temperature: supported
+    top_p: supported
   egress_kind: openai_responses
 - model_id: openai/gpt-5
   provider_id: openai
@@ -1188,9 +1733,10 @@ models:
   - streaming
   - tools
   parameter_support:
-    logprobs: unsupported
-    temperature: unsupported
-    top_p: unsupported
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    temperature: supported
+    top_p: supported
   egress_kind: openai_responses
 - model_id: openai/gpt-5-2025-08-07
   provider_id: openai
@@ -1203,6 +1749,11 @@ models:
   max_output_tokens: 128000
   capabilities:
   - streaming
+  parameter_support:
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    temperature: supported
+    top_p: supported
   egress_kind: openai_responses
 - model_id: openai/gpt-5-mini
   provider_id: openai
@@ -1217,9 +1768,10 @@ models:
   - streaming
   - tools
   parameter_support:
-    logprobs: unsupported
-    temperature: unsupported
-    top_p: unsupported
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    temperature: supported
+    top_p: supported
   egress_kind: openai_responses
 - model_id: openai/gpt-5-mini-2025-08-07
   provider_id: openai
@@ -1232,6 +1784,11 @@ models:
   max_output_tokens: 128000
   capabilities:
   - streaming
+  parameter_support:
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    temperature: supported
+    top_p: supported
   egress_kind: openai_responses
 - model_id: openai/gpt-5-nano
   provider_id: openai
@@ -1246,9 +1803,10 @@ models:
   - streaming
   - tools
   parameter_support:
-    logprobs: unsupported
+    parallel_tool_calls: supported
+    reasoning_effort: supported
     temperature: unsupported
-    top_p: unsupported
+    top_p: supported
   egress_kind: openai_responses
 - model_id: openai/gpt-5-nano-2025-08-07
   provider_id: openai
@@ -1261,6 +1819,11 @@ models:
   max_output_tokens: 128000
   capabilities:
   - streaming
+  parameter_support:
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    temperature: supported
+    top_p: supported
   egress_kind: openai_responses
 - model_id: openai/gpt-5.1
   provider_id: openai
@@ -1274,6 +1837,11 @@ models:
   capabilities:
   - streaming
   - tools
+  parameter_support:
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    temperature: supported
+    top_p: supported
   egress_kind: openai_responses
 - model_id: openai/gpt-5.2
   provider_id: openai
@@ -1287,6 +1855,11 @@ models:
   capabilities:
   - streaming
   - tools
+  parameter_support:
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    temperature: supported
+    top_p: supported
   egress_kind: openai_responses
 - model_id: openai/gpt-5.4
   provider_id: openai
@@ -1300,6 +1873,11 @@ models:
   capabilities:
   - streaming
   - tools
+  parameter_support:
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    temperature: supported
+    top_p: supported
   egress_kind: openai_responses
 - model_id: openai/gpt-5.4-mini
   provider_id: openai
@@ -1313,6 +1891,11 @@ models:
   capabilities:
   - streaming
   - tools
+  parameter_support:
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    temperature: supported
+    top_p: supported
   egress_kind: openai_responses
 - model_id: openai/gpt-5.4-nano
   provider_id: openai
@@ -1326,6 +1909,11 @@ models:
   capabilities:
   - streaming
   - tools
+  parameter_support:
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    temperature: supported
+    top_p: supported
   egress_kind: openai_responses
 - model_id: openai/gpt-5.5
   provider_id: openai
@@ -1339,6 +1927,11 @@ models:
   capabilities:
   - streaming
   - tools
+  parameter_support:
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    temperature: supported
+    top_p: supported
   egress_kind: openai_responses
 - model_id: openai/gpt-5.6-luna
   provider_id: openai
@@ -1352,6 +1945,11 @@ models:
   capabilities:
   - streaming
   - tools
+  parameter_support:
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    temperature: supported
+    top_p: supported
   egress_kind: openai_responses
 - model_id: openai/gpt-5.6-sol
   provider_id: openai
@@ -1365,6 +1963,11 @@ models:
   capabilities:
   - streaming
   - tools
+  parameter_support:
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    temperature: supported
+    top_p: supported
   egress_kind: openai_responses
 - model_id: openai/gpt-5.6-terra
   provider_id: openai
@@ -1378,6 +1981,11 @@ models:
   capabilities:
   - streaming
   - tools
+  parameter_support:
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    temperature: supported
+    top_p: supported
   egress_kind: openai_responses
 - model_id: openai/o1
   provider_id: openai
@@ -1391,6 +1999,11 @@ models:
   capabilities:
   - streaming
   - tools
+  parameter_support:
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    temperature: supported
+    top_p: supported
   egress_kind: openai_responses
 - model_id: openai/o1-2024-12-17
   provider_id: openai
@@ -1403,6 +2016,11 @@ models:
   max_output_tokens: 100000
   capabilities:
   - streaming
+  parameter_support:
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    temperature: supported
+    top_p: supported
   egress_kind: openai_responses
 - model_id: openai/o3
   provider_id: openai
@@ -1416,6 +2034,11 @@ models:
   capabilities:
   - streaming
   - tools
+  parameter_support:
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    temperature: supported
+    top_p: supported
   egress_kind: openai_responses
 - model_id: openai/o3-2025-04-16
   provider_id: openai
@@ -1428,6 +2051,11 @@ models:
   max_output_tokens: 100000
   capabilities:
   - streaming
+  parameter_support:
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    temperature: supported
+    top_p: supported
   egress_kind: openai_responses
 - model_id: openai/o3-mini
   provider_id: openai
@@ -1441,6 +2069,11 @@ models:
   capabilities:
   - streaming
   - tools
+  parameter_support:
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    temperature: supported
+    top_p: supported
   egress_kind: openai_responses
 - model_id: openai/o3-mini-2025-01-31
   provider_id: openai
@@ -1453,6 +2086,11 @@ models:
   max_output_tokens: 100000
   capabilities:
   - streaming
+  parameter_support:
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    temperature: supported
+    top_p: supported
   egress_kind: openai_responses
 - model_id: openai/o4-mini
   provider_id: openai
@@ -1466,6 +2104,11 @@ models:
   capabilities:
   - streaming
   - tools
+  parameter_support:
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    temperature: supported
+    top_p: supported
   egress_kind: openai_responses
 - model_id: openai/o4-mini-2025-04-16
   provider_id: openai
@@ -1478,6 +2121,11 @@ models:
   max_output_tokens: 100000
   capabilities:
   - streaming
+  parameter_support:
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    temperature: supported
+    top_p: supported
   egress_kind: openai_responses
 - model_id: together/LiquidAI/LFM2.5-8B-A1B
   provider_id: together
@@ -1490,6 +2138,13 @@ models:
   max_output_tokens: null
   capabilities:
   - streaming
+  parameter_support:
+    logprobs: supported
+    reasoning_effort: supported
+    seed: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: together/MiniMaxAI/MiniMax-M3
   provider_id: together
   upstream_model: MiniMaxAI/MiniMax-M3
@@ -1502,6 +2157,13 @@ models:
   capabilities:
   - streaming
   - tools
+  parameter_support:
+    logprobs: supported
+    reasoning_effort: supported
+    seed: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: together/Qwen/Qwen2.5-7B-Instruct-Turbo
   provider_id: together
   upstream_model: Qwen/Qwen2.5-7B-Instruct-Turbo
@@ -1514,6 +2176,13 @@ models:
   capabilities:
   - streaming
   - tools
+  parameter_support:
+    logprobs: supported
+    reasoning_effort: supported
+    seed: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: together/Qwen/Qwen3.5-9B
   provider_id: together
   upstream_model: Qwen/Qwen3.5-9B
@@ -1526,6 +2195,13 @@ models:
   capabilities:
   - streaming
   - tools
+  parameter_support:
+    logprobs: supported
+    reasoning_effort: supported
+    seed: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: together/Qwen/Qwen3.8-2.4T-A95B
   provider_id: together
   upstream_model: Qwen/Qwen3.8-2.4T-A95B
@@ -1537,6 +2213,13 @@ models:
   max_output_tokens: 262144
   capabilities:
   - streaming
+  parameter_support:
+    logprobs: supported
+    reasoning_effort: supported
+    seed: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: together/arize-ai/qwen-2-1.5b-instruct
   provider_id: together
   upstream_model: arize-ai/qwen-2-1.5b-instruct
@@ -1548,6 +2231,13 @@ models:
   max_output_tokens: null
   capabilities:
   - streaming
+  parameter_support:
+    logprobs: supported
+    reasoning_effort: supported
+    seed: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: together/deepcogito/cogito-v2-1-671b
   provider_id: together
   upstream_model: deepcogito/cogito-v2-1-671b
@@ -1559,6 +2249,13 @@ models:
   max_output_tokens: 128000
   capabilities:
   - streaming
+  parameter_support:
+    logprobs: supported
+    reasoning_effort: supported
+    seed: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: together/deepseek-ai/DeepSeek-V4-Flash-0731
   provider_id: together
   upstream_model: deepseek-ai/DeepSeek-V4-Flash-0731
@@ -1571,6 +2268,13 @@ models:
   capabilities:
   - streaming
   - tools
+  parameter_support:
+    logprobs: supported
+    reasoning_effort: supported
+    seed: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: together/deepseek-ai/DeepSeek-V4-Pro
   provider_id: together
   upstream_model: deepseek-ai/DeepSeek-V4-Pro
@@ -1583,6 +2287,13 @@ models:
   capabilities:
   - streaming
   - tools
+  parameter_support:
+    logprobs: supported
+    reasoning_effort: supported
+    seed: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: together/deepseek-ai/DeepSeek-V4-Pro-0813
   provider_id: together
   upstream_model: deepseek-ai/DeepSeek-V4-Pro-0813
@@ -1595,6 +2306,13 @@ models:
   capabilities:
   - streaming
   - tools
+  parameter_support:
+    logprobs: supported
+    reasoning_effort: supported
+    seed: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: together/google/gemma-3n-E4B-it
   provider_id: together
   upstream_model: google/gemma-3n-E4B-it
@@ -1606,6 +2324,13 @@ models:
   max_output_tokens: 32768
   capabilities:
   - streaming
+  parameter_support:
+    logprobs: supported
+    reasoning_effort: supported
+    seed: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: together/google/gemma-4-31B-it
   provider_id: together
   upstream_model: google/gemma-4-31B-it
@@ -1617,6 +2342,13 @@ models:
   max_output_tokens: 262144
   capabilities:
   - streaming
+  parameter_support:
+    logprobs: supported
+    reasoning_effort: supported
+    seed: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: together/meta-llama/Llama-3.3-70B-Instruct-Turbo
   provider_id: together
   upstream_model: meta-llama/Llama-3.3-70B-Instruct-Turbo
@@ -1629,6 +2361,13 @@ models:
   capabilities:
   - streaming
   - tools
+  parameter_support:
+    logprobs: supported
+    reasoning_effort: supported
+    seed: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: together/meta-models/Muse-Glimmer-30B
   provider_id: together
   upstream_model: meta-models/Muse-Glimmer-30B
@@ -1640,6 +2379,13 @@ models:
   max_output_tokens: 131072
   capabilities:
   - streaming
+  parameter_support:
+    logprobs: supported
+    reasoning_effort: supported
+    seed: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: together/moonshotai/Kimi-K2.6
   provider_id: together
   upstream_model: moonshotai/Kimi-K2.6
@@ -1652,6 +2398,13 @@ models:
   capabilities:
   - streaming
   - tools
+  parameter_support:
+    logprobs: supported
+    reasoning_effort: supported
+    seed: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: together/moonshotai/Kimi-K2.7-Code
   provider_id: together
   upstream_model: moonshotai/Kimi-K2.7-Code
@@ -1664,6 +2417,13 @@ models:
   capabilities:
   - streaming
   - tools
+  parameter_support:
+    logprobs: supported
+    reasoning_effort: supported
+    seed: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: together/moonshotai/Kimi-K3
   provider_id: together
   upstream_model: moonshotai/Kimi-K3
@@ -1676,6 +2436,13 @@ models:
   capabilities:
   - streaming
   - tools
+  parameter_support:
+    logprobs: supported
+    reasoning_effort: supported
+    seed: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: together/nvidia/nemotron-3-ultra-550b-a55b
   provider_id: together
   upstream_model: nvidia/nemotron-3-ultra-550b-a55b
@@ -1688,6 +2455,13 @@ models:
   capabilities:
   - streaming
   - tools
+  parameter_support:
+    logprobs: supported
+    reasoning_effort: supported
+    seed: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: together/openai/gpt-oss-120b
   provider_id: together
   upstream_model: openai/gpt-oss-120b
@@ -1700,6 +2474,13 @@ models:
   capabilities:
   - streaming
   - tools
+  parameter_support:
+    logprobs: supported
+    reasoning_effort: supported
+    seed: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: together/openai/gpt-oss-20b
   provider_id: together
   upstream_model: openai/gpt-oss-20b
@@ -1712,6 +2493,13 @@ models:
   capabilities:
   - streaming
   - tools
+  parameter_support:
+    logprobs: supported
+    reasoning_effort: supported
+    seed: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: together/pearl-ai/gemma-4-31b-it
   provider_id: together
   upstream_model: pearl-ai/gemma-4-31b-it
@@ -1723,6 +2511,13 @@ models:
   max_output_tokens: 262144
   capabilities:
   - streaming
+  parameter_support:
+    logprobs: supported
+    reasoning_effort: supported
+    seed: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: together/thinkingmachines/Inkling
   provider_id: together
   upstream_model: thinkingmachines/Inkling
@@ -1735,6 +2530,13 @@ models:
   capabilities:
   - streaming
   - tools
+  parameter_support:
+    logprobs: supported
+    reasoning_effort: supported
+    seed: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: together/thinkingmachines/Inkling-Small
   provider_id: together
   upstream_model: thinkingmachines/Inkling-Small
@@ -1746,6 +2548,13 @@ models:
   max_output_tokens: 262144
   capabilities:
   - streaming
+  parameter_support:
+    logprobs: supported
+    reasoning_effort: supported
+    seed: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: together/zai-org/GLM-4.5-Air-FP8
   provider_id: together
   upstream_model: zai-org/GLM-4.5-Air-FP8
@@ -1757,6 +2566,13 @@ models:
   max_output_tokens: 98304
   capabilities:
   - streaming
+  parameter_support:
+    logprobs: supported
+    reasoning_effort: supported
+    seed: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: together/zai-org/GLM-5.2
   provider_id: together
   upstream_model: zai-org/GLM-5.2
@@ -1769,6 +2585,13 @@ models:
   capabilities:
   - streaming
   - tools
+  parameter_support:
+    logprobs: supported
+    reasoning_effort: supported
+    seed: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: xai/grok-4.20-0309-non-reasoning
   provider_id: xai
   upstream_model: grok-4.20-0309-non-reasoning
@@ -1782,6 +2605,14 @@ models:
   - streaming
   - tools
   - vision
+  parameter_support:
+    logprobs: supported
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    seed: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: xai/grok-4.20-0309-reasoning
   provider_id: xai
   upstream_model: grok-4.20-0309-reasoning
@@ -1795,6 +2626,14 @@ models:
   - streaming
   - tools
   - vision
+  parameter_support:
+    logprobs: supported
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    seed: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: xai/grok-4.3
   provider_id: xai
   upstream_model: grok-4.3
@@ -1808,6 +2647,14 @@ models:
   - streaming
   - tools
   - vision
+  parameter_support:
+    logprobs: supported
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    seed: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: xai/grok-4.5
   provider_id: xai
   upstream_model: grok-4.5
@@ -1821,6 +2668,14 @@ models:
   - streaming
   - tools
   - vision
+  parameter_support:
+    logprobs: supported
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    seed: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: xai/grok-4.6
   provider_id: xai
   upstream_model: grok-4.6
@@ -1834,6 +2689,14 @@ models:
   - streaming
   - tools
   - vision
+  parameter_support:
+    logprobs: supported
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    seed: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: xai/grok-build-0.1
   provider_id: xai
   upstream_model: grok-build-0.1
@@ -1847,3 +2710,11 @@ models:
   - streaming
   - tools
   - vision
+  parameter_support:
+    logprobs: supported
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    seed: supported
+    stop: supported
+    temperature: supported
+    top_p: supported

@@ -23,6 +23,27 @@
       "pricing_source": "models.dev",
       "reachable": true,
       "reachable_checked": "2026-08-17",
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/anthropic.anthropic.request.json",
+            "schemas/completion/oai.deepseek.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "logprobs": "supported"
+            },
+            "messages": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported"
+            }
+          }
+        }
+      },
       "endpoint_status": {
         "chat/completions": {
           "outcome": "ok",
@@ -49,6 +70,27 @@
       "pricing_source": "models.dev",
       "reachable": true,
       "reachable_checked": "2026-08-17",
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/anthropic.anthropic.request.json",
+            "schemas/completion/oai.deepseek.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "logprobs": "supported"
+            },
+            "messages": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported"
+            }
+          }
+        }
+      },
       "endpoint_status": {
         "chat/completions": {
           "outcome": "ok",

@@ -25,7 +25,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from canonical import write_catalog, write_schema
+from parameter_support import apply_discovery_evidence, discovery_evidence
 from paths import TAXONOMY
+from probe_parameters import probe_models
 
 import yaml
 
@@ -126,14 +128,19 @@ def main() -> int:
             continue
         declared = sum(1 for m in models if m.get("context_length") or m.get("supports_tools") is not None)
         target = OUT / f"{provider}.json"
+        previous_ids = {model["id"] for model in json.loads(target.read_text()).get("models") or []} if target.exists() else set()
+        models = carry_forward(target, models)
+        models = apply_discovery_evidence(models, discovery_evidence(providers[provider], ROOT))
+        new_models = [model for model in models if model["id"] not in previous_ids]
+        attempted, conclusive = probe_models(providers[provider], new_models, key) if key else (0, 0)
         write_catalog(target, {
             "provider": provider, "source": source.url, "source_type": "api",
-            "updated": stamp, "models": carry_forward(target, models),
+            "updated": stamp, "models": models,
         })
-        ok.append((provider, len(models), declared))
+        ok.append((provider, len(models), declared, len(new_models), attempted, conclusive))
 
-    for p, n, d in ok:
-        print(f"  ok      {p:<13} {n:>4} models, {d:>4} with declared capabilities")
+    for p, n, d, new, attempted, conclusive in ok:
+        print(f"  ok      {p:<13} {n:>4} models, {d:>4} declared, {new:>3} new, {conclusive:>3}/{attempted:<3} probes conclusive")
     for p, why in skipped:
         print(f"  skip    {p:<13} {why}")
     for p, why in failed:

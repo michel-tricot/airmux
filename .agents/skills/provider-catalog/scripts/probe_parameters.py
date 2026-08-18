@@ -53,7 +53,7 @@ def request_body(endpoint: str, model_id: str, parameter: str, value: object) ->
         body = {"model": model_id, "messages": [{"role": "user", "content": "say ok"}], "max_tokens": MAX_TOKENS}
         spelling = "stop_sequences" if parameter == "stop" else parameter
         return {**body, spelling: value}
-    body = {"model": model_id, "messages": [{"role": "user", "content": "say ok"}], "max_completion_tokens": MAX_TOKENS}
+    body = {"model": model_id, "messages": [{"role": "user", "content": "say ok"}]}
     return {**body, parameter: value}
 
 
@@ -86,12 +86,52 @@ def endpoints(provider: dict) -> tuple[str, ...]:
     return tuple(selected)
 
 
+def probe_models(provider: dict, models: list[dict], key: str, parameter_filter: str | None = None) -> tuple[int, int]:
+    attempted = 0
+    conclusive = 0
+    for model in models:
+        support: dict[str, dict[str, str]] = {}
+        attempts: dict[str, list[str]] = {}
+        for endpoint in endpoints(provider):
+            selected = {parameter: value for parameter, value in PROBES[endpoint].items() if parameter_filter is None or parameter == parameter_filter}
+            endpoint_support = {
+                parameter: status
+                for parameter, value in selected.items()
+                if (status := probe(provider, model.get("upstream_id") or model["id"], endpoint, parameter, value, key)) is not None
+            }
+            if selected:
+                attempts[endpoint] = sorted(selected)
+                attempted += len(selected)
+            if endpoint_support:
+                support[endpoint] = endpoint_support
+                conclusive += len(endpoint_support)
+        if not attempts:
+            continue
+        parameter_evidence = dict(model.get("parameter_evidence") or {})
+        previous_probe = parameter_evidence.get("live_probe") or {}
+        previous_support = previous_probe.get("support") or {}
+        previous_attempts = previous_probe.get("attempted") or {}
+        parameter_evidence["live_probe"] = {
+            "attempted": {
+                endpoint: sorted(set(previous_attempts.get(endpoint) or []) | set(parameters))
+                for endpoint, parameters in {**previous_attempts, **attempts}.items()
+            },
+            "support": {
+                endpoint: {**(previous_support.get(endpoint) or {}), **statuses}
+                for endpoint, statuses in {**previous_support, **support}.items()
+            },
+        }
+        model["parameter_evidence"] = parameter_evidence
+    return attempted, conclusive
+
+
 def main() -> int:
     wanted = {argument for argument in sys.argv[1:] if not argument.startswith("--")}
     parameter_filter = next((argument.split("=", 1)[1] for argument in sys.argv[1:] if argument.startswith("--parameter=")), None)
     limit = next((int(argument.split("=", 1)[1]) for argument in sys.argv[1:] if argument.startswith("--limit=")), None)
     providers = {provider["id"]: provider for provider in yaml.safe_load((TAXONOMY / "providers.yml").read_text())["providers"]}
     changed = 0
+    attempted = 0
     conclusive = 0
     for path in sorted((TAXONOMY / "models").glob("*.json")):
         catalog = json.loads(path.read_text())
@@ -102,32 +142,12 @@ def main() -> int:
         if not key:
             print(f"skip {provider['id']}: no {provider['env_var']}")
             continue
-        for model in catalog["models"][:limit]:
-            if model.get("reachable") is False:
-                continue
-            support: dict[str, dict[str, str]] = {}
-            for endpoint in endpoints(provider):
-                endpoint_support = {
-                    parameter: status
-                    for parameter, value in PROBES[endpoint].items()
-                    if (parameter_filter is None or parameter == parameter_filter)
-                    and (status := probe(provider, model.get("upstream_id") or model["id"], endpoint, parameter, value, key)) is not None
-                }
-                if endpoint_support:
-                    support[endpoint] = endpoint_support
-                    conclusive += len(endpoint_support)
-            if support:
-                parameter_evidence = dict(model.get("parameter_evidence") or {})
-                previous = ((parameter_evidence.get("live_probe") or {}).get("support") or {})
-                parameter_evidence["live_probe"] = {
-                    "support": {
-                        endpoint: {**(previous.get(endpoint) or {}), **statuses}
-                        for endpoint, statuses in {**previous, **support}.items()
-                    }
-                }
-                model["parameter_evidence"] = parameter_evidence
+        models = [model for model in catalog["models"] if model.get("reachable") is not False][:limit]
+        model_attempted, model_conclusive = probe_models(provider, models, key, parameter_filter)
+        attempted += model_attempted
+        conclusive += model_conclusive
         changed += write_catalog(path, catalog)
-    print(f"{conclusive} conclusive parameter probes; {changed} catalogs changed")
+    print(f"{attempted} parameter probes attempted; {conclusive} conclusive; {changed} catalogs changed")
     return 0
 
 

@@ -98,7 +98,7 @@ def main() -> int:
         return 0
 
     for script in ("extract_schemas.py", "doc_schemas.py", "fetch_icons.py",
-                   "fetch_models.py", "enrich.py", "apply_parameter_docs.py"):
+                   "fetch_models.py", "enrich.py", "discover_parameters.py"):
         run(script)
 
     print("\nrewiring schema references now that the extractors have run")
