@@ -16,6 +16,7 @@ from control_plane.models.org_invitation import OrgInvitation
 from control_plane.models.org_membership import OrgMembership
 from control_plane.models.provider import Provider
 from control_plane.models.provider_credential import ProviderCredential
+from control_plane.models.runtime_configuration import RuntimeConfiguration, runtime_configured
 from control_plane.models.usage_event import UsageEvent
 from control_plane.models.user import User
 from control_plane.models.workspace import Workspace
@@ -40,11 +41,13 @@ __all__ = [
     "Provider",
     "ProviderCredential",
     "Record",
+    "RuntimeConfiguration",
     "Tombstonable",
     "UsageEvent",
     "User",
     "Workspace",
     "WorkspaceMembership",
     "audited",
+    "runtime_configured",
     "set_actor",
 ]

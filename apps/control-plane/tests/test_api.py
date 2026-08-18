@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from datetime import UTC, datetime, timedelta
 from uuid import UUID, uuid4
 
@@ -12,7 +13,9 @@ from pg import db_name_for, ensure_database
 from contract import INFERENCE_TOKEN_PREFIX, SignedBundle, private_key_to_b64, token_hash, uuid7, verify_bundle
 from control_plane.app import create_app
 from control_plane.authz import Permission
+from control_plane.compiler import compile_and_store
 from control_plane.config import BundlePolicy, DatabaseConfig, Settings
+from control_plane.db import standalone_transaction
 from control_plane.models import DataPlaneInstance
 
 
@@ -64,13 +67,12 @@ def test_full_flow_to_verified_bundle(tmp_path):
         assert key["token"].startswith(INFERENCE_TOKEN_PREFIX)
         assert c.post("/api/v1/instance/taxonomy/providers", json=PROVIDER, headers=root).status_code == 200
         assert c.post("/api/v1/instance/taxonomy/models", json=MODEL, headers=root).status_code == 200
-        compiled = c.post(f"/api/v1/orgs/{o1}/bundles/compile", headers=org).json()["data"]
-        assert compiled["version"] == 1
-
         latest = c.get("/api/v1/bundle/latest", params={"org_id": str(o1)}, headers=root)
         assert latest.status_code == 200
         bundle = verify_bundle(SignedBundle.model_validate(latest.json()["data"]), cp.bundle_key.public_key())
-        assert str(bundle.bundle_id) == compiled["id"]
+        bundles = c.get(f"/api/v1/orgs/{o1}/bundles", headers=org).json()["data"]
+        assert [entry["version"] for entry in bundles] == [1, 2, 3]
+        assert str(bundle.bundle_id) == bundles[-1]["id"]
         assert [k.key_id for k in bundle.keys] == [key["id"]]
         assert [k.token_hash for k in bundle.keys] == [token_hash(key["token"])]
         assert [k.workspace_id for k in bundle.keys] == [ws]
@@ -90,15 +92,42 @@ def test_revocation_lands_in_next_bundle(tmp_path):
         org = cp.headers(org_id)
         ws = make_workspace(c, org)
         key = c.post(f"/api/v1/orgs/{org_id}/workspaces/{ws}/inference-keys", json={"label": "k"}, headers=org).json()["data"]
-        c.post(f"/api/v1/orgs/{org_id}/bundles/compile", headers=org)
         assert c.delete(f"/api/v1/orgs/{org_id}/workspaces/{ws}/inference-keys/{key['id']}", headers=org).status_code == 200
-        compiled = c.post(f"/api/v1/orgs/{org_id}/bundles/compile", headers=org).json()["data"]
-        assert compiled["version"] == 2
         bundle = verify_bundle(
             SignedBundle.model_validate(c.get("/api/v1/bundle/latest", params={"org_id": str(org_id)}, headers=root).json()["data"]),
             cp.bundle_key.public_key(),
         )
         assert bundle.keys == []
+        bundles = c.get(f"/api/v1/orgs/{org_id}/bundles", headers=org).json()["data"]
+        assert [entry["version"] for entry in bundles] == [1, 2]
+
+
+def test_inference_key_changes_publish_without_manual_action(tmp_path):
+    cp = setup_control_plane(tmp_path)
+    root = cp.headers()
+    with TestClient(cp.app) as c:
+        org_id = make_org(c, root, "o1")
+        org = cp.headers(org_id)
+        workspace_id = make_workspace(c, org)
+
+        key = c.post(
+            f"/api/v1/orgs/{org_id}/workspaces/{workspace_id}/inference-keys",
+            json={"label": "automatic"},
+            headers=org,
+        ).json()["data"]
+        created = verify_bundle(
+            SignedBundle.model_validate(c.get("/api/v1/bundle/latest", params={"org_id": str(org_id)}, headers=root).json()["data"]),
+            cp.bundle_key.public_key(),
+        )
+        assert [entry.key_id for entry in created.keys] == [key["id"]]
+
+        assert c.delete(f"/api/v1/orgs/{org_id}/workspaces/{workspace_id}/inference-keys/{key['id']}", headers=org).status_code == 200
+        revoked = verify_bundle(
+            SignedBundle.model_validate(c.get("/api/v1/bundle/latest", params={"org_id": str(org_id)}, headers=root).json()["data"]),
+            cp.bundle_key.public_key(),
+        )
+        assert revoked.bundle_id != created.bundle_id
+        assert revoked.keys == []
 
 
 def test_updated_at_tracks_modifications(tmp_path):
@@ -235,7 +264,6 @@ def test_list_endpoints_read_back(tmp_path):
         key = c.post(f"/api/v1/orgs/{org_id}/workspaces/{ws}/inference-keys", json={"label": "k"}, headers=org).json()["data"]
         c.post("/api/v1/instance/taxonomy/providers", json=PROVIDER, headers=root)
         c.post("/api/v1/instance/taxonomy/models", json=MODEL, headers=root)
-        c.post(f"/api/v1/orgs/{org_id}/bundles/compile", headers=org)
 
         assert [o["name"] for o in c.get("/api/v1/orgs", headers=root).json()["data"]] == ["o1"]
         keys = c.get(f"/api/v1/orgs/{org_id}/workspaces/{ws}/inference-keys", headers=org).json()["data"]
@@ -248,7 +276,7 @@ def test_list_endpoints_read_back(tmp_path):
         assert [p["name"] for p in taxonomy["providers"]] == ["openai"]
         assert [m["name"] for m in taxonomy["models"]] == ["gpt-test"]
         bundles = c.get(f"/api/v1/orgs/{org_id}/bundles", headers=org).json()["data"]
-        assert [b["version"] for b in bundles] == [1]
+        assert [b["version"] for b in bundles] == [1, 2, 3]
         assert "payload" not in bundles[0]
 
 
@@ -271,6 +299,22 @@ def test_bundle_latest_filters_by_org(tmp_path):
         scoped = c.get("/api/v1/bundle/latest", headers=root, params={"org_id": str(o1)})
         bundle = verify_bundle(SignedBundle.model_validate(scoped.json()["data"]), cp.bundle_key.public_key())
         assert bundle.org_id == o1
+
+
+def test_concurrent_publications_allocate_distinct_versions(tmp_path):
+    cp = setup_control_plane(tmp_path)
+    with TestClient(cp.app) as c:
+        org_id = make_org(c, cp.headers(), "o1")
+
+    async def publish() -> int:
+        async with standalone_transaction(cp.db_url):
+            bundle = await compile_and_store(org_id, uuid7(), datetime.now(tz=UTC), timedelta(hours=1), cp.bundle_key)
+            return bundle.version
+
+    async def publish_both() -> list[int]:
+        return list(await asyncio.gather(publish(), publish()))
+
+    assert sorted(asyncio.run(publish_both())) == [1, 2]
 
 
 def test_model_and_provider_upsert_converge(tmp_path):

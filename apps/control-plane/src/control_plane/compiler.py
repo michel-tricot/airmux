@@ -5,9 +5,9 @@ from typing import TYPE_CHECKING, Literal, cast
 from sqlalchemy import func
 from sqlmodel import col, or_, select
 
-from contract import BundleV1, Catalog, CredentialEntry, KeyEntry, ModelEntry, ProviderEntry, canonical_json, sign_bundle
+from contract import BundleV1, Catalog, CredentialEntry, KeyEntry, ModelEntry, ProviderEntry, canonical_json, sign_bundle, uuid7
 from control_plane.db import current_session
-from control_plane.models import Bundle, InferenceKey, Model, Org, Provider, ProviderCredential
+from control_plane.models import Bundle, InferenceKey, Model, Org, Provider, ProviderCredential, RuntimeConfiguration
 
 if TYPE_CHECKING:
     from datetime import datetime, timedelta
@@ -25,19 +25,44 @@ class UnknownOrgError(LookupError):
 
 async def compile_and_store(org_id: UUID, bundle_id: UUID, now: datetime, staleness_bound: timedelta, signing_key: Ed25519PrivateKey) -> Bundle:
     """Compile, sign, and persist the next bundle version for an org; returns the stored row."""
+    if await Org.find_by_id(org_id) is None:
+        raise UnknownOrgError(org_id)
+    configuration = await RuntimeConfiguration.for_update(org_id)
+    return await _compile_and_store(configuration, bundle_id, now, staleness_bound, signing_key)
+
+
+async def publish_pending(now: datetime, staleness_bound: timedelta, signing_key: Ed25519PrivateKey) -> None:
+    configuration = await RuntimeConfiguration.next_pending()
+    while configuration is not None:
+        await _compile_and_store(configuration, uuid7(), now, staleness_bound, signing_key)
+        configuration = await RuntimeConfiguration.next_pending()
+
+
+async def _compile_and_store(
+    configuration: RuntimeConfiguration,
+    bundle_id: UUID,
+    now: datetime,
+    staleness_bound: timedelta,
+    signing_key: Ed25519PrivateKey,
+) -> Bundle:
+    org_id = configuration.org_id
     bundle = await compile_bundle(org_id, bundle_id, now, staleness_bound)
     signed = sign_bundle(bundle, signing_key, SIGNING_KEY_ID)
     version = (await current_session().execute(select(func.max(Bundle.version)).where(Bundle.org_id == org_id))).scalar() or 0
-    return await Bundle(
+    stored = await Bundle(
         id=bundle_id,
         org_id=org_id,
         version=version + 1,
         issued_at=now,
         expires_at=bundle.expires_at,
+        configuration_revision=configuration.desired_revision,
         payload=canonical_json(bundle),
         signature=signed.signature,
         signing_key_id=signed.signing_key_id,
     ).save()
+    configuration.published_revision = configuration.desired_revision
+    await configuration.save()
+    return stored
 
 
 async def compile_bundle(org_id: UUID, bundle_id: UUID, now: datetime, staleness_bound: timedelta) -> BundleV1:
