@@ -470,9 +470,9 @@ export const CliAuthApproveResponse = zod.object({
 
 
 /**
- * Return pending status or deliver the approved organization-scoped access key once.
+ * Return pending status or deliver the approved scoped access key once.
  *
- * When the request includes the CLI's current access key for the same user and organization, that
+ * When the request includes the CLI's current access key for the same user and scope, that
  * key is revoked as part of replacement. Labels do not participate in matching.
  *
  * Authentication: none.
