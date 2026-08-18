@@ -94,13 +94,30 @@ class BundleV1(BaseModel):
 
 
 class SignedBundle(BaseModel):
-    """A BundleV1 as it crosses the wire and rests on disk.
+    """A serialized BundleV1 as it crosses the wire and rests on disk.
 
-    A bundle that fails verification is rejected and the previous one keeps serving.
+    The signature covers the payload's exact UTF-8 bytes. Consumers verify before parsing.
     """
 
     model_config = ConfigDict(frozen=True)
 
-    payload: BundleV1
-    signature: str  # Ed25519 over canonical_json(payload), base64
+    payload: str
+    signature: str  # Ed25519 over payload.encode("utf-8"), base64
     signing_key_id: str  # selects the public key the data plane verifies with
+
+
+class BundleManifestEntry(BaseModel):
+    """The immutable identity of one organization bundle available to a data plane."""
+
+    model_config = ConfigDict(frozen=True)
+
+    org_id: UUID
+    bundle_id: UUID
+
+
+class BundleManifest(BaseModel):
+    """The complete set of organization bundles one data plane may serve."""
+
+    model_config = ConfigDict(frozen=True)
+
+    bundles: list[BundleManifestEntry]

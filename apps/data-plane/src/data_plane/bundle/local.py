@@ -17,6 +17,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from contract import BundleV1, Catalog, CredentialEntry, KeyEntry, ModelEntry, ProviderEntry, SecretPurpose, SecretRef, token_hash
 from data_plane.bundle.base import BundleSource
+from data_plane.bundle.holder import BundleSet
 from data_plane.tasks import run_periodic
 
 if TYPE_CHECKING:
@@ -97,7 +98,7 @@ class LocalBundleSource(BundleSource):
         if mtime == self._served_mtime:
             return
         bundle = load_local(self._config.path, datetime.now(tz=UTC))
-        self._holder.admit(bundle, source="local")
+        self._holder.swap(BundleSet.from_bundles((bundle,)), source="local")
         self._served_mtime = mtime
 
     async def once(self) -> None:

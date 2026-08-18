@@ -5,6 +5,8 @@ import time
 from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
+from pydantic import TypeAdapter
+
 from contract import SignedBundle, uuid7
 
 if TYPE_CHECKING:
@@ -40,12 +42,16 @@ def instance_id(cache_dir: Path) -> UUID:
     raise RuntimeError(msg)
 
 
-def read_cached_bundle(cache_dir: Path) -> SignedBundle | None:
-    path = cache_dir / "bundle.json"
+CACHE_FILE = "bundles.json"
+_SIGNED_BUNDLES = TypeAdapter(list[SignedBundle])
+
+
+def read_cached_bundles(cache_dir: Path) -> list[SignedBundle] | None:
+    path = cache_dir / CACHE_FILE
     if not path.exists():
         return None
-    return SignedBundle.model_validate_json(path.read_text(encoding="utf-8"))
+    return _SIGNED_BUNDLES.validate_json(path.read_text(encoding="utf-8"))
 
 
-def write_cached_bundle(cache_dir: Path, signed: SignedBundle) -> None:
-    atomic_write_text(cache_dir / "bundle.json", signed.model_dump_json(indent=2))
+def write_cached_bundles(cache_dir: Path, bundles: list[SignedBundle]) -> None:
+    atomic_write_text(cache_dir / CACHE_FILE, _SIGNED_BUNDLES.dump_json(bundles, indent=2).decode())

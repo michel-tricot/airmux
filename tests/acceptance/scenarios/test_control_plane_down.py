@@ -23,7 +23,7 @@ def test_serves_from_disk_through_outage_and_cold_restart(stack: Stack) -> None:
     for _ in range(100):
         assert stack.request().status_code == 200
 
-    assert (stack.cache_dir / "bundle.json").exists()
+    assert (stack.cache_dir / "bundles.json").exists()
     stack.stop("dp", signal.SIGKILL)
     stack.start_dp()
     stack.wait_dp_ready()

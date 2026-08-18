@@ -11,11 +11,10 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type ModelEntryEgressKind = typeof ModelEntryEgressKind[keyof typeof ModelEntryEgressKind] | null;
-
-
-export const ModelEntryEgressKind = {
-  openai_compatible: 'openai_compatible',
-  openai_responses: 'openai_responses',
-  anthropic: 'anthropic',
-} as const;
+/**
+ * The immutable identity of one organization bundle available to a data plane.
+ */
+export interface BundleManifestEntry {
+  org_id: string;
+  bundle_id: string;
+}

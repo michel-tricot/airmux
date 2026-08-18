@@ -60,14 +60,6 @@ schema and query change. The blueprint is:
 
 This must ship with a new trigger DDL version and a migration. Existing trigger functions are frozen.
 
-## Sign exact bundle bytes
-
-Make `SignedBundle.payload` the serialized string covered by the signature. The control plane would
-serialize once, sign those bytes, and store them; the data plane would verify before parsing. This
-removes re-serialization from verification and lets a lagging data plane ignore new fields after
-signature validation. It is a coordinated contract break and is worth doing before third-party or
-non-Python consumers depend on the current shape.
-
 ## Session lifecycle hardening
 
 - Expired sessions are inert but remain stored because a failed authenticated request rolls back.

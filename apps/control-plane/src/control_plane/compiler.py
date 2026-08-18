@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Literal, cast
 from sqlalchemy import func
 from sqlmodel import col, or_, select
 
-from contract import BundleV1, Catalog, CredentialEntry, KeyEntry, ModelEntry, ProviderEntry, canonical_json, sign_bundle, uuid7
+from contract import BundleV1, Catalog, CredentialEntry, KeyEntry, ModelEntry, ProviderEntry, sign_bundle, uuid7
 from control_plane.db import current_session
 from control_plane.models import Bundle, InferenceKey, Model, Org, PlaygroundSession, Provider, ProviderCredential, RuntimeConfiguration
 from control_plane.models.runtime_configuration import runtime_configuration_changes
@@ -54,7 +54,7 @@ async def _publish_revision(
         version=version + 1,
         issued_at=now,
         configuration_revision=configuration.desired_revision,
-        payload=canonical_json(bundle),
+        payload=signed.payload,
         signature=signed.signature,
         signing_key_id=signed.signing_key_id,
     ).save()

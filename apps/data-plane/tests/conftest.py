@@ -28,6 +28,7 @@ from contract import (
 )
 from data_plane.app import create_app
 from data_plane.bundle import RemoteBundleConfig
+from data_plane.cache import write_cached_bundles
 from data_plane.config import Config, DevNullOutboxConfig, SqliteOutboxConfig
 from data_plane.control_plane_link import ControlPlaneLink
 from data_plane.egress import REGISTRY
@@ -119,7 +120,7 @@ def make_outbox(tmp_path, http_client: httpx.AsyncClient, flush_interval_s: floa
 
 
 def mock_control_plane() -> None:
-    respx.get(f"{CONTROL_PLANE_URL}/api/v1/bundle/latest").mock(return_value=httpx.Response(503))
+    respx.get(f"{CONTROL_PLANE_URL}/api/v1/bundles/manifest").mock(return_value=httpx.Response(503))
     respx.post(f"{CONTROL_PLANE_URL}/api/v1/heartbeat").mock(return_value=httpx.Response(200))
 
 
@@ -186,7 +187,7 @@ def booted(tmp_path, monkeypatch) -> BootedApp:
     caller_token, entry = make_key()
     catalog = Catalog(providers=[PROVIDER], models=[MODEL], credentials=[PLATFORM_CREDENTIAL])
     bundle = make_bundle(keys=[entry], catalog=catalog)
-    (tmp_path / "bundle.json").write_text(sign_bundle(bundle, bundle_key, "k1").model_dump_json(), encoding="utf-8")
+    write_cached_bundles(tmp_path, [sign_bundle(bundle, bundle_key, "k1")])
     control_plane = ControlPlaneLink(url=CONTROL_PLANE_URL, token="dp-token")
     config = Config(
         bundle=RemoteBundleConfig(control_plane=control_plane, verify_key=bundle_key.public_key(), cache_dir=tmp_path),

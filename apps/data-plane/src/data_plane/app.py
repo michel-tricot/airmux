@@ -32,7 +32,7 @@ async def healthz(_request: Request) -> JSONResponse:
 
 
 async def readyz(request: Request) -> JSONResponse:
-    if runtime_of(request).holder.snapshot is None:
+    if not runtime_of(request).holder.current.snapshots:
         return JSONResponse({"status": "no bundle"}, status_code=503)
     return JSONResponse({"status": "ready"})
 

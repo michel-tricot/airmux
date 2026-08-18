@@ -129,6 +129,20 @@ def test_remote_bundle_requires_a_control_plane(clean_env):
         load_config()
 
 
+def test_remote_bundle_rejects_the_removed_org_selector():
+    with pytest.raises(ValidationError, match="org"):
+        Config.model_validate(
+            {
+                "bundle": {
+                    "kind": "remote",
+                    "control_plane": {"url": "http://cp.test", "token": "dp-token"},
+                    "verify_key": PUBLIC_KEY_B64,
+                    "org": "0198f3c6-e1d8-7b4a-8c2d-1f4e5a6b7c8d",
+                }
+            }
+        )
+
+
 def test_sqlite_outbox_requires_a_control_plane(clean_env):
     config = "data_plane:\n  bundle:\n    kind: local\n    path: ./bundle.yml\n  events:\n    kind: sqlite\n"
     (clean_env / "airllm.yml").write_text(config, encoding="utf-8")
