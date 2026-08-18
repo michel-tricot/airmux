@@ -19,7 +19,9 @@ import { PageShell } from '@/components/shared/page-shell';
 import { useCreateInvitationMutation } from '@/features/invitations/hooks';
 import { InvitationDialog, invitationRequest } from '@/components/shared/invitation-dialog';
 import { OneTimeValueDialog } from '@/components/shared/one-time-value-dialog';
-import { hasPermission, useEffectivePermissions } from '@/features/permissions/hooks';
+import { useAuthorization } from '@/features/permissions/hooks';
+import { orgMemberAccess, workspaceMemberAccess } from '@/features/members/policy';
+import { workspaceAccess } from '@/features/workspaces/policy';
 
 export default function WorkspaceSettings() {
   const workspaceRef = useRequiredParam('workspaceRef');
@@ -32,21 +34,21 @@ function WorkspaceSettingsContent({ workspaceRef }: { workspaceRef: string }) {
 
   const workspaceQuery = useWorkspace(orgId, workspaceRef);
   const workspace = workspaceQuery.data;
-  const workspacePermissionsQuery = useEffectivePermissions({ orgId, workspaceRef });
-  const orgPermissionsQuery = useEffectivePermissions({ orgId });
-  const workspacePermissions = workspacePermissionsQuery.data?.permissions;
-  const orgPermissions = orgPermissionsQuery.data?.permissions;
-  const canReadMembers = hasPermission(workspacePermissions, 'members.read');
-  const canManageMembers = hasPermission(workspacePermissions, 'members.manage');
-  const canUpdate = hasPermission(workspacePermissions, 'workspaces.update');
-  const canDelete = hasPermission(workspacePermissions, 'workspaces.delete');
+  const workspaceAuthorization = useAuthorization('workspace');
+  const orgAuthorization = useAuthorization('org');
+  const canReadMembers = workspaceAuthorization.can(workspaceMemberAccess.read);
+  const canListCandidates = workspaceAuthorization.can(workspaceMemberAccess.listCandidates);
+  const canAddMembers = workspaceAuthorization.can(workspaceMemberAccess.add);
+  const canRemoveMembers = workspaceAuthorization.can(workspaceMemberAccess.remove);
+  const canUpdate = workspaceAuthorization.can(workspaceAccess.update);
+  const canDelete = workspaceAuthorization.can(workspaceAccess.delete);
 
   const [name, setName] = useState<string | null>(null);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [invitationUrl, setInvitationUrl] = useState<string | null>(null);
 
   const membersQuery = useWorkspaceMembers(orgId, workspaceRef, canReadMembers);
-  const candidatesQuery = useWorkspaceMemberCandidates(orgId, workspaceRef, canManageMembers);
+  const candidatesQuery = useWorkspaceMemberCandidates(orgId, workspaceRef, canListCandidates);
   const members = membersQuery.data;
   const candidates = candidatesQuery.data;
 
@@ -55,15 +57,13 @@ function WorkspaceSettingsContent({ workspaceRef }: { workspaceRef: string }) {
   const rename = useRenameWorkspaceMutation(orgId, workspaceRef);
   const remove = useDeleteWorkspaceMutation(orgId);
   const createInvitation = useCreateInvitationMutation(orgId);
-  const canInvite = hasPermission(orgPermissions, 'members.manage');
+  const canInvite = orgAuthorization.can(orgMemberAccess.invite);
 
   if (workspaceQuery.isLoading) return <LoadingState label="Loading workspace..." />;
   if (workspaceQuery.isError) return <ErrorState error={workspaceQuery.error} resource="workspace" onRetry={() => workspaceQuery.refetch()} />;
-  if (workspacePermissionsQuery.isLoading) return <LoadingState label="Loading workspace permissions..." />;
-  if (workspacePermissionsQuery.isError) {
-    return (
-      <ErrorState error={workspacePermissionsQuery.error} resource="workspace permissions" onRetry={() => workspacePermissionsQuery.refetch()} />
-    );
+  if (workspaceAuthorization.isLoading) return <LoadingState label="Loading workspace permissions..." />;
+  if (workspaceAuthorization.isError) {
+    return <ErrorState error={workspaceAuthorization.error} resource="workspace permissions" onRetry={() => workspaceAuthorization.refetch()} />;
   }
   if (!workspace) return <ErrorState message="Workspace not found" />;
 
@@ -114,7 +114,7 @@ function WorkspaceSettingsContent({ workspaceRef }: { workspaceRef: string }) {
             isLoading={membersQuery.isLoading}
             isError={membersQuery.isError || candidatesQuery.isError}
             error={membersQuery.error ?? candidatesQuery.error}
-            onRetry={() => Promise.all([membersQuery.refetch(), ...(canManageMembers ? [candidatesQuery.refetch()] : [])])}
+            onRetry={() => Promise.all([membersQuery.refetch(), ...(canListCandidates ? [candidatesQuery.refetch()] : [])])}
             emptyText="No members in this workspace."
             actions={
               canInvite ? (
@@ -124,7 +124,7 @@ function WorkspaceSettingsContent({ workspaceRef }: { workspaceRef: string }) {
               ) : undefined
             }
             add={
-              canManageMembers
+              canAddMembers
                 ? {
                     candidates: candidates?.map((user) => ({ value: user.user_id, label: `${user.name} (${user.email})` })) ?? [],
                     dialogTitle: 'Add Member',
@@ -138,7 +138,7 @@ function WorkspaceSettingsContent({ workspaceRef }: { workspaceRef: string }) {
                 : undefined
             }
             remove={
-              canManageMembers
+              canRemoveMembers
                 ? {
                     title: (member) => `Remove ${member.name} from the workspace?`,
                     description: 'They lose access to this workspace but stay in the organization.',

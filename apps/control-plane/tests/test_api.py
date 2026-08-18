@@ -46,6 +46,48 @@ def test_create_returns_the_full_resource_and_patch_updates_it(tmp_path):
         assert [o["name"] for o in c.get("/api/v1/orgs", headers=root).json()["data"]] == ["Acme"]
 
 
+def test_organization_slug_lifecycle(tmp_path):
+    cp = setup_control_plane(tmp_path)
+    root = cp.headers()
+    with TestClient(cp.app) as c:
+        created = c.post("/api/v1/orgs", json={"name": "Acme Corporation", "slug": "acme"}, headers=root)
+        assert created.status_code == 200, created.text
+        org = created.json()["data"]
+        assert org["slug"] == "acme"
+
+        assert c.get("/api/v1/orgs/acme", headers=root).json()["data"]["id"] == org["id"]
+        assert c.get("/api/v1/orgs/ACME", headers=root).json()["data"]["id"] == org["id"]
+        assert c.get("/api/v1/orgs/acme/workspaces", headers=root).status_code == 200
+
+        renamed = c.patch("/api/v1/orgs/acme", json={"name": "Acme, Inc."}, headers=root).json()["data"]
+        assert (renamed["name"], renamed["slug"]) == ("Acme, Inc.", "acme")
+        assert c.patch("/api/v1/orgs/acme", json={"slug": "renamed"}, headers=root).status_code == 422
+
+
+def test_organization_slugs_are_globally_unique_and_derived_when_omitted(tmp_path):
+    cp = setup_control_plane(tmp_path)
+    root = cp.headers()
+    with TestClient(cp.app) as c:
+
+        def create(name):
+            response = c.post("/api/v1/orgs", json={"name": name}, headers=root)
+            assert response.status_code == 200, response.text
+            return response.json()["data"]["slug"]
+
+        assert create("Acme") == "acme"
+        assert create("Acme") == "acme-2"
+        assert create("スタッフ") == "organization"
+        assert c.post("/api/v1/orgs", json={"name": "Another Acme", "slug": "acme"}, headers=root).status_code == 409
+
+
+@pytest.mark.parametrize("slug", ["Acme", "with space", "trailing-", "under_score", "0198f3c6-e1d8-7b4a-8c2d-1f4e5a6b7c8d", ""])
+def test_organization_slug_shapes_the_api_refuses(tmp_path, slug):
+    cp = setup_control_plane(tmp_path)
+    with TestClient(cp.app) as c:
+        response = c.post("/api/v1/orgs", json={"name": "Acme", "slug": slug}, headers=cp.headers())
+        assert response.status_code == 422
+
+
 def test_mutation_inputs_reject_unknown_fields(tmp_path):
     cp = setup_control_plane(tmp_path)
     with TestClient(cp.app) as c:

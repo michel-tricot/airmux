@@ -11,7 +11,8 @@ import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/comp
 import { useRequiredParam } from '@/lib/route';
 import { PageShell } from '@/components/shared/page-shell';
 import { ErrorState, LoadingState } from '@/components/shared/states';
-import { hasPermission, useEffectivePermissions } from '@/features/permissions/hooks';
+import { useAuthorization } from '@/features/permissions/hooks';
+import { inferenceKeyAccess } from '@/features/keys/policy';
 
 const keyLabelSchema = z.object({ label: z.string().min(1, 'Label is required') });
 
@@ -19,10 +20,10 @@ export default function WorkspaceApiKeys() {
   const workspaceRef = useRequiredParam('workspaceRef');
   const orgId = useRequiredOrgId();
 
-  const permissionsQuery = useEffectivePermissions({ orgId, workspaceRef });
-  const permissions = permissionsQuery.data?.permissions;
-  const canRead = hasPermission(permissions, 'inference-keys.read');
-  const canManage = hasPermission(permissions, 'inference-keys.manage');
+  const authorization = useAuthorization('workspace');
+  const canRead = authorization.can(inferenceKeyAccess.read);
+  const canCreate = authorization.can(inferenceKeyAccess.create);
+  const canRevoke = authorization.can(inferenceKeyAccess.revoke);
   const keysQuery = useInferenceKeys(orgId, workspaceRef, canRead);
 
   const [keyOpen, setKeyOpen] = useState(false);
@@ -31,9 +32,9 @@ export default function WorkspaceApiKeys() {
   const createKey = useCreateInferenceKeyMutation(orgId, workspaceRef);
   const revokeKey = useRevokeInferenceKeyMutation(orgId, workspaceRef);
 
-  if (permissionsQuery.isLoading) return <LoadingState label="Loading workspace permissions..." />;
-  if (permissionsQuery.isError)
-    return <ErrorState error={permissionsQuery.error} resource="workspace permissions" onRetry={() => permissionsQuery.refetch()} />;
+  if (authorization.isLoading) return <LoadingState label="Loading workspace permissions..." />;
+  if (authorization.isError)
+    return <ErrorState error={authorization.error} resource="workspace permissions" onRetry={() => authorization.refetch()} />;
   if (!canRead) return <ErrorState message="You do not have access to inference keys in this workspace." />;
 
   return (
@@ -43,7 +44,7 @@ export default function WorkspaceApiKeys() {
           <h1 className="text-3xl font-bold tracking-tight">API Keys</h1>
           <p className="text-muted-foreground mt-1 text-sm">Keys let applications send requests to the models available to this workspace.</p>
         </div>
-        {canManage && (
+        {canCreate && (
           <Button onClick={() => setKeyOpen(true)}>
             <Plus className="w-4 h-4 mr-1" /> Generate Key
           </Button>
@@ -58,11 +59,11 @@ export default function WorkspaceApiKeys() {
         onRetry={() => keysQuery.refetch()}
         emptyText="No inference keys generated."
         revokeDescription="Requests using this inference key will stop working immediately. This cannot be undone."
-        onRevoke={canManage ? (key) => revokeKey.mutateAsync({ orgId, workspaceRef, keyId: key.id }) : undefined}
-        revokePending={canManage ? revokeKey.isPending : undefined}
+        onRevoke={canRevoke ? (key) => revokeKey.mutateAsync({ orgId, workspaceRef, keyId: key.id }) : undefined}
+        revokePending={canRevoke ? revokeKey.isPending : undefined}
       />
 
-      {canManage && (
+      {canCreate && (
         <FormDialog
           open={keyOpen}
           onOpenChange={setKeyOpen}

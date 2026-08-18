@@ -20,7 +20,10 @@ import { ApiKeysTable } from '@/components/shared/api-keys-table';
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { KeyRevealDialog } from '@/components/KeyRevealDialog';
 import { PageShell } from '@/components/shared/page-shell';
-import { hasPermission, useEffectivePermissions } from '@/features/permissions/hooks';
+import { useScopedAuthorization } from '@/features/permissions/hooks';
+import { inferenceKeyAccess } from '@/features/keys/policy';
+import { workspaceMemberAccess } from '@/features/members/policy';
+import { workspaceAccess } from '@/features/workspaces/policy';
 
 const nameSchema = z.object({ name: z.string().min(1, 'Name is required') });
 const keyLabelSchema = z.object({ label: z.string().min(1, 'Label is required') });
@@ -37,17 +40,19 @@ export function WorkspacePanel({ orgId, workspaceRef, backHref, backLabel }: Wor
 
   const workspaceQuery = useWorkspace(orgId, workspaceRef);
   const workspace = workspaceQuery.data;
-  const permissionsQuery = useEffectivePermissions({ orgId, workspaceRef });
-  const permissions = permissionsQuery.data?.permissions;
-  const canReadKeys = hasPermission(permissions, 'inference-keys.read');
-  const canManageKeys = hasPermission(permissions, 'inference-keys.manage');
-  const canReadMembers = hasPermission(permissions, 'members.read');
-  const canManageMembers = hasPermission(permissions, 'members.manage');
-  const canUpdate = hasPermission(permissions, 'workspaces.update');
-  const canDelete = hasPermission(permissions, 'workspaces.delete');
+  const authorization = useScopedAuthorization({ level: 'workspace', orgId, workspaceRef });
+  const canReadKeys = authorization.can(inferenceKeyAccess.read);
+  const canCreateKeys = authorization.can(inferenceKeyAccess.create);
+  const canRevokeKeys = authorization.can(inferenceKeyAccess.revoke);
+  const canReadMembers = authorization.can(workspaceMemberAccess.read);
+  const canListCandidates = authorization.can(workspaceMemberAccess.listCandidates);
+  const canAddMembers = authorization.can(workspaceMemberAccess.add);
+  const canRemoveMembers = authorization.can(workspaceMemberAccess.remove);
+  const canUpdate = authorization.can(workspaceAccess.update);
+  const canDelete = authorization.can(workspaceAccess.delete);
   const keysQuery = useInferenceKeys(orgId, workspaceRef, canReadKeys);
   const membersQuery = useWorkspaceMembers(orgId, workspaceRef, canReadMembers);
-  const candidatesQuery = useWorkspaceMemberCandidates(orgId, workspaceRef, canManageMembers);
+  const candidatesQuery = useWorkspaceMemberCandidates(orgId, workspaceRef, canListCandidates);
   const members = membersQuery.data;
   const candidates = candidatesQuery.data;
 
@@ -65,9 +70,9 @@ export function WorkspacePanel({ orgId, workspaceRef, backHref, backLabel }: Wor
 
   if (workspaceQuery.isLoading) return <LoadingState label="Loading workspace..." />;
   if (workspaceQuery.isError) return <ErrorState error={workspaceQuery.error} resource="workspace" onRetry={() => workspaceQuery.refetch()} />;
-  if (permissionsQuery.isLoading) return <LoadingState label="Loading workspace permissions..." />;
-  if (permissionsQuery.isError)
-    return <ErrorState error={permissionsQuery.error} resource="workspace permissions" onRetry={() => permissionsQuery.refetch()} />;
+  if (authorization.isLoading) return <LoadingState label="Loading workspace permissions..." />;
+  if (authorization.isError)
+    return <ErrorState error={authorization.error} resource="workspace permissions" onRetry={() => authorization.refetch()} />;
   if (!workspace) return <ErrorState message="Workspace not found" />;
 
   return (
@@ -134,7 +139,7 @@ export function WorkspacePanel({ orgId, workspaceRef, backHref, backLabel }: Wor
           <TabsContent value="keys" className="space-y-4 mt-0">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-lg font-semibold">Inference Keys</h2>
-              {canManageKeys && (
+              {canCreateKeys && (
                 <Button onClick={() => setKeyOpen(true)} size="sm">
                   <Plus className="w-4 h-4 mr-1" /> Generate Key
                 </Button>
@@ -148,8 +153,8 @@ export function WorkspacePanel({ orgId, workspaceRef, backHref, backLabel }: Wor
               onRetry={() => keysQuery.refetch()}
               emptyText="No inference keys generated."
               revokeDescription="Requests using this inference key will stop working immediately. This cannot be undone."
-              onRevoke={canManageKeys ? (key) => revokeKey.mutateAsync({ orgId, workspaceRef, keyId: key.id }) : undefined}
-              revokePending={canManageKeys ? revokeKey.isPending : undefined}
+              onRevoke={canRevokeKeys ? (key) => revokeKey.mutateAsync({ orgId, workspaceRef, keyId: key.id }) : undefined}
+              revokePending={canRevokeKeys ? revokeKey.isPending : undefined}
             />
           </TabsContent>
         )}
@@ -162,10 +167,10 @@ export function WorkspacePanel({ orgId, workspaceRef, backHref, backLabel }: Wor
               isLoading={membersQuery.isLoading}
               isError={membersQuery.isError || candidatesQuery.isError}
               error={membersQuery.error ?? candidatesQuery.error}
-              onRetry={() => Promise.all([membersQuery.refetch(), ...(canManageMembers ? [candidatesQuery.refetch()] : [])])}
+              onRetry={() => Promise.all([membersQuery.refetch(), ...(canListCandidates ? [candidatesQuery.refetch()] : [])])}
               emptyText="No members in this workspace."
               add={
-                canManageMembers
+                canAddMembers
                   ? {
                       candidates: candidates?.map((user) => ({ value: user.user_id, label: `${user.name} (${user.email})` })) ?? [],
                       dialogTitle: 'Add Member',
@@ -179,7 +184,7 @@ export function WorkspacePanel({ orgId, workspaceRef, backHref, backLabel }: Wor
                   : undefined
               }
               remove={
-                canManageMembers
+                canRemoveMembers
                   ? {
                       title: (member) => `Remove ${member.name} from the workspace?`,
                       description: 'They lose access to this workspace but stay in the organization.',
@@ -193,7 +198,7 @@ export function WorkspacePanel({ orgId, workspaceRef, backHref, backLabel }: Wor
         )}
       </Tabs>
 
-      {canManageKeys && (
+      {canCreateKeys && (
         <FormDialog
           open={keyOpen}
           onOpenChange={setKeyOpen}

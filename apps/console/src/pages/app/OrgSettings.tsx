@@ -13,32 +13,38 @@ import { PageShell } from '@/components/shared/page-shell';
 import { DataTable } from '@/components/shared/data-table';
 import { FormDialog } from '@/components/shared/form-dialog';
 import { ApiKeysTable } from '@/components/shared/api-keys-table';
-import { AccessKeyFormFields, accessKeyFormSchema, canIssueAccessKeys } from '@/components/shared/access-key-form';
+import { AccessKeyFormFields, accessKeyFormSchema } from '@/components/shared/access-key-form';
 import { PermissionsCell } from '@/components/shared/permissions-cell';
 import { InvitationDialog, invitationRequest } from '@/components/shared/invitation-dialog';
 import { OneTimeValueDialog } from '@/components/shared/one-time-value-dialog';
 import { ErrorState, LoadingState } from '@/components/shared/states';
-import { hasPermission, useEffectivePermissions } from '@/features/permissions/hooks';
+import { useAuthorization } from '@/features/permissions/hooks';
+import { accessKeyAccess } from '@/features/keys/policy';
+import { orgMemberAccess } from '@/features/members/policy';
+import { telemetryAccess } from '@/features/telemetry/policy';
 
 export default function AppOrgSettings() {
   const orgId = useRequiredOrgId();
-  const permissionsQuery = useEffectivePermissions({ orgId });
-  const permissions = permissionsQuery.data?.permissions;
-  const canReadKeys = hasPermission(permissions, 'access-keys.read');
-  const canIssueKey = canIssueAccessKeys(permissions);
-  const canRevokeKeys = hasPermission(permissions, 'access-keys.revoke');
-  const canReadBundles = hasPermission(permissions, 'bundles.read');
-  const canPublishBundles = hasPermission(permissions, 'bundles.publish');
-  const canReadMembers = hasPermission(permissions, 'members.read');
-  const canManageInvitations = hasPermission(permissions, 'members.manage');
-  const canReadActivity = hasPermission(permissions, 'audit.read');
+  const authorization = useAuthorization('org');
+  const canReadKeys = authorization.can(accessKeyAccess.org.read);
+  const canIssueKey = authorization.can(accessKeyAccess.org.issue);
+  const canRevokeKeys = authorization.can(accessKeyAccess.org.revoke);
+  const canReadBundles = authorization.can(telemetryAccess.bundles.read);
+  const canPublishBundles = authorization.can(telemetryAccess.bundles.publish);
+  const canReadMembers = authorization.can(orgMemberAccess.read);
+  const canListInvitations = authorization.can(orgMemberAccess.listInvitations);
+  const canCreateInvitations = authorization.can(orgMemberAccess.invite);
+  const canReissueInvitations = authorization.can(orgMemberAccess.reissueInvitation);
+  const canRevokeInvitations = authorization.can(orgMemberAccess.revokeInvitation);
+  const canOpenMembers = canReadMembers || canListInvitations;
+  const canReadActivity = authorization.can(telemetryAccess.orgActivity);
 
   const keysQuery = useOrgAccessKeys(orgId, undefined, canReadKeys);
   const bundlesQuery = useBundles(orgId, canReadBundles);
   const membersQuery = useOrgMembers(orgId, canReadMembers);
   const activityQuery = useOrgActivity(orgId, { limit: 50 }, canReadActivity);
   const workspacesQuery = useWorkspaces(orgId);
-  const invitationsQuery = useInvitations(orgId, canReadMembers);
+  const invitationsQuery = useInvitations(orgId, canListInvitations);
   const members = membersQuery.data;
 
   const [keyOpen, setKeyOpen] = useState(false);
@@ -56,13 +62,13 @@ export default function AppOrgSettings() {
   const reissueInvitation = useReissueInvitationMutation(orgId);
   const revokeInvitation = useRevokeInvitationMutation(orgId);
   const workspaceNames = new Map(workspacesQuery.data?.map((workspace) => [workspace.id, workspace.name] as const) ?? []);
-  const defaultTab = canReadKeys ? 'keys' : canReadBundles ? 'bundles' : canReadMembers ? 'members' : 'activity';
+  const defaultTab = canReadKeys ? 'keys' : canReadBundles ? 'bundles' : canOpenMembers ? 'members' : 'activity';
 
-  if (permissionsQuery.isLoading) return <LoadingState label="Loading organization permissions..." />;
-  if (permissionsQuery.isError) {
-    return <ErrorState error={permissionsQuery.error} resource="organization permissions" onRetry={() => permissionsQuery.refetch()} />;
+  if (authorization.isLoading) return <LoadingState label="Loading organization permissions..." />;
+  if (authorization.isError) {
+    return <ErrorState error={authorization.error} resource="organization permissions" onRetry={() => authorization.refetch()} />;
   }
-  if (!canReadKeys && !canReadBundles && !canReadMembers && !canReadActivity) {
+  if (!canReadKeys && !canReadBundles && !canOpenMembers && !canReadActivity) {
     return <ErrorState message="You do not have access to organization settings." />;
   }
 
@@ -90,7 +96,7 @@ export default function AppOrgSettings() {
               <Package className="w-4 h-4" /> Policies
             </TabsTrigger>
           )}
-          {canReadMembers && (
+          {canOpenMembers && (
             <TabsTrigger value="members" className="gap-2">
               <Users className="w-4 h-4" /> Members
             </TabsTrigger>
@@ -176,129 +182,143 @@ export default function AppOrgSettings() {
           </TabsContent>
         )}
 
-        {canReadMembers && (
+        {canOpenMembers && (
           <TabsContent value="members" className="space-y-4 mt-0">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-semibold">Organization Members</h2>
-              {canManageInvitations && (
+              <h2 className="text-lg font-semibold">{canReadMembers ? 'Organization Members' : 'Organization Invitations'}</h2>
+              {canCreateInvitations && (
                 <Button size="sm" onClick={() => setInviteOpen(true)} disabled={workspacesQuery.isLoading || workspacesQuery.isError}>
                   <UserPlus className="w-4 h-4 mr-1" /> Invite by email
                 </Button>
               )}
             </div>
-            <Card>
-              <DataTable
-                rows={members}
-                rowKey={(member) => member.user_id}
-                isLoading={membersQuery.isLoading}
-                isError={membersQuery.isError}
-                error={membersQuery.error}
-                resource="members"
-                onRetry={() => membersQuery.refetch()}
-                empty="No members found."
-                columns={[
-                  {
-                    key: 'name',
-                    header: 'Name',
-                    cellClassName: 'font-medium',
-                    cell: (member) => (
-                      <span className="flex items-center gap-2">
-                        <Avatar aria-hidden="true" className="h-6 w-6">
-                          <AvatarFallback className="bg-primary/10 text-xs font-bold text-primary">{member.name.charAt(0)}</AvatarFallback>
-                        </Avatar>
-                        {member.name}
-                      </span>
-                    ),
-                  },
-                  { key: 'email', header: 'Email', cellClassName: 'text-muted-foreground', cell: (member) => member.email },
-                  { key: 'role', header: 'Role', cellClassName: 'text-muted-foreground', cell: (member) => member.role },
-                  {
-                    key: 'kind',
-                    header: 'Account type',
-                    headClassName: 'text-right',
-                    cellClassName: 'text-right',
-                    cell: (member) => (
-                      <Badge variant={member.service_account ? 'secondary' : 'outline'}>{member.service_account ? 'Service account' : 'User'}</Badge>
-                    ),
-                  },
-                ]}
-              />
-            </Card>
-
-            <div className="flex justify-between items-center pt-4">
-              <div>
-                <h2 className="text-lg font-semibold">Pending Invitations</h2>
-                <p className="text-sm text-muted-foreground">Links expire after seven days and can be revoked or replaced.</p>
-              </div>
-            </div>
-            <Card>
-              <DataTable
-                rows={invitationsQuery.data}
-                rowKey={(invitation) => invitation.id}
-                isLoading={invitationsQuery.isLoading}
-                isError={invitationsQuery.isError}
-                error={invitationsQuery.error}
-                resource="invitations"
-                onRetry={() => invitationsQuery.refetch()}
-                empty="No pending invitations."
-                columns={[
-                  { key: 'email', header: 'Email', cellClassName: 'font-medium', cell: (invitation) => invitation.email },
-                  {
-                    key: 'access',
-                    header: 'Access',
-                    cellClassName: 'text-muted-foreground',
-                    cell: (invitation) =>
-                      invitation.workspace_id
-                        ? `${invitation.org_role} · ${workspaceNames.get(invitation.workspace_id) ?? 'Workspace'} ${invitation.workspace_role}`
-                        : invitation.org_role,
-                  },
-                  {
-                    key: 'expires',
-                    header: 'Expires',
-                    cellClassName: 'text-muted-foreground text-sm',
-                    cell: (invitation) => formatDate(invitation.expires_at),
-                  },
-                  {
-                    key: 'status',
-                    header: 'Status',
-                    cell: (invitation) => <Badge variant={invitation.status === 'expired' ? 'destructive' : 'outline'}>{invitation.status}</Badge>,
-                  },
-                  {
-                    key: 'actions',
-                    header: 'Actions',
-                    headClassName: 'text-right',
-                    cellClassName: 'text-right',
-                    cell: (invitation) =>
-                      canManageInvitations ? (
-                        <span className="inline-flex items-center gap-1">
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            aria-label={`Reissue invitation for ${invitation.email}`}
-                            disabled={reissueInvitation.isPending}
-                            onClick={async () => {
-                              const minted = await reissueInvitation.mutateAsync({ orgId, invitationId: invitation.id });
-                              setInvitationUrl(minted.url);
-                            }}
-                          >
-                            <RefreshCw className="w-4 h-4" />
-                          </Button>
-                          <ConfirmButton
-                            title={`Revoke invitation for ${invitation.email}?`}
-                            description="The shared link will stop working immediately."
-                            confirmLabel="Revoke invitation"
-                            pending={revokeInvitation.isPending}
-                            aria-label={`Revoke invitation for ${invitation.email}`}
-                            onConfirm={() => revokeInvitation.mutateAsync({ orgId, invitationId: invitation.id })}
-                          >
-                            <Ban className="w-4 h-4" />
-                          </ConfirmButton>
+            {canReadMembers && (
+              <Card>
+                <DataTable
+                  rows={members}
+                  rowKey={(member) => member.user_id}
+                  isLoading={membersQuery.isLoading}
+                  isError={membersQuery.isError}
+                  error={membersQuery.error}
+                  resource="members"
+                  onRetry={() => membersQuery.refetch()}
+                  empty="No members found."
+                  columns={[
+                    {
+                      key: 'name',
+                      header: 'Name',
+                      cellClassName: 'font-medium',
+                      cell: (member) => (
+                        <span className="flex items-center gap-2">
+                          <Avatar aria-hidden="true" className="h-6 w-6">
+                            <AvatarFallback className="bg-primary/10 text-xs font-bold text-primary">{member.name.charAt(0)}</AvatarFallback>
+                          </Avatar>
+                          {member.name}
                         </span>
-                      ) : null,
-                  },
-                ]}
-              />
-            </Card>
+                      ),
+                    },
+                    { key: 'email', header: 'Email', cellClassName: 'text-muted-foreground', cell: (member) => member.email },
+                    { key: 'role', header: 'Role', cellClassName: 'text-muted-foreground', cell: (member) => member.role },
+                    {
+                      key: 'kind',
+                      header: 'Account type',
+                      headClassName: 'text-right',
+                      cellClassName: 'text-right',
+                      cell: (member) => (
+                        <Badge variant={member.service_account ? 'secondary' : 'outline'}>
+                          {member.service_account ? 'Service account' : 'User'}
+                        </Badge>
+                      ),
+                    },
+                  ]}
+                />
+              </Card>
+            )}
+
+            {canListInvitations && (
+              <>
+                <div className="flex justify-between items-center pt-4">
+                  <div>
+                    <h2 className="text-lg font-semibold">Pending Invitations</h2>
+                    <p className="text-sm text-muted-foreground">Links expire after seven days and can be revoked or replaced.</p>
+                  </div>
+                </div>
+                <Card>
+                  <DataTable
+                    rows={invitationsQuery.data}
+                    rowKey={(invitation) => invitation.id}
+                    isLoading={invitationsQuery.isLoading}
+                    isError={invitationsQuery.isError}
+                    error={invitationsQuery.error}
+                    resource="invitations"
+                    onRetry={() => invitationsQuery.refetch()}
+                    empty="No pending invitations."
+                    columns={[
+                      { key: 'email', header: 'Email', cellClassName: 'font-medium', cell: (invitation) => invitation.email },
+                      {
+                        key: 'access',
+                        header: 'Access',
+                        cellClassName: 'text-muted-foreground',
+                        cell: (invitation) =>
+                          invitation.workspace_id
+                            ? `${invitation.org_role} · ${workspaceNames.get(invitation.workspace_id) ?? 'Workspace'} ${invitation.workspace_role}`
+                            : invitation.org_role,
+                      },
+                      {
+                        key: 'expires',
+                        header: 'Expires',
+                        cellClassName: 'text-muted-foreground text-sm',
+                        cell: (invitation) => formatDate(invitation.expires_at),
+                      },
+                      {
+                        key: 'status',
+                        header: 'Status',
+                        cell: (invitation) => (
+                          <Badge variant={invitation.status === 'expired' ? 'destructive' : 'outline'}>{invitation.status}</Badge>
+                        ),
+                      },
+                      {
+                        key: 'actions',
+                        header: 'Actions',
+                        headClassName: 'text-right',
+                        cellClassName: 'text-right',
+                        cell: (invitation) =>
+                          canReissueInvitations || canRevokeInvitations ? (
+                            <span className="inline-flex items-center gap-1">
+                              {canReissueInvitations && (
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  aria-label={`Reissue invitation for ${invitation.email}`}
+                                  disabled={reissueInvitation.isPending}
+                                  onClick={async () => {
+                                    const minted = await reissueInvitation.mutateAsync({ orgId, invitationId: invitation.id });
+                                    setInvitationUrl(minted.url);
+                                  }}
+                                >
+                                  <RefreshCw className="w-4 h-4" />
+                                </Button>
+                              )}
+                              {canRevokeInvitations && (
+                                <ConfirmButton
+                                  title={`Revoke invitation for ${invitation.email}?`}
+                                  description="The shared link will stop working immediately."
+                                  confirmLabel="Revoke invitation"
+                                  pending={revokeInvitation.isPending}
+                                  aria-label={`Revoke invitation for ${invitation.email}`}
+                                  onConfirm={() => revokeInvitation.mutateAsync({ orgId, invitationId: invitation.id })}
+                                >
+                                  <Ban className="w-4 h-4" />
+                                </ConfirmButton>
+                              )}
+                            </span>
+                          ) : null,
+                      },
+                    ]}
+                  />
+                </Card>
+              </>
+            )}
           </TabsContent>
         )}
 
@@ -382,13 +402,14 @@ export default function AppOrgSettings() {
           }}
           submitLabel="Generate"
           pending={mintKey.isPending}
-          submitDisabled={permissionsQuery.isFetching || permissionsQuery.isError || !canIssueKey}
+          submitDisabled={authorization.isFetching || authorization.isError || !canIssueKey}
         >
           {(form) => (
             <AccessKeyFormFields
               form={form}
-              availablePermissions={permissionsQuery.data?.permissions ?? []}
-              permissionsLoading={permissionsQuery.isFetching}
+              availablePermissions={authorization.permissions}
+              canIssue={canIssueKey}
+              permissionsLoading={authorization.isFetching}
             />
           )}
         </FormDialog>
@@ -396,7 +417,7 @@ export default function AppOrgSettings() {
 
       <KeyRevealDialog open={!!token} onOpenChange={(v) => !v && setToken(null)} token={token} />
 
-      {canManageInvitations && (
+      {canCreateInvitations && (
         <InvitationDialog
           open={inviteOpen}
           onOpenChange={setInviteOpen}

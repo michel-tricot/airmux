@@ -10,7 +10,8 @@ import { FormDialog } from '@/components/shared/form-dialog';
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group';
 import { PageShell } from '@/components/shared/page-shell';
-import { hasPermission, useEffectivePermissions } from '@/features/permissions/hooks';
+import { useAuthorization } from '@/features/permissions/hooks';
+import { userAccess } from '@/features/users/policy';
 
 const createServiceAccountSchema = z.object({
   name: z
@@ -26,8 +27,8 @@ export default function UsersList() {
   const [search, setSearch] = useState('');
   const [serviceAccountOpen, setServiceAccountOpen] = useState(false);
   const createServiceAccount = useCreateServiceAccountMutation();
-  const permissionsQuery = useEffectivePermissions({});
-  const canManage = hasPermission(permissionsQuery.data?.permissions, 'principals.manage');
+  const authorization = useAuthorization('instance');
+  const canCreateServiceAccount = authorization.can(userAccess.createServiceAccount);
 
   const filteredUsers = users?.filter(
     (u) => u.name.toLowerCase().includes(search.toLowerCase()) || u.email.toLowerCase().includes(search.toLowerCase()),
@@ -42,7 +43,7 @@ export default function UsersList() {
             Every account on the instance, with the orgs it belongs to. Human accounts sign up themselves.
           </p>
         </div>
-        {canManage && (
+        {canCreateServiceAccount && (
           <Button onClick={() => setServiceAccountOpen(true)} variant="outline" className="gap-2">
             <Bot className="w-4 h-4" /> Create Service Account
           </Button>
@@ -119,7 +120,7 @@ export default function UsersList() {
         />
       </Card>
 
-      {canManage && (
+      {canCreateServiceAccount && (
         <FormDialog
           open={serviceAccountOpen}
           onOpenChange={setServiceAccountOpen}

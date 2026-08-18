@@ -21,7 +21,9 @@ import { ProviderIcon } from '@/components/ProviderIcon';
 import { PageShell } from '@/components/shared/page-shell';
 import { ErrorState, LoadingState } from '@/components/shared/states';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { hasPermission, useEffectivePermissions } from '@/features/permissions/hooks';
+import { useAuthorization } from '@/features/permissions/hooks';
+import { catalogAccess } from '@/features/catalog/policy';
+import { providerCredentialAccess } from '@/features/credentials/policy';
 
 const addSchema = z.object({
   provider: z.string().min(1, 'Pick a provider'),
@@ -48,12 +50,16 @@ export default function WorkspaceByok() {
   const workspaceRef = useRequiredParam('workspaceRef');
   const orgId = useRequiredOrgId();
 
-  const permissionsQuery = useEffectivePermissions({ orgId, workspaceRef });
-  const permissions = permissionsQuery.data?.permissions;
-  const canRead = hasPermission(permissions, 'provider-credentials.read');
-  const canManage = hasPermission(permissions, 'provider-credentials.manage');
+  const authorization = useAuthorization('workspace');
+  const canRead = authorization.can(providerCredentialAccess.workspace.read);
+  const canReadCatalog = authorization.can(catalogAccess.workspace.read);
+  const canCreate = authorization.can(providerCredentialAccess.workspace.create);
+  const canUpdate = authorization.can(providerCredentialAccess.update);
+  const canRotate = authorization.can(providerCredentialAccess.rotate);
+  const canDelete = authorization.can(providerCredentialAccess.delete);
+  const canUseActions = canUpdate || canRotate || canDelete;
   const credentialsQuery = useProviderCredentials(orgId, workspaceRef, canRead);
-  const taxonomy = useProviders(orgId, workspaceRef, canRead);
+  const taxonomy = useProviders(orgId, workspaceRef, canReadCatalog);
   const providers = taxonomy.data?.providers ?? [];
 
   const [addOpen, setAddOpen] = useState(false);
@@ -82,7 +88,7 @@ export default function WorkspaceByok() {
         return <Badge variant={variant}>{label}</Badge>;
       },
     },
-    ...(canManage
+    ...(canUseActions
       ? [
           {
             key: 'actions',
@@ -91,48 +97,54 @@ export default function WorkspaceByok() {
             cellClassName: 'w-px',
             cell: (c) => (
               <div className="flex items-center gap-1">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button aria-label={`Rotate ${c.name}`} size="icon" variant="ghost" onClick={() => setRotating(c)}>
-                      <RefreshCw className="w-4 h-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Rotate key</TooltipContent>
-                </Tooltip>
+                {canRotate && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button aria-label={`Rotate ${c.name}`} size="icon" variant="ghost" onClick={() => setRotating(c)}>
+                        <RefreshCw className="w-4 h-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Rotate key</TooltipContent>
+                  </Tooltip>
+                )}
 
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      aria-label={`${c.enabled ? 'Disable' : 'Enable'} ${c.name}`}
-                      aria-pressed={c.enabled}
-                      className={c.enabled ? '' : 'text-muted-foreground'}
-                      onClick={() => updateCredential.mutate({ orgId, credentialId: c.id, data: { enabled: !c.enabled } })}
-                    >
-                      <Power className="w-4 h-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>{c.enabled ? 'Disable' : 'Enable'}</TooltipContent>
-                </Tooltip>
-
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span>
-                      <ConfirmButton
-                        title={`Delete "${c.name}"?`}
-                        description="Permanently removes this key. Traffic will fall back to the next available key in priority order. This cannot be undone."
-                        confirmLabel="Delete"
-                        pending={deleteCredential.isPending}
-                        aria-label={`Delete ${c.name}`}
-                        onConfirm={() => deleteCredential.mutateAsync({ orgId, credentialId: c.id })}
+                {canUpdate && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        aria-label={`${c.enabled ? 'Disable' : 'Enable'} ${c.name}`}
+                        aria-pressed={c.enabled}
+                        className={c.enabled ? '' : 'text-muted-foreground'}
+                        onClick={() => updateCredential.mutate({ orgId, credentialId: c.id, data: { enabled: !c.enabled } })}
                       >
-                        <Trash2 className="w-4 h-4" />
-                      </ConfirmButton>
-                    </span>
-                  </TooltipTrigger>
-                  <TooltipContent>Delete</TooltipContent>
-                </Tooltip>
+                        <Power className="w-4 h-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>{c.enabled ? 'Disable' : 'Enable'}</TooltipContent>
+                  </Tooltip>
+                )}
+
+                {canDelete && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span>
+                        <ConfirmButton
+                          title={`Delete "${c.name}"?`}
+                          description="Permanently removes this key. Traffic will fall back to the next available key in priority order. This cannot be undone."
+                          confirmLabel="Delete"
+                          pending={deleteCredential.isPending}
+                          aria-label={`Delete ${c.name}`}
+                          onConfirm={() => deleteCredential.mutateAsync({ orgId, credentialId: c.id })}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </ConfirmButton>
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent>Delete</TooltipContent>
+                  </Tooltip>
+                )}
               </div>
             ),
           } satisfies Column<ProviderCredentialOut>,
@@ -140,9 +152,9 @@ export default function WorkspaceByok() {
       : []),
   ];
 
-  if (permissionsQuery.isLoading) return <LoadingState label="Loading workspace permissions..." />;
-  if (permissionsQuery.isError)
-    return <ErrorState error={permissionsQuery.error} resource="workspace permissions" onRetry={() => permissionsQuery.refetch()} />;
+  if (authorization.isLoading) return <LoadingState label="Loading workspace permissions..." />;
+  if (authorization.isError)
+    return <ErrorState error={authorization.error} resource="workspace permissions" onRetry={() => authorization.refetch()} />;
   if (!canRead) return <ErrorState message="You do not have access to provider keys in this workspace." />;
 
   return (
@@ -154,14 +166,14 @@ export default function WorkspaceByok() {
             Use your own API keys for this workspace. Keys are tried in priority order. If one fails, the next takes over automatically.
           </p>
         </div>
-        {canManage && (
+        {canCreate && canReadCatalog && (
           <Button onClick={() => setAddOpen(true)} disabled={taxonomy.isLoading || taxonomy.isError || providers.length === 0}>
             <Plus className="w-4 h-4 mr-1" /> Add Key
           </Button>
         )}
       </div>
 
-      {taxonomy.isError && <ErrorState error={taxonomy.error} resource="provider catalog" onRetry={() => taxonomy.refetch()} />}
+      {canReadCatalog && taxonomy.isError && <ErrorState error={taxonomy.error} resource="provider catalog" onRetry={() => taxonomy.refetch()} />}
 
       <Card>
         <DataTable
@@ -178,7 +190,7 @@ export default function WorkspaceByok() {
         />
       </Card>
 
-      {canManage && (
+      {canCreate && canReadCatalog && (
         <FormDialog
           open={addOpen}
           onOpenChange={setAddOpen}
@@ -265,7 +277,7 @@ export default function WorkspaceByok() {
         </FormDialog>
       )}
 
-      {canManage && (
+      {canRotate && (
         <FormDialog
           open={!!rotating}
           onOpenChange={(v) => !v && setRotating(null)}

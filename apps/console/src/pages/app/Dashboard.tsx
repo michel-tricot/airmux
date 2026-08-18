@@ -7,12 +7,15 @@ import { Link } from 'wouter';
 import { formatDate, formatRelative } from '@/lib/format';
 import { DataTable } from '@/components/shared/data-table';
 import { PageShell } from '@/components/shared/page-shell';
-import { hasPermission, useEffectivePermissions } from '@/features/permissions/hooks';
+import { useAuthorization } from '@/features/permissions/hooks';
+import { telemetryAccess } from '@/features/telemetry/policy';
+import { workspaceAccess } from '@/features/workspaces/policy';
 
 export default function AppDashboard() {
   const orgId = useRequiredOrgId();
-  const permissionsQuery = useEffectivePermissions({ orgId });
-  const canReadUsage = hasPermission(permissionsQuery.data?.permissions, 'usage.read');
+  const authorization = useAuthorization('org');
+  const canReadWorkspaces = authorization.can(workspaceAccess.list);
+  const canReadUsage = authorization.can(telemetryAccess.orgUsage);
 
   const workspacesQuery = useWorkspaces(orgId);
   const eventsQuery = useOrgEvents(orgId, { limit: 10 }, canReadUsage);
@@ -24,7 +27,7 @@ export default function AppDashboard() {
         <p className="text-muted-foreground mt-1 text-sm">Select a workspace to manage its keys and access.</p>
       </div>
 
-      {canReadUsage && (
+      {canReadWorkspaces && (
         <Card>
           <div className="p-4 border-b border-border bg-muted/20">
             <h2 className="text-lg font-semibold flex items-center gap-2">
@@ -70,66 +73,68 @@ export default function AppDashboard() {
         </Card>
       )}
 
-      <Card>
-        <div className="p-4 border-b border-border bg-muted/20">
-          <h2 className="text-lg font-semibold flex items-center gap-2">
-            <Activity className="w-5 h-5 text-muted-foreground" />
-            Recent Usage
-          </h2>
-        </div>
+      {canReadUsage && (
+        <Card>
+          <div className="p-4 border-b border-border bg-muted/20">
+            <h2 className="text-lg font-semibold flex items-center gap-2">
+              <Activity className="w-5 h-5 text-muted-foreground" />
+              Recent Usage
+            </h2>
+          </div>
 
-        <DataTable
-          rows={eventsQuery.data}
-          rowKey={(event) => event.event_id}
-          isLoading={eventsQuery.isLoading}
-          isError={eventsQuery.isError}
-          error={eventsQuery.error}
-          resource="usage"
-          onRetry={() => eventsQuery.refetch()}
-          empty="No requests through the gateway yet."
-          columns={[
-            {
-              key: 'model',
-              header: 'Model',
-              cell: (event) => (
-                <Badge variant="outline" className="font-mono">
-                  {event.model_id}
-                </Badge>
-              ),
-            },
-            {
-              key: 'status',
-              header: 'Status',
-              cell: (event) => (
-                <Badge variant={event.status === 'ok' ? 'success' : 'destructive'} className="font-mono">
-                  {event.status}
-                </Badge>
-              ),
-            },
-            {
-              key: 'tokens',
-              header: 'Tokens',
-              headClassName: 'text-right',
-              cellClassName: 'text-right font-mono text-sm',
-              cell: (event) => event.input_tokens + event.output_tokens,
-            },
-            {
-              key: 'cost',
-              header: 'Cost',
-              headClassName: 'text-right',
-              cellClassName: 'text-right font-mono text-sm',
-              cell: (event) => `$${event.cost_usd.toFixed(4)}`,
-            },
-            {
-              key: 'when',
-              header: 'When',
-              headClassName: 'text-right',
-              cellClassName: 'text-right text-muted-foreground text-sm',
-              cell: (event) => formatRelative(event.occurred_at),
-            },
-          ]}
-        />
-      </Card>
+          <DataTable
+            rows={eventsQuery.data}
+            rowKey={(event) => event.event_id}
+            isLoading={eventsQuery.isLoading}
+            isError={eventsQuery.isError}
+            error={eventsQuery.error}
+            resource="usage"
+            onRetry={() => eventsQuery.refetch()}
+            empty="No requests through the gateway yet."
+            columns={[
+              {
+                key: 'model',
+                header: 'Model',
+                cell: (event) => (
+                  <Badge variant="outline" className="font-mono">
+                    {event.model_id}
+                  </Badge>
+                ),
+              },
+              {
+                key: 'status',
+                header: 'Status',
+                cell: (event) => (
+                  <Badge variant={event.status === 'ok' ? 'success' : 'destructive'} className="font-mono">
+                    {event.status}
+                  </Badge>
+                ),
+              },
+              {
+                key: 'tokens',
+                header: 'Tokens',
+                headClassName: 'text-right',
+                cellClassName: 'text-right font-mono text-sm',
+                cell: (event) => event.input_tokens + event.output_tokens,
+              },
+              {
+                key: 'cost',
+                header: 'Cost',
+                headClassName: 'text-right',
+                cellClassName: 'text-right font-mono text-sm',
+                cell: (event) => `$${event.cost_usd.toFixed(4)}`,
+              },
+              {
+                key: 'when',
+                header: 'When',
+                headClassName: 'text-right',
+                cellClassName: 'text-right text-muted-foreground text-sm',
+                cell: (event) => formatRelative(event.occurred_at),
+              },
+            ]}
+          />
+        </Card>
+      )}
     </PageShell>
   );
 }

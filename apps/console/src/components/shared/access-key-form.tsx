@@ -14,24 +14,21 @@ export const accessKeyFormSchema = z.object({
 
 export type AccessKeyFormValues = z.infer<typeof accessKeyFormSchema>;
 
-export function canIssueAccessKeys(permissions: readonly PermissionName[] | undefined): boolean {
-  return permissions?.includes('access-keys.issue') ?? false;
-}
-
 export function AccessKeyFormFields({
   form,
   availablePermissions,
+  canIssue,
   permissionsLoading,
   permissionsError,
   onPermissionsRetry,
 }: {
   form: UseFormReturn<AccessKeyFormValues>;
   availablePermissions: readonly PermissionName[];
+  canIssue: boolean;
   permissionsLoading?: boolean;
   permissionsError?: unknown;
   onPermissionsRetry?: () => void;
 }) {
-  const canIssue = canIssueAccessKeys(availablePermissions);
   return (
     <>
       <FormField

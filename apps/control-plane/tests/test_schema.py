@@ -94,8 +94,34 @@ def test_migrations_produce_the_model_schema(pg_db):
     assert diff == []
 
 
+def test_org_slug_migration_backfills_unique_handles(pg_db):
+    url = pg_db("org_slug_backfill")
+    config = Config(str(CONTROL_PLANE_DIR / "alembic.ini"))
+    config.set_main_option("script_location", str(CONTROL_PLANE_DIR / "migrations"))
+    config.set_main_option("sqlalchemy.url", url)
+    command.upgrade(config, "c7d8e9f0a1b2")
+
+    def seed_orgs(conn):
+        conn.execute(text("SELECT set_config('app.user_id', 'schema-test', true)"))
+        conn.execute(
+            text(
+                "INSERT INTO org (id, name) VALUES "
+                "('00000000-0000-0000-0000-000000000001', 'Acme'), "
+                "('00000000-0000-0000-0000-000000000002', 'Acme'), "
+                "('00000000-0000-0000-0000-000000000003', 'スタッフ')"
+            )
+        )
+        conn.commit()
+
+    _run_sync(url, seed_orgs)
+    command.upgrade(config, "head")
+    slugs = _run_sync(url, lambda conn: list(conn.execute(text("SELECT slug FROM org ORDER BY id")).scalars()))
+    assert slugs == ["acme", "acme-2", "organization"]
+
+
 def test_case_insensitive_identifiers_use_citext_in_models_and_migrations(pg_db):
     expected = {
+        ("org", "slug"),
         ("provider", "name"),
         ("provider_credential", "name"),
         ("org_invitation", "email"),

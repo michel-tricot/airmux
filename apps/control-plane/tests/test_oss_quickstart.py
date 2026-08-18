@@ -54,7 +54,7 @@ def _org_data_plane_token(tmp_path, *, role: OrgRole = OrgRole.data_plane) -> st
         user = User(email=f"data-plane-{uuid7()}@example.com", name="Data Plane", service_account=True)
         await set_actor(user.id)
         await user.save()
-        org = await Org(name=f"Org {uuid7()}").save()
+        org = await Org.create(f"Org {uuid7()}")
         await OrgMembership(user_id=user.id, org_id=org.id, role=role).save()
         _, token = await mint_access_key(
             AccessKeyGrant(

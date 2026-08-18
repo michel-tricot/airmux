@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from fastapi import FastAPI
 from fastapi.routing import APIRoute
@@ -9,6 +9,8 @@ from control_plane.sessions import SESSION_COOKIE
 
 if TYPE_CHECKING:
     from typing import Any
+
+    from control_plane.deps import PermissionCheck
 
 API_DESCRIPTION = """Manage AirLLM organizations, workspaces, access keys, provider credentials, and data-plane synchronization.
 
@@ -206,7 +208,7 @@ OPERATION_SUMMARIES = {
 }
 
 PARAMETER_DESCRIPTIONS = {
-    "org_id": "Organization ID",
+    "org_id": "Organization ID or slug",
     "workspace_ref": "Workspace ID or slug",
     "user_id": "User or service-account ID",
     "invitation_id": "Organization invitation ID",
@@ -256,15 +258,26 @@ class ControlPlaneApp(FastAPI):
             "description": "Browser session cookie returned by login or signup. Browser requests must also send `X-Requested-With`.",
         }
         for route in _api_routes(self.routes):
-            permission_rules = [
-                permissions for dependency in route.dependant.dependencies if (permissions := getattr(dependency.call, "required_permissions", None))
+            permission_checks = [
+                cast("PermissionCheck", dependency.call)
+                for dependency in route.dependant.dependencies
+                if getattr(dependency.call, "required_permissions", None)
             ]
+            permission_rules = [check.required_permissions for check in permission_checks]
             permissions = [str(permission) for rule in permission_rules for permission in rule]
             access = [kind for dependency in route.dependant.dependencies if (kind := getattr(dependency.call, "access", None)) is not None]
             for method in route.methods or ():
                 path = "/api/v1" + route.path
                 operation = schema["paths"][path][method.lower()]
                 operation["summary"] = OPERATION_SUMMARIES.get(route.name, operation["summary"])
+                if permission_checks:
+                    operation["x-airllm-authority"] = [
+                        {
+                            "scope": check.required_scope,
+                            "anyOf": [permission.value for permission in check.required_permissions],
+                        }
+                        for check in permission_checks
+                    ]
                 for parameter in operation.get("parameters", []):
                     parameter.setdefault("description", _parameter_description(path, parameter["name"], parameter["in"]))
                 if permissions:

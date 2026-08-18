@@ -190,7 +190,7 @@ def _seed_orgs(tmp_path, *names: str) -> None:
     async def seed() -> None:
         await set_actor("root")
         for name in names:
-            await Org(name=name).save()
+            await Org.create(name)
 
     run_in_db(tmp_path, seed)
 

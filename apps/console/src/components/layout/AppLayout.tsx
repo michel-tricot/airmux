@@ -3,21 +3,7 @@ import * as z from 'zod';
 import { useRequiredOrgId, useSession } from '@/lib/session';
 import { useWorkspaces, useCreateWorkspaceMutation } from '@/features/workspaces/hooks';
 import { Link, useLocation } from 'wouter';
-import {
-  Settings,
-  LogOut,
-  Shield,
-  ArrowLeftRight,
-  LayoutGrid,
-  KeyRound,
-  Database,
-  Route as RouteIcon,
-  ShieldCheck,
-  Building2,
-  Boxes,
-  Plus,
-  FlaskConical,
-} from 'lucide-react';
+import { Settings, LogOut, Shield, ArrowLeftRight, Building2, Boxes, Plus } from 'lucide-react';
 import { useEnrollment } from '@workspace/api-client-react';
 import { Avatar, AvatarFallback, Badge, Button, Input, Dropdown } from '@/components/ui/elements';
 import { cn } from '@/lib/utils';
@@ -25,19 +11,15 @@ import { FormDialog } from '@/components/shared/form-dialog';
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { ErrorState } from '@/components/shared/states';
 import { GatewayBrand, ResponsiveShell } from '@/components/layout/responsive-shell';
-import { hasPermission, useEffectivePermissions } from '@/features/permissions/hooks';
+import { useAuthorization, useScopedAuthorization } from '@/features/permissions/hooks';
+import { catalogAccess } from '@/features/catalog/policy';
+import { accessKeyAccess } from '@/features/keys/policy';
+import { orgMemberAccess } from '@/features/members/policy';
+import { telemetryAccess } from '@/features/telemetry/policy';
+import { workspaceAccess } from '@/features/workspaces/policy';
+import { workspaceRoutes } from '@/pages/app/workspace/routes';
 
 const workspaceNameSchema = z.object({ name: z.string().min(1, 'Name is required') });
-
-const SECTIONS = [
-  { label: 'Overview', suffix: '', icon: LayoutGrid },
-  { label: 'Playground', suffix: '/playground', icon: FlaskConical },
-  { label: 'API Keys', suffix: '/keys', icon: KeyRound },
-  { label: 'BYOK', suffix: '/byok', icon: Database },
-  { label: 'Routing', suffix: '/routing', icon: RouteIcon, soon: true },
-  { label: 'Policies', suffix: '/policies', icon: ShieldCheck, soon: true },
-  { label: 'Settings', suffix: '/settings', icon: Settings },
-];
 
 const navigationClassName =
   'flex items-center gap-3 rounded-md border-l-2 px-3 py-2 font-mono text-[11px] font-bold uppercase tracking-wider transition-colors';
@@ -47,8 +29,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const orgId = useRequiredOrgId();
   const workspacesQuery = useWorkspaces(orgId);
   const workspaces = workspacesQuery.data;
-  const orgPermissionsQuery = useEffectivePermissions({ orgId });
-  const orgPermissions = orgPermissionsQuery.data?.permissions;
+  const orgAuthorization = useAuthorization('org');
   const enrollment = useEnrollment();
   const canSwitchOrg = (enrollment.data?.orgs.length ?? 0) > 1;
   const [location, setLocation] = useLocation();
@@ -61,29 +42,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const selectedWorkspaceRef = routedWorkspaceRef || window.localStorage.getItem(lastWorkspaceKey) || '';
   const activeWorkspace = workspaces?.find((workspace) => workspace.slug === selectedWorkspaceRef || workspace.id === selectedWorkspaceRef);
   const activeWorkspaceSlug = activeWorkspace?.slug ?? routedWorkspaceRef;
-  const workspacePermissionsQuery = useEffectivePermissions({ orgId, workspaceRef: activeWorkspaceSlug, enabled: activeWorkspaceSlug !== '' });
-  const workspacePermissions = workspacePermissionsQuery.data?.permissions;
-  const canCreateWorkspace = hasPermission(orgPermissions, 'workspaces.create');
-  const canOpenOrgSettings =
-    hasPermission(orgPermissions, 'access-keys.read') ||
-    hasPermission(orgPermissions, 'bundles.read') ||
-    hasPermission(orgPermissions, 'members.read') ||
-    hasPermission(orgPermissions, 'audit.read');
-  const canOpenWorkspaceSection = (suffix: string) => {
-    if (suffix === '/keys') return hasPermission(workspacePermissions, 'inference-keys.read');
-    if (suffix === '/byok') return hasPermission(workspacePermissions, 'provider-credentials.read');
-    if (suffix === '/settings') {
-      return (
-        hasPermission(workspacePermissions, 'members.read') ||
-        hasPermission(workspacePermissions, 'workspaces.update') ||
-        hasPermission(workspacePermissions, 'workspaces.delete')
-      );
-    }
-    if (suffix === '/playground' || suffix === '/routing' || suffix === '/policies') {
-      return hasPermission(workspacePermissions, 'catalog.read');
-    }
-    return hasPermission(workspacePermissions, 'workspaces.read');
-  };
+  const workspaceAuthorization = useScopedAuthorization({ level: 'workspace', orgId, workspaceRef: activeWorkspaceSlug }, activeWorkspaceSlug !== '');
+  const canCreateWorkspace = orgAuthorization.can(workspaceAccess.create);
+  const canOpenOrgSettings = orgAuthorization.canAny(
+    accessKeyAccess.org.read,
+    telemetryAccess.bundles.read,
+    orgMemberAccess.read,
+    orgMemberAccess.listInvitations,
+    telemetryAccess.orgActivity,
+  );
 
   useEffect(() => {
     if (activeWorkspaceSlug) window.localStorage.setItem(lastWorkspaceKey, activeWorkspaceSlug);
@@ -164,28 +131,30 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       ) : (
         <nav aria-label="Workspace navigation" className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
           {activeWorkspaceSlug ? (
-            SECTIONS.filter(({ suffix }) => canOpenWorkspaceSection(suffix)).map(({ label, suffix, icon: Icon, soon }) => {
-              const href = `/org/workspaces/${activeWorkspaceSlug}${suffix}`;
-              const isActive = location === href;
-              return (
-                <Link
-                  key={suffix}
-                  href={href}
-                  onClick={close}
-                  aria-current={isActive ? 'page' : undefined}
-                  className={cn(
-                    navigationClassName,
-                    isActive
-                      ? 'border-primary bg-primary/10 text-primary'
-                      : 'border-transparent text-muted-foreground hover:bg-muted hover:text-foreground',
-                  )}
-                >
-                  <Icon className="h-4 w-4 shrink-0" />
-                  <span className="truncate">{label}</span>
-                  {soon && <Badge className="ml-auto rounded-full px-1.5 py-0.5 text-[9px]">Soon</Badge>}
-                </Link>
-              );
-            })
+            workspaceRoutes
+              .filter(({ access }) => workspaceAuthorization.can(access))
+              .map(({ label, suffix, icon: Icon, soon }) => {
+                const href = `/org/workspaces/${activeWorkspaceSlug}${suffix}`;
+                const isActive = location === href;
+                return (
+                  <Link
+                    key={suffix}
+                    href={href}
+                    onClick={close}
+                    aria-current={isActive ? 'page' : undefined}
+                    className={cn(
+                      navigationClassName,
+                      isActive
+                        ? 'border-primary bg-primary/10 text-primary'
+                        : 'border-transparent text-muted-foreground hover:bg-muted hover:text-foreground',
+                    )}
+                  >
+                    <Icon className="h-4 w-4 shrink-0" />
+                    <span className="truncate">{label}</span>
+                    {soon && <Badge className="ml-auto rounded-full px-1.5 py-0.5 text-[9px]">Soon</Badge>}
+                  </Link>
+                );
+              })
           ) : (
             <div className="px-3 py-2 text-xs italic text-muted-foreground">
               {workspaces?.length === 0 ? 'No workspaces in this organization.' : 'Select a workspace above.'}
@@ -196,7 +165,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <div className="mb-2 mt-6 px-3 font-mono text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Organization</div>
             {[
               { href: '/org', label: 'Overview', icon: Building2 },
-              ...(hasPermission(orgPermissions, 'catalog.read') ? [{ href: '/org/models', label: 'Models', icon: Boxes }] : []),
+              ...(orgAuthorization.can(catalogAccess.org.read) ? [{ href: '/org/models', label: 'Models', icon: Boxes }] : []),
               ...(canOpenOrgSettings ? [{ href: '/org/settings', label: 'Org Settings', icon: Settings }] : []),
             ].map((item) => {
               const isActive = location === item.href;

@@ -95,6 +95,24 @@ def test_documentation_groups_follow_authority_scopes():
     assert offenders == []
 
 
+def test_permission_requirements_are_machine_readable():
+    app = make_app()
+    schema = app.openapi()
+    operations = {operation["operationId"]: operation for methods in schema["paths"].values() for operation in methods.values()}
+    expected = {
+        route.name: [
+            {
+                "scope": dependency.call.required_scope,
+                "anyOf": [permission.value for permission in dependency.call.required_permissions],
+            }
+            for dependency in route.dependant.dependencies
+            if hasattr(dependency.call, "required_permissions")
+        ]
+        for route in _api_routes(app)
+    }
+    assert {name: operation.get("x-airllm-authority", []) for name, operation in operations.items()} == expected
+
+
 def test_membership_and_workspace_docs_are_resource_specific():
     operations = {operation["operationId"]: operation["tags"] for methods in make_app().openapi()["paths"].values() for operation in methods.values()}
     assert {operation: operations[operation] for operation in ("list_org_users", "add_org_user", "remove_org_user")} == {
