@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowDown, ArrowUp, ArrowUpDown, Boxes, Search } from 'lucide-react';
+import { ArrowDown, ArrowUp, ArrowUpDown, Boxes, Building2, Search, Wrench } from 'lucide-react';
 import { type ModelOut, type ProviderOut, useGetOrgTaxonomy } from '@workspace/api-client-react';
 import { ProviderIcon } from '@/components/ProviderIcon';
 import { DataTable, type Column } from '@/components/shared/data-table';
@@ -7,6 +7,7 @@ import { PageShell } from '@/components/shared/page-shell';
 import { Badge, Button, Card, Dropdown } from '@/components/ui/elements';
 import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group';
 import { useRequiredOrgId } from '@/lib/session';
+import { cn } from '@/lib/utils';
 
 type SortKey =
   | 'name'
@@ -34,6 +35,13 @@ const priceFormatter = new Intl.NumberFormat('en-US', {
 });
 const nameCollator = new Intl.Collator('en-US', { numeric: true, sensitivity: 'base' });
 const ALL_FILTERS = 'all';
+
+function capabilityVariant(capability: string): 'default' | 'warning' | 'success' | 'secondary' {
+  if (capability === 'streaming') return 'default';
+  if (capability === 'tools') return 'warning';
+  if (capability === 'vision') return 'success';
+  return 'secondary';
+}
 
 function modelSortValue(catalogModel: CatalogModel, key: SortKey): string | number | null {
   if (key === 'name') return catalogModel.model.name;
@@ -78,10 +86,10 @@ function SortableHeader({
       size="sm"
       aria-label={`Sort by ${label}${currentDirection}`}
       onClick={() => onSort(sortKey)}
-      className={align === 'right' ? 'ml-auto -mr-3 h-8 gap-1.5 px-3' : '-ml-3 h-8 gap-1.5 px-3'}
+      className={cn(align === 'right' ? 'ml-auto -mr-3 h-8 gap-1.5 px-3' : '-ml-3 h-8 gap-1.5 px-3', active && 'text-primary')}
     >
       {label}
-      <Icon className="h-3.5 w-3.5 text-muted-foreground" />
+      <Icon className={cn('h-3.5 w-3.5', active ? 'text-primary' : 'text-muted-foreground')} />
     </Button>
   );
 }
@@ -96,6 +104,8 @@ export default function Models() {
   const [sortDirection, setSortDirection] = useState<SortDirection>('ascending');
   const providersById = new Map(taxonomy.data?.providers.map((provider) => [provider.id, provider]));
   const catalog = taxonomy.data?.models.map((model) => ({ model, provider: providersById.get(model.provider_id) }));
+  const providerCount = taxonomy.data?.providers.length ?? 0;
+  const toolCapableModels = catalog?.filter(({ model }) => model.capabilities.includes('tools')).length ?? 0;
   const normalizedFilter = filter.trim().toLocaleLowerCase();
   const providerOptions = [
     { value: ALL_FILTERS, label: 'All providers' },
@@ -135,11 +145,13 @@ export default function Models() {
       sortDirection: sortDirectionFor('name'),
       cell: ({ model }) => (
         <div className="min-w-48">
-          <div className="font-mono text-sm font-medium text-foreground">{model.name}</div>
+          <Badge variant="outline" className="font-mono">
+            {model.name}
+          </Badge>
           {model.capabilities.length > 0 && (
             <div className="mt-2 flex flex-wrap gap-1.5">
               {model.capabilities.map((capability) => (
-                <Badge key={capability} variant="secondary" className="rounded-full px-2 py-0.5 normal-case tracking-normal">
+                <Badge key={capability} variant={capabilityVariant(capability)} className="rounded-full px-2 py-0.5 normal-case tracking-normal">
                   {capability}
                 </Badge>
               ))}
@@ -153,9 +165,15 @@ export default function Models() {
       header: header('Provider', 'provider'),
       sortDirection: sortDirectionFor('provider'),
       cell: ({ provider }) => (
-        <div className="flex items-center gap-2 font-medium">
-          {provider?.icon && <ProviderIcon markup={provider.icon} />}
-          {provider?.name ?? 'Unknown provider'}
+        <div className="flex items-center gap-3 font-medium">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-primary/20 bg-primary/10 text-primary">
+            {provider?.icon ? (
+              <ProviderIcon markup={provider.icon} />
+            ) : (
+              <span className="font-mono text-xs font-bold">{provider?.name.at(0)?.toUpperCase() ?? '?'}</span>
+            )}
+          </span>
+          <span>{provider?.name ?? 'Unknown provider'}</span>
         </div>
       ),
     },
@@ -163,8 +181,8 @@ export default function Models() {
       key: 'context-window',
       header: header('Context window', 'context_window', 'right'),
       sortDirection: sortDirectionFor('context_window'),
-      headClassName: 'text-right',
-      cellClassName: 'text-right font-mono text-sm tabular-nums',
+      headClassName: 'border-l border-primary/20 text-right',
+      cellClassName: 'border-l border-primary/10 text-right font-mono text-sm tabular-nums',
       cell: ({ model }) => numberFormatter.format(model.context_window),
     },
     {
@@ -179,8 +197,8 @@ export default function Models() {
       key: 'input-price',
       header: header('Input price', 'input_price_per_mtok', 'right'),
       sortDirection: sortDirectionFor('input_price_per_mtok'),
-      headClassName: 'text-right',
-      cellClassName: 'text-right font-mono text-sm tabular-nums',
+      headClassName: 'border-l border-warning/20 text-right',
+      cellClassName: 'border-l border-warning/10 text-right font-mono text-sm tabular-nums',
       cell: ({ model }) => priceFormatter.format(model.input_price_per_mtok),
     },
     {
@@ -216,8 +234,46 @@ export default function Models() {
         <p className="mt-1 text-sm text-muted-foreground">Models available across this organization, with limits and prices per million tokens.</p>
       </div>
 
-      <Card>
-        <div className="flex flex-col gap-3 border-b border-border p-4 lg:flex-row lg:items-center lg:justify-between">
+      {catalog && (
+        <Card aria-label="Catalog summary" className="grid overflow-hidden sm:grid-cols-3">
+          <div aria-label={`${catalog.length} models`} className="flex items-center gap-3 bg-primary/[0.07] p-4">
+            <span className="flex h-10 w-10 items-center justify-center rounded-md border border-primary/25 bg-primary/10 text-primary">
+              <Boxes className="h-5 w-5" />
+            </span>
+            <div>
+              <div className="font-mono text-2xl font-bold tabular-nums">{numberFormatter.format(catalog.length)}</div>
+              <div className="text-xs font-medium text-muted-foreground">Models</div>
+            </div>
+          </div>
+          <div
+            aria-label={`${providerCount} providers`}
+            className="flex items-center gap-3 border-t border-border bg-muted/20 p-4 sm:border-l sm:border-t-0"
+          >
+            <span className="flex h-10 w-10 items-center justify-center rounded-md border border-warning/25 bg-warning/10 text-warning">
+              <Building2 className="h-5 w-5" />
+            </span>
+            <div>
+              <div className="font-mono text-2xl font-bold tabular-nums">{numberFormatter.format(providerCount)}</div>
+              <div className="text-xs font-medium text-muted-foreground">Providers</div>
+            </div>
+          </div>
+          <div
+            aria-label={`${toolCapableModels} tool-capable models`}
+            className="flex items-center gap-3 border-t border-border bg-success/[0.04] p-4 sm:border-l sm:border-t-0"
+          >
+            <span className="flex h-10 w-10 items-center justify-center rounded-md border border-success/25 bg-success/10 text-success">
+              <Wrench className="h-5 w-5" />
+            </span>
+            <div>
+              <div className="font-mono text-2xl font-bold tabular-nums">{numberFormatter.format(toolCapableModels)}</div>
+              <div className="text-xs font-medium text-muted-foreground">Tool-capable</div>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      <Card className="overflow-hidden">
+        <div className="flex flex-col gap-3 border-b border-border bg-primary/[0.025] p-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:flex-wrap">
             <InputGroup className="w-full bg-background/50 sm:max-w-sm sm:flex-1">
               <InputGroupAddon>
@@ -249,15 +305,31 @@ export default function Models() {
             />
           </div>
           {catalog && (
-            <span className="shrink-0 font-mono text-xs text-muted-foreground">
+            <Badge className="shrink-0 normal-case tracking-normal">
               {filteredModels?.length ?? 0} of {catalog.length} models
-            </span>
+            </Badge>
           )}
         </div>
 
         <DataTable
+          headerGroups={[
+            { key: 'catalog', label: 'Catalog', colSpan: 2, className: 'bg-muted/30 font-mono text-[10px] font-bold uppercase tracking-widest' },
+            {
+              key: 'limits',
+              label: 'Limits',
+              colSpan: 2,
+              className: 'border-l border-primary/20 bg-primary/[0.06] font-mono text-[10px] font-bold uppercase tracking-widest text-primary',
+            },
+            {
+              key: 'pricing',
+              label: 'Pricing',
+              colSpan: 4,
+              className: 'border-l border-warning/20 bg-warning/[0.05] font-mono text-[10px] font-bold uppercase tracking-widest text-warning',
+            },
+          ]}
           rows={filteredModels}
           rowKey={({ model }) => model.id}
+          rowClassName="group odd:bg-muted/[0.12] hover:bg-primary/[0.06]"
           isLoading={taxonomy.isLoading}
           isError={taxonomy.isError}
           error={taxonomy.error}

@@ -379,18 +379,19 @@ export const Badge = ({
   className,
   variant = 'default',
   ...props
-}: React.HTMLAttributes<HTMLDivElement> & { variant?: 'default' | 'secondary' | 'destructive' | 'outline' | 'success' | 'mono' }) => {
+}: React.HTMLAttributes<HTMLDivElement> & { variant?: 'default' | 'secondary' | 'destructive' | 'outline' | 'success' | 'warning' | 'mono' }) => {
   const variants = {
     default: 'border-primary/30 bg-primary/10 text-primary shadow-[0_0_8px_rgba(97,94,255,0.15)]',
     secondary: 'border-border bg-secondary text-secondary-foreground',
     destructive: 'border-destructive/30 bg-destructive/10 text-destructive',
     success: 'border-success/30 bg-success/10 text-success',
+    warning: 'border-warning/30 bg-warning/10 text-warning',
     outline: 'border-border text-foreground',
     mono: 'border-border bg-muted/50 text-muted-foreground',
   };
   return (
     <BadgePrimitive
-      variant={variant === 'success' || variant === 'mono' ? 'outline' : variant}
+      variant={variant === 'success' || variant === 'warning' || variant === 'mono' ? 'outline' : variant}
       className={cn(
         'inline-flex items-center rounded border px-2 py-0.5 text-[10px] font-mono font-bold uppercase tracking-wider transition-colors',
         variants[variant],

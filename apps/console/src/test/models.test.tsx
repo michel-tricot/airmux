@@ -80,7 +80,9 @@ function renderModels() {
 }
 
 function modelRows() {
-  return within(screen.getByRole('table')).getAllByRole('row').slice(1);
+  return within(screen.getByRole('table'))
+    .getAllByRole('row')
+    .filter((row) => row.parentElement?.tagName === 'TBODY');
 }
 
 describe('organization models', () => {
@@ -92,6 +94,7 @@ describe('organization models', () => {
     expect(claude).not.toBeNull();
     expect(claude).toHaveTextContent('anthropic');
     expect(claude).not.toHaveTextContent('claude-sonnet-4-5-20250929');
+    expect(within(claude!).getByText('anthropic/claude-sonnet-4-5')).toHaveClass('border-border', 'font-mono');
     expect(within(claude!).getByText('streaming')).toHaveClass('rounded-full');
     expect(within(claude!).getByText('tools')).toHaveClass('rounded-full');
     expect(claude).toHaveTextContent('$3.00');
@@ -111,6 +114,23 @@ describe('organization models', () => {
     ]) {
       expect(screen.getByRole('button', { name: new RegExp(`Sort by ${label}`, 'i') })).toBeInTheDocument();
     }
+  });
+
+  it('adds visual hierarchy to the catalog summary, groups, capabilities, and active sort', async () => {
+    renderModels();
+
+    const claude = (await screen.findByText('anthropic/claude-sonnet-4-5')).closest('tr');
+    const gpt = screen.getByText('openai/gpt-5').closest('tr');
+    expect(screen.getByLabelText('2 models')).toBeInTheDocument();
+    expect(screen.getByLabelText('2 providers')).toBeInTheDocument();
+    expect(screen.getByLabelText('2 tool-capable models')).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'Catalog' })).toHaveAttribute('colspan', '2');
+    expect(screen.getByRole('columnheader', { name: 'Limits' })).toHaveAttribute('colspan', '2');
+    expect(screen.getByRole('columnheader', { name: 'Pricing' })).toHaveAttribute('colspan', '4');
+    expect(within(claude!).getByText('streaming')).toHaveClass('text-primary');
+    expect(within(claude!).getByText('tools')).toHaveClass('text-warning');
+    expect(within(gpt!).getByText('vision')).toHaveClass('text-success');
+    expect(screen.getByRole('button', { name: /Sort by Model/i })).toHaveClass('text-primary');
   });
 
   it('combines search and dropdown filters and sorts numeric columns in both directions', async () => {

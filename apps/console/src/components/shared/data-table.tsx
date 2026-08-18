@@ -13,6 +13,12 @@ export interface Column<T> {
 
 interface DataTableProps<T> {
   columns: Array<Column<T>>;
+  headerGroups?: Array<{
+    key: string;
+    label: ReactNode;
+    colSpan: number;
+    className?: string;
+  }>;
   rows: T[] | undefined;
   rowKey: (row: T) => string;
   rowClassName?: string;
@@ -29,6 +35,7 @@ interface DataTableProps<T> {
 
 export function DataTable<T>({
   columns,
+  headerGroups,
   rows,
   rowKey,
   rowClassName,
@@ -49,6 +56,15 @@ export function DataTable<T>({
   return (
     <Table>
       <TableHeader>
+        {headerGroups && (
+          <TableRow className="bg-muted/20 hover:bg-muted/20">
+            {headerGroups.map((group) => (
+              <TableHead key={group.key} scope="colgroup" colSpan={group.colSpan} className={group.className}>
+                {group.label}
+              </TableHead>
+            ))}
+          </TableRow>
+        )}
         <TableRow>
           {columns.map((col) => (
             <TableHead key={col.key} className={col.headClassName} aria-sort={col.sortDirection}>
