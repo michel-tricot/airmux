@@ -36,7 +36,7 @@ class Heartbeat:
         self._http_client = http_client
 
     async def once(self) -> None:
-        snapshots = tuple(self._holder.snapshots.values())
+        snapshots = tuple(self._holder.current.snapshots.values())
         body = HeartbeatV1(
             instance_id=self._instance_id,
             version=VERSION,

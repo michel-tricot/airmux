@@ -98,17 +98,17 @@ async def test_a_reload_swaps_on_change_and_survives_a_broken_edit(tmp_path):
     holder = BundleHolder()
     source = LocalBundleSource(config, holder)
     await source.once()
-    assert holder.snapshots
-    served = holder.snapshots[LOCAL_ORG].bundle.bundle_id
-    snapshot = holder.snapshots[LOCAL_ORG]
+    assert holder.current.snapshots
+    served = holder.current.snapshots[LOCAL_ORG].bundle.bundle_id
+    snapshot = holder.current.snapshots[LOCAL_ORG]
 
     await source.once()
-    assert holder.snapshots[LOCAL_ORG] is snapshot
+    assert holder.current.snapshots[LOCAL_ORG] is snapshot
 
     path.write_text("keys: []\n", encoding="utf-8")
     with pytest.raises(ValidationError):
         await source.once()
-    assert holder.snapshots[LOCAL_ORG].bundle.bundle_id == served  # the last good bundle keeps serving
+    assert holder.current.snapshots[LOCAL_ORG].bundle.bundle_id == served  # the last good bundle keeps serving
 
 
 @respx.mock

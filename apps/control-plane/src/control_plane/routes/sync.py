@@ -38,8 +38,8 @@ async def bundle_manifest(scope: CredentialScopeDep) -> Envelope[BundleManifest]
     """Return every latest organization bundle visible to the authenticated data plane credential."""
     if scope.level is ScopeLevel.workspace:
         raise HTTPException(status_code=403, detail="workspace credentials cannot read organization bundles")
-    bundles = await Bundle.latest_per_org(scope.org_id)
-    return Envelope(data=BundleManifest(bundles=[BundleManifestEntry(org_id=bundle.org_id, bundle_id=bundle.id) for bundle in bundles]))
+    bundle_refs = await Bundle.latest_refs_per_org(scope.org_id)
+    return Envelope(data=BundleManifest(bundles=[BundleManifestEntry(org_id=org_id, bundle_id=bundle_id) for org_id, bundle_id in bundle_refs]))
 
 
 async def selected_bundle(bundle_id: UUID) -> Bundle:

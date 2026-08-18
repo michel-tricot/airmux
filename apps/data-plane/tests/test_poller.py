@@ -54,12 +54,12 @@ async def test_poll_admits_every_bundle_in_the_authorized_manifest(tmp_path, htt
 
     await _remote_source(tmp_path, holder, private_key, http_client).once()
 
-    assert set(holder.snapshots) == {ORG, other_org}
-    assert make_key("first", ORG)[1].token_hash in holder.key_index
-    assert make_key("second", other_org)[1].token_hash in holder.key_index
+    assert set(holder.current.snapshots) == {ORG, other_org}
+    assert make_key("first", ORG)[1].token_hash in holder.current.key_index
+    assert make_key("second", other_org)[1].token_hash in holder.current.key_index
     cached = read_cached_bundles(tmp_path)
     assert cached is not None
-    assert {bundle.payload.bundle_id for bundle in cached.bundles} == {first.payload.bundle_id, second.payload.bundle_id}
+    assert {bundle.payload.bundle_id for bundle in cached} == {first.payload.bundle_id, second.payload.bundle_id}
 
 
 @respx.mock
@@ -70,11 +70,11 @@ async def test_poll_swaps_and_persists(tmp_path, http_client):
     respx.get(f"http://cp.test/api/v1/bundles/{signed.payload.bundle_id}").mock(return_value=bundle_response(signed))
     holder = BundleHolder()
     await _remote_source(tmp_path, holder, private_key, http_client).once()
-    assert holder.snapshots[ORG].bundle.bundle_id == signed.payload.bundle_id
-    assert make_key("k1")[1].token_hash in holder.key_index
+    assert holder.current.snapshots[ORG].bundle.bundle_id == signed.payload.bundle_id
+    assert make_key("k1")[1].token_hash in holder.current.key_index
     cached = read_cached_bundles(tmp_path)
     assert cached is not None
-    assert [bundle.payload.bundle_id for bundle in cached.bundles] == [signed.payload.bundle_id]
+    assert [bundle.payload.bundle_id for bundle in cached] == [signed.payload.bundle_id]
 
 
 @respx.mock
@@ -94,7 +94,7 @@ async def test_poll_does_not_publish_a_bundle_set_that_failed_to_persist(tmp_pat
     with pytest.raises(OSError, match="cache unavailable"):
         await _remote_source(tmp_path, holder, private_key, http_client).once()
 
-    assert holder.snapshots == {}
+    assert holder.current.snapshots == {}
 
 
 @respx.mock
@@ -122,10 +122,10 @@ async def test_poll_revocation_updates_holder(tmp_path, http_client):
     holder = BundleHolder()
     source = _remote_source(tmp_path, holder, private_key, http_client)
     await source.once()
-    assert make_key("k1")[1].token_hash in holder.key_index
+    assert make_key("k1")[1].token_hash in holder.current.key_index
     route.mock(return_value=httpx.Response(200, content=manifested(second)))
     await source.once()
-    assert holder.key_index == {}
+    assert holder.current.key_index == {}
 
 
 @respx.mock
@@ -143,7 +143,7 @@ async def test_poll_signature_failure_identifies_the_bundle_and_signing_key(tmp_
     message = str(error.value)
     assert str(signed.payload.bundle_id) in message
     assert signed.signing_key_id in message
-    assert holder.snapshots == {}
+    assert holder.current.snapshots == {}
     assert read_cached_bundles(tmp_path) is None
 
 
@@ -163,11 +163,11 @@ async def test_poll_removes_an_org_absent_from_the_next_manifest(tmp_path, http_
     manifest.mock(return_value=httpx.Response(200, content=manifested(first)))
     await source.once()
 
-    assert list(holder.snapshots) == [ORG]
-    assert make_key("second", other_org)[1].token_hash not in holder.key_index
+    assert list(holder.current.snapshots) == [ORG]
+    assert make_key("second", other_org)[1].token_hash not in holder.current.key_index
     cached = read_cached_bundles(tmp_path)
     assert cached is not None
-    assert [bundle.payload.org_id for bundle in cached.bundles] == [ORG]
+    assert [bundle.payload.org_id for bundle in cached] == [ORG]
 
 
 @respx.mock
@@ -191,8 +191,8 @@ async def test_poll_fetches_only_the_org_whose_bundle_changed(tmp_path, http_cli
     assert first_fetch.call_count == 1
     assert changed_fetch.call_count == 1
     assert second_fetch.call_count == 1
-    assert make_key("changed", ORG)[1].token_hash in holder.key_index
-    assert make_key("second", other_org)[1].token_hash in holder.key_index
+    assert make_key("changed", ORG)[1].token_hash in holder.current.key_index
+    assert make_key("second", other_org)[1].token_hash in holder.current.key_index
 
 
 @respx.mock
@@ -207,7 +207,7 @@ async def test_poll_rejects_a_bundle_that_does_not_match_its_manifest_entry(tmp_
     with pytest.raises(BundleManifestMismatchError):
         await _remote_source(tmp_path, holder, private_key, http_client).once()
 
-    assert holder.snapshots == {}
+    assert holder.current.snapshots == {}
     assert read_cached_bundles(tmp_path) is None
 
 
@@ -225,5 +225,5 @@ async def test_poll_rejects_a_token_hash_shared_by_two_org_bundles(tmp_path, htt
     with pytest.raises(DuplicateInferenceTokenError):
         await _remote_source(tmp_path, holder, private_key, http_client).once()
 
-    assert holder.snapshots == {}
+    assert holder.current.snapshots == {}
     assert read_cached_bundles(tmp_path) is None

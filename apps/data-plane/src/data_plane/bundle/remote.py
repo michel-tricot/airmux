@@ -10,6 +10,7 @@ from pydantic import ValidationError
 
 from contract import BundleManifest, BundleManifestEntry, SignedBundle, public_key_to_b64, verify_bundle
 from data_plane.bundle.base import BundleSource
+from data_plane.bundle.holder import BundleSet
 from data_plane.cache import instance_id as cache_instance_id
 from data_plane.cache import read_cached_bundles, write_cached_bundles
 from data_plane.heartbeat import Heartbeat
@@ -53,9 +54,9 @@ class RemoteBundleSource(BundleSource):
             return
         signed_bundles = list(await asyncio.gather(*(self._resolve(entry) for entry in manifest.bundles)))
         bundles = tuple(self._verify(signed) for signed in signed_bundles)
-        current = self._holder.prepare(bundles)
+        bundle_set = BundleSet.from_bundles(bundles)
         write_cached_bundles(self._config.cache_dir, signed_bundles)
-        self._holder.publish(current, source="polled")
+        self._holder.swap(bundle_set, source="polled")
         self._signed_by_org = {signed.payload.org_id: signed for signed in signed_bundles}
 
     async def run(self) -> None:
@@ -86,12 +87,12 @@ class RemoteBundleSource(BundleSource):
             if cached is None:
                 logger.warning("no cached bundles in %s, serving 503 until one arrives", self._config.cache_dir)
                 return
-            bundles = tuple(self._verify(signed) for signed in cached.bundles)
-            self._holder.replace(bundles, source="cached")
+            bundles = tuple(self._verify(signed) for signed in cached)
+            self._holder.swap(BundleSet.from_bundles(bundles), source="cached")
         except (InvalidSignature, ValidationError, ValueError):
             logger.exception("cached bundles in %s are invalid, ignoring them", self._config.cache_dir)
             return
-        self._signed_by_org = {signed.payload.org_id: signed for signed in cached.bundles}
+        self._signed_by_org = {signed.payload.org_id: signed for signed in cached}
 
     async def _resolve(self, entry: BundleManifestEntry) -> SignedBundle:
         existing = self._signed_by_org.get(entry.org_id)
