@@ -1,11 +1,24 @@
 import { useState } from 'react';
-import { ArrowDown, ArrowUp, ArrowUpDown, Boxes, Building2, Wrench } from 'lucide-react';
+import {
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
+  AudioLines,
+  Boxes,
+  Building2,
+  CircleHelp,
+  Image as ImageIcon,
+  Type as TextIcon,
+  Video,
+  Wrench,
+} from 'lucide-react';
 import { type ModelOut, type ProviderOut, useGetOrgTaxonomy } from '@workspace/api-client-react';
 import { ProviderIcon } from '@/components/ProviderIcon';
 import { DataTable, type Column } from '@/components/shared/data-table';
 import { PageHeader, PageShell } from '@/components/shared/page-shell';
 import { SearchField } from '@/components/shared/search-field';
 import { Badge, Button, Card, Dropdown } from '@/components/ui/elements';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useRequiredOrgId } from '@/lib/session';
 import { cn } from '@/lib/utils';
 
@@ -40,6 +53,74 @@ function capabilityVariant(capability: string): 'default' | 'warning' | 'success
   if (capability === 'streaming') return 'default';
   if (capability === 'tools') return 'warning';
   return 'secondary';
+}
+
+function ModalityIcon({ modality }: { modality: string }) {
+  const Icon = modality === 'image' ? ImageIcon : modality === 'audio' ? AudioLines : modality === 'video' ? Video : TextIcon;
+  return <Icon aria-hidden="true" className="h-3.5 w-3.5" />;
+}
+
+function ModalityGroup({ label, modalities }: { label: 'Input' | 'Output'; modalities: string[] }) {
+  return (
+    <div aria-label={`${label} modalities`} className="flex items-start gap-2">
+      <span className="w-11 shrink-0 font-mono text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{label}</span>
+      <div className="flex flex-wrap gap-x-3 gap-y-1.5">
+        {modalities.map((modality) => (
+          <div
+            key={modality}
+            className={cn(
+              'flex items-center gap-1.5 border-l-2 pl-2 text-xs font-medium capitalize',
+              label === 'Input' ? 'border-success/40 text-success' : 'border-primary/40 text-primary',
+            )}
+          >
+            <ModalityIcon modality={modality} />
+            <span>{modality}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ModelMetadata({
+  capabilities,
+  inputModalities,
+  outputModalities,
+}: {
+  capabilities: string[];
+  inputModalities: string[];
+  outputModalities: string[];
+}) {
+  return (
+    <Tooltip delayDuration={150}>
+      <TooltipTrigger
+        type="button"
+        aria-label="Show model metadata"
+        className="inline-flex h-6 w-6 items-center justify-center text-muted-foreground transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        <CircleHelp aria-hidden="true" className="h-4 w-4" />
+      </TooltipTrigger>
+      <TooltipContent side="bottom" className="max-w-96 border border-border bg-card p-3 text-foreground shadow-xl">
+        <div className="space-y-3">
+          <div>
+            <div className="mb-1 font-mono text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Capabilities</div>
+            <div className="flex flex-wrap gap-1.5">
+              {capabilities.map((capability) => (
+                <Badge key={capability} variant={capabilityVariant(capability)} className="rounded-full px-2 py-0.5 normal-case tracking-normal">
+                  {capability}
+                </Badge>
+              ))}
+            </div>
+          </div>
+          <div className="space-y-1.5 border-t border-border pt-3">
+            <div className="font-mono text-[10px] font-bold uppercase tracking-wider text-muted-foreground">I/O modalities</div>
+            <ModalityGroup label="Input" modalities={inputModalities} />
+            <ModalityGroup label="Output" modalities={outputModalities} />
+          </div>
+        </div>
+      </TooltipContent>
+    </Tooltip>
+  );
 }
 
 function modelSortValue(catalogModel: CatalogModel, key: SortKey): string | number | null {
@@ -142,30 +223,15 @@ export default function Models() {
       key: 'model',
       header: header('Model', 'name'),
       sortDirection: sortDirectionFor('name'),
-      cell: ({ model }) => {
-        const nonTextInputs = model.input_modalities.filter((modality) => modality !== 'text');
-        return (
-          <div className="min-w-48">
-            <Badge variant="outline" className="font-mono">
-              {model.name}
-            </Badge>
-            {(nonTextInputs.length > 0 || model.capabilities.length > 0) && (
-              <div className="mt-2 flex flex-wrap gap-1.5">
-                {nonTextInputs.map((modality) => (
-                  <Badge key={`input:${modality}`} variant="success" className="rounded-full px-2 py-0.5 normal-case tracking-normal">
-                    input:{modality}
-                  </Badge>
-                ))}
-                {model.capabilities.map((capability) => (
-                  <Badge key={capability} variant={capabilityVariant(capability)} className="rounded-full px-2 py-0.5 normal-case tracking-normal">
-                    {capability}
-                  </Badge>
-                ))}
-              </div>
-            )}
-          </div>
-        );
-      },
+      cellClassName: 'min-w-48',
+      cell: ({ model }) => (
+        <div className="flex items-center gap-1.5">
+          <Badge variant="outline" className="font-mono">
+            {model.name}
+          </Badge>
+          <ModelMetadata capabilities={model.capabilities} inputModalities={model.input_modalities} outputModalities={model.output_modalities} />
+        </div>
+      ),
     },
     {
       key: 'provider',
