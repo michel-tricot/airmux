@@ -86,6 +86,32 @@ def test_org_admin_creates_an_org_owned_service_account_with_a_management_key(tm
         assert managed["managed"] is True
 
 
+def test_org_admin_can_issue_a_replacement_key_for_a_managed_service_account(tmp_path):
+    cp = setup_control_plane(tmp_path)
+    root = cp.headers()
+    with _client(cp) as client:
+        org_id = make_org(client, root, "acme")
+        _org_admin(client, cp, org_id)
+        created = _create(client, org_id).json()["data"]
+
+        response = client.post(
+            f"/api/v1/orgs/{org_id}/access-keys",
+            json={
+                "user_id": created["service_account"]["id"],
+                "label": "replacement-management",
+                "permissions": [Permission.workspaces_read],
+            },
+            headers=CSRF,
+        )
+
+        assert response.status_code == 200, response.text
+        replacement = response.json()["data"]
+        assert replacement["user_id"] == created["service_account"]["id"]
+        assert replacement["scope"] == {"level": "org", "org_id": str(org_id), "workspace_id": None}
+        assert replacement["permissions"] == [Permission.workspaces_read]
+        assert replacement["token"] != created["access_key"]["token"]
+
+
 def test_service_account_creation_is_atomic_when_the_key_exceeds_its_role(tmp_path):
     cp = setup_control_plane(tmp_path)
     root = cp.headers()

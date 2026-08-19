@@ -19,7 +19,7 @@ import {
   TabsTrigger,
   TabsContent,
 } from '@/components/ui/elements';
-import { Plus, Key, Settings, Package, RefreshCw, Users, Activity, UserPlus, Ban, Bot, Trash2 } from 'lucide-react';
+import { Plus, Key, KeyRound, Settings, Package, RefreshCw, Users, Activity, UserPlus, Ban, Bot, Trash2 } from 'lucide-react';
 import { formatDate, formatRelative } from '@/lib/format';
 import { KeyRevealDialog } from '@/components/KeyRevealDialog';
 import { PageShell } from '@/components/shared/page-shell';
@@ -66,6 +66,7 @@ export default function AppOrgSettings() {
   const members = membersQuery.data;
 
   const [keyOpen, setKeyOpen] = useState(false);
+  const [keyTarget, setKeyTarget] = useState<{ userId: string; name: string } | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [serviceAccountOpen, setServiceAccountOpen] = useState(false);
@@ -126,7 +127,14 @@ export default function AppOrgSettings() {
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-lg font-semibold">Automation Keys</h2>
               {canIssueKey && (
-                <Button onClick={() => setKeyOpen(true)} size="sm" className="shadow-sm">
+                <Button
+                  onClick={() => {
+                    setKeyTarget(null);
+                    setKeyOpen(true);
+                  }}
+                  size="sm"
+                  className="shadow-sm"
+                >
                   <Plus className="w-4 h-4 mr-1" /> Generate Key
                 </Button>
               )}
@@ -244,7 +252,7 @@ export default function AppOrgSettings() {
                         </Badge>
                       ),
                     },
-                    ...(canDeleteServiceAccount
+                    ...(canIssueKey || canDeleteServiceAccount
                       ? [
                           {
                             key: 'actions',
@@ -253,16 +261,34 @@ export default function AppOrgSettings() {
                             cellClassName: 'text-right',
                             cell: (member: NonNullable<typeof members>[number]) =>
                               member.managed ? (
-                                <ConfirmButton
-                                  title={`Delete ${member.name}?`}
-                                  description="The service account and all of its control-plane access keys will stop working immediately."
-                                  confirmLabel="Delete service account"
-                                  pending={deleteServiceAccount.isPending}
-                                  aria-label={`Delete service account ${member.name}`}
-                                  onConfirm={() => deleteServiceAccount.mutateAsync({ orgId, userId: member.user_id })}
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </ConfirmButton>
+                                <span className="inline-flex items-center gap-1">
+                                  {canIssueKey && (
+                                    <Button
+                                      size="icon"
+                                      variant="ghost"
+                                      aria-label={`Generate replacement key for ${member.name}`}
+                                      disabled={mintKey.isPending}
+                                      onClick={() => {
+                                        setKeyTarget({ userId: member.user_id, name: member.name });
+                                        setKeyOpen(true);
+                                      }}
+                                    >
+                                      <KeyRound className="w-4 h-4" />
+                                    </Button>
+                                  )}
+                                  {canDeleteServiceAccount && (
+                                    <ConfirmButton
+                                      title={`Delete ${member.name}?`}
+                                      description="The service account and all of its control-plane access keys will stop working immediately."
+                                      confirmLabel="Delete service account"
+                                      pending={deleteServiceAccount.isPending}
+                                      aria-label={`Delete service account ${member.name}`}
+                                      onConfirm={() => deleteServiceAccount.mutateAsync({ orgId, userId: member.user_id })}
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </ConfirmButton>
+                                  )}
+                                </span>
                               ) : null,
                           },
                         ]
@@ -425,19 +451,30 @@ export default function AppOrgSettings() {
       {canIssueKey && (
         <FormDialog
           open={keyOpen}
-          onOpenChange={setKeyOpen}
-          title="Create an organization access key"
-          description="The key is bound to this organization and carries only the permissions you name."
+          onOpenChange={(open) => {
+            setKeyOpen(open);
+            if (!open) setKeyTarget(null);
+          }}
+          title={keyTarget ? `Generate a replacement key for ${keyTarget.name}` : 'Create an organization access key'}
+          description={
+            keyTarget
+              ? 'The new key is shown once and does not revoke any existing keys for this service account.'
+              : 'The key is bound to this organization and carries only the permissions you name.'
+          }
           schema={accessKeyFormSchema}
           defaultValues={{ label: '', permissions: [] }}
           onSubmit={async (values) => {
             const minted = await mintKey.mutateAsync({
               orgId,
-              data: { label: values.label, permissions: values.permissions },
+              data: {
+                ...(keyTarget ? { user_id: keyTarget.userId } : {}),
+                label: values.label,
+                permissions: values.permissions,
+              },
             });
             setToken(minted.token);
           }}
-          submitLabel="Generate"
+          submitLabel={keyTarget ? 'Generate replacement key' : 'Generate'}
           pending={mintKey.isPending}
           submitDisabled={authorization.isFetching || authorization.isError || !canIssueKey}
         >
