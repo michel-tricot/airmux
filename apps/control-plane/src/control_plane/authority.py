@@ -154,6 +154,10 @@ async def principal_can_select_org(principal_id: UUID, org_id: UUID) -> bool:
     return user is not None and (user.instance_role is not None or await OrgMembership.get((principal_id, org_id)) is not None)
 
 
+async def principal_can_issue_instance_access_key(principal_id: UUID) -> bool:
+    return Permission.access_keys_issue in await principal_permissions(principal_id, Scope.instance())
+
+
 async def access_key_parent(
     actor: Actor,
     principal_id: UUID,

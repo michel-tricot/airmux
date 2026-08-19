@@ -3,6 +3,7 @@ from __future__ import annotations
 import httpx
 import pytest
 import respx
+from click import unstyle
 from typer.testing import CliRunner
 
 from cli.main import app
@@ -16,9 +17,10 @@ def test_login_url_is_exclusive_with_split_urls(split_option):
     result = runner.invoke(app, ["login", "--url", "https://airllm.example.com", split_option, "https://other.example.com"])
 
     assert result.exit_code == 2
-    assert "--url cannot be combined" in result.output
-    assert "--control-plane-url" in result.output
-    assert "--console-url" in result.output
+    output = unstyle(result.output)
+    assert "--url cannot be combined" in output
+    assert "--control-plane-url" in output
+    assert "--console-url" in output
 
 
 @pytest.mark.parametrize(

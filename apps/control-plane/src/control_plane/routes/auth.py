@@ -9,7 +9,7 @@ from fastapi import APIRouter, HTTPException, Request, Response
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from contract import PLAYGROUND_COOKIE
-from control_plane.authority import effective_permissions, principal_can_select_org, principal_permissions, visible_org_ids
+from control_plane.authority import effective_permissions, principal_can_issue_instance_access_key, principal_can_select_org, visible_org_ids
 from control_plane.authz import Actor, InstanceRole, Permission, Scope
 from control_plane.deps import (
     ActingUserDep,
@@ -288,7 +288,7 @@ async def cli_auth_request_details(code: str, user: CookieUserDep) -> Envelope[C
             client_name=auth_request.client_name,
             requester=auth_request.requester,
             expires_at=auth_request.expires_at,
-            can_approve_instance=Permission.access_keys_issue in await principal_permissions(user.id, Scope.instance()),
+            can_approve_instance=await principal_can_issue_instance_access_key(user.id),
         )
     )
 
@@ -300,7 +300,7 @@ async def cli_auth_approve(body: CliAuthApproveIn, user: CookieUserDep) -> Envel
     if auth_request.approved_user_id is not None:
         raise HTTPException(status_code=409, detail="This sign-in request was already approved")
     if body.scope == "instance":
-        if Permission.access_keys_issue not in await principal_permissions(user.id, Scope.instance()):
+        if not await principal_can_issue_instance_access_key(user.id):
             raise HTTPException(status_code=403, detail="You cannot approve instance CLI access")
     else:
         org_id = body.org_id
