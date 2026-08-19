@@ -18,6 +18,8 @@ import json
 from pathlib import Path
 from typing import Any
 
+from catalog_io import atomic_write_text
+
 # Leading fields first, by how much a reader needs them. Anything unlisted sorts after,
 # alphabetically, so a new field cannot silently land in the middle of an existing diff.
 # "updated" is the date this content last changed, not the date it was last checked. A
@@ -25,11 +27,22 @@ from typing import Any
 # not record it.
 CATALOG_ORDER = ("provider", "source", "source_type", "updated", "count", "models")
 MODEL_ORDER = (
-    "id", "upstream_id", "kind", "context_length", "max_output_tokens",
-    "input_modalities", "output_modalities",
-    "supports_tools", "supports_structured_output", "pricing",
-    "limits_source", "pricing_source", "reachable", "reachable_checked",
+    "id",
+    "upstream_id",
+    "kind",
+    "context_length",
+    "max_output_tokens",
+    "input_modalities",
+    "output_modalities",
+    "supports_tools",
+    "supports_structured_output",
+    "pricing",
+    "limits_source",
+    "pricing_source",
+    "reachable",
+    "reachable_checked",
     "parameter_evidence",
+    "capability_evidence",
 )
 
 
@@ -44,16 +57,13 @@ def clean_floats(record: dict) -> dict:
     0.030000000000000002, which is meaningless precision and pure diff churn."""
     pricing = record.get("pricing")
     if isinstance(pricing, dict):
-        record["pricing"] = {
-            k: round(v, 4) if isinstance(v, float) else v for k, v in pricing.items()
-        }
+        record["pricing"] = {k: round(v, 4) if isinstance(v, float) else v for k, v in pricing.items()}
     return record
 
 
 def sort_models(models: list[dict]) -> list[dict]:
     """Vendors return catalogs in arbitrary and unstable order. Impose one."""
-    return sorted((clean_floats(order_keys(m, MODEL_ORDER)) for m in models),
-                  key=lambda m: (str(m.get("id", "")).lower(), str(m.get("id", ""))))
+    return sorted((clean_floats(order_keys(m, MODEL_ORDER)) for m in models), key=lambda m: (str(m.get("id", "")).lower(), str(m.get("id", ""))))
 
 
 def sort_defs(schema: dict) -> dict:
@@ -79,10 +89,9 @@ def write_json(path: Path, obj: Any, *, stamp_field: str | None = None) -> bool:
                 old = json.loads(previous)
             except json.JSONDecodeError:
                 old = None
-            if isinstance(old, dict) and stamp_field in old:
-                if dumps({**obj, stamp_field: old[stamp_field]}) == previous:
-                    return False
-    path.write_text(text)
+            if isinstance(old, dict) and stamp_field in old and dumps({**obj, stamp_field: old[stamp_field]}) == previous:
+                return False
+    atomic_write_text(path, text)
     return True
 
 

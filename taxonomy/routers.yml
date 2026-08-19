@@ -11,10 +11,29 @@ routers:
   base_url: https://openrouter.ai/api/v1
   openapi: https://openrouter.ai/openapi.json
   models_url: https://openrouter.ai/api/v1/models
+  models_auth: none
+  models_headers: {}
   ingress:
   - oai
   - oai_responses
   - anthropic
+  surfaces:
+    oai:
+      endpoint: chat/completions
+      auth: bearer
+      egress_kind: openai_compatible
+      headers: {}
+    oai_responses:
+      endpoint: responses
+      auth: bearer
+      egress_kind: openai_responses
+      headers: {}
+    anthropic:
+      endpoint: messages
+      auth: bearer
+      egress_kind: anthropic
+      headers:
+        anthropic-version: '2023-06-01'
   auth:
   - bearer
   env_var: OPENROUTER_API_KEY

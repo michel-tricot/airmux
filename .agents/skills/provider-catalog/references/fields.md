@@ -2,7 +2,7 @@
 
 `providers.yml` and `routers.yml` carry data only. Every field is defined here.
 
-Both files hold the same 12 fields in the same order, so a router is readable by anything
+Both files hold the same 16 fields in the same order, so a router is readable by anything
 that reads a provider.
 
 ## id, name
@@ -54,8 +54,14 @@ than at a URL that will rot.
 ## models_url
 
 The model listing endpoint. `fetch_models.py` reads it from here, so it is never written
-down twice. A URL containing `{...}` is account-scoped and cannot be fetched without
-substitution; the fetcher reports the template instead of failing.
+down twice. An unresolved URL template is a refresh failure.
+
+## models_auth, models_headers
+
+The credential transport and fixed headers for the model-list request. `models_auth` is
+`none`, `bearer` or `header_key:<name>`. `models_headers` is a string-to-string mapping and
+is empty when the catalog needs no additional protocol headers. Anthropic, for example,
+requires both `x-api-key` authentication and an `anthropic-version` header.
 
 ## ingress
 
@@ -64,13 +70,28 @@ The request shape the provider's own API accepts, one or more of:
 | value | meaning |
 |---|---|
 | `oai` | OpenAI Chat Completions |
-| `oai_responses` | OpenAI Responses. Only split out where a vendor serves both as separate paths, which so far is only OpenRouter |
+| `oai_responses` | OpenAI Responses, split out when a vendor serves it as a separate path |
 | `anthropic` | Anthropic Messages |
 | `google` | Gemini `generateContent` |
 | `other_standard` | a widely adopted third-party shape. Currently unused |
 | `custom` | a shape only this vendor speaks |
 
 Two values mean it serves both, so one adapter can cover several entries.
+
+## surfaces
+
+A profile for every supported ingress. Each profile contains:
+
+| field | meaning |
+|---|---|
+| `endpoint` | path below `base_url`: `chat/completions`, `responses` or `messages` |
+| `auth` | credential transport for this surface |
+| `egress_kind` | gateway adapter: `openai_compatible`, `openai_responses` or `anthropic` |
+| `headers` | fixed protocol headers added to inference requests |
+
+This is the operational source of truth for probes, smoke tests and applied taxonomy
+generation. `ingress` remains the provider-facing vocabulary used by schema discovery;
+validation requires the two representations to agree exactly.
 
 ## auth
 
@@ -88,7 +109,8 @@ takes `x-goog-api-key` natively and bearer on its OpenAI-compatible layer; DeepS
 bearer on the OpenAI surface and `x-api-key` on the Anthropic one; bedrock, vertex and
 azure-foundry each accept a full-strength mechanism plus a weaker key shortcut.
 
-The field says nothing about what else a request needs. See account scoping below.
+The aggregate field documents accepted mechanisms. Surface-specific transport belongs in
+`surfaces`, and model-list transport belongs in `models_auth`.
 
 ## env_var
 

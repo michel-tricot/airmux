@@ -9,6 +9,11 @@ from pydantic import BaseModel, ConfigDict, Field, HttpUrl
 from contract.secrets import SecretRef
 
 ParameterSupport = Literal["supported", "unsupported"]
+Modality = Literal["text", "image", "audio", "video"]
+
+
+def _text_modalities() -> list[Modality]:
+    return ["text"]
 
 
 class KeyEntry(BaseModel):
@@ -54,7 +59,9 @@ class ModelEntry(BaseModel):
     cache_write_price_per_mtok: float  # USD per million cache-write input tokens
     context_window: int
     max_output_tokens: int | None = None  # completion cap; requests are clamped to it, distinct from context_window
-    capabilities: list[str]  # "streaming", "tools", "vision"
+    input_modalities: list[Modality] = Field(default_factory=_text_modalities)
+    output_modalities: list[Modality] = Field(default_factory=_text_modalities)
+    capabilities: list[str]
     parameter_support: dict[str, ParameterSupport] = Field(default_factory=dict)
     egress_kind: Literal["openai_compatible", "openai_responses", "anthropic"] | None = None
 

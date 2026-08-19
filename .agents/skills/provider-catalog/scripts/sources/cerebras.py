@@ -29,9 +29,6 @@ from .base import ModelSource
 
 class Cerebras(ModelSource):
     id = "cerebras"
-    # the authenticated /v1/models 403s and carries less; see the docstring
-    url = "https://api.cerebras.ai/public/v1/models"
-    open_access = True
 
     def normalize(self, item):
         limits = item.get("limits") or {}

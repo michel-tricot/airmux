@@ -2,7 +2,7 @@
   "provider": "mistral",
   "source": "https://api.mistral.ai/v1/models",
   "source_type": "api",
-  "updated": "2026-08-17",
+  "updated": "2026-08-19",
   "count": 36,
   "models": [
     {
@@ -24,7 +24,7 @@
       },
       "pricing_source": "openrouter-index",
       "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "reachable_checked": "2026-08-19",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -41,6 +41,10 @@
           }
         },
         "live_probe": {
+          "version": 1,
+          "targets": {
+            "chat/completions": "7032f0518c1405f7ddc3"
+          },
           "attempted": {
             "chat/completions": [
               "logprobs",
@@ -62,6 +66,44 @@
           }
         }
       },
+      "capability_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.mistral.stream.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "streaming": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "version": 2,
+          "targets": {
+            "chat/completions": "dd4be8e6183e724ab669"
+          },
+          "attempted": {
+            "chat/completions": [
+              "image_input",
+              "json_object",
+              "json_schema",
+              "parallel_tools",
+              "reasoning",
+              "streaming",
+              "tools"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "json_object": "supported",
+              "json_schema": "supported",
+              "parallel_tools": "supported",
+              "streaming": "supported",
+              "tools": "supported"
+            }
+          }
+        }
+      },
       "aliases": [
         "codestral-latest",
         "mistral-code-fim-latest",
@@ -71,8 +113,10 @@
       "display_name": "codestral-2508",
       "endpoint_status": {
         "chat/completions": {
+          "version": 1,
+          "target": "202d51914e1e905fb292",
           "outcome": "ok",
-          "checked": "2026-08-17"
+          "checked": "2026-08-19"
         }
       }
     },
@@ -96,7 +140,7 @@
       "limits_source": "models.dev",
       "pricing_source": "models.dev",
       "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "reachable_checked": "2026-08-19",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -113,6 +157,10 @@
           }
         },
         "live_probe": {
+          "version": 1,
+          "targets": {
+            "chat/completions": "80417dce28ca23d14793"
+          },
           "attempted": {
             "chat/completions": [
               "logprobs",
@@ -134,6 +182,44 @@
           }
         }
       },
+      "capability_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.mistral.stream.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "streaming": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "version": 2,
+          "targets": {
+            "chat/completions": "06ca959625941a34d7ae"
+          },
+          "attempted": {
+            "chat/completions": [
+              "image_input",
+              "json_object",
+              "json_schema",
+              "parallel_tools",
+              "reasoning",
+              "streaming",
+              "tools"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "json_object": "supported",
+              "json_schema": "supported",
+              "parallel_tools": "supported",
+              "streaming": "supported",
+              "tools": "supported"
+            }
+          }
+        }
+      },
       "aliases": [
         "codestral-2508",
         "mistral-code-fim-latest",
@@ -143,8 +229,10 @@
       "display_name": "codestral-2508",
       "endpoint_status": {
         "chat/completions": {
+          "version": 1,
+          "target": "5eaa6d637855d97828b2",
           "outcome": "ok",
-          "checked": "2026-08-17"
+          "checked": "2026-08-19"
         }
       }
     },
@@ -168,7 +256,7 @@
       "limits_source": "models.dev",
       "pricing_source": "models.dev",
       "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "reachable_checked": "2026-08-19",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -185,6 +273,10 @@
           }
         },
         "live_probe": {
+          "version": 1,
+          "targets": {
+            "chat/completions": "abc13c798ebf65361838"
+          },
           "attempted": {
             "chat/completions": [
               "logprobs",
@@ -206,6 +298,44 @@
           }
         }
       },
+      "capability_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.mistral.stream.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "streaming": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "version": 2,
+          "targets": {
+            "chat/completions": "8b29d58c68a6f2feb504"
+          },
+          "attempted": {
+            "chat/completions": [
+              "image_input",
+              "json_object",
+              "json_schema",
+              "parallel_tools",
+              "reasoning",
+              "streaming",
+              "tools"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "json_object": "supported",
+              "json_schema": "supported",
+              "parallel_tools": "supported",
+              "streaming": "supported",
+              "tools": "supported"
+            }
+          }
+        }
+      },
       "aliases": [
         "devstral-latest",
         "devstral-medium-latest",
@@ -217,8 +347,10 @@
       "display_name": "devstral-2512",
       "endpoint_status": {
         "chat/completions": {
+          "version": 1,
+          "target": "1627939dde211e73bb61",
           "outcome": "ok",
-          "checked": "2026-08-17"
+          "checked": "2026-08-19"
         }
       }
     },
@@ -242,7 +374,7 @@
       "limits_source": "models.dev",
       "pricing_source": "models.dev",
       "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "reachable_checked": "2026-08-19",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -259,6 +391,10 @@
           }
         },
         "live_probe": {
+          "version": 1,
+          "targets": {
+            "chat/completions": "26e5790b3d35d3a7ff40"
+          },
           "attempted": {
             "chat/completions": [
               "logprobs",
@@ -280,6 +416,44 @@
           }
         }
       },
+      "capability_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.mistral.stream.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "streaming": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "version": 2,
+          "targets": {
+            "chat/completions": "23d624556295e5e73c99"
+          },
+          "attempted": {
+            "chat/completions": [
+              "image_input",
+              "json_object",
+              "json_schema",
+              "parallel_tools",
+              "reasoning",
+              "streaming",
+              "tools"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "json_object": "supported",
+              "json_schema": "supported",
+              "parallel_tools": "supported",
+              "streaming": "supported",
+              "tools": "supported"
+            }
+          }
+        }
+      },
       "aliases": [
         "devstral-2512",
         "devstral-medium-latest",
@@ -291,8 +465,10 @@
       "display_name": "devstral-2512",
       "endpoint_status": {
         "chat/completions": {
+          "version": 1,
+          "target": "2125a01cf3d357299f77",
           "outcome": "ok",
-          "checked": "2026-08-17"
+          "checked": "2026-08-19"
         }
       }
     },
@@ -316,7 +492,7 @@
       "limits_source": "models.dev",
       "pricing_source": "models.dev",
       "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "reachable_checked": "2026-08-19",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -333,6 +509,10 @@
           }
         },
         "live_probe": {
+          "version": 1,
+          "targets": {
+            "chat/completions": "0a1aff056fe631a4d4ee"
+          },
           "attempted": {
             "chat/completions": [
               "logprobs",
@@ -354,6 +534,44 @@
           }
         }
       },
+      "capability_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.mistral.stream.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "streaming": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "version": 2,
+          "targets": {
+            "chat/completions": "588ef062937a64f58811"
+          },
+          "attempted": {
+            "chat/completions": [
+              "image_input",
+              "json_object",
+              "json_schema",
+              "parallel_tools",
+              "reasoning",
+              "streaming",
+              "tools"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "json_object": "supported",
+              "json_schema": "supported",
+              "parallel_tools": "supported",
+              "streaming": "supported",
+              "tools": "supported"
+            }
+          }
+        }
+      },
       "aliases": [
         "devstral-2512",
         "devstral-latest",
@@ -365,8 +583,10 @@
       "display_name": "devstral-2512",
       "endpoint_status": {
         "chat/completions": {
+          "version": 1,
+          "target": "ac4c390c74758b48c10a",
           "outcome": "ok",
-          "checked": "2026-08-17"
+          "checked": "2026-08-19"
         }
       }
     },
@@ -385,7 +605,7 @@
       "supports_structured_output": null,
       "pricing": null,
       "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "reachable_checked": "2026-08-19",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -402,6 +622,10 @@
           }
         },
         "live_probe": {
+          "version": 1,
+          "targets": {
+            "chat/completions": "10d080cdb65a8cab33d0"
+          },
           "attempted": {
             "chat/completions": [
               "logprobs",
@@ -425,14 +649,54 @@
           }
         }
       },
+      "capability_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.mistral.stream.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "streaming": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "version": 2,
+          "targets": {
+            "chat/completions": "257e351d3b514f224be4"
+          },
+          "attempted": {
+            "chat/completions": [
+              "image_input",
+              "json_object",
+              "json_schema",
+              "parallel_tools",
+              "reasoning",
+              "streaming",
+              "tools"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "json_object": "supported",
+              "json_schema": "supported",
+              "parallel_tools": "supported",
+              "streaming": "supported",
+              "tools": "supported"
+            }
+          }
+        }
+      },
       "aliases": [
         "zai-glm-5-2"
       ],
       "display_name": "glm-5-2",
       "endpoint_status": {
         "chat/completions": {
+          "version": 1,
+          "target": "b17275536522d375877b",
           "outcome": "ok",
-          "checked": "2026-08-17"
+          "checked": "2026-08-19"
         }
       }
     },
@@ -452,7 +716,7 @@
       "supports_structured_output": null,
       "pricing": null,
       "reachable": false,
-      "reachable_checked": "2026-08-17",
+      "reachable_checked": "2026-08-19",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -467,13 +731,69 @@
               "parallel_tool_calls": "supported"
             }
           }
+        },
+        "live_probe": {
+          "version": 1,
+          "targets": {
+            "chat/completions": "3c4732926d32b58b8020"
+          },
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {}
+        }
+      },
+      "capability_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.mistral.stream.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "streaming": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "version": 2,
+          "targets": {
+            "chat/completions": "320905cc6d1f55d5b9aa"
+          },
+          "attempted": {
+            "chat/completions": [
+              "image_input",
+              "json_object",
+              "json_schema",
+              "parallel_tools",
+              "reasoning",
+              "streaming",
+              "tools"
+            ]
+          },
+          "support": {}
         }
       },
       "aliases": [
         "labs-leanstral-1-5-1"
       ],
       "default_temperature": 1.0,
-      "display_name": "labs-leanstral-1-5-1"
+      "display_name": "labs-leanstral-1-5-1",
+      "endpoint_status": {
+        "chat/completions": {
+          "version": 1,
+          "target": "6d29533d9c842c9e6d83",
+          "outcome": "access",
+          "checked": "2026-08-19"
+        }
+      }
     },
     {
       "id": "labs-leanstral-1-5-1",
@@ -491,7 +811,7 @@
       "supports_structured_output": null,
       "pricing": null,
       "reachable": false,
-      "reachable_checked": "2026-08-17",
+      "reachable_checked": "2026-08-19",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -506,13 +826,69 @@
               "parallel_tool_calls": "supported"
             }
           }
+        },
+        "live_probe": {
+          "version": 1,
+          "targets": {
+            "chat/completions": "348dc921df15da4fcdd2"
+          },
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {}
+        }
+      },
+      "capability_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.mistral.stream.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "streaming": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "version": 2,
+          "targets": {
+            "chat/completions": "30be2fe8c92e4b144dd4"
+          },
+          "attempted": {
+            "chat/completions": [
+              "image_input",
+              "json_object",
+              "json_schema",
+              "parallel_tools",
+              "reasoning",
+              "streaming",
+              "tools"
+            ]
+          },
+          "support": {}
         }
       },
       "aliases": [
         "labs-leanstral-1-5"
       ],
       "default_temperature": 1.0,
-      "display_name": "labs-leanstral-1-5-1"
+      "display_name": "labs-leanstral-1-5-1",
+      "endpoint_status": {
+        "chat/completions": {
+          "version": 1,
+          "target": "53713c4812876d719e3d",
+          "outcome": "access",
+          "checked": "2026-08-19"
+        }
+      }
     },
     {
       "id": "magistral-small-latest",
@@ -535,7 +911,7 @@
       "limits_source": "alias:mistral-small-2603",
       "pricing_source": "alias:mistral-small-2603",
       "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "reachable_checked": "2026-08-19",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -552,6 +928,10 @@
           }
         },
         "live_probe": {
+          "version": 1,
+          "targets": {
+            "chat/completions": "aeb837261a3e86d026a3"
+          },
           "attempted": {
             "chat/completions": [
               "logprobs",
@@ -574,6 +954,44 @@
           }
         }
       },
+      "capability_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.mistral.stream.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "streaming": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "version": 2,
+          "targets": {
+            "chat/completions": "327db7c5eb6b332caa9b"
+          },
+          "attempted": {
+            "chat/completions": [
+              "image_input",
+              "json_object",
+              "json_schema",
+              "parallel_tools",
+              "reasoning",
+              "streaming",
+              "tools"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "json_object": "supported",
+              "json_schema": "supported",
+              "parallel_tools": "supported",
+              "streaming": "supported",
+              "tools": "supported"
+            }
+          }
+        }
+      },
       "aliases": [
         "mistral-small-2603",
         "mistral-small-latest",
@@ -583,8 +1001,10 @@
       "display_name": "mistral-small-2603",
       "endpoint_status": {
         "chat/completions": {
+          "version": 1,
+          "target": "fb6b0a4b9384b099c534",
           "outcome": "ok",
-          "checked": "2026-08-17"
+          "checked": "2026-08-19"
         }
       }
     },
@@ -608,7 +1028,7 @@
       },
       "pricing_source": "openrouter-index",
       "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "reachable_checked": "2026-08-19",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -625,6 +1045,10 @@
           }
         },
         "live_probe": {
+          "version": 1,
+          "targets": {
+            "chat/completions": "1f3b861abbca575c3344"
+          },
           "attempted": {
             "chat/completions": [
               "logprobs",
@@ -646,6 +1070,44 @@
           }
         }
       },
+      "capability_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.mistral.stream.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "streaming": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "version": 2,
+          "targets": {
+            "chat/completions": "734bff3a50e3ce90ed2d"
+          },
+          "attempted": {
+            "chat/completions": [
+              "image_input",
+              "json_object",
+              "json_schema",
+              "parallel_tools",
+              "reasoning",
+              "streaming",
+              "tools"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "json_object": "supported",
+              "json_schema": "supported",
+              "parallel_tools": "supported",
+              "streaming": "supported",
+              "tools": "supported"
+            }
+          }
+        }
+      },
       "aliases": [
         "ministral-14b-latest"
       ],
@@ -653,8 +1115,10 @@
       "display_name": "ministral-14b-2512",
       "endpoint_status": {
         "chat/completions": {
+          "version": 1,
+          "target": "039912fe4af137d4696b",
           "outcome": "ok",
-          "checked": "2026-08-17"
+          "checked": "2026-08-19"
         }
       }
     },
@@ -678,7 +1142,7 @@
       },
       "pricing_source": "alias:ministral-14b-2512",
       "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "reachable_checked": "2026-08-19",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -695,6 +1159,10 @@
           }
         },
         "live_probe": {
+          "version": 1,
+          "targets": {
+            "chat/completions": "87b320014e7f6a3187d9"
+          },
           "attempted": {
             "chat/completions": [
               "logprobs",
@@ -716,6 +1184,44 @@
           }
         }
       },
+      "capability_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.mistral.stream.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "streaming": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "version": 2,
+          "targets": {
+            "chat/completions": "32a50b9956ac4f3582f5"
+          },
+          "attempted": {
+            "chat/completions": [
+              "image_input",
+              "json_object",
+              "json_schema",
+              "parallel_tools",
+              "reasoning",
+              "streaming",
+              "tools"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "json_object": "supported",
+              "json_schema": "supported",
+              "parallel_tools": "supported",
+              "streaming": "supported",
+              "tools": "supported"
+            }
+          }
+        }
+      },
       "aliases": [
         "ministral-14b-2512"
       ],
@@ -723,8 +1229,10 @@
       "display_name": "ministral-14b-2512",
       "endpoint_status": {
         "chat/completions": {
+          "version": 1,
+          "target": "badab69ddfdf844e8f44",
           "outcome": "ok",
-          "checked": "2026-08-17"
+          "checked": "2026-08-19"
         }
       }
     },
@@ -748,7 +1256,7 @@
       },
       "pricing_source": "openrouter-index",
       "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "reachable_checked": "2026-08-19",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -765,6 +1273,10 @@
           }
         },
         "live_probe": {
+          "version": 1,
+          "targets": {
+            "chat/completions": "a12d140420aebb776cfb"
+          },
           "attempted": {
             "chat/completions": [
               "logprobs",
@@ -786,6 +1298,44 @@
           }
         }
       },
+      "capability_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.mistral.stream.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "streaming": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "version": 2,
+          "targets": {
+            "chat/completions": "68523869afd816161b92"
+          },
+          "attempted": {
+            "chat/completions": [
+              "image_input",
+              "json_object",
+              "json_schema",
+              "parallel_tools",
+              "reasoning",
+              "streaming",
+              "tools"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "json_object": "supported",
+              "json_schema": "supported",
+              "parallel_tools": "supported",
+              "streaming": "supported",
+              "tools": "supported"
+            }
+          }
+        }
+      },
       "aliases": [
         "ministral-3b-latest"
       ],
@@ -793,8 +1343,10 @@
       "display_name": "ministral-3b-2512",
       "endpoint_status": {
         "chat/completions": {
+          "version": 1,
+          "target": "e1da6661def1dc1c6325",
           "outcome": "ok",
-          "checked": "2026-08-17"
+          "checked": "2026-08-19"
         }
       }
     },
@@ -819,7 +1371,7 @@
       "limits_source": "models.dev",
       "pricing_source": "models.dev",
       "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "reachable_checked": "2026-08-19",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -836,6 +1388,10 @@
           }
         },
         "live_probe": {
+          "version": 1,
+          "targets": {
+            "chat/completions": "bca4e9bf0179d0b6c876"
+          },
           "attempted": {
             "chat/completions": [
               "logprobs",
@@ -857,6 +1413,44 @@
           }
         }
       },
+      "capability_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.mistral.stream.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "streaming": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "version": 2,
+          "targets": {
+            "chat/completions": "02487e0aa6bd0717260a"
+          },
+          "attempted": {
+            "chat/completions": [
+              "image_input",
+              "json_object",
+              "json_schema",
+              "parallel_tools",
+              "reasoning",
+              "streaming",
+              "tools"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "json_object": "supported",
+              "json_schema": "supported",
+              "parallel_tools": "supported",
+              "streaming": "supported",
+              "tools": "supported"
+            }
+          }
+        }
+      },
       "aliases": [
         "ministral-3b-2512"
       ],
@@ -864,8 +1458,10 @@
       "display_name": "ministral-3b-2512",
       "endpoint_status": {
         "chat/completions": {
+          "version": 1,
+          "target": "672c6466337aeabd908e",
           "outcome": "ok",
-          "checked": "2026-08-17"
+          "checked": "2026-08-19"
         }
       }
     },
@@ -889,7 +1485,7 @@
       },
       "pricing_source": "openrouter-index",
       "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "reachable_checked": "2026-08-19",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -906,6 +1502,10 @@
           }
         },
         "live_probe": {
+          "version": 1,
+          "targets": {
+            "chat/completions": "cf0a07390af6bd8ad94f"
+          },
           "attempted": {
             "chat/completions": [
               "logprobs",
@@ -927,6 +1527,45 @@
           }
         }
       },
+      "capability_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.mistral.stream.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "streaming": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "version": 2,
+          "targets": {
+            "chat/completions": "aee7b529301a3b11f39b"
+          },
+          "attempted": {
+            "chat/completions": [
+              "image_input",
+              "json_object",
+              "json_schema",
+              "parallel_tools",
+              "reasoning",
+              "streaming",
+              "tools"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "image_input": "supported",
+              "json_object": "supported",
+              "json_schema": "supported",
+              "parallel_tools": "supported",
+              "streaming": "supported",
+              "tools": "supported"
+            }
+          }
+        }
+      },
       "aliases": [
         "ministral-8b-latest"
       ],
@@ -934,8 +1573,10 @@
       "display_name": "ministral-8b-2512",
       "endpoint_status": {
         "chat/completions": {
+          "version": 1,
+          "target": "aeae29bcac31ae6192a1",
           "outcome": "ok",
-          "checked": "2026-08-17"
+          "checked": "2026-08-19"
         }
       }
     },
@@ -960,7 +1601,7 @@
       "limits_source": "models.dev",
       "pricing_source": "models.dev",
       "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "reachable_checked": "2026-08-19",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -977,6 +1618,10 @@
           }
         },
         "live_probe": {
+          "version": 1,
+          "targets": {
+            "chat/completions": "f660e56150aedbf5884a"
+          },
           "attempted": {
             "chat/completions": [
               "logprobs",
@@ -998,6 +1643,45 @@
           }
         }
       },
+      "capability_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.mistral.stream.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "streaming": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "version": 2,
+          "targets": {
+            "chat/completions": "0b5e7d1574402649a638"
+          },
+          "attempted": {
+            "chat/completions": [
+              "image_input",
+              "json_object",
+              "json_schema",
+              "parallel_tools",
+              "reasoning",
+              "streaming",
+              "tools"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "image_input": "supported",
+              "json_object": "supported",
+              "json_schema": "supported",
+              "parallel_tools": "supported",
+              "streaming": "supported",
+              "tools": "supported"
+            }
+          }
+        }
+      },
       "aliases": [
         "ministral-8b-2512"
       ],
@@ -1005,8 +1689,10 @@
       "display_name": "ministral-8b-2512",
       "endpoint_status": {
         "chat/completions": {
+          "version": 1,
+          "target": "3dce8f627948c0c4f271",
           "outcome": "ok",
-          "checked": "2026-08-17"
+          "checked": "2026-08-19"
         }
       }
     },
@@ -1030,7 +1716,7 @@
       "limits_source": "alias:devstral-2512",
       "pricing_source": "alias:devstral-2512",
       "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "reachable_checked": "2026-08-19",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -1047,6 +1733,10 @@
           }
         },
         "live_probe": {
+          "version": 1,
+          "targets": {
+            "chat/completions": "2ef3ac5099b06bf3e8b9"
+          },
           "attempted": {
             "chat/completions": [
               "logprobs",
@@ -1068,6 +1758,44 @@
           }
         }
       },
+      "capability_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.mistral.stream.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "streaming": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "version": 2,
+          "targets": {
+            "chat/completions": "a0d8ba9f5204d7c95c86"
+          },
+          "attempted": {
+            "chat/completions": [
+              "image_input",
+              "json_object",
+              "json_schema",
+              "parallel_tools",
+              "reasoning",
+              "streaming",
+              "tools"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "json_object": "supported",
+              "json_schema": "supported",
+              "parallel_tools": "supported",
+              "streaming": "supported",
+              "tools": "supported"
+            }
+          }
+        }
+      },
       "aliases": [
         "devstral-2512",
         "devstral-latest",
@@ -1079,8 +1807,10 @@
       "display_name": "devstral-2512",
       "endpoint_status": {
         "chat/completions": {
+          "version": 1,
+          "target": "effcb1c8040ca3b06708",
           "outcome": "ok",
-          "checked": "2026-08-17"
+          "checked": "2026-08-19"
         }
       }
     },
@@ -1103,7 +1833,7 @@
       },
       "pricing_source": "alias:codestral-2508",
       "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "reachable_checked": "2026-08-19",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -1120,6 +1850,10 @@
           }
         },
         "live_probe": {
+          "version": 1,
+          "targets": {
+            "chat/completions": "4a28774f94a85839d365"
+          },
           "attempted": {
             "chat/completions": [
               "logprobs",
@@ -1141,6 +1875,44 @@
           }
         }
       },
+      "capability_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.mistral.stream.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "streaming": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "version": 2,
+          "targets": {
+            "chat/completions": "3a0c809b8e6d3b15d163"
+          },
+          "attempted": {
+            "chat/completions": [
+              "image_input",
+              "json_object",
+              "json_schema",
+              "parallel_tools",
+              "reasoning",
+              "streaming",
+              "tools"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "json_object": "supported",
+              "json_schema": "supported",
+              "parallel_tools": "supported",
+              "streaming": "supported",
+              "tools": "supported"
+            }
+          }
+        }
+      },
       "aliases": [
         "codestral-2508",
         "codestral-latest",
@@ -1150,8 +1922,10 @@
       "display_name": "codestral-2508",
       "endpoint_status": {
         "chat/completions": {
+          "version": 1,
+          "target": "ba5ddd8cad3612e72de4",
           "outcome": "ok",
-          "checked": "2026-08-17"
+          "checked": "2026-08-19"
         }
       }
     },
@@ -1174,7 +1948,7 @@
       },
       "pricing_source": "alias:codestral-2508",
       "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "reachable_checked": "2026-08-19",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -1191,6 +1965,10 @@
           }
         },
         "live_probe": {
+          "version": 1,
+          "targets": {
+            "chat/completions": "3537e9e314f36442bb63"
+          },
           "attempted": {
             "chat/completions": [
               "logprobs",
@@ -1212,6 +1990,44 @@
           }
         }
       },
+      "capability_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.mistral.stream.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "streaming": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "version": 2,
+          "targets": {
+            "chat/completions": "4e2c5949d20b25bb9d90"
+          },
+          "attempted": {
+            "chat/completions": [
+              "image_input",
+              "json_object",
+              "json_schema",
+              "parallel_tools",
+              "reasoning",
+              "streaming",
+              "tools"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "json_object": "supported",
+              "json_schema": "supported",
+              "parallel_tools": "supported",
+              "streaming": "supported",
+              "tools": "supported"
+            }
+          }
+        }
+      },
       "aliases": [
         "codestral-2508",
         "codestral-latest",
@@ -1221,8 +2037,10 @@
       "display_name": "codestral-2508",
       "endpoint_status": {
         "chat/completions": {
+          "version": 1,
+          "target": "0ae7fccf855411461dd7",
           "outcome": "ok",
-          "checked": "2026-08-17"
+          "checked": "2026-08-19"
         }
       }
     },
@@ -1247,7 +2065,7 @@
       "limits_source": "models.dev",
       "pricing_source": "models.dev",
       "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "reachable_checked": "2026-08-19",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -1264,6 +2082,10 @@
           }
         },
         "live_probe": {
+          "version": 1,
+          "targets": {
+            "chat/completions": "d445f0d8e1009ffa1135"
+          },
           "attempted": {
             "chat/completions": [
               "logprobs",
@@ -1285,6 +2107,45 @@
           }
         }
       },
+      "capability_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.mistral.stream.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "streaming": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "version": 2,
+          "targets": {
+            "chat/completions": "381db8539364135d8c51"
+          },
+          "attempted": {
+            "chat/completions": [
+              "image_input",
+              "json_object",
+              "json_schema",
+              "parallel_tools",
+              "reasoning",
+              "streaming",
+              "tools"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "image_input": "supported",
+              "json_object": "supported",
+              "json_schema": "supported",
+              "parallel_tools": "supported",
+              "streaming": "supported",
+              "tools": "supported"
+            }
+          }
+        }
+      },
       "aliases": [
         "mistral-large-latest"
       ],
@@ -1292,8 +2153,10 @@
       "display_name": "mistral-large-2512",
       "endpoint_status": {
         "chat/completions": {
+          "version": 1,
+          "target": "1e7915c946b6c7ca5429",
           "outcome": "ok",
-          "checked": "2026-08-17"
+          "checked": "2026-08-19"
         }
       }
     },
@@ -1318,7 +2181,7 @@
       "limits_source": "models.dev",
       "pricing_source": "models.dev",
       "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "reachable_checked": "2026-08-19",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -1335,6 +2198,10 @@
           }
         },
         "live_probe": {
+          "version": 1,
+          "targets": {
+            "chat/completions": "adbab15e41abaec938cb"
+          },
           "attempted": {
             "chat/completions": [
               "logprobs",
@@ -1356,6 +2223,44 @@
           }
         }
       },
+      "capability_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.mistral.stream.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "streaming": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "version": 2,
+          "targets": {
+            "chat/completions": "47f14172573e1cf72505"
+          },
+          "attempted": {
+            "chat/completions": [
+              "image_input",
+              "json_object",
+              "json_schema",
+              "parallel_tools",
+              "reasoning",
+              "streaming",
+              "tools"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "json_object": "supported",
+              "json_schema": "supported",
+              "parallel_tools": "supported",
+              "streaming": "supported",
+              "tools": "supported"
+            }
+          }
+        }
+      },
       "aliases": [
         "mistral-large-2512"
       ],
@@ -1363,8 +2268,10 @@
       "display_name": "mistral-large-2512",
       "endpoint_status": {
         "chat/completions": {
+          "version": 1,
+          "target": "61770b868ea35b298b19",
           "outcome": "ok",
-          "checked": "2026-08-17"
+          "checked": "2026-08-19"
         }
       }
     },
@@ -1389,7 +2296,7 @@
       "limits_source": "alias:mistral-medium-2604",
       "pricing_source": "alias:mistral-medium-2604",
       "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "reachable_checked": "2026-08-19",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -1406,6 +2313,10 @@
           }
         },
         "live_probe": {
+          "version": 1,
+          "targets": {
+            "chat/completions": "75395cfea6538353c7f2"
+          },
           "attempted": {
             "chat/completions": [
               "logprobs",
@@ -1428,6 +2339,44 @@
           }
         }
       },
+      "capability_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.mistral.stream.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "streaming": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "version": 2,
+          "targets": {
+            "chat/completions": "d96c9727e13e6516b400"
+          },
+          "attempted": {
+            "chat/completions": [
+              "image_input",
+              "json_object",
+              "json_schema",
+              "parallel_tools",
+              "reasoning",
+              "streaming",
+              "tools"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "json_object": "supported",
+              "json_schema": "supported",
+              "parallel_tools": "supported",
+              "streaming": "supported",
+              "tools": "supported"
+            }
+          }
+        }
+      },
       "aliases": [
         "mistral-medium-2604",
         "mistral-medium-3",
@@ -1441,8 +2390,10 @@
       "display_name": "mistral-medium-latest",
       "endpoint_status": {
         "chat/completions": {
+          "version": 1,
+          "target": "ae96fb2e188320749d9d",
           "outcome": "ok",
-          "checked": "2026-08-17"
+          "checked": "2026-08-19"
         }
       }
     },
@@ -1467,7 +2418,7 @@
       "limits_source": "models.dev",
       "pricing_source": "models.dev",
       "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "reachable_checked": "2026-08-19",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -1484,6 +2435,10 @@
           }
         },
         "live_probe": {
+          "version": 1,
+          "targets": {
+            "chat/completions": "355e31cc7dd59b541383"
+          },
           "attempted": {
             "chat/completions": [
               "logprobs",
@@ -1505,14 +2460,55 @@
           }
         }
       },
+      "capability_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.mistral.stream.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "streaming": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "version": 2,
+          "targets": {
+            "chat/completions": "f79c022db42118674187"
+          },
+          "attempted": {
+            "chat/completions": [
+              "image_input",
+              "json_object",
+              "json_schema",
+              "parallel_tools",
+              "reasoning",
+              "streaming",
+              "tools"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "image_input": "supported",
+              "json_object": "supported",
+              "json_schema": "supported",
+              "parallel_tools": "supported",
+              "streaming": "supported",
+              "tools": "supported"
+            }
+          }
+        }
+      },
       "default_temperature": 0.3,
       "deprecation_date": "2026-08-31T12:00:00Z",
       "deprecation_replacement": "mistral-medium-3-5",
       "display_name": "mistral-medium-2505",
       "endpoint_status": {
         "chat/completions": {
+          "version": 1,
+          "target": "c814526eb638ce1f861c",
           "outcome": "ok",
-          "checked": "2026-08-17"
+          "checked": "2026-08-19"
         }
       }
     },
@@ -1537,7 +2533,7 @@
       "limits_source": "models.dev",
       "pricing_source": "models.dev",
       "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "reachable_checked": "2026-08-19",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -1554,6 +2550,10 @@
           }
         },
         "live_probe": {
+          "version": 1,
+          "targets": {
+            "chat/completions": "08534127e0094844e3ba"
+          },
           "attempted": {
             "chat/completions": [
               "logprobs",
@@ -1575,14 +2575,55 @@
           }
         }
       },
+      "capability_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.mistral.stream.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "streaming": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "version": 2,
+          "targets": {
+            "chat/completions": "b4544f1929fe3f074462"
+          },
+          "attempted": {
+            "chat/completions": [
+              "image_input",
+              "json_object",
+              "json_schema",
+              "parallel_tools",
+              "reasoning",
+              "streaming",
+              "tools"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "image_input": "supported",
+              "json_object": "supported",
+              "json_schema": "supported",
+              "parallel_tools": "supported",
+              "streaming": "supported",
+              "tools": "supported"
+            }
+          }
+        }
+      },
       "default_temperature": 0.3,
       "deprecation_date": "2026-08-31T12:00:00Z",
       "deprecation_replacement": "mistral-medium-3-5",
       "display_name": "mistral-medium-2508",
       "endpoint_status": {
         "chat/completions": {
+          "version": 1,
+          "target": "7f38dee7a22248df71d7",
           "outcome": "ok",
-          "checked": "2026-08-17"
+          "checked": "2026-08-19"
         }
       }
     },
@@ -1607,7 +2648,7 @@
       "limits_source": "models.dev",
       "pricing_source": "models.dev",
       "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "reachable_checked": "2026-08-19",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -1624,6 +2665,10 @@
           }
         },
         "live_probe": {
+          "version": 1,
+          "targets": {
+            "chat/completions": "206f9d206b6ab880a82a"
+          },
           "attempted": {
             "chat/completions": [
               "logprobs",
@@ -1646,6 +2691,44 @@
           }
         }
       },
+      "capability_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.mistral.stream.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "streaming": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "version": 2,
+          "targets": {
+            "chat/completions": "85e265148a4d20d70c0d"
+          },
+          "attempted": {
+            "chat/completions": [
+              "image_input",
+              "json_object",
+              "json_schema",
+              "parallel_tools",
+              "reasoning",
+              "streaming",
+              "tools"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "json_object": "supported",
+              "json_schema": "supported",
+              "parallel_tools": "supported",
+              "streaming": "supported",
+              "tools": "supported"
+            }
+          }
+        }
+      },
       "aliases": [
         "mistral-medium",
         "mistral-medium-3",
@@ -1659,8 +2742,10 @@
       "display_name": "mistral-medium-latest",
       "endpoint_status": {
         "chat/completions": {
+          "version": 1,
+          "target": "8cc08508d17899635240",
           "outcome": "ok",
-          "checked": "2026-08-17"
+          "checked": "2026-08-19"
         }
       }
     },
@@ -1684,7 +2769,7 @@
       },
       "pricing_source": "openrouter-index",
       "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "reachable_checked": "2026-08-19",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -1701,6 +2786,10 @@
           }
         },
         "live_probe": {
+          "version": 1,
+          "targets": {
+            "chat/completions": "bdc1f9e1f280f89e322b"
+          },
           "attempted": {
             "chat/completions": [
               "logprobs",
@@ -1723,6 +2812,45 @@
           }
         }
       },
+      "capability_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.mistral.stream.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "streaming": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "version": 2,
+          "targets": {
+            "chat/completions": "7e70c3f956bc51ac0ac1"
+          },
+          "attempted": {
+            "chat/completions": [
+              "image_input",
+              "json_object",
+              "json_schema",
+              "parallel_tools",
+              "reasoning",
+              "streaming",
+              "tools"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "image_input": "supported",
+              "json_object": "supported",
+              "json_schema": "supported",
+              "parallel_tools": "supported",
+              "streaming": "supported",
+              "tools": "supported"
+            }
+          }
+        }
+      },
       "aliases": [
         "mistral-medium",
         "mistral-medium-2604",
@@ -1736,8 +2864,10 @@
       "display_name": "mistral-medium-latest",
       "endpoint_status": {
         "chat/completions": {
+          "version": 1,
+          "target": "a18b71b44a5a61106278",
           "outcome": "ok",
-          "checked": "2026-08-17"
+          "checked": "2026-08-19"
         }
       }
     },
@@ -1761,7 +2891,7 @@
       },
       "pricing_source": "openrouter-index",
       "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "reachable_checked": "2026-08-19",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -1778,6 +2908,10 @@
           }
         },
         "live_probe": {
+          "version": 1,
+          "targets": {
+            "chat/completions": "6a07a626d5c0cc228601"
+          },
           "attempted": {
             "chat/completions": [
               "logprobs",
@@ -1800,6 +2934,44 @@
           }
         }
       },
+      "capability_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.mistral.stream.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "streaming": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "version": 2,
+          "targets": {
+            "chat/completions": "0e030c8635a39f903617"
+          },
+          "attempted": {
+            "chat/completions": [
+              "image_input",
+              "json_object",
+              "json_schema",
+              "parallel_tools",
+              "reasoning",
+              "streaming",
+              "tools"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "json_object": "supported",
+              "json_schema": "supported",
+              "parallel_tools": "supported",
+              "streaming": "supported",
+              "tools": "supported"
+            }
+          }
+        }
+      },
       "aliases": [
         "mistral-medium",
         "mistral-medium-2604",
@@ -1813,8 +2985,10 @@
       "display_name": "mistral-medium-latest",
       "endpoint_status": {
         "chat/completions": {
+          "version": 1,
+          "target": "2b260a211ff26d8516e3",
           "outcome": "ok",
-          "checked": "2026-08-17"
+          "checked": "2026-08-19"
         }
       }
     },
@@ -1839,7 +3013,7 @@
       "limits_source": "alias:mistral-medium",
       "pricing_source": "alias:mistral-medium",
       "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "reachable_checked": "2026-08-19",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -1856,6 +3030,10 @@
           }
         },
         "live_probe": {
+          "version": 1,
+          "targets": {
+            "chat/completions": "dc216f68dc6797bb2749"
+          },
           "attempted": {
             "chat/completions": [
               "logprobs",
@@ -1878,6 +3056,44 @@
           }
         }
       },
+      "capability_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.mistral.stream.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "streaming": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "version": 2,
+          "targets": {
+            "chat/completions": "b56ed86a4062b98a0974"
+          },
+          "attempted": {
+            "chat/completions": [
+              "image_input",
+              "json_object",
+              "json_schema",
+              "parallel_tools",
+              "reasoning",
+              "streaming",
+              "tools"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "json_object": "supported",
+              "json_schema": "supported",
+              "parallel_tools": "supported",
+              "streaming": "supported",
+              "tools": "supported"
+            }
+          }
+        }
+      },
       "aliases": [
         "mistral-medium",
         "mistral-medium-2604",
@@ -1891,8 +3107,10 @@
       "display_name": "mistral-medium-latest",
       "endpoint_status": {
         "chat/completions": {
+          "version": 1,
+          "target": "636370926086e987e93d",
           "outcome": "ok",
-          "checked": "2026-08-17"
+          "checked": "2026-08-19"
         }
       }
     },
@@ -1917,7 +3135,7 @@
       "limits_source": "models.dev",
       "pricing_source": "models.dev",
       "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "reachable_checked": "2026-08-19",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -1934,6 +3152,10 @@
           }
         },
         "live_probe": {
+          "version": 1,
+          "targets": {
+            "chat/completions": "44718e5a828a497159f3"
+          },
           "attempted": {
             "chat/completions": [
               "logprobs",
@@ -1956,6 +3178,44 @@
           }
         }
       },
+      "capability_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.mistral.stream.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "streaming": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "version": 2,
+          "targets": {
+            "chat/completions": "9c6f91ee2cdbeec76b66"
+          },
+          "attempted": {
+            "chat/completions": [
+              "image_input",
+              "json_object",
+              "json_schema",
+              "parallel_tools",
+              "reasoning",
+              "streaming",
+              "tools"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "json_object": "supported",
+              "json_schema": "supported",
+              "parallel_tools": "supported",
+              "streaming": "supported",
+              "tools": "supported"
+            }
+          }
+        }
+      },
       "aliases": [
         "mistral-medium",
         "mistral-medium-2604",
@@ -1969,8 +3229,10 @@
       "display_name": "mistral-medium-latest",
       "endpoint_status": {
         "chat/completions": {
+          "version": 1,
+          "target": "2c90ad99e84a64a636a0",
           "outcome": "ok",
-          "checked": "2026-08-17"
+          "checked": "2026-08-19"
         }
       }
     },
@@ -1995,7 +3257,7 @@
       "limits_source": "models.dev",
       "pricing_source": "models.dev",
       "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "reachable_checked": "2026-08-19",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -2012,6 +3274,10 @@
           }
         },
         "live_probe": {
+          "version": 1,
+          "targets": {
+            "chat/completions": "ca2ff6d0170dbbe09c41"
+          },
           "attempted": {
             "chat/completions": [
               "logprobs",
@@ -2034,6 +3300,44 @@
           }
         }
       },
+      "capability_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.mistral.stream.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "streaming": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "version": 2,
+          "targets": {
+            "chat/completions": "26dd2de3602c13a8cd53"
+          },
+          "attempted": {
+            "chat/completions": [
+              "image_input",
+              "json_object",
+              "json_schema",
+              "parallel_tools",
+              "reasoning",
+              "streaming",
+              "tools"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "json_object": "supported",
+              "json_schema": "supported",
+              "parallel_tools": "supported",
+              "streaming": "supported",
+              "tools": "supported"
+            }
+          }
+        }
+      },
       "aliases": [
         "magistral-small-latest",
         "mistral-small-latest",
@@ -2043,8 +3347,10 @@
       "display_name": "mistral-small-2603",
       "endpoint_status": {
         "chat/completions": {
+          "version": 1,
+          "target": "b274dffb62e9c6c984a7",
           "outcome": "ok",
-          "checked": "2026-08-17"
+          "checked": "2026-08-19"
         }
       }
     },
@@ -2069,7 +3375,7 @@
       "limits_source": "models.dev",
       "pricing_source": "models.dev",
       "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "reachable_checked": "2026-08-19",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -2086,6 +3392,10 @@
           }
         },
         "live_probe": {
+          "version": 1,
+          "targets": {
+            "chat/completions": "11954baf013f2f4c2caa"
+          },
           "attempted": {
             "chat/completions": [
               "logprobs",
@@ -2108,6 +3418,44 @@
           }
         }
       },
+      "capability_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.mistral.stream.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "streaming": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "version": 2,
+          "targets": {
+            "chat/completions": "1623b18adcf3f3b4745b"
+          },
+          "attempted": {
+            "chat/completions": [
+              "image_input",
+              "json_object",
+              "json_schema",
+              "parallel_tools",
+              "reasoning",
+              "streaming",
+              "tools"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "json_object": "supported",
+              "json_schema": "supported",
+              "parallel_tools": "supported",
+              "streaming": "supported",
+              "tools": "supported"
+            }
+          }
+        }
+      },
       "aliases": [
         "magistral-small-latest",
         "mistral-small-2603",
@@ -2117,8 +3465,10 @@
       "display_name": "mistral-small-2603",
       "endpoint_status": {
         "chat/completions": {
+          "version": 1,
+          "target": "488b18232de7bcdaa0de",
           "outcome": "ok",
-          "checked": "2026-08-17"
+          "checked": "2026-08-19"
         }
       }
     },
@@ -2143,7 +3493,7 @@
       "limits_source": "alias:magistral-small-latest",
       "pricing_source": "alias:magistral-small-latest",
       "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "reachable_checked": "2026-08-19",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -2160,6 +3510,10 @@
           }
         },
         "live_probe": {
+          "version": 1,
+          "targets": {
+            "chat/completions": "33e0960fc7efe37094aa"
+          },
           "attempted": {
             "chat/completions": [
               "logprobs",
@@ -2182,6 +3536,44 @@
           }
         }
       },
+      "capability_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.mistral.stream.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "streaming": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "version": 2,
+          "targets": {
+            "chat/completions": "1ad6fa120bdbfdb7669c"
+          },
+          "attempted": {
+            "chat/completions": [
+              "image_input",
+              "json_object",
+              "json_schema",
+              "parallel_tools",
+              "reasoning",
+              "streaming",
+              "tools"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "json_object": "supported",
+              "json_schema": "supported",
+              "parallel_tools": "supported",
+              "streaming": "supported",
+              "tools": "supported"
+            }
+          }
+        }
+      },
       "aliases": [
         "magistral-small-latest",
         "mistral-small-2603",
@@ -2191,8 +3583,10 @@
       "display_name": "mistral-small-2603",
       "endpoint_status": {
         "chat/completions": {
+          "version": 1,
+          "target": "9d0430683e361eaf3537",
           "outcome": "ok",
-          "checked": "2026-08-17"
+          "checked": "2026-08-19"
         }
       }
     },
@@ -2217,7 +3611,7 @@
       "limits_source": "alias:mistral-medium",
       "pricing_source": "alias:mistral-medium",
       "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "reachable_checked": "2026-08-19",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -2234,6 +3628,10 @@
           }
         },
         "live_probe": {
+          "version": 1,
+          "targets": {
+            "chat/completions": "2311b62aed6c1779cf06"
+          },
           "attempted": {
             "chat/completions": [
               "logprobs",
@@ -2256,6 +3654,44 @@
           }
         }
       },
+      "capability_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.mistral.stream.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "streaming": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "version": 2,
+          "targets": {
+            "chat/completions": "54069ba9948d9874cec8"
+          },
+          "attempted": {
+            "chat/completions": [
+              "image_input",
+              "json_object",
+              "json_schema",
+              "parallel_tools",
+              "reasoning",
+              "streaming",
+              "tools"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "json_object": "supported",
+              "json_schema": "supported",
+              "parallel_tools": "supported",
+              "streaming": "supported",
+              "tools": "supported"
+            }
+          }
+        }
+      },
       "aliases": [
         "mistral-medium",
         "mistral-medium-2604",
@@ -2269,8 +3705,10 @@
       "display_name": "mistral-medium-latest",
       "endpoint_status": {
         "chat/completions": {
+          "version": 1,
+          "target": "fcf05bbf26b6bda8f3f5",
           "outcome": "ok",
-          "checked": "2026-08-17"
+          "checked": "2026-08-19"
         }
       }
     },
@@ -2295,7 +3733,7 @@
       "limits_source": "alias:mistral-medium",
       "pricing_source": "alias:mistral-medium",
       "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "reachable_checked": "2026-08-19",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -2312,6 +3750,10 @@
           }
         },
         "live_probe": {
+          "version": 1,
+          "targets": {
+            "chat/completions": "e3cb411c8a5339c8992c"
+          },
           "attempted": {
             "chat/completions": [
               "logprobs",
@@ -2334,6 +3776,44 @@
           }
         }
       },
+      "capability_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.mistral.stream.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "streaming": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "version": 2,
+          "targets": {
+            "chat/completions": "d983036bb5980e07199b"
+          },
+          "attempted": {
+            "chat/completions": [
+              "image_input",
+              "json_object",
+              "json_schema",
+              "parallel_tools",
+              "reasoning",
+              "streaming",
+              "tools"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "json_object": "supported",
+              "json_schema": "supported",
+              "parallel_tools": "supported",
+              "streaming": "supported",
+              "tools": "supported"
+            }
+          }
+        }
+      },
       "aliases": [
         "mistral-medium",
         "mistral-medium-2604",
@@ -2347,8 +3827,10 @@
       "display_name": "mistral-medium-latest",
       "endpoint_status": {
         "chat/completions": {
+          "version": 1,
+          "target": "e4fec68c504f650275e8",
           "outcome": "ok",
-          "checked": "2026-08-17"
+          "checked": "2026-08-19"
         }
       }
     },
@@ -2372,7 +3854,7 @@
       "limits_source": "alias:voxtral-small-latest",
       "pricing_source": "alias:voxtral-small-latest",
       "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "reachable_checked": "2026-08-19",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -2389,6 +3871,10 @@
           }
         },
         "live_probe": {
+          "version": 1,
+          "targets": {
+            "chat/completions": "7a96174e8d7532f13d65"
+          },
           "attempted": {
             "chat/completions": [
               "logprobs",
@@ -2410,6 +3896,44 @@
           }
         }
       },
+      "capability_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.mistral.stream.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "streaming": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "version": 2,
+          "targets": {
+            "chat/completions": "dfa688b1d2cd2b79a5c3"
+          },
+          "attempted": {
+            "chat/completions": [
+              "image_input",
+              "json_object",
+              "json_schema",
+              "parallel_tools",
+              "reasoning",
+              "streaming",
+              "tools"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "json_object": "supported",
+              "json_schema": "supported",
+              "parallel_tools": "supported",
+              "streaming": "supported",
+              "tools": "supported"
+            }
+          }
+        }
+      },
       "aliases": [
         "voxtral-small-latest"
       ],
@@ -2417,8 +3941,10 @@
       "display_name": "voxtral-small-2507",
       "endpoint_status": {
         "chat/completions": {
+          "version": 1,
+          "target": "30b5e1873ff8731cf651",
           "outcome": "ok",
-          "checked": "2026-08-17"
+          "checked": "2026-08-19"
         }
       }
     },
@@ -2442,7 +3968,7 @@
       "limits_source": "models.dev",
       "pricing_source": "models.dev",
       "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "reachable_checked": "2026-08-19",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -2459,6 +3985,10 @@
           }
         },
         "live_probe": {
+          "version": 1,
+          "targets": {
+            "chat/completions": "472083fbd7ff0aa16c05"
+          },
           "attempted": {
             "chat/completions": [
               "logprobs",
@@ -2480,6 +4010,44 @@
           }
         }
       },
+      "capability_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.mistral.stream.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "streaming": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "version": 2,
+          "targets": {
+            "chat/completions": "e6fd00ace20b3412ea29"
+          },
+          "attempted": {
+            "chat/completions": [
+              "image_input",
+              "json_object",
+              "json_schema",
+              "parallel_tools",
+              "reasoning",
+              "streaming",
+              "tools"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "json_object": "supported",
+              "json_schema": "supported",
+              "parallel_tools": "supported",
+              "streaming": "supported",
+              "tools": "supported"
+            }
+          }
+        }
+      },
       "aliases": [
         "voxtral-small-2507"
       ],
@@ -2487,8 +4055,10 @@
       "display_name": "voxtral-small-2507",
       "endpoint_status": {
         "chat/completions": {
+          "version": 1,
+          "target": "39a577d0639b35029981",
           "outcome": "ok",
-          "checked": "2026-08-17"
+          "checked": "2026-08-19"
         }
       }
     },
@@ -2507,7 +4077,7 @@
       "supports_structured_output": null,
       "pricing": null,
       "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "reachable_checked": "2026-08-19",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -2524,6 +4094,10 @@
           }
         },
         "live_probe": {
+          "version": 1,
+          "targets": {
+            "chat/completions": "3898039901a55aff7223"
+          },
           "attempted": {
             "chat/completions": [
               "logprobs",
@@ -2547,14 +4121,54 @@
           }
         }
       },
+      "capability_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.mistral.stream.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "streaming": "supported"
+            }
+          }
+        },
+        "live_probe": {
+          "version": 2,
+          "targets": {
+            "chat/completions": "9ada83fa0ecc959200cd"
+          },
+          "attempted": {
+            "chat/completions": [
+              "image_input",
+              "json_object",
+              "json_schema",
+              "parallel_tools",
+              "reasoning",
+              "streaming",
+              "tools"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "json_object": "supported",
+              "json_schema": "supported",
+              "parallel_tools": "supported",
+              "streaming": "supported",
+              "tools": "supported"
+            }
+          }
+        }
+      },
       "aliases": [
         "glm-5-2"
       ],
       "display_name": "glm-5-2",
       "endpoint_status": {
         "chat/completions": {
+          "version": 1,
+          "target": "834955593f6efcc45681",
           "outcome": "ok",
-          "checked": "2026-08-17"
+          "checked": "2026-08-19"
         }
       }
     }

@@ -6,12 +6,16 @@ from uuid import UUID
 from sqlalchemy import JSON
 from sqlmodel import Field
 
-from contract import ParameterSupport
+from contract import Modality, ParameterSupport
 from control_plane.models.audit import audited
 from control_plane.models.common import Identified, Tombstonable
 from control_plane.models.common.base import Record
 from control_plane.models.common.wire import RecordOut
 from control_plane.models.runtime_configuration import runtime_configured
+
+
+def _text_modalities() -> list[Modality]:
+    return ["text"]
 
 
 @audited
@@ -28,6 +32,8 @@ from control_plane.models.runtime_configuration import runtime_configured
         "cache_write_price_per_mtok",
         "context_window",
         "max_output_tokens",
+        "input_modalities",
+        "output_modalities",
         "capabilities",
         "parameter_support",
     ),
@@ -43,6 +49,8 @@ class Model(Record, Identified, Tombstonable, table=True):
     cache_write_price_per_mtok: float
     context_window: int
     max_output_tokens: int | None = None
+    input_modalities: list[Modality] = Field(default_factory=_text_modalities, sa_type=JSON)
+    output_modalities: list[Modality] = Field(default_factory=_text_modalities, sa_type=JSON)
     capabilities: list[str] = Field(default_factory=list, sa_type=JSON)
     parameter_support: dict[str, ParameterSupport] = Field(default_factory=dict, sa_type=JSON)
 
@@ -59,6 +67,8 @@ class ModelOut(RecordOut[Model]):
     cache_write_price_per_mtok: float
     context_window: int
     max_output_tokens: int | None
+    input_modalities: list[Modality]
+    output_modalities: list[Modality]
     capabilities: list[str]
     parameter_support: dict[str, ParameterSupport]
     created_at: datetime

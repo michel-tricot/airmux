@@ -3,7 +3,6 @@ from __future__ import annotations
 import json
 
 import yaml
-
 from canonical import write_catalog
 from parameter_support import apply_discovery_evidence, discovery_evidence
 from paths import TAXONOMY

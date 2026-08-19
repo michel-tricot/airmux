@@ -13,14 +13,15 @@ silently counted as evidence.
 from __future__ import annotations
 
 import csv
+import io
 import json
 import sys
 from pathlib import Path
 from typing import TypedDict
 
-from paths import TAXONOMY
-
 import yaml
+from catalog_io import atomic_write_text
+from paths import TAXONOMY
 
 ROOT = TAXONOMY
 OUT = ROOT / "reports"
@@ -126,20 +127,21 @@ def main() -> int:
     rows: list[MatrixRow] = []
     for path in paths:
         flags = [1 if path in support[c["id"]] else 0 for c in columns]
-        verified = sum(f for f, c in zip(flags, columns) if c["kind"] == "provider" and not c["standin"])
+        verified = sum(f for f, c in zip(flags, columns, strict=True) if c["kind"] == "provider" and not c["standin"])
         rows.append({"path": path, "flags": flags, "total": sum(flags), "verified": verified})
     rows.sort(key=lambda r: (-r["total"], r["path"]))
 
     OUT.mkdir(exist_ok=True)
     csv_path = OUT / f"{INGRESS}-request-fields.csv"
-    with csv_path.open("w", newline="") as fh:
-        w = csv.writer(fh, lineterminator="\n")
-        w.writerow(["jsonpath", "supported_by", "supported_by_excluding_standins"] + [c["id"] for c in columns])
-        for r in rows:
-            w.writerow([r["path"], r["total"], r["verified"]] + r["flags"])
+    stream = io.StringIO(newline="")
+    writer = csv.writer(stream, lineterminator="\n")
+    writer.writerow(["jsonpath", "supported_by", "supported_by_excluding_standins"] + [column["id"] for column in columns])
+    for row in rows:
+        writer.writerow([row["path"], row["total"], row["verified"]] + row["flags"])
+    atomic_write_text(csv_path, stream.getvalue())
 
     blob = {"ingress": INGRESS, "maxdepth": MAXDEPTH, "columns": columns, "rows": rows}
-    (OUT / f"{INGRESS}-request-fields.json").write_text(json.dumps(blob, separators=(",", ":")) + "\n")
+    atomic_write_text(OUT / f"{INGRESS}-request-fields.json", json.dumps(blob, separators=(",", ":")) + "\n")
 
     universal = sum(1 for r in rows if r["total"] == len(columns))
     solo = sum(1 for r in rows if r["total"] == 1)

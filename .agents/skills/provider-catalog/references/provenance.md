@@ -45,10 +45,20 @@ canonical parameter independently, with a conclusive live probe winning over mod
 discovery. A successful request means supported; only an explicit unsupported-parameter
 response means unsupported. Every other outcome remains unknown.
 
-`fetch_models.py` adds discovery evidence before writing every returned model and probes new
-models when it has a provider credential. `validate.py` independently regenerates the
-schema-derived evidence and rejects missing or stale model records. There is no maintained
-list of model ids or parameter claims in the skill.
+Live evidence includes a probe-suite version and endpoint target fingerprints derived from
+the provider id, base URL, endpoint and upstream model id. A classifier change or routing
+target change makes the evidence stale. `fetch_models.py` preserves only evidence that is
+still current; the explicit probe phase refreshes the rest.
+
+Capability evidence follows the same structure. Direct evidence describes provider
+behavior. `adapter_support.py` independently describes what each data-plane egress family
+can translate, and `build_taxonomy.py` intersects them. `probe_gateway.py` measures the
+combined runtime path but writes an operational report rather than replacing provider
+evidence.
+
+`validate.py` independently regenerates schema-derived evidence and rejects missing,
+incomplete or stale model records. There is no maintained list of model ids, parameter
+claims or capability claims in the skill.
 
 ## Schemas carry provenance in the filename
 

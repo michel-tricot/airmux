@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Literal
 import yaml
 from pydantic import BaseModel, Field, HttpUrl, field_validator
 
-from contract import ParameterSupport  # noqa: TC001 pydantic resolves this enum annotation at runtime
+from contract import Modality, ParameterSupport  # noqa: TC001 pydantic resolves these annotations at runtime
 from control_plane.models import Model, Provider
 from control_plane.models.common.wire import RequestModel
 from control_plane.models.model import ModelOut
@@ -13,6 +13,10 @@ from control_plane.models.provider import ProviderOut
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+
+def _text_modalities() -> list[Modality]:
+    return ["text"]
 
 
 class UnknownProviderError(ValueError):
@@ -54,6 +58,8 @@ class ModelIn(RequestModel):
     cache_write_price_per_mtok: float = Field(0.0, ge=0, description="USD per million cache-write input tokens")
     context_window: int = Field(128000, ge=1, le=100_000_000, description="Context window in tokens")
     max_output_tokens: int | None = Field(None, ge=1, le=100_000_000, description="Max completion tokens; requests are clamped to it")
+    input_modalities: list[Modality] = Field(default_factory=_text_modalities, max_length=16, description="Accepted input modalities")
+    output_modalities: list[Modality] = Field(default_factory=_text_modalities, max_length=16, description="Produced output modalities")
     capabilities: list[str] = Field(default_factory=lambda: ["streaming", "tools"], max_length=128, description="Capabilities supported by the model")
     parameter_support: dict[str, ParameterSupport] = Field(
         default_factory=dict,
@@ -114,6 +120,8 @@ async def upsert_model(m: ModelIn) -> Model:
             cache_write_price_per_mtok=m.cache_write_price_per_mtok,
             context_window=m.context_window,
             max_output_tokens=m.max_output_tokens,
+            input_modalities=m.input_modalities,
+            output_modalities=m.output_modalities,
             capabilities=m.capabilities,
             parameter_support=m.parameter_support,
         )
@@ -127,6 +135,8 @@ async def upsert_model(m: ModelIn) -> Model:
         model.cache_write_price_per_mtok = m.cache_write_price_per_mtok
         model.context_window = m.context_window
         model.max_output_tokens = m.max_output_tokens
+        model.input_modalities = m.input_modalities
+        model.output_modalities = m.output_modalities
         model.capabilities = m.capabilities
         model.parameter_support = m.parameter_support
     return await model.save()

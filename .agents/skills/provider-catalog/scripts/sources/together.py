@@ -34,7 +34,6 @@ from .base import ModelSource
 
 class Together(ModelSource):
     id = "together"
-    url = "https://api.together.ai/v1/models"
     serverless_only = True
 
     def items(self, payload):
@@ -46,7 +45,7 @@ class Together(ModelSource):
             return None
         pricing = item.get("pricing") or {}
         if not pricing.get("input"):
-            return None                       # no token rate means dedicated-only
+            return None  # no token rate means dedicated-only
 
         link = item.get("link") or ""
         return self.record(

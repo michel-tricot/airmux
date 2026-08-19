@@ -455,6 +455,22 @@ class ModelIn(BaseModel):
             title="Max Output Tokens",
         ),
     ] = None
+    input_modalities: Annotated[
+        list[Literal["text", "image", "audio", "video"]] | None,
+        Field(
+            description="Accepted input modalities",
+            max_length=16,
+            title="Input Modalities",
+        ),
+    ] = None
+    output_modalities: Annotated[
+        list[Literal["text", "image", "audio", "video"]] | None,
+        Field(
+            description="Produced output modalities",
+            max_length=16,
+            title="Output Modalities",
+        ),
+    ] = None
     capabilities: Annotated[
         list[str] | None,
         Field(
@@ -485,6 +501,14 @@ class ModelOut(BaseModel):
     cache_write_price_per_mtok: Annotated[float, Field(title="Cache Write Price Per Mtok")]
     context_window: Annotated[int, Field(title="Context Window")]
     max_output_tokens: Annotated[int | None, Field(title="Max Output Tokens")]
+    input_modalities: Annotated[
+        list[Literal["text", "image", "audio", "video"]],
+        Field(title="Input Modalities"),
+    ]
+    output_modalities: Annotated[
+        list[Literal["text", "image", "audio", "video"]],
+        Field(title="Output Modalities"),
+    ]
     capabilities: Annotated[list[str], Field(title="Capabilities")]
     parameter_support: Annotated[dict[str, Literal["supported", "unsupported"]], Field(title="Parameter Support")]
     created_at: Annotated[AwareDatetime, Field(title="Created At")]

@@ -35,18 +35,17 @@ from .base import ModelSource
 
 class Fireworks(ModelSource):
     id = "fireworks"
-    url = "https://api.fireworks.ai/v1/accounts/fireworks/models?pageSize=200"
     serverless_only = True
 
-    def fetch(self, key):
-        collected, url = [], self.url
-        for _ in range(10):                      # 297 models at 200 a page, with headroom
-            payload = self.get(url, key)
+    def fetch(self, url, headers):
+        collected, page_url = [], url
+        for _ in range(10):  # 297 models at 200 a page, with headroom
+            payload = self.get(page_url, headers)
             collected.extend(payload.get("models") or [])
             token = payload.get("nextPageToken")
             if not token:
                 break
-            url = f"{self.url}&pageToken={token}"
+            page_url = f"{url}&pageToken={token}"
         return {"models": collected}
 
     def normalize(self, item):
@@ -59,9 +58,7 @@ class Fireworks(ModelSource):
 
         deprecation = item.get("deprecationDate") or {}
         sunset = (
-            f"{deprecation['year']:04d}-{deprecation['month']:02d}-{deprecation['day']:02d}"
-            if {"year", "month", "day"} <= set(deprecation)
-            else None
+            f"{deprecation['year']:04d}-{deprecation['month']:02d}-{deprecation['day']:02d}" if {"year", "month", "day"} <= set(deprecation) else None
         )
         hf_url = item.get("huggingFaceUrl") or ""
 
@@ -75,7 +72,7 @@ class Fireworks(ModelSource):
             input_modalities=["text", "image"] if item.get("supportsImageInput") else ["text"],
             output_modalities=["text"],
             supports_tools=item.get("supportsTools"),
-            pricing=None,                        # not published on the API, see the docstring
+            pricing=None,  # not published on the API, see the docstring
             display_name=item.get("displayName"),
             hugging_face_id=hf_url.removeprefix("https://huggingface.co/") or None,
             deprecation_date=sunset,

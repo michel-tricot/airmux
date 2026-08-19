@@ -5056,6 +5056,30 @@ components:
           - type: 'null'
           title: Max Output Tokens
           description: Max completion tokens; requests are clamped to it
+        input_modalities:
+          items:
+            type: string
+            enum:
+            - text
+            - image
+            - audio
+            - video
+          type: array
+          maxItems: 16
+          title: Input Modalities
+          description: Accepted input modalities
+        output_modalities:
+          items:
+            type: string
+            enum:
+            - text
+            - image
+            - audio
+            - video
+          type: array
+          maxItems: 16
+          title: Output Modalities
+          description: Produced output modalities
         capabilities:
           items:
             type: string
@@ -5120,6 +5144,26 @@ components:
           - type: integer
           - type: 'null'
           title: Max Output Tokens
+        input_modalities:
+          items:
+            type: string
+            enum:
+            - text
+            - image
+            - audio
+            - video
+          type: array
+          title: Input Modalities
+        output_modalities:
+          items:
+            type: string
+            enum:
+            - text
+            - image
+            - audio
+            - video
+          type: array
+          title: Output Modalities
         capabilities:
           items:
             type: string
@@ -5160,6 +5204,8 @@ components:
       - cache_write_price_per_mtok
       - context_window
       - max_output_tokens
+      - input_modalities
+      - output_modalities
       - capabilities
       - parameter_support
       - created_at

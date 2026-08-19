@@ -20,11 +20,10 @@ import re
 import ssl
 import urllib.error
 import urllib.request
-from pathlib import Path
-
-from paths import TAXONOMY
 
 import yaml
+from catalog_io import atomic_write_text
+from paths import TAXONOMY
 
 ROOT = TAXONOMY
 OUT = ROOT / "icons"
@@ -72,8 +71,7 @@ def main() -> int:
     for filename, key in (("providers.yml", "providers"), ("routers.yml", "routers")):
         path = ROOT / filename
         if path.exists():
-            entries += [(e["id"], e.get("icon_mono"), e.get("icon_color"))
-                        for e in yaml.safe_load(path.read_text())[key]]
+            entries += [(e["id"], e.get("icon_mono"), e.get("icon_color")) for e in yaml.safe_load(path.read_text())[key]]
 
     slugs = sorted({s for _, mono, color in entries for s in (mono, color) if s})
     missing = sorted(eid for eid, mono, color in entries if not (mono and color))
@@ -84,15 +82,15 @@ def main() -> int:
             raw = urllib.request.urlopen(urllib.request.Request(f"{BASE}/{slug}.svg", headers=UA), timeout=30, context=CTX).read().decode()
         except urllib.error.HTTPError as e:
             if e.code == 404:
-                (OUT / f"{slug}.svg").write_text(monogram(slug))
+                atomic_write_text(OUT / f"{slug}.svg", monogram(slug))
                 generated.append(slug)
                 continue
             failed.append((slug, f"HTTP {e.code}"))
             continue
-        except Exception as e:
+        except (OSError, UnicodeError) as e:
             failed.append((slug, type(e).__name__))
             continue
-        (OUT / f"{slug}.svg").write_text(normalize(raw, slug))
+        atomic_write_text(OUT / f"{slug}.svg", normalize(raw, slug))
         written.append(slug)
 
     print(f"  {len(written)} marks written to taxonomy/icons at lobehub {VERSION}")

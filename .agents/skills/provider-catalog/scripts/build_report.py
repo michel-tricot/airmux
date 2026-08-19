@@ -1,8 +1,8 @@
 """Render the field support matrix to a self-contained HTML report."""
 
 import json
-from pathlib import Path
 
+from catalog_io import atomic_write_text
 from paths import TAXONOMY
 
 HERE = TAXONOMY / "reports"
@@ -264,7 +264,7 @@ render();
 
 def main() -> int:
     out = HERE / "field-matrix.html"
-    out.write_text(HTML.replace("__DATA__", json.dumps(DATA, separators=(",", ":"))))
+    atomic_write_text(out, HTML.replace("__DATA__", json.dumps(DATA, separators=(",", ":"))))
     print(f"wrote {out} ({out.stat().st_size:,} bytes)")
     return 0
 

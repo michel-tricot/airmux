@@ -41,6 +41,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from canonical import write_catalog
+from catalog_io import atomic_write_text
 from model_kind import classify, text_only
 from paths import TAXONOMY
 
@@ -96,7 +97,9 @@ def load_models_dev(providers: list[str]) -> dict[tuple[str, str], dict]:
                     "output_per_mtok": cost.get("output"),
                     **({"cached_input_per_mtok": cost["cache_read"]} if cost.get("cache_read") is not None else {}),
                     **({"cache_write_per_mtok": cost["cache_write"]} if cost.get("cache_write") is not None else {}),
-                } if cost.get("input") is not None else None,
+                }
+                if cost.get("input") is not None
+                else None,
                 "supports_tools": model.get("tool_call"),
                 "supports_structured_output": model.get("structured_output"),
             }
@@ -115,7 +118,9 @@ def load_openrouter() -> dict[str, dict]:
             "pricing": {
                 "input_per_mtok": per_mtok(cost.get("prompt")),
                 "output_per_mtok": per_mtok(cost.get("completion")),
-            } if per_mtok(cost.get("prompt")) else None,
+            }
+            if per_mtok(cost.get("prompt"))
+            else None,
         }
         for key in filter(None, (model.get("id"), model.get("canonical_slug"), model.get("hugging_face_id"))):
             table.setdefault(norm(key), record)
@@ -216,7 +221,7 @@ def main() -> int:
         print(f"    {source:<28} {n}")
     print(f"  still missing a limit or a price: {len(gaps)}")
     (TAXONOMY / "reports").mkdir(exist_ok=True)
-    (TAXONOMY / "reports" / "missing-limits.json").write_text(json.dumps(sorted(gaps), indent=2) + "\n")
+    atomic_write_text(TAXONOMY / "reports" / "missing-limits.json", json.dumps(sorted(gaps), indent=2) + "\n")
     return 0
 
 

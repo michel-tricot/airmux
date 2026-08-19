@@ -20,10 +20,8 @@ provider in the catalog publishes.
 from .base import ModelSource
 
 
-
 class OpenAI(ModelSource):
     id = "openai"
-    url = "https://api.openai.com/v1/models"
 
     def normalize(self, item):
         return self.record(item["id"], shutdown_date=item.get("shutdown_date"))

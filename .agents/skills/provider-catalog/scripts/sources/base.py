@@ -39,35 +39,22 @@ def per_mtok(value: Any) -> float | None:
 class ModelSource:
     """Base for a provider's model catalog.
 
-    Subclasses set `id` and `url`, then override `normalize`. Override `items` when the
+    Subclasses set `id`, then override `normalize`. Override `items` when the
     payload is not `{"data": [...]}`, and `fetch` when one request is not enough.
     """
 
     id: str = ""
-    url: str = ""
-    auth: str = "bearer"          # "bearer", "header:<Name>", or "none"
-    open_access: bool = False     # catalog readable without a credential
-    serverless_only: bool = False # vendor lists models it will not serve on demand
+    serverless_only: bool = False
 
     # ---- transport -------------------------------------------------------------
 
-    def headers(self, key: str | None) -> dict[str, str]:
-        head = dict(UA)
-        if self.auth == "none" or not key:
-            return head
-        if self.auth.startswith("header:"):
-            head[self.auth.split(":", 1)[1]] = key
-        else:
-            head["Authorization"] = f"Bearer {key}"
-        return head
-
-    def get(self, url: str, key: str | None) -> Any:
-        request = urllib.request.Request(url, headers=self.headers(key))
+    def get(self, url: str, headers: dict[str, str]) -> Any:
+        request = urllib.request.Request(url, headers={**UA, **headers})
         with urllib.request.urlopen(request, timeout=90, context=CTX) as response:
             return json.loads(response.read().decode())
 
-    def fetch(self, key: str | None) -> Any:
-        return self.get(self.url, key)
+    def fetch(self, url: str, headers: dict[str, str]) -> Any:
+        return self.get(url, headers)
 
     # ---- shape -----------------------------------------------------------------
 

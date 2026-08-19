@@ -17,7 +17,6 @@ from .base import ModelSource
 
 class Groq(ModelSource):
     id = "groq"
-    url = "https://api.groq.com/openai/v1/models"
 
     def normalize(self, item):
         if item.get("active") is False:
@@ -33,7 +32,8 @@ class Groq(ModelSource):
             supports_tools="tools" in features,
             supports_structured_output="json_mode" in features or "structured_outputs" in features,
             pricing=self.price(
-                pricing.get("prompt"), pricing.get("completion"),
+                pricing.get("prompt"),
+                pricing.get("completion"),
                 cached_input_per_mtok=pricing.get("input_cache_read"),
             ),
             display_name=item.get("name"),

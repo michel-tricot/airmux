@@ -39,7 +39,6 @@ const ALL_FILTERS = 'all';
 function capabilityVariant(capability: string): 'default' | 'warning' | 'success' | 'secondary' {
   if (capability === 'streaming') return 'default';
   if (capability === 'tools') return 'warning';
-  if (capability === 'vision') return 'success';
   return 'secondary';
 }
 
@@ -143,22 +142,30 @@ export default function Models() {
       key: 'model',
       header: header('Model', 'name'),
       sortDirection: sortDirectionFor('name'),
-      cell: ({ model }) => (
-        <div className="min-w-48">
-          <Badge variant="outline" className="font-mono">
-            {model.name}
-          </Badge>
-          {model.capabilities.length > 0 && (
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {model.capabilities.map((capability) => (
-                <Badge key={capability} variant={capabilityVariant(capability)} className="rounded-full px-2 py-0.5 normal-case tracking-normal">
-                  {capability}
-                </Badge>
-              ))}
-            </div>
-          )}
-        </div>
-      ),
+      cell: ({ model }) => {
+        const nonTextInputs = model.input_modalities.filter((modality) => modality !== 'text');
+        return (
+          <div className="min-w-48">
+            <Badge variant="outline" className="font-mono">
+              {model.name}
+            </Badge>
+            {(nonTextInputs.length > 0 || model.capabilities.length > 0) && (
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {nonTextInputs.map((modality) => (
+                  <Badge key={`input:${modality}`} variant="success" className="rounded-full px-2 py-0.5 normal-case tracking-normal">
+                    input:{modality}
+                  </Badge>
+                ))}
+                {model.capabilities.map((capability) => (
+                  <Badge key={capability} variant={capabilityVariant(capability)} className="rounded-full px-2 py-0.5 normal-case tracking-normal">
+                    {capability}
+                  </Badge>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      },
     },
     {
       key: 'provider',

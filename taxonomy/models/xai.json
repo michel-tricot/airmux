@@ -2,7 +2,7 @@
   "provider": "xai",
   "source": "https://api.x.ai/v1/language-models",
   "source_type": "api",
-  "updated": "2026-08-17",
+  "updated": "2026-08-19",
   "count": 7,
   "models": [
     {
@@ -27,7 +27,7 @@
       "limits_source": "models.dev",
       "pricing_source": "provider",
       "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "reachable_checked": "2026-08-19",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -52,6 +52,11 @@
           }
         },
         "live_probe": {
+          "version": 1,
+          "targets": {
+            "chat/completions": "51a013c5e4e9ec878125",
+            "messages": "0ab5142fe47a840b3fa4"
+          },
           "attempted": {
             "chat/completions": [
               "logprobs",
@@ -85,6 +90,54 @@
           }
         }
       },
+      "capability_evidence": {
+        "model_discovery": {
+          "sources": [],
+          "support": {}
+        },
+        "live_probe": {
+          "version": 2,
+          "targets": {
+            "chat/completions": "b3dd076f9e658c42d157",
+            "messages": "aefd6ea120e24ca511be"
+          },
+          "attempted": {
+            "chat/completions": [
+              "image_input",
+              "json_object",
+              "json_schema",
+              "parallel_tools",
+              "reasoning",
+              "streaming",
+              "tools"
+            ],
+            "messages": [
+              "image_input",
+              "json_object",
+              "json_schema",
+              "parallel_tools",
+              "reasoning",
+              "streaming",
+              "tools"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "image_input": "supported",
+              "json_object": "supported",
+              "json_schema": "supported",
+              "parallel_tools": "supported",
+              "streaming": "supported",
+              "tools": "supported"
+            },
+            "messages": {
+              "image_input": "supported",
+              "streaming": "supported",
+              "tools": "supported"
+            }
+          }
+        }
+      },
       "aliases": [
         "grok-4.20-beta-0309-non-reasoning",
         "grok-4.20-beta-latest-non-reasoning",
@@ -97,8 +150,16 @@
       ],
       "endpoint_status": {
         "chat/completions": {
+          "version": 1,
+          "target": "0be0fd6a3e3017adbdb0",
           "outcome": "ok",
-          "checked": "2026-08-17"
+          "checked": "2026-08-19"
+        },
+        "messages": {
+          "version": 1,
+          "target": "3d03ccaa16686af68762",
+          "outcome": "ok",
+          "checked": "2026-08-19"
         }
       },
       "long_context_threshold": 200000,
@@ -127,7 +188,7 @@
       "limits_source": "models.dev",
       "pricing_source": "provider",
       "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "reachable_checked": "2026-08-19",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -152,6 +213,11 @@
           }
         },
         "live_probe": {
+          "version": 1,
+          "targets": {
+            "chat/completions": "3273992773b6202882f6",
+            "messages": "86de8932db9dafb07b9f"
+          },
           "attempted": {
             "chat/completions": [
               "logprobs",
@@ -185,6 +251,56 @@
           }
         }
       },
+      "capability_evidence": {
+        "model_discovery": {
+          "sources": [],
+          "support": {}
+        },
+        "live_probe": {
+          "version": 2,
+          "targets": {
+            "chat/completions": "d9ed1baf2cde940552c9",
+            "messages": "e64b18023981165122a4"
+          },
+          "attempted": {
+            "chat/completions": [
+              "image_input",
+              "json_object",
+              "json_schema",
+              "parallel_tools",
+              "reasoning",
+              "streaming",
+              "tools"
+            ],
+            "messages": [
+              "image_input",
+              "json_object",
+              "json_schema",
+              "parallel_tools",
+              "reasoning",
+              "streaming",
+              "tools"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "json_object": "supported",
+              "json_schema": "supported",
+              "parallel_tools": "supported",
+              "reasoning": "supported",
+              "streaming": "supported",
+              "tools": "supported"
+            },
+            "messages": {
+              "json_object": "supported",
+              "json_schema": "supported",
+              "reasoning": "supported",
+              "streaming": "supported",
+              "tools": "supported"
+            }
+          }
+        }
+      },
       "aliases": [
         "grok-4.20",
         "grok-4.20-0309",
@@ -204,8 +320,16 @@
       ],
       "endpoint_status": {
         "chat/completions": {
+          "version": 1,
+          "target": "c9e2f1e7ce417db14547",
           "outcome": "ok",
-          "checked": "2026-08-17"
+          "checked": "2026-08-19"
+        },
+        "messages": {
+          "version": 1,
+          "target": "89cb69a8f0cafc98271a",
+          "outcome": "ok",
+          "checked": "2026-08-19"
         }
       },
       "long_context_threshold": 200000,
@@ -233,8 +357,8 @@
       },
       "limits_source": "models.dev",
       "pricing_source": "provider",
-      "reachable": false,
-      "reachable_checked": "2026-08-17",
+      "reachable": true,
+      "reachable_checked": "2026-08-19",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -257,6 +381,75 @@
               "stop": "supported"
             }
           }
+        },
+        "live_probe": {
+          "version": 1,
+          "targets": {
+            "chat/completions": "a27d7ce730b62c822141",
+            "messages": "9de4141d93875dd6aba9"
+          },
+          "attempted": {
+            "chat/completions": [
+              "logprobs",
+              "parallel_tool_calls",
+              "reasoning_effort",
+              "seed",
+              "stop",
+              "temperature",
+              "top_p"
+            ],
+            "messages": [
+              "stop",
+              "temperature",
+              "top_p"
+            ]
+          },
+          "support": {
+            "messages": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "unsupported"
+            }
+          }
+        }
+      },
+      "capability_evidence": {
+        "model_discovery": {
+          "sources": [],
+          "support": {}
+        },
+        "live_probe": {
+          "version": 2,
+          "targets": {
+            "chat/completions": "d444967100da64fd5867",
+            "messages": "0c1f291579ebf0614391"
+          },
+          "attempted": {
+            "chat/completions": [
+              "image_input",
+              "json_object",
+              "json_schema",
+              "parallel_tools",
+              "reasoning",
+              "streaming",
+              "tools"
+            ],
+            "messages": [
+              "image_input",
+              "json_object",
+              "json_schema",
+              "parallel_tools",
+              "reasoning",
+              "streaming",
+              "tools"
+            ]
+          },
+          "support": {
+            "messages": {
+              "image_input": "supported",
+              "streaming": "supported"
+            }
+          }
         }
       },
       "aliases": [
@@ -267,6 +460,20 @@
         "grok-4.20-multi-agent-experimental-beta-latest",
         "grok-4.20-multi-agent-latest"
       ],
+      "endpoint_status": {
+        "chat/completions": {
+          "version": 1,
+          "target": "793c0c477513778fb4de",
+          "outcome": "bad_request",
+          "checked": "2026-08-19"
+        },
+        "messages": {
+          "version": 1,
+          "target": "51e937f9c7438fff6d63",
+          "outcome": "ok",
+          "checked": "2026-08-19"
+        }
+      },
       "long_context_threshold": 200000,
       "owned_by": "xai",
       "version": "1.0"
@@ -293,7 +500,7 @@
       "limits_source": "models.dev",
       "pricing_source": "provider",
       "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "reachable_checked": "2026-08-19",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -318,6 +525,11 @@
           }
         },
         "live_probe": {
+          "version": 1,
+          "targets": {
+            "chat/completions": "6dff05607092f3b14514",
+            "messages": "3885d574d91551b43a6b"
+          },
           "attempted": {
             "chat/completions": [
               "logprobs",
@@ -352,13 +564,71 @@
           }
         }
       },
+      "capability_evidence": {
+        "model_discovery": {
+          "sources": [],
+          "support": {}
+        },
+        "live_probe": {
+          "version": 2,
+          "targets": {
+            "chat/completions": "34a7dd8fff6bc6c0ab88",
+            "messages": "14bb7e99b525ffdc9f7f"
+          },
+          "attempted": {
+            "chat/completions": [
+              "image_input",
+              "json_object",
+              "json_schema",
+              "parallel_tools",
+              "reasoning",
+              "streaming",
+              "tools"
+            ],
+            "messages": [
+              "image_input",
+              "json_object",
+              "json_schema",
+              "parallel_tools",
+              "reasoning",
+              "streaming",
+              "tools"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "json_object": "supported",
+              "json_schema": "supported",
+              "parallel_tools": "supported",
+              "reasoning": "supported",
+              "streaming": "supported",
+              "tools": "supported"
+            },
+            "messages": {
+              "json_object": "supported",
+              "json_schema": "supported",
+              "reasoning": "supported",
+              "streaming": "supported",
+              "tools": "supported"
+            }
+          }
+        }
+      },
       "aliases": [
         "grok-4.3-latest"
       ],
       "endpoint_status": {
         "chat/completions": {
+          "version": 1,
+          "target": "2a001dc85ef10f70bbc0",
           "outcome": "ok",
-          "checked": "2026-08-17"
+          "checked": "2026-08-19"
+        },
+        "messages": {
+          "version": 1,
+          "target": "af28cb68aed8ab6b60b7",
+          "outcome": "ok",
+          "checked": "2026-08-19"
         }
       },
       "long_context_threshold": 200000,
@@ -387,7 +657,7 @@
       "limits_source": "models.dev",
       "pricing_source": "provider",
       "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "reachable_checked": "2026-08-19",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -412,6 +682,11 @@
           }
         },
         "live_probe": {
+          "version": 1,
+          "targets": {
+            "chat/completions": "bfde27477a9b961a9614",
+            "messages": "7cca52b598f261ce5819"
+          },
           "attempted": {
             "chat/completions": [
               "logprobs",
@@ -446,14 +721,71 @@
           }
         }
       },
+      "capability_evidence": {
+        "model_discovery": {
+          "sources": [],
+          "support": {}
+        },
+        "live_probe": {
+          "version": 2,
+          "targets": {
+            "chat/completions": "b1a7c1ef8477d476d85a",
+            "messages": "99cff9fc7ed78ae8a53a"
+          },
+          "attempted": {
+            "chat/completions": [
+              "image_input",
+              "json_object",
+              "json_schema",
+              "parallel_tools",
+              "reasoning",
+              "streaming",
+              "tools"
+            ],
+            "messages": [
+              "image_input",
+              "json_object",
+              "json_schema",
+              "parallel_tools",
+              "reasoning",
+              "streaming",
+              "tools"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "json_object": "supported",
+              "json_schema": "supported",
+              "parallel_tools": "supported",
+              "reasoning": "supported",
+              "streaming": "supported",
+              "tools": "supported"
+            },
+            "messages": {
+              "json_object": "supported",
+              "reasoning": "supported",
+              "streaming": "supported",
+              "tools": "supported"
+            }
+          }
+        }
+      },
       "aliases": [
         "grok-4.5-latest",
         "grok-build-latest"
       ],
       "endpoint_status": {
         "chat/completions": {
+          "version": 1,
+          "target": "fb2b1a5fabc21d8be413",
           "outcome": "ok",
-          "checked": "2026-08-17"
+          "checked": "2026-08-19"
+        },
+        "messages": {
+          "version": 1,
+          "target": "727420d760ab6960017f",
+          "outcome": "ok",
+          "checked": "2026-08-19"
         }
       },
       "long_context_threshold": 200000,
@@ -482,7 +814,7 @@
       "limits_source": "models.dev",
       "pricing_source": "provider",
       "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "reachable_checked": "2026-08-19",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -507,6 +839,11 @@
           }
         },
         "live_probe": {
+          "version": 1,
+          "targets": {
+            "chat/completions": "f4016ef5a048b389d5bf",
+            "messages": "6e01a3070ab691f3e4f5"
+          },
           "attempted": {
             "chat/completions": [
               "logprobs",
@@ -541,10 +878,67 @@
           }
         }
       },
+      "capability_evidence": {
+        "model_discovery": {
+          "sources": [],
+          "support": {}
+        },
+        "live_probe": {
+          "version": 2,
+          "targets": {
+            "chat/completions": "ad217808178f1a7582b6",
+            "messages": "f60205f3cebbfbe27817"
+          },
+          "attempted": {
+            "chat/completions": [
+              "image_input",
+              "json_object",
+              "json_schema",
+              "parallel_tools",
+              "reasoning",
+              "streaming",
+              "tools"
+            ],
+            "messages": [
+              "image_input",
+              "json_object",
+              "json_schema",
+              "parallel_tools",
+              "reasoning",
+              "streaming",
+              "tools"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "json_object": "supported",
+              "json_schema": "supported",
+              "parallel_tools": "supported",
+              "reasoning": "supported",
+              "streaming": "supported",
+              "tools": "supported"
+            },
+            "messages": {
+              "json_object": "supported",
+              "reasoning": "supported",
+              "streaming": "supported",
+              "tools": "supported"
+            }
+          }
+        }
+      },
       "endpoint_status": {
         "chat/completions": {
+          "version": 1,
+          "target": "7be23c0211d8d94f2d91",
           "outcome": "ok",
-          "checked": "2026-08-17"
+          "checked": "2026-08-19"
+        },
+        "messages": {
+          "version": 1,
+          "target": "ae1b208627e1a9f78962",
+          "outcome": "ok",
+          "checked": "2026-08-19"
         }
       },
       "long_context_threshold": 200000,
@@ -573,7 +967,7 @@
       "limits_source": "models.dev",
       "pricing_source": "provider",
       "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "reachable_checked": "2026-08-19",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -598,6 +992,11 @@
           }
         },
         "live_probe": {
+          "version": 1,
+          "targets": {
+            "chat/completions": "fd6c2b315d469908ff12",
+            "messages": "b71f853de97493064627"
+          },
           "attempted": {
             "chat/completions": [
               "logprobs",
@@ -631,6 +1030,56 @@
           }
         }
       },
+      "capability_evidence": {
+        "model_discovery": {
+          "sources": [],
+          "support": {}
+        },
+        "live_probe": {
+          "version": 2,
+          "targets": {
+            "chat/completions": "42b44c0edae97ed3640a",
+            "messages": "7e1c582dc7dbb8e91f5b"
+          },
+          "attempted": {
+            "chat/completions": [
+              "image_input",
+              "json_object",
+              "json_schema",
+              "parallel_tools",
+              "reasoning",
+              "streaming",
+              "tools"
+            ],
+            "messages": [
+              "image_input",
+              "json_object",
+              "json_schema",
+              "parallel_tools",
+              "reasoning",
+              "streaming",
+              "tools"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "json_object": "supported",
+              "json_schema": "supported",
+              "parallel_tools": "supported",
+              "reasoning": "supported",
+              "streaming": "supported",
+              "tools": "supported"
+            },
+            "messages": {
+              "json_object": "supported",
+              "json_schema": "supported",
+              "reasoning": "supported",
+              "streaming": "supported",
+              "tools": "supported"
+            }
+          }
+        }
+      },
       "aliases": [
         "grok-code-fast",
         "grok-code-fast-1",
@@ -638,8 +1087,16 @@
       ],
       "endpoint_status": {
         "chat/completions": {
+          "version": 1,
+          "target": "20820c8f1ef8e8eed5c0",
           "outcome": "ok",
-          "checked": "2026-08-17"
+          "checked": "2026-08-19"
+        },
+        "messages": {
+          "version": 1,
+          "target": "43ad4e83bffc62390fae",
+          "outcome": "ok",
+          "checked": "2026-08-19"
         }
       },
       "long_context_threshold": 200000,

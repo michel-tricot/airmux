@@ -90,3 +90,27 @@ on its OpenAI surface and `x-api-key` on its Anthropic one.
 
 SambaNova validates the model before the credential, so a bad key with a bad model returns
 `model_not_found` rather than 401. Do not conclude auth succeeded.
+
+## A 2xx is not capability evidence
+
+**Symptom** A model is marked vision, tools or structured-output capable because the
+request returned successfully.
+
+**Cause** Providers may ignore unknown fields or answer in ordinary text. Request
+acceptance proves parameter acceptance at most; it does not prove the requested behavior.
+
+**Do** Require an observable protocol result: the exact generated image challenge, a named
+tool call, two distinct parallel calls, valid constrained JSON, reasoning content, or SSE
+framing. A 2xx without the behavior is inconclusive, not unsupported.
+
+## Operational failures are not unsupported features
+
+Authentication, entitlement, throttling, timeouts, transport errors and server failures
+say nothing durable about model capability. Keep them in the local probe report and leave
+catalog support unknown. Only an explicit feature-specific rejection is unsupported.
+
+## Partial refreshes must not publish
+
+A sequential refresh can write several catalogs and fail on the next provider, leaving a
+plausible mixed snapshot. Run `refresh.py`, which performs every phase against an isolated
+taxonomy root and publishes only after validation succeeds.

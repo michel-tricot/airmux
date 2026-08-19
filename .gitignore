@@ -31,5 +31,8 @@ coverage/
 # editor and task-runner drop zone; nothing here belongs in the repo
 attached_assets/
 
-# smoke run log: carries each model's reply, so it differs every run
+# Live probe reports carry transient replies and operational failures
 taxonomy/reports/smoke.json
+taxonomy/reports/capability-probes.json
+taxonomy/reports/parameter-probes.json
+taxonomy/reports/gateway-probes.json

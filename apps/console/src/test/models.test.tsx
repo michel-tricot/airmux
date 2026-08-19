@@ -46,6 +46,8 @@ const models = [
     cache_write_price_per_mtok: 3.75,
     context_window: 200000,
     max_output_tokens: 64000,
+    input_modalities: ['text'],
+    output_modalities: ['text'],
     capabilities: ['streaming', 'tools'],
     created_at: now,
     updated_at: now,
@@ -62,7 +64,9 @@ const models = [
     cache_write_price_per_mtok: 1.25,
     context_window: 400000,
     max_output_tokens: 128000,
-    capabilities: ['streaming', 'tools', 'vision'],
+    input_modalities: ['text', 'image'],
+    output_modalities: ['text'],
+    capabilities: ['streaming', 'tools', 'json_schema'],
     created_at: now,
     updated_at: now,
     deleted_at: null,
@@ -129,7 +133,7 @@ describe('organization models', () => {
     expect(screen.getByRole('columnheader', { name: 'Pricing' })).toHaveAttribute('colspan', '4');
     expect(within(claude!).getByText('streaming')).toHaveClass('text-primary');
     expect(within(claude!).getByText('tools')).toHaveClass('text-warning');
-    expect(within(gpt!).getByText('vision')).toHaveClass('text-success');
+    expect(within(gpt!).getByText('input:image')).toHaveClass('text-success');
     expect(screen.getByRole('button', { name: /Sort by Model/i })).toHaveClass('text-primary');
   });
 
@@ -153,7 +157,7 @@ describe('organization models', () => {
     await user.click(screen.getByRole('combobox', { name: 'Filter by provider' }));
     await user.click(await screen.findByRole('option', { name: 'All providers' }));
     await user.click(screen.getByRole('combobox', { name: 'Filter by capability' }));
-    await user.click(await screen.findByRole('option', { name: 'vision' }));
+    await user.click(await screen.findByRole('option', { name: 'json_schema' }));
     expect(screen.getByText('openai/gpt-5')).toBeInTheDocument();
     expect(screen.queryByText('anthropic/claude-sonnet-4-5')).not.toBeInTheDocument();
 

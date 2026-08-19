@@ -18,20 +18,15 @@ which covers the family and is fetched on every run.
 from .base import ModelSource
 
 
-
 class Anthropic(ModelSource):
     id = "anthropic"
-    url = "https://api.anthropic.com/v1/models"
-    auth = "header:x-api-key"
-
-    def headers(self, key):
-        head = super().headers(key)
-        head["anthropic-version"] = "2023-06-01"
-        return head
 
     def normalize(self, item):
         caps = item.get("capabilities") or {}
-        supported = lambda name: bool((caps.get(name) or {}).get("supported"))
+
+        def supported(name):
+            return bool((caps.get(name) or {}).get("supported"))
+
         inputs = ["text"]
         if supported("image_input"):
             inputs.append("image")

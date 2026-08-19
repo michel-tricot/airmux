@@ -13,22 +13,50 @@ from __future__ import annotations
 
 import json
 import sys
-from importlib.util import find_spec
 from pathlib import Path
 
-from paths import TAXONOMY
-
 import yaml
-
-HAS_JSONSCHEMA = find_spec("jsonschema") is not None
+from jsonschema import Draft202012Validator
+from jsonschema.exceptions import SchemaError
+from paths import TAXONOMY
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from canonical import MODEL_ORDER, sort_models
+from capability_support import PROBES
+from capability_support import SUPPORT as CAPABILITY_SUPPORT
+from capability_support import discovery_evidence as capability_discovery_evidence
+from evidence import (
+    CAPABILITY_PROBE_VERSION,
+    PARAMETER_PROBE_VERSION,
+    REACHABILITY_PROBE_VERSION,
+    current_targets,
+    live_evidence_is_current,
+    target_fingerprint,
+)
 from model_kind import classify
-from parameter_support import ENDPOINTS, PARAMETERS, SUPPORT, discovery_evidence
+from parameter_support import ENDPOINTS, INGRESS_ENDPOINT, PARAMETERS, SUPPORT, discovery_evidence
+from probe_parameters import PROBES as PARAMETER_PROBES
+from provider_profile import catalog_headers, endpoints, provider_surfaces
 
 ROOT = TAXONOMY
-FIELDS = {"id", "name", "icon_mono", "icon_color", "homepage", "docs", "base_url", "openapi", "models_url", "ingress", "auth", "env_var", "schema"}
+FIELDS = {
+    "id",
+    "name",
+    "icon_mono",
+    "icon_color",
+    "homepage",
+    "docs",
+    "base_url",
+    "openapi",
+    "models_url",
+    "models_auth",
+    "models_headers",
+    "ingress",
+    "surfaces",
+    "auth",
+    "env_var",
+    "schema",
+}
 INGRESS = {"oai", "oai_responses", "anthropic", "google", "other_standard", "custom"}
 # ingresses that carry a schema; google is the one shape we have not extracted
 WIRE = {"oai", "oai_responses", "anthropic", "custom"}
@@ -44,6 +72,8 @@ def known_source(value: str | None, vocabulary: set[str]) -> bool:
     if value is None or value in vocabulary:
         return True
     return value.startswith("alias:") and len(value.split(":", 1)[1]) > 1
+
+
 ROOT_FORMS = {"properties", "$ref", "oneOf", "anyOf", "allOf", "type", "items"}
 
 # A wire ingress with no schema is normally a hole. These are the exceptions, recorded
@@ -95,6 +125,11 @@ def check_shape(all_entries: list[dict]) -> None:
             fail("models_url", f"{eid} has no usable listing endpoint")
         if not (e.get("base_url") or "").startswith("http"):
             fail("base_url", f"{eid} has no inference endpoint; the applied taxonomy needs one")
+        try:
+            provider_surfaces(e)
+            catalog_headers(e, "validation-key")
+        except ValueError as exc:
+            fail("surface", str(exc))
 
 
 def check_icons(all_entries: list[dict]) -> None:
@@ -155,13 +190,10 @@ def check_schemas(all_entries: list[dict]) -> None:
                     continue
                 if not (ROOT_FORMS & set(doc)):
                     fail("schema", f"{rel} has no root schema form, so it constrains nothing")
-                if HAS_JSONSCHEMA:
-                    from jsonschema import Draft202012Validator
-
-                    try:
-                        Draft202012Validator.check_schema(doc)
-                    except Exception as exc:
-                        fail("schema", f"{rel} is not a valid JSON Schema: {str(exc)[:100]}")
+                try:
+                    Draft202012Validator.check_schema(doc)
+                except SchemaError as exc:
+                    fail("schema", f"{rel} is not a valid JSON Schema: {str(exc)[:100]}")
 
     for f in sorted((ROOT / "schemas" / "completion").glob("*.json")):
         if f.name not in referenced:
@@ -170,6 +202,10 @@ def check_schemas(all_entries: list[dict]) -> None:
 
 def check_models(all_entries: list[dict]) -> None:
     known = {entry["id"]: entry for entry in all_entries}
+    active_providers = {provider["id"] for provider in yaml.safe_load((ROOT / "providers.yml").read_text())["providers"]}
+    catalog_ids = {path.stem for path in (ROOT / "models").glob("*.json")}
+    for provider in sorted(active_providers - catalog_ids):
+        fail("models", f"{provider} has no model catalog")
     for f in sorted((ROOT / "models").glob("*.json")):
         doc = json.loads(f.read_text())
         provider = doc.get("provider")
@@ -183,6 +219,7 @@ def check_models(all_entries: list[dict]) -> None:
         if [m.get("id") for m in models] != [m.get("id") for m in sort_models([dict(m) for m in models])]:
             fail("models", f"{provider} is not sorted by id; regenerate so diffs stay reviewable")
         expected_discovery = discovery_evidence(known[provider], ROOT) if provider in known else None
+        expected_capability_discovery = capability_discovery_evidence(known[provider]) if provider in known else None
         for m in models:
             leading = [k for k in m if k in MODEL_ORDER]
             if leading != [k for k in MODEL_ORDER if k in m]:
@@ -220,8 +257,11 @@ def check_models(all_entries: list[dict]) -> None:
                 if source_type == "model_discovery" and not source_evidence.get("sources"):
                     fail("models", f"{provider}/{mid} has model-discovery parameter evidence without a request schema")
                 if source_type == "live_probe":
-                    if extra_fields := set(source_evidence) - {"attempted", "support"}:
+                    if extra_fields := set(source_evidence) - {"version", "targets", "attempted", "support"}:
                         fail("models", f"{provider}/{mid} has unknown live-probe fields {sorted(extra_fields)}")
+                    targets = current_targets(known[provider], m, endpoints(known[provider]), "parameters", PARAMETER_PROBE_VERSION)
+                    if not live_evidence_is_current(source_evidence, targets, PARAMETER_PROBE_VERSION):
+                        fail("models", f"{provider}/{mid} has stale parameter probe evidence; run probe_parameters.py --replace")
                     attempted = source_evidence.get("attempted") or {}
                     if not attempted:
                         fail("models", f"{provider}/{mid} has live-probe evidence without attempted parameters")
@@ -240,6 +280,44 @@ def check_models(all_entries: list[dict]) -> None:
                         missing_attempts = set(parameters) - set((source_evidence.get("attempted") or {}).get(endpoint) or [])
                         if missing_attempts:
                             fail("models", f"{provider}/{mid}/{endpoint} has unattempted live results {sorted(missing_attempts)}")
+            capability_evidence = m.get("capability_evidence") or {}
+            if extra_sources := set(capability_evidence) - {"model_discovery", "live_probe"}:
+                fail("models", f"{provider}/{mid} has unknown capability evidence {sorted(extra_sources)}")
+            if capability_evidence.get("model_discovery") != expected_capability_discovery:
+                fail("models", f"{provider}/{mid} has stale or missing capability discovery evidence; run discover_capabilities.py")
+            capability_probe = capability_evidence.get("live_probe") or {}
+            if extra_fields := set(capability_probe) - {"version", "targets", "attempted", "support"}:
+                fail("models", f"{provider}/{mid} has unknown live capability fields {sorted(extra_fields)}")
+            capability_targets = current_targets(known[provider], m, endpoints(known[provider]), "capabilities", CAPABILITY_PROBE_VERSION)
+            if not live_evidence_is_current(capability_probe, capability_targets, CAPABILITY_PROBE_VERSION):
+                fail("models", f"{provider}/{mid} has stale capability evidence; run probe_capabilities.py --replace")
+            capability_attempts = capability_probe.get("attempted") or {}
+            capability_support = capability_probe.get("support") or {}
+            if bad_endpoints := set(capability_attempts) - ENDPOINTS:
+                fail("models", f"{provider}/{mid} has capability attempts for {sorted(bad_endpoints)}")
+            if bad_endpoints := set(capability_support) - ENDPOINTS:
+                fail("models", f"{provider}/{mid} has capability evidence for {sorted(bad_endpoints)}")
+            for endpoint, probe_names in capability_attempts.items():
+                if unknown := set(probe_names) - PROBES:
+                    fail("models", f"{provider}/{mid}/{endpoint} attempted unknown capability probes {sorted(unknown)}")
+            for endpoint, statuses in capability_support.items():
+                if unknown := set(statuses) - PROBES:
+                    fail("models", f"{provider}/{mid}/{endpoint} has unknown capability probes {sorted(unknown)}")
+                if bad_statuses := set(statuses.values()) - CAPABILITY_SUPPORT:
+                    fail("models", f"{provider}/{mid}/{endpoint} has capability statuses {sorted(bad_statuses)}")
+                if missing_attempts := set(statuses) - set(capability_attempts.get(endpoint) or []):
+                    fail("models", f"{provider}/{mid}/{endpoint} has unattempted capability results {sorted(missing_attempts)}")
+            expected_endpoints = {INGRESS_ENDPOINT[ingress] for ingress in known[provider]["ingress"] if ingress in INGRESS_ENDPOINT}
+            for endpoint in sorted(expected_endpoints):
+                parameter_probe = evidence.get("live_probe") or {}
+                if missing := set(PARAMETER_PROBES[endpoint]) - set((parameter_probe.get("attempted") or {}).get(endpoint) or []):
+                    fail("models", f"{provider}/{mid}/{endpoint} has never attempted parameters {sorted(missing)}; run probe_parameters.py")
+                if missing := PROBES - set(capability_attempts.get(endpoint) or []):
+                    fail("models", f"{provider}/{mid}/{endpoint} has never attempted probes {sorted(missing)}; run probe_capabilities.py")
+                endpoint_status = (m.get("endpoint_status") or {}).get(endpoint) or {}
+                expected_target = target_fingerprint(known[provider], m, endpoint, "reachability", REACHABILITY_PROBE_VERSION)
+                if endpoint_status.get("version") != REACHABILITY_PROBE_VERSION or endpoint_status.get("target") != expected_target:
+                    fail("models", f"{provider}/{mid}/{endpoint} has stale reachability evidence; run smoke.py")
 
 
 CANDIDATE_FIELDS = {"id", "name", "homepage", "docs", "env_var"}
@@ -264,9 +342,11 @@ def check_candidates(all_entries: list[dict]) -> None:
 def check_applied() -> None:
     """taxonomy.yml is generated. If it has drifted, the database gets stale routing."""
     import subprocess
+
     result = subprocess.run(
         [sys.executable, str(Path(__file__).resolve().parent / "build_taxonomy.py"), "--check"],
-        capture_output=True, text=True,
+        capture_output=True,
+        text=True,
     )
     if result.returncode != 0:
         fail("applied", "taxonomy.yml is out of date; run build_taxonomy.py")
@@ -278,7 +358,23 @@ def check_seed(all_entries: list[dict]) -> None:
     if not seed_path.exists():
         fail("seed", "seed.yml is missing; a rebuild from scratch would be impossible")
         return
-    carried = ("id", "name", "icon_mono", "icon_color", "homepage", "docs", "base_url", "openapi", "models_url", "ingress", "auth", "env_var")
+    carried = (
+        "id",
+        "name",
+        "icon_mono",
+        "icon_color",
+        "homepage",
+        "docs",
+        "base_url",
+        "openapi",
+        "models_url",
+        "models_auth",
+        "models_headers",
+        "ingress",
+        "surfaces",
+        "auth",
+        "env_var",
+    )
     seed = yaml.safe_load(seed_path.read_text())
     # candidates live in the seed too, but they are not catalog entries
     seeded = {e["id"]: e for key, group in seed.items() if key != "candidates" for e in group}
@@ -303,9 +399,6 @@ def main() -> int:
     check_applied()
     check_seed(all_entries)
 
-    if not HAS_JSONSCHEMA:
-        print("note: jsonschema is not installed, so schemas were not compiled")
-
     if failures:
         print(f"{len(failures)} problems\n")
         for line in failures:
@@ -314,10 +407,12 @@ def main() -> int:
 
     models = [m for f in (ROOT / "models").glob("*.json") for m in json.loads(f.read_text())["models"]]
     complete = sum(1 for m in models if m.get("context_length") and m.get("max_output_tokens"))
-    print(f"ok: {len(all_entries)} entries, "
-          f"{len(list((ROOT / 'schemas' / 'completion').glob('*.json')))} schemas, "
-          f"{len(list((ROOT / 'icons').glob('*.svg')))} icons, "
-          f"{len(models)} models ({complete} with both limits)")
+    print(
+        f"ok: {len(all_entries)} entries, "
+        f"{len(list((ROOT / 'schemas' / 'completion').glob('*.json')))} schemas, "
+        f"{len(list((ROOT / 'icons').glob('*.svg')))} icons, "
+        f"{len(models)} models ({complete} with both limits)"
+    )
     return 0
 
 

@@ -2,7 +2,7 @@
   "provider": "cerebras",
   "source": "https://api.cerebras.ai/public/v1/models",
   "source_type": "api",
-  "updated": "2026-08-17",
+  "updated": "2026-08-19",
   "count": 2,
   "models": [
     {
@@ -26,7 +26,7 @@
       "limits_source": "provider",
       "pricing_source": "provider",
       "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "reachable_checked": "2026-08-19",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -45,6 +45,10 @@
           }
         },
         "live_probe": {
+          "version": 1,
+          "targets": {
+            "chat/completions": "c3247f29d0ced80bacfc"
+          },
           "attempted": {
             "chat/completions": [
               "logprobs",
@@ -69,11 +73,46 @@
           }
         }
       },
+      "capability_evidence": {
+        "model_discovery": {
+          "sources": [],
+          "support": {}
+        },
+        "live_probe": {
+          "version": 2,
+          "targets": {
+            "chat/completions": "7ca7dea77e9e3e0887ac"
+          },
+          "attempted": {
+            "chat/completions": [
+              "image_input",
+              "json_object",
+              "json_schema",
+              "parallel_tools",
+              "reasoning",
+              "streaming",
+              "tools"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "image_input": "supported",
+              "json_object": "supported",
+              "json_schema": "supported",
+              "parallel_tools": "supported",
+              "streaming": "supported",
+              "tools": "supported"
+            }
+          }
+        }
+      },
       "display_name": "Gemma 4 31B",
       "endpoint_status": {
         "chat/completions": {
+          "version": 1,
+          "target": "3a8ad2375f03be022eb3",
           "outcome": "ok",
-          "checked": "2026-08-17"
+          "checked": "2026-08-19"
         }
       },
       "hugging_face_id": "google/gemma-4-31B",
@@ -108,7 +147,7 @@
       "limits_source": "provider",
       "pricing_source": "provider",
       "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "reachable_checked": "2026-08-19",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -127,6 +166,10 @@
           }
         },
         "live_probe": {
+          "version": 1,
+          "targets": {
+            "chat/completions": "514eb81ee80399577276"
+          },
           "attempted": {
             "chat/completions": [
               "logprobs",
@@ -151,11 +194,43 @@
           }
         }
       },
+      "capability_evidence": {
+        "model_discovery": {
+          "sources": [],
+          "support": {}
+        },
+        "live_probe": {
+          "version": 2,
+          "targets": {
+            "chat/completions": "b82f083c26df06b32fc6"
+          },
+          "attempted": {
+            "chat/completions": [
+              "image_input",
+              "json_object",
+              "json_schema",
+              "parallel_tools",
+              "reasoning",
+              "streaming",
+              "tools"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "image_input": "unsupported",
+              "streaming": "supported",
+              "tools": "supported"
+            }
+          }
+        }
+      },
       "display_name": "OpenAI GPT OSS",
       "endpoint_status": {
         "chat/completions": {
+          "version": 1,
+          "target": "130adfd37e7af3714a12",
           "outcome": "ok",
-          "checked": "2026-08-17"
+          "checked": "2026-08-19"
         }
       },
       "hugging_face_id": "openai/gpt-oss-120b",

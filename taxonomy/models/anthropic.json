@@ -2,7 +2,7 @@
   "provider": "anthropic",
   "source": "https://api.anthropic.com/v1/models",
   "source_type": "api",
-  "updated": "2026-08-15",
+  "updated": "2026-08-19",
   "count": 10,
   "models": [
     {
@@ -29,7 +29,7 @@
       "limits_source": "openrouter-index",
       "pricing_source": "models.dev",
       "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "reachable_checked": "2026-08-19",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -44,6 +44,10 @@
           }
         },
         "live_probe": {
+          "version": 1,
+          "targets": {
+            "messages": "496086c71af964061fa1"
+          },
           "attempted": {
             "messages": [
               "stop",
@@ -53,8 +57,40 @@
           },
           "support": {
             "messages": {
-              "temperature": "supported",
               "stop": "supported"
+            }
+          }
+        }
+      },
+      "capability_evidence": {
+        "model_discovery": {
+          "sources": [],
+          "support": {}
+        },
+        "live_probe": {
+          "version": 2,
+          "targets": {
+            "messages": "9c0b26083d42f0eb4f7f"
+          },
+          "attempted": {
+            "messages": [
+              "image_input",
+              "json_object",
+              "json_schema",
+              "parallel_tools",
+              "reasoning",
+              "streaming",
+              "tools"
+            ]
+          },
+          "support": {
+            "messages": {
+              "image_input": "supported",
+              "json_schema": "supported",
+              "parallel_tools": "supported",
+              "reasoning": "unsupported",
+              "streaming": "supported",
+              "tools": "supported"
             }
           }
         }
@@ -62,8 +98,10 @@
       "display_name": "Claude Fable 5",
       "endpoint_status": {
         "messages": {
+          "version": 1,
+          "target": "4a3e3f9aa4f4c9a243f1",
           "outcome": "ok",
-          "checked": "2026-08-17"
+          "checked": "2026-08-19"
         }
       },
       "supports_batch": true,
@@ -93,7 +131,7 @@
       "limits_source": "openrouter-index",
       "pricing_source": "models.dev",
       "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "reachable_checked": "2026-08-19",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -108,6 +146,10 @@
           }
         },
         "live_probe": {
+          "version": 1,
+          "targets": {
+            "messages": "865a11079a6a39be96f0"
+          },
           "attempted": {
             "messages": [
               "stop",
@@ -124,11 +166,46 @@
           }
         }
       },
+      "capability_evidence": {
+        "model_discovery": {
+          "sources": [],
+          "support": {}
+        },
+        "live_probe": {
+          "version": 2,
+          "targets": {
+            "messages": "415f73421c1f2ddac17e"
+          },
+          "attempted": {
+            "messages": [
+              "image_input",
+              "json_object",
+              "json_schema",
+              "parallel_tools",
+              "reasoning",
+              "streaming",
+              "tools"
+            ]
+          },
+          "support": {
+            "messages": {
+              "image_input": "supported",
+              "json_schema": "supported",
+              "parallel_tools": "supported",
+              "reasoning": "supported",
+              "streaming": "supported",
+              "tools": "supported"
+            }
+          }
+        }
+      },
       "display_name": "Claude Haiku 4.5",
       "endpoint_status": {
         "messages": {
+          "version": 1,
+          "target": "c99036ee3b4ebffe0045",
           "outcome": "ok",
-          "checked": "2026-08-17"
+          "checked": "2026-08-19"
         }
       },
       "supports_batch": true,
@@ -158,7 +235,7 @@
       "limits_source": "openrouter-index",
       "pricing_source": "models.dev",
       "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "reachable_checked": "2026-08-19",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -173,6 +250,10 @@
           }
         },
         "live_probe": {
+          "version": 1,
+          "targets": {
+            "messages": "839bea3011c5f4e6d1c1"
+          },
           "attempted": {
             "messages": [
               "stop",
@@ -189,11 +270,46 @@
           }
         }
       },
+      "capability_evidence": {
+        "model_discovery": {
+          "sources": [],
+          "support": {}
+        },
+        "live_probe": {
+          "version": 2,
+          "targets": {
+            "messages": "47b0efc1f56b06bb0161"
+          },
+          "attempted": {
+            "messages": [
+              "image_input",
+              "json_object",
+              "json_schema",
+              "parallel_tools",
+              "reasoning",
+              "streaming",
+              "tools"
+            ]
+          },
+          "support": {
+            "messages": {
+              "image_input": "supported",
+              "json_schema": "supported",
+              "parallel_tools": "supported",
+              "reasoning": "supported",
+              "streaming": "supported",
+              "tools": "supported"
+            }
+          }
+        }
+      },
       "display_name": "Claude Opus 4.5",
       "endpoint_status": {
         "messages": {
+          "version": 1,
+          "target": "342aa95c04e46253ffb8",
           "outcome": "ok",
-          "checked": "2026-08-17"
+          "checked": "2026-08-19"
         }
       },
       "supports_batch": true,
@@ -223,7 +339,7 @@
       "limits_source": "openrouter-index",
       "pricing_source": "models.dev",
       "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "reachable_checked": "2026-08-19",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -238,6 +354,10 @@
           }
         },
         "live_probe": {
+          "version": 1,
+          "targets": {
+            "messages": "8cfbf1e78dc3dbdcf83a"
+          },
           "attempted": {
             "messages": [
               "stop",
@@ -254,11 +374,46 @@
           }
         }
       },
+      "capability_evidence": {
+        "model_discovery": {
+          "sources": [],
+          "support": {}
+        },
+        "live_probe": {
+          "version": 2,
+          "targets": {
+            "messages": "ff94c87b0a28cf0c3f94"
+          },
+          "attempted": {
+            "messages": [
+              "image_input",
+              "json_object",
+              "json_schema",
+              "parallel_tools",
+              "reasoning",
+              "streaming",
+              "tools"
+            ]
+          },
+          "support": {
+            "messages": {
+              "image_input": "supported",
+              "json_schema": "supported",
+              "parallel_tools": "supported",
+              "reasoning": "supported",
+              "streaming": "supported",
+              "tools": "supported"
+            }
+          }
+        }
+      },
       "display_name": "Claude Opus 4.6",
       "endpoint_status": {
         "messages": {
+          "version": 1,
+          "target": "e38e1a2089184c04480f",
           "outcome": "ok",
-          "checked": "2026-08-17"
+          "checked": "2026-08-19"
         }
       },
       "supports_batch": true,
@@ -288,7 +443,7 @@
       "limits_source": "openrouter-index",
       "pricing_source": "models.dev",
       "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "reachable_checked": "2026-08-19",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -303,6 +458,10 @@
           }
         },
         "live_probe": {
+          "version": 1,
+          "targets": {
+            "messages": "b958ef5d60af3461e04c"
+          },
           "attempted": {
             "messages": [
               "stop",
@@ -312,8 +471,40 @@
           },
           "support": {
             "messages": {
-              "temperature": "supported",
               "stop": "supported"
+            }
+          }
+        }
+      },
+      "capability_evidence": {
+        "model_discovery": {
+          "sources": [],
+          "support": {}
+        },
+        "live_probe": {
+          "version": 2,
+          "targets": {
+            "messages": "ac19ab8749ea9af53495"
+          },
+          "attempted": {
+            "messages": [
+              "image_input",
+              "json_object",
+              "json_schema",
+              "parallel_tools",
+              "reasoning",
+              "streaming",
+              "tools"
+            ]
+          },
+          "support": {
+            "messages": {
+              "image_input": "supported",
+              "json_schema": "supported",
+              "parallel_tools": "supported",
+              "reasoning": "unsupported",
+              "streaming": "supported",
+              "tools": "supported"
             }
           }
         }
@@ -321,8 +512,10 @@
       "display_name": "Claude Opus 4.7",
       "endpoint_status": {
         "messages": {
+          "version": 1,
+          "target": "2b34f9f408d932cb8e89",
           "outcome": "ok",
-          "checked": "2026-08-17"
+          "checked": "2026-08-19"
         }
       },
       "supports_batch": true,
@@ -352,7 +545,7 @@
       "limits_source": "openrouter-index",
       "pricing_source": "models.dev",
       "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "reachable_checked": "2026-08-19",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -367,6 +560,10 @@
           }
         },
         "live_probe": {
+          "version": 1,
+          "targets": {
+            "messages": "dbfc59b64ac26b9d980a"
+          },
           "attempted": {
             "messages": [
               "stop",
@@ -376,8 +573,40 @@
           },
           "support": {
             "messages": {
-              "temperature": "supported",
               "stop": "supported"
+            }
+          }
+        }
+      },
+      "capability_evidence": {
+        "model_discovery": {
+          "sources": [],
+          "support": {}
+        },
+        "live_probe": {
+          "version": 2,
+          "targets": {
+            "messages": "6efac490513e772d491a"
+          },
+          "attempted": {
+            "messages": [
+              "image_input",
+              "json_object",
+              "json_schema",
+              "parallel_tools",
+              "reasoning",
+              "streaming",
+              "tools"
+            ]
+          },
+          "support": {
+            "messages": {
+              "image_input": "supported",
+              "json_schema": "supported",
+              "parallel_tools": "supported",
+              "reasoning": "unsupported",
+              "streaming": "supported",
+              "tools": "supported"
             }
           }
         }
@@ -385,8 +614,10 @@
       "display_name": "Claude Opus 4.8",
       "endpoint_status": {
         "messages": {
+          "version": 1,
+          "target": "6c05e3c6d573b51a89a0",
           "outcome": "ok",
-          "checked": "2026-08-17"
+          "checked": "2026-08-19"
         }
       },
       "supports_batch": true,
@@ -416,7 +647,7 @@
       "limits_source": "openrouter-index",
       "pricing_source": "models.dev",
       "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "reachable_checked": "2026-08-19",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -431,6 +662,10 @@
           }
         },
         "live_probe": {
+          "version": 1,
+          "targets": {
+            "messages": "f4d07cf7a6147bbb21e6"
+          },
           "attempted": {
             "messages": [
               "stop",
@@ -440,8 +675,40 @@
           },
           "support": {
             "messages": {
-              "temperature": "supported",
               "stop": "supported"
+            }
+          }
+        }
+      },
+      "capability_evidence": {
+        "model_discovery": {
+          "sources": [],
+          "support": {}
+        },
+        "live_probe": {
+          "version": 2,
+          "targets": {
+            "messages": "a0fca6f6842a69599368"
+          },
+          "attempted": {
+            "messages": [
+              "image_input",
+              "json_object",
+              "json_schema",
+              "parallel_tools",
+              "reasoning",
+              "streaming",
+              "tools"
+            ]
+          },
+          "support": {
+            "messages": {
+              "image_input": "supported",
+              "json_schema": "supported",
+              "parallel_tools": "supported",
+              "reasoning": "unsupported",
+              "streaming": "supported",
+              "tools": "supported"
             }
           }
         }
@@ -449,8 +716,10 @@
       "display_name": "Claude Opus 5",
       "endpoint_status": {
         "messages": {
+          "version": 1,
+          "target": "f811dfaa474cbd49e172",
           "outcome": "ok",
-          "checked": "2026-08-17"
+          "checked": "2026-08-19"
         }
       },
       "supports_batch": true,
@@ -480,7 +749,7 @@
       "limits_source": "openrouter-index",
       "pricing_source": "models.dev",
       "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "reachable_checked": "2026-08-19",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -495,6 +764,10 @@
           }
         },
         "live_probe": {
+          "version": 1,
+          "targets": {
+            "messages": "dd641b8e37cb6e0e6af3"
+          },
           "attempted": {
             "messages": [
               "stop",
@@ -511,11 +784,46 @@
           }
         }
       },
+      "capability_evidence": {
+        "model_discovery": {
+          "sources": [],
+          "support": {}
+        },
+        "live_probe": {
+          "version": 2,
+          "targets": {
+            "messages": "aba31b711a326c751741"
+          },
+          "attempted": {
+            "messages": [
+              "image_input",
+              "json_object",
+              "json_schema",
+              "parallel_tools",
+              "reasoning",
+              "streaming",
+              "tools"
+            ]
+          },
+          "support": {
+            "messages": {
+              "image_input": "supported",
+              "json_schema": "supported",
+              "parallel_tools": "supported",
+              "reasoning": "supported",
+              "streaming": "supported",
+              "tools": "supported"
+            }
+          }
+        }
+      },
       "display_name": "Claude Sonnet 4.5",
       "endpoint_status": {
         "messages": {
+          "version": 1,
+          "target": "3a63371f388be04308d1",
           "outcome": "ok",
-          "checked": "2026-08-17"
+          "checked": "2026-08-19"
         }
       },
       "supports_batch": true,
@@ -545,7 +853,7 @@
       "limits_source": "openrouter-index",
       "pricing_source": "models.dev",
       "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "reachable_checked": "2026-08-19",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -560,6 +868,10 @@
           }
         },
         "live_probe": {
+          "version": 1,
+          "targets": {
+            "messages": "9b69a474534afa5e634c"
+          },
           "attempted": {
             "messages": [
               "stop",
@@ -576,11 +888,46 @@
           }
         }
       },
+      "capability_evidence": {
+        "model_discovery": {
+          "sources": [],
+          "support": {}
+        },
+        "live_probe": {
+          "version": 2,
+          "targets": {
+            "messages": "12305f9044fab43eff0d"
+          },
+          "attempted": {
+            "messages": [
+              "image_input",
+              "json_object",
+              "json_schema",
+              "parallel_tools",
+              "reasoning",
+              "streaming",
+              "tools"
+            ]
+          },
+          "support": {
+            "messages": {
+              "image_input": "supported",
+              "json_schema": "supported",
+              "parallel_tools": "supported",
+              "reasoning": "supported",
+              "streaming": "supported",
+              "tools": "supported"
+            }
+          }
+        }
+      },
       "display_name": "Claude Sonnet 4.6",
       "endpoint_status": {
         "messages": {
+          "version": 1,
+          "target": "49ebebdaea6da4c295b0",
           "outcome": "ok",
-          "checked": "2026-08-17"
+          "checked": "2026-08-19"
         }
       },
       "supports_batch": true,
@@ -610,7 +957,7 @@
       "limits_source": "openrouter-index",
       "pricing_source": "models.dev",
       "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "reachable_checked": "2026-08-19",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -625,6 +972,10 @@
           }
         },
         "live_probe": {
+          "version": 1,
+          "targets": {
+            "messages": "fa461ba35322bfd544cc"
+          },
           "attempted": {
             "messages": [
               "stop",
@@ -634,8 +985,40 @@
           },
           "support": {
             "messages": {
-              "temperature": "supported",
               "stop": "supported"
+            }
+          }
+        }
+      },
+      "capability_evidence": {
+        "model_discovery": {
+          "sources": [],
+          "support": {}
+        },
+        "live_probe": {
+          "version": 2,
+          "targets": {
+            "messages": "d4a5f75854d59c2d947a"
+          },
+          "attempted": {
+            "messages": [
+              "image_input",
+              "json_object",
+              "json_schema",
+              "parallel_tools",
+              "reasoning",
+              "streaming",
+              "tools"
+            ]
+          },
+          "support": {
+            "messages": {
+              "image_input": "supported",
+              "json_schema": "supported",
+              "parallel_tools": "supported",
+              "reasoning": "unsupported",
+              "streaming": "supported",
+              "tools": "supported"
             }
           }
         }
@@ -643,8 +1026,10 @@
       "display_name": "Claude Sonnet 5",
       "endpoint_status": {
         "messages": {
+          "version": 1,
+          "target": "76734473714120daed93",
           "outcome": "ok",
-          "checked": "2026-08-17"
+          "checked": "2026-08-19"
         }
       },
       "supports_batch": true,

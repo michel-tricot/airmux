@@ -2,7 +2,7 @@
   "provider": "groq",
   "source": "https://api.groq.com/openai/v1/models",
   "source_type": "api",
-  "updated": "2026-08-17",
+  "updated": "2026-08-19",
   "count": 6,
   "models": [
     {
@@ -23,9 +23,9 @@
         "output_per_mtok": 0
       },
       "limits_source": "provider",
-      "pricing_source": "provider",
+      "pricing_source": "models.dev",
       "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "reachable_checked": "2026-08-19",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -44,6 +44,10 @@
           }
         },
         "live_probe": {
+          "version": 1,
+          "targets": {
+            "chat/completions": "d36ba35a8e0f49a92b74"
+          },
           "attempted": {
             "chat/completions": [
               "logprobs",
@@ -62,8 +66,39 @@
               "seed": "supported",
               "stop": "supported",
               "reasoning_effort": "unsupported",
-              "parallel_tool_calls": "supported",
               "logprobs": "unsupported"
+            }
+          }
+        }
+      },
+      "capability_evidence": {
+        "model_discovery": {
+          "sources": [],
+          "support": {}
+        },
+        "live_probe": {
+          "version": 2,
+          "targets": {
+            "chat/completions": "d78d769550f9304d957c"
+          },
+          "attempted": {
+            "chat/completions": [
+              "image_input",
+              "json_object",
+              "json_schema",
+              "parallel_tools",
+              "reasoning",
+              "streaming",
+              "tools"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "json_object": "supported",
+              "json_schema": "unsupported",
+              "parallel_tools": "unsupported",
+              "streaming": "supported",
+              "tools": "unsupported"
             }
           }
         }
@@ -71,8 +106,10 @@
       "display_name": "ALLaM-2-7b",
       "endpoint_status": {
         "chat/completions": {
+          "version": 1,
+          "target": "f50f8b6eb3f5bfd7bdc3",
           "outcome": "ok",
-          "checked": "2026-08-17"
+          "checked": "2026-08-19"
         }
       },
       "hugging_face_id": "ALLaM-AI/ALLaM-2.0-7B-Instruct"
@@ -93,7 +130,7 @@
       "pricing": null,
       "limits_source": "provider",
       "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "reachable_checked": "2026-08-19",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -112,6 +149,10 @@
           }
         },
         "live_probe": {
+          "version": 1,
+          "targets": {
+            "chat/completions": "cafe08415d0adae3a4c7"
+          },
           "attempted": {
             "chat/completions": [
               "logprobs",
@@ -133,11 +174,44 @@
           }
         }
       },
+      "capability_evidence": {
+        "model_discovery": {
+          "sources": [],
+          "support": {}
+        },
+        "live_probe": {
+          "version": 2,
+          "targets": {
+            "chat/completions": "1148d5223f864197c0c4"
+          },
+          "attempted": {
+            "chat/completions": [
+              "image_input",
+              "json_object",
+              "json_schema",
+              "parallel_tools",
+              "reasoning",
+              "streaming",
+              "tools"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "json_schema": "unsupported",
+              "parallel_tools": "unsupported",
+              "streaming": "supported",
+              "tools": "unsupported"
+            }
+          }
+        }
+      },
       "display_name": "Compound",
       "endpoint_status": {
         "chat/completions": {
+          "version": 1,
+          "target": "636568c287fe227ffcb8",
           "outcome": "ok",
-          "checked": "2026-08-17"
+          "checked": "2026-08-19"
         }
       },
       "hugging_face_id": "groq/compound-beta"
@@ -158,7 +232,7 @@
       "pricing": null,
       "limits_source": "provider",
       "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "reachable_checked": "2026-08-19",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -177,6 +251,10 @@
           }
         },
         "live_probe": {
+          "version": 1,
+          "targets": {
+            "chat/completions": "d8ea9e3185fd56ba44cb"
+          },
           "attempted": {
             "chat/completions": [
               "logprobs",
@@ -190,10 +268,39 @@
           },
           "support": {
             "chat/completions": {
-              "seed": "supported",
               "reasoning_effort": "unsupported",
-              "logprobs": "unsupported",
-              "temperature": "supported"
+              "logprobs": "unsupported"
+            }
+          }
+        }
+      },
+      "capability_evidence": {
+        "model_discovery": {
+          "sources": [],
+          "support": {}
+        },
+        "live_probe": {
+          "version": 2,
+          "targets": {
+            "chat/completions": "190c84ccd29f7db86704"
+          },
+          "attempted": {
+            "chat/completions": [
+              "image_input",
+              "json_object",
+              "json_schema",
+              "parallel_tools",
+              "reasoning",
+              "streaming",
+              "tools"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "json_schema": "unsupported",
+              "parallel_tools": "unsupported",
+              "streaming": "supported",
+              "tools": "unsupported"
             }
           }
         }
@@ -201,8 +308,10 @@
       "display_name": "Compound Mini",
       "endpoint_status": {
         "chat/completions": {
+          "version": 1,
+          "target": "0a273a56090e747e210e",
           "outcome": "ok",
-          "checked": "2026-08-17"
+          "checked": "2026-08-19"
         }
       },
       "hugging_face_id": "groq/compound-beta-mini"
@@ -228,7 +337,7 @@
       "limits_source": "provider",
       "pricing_source": "provider",
       "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "reachable_checked": "2026-08-19",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -247,6 +356,10 @@
           }
         },
         "live_probe": {
+          "version": 1,
+          "targets": {
+            "chat/completions": "c765fc6c56be77cec987"
+          },
           "attempted": {
             "chat/completions": [
               "logprobs",
@@ -265,8 +378,36 @@
               "seed": "supported",
               "stop": "supported",
               "reasoning_effort": "supported",
-              "parallel_tool_calls": "supported",
               "logprobs": "unsupported"
+            }
+          }
+        }
+      },
+      "capability_evidence": {
+        "model_discovery": {
+          "sources": [],
+          "support": {}
+        },
+        "live_probe": {
+          "version": 2,
+          "targets": {
+            "chat/completions": "905d54ac22d4fc2c8573"
+          },
+          "attempted": {
+            "chat/completions": [
+              "image_input",
+              "json_object",
+              "json_schema",
+              "parallel_tools",
+              "reasoning",
+              "streaming",
+              "tools"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "streaming": "supported",
+              "tools": "supported"
             }
           }
         }
@@ -274,8 +415,10 @@
       "display_name": "GPT OSS 120B",
       "endpoint_status": {
         "chat/completions": {
+          "version": 1,
+          "target": "59997bbabd4f71331eb2",
           "outcome": "ok",
-          "checked": "2026-08-17"
+          "checked": "2026-08-19"
         }
       },
       "hugging_face_id": "openai/gpt-oss-120b"
@@ -301,7 +444,7 @@
       "limits_source": "provider",
       "pricing_source": "provider",
       "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "reachable_checked": "2026-08-19",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -320,6 +463,10 @@
           }
         },
         "live_probe": {
+          "version": 1,
+          "targets": {
+            "chat/completions": "c0d4ec71e8f6e9a810b3"
+          },
           "attempted": {
             "chat/completions": [
               "logprobs",
@@ -344,11 +491,42 @@
           }
         }
       },
+      "capability_evidence": {
+        "model_discovery": {
+          "sources": [],
+          "support": {}
+        },
+        "live_probe": {
+          "version": 2,
+          "targets": {
+            "chat/completions": "48ba05ccf1b4fec75d4b"
+          },
+          "attempted": {
+            "chat/completions": [
+              "image_input",
+              "json_object",
+              "json_schema",
+              "parallel_tools",
+              "reasoning",
+              "streaming",
+              "tools"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "streaming": "supported",
+              "tools": "supported"
+            }
+          }
+        }
+      },
       "display_name": "GPT OSS 20B",
       "endpoint_status": {
         "chat/completions": {
+          "version": 1,
+          "target": "bb6a37f0ebccb58f76e1",
           "outcome": "ok",
-          "checked": "2026-08-17"
+          "checked": "2026-08-19"
         }
       },
       "hugging_face_id": "openai/gpt-oss-20b"
@@ -375,7 +553,7 @@
       "limits_source": "provider",
       "pricing_source": "provider",
       "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "reachable_checked": "2026-08-19",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -394,6 +572,10 @@
           }
         },
         "live_probe": {
+          "version": 1,
+          "targets": {
+            "chat/completions": "196a5df15b1c7c8a66ed"
+          },
           "attempted": {
             "chat/completions": [
               "logprobs",
@@ -417,11 +599,41 @@
           }
         }
       },
+      "capability_evidence": {
+        "model_discovery": {
+          "sources": [],
+          "support": {}
+        },
+        "live_probe": {
+          "version": 2,
+          "targets": {
+            "chat/completions": "1ba90d60fdb3236faeb0"
+          },
+          "attempted": {
+            "chat/completions": [
+              "image_input",
+              "json_object",
+              "json_schema",
+              "parallel_tools",
+              "reasoning",
+              "streaming",
+              "tools"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "streaming": "supported"
+            }
+          }
+        }
+      },
       "display_name": "Qwen/Qwen3.6-27B",
       "endpoint_status": {
         "chat/completions": {
+          "version": 1,
+          "target": "fc1dd067a12bed1e3a1a",
           "outcome": "ok",
-          "checked": "2026-08-17"
+          "checked": "2026-08-19"
         }
       },
       "hugging_face_id": "Qwen/Qwen3.6-27B"

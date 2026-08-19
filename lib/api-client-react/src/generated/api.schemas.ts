@@ -469,6 +469,26 @@ export const ModelInEgressKind = {
   anthropic: 'anthropic',
 } as const;
 
+export type ModelInInputModalitiesItem = typeof ModelInInputModalitiesItem[keyof typeof ModelInInputModalitiesItem];
+
+
+export const ModelInInputModalitiesItem = {
+  text: 'text',
+  image: 'image',
+  audio: 'audio',
+  video: 'video',
+} as const;
+
+export type ModelInOutputModalitiesItem = typeof ModelInOutputModalitiesItem[keyof typeof ModelInOutputModalitiesItem];
+
+
+export const ModelInOutputModalitiesItem = {
+  text: 'text',
+  image: 'image',
+  audio: 'audio',
+  video: 'video',
+} as const;
+
 /**
  * Known support for canonical request parameters; an absent parameter is unknown
  */
@@ -524,6 +544,16 @@ export interface ModelIn {
   /** Max completion tokens; requests are clamped to it */
   max_output_tokens?: number | null;
   /**
+     * Accepted input modalities
+     * @maxItems 16
+     */
+  input_modalities?: ModelInInputModalitiesItem[];
+  /**
+     * Produced output modalities
+     * @maxItems 16
+     */
+  output_modalities?: ModelInOutputModalitiesItem[];
+  /**
      * Capabilities supported by the model
      * @maxItems 128
      */
@@ -531,6 +561,26 @@ export interface ModelIn {
   /** Known support for canonical request parameters; an absent parameter is unknown */
   parameter_support?: ModelInParameterSupport;
 }
+
+export type ModelOutInputModalitiesItem = typeof ModelOutInputModalitiesItem[keyof typeof ModelOutInputModalitiesItem];
+
+
+export const ModelOutInputModalitiesItem = {
+  text: 'text',
+  image: 'image',
+  audio: 'audio',
+  video: 'video',
+} as const;
+
+export type ModelOutOutputModalitiesItem = typeof ModelOutOutputModalitiesItem[keyof typeof ModelOutOutputModalitiesItem];
+
+
+export const ModelOutOutputModalitiesItem = {
+  text: 'text',
+  image: 'image',
+  audio: 'audio',
+  video: 'video',
+} as const;
 
 export type ModelOutParameterSupport = {[key: string]: 'supported' | 'unsupported'};
 
@@ -546,6 +596,8 @@ export interface ModelOut {
   cache_write_price_per_mtok: number;
   context_window: number;
   max_output_tokens: number | null;
+  input_modalities: ModelOutInputModalitiesItem[];
+  output_modalities: ModelOutOutputModalitiesItem[];
   capabilities: string[];
   parameter_support: ModelOutParameterSupport;
   created_at: string;

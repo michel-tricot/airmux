@@ -10,7 +10,22 @@ SCRIPTS = Path(__file__).resolve().parents[1] / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 
 from parameter_support import apply_discovery_evidence, classify_parameter_response, discovery_evidence, resolve_parameter_support
-from probe_parameters import PROBES, probe_models, request_body, routable_models
+from probe_parameters import PROBES, probe_models, request_body
+from probe_runtime import ProbeOutcome
+
+PROVIDER = {
+    "id": "example",
+    "base_url": "https://example.test/v1",
+    "ingress": ["oai"],
+    "surfaces": {
+        "oai": {
+            "endpoint": "chat/completions",
+            "auth": "bearer",
+            "egress_kind": "openai_compatible",
+            "headers": {},
+        }
+    },
+}
 
 
 def test_live_probe_wins_over_model_discovery():
@@ -73,15 +88,21 @@ def test_refreshing_discovery_preserves_live_probe_results():
 def test_model_discovery_probe_records_attempts_and_conclusive_results(monkeypatch):
     monkeypatch.setattr(
         "probe_parameters.probe",
-        lambda provider, model_id, endpoint, parameter, value, key: "unsupported" if parameter == "temperature" else None,
+        lambda provider, model_id, endpoint, parameter, value, key: (
+            ProbeOutcome("unsupported", "explicit_rejection") if parameter == "temperature" else ProbeOutcome(None, "behavior_not_observed")
+        ),
     )
     models = [{"id": "new-model", "parameter_evidence": {"model_discovery": {"sources": [], "support": {}}}}]
 
-    attempted, conclusive = probe_models({"ingress": ["oai"]}, models, "key")
+    attempted, conclusive = probe_models(PROVIDER, models, "key")
 
     assert attempted == 7
     assert conclusive == 1
     assert models[0]["parameter_evidence"]["live_probe"] == {
+        "version": 1,
+        "targets": {
+            "chat/completions": "2d4f670c1fae5841c3c3",
+        },
         "attempted": {
             "chat/completions": [
                 "logprobs",
@@ -97,6 +118,13 @@ def test_model_discovery_probe_records_attempts_and_conclusive_results(monkeypat
     }
 
 
+def test_parameter_probe_adds_tools_when_testing_parallel_tool_calls():
+    body = request_body("chat/completions", "new-model", "parallel_tool_calls", False)
+
+    assert body["parallel_tool_calls"] is False
+    assert body["tools"][0]["function"]["name"] == "report_result"
+
+
 def test_chat_probe_isolates_the_parameter_under_test():
     assert request_body("chat/completions", "new-model", "temperature", 0.7) == {
         "model": "new-model",
@@ -108,13 +136,6 @@ def test_chat_probe_isolates_the_parameter_under_test():
 def test_temperature_probe_uses_a_non_default_value():
     assert PROBES["chat/completions"]["temperature"] == 0.7
     assert PROBES["responses"]["temperature"] == 0.7
-
-
-def test_manual_probe_selects_only_models_in_the_applied_taxonomy():
-    catalog = {"models": [{"id": "advertised"}, {"id": "routable"}, {"id": "also-routable"}]}
-    applied_model_ids = {"example/routable", "example/also-routable"}
-
-    assert routable_models(catalog, "example", applied_model_ids, limit=1) == [{"id": "routable"}]
 
 
 def test_every_cataloged_model_contains_discovery_evidence():

@@ -2,7 +2,7 @@
   "provider": "deepseek",
   "source": "https://api.deepseek.com/models",
   "source_type": "api",
-  "updated": "2026-08-17",
+  "updated": "2026-08-19",
   "count": 2,
   "models": [
     {
@@ -22,7 +22,7 @@
       "limits_source": "models.dev",
       "pricing_source": "models.dev",
       "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "reachable_checked": "2026-08-19",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -44,6 +44,11 @@
           }
         },
         "live_probe": {
+          "version": 1,
+          "targets": {
+            "chat/completions": "110ac60fa49288f01d9a",
+            "messages": "703e1a013ff8292f27d3"
+          },
           "attempted": {
             "chat/completions": [
               "logprobs",
@@ -73,10 +78,60 @@
           }
         }
       },
+      "capability_evidence": {
+        "model_discovery": {
+          "sources": [],
+          "support": {}
+        },
+        "live_probe": {
+          "version": 2,
+          "targets": {
+            "chat/completions": "6a651b03c8da6fd2d9c5",
+            "messages": "e790eb6b423b30ff0b21"
+          },
+          "attempted": {
+            "chat/completions": [
+              "image_input",
+              "json_object",
+              "json_schema",
+              "parallel_tools",
+              "reasoning",
+              "streaming",
+              "tools"
+            ],
+            "messages": [
+              "image_input",
+              "json_object",
+              "json_schema",
+              "parallel_tools",
+              "reasoning",
+              "streaming",
+              "tools"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "json_object": "supported",
+              "parallel_tools": "unsupported",
+              "reasoning": "supported",
+              "streaming": "supported",
+              "tools": "unsupported"
+            }
+          }
+        }
+      },
       "endpoint_status": {
         "chat/completions": {
+          "version": 1,
+          "target": "2d24857d662ebcedadba",
           "outcome": "ok",
-          "checked": "2026-08-17"
+          "checked": "2026-08-19"
+        },
+        "messages": {
+          "version": 1,
+          "target": "8b80319ccb60af1d0aa7",
+          "outcome": "not_found",
+          "checked": "2026-08-19"
         }
       },
       "owned_by": "deepseek"
@@ -98,7 +153,7 @@
       "limits_source": "models.dev",
       "pricing_source": "models.dev",
       "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "reachable_checked": "2026-08-19",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -120,6 +175,11 @@
           }
         },
         "live_probe": {
+          "version": 1,
+          "targets": {
+            "chat/completions": "d47a81356c89930f69a4",
+            "messages": "81aba04368fd904d9cba"
+          },
           "attempted": {
             "chat/completions": [
               "logprobs",
@@ -149,10 +209,60 @@
           }
         }
       },
+      "capability_evidence": {
+        "model_discovery": {
+          "sources": [],
+          "support": {}
+        },
+        "live_probe": {
+          "version": 2,
+          "targets": {
+            "chat/completions": "eae7f5a0ffb23a27af48",
+            "messages": "dbadae69816d46d10a0d"
+          },
+          "attempted": {
+            "chat/completions": [
+              "image_input",
+              "json_object",
+              "json_schema",
+              "parallel_tools",
+              "reasoning",
+              "streaming",
+              "tools"
+            ],
+            "messages": [
+              "image_input",
+              "json_object",
+              "json_schema",
+              "parallel_tools",
+              "reasoning",
+              "streaming",
+              "tools"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "json_object": "supported",
+              "parallel_tools": "unsupported",
+              "reasoning": "supported",
+              "streaming": "supported",
+              "tools": "unsupported"
+            }
+          }
+        }
+      },
       "endpoint_status": {
         "chat/completions": {
+          "version": 1,
+          "target": "084207ccc7e3950bf016",
           "outcome": "ok",
-          "checked": "2026-08-17"
+          "checked": "2026-08-19"
+        },
+        "messages": {
+          "version": 1,
+          "target": "1b3b3cd9cc7878cb6539",
+          "outcome": "not_found",
+          "checked": "2026-08-19"
         }
       },
       "owned_by": "deepseek"

@@ -16,9 +16,22 @@ providers:
   base_url: https://api.openai.com/v1
   openapi: https://raw.githubusercontent.com/openai/openai-openapi/master/openapi.yaml
   models_url: https://api.openai.com/v1/models
+  models_auth: bearer
+  models_headers: {}
   ingress:
   - oai
   - oai_responses
+  surfaces:
+    oai:
+      endpoint: chat/completions
+      auth: bearer
+      egress_kind: openai_compatible
+      headers: {}
+    oai_responses:
+      endpoint: responses
+      auth: bearer
+      egress_kind: openai_responses
+      headers: {}
   auth:
   - bearer
   env_var: OPENAI_API_KEY
@@ -31,8 +44,18 @@ providers:
   base_url: https://api.anthropic.com/v1
   openapi: https://raw.githubusercontent.com/anthropics/anthropic-sdk-typescript/main/.stats.yml
   models_url: https://api.anthropic.com/v1/models
+  models_auth: header_key:x-api-key
+  models_headers:
+    anthropic-version: '2023-06-01'
   ingress:
   - anthropic
+  surfaces:
+    anthropic:
+      endpoint: messages
+      auth: header_key:x-api-key
+      egress_kind: anthropic
+      headers:
+        anthropic-version: '2023-06-01'
   auth:
   - header_key:x-api-key
   env_var: ANTHROPIC_API_KEY
@@ -45,8 +68,16 @@ providers:
   base_url: https://api.together.ai/v1
   openapi: https://docs.together.ai/openapi.yaml
   models_url: https://api.together.ai/v1/models
+  models_auth: bearer
+  models_headers: {}
   ingress:
   - oai
+  surfaces:
+    oai:
+      endpoint: chat/completions
+      auth: bearer
+      egress_kind: openai_compatible
+      headers: {}
   auth:
   - bearer
   env_var: TOGETHER_API_KEY
@@ -58,9 +89,17 @@ providers:
   docs: https://docs.fireworks.ai
   base_url: https://api.fireworks.ai/inference/v1
   openapi: null
-  models_url: https://api.fireworks.ai/inference/v1/models
+  models_url: https://api.fireworks.ai/v1/accounts/fireworks/models?pageSize=200
+  models_auth: bearer
+  models_headers: {}
   ingress:
   - oai
+  surfaces:
+    oai:
+      endpoint: chat/completions
+      auth: bearer
+      egress_kind: openai_compatible
+      headers: {}
   auth:
   - bearer
   env_var: FIREWORKS_API_KEY
@@ -73,8 +112,16 @@ providers:
   base_url: https://api.groq.com/openai/v1
   openapi: https://raw.githubusercontent.com/groq/groq-python/main/.stats.yml
   models_url: https://api.groq.com/openai/v1/models
+  models_auth: bearer
+  models_headers: {}
   ingress:
   - oai
+  surfaces:
+    oai:
+      endpoint: chat/completions
+      auth: bearer
+      egress_kind: openai_compatible
+      headers: {}
   auth:
   - bearer
   env_var: GROQ_API_KEY
@@ -87,9 +134,23 @@ providers:
   base_url: https://api.x.ai/v1
   openapi: https://docs.x.ai/openapi.json
   models_url: https://api.x.ai/v1/language-models
+  models_auth: bearer
+  models_headers: {}
   ingress:
   - oai
   - anthropic
+  surfaces:
+    oai:
+      endpoint: chat/completions
+      auth: bearer
+      egress_kind: openai_compatible
+      headers: {}
+    anthropic:
+      endpoint: messages
+      auth: header_key:x-api-key
+      egress_kind: anthropic
+      headers:
+        anthropic-version: '2023-06-01'
   auth:
   - bearer
   env_var: XAI_API_KEY
@@ -102,9 +163,23 @@ providers:
   base_url: https://api.deepseek.com
   openapi: null
   models_url: https://api.deepseek.com/models
+  models_auth: bearer
+  models_headers: {}
   ingress:
   - oai
   - anthropic
+  surfaces:
+    oai:
+      endpoint: chat/completions
+      auth: bearer
+      egress_kind: openai_compatible
+      headers: {}
+    anthropic:
+      endpoint: messages
+      auth: header_key:x-api-key
+      egress_kind: anthropic
+      headers:
+        anthropic-version: '2023-06-01'
   auth:
   - bearer
   env_var: DEEPSEEK_API_KEY
@@ -117,8 +192,16 @@ providers:
   base_url: https://api.mistral.ai/v1
   openapi: https://raw.githubusercontent.com/mistralai/platform-docs-public/main/openapi.yaml
   models_url: https://api.mistral.ai/v1/models
+  models_auth: bearer
+  models_headers: {}
   ingress:
   - oai
+  surfaces:
+    oai:
+      endpoint: chat/completions
+      auth: bearer
+      egress_kind: openai_compatible
+      headers: {}
   auth:
   - bearer
   env_var: MISTRAL_API_KEY
@@ -131,8 +214,16 @@ providers:
   base_url: https://api.cerebras.ai/v1
   openapi: https://storage.googleapis.com/stainless-sdk-openapi-specs/cerebras/cerebras-cloud-5471bd6d34fdddff21977458788b979ce93f6b080e11ff0d35777182b6615baa.yml
   models_url: https://api.cerebras.ai/public/v1/models
+  models_auth: none
+  models_headers: {}
   ingress:
   - oai
+  surfaces:
+    oai:
+      endpoint: chat/completions
+      auth: bearer
+      egress_kind: openai_compatible
+      headers: {}
   auth:
   - bearer
   env_var: CEREBRAS_API_KEY
@@ -146,10 +237,29 @@ routers:
   base_url: https://openrouter.ai/api/v1
   openapi: https://openrouter.ai/openapi.json
   models_url: https://openrouter.ai/api/v1/models
+  models_auth: none
+  models_headers: {}
   ingress:
   - oai
   - oai_responses
   - anthropic
+  surfaces:
+    oai:
+      endpoint: chat/completions
+      auth: bearer
+      egress_kind: openai_compatible
+      headers: {}
+    oai_responses:
+      endpoint: responses
+      auth: bearer
+      egress_kind: openai_responses
+      headers: {}
+    anthropic:
+      endpoint: messages
+      auth: bearer
+      egress_kind: anthropic
+      headers:
+        anthropic-version: '2023-06-01'
   auth:
   - bearer
   env_var: OPENROUTER_API_KEY

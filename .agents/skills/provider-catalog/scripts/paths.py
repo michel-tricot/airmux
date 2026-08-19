@@ -4,6 +4,7 @@ The scripts live with the skill and the data lives in the repo, so neither can a
 other is a sibling. Walk up for the repo root and take taxonomy/ from there.
 """
 
+import os
 from pathlib import Path
 
 
@@ -15,4 +16,6 @@ def repo_root() -> Path:
     raise RuntimeError("no repository root above " + str(here))
 
 
-TAXONOMY = repo_root() / "taxonomy"
+REPO_ROOT = repo_root()
+TAXONOMY = Path(os.environ["AIRLLM_TAXONOMY_ROOT"]).resolve() if os.environ.get("AIRLLM_TAXONOMY_ROOT") else REPO_ROOT / "taxonomy"
+ENV_FILE = REPO_ROOT / ".env"

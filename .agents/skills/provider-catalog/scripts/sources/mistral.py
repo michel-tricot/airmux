@@ -32,7 +32,6 @@ from .base import ModelSource
 
 class Mistral(ModelSource):
     id = "mistral"
-    url = "https://api.mistral.ai/v1/models"
 
     def normalize(self, item):
         # a fine-tune belongs to one account, not to the provider's catalog
@@ -48,7 +47,7 @@ class Mistral(ModelSource):
             input_modalities=["text", "image"] if capabilities.get("vision") else ["text"],
             output_modalities=["text"],
             supports_tools=capabilities.get("function_calling"),
-            pricing=None,                        # published on the pricing page only
+            pricing=None,  # published on the pricing page only
             display_name=item.get("name"),
             aliases=sorted(item.get("aliases") or []),
             deprecation_date=item.get("deprecation"),

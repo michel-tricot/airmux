@@ -30,7 +30,6 @@ from .base import ModelSource
 
 class DeepSeek(ModelSource):
     id = "deepseek"
-    url = "https://api.deepseek.com/models"
 
     def normalize(self, item):
         return self.record(item["id"], owned_by=item.get("owned_by"))

@@ -39,14 +39,13 @@ CENTS_PER_HUNDRED_MILLION = 10_000
 
 class XAI(ModelSource):
     id = "xai"
-    url = "https://api.x.ai/v1/language-models"
 
-    def fetch(self, key):
-        payload = self.get(self.url, key)
+    def fetch(self, url, headers):
+        payload = self.get(url, headers)
         # only /v1/models knows the context window, and only for the ids it shares with us
         windows = {
             model["id"]: model.get("context_length")
-            for model in self.items(self.get("https://api.x.ai/v1/models", key))
+            for model in self.items(self.get(url.removesuffix("language-models") + "models", headers))
             if model.get("id")
         }
         for model in payload.get("models") or []:
@@ -54,7 +53,9 @@ class XAI(ModelSource):
         return payload
 
     def normalize(self, item):
-        scale = lambda v: round(v / CENTS_PER_HUNDRED_MILLION, 4) if isinstance(v, (int, float)) else None
+        def scale(value):
+            return round(value / CENTS_PER_HUNDRED_MILLION, 4) if isinstance(value, (int, float)) else None
+
         prompt = scale(item.get("prompt_text_token_price"))
         cached = scale(item.get("cached_prompt_text_token_price"))
 
@@ -67,7 +68,9 @@ class XAI(ModelSource):
                 "input_per_mtok": prompt,
                 "output_per_mtok": scale(item.get("completion_text_token_price")),
                 **({"cached_input_per_mtok": cached} if cached else {}),
-            } if prompt is not None else None,
+            }
+            if prompt is not None
+            else None,
             # zero means "no second tier", not "free above the threshold"
             long_context_threshold=item.get("long_context_threshold") or None,
             aliases=sorted(item.get("aliases") or []),

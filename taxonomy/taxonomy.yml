@@ -81,10 +81,15 @@ models:
   cache_write_price_per_mtok: 12.5
   context_window: 1000000
   max_output_tokens: 128000
+  input_modalities:
+  - text
+  - image
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
-  - vision
+  - parallel_tools
   parameter_support:
     stop: supported
     temperature: supported
@@ -98,10 +103,16 @@ models:
   cache_write_price_per_mtok: 1.25
   context_window: 200000
   max_output_tokens: 64000
+  input_modalities:
+  - text
+  - image
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
-  - vision
+  - parallel_tools
+  - reasoning
   parameter_support:
     stop: supported
     temperature: supported
@@ -115,10 +126,16 @@ models:
   cache_write_price_per_mtok: 6.25
   context_window: 200000
   max_output_tokens: 64000
+  input_modalities:
+  - text
+  - image
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
-  - vision
+  - parallel_tools
+  - reasoning
   parameter_support:
     stop: supported
     temperature: supported
@@ -132,10 +149,16 @@ models:
   cache_write_price_per_mtok: 6.25
   context_window: 1000000
   max_output_tokens: 128000
+  input_modalities:
+  - text
+  - image
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
-  - vision
+  - parallel_tools
+  - reasoning
   parameter_support:
     stop: supported
     temperature: supported
@@ -149,10 +172,15 @@ models:
   cache_write_price_per_mtok: 6.25
   context_window: 1000000
   max_output_tokens: 128000
+  input_modalities:
+  - text
+  - image
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
-  - vision
+  - parallel_tools
   parameter_support:
     stop: supported
     temperature: supported
@@ -166,10 +194,15 @@ models:
   cache_write_price_per_mtok: 6.25
   context_window: 1000000
   max_output_tokens: 128000
+  input_modalities:
+  - text
+  - image
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
-  - vision
+  - parallel_tools
   parameter_support:
     stop: supported
     temperature: supported
@@ -183,10 +216,15 @@ models:
   cache_write_price_per_mtok: 6.25
   context_window: 1000000
   max_output_tokens: 128000
+  input_modalities:
+  - text
+  - image
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
-  - vision
+  - parallel_tools
   parameter_support:
     stop: supported
     temperature: supported
@@ -200,10 +238,16 @@ models:
   cache_write_price_per_mtok: 3.75
   context_window: 1000000
   max_output_tokens: 64000
+  input_modalities:
+  - text
+  - image
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
-  - vision
+  - parallel_tools
+  - reasoning
   parameter_support:
     stop: supported
     temperature: supported
@@ -217,10 +261,16 @@ models:
   cache_write_price_per_mtok: 3.75
   context_window: 1000000
   max_output_tokens: 128000
+  input_modalities:
+  - text
+  - image
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
-  - vision
+  - parallel_tools
+  - reasoning
   parameter_support:
     stop: supported
     temperature: supported
@@ -234,10 +284,15 @@ models:
   cache_write_price_per_mtok: 2.5
   context_window: 1000000
   max_output_tokens: 128000
+  input_modalities:
+  - text
+  - image
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
-  - vision
+  - parallel_tools
   parameter_support:
     stop: supported
     temperature: supported
@@ -251,10 +306,17 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 131072
   max_output_tokens: 40960
+  input_modalities:
+  - text
+  - image
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
-  - vision
+  - parallel_tools
+  - json_object
+  - json_schema
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -272,6 +334,10 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 131072
   max_output_tokens: 40960
+  input_modalities:
+  - text
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
@@ -292,9 +358,14 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 1000000
   max_output_tokens: 384000
+  input_modalities:
+  - text
+  output_modalities:
+  - text
   capabilities:
   - streaming
-  - tools
+  - json_object
+  - reasoning
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -312,9 +383,14 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 1000000
   max_output_tokens: 384000
+  input_modalities:
+  - text
+  output_modalities:
+  - text
   capabilities:
   - streaming
-  - tools
+  - json_object
+  - reasoning
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -332,9 +408,16 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 1048576
   max_output_tokens: 393216
+  input_modalities:
+  - text
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
+  - json_object
+  - json_schema
+  - reasoning
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -352,9 +435,15 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 1048576
   max_output_tokens: 384000
+  input_modalities:
+  - text
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
+  - json_schema
+  - reasoning
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -372,9 +461,16 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 1048576
   max_output_tokens: 384000
+  input_modalities:
+  - text
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
+  - json_object
+  - json_schema
+  - reasoning
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -392,9 +488,15 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 1048576
   max_output_tokens: 131072
+  input_modalities:
+  - text
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
+  - parallel_tools
+  - reasoning
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -412,9 +514,15 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 131072
   max_output_tokens: 131072
+  input_modalities:
+  - text
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
+  - json_object
+  - reasoning
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -432,8 +540,14 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 131072
   max_output_tokens: 131072
+  input_modalities:
+  - text
+  output_modalities:
+  - text
   capabilities:
   - streaming
+  - tools
+  - reasoning
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -451,10 +565,17 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 1048576
   max_output_tokens: 262144
+  input_modalities:
+  - text
+  - image
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
-  - vision
+  - json_object
+  - json_schema
+  - reasoning
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -472,10 +593,15 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 262144
   max_output_tokens: 262000
+  input_modalities:
+  - text
+  - image
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
-  - vision
+  - reasoning
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -493,10 +619,18 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 262144
   max_output_tokens: 262000
+  input_modalities:
+  - text
+  - image
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
-  - vision
+  - parallel_tools
+  - json_object
+  - json_schema
+  - reasoning
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -514,10 +648,17 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 1048576
   max_output_tokens: 1048576
+  input_modalities:
+  - text
+  - image
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
-  - vision
+  - json_object
+  - json_schema
+  - reasoning
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -535,9 +676,14 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 196608
   max_output_tokens: 196608
+  input_modalities:
+  - text
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
+  - json_schema
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -555,9 +701,17 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 512000
   max_output_tokens: 512000
+  input_modalities:
+  - text
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
+  - parallel_tools
+  - json_object
+  - json_schema
+  - reasoning
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -575,10 +729,15 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 131072
   max_output_tokens: 131072
+  input_modalities:
+  - text
+  - image
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
-  - vision
+  - reasoning
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -596,9 +755,15 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 262144
   max_output_tokens: 128000
+  input_modalities:
+  - text
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
+  - parallel_tools
+  - reasoning
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -616,6 +781,10 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 262144
   max_output_tokens: 262144
+  input_modalities:
+  - text
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
@@ -636,10 +805,14 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 262144
   max_output_tokens: 65536
+  input_modalities:
+  - text
+  - image
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
-  - vision
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -657,9 +830,16 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 262144
   max_output_tokens: null
+  input_modalities:
+  - text
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
+  - json_object
+  - json_schema
+  - reasoning
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -677,10 +857,17 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 262144
   max_output_tokens: 131072
+  input_modalities:
+  - text
+  - image
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
-  - vision
+  - json_object
+  - json_schema
+  - reasoning
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -698,8 +885,13 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 4096
   max_output_tokens: 4096
+  input_modalities:
+  - text
+  output_modalities:
+  - text
   capabilities:
   - streaming
+  - json_object
   parameter_support:
     logprobs: unsupported
     parallel_tool_calls: supported
@@ -717,6 +909,10 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 131072
   max_output_tokens: 8192
+  input_modalities:
+  - text
+  output_modalities:
+  - text
   capabilities:
   - streaming
   parameter_support:
@@ -736,6 +932,10 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 131072
   max_output_tokens: 8192
+  input_modalities:
+  - text
+  output_modalities:
+  - text
   capabilities:
   - streaming
   parameter_support:
@@ -755,6 +955,10 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 131072
   max_output_tokens: 65536
+  input_modalities:
+  - text
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
@@ -775,6 +979,10 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 131072
   max_output_tokens: 65536
+  input_modalities:
+  - text
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
@@ -795,10 +1003,14 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 131072
   max_output_tokens: 16384
+  input_modalities:
+  - text
+  - image
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
-  - vision
   parameter_support:
     logprobs: unsupported
     parallel_tool_calls: supported
@@ -816,9 +1028,16 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 256000
   max_output_tokens: null
+  input_modalities:
+  - text
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
+  - parallel_tools
+  - json_object
+  - json_schema
   parameter_support:
     parallel_tool_calls: supported
     reasoning_effort: supported
@@ -834,9 +1053,16 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 256000
   max_output_tokens: 4096
+  input_modalities:
+  - text
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
+  - parallel_tools
+  - json_object
+  - json_schema
   parameter_support:
     parallel_tool_calls: supported
     reasoning_effort: supported
@@ -852,9 +1078,16 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 262144
   max_output_tokens: 262144
+  input_modalities:
+  - text
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
+  - parallel_tools
+  - json_object
+  - json_schema
   parameter_support:
     parallel_tool_calls: supported
     reasoning_effort: supported
@@ -870,9 +1103,16 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 262144
   max_output_tokens: 262144
+  input_modalities:
+  - text
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
+  - parallel_tools
+  - json_object
+  - json_schema
   parameter_support:
     parallel_tool_calls: supported
     reasoning_effort: supported
@@ -888,9 +1128,16 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 262144
   max_output_tokens: 262144
+  input_modalities:
+  - text
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
+  - parallel_tools
+  - json_object
+  - json_schema
   parameter_support:
     parallel_tool_calls: supported
     reasoning_effort: supported
@@ -906,9 +1153,16 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 1048576
   max_output_tokens: null
+  input_modalities:
+  - text
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
+  - parallel_tools
+  - json_object
+  - json_schema
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -925,10 +1179,17 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 262144
   max_output_tokens: 256000
+  input_modalities:
+  - text
+  - image
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
-  - vision
+  - parallel_tools
+  - json_object
+  - json_schema
   parameter_support:
     parallel_tool_calls: supported
     reasoning_effort: unsupported
@@ -944,10 +1205,17 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 262144
   max_output_tokens: null
+  input_modalities:
+  - text
+  - image
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
-  - vision
+  - parallel_tools
+  - json_object
+  - json_schema
   parameter_support:
     parallel_tool_calls: supported
     reasoning_effort: supported
@@ -963,10 +1231,17 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 262144
   max_output_tokens: null
+  input_modalities:
+  - text
+  - image
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
-  - vision
+  - parallel_tools
+  - json_object
+  - json_schema
   parameter_support:
     parallel_tool_calls: supported
     reasoning_effort: supported
@@ -982,10 +1257,17 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 131072
   max_output_tokens: null
+  input_modalities:
+  - text
+  - image
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
-  - vision
+  - parallel_tools
+  - json_object
+  - json_schema
   parameter_support:
     parallel_tool_calls: supported
     reasoning_effort: supported
@@ -1001,10 +1283,17 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 131072
   max_output_tokens: 128000
+  input_modalities:
+  - text
+  - image
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
-  - vision
+  - parallel_tools
+  - json_object
+  - json_schema
   parameter_support:
     parallel_tool_calls: supported
     reasoning_effort: supported
@@ -1020,10 +1309,17 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 262144
   max_output_tokens: null
+  input_modalities:
+  - text
+  - image
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
-  - vision
+  - parallel_tools
+  - json_object
+  - json_schema
   parameter_support:
     parallel_tool_calls: supported
     reasoning_effort: supported
@@ -1039,10 +1335,17 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 262144
   max_output_tokens: 128000
+  input_modalities:
+  - text
+  - image
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
-  - vision
+  - parallel_tools
+  - json_object
+  - json_schema
   parameter_support:
     parallel_tool_calls: supported
     reasoning_effort: supported
@@ -1058,9 +1361,16 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 262144
   max_output_tokens: 262144
+  input_modalities:
+  - text
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
+  - parallel_tools
+  - json_object
+  - json_schema
   parameter_support:
     parallel_tool_calls: supported
     reasoning_effort: supported
@@ -1076,9 +1386,16 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 256000
   max_output_tokens: null
+  input_modalities:
+  - text
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
+  - parallel_tools
+  - json_object
+  - json_schema
   parameter_support:
     parallel_tool_calls: supported
     reasoning_effort: supported
@@ -1094,9 +1411,16 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 256000
   max_output_tokens: null
+  input_modalities:
+  - text
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
+  - parallel_tools
+  - json_object
+  - json_schema
   parameter_support:
     parallel_tool_calls: supported
     reasoning_effort: supported
@@ -1112,10 +1436,17 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 262144
   max_output_tokens: 262144
+  input_modalities:
+  - text
+  - image
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
-  - vision
+  - parallel_tools
+  - json_object
+  - json_schema
   parameter_support:
     parallel_tool_calls: supported
     reasoning_effort: supported
@@ -1131,10 +1462,17 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 262144
   max_output_tokens: 262144
+  input_modalities:
+  - text
+  - image
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
-  - vision
+  - parallel_tools
+  - json_object
+  - json_schema
   parameter_support:
     parallel_tool_calls: supported
     reasoning_effort: supported
@@ -1150,10 +1488,17 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 262144
   max_output_tokens: 262144
+  input_modalities:
+  - text
+  - image
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
-  - vision
+  - parallel_tools
+  - json_object
+  - json_schema
   parameter_support:
     parallel_tool_calls: supported
     reasoning_effort: unsupported
@@ -1169,10 +1514,17 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 131072
   max_output_tokens: 131072
+  input_modalities:
+  - text
+  - image
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
-  - vision
+  - parallel_tools
+  - json_object
+  - json_schema
   parameter_support:
     parallel_tool_calls: supported
     reasoning_effort: supported
@@ -1188,10 +1540,17 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 131072
   max_output_tokens: 262144
+  input_modalities:
+  - text
+  - image
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
-  - vision
+  - parallel_tools
+  - json_object
+  - json_schema
   parameter_support:
     parallel_tool_calls: supported
     reasoning_effort: supported
@@ -1207,10 +1566,17 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 262144
   max_output_tokens: 262144
+  input_modalities:
+  - text
+  - image
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
-  - vision
+  - parallel_tools
+  - json_object
+  - json_schema
   parameter_support:
     parallel_tool_calls: supported
     reasoning_effort: unsupported
@@ -1226,10 +1592,17 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 262144
   max_output_tokens: null
+  input_modalities:
+  - text
+  - image
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
-  - vision
+  - parallel_tools
+  - json_object
+  - json_schema
   parameter_support:
     parallel_tool_calls: supported
     reasoning_effort: unsupported
@@ -1245,10 +1618,17 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 262144
   max_output_tokens: null
+  input_modalities:
+  - text
+  - image
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
-  - vision
+  - parallel_tools
+  - json_object
+  - json_schema
   parameter_support:
     parallel_tool_calls: supported
     reasoning_effort: unsupported
@@ -1264,10 +1644,17 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 262144
   max_output_tokens: 262144
+  input_modalities:
+  - text
+  - image
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
-  - vision
+  - parallel_tools
+  - json_object
+  - json_schema
   parameter_support:
     parallel_tool_calls: supported
     reasoning_effort: unsupported
@@ -1283,10 +1670,17 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 262144
   max_output_tokens: 262144
+  input_modalities:
+  - text
+  - image
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
-  - vision
+  - parallel_tools
+  - json_object
+  - json_schema
   parameter_support:
     parallel_tool_calls: supported
     reasoning_effort: unsupported
@@ -1302,10 +1696,17 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 262144
   max_output_tokens: 256000
+  input_modalities:
+  - text
+  - image
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
-  - vision
+  - parallel_tools
+  - json_object
+  - json_schema
   parameter_support:
     parallel_tool_calls: supported
     reasoning_effort: unsupported
@@ -1321,10 +1722,17 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 262144
   max_output_tokens: 256000
+  input_modalities:
+  - text
+  - image
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
-  - vision
+  - parallel_tools
+  - json_object
+  - json_schema
   parameter_support:
     parallel_tool_calls: supported
     reasoning_effort: unsupported
@@ -1340,10 +1748,17 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 262144
   max_output_tokens: 256000
+  input_modalities:
+  - text
+  - image
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
-  - vision
+  - parallel_tools
+  - json_object
+  - json_schema
   parameter_support:
     parallel_tool_calls: supported
     reasoning_effort: unsupported
@@ -1359,10 +1774,17 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 262144
   max_output_tokens: 262144
+  input_modalities:
+  - text
+  - image
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
-  - vision
+  - parallel_tools
+  - json_object
+  - json_schema
   parameter_support:
     parallel_tool_calls: supported
     reasoning_effort: unsupported
@@ -1378,10 +1800,17 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 262144
   max_output_tokens: 262144
+  input_modalities:
+  - text
+  - image
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
-  - vision
+  - parallel_tools
+  - json_object
+  - json_schema
   parameter_support:
     parallel_tool_calls: supported
     reasoning_effort: unsupported
@@ -1397,9 +1826,16 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 32768
   max_output_tokens: 32000
+  input_modalities:
+  - text
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
+  - parallel_tools
+  - json_object
+  - json_schema
   parameter_support:
     parallel_tool_calls: supported
     reasoning_effort: supported
@@ -1415,9 +1851,16 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 32768
   max_output_tokens: 32000
+  input_modalities:
+  - text
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
+  - parallel_tools
+  - json_object
+  - json_schema
   parameter_support:
     parallel_tool_calls: supported
     reasoning_effort: supported
@@ -1433,9 +1876,16 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 1048576
   max_output_tokens: null
+  input_modalities:
+  - text
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
+  - parallel_tools
+  - json_object
+  - json_schema
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -1452,8 +1902,15 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 16385
   max_output_tokens: 4096
+  input_modalities:
+  - text
+  output_modalities:
+  - text
   capabilities:
   - streaming
+  - tools
+  - parallel_tools
+  - json_object
   parameter_support:
     parallel_tool_calls: supported
     reasoning_effort: unsupported
@@ -1469,8 +1926,15 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 16385
   max_output_tokens: 4096
+  input_modalities:
+  - text
+  output_modalities:
+  - text
   capabilities:
   - streaming
+  - tools
+  - parallel_tools
+  - json_object
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -1479,7 +1943,6 @@ models:
     stop: supported
     temperature: supported
     top_p: supported
-  egress_kind: openai_compatible
 - model_id: openai/gpt-4
   provider_id: openai
   upstream_model: gpt-4
@@ -1489,9 +1952,15 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 128000
   max_output_tokens: 4096
+  input_modalities:
+  - text
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
+  - parallel_tools
+  - json_object
   parameter_support:
     parallel_tool_calls: supported
     reasoning_effort: unsupported
@@ -1507,9 +1976,16 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 128000
   max_output_tokens: 4096
+  input_modalities:
+  - text
+  - image
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
+  - parallel_tools
+  - json_object
   parameter_support:
     parallel_tool_calls: supported
     reasoning_effort: unsupported
@@ -1525,9 +2001,17 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 1047576
   max_output_tokens: 32768
+  input_modalities:
+  - text
+  - image
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
+  - parallel_tools
+  - json_object
+  - json_schema
   parameter_support:
     parallel_tool_calls: supported
     reasoning_effort: unsupported
@@ -1543,8 +2027,17 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 1047576
   max_output_tokens: 32768
+  input_modalities:
+  - text
+  - image
+  output_modalities:
+  - text
   capabilities:
   - streaming
+  - tools
+  - parallel_tools
+  - json_object
+  - json_schema
   parameter_support:
     parallel_tool_calls: supported
     reasoning_effort: unsupported
@@ -1560,9 +2053,17 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 1047576
   max_output_tokens: 32768
+  input_modalities:
+  - text
+  - image
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
+  - parallel_tools
+  - json_object
+  - json_schema
   parameter_support:
     parallel_tool_calls: supported
     reasoning_effort: unsupported
@@ -1578,8 +2079,17 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 1047576
   max_output_tokens: 32768
+  input_modalities:
+  - text
+  - image
+  output_modalities:
+  - text
   capabilities:
   - streaming
+  - tools
+  - parallel_tools
+  - json_object
+  - json_schema
   parameter_support:
     parallel_tool_calls: supported
     reasoning_effort: unsupported
@@ -1595,9 +2105,16 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 1047576
   max_output_tokens: 32768
+  input_modalities:
+  - text
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
+  - parallel_tools
+  - json_object
+  - json_schema
   parameter_support:
     parallel_tool_calls: supported
     reasoning_effort: unsupported
@@ -1613,8 +2130,16 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 1047576
   max_output_tokens: 32768
+  input_modalities:
+  - text
+  output_modalities:
+  - text
   capabilities:
   - streaming
+  - tools
+  - parallel_tools
+  - json_object
+  - json_schema
   parameter_support:
     parallel_tool_calls: supported
     reasoning_effort: unsupported
@@ -1630,9 +2155,17 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 128000
   max_output_tokens: 16384
+  input_modalities:
+  - text
+  - image
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
+  - parallel_tools
+  - json_object
+  - json_schema
   parameter_support:
     parallel_tool_calls: supported
     reasoning_effort: unsupported
@@ -1648,9 +2181,16 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 128000
   max_output_tokens: 4096
+  input_modalities:
+  - text
+  - image
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
+  - parallel_tools
+  - json_object
   parameter_support:
     parallel_tool_calls: supported
     reasoning_effort: unsupported
@@ -1666,9 +2206,17 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 128000
   max_output_tokens: 16384
+  input_modalities:
+  - text
+  - image
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
+  - parallel_tools
+  - json_object
+  - json_schema
   parameter_support:
     parallel_tool_calls: supported
     reasoning_effort: unsupported
@@ -1684,9 +2232,17 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 128000
   max_output_tokens: 16384
+  input_modalities:
+  - text
+  - image
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
+  - parallel_tools
+  - json_object
+  - json_schema
   parameter_support:
     parallel_tool_calls: supported
     reasoning_effort: unsupported
@@ -1702,9 +2258,17 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 128000
   max_output_tokens: 16384
+  input_modalities:
+  - text
+  - image
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
+  - parallel_tools
+  - json_object
+  - json_schema
   parameter_support:
     parallel_tool_calls: supported
     reasoning_effort: unsupported
@@ -1720,8 +2284,17 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 128000
   max_output_tokens: 16384
+  input_modalities:
+  - text
+  - image
+  output_modalities:
+  - text
   capabilities:
   - streaming
+  - tools
+  - parallel_tools
+  - json_object
+  - json_schema
   parameter_support:
     parallel_tool_calls: supported
     reasoning_effort: unsupported
@@ -1737,9 +2310,14 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 400000
   max_output_tokens: 128000
+  input_modalities:
+  - text
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
+  - reasoning
   parameter_support:
     parallel_tool_calls: supported
     reasoning_effort: supported
@@ -1755,8 +2333,13 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 400000
   max_output_tokens: 128000
+  input_modalities:
+  - text
+  output_modalities:
+  - text
   capabilities:
   - streaming
+  - reasoning
   parameter_support:
     parallel_tool_calls: supported
     reasoning_effort: supported
@@ -1772,9 +2355,14 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 400000
   max_output_tokens: 128000
+  input_modalities:
+  - text
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
+  - reasoning
   parameter_support:
     parallel_tool_calls: supported
     reasoning_effort: supported
@@ -1790,8 +2378,13 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 400000
   max_output_tokens: 128000
+  input_modalities:
+  - text
+  output_modalities:
+  - text
   capabilities:
   - streaming
+  - reasoning
   parameter_support:
     parallel_tool_calls: supported
     reasoning_effort: supported
@@ -1807,9 +2400,14 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 400000
   max_output_tokens: 128000
+  input_modalities:
+  - text
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
+  - reasoning
   parameter_support:
     parallel_tool_calls: supported
     reasoning_effort: supported
@@ -1825,8 +2423,57 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 400000
   max_output_tokens: 128000
+  input_modalities:
+  - text
+  output_modalities:
+  - text
   capabilities:
   - streaming
+  - reasoning
+  parameter_support:
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    temperature: unsupported
+    top_p: unsupported
+  egress_kind: openai_responses
+- model_id: openai/gpt-5-pro
+  provider_id: openai
+  upstream_model: gpt-5-pro
+  input_price_per_mtok: 15.0
+  output_price_per_mtok: 120.0
+  cache_read_price_per_mtok: 0.0
+  cache_write_price_per_mtok: 0.0
+  context_window: 400000
+  max_output_tokens: 128000
+  input_modalities:
+  - text
+  output_modalities:
+  - text
+  capabilities:
+  - streaming
+  - tools
+  parameter_support:
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    temperature: unsupported
+    top_p: unsupported
+  egress_kind: openai_responses
+- model_id: openai/gpt-5-pro-2025-10-06
+  provider_id: openai
+  upstream_model: gpt-5-pro-2025-10-06
+  input_price_per_mtok: 15.0
+  output_price_per_mtok: 120.0
+  cache_read_price_per_mtok: 0.0
+  cache_write_price_per_mtok: 0.0
+  context_window: 400000
+  max_output_tokens: 128000
+  input_modalities:
+  - text
+  output_modalities:
+  - text
+  capabilities:
+  - streaming
+  - json_object
   parameter_support:
     parallel_tool_calls: supported
     reasoning_effort: supported
@@ -1842,9 +2489,18 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 400000
   max_output_tokens: 128000
+  input_modalities:
+  - text
+  - image
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
+  - parallel_tools
+  - json_object
+  - json_schema
+  - reasoning
   parameter_support:
     parallel_tool_calls: supported
     reasoning_effort: supported
@@ -1860,9 +2516,70 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 400000
   max_output_tokens: 128000
+  input_modalities:
+  - text
+  - image
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
+  - parallel_tools
+  - json_object
+  - json_schema
+  - reasoning
+  parameter_support:
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    temperature: supported
+    top_p: supported
+  egress_kind: openai_responses
+- model_id: openai/gpt-5.2-pro
+  provider_id: openai
+  upstream_model: gpt-5.2-pro
+  input_price_per_mtok: 21.0
+  output_price_per_mtok: 168.0
+  cache_read_price_per_mtok: 0.0
+  cache_write_price_per_mtok: 0.0
+  context_window: 400000
+  max_output_tokens: 128000
+  input_modalities:
+  - text
+  - image
+  output_modalities:
+  - text
+  capabilities:
+  - streaming
+  - tools
+  - json_object
+  - json_schema
+  parameter_support:
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    temperature: unsupported
+    top_p: unsupported
+  egress_kind: openai_responses
+- model_id: openai/gpt-5.3-codex
+  provider_id: openai
+  upstream_model: gpt-5.3-codex
+  input_price_per_mtok: 1.75
+  output_price_per_mtok: 14.0
+  cache_read_price_per_mtok: 0.175
+  cache_write_price_per_mtok: 0.0
+  context_window: 400000
+  max_output_tokens: 128000
+  input_modalities:
+  - text
+  - image
+  output_modalities:
+  - text
+  capabilities:
+  - streaming
+  - tools
+  - parallel_tools
+  - json_object
+  - json_schema
+  - reasoning
   parameter_support:
     parallel_tool_calls: supported
     reasoning_effort: supported
@@ -1878,9 +2595,18 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 1050000
   max_output_tokens: 128000
+  input_modalities:
+  - text
+  - image
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
+  - parallel_tools
+  - json_object
+  - json_schema
+  - reasoning
   parameter_support:
     parallel_tool_calls: supported
     reasoning_effort: supported
@@ -1896,9 +2622,17 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 400000
   max_output_tokens: 128000
+  input_modalities:
+  - text
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
+  - parallel_tools
+  - json_object
+  - json_schema
+  - reasoning
   parameter_support:
     parallel_tool_calls: supported
     reasoning_effort: supported
@@ -1914,14 +2648,47 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 400000
   max_output_tokens: 128000
+  input_modalities:
+  - text
+  - image
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
+  - parallel_tools
+  - json_object
+  - json_schema
   parameter_support:
     parallel_tool_calls: supported
     reasoning_effort: supported
     temperature: supported
     top_p: supported
+  egress_kind: openai_responses
+- model_id: openai/gpt-5.4-pro
+  provider_id: openai
+  upstream_model: gpt-5.4-pro
+  input_price_per_mtok: 30.0
+  output_price_per_mtok: 180.0
+  cache_read_price_per_mtok: 0.0
+  cache_write_price_per_mtok: 0.0
+  context_window: 1050000
+  max_output_tokens: 128000
+  input_modalities:
+  - text
+  - image
+  output_modalities:
+  - text
+  capabilities:
+  - streaming
+  - tools
+  - json_object
+  - json_schema
+  parameter_support:
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    temperature: unsupported
+    top_p: unsupported
   egress_kind: openai_responses
 - model_id: openai/gpt-5.5
   provider_id: openai
@@ -1932,9 +2699,43 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 1050000
   max_output_tokens: 128000
+  input_modalities:
+  - text
+  - image
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
+  - parallel_tools
+  - json_object
+  - json_schema
+  - reasoning
+  parameter_support:
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    temperature: unsupported
+    top_p: unsupported
+  egress_kind: openai_responses
+- model_id: openai/gpt-5.5-pro
+  provider_id: openai
+  upstream_model: gpt-5.5-pro
+  input_price_per_mtok: 30.0
+  output_price_per_mtok: 180.0
+  cache_read_price_per_mtok: 0.0
+  cache_write_price_per_mtok: 0.0
+  context_window: 1050000
+  max_output_tokens: 128000
+  input_modalities:
+  - text
+  output_modalities:
+  - text
+  capabilities:
+  - streaming
+  - tools
+  - parallel_tools
+  - json_object
+  - json_schema
   parameter_support:
     parallel_tool_calls: supported
     reasoning_effort: supported
@@ -1950,9 +2751,17 @@ models:
   cache_write_price_per_mtok: 0.25
   context_window: 1050000
   max_output_tokens: 128000
+  input_modalities:
+  - text
+  - image
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
+  - parallel_tools
+  - json_object
+  - json_schema
   parameter_support:
     parallel_tool_calls: supported
     reasoning_effort: supported
@@ -1968,9 +2777,17 @@ models:
   cache_write_price_per_mtok: 6.25
   context_window: 1050000
   max_output_tokens: 128000
+  input_modalities:
+  - text
+  - image
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
+  - parallel_tools
+  - json_object
+  - json_schema
   parameter_support:
     parallel_tool_calls: supported
     reasoning_effort: supported
@@ -1986,9 +2803,17 @@ models:
   cache_write_price_per_mtok: 2.5
   context_window: 1050000
   max_output_tokens: 128000
+  input_modalities:
+  - text
+  - image
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
+  - parallel_tools
+  - json_object
+  - json_schema
   parameter_support:
     parallel_tool_calls: supported
     reasoning_effort: supported
@@ -2004,6 +2829,10 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 200000
   max_output_tokens: 100000
+  input_modalities:
+  - text
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
@@ -2022,8 +2851,37 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 200000
   max_output_tokens: 100000
+  input_modalities:
+  - text
+  output_modalities:
+  - text
   capabilities:
   - streaming
+  - json_object
+  parameter_support:
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    temperature: unsupported
+    top_p: unsupported
+  egress_kind: openai_responses
+- model_id: openai/o1-pro
+  provider_id: openai
+  upstream_model: o1-pro
+  input_price_per_mtok: 150.0
+  output_price_per_mtok: 600.0
+  cache_read_price_per_mtok: 0.0
+  cache_write_price_per_mtok: 0.0
+  context_window: 200000
+  max_output_tokens: 100000
+  input_modalities:
+  - text
+  output_modalities:
+  - text
+  capabilities:
+  - streaming
+  - tools
+  - json_object
+  - reasoning
   parameter_support:
     parallel_tool_calls: supported
     reasoning_effort: supported
@@ -2039,6 +2897,10 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 200000
   max_output_tokens: 100000
+  input_modalities:
+  - text
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
@@ -2057,6 +2919,10 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 200000
   max_output_tokens: 100000
+  input_modalities:
+  - text
+  output_modalities:
+  - text
   capabilities:
   - streaming
   parameter_support:
@@ -2074,6 +2940,10 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 200000
   max_output_tokens: 100000
+  input_modalities:
+  - text
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
@@ -2092,6 +2962,10 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 200000
   max_output_tokens: 100000
+  input_modalities:
+  - text
+  output_modalities:
+  - text
   capabilities:
   - streaming
   parameter_support:
@@ -2109,6 +2983,10 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 200000
   max_output_tokens: 100000
+  input_modalities:
+  - text
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
@@ -2127,8 +3005,13 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 200000
   max_output_tokens: 100000
+  input_modalities:
+  - text
+  output_modalities:
+  - text
   capabilities:
   - streaming
+  - json_schema
   parameter_support:
     parallel_tool_calls: supported
     reasoning_effort: supported
@@ -2144,8 +3027,15 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 128000
   max_output_tokens: null
+  input_modalities:
+  - text
+  output_modalities:
+  - text
   capabilities:
   - streaming
+  - tools
+  - parallel_tools
+  - json_object
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -2163,9 +3053,17 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 524288
   max_output_tokens: 512000
+  input_modalities:
+  - text
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
+  - parallel_tools
+  - json_object
+  - json_schema
+  - reasoning
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -2183,9 +3081,14 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 32768
   max_output_tokens: 32768
+  input_modalities:
+  - text
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
+  - json_object
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -2203,6 +3106,10 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 262144
   max_output_tokens: 262144
+  input_modalities:
+  - text
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
@@ -2223,8 +3130,15 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 1010000
   max_output_tokens: 262144
+  input_modalities:
+  - text
+  output_modalities:
+  - text
   capabilities:
   - streaming
+  - tools
+  - json_object
+  - json_schema
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -2242,8 +3156,16 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 32768
   max_output_tokens: null
+  input_modalities:
+  - text
+  output_modalities:
+  - text
   capabilities:
   - streaming
+  - tools
+  - parallel_tools
+  - json_object
+  - json_schema
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -2261,11 +3183,16 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 163840
   max_output_tokens: 128000
+  input_modalities:
+  - text
+  output_modalities:
+  - text
   capabilities:
   - streaming
+  - json_object
+  - json_schema
   parameter_support:
     logprobs: supported
-    parallel_tool_calls: supported
     reasoning_effort: supported
     seed: supported
     stop: supported
@@ -2280,9 +3207,16 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 1048576
   max_output_tokens: 384000
+  input_modalities:
+  - text
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
+  - parallel_tools
+  - json_object
+  - json_schema
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -2300,9 +3234,16 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 512000
   max_output_tokens: 393216
+  input_modalities:
+  - text
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
+  - parallel_tools
+  - json_object
+  - json_schema
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -2320,9 +3261,17 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 1048576
   max_output_tokens: 384000
+  input_modalities:
+  - text
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
+  - parallel_tools
+  - json_object
+  - json_schema
+  - reasoning
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -2340,8 +3289,15 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 32768
   max_output_tokens: 32768
+  input_modalities:
+  - text
+  - image
+  output_modalities:
+  - text
   capabilities:
   - streaming
+  - json_object
+  - json_schema
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -2359,8 +3315,14 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 262144
   max_output_tokens: 262144
+  input_modalities:
+  - text
+  output_modalities:
+  - text
   capabilities:
   - streaming
+  - tools
+  - json_object
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -2378,9 +3340,16 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 131072
   max_output_tokens: 131072
+  input_modalities:
+  - text
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
+  - parallel_tools
+  - json_object
+  - json_schema
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -2398,8 +3367,13 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 131072
   max_output_tokens: 131072
+  input_modalities:
+  - text
+  output_modalities:
+  - text
   capabilities:
   - streaming
+  - tools
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -2417,9 +3391,14 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 262144
   max_output_tokens: 262144
+  input_modalities:
+  - text
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
+  - parallel_tools
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -2437,9 +3416,16 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 262144
   max_output_tokens: 262144
+  input_modalities:
+  - text
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
+  - parallel_tools
+  - json_object
+  - json_schema
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -2457,9 +3443,16 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 1000000
   max_output_tokens: 1048576
+  input_modalities:
+  - text
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
+  - json_object
+  - json_schema
+  - reasoning
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -2477,11 +3470,19 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 512288
   max_output_tokens: 512288
+  input_modalities:
+  - text
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
+  - parallel_tools
+  - json_object
+  - json_schema
   parameter_support:
     logprobs: supported
+    parallel_tool_calls: supported
     reasoning_effort: supported
     seed: supported
     stop: supported
@@ -2496,6 +3497,10 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 131072
   max_output_tokens: 131072
+  input_modalities:
+  - text
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
@@ -2516,9 +3521,15 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 131072
   max_output_tokens: 131072
+  input_modalities:
+  - text
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
+  - json_object
+  - json_schema
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -2536,8 +3547,13 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 262144
   max_output_tokens: 262144
+  input_modalities:
+  - text
+  output_modalities:
+  - text
   capabilities:
   - streaming
+  - tools
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -2555,9 +3571,16 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 524288
   max_output_tokens: 262144
+  input_modalities:
+  - text
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
+  - parallel_tools
+  - json_object
+  - json_schema
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -2575,8 +3598,14 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 524288
   max_output_tokens: 262144
+  input_modalities:
+  - text
+  output_modalities:
+  - text
   capabilities:
   - streaming
+  - tools
+  - reasoning
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -2594,6 +3623,10 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 131072
   max_output_tokens: 98304
+  input_modalities:
+  - text
+  output_modalities:
+  - text
   capabilities:
   - streaming
   parameter_support:
@@ -2612,9 +3645,16 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 512000
   max_output_tokens: 131072
+  input_modalities:
+  - text
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
+  - parallel_tools
+  - json_object
+  - json_schema
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -2632,10 +3672,17 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 1000000
   max_output_tokens: 30000
+  input_modalities:
+  - text
+  - image
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
-  - vision
+  - parallel_tools
+  - json_object
+  - json_schema
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -2653,10 +3700,18 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 1000000
   max_output_tokens: 30000
+  input_modalities:
+  - text
+  - image
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
-  - vision
+  - parallel_tools
+  - json_object
+  - json_schema
+  - reasoning
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -2665,6 +3720,27 @@ models:
     stop: unsupported
     temperature: supported
     top_p: supported
+- model_id: xai/grok-4.20-multi-agent-0309
+  provider_id: xai
+  upstream_model: grok-4.20-multi-agent-0309
+  input_price_per_mtok: 1.25
+  output_price_per_mtok: 2.5
+  cache_read_price_per_mtok: 0.2
+  cache_write_price_per_mtok: 0.0
+  context_window: 1000000
+  max_output_tokens: 30000
+  input_modalities:
+  - text
+  - image
+  output_modalities:
+  - text
+  capabilities:
+  - streaming
+  parameter_support:
+    stop: unsupported
+    temperature: supported
+    top_p: supported
+  egress_kind: anthropic
 - model_id: xai/grok-4.3
   provider_id: xai
   upstream_model: grok-4.3
@@ -2674,10 +3750,18 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 1000000
   max_output_tokens: 30000
+  input_modalities:
+  - text
+  - image
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
-  - vision
+  - parallel_tools
+  - json_object
+  - json_schema
+  - reasoning
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -2695,10 +3779,18 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 500000
   max_output_tokens: 500000
+  input_modalities:
+  - text
+  - image
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
-  - vision
+  - parallel_tools
+  - json_object
+  - json_schema
+  - reasoning
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -2716,10 +3808,18 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 500000
   max_output_tokens: 500000
+  input_modalities:
+  - text
+  - image
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
-  - vision
+  - parallel_tools
+  - json_object
+  - json_schema
+  - reasoning
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -2737,10 +3837,18 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 256000
   max_output_tokens: 256000
+  input_modalities:
+  - text
+  - image
+  output_modalities:
+  - text
   capabilities:
   - streaming
   - tools
-  - vision
+  - parallel_tools
+  - json_object
+  - json_schema
+  - reasoning
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported

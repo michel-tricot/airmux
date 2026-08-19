@@ -11,6 +11,8 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { ModelInEgressKind } from './modelInEgressKind';
+import type { ModelInInputModalitiesItem } from './modelInInputModalitiesItem';
+import type { ModelInOutputModalitiesItem } from './modelInOutputModalitiesItem';
 import type { ModelInParameterSupport } from './modelInParameterSupport';
 
 export interface ModelIn {
@@ -62,6 +64,16 @@ export interface ModelIn {
   context_window?: number;
   /** Max completion tokens; requests are clamped to it */
   max_output_tokens?: number | null;
+  /**
+     * Accepted input modalities
+     * @maxItems 16
+     */
+  input_modalities?: ModelInInputModalitiesItem[];
+  /**
+     * Produced output modalities
+     * @maxItems 16
+     */
+  output_modalities?: ModelInOutputModalitiesItem[];
   /**
      * Capabilities supported by the model
      * @maxItems 128

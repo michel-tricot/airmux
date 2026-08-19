@@ -2,7 +2,7 @@
   "provider": "fireworks",
   "source": "https://api.fireworks.ai/v1/accounts/fireworks/models?pageSize=200",
   "source_type": "api",
-  "updated": "2026-08-17",
+  "updated": "2026-08-19",
   "count": 18,
   "models": [
     {
@@ -27,7 +27,7 @@
       "limits_source": "openrouter-index",
       "pricing_source": "models.dev",
       "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "reachable_checked": "2026-08-19",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -46,6 +46,10 @@
           }
         },
         "live_probe": {
+          "version": 1,
+          "targets": {
+            "chat/completions": "aa018d93bb24da867d7d"
+          },
           "attempted": {
             "chat/completions": [
               "logprobs",
@@ -70,11 +74,46 @@
           }
         }
       },
+      "capability_evidence": {
+        "model_discovery": {
+          "sources": [],
+          "support": {}
+        },
+        "live_probe": {
+          "version": 2,
+          "targets": {
+            "chat/completions": "76fa3311ba2f2ccaa142"
+          },
+          "attempted": {
+            "chat/completions": [
+              "image_input",
+              "json_object",
+              "json_schema",
+              "parallel_tools",
+              "reasoning",
+              "streaming",
+              "tools"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "image_input": "unsupported",
+              "json_object": "supported",
+              "json_schema": "supported",
+              "reasoning": "supported",
+              "streaming": "supported",
+              "tools": "supported"
+            }
+          }
+        }
+      },
       "display_name": "DeepSeek-V4-Flash-0731",
       "endpoint_status": {
         "chat/completions": {
+          "version": 1,
+          "target": "21040fae148a8876ef6d",
           "outcome": "ok",
-          "checked": "2026-08-17"
+          "checked": "2026-08-19"
         }
       },
       "hugging_face_id": "deepseek-ai/DeepSeek-V4-Flash-0731"
@@ -101,7 +140,7 @@
       "limits_source": "openrouter-index",
       "pricing_source": "models.dev",
       "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "reachable_checked": "2026-08-19",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -120,6 +159,10 @@
           }
         },
         "live_probe": {
+          "version": 1,
+          "targets": {
+            "chat/completions": "fa4653f526e0de274935"
+          },
           "attempted": {
             "chat/completions": [
               "logprobs",
@@ -144,11 +187,45 @@
           }
         }
       },
+      "capability_evidence": {
+        "model_discovery": {
+          "sources": [],
+          "support": {}
+        },
+        "live_probe": {
+          "version": 2,
+          "targets": {
+            "chat/completions": "c770d867f4e8d20fa52c"
+          },
+          "attempted": {
+            "chat/completions": [
+              "image_input",
+              "json_object",
+              "json_schema",
+              "parallel_tools",
+              "reasoning",
+              "streaming",
+              "tools"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "image_input": "unsupported",
+              "json_schema": "supported",
+              "reasoning": "supported",
+              "streaming": "supported",
+              "tools": "supported"
+            }
+          }
+        }
+      },
       "display_name": "DeepSeek-V4-Pro",
       "endpoint_status": {
         "chat/completions": {
+          "version": 1,
+          "target": "4e1ae163f24287e8d07b",
           "outcome": "ok",
-          "checked": "2026-08-17"
+          "checked": "2026-08-19"
         }
       },
       "hugging_face_id": "deepseek-ai/DeepSeek-V4-Pro"
@@ -175,7 +252,7 @@
       "limits_source": "openrouter-index",
       "pricing_source": "models.dev",
       "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "reachable_checked": "2026-08-19",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -194,6 +271,10 @@
           }
         },
         "live_probe": {
+          "version": 1,
+          "targets": {
+            "chat/completions": "b3f9ade1050023c82a91"
+          },
           "attempted": {
             "chat/completions": [
               "logprobs",
@@ -218,11 +299,46 @@
           }
         }
       },
+      "capability_evidence": {
+        "model_discovery": {
+          "sources": [],
+          "support": {}
+        },
+        "live_probe": {
+          "version": 2,
+          "targets": {
+            "chat/completions": "7d5ab30e43118ce43007"
+          },
+          "attempted": {
+            "chat/completions": [
+              "image_input",
+              "json_object",
+              "json_schema",
+              "parallel_tools",
+              "reasoning",
+              "streaming",
+              "tools"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "image_input": "unsupported",
+              "json_object": "supported",
+              "json_schema": "supported",
+              "reasoning": "supported",
+              "streaming": "supported",
+              "tools": "supported"
+            }
+          }
+        }
+      },
       "display_name": "DeepSeek-V4-Pro-0813",
       "endpoint_status": {
         "chat/completions": {
+          "version": 1,
+          "target": "605f490825f6c77320e1",
           "outcome": "ok",
-          "checked": "2026-08-17"
+          "checked": "2026-08-19"
         }
       },
       "hugging_face_id": "deepseek-ai/DeepSeek-V4-Pro-0813"
@@ -249,7 +365,7 @@
       "limits_source": "models.dev",
       "pricing_source": "models.dev",
       "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "reachable_checked": "2026-08-19",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -268,6 +384,10 @@
           }
         },
         "live_probe": {
+          "version": 1,
+          "targets": {
+            "chat/completions": "f7bdec5cd4b53ac38059"
+          },
           "attempted": {
             "chat/completions": [
               "logprobs",
@@ -284,10 +404,39 @@
               "temperature": "supported",
               "top_p": "supported",
               "seed": "supported",
-              "stop": "supported",
-              "reasoning_effort": "supported",
-              "parallel_tool_calls": "supported",
               "logprobs": "supported"
+            }
+          }
+        }
+      },
+      "capability_evidence": {
+        "model_discovery": {
+          "sources": [],
+          "support": {}
+        },
+        "live_probe": {
+          "version": 2,
+          "targets": {
+            "chat/completions": "04207c1b13dc7d12f2b8"
+          },
+          "attempted": {
+            "chat/completions": [
+              "image_input",
+              "json_object",
+              "json_schema",
+              "parallel_tools",
+              "reasoning",
+              "streaming",
+              "tools"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "image_input": "unsupported",
+              "parallel_tools": "supported",
+              "reasoning": "supported",
+              "streaming": "supported",
+              "tools": "supported"
             }
           }
         }
@@ -295,8 +444,10 @@
       "display_name": "GLM 5.2",
       "endpoint_status": {
         "chat/completions": {
+          "version": 1,
+          "target": "9980ff54615536e00966",
           "outcome": "ok",
-          "checked": "2026-08-17"
+          "checked": "2026-08-19"
         }
       },
       "hugging_face_id": "zai-org/GLM-5.2"
@@ -323,7 +474,7 @@
       "limits_source": "openrouter-index",
       "pricing_source": "models.dev",
       "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "reachable_checked": "2026-08-19",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -342,6 +493,10 @@
           }
         },
         "live_probe": {
+          "version": 1,
+          "targets": {
+            "chat/completions": "6917c257fd2a7dd9b049"
+          },
           "attempted": {
             "chat/completions": [
               "logprobs",
@@ -366,11 +521,45 @@
           }
         }
       },
+      "capability_evidence": {
+        "model_discovery": {
+          "sources": [],
+          "support": {}
+        },
+        "live_probe": {
+          "version": 2,
+          "targets": {
+            "chat/completions": "789bbc3b45459969c916"
+          },
+          "attempted": {
+            "chat/completions": [
+              "image_input",
+              "json_object",
+              "json_schema",
+              "parallel_tools",
+              "reasoning",
+              "streaming",
+              "tools"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "image_input": "unsupported",
+              "json_object": "supported",
+              "reasoning": "supported",
+              "streaming": "supported",
+              "tools": "supported"
+            }
+          }
+        }
+      },
       "display_name": "OpenAI gpt-oss-120b",
       "endpoint_status": {
         "chat/completions": {
+          "version": 1,
+          "target": "7a295475f4e7b3a4b672",
           "outcome": "ok",
-          "checked": "2026-08-17"
+          "checked": "2026-08-19"
         }
       },
       "hugging_face_id": "openai/gpt-oss-120b"
@@ -397,7 +586,7 @@
       "limits_source": "openrouter-index",
       "pricing_source": "models.dev",
       "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "reachable_checked": "2026-08-19",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -416,6 +605,10 @@
           }
         },
         "live_probe": {
+          "version": 1,
+          "targets": {
+            "chat/completions": "f309bff4e013d14aa309"
+          },
           "attempted": {
             "chat/completions": [
               "logprobs",
@@ -440,11 +633,44 @@
           }
         }
       },
+      "capability_evidence": {
+        "model_discovery": {
+          "sources": [],
+          "support": {}
+        },
+        "live_probe": {
+          "version": 2,
+          "targets": {
+            "chat/completions": "bf6ca4848b92a905c09c"
+          },
+          "attempted": {
+            "chat/completions": [
+              "image_input",
+              "json_object",
+              "json_schema",
+              "parallel_tools",
+              "reasoning",
+              "streaming",
+              "tools"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "image_input": "unsupported",
+              "reasoning": "supported",
+              "streaming": "supported",
+              "tools": "supported"
+            }
+          }
+        }
+      },
       "display_name": "OpenAI gpt-oss-20b",
       "endpoint_status": {
         "chat/completions": {
+          "version": 1,
+          "target": "d0ae18612031b5a125a8",
           "outcome": "ok",
-          "checked": "2026-08-17"
+          "checked": "2026-08-19"
         }
       },
       "hugging_face_id": "openai/gpt-oss-20b"
@@ -472,7 +698,7 @@
       "limits_source": "openrouter-index",
       "pricing_source": "models.dev",
       "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "reachable_checked": "2026-08-19",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -491,6 +717,10 @@
           }
         },
         "live_probe": {
+          "version": 1,
+          "targets": {
+            "chat/completions": "51f20519b465aeba8832"
+          },
           "attempted": {
             "chat/completions": [
               "logprobs",
@@ -515,11 +745,45 @@
           }
         }
       },
+      "capability_evidence": {
+        "model_discovery": {
+          "sources": [],
+          "support": {}
+        },
+        "live_probe": {
+          "version": 2,
+          "targets": {
+            "chat/completions": "00d87cf3f16bf3f63981"
+          },
+          "attempted": {
+            "chat/completions": [
+              "image_input",
+              "json_object",
+              "json_schema",
+              "parallel_tools",
+              "reasoning",
+              "streaming",
+              "tools"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "json_object": "supported",
+              "json_schema": "supported",
+              "reasoning": "supported",
+              "streaming": "supported",
+              "tools": "supported"
+            }
+          }
+        }
+      },
       "display_name": "Inkling",
       "endpoint_status": {
         "chat/completions": {
+          "version": 1,
+          "target": "9efb2a88c35c70bfdd93",
           "outcome": "ok",
-          "checked": "2026-08-17"
+          "checked": "2026-08-19"
         }
       },
       "hugging_face_id": "thinkingmachines/Inkling"
@@ -547,7 +811,7 @@
       "limits_source": "models.dev",
       "pricing_source": "models.dev",
       "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "reachable_checked": "2026-08-19",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -566,6 +830,10 @@
           }
         },
         "live_probe": {
+          "version": 1,
+          "targets": {
+            "chat/completions": "999ab99d7b30052b2fed"
+          },
           "attempted": {
             "chat/completions": [
               "logprobs",
@@ -590,11 +858,43 @@
           }
         }
       },
+      "capability_evidence": {
+        "model_discovery": {
+          "sources": [],
+          "support": {}
+        },
+        "live_probe": {
+          "version": 2,
+          "targets": {
+            "chat/completions": "44e5073ba4bfd3c7a86d"
+          },
+          "attempted": {
+            "chat/completions": [
+              "image_input",
+              "json_object",
+              "json_schema",
+              "parallel_tools",
+              "reasoning",
+              "streaming",
+              "tools"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "reasoning": "supported",
+              "streaming": "supported",
+              "tools": "supported"
+            }
+          }
+        }
+      },
       "display_name": "Kimi K2.6",
       "endpoint_status": {
         "chat/completions": {
+          "version": 1,
+          "target": "91f7c56c629b79f5c2f1",
           "outcome": "ok",
-          "checked": "2026-08-17"
+          "checked": "2026-08-19"
         }
       },
       "hugging_face_id": "moonshotai/Kimi-K2.6"
@@ -622,7 +922,7 @@
       "limits_source": "models.dev",
       "pricing_source": "models.dev",
       "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "reachable_checked": "2026-08-19",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -641,6 +941,10 @@
           }
         },
         "live_probe": {
+          "version": 1,
+          "targets": {
+            "chat/completions": "ed7c35bbba5ea370c79f"
+          },
           "attempted": {
             "chat/completions": [
               "logprobs",
@@ -665,11 +969,46 @@
           }
         }
       },
+      "capability_evidence": {
+        "model_discovery": {
+          "sources": [],
+          "support": {}
+        },
+        "live_probe": {
+          "version": 2,
+          "targets": {
+            "chat/completions": "693ae78123cc9eebf707"
+          },
+          "attempted": {
+            "chat/completions": [
+              "image_input",
+              "json_object",
+              "json_schema",
+              "parallel_tools",
+              "reasoning",
+              "streaming",
+              "tools"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "json_object": "supported",
+              "json_schema": "supported",
+              "parallel_tools": "supported",
+              "reasoning": "supported",
+              "streaming": "supported",
+              "tools": "supported"
+            }
+          }
+        }
+      },
       "display_name": "Kimi K2.7 Code",
       "endpoint_status": {
         "chat/completions": {
+          "version": 1,
+          "target": "e2294ad3077236768dbf",
           "outcome": "ok",
-          "checked": "2026-08-17"
+          "checked": "2026-08-19"
         }
       },
       "hugging_face_id": "moonshotai/Kimi-K2.7-Code"
@@ -697,7 +1036,7 @@
       "limits_source": "openrouter-index",
       "pricing_source": "models.dev",
       "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "reachable_checked": "2026-08-19",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -716,6 +1055,10 @@
           }
         },
         "live_probe": {
+          "version": 1,
+          "targets": {
+            "chat/completions": "a17048bc36aa58b28965"
+          },
           "attempted": {
             "chat/completions": [
               "logprobs",
@@ -740,11 +1083,44 @@
           }
         }
       },
+      "capability_evidence": {
+        "model_discovery": {
+          "sources": [],
+          "support": {}
+        },
+        "live_probe": {
+          "version": 2,
+          "targets": {
+            "chat/completions": "fd005f1beb28c3f148fe"
+          },
+          "attempted": {
+            "chat/completions": [
+              "image_input",
+              "json_object",
+              "json_schema",
+              "parallel_tools",
+              "reasoning",
+              "streaming",
+              "tools"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "json_object": "supported",
+              "json_schema": "supported",
+              "reasoning": "supported",
+              "streaming": "supported"
+            }
+          }
+        }
+      },
       "display_name": "Kimi K3",
       "endpoint_status": {
         "chat/completions": {
+          "version": 1,
+          "target": "45da2e8c644c67015cda",
           "outcome": "ok",
-          "checked": "2026-08-17"
+          "checked": "2026-08-19"
         }
       },
       "hugging_face_id": "moonshotai/Kimi-K3"
@@ -771,7 +1147,7 @@
       "limits_source": "models.dev",
       "pricing_source": "models.dev",
       "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "reachable_checked": "2026-08-19",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -790,6 +1166,10 @@
           }
         },
         "live_probe": {
+          "version": 1,
+          "targets": {
+            "chat/completions": "75c040811a5b0f13f6cb"
+          },
           "attempted": {
             "chat/completions": [
               "logprobs",
@@ -814,11 +1194,44 @@
           }
         }
       },
+      "capability_evidence": {
+        "model_discovery": {
+          "sources": [],
+          "support": {}
+        },
+        "live_probe": {
+          "version": 2,
+          "targets": {
+            "chat/completions": "47ea37d6d72d92b8a66d"
+          },
+          "attempted": {
+            "chat/completions": [
+              "image_input",
+              "json_object",
+              "json_schema",
+              "parallel_tools",
+              "reasoning",
+              "streaming",
+              "tools"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "image_input": "unsupported",
+              "json_schema": "supported",
+              "streaming": "supported",
+              "tools": "supported"
+            }
+          }
+        }
+      },
       "display_name": "MiniMax M2.7",
       "endpoint_status": {
         "chat/completions": {
+          "version": 1,
+          "target": "e039b6a1ea83ca5af563",
           "outcome": "ok",
-          "checked": "2026-08-17"
+          "checked": "2026-08-19"
         }
       },
       "hugging_face_id": "MiniMaxAI/MiniMax-M2.7"
@@ -845,7 +1258,7 @@
       "limits_source": "openrouter-index",
       "pricing_source": "models.dev",
       "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "reachable_checked": "2026-08-19",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -864,6 +1277,10 @@
           }
         },
         "live_probe": {
+          "version": 1,
+          "targets": {
+            "chat/completions": "b397322beacaccef6711"
+          },
           "attempted": {
             "chat/completions": [
               "logprobs",
@@ -888,11 +1305,46 @@
           }
         }
       },
+      "capability_evidence": {
+        "model_discovery": {
+          "sources": [],
+          "support": {}
+        },
+        "live_probe": {
+          "version": 2,
+          "targets": {
+            "chat/completions": "174b71080d61c5ade433"
+          },
+          "attempted": {
+            "chat/completions": [
+              "image_input",
+              "json_object",
+              "json_schema",
+              "parallel_tools",
+              "reasoning",
+              "streaming",
+              "tools"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "json_object": "supported",
+              "json_schema": "supported",
+              "parallel_tools": "supported",
+              "reasoning": "supported",
+              "streaming": "supported",
+              "tools": "supported"
+            }
+          }
+        }
+      },
       "display_name": "Minimax M3",
       "endpoint_status": {
         "chat/completions": {
+          "version": 1,
+          "target": "13f7e22b59418a34468f",
           "outcome": "ok",
-          "checked": "2026-08-17"
+          "checked": "2026-08-19"
         }
       },
       "hugging_face_id": "MiniMaxAI/MiniMax-M3"
@@ -920,7 +1372,7 @@
       "limits_source": "openrouter-index",
       "pricing_source": "models.dev",
       "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "reachable_checked": "2026-08-19",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -939,6 +1391,10 @@
           }
         },
         "live_probe": {
+          "version": 1,
+          "targets": {
+            "chat/completions": "f9c80c50ce7fa006360c"
+          },
           "attempted": {
             "chat/completions": [
               "logprobs",
@@ -963,11 +1419,42 @@
           }
         }
       },
+      "capability_evidence": {
+        "model_discovery": {
+          "sources": [],
+          "support": {}
+        },
+        "live_probe": {
+          "version": 2,
+          "targets": {
+            "chat/completions": "e560d30f564db66f3e42"
+          },
+          "attempted": {
+            "chat/completions": [
+              "image_input",
+              "json_object",
+              "json_schema",
+              "parallel_tools",
+              "reasoning",
+              "streaming",
+              "tools"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "reasoning": "supported",
+              "streaming": "supported"
+            }
+          }
+        }
+      },
       "display_name": "Muse Glimmer 30B",
       "endpoint_status": {
         "chat/completions": {
+          "version": 1,
+          "target": "8d84e395e42dda8ae49a",
           "outcome": "ok",
-          "checked": "2026-08-17"
+          "checked": "2026-08-19"
         }
       },
       "hugging_face_id": "meta-models/Muse-Glimmer-30B"
@@ -994,7 +1481,7 @@
       "limits_source": "models.dev",
       "pricing_source": "models.dev",
       "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "reachable_checked": "2026-08-19",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -1013,6 +1500,10 @@
           }
         },
         "live_probe": {
+          "version": 1,
+          "targets": {
+            "chat/completions": "5fc19b041de8931bf90f"
+          },
           "attempted": {
             "chat/completions": [
               "logprobs",
@@ -1037,11 +1528,45 @@
           }
         }
       },
+      "capability_evidence": {
+        "model_discovery": {
+          "sources": [],
+          "support": {}
+        },
+        "live_probe": {
+          "version": 2,
+          "targets": {
+            "chat/completions": "9157318b9bfcbd3c3735"
+          },
+          "attempted": {
+            "chat/completions": [
+              "image_input",
+              "json_object",
+              "json_schema",
+              "parallel_tools",
+              "reasoning",
+              "streaming",
+              "tools"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "image_input": "unsupported",
+              "parallel_tools": "supported",
+              "reasoning": "supported",
+              "streaming": "supported",
+              "tools": "supported"
+            }
+          }
+        }
+      },
       "display_name": "NVIDIA Nemotron 3 Ultra NVFP4",
       "endpoint_status": {
         "chat/completions": {
+          "version": 1,
+          "target": "7b537f711973191cdaa8",
           "outcome": "ok",
-          "checked": "2026-08-17"
+          "checked": "2026-08-19"
         }
       },
       "hugging_face_id": "nvidia/NVIDIA-Nemotron-3-Ultra-550B-A55B-NVFP4"
@@ -1068,7 +1593,7 @@
       "limits_source": "models.dev",
       "pricing_source": "models.dev",
       "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "reachable_checked": "2026-08-19",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -1087,6 +1612,10 @@
           }
         },
         "live_probe": {
+          "version": 1,
+          "targets": {
+            "chat/completions": "93a819e4d7bf59e9485a"
+          },
           "attempted": {
             "chat/completions": [
               "logprobs",
@@ -1111,11 +1640,43 @@
           }
         }
       },
+      "capability_evidence": {
+        "model_discovery": {
+          "sources": [],
+          "support": {}
+        },
+        "live_probe": {
+          "version": 2,
+          "targets": {
+            "chat/completions": "9894421ae0bb10f67b4a"
+          },
+          "attempted": {
+            "chat/completions": [
+              "image_input",
+              "json_object",
+              "json_schema",
+              "parallel_tools",
+              "reasoning",
+              "streaming",
+              "tools"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "image_input": "unsupported",
+              "streaming": "supported",
+              "tools": "supported"
+            }
+          }
+        }
+      },
       "display_name": "Nemotron Lightning 3.5 30B A3B",
       "endpoint_status": {
         "chat/completions": {
+          "version": 1,
+          "target": "e1c20697b8e9b23b8454",
           "outcome": "ok",
-          "checked": "2026-08-17"
+          "checked": "2026-08-19"
         }
       },
       "hugging_face_id": "nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-BF16"
@@ -1143,7 +1704,7 @@
       "limits_source": "models.dev",
       "pricing_source": "models.dev",
       "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "reachable_checked": "2026-08-19",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -1162,6 +1723,10 @@
           }
         },
         "live_probe": {
+          "version": 1,
+          "targets": {
+            "chat/completions": "19fcb35e316afa900e93"
+          },
           "attempted": {
             "chat/completions": [
               "logprobs",
@@ -1186,11 +1751,42 @@
           }
         }
       },
+      "capability_evidence": {
+        "model_discovery": {
+          "sources": [],
+          "support": {}
+        },
+        "live_probe": {
+          "version": 2,
+          "targets": {
+            "chat/completions": "a500ef70257bfff2059b"
+          },
+          "attempted": {
+            "chat/completions": [
+              "image_input",
+              "json_object",
+              "json_schema",
+              "parallel_tools",
+              "reasoning",
+              "streaming",
+              "tools"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "streaming": "supported",
+              "tools": "supported"
+            }
+          }
+        }
+      },
       "display_name": "Qwen3.7 Plus",
       "endpoint_status": {
         "chat/completions": {
+          "version": 1,
+          "target": "dc1cd92484917ac90f87",
           "outcome": "ok",
-          "checked": "2026-08-17"
+          "checked": "2026-08-19"
         }
       },
       "hugging_face_id": "Qwen/"
@@ -1211,7 +1807,7 @@
       "supports_structured_output": null,
       "pricing": null,
       "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "reachable_checked": "2026-08-19",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -1230,6 +1826,10 @@
           }
         },
         "live_probe": {
+          "version": 1,
+          "targets": {
+            "chat/completions": "3f8ae25f4c7c941ee604"
+          },
           "attempted": {
             "chat/completions": [
               "logprobs",
@@ -1254,11 +1854,45 @@
           }
         }
       },
+      "capability_evidence": {
+        "model_discovery": {
+          "sources": [],
+          "support": {}
+        },
+        "live_probe": {
+          "version": 2,
+          "targets": {
+            "chat/completions": "d33c68e1ad81de84c67d"
+          },
+          "attempted": {
+            "chat/completions": [
+              "image_input",
+              "json_object",
+              "json_schema",
+              "parallel_tools",
+              "reasoning",
+              "streaming",
+              "tools"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "json_object": "supported",
+              "json_schema": "supported",
+              "reasoning": "supported",
+              "streaming": "supported",
+              "tools": "supported"
+            }
+          }
+        }
+      },
       "display_name": "Qwen3.8-2.4T-A95B",
       "endpoint_status": {
         "chat/completions": {
+          "version": 1,
+          "target": "66f9bd395447a2923fcb",
           "outcome": "ok",
-          "checked": "2026-08-17"
+          "checked": "2026-08-19"
         }
       },
       "hugging_face_id": "Qwen/Qwen3.8-2.4T-A95B"
@@ -1286,7 +1920,7 @@
       "limits_source": "models.dev",
       "pricing_source": "models.dev",
       "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "reachable_checked": "2026-08-19",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -1305,6 +1939,10 @@
           }
         },
         "live_probe": {
+          "version": 1,
+          "targets": {
+            "chat/completions": "9e44406bfc2f893102f2"
+          },
           "attempted": {
             "chat/completions": [
               "logprobs",
@@ -1329,11 +1967,45 @@
           }
         }
       },
+      "capability_evidence": {
+        "model_discovery": {
+          "sources": [],
+          "support": {}
+        },
+        "live_probe": {
+          "version": 2,
+          "targets": {
+            "chat/completions": "9a00a5ff7c8117c6e95b"
+          },
+          "attempted": {
+            "chat/completions": [
+              "image_input",
+              "json_object",
+              "json_schema",
+              "parallel_tools",
+              "reasoning",
+              "streaming",
+              "tools"
+            ]
+          },
+          "support": {
+            "chat/completions": {
+              "json_object": "supported",
+              "json_schema": "supported",
+              "reasoning": "supported",
+              "streaming": "supported",
+              "tools": "supported"
+            }
+          }
+        }
+      },
       "display_name": "Qwen 3.8 Max",
       "endpoint_status": {
         "chat/completions": {
+          "version": 1,
+          "target": "d18e4c7ed79746e4e303",
           "outcome": "ok",
-          "checked": "2026-08-17"
+          "checked": "2026-08-19"
         }
       },
       "hugging_face_id": "Qwen/Qwen3.8-2.4T-A95B"

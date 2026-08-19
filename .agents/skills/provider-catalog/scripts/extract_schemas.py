@@ -12,11 +12,9 @@ import re
 import ssl
 import sys
 import urllib.request
-from pathlib import Path
 
 import yaml
-
-from canonical import write_catalog, write_schema
+from canonical import write_schema
 from paths import TAXONOMY
 
 UA = {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/131.0"}
@@ -24,30 +22,19 @@ CTX = ssl.create_default_context()
 OUT = TAXONOMY / "schemas" / "completion"
 OUT.mkdir(parents=True, exist_ok=True)
 
-# (provider, ingress) -> (spec url, path regex)
-SPECS = {
-    ("openrouter", "oai"): ("https://openrouter.ai/openapi.json", r"^/chat/completions$"),
-    ("openrouter", "anthropic"): ("https://openrouter.ai/openapi.json", r"^/messages$"),
-    ("openrouter", "oai_responses"): ("https://openrouter.ai/openapi.json", r"^/responses$"),
-    ("openai", "oai"): ("https://raw.githubusercontent.com/openai/openai-openapi/master/openapi.yaml", r"^/chat/completions$"),
-    ("openai", "oai_responses"): ("https://raw.githubusercontent.com/openai/openai-openapi/master/openapi.yaml", r"^/responses$"),
-    ("anthropic", "anthropic"): ("https://storage.googleapis.com/stainless-sdk-openapi-specs/anthropic/anthropic-891ba7f96c3771e1e3ba6cb37fe8cb6d8615b8a06b6c435d9df66f4aad144bb4.yml", r"^/v1/messages$"),
-    ("xai", "oai"): ("https://docs.x.ai/openapi.json", r"^/v1/chat/completions$"),
-    ("xai", "anthropic"): ("https://docs.x.ai/openapi.json", r"^/v1/messages$"),
-    ("mistral", "oai"): ("https://raw.githubusercontent.com/mistralai/platform-docs-public/main/openapi.yaml", r"^/v1/chat/completions$"),
-    ("ai21", "oai"): ("https://api.ai21.com/openapi.json", r"^/studio/v1/chat/completions$"),
-    ("moonshot", "oai"): ("https://platform.kimi.ai/docs/openapi.json", r"chat/completions$"),
-    ("zai", "oai"): ("https://docs.z.ai/openapi.json", r"chat/completions$"),
-    ("together", "oai"): ("https://docs.together.ai/openapi.yaml", r"chat/completions$"),
-    ("groq", "oai"): ("https://storage.googleapis.com/stainless-sdk-openapi-specs/groqcloud/groqcloud-debd965baa031e12228c41e538741fa6055bf2813bcd062840a19f84a17cea95.yml", r"chat/completions$"),
-    ("cerebras", "oai"): ("https://storage.googleapis.com/stainless-sdk-openapi-specs/cerebras/cerebras-cloud-5471bd6d34fdddff21977458788b979ce93f6b080e11ff0d35777182b6615baa.yml", r"chat/completions$"),
-    ("deepinfra", "oai"): ("https://api.deepinfra.com/openapi.json", r"^/v1/chat/completions$"),
-    ("deepinfra", "anthropic"): ("https://api.deepinfra.com/openapi.json", r"^/anthropic/v1/messages$"),
-    ("nebius", "oai"): ("https://api.tokenfactory.nebius.com/openapi.json", r"chat/completions$"),
-    ("azure-foundry", "oai"): ("https://raw.githubusercontent.com/Azure/azure-rest-api-specs/main/specification/cognitiveservices/data-plane/AzureOpenAI/inference/stable/2024-10-21/inference.json", r"chat/completions$"),
-    ("cohere", "custom"): ("https://raw.githubusercontent.com/cohere-ai/cohere-developer-experience/main/cohere-openapi.yaml", r"^/v2/chat$"),
-    ("perplexity", "custom"): ("https://docs.perplexity.ai/openapi.json", r"^/v1/sonar$"),
-    ("replicate", "custom"): ("https://api.replicate.com/openapi.json", r"^/predictions$"),
+PATHS = {
+    ("openrouter", "oai"): r"^/chat/completions$",
+    ("openrouter", "anthropic"): r"^/messages$",
+    ("openrouter", "oai_responses"): r"^/responses$",
+    ("openai", "oai"): r"^/chat/completions$",
+    ("openai", "oai_responses"): r"^/responses$",
+    ("anthropic", "anthropic"): r"^/v1/messages$",
+    ("xai", "oai"): r"^/v1/chat/completions$",
+    ("xai", "anthropic"): r"^/v1/messages$",
+    ("mistral", "oai"): r"^/v1/chat/completions$",
+    ("together", "oai"): r"chat/completions$",
+    ("groq", "oai"): r"chat/completions$",
+    ("cerebras", "oai"): r"chat/completions$",
 }
 
 _cache = {}
@@ -61,6 +48,21 @@ def fetch(url):
         except json.JSONDecodeError:
             _cache[url] = yaml.safe_load(raw)
     return _cache[url]
+
+
+def spec_document(entry: dict) -> dict:
+    url = entry.get("openapi")
+    if not isinstance(url, str) or not url.startswith("http"):
+        raise ValueError(f"{entry['id']} has no OpenAPI source")
+    document = fetch(url)
+    if url.endswith(".stats.yml"):
+        resolved = document.get("openapi_spec_url") if isinstance(document, dict) else None
+        if not isinstance(resolved, str) or not resolved.startswith("http"):
+            raise ValueError(f"{entry['id']} SDK metadata has no openapi_spec_url")
+        document = fetch(resolved)
+    if not isinstance(document, dict):
+        raise ValueError(f"{entry['id']} OpenAPI source is not an object")
+    return document
 
 
 def make_collector(doc):
@@ -80,7 +82,8 @@ def make_collector(doc):
             key = re.sub(r"[^A-Za-z0-9_.-]", "_", ptr.lstrip("#/"))
             rest = {k: v for k, v in schema.items() if k != "$ref"}
             if key not in seen:
-                seen.add(key); defs[key] = None
+                seen.add(key)
+                defs[key] = None
                 defs[key] = collect(resolve(ptr), defs, seen)
             out = {"$ref": f"#/$defs/{key}"}
             if rest:
@@ -142,8 +145,7 @@ def modernize_recursion(out: dict) -> None:
     $defs no longer expresses. That is unambiguous only while the document has exactly one
     anchor, so anything else is left alone for validate.py to report rather than guessed at.
     """
-    anchored = [key for key, node in (out.get("$defs") or {}).items()
-                if isinstance(node, dict) and node.get("$recursiveAnchor") is True]
+    anchored = [key for key, node in (out.get("$defs") or {}).items() if isinstance(node, dict) and node.get("$recursiveAnchor") is True]
     if len(anchored) != 1:
         return
     name = anchored[0]
@@ -162,57 +164,60 @@ def modernize_recursion(out: dict) -> None:
     out["$defs"] = retarget(out["$defs"])
 
 
-def active() -> set[str]:
-    """Ids in providers.yml and routers.yml.
-
-    SPECS keeps an entry for every provider whose spec has been located, candidates
-    included, because finding the spec is the expensive half of promoting one later. Only
-    active ids are written though: a candidate carries no derived data, so extracting its
-    schema leaves an orphan that validate.py rejects and someone deletes by hand.
-    """
-    ids: set[str] = set()
+def active() -> dict[str, dict]:
+    entries = {}
     for filename, key in (("providers.yml", "providers"), ("routers.yml", "routers")):
         path = TAXONOMY / filename
         if path.exists():
-            ids |= {entry["id"] for entry in yaml.safe_load(path.read_text())[key]}
-    return ids
+            entries.update({entry["id"]: entry for entry in yaml.safe_load(path.read_text())[key]})
+    return entries
 
 
-rows = []
-live = active()
-selected = set(sys.argv[1:])
-for (provider, ingress), (url, path_re) in SPECS.items():
-    if selected and provider not in selected and f"{provider}:{ingress}" not in selected:
-        continue
-    if provider not in live:
-        rows.append((provider, ingress, "candidate, spec recorded but not extracted"))
-        continue
-    try:
-        doc = fetch(url)
-    except Exception as e:
-        rows.append((provider, ingress, f"FETCH FAIL {e}")); continue
-    path, op = find_op(doc, path_re)
-    if not op:
-        rows.append((provider, ingress, "path not found")); continue
-    collect = make_collector(doc)
-    got = []
-    for kind in ("request", "response", "stream"):
-        sch = body(op, kind)
-        if sch is None:
+def main() -> int:
+    rows = []
+    failures = 0
+    providers = active()
+    selected = set(sys.argv[1:])
+    known = set(providers) | {f"{provider}:{ingress}" for provider, ingress in PATHS}
+    if unknown := selected - known:
+        print(f"unknown schema targets: {', '.join(sorted(unknown))}", file=sys.stderr)
+        return 2
+    for (provider, ingress), path_re in PATHS.items():
+        if selected and provider not in selected and f"{provider}:{ingress}" not in selected:
             continue
-        if not ({"properties", "$ref", "oneOf", "anyOf", "allOf", "type", "items"} & set(sch)):
-            continue  # declared but empty, e.g. deepinfra's 200
-        defs = {}
-        root = collect(sch, defs, set())
-        out = {"$schema": "https://json-schema.org/draft/2020-12/schema"}
-        out.update(root)
-        if defs:
-            out["$defs"] = defs
-            modernize_recursion(out)
-        f = OUT / f"{ingress}.{provider}.{kind}.json"
-        write_schema(f, out)
-        got.append(f"{kind}:{f.stat().st_size // 1024}k")
-    rows.append((provider, ingress, ", ".join(got) or "nothing extractable"))
+        try:
+            doc = spec_document(providers[provider])
+        except (OSError, ValueError, yaml.YAMLError) as exc:
+            rows.append((provider, ingress, f"fetch failed: {exc}"))
+            failures += 1
+            continue
+        _, operation = find_op(doc, path_re)
+        if not operation:
+            rows.append((provider, ingress, "path not found"))
+            failures += 1
+            continue
+        collect = make_collector(doc)
+        got = []
+        for kind in ("request", "response", "stream"):
+            schema = body(operation, kind)
+            if schema is None or not ({"properties", "$ref", "oneOf", "anyOf", "allOf", "type", "items"} & set(schema)):
+                continue
+            definitions = {}
+            root = collect(schema, definitions, set())
+            output = {"$schema": "https://json-schema.org/draft/2020-12/schema", **root}
+            if definitions:
+                output["$defs"] = definitions
+                modernize_recursion(output)
+            path = OUT / f"{ingress}.{provider}.{kind}.json"
+            write_schema(path, output)
+            got.append(f"{kind}:{path.stat().st_size // 1024}k")
+        note = ", ".join(got) or "nothing extractable"
+        failures += not got
+        rows.append((provider, ingress, note))
+    for provider, ingress, note in sorted(rows):
+        print(f"  {provider:<14} {ingress:<14} {note}")
+    return 1 if failures else 0
 
-for provider, ingress, note in sorted(rows):
-    print(f"  {provider:<14} {ingress:<10} {note}")
+
+if __name__ == "__main__":
+    raise SystemExit(main())

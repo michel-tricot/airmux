@@ -4,9 +4,11 @@ import json
 from collections.abc import Mapping
 from pathlib import Path
 
+from probe_runtime import Support
+from provider_profile import INGRESS_ENDPOINT
+
 SUPPORT = frozenset({"supported", "unsupported"})
-ENDPOINTS = frozenset({"chat/completions", "responses", "messages"})
-INGRESS_ENDPOINT = {"oai": "chat/completions", "oai_responses": "responses", "anthropic": "messages"}
+ENDPOINTS = frozenset(INGRESS_ENDPOINT.values())
 PARAMETER_PATHS = {
     "oai": {
         "temperature": "$.temperature",
@@ -41,8 +43,8 @@ PARAMETERS = frozenset(parameter for mappings in PARAMETER_PATHS.values() for pa
 
 def _deref(node: object, definitions: Mapping, seen: frozenset[str]) -> object:
     hops = 0
-    while isinstance(node, dict) and "$ref" in node and hops < 20:
-        key = str(node["$ref"]).removeprefix("#/$defs/")
+    while isinstance(node, Mapping) and isinstance(node.get("$ref"), str) and hops < 20:
+        key = str(node.get("$ref")).removeprefix("#/$defs/")
         if key in seen:
             return None
         seen = seen | {key}
@@ -63,7 +65,9 @@ def _variants(node: object, definitions: Mapping, seen: frozenset[str]) -> list[
         if current.get("properties") or current.get("items") is not None:
             variants.append(current)
         for keyword in ("oneOf", "anyOf", "allOf"):
-            queue.extend(current.get(keyword) or [])
+            children = current.get(keyword)
+            if isinstance(children, list):
+                queue.extend(children)
     return variants
 
 
@@ -89,15 +93,13 @@ def schema_paths(path: Path) -> set[str]:
 def discovery_evidence(provider: Mapping, taxonomy: Path) -> dict:
     sources = []
     support = {}
-    completion = ((provider.get("schema") or {}).get("completion") or {})
+    completion = (provider.get("schema") or {}).get("completion") or {}
     for ingress in provider.get("ingress") or []:
         if ingress not in INGRESS_ENDPOINT or ingress not in completion:
             continue
         source = completion[ingress]["request"]
         paths = schema_paths(taxonomy / source)
-        endpoint_support = {
-            parameter: "supported" for parameter, path in PARAMETER_PATHS[ingress].items() if path in paths
-        }
+        endpoint_support = {parameter: "supported" for parameter, path in PARAMETER_PATHS[ingress].items() if path in paths}
         sources.append(source)
         support[INGRESS_ENDPOINT[ingress]] = endpoint_support
     return {"sources": sorted(sources), "support": support}
@@ -119,7 +121,7 @@ def resolve_parameter_support(evidence: Mapping, endpoint: str) -> dict[str, str
     return {parameter: status for parameter, status in sorted(resolved.items()) if status in SUPPORT}
 
 
-def classify_parameter_response(status: int, body: str, parameter: str) -> str | None:
+def classify_parameter_response(status: int, body: str, parameter: str) -> Support | None:
     if 200 <= status < 300:
         return "supported"
     if status != 400:
