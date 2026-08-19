@@ -108,6 +108,10 @@ class Org(Record, Identified, Tombstonable, table=True):
             await membership.delete()
         for bundle in await Bundle.find(Bundle.org_id == self.id):
             await bundle.delete()
+        from control_plane.models.user import User  # noqa: PLC0415 user imports org membership, so org-owned accounts meet it at deletion
+
+        for service_account in await User.find(User.managing_org_id == self.id):
+            await service_account.delete_with_contents()
         await self.delete()
 
 

@@ -59,3 +59,4 @@ class OrgMemberOut(BaseModel):
     service_account: bool
     role: OrgRole
     status: Literal["member"]
+    managed: bool = False

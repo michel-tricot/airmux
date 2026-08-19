@@ -4,18 +4,19 @@ from datetime import datetime
 from typing import ClassVar, Self
 from uuid import UUID, uuid4
 
-from pydantic import field_validator
-from sqlalchemy import CheckConstraint, text
+from pydantic import BaseModel, field_validator
+from sqlalchemy import CheckConstraint, Column, ForeignKey, text
 from sqlalchemy.dialects.postgresql import CITEXT
 from sqlmodel import Field, col, select
 
 from control_plane.authz import InstanceRole  # noqa: TC001 pydantic resolves this enum annotation at runtime
 from control_plane.db import current_session
+from control_plane.models.access_key import AccessKeyGrantIn, AccessKeyMintedOut
 from control_plane.models.audit import audited
-from control_plane.models.common import Identified, Tombstonable, slugify
+from control_plane.models.common import Identified, NotOwnedError, Tombstonable, slugify
 from control_plane.models.common.base import Record
 from control_plane.models.common.wire import RecordOut, RequestModel
-from control_plane.models.org_membership import OrgMembership
+from control_plane.models.org_membership import MembershipOut, OrgMembership
 from control_plane.models.workspace_membership import WorkspaceMembership
 
 SERVICE_ACCOUNT_EMAIL_DOMAIN = "service-account.airllm.invalid"
@@ -29,14 +30,22 @@ _CLAIM_LOCK = 0x41524C4C
 class User(Record, Identified, Tombstonable, table=True):
     __table_args__: ClassVar = (
         CheckConstraint("instance_role IS NULL OR instance_role IN ('owner', 'auditor', 'data_plane')", name="user_instance_role_valid"),
+        CheckConstraint(
+            "managing_org_id IS NULL OR (service_account AND instance_role IS NULL)",
+            name="user_managing_org_requires_org_scoped_service_account",
+        ),
     )
 
     email: str = Field(unique=True, sa_type=CITEXT)
     name: str
     instance_role: str | None = None
     service_account: bool = False
+    managing_org_id: UUID | None = Field(
+        default=None,
+        sa_column=Column(ForeignKey("org.id", name="user_managing_org_id_fkey", use_alter=True), index=True),
+    )
 
-    api_readonly: ClassVar[frozenset[str]] = frozenset({"service_account"})
+    api_readonly: ClassVar[frozenset[str]] = frozenset({"service_account", "managing_org_id"})
     api_immutable: ClassVar[frozenset[str]] = frozenset({"email"})
 
     @staticmethod
@@ -91,6 +100,13 @@ class User(Record, Identified, Tombstonable, table=True):
         )
 
     @classmethod
+    async def owned_by(cls, org_id: UUID, user_id: UUID) -> Self:
+        user = await cls.find_by_id(user_id)
+        if user is None or user.managing_org_id != org_id:
+            raise NotOwnedError
+        return user
+
+    @classmethod
     async def instance_claimed(cls) -> bool:
         """Whether any human account exists. Service accounts do not claim an instance."""
         return await cls.first(col(cls.service_account).is_(False)) is not None
@@ -123,23 +139,23 @@ class User(Record, Identified, Tombstonable, table=True):
         await self.delete()
 
     @classmethod
-    def new_service_account(cls, name: str, instance_role: InstanceRole | None = None) -> Self:
+    def new_service_account(cls, name: str, instance_role: InstanceRole | None = None, managing_org_id: UUID | None = None) -> Self:
         """Machine principal with a derived unique email; the caller saves it and adds memberships."""
         return cls(
             email=f"{slugify(name)}-{uuid4().hex[:8]}@{SERVICE_ACCOUNT_EMAIL_DOMAIN}",
             name=name,
             instance_role=instance_role,
             service_account=True,
+            managing_org_id=managing_org_id,
         )
 
 
-class ServiceAccountIn(RequestModel):
+class ServiceAccountNameIn(RequestModel):
     name: str = Field(
         description="Display name for the service account",
         min_length=1,
         max_length=200,
     )
-    instance_role: InstanceRole | None = Field(default=None, description="Optional instance-wide role for the service account")
 
     @field_validator("name")
     @classmethod
@@ -150,15 +166,30 @@ class ServiceAccountIn(RequestModel):
         return v
 
 
+class ServiceAccountIn(ServiceAccountNameIn):
+    instance_role: InstanceRole | None = Field(default=None, description="Optional instance-wide role for the service account")
+
+
+class OrgServiceAccountIn(ServiceAccountNameIn):
+    access_key: AccessKeyGrantIn = Field(description="Initial organization-scoped management key to issue for the service account")
+
+
 class UserOut(RecordOut[User]):
     id: UUID
     email: str
     name: str
     instance_role: str | None
     service_account: bool
+    managing_org_id: UUID | None
     created_at: datetime
     updated_at: datetime
     deleted_at: datetime | None
     orgs: list[UUID]
 
     api_extra: ClassVar[frozenset[str]] = frozenset({"orgs"})
+
+
+class OrgServiceAccountMintedOut(BaseModel):
+    service_account: UserOut
+    membership: MembershipOut
+    access_key: AccessKeyMintedOut

@@ -1,9 +1,8 @@
 import { useState } from 'react';
 import * as z from 'zod';
-import { Avatar, AvatarFallback, Card, Button, Input, Badge } from '@/components/ui/elements';
+import { Card, Button, Input, Badge } from '@/components/ui/elements';
 import { Users, Bot } from 'lucide-react';
 import { formatDate } from '@/lib/format';
-import { Link } from 'wouter';
 import { useUsers, useCreateServiceAccountMutation } from '@/features/users/hooks';
 import { DataTable } from '@/components/shared/data-table';
 import { FormDialog } from '@/components/shared/form-dialog';
@@ -12,6 +11,7 @@ import { PageHeader, PageShell } from '@/components/shared/page-shell';
 import { SearchField } from '@/components/shared/search-field';
 import { useAuthorization } from '@/features/permissions/hooks';
 import { userAccess } from '@/features/users/policy';
+import { AccountIdentity, AccountKindBadge } from '@/components/shared/account-display';
 
 const createServiceAccountSchema = z.object({
   name: z
@@ -70,20 +70,13 @@ export default function UsersList() {
               key: 'user',
               header: 'User',
               cellClassName: 'font-medium',
-              cell: (user) => (
-                <Link href={`/instance/users/${user.id}`} className="flex items-center gap-2 hover:text-primary transition-colors">
-                  <Avatar aria-hidden="true" className="h-6 w-6">
-                    <AvatarFallback className="text-xs font-bold">{user.name.charAt(0)}</AvatarFallback>
-                  </Avatar>
-                  {user.name}
-                </Link>
-              ),
+              cell: (user) => <AccountIdentity name={user.name} href={`/instance/users/${user.id}`} />,
             },
             { key: 'email', header: 'Email', cellClassName: 'text-muted-foreground text-sm', cell: (user) => user.email },
             {
               key: 'kind',
               header: 'Kind',
-              cell: (user) => <Badge variant={user.service_account ? 'secondary' : 'outline'}>{user.service_account ? 'SERVICE' : 'HUMAN'}</Badge>,
+              cell: (user) => <AccountKindBadge serviceAccount={user.service_account} />,
             },
             {
               key: 'orgs',

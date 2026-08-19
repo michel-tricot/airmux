@@ -12,7 +12,7 @@
  */
 import type { Permission } from './permission';
 
-export interface AccessKeyIn {
+export interface AccessKeyGrantIn {
   /**
      * Where this key lives, such as ci, laptop, or data-plane
      * @minLength 1
@@ -26,6 +26,4 @@ export interface AccessKeyIn {
   permissions: Permission[];
   /** Optional expiration timestamp with a timezone */
   expires_at?: Date | null;
-  /** Principal the key authenticates; defaults to the authenticated principal */
-  user_id?: string | null;
 }

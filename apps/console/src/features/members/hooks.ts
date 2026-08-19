@@ -5,7 +5,10 @@ import {
   useListMemberCandidates,
   useAddMember,
   useRemoveMember,
+  useCreateOrgServiceAccount,
+  useDeleteOrgServiceAccount,
   getListOrgUsersQueryKey,
+  getListOrgAccessKeysQueryKey,
   getListMembersQueryKey,
   getListMemberCandidatesQueryKey,
   type WorkspaceRole,
@@ -20,6 +23,32 @@ export const workspaceRoleOptions: Array<{ value: WorkspaceRole; label: string }
 
 export function useOrgMembers(orgId: string, { enabled = true }: EnabledQueryOptions = {}) {
   return useListOrgUsers(orgId, { query: { enabled, queryKey: getListOrgUsersQueryKey(orgId) } });
+}
+
+export function useCreateOrgServiceAccountMutation(orgId: string) {
+  const queryClient = useQueryClient();
+  return useCreateOrgServiceAccount({
+    mutation: {
+      onSuccess: () => {
+        void queryClient.invalidateQueries({ queryKey: getListOrgUsersQueryKey(orgId) });
+        void queryClient.invalidateQueries({ queryKey: getListOrgAccessKeysQueryKey(orgId) });
+      },
+      meta: { errorMessage: 'We couldn’t create the service account. Please try again.' },
+    },
+  });
+}
+
+export function useDeleteOrgServiceAccountMutation(orgId: string) {
+  const queryClient = useQueryClient();
+  return useDeleteOrgServiceAccount({
+    mutation: {
+      onSuccess: () => {
+        void queryClient.invalidateQueries({ queryKey: getListOrgUsersQueryKey(orgId) });
+        void queryClient.invalidateQueries({ queryKey: getListOrgAccessKeysQueryKey(orgId) });
+      },
+      meta: { errorMessage: 'We couldn’t delete the service account. Please try again.' },
+    },
+  });
 }
 
 export function useWorkspaceMembers(orgId: string, workspaceRef: string, { enabled = true }: EnabledQueryOptions = {}) {

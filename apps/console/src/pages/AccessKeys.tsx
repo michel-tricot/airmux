@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { KeyRound, Plus } from 'lucide-react';
-import { Link } from 'wouter';
 import { Badge, Button } from '@/components/ui/elements';
 import { useInstanceAccessKeys, useCreateInstanceAccessKeyMutation, useRevokeInstanceAccessKeyMutation } from '@/features/keys/hooks';
 import { useUsers } from '@/features/users/hooks';
@@ -14,6 +13,7 @@ import { PageHeader, PageShell } from '@/components/shared/page-shell';
 import { useAuthorization } from '@/features/permissions/hooks';
 import { accessKeyAccess } from '@/features/keys/policy';
 import { userAccess } from '@/features/users/policy';
+import { AccountIdentity } from '@/components/shared/account-display';
 
 export default function AccessKeys() {
   const [createOpen, setCreateOpen] = useState(false);
@@ -62,9 +62,7 @@ export default function AccessKeys() {
             cell: (key) => {
               const user = usersById.get(key.user_id);
               return user ? (
-                <Link href={`/instance/users/${user.id}`} className="transition-colors hover:text-primary">
-                  {user.name}
-                </Link>
+                <AccountIdentity name={user.name} href={`/instance/users/${user.id}`} />
               ) : (
                 <span className="font-mono text-xs text-muted-foreground">{key.user_id}</span>
               );

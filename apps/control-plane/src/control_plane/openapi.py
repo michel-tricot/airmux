@@ -57,6 +57,11 @@ API_TAGS = [
         "description": "Manage organization membership and organization roles",
     },
     {
+        "name": "Organization Service Accounts",
+        "x-displayName": "Service Accounts",
+        "description": "Create and delete organization-managed machine principals and their initial management credentials",
+    },
+    {
         "name": "Organization Invitations",
         "x-displayName": "Invitations",
         "description": "Invite human users to an organization and optionally one workspace",
@@ -151,6 +156,7 @@ TAG_GROUPS = [
         "tags": [
             "Organization Settings",
             "Organization Members",
+            "Organization Service Accounts",
             "Organization Invitations",
             "Organization Workspaces",
             "Organization Access Keys",
@@ -199,6 +205,8 @@ OPERATION_SUMMARIES = {
     "list_org_users": "List Organization Members",
     "add_org_user": "Add Organization Member",
     "remove_org_user": "Remove Organization Member",
+    "create_org_service_account": "Create Organization Service Account",
+    "delete_org_service_account": "Delete Organization Service Account",
     "create_invitation": "Create Organization Invitation",
     "list_invitations": "List Organization Invitations",
     "reissue_invitation": "Reissue Organization Invitation",
@@ -280,7 +288,7 @@ class ControlPlaneApp(FastAPI):
                 for dependency in route.dependant.dependencies
                 if getattr(dependency.call, "required_permissions", None)
             ]
-            permission_rules = [check.required_permissions for check in permission_checks]
+            permission_rules = [rule for check in permission_checks for rule in check.required_permission_rules]
             permissions = [str(permission) for rule in permission_rules for permission in rule]
             access = [kind for dependency in route.dependant.dependencies if (kind := getattr(dependency.call, "access", None)) is not None]
             for method in route.methods or ():
@@ -289,11 +297,9 @@ class ControlPlaneApp(FastAPI):
                 operation["summary"] = OPERATION_SUMMARIES.get(route.name, operation["summary"])
                 if permission_checks:
                     operation["x-airllm-authority"] = [
-                        {
-                            "scope": check.required_scope,
-                            "anyOf": [permission.value for permission in check.required_permissions],
-                        }
+                        {"scope": check.required_scope, "anyOf": [permission.value for permission in rule]}
                         for check in permission_checks
+                        for rule in check.required_permission_rules
                     ]
                 for parameter in operation.get("parameters", []):
                     parameter.setdefault("description", _parameter_description(path, parameter["name"], parameter["in"]))
@@ -304,7 +310,9 @@ class ControlPlaneApp(FastAPI):
                     authentication = (
                         f"Required permission: one of `{'`, `'.join(permissions)}`."
                         if len(permission_rules) == 1 and len(permission_rules[0]) > 1
-                        else f"Required permission: `{'`, `'.join(permissions)}`."
+                        else f"Required permissions: {' and '.join(f'`{permission}`' for permission in permissions)}."
+                        if len(permission_rules) > 1
+                        else f"Required permission: `{permissions[0]}`."
                     )
                 elif "public" in access:
                     operation["security"] = []

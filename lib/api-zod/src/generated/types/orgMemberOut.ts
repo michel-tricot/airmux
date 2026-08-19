@@ -22,4 +22,5 @@ export interface OrgMemberOut {
   service_account: boolean;
   role: OrgRole;
   status: 'member';
+  managed?: boolean;
 }

@@ -18,6 +18,8 @@ import { useAuthorization } from '@/features/permissions/hooks';
 import { accessKeyAccess } from '@/features/keys/policy';
 import { orgMemberAccess } from '@/features/members/policy';
 import { userAccess } from '@/features/users/policy';
+import { AccountKindBadge } from '@/components/shared/account-display';
+import { ApiKeysTable } from '@/components/shared/api-keys-table';
 
 const addToOrgSchema = z.object({
   orgId: z.string().min(1, 'Select an organization'),
@@ -71,7 +73,7 @@ export default function UserDetail() {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <Badge variant={user.service_account ? 'secondary' : 'outline'}>{user.service_account ? 'SERVICE ACCOUNT' : 'HUMAN'}</Badge>
+          <AccountKindBadge serviceAccount={user.service_account} />
           {canDeleteUser && (
             <ConfirmButton
               variant="outline"
@@ -161,29 +163,16 @@ export default function UserDetail() {
             Keys owned by this user
           </h2>
 
-          <Card>
-            <DataTable
-              rows={accessKeysQuery.data}
-              rowKey={(key) => key.id}
-              isLoading={accessKeysQuery.isLoading}
-              isError={accessKeysQuery.isError}
-              error={accessKeysQuery.error}
-              resource="access keys"
-              onRetry={() => accessKeysQuery.refetch()}
-              empty="This user does not own any access keys."
-              columns={[
-                { key: 'scope', header: 'Scope', cell: (key) => <Badge variant="secondary">{key.scope.level}</Badge> },
-                { key: 'label', header: 'Label', cellClassName: 'font-medium', cell: (key) => key.label },
-                { key: 'key', header: 'Key', cellClassName: 'font-mono text-xs text-muted-foreground', cell: (key) => <>{key.prefix}…</> },
-                {
-                  key: 'status',
-                  header: 'Status',
-                  cell: (key) => <Badge variant={key.status === 'active' ? 'success' : 'outline'}>{key.status.toUpperCase()}</Badge>,
-                },
-                { key: 'created', header: 'Created', cellClassName: 'text-muted-foreground text-sm', cell: (key) => formatDate(key.created_at) },
-              ]}
-            />
-          </Card>
+          <ApiKeysTable
+            resource="access keys"
+            keys={accessKeysQuery.data}
+            isLoading={accessKeysQuery.isLoading}
+            isError={accessKeysQuery.isError}
+            error={accessKeysQuery.error}
+            onRetry={() => accessKeysQuery.refetch()}
+            emptyText="This user does not own any access keys."
+            extraColumns={[{ key: 'scope', header: 'Scope', cell: (key) => <Badge variant="secondary">{key.scope.level}</Badge> }]}
+          />
         </div>
       )}
 

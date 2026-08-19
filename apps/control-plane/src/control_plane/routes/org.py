@@ -8,15 +8,18 @@ from fastapi import APIRouter, HTTPException, Query, Request
 from sqlmodel import col
 
 from control_plane.authority import ensure_org_role_change
-from control_plane.authz import OrgRole, Permission
+from control_plane.authz import OrgRole, Permission, Scope
 from control_plane.compiler import publish_pending
-from control_plane.deps import ActorDep, OrgDep, WorkspaceDep, org_scope, require, workspace_scope
-from control_plane.models import AuditLog, Bundle, OrgMembership, RuntimeConfiguration, UsageEvent, User
+from control_plane.deps import ActorDep, OrgDep, WorkspaceDep, org_scope, require, require_all, workspace_scope
+from control_plane.models import AuditLog, Bundle, InferenceKey, OrgMembership, RuntimeConfiguration, UsageEvent, User
+from control_plane.models.access_key import AccessKeyIn
 from control_plane.models.audit import ActivityOut
 from control_plane.models.bundle import BundleOut
 from control_plane.models.common.wire import DeletedOut, Envelope
 from control_plane.models.org_membership import MembershipOut, OrgMemberOut, OrgMembershipIn
 from control_plane.models.usage_event import UsageEventOut, UsageEventPage
+from control_plane.models.user import OrgServiceAccountIn, OrgServiceAccountMintedOut, UserOut
+from control_plane.routes.access_keys import issue_access_key
 
 router = APIRouter(prefix="/orgs/{org_id}")
 
@@ -35,6 +38,7 @@ async def list_org_users(org_id: OrgDep) -> Envelope[list[OrgMemberOut]]:
                 service_account=user.service_account,
                 role=memberships[user.id].role,
                 status="member",
+                managed=user.managing_org_id == org_id,
             )
             for user in members
         ]
@@ -44,8 +48,13 @@ async def list_org_users(org_id: OrgDep) -> Envelope[list[OrgMemberOut]]:
 @router.put("/users/{user_id}", tags=["Organization Members"], dependencies=[require(org_scope, Permission.members_manage)])
 async def add_org_user(user_id: UUID, body: OrgMembershipIn, org_id: OrgDep, actor: ActorDep) -> Envelope[MembershipOut]:
     """Add a principal to an organization or update its organization role."""
-    if await User.find_by_id(user_id) is None:
+    user = await User.find_by_id(user_id)
+    if user is None:
         raise HTTPException(status_code=404, detail="User not found")
+    if user.managing_org_id is not None and user.managing_org_id != org_id:
+        raise HTTPException(status_code=409, detail="Organization-managed service accounts cannot join another organization")
+    if user.managing_org_id is not None and body.role is OrgRole.owner:
+        raise HTTPException(status_code=409, detail="Organization-managed service accounts cannot own an organization")
     membership = await OrgMembership.get((user_id, org_id))
     current = membership.role if membership else None
     await ensure_org_role_change(actor, org_id, current, body.role)
@@ -65,11 +74,61 @@ async def remove_org_user(user_id: UUID, org_id: OrgDep, actor: ActorDep) -> Env
     membership = await OrgMembership.get((user_id, org_id))
     if membership is None:
         raise HTTPException(status_code=404, detail="User is not a member of this org")
+    user = await User.find_by_id(user_id)
+    if user is not None and user.managing_org_id == org_id:
+        raise HTTPException(status_code=409, detail="Delete an organization-managed service account instead of removing its membership")
     await ensure_org_role_change(actor, org_id, membership.role, OrgRole.member)
     if await membership.is_only_owner():
         raise HTTPException(status_code=409, detail="An organization must keep at least one owner")
     await membership.delete()
     return Envelope(data=DeletedOut.of(f"{user_id}/{org_id}"))
+
+
+@router.post(
+    "/service-accounts",
+    tags=["Organization Service Accounts"],
+    dependencies=[require_all(org_scope, Permission.members_manage, Permission.access_keys_issue)],
+)
+async def create_org_service_account(
+    body: OrgServiceAccountIn,
+    org_id: OrgDep,
+    actor: ActorDep,
+) -> Envelope[OrgServiceAccountMintedOut]:
+    """Create an organization-managed service account and issue its first management key."""
+    await ensure_org_role_change(actor, org_id, None, OrgRole.admin)
+    service_account = await User.new_service_account(body.name, managing_org_id=org_id).save()
+    membership = await OrgMembership(user_id=service_account.id, org_id=org_id, role=OrgRole.admin).save()
+    access_key = await issue_access_key(
+        AccessKeyIn(user_id=service_account.id, **body.access_key.model_dump()),
+        actor,
+        Scope.org(org_id),
+    )
+    return Envelope(
+        data=OrgServiceAccountMintedOut(
+            service_account=UserOut.model_validate({**service_account.model_dump(), "orgs": [org_id]}),
+            membership=MembershipOut(user_id=service_account.id, org_id=org_id, role=OrgRole(membership.role), status="member"),
+            access_key=access_key,
+        )
+    )
+
+
+@router.delete(
+    "/service-accounts/{user_id}",
+    tags=["Organization Service Accounts"],
+    dependencies=[require_all(org_scope, Permission.members_manage, Permission.access_keys_revoke)],
+)
+async def delete_org_service_account(user_id: UUID, org_id: OrgDep, actor: ActorDep) -> Envelope[DeletedOut[UUID]]:
+    """Delete an organization-managed service account and its control-plane credentials."""
+    service_account = await User.owned_by(org_id, user_id)
+    membership = await OrgMembership.get((user_id, org_id))
+    if membership is not None:
+        await ensure_org_role_change(actor, org_id, membership.role, OrgRole.member)
+    if await InferenceKey.first(InferenceKey.user_id == user_id) is not None:
+        raise HTTPException(status_code=409, detail="service account minted inference keys that outlive it; delete those workspaces first")
+    if membership is not None:
+        await membership.delete()
+    await service_account.delete_with_contents()
+    return Envelope(data=DeletedOut.of(user_id))
 
 
 @router.post("/bundles/republish", tags=["Organization Bundles"], dependencies=[require(org_scope, Permission.bundles_publish)])

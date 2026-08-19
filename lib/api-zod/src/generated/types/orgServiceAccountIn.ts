@@ -10,22 +10,15 @@
  *
  * OpenAPI spec version: 0.1.0
  */
-import type { Permission } from './permission';
+import type { AccessKeyGrantIn } from './accessKeyGrantIn';
 
-export interface AccessKeyIn {
+export interface OrgServiceAccountIn {
   /**
-     * Where this key lives, such as ci, laptop, or data-plane
+     * Display name for the service account
      * @minLength 1
-     * @maxLength 80
+     * @maxLength 200
      */
-  label: string;
-  /**
-     * Explicit maximum permissions carried by the key
-     * @minItems 1
-     */
-  permissions: Permission[];
-  /** Optional expiration timestamp with a timezone */
-  expires_at?: Date | null;
-  /** Principal the key authenticates; defaults to the authenticated principal */
-  user_id?: string | null;
+  name: string;
+  /** Initial organization-scoped management key to issue for the service account */
+  access_key: AccessKeyGrantIn;
 }

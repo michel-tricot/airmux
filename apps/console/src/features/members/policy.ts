@@ -8,6 +8,8 @@ export const orgMemberAccess = {
   listInvitations: operationAuthority.listInvitations,
   reissueInvitation: operationAuthority.reissueInvitation,
   revokeInvitation: operationAuthority.revokeInvitation,
+  createServiceAccount: operationAuthority.createOrgServiceAccount,
+  deleteServiceAccount: operationAuthority.deleteOrgServiceAccount,
 } as const;
 
 export const workspaceMemberAccess = {

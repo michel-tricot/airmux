@@ -175,32 +175,47 @@ PermissionScopeDep = Annotated[Scope, Depends(permission_scope)]
 
 class PermissionCheck(Protocol):
     required_permissions: tuple[Permission, ...]
+    required_permission_rules: tuple[tuple[Permission, ...], ...]
     required_scope: str
 
     def __call__(self, actor: Actor) -> Awaitable[None]: ...
 
 
-def require(scope_resolver: Callable[..., Awaitable[Scope]], permission: Permission, *additional_permissions: Permission) -> params.Depends:
-    required = (permission, *additional_permissions)
+def _require(
+    scope_resolver: Callable[..., Awaitable[Scope]],
+    required_permission_rules: tuple[tuple[Permission, ...], ...],
+) -> params.Depends:
+    required = tuple(permission for rule in required_permission_rules for permission in rule)
     scope_dependency = Depends(scope_resolver)
 
     async def check_permission(resolved: ActorDep, scope: Scope = scope_dependency) -> None:
         effective = await effective_permissions(resolved, scope)
-        if any(permission in effective for permission in required):
+        if all(any(permission in effective for permission in rule) for rule in required_permission_rules):
             return
         names = ", ".join(permission.value for permission in required)
         detail = (
             f"Missing {names} permission for {scope.level.value} scope"
             if len(required) == 1
             else f"Missing one of {names} permissions for {scope.level.value} scope"
+            if len(required_permission_rules) == 1
+            else f"Missing required permissions for {scope.level.value} scope: {names}"
         )
         raise HTTPException(status_code=403, detail=detail)
 
     checker = cast("PermissionCheck", check_permission)
     checker.required_permissions = required
+    checker.required_permission_rules = required_permission_rules
     scope_name = getattr(scope_resolver, "__name__", "")
     checker.required_scope = scope_name if isinstance(scope_name, str) else type(scope_resolver).__name__
     return Depends(checker)
+
+
+def require(scope_resolver: Callable[..., Awaitable[Scope]], permission: Permission, *additional_permissions: Permission) -> params.Depends:
+    return _require(scope_resolver, ((permission, *additional_permissions),))
+
+
+def require_all(scope_resolver: Callable[..., Awaitable[Scope]], permission: Permission, *additional_permissions: Permission) -> params.Depends:
+    return _require(scope_resolver, tuple((required,) for required in (permission, *additional_permissions)))
 
 
 class AccessTag(Protocol):

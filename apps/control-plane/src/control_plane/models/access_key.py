@@ -157,9 +157,8 @@ class AccessKeyRevokedOut(BaseModel):
     revoked_at: datetime
 
 
-class AccessKeyIn(RequestModel):
+class AccessKeyGrantIn(RequestModel):
     label: str = PydanticField(description="Where this key lives, such as ci, laptop, or data-plane", min_length=1, max_length=80)
-    user_id: UUID | None = PydanticField(default=None, description="Principal the key authenticates; defaults to the authenticated principal")
     permissions: list[Permission] = PydanticField(min_length=1, description="Explicit maximum permissions carried by the key")
     expires_at: datetime | None = PydanticField(default=None, description="Optional expiration timestamp with a timezone")
 
@@ -180,3 +179,7 @@ class AccessKeyIn(RequestModel):
             msg = "expires_at must include a timezone"
             raise ValueError(msg)
         return expires_at.astimezone(UTC)
+
+
+class AccessKeyIn(AccessKeyGrantIn):
+    user_id: UUID | None = PydanticField(default=None, description="Principal the key authenticates; defaults to the authenticated principal")

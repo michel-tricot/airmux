@@ -45,15 +45,13 @@ export const Permission = {
   'access-keysrevoke': 'access-keys.revoke',
 } as const;
 
-export interface AccessKeyIn {
+export interface AccessKeyGrantIn {
   /**
      * Where this key lives, such as ci, laptop, or data-plane
      * @minLength 1
      * @maxLength 80
      */
   label: string;
-  /** Principal the key authenticates; defaults to the authenticated principal */
-  user_id?: string | null;
   /**
      * Explicit maximum permissions carried by the key
      * @minItems 1
@@ -61,6 +59,24 @@ export interface AccessKeyIn {
   permissions: Permission[];
   /** Optional expiration timestamp with a timezone */
   expires_at?: string | null;
+}
+
+export interface AccessKeyIn {
+  /**
+     * Where this key lives, such as ci, laptop, or data-plane
+     * @minLength 1
+     * @maxLength 80
+     */
+  label: string;
+  /**
+     * Explicit maximum permissions carried by the key
+     * @minItems 1
+     */
+  permissions: Permission[];
+  /** Optional expiration timestamp with a timezone */
+  expires_at?: string | null;
+  /** Principal the key authenticates; defaults to the authenticated principal */
+  user_id?: string | null;
 }
 
 export type AccessKeyMintedOutStatus = typeof AccessKeyMintedOutStatus[keyof typeof AccessKeyMintedOutStatus];
@@ -640,11 +656,42 @@ export interface OrgMemberOut {
   service_account: boolean;
   role: OrgRole;
   status: 'member';
+  managed?: boolean;
 }
 
 export interface OrgMembershipIn {
   /** Organization role to grant */
   role: OrgRole;
+}
+
+export interface OrgServiceAccountIn {
+  /**
+     * Display name for the service account
+     * @minLength 1
+     * @maxLength 200
+     */
+  name: string;
+  /** Initial organization-scoped management key to issue for the service account */
+  access_key: AccessKeyGrantIn;
+}
+
+export interface UserOut {
+  id: string;
+  email: string;
+  name: string;
+  instance_role: string | null;
+  service_account: boolean;
+  managing_org_id: string | null;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+  orgs: string[];
+}
+
+export interface OrgServiceAccountMintedOut {
+  service_account: UserOut;
+  membership: MembershipOut;
+  access_key: AccessKeyMintedOut;
 }
 
 export interface OrgUpdate {
@@ -1029,18 +1076,6 @@ export interface UsageEventV1 {
   credential_id?: string | null;
   /** Scope of the provider credential used for the request */
   credential_scope?: UsageEventV1CredentialScope;
-}
-
-export interface UserOut {
-  id: string;
-  email: string;
-  name: string;
-  instance_role: string | null;
-  service_account: boolean;
-  created_at: string;
-  updated_at: string;
-  deleted_at: string | null;
-  orgs: string[];
 }
 
 export interface WorkspaceCreate {

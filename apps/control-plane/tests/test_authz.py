@@ -90,9 +90,10 @@ def test_spec_advertises_the_enforced_permission():
     problems = []
     for route in _api_routes(app):
         enforced = [
-            tuple(str(permission) for permission in permissions)
+            tuple(str(permission) for permission in rule)
             for dependency in route.dependant.dependencies
-            if (permissions := getattr(dependency.call, "required_permissions", None)) is not None
+            if getattr(dependency.call, "required_permissions", None) is not None
+            for rule in dependency.call.required_permission_rules
         ]
         access = [access for dependency in route.dependant.dependencies if (access := getattr(dependency.call, "access", None)) is not None]
         for method in sorted(route.methods or ()):
@@ -100,11 +101,14 @@ def test_spec_advertises_the_enforced_permission():
             description = operation.get("description", "")
             if enforced and operation.get("security") != [{"AccessKey": []}, {"SessionCookie": []}]:
                 problems.append(f"{method} {route.path} does not advertise bearer-or-cookie authentication")
+            permissions = [permission for rule in enforced for permission in rule]
             documented = (
-                f"Required permission: one of `{'`, `'.join(enforced[0])}`."
-                if enforced and len(enforced[0]) > 1
-                else f"Required permission: `{enforced[0][0]}`."
-                if enforced and enforced[0]
+                f"Required permission: one of `{'`, `'.join(permissions)}`."
+                if len(enforced) == 1 and len(enforced[0]) > 1
+                else f"Required permissions: {' and '.join(f'`{permission}`' for permission in permissions)}."
+                if len(enforced) > 1
+                else f"Required permission: `{permissions[0]}`."
+                if permissions
                 else ""
             )
             if enforced and documented not in description:

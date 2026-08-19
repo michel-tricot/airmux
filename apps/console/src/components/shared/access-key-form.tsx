@@ -14,6 +14,66 @@ export const accessKeyFormSchema = z.object({
 
 export type AccessKeyFormValues = z.infer<typeof accessKeyFormSchema>;
 
+export function PermissionChecklist({
+  value,
+  onChange,
+  availablePermissions,
+  canIssue,
+  permissionsLoading,
+  permissionsError,
+  onPermissionsRetry,
+}: {
+  value: PermissionName[];
+  onChange: (value: PermissionName[]) => void;
+  availablePermissions: readonly PermissionName[];
+  canIssue: boolean;
+  permissionsLoading?: boolean;
+  permissionsError?: unknown;
+  onPermissionsRetry?: () => void;
+}) {
+  if (permissionsLoading) return <p className="text-xs text-muted-foreground">Loading your permissions...</p>;
+  if (permissionsError) {
+    return (
+      <ErrorState error={permissionsError} resource="permissions" onRetry={onPermissionsRetry} className="rounded-md border border-border p-3" />
+    );
+  }
+  if (!canIssue) return <p className="text-xs text-muted-foreground">You do not have permission to issue access keys at this scope.</p>;
+  return (
+    <>
+      <div className="permission-scrollbar max-h-64 space-y-3 overflow-y-auto rounded-md border border-border bg-card/30 p-3">
+        {groupPermissions(availablePermissions).map(([resource, permissions]) => (
+          <div key={resource} className="space-y-1">
+            <div className="font-mono text-[11px] font-bold uppercase tracking-wider text-muted-foreground">{resource}</div>
+            <div className="grid grid-cols-2 gap-x-3 gap-y-1">
+              {permissions.map((permission) => {
+                const checked = value.includes(permission);
+                return (
+                  <label
+                    key={permission}
+                    className={cn(
+                      'flex cursor-pointer items-center gap-2 rounded-sm px-1.5 py-1 text-xs',
+                      checked ? 'text-foreground' : 'text-muted-foreground hover:text-foreground',
+                    )}
+                  >
+                    <input
+                      type="checkbox"
+                      className="size-3.5 accent-primary"
+                      checked={checked}
+                      onChange={(event) => onChange(event.target.checked ? [...value, permission] : value.filter((item) => item !== permission))}
+                    />
+                    <span className="font-mono">{permission}</span>
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+      <p className="text-xs text-muted-foreground">Only permissions you currently hold are listed. The key can never exceed them.</p>
+    </>
+  );
+}
+
 export function AccessKeyFormFields({
   form,
   availablePermissions,
@@ -50,55 +110,15 @@ export function AccessKeyFormFields({
         render={({ field }) => (
           <FormItem>
             <FormLabel>Permissions</FormLabel>
-            {permissionsLoading ? (
-              <p className="text-xs text-muted-foreground">Loading your permissions...</p>
-            ) : permissionsError ? (
-              <ErrorState
-                error={permissionsError}
-                resource="permissions"
-                onRetry={onPermissionsRetry}
-                className="rounded-md border border-border p-3"
-              />
-            ) : !canIssue ? (
-              <p className="text-xs text-muted-foreground">You do not have permission to issue access keys at this scope.</p>
-            ) : (
-              <div className="permission-scrollbar max-h-64 space-y-3 overflow-y-auto rounded-md border border-border bg-card/30 p-3">
-                {groupPermissions(availablePermissions).map(([resource, permissions]) => (
-                  <div key={resource} className="space-y-1">
-                    <div className="font-mono text-[11px] font-bold uppercase tracking-wider text-muted-foreground">{resource}</div>
-                    <div className="grid grid-cols-2 gap-x-3 gap-y-1">
-                      {permissions.map((permission) => {
-                        const checked = field.value.includes(permission);
-                        return (
-                          <label
-                            key={permission}
-                            className={cn(
-                              'flex cursor-pointer items-center gap-2 rounded-sm px-1.5 py-1 text-xs',
-                              checked ? 'text-foreground' : 'text-muted-foreground hover:text-foreground',
-                            )}
-                          >
-                            <input
-                              type="checkbox"
-                              className="size-3.5 accent-primary"
-                              checked={checked}
-                              onChange={(event) =>
-                                field.onChange(
-                                  event.target.checked ? [...field.value, permission] : field.value.filter((value) => value !== permission),
-                                )
-                              }
-                            />
-                            <span className="font-mono">{permission}</span>
-                          </label>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-            {!permissionsLoading && !permissionsError && canIssue && (
-              <p className="text-xs text-muted-foreground">Only permissions you currently hold are listed. The key can never exceed them.</p>
-            )}
+            <PermissionChecklist
+              value={field.value}
+              onChange={field.onChange}
+              availablePermissions={availablePermissions}
+              canIssue={canIssue}
+              permissionsLoading={permissionsLoading}
+              permissionsError={permissionsError}
+              onPermissionsRetry={onPermissionsRetry}
+            />
             <FormMessage />
           </FormItem>
         )}

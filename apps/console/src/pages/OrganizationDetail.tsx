@@ -13,6 +13,7 @@ import { LoadingState, ErrorState } from '@/components/shared/states';
 import { DataTable } from '@/components/shared/data-table';
 import { FormDialog } from '@/components/shared/form-dialog';
 import { MembersPanel } from '@/components/shared/members-panel';
+import { AccountIdentity } from '@/components/shared/account-display';
 import { ApiKeysTable } from '@/components/shared/api-keys-table';
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useRequiredParam } from '@/lib/route';
@@ -205,13 +206,7 @@ export default function OrganizationDetail() {
                   cellClassName: 'text-muted-foreground text-sm',
                   cell: (key) => {
                     const user = usersById.get(key.user_id);
-                    return user ? (
-                      <Link href={`/instance/users/${user.id}`} className="hover:text-primary transition-colors">
-                        {user.name}
-                      </Link>
-                    ) : (
-                      key.user_id
-                    );
+                    return user ? <AccountIdentity name={user.name} href={`/instance/users/${user.id}`} /> : key.user_id;
                   },
                 },
                 { key: 'scope', header: 'Scope', cellClassName: 'text-muted-foreground text-sm', cell: (key) => key.scope.level },

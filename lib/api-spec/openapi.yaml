@@ -2883,6 +2883,110 @@ paths:
       - scope: org_scope
         anyOf:
         - members.manage
+  /api/v1/orgs/{org_id}/service-accounts:
+    post:
+      tags:
+      - Organization Service Accounts
+      summary: Create Organization Service Account
+      description: 'Create an organization-managed service account and issue its first management key.
+
+
+        Required permissions: `members.manage` and `access-keys.issue`.'
+      operationId: create_org_service_account
+      security:
+      - AccessKey: []
+      - SessionCookie: []
+      parameters:
+      - name: org_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Org Id
+        description: Organization ID or slug
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrgServiceAccountIn'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_OrgServiceAccountMintedOut_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
+      x-airllm-authority:
+      - scope: org_scope
+        anyOf:
+        - members.manage
+      - scope: org_scope
+        anyOf:
+        - access-keys.issue
+  /api/v1/orgs/{org_id}/service-accounts/{user_id}:
+    delete:
+      tags:
+      - Organization Service Accounts
+      summary: Delete Organization Service Account
+      description: 'Delete an organization-managed service account and its control-plane credentials.
+
+
+        Required permissions: `members.manage` and `access-keys.revoke`.'
+      operationId: delete_org_service_account
+      security:
+      - AccessKey: []
+      - SessionCookie: []
+      parameters:
+      - name: user_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: User Id
+        description: User or service-account ID
+      - name: org_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Org Id
+        description: Organization ID or slug
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_DeletedOut_UUID__'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
+      x-airllm-authority:
+      - scope: org_scope
+        anyOf:
+        - members.manage
+      - scope: org_scope
+        anyOf:
+        - access-keys.revoke
   /api/v1/orgs/{org_id}/bundles/republish:
     post:
       tags:
@@ -3623,7 +3727,7 @@ paths:
         - catalog.manage
 components:
   schemas:
-    AccessKeyIn:
+    AccessKeyGrantIn:
       properties:
         label:
           type: string
@@ -3631,13 +3735,6 @@ components:
           minLength: 1
           title: Label
           description: Where this key lives, such as ci, laptop, or data-plane
-        user_id:
-          anyOf:
-          - type: string
-            format: uuid
-          - type: 'null'
-          title: User Id
-          description: Principal the key authenticates; defaults to the authenticated principal
         permissions:
           items:
             $ref: '#/components/schemas/Permission'
@@ -3652,6 +3749,41 @@ components:
           - type: 'null'
           title: Expires At
           description: Optional expiration timestamp with a timezone
+      additionalProperties: false
+      type: object
+      required:
+      - label
+      - permissions
+      title: AccessKeyGrantIn
+    AccessKeyIn:
+      properties:
+        label:
+          type: string
+          maxLength: 80
+          minLength: 1
+          title: Label
+          description: Where this key lives, such as ci, laptop, or data-plane
+        permissions:
+          items:
+            $ref: '#/components/schemas/Permission'
+          type: array
+          minItems: 1
+          title: Permissions
+          description: Explicit maximum permissions carried by the key
+        expires_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Expires At
+          description: Optional expiration timestamp with a timezone
+        user_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: User Id
+          description: Principal the key authenticates; defaults to the authenticated principal
       additionalProperties: false
       type: object
       required:
@@ -4423,6 +4555,14 @@ components:
       required:
       - data
       title: Envelope[OrgOut]
+    Envelope_OrgServiceAccountMintedOut_:
+      properties:
+        data:
+          $ref: '#/components/schemas/OrgServiceAccountMintedOut'
+      type: object
+      required:
+      - data
+      title: Envelope[OrgServiceAccountMintedOut]
     Envelope_PasswordChangedOut_:
       properties:
         data:
@@ -5379,6 +5519,10 @@ components:
           type: string
           const: member
           title: Status
+        managed:
+          type: boolean
+          title: Managed
+          default: false
       type: object
       required:
       - user_id
@@ -5449,6 +5593,37 @@ components:
       - member
       - data_plane
       title: OrgRole
+    OrgServiceAccountIn:
+      properties:
+        name:
+          type: string
+          maxLength: 200
+          minLength: 1
+          title: Name
+          description: Display name for the service account
+        access_key:
+          $ref: '#/components/schemas/AccessKeyGrantIn'
+          description: Initial organization-scoped management key to issue for the service account
+      additionalProperties: false
+      type: object
+      required:
+      - name
+      - access_key
+      title: OrgServiceAccountIn
+    OrgServiceAccountMintedOut:
+      properties:
+        service_account:
+          $ref: '#/components/schemas/UserOut'
+        membership:
+          $ref: '#/components/schemas/MembershipOut'
+        access_key:
+          $ref: '#/components/schemas/AccessKeyMintedOut'
+      type: object
+      required:
+      - service_account
+      - membership
+      - access_key
+      title: OrgServiceAccountMintedOut
     OrgUpdate:
       properties:
         name:
@@ -6255,6 +6430,12 @@ components:
         service_account:
           type: boolean
           title: Service Account
+        managing_org_id:
+          anyOf:
+          - type: string
+            format: uuid
+          - type: 'null'
+          title: Managing Org Id
         created_at:
           type: string
           format: date-time
@@ -6282,6 +6463,7 @@ components:
       - name
       - instance_role
       - service_account
+      - managing_org_id
       - created_at
       - updated_at
       - deleted_at
@@ -6507,6 +6689,9 @@ tags:
 - name: Organization Members
   description: Manage organization membership and organization roles
   x-displayName: Members
+- name: Organization Service Accounts
+  description: Create and delete organization-managed machine principals and their initial management credentials
+  x-displayName: Service Accounts
 - name: Organization Invitations
   description: Invite human users to an organization and optionally one workspace
   x-displayName: Invitations
@@ -6577,6 +6762,7 @@ x-tagGroups:
   tags:
   - Organization Settings
   - Organization Members
+  - Organization Service Accounts
   - Organization Invitations
   - Organization Workspaces
   - Organization Access Keys

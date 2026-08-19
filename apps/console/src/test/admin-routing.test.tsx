@@ -320,6 +320,7 @@ describe('instance administration routes', () => {
     await screen.findByRole('heading', { name: 'Global Users' });
 
     expect(screen.getByText(/Human accounts sign up themselves/)).toBeInTheDocument();
+    expect(await screen.findByText('HUMAN')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Add User' })).not.toBeInTheDocument();
     await user.click(await screen.findByRole('button', { name: 'Create Service Account' }));
     expect(screen.getByRole('dialog', { name: 'Create Service Account' })).toBeInTheDocument();
