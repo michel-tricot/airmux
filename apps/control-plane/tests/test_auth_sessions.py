@@ -4,9 +4,9 @@ from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from fastapi.testclient import TestClient
-from helpers import make_org, run_in_db, setup_control_plane
+from helpers import make_org, make_workspace, run_in_db, setup_control_plane
 
-from control_plane.models import AuthIdentity, AuthSession, User, set_actor
+from control_plane.models import AuthIdentity, AuthSession, PlaygroundSession, User, set_actor
 from control_plane.sessions import SESSION_COOKIE, mint_session, verify_session
 
 CSRF = {"X-Requested-With": "fetch"}
@@ -163,6 +163,29 @@ def test_logout_revokes_session_and_clears_cookie(tmp_path):
         assert UUID(out.json()["data"]["id"]).version == 7
         c.cookies.set(SESSION_COOKIE, stolen)
         assert c.get("/api/v1/orgs", headers=CSRF).status_code == 401
+
+
+def test_logout_revokes_active_playground_session(tmp_path):
+    cp = setup_control_plane(tmp_path)
+    root = cp.headers()
+    with _client(cp) as c:
+        org_id = make_org(c, root)
+        workspace_id = make_workspace(c, cp.headers(org_id))
+        _make_user(c, cp, admin=True, tmp_path=tmp_path)
+        _login(c)
+        path = f"/api/v1/orgs/{org_id}/workspaces/{workspace_id}/playground-session"
+        playground_session = c.put(path, headers=CSRF)
+        assert playground_session.status_code == 200, playground_session.text
+
+        out = c.post("/api/v1/auth/logout", headers=CSRF)
+        assert out.status_code == 200, out.text
+
+    async def revoked():
+        session = await PlaygroundSession.find_by_id(UUID(playground_session.json()["data"]["id"]))
+        assert session is not None
+        return session.revoked
+
+    assert run_in_db(tmp_path, revoked) is True
 
 
 def test_self_change_requires_current_password(tmp_path):
