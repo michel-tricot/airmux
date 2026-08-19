@@ -8,11 +8,12 @@ from uuid import UUID  # noqa: TC003 NamedTuple resolves its annotations at runt
 import pytest
 from fastapi.testclient import TestClient
 from helpers import MODEL, PROVIDER, make_org, make_workspace, run_in_db, setup_control_plane
+from pg import db_url_for
 from sqlalchemy.exc import IntegrityError
 
-from contract import BundleV1, EnvStoreConfig, SecretNotFoundError, SecretPurpose, SecretRef, uuid7
+from contract import BundleV1, EnvStoreConfig, InsecureDatabaseStoreConfig, SecretNotFoundError, SecretPurpose, SecretRef, uuid7
 from control_plane.authz import Permission
-from control_plane.models import Provider, ProviderCredential, set_actor
+from control_plane.models import InsecureVaultSecret, Provider, ProviderCredential, set_actor
 
 KEY = "sk-provider-abcd1234"
 CSRF = {"X-Requested-With": "fetch"}
@@ -69,6 +70,33 @@ def test_a_credential_keeps_its_value_out_of_the_api(tmp_path):
         assert credential["scope"] == "org"
         assert credential["version"] == 1
         assert _stored(cp, credential) == KEY
+
+
+def test_the_insecure_database_vault_keeps_its_plaintext_out_of_the_bundle(tmp_path):
+    config = InsecureDatabaseStoreConfig(url=db_url_for(tmp_path))
+    cp = setup_control_plane(tmp_path, secrets=config)
+    with TestClient(cp.app) as c:
+        root = cp.headers()
+        _catalog(c, root)
+        org = cp.headers(make_org(c, root))
+        response = c.post(_collection(org), json={"provider": "openai", "value": KEY}, headers=org)
+        assert response.status_code == 200, response.text
+        credential = response.json()["data"]
+        bundle_response = c.get("/api/v1/bundle/latest", headers=org)
+        entry = BundleV1.model_validate_json(bundle_response.json()["data"]["payload"]).catalog.credentials[0]
+        rotated = c.put(f"{_credential_path(credential)}/value", json={"value": "sk-rotated-9999"}, headers=org)
+        assert rotated.status_code == 200, rotated.text
+
+        async def stored_values():
+            return [secret.value for secret in await InsecureVaultSecret.find()]
+
+        assert run_in_db(tmp_path, stored_values) == ["sk-rotated-9999"]
+        assert KEY not in bundle_response.text
+        assert set(entry.model_dump()) == {"ref", "priority", "version"}
+        assert _stored(cp, credential) == "sk-rotated-9999"
+        assert c.delete(_credential_path(credential), headers=org).status_code == 200
+
+    assert run_in_db(tmp_path, stored_values) == []
 
 
 def test_an_instance_credential_can_be_created_and_listed(tmp_path):

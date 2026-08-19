@@ -2,8 +2,10 @@
 
 A workspace brings its own provider API keys, plural per provider. The values live in a secret store
 the control plane writes and the data plane reads, named once in config and reached through one
-facade. They are never persisted anywhere else: not in the bundle, not in `bundle.payload`, not in
-the data plane's disk cache, not in `audit_log`, not in `.env` or `airllm.yml`, not in a log line.
+facade. Plaintext is never persisted anywhere else: not in the bundle, not in `bundle.payload`, not
+in the data plane's disk cache, not in `audit_log`, not in `.env` or `airllm.yml`, not in a log line.
+The explicitly named `insecure_database` backend stores plaintext in its dedicated PostgreSQL table;
+database readers, backups, replicas, and transaction logs can expose it.
 
 ## Core shape
 
@@ -107,7 +109,28 @@ the other reads.
 
 Shipped: `memory` (tests and single-process dev), `file` (one 0600 file per secret under a root,
 which is a real single-host deployment), `env` (read only, quickstart and single-tenant instances
-whose provider keys already arrive as environment variables).
+whose provider keys already arrive as environment variables), and `insecure_database` (plaintext
+in PostgreSQL for deployments that accept the security tradeoff).
+
+The insecure database store takes one PostgreSQL URL, configured identically in both planes:
+
+```yaml
+control_plane:
+  secrets:
+    kind: insecure_database
+    url: ${env:AIRLLM_INSECURE_VAULT_URL}
+
+data_plane:
+  secrets:
+    kind: insecure_database
+    url: ${env:AIRLLM_INSECURE_VAULT_URL}
+```
+
+The store maps the full `SecretRef` to an internal address and uses parameterized SQL for every
+operation. The bundle still carries only the ref, priority, and version. A data plane reads
+PostgreSQL on cold resolution, then the existing version-keyed, single-flight cache keeps the value
+off the hot path for five minutes. Rotation increments the version and therefore bypasses the old
+cache entry immediately.
 
 The env store resolves a provider credential to **`{SERVICE}_API_KEY`**, the name every provider SDK
 documents and the one `taxonomy/taxonomy.yml` used before credentials became a resource, so an operator
@@ -366,7 +389,9 @@ Each lands its failing test in the same commit.
 5. Console and CLI: `airllm credentials add/list/rotate/rm --workspace --provider --name` with
    `--from-stdin` so keys never enter shell history, status and fingerprint columns, console panel
    with per-key health
-6. The Vault KV v2 store: one module behind the facade, its own config fields, and its auth method
+6. **Done.** The explicitly insecure database store: plaintext PostgreSQL persistence behind the
+   existing data-plane credential cache, with no store-specific bundle fields
+7. The Vault KV v2 store: one module behind the facade, its own config fields, and its auth method
    in both plane configs
 
 ## Deferred to the next version

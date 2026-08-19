@@ -13,6 +13,8 @@ from contract import (
     EnvStoreConfig,
     FileSecretStore,
     FileStoreConfig,
+    InsecureDatabaseSecretStore,
+    InsecureDatabaseStoreConfig,
     MemorySecretStore,
     MemoryStoreConfig,
     Secret,
@@ -159,12 +161,23 @@ def test_a_config_builds_its_own_store(tmp_path):
     assert isinstance(MemoryStoreConfig().build(), MemorySecretStore)
     assert isinstance(FileStoreConfig(root=tmp_path).build(), FileSecretStore)
     assert isinstance(EnvStoreConfig().build(), EnvSecretStore)
+    assert isinstance(InsecureDatabaseStoreConfig(url="postgresql://vault:secret@db/vault").build(), InsecureDatabaseSecretStore)
 
 
 def test_the_kind_selects_which_backend_parses_the_settings(tmp_path):
     configured = Configured.model_validate({"secrets": {"kind": "file", "root": str(tmp_path)}})
     assert configured.secrets == FileStoreConfig(root=tmp_path)
     assert Configured.model_validate({"secrets": {"kind": "env", "prefix": "ACME"}}).secrets == EnvStoreConfig(prefix="ACME")
+    configured = Configured.model_validate({"secrets": {"kind": "insecure_database", "url": "postgresql://vault:secret@db/vault"}})
+    assert isinstance(configured.secrets, InsecureDatabaseStoreConfig)
+
+
+def test_the_insecure_database_url_is_redacted():
+    url = "postgresql://vault:secret@db/vault"
+    config = InsecureDatabaseStoreConfig(url=url)
+
+    assert url not in repr(config)
+    assert config.kind == "insecure_database"
 
 
 def test_a_backend_does_not_accept_another_backend_settings():

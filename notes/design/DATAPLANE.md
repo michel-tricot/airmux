@@ -20,13 +20,15 @@ Its hard boundaries are architectural, not conventions:
 - `data_plane` never imports `control_plane`, SQLAlchemy, SQLModel, asyncpg, Alembic, or FastAPI
 - `contract` is the only code shared by the two planes
 - Every fact needed for authentication, policy, provider selection, reconciliation, and pricing is in `BundleV1`
-- A feature that appears to require a database read on the request path requires a bundle field instead
+- A feature that appears to require a database read on the request path requires a bundle field
+  instead, except cold `SecretStore.get(ref)` resolution
 - `evaluate()` remains pure and synchronous, with no I/O, clock access, or hidden state
 - Starlette is the HTTP framework; Pydantic validation is applied deliberately at protocol boundaries
 
-The request path performs no control-plane or database I/O. It can still perform three kinds of I/O:
+The request path performs no control-plane or management-database I/O. It can still perform three kinds of I/O:
 
-- A provider-secret store read on a credential cache miss
+- A provider-secret store read on a credential cache miss, including PostgreSQL only when the
+  explicitly insecure database store is configured
 - The provider HTTP request
 - A synchronous local SQLite write when the durable event outbox is enabled
 

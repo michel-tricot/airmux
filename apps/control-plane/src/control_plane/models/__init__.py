@@ -10,6 +10,7 @@ from control_plane.models.common import Identified, NotOwnedError, OrgOwned, Tom
 from control_plane.models.common.base import Record
 from control_plane.models.data_plane_instance import DataPlaneInstance
 from control_plane.models.inference_key import InferenceKey
+from control_plane.models.insecure_vault_secret import InsecureVaultSecret
 from control_plane.models.model import Model
 from control_plane.models.org import Org
 from control_plane.models.org_invitation import OrgInvitation
@@ -33,6 +34,7 @@ __all__ = [
     "DataPlaneInstance",
     "Identified",
     "InferenceKey",
+    "InsecureVaultSecret",
     "Model",
     "NotOwnedError",
     "Org",
