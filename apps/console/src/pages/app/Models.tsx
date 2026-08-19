@@ -11,6 +11,7 @@ import {
   Type as TextIcon,
   Video,
   Wrench,
+  X,
 } from 'lucide-react';
 import { type ModelOut, type ProviderOut, useGetOrgTaxonomy } from '@workspace/api-client-react';
 import { ProviderIcon } from '@/components/ProviderIcon';
@@ -193,6 +194,7 @@ export default function Models() {
   const providerCount = taxonomy.data?.providers.length ?? 0;
   const toolCapableModels = catalog?.filter(({ model }) => model.capabilities.includes('tools')).length ?? 0;
   const normalizedFilter = filter.trim().toLocaleLowerCase();
+  const hasActiveFilters = normalizedFilter.length > 0 || providerFilters.length > 0 || capabilityFilters.length > 0 || modalityFilters.length > 0;
   const providerOptions = [...(taxonomy.data?.providers ?? [])]
     .sort((left, right) => nameCollator.compare(left.name, right.name))
     .map((provider) => ({ value: provider.id, label: provider.name }));
@@ -226,6 +228,13 @@ export default function Models() {
     }
     setSortKey(key);
     setSortDirection('ascending');
+  };
+
+  const clearFilters = () => {
+    setFilter('');
+    setProviderFilters([]);
+    setCapabilityFilters([]);
+    setModalityFilters([]);
   };
 
   const header = (label: string, key: SortKey, align?: 'left' | 'right') => (
@@ -396,6 +405,10 @@ export default function Models() {
               disabled={!catalog?.length}
               className="w-full sm:w-48"
             />
+            <Button variant="ghost" size="sm" onClick={clearFilters} disabled={!hasActiveFilters} className="h-9 w-full gap-1.5 px-3 sm:w-auto">
+              <X className="h-3.5 w-3.5" />
+              Clear filters
+            </Button>
           </div>
           {catalog && (
             <Badge className="shrink-0 normal-case tracking-normal">

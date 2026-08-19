@@ -262,7 +262,7 @@ export const CheckboxDropdown = ({
         size="sm"
         aria-label={ariaLabel}
         disabled={disabled}
-        className={cn('h-9 w-full justify-between gap-2 px-3 normal-case tracking-normal', className)}
+        className={cn('h-9 w-full justify-between gap-2 px-3 text-[13px] normal-case tracking-normal', className)}
       >
         <span className="truncate">{values.length === 0 ? allLabel : `${label} (${values.length})`}</span>
         <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />

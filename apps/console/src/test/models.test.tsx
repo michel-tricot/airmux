@@ -122,6 +122,7 @@ describe('organization models', () => {
     }
     expect(screen.queryByRole('columnheader', { name: 'I/O modalities' })).not.toBeInTheDocument();
     expect(screen.queryByRole('columnheader', { name: 'Capabilities' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Clear filters' })).toBeDisabled();
   });
 
   it('adds visual hierarchy to the catalog summary, groups, and active sort', async () => {
@@ -135,6 +136,7 @@ describe('organization models', () => {
     expect(screen.getByRole('columnheader', { name: 'Limits' })).toHaveAttribute('colspan', '2');
     expect(screen.getByRole('columnheader', { name: 'Pricing' })).toHaveAttribute('colspan', '4');
     expect(screen.getByRole('button', { name: /Sort by Model/i })).toHaveClass('text-primary');
+    expect(screen.getByRole('button', { name: 'Filter by provider' })).toHaveClass('text-[13px]');
   });
 
   it('combines search and multi-select filters and sorts numeric columns in both directions', async () => {
@@ -177,6 +179,12 @@ describe('organization models', () => {
 
     await user.type(screen.getByRole('textbox', { name: 'Filter models' }), 'not-a-model');
     expect(screen.getByText('No models match these filters.')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Clear filters' }));
+    expect(screen.getByText('anthropic/claude-sonnet-4-5')).toBeInTheDocument();
+    expect(screen.getByText('openai/gpt-5')).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'Filter models' })).toHaveValue('');
+    expect(screen.getByRole('button', { name: 'Filter by modality' })).toHaveTextContent('All modalities');
+    expect(screen.getByRole('button', { name: 'Clear filters' })).toBeDisabled();
   });
 
   it('keeps capabilities and modalities in a discoverable metadata tooltip', async () => {
