@@ -70,10 +70,17 @@ class CliAuthApproveIn(BaseModel):
             title="User Code",
         ),
     ]
+    scope: Annotated[
+        Literal["instance", "org"] | None,
+        Field(description="Scope the CLI access key should use", title="Scope"),
+    ] = "org"
     org_id: Annotated[
-        UUID,
-        Field(description="Organization the CLI access key should use", title="Org Id"),
-    ]
+        UUID | None,
+        Field(
+            description="Organization the CLI access key should use for organization scope",
+            title="Org Id",
+        ),
+    ] = None
 
 
 class CliAuthApprovedOut(BaseModel):
@@ -99,6 +106,7 @@ class CliAuthPollIn(BaseModel):
 class CliAuthPollOut(BaseModel):
     status: Annotated[Literal["pending", "complete"], Field(title="Status")]
     interval_seconds: Annotated[int, Field(title="Interval Seconds")]
+    scope: Annotated[Literal["instance", "org"] | None, Field(title="Scope")] = None
     token: Annotated[str | None, Field(title="Token")] = None
     org_id: Annotated[UUID | None, Field(title="Org Id")] = None
     org_name: Annotated[str | None, Field(title="Org Name")] = None
@@ -108,6 +116,7 @@ class CliAuthRequestOut(BaseModel):
     client_name: Annotated[str, Field(title="Client Name")]
     requester: Annotated[str, Field(title="Requester")]
     expires_at: Annotated[AwareDatetime, Field(title="Expires At")]
+    can_approve_instance: Annotated[bool, Field(title="Can Approve Instance")]
 
 
 class CliAuthStartIn(BaseModel):
