@@ -137,7 +137,7 @@ describe('organization models', () => {
     expect(screen.getByRole('button', { name: /Sort by Model/i })).toHaveClass('text-primary');
   });
 
-  it('combines search and dropdown filters and sorts numeric columns in both directions', async () => {
+  it('combines search and multi-select filters and sorts numeric columns in both directions', async () => {
     const user = userEvent.setup();
     renderModels();
     await screen.findByText('anthropic/claude-sonnet-4-5');
@@ -148,18 +148,32 @@ describe('organization models', () => {
     await user.click(screen.getByRole('button', { name: /Sort by Input price/i }));
     expect(modelRows()[0]).toHaveTextContent('anthropic/claude-sonnet-4-5');
 
-    await user.click(screen.getByRole('combobox', { name: 'Filter by provider' }));
-    await user.click(await screen.findByRole('option', { name: 'openai' }));
+    await user.click(screen.getByRole('button', { name: 'Filter by provider' }));
+    await user.click(await screen.findByRole('menuitemcheckbox', { name: 'openai' }));
     expect(screen.getByText('openai/gpt-5')).toBeInTheDocument();
     expect(screen.queryByText('anthropic/claude-sonnet-4-5')).not.toBeInTheDocument();
     expect(screen.getByText('1 of 2 models')).toBeInTheDocument();
+    await user.click(screen.getByRole('menuitemcheckbox', { name: 'anthropic' }));
+    expect(screen.getByText('anthropic/claude-sonnet-4-5')).toBeInTheDocument();
+    expect(screen.getByText('2 of 2 models')).toBeInTheDocument();
+    await user.click(screen.getByRole('menuitemcheckbox', { name: 'All providers' }));
+    await user.keyboard('{Escape}');
 
-    await user.click(screen.getByRole('combobox', { name: 'Filter by provider' }));
-    await user.click(await screen.findByRole('option', { name: 'All providers' }));
-    await user.click(screen.getByRole('combobox', { name: 'Filter by capability' }));
-    await user.click(await screen.findByRole('option', { name: 'json_schema' }));
+    await user.click(screen.getByRole('button', { name: 'Filter by capability' }));
+    await user.click(await screen.findByRole('menuitemcheckbox', { name: 'tools' }));
+    await user.click(screen.getByRole('menuitemcheckbox', { name: 'reasoning' }));
     expect(screen.getByText('openai/gpt-5')).toBeInTheDocument();
     expect(screen.queryByText('anthropic/claude-sonnet-4-5')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('menuitemcheckbox', { name: 'All capabilities' }));
+    await user.keyboard('{Escape}');
+
+    await user.click(screen.getByRole('button', { name: 'Filter by modality' }));
+    await user.click(await screen.findByRole('menuitemcheckbox', { name: 'Input: text' }));
+    expect(screen.getByText('2 of 2 models')).toBeInTheDocument();
+    await user.click(screen.getByRole('menuitemcheckbox', { name: 'Input: image' }));
+    expect(screen.getByText('openai/gpt-5')).toBeInTheDocument();
+    expect(screen.queryByText('anthropic/claude-sonnet-4-5')).not.toBeInTheDocument();
+    await user.keyboard('{Escape}');
 
     await user.type(screen.getByRole('textbox', { name: 'Filter models' }), 'not-a-model');
     expect(screen.getByText('No models match these filters.')).toBeInTheDocument();

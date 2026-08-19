@@ -17,7 +17,7 @@ import { ProviderIcon } from '@/components/ProviderIcon';
 import { DataTable, type Column } from '@/components/shared/data-table';
 import { PageHeader, PageShell } from '@/components/shared/page-shell';
 import { SearchField } from '@/components/shared/search-field';
-import { Badge, Button, Card, Dropdown } from '@/components/ui/elements';
+import { Badge, Button, Card, CheckboxDropdown } from '@/components/ui/elements';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useRequiredOrgId } from '@/lib/session';
 import { cn } from '@/lib/utils';
@@ -47,7 +47,6 @@ const priceFormatter = new Intl.NumberFormat('en-US', {
   maximumFractionDigits: 4,
 });
 const nameCollator = new Intl.Collator('en-US', { numeric: true, sensitivity: 'base' });
-const ALL_FILTERS = 'all';
 
 function capabilityVariant(capability: string): 'default' | 'warning' | 'success' | 'secondary' {
   if (capability === 'streaming') return 'default';
@@ -141,6 +140,12 @@ function compareModels(left: CatalogModel, right: CatalogModel, key: SortKey, di
   return direction === 'ascending' ? comparison : -comparison;
 }
 
+function supportsModality(model: ModelOut, value: string): boolean {
+  const [direction, modality] = value.split(':');
+  const modalities = direction === 'input' ? model.input_modalities : model.output_modalities;
+  return modalities.some((candidate) => candidate === modality);
+}
+
 function SortableHeader({
   label,
   sortKey,
@@ -178,8 +183,9 @@ export default function Models() {
   const orgId = useRequiredOrgId();
   const taxonomy = useGetOrgTaxonomy(orgId);
   const [filter, setFilter] = useState('');
-  const [providerFilter, setProviderFilter] = useState(ALL_FILTERS);
-  const [capabilityFilter, setCapabilityFilter] = useState(ALL_FILTERS);
+  const [providerFilters, setProviderFilters] = useState<string[]>([]);
+  const [capabilityFilters, setCapabilityFilters] = useState<string[]>([]);
+  const [modalityFilters, setModalityFilters] = useState<string[]>([]);
   const [sortKey, setSortKey] = useState<SortKey>('name');
   const [sortDirection, setSortDirection] = useState<SortDirection>('ascending');
   const providersById = new Map(taxonomy.data?.providers.map((provider) => [provider.id, provider]));
@@ -187,22 +193,30 @@ export default function Models() {
   const providerCount = taxonomy.data?.providers.length ?? 0;
   const toolCapableModels = catalog?.filter(({ model }) => model.capabilities.includes('tools')).length ?? 0;
   const normalizedFilter = filter.trim().toLocaleLowerCase();
-  const providerOptions = [
-    { value: ALL_FILTERS, label: 'All providers' },
-    ...[...(taxonomy.data?.providers ?? [])]
-      .sort((left, right) => nameCollator.compare(left.name, right.name))
-      .map((provider) => ({ value: provider.id, label: provider.name })),
-  ];
-  const capabilityOptions = [
-    { value: ALL_FILTERS, label: 'All capabilities' },
-    ...[...new Set(taxonomy.data?.models.flatMap((model) => model.capabilities) ?? [])]
-      .sort(nameCollator.compare)
-      .map((capability) => ({ value: capability, label: capability })),
-  ];
+  const providerOptions = [...(taxonomy.data?.providers ?? [])]
+    .sort((left, right) => nameCollator.compare(left.name, right.name))
+    .map((provider) => ({ value: provider.id, label: provider.name }));
+  const capabilityOptions = [...new Set(taxonomy.data?.models.flatMap((model) => model.capabilities) ?? [])]
+    .sort(nameCollator.compare)
+    .map((capability) => ({ value: capability, label: capability }));
+  const modalityOptions = [
+    ...new Set(
+      taxonomy.data?.models.flatMap((model) => [
+        ...model.input_modalities.map((modality) => `input:${modality}`),
+        ...model.output_modalities.map((modality) => `output:${modality}`),
+      ]) ?? [],
+    ),
+  ]
+    .sort(nameCollator.compare)
+    .map((value) => {
+      const [direction, modality] = value.split(':');
+      return { value, label: `${direction === 'input' ? 'Input' : 'Output'}: ${modality}` };
+    });
   const filteredModels = catalog
     ?.filter(({ model }) => model.name.toLocaleLowerCase().includes(normalizedFilter))
-    .filter(({ model }) => providerFilter === ALL_FILTERS || model.provider_id === providerFilter)
-    .filter(({ model }) => capabilityFilter === ALL_FILTERS || model.capabilities.includes(capabilityFilter))
+    .filter(({ model }) => providerFilters.length === 0 || providerFilters.includes(model.provider_id))
+    .filter(({ model }) => capabilityFilters.every((capability) => model.capabilities.includes(capability)))
+    .filter(({ model }) => modalityFilters.every((modality) => supportsModality(model, modality)))
     .sort((left, right) => compareModels(left, right, sortKey, sortDirection));
 
   const sort = (key: SortKey) => {
@@ -352,21 +366,35 @@ export default function Models() {
               placeholder="Search models..."
               className="w-full sm:max-w-sm sm:flex-1"
             />
-            <Dropdown
+            <CheckboxDropdown
               aria-label="Filter by provider"
-              value={providerFilter}
-              onValueChange={setProviderFilter}
+              label="Providers"
+              allLabel="All providers"
+              values={providerFilters}
+              onValuesChange={setProviderFilters}
               options={providerOptions}
               disabled={!catalog?.length}
               className="w-full sm:w-48"
             />
-            <Dropdown
+            <CheckboxDropdown
               aria-label="Filter by capability"
-              value={capabilityFilter}
-              onValueChange={setCapabilityFilter}
+              label="Capabilities"
+              allLabel="All capabilities"
+              values={capabilityFilters}
+              onValuesChange={setCapabilityFilters}
               options={capabilityOptions}
               disabled={!catalog?.length}
               className="w-full sm:w-52"
+            />
+            <CheckboxDropdown
+              aria-label="Filter by modality"
+              label="Modalities"
+              allLabel="All modalities"
+              values={modalityFilters}
+              onValuesChange={setModalityFilters}
+              options={modalityOptions}
+              disabled={!catalog?.length}
+              className="w-full sm:w-48"
             />
           </div>
           {catalog && (
