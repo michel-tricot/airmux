@@ -18,6 +18,7 @@ import { useAuthorization } from '@/features/permissions/hooks';
 import { accessKeyAccess } from '@/features/keys/policy';
 import { orgMemberAccess } from '@/features/members/policy';
 import { userAccess } from '@/features/users/policy';
+import { AccountKindBadge } from '@/components/shared/account-display';
 
 const addToOrgSchema = z.object({
   orgId: z.string().min(1, 'Select an organization'),
@@ -71,7 +72,7 @@ export default function UserDetail() {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <Badge variant={user.service_account ? 'secondary' : 'outline'}>{user.service_account ? 'SERVICE ACCOUNT' : 'HUMAN'}</Badge>
+          <AccountKindBadge serviceAccount={user.service_account} />
           {canDeleteUser && (
             <ConfirmButton
               variant="outline"

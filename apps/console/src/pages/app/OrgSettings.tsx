@@ -6,19 +6,7 @@ import { useCreateOrgServiceAccountMutation, useDeleteOrgServiceAccountMutation,
 import { useCreateInvitationMutation, useInvitations, useReissueInvitationMutation, useRevokeInvitationMutation } from '@/features/invitations/hooks';
 import { useWorkspaces } from '@/features/workspaces/hooks';
 import { useBundles, useOrgActivity, useRepublishBundleMutation } from '@/features/telemetry/hooks';
-import {
-  Avatar,
-  AvatarFallback,
-  Card,
-  Button,
-  Badge,
-  ConfirmButton,
-  Input,
-  Tabs,
-  TabsList,
-  TabsTrigger,
-  TabsContent,
-} from '@/components/ui/elements';
+import { Card, Button, Badge, ConfirmButton, Input, Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/elements';
 import { Plus, Key, KeyRound, Settings, Package, RefreshCw, Users, Activity, UserPlus, Ban, Bot, Trash2 } from 'lucide-react';
 import { formatDate, formatRelative } from '@/lib/format';
 import { KeyRevealDialog } from '@/components/KeyRevealDialog';
@@ -35,6 +23,7 @@ import { accessKeyAccess } from '@/features/keys/policy';
 import { orgMemberAccess } from '@/features/members/policy';
 import { telemetryAccess } from '@/features/telemetry/policy';
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { AccountIdentity, AccountKindBadge } from '@/components/shared/account-display';
 
 const orgServiceAccountSchema = accessKeyFormSchema.extend({
   name: z.string().trim().min(1, 'Name is required').max(200, 'Name must be 200 characters or fewer'),
@@ -227,30 +216,19 @@ export default function AppOrgSettings() {
                   empty="No members found."
                   columns={[
                     {
-                      key: 'name',
-                      header: 'Name',
+                      key: 'user',
+                      header: 'User',
                       cellClassName: 'font-medium',
-                      cell: (member) => (
-                        <span className="flex items-center gap-2">
-                          <Avatar aria-hidden="true" className="h-6 w-6">
-                            <AvatarFallback className="bg-primary/10 text-xs font-bold text-primary">{member.name.charAt(0)}</AvatarFallback>
-                          </Avatar>
-                          {member.name}
-                        </span>
-                      ),
+                      cell: (member) => <AccountIdentity name={member.name} />,
                     },
                     { key: 'email', header: 'Email', cellClassName: 'text-muted-foreground', cell: (member) => member.email },
                     { key: 'role', header: 'Role', cellClassName: 'text-muted-foreground', cell: (member) => member.role },
                     {
                       key: 'kind',
-                      header: 'Account type',
+                      header: 'Kind',
                       headClassName: 'text-right',
                       cellClassName: 'text-right',
-                      cell: (member) => (
-                        <Badge variant={member.service_account ? 'secondary' : 'outline'}>
-                          {member.service_account ? 'Service account' : 'User'}
-                        </Badge>
-                      ),
+                      cell: (member) => <AccountKindBadge serviceAccount={member.service_account} />,
                     },
                     ...(canIssueKey || canDeleteServiceAccount
                       ? [

@@ -119,6 +119,7 @@ describe('organization service accounts', () => {
     });
     await user.click(screen.getByRole('button', { name: 'I have saved it' }));
     expect(await screen.findByText('Deploy Bot')).toBeInTheDocument();
+    expect(screen.getByText('SERVICE')).toBeInTheDocument();
     expect(screen.queryByDisplayValue('sk-cp-show-once-secret')).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Generate replacement key for Deploy Bot' }));
