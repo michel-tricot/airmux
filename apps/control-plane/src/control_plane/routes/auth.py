@@ -153,6 +153,7 @@ async def signup(body: SignupIn, request: Request, response: Response) -> Envelo
 @router.post("/logout", tags=["Auth"], dependencies=[browser_scoped()])
 async def logout(
     response: Response,
+    _user: CookieUserDep,
     session_cookie: SessionCookie = None,
     x_requested_with: RequestedWith = None,
     sec_fetch_site: FetchSite = None,
