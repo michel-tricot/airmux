@@ -1186,6 +1186,7 @@ class UserOut(BaseModel):
     name: Annotated[str, Field(title="Name")]
     instance_role: Annotated[str | None, Field(title="Instance Role")]
     service_account: Annotated[bool, Field(title="Service Account")]
+    managing_org_id: Annotated[UUID | None, Field(title="Managing Org Id")]
     created_at: Annotated[AwareDatetime, Field(title="Created At")]
     updated_at: Annotated[AwareDatetime, Field(title="Updated At")]
     deleted_at: Annotated[AwareDatetime | None, Field(title="Deleted At")]
@@ -1264,7 +1265,7 @@ class WorkspaceUpdate(BaseModel):
     name: Annotated[Name1 | None, Field(description="Replacement workspace name", title="Name")] = None
 
 
-class AccessKeyIn(BaseModel):
+class AccessKeyGrantIn(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
     )
@@ -1277,13 +1278,6 @@ class AccessKeyIn(BaseModel):
             title="Label",
         ),
     ]
-    user_id: Annotated[
-        UUID | None,
-        Field(
-            description="Principal the key authenticates; defaults to the authenticated principal",
-            title="User Id",
-        ),
-    ] = None
     permissions: Annotated[
         list[Permission],
         Field(
@@ -1297,6 +1291,43 @@ class AccessKeyIn(BaseModel):
         Field(
             description="Optional expiration timestamp with a timezone",
             title="Expires At",
+        ),
+    ] = None
+
+
+class AccessKeyIn(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    label: Annotated[
+        str,
+        Field(
+            description="Where this key lives, such as ci, laptop, or data-plane",
+            max_length=80,
+            min_length=1,
+            title="Label",
+        ),
+    ]
+    permissions: Annotated[
+        list[Permission],
+        Field(
+            description="Explicit maximum permissions carried by the key",
+            min_length=1,
+            title="Permissions",
+        ),
+    ]
+    expires_at: Annotated[
+        AwareDatetime | None,
+        Field(
+            description="Optional expiration timestamp with a timezone",
+            title="Expires At",
+        ),
+    ] = None
+    user_id: Annotated[
+        UUID | None,
+        Field(
+            description="Principal the key authenticates; defaults to the authenticated principal",
+            title="User Id",
         ),
     ] = None
 
@@ -1472,6 +1503,7 @@ class OrgMemberOut(BaseModel):
     service_account: Annotated[bool, Field(title="Service Account")]
     role: OrgRole
     status: Annotated[Literal["member"], Field(title="Status")]
+    managed: Annotated[bool | None, Field(title="Managed")] = False
 
 
 class OrgMembershipIn(BaseModel):
@@ -1479,6 +1511,25 @@ class OrgMembershipIn(BaseModel):
         extra="forbid",
     )
     role: Annotated[OrgRole, Field(description="Organization role to grant")]
+
+
+class OrgServiceAccountIn(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    name: Annotated[
+        str,
+        Field(
+            description="Display name for the service account",
+            max_length=200,
+            min_length=1,
+            title="Name",
+        ),
+    ]
+    access_key: Annotated[
+        AccessKeyGrantIn,
+        Field(description="Initial organization-scoped management key to issue for the service account"),
+    ]
 
 
 class Scope(BaseModel):
@@ -1571,3 +1622,13 @@ class EnvelopeListOrgMemberOut(BaseModel):
 
 class EnvelopeListWorkspaceMembershipOut(BaseModel):
     data: Annotated[list[WorkspaceMembershipOut], Field(title="Data")]
+
+
+class OrgServiceAccountMintedOut(BaseModel):
+    service_account: UserOut
+    membership: MembershipOut
+    access_key: AccessKeyMintedOut
+
+
+class EnvelopeOrgServiceAccountMintedOut(BaseModel):
+    data: OrgServiceAccountMintedOut
