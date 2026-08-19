@@ -81,6 +81,8 @@ import type {
   OrgMemberOut,
   OrgMembershipIn,
   OrgOut,
+  OrgServiceAccountIn,
+  OrgServiceAccountMintedOut,
   OrgUpdate,
   PasswordChangeIn,
   PasswordChangedOut,
@@ -5268,6 +5270,157 @@ export const useRemoveOrgUser = <TError = ErrorType<void | HTTPValidationError>,
         TContext
       > => {
       return useMutation(getRemoveOrgUserMutationOptions(options));
+    }
+
+export const getCreateOrgServiceAccountUrl = (orgId: string,) => {
+
+
+
+
+  return `/api/v1/orgs/${orgId}/service-accounts`
+}
+
+/**
+ * Create an organization-managed service account and issue its first management key.
+ *
+ * Required permissions: `members.manage` and `access-keys.issue`.
+ * @summary Create Organization Service Account
+ */
+export const createOrgServiceAccount = async (orgId: string,
+    orgServiceAccountIn: OrgServiceAccountIn, options?: Parameters<typeof customFetch>[1]): Promise<OrgServiceAccountMintedOut> => {
+
+  return customFetch<OrgServiceAccountMintedOut>(getCreateOrgServiceAccountUrl(orgId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(orgServiceAccountIn)
+  }
+);}
+
+
+
+
+
+export const getCreateOrgServiceAccountMutationOptions = <TError = ErrorType<void | HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createOrgServiceAccount>>, TError,{orgId: string;data: BodyType<OrgServiceAccountIn>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createOrgServiceAccount>>, TError,{orgId: string;data: BodyType<OrgServiceAccountIn>}, TContext> => {
+
+const mutationKey = ['createOrgServiceAccount'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createOrgServiceAccount>>, {orgId: string;data: BodyType<OrgServiceAccountIn>}> = (props) => {
+          const {orgId,data} = props ?? {};
+
+          return  createOrgServiceAccount(orgId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateOrgServiceAccountMutationResult = NonNullable<Awaited<ReturnType<typeof createOrgServiceAccount>>>
+    export type CreateOrgServiceAccountMutationBody = BodyType<OrgServiceAccountIn>
+    export type CreateOrgServiceAccountMutationError = ErrorType<void | HTTPValidationError>
+
+    /**
+ * @summary Create Organization Service Account
+ */
+export const useCreateOrgServiceAccount = <TError = ErrorType<void | HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createOrgServiceAccount>>, TError,{orgId: string;data: BodyType<OrgServiceAccountIn>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createOrgServiceAccount>>,
+        TError,
+        {orgId: string;data: BodyType<OrgServiceAccountIn>},
+        TContext
+      > => {
+      return useMutation(getCreateOrgServiceAccountMutationOptions(options));
+    }
+
+export const getDeleteOrgServiceAccountUrl = (orgId: string,
+    userId: string,) => {
+
+
+
+
+  return `/api/v1/orgs/${orgId}/service-accounts/${userId}`
+}
+
+/**
+ * Delete an organization-managed service account and its control-plane credentials.
+ *
+ * Required permissions: `members.manage` and `access-keys.revoke`.
+ * @summary Delete Organization Service Account
+ */
+export const deleteOrgServiceAccount = async (orgId: string,
+    userId: string, options?: Parameters<typeof customFetch>[1]): Promise<DeletedOutUUID> => {
+
+  return customFetch<DeletedOutUUID>(getDeleteOrgServiceAccountUrl(orgId,userId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteOrgServiceAccountMutationOptions = <TError = ErrorType<void | HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteOrgServiceAccount>>, TError,{orgId: string;userId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteOrgServiceAccount>>, TError,{orgId: string;userId: string}, TContext> => {
+
+const mutationKey = ['deleteOrgServiceAccount'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteOrgServiceAccount>>, {orgId: string;userId: string}> = (props) => {
+          const {orgId,userId} = props ?? {};
+
+          return  deleteOrgServiceAccount(orgId,userId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteOrgServiceAccountMutationResult = NonNullable<Awaited<ReturnType<typeof deleteOrgServiceAccount>>>
+
+    export type DeleteOrgServiceAccountMutationError = ErrorType<void | HTTPValidationError>
+
+    /**
+ * @summary Delete Organization Service Account
+ */
+export const useDeleteOrgServiceAccount = <TError = ErrorType<void | HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteOrgServiceAccount>>, TError,{orgId: string;userId: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteOrgServiceAccount>>,
+        TError,
+        {orgId: string;userId: string},
+        TContext
+      > => {
+      return useMutation(getDeleteOrgServiceAccountMutationOptions(options));
     }
 
 export const getRepublishBundleUrl = (orgId: string,) => {

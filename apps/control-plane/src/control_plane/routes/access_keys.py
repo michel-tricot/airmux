@@ -49,7 +49,7 @@ async def _list_access_keys(scope: Scope, user_id: UUID | None) -> Envelope[list
     return Envelope(data=[_out(key, now) for key in keys])
 
 
-async def _create_access_key(body: AccessKeyIn, actor: Actor, scope: Scope) -> Envelope[AccessKeyMintedOut]:
+async def issue_access_key(body: AccessKeyIn, actor: Actor, scope: Scope) -> AccessKeyMintedOut:
     now = datetime.now(tz=UTC)
     if body.expires_at is not None and body.expires_at <= now:
         raise HTTPException(status_code=422, detail="expires_at must be in the future")
@@ -71,7 +71,11 @@ async def _create_access_key(body: AccessKeyIn, actor: Actor, scope: Scope) -> E
     key = await AccessKey.find_by_id(key_id)
     if key is None:
         raise HTTPException(status_code=500, detail="Access key was not persisted")
-    return Envelope(data=AccessKeyMintedOut.model_validate({**key.model_dump(), "scope": key.scope, "status": key.status(now), "token": token}))
+    return AccessKeyMintedOut.model_validate({**key.model_dump(), "scope": key.scope, "status": key.status(now), "token": token})
+
+
+async def _create_access_key(body: AccessKeyIn, actor: Actor, scope: Scope) -> Envelope[AccessKeyMintedOut]:
+    return Envelope(data=await issue_access_key(body, actor, scope))
 
 
 @router.get("/instance/access-keys", tags=["Instance Access Keys"], dependencies=[require(instance_scope, Permission.access_keys_read)])

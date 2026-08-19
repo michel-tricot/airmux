@@ -17,6 +17,7 @@ export interface UserOut {
   name: string;
   instance_role: string | null;
   service_account: boolean;
+  managing_org_id: string | null;
   created_at: Date;
   updated_at: Date;
   deleted_at: Date | null;

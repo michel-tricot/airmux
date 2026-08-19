@@ -402,6 +402,30 @@ export const operationAuthority = {
       },
     ],
   },
+  createOrgServiceAccount: {
+    checks: [
+      {
+        scope: "org_scope",
+        anyOf: ["members.manage"],
+      },
+      {
+        scope: "org_scope",
+        anyOf: ["access-keys.issue"],
+      },
+    ],
+  },
+  deleteOrgServiceAccount: {
+    checks: [
+      {
+        scope: "org_scope",
+        anyOf: ["members.manage"],
+      },
+      {
+        scope: "org_scope",
+        anyOf: ["access-keys.revoke"],
+      },
+    ],
+  },
   republishBundle: {
     checks: [
       {

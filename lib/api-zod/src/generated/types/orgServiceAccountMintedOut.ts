@@ -10,22 +10,12 @@
  *
  * OpenAPI spec version: 0.1.0
  */
-import type { Permission } from './permission';
+import type { AccessKeyMintedOut } from './accessKeyMintedOut';
+import type { MembershipOut } from './membershipOut';
+import type { UserOut } from './userOut';
 
-export interface AccessKeyIn {
-  /**
-     * Where this key lives, such as ci, laptop, or data-plane
-     * @minLength 1
-     * @maxLength 80
-     */
-  label: string;
-  /**
-     * Explicit maximum permissions carried by the key
-     * @minItems 1
-     */
-  permissions: Permission[];
-  /** Optional expiration timestamp with a timezone */
-  expires_at?: Date | null;
-  /** Principal the key authenticates; defaults to the authenticated principal */
-  user_id?: string | null;
+export interface OrgServiceAccountMintedOut {
+  service_account: UserOut;
+  membership: MembershipOut;
+  access_key: AccessKeyMintedOut;
 }

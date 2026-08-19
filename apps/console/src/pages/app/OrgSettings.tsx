@@ -1,19 +1,32 @@
 import { useState } from 'react';
+import * as z from 'zod';
 import { useRequiredOrgId } from '@/lib/session';
 import { useOrgAccessKeys, useCreateOrgAccessKeyMutation, useRevokeOrgAccessKeyMutation } from '@/features/keys/hooks';
-import { useOrgMembers } from '@/features/members/hooks';
+import { useCreateOrgServiceAccountMutation, useDeleteOrgServiceAccountMutation, useOrgMembers } from '@/features/members/hooks';
 import { useCreateInvitationMutation, useInvitations, useReissueInvitationMutation, useRevokeInvitationMutation } from '@/features/invitations/hooks';
 import { useWorkspaces } from '@/features/workspaces/hooks';
 import { useBundles, useOrgActivity, useRepublishBundleMutation } from '@/features/telemetry/hooks';
-import { Avatar, AvatarFallback, Card, Button, Badge, ConfirmButton, Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/elements';
-import { Plus, Key, Settings, Package, RefreshCw, Users, Activity, UserPlus, Ban } from 'lucide-react';
+import {
+  Avatar,
+  AvatarFallback,
+  Card,
+  Button,
+  Badge,
+  ConfirmButton,
+  Input,
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  TabsContent,
+} from '@/components/ui/elements';
+import { Plus, Key, Settings, Package, RefreshCw, Users, Activity, UserPlus, Ban, Bot, Trash2 } from 'lucide-react';
 import { formatDate, formatRelative } from '@/lib/format';
 import { KeyRevealDialog } from '@/components/KeyRevealDialog';
 import { PageShell } from '@/components/shared/page-shell';
 import { DataTable } from '@/components/shared/data-table';
 import { FormDialog } from '@/components/shared/form-dialog';
 import { ApiKeysTable } from '@/components/shared/api-keys-table';
-import { AccessKeyFormFields, accessKeyFormSchema } from '@/components/shared/access-key-form';
+import { AccessKeyFormFields, PermissionChecklist, accessKeyFormSchema } from '@/components/shared/access-key-form';
 import { PermissionsCell } from '@/components/shared/permissions-cell';
 import { InvitationDialog, invitationRequest } from '@/components/shared/invitation-dialog';
 import { OneTimeValueDialog } from '@/components/shared/one-time-value-dialog';
@@ -21,6 +34,11 @@ import { useAuthorization } from '@/features/permissions/hooks';
 import { accessKeyAccess } from '@/features/keys/policy';
 import { orgMemberAccess } from '@/features/members/policy';
 import { telemetryAccess } from '@/features/telemetry/policy';
+import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+
+const orgServiceAccountSchema = accessKeyFormSchema.extend({
+  name: z.string().trim().min(1, 'Name is required').max(200, 'Name must be 200 characters or fewer'),
+});
 
 export default function AppOrgSettings() {
   const orgId = useRequiredOrgId();
@@ -35,6 +53,8 @@ export default function AppOrgSettings() {
   const canCreateInvitations = authorization.can(orgMemberAccess.invite);
   const canReissueInvitations = authorization.can(orgMemberAccess.reissueInvitation);
   const canRevokeInvitations = authorization.can(orgMemberAccess.revokeInvitation);
+  const canCreateServiceAccount = authorization.can(orgMemberAccess.createServiceAccount);
+  const canDeleteServiceAccount = authorization.can(orgMemberAccess.deleteServiceAccount);
   const canReadActivity = authorization.can(telemetryAccess.orgActivity);
 
   const keysQuery = useOrgAccessKeys(orgId, undefined, { enabled: canReadKeys });
@@ -48,6 +68,7 @@ export default function AppOrgSettings() {
   const [keyOpen, setKeyOpen] = useState(false);
   const [token, setToken] = useState<string | null>(null);
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [serviceAccountOpen, setServiceAccountOpen] = useState(false);
   const [invitationUrl, setInvitationUrl] = useState<string | null>(null);
 
   const keyLabels = new Map(keysQuery.data?.map((key) => [key.id, key.label] as const) ?? []);
@@ -59,6 +80,8 @@ export default function AppOrgSettings() {
   const createInvitation = useCreateInvitationMutation(orgId);
   const reissueInvitation = useReissueInvitationMutation(orgId);
   const revokeInvitation = useRevokeInvitationMutation(orgId);
+  const createServiceAccount = useCreateOrgServiceAccountMutation(orgId);
+  const deleteServiceAccount = useDeleteOrgServiceAccountMutation(orgId);
   const workspaceNames = new Map(workspacesQuery.data?.map((workspace) => [workspace.id, workspace.name] as const) ?? []);
   const defaultTab = canReadKeys ? 'keys' : canReadBundles ? 'bundles' : canReadMembers || canListInvitations ? 'members' : 'activity';
 
@@ -170,11 +193,18 @@ export default function AppOrgSettings() {
           <TabsContent value="members" className="space-y-4 mt-0">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-lg font-semibold">{canReadMembers ? 'Organization Members' : 'Organization Invitations'}</h2>
-              {canCreateInvitations && (
-                <Button size="sm" onClick={() => setInviteOpen(true)} disabled={workspacesQuery.isLoading || workspacesQuery.isError}>
-                  <UserPlus className="w-4 h-4 mr-1" /> Invite by email
-                </Button>
-              )}
+              <div className="flex items-center gap-2">
+                {canCreateServiceAccount && (
+                  <Button size="sm" variant="outline" onClick={() => setServiceAccountOpen(true)}>
+                    <Bot className="w-4 h-4 mr-1" /> Create service account
+                  </Button>
+                )}
+                {canCreateInvitations && (
+                  <Button size="sm" onClick={() => setInviteOpen(true)} disabled={workspacesQuery.isLoading || workspacesQuery.isError}>
+                    <UserPlus className="w-4 h-4 mr-1" /> Invite by email
+                  </Button>
+                )}
+              </div>
             </div>
             {canReadMembers && (
               <Card>
@@ -214,6 +244,29 @@ export default function AppOrgSettings() {
                         </Badge>
                       ),
                     },
+                    ...(canDeleteServiceAccount
+                      ? [
+                          {
+                            key: 'actions',
+                            header: 'Actions',
+                            headClassName: 'text-right',
+                            cellClassName: 'text-right',
+                            cell: (member: NonNullable<typeof members>[number]) =>
+                              member.managed ? (
+                                <ConfirmButton
+                                  title={`Delete ${member.name}?`}
+                                  description="The service account and all of its control-plane access keys will stop working immediately."
+                                  confirmLabel="Delete service account"
+                                  pending={deleteServiceAccount.isPending}
+                                  aria-label={`Delete service account ${member.name}`}
+                                  onConfirm={() => deleteServiceAccount.mutateAsync({ orgId, userId: member.user_id })}
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </ConfirmButton>
+                              ) : null,
+                          },
+                        ]
+                      : []),
                   ]}
                 />
               </Card>
@@ -400,6 +453,78 @@ export default function AppOrgSettings() {
       )}
 
       <KeyRevealDialog open={!!token} onOpenChange={(v) => !v && setToken(null)} token={token} />
+
+      {canCreateServiceAccount && (
+        <FormDialog
+          open={serviceAccountOpen}
+          onOpenChange={setServiceAccountOpen}
+          title="Create a service account"
+          description="This creates an organization admin for automation and a management key shown only once."
+          schema={orgServiceAccountSchema}
+          defaultValues={{ name: '', label: '', permissions: [] }}
+          onSubmit={async (values) => {
+            const minted = await createServiceAccount.mutateAsync({
+              orgId,
+              data: { name: values.name, access_key: { label: values.label, permissions: values.permissions } },
+            });
+            setToken(minted.access_key.token);
+          }}
+          submitLabel="Create service account"
+          pendingLabel="Creating..."
+          pending={createServiceAccount.isPending}
+          submitDisabled={authorization.isFetching || authorization.isError || !canCreateServiceAccount}
+        >
+          {(form) => (
+            <>
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Service account name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g. Deploy Bot" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="label"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Key label</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g. deployment-management" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="permissions"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Key permissions</FormLabel>
+                    <PermissionChecklist
+                      value={field.value}
+                      onChange={field.onChange}
+                      availablePermissions={authorization.permissions}
+                      canIssue={canCreateServiceAccount}
+                      permissionsLoading={authorization.isFetching}
+                      permissionsError={authorization.error}
+                      onPermissionsRetry={() => authorization.refetch()}
+                    />
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </>
+          )}
+        </FormDialog>
+      )}
 
       {canCreateInvitations && (
         <InvitationDialog

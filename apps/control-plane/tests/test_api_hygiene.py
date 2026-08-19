@@ -103,10 +103,11 @@ def test_permission_requirements_are_machine_readable():
         route.name: [
             {
                 "scope": dependency.call.required_scope,
-                "anyOf": [permission.value for permission in dependency.call.required_permissions],
+                "anyOf": [permission.value for permission in rule],
             }
             for dependency in route.dependant.dependencies
             if hasattr(dependency.call, "required_permissions")
+            for rule in dependency.call.required_permission_rules
         ]
         for route in _api_routes(app)
     }
@@ -119,6 +120,10 @@ def test_membership_and_workspace_docs_are_resource_specific():
         "list_org_users": ["Organization Members"],
         "add_org_user": ["Organization Members"],
         "remove_org_user": ["Organization Members"],
+    }
+    assert {operation: operations[operation] for operation in ("create_org_service_account", "delete_org_service_account")} == {
+        "create_org_service_account": ["Organization Service Accounts"],
+        "delete_org_service_account": ["Organization Service Accounts"],
     }
     assert {operation: operations[operation] for operation in ("create_workspace", "list_workspaces")} == {
         "create_workspace": ["Organization Workspaces"],
