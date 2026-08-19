@@ -63,9 +63,10 @@ export default function Invite() {
     return (
       <Login
         initialEmail={invitation.email}
+        initialMode="choice"
         emailReadOnly
         heading={`Join ${invitation.org_name}`}
-        description={`Sign in or create the ${invitation.email} account to accept access to ${destination}.`}
+        description={`This invitation is for ${invitation.email} and grants access to ${destination}. Create a new account or sign in to an existing one.`}
       />
     );
   }

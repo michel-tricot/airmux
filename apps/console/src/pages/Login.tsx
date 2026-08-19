@@ -20,25 +20,29 @@ const signupSchema = loginSchema.extend({
 });
 
 type Credentials = z.infer<typeof loginSchema>;
+type LoginMode = 'login' | 'signup';
+type InitialLoginMode = LoginMode | 'choice';
 
 export default function Login({
   initialEmail = '',
+  initialMode = 'login',
   emailReadOnly = false,
   heading,
   description,
 }: {
   initialEmail?: string;
+  initialMode?: InitialLoginMode;
   emailReadOnly?: boolean;
   heading?: string;
   description?: string;
 } = {}) {
   const queryClient = useQueryClient();
-  const [mode, setMode] = useState<'login' | 'signup'>('login');
+  const [mode, setMode] = useState<InitialLoginMode>(initialMode);
   const [submissionError, setSubmissionError] = useState<string | null>(null);
   const { data: claim } = useClaim();
 
   const form = useForm<Credentials>({
-    resolver: zodResolver(mode === 'login' ? loginSchema : signupSchema),
+    resolver: zodResolver(mode === 'signup' ? signupSchema : loginSchema),
     defaultValues: { email: initialEmail, name: '', password: '' },
   });
 
@@ -87,19 +91,23 @@ export default function Login({
           <div className="w-12 h-12 rounded bg-primary text-primary-foreground flex items-center justify-center mb-4 shadow-md">
             <TerminalSquare className="w-6 h-6" />
           </div>
-          <h1 className="text-xl font-mono font-bold tracking-widest uppercase">{heading ?? (mode === 'login' ? 'Sign in' : 'Create an account')}</h1>
+          <h1 className="text-xl font-mono font-bold tracking-widest uppercase">
+            {heading ?? (mode === 'choice' ? 'Continue' : mode === 'login' ? 'Sign in' : 'Create an account')}
+          </h1>
           <p className="text-muted-foreground text-sm mt-2 text-center max-w-sm">
             {description ??
-              (mode === 'login'
-                ? 'Sign in with your account credentials.'
-                : claim?.claimed === false
-                  ? 'The first account becomes the administrator.'
-                  : 'You can join or create an organization after signing up.')}
+              (mode === 'choice'
+                ? 'Choose whether to create an account or sign in.'
+                : mode === 'login'
+                  ? 'Sign in with your account credentials.'
+                  : claim?.claimed === false
+                    ? 'The first account becomes the administrator.'
+                    : 'You can join or create an organization after signing up.')}
           </p>
         </div>
 
         <Form {...form}>
-          <form onSubmit={submit} noValidate className="space-y-4">
+          <form onSubmit={mode === 'choice' ? (event) => event.preventDefault() : submit} noValidate className="space-y-4">
             <FormField
               control={form.control}
               name="email"
@@ -114,54 +122,69 @@ export default function Login({
               )}
             />
 
-            {mode === 'signup' && (
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Jane Doe" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
+            {mode === 'choice' ? (
+              <div className="space-y-3 pt-2">
+                <Button className="w-full" onClick={() => setMode('signup')}>
+                  Create account
+                </Button>
+                <Button variant="outline" className="w-full" onClick={() => setMode('login')}>
+                  Sign in to existing account
+                </Button>
+              </div>
+            ) : (
+              <>
+                {mode === 'signup' && (
+                  <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Name</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Jane Doe" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 )}
-              />
+
+                <FormField
+                  control={form.control}
+                  name="password"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Password</FormLabel>
+                      <FormControl>
+                        <Input type="password" autoComplete={mode === 'login' ? 'current-password' : 'new-password'} {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {submissionError && (
+                  <Alert variant="destructive">
+                    <div>
+                      <AlertTitle>{mode === 'login' ? 'Couldn’t sign in' : 'Couldn’t create account'}</AlertTitle>
+                      <AlertDescription>{submissionError}</AlertDescription>
+                    </div>
+                  </Alert>
+                )}
+
+                <Button type="submit" className="w-full" disabled={pending}>
+                  {pending ? (mode === 'login' ? 'Signing in...' : 'Creating account...') : mode === 'login' ? 'Sign in' : 'Create account'}
+                </Button>
+              </>
             )}
-
-            <FormField
-              control={form.control}
-              name="password"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Password</FormLabel>
-                  <FormControl>
-                    <Input type="password" autoComplete={mode === 'login' ? 'current-password' : 'new-password'} {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {submissionError && (
-              <Alert variant="destructive">
-                <div>
-                  <AlertTitle>{mode === 'login' ? 'Couldn’t sign in' : 'Couldn’t create account'}</AlertTitle>
-                  <AlertDescription>{submissionError}</AlertDescription>
-                </div>
-              </Alert>
-            )}
-
-            <Button type="submit" className="w-full" disabled={pending}>
-              {pending ? (mode === 'login' ? 'Signing in...' : 'Creating account...') : mode === 'login' ? 'Sign in' : 'Create account'}
-            </Button>
           </form>
         </Form>
 
-        <Button variant="ghost" className="w-full mt-4 text-muted-foreground hover:text-foreground" onClick={switchMode}>
-          {mode === 'login' ? 'No account? Sign up' : 'Already have an account? Sign in'}
-        </Button>
+        {mode !== 'choice' && (
+          <Button variant="ghost" className="w-full mt-4 text-muted-foreground hover:text-foreground" onClick={switchMode}>
+            {mode === 'login' ? 'No account? Sign up' : 'Already have an account? Sign in'}
+          </Button>
+        )}
       </Card>
     </div>
   );

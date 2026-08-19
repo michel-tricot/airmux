@@ -145,6 +145,72 @@ describe('organization invitations', () => {
     const email = screen.getByLabelText('Email');
     expect(email).toHaveValue('teammate@example.com');
     expect(email).toHaveAttribute('readonly');
+    expect(screen.queryByLabelText('Name')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Create account' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Sign in to existing account' })).toBeInTheDocument();
+  });
+
+  it('keeps the invitation available after sign-in fails', async () => {
+    server.use(
+      http.get('/api/v1/auth/me', () => new HttpResponse(null, { status: 401 })),
+      http.get('/api/v1/instance/oss/claim', () => HttpResponse.json({ claimed: true })),
+      http.post('/api/v1/enroll/invitations/preview', () =>
+        HttpResponse.json({
+          email: 'teammate@example.com',
+          org_id: ORG.id,
+          org_name: ORG.name,
+          org_role: 'member',
+          workspace_id: null,
+          workspace_name: null,
+          workspace_role: null,
+          expires_at: '2026-08-24T12:00:00Z',
+        }),
+      ),
+      http.post('/api/v1/auth/login', () => HttpResponse.json({ detail: 'Invalid credentials' }, { status: 401 })),
+    );
+    const user = userEvent.setup();
+    renderAt('/invite#token=invite-secret');
+
+    await screen.findByRole('heading', { name: `Join ${ORG.name}` });
+    await user.click(screen.getByRole('button', { name: 'Sign in to existing account' }));
+    await user.type(screen.getByLabelText('Password'), 'incorrect-password');
+    await user.click(screen.getByRole('button', { name: 'Sign in' }));
+
+    expect(await screen.findByText('Sign in failed. Check your email and password.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'No account? Sign up' })).toBeInTheDocument();
+    expect(screen.queryByText('This invitation link is missing its secret. Ask the sender for a new link.')).not.toBeInTheDocument();
+  });
+
+  it('creates the invited account without losing the invitation', async () => {
+    server.use(
+      http.get('/api/v1/auth/me', () => new HttpResponse(null, { status: 401 })),
+      http.get('/api/v1/instance/oss/claim', () => HttpResponse.json({ claimed: true })),
+      http.post('/api/v1/enroll/invitations/preview', () =>
+        HttpResponse.json({
+          email: 'teammate@example.com',
+          org_id: ORG.id,
+          org_name: ORG.name,
+          org_role: 'member',
+          workspace_id: null,
+          workspace_name: null,
+          workspace_role: null,
+          expires_at: '2026-08-24T12:00:00Z',
+        }),
+      ),
+      http.post('/api/v1/auth/signup', () =>
+        HttpResponse.json({ user_id: 'user-2', email: 'teammate@example.com', name: 'Teammate', instance_role: null, orgs: [] }),
+      ),
+    );
+    const user = userEvent.setup();
+    renderAt('/invite#token=invite-secret');
+
+    await user.click(await screen.findByRole('button', { name: 'Create account' }));
+    await user.type(screen.getByLabelText('Name'), 'Teammate');
+    await user.type(screen.getByLabelText('Password'), 'new-password');
+    await user.click(screen.getByRole('button', { name: 'Create account' }));
+
+    expect(await screen.findByRole('button', { name: 'Accept invitation' })).toBeInTheDocument();
+    expect(screen.queryByText('This invitation link is missing its secret. Ask the sender for a new link.')).not.toBeInTheDocument();
   });
 
   it('does not let a mismatched signed-in account accept', async () => {
