@@ -8,7 +8,7 @@ import { useWorkspaces } from '@/features/workspaces/hooks';
 import { useBundles, useOrgActivity, useRepublishBundleMutation } from '@/features/telemetry/hooks';
 import { Card, Button, Badge, ConfirmButton, Input, Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/elements';
 import { Plus, Key, KeyRound, Settings, Package, RefreshCw, Users, Activity, UserPlus, Ban, Bot, Trash2 } from 'lucide-react';
-import { formatDate, formatRelative } from '@/lib/format';
+import { formatDate } from '@/lib/format';
 import { KeyRevealDialog } from '@/components/KeyRevealDialog';
 import { PageShell } from '@/components/shared/page-shell';
 import { DataTable } from '@/components/shared/data-table';
@@ -24,6 +24,8 @@ import { orgMemberAccess } from '@/features/members/policy';
 import { telemetryAccess } from '@/features/telemetry/policy';
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { AccountIdentity, AccountKindBadge } from '@/components/shared/account-display';
+import { ActivityTable } from '@/components/shared/activity-table';
+import { MembersPanel } from '@/components/shared/members-panel';
 
 const orgServiceAccountSchema = accessKeyFormSchema.extend({
   name: z.string().trim().min(1, 'Name is required').max(200, 'Name must be 200 characters or fewer'),
@@ -74,6 +76,20 @@ export default function AppOrgSettings() {
   const deleteServiceAccount = useDeleteOrgServiceAccountMutation(orgId);
   const workspaceNames = new Map(workspacesQuery.data?.map((workspace) => [workspace.id, workspace.name] as const) ?? []);
   const defaultTab = canReadKeys ? 'keys' : canReadBundles ? 'bundles' : canReadMembers || canListInvitations ? 'members' : 'activity';
+  const memberActions = (
+    <>
+      {canCreateServiceAccount && (
+        <Button size="sm" variant="outline" onClick={() => setServiceAccountOpen(true)}>
+          <Bot className="w-4 h-4 mr-1" /> Create service account
+        </Button>
+      )}
+      {canCreateInvitations && (
+        <Button size="sm" onClick={() => setInviteOpen(true)} disabled={workspacesQuery.isLoading || workspacesQuery.isError}>
+          <UserPlus className="w-4 h-4 mr-1" /> Invite by email
+        </Button>
+      )}
+    </>
+  );
 
   return (
     <PageShell className="max-w-5xl">
@@ -188,92 +204,73 @@ export default function AppOrgSettings() {
 
         {(canReadMembers || canListInvitations) && (
           <TabsContent value="members" className="space-y-4 mt-0">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-semibold">{canReadMembers ? 'Organization Members' : 'Organization Invitations'}</h2>
-              <div className="flex items-center gap-2">
-                {canCreateServiceAccount && (
-                  <Button size="sm" variant="outline" onClick={() => setServiceAccountOpen(true)}>
-                    <Bot className="w-4 h-4 mr-1" /> Create service account
-                  </Button>
-                )}
-                {canCreateInvitations && (
-                  <Button size="sm" onClick={() => setInviteOpen(true)} disabled={workspacesQuery.isLoading || workspacesQuery.isError}>
-                    <UserPlus className="w-4 h-4 mr-1" /> Invite by email
-                  </Button>
-                )}
+            {canReadMembers ? (
+              <MembersPanel
+                heading="Organization Members"
+                members={members}
+                isLoading={membersQuery.isLoading}
+                isError={membersQuery.isError}
+                error={membersQuery.error}
+                onRetry={() => membersQuery.refetch()}
+                emptyText="No members found."
+                renderName={(member) => <AccountIdentity name={member.name} />}
+                actions={memberActions}
+                extraColumns={[
+                  {
+                    key: 'kind',
+                    header: 'Kind',
+                    headClassName: 'text-right',
+                    cellClassName: 'text-right',
+                    cell: (member) => <AccountKindBadge serviceAccount={member.service_account} />,
+                  },
+                  ...(canIssueKey || canDeleteServiceAccount
+                    ? [
+                        {
+                          key: 'actions',
+                          header: 'Actions',
+                          headClassName: 'text-right',
+                          cellClassName: 'text-right',
+                          cell: (member: NonNullable<typeof members>[number]) =>
+                            member.managed ? (
+                              <span className="inline-flex items-center gap-1">
+                                {canIssueKey && (
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    aria-label={`Generate replacement key for ${member.name}`}
+                                    disabled={mintKey.isPending}
+                                    onClick={() => {
+                                      setKeyTarget({ userId: member.user_id, name: member.name });
+                                      setKeyOpen(true);
+                                    }}
+                                  >
+                                    <KeyRound className="w-4 h-4" />
+                                  </Button>
+                                )}
+                                {canDeleteServiceAccount && (
+                                  <ConfirmButton
+                                    title={`Delete ${member.name}?`}
+                                    description="The service account and all of its control-plane access keys will stop working immediately."
+                                    confirmLabel="Delete service account"
+                                    pending={deleteServiceAccount.isPending}
+                                    aria-label={`Delete service account ${member.name}`}
+                                    onConfirm={() => deleteServiceAccount.mutateAsync({ orgId, userId: member.user_id })}
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </ConfirmButton>
+                                )}
+                              </span>
+                            ) : null,
+                        },
+                      ]
+                    : []),
+                ]}
+              />
+            ) : (
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-lg font-semibold">Organization Invitations</h2>
+                <div className="flex items-center gap-2">{memberActions}</div>
               </div>
-            </div>
-            {canReadMembers && (
-              <Card>
-                <DataTable
-                  rows={members}
-                  rowKey={(member) => member.user_id}
-                  isLoading={membersQuery.isLoading}
-                  isError={membersQuery.isError}
-                  error={membersQuery.error}
-                  resource="members"
-                  onRetry={() => membersQuery.refetch()}
-                  empty="No members found."
-                  columns={[
-                    {
-                      key: 'user',
-                      header: 'User',
-                      cellClassName: 'font-medium',
-                      cell: (member) => <AccountIdentity name={member.name} />,
-                    },
-                    { key: 'email', header: 'Email', cellClassName: 'text-muted-foreground', cell: (member) => member.email },
-                    { key: 'role', header: 'Role', cellClassName: 'text-muted-foreground', cell: (member) => member.role },
-                    {
-                      key: 'kind',
-                      header: 'Kind',
-                      headClassName: 'text-right',
-                      cellClassName: 'text-right',
-                      cell: (member) => <AccountKindBadge serviceAccount={member.service_account} />,
-                    },
-                    ...(canIssueKey || canDeleteServiceAccount
-                      ? [
-                          {
-                            key: 'actions',
-                            header: 'Actions',
-                            headClassName: 'text-right',
-                            cellClassName: 'text-right',
-                            cell: (member: NonNullable<typeof members>[number]) =>
-                              member.managed ? (
-                                <span className="inline-flex items-center gap-1">
-                                  {canIssueKey && (
-                                    <Button
-                                      size="icon"
-                                      variant="ghost"
-                                      aria-label={`Generate replacement key for ${member.name}`}
-                                      disabled={mintKey.isPending}
-                                      onClick={() => {
-                                        setKeyTarget({ userId: member.user_id, name: member.name });
-                                        setKeyOpen(true);
-                                      }}
-                                    >
-                                      <KeyRound className="w-4 h-4" />
-                                    </Button>
-                                  )}
-                                  {canDeleteServiceAccount && (
-                                    <ConfirmButton
-                                      title={`Delete ${member.name}?`}
-                                      description="The service account and all of its control-plane access keys will stop working immediately."
-                                      confirmLabel="Delete service account"
-                                      pending={deleteServiceAccount.isPending}
-                                      aria-label={`Delete service account ${member.name}`}
-                                      onConfirm={() => deleteServiceAccount.mutateAsync({ orgId, userId: member.user_id })}
-                                    >
-                                      <Trash2 className="w-4 h-4" />
-                                    </ConfirmButton>
-                                  )}
-                                </span>
-                              ) : null,
-                          },
-                        ]
-                      : []),
-                  ]}
-                />
-              </Card>
             )}
 
             {canListInvitations && (
@@ -369,57 +366,15 @@ export default function AppOrgSettings() {
               <h2 className="text-lg font-semibold">Recent activity</h2>
             </div>
             <Card>
-              <DataTable
-                rows={activityQuery.data}
-                rowKey={(entry) => String(entry.id)}
+              <ActivityTable
+                entries={activityQuery.data}
                 isLoading={activityQuery.isLoading}
                 isError={activityQuery.isError}
                 error={activityQuery.error}
-                resource="activity"
                 onRetry={() => activityQuery.refetch()}
-                empty="Nothing has changed in this org yet."
-                columns={[
-                  {
-                    key: 'change',
-                    header: 'Change',
-                    cell: (entry) => (
-                      <Badge
-                        variant={entry.action === 'delete' ? 'destructive' : entry.action === 'create' ? 'success' : 'secondary'}
-                        className="font-mono"
-                      >
-                        {entry.action}
-                      </Badge>
-                    ),
-                  },
-                  {
-                    key: 'item',
-                    header: 'Item',
-                    cellClassName: 'font-medium',
-                    cell: (entry) => {
-                      const label = describeRecord(entry);
-                      return (
-                        <>
-                          {entry.table_name}
-                          {label && <span className="ml-2 text-muted-foreground">“{label}”</span>}
-                          <div className="text-xs text-muted-foreground font-mono">{entry.record_id}</div>
-                        </>
-                      );
-                    },
-                  },
-                  {
-                    key: 'actor',
-                    header: 'Changed by',
-                    cellClassName: 'font-mono text-xs text-muted-foreground',
-                    cell: (entry) => members?.find((m) => m.user_id === entry.user_id)?.email ?? entry.user_id,
-                  },
-                  {
-                    key: 'when',
-                    header: 'When',
-                    headClassName: 'text-right',
-                    cellClassName: 'text-right text-muted-foreground text-sm',
-                    cell: (entry) => formatRelative(entry.occurred_at),
-                  },
-                ]}
+                emptyText="Nothing has changed in this org yet."
+                recordLabel={describeRecord}
+                renderActor={(entry) => members?.find((member) => member.user_id === entry.user_id)?.email ?? entry.user_id}
               />
             </Card>
           </TabsContent>

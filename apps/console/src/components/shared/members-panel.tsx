@@ -25,6 +25,7 @@ interface MembersPanelProps<T extends MemberRow> {
   emptyText: string;
   renderName?: (member: T) => ReactNode;
   renderEmail?: (member: T) => ReactNode;
+  extraColumns?: Array<Column<T>>;
   actions?: ReactNode;
   add?: {
     candidates: Array<{ value: string; label: string }>;
@@ -54,6 +55,7 @@ export function MembersPanel<T extends MemberRow>({
   emptyText,
   renderName,
   renderEmail,
+  extraColumns = [],
   actions,
   add,
   remove,
@@ -74,6 +76,7 @@ export function MembersPanel<T extends MemberRow>({
       cell: (member) => (renderEmail ? renderEmail(member) : (member.email ?? member.user_id)),
     },
     { key: 'role', header: 'Role', cellClassName: 'text-muted-foreground', cell: (member) => member.role },
+    ...extraColumns,
   ];
   if (remove) {
     columns.push({

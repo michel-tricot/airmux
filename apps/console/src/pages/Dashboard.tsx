@@ -6,6 +6,7 @@ import { useUsers } from '@/features/users/hooks';
 import { useInstanceAccessKeys } from '@/features/keys/hooks';
 import { useDataPlanes, useInstanceActivity } from '@/features/telemetry/hooks';
 import { DataTable } from '@/components/shared/data-table';
+import { ActivityTable } from '@/components/shared/activity-table';
 import { ErrorState } from '@/components/shared/states';
 import { PageHeader, PageShell } from '@/components/shared/page-shell';
 import { useAuthorization } from '@/features/permissions/hooks';
@@ -132,54 +133,15 @@ export default function Dashboard() {
             </div>
           </CardHeader>
           <CardContent>
-            <DataTable
-              rows={activityQuery.data}
-              rowKey={(entry) => String(entry.id)}
+            <ActivityTable
+              entries={activityQuery.data}
               isLoading={activityQuery.isLoading}
               isError={activityQuery.isError}
               error={activityQuery.error}
-              resource="activity"
               onRetry={() => activityQuery.refetch()}
-              loadingLabel="Loading activity..."
-              empty="Nothing has changed on this instance yet."
-              columns={[
-                {
-                  key: 'action',
-                  header: 'Action',
-                  headClassName: 'w-[120px]',
-                  cell: (entry) => (
-                    <Badge
-                      variant={entry.action === 'delete' ? 'destructive' : entry.action === 'create' ? 'success' : 'secondary'}
-                      className="font-mono"
-                    >
-                      {entry.action}
-                    </Badge>
-                  ),
-                },
-                {
-                  key: 'resource',
-                  header: 'Resource',
-                  cellClassName: 'font-medium',
-                  cell: (entry) => {
-                    const label = describeRecord(entry);
-                    return (
-                      <>
-                        {entry.table_name}
-                        {label && <span className="ml-2 text-muted-foreground">“{label}”</span>}
-                        <div className="text-xs text-muted-foreground font-mono">{entry.record_id}</div>
-                      </>
-                    );
-                  },
-                },
-                { key: 'actor', header: 'Actor', cellClassName: 'text-muted-foreground text-sm', cell: (entry) => actor(entry.user_id) },
-                {
-                  key: 'when',
-                  header: 'When',
-                  headClassName: 'text-right',
-                  cellClassName: 'text-right text-muted-foreground text-sm',
-                  cell: (entry) => formatRelative(entry.occurred_at),
-                },
-              ]}
+              emptyText="Nothing has changed on this instance yet."
+              recordLabel={describeRecord}
+              renderActor={(entry) => actor(entry.user_id)}
             />
           </CardContent>
         </Card>

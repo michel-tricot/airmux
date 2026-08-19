@@ -22,7 +22,7 @@ interface ApiKeysTableProps<T extends ApiKeyRow> {
   onRetry?: () => void;
   emptyText: string;
   extraColumns?: Array<Column<T>>;
-  revokeDescription: string;
+  revokeDescription?: string;
   onRevoke?: (key: T) => Promise<unknown>;
   revokePending?: boolean;
 }
@@ -77,7 +77,7 @@ export function ApiKeysTable<T extends ApiKeyRow>({
           <ConfirmButton
             size="sm"
             title={`Revoke "${key.label}"?`}
-            description={revokeDescription}
+            description={revokeDescription ?? 'This key will stop working immediately.'}
             confirmLabel="Revoke key"
             pending={revokePending}
             onConfirm={() => onRevoke(key)}
