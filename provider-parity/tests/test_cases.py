@@ -22,3 +22,13 @@ def test_parallel_tools_describes_the_interaction_in_one_place():
     assert case.requires.capabilities == frozenset({"tools", "parallel_tools"})
     assert case.oracle.tool_names == ("report_alpha", "report_beta")
     assert case.request.parallel_tool_calls
+
+
+def test_content_cases_leave_room_for_reasoning_tokens():
+    cases = {case.id: case for case in load_cases(CASES)}
+
+    assert cases["text.basic"].request.max_tokens >= 512
+    assert cases["text.multi-turn"].request.max_tokens >= 512
+    assert cases["structured-output.json-object"].request.max_tokens >= 512
+    assert cases["tools.single"].request.max_tokens >= 512
+    assert cases["parameters.max-tokens"].request.max_tokens == 8

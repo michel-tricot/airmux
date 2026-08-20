@@ -7,7 +7,7 @@ request:
   messages:
   - role: user
     content: Reply with ok and then the word END
-  max_tokens: 32
+  max_tokens: 1024
   stop: [END]
 oracle:
   text_nonempty: true

@@ -13,10 +13,18 @@ OK = 200
 class Gateway:
     base_url: str
     api_key: str
+    request_timeout_seconds: float = 60
 
     def connection(self, endpoint: str) -> Connection:
         suffix = "/inf" if endpoint == "messages" else "/inf/v1"
-        return Connection(base_url=f"{self.base_url.rstrip('/')}{suffix}", api_key=self.api_key, auth="bearer", headers={}, route="gateway")
+        return Connection(
+            base_url=f"{self.base_url.rstrip('/')}{suffix}",
+            api_key=self.api_key,
+            auth="bearer",
+            headers={},
+            route="gateway",
+            timeout_seconds=self.request_timeout_seconds,
+        )
 
     def require_ready(self) -> None:
         try:

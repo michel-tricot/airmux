@@ -27,8 +27,8 @@ def test_equivalent_observations_that_miss_the_oracle_are_still_parity():
     assert result.verdict == "parity"
     assert result.differences == ()
     assert result.reason == ""
-    assert result.direct_satisfies_oracle is False
-    assert result.gateway_satisfies_oracle is False
+    assert result.direct_satisfies_oracle is None
+    assert result.gateway_satisfies_oracle is None
 
 
 def test_a_gateway_failure_after_direct_success_is_a_regression():

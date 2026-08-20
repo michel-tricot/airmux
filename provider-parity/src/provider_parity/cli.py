@@ -20,7 +20,7 @@ from provider_parity.plan import Filters, build_plan
 from provider_parity.progress import ConsoleProgress
 from provider_parity.provenance import metadata
 from provider_parity.report import write_report
-from provider_parity.runner import execute
+from provider_parity.runner import ExecutionOptions, execute
 
 ROOT = Path(__file__).resolve().parents[3]
 CASES = ROOT / "provider-parity" / "cases"
@@ -161,6 +161,8 @@ def runs_execute(  # noqa: PLR0913, PLR0917 command flags define the CLI surface
     gateway_api_key: GatewayKeyOption = None,
     yes: Annotated[bool, typer.Option("--yes", help="Confirm a run above the request guardrail")] = False,
     max_requests: Annotated[int, typer.Option("--max-requests", min=1)] = 500,
+    confirmations: Annotated[int, typer.Option("--confirmations", min=0, max=5, help="Paired reruns for a suspected difference")] = 1,
+    request_timeout: Annotated[float, typer.Option("--request-timeout", min=0.1, help="Per-request timeout in seconds")] = 60,
     output_format: FormatOption = OutputFormat.table,
 ) -> None:
     load_dotenv(ROOT / ".env")
@@ -186,13 +188,20 @@ def runs_execute(  # noqa: PLR0913, PLR0917 command flags define the CLI surface
     if not plan.experiments:
         message = "the selected run has no applicable experiments"
         raise typer.BadParameter(message)
-    if plan.requests > max_requests and not yes:
-        message = f"the run schedules {plan.requests} requests; pass --yes or narrow the selection"
+    maximum_requests = plan.requests * (confirmations + 1)
+    if maximum_requests > max_requests and not yes:
+        message = f"the run can schedule up to {maximum_requests} requests including confirmations; pass --yes or narrow the selection"
         raise typer.BadParameter(message)
-    gateway = Gateway(base_url=gateway_url, api_key=gateway_api_key)
+    gateway = Gateway(base_url=gateway_url, api_key=gateway_api_key, request_timeout_seconds=request_timeout)
     progress = ConsoleProgress()
-    progress.start(plan, gateway.base_url)
-    results = execute(plan, gateway, load_expected_differences(DIFFERENCES), progress=progress)
+    progress.start(plan, gateway.base_url, confirmations)
+    results = execute(
+        plan,
+        gateway,
+        load_expected_differences(DIFFERENCES),
+        progress=progress,
+        options=ExecutionOptions(confirmations=confirmations, request_timeout_seconds=request_timeout),
+    )
     run_id = datetime.now(tz=UTC).strftime("%Y%m%dT%H%M%SZ")
     paths = write_report(results, REPORTS, run_id, metadata(ROOT, run_id, gateway.base_url))
     rows = [
@@ -204,6 +213,7 @@ def runs_execute(  # noqa: PLR0913, PLR0917 command flags define the CLI surface
             "verdict": result.comparison.verdict,
             "case_result": case_result(result.comparison),
             "differences": ", ".join(result.comparison.differences),
+            "attempts": len(result.confirmations) + 1,
         }
         for result in results
     ]
@@ -218,6 +228,7 @@ def runs_execute(  # noqa: PLR0913, PLR0917 command flags define the CLI surface
             Col("verdict", "Verdict"),
             Col("case_result", "Case result"),
             Col("differences", "Differences"),
+            Col("attempts", "Attempts"),
         ],
         output_format,
     )

@@ -41,7 +41,7 @@ class Tool(FrozenModel):
 
 class Request(FrozenModel):
     messages: tuple[dict[str, JsonValue], ...]
-    max_tokens: int = Field(64, ge=1)
+    max_tokens: int = Field(1024, ge=1)
     temperature: float | None = None
     top_p: float | None = None
     stop: tuple[str, ...] | None = None
@@ -168,6 +168,12 @@ class Comparison(FrozenModel):
     gateway_satisfies_oracle: bool | None = None
 
 
+class PairAttempt(FrozenModel):
+    direct: Observation
+    gateway: Observation
+    comparison: Comparison
+
+
 class PairResult(FrozenModel):
     case_id: str
     case_version: int = 1
@@ -182,6 +188,7 @@ class PairResult(FrozenModel):
     direct: Observation
     gateway: Observation
     comparison: Comparison
+    confirmations: tuple[PairAttempt, ...] = ()
 
 
 class RunMetadata(FrozenModel):

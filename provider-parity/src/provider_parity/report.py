@@ -17,6 +17,12 @@ def _row(result: PairResult) -> str:
         f"<strong>{html.escape(detail.label)}</strong>: direct={html.escape(detail.direct)}, gateway={html.escape(detail.gateway)}"
         for detail in difference_details(result)
     )
+    confirmations = "<br>".join(
+        f"attempt {index}: {html.escape(attempt.comparison.verdict)}"
+        f" ({html.escape(', '.join(attempt.comparison.differences) or 'no differences')});"
+        f" direct={html.escape(observation_summary(attempt.direct))}; gateway={html.escape(observation_summary(attempt.gateway))}"
+        for index, attempt in enumerate(result.confirmations, start=2)
+    )
     return (
         "<tr>"
         f"<td>{html.escape(result.provider_id)}</td>"
@@ -28,6 +34,7 @@ def _row(result: PairResult) -> str:
         f"<td class='{html.escape(result.comparison.verdict)}'>{html.escape(result.comparison.verdict)}</td>"
         f"<td>{html.escape(case_result(result.comparison))}</td>"
         f"<td>{html.escape(result.comparison.reason)}</td>"
+        f"<td>{confirmations or 'not needed'}</td>"
         f"<td>{html.escape(observation_summary(result.direct))}</td>"
         f"<td>{html.escape(observation_summary(result.gateway))}</td>"
         f"<td>{details}</td>"
@@ -61,7 +68,7 @@ taxonomy <code>{html.escape(run.taxonomy_fingerprint)}</code></p>
 <p>{html.escape(summary)}</p>
 <table><thead><tr>
 <th>Provider</th><th>Surface</th><th>Model</th><th>SDK</th><th>Case</th><th>Transport</th><th>Verdict</th>
-<th>Case result</th><th>Reason</th><th>Direct observation</th><th>Gateway observation</th><th>Differences</th>
+<th>Case result</th><th>Reason</th><th>Confirmations</th><th>Direct observation</th><th>Gateway observation</th><th>Differences</th>
 </tr></thead>
 <tbody>{rows}</tbody></table></body></html>
 """

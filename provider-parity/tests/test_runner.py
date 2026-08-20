@@ -35,6 +35,46 @@ class ThrowingDriver(SDKDriver):
         return Observation(outcome="success", text="ok", sdk_type="StubResponse")
 
 
+class FlakyDriver(SDKDriver):
+    id = "flaky"
+    endpoints = frozenset({"responses"})
+
+    def __init__(self, gateway_observations: tuple[Observation, ...]) -> None:
+        self.gateway_observations = iter(gateway_observations)
+
+    def execute(self, connection: Connection, endpoint: str, model: str, case: Case, transport: Transport) -> Observation:
+        if connection.route == "direct":
+            return Observation(outcome="success", text="ok", reasoning_present=True)
+        return next(self.gateway_observations)
+
+
+def _experiment(driver_id: str) -> Experiment:
+    target = Target(
+        provider_id="stub",
+        surface_id="stub_responses",
+        endpoint="responses",
+        egress_kind="openai_responses",
+        base_url="http://provider.example/v1",
+        credential_env="STUB_API_KEY",
+        auth="bearer",
+        headers={},
+        model_id="stub/model",
+        upstream_model="upstream-model",
+        context_window=8192,
+        max_output_tokens=1024,
+        input_modalities=frozenset({"text"}),
+        capabilities=frozenset(),
+        parameter_support={},
+    )
+    case = Case(
+        id="text.confirm",
+        title="Confirm difference",
+        request=Request(messages=({"role": "user", "content": "Reply with ok"},)),
+        oracle=Oracle(text_contains="ok"),
+    )
+    return Experiment(target=target, case=case, driver_id=driver_id, transport="buffered")
+
+
 def test_sdk_exception_is_reported_as_parity_evidence_and_the_run_continues(monkeypatch):
     monkeypatch.setenv("STUB_API_KEY", "provider-key")
     monkeypatch.setattr(runner, "discover", lambda: {"throwing": ThrowingDriver()})
@@ -135,6 +175,32 @@ def test_sdk_exception_is_reported_as_parity_evidence_and_the_run_continues(monk
     matched_progress(runner.ProgressEvent(kind="experiment_completed", index=1, total=1, experiment=experiment, result=matched_failure))
     rendered_match = matched_output.getvalue()
     assert "✓ PARITY" in rendered_match
-    assert "! CASE FAILED" in rendered_match
-    assert "expected non-empty assistant text" in rendered_match
-    assert case_result(matched_failure.comparison) == "failed both"
+    assert "? CASE NOT EVALUATED" in rendered_match
+    assert "output token limit reached" in rendered_match
+    assert case_result(matched_failure.comparison) == "not evaluated"
+
+
+def test_a_suspected_difference_that_does_not_repeat_is_inconclusive(monkeypatch):
+    monkeypatch.setenv("STUB_API_KEY", "provider-key")
+    driver = FlakyDriver((Observation(outcome="success"), Observation(outcome="success", text="ok", reasoning_present=True)))
+    monkeypatch.setattr(runner, "discover", lambda: {"flaky": driver})
+
+    (result,) = runner.execute(Plan(experiments=(_experiment("flaky"),)), Gateway(), options=runner.ExecutionOptions(confirmations=1))
+
+    assert result.comparison.verdict == "inconclusive"
+    assert result.comparison.reason == "suspected parity difference did not reproduce across 2 attempts"
+    assert len(result.confirmations) == 1
+    assert result.confirmations[0].comparison.verdict == "parity"
+
+
+def test_a_stable_field_difference_survives_confirmation(monkeypatch):
+    monkeypatch.setenv("STUB_API_KEY", "provider-key")
+    gateway = Observation(outcome="success", text="ok", reasoning_present=False)
+    driver = FlakyDriver((gateway, gateway))
+    monkeypatch.setattr(runner, "discover", lambda: {"flaky": driver})
+
+    (result,) = runner.execute(Plan(experiments=(_experiment("flaky"),)), Gateway(), options=runner.ExecutionOptions(confirmations=1))
+
+    assert result.comparison.verdict == "different"
+    assert result.comparison.differences == ("reasoning_presence",)
+    assert result.comparison.reason == "reproduced across 2 attempts"

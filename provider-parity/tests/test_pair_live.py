@@ -2,13 +2,14 @@ from __future__ import annotations
 
 import json
 import threading
+import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import TYPE_CHECKING, NamedTuple, cast
 
 import pytest
 
 from provider_parity.gateway import Gateway
-from provider_parity.models import Case, EgressKind, Experiment, Oracle, Plan, Request, Target, Transport
+from provider_parity.models import Case, EgressKind, ExpectedDifference, Experiment, Oracle, Plan, Request, Target, Transport
 from provider_parity.runner import execute
 
 if TYPE_CHECKING:
@@ -30,6 +31,11 @@ class ProviderHandler(BaseHTTPRequestHandler):
         request = json.loads(self.rfile.read(int(self.headers["content-length"])))
         server.models.append(request["model"])
         server.requests.append(request)
+        if not self.path.startswith("/inf") and server.direct_status is not None:
+            self._send_json({"type": "error", "error": {"type": "not_found_error", "message": "Not found"}}, server.direct_status)
+            return
+        if self.path.startswith("/inf") and server.gateway_delay_seconds:
+            time.sleep(server.gateway_delay_seconds)
         if self.path.startswith("/inf") and server.gateway_status is not None:
             self._send_json({"type": "error", "error": {"type": "authentication_error", "message": "invalid inference key"}}, server.gateway_status)
             return
@@ -166,6 +172,8 @@ class ProviderServer(ThreadingHTTPServer):
         self.models: list[str] = []
         self.requests: list[dict[str, object]] = []
         self.gateway_status: int | None = None
+        self.gateway_delay_seconds = 0.0
+        self.direct_status: int | None = None
         self.malformed_gateway_responses_stream = False
 
     def start(self) -> None:
@@ -385,6 +393,101 @@ def test_gateway_authentication_failure_is_inconclusive(monkeypatch, surface: Su
     assert result.direct.outcome == "success"
     assert result.gateway.outcome == "inconclusive"
     assert result.gateway.error_code == "gateway_authentication"
+    assert result.comparison.verdict == "inconclusive"
+
+
+def test_direct_model_access_failure_is_inconclusive(monkeypatch):
+    provider = ProviderServer()
+    provider.direct_status = 404
+    provider.start()
+    monkeypatch.setenv("CHAT_API_KEY", "sk-provider")
+    target = Target(
+        provider_id="chat",
+        surface_id="oai",
+        endpoint="chat/completions",
+        egress_kind="openai_compatible",
+        base_url=f"http://127.0.0.1:{provider.server_port}/v1",
+        credential_env="CHAT_API_KEY",
+        auth="bearer",
+        headers={},
+        model_id="chat/model",
+        upstream_model="upstream-model",
+        context_window=8192,
+        max_output_tokens=1024,
+        input_modalities=frozenset({"text"}),
+        capabilities=frozenset(),
+        parameter_support={},
+    )
+    case = Case(
+        id="text.live",
+        title="Live pair",
+        request=Request(messages=({"role": "user", "content": "Reply with ok"},)),
+        oracle=Oracle(text_contains="ok"),
+    )
+    plan = Plan(
+        experiments=(
+            Experiment(target=target, case=case, driver_id="openai", transport="buffered"),
+            Experiment(target=target, case=case.model_copy(update={"id": "text.second"}), driver_id="openai", transport="buffered"),
+        )
+    )
+
+    try:
+        expected = [ExpectedDifference(model="chat/model", reason="known gateway behavior")]
+        result, skipped = execute(plan, Gateway(base_url=f"http://127.0.0.1:{provider.server_port}", api_key="sk-inf-parity"), expected)
+    finally:
+        provider.shutdown()
+        provider.server_close()
+
+    assert result.direct.outcome == "inconclusive"
+    assert result.direct.error_code == "direct_model_access"
+    assert result.gateway.outcome == "success"
+    assert result.comparison.verdict == "inconclusive"
+    assert skipped.direct.error_code == "not_run"
+    assert skipped.gateway.error_code == "not_run"
+    assert skipped.comparison.reason == "not run because direct model access could not be established earlier"
+    assert len(provider.requests) == 2
+
+
+def test_request_timeout_is_inconclusive_and_does_not_hang(monkeypatch):
+    provider = ProviderServer()
+    provider.gateway_delay_seconds = 0.1
+    provider.start()
+    monkeypatch.setenv("CHAT_API_KEY", "sk-provider")
+    target = Target(
+        provider_id="chat",
+        surface_id="oai",
+        endpoint="chat/completions",
+        egress_kind="openai_compatible",
+        base_url=f"http://127.0.0.1:{provider.server_port}/v1",
+        credential_env="CHAT_API_KEY",
+        auth="bearer",
+        headers={},
+        model_id="chat/model",
+        upstream_model="upstream-model",
+        context_window=8192,
+        max_output_tokens=1024,
+        input_modalities=frozenset({"text"}),
+        capabilities=frozenset(),
+        parameter_support={},
+    )
+    case = Case(
+        id="text.live",
+        title="Live pair",
+        request=Request(messages=({"role": "user", "content": "Reply with ok"},)),
+        oracle=Oracle(text_contains="ok"),
+    )
+    plan = Plan(experiments=(Experiment(target=target, case=case, driver_id="openai", transport="buffered"),))
+
+    try:
+        gateway = Gateway(base_url=f"http://127.0.0.1:{provider.server_port}", api_key="sk-inf-parity", request_timeout_seconds=0.02)
+        (result,) = execute(plan, gateway)
+    finally:
+        provider.shutdown()
+        provider.server_close()
+
+    assert result.direct.outcome == "success"
+    assert result.gateway.outcome == "inconclusive"
+    assert result.gateway.error_code == "request_timeout"
     assert result.comparison.verdict == "inconclusive"
 
 

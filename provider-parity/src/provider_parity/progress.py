@@ -65,11 +65,15 @@ class ConsoleProgress:
         self.console = console or Console(stderr=True)
         self.status: Status | None = None
 
-    def start(self, plan: Plan, gateway_url: str) -> None:
+    def start(self, plan: Plan, gateway_url: str, confirmations: int = 0) -> None:
         experiment_count = len(plan.experiments)
         experiment_label = "experiment" if experiment_count == 1 else "experiments"
+        confirmation_label = (
+            f" | up to {confirmations} confirmation pair{'s' if confirmations != 1 else ''} per suspected difference" if confirmations else ""
+        )
         self.console.print(
-            f"[bold]Provider parity[/bold] [dim]| {experiment_count} {experiment_label} | {plan.requests} requests | {escape(gateway_url)}[/dim]"
+            f"[bold]Provider parity[/bold] [dim]| {experiment_count} {experiment_label} | {plan.requests} requests{confirmation_label}"
+            f" | {escape(gateway_url)}[/dim]"
         )
 
     def __call__(self, event: ProgressEvent) -> None:
@@ -83,7 +87,8 @@ class ConsoleProgress:
             return
         if event.kind == "path_started":
             self._stop()
-            self.status = self.console.status(f"[bold]{_path_action(event.path)}[/bold]", spinner="dots")
+            confirmation = f" [dim](confirmation {event.attempt - 1}/{event.max_attempts - 1})[/dim]" if event.attempt > 1 else ""
+            self.status = self.console.status(f"[bold]{_path_action(event.path)}[/bold]{confirmation}", spinner="dots")
             self.status.start()
             return
         if event.kind == "path_completed":
@@ -93,7 +98,8 @@ class ConsoleProgress:
             label, style = OUTCOME_STYLE[event.observation.outcome]
             details = _details(event.observation)
             suffix = f" [dim]| {details}[/dim]" if details else ""
-            self.console.print(f"  [{style}]{label}[/{style}] {_path_name(event.path)}{suffix}")
+            confirmation = f" [dim](confirmation {event.attempt - 1}/{event.max_attempts - 1})[/dim]" if event.attempt > 1 else ""
+            self.console.print(f"  [{style}]{label}[/{style}] {_path_name(event.path)}{confirmation}{suffix}")
             return
         self._experiment_completed(event)
 
@@ -105,8 +111,15 @@ class ConsoleProgress:
         icon, style = VERDICT_STYLE[verdict]
         self.console.print(f"  [{style}]{icon} {_verdict(verdict)}[/{style}]")
         comparison = event.result.comparison
+        if event.result.confirmations:
+            verdicts = ", ".join(attempt.comparison.verdict.replace("_", " ") for attempt in event.result.confirmations)
+            self.console.print(f"    [dim]Confirmation verdicts: {escape(verdicts)}[/dim]")
         both_failed = comparison.direct_satisfies_oracle is False and comparison.gateway_satisfies_oracle is False
-        if both_failed:
+        both_indeterminate = comparison.direct_satisfies_oracle is None and comparison.gateway_satisfies_oracle is None
+        if both_indeterminate and event.result.direct.outcome == event.result.gateway.outcome == "success":
+            self.console.print("  [bold yellow]? CASE NOT EVALUATED[/bold yellow]")
+            self.console.print("    [yellow]output token limit reached before the case oracle could be evaluated[/yellow]")
+        elif both_failed:
             self.console.print("  [bold yellow]! CASE FAILED[/bold yellow]")
             direct_failures = oracle_failures(event.result.direct, event.experiment.case.oracle)
             gateway_failures = oracle_failures(event.result.gateway, event.experiment.case.oracle)

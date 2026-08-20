@@ -9,6 +9,6 @@ request:
     content: Understood
   - role: user
     content: What is the code word
-  max_tokens: 32
+  max_tokens: 1024
 oracle:
   text_contains: cobalt

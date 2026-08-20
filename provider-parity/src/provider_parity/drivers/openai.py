@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, cast
 import openai
 from openai import OpenAI
 
-from provider_parity.drivers.base import Connection, SDKDriver, is_gateway_auth_failure
+from provider_parity.drivers.base import Connection, SDKDriver, access_error
 from provider_parity.drivers.normalize import openai_chat, openai_responses
 from provider_parity.models import Case, Observation, Tool, Transport
 
@@ -119,7 +119,13 @@ class OpenAIDriver(SDKDriver):
     endpoints = frozenset({"chat/completions", "responses"})
 
     def execute(self, connection: Connection, endpoint: str, model: str, case: Case, transport: Transport) -> Observation:
-        client = OpenAI(base_url=connection.base_url, api_key=connection.api_key, default_headers=connection.headers)
+        client = OpenAI(
+            base_url=connection.base_url,
+            api_key=connection.api_key,
+            default_headers=connection.headers,
+            timeout=connection.timeout_seconds,
+            max_retries=0,
+        )
         started = time.perf_counter()
         try:
             if endpoint == "responses":
@@ -130,16 +136,32 @@ class OpenAIDriver(SDKDriver):
             raise ValueError(message)
         except openai.APIStatusError as error:
             elapsed = (time.perf_counter() - started) * 1000
-            gateway_auth_failure = is_gateway_auth_failure(connection, error.status_code)
+            access_code = access_error(connection, error.status_code)
             return Observation(
-                outcome="inconclusive" if gateway_auth_failure else "unsupported" if _unsupported(error) else "error",
-                error_code="gateway_authentication" if gateway_auth_failure else str(getattr(error, "code", None) or error.status_code),
+                outcome="inconclusive" if access_code else "unsupported" if _unsupported(error) else "error",
+                error_code=access_code or str(getattr(error, "code", None) or error.status_code),
+                error_message=str(error)[:500],
+                duration_ms=elapsed,
+                sdk_type=type(error).__name__,
+            )
+        except openai.APITimeoutError as error:
+            elapsed = (time.perf_counter() - started) * 1000
+            return Observation(
+                outcome="inconclusive",
+                error_code="request_timeout",
                 error_message=str(error)[:500],
                 duration_ms=elapsed,
                 sdk_type=type(error).__name__,
             )
         except openai.APIConnectionError as error:
-            return Observation(outcome="inconclusive", error_code="connection_error", error_message=str(error)[:500], sdk_type=type(error).__name__)
+            elapsed = (time.perf_counter() - started) * 1000
+            return Observation(
+                outcome="inconclusive",
+                error_code="connection_error",
+                error_message=str(error)[:500],
+                duration_ms=elapsed,
+                sdk_type=type(error).__name__,
+            )
         except IndexError as error:
             elapsed = (time.perf_counter() - started) * 1000
             return Observation(

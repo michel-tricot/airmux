@@ -7,7 +7,7 @@ request:
   messages:
   - role: user
     content: Reply with ok
-  max_tokens: 16
+  max_tokens: 1024
   top_p: 0.83
 oracle:
   text_nonempty: true

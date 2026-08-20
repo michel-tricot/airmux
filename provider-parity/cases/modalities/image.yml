@@ -12,6 +12,6 @@ request:
     - type: image
       media_type: image/png
       data: iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wl2s0UAAAAASUVORK5CYII=
-  max_tokens: 16
+  max_tokens: 1024
 oracle:
   text_contains: received

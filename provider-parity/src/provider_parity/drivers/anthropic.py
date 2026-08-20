@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, cast
 import anthropic
 from anthropic import Anthropic
 
-from provider_parity.drivers.base import Connection, SDKDriver, is_gateway_auth_failure
+from provider_parity.drivers.base import Connection, SDKDriver, access_error
 from provider_parity.drivers.normalize import anthropic_message
 from provider_parity.models import Case, Observation, Transport
 
@@ -102,9 +102,22 @@ class AnthropicDriver(SDKDriver):
             message = f"anthropic SDK does not support endpoint {endpoint}"
             raise ValueError(message)
         if connection.auth == "bearer":
-            client = Anthropic(base_url=connection.base_url, api_key="unused", auth_token=connection.api_key, default_headers=connection.headers)
+            client = Anthropic(
+                base_url=connection.base_url,
+                api_key="unused",
+                auth_token=connection.api_key,
+                default_headers=connection.headers,
+                timeout=connection.timeout_seconds,
+                max_retries=0,
+            )
         else:
-            client = Anthropic(base_url=connection.base_url, api_key=connection.api_key, default_headers=connection.headers)
+            client = Anthropic(
+                base_url=connection.base_url,
+                api_key=connection.api_key,
+                default_headers=connection.headers,
+                timeout=connection.timeout_seconds,
+                max_retries=0,
+            )
         messages, extra = _body(case)
         started = time.perf_counter()
         try:
@@ -118,13 +131,29 @@ class AnthropicDriver(SDKDriver):
             return anthropic_message(cast("Mapping[str, object]", message.model_dump()), elapsed, type(message).__name__)
         except anthropic.APIStatusError as error:
             elapsed = (time.perf_counter() - started) * 1000
-            gateway_auth_failure = is_gateway_auth_failure(connection, error.status_code)
+            access_code = access_error(connection, error.status_code)
             return Observation(
-                outcome="inconclusive" if gateway_auth_failure else "unsupported" if _unsupported(error) else "error",
-                error_code="gateway_authentication" if gateway_auth_failure else str(getattr(error, "code", None) or error.status_code),
+                outcome="inconclusive" if access_code else "unsupported" if _unsupported(error) else "error",
+                error_code=access_code or str(getattr(error, "code", None) or error.status_code),
+                error_message=str(error)[:500],
+                duration_ms=elapsed,
+                sdk_type=type(error).__name__,
+            )
+        except anthropic.APITimeoutError as error:
+            elapsed = (time.perf_counter() - started) * 1000
+            return Observation(
+                outcome="inconclusive",
+                error_code="request_timeout",
                 error_message=str(error)[:500],
                 duration_ms=elapsed,
                 sdk_type=type(error).__name__,
             )
         except anthropic.APIConnectionError as error:
-            return Observation(outcome="inconclusive", error_code="connection_error", error_message=str(error)[:500], sdk_type=type(error).__name__)
+            elapsed = (time.perf_counter() - started) * 1000
+            return Observation(
+                outcome="inconclusive",
+                error_code="connection_error",
+                error_message=str(error)[:500],
+                duration_ms=elapsed,
+                sdk_type=type(error).__name__,
+            )

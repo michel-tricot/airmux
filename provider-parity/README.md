@@ -20,22 +20,28 @@ uv run airllm-parity reports show -f table
 
 `runs execute` requires a running data plane configured with the selected catalog model ids. Set its origin with `AIRLLM_GATEWAY_URL` and its inference key with `AIRLLM_API_KEY`, or pass `--gateway-url` and `--gateway-api-key`. The command checks `/readyz` before making a direct provider call and never starts or stops the data plane.
 
-Direct provider credentials load from the repository `.env`. A plan above 500 HTTP requests requires `--yes`. Every experiment makes two completion requests, one direct and one through the gateway.
+Direct provider credentials load from the repository `.env`. Every experiment makes one direct request and one gateway request. A suspected difference is rerun as a pair once by default, and the report retains every confirmation observation. `--confirmations 0` disables confirmation and `--confirmations N` requests up to five paired confirmations. The 500-request guardrail uses the maximum request count including confirmations.
+
+Vendor SDK requests have a 60-second timeout with automatic SDK retries disabled so an unavailable endpoint cannot stall a matrix. Use `--request-timeout SECONDS` to change that bound.
+
+If direct model access or gateway authentication cannot be established for a target, later experiments for that target are recorded as `not_run` instead of repeating a matrix that cannot produce parity evidence.
 
 Reports are written as JSON and self-contained HTML under `provider-parity/reports/`. The directory is ignored because results contain transient vendor output and operational failures.
 
 ## Verdicts
 
-- `parity`: both paths satisfy the case oracle and their normalized protocol behavior agrees
-- `gateway_regression`: direct satisfies the oracle and the gateway path does not
+- `parity`: both paths have the same normalized protocol behavior; the separate case result says whether both passed, both failed, or could not be evaluated
+- `gateway_regression`: direct satisfies the case oracle and the gateway path does not, and the difference reproduces when confirmation is enabled
 - `provider_limitation`: both paths explicitly report unsupported behavior
 - `upstream_failure`: both paths fail in the same outcome class
 - `gateway_only_success`: the gateway succeeds where the direct path does not
-- `different`: both paths complete but their normalized behavior differs
-- `inconclusive`: transport or authentication prevented a meaningful comparison, including gateway 401 and 403 responses
+- `different`: both paths complete with a reproduced normalized behavior difference
+- `inconclusive`: access, authentication, connection, timeout, or a non-reproducing suspected difference prevented a meaningful conclusion
 - `expected_difference`: a non-parity result matches `expected-differences.yml`
 
 Generated text is never compared byte-for-byte. Cases assert stable semantic observations such as tool names, JSON validity, structured values, reasoning presence, finish-reason class, usage presence and SDK parseability.
+
+Content cases reserve enough output budget for models that consume completion tokens while reasoning. If a model still reaches the output limit before producing evidence needed by the oracle, the case result is `not evaluated`, not a false oracle failure.
 
 The initial matrix covers text and system messages, multi-turn history, inline image input, output limits, sampling parameters, stop and seed, exposed reasoning, reasoning with tools, single and parallel tools, named tool choice, JSON objects, JSON Schema, and buffered and streamed transport.
 

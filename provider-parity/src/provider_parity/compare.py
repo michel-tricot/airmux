@@ -45,7 +45,22 @@ def oracle_failures(observation: Observation, oracle: Oracle) -> tuple[str, ...]
     return tuple(message for passed, message in checks if not passed)
 
 
-def satisfies(observation: Observation, oracle: Oracle) -> bool:
+def _truncated_before_assertion(observation: Observation, oracle: Oracle) -> bool:
+    return _finish_class(observation.finish_reason) == "length" and any(
+        (
+            oracle.text_nonempty and not observation.text.strip(),
+            oracle.text_contains is not None and oracle.text_contains.casefold() not in observation.text.casefold(),
+            oracle.assistant_text == "required" and not observation.text.strip(),
+            bool(oracle.tool_names) and not observation.tool_calls,
+            oracle.json_equals is not None and observation.json_value is None,
+            oracle.reasoning_present and not observation.reasoning_present,
+        )
+    )
+
+
+def satisfies(observation: Observation, oracle: Oracle) -> bool | None:
+    if observation.outcome == "inconclusive" or _truncated_before_assertion(observation, oracle):
+        return None
     return not oracle_failures(observation, oracle)
 
 
@@ -69,7 +84,8 @@ def _differences(direct: Observation, gateway: Observation) -> tuple[str, ...]:
 def compare(direct: Observation, gateway: Observation, oracle: Oracle) -> Comparison:
     direct_passes = satisfies(direct, oracle)
     gateway_passes = satisfies(gateway, oracle)
-    differences = _differences(direct, gateway) + (("oracle",) if direct_passes != gateway_passes else ())
+    oracle_differs = direct_passes is not None and gateway_passes is not None and direct_passes != gateway_passes
+    differences = _differences(direct, gateway) + (("oracle",) if oracle_differs else ())
 
     def result(verdict: Verdict, reason: str = "") -> Comparison:
         return Comparison(
@@ -82,7 +98,7 @@ def compare(direct: Observation, gateway: Observation, oracle: Oracle) -> Compar
 
     if "inconclusive" in {direct.outcome, gateway.outcome}:
         comparison = result("inconclusive", "at least one path was inconclusive")
-    elif direct.outcome == "success" and direct_passes and not gateway_passes:
+    elif direct.outcome == "success" and direct_passes is True and gateway_passes is False:
         comparison = result("gateway_regression", "direct satisfied the oracle and gateway did not")
     elif direct.outcome != "success" and gateway.outcome == "success":
         comparison = result("gateway_only_success", "only the gateway path succeeded")
