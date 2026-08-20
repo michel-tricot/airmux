@@ -34,6 +34,9 @@ class ProviderHandler(BaseHTTPRequestHandler):
             self._send_json({"type": "error", "error": {"type": "authentication_error", "message": "invalid inference key"}}, server.gateway_status)
             return
         if self.path.endswith("/responses"):
+            if request.get("stream"):
+                self._send_responses_stream(request, self.path.startswith("/inf") and server.malformed_gateway_responses_stream)
+                return
             self._send_json(
                 {
                     "id": "resp-parity",
@@ -96,6 +99,55 @@ class ProviderHandler(BaseHTTPRequestHandler):
         }
         self._send_json(payload)
 
+    def _send_responses_stream(self, request: dict[str, object], malformed: bool) -> None:
+        response = {
+            "id": "resp-parity",
+            "object": "response",
+            "created_at": 1,
+            "model": request["model"],
+            "status": "completed",
+            "output": [
+                {
+                    "type": "message",
+                    "id": "msg-parity",
+                    "role": "assistant",
+                    "status": "completed",
+                    "content": [{"type": "output_text", "text": "ok", "annotations": []}],
+                }
+            ],
+            "usage": {"input_tokens": 3, "output_tokens": 1, "total_tokens": 4},
+        }
+        events = [
+            ("response.created", {"response": {**response, "status": "in_progress", "output": []}}),
+            (
+                "response.output_item.added",
+                {
+                    "output_index": 0,
+                    "item": {"type": "message", "id": "msg-parity", "role": "assistant", "status": "in_progress", "content": []},
+                },
+            ),
+            *(
+                ([])
+                if malformed
+                else [
+                    (
+                        "response.content_part.added",
+                        {"output_index": 0, "content_index": 0, "part": {"type": "output_text", "text": "", "annotations": []}},
+                    )
+                ]
+            ),
+            ("response.output_text.delta", {"output_index": 0, "content_index": 0, "delta": "ok"}),
+            ("response.completed", {"response": response}),
+        ]
+        self.send_response(200)
+        self.send_header("content-type", "text/event-stream")
+        self.end_headers()
+        for kind, payload in events:
+            event = {"type": kind, **payload}
+            self.wfile.write(b"event: " + kind.encode() + b"\n")
+            self.wfile.write(b"data: " + json.dumps(event).encode() + b"\n\n")
+        self.wfile.flush()
+
     def _send_json(self, payload: dict[str, object], status: int = 200) -> None:
         body = json.dumps(payload).encode()
         self.send_response(status)
@@ -114,6 +166,7 @@ class ProviderServer(ThreadingHTTPServer):
         self.models: list[str] = []
         self.requests: list[dict[str, object]] = []
         self.gateway_status: int | None = None
+        self.malformed_gateway_responses_stream = False
 
     def start(self) -> None:
         threading.Thread(target=self.serve_forever, daemon=True).start()
@@ -333,3 +386,52 @@ def test_gateway_authentication_failure_is_inconclusive(monkeypatch, surface: Su
     assert result.gateway.outcome == "inconclusive"
     assert result.gateway.error_code == "gateway_authentication"
     assert result.comparison.verdict == "inconclusive"
+
+
+def test_responses_sdk_protocol_failure_is_reported_and_the_run_continues(monkeypatch):
+    provider = ProviderServer()
+    provider.malformed_gateway_responses_stream = True
+    provider.start()
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-provider")
+    target = Target(
+        provider_id="openai",
+        surface_id="oai_responses",
+        endpoint="responses",
+        egress_kind="openai_responses",
+        base_url=f"http://127.0.0.1:{provider.server_port}/v1",
+        credential_env="OPENAI_API_KEY",
+        auth="bearer",
+        headers={},
+        model_id="openai/model",
+        upstream_model="upstream-model",
+        context_window=8192,
+        max_output_tokens=1024,
+        input_modalities=frozenset({"text"}),
+        capabilities=frozenset({"streaming"}),
+        parameter_support={},
+    )
+    case = Case(
+        id="text.live",
+        title="Live pair",
+        request=Request(messages=({"role": "user", "content": "Reply with ok"},)),
+        oracle=Oracle(text_contains="ok"),
+    )
+    plan = Plan(
+        experiments=(
+            Experiment(target=target, case=case, driver_id="openai", transport="streamed"),
+            Experiment(target=target, case=case, driver_id="openai", transport="buffered"),
+        )
+    )
+
+    try:
+        streamed, buffered = execute(plan, Gateway(base_url=f"http://127.0.0.1:{provider.server_port}", api_key="sk-inf-parity"))
+    finally:
+        provider.shutdown()
+        provider.server_close()
+
+    assert streamed.direct.outcome == "success"
+    assert streamed.gateway.outcome == "error"
+    assert streamed.gateway.error_code == "sdk_protocol_error"
+    assert streamed.gateway.sdk_type == "IndexError"
+    assert streamed.comparison.verdict == "gateway_regression"
+    assert buffered.comparison.verdict == "parity"

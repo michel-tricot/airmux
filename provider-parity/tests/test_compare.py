@@ -19,6 +19,18 @@ def test_equivalent_semantic_observations_are_parity():
     assert result.differences == ()
 
 
+def test_equivalent_observations_that_miss_the_oracle_are_still_parity():
+    observation = Observation(outcome="success", finish_reason="length", usage_present=True, reasoning_present=True)
+
+    result = compare(observation, observation, Oracle(text_nonempty=True))
+
+    assert result.verdict == "parity"
+    assert result.differences == ()
+    assert result.reason == "both paths matched; neither satisfied the case oracle"
+    assert result.direct_satisfies_oracle is False
+    assert result.gateway_satisfies_oracle is False
+
+
 def test_a_gateway_failure_after_direct_success_is_a_regression():
     gateway = Observation(outcome="error", error_code="invalid_upstream_response")
 
@@ -26,6 +38,9 @@ def test_a_gateway_failure_after_direct_success_is_a_regression():
 
     assert result.verdict == "gateway_regression"
     assert "outcome" in result.differences
+    assert "oracle" in result.differences
+    assert result.direct_satisfies_oracle is True
+    assert result.gateway_satisfies_oracle is False
 
 
 def test_matching_unsupported_results_preserve_the_provider_limitation():

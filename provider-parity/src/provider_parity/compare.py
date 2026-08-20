@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 
-from provider_parity.models import Comparison, Observation, Oracle
+from provider_parity.models import Comparison, Observation, Oracle, Verdict
 
 
 def _finish_class(reason: str | None) -> str | None:
@@ -16,24 +16,37 @@ def _finish_class(reason: str | None) -> str | None:
     }.get(reason, reason)
 
 
-def satisfies(observation: Observation, oracle: Oracle) -> bool:
+def oracle_failures(observation: Observation, oracle: Oracle) -> tuple[str, ...]:
     if observation.outcome != oracle.outcome:
-        return False
+        return (f"expected outcome {oracle.outcome}, got {observation.outcome}",)
     if observation.outcome != "success":
-        return True
+        return ()
     names = tuple(sorted(tool.name for tool in observation.tool_calls))
     expected_names = tuple(sorted(oracle.tool_names))
-    assertions = (
-        not oracle.text_nonempty or bool(observation.text.strip()),
-        oracle.text_contains is None or oracle.text_contains.casefold() in observation.text.casefold(),
-        oracle.assistant_text != "forbidden" or not observation.text.strip(),
-        oracle.assistant_text != "required" or bool(observation.text.strip()),
-        not oracle.tool_names or names == expected_names,
-        not oracle.tool_arguments_valid or all(tool.valid_arguments for tool in observation.tool_calls),
-        oracle.json_equals is None or observation.json_value == oracle.json_equals,
-        not oracle.reasoning_present or observation.reasoning_present,
+    checks = (
+        (not oracle.text_nonempty or bool(observation.text.strip()), "expected non-empty assistant text"),
+        (
+            oracle.text_contains is None or oracle.text_contains.casefold() in observation.text.casefold(),
+            f'expected assistant text containing "{oracle.text_contains}"',
+        ),
+        (oracle.assistant_text != "forbidden" or not observation.text.strip(), "expected no assistant text"),
+        (oracle.assistant_text != "required" or bool(observation.text.strip()), "expected assistant text"),
+        (not oracle.tool_names or names == expected_names, f"expected tool calls: {', '.join(expected_names)}"),
+        (
+            not oracle.tool_arguments_valid or all(tool.valid_arguments for tool in observation.tool_calls),
+            "expected valid JSON object arguments for every tool call",
+        ),
+        (
+            oracle.json_equals is None or observation.json_value == oracle.json_equals,
+            f"expected JSON: {json.dumps(oracle.json_equals, sort_keys=True, ensure_ascii=False)}",
+        ),
+        (not oracle.reasoning_present or observation.reasoning_present, "expected reasoning output"),
     )
-    return all(assertions)
+    return tuple(message for passed, message in checks if not passed)
+
+
+def satisfies(observation: Observation, oracle: Oracle) -> bool:
+    return not oracle_failures(observation, oracle)
 
 
 def _differences(direct: Observation, gateway: Observation) -> tuple[str, ...]:
@@ -54,22 +67,32 @@ def _differences(direct: Observation, gateway: Observation) -> tuple[str, ...]:
 
 
 def compare(direct: Observation, gateway: Observation, oracle: Oracle) -> Comparison:
-    differences = _differences(direct, gateway)
+    direct_passes = satisfies(direct, oracle)
+    gateway_passes = satisfies(gateway, oracle)
+    differences = _differences(direct, gateway) + (("oracle",) if direct_passes != gateway_passes else ())
+
+    def result(verdict: Verdict, reason: str = "") -> Comparison:
+        return Comparison(
+            verdict=verdict,
+            differences=differences,
+            reason=reason,
+            direct_satisfies_oracle=direct_passes,
+            gateway_satisfies_oracle=gateway_passes,
+        )
+
     if "inconclusive" in {direct.outcome, gateway.outcome}:
-        comparison = Comparison(verdict="inconclusive", differences=differences, reason="at least one path was inconclusive")
+        comparison = result("inconclusive", "at least one path was inconclusive")
+    elif direct.outcome == "success" and direct_passes and not gateway_passes:
+        comparison = result("gateway_regression", "direct satisfied the oracle and gateway did not")
+    elif direct.outcome != "success" and gateway.outcome == "success":
+        comparison = result("gateway_only_success", "only the gateway path succeeded")
+    elif direct.outcome == gateway.outcome == "unsupported":
+        comparison = result("provider_limitation", "both paths reported unsupported behavior")
+    elif direct.outcome != "success" and direct.outcome == gateway.outcome:
+        comparison = result("upstream_failure", "both paths failed in the same outcome class")
+    elif not differences:
+        reason = "" if direct_passes else "both paths matched; neither satisfied the case oracle"
+        comparison = result("parity", reason)
     else:
-        direct_passes = satisfies(direct, oracle)
-        gateway_passes = satisfies(gateway, oracle)
-        if direct.outcome == "success" and direct_passes and not gateway_passes:
-            comparison = Comparison(verdict="gateway_regression", differences=differences, reason="direct satisfied the oracle and gateway did not")
-        elif direct.outcome != "success" and gateway.outcome == "success":
-            comparison = Comparison(verdict="gateway_only_success", differences=differences, reason="only the gateway path succeeded")
-        elif direct.outcome == gateway.outcome == "unsupported":
-            comparison = Comparison(verdict="provider_limitation", differences=differences, reason="both paths reported unsupported behavior")
-        elif direct.outcome != "success" and direct.outcome == gateway.outcome:
-            comparison = Comparison(verdict="upstream_failure", differences=differences, reason="both paths failed in the same outcome class")
-        elif direct_passes and gateway_passes and not differences:
-            comparison = Comparison(verdict="parity")
-        else:
-            comparison = Comparison(verdict="different", differences=differences, reason="both paths completed with different normalized behavior")
+        comparison = result("different", "both paths completed with different normalized behavior")
     return comparison

@@ -11,11 +11,13 @@ from dotenv import load_dotenv
 
 from provider_parity.cases import load_cases, load_expected_differences
 from provider_parity.catalog import load_catalog
+from provider_parity.diagnostics import case_result
 from provider_parity.drivers import supported_endpoints
 from provider_parity.gateway import Gateway
 from provider_parity.models import Plan, ReportDocument
 from provider_parity.output import Col, FormatOption, OutputFormat, print_rows
 from provider_parity.plan import Filters, build_plan
+from provider_parity.progress import ConsoleProgress
 from provider_parity.provenance import metadata
 from provider_parity.report import write_report
 from provider_parity.runner import execute
@@ -188,7 +190,9 @@ def runs_execute(  # noqa: PLR0913, PLR0917 command flags define the CLI surface
         message = f"the run schedules {plan.requests} requests; pass --yes or narrow the selection"
         raise typer.BadParameter(message)
     gateway = Gateway(base_url=gateway_url, api_key=gateway_api_key)
-    results = execute(plan, gateway, load_expected_differences(DIFFERENCES))
+    progress = ConsoleProgress()
+    progress.start(plan, gateway.base_url)
+    results = execute(plan, gateway, load_expected_differences(DIFFERENCES), progress=progress)
     run_id = datetime.now(tz=UTC).strftime("%Y%m%dT%H%M%SZ")
     paths = write_report(results, REPORTS, run_id, metadata(ROOT, run_id, gateway.base_url))
     rows = [
@@ -198,6 +202,7 @@ def runs_execute(  # noqa: PLR0913, PLR0917 command flags define the CLI surface
             "model": result.model_id,
             "case": result.case_id,
             "verdict": result.comparison.verdict,
+            "case_result": case_result(result.comparison),
             "differences": ", ".join(result.comparison.differences),
         }
         for result in results
@@ -211,6 +216,7 @@ def runs_execute(  # noqa: PLR0913, PLR0917 command flags define the CLI surface
             Col("model", "Model"),
             Col("case", "Case"),
             Col("verdict", "Verdict"),
+            Col("case_result", "Case result"),
             Col("differences", "Differences"),
         ],
         output_format,
@@ -235,12 +241,20 @@ def reports_show(path: Path | None = None, output_format: FormatOption = OutputF
             "model": result.model_id,
             "case": result.case_id,
             "verdict": result.comparison.verdict,
+            "case_result": case_result(result.comparison),
         }
         for result in results
     ]
     print_rows(
         "results",
         rows,
-        [Col("provider", "Provider"), Col("surface", "Surface"), Col("model", "Model"), Col("case", "Case"), Col("verdict", "Verdict")],
+        [
+            Col("provider", "Provider"),
+            Col("surface", "Surface"),
+            Col("model", "Model"),
+            Col("case", "Case"),
+            Col("verdict", "Verdict"),
+            Col("case_result", "Case result"),
+        ],
         output_format,
     )

@@ -140,6 +140,15 @@ class OpenAIDriver(SDKDriver):
             )
         except openai.APIConnectionError as error:
             return Observation(outcome="inconclusive", error_code="connection_error", error_message=str(error)[:500], sdk_type=type(error).__name__)
+        except IndexError as error:
+            elapsed = (time.perf_counter() - started) * 1000
+            return Observation(
+                outcome="error",
+                error_code="sdk_protocol_error",
+                error_message=str(error)[:500] or "OpenAI SDK could not fold the response stream",
+                duration_ms=elapsed,
+                sdk_type=type(error).__name__,
+            )
 
     @staticmethod
     def _responses(client: OpenAI, model: str, case: Case, transport: Transport, started: float) -> Observation:

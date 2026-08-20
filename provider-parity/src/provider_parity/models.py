@@ -164,6 +164,8 @@ class Comparison(FrozenModel):
     verdict: Verdict
     differences: tuple[str, ...] = ()
     reason: str = ""
+    direct_satisfies_oracle: bool | None = None
+    gateway_satisfies_oracle: bool | None = None
 
 
 class PairResult(FrozenModel):

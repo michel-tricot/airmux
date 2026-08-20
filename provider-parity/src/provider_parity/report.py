@@ -5,10 +5,34 @@ import json
 from collections import Counter
 from typing import TYPE_CHECKING
 
+from provider_parity.diagnostics import case_result, difference_details, observation_summary
 from provider_parity.models import PairResult, ReportDocument, ReportPaths, RunMetadata
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+
+def _row(result: PairResult) -> str:
+    details = "<br>".join(
+        f"<strong>{html.escape(detail.label)}</strong>: direct={html.escape(detail.direct)}, gateway={html.escape(detail.gateway)}"
+        for detail in difference_details(result)
+    )
+    return (
+        "<tr>"
+        f"<td>{html.escape(result.provider_id)}</td>"
+        f"<td>{html.escape(result.surface_id)}</td>"
+        f"<td>{html.escape(result.model_id)}</td>"
+        f"<td>{html.escape(result.sdk)}</td>"
+        f"<td>{html.escape(result.case_id)}</td>"
+        f"<td>{html.escape(result.transport)}</td>"
+        f"<td class='{html.escape(result.comparison.verdict)}'>{html.escape(result.comparison.verdict)}</td>"
+        f"<td>{html.escape(case_result(result.comparison))}</td>"
+        f"<td>{html.escape(result.comparison.reason)}</td>"
+        f"<td>{html.escape(observation_summary(result.direct))}</td>"
+        f"<td>{html.escape(observation_summary(result.gateway))}</td>"
+        f"<td>{details}</td>"
+        "</tr>"
+    )
 
 
 def write_report(results: list[PairResult], directory: Path, run_id: str, metadata: RunMetadata | None = None) -> ReportPaths:
@@ -20,25 +44,13 @@ def write_report(results: list[PairResult], directory: Path, run_id: str, metada
     json_path.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     counts = Counter(result.comparison.verdict for result in results)
     summary = " ".join(f"{name}: {count}" for name, count in sorted(counts.items()))
-    rows = "".join(
-        "<tr>"
-        f"<td>{html.escape(result.provider_id)}</td>"
-        f"<td>{html.escape(result.surface_id)}</td>"
-        f"<td>{html.escape(result.model_id)}</td>"
-        f"<td>{html.escape(result.sdk)}</td>"
-        f"<td>{html.escape(result.case_id)}</td>"
-        f"<td>{html.escape(result.transport)}</td>"
-        f"<td class='{html.escape(result.comparison.verdict)}'>{html.escape(result.comparison.verdict)}</td>"
-        f"<td>{html.escape(', '.join(result.comparison.differences))}</td>"
-        "</tr>"
-        for result in results
-    )
+    rows = "".join(_row(result) for result in results)
     document = f"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>AirLLM provider parity {html.escape(run_id)}</title>
 <style>
 body{{font:14px system-ui;margin:2rem;color:#18212b}}table{{border-collapse:collapse;width:100%}}
-th,td{{border:1px solid #ccd3da;padding:.5rem;text-align:left}}th{{background:#eef2f5}}
+th,td{{border:1px solid #ccd3da;padding:.5rem;text-align:left;vertical-align:top}}th{{background:#eef2f5}}
 .parity{{color:#087830}}.gateway_regression,.different{{color:#b42318;font-weight:700}}
 .expected_difference,.gateway_only_success{{color:#9a6700}}code{{background:#eef2f5;padding:.2rem}}
 </style>
@@ -47,7 +59,10 @@ th,td{{border:1px solid #ccd3da;padding:.5rem;text-align:left}}th{{background:#e
 harness <code>{html.escape(run.harness_commit)}</code>,
 taxonomy <code>{html.escape(run.taxonomy_fingerprint)}</code></p>
 <p>{html.escape(summary)}</p>
-<table><thead><tr><th>Provider</th><th>Surface</th><th>Model</th><th>SDK</th><th>Case</th><th>Transport</th><th>Verdict</th><th>Differences</th></tr></thead>
+<table><thead><tr>
+<th>Provider</th><th>Surface</th><th>Model</th><th>SDK</th><th>Case</th><th>Transport</th><th>Verdict</th>
+<th>Case result</th><th>Reason</th><th>Direct observation</th><th>Gateway observation</th><th>Differences</th>
+</tr></thead>
 <tbody>{rows}</tbody></table></body></html>
 """
     html_path.write_text(document, encoding="utf-8")
