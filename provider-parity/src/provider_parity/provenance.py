@@ -31,11 +31,12 @@ def _taxonomy_fingerprint(root: Path) -> str:
     return digest.hexdigest()[:20]
 
 
-def metadata(root: Path, run_id: str) -> RunMetadata:
+def metadata(root: Path, run_id: str, gateway_url: str) -> RunMetadata:
     return RunMetadata(
         run_id=run_id,
         created_at=datetime.now(tz=UTC).isoformat(),
-        gateway_commit=_git_commit(root),
+        harness_commit=_git_commit(root),
+        gateway_url=gateway_url,
         taxonomy_fingerprint=_taxonomy_fingerprint(root),
         sdk_versions={"anthropic": version("anthropic"), "openai": version("openai")},
     )

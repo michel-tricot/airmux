@@ -15,7 +15,7 @@ def write_report(results: list[PairResult], directory: Path, run_id: str, metada
     directory.mkdir(parents=True, exist_ok=True)
     json_path = directory / f"{run_id}.json"
     html_path = directory / f"{run_id}.html"
-    run = metadata or RunMetadata(run_id=run_id, created_at="", gateway_commit="", taxonomy_fingerprint="", sdk_versions={})
+    run = metadata or RunMetadata(run_id=run_id, created_at="", harness_commit="", gateway_url="", taxonomy_fingerprint="", sdk_versions={})
     payload = ReportDocument(run=run, results=tuple(results)).model_dump(mode="json")
     json_path.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     counts = Counter(result.comparison.verdict for result in results)
@@ -43,7 +43,9 @@ th,td{{border:1px solid #ccd3da;padding:.5rem;text-align:left}}th{{background:#e
 .expected_difference,.gateway_only_success{{color:#9a6700}}code{{background:#eef2f5;padding:.2rem}}
 </style>
 </head><body><h1>Provider parity</h1><p><code>{html.escape(run_id)}</code></p>
-<p>Gateway <code>{html.escape(run.gateway_commit)}</code>, taxonomy <code>{html.escape(run.taxonomy_fingerprint)}</code></p>
+<p>Gateway <code>{html.escape(run.gateway_url)}</code>,
+harness <code>{html.escape(run.harness_commit)}</code>,
+taxonomy <code>{html.escape(run.taxonomy_fingerprint)}</code></p>
 <p>{html.escape(summary)}</p>
 <table><thead><tr><th>Provider</th><th>Surface</th><th>Model</th><th>SDK</th><th>Case</th><th>Transport</th><th>Verdict</th><th>Differences</th></tr></thead>
 <tbody>{rows}</tbody></table></body></html>

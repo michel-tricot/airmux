@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, NamedTuple, cast
 
 import pytest
 
+from provider_parity.gateway import Gateway
 from provider_parity.models import Case, EgressKind, Experiment, Oracle, Plan, Request, Target, Transport
 from provider_parity.runner import execute
 
@@ -17,12 +18,21 @@ IMAGE_DATA = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAu
 
 
 class ProviderHandler(BaseHTTPRequestHandler):
+    def do_GET(self) -> None:
+        if self.path == "/readyz":
+            self._send_json({"status": "ready"})
+            return
+        self.send_error(404)
+
     def do_POST(self) -> None:
         server = self.server
         assert isinstance(server, ProviderServer)
         request = json.loads(self.rfile.read(int(self.headers["content-length"])))
         server.models.append(request["model"])
         server.requests.append(request)
+        if self.path.startswith("/inf") and server.gateway_status is not None:
+            self._send_json({"type": "error", "error": {"type": "authentication_error", "message": "invalid inference key"}}, server.gateway_status)
+            return
         if self.path.endswith("/responses"):
             self._send_json(
                 {
@@ -86,9 +96,9 @@ class ProviderHandler(BaseHTTPRequestHandler):
         }
         self._send_json(payload)
 
-    def _send_json(self, payload: dict[str, object]) -> None:
+    def _send_json(self, payload: dict[str, object], status: int = 200) -> None:
         body = json.dumps(payload).encode()
-        self.send_response(200)
+        self.send_response(status)
         self.send_header("content-type", "application/json")
         self.send_header("content-length", str(len(body)))
         self.end_headers()
@@ -103,6 +113,7 @@ class ProviderServer(ThreadingHTTPServer):
         super().__init__(("127.0.0.1", 0), ProviderHandler)
         self.models: list[str] = []
         self.requests: list[dict[str, object]] = []
+        self.gateway_status: int | None = None
 
     def start(self) -> None:
         threading.Thread(target=self.serve_forever, daemon=True).start()
@@ -118,7 +129,7 @@ class SurfacePair(NamedTuple):
 
 
 @pytest.mark.parametrize("transport", ["buffered", "streamed"])
-def test_the_same_sdk_case_runs_directly_and_through_a_real_data_plane(monkeypatch, transport: Transport):
+def test_the_same_sdk_case_runs_directly_and_through_the_configured_gateway(monkeypatch, transport: Transport):
     provider = ProviderServer()
     provider.start()
     monkeypatch.setenv("STUB_API_KEY", "sk-provider")
@@ -148,7 +159,7 @@ def test_the_same_sdk_case_runs_directly_and_through_a_real_data_plane(monkeypat
     plan = Plan(experiments=(Experiment(target=target, case=case, driver_id="openai", transport=transport),))
 
     try:
-        (result,) = execute(plan)
+        (result,) = execute(plan, Gateway(base_url=f"http://127.0.0.1:{provider.server_port}", api_key="sk-inf-parity"))
     finally:
         provider.shutdown()
         provider.server_close()
@@ -157,7 +168,7 @@ def test_the_same_sdk_case_runs_directly_and_through_a_real_data_plane(monkeypat
     expected_type = "ChatCompletion" if transport == "buffered" else "Stream[ChatCompletionChunk]"
     assert result.direct.sdk_type == expected_type
     assert result.gateway.sdk_type == expected_type
-    assert provider.models == ["upstream-model", "upstream-model"]
+    assert provider.models == ["upstream-model", "stub/model"]
 
 
 @pytest.mark.parametrize(
@@ -198,7 +209,7 @@ def test_each_native_sdk_surface_is_paired_through_the_gateway(monkeypatch, surf
     plan = Plan(experiments=(Experiment(target=target, case=case, driver_id=surface.driver_id, transport="buffered"),))
 
     try:
-        (result,) = execute(plan)
+        (result,) = execute(plan, Gateway(base_url=f"http://127.0.0.1:{provider.server_port}", api_key="sk-inf-parity"))
     finally:
         provider.shutdown()
         provider.server_close()
@@ -206,7 +217,7 @@ def test_each_native_sdk_surface_is_paired_through_the_gateway(monkeypatch, surf
     assert result.comparison.verdict == "parity"
     assert result.direct.sdk_type == surface.sdk_type
     assert result.gateway.sdk_type == surface.sdk_type
-    assert provider.models == ["upstream-model", "upstream-model"]
+    assert provider.models == ["upstream-model", f"{surface.provider_id}/model"]
 
 
 @pytest.mark.parametrize(
@@ -258,7 +269,7 @@ def test_image_input_uses_each_sdk_spelling_on_both_paths(monkeypatch, surface: 
     plan = Plan(experiments=(Experiment(target=target, case=case, driver_id=surface.driver_id, transport="buffered"),))
 
     try:
-        (result,) = execute(plan)
+        (result,) = execute(plan, Gateway(base_url=f"http://127.0.0.1:{provider.server_port}", api_key="sk-inf-parity"))
     finally:
         provider.shutdown()
         provider.server_close()
@@ -272,3 +283,53 @@ def test_image_input_uses_each_sdk_spelling_on_both_paths(monkeypatch, surface: 
         assert isinstance(content, list)
         block = cast("Mapping[str, object]", content[1])
         assert block["type"] == block_type
+
+
+@pytest.mark.parametrize(
+    "surface",
+    [
+        SurfacePair("chat", "oai", "chat/completions", "openai_compatible", "openai", "ChatCompletion"),
+        SurfacePair("messages", "anthropic", "messages", "anthropic", "anthropic", "Message"),
+    ],
+)
+def test_gateway_authentication_failure_is_inconclusive(monkeypatch, surface: SurfacePair):
+    provider = ProviderServer()
+    provider.gateway_status = 401
+    provider.start()
+    credential_env = f"{surface.provider_id.upper()}_API_KEY"
+    monkeypatch.setenv(credential_env, "sk-provider")
+    target = Target(
+        provider_id=surface.provider_id,
+        surface_id=surface.surface_id,
+        endpoint=surface.endpoint,
+        egress_kind=surface.egress_kind,
+        base_url=f"http://127.0.0.1:{provider.server_port}/v1",
+        credential_env=credential_env,
+        auth="header_key:x-api-key" if surface.endpoint == "messages" else "bearer",
+        headers={},
+        model_id=f"{surface.provider_id}/model",
+        upstream_model="upstream-model",
+        context_window=8192,
+        max_output_tokens=1024,
+        input_modalities=frozenset({"text"}),
+        capabilities=frozenset(),
+        parameter_support={},
+    )
+    case = Case(
+        id="text.live",
+        title="Live pair",
+        request=Request(messages=({"role": "user", "content": "Reply with ok"},)),
+        oracle=Oracle(text_contains="ok"),
+    )
+    plan = Plan(experiments=(Experiment(target=target, case=case, driver_id=surface.driver_id, transport="buffered"),))
+
+    try:
+        (result,) = execute(plan, Gateway(base_url=f"http://127.0.0.1:{provider.server_port}", api_key="invalid"))
+    finally:
+        provider.shutdown()
+        provider.server_close()
+
+    assert result.direct.outcome == "success"
+    assert result.gateway.outcome == "inconclusive"
+    assert result.gateway.error_code == "gateway_authentication"
+    assert result.comparison.verdict == "inconclusive"

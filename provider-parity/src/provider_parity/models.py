@@ -185,7 +185,8 @@ class PairResult(FrozenModel):
 class RunMetadata(FrozenModel):
     run_id: str
     created_at: str
-    gateway_commit: str
+    harness_commit: str
+    gateway_url: str
     taxonomy_fingerprint: str
     sdk_versions: dict[str, str]
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated, Literal
@@ -11,6 +12,7 @@ from dotenv import load_dotenv
 from provider_parity.cases import load_cases, load_expected_differences
 from provider_parity.catalog import load_catalog
 from provider_parity.drivers import supported_endpoints
+from provider_parity.gateway import Gateway
 from provider_parity.models import Plan, ReportDocument
 from provider_parity.output import Col, FormatOption, OutputFormat, print_rows
 from provider_parity.plan import Filters, build_plan
@@ -30,6 +32,8 @@ SDKOption = Annotated[str | None, typer.Option("--sdk")]
 SurfaceOption = Annotated[str | None, typer.Option("--surface")]
 TransportOption = Annotated[Literal["buffered", "streamed"] | None, typer.Option("--transport")]
 UnknownOption = Annotated[bool, typer.Option("--include-unknown", help="Include parameters whose support is not known")]
+GatewayUrlOption = Annotated[str | None, typer.Option("--gateway-url", help="Origin of the running AirLLM data plane")]
+GatewayKeyOption = Annotated[str | None, typer.Option("--gateway-api-key", help="Inference key accepted by the running data plane")]
 
 app = typer.Typer(name="airllm-parity", no_args_is_help=True)
 cases_app = typer.Typer(name="cases", no_args_is_help=True)
@@ -151,11 +155,21 @@ def runs_execute(  # noqa: PLR0913, PLR0917 command flags define the CLI surface
     surface: SurfaceOption = None,
     transport: TransportOption = None,
     include_unknown: UnknownOption = False,
+    gateway_url: GatewayUrlOption = None,
+    gateway_api_key: GatewayKeyOption = None,
     yes: Annotated[bool, typer.Option("--yes", help="Confirm a run above the request guardrail")] = False,
     max_requests: Annotated[int, typer.Option("--max-requests", min=1)] = 500,
     output_format: FormatOption = OutputFormat.table,
 ) -> None:
     load_dotenv(ROOT / ".env")
+    gateway_url = gateway_url or os.environ.get("AIRLLM_GATEWAY_URL")
+    gateway_api_key = gateway_api_key or os.environ.get("AIRLLM_API_KEY")
+    if gateway_url is None:
+        message = "set AIRLLM_GATEWAY_URL or pass --gateway-url"
+        raise typer.BadParameter(message)
+    if gateway_api_key is None:
+        message = "set AIRLLM_API_KEY or pass --gateway-api-key"
+        raise typer.BadParameter(message)
     plan = _plan(
         Filters(
             provider=provider,
@@ -173,9 +187,10 @@ def runs_execute(  # noqa: PLR0913, PLR0917 command flags define the CLI surface
     if plan.requests > max_requests and not yes:
         message = f"the run schedules {plan.requests} requests; pass --yes or narrow the selection"
         raise typer.BadParameter(message)
-    results = execute(plan, load_expected_differences(DIFFERENCES))
+    gateway = Gateway(base_url=gateway_url, api_key=gateway_api_key)
+    results = execute(plan, gateway, load_expected_differences(DIFFERENCES))
     run_id = datetime.now(tz=UTC).strftime("%Y%m%dT%H%M%SZ")
-    paths = write_report(results, REPORTS, run_id, metadata(ROOT, run_id))
+    paths = write_report(results, REPORTS, run_id, metadata(ROOT, run_id, gateway.base_url))
     rows = [
         {
             "provider": result.provider_id,

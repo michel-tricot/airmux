@@ -1,33 +1,16 @@
 from __future__ import annotations
 
-import yaml
-
-from provider_parity.gateway import render_bundle
-from provider_parity.models import Target
+from provider_parity.gateway import Gateway
 
 
-def test_local_bundle_routes_the_gateway_model_to_the_same_provider_surface():
-    target = Target(
-        provider_id="anthropic",
-        surface_id="anthropic",
-        endpoint="messages",
-        egress_kind="anthropic",
-        base_url="https://api.anthropic.com/v1",
-        credential_env="ANTHROPIC_API_KEY",
-        auth="header_key:x-api-key",
-        headers={"anthropic-version": "2023-06-01"},
-        model_id="anthropic/claude-test",
-        upstream_model="claude-test",
-        context_window=200000,
-        max_output_tokens=8192,
-        input_modalities=frozenset({"text"}),
-        capabilities=frozenset({"streaming", "tools"}),
-        parameter_support={"temperature": "supported"},
-    )
+def test_running_gateway_uses_the_configured_origin_for_each_sdk_surface():
+    gateway = Gateway(base_url="http://gateway.example/", api_key="sk-inf-parity")
 
-    bundle = yaml.safe_load(render_bundle([target], "sk-inf-parity"))
+    openai = gateway.connection("chat/completions")
+    responses = gateway.connection("responses")
+    anthropic = gateway.connection("messages")
 
-    assert bundle["providers"] == [{"provider_id": "anthropic", "kind": "anthropic", "base_url": "https://api.anthropic.com/v1"}]
-    assert bundle["models"][0]["model_id"] == "anthropic/claude-test"
-    assert bundle["models"][0]["upstream_model"] == "claude-test"
-    assert bundle["models"][0]["parameter_support"] == {"temperature": "supported"}
+    assert openai.base_url == "http://gateway.example/inf/v1"
+    assert responses.base_url == "http://gateway.example/inf/v1"
+    assert anthropic.base_url == "http://gateway.example/inf"
+    assert {openai.api_key, responses.api_key, anthropic.api_key} == {"sk-inf-parity"}

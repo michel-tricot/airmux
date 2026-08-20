@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, cast
 import openai
 from openai import OpenAI
 
-from provider_parity.drivers.base import Connection, SDKDriver
+from provider_parity.drivers.base import Connection, SDKDriver, is_gateway_auth_failure
 from provider_parity.drivers.normalize import openai_chat, openai_responses
 from provider_parity.models import Case, Observation, Tool, Transport
 
@@ -130,9 +130,10 @@ class OpenAIDriver(SDKDriver):
             raise ValueError(message)
         except openai.APIStatusError as error:
             elapsed = (time.perf_counter() - started) * 1000
+            gateway_auth_failure = is_gateway_auth_failure(connection, error.status_code)
             return Observation(
-                outcome="unsupported" if _unsupported(error) else "error",
-                error_code=str(getattr(error, "code", None) or error.status_code),
+                outcome="inconclusive" if gateway_auth_failure else "unsupported" if _unsupported(error) else "error",
+                error_code="gateway_authentication" if gateway_auth_failure else str(getattr(error, "code", None) or error.status_code),
                 error_message=str(error)[:500],
                 duration_ms=elapsed,
                 sdk_type=type(error).__name__,

@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, cast
 import anthropic
 from anthropic import Anthropic
 
-from provider_parity.drivers.base import Connection, SDKDriver
+from provider_parity.drivers.base import Connection, SDKDriver, is_gateway_auth_failure
 from provider_parity.drivers.normalize import anthropic_message
 from provider_parity.models import Case, Observation, Transport
 
@@ -118,9 +118,10 @@ class AnthropicDriver(SDKDriver):
             return anthropic_message(cast("Mapping[str, object]", message.model_dump()), elapsed, type(message).__name__)
         except anthropic.APIStatusError as error:
             elapsed = (time.perf_counter() - started) * 1000
+            gateway_auth_failure = is_gateway_auth_failure(connection, error.status_code)
             return Observation(
-                outcome="unsupported" if _unsupported(error) else "error",
-                error_code=str(getattr(error, "code", None) or error.status_code),
+                outcome="inconclusive" if gateway_auth_failure else "unsupported" if _unsupported(error) else "error",
+                error_code="gateway_authentication" if gateway_auth_failure else str(getattr(error, "code", None) or error.status_code),
                 error_message=str(error)[:500],
                 duration_ms=elapsed,
                 sdk_type=type(error).__name__,
