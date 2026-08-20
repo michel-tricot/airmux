@@ -115,7 +115,7 @@ describe('provider icons', () => {
 });
 
 describe('show-once keys', () => {
-  it('shows copied feedback before the clipboard write finishes', async () => {
+  it('waits for the clipboard write before showing copied feedback', async () => {
     const user = userEvent.setup();
     let finishCopy: (() => void) | undefined;
     vi.spyOn(navigator.clipboard, 'writeText').mockImplementation(
@@ -128,8 +128,10 @@ describe('show-once keys', () => {
 
     await user.click(screen.getByRole('button', { name: 'Copy key' }));
 
-    expect(screen.getByRole('button', { name: 'Copied' })).toHaveTextContent('Copied');
+    expect(screen.getByRole('button', { name: 'Copying' })).toBeDisabled();
+    expect(screen.queryByRole('button', { name: 'Copied' })).not.toBeInTheDocument();
     finishCopy?.();
+    expect(await screen.findByRole('button', { name: 'Copied' })).toHaveTextContent('Copied');
   });
 
   it('presents an explicit copy action without focusing the secret text', async () => {
@@ -148,27 +150,44 @@ describe('show-once keys', () => {
     expect(screen.getByRole('button', { name: 'Copied' })).toHaveTextContent('Copied');
   });
 
-  it('reports clipboard failures and keeps manual copy available', async () => {
+  it('falls back to the selected-text copy command when clipboard permission is blocked', async () => {
     const user = userEvent.setup();
     vi.spyOn(navigator.clipboard, 'writeText').mockRejectedValue(new Error('blocked'));
+    const legacyCopy = vi.spyOn(document, 'execCommand').mockReturnValue(true);
     render(<KeyRevealDialog open onOpenChange={() => undefined} token="secret-token" />);
 
     await user.click(screen.getByRole('button', { name: 'Copy key' }));
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('Could not copy the key');
-    expect(screen.getByDisplayValue('secret-token')).toHaveFocus();
+    expect(legacyCopy).toHaveBeenCalledWith('copy');
+    expect(await screen.findByRole('button', { name: 'Copied' })).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
-  it('clears stale clipboard feedback before revealing a different key', async () => {
+  it('selects the value and gives keyboard instructions when automatic copy is blocked', async () => {
     const user = userEvent.setup();
     vi.spyOn(navigator.clipboard, 'writeText').mockRejectedValue(new Error('blocked'));
+    vi.spyOn(document, 'execCommand').mockReturnValue(false);
+    render(<KeyRevealDialog open onOpenChange={() => undefined} token="secret-token" />);
+
+    await user.click(screen.getByRole('button', { name: 'Copy key' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Press Command+C or Ctrl+C');
+    const secret = screen.getByDisplayValue('secret-token');
+    expect(secret).toHaveFocus();
+    expect(secret).toHaveSelection('secret-token');
+  });
+
+  it('clears stale clipboard feedback when a value is hidden and shown again', async () => {
+    const user = userEvent.setup();
+    vi.spyOn(navigator.clipboard, 'writeText').mockRejectedValue(new Error('blocked'));
+    vi.spyOn(document, 'execCommand').mockReturnValue(false);
     const dialog = render(<KeyRevealDialog open onOpenChange={() => undefined} token="first-token" />);
 
     await user.click(screen.getByRole('button', { name: 'Copy key' }));
     expect(await screen.findByRole('alert')).toBeInTheDocument();
 
     dialog.rerender(<KeyRevealDialog open={false} onOpenChange={() => undefined} token={null} />);
-    dialog.rerender(<KeyRevealDialog open onOpenChange={() => undefined} token="second-token" />);
+    dialog.rerender(<KeyRevealDialog open onOpenChange={() => undefined} token="first-token" />);
 
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Copy key' })).toBeInTheDocument();
@@ -265,6 +284,7 @@ describe('playground', () => {
     };
     let dialect = '';
     let requestedWith = '';
+    let requestBody: Record<string, unknown> = {};
     let sessions = 0;
     server.use(
       http.get(`/api/v1/orgs/${ORG.id}/workspaces/${WORKSPACES[0].slug}/taxonomy`, () =>
@@ -274,11 +294,20 @@ describe('playground', () => {
         sessions += 1;
         return HttpResponse.json({ id: 'session-1', expires_at: '2026-01-01T01:00:00Z', status: 'ready' });
       }),
-      http.post('/inf/v1/chat/completions', ({ request }) => {
+      http.post('/inf/v1/chat/completions', async ({ request }) => {
         dialect = request.headers.get('x-airllm-dialect') ?? '';
         requestedWith = request.headers.get('x-requested-with') ?? '';
+        requestBody = (await request.json()) as Record<string, unknown>;
         return HttpResponse.text(
-          'data: {"choices":[{"delta":{"content":"hello from the gateway"}}]}\n\ndata: {"choices":[{"finish_reason":"stop"}],"usage":{"prompt_tokens":12,"completion_tokens":4,"prompt_tokens_details":{"cached_tokens":2}}}\n\ndata: [DONE]\n\n',
+          [
+            'data: {"choices":[{"delta":{"content":"hello from the gateway"}}]}',
+            '',
+            'data: {"choices":[{"finish_reason":"stop"}],"usage":{"prompt_tokens":12,"completion_tokens":4,' +
+              '"prompt_tokens_details":{"cached_tokens":2}}}',
+            '',
+            'data: [DONE]',
+            '',
+          ].join('\n'),
           { headers: { 'content-type': 'text/event-stream' } },
         );
       }),
@@ -286,23 +315,59 @@ describe('playground', () => {
     window.history.replaceState(null, '', `/org/workspaces/${WORKSPACES[0].slug}/playground`);
     render(<App />);
     const user = userEvent.setup();
+    vi.spyOn(navigator.clipboard, 'writeText').mockRejectedValue(new Error('blocked'));
+    const legacyCopy = vi.spyOn(document, 'execCommand').mockReturnValue(true);
 
     const composer = await screen.findByPlaceholderText('Send a message... (Shift+Enter for newline)');
+    expect(document.querySelector('[data-playground-scroll-anchor]')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('combobox', { name: 'API surface' }));
+    expect(screen.getByRole('option', { name: 'OpenAI Chat (oai)' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'OpenAI-compatible (oai_compatible)' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Responses API' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Messages API' })).toBeInTheDocument();
+    await user.keyboard('{Escape}');
+    const maxTokens = screen.getByLabelText('Max tokens');
+    await user.click(screen.getByRole('button', { name: 'Increase Max tokens' }));
+    expect(maxTokens).toHaveValue(1);
+    await user.click(screen.getByRole('button', { name: 'Decrease Max tokens' }));
+    expect(maxTokens).toHaveValue(1);
+    await user.clear(maxTokens);
     await user.type(composer, 'hello');
     await user.click(screen.getByRole('button', { name: 'Send message' }));
 
     expect(composer).toHaveFocus();
 
     expect(await screen.findByText('hello from the gateway')).toBeInTheDocument();
+    expect(document.querySelector('[data-playground-scroll-anchor]')).toBeInTheDocument();
     expect(composer).toHaveFocus();
+    expect(screen.getByText('16 total')).toBeInTheDocument();
+    expect(screen.queryByText('12 input')).not.toBeInTheDocument();
+    expect(screen.queryByText('2 cached')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Show response details' }));
     expect(screen.getByText('12 input')).toBeInTheDocument();
     expect(screen.getByText('4 output')).toBeInTheDocument();
-    expect(screen.getByText('16 total')).toBeInTheDocument();
     expect(screen.getByText('2 cached')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'View cURL' }));
+    const curlDialog = screen.getByRole('dialog', { name: 'Replicate request' });
+    expect(curlDialog).toHaveTextContent('/inf/v1/chat/completions');
+    expect(curlDialog).toHaveTextContent('Authorization: Bearer $AIRLLM_API_KEY');
+    expect(curlDialog).toHaveTextContent('openai/gpt-test');
+    expect(curlDialog).toHaveTextContent('"content": "hello"');
+    expect(curlDialog).toHaveTextContent('"temperature": 1');
+    expect(curlDialog).toHaveTextContent('"stream": true');
+    const copyCurl = within(curlDialog).getByRole('button', { name: 'Copy cURL' });
+    expect(copyCurl).toHaveClass('justify-center', 'leading-none');
+    expect(within(curlDialog).getByLabelText('cURL command')).toHaveClass('max-w-full', 'whitespace-pre-wrap', 'break-words');
+    await user.click(copyCurl);
+    expect(legacyCopy).toHaveBeenCalledWith('copy');
+    expect(await within(curlDialog).findByRole('button', { name: 'Copied cURL' })).toBeInTheDocument();
+    await user.click(within(curlDialog).getByRole('button', { name: 'Close' }));
     expect(screen.queryByRole('button', { name: 'Generate playground key' })).not.toBeInTheDocument();
     expect(sessions).toBe(1);
     expect(dialect).toBe('openai_native');
     expect(requestedWith).toBe('fetch');
+    expect(requestBody.messages).toEqual([{ role: 'user', content: 'hello' }]);
 
     const workspaceNavigation = screen.getByRole('navigation', { name: 'Workspace navigation' });
     const workspaceOverview = within(workspaceNavigation)
@@ -314,6 +379,51 @@ describe('playground', () => {
     expect(await screen.findByText('hello from the gateway')).toBeInTheDocument();
     expect(screen.getByText(/Active until/)).toBeInTheDocument();
     expect(sessions).toBe(1);
+  });
+
+  it('explains when a response is stopped by content filtering', async () => {
+    const provider = taxonomyProvider('provider-1', 'anthropic');
+    const model = {
+      id: 'model-1',
+      name: 'anthropic/claude-test',
+      provider_id: provider.id,
+      upstream_model: 'claude-test',
+      input_price_per_mtok: 1,
+      output_price_per_mtok: 2,
+      cache_read_price_per_mtok: 0,
+      cache_write_price_per_mtok: 0,
+      context_window: 128000,
+      max_output_tokens: 4096,
+      input_modalities: ['text'],
+      output_modalities: ['text'],
+      capabilities: ['streaming'],
+      created_at: now,
+      updated_at: now,
+      deleted_at: null,
+    };
+    server.use(
+      http.get(`/api/v1/orgs/${ORG.id}/workspaces/${WORKSPACES[0].slug}/taxonomy`, () =>
+        HttpResponse.json({ providers: [provider], models: [model] }),
+      ),
+      http.put(`/api/v1/orgs/${ORG.id}/workspaces/${WORKSPACES[0].slug}/playground-session`, () =>
+        HttpResponse.json({ id: 'session-1', expires_at: '2026-01-01T01:00:00Z', status: 'ready' }),
+      ),
+      http.post('/inf/v1/chat/completions', () =>
+        HttpResponse.text('data: {"choices":[{"finish_reason":"content_filter"}]}\n\ndata: [DONE]\n\n', {
+          headers: { 'content-type': 'text/event-stream' },
+        }),
+      ),
+    );
+    window.history.replaceState(null, '', `/org/workspaces/${WORKSPACES[0].slug}/playground`);
+    render(<App />);
+    const user = userEvent.setup();
+
+    await user.type(await screen.findByPlaceholderText('Send a message... (Shift+Enter for newline)'), 'hello');
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+
+    expect(await screen.findByText('Response stopped: content_filter')).toBeInTheDocument();
+    expect(screen.queryByText('No text content returned')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'View cURL' })).toBeInTheDocument();
   });
 
   it('filters the model selector by model and provider name', async () => {

@@ -111,7 +111,7 @@ function ProviderCredentialFields({ form, providers }: { form: UseFormReturn<Add
           <FormItem>
             <FormLabel>Priority</FormLabel>
             <FormControl>
-              <Input type="number" min={1} {...field} />
+              <Input type="number" min={1} stepperLabel="Priority" {...field} />
             </FormControl>
             <FormMessage />
           </FormItem>

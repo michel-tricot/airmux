@@ -1,20 +1,21 @@
 import { useEffect, useRef, useState } from 'react';
-import { Send, Trash2, Loader2, User, Bot, AlertCircle, Zap, ShieldCheck } from 'lucide-react';
+import { Send, Trash2, Loader2, User, Bot, AlertCircle, Zap, ShieldCheck, ChevronDown, Copy, Check } from 'lucide-react';
 import { useRequiredOrgId } from '@/lib/session';
 import { useRequiredParam } from '@/lib/route';
 import { useProviders } from '@/features/credentials/hooks';
-import { Alert, AlertDescription, AlertTitle, Badge, Button, Input, Label, Switch } from '@/components/ui/elements';
+import { Alert, AlertDescription, AlertTitle, Badge, Button, Dropdown, Input, Label, Modal, Switch } from '@/components/ui/elements';
 import { Textarea } from '@/components/ui/textarea';
 import { PageShell } from '@/components/shared/page-shell';
 import { LoadingState, ErrorState, EmptyState } from '@/components/shared/states';
 import { ProviderIcon } from '@/components/ProviderIcon';
 import { cn } from '@/lib/utils';
-import { chatCompletion, type InferenceMessage } from '@/lib/inference';
+import { inferenceCompletion, prepareInferenceRequest, type InferenceMessage, type InferenceSurface } from '@/lib/inference';
 import { useAuthorization } from '@/features/permissions/hooks';
 import { catalogAccess } from '@/features/catalog/policy';
 import { useEndPlaygroundSessionMutation, useEnsurePlaygroundSessionMutation } from '@/features/playground/hooks';
-import { usePlaygroundState, type PlaygroundMessage } from '@/features/playground/state';
+import { usePlaygroundState, type PlaygroundMessage, type PlaygroundRequest } from '@/features/playground/state';
 import { ModelPicker } from '@/components/shared/model-picker';
+import { useClipboardCopy } from '@/components/shared/use-clipboard-copy';
 
 function formatDuration(durationMs: number) {
   return durationMs < 1_000 ? `${Math.round(durationMs)} ms` : `${(durationMs / 1_000).toFixed(1)} s`;
@@ -24,8 +25,91 @@ function formatCost(costUsd: number) {
   return `$${costUsd.toFixed(costUsd < 0.01 ? 4 : 2)}`;
 }
 
+const SURFACE_OPTIONS: { value: InferenceSurface; label: string }[] = [
+  { value: 'oai', label: 'OpenAI Chat (oai)' },
+  { value: 'oai_compatible', label: 'OpenAI-compatible (oai_compatible)' },
+  { value: 'responses', label: 'Responses API' },
+  { value: 'messages', label: 'Messages API' },
+];
+
+function curlFor(request: PlaygroundRequest) {
+  const prepared = prepareInferenceRequest(request);
+  const body = JSON.stringify(prepared.body, null, 2).replaceAll("'", "'\"'\"'");
+  const apiKeyHeader =
+    prepared.apiKeyHeader === 'Authorization' ? '  -H "Authorization: Bearer $AIRLLM_API_KEY" \\' : '  -H "x-api-key: $AIRLLM_API_KEY" \\';
+  return [
+    "curl '" + window.location.origin + prepared.path + "' \\",
+    apiKeyHeader,
+    "  -H 'Content-Type: application/json' \\",
+    ...(prepared.dialect ? ["  -H 'x-airllm-dialect: " + prepared.dialect + "' \\"] : []),
+    "  --data-raw '" + body + "'",
+  ].join('\n');
+}
+
+function CurlDialog({ open, onOpenChange, request }: { open: boolean; onOpenChange: (open: boolean) => void; request: PlaygroundRequest }) {
+  const curl = curlFor(request);
+  const curlText = useRef<HTMLPreElement>(null);
+  const { copy, status } = useClipboardCopy(curl, curlText, request);
+  const copied = status === 'copied';
+  const copying = status === 'copying';
+
+  return (
+    <Modal
+      open={open}
+      onOpenChange={onOpenChange}
+      title="Replicate request"
+      description="Set AIRLLM_API_KEY to an inference key, then run this command from your terminal."
+      contentClassName="sm:max-w-3xl"
+    >
+      <div className="min-w-0 space-y-3">
+        <div className="min-w-0 max-w-full overflow-hidden rounded border border-border bg-background/60">
+          <div className="flex justify-end border-b border-border p-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              className="min-w-20 justify-center gap-1.5 leading-none"
+              onClick={() => void copy()}
+              disabled={copying}
+              aria-label={copying ? 'Copying cURL' : copied ? 'Copied cURL' : 'Copy cURL'}
+            >
+              {copying ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : copied ? (
+                <Check className="h-3.5 w-3.5 text-success" />
+              ) : (
+                <Copy className="h-3.5 w-3.5" />
+              )}
+              <span className="inline-flex h-full items-center leading-none">{copying ? 'Copying' : copied ? 'Copied' : 'Copy'}</span>
+            </Button>
+          </div>
+          <pre
+            ref={curlText}
+            tabIndex={-1}
+            aria-label="cURL command"
+            className={cn(
+              'permission-scrollbar max-h-[60vh] min-w-0 max-w-full overflow-x-hidden overflow-y-auto p-4',
+              'whitespace-pre-wrap break-words font-mono text-xs leading-relaxed text-foreground',
+            )}
+          >
+            {curl}
+          </pre>
+        </div>
+        {status === 'manual' && (
+          <p role="alert" className="text-sm text-destructive">
+            Automatic copy was blocked. Press Command+C or Ctrl+C to copy the selected command.
+          </p>
+        )}
+      </div>
+    </Modal>
+  );
+}
+
 function MessageBubble({ message }: { message: PlaygroundMessage }) {
   const isUser = message.role === 'user';
+  const hasTextContent = !!message.content.trim();
+  const stoppedAbnormally = message.finishReason !== undefined && message.finishReason !== 'stop';
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [curlOpen, setCurlOpen] = useState(false);
   return (
     <div className={cn('flex gap-3', isUser && 'flex-row-reverse')}>
       <div
@@ -43,23 +127,57 @@ function MessageBubble({ message }: { message: PlaygroundMessage }) {
             isUser ? 'rounded-tr-sm bg-primary text-primary-foreground' : 'rounded-tl-sm border border-border bg-card text-foreground',
           )}
         >
-          <pre className="whitespace-pre-wrap font-sans">{message.content}</pre>
+          {hasTextContent && <pre className="whitespace-pre-wrap font-sans">{message.content}</pre>}
+          {stoppedAbnormally ? (
+            <p role="status" className={cn('font-mono text-xs text-warning', hasTextContent && 'mt-2 border-t border-warning/20 pt-2')}>
+              Response stopped: {message.finishReason}
+            </p>
+          ) : !hasTextContent ? (
+            <span className="font-sans italic text-muted-foreground">No text content returned</span>
+          ) : null}
         </div>
-        {message.interaction && (
-          <div className="flex flex-wrap gap-x-3 gap-y-1 pl-1 font-mono text-[10px] text-muted-foreground">
-            <span>{message.interaction.model}</span>
-            {message.interaction.provider && <span>{message.interaction.provider}</span>}
-            <span>{message.interaction.inputTokens} input</span>
-            <span>{message.interaction.outputTokens} output</span>
-            <span>{message.interaction.inputTokens + message.interaction.outputTokens} total</span>
-            {message.interaction.cacheReadTokens > 0 && <span>{message.interaction.cacheReadTokens} cached</span>}
-            <span>Est. {formatCost(message.interaction.estimatedCostUsd)}</span>
-            <span>{formatDuration(message.interaction.durationMs)}</span>
-            {message.interaction.firstTokenMs !== undefined && <span>First token {formatDuration(message.interaction.firstTokenMs)}</span>}
-            {message.interaction.finishReason && <span>{message.interaction.finishReason}</span>}
+        {(message.interaction || message.request) && (
+          <div className="space-y-1 pl-1 font-mono text-[10px] text-muted-foreground">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+              {message.interaction && (
+                <>
+                  <span>{message.interaction.model}</span>
+                  <span>{message.interaction.inputTokens + message.interaction.outputTokens} total</span>
+                  <span>Est. {formatCost(message.interaction.estimatedCostUsd)}</span>
+                  <span>{formatDuration(message.interaction.durationMs)}</span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-5 gap-1 px-1.5 text-[10px]"
+                    aria-expanded={detailsOpen}
+                    aria-label={detailsOpen ? 'Hide response details' : 'Show response details'}
+                    onClick={() => setDetailsOpen((open) => !open)}
+                  >
+                    {detailsOpen ? 'Hide details' : 'Show details'}
+                    <ChevronDown className={cn('h-3 w-3 transition-transform', detailsOpen && 'rotate-180')} />
+                  </Button>
+                </>
+              )}
+              {message.request && (
+                <Button variant="ghost" size="sm" className="h-5 px-1.5 text-[10px]" onClick={() => setCurlOpen(true)}>
+                  View cURL
+                </Button>
+              )}
+            </div>
+            {message.interaction && detailsOpen && (
+              <div className="flex flex-wrap gap-x-3 gap-y-1 border-l border-border pl-2">
+                {message.interaction.provider && <span>{message.interaction.provider}</span>}
+                <span>{message.interaction.inputTokens} input</span>
+                <span>{message.interaction.outputTokens} output</span>
+                <span>{message.interaction.cacheReadTokens} cached</span>
+                {message.interaction.firstTokenMs !== undefined && <span>First token {formatDuration(message.interaction.firstTokenMs)}</span>}
+                {message.finishReason && <span>{message.finishReason}</span>}
+              </div>
+            )}
           </div>
         )}
       </div>
+      {message.request && <CurlDialog open={curlOpen} onOpenChange={setCurlOpen} request={message.request} />}
     </div>
   );
 }
@@ -92,7 +210,7 @@ function Playground({ orgId, workspaceRef }: { orgId: string; workspaceRef: stri
   const ensureSession = useEnsurePlaygroundSessionMutation();
   const endSession = useEndPlaygroundSessionMutation();
   const [playground, setPlayground] = usePlaygroundState(`${orgId}:${workspaceRef}`);
-  const { selectedModel, systemPrompt, temperature, maxTokens, streamEnabled, messages, input, sessionExpiresAt } = playground;
+  const { surface, selectedModel, systemPrompt, temperature, maxTokens, streamEnabled, messages, input, sessionExpiresAt } = playground;
   const updatePlayground = (update: Partial<typeof playground>) => setPlayground((current) => ({ ...current, ...update }));
 
   const models = taxonomyQuery.data?.models ?? [];
@@ -158,14 +276,18 @@ function Playground({ orgId, workspaceRef }: { orgId: string; workspaceRef: stri
       requestStarted = true;
       const requestMessages: InferenceMessage[] = [
         ...(systemPrompt.trim() ? [{ role: 'system' as const, content: systemPrompt.trim() }] : []),
-        ...history,
+        ...history.map(({ role, content }) => ({ role, content })),
       ];
-      const result = await chatCompletion({
+      const request: PlaygroundRequest = {
+        surface,
         model: activeModel,
         messages: requestMessages,
         temperature: temperatureUnsupported ? undefined : Number(temperature),
         maxTokens: maxTokens ? Number.parseInt(maxTokens, 10) : undefined,
         stream: streamEnabled,
+      };
+      const result = await inferenceCompletion({
+        ...request,
         signal: controller.signal,
         onDelta: (content) => {
           partial = content;
@@ -188,6 +310,8 @@ function Playground({ orgId, workspaceRef }: { orgId: string; workspaceRef: stri
           {
             role: 'assistant',
             content: result.content,
+            finishReason: result.finishReason,
+            request,
             interaction: usage
               ? {
                   model: activeModel,
@@ -198,7 +322,6 @@ function Playground({ orgId, workspaceRef }: { orgId: string; workspaceRef: stri
                   estimatedCostUsd,
                   durationMs: result.durationMs,
                   firstTokenMs: result.firstTokenMs,
-                  finishReason: result.finishReason,
                 }
               : undefined,
           },
@@ -248,6 +371,7 @@ function Playground({ orgId, workspaceRef }: { orgId: string; workspaceRef: stri
   }
 
   const canSend = !!input.trim() && !!activeModel && !sending;
+  const hasConversationContent = messages.length > 0 || sending || error !== null;
 
   return (
     <PageShell className="h-[calc(100vh-2rem)] max-w-none flex flex-col gap-0 p-0 overflow-hidden">
@@ -268,6 +392,18 @@ function Playground({ orgId, workspaceRef }: { orgId: string; workspaceRef: stri
               onSelectionComplete={() => composerRef.current?.focus()}
               options={modelOptions}
               placeholder="Select model"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="playground-surface">API surface</Label>
+            <Dropdown
+              id="playground-surface"
+              aria-label="API surface"
+              value={surface}
+              onValueChange={(value) => updatePlayground({ surface: value as InferenceSurface })}
+              options={SURFACE_OPTIONS}
+              className="h-8 text-xs"
             />
           </div>
 
@@ -317,6 +453,7 @@ function Playground({ orgId, workspaceRef }: { orgId: string; workspaceRef: stri
               min={1}
               placeholder="Default"
               value={maxTokens}
+              stepperLabel="Max tokens"
               onChange={(event) => updatePlayground({ maxTokens: event.target.value })}
               className="h-8 text-xs font-mono"
             />
@@ -398,7 +535,7 @@ function Playground({ orgId, workspaceRef }: { orgId: string; workspaceRef: stri
                 <AlertDescription className="font-mono text-[11px]">{error}</AlertDescription>
               </Alert>
             )}
-            <div ref={bottomRef} />
+            {hasConversationContent && <div ref={bottomRef} data-playground-scroll-anchor />}
           </div>
 
           <div className="border-t border-border bg-card/40 p-4">
@@ -448,6 +585,9 @@ function Playground({ orgId, workspaceRef }: { orgId: string; workspaceRef: stri
               <div className="mt-2 flex items-center gap-1.5">
                 <Badge variant="outline" className="font-mono text-[10px]">
                   {activeModel}
+                </Badge>
+                <Badge variant="outline" className="font-mono text-[10px]">
+                  {surface}
                 </Badge>
                 {streamEnabled && (
                   <Badge variant="secondary" className="text-[10px]">

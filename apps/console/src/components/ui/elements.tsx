@@ -1,4 +1,5 @@
 import React, { forwardRef } from 'react';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import {
@@ -117,16 +118,71 @@ export const Switch = forwardRef<
 ));
 Switch.displayName = 'Switch';
 
-export const Input = forwardRef<HTMLInputElement, React.ComponentPropsWithoutRef<typeof InputPrimitive>>(({ className, ...props }, ref) => (
-  <InputPrimitive
-    ref={ref}
-    className={cn(
-      'rounded bg-background/50 text-sm font-mono placeholder:text-muted-foreground/50 focus-visible:border-primary focus-visible:ring-primary',
-      className,
-    )}
-    {...props}
-  />
-));
+type InputProps = React.ComponentPropsWithoutRef<typeof InputPrimitive> & { stepperLabel?: string };
+
+export const Input = forwardRef<HTMLInputElement, InputProps>(({ className, stepperLabel = 'value', type, disabled, ...props }, ref) => {
+  const inputRef = React.useRef<HTMLInputElement | null>(null);
+  const setRef = (input: HTMLInputElement | null) => {
+    inputRef.current = input;
+    if (typeof ref === 'function') ref(input);
+    else if (ref) ref.current = input;
+  };
+  const step = (direction: 'up' | 'down') => {
+    const input = inputRef.current;
+    if (!input) return;
+    if (direction === 'up') input.stepUp();
+    else input.stepDown();
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    input.focus();
+  };
+  const input = (
+    <InputPrimitive
+      ref={setRef}
+      type={type}
+      disabled={disabled}
+      className={cn(
+        'rounded bg-background/50 text-sm font-mono placeholder:text-muted-foreground/50 focus-visible:border-primary focus-visible:ring-primary',
+        type === 'number' && 'pr-8',
+        className,
+      )}
+      {...props}
+    />
+  );
+  if (type !== 'number') return input;
+  return (
+    <div className="relative">
+      {input}
+      <div className="absolute inset-y-px right-px flex w-7 flex-col overflow-hidden rounded-r border-l border-border bg-muted/40">
+        <button
+          type="button"
+          aria-label={`Increase ${stepperLabel}`}
+          disabled={disabled}
+          className={cn(
+            'flex min-h-0 flex-1 items-center justify-center text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary',
+            'focus-visible:z-10 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-primary',
+            'disabled:cursor-not-allowed disabled:opacity-50',
+          )}
+          onClick={() => step('up')}
+        >
+          <ChevronUp className="h-3 w-3" />
+        </button>
+        <button
+          type="button"
+          aria-label={`Decrease ${stepperLabel}`}
+          disabled={disabled}
+          className={cn(
+            'flex min-h-0 flex-1 items-center justify-center border-t border-border text-muted-foreground transition-colors',
+            'hover:bg-primary/10 hover:text-primary focus-visible:z-10 focus-visible:outline-none focus-visible:ring-1',
+            'focus-visible:ring-inset focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-50',
+          )}
+          onClick={() => step('down')}
+        >
+          <ChevronDown className="h-3 w-3" />
+        </button>
+      </div>
+    </div>
+  );
+});
 Input.displayName = 'Input';
 
 export const Label = forwardRef<React.ElementRef<typeof LabelPrimitive>, React.ComponentPropsWithoutRef<typeof LabelPrimitive> & { htmlFor: string }>(

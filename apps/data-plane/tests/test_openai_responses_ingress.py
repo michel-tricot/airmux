@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import pytest
 
-from data_plane.canonical import CanonicalMessage, TextPart
-from data_plane.formats.openai_responses import input_of, messages_of
+from data_plane.canonical import CanonicalMessage, TextPart, Usage
+from data_plane.formats.openai_responses import input_of, json_response, messages_of
 
 SPELLINGS = [
     (
@@ -59,3 +59,10 @@ def test_a_conversation_read_then_rewritten_keeps_every_turn():
         ("assistant", "Paris"),
         ("user", "And of Spain?"),
     ]
+
+
+def test_content_filter_is_visible_in_a_responses_reply():
+    response = json_response("response-1", "model-1", [], "content_filter", Usage())
+
+    assert response["status"] == "incomplete"
+    assert response["incomplete_details"] == {"reason": "content_filter"}

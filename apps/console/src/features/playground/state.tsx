@@ -1,4 +1,14 @@
 import { createContext, useContext, useState, type Dispatch, type ReactNode, type SetStateAction } from 'react';
+import type { InferenceMessage, InferenceSurface } from '@/lib/inference';
+
+export type PlaygroundRequest = {
+  surface: InferenceSurface;
+  model: string;
+  messages: InferenceMessage[];
+  temperature: number | undefined;
+  maxTokens: number | undefined;
+  stream: boolean;
+};
 
 export type PlaygroundInteraction = {
   model: string;
@@ -9,16 +19,18 @@ export type PlaygroundInteraction = {
   estimatedCostUsd: number;
   durationMs: number;
   firstTokenMs: number | undefined;
-  finishReason: string | undefined;
 };
 
 export type PlaygroundMessage = {
   role: 'user' | 'assistant';
   content: string;
+  finishReason?: string;
   interaction?: PlaygroundInteraction;
+  request?: PlaygroundRequest;
 };
 
 export type PlaygroundState = {
+  surface: InferenceSurface;
   selectedModel: string;
   systemPrompt: string;
   temperature: string;
@@ -30,6 +42,7 @@ export type PlaygroundState = {
 };
 
 const initialState: PlaygroundState = {
+  surface: 'oai',
   selectedModel: '',
   systemPrompt: '',
   temperature: '1',
