@@ -51,7 +51,6 @@ function CurlDialog({ open, onOpenChange, request }: { open: boolean; onOpenChan
   const curlText = useRef<HTMLPreElement>(null);
   const { copy, status } = useClipboardCopy(curl, curlText, request);
   const copied = status === 'copied';
-  const copying = status === 'copying';
 
   return (
     <Modal
@@ -69,17 +68,10 @@ function CurlDialog({ open, onOpenChange, request }: { open: boolean; onOpenChan
               size="sm"
               className="min-w-20 justify-center gap-1.5 leading-none"
               onClick={() => void copy()}
-              disabled={copying}
-              aria-label={copying ? 'Copying cURL' : copied ? 'Copied cURL' : 'Copy cURL'}
+              aria-label={copied ? 'Copied cURL' : 'Copy cURL'}
             >
-              {copying ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              ) : copied ? (
-                <Check className="h-3.5 w-3.5 text-success" />
-              ) : (
-                <Copy className="h-3.5 w-3.5" />
-              )}
-              <span className="inline-flex h-full items-center leading-none">{copying ? 'Copying' : copied ? 'Copied' : 'Copy'}</span>
+              {copied ? <Check className="h-3.5 w-3.5 text-success" /> : <Copy className="h-3.5 w-3.5" />}
+              <span className="inline-flex h-full items-center leading-none">{copied ? 'Copied' : 'Copy'}</span>
             </Button>
           </div>
           <pre

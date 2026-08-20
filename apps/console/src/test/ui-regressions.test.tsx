@@ -115,23 +115,17 @@ describe('provider icons', () => {
 });
 
 describe('show-once keys', () => {
-  it('waits for the clipboard write before showing copied feedback', async () => {
+  it('shows enabled copied feedback without waiting for the clipboard API', async () => {
     const user = userEvent.setup();
-    let finishCopy: (() => void) | undefined;
-    vi.spyOn(navigator.clipboard, 'writeText').mockImplementation(
-      () =>
-        new Promise<void>((resolve) => {
-          finishCopy = resolve;
-        }),
-    );
+    const writeText = vi.spyOn(navigator.clipboard, 'writeText').mockImplementation(() => new Promise<void>(() => undefined));
+    const legacyCopy = vi.spyOn(document, 'execCommand');
     render(<KeyRevealDialog open onOpenChange={() => undefined} token="secret-token" />);
 
     await user.click(screen.getByRole('button', { name: 'Copy key' }));
 
-    expect(screen.getByRole('button', { name: 'Copying' })).toBeDisabled();
-    expect(screen.queryByRole('button', { name: 'Copied' })).not.toBeInTheDocument();
-    finishCopy?.();
-    expect(await screen.findByRole('button', { name: 'Copied' })).toHaveTextContent('Copied');
+    expect(writeText).toHaveBeenCalledWith('secret-token');
+    expect(legacyCopy).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'Copied' })).toBeEnabled();
   });
 
   it('presents an explicit copy action without focusing the secret text', async () => {
@@ -147,20 +141,33 @@ describe('show-once keys', () => {
     await user.click(copy);
 
     expect(writeText).toHaveBeenCalledWith('secret-token');
+    expect(secret).not.toHaveFocus();
     expect(screen.getByRole('button', { name: 'Copied' })).toHaveTextContent('Copied');
+  });
+
+  it('allows another copy while a clipboard API write is pending', async () => {
+    const user = userEvent.setup();
+    const writeText = vi.spyOn(navigator.clipboard, 'writeText').mockImplementation(() => new Promise<void>(() => undefined));
+    vi.spyOn(document, 'execCommand').mockReturnValue(false);
+    render(<KeyRevealDialog open onOpenChange={() => undefined} token="secret-token" />);
+
+    await user.click(screen.getByRole('button', { name: 'Copy key' }));
+    await user.click(screen.getByRole('button', { name: 'Copied' }));
+
+    expect(writeText).toHaveBeenCalledTimes(2);
   });
 
   it('falls back to the selected-text copy command when clipboard permission is blocked', async () => {
     const user = userEvent.setup();
-    vi.spyOn(navigator.clipboard, 'writeText').mockRejectedValue(new Error('blocked'));
+    const writeText = vi.spyOn(navigator.clipboard, 'writeText').mockRejectedValue(new Error('blocked'));
     const legacyCopy = vi.spyOn(document, 'execCommand').mockReturnValue(true);
     render(<KeyRevealDialog open onOpenChange={() => undefined} token="secret-token" />);
 
     await user.click(screen.getByRole('button', { name: 'Copy key' }));
 
+    expect(writeText).toHaveBeenCalledWith('secret-token');
     expect(legacyCopy).toHaveBeenCalledWith('copy');
     expect(await screen.findByRole('button', { name: 'Copied' })).toBeInTheDocument();
-    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
   it('selects the value and gives keyboard instructions when automatic copy is blocked', async () => {

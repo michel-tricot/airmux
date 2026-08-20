@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type RefObject } from 'react';
 
-export type ClipboardCopyStatus = 'idle' | 'copying' | 'copied' | 'manual';
+export type ClipboardCopyStatus = 'idle' | 'copied' | 'manual';
 
 function selectCopyTarget(target: HTMLElement) {
   target.focus({ preventScroll: true });
@@ -35,44 +35,44 @@ export function useClipboardCopy(value: string, targetRef: RefObject<HTMLElement
   const [result, setResult] = useState<{ resetKey: unknown; status: ClipboardCopyStatus }>({ resetKey, status: 'idle' });
   const copyTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const copyAttempt = useRef(0);
-  const copyingKey = useRef<{ resetKey: unknown } | null>(null);
   const status = result.resetKey === resetKey ? result.status : 'idle';
 
   useEffect(
     () => () => {
       copyAttempt.current += 1;
-      copyingKey.current = null;
       clearTimeout(copyTimer.current);
     },
     [],
   );
 
   const copy = async () => {
-    if (copyingKey.current?.resetKey === resetKey) return;
-    copyingKey.current = { resetKey };
     const attempt = ++copyAttempt.current;
     const copiedValue = value;
-    clearTimeout(copyTimer.current);
-    setResult({ resetKey, status: 'copying' });
-    let copied = false;
+    let clipboardWrite: Promise<void> | undefined;
     try {
-      if (!navigator.clipboard?.writeText) throw new Error('Clipboard API unavailable');
-      await navigator.clipboard.writeText(copiedValue);
-      copied = true;
+      clipboardWrite = navigator.clipboard?.writeText(copiedValue);
     } catch {
-      const target = targetRef.current;
-      copied = target ? legacyCopy(target) : false;
+      clipboardWrite = undefined;
     }
-    if (copyAttempt.current !== attempt) return;
-    copyingKey.current = null;
-    if (!copied) {
-      const target = targetRef.current;
-      if (target) selectCopyTarget(target);
-      setResult({ resetKey, status: 'manual' });
-      return;
-    }
+    clearTimeout(copyTimer.current);
     setResult({ resetKey, status: 'copied' });
     copyTimer.current = setTimeout(() => setResult({ resetKey, status: 'idle' }), 2_000);
+    try {
+      if (!clipboardWrite) throw new Error('Clipboard API unavailable');
+      await clipboardWrite;
+    } catch {
+      if (copyAttempt.current !== attempt) return;
+      const target = targetRef.current;
+      if (target && legacyCopy(target)) {
+        clearTimeout(copyTimer.current);
+        setResult({ resetKey, status: 'copied' });
+        copyTimer.current = setTimeout(() => setResult({ resetKey, status: 'idle' }), 2_000);
+        return;
+      }
+      clearTimeout(copyTimer.current);
+      if (target) selectCopyTarget(target);
+      setResult({ resetKey, status: 'manual' });
+    }
   };
 
   return { copy, status };
