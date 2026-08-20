@@ -73,7 +73,7 @@ def create_app(config: Config) -> Starlette:
     async def lifespan(_app: Starlette) -> AsyncIterator[dict[str, Runtime]]:
         if config.dev:
             _configure_dev_logging()
-        async with _build_http_client() as http_client:
+        async with config.secrets.build() as secret_store, _build_http_client() as http_client:
             outbox = build_outbox(config.events, http_client)
             try:
                 holder = BundleHolder()
@@ -81,7 +81,7 @@ def create_app(config: Config) -> Starlette:
                 runtime = Runtime(
                     holder=holder,
                     outbox=outbox,
-                    credentials=CredentialResolver(config.secrets.build()),
+                    credentials=CredentialResolver(secret_store),
                     http_client=http_client,
                 )
                 async with asyncio.TaskGroup() as task_group:

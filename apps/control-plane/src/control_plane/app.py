@@ -62,7 +62,9 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     try:
         await _require_migrated_schema(engine)
         app.state.session_factory = make_session_factory(engine)
-        yield
+        async with settings.secrets.build() as secret_store:
+            app.state.secret_store = secret_store
+            yield
     finally:
         await engine.dispose()
 
@@ -116,7 +118,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         generate_unique_id_function=operation_id,
     )
     app.state.settings = settings if settings is not None else load_settings()
-    app.state.secret_store = app.state.settings.secrets.build()
     app.add_exception_handler(NotOwnedError, not_owned_handler)
     app.add_exception_handler(RequestValidationError, validation_handler)
     app.add_exception_handler(IntegrityError, integrity_handler)

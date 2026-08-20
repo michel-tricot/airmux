@@ -342,9 +342,12 @@ class Stack:
         poll_interval_s: int = 1,
         flush_interval_s: int = 1,
         outbox_kind: Literal["sqlite", "devnull"] = "sqlite",
+        secrets_kind: Literal["file", "insecure_database"] = "file",
     ) -> None:
         """Write both planes against one secret store and the selected event outbox."""
-        secrets_store = {"kind": "file", "root": str(self.tmp / "secrets")}
+        secrets_store = (
+            {"kind": "file", "root": str(self.tmp / "secrets")} if secrets_kind == "file" else {"kind": "insecure_database", "url": self.db_url}
+        )
         control_plane_link = {"url": self.cp_url, "token": "env:GW_DATAPLANE_TOKEN"}
         outbox_config = (
             {"kind": "devnull"}

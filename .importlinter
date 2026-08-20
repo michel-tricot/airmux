@@ -6,7 +6,7 @@ root_packages =
 include_external_packages = True
 
 [importlinter:contract:data-plane-isolation]
-name = data plane never imports control plane or database machinery
+name = data plane imports no control plane or database machinery except the insecure vault
 type = forbidden
 source_modules =
     data_plane
@@ -18,3 +18,5 @@ forbidden_modules =
     psycopg
     alembic
     fastapi
+ignore_imports =
+    contract.secrets.insecure_database -> asyncpg

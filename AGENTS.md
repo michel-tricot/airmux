@@ -2,8 +2,13 @@
 
 ## Boundary rules, non-negotiable
 - data_plane may never import sqlalchemy, sqlmodel, asyncpg, alembic, fastapi, or control_plane.
+  The only exception is `contract/secrets/insecure_database.py`, which may use asyncpg so the
+  `insecure_database` secret store can resolve a cold credential behind the data plane's
+  version-keyed, single-flight TTL cache. No other contract module may import a database driver.
 - The only shared import between planes is contract.
 - If a feature seems to need a DB read on the request path, add a field to the bundle instead. Say so before doing it.
+  Cold secret resolution through `SecretStore.get(ref)` is the sole exception; secret values and
+  store-specific representations never enter the bundle contract.
 - evaluate() must stay pure: no async, no network, no I/O, no datetime.now(). Under 100 lines.
 
 ## The two-sided adapter model
@@ -32,6 +37,9 @@ registry, the registry is wrong; fix the registry.
 
 ## Control plane data access
 - All DB access goes through the fat-model API on control_plane.models: Record.get/find/first/save/delete, OrgOwned.owned_by, Identified.find_by_id.
+  The shared `InsecureDatabaseSecretStore` is the sole exception: both planes use its three fixed,
+  parameterized asyncpg statements against `insecure_vault_secret`, outside the ambient management
+  transaction. No other control-plane path may use it for database access.
 - The session is ambient (ContextVar in control_plane.db). One transaction per request, committed at request end; save() flushes, never commits.
 - Routes take no SessionDep unless they need raw SQL. Raw sessions are only for what the model API cannot express:
   aggregates, dialect-specific atomic upserts. Do not grow Record into a query builder to absorb them.
@@ -127,6 +135,12 @@ Anything started from the command line uses typer. Servers expose a typer entry 
 Commands are resource-first (keys list, bundles compile), grouped in help panels: Setup, Resources, Testing.
 Any command that outputs resource data takes -f/--format (table|json|text) via FormatOption and renders
 through _print_rows with a Col spec. Do not print resource data any other way.
+
+## Delivery
+- After completing any task that changes project files, commit the finished work, push its branch,
+  and open a draft pull request unless the user explicitly requests local-only changes.
+- Use an isolated worktree and a dedicated branch so unrelated changes never enter the pull request.
+- The pull request description names the user impact and the checks that prove the change.
 
 ## Style
 No comments unless asked. No emojis. No em dashes. No trailing periods in bullets.

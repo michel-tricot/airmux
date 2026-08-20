@@ -133,8 +133,8 @@ def fixtures(config: str = "airllm.yml") -> None:
     settings = load_settings(config)
 
     async def run() -> tuple[Fixtures, list[tuple[str, int]], int]:
-        async with standalone_transaction(settings.database.url):
-            seeded = await apply_fixtures(datetime.now(tz=UTC), settings.secrets.build())
+        async with settings.secrets.build() as secret_store, standalone_transaction(settings.database.url):
+            seeded = await apply_fixtures(datetime.now(tz=UTC), secret_store)
             now = datetime.now(tz=UTC)
             orgs = {org.id: org.name for org in await Org.find()}
             versions = [(orgs[bundle.org_id], bundle.version) for bundle in await publish_changes(now, settings.bundle.signing_key)]

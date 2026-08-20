@@ -16,9 +16,10 @@ from contract.secrets.base import (
 )
 from contract.secrets.env import EnvSecretStore, EnvStoreConfig
 from contract.secrets.file import FileSecretStore, FileStoreConfig
+from contract.secrets.insecure_database import InsecureDatabaseSecretStore, InsecureDatabaseStoreConfig
 from contract.secrets.memory import MemorySecretStore, MemoryStoreConfig
 
-SecretsConfig = Annotated[MemoryStoreConfig | FileStoreConfig | EnvStoreConfig, Field(discriminator="kind")]
+SecretsConfig = Annotated[MemoryStoreConfig | FileStoreConfig | EnvStoreConfig | InsecureDatabaseStoreConfig, Field(discriminator="kind")]
 """Which store this process talks to, tagged by kind so each backend parses only its own settings.
 
 Both planes read their own copy of this section and must name the same store, because one writes
@@ -31,6 +32,8 @@ __all__ = [
     "EnvStoreConfig",
     "FileSecretStore",
     "FileStoreConfig",
+    "InsecureDatabaseSecretStore",
+    "InsecureDatabaseStoreConfig",
     "MemorySecretStore",
     "MemoryStoreConfig",
     "Secret",
