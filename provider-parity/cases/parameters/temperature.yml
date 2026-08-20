@@ -1,0 +1,13 @@
+version: 1
+id: parameters.temperature
+title: Non-default temperature is accepted
+requires:
+  parameters: [temperature]
+request:
+  messages:
+  - role: user
+    content: Reply with ok
+  max_tokens: 16
+  temperature: 0.37
+oracle:
+  text_nonempty: true

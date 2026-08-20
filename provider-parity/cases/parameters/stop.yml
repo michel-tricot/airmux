@@ -1,0 +1,13 @@
+version: 1
+id: parameters.stop
+title: Stop sequence is accepted
+requires:
+  parameters: [stop]
+request:
+  messages:
+  - role: user
+    content: Reply with ok and then the word END
+  max_tokens: 32
+  stop: [END]
+oracle:
+  text_nonempty: true

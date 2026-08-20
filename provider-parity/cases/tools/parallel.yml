@@ -1,0 +1,28 @@
+version: 1
+id: tools.parallel
+title: Two independent tools in one assistant turn
+requires:
+  capabilities: [tools, parallel_tools]
+request:
+  messages:
+  - role: user
+    content: Call report_alpha and report_beta once each and do not answer with text
+  tools:
+  - name: report_alpha
+    description: Report alpha
+    parameters:
+      type: object
+      properties: {}
+      additionalProperties: false
+  - name: report_beta
+    description: Report beta
+    parameters:
+      type: object
+      properties: {}
+      additionalProperties: false
+  tool_choice: required
+  parallel_tool_calls: true
+oracle:
+  assistant_text: forbidden
+  tool_names: [report_alpha, report_beta]
+  tool_arguments_valid: true

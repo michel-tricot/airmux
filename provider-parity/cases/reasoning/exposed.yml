@@ -1,0 +1,18 @@
+version: 1
+id: reasoning.exposed
+title: Exposed model reasoning
+requires:
+  capabilities: [reasoning]
+request:
+  messages:
+  - role: user
+    content: Reason briefly and answer what is 20 plus 22
+  max_tokens: 1100
+  reasoning:
+    effort: low
+    type: enabled
+    budget_tokens: 1024
+    summary: auto
+oracle:
+  reasoning_present: true
+  text_contains: "42"

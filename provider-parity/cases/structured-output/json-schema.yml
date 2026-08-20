@@ -1,0 +1,25 @@
+version: 1
+id: structured-output.json-schema
+title: JSON Schema output
+requires:
+  capabilities: [json_schema]
+request:
+  messages:
+  - role: user
+    content: Return a JSON object with answer set to 42
+  response_format:
+    type: json_schema
+    json_schema:
+      name: parity_answer
+      strict: true
+      schema:
+        type: object
+        properties:
+          answer:
+            type: integer
+            const: 42
+        required: [answer]
+        additionalProperties: false
+oracle:
+  json_equals:
+    answer: 42

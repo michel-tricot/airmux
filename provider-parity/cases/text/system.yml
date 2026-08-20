@@ -1,0 +1,12 @@
+version: 1
+id: text.system
+title: System instruction
+request:
+  messages:
+  - role: system
+    content: Reply with one word
+  - role: user
+    content: Say ok
+  max_tokens: 16
+oracle:
+  text_nonempty: true

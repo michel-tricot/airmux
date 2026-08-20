@@ -1,0 +1,231 @@
+from __future__ import annotations
+
+import json
+from datetime import UTC, datetime
+from pathlib import Path
+from typing import Annotated, Literal
+
+import typer
+from dotenv import load_dotenv
+
+from provider_parity.cases import load_cases, load_expected_differences
+from provider_parity.catalog import load_catalog
+from provider_parity.drivers import supported_endpoints
+from provider_parity.models import Plan, ReportDocument
+from provider_parity.output import Col, FormatOption, OutputFormat, print_rows
+from provider_parity.plan import Filters, build_plan
+from provider_parity.provenance import metadata
+from provider_parity.report import write_report
+from provider_parity.runner import execute
+
+ROOT = Path(__file__).resolve().parents[3]
+CASES = ROOT / "provider-parity" / "cases"
+DIFFERENCES = ROOT / "provider-parity" / "expected-differences.yml"
+REPORTS = ROOT / "provider-parity" / "reports"
+
+ProviderOption = Annotated[str | None, typer.Option("--provider")]
+ModelOption = Annotated[str | None, typer.Option("--model")]
+CaseOption = Annotated[str | None, typer.Option("--case")]
+SDKOption = Annotated[str | None, typer.Option("--sdk")]
+SurfaceOption = Annotated[str | None, typer.Option("--surface")]
+TransportOption = Annotated[Literal["buffered", "streamed"] | None, typer.Option("--transport")]
+UnknownOption = Annotated[bool, typer.Option("--include-unknown", help="Include parameters whose support is not known")]
+
+app = typer.Typer(name="airllm-parity", no_args_is_help=True)
+cases_app = typer.Typer(name="cases", no_args_is_help=True)
+targets_app = typer.Typer(name="targets", no_args_is_help=True)
+runs_app = typer.Typer(name="runs", no_args_is_help=True)
+reports_app = typer.Typer(name="reports", no_args_is_help=True)
+app.add_typer(cases_app)
+app.add_typer(targets_app)
+app.add_typer(runs_app)
+app.add_typer(reports_app)
+
+
+def _plan(filters: Filters) -> Plan:
+    catalog = load_catalog(ROOT / "taxonomy")
+    return build_plan(catalog.targets, load_cases(CASES), supported_endpoints(), filters)
+
+
+@cases_app.command("list")
+def cases_list(output_format: FormatOption = OutputFormat.table) -> None:
+    rows = [
+        {
+            "id": case.id,
+            "title": case.title,
+            "requires": ", ".join(sorted(case.requires.capabilities | case.requires.parameters | case.requires.input_modalities)),
+            "transports": ", ".join(case.transports),
+        }
+        for case in load_cases(CASES)
+    ]
+    print_rows("cases", rows, [Col("id", "Case"), Col("title", "Title"), Col("requires", "Requires"), Col("transports", "Transports")], output_format)
+
+
+@targets_app.command("list")
+def targets_list(
+    provider: ProviderOption = None, model: ModelOption = None, surface: SurfaceOption = None, output_format: FormatOption = OutputFormat.table
+) -> None:
+    targets = load_catalog(ROOT / "taxonomy").targets
+    rows = [
+        {
+            "provider": target.provider_id,
+            "surface": target.surface_id,
+            "model": target.model_id,
+            "endpoint": target.endpoint,
+            "capabilities": ", ".join(sorted(target.capabilities)),
+        }
+        for target in targets
+        if (provider is None or target.provider_id == provider)
+        and (model is None or target.model_id == model)
+        and (surface is None or target.surface_id == surface)
+    ]
+    print_rows(
+        "targets",
+        rows,
+        [
+            Col("provider", "Provider"),
+            Col("surface", "Surface"),
+            Col("model", "Model"),
+            Col("endpoint", "Endpoint"),
+            Col("capabilities", "Capabilities"),
+        ],
+        output_format,
+    )
+
+
+@runs_app.command("plan")
+def runs_plan(  # noqa: PLR0913, PLR0917 command flags define the CLI surface
+    provider: ProviderOption = None,
+    model: ModelOption = None,
+    case: CaseOption = None,
+    sdk: SDKOption = None,
+    surface: SurfaceOption = None,
+    transport: TransportOption = None,
+    include_unknown: UnknownOption = False,
+    output_format: FormatOption = OutputFormat.table,
+) -> None:
+    plan = _plan(
+        Filters(
+            provider=provider,
+            model=model,
+            case=case,
+            sdk=sdk,
+            surface=surface,
+            transport=transport,
+            include_unknown=include_unknown,
+        )
+    )
+    rows = [
+        {
+            "provider": experiment.target.provider_id,
+            "surface": experiment.target.surface_id,
+            "model": experiment.target.model_id,
+            "sdk": experiment.driver_id,
+            "case": experiment.case.id,
+            "transport": experiment.transport,
+        }
+        for experiment in plan.experiments
+    ]
+    print_rows(
+        "experiments",
+        rows,
+        [
+            Col("provider", "Provider"),
+            Col("surface", "Surface"),
+            Col("model", "Model"),
+            Col("sdk", "SDK"),
+            Col("case", "Case"),
+            Col("transport", "Transport"),
+        ],
+        output_format,
+    )
+    typer.echo(f"{len(plan.experiments)} paired experiments, {plan.requests} requests, {plan.skipped} unsupported combinations skipped", err=True)
+
+
+@runs_app.command("execute")
+def runs_execute(  # noqa: PLR0913, PLR0917 command flags define the CLI surface
+    provider: ProviderOption = None,
+    model: ModelOption = None,
+    case: CaseOption = None,
+    sdk: SDKOption = None,
+    surface: SurfaceOption = None,
+    transport: TransportOption = None,
+    include_unknown: UnknownOption = False,
+    yes: Annotated[bool, typer.Option("--yes", help="Confirm a run above the request guardrail")] = False,
+    max_requests: Annotated[int, typer.Option("--max-requests", min=1)] = 500,
+    output_format: FormatOption = OutputFormat.table,
+) -> None:
+    load_dotenv(ROOT / ".env")
+    plan = _plan(
+        Filters(
+            provider=provider,
+            model=model,
+            case=case,
+            sdk=sdk,
+            surface=surface,
+            transport=transport,
+            include_unknown=include_unknown,
+        )
+    )
+    if not plan.experiments:
+        message = "the selected run has no applicable experiments"
+        raise typer.BadParameter(message)
+    if plan.requests > max_requests and not yes:
+        message = f"the run schedules {plan.requests} requests; pass --yes or narrow the selection"
+        raise typer.BadParameter(message)
+    results = execute(plan, load_expected_differences(DIFFERENCES))
+    run_id = datetime.now(tz=UTC).strftime("%Y%m%dT%H%M%SZ")
+    paths = write_report(results, REPORTS, run_id, metadata(ROOT, run_id))
+    rows = [
+        {
+            "provider": result.provider_id,
+            "surface": result.surface_id,
+            "model": result.model_id,
+            "case": result.case_id,
+            "verdict": result.comparison.verdict,
+            "differences": ", ".join(result.comparison.differences),
+        }
+        for result in results
+    ]
+    print_rows(
+        "results",
+        rows,
+        [
+            Col("provider", "Provider"),
+            Col("surface", "Surface"),
+            Col("model", "Model"),
+            Col("case", "Case"),
+            Col("verdict", "Verdict"),
+            Col("differences", "Differences"),
+        ],
+        output_format,
+    )
+    typer.echo(f"wrote {paths.json_path} and {paths.html_path}", err=True)
+    if any(result.comparison.verdict in {"gateway_regression", "different"} for result in results):
+        raise typer.Exit(1)
+
+
+@reports_app.command("show")
+def reports_show(path: Path | None = None, output_format: FormatOption = OutputFormat.table) -> None:
+    candidates = sorted(REPORTS.glob("*.json"))
+    selected = path or (candidates[-1] if candidates else None)
+    if selected is None:
+        message = "no parity report exists"
+        raise typer.BadParameter(message)
+    results = ReportDocument.model_validate(json.loads(selected.read_text(encoding="utf-8"))).results
+    rows = [
+        {
+            "provider": result.provider_id,
+            "surface": result.surface_id,
+            "model": result.model_id,
+            "case": result.case_id,
+            "verdict": result.comparison.verdict,
+        }
+        for result in results
+    ]
+    print_rows(
+        "results",
+        rows,
+        [Col("provider", "Provider"), Col("surface", "Surface"), Col("model", "Model"), Col("case", "Case"), Col("verdict", "Verdict")],
+        output_format,
+    )

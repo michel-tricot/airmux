@@ -3,6 +3,7 @@ root_packages =
     contract
     control_plane
     data_plane
+    provider_parity
 include_external_packages = True
 
 [importlinter:contract:data-plane-isolation]
@@ -20,3 +21,12 @@ forbidden_modules =
     fastapi
 ignore_imports =
     contract.secrets.insecure_database -> asyncpg
+
+[importlinter:contract:provider-parity-is-black-box]
+name = provider parity exercises both planes through shipped commands and public HTTP only
+type = forbidden
+source_modules =
+    provider_parity
+forbidden_modules =
+    control_plane
+    data_plane

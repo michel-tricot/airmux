@@ -1,0 +1,30 @@
+version: 1
+id: reasoning.with-tool
+title: Reasoning followed by a tool call
+requires:
+  capabilities: [reasoning, tools]
+request:
+  messages:
+  - role: user
+    content: Think briefly and call report_result with value ok
+  max_tokens: 1100
+  tools:
+  - name: report_result
+    description: Report the requested result
+    parameters:
+      type: object
+      properties:
+        value:
+          type: string
+      required: [value]
+      additionalProperties: false
+  tool_choice:
+    name: report_result
+  reasoning:
+    effort: low
+    type: enabled
+    budget_tokens: 1024
+    summary: auto
+oracle:
+  tool_names: [report_result]
+  tool_arguments_valid: true
