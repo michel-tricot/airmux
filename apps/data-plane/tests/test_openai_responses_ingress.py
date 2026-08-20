@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from data_plane.canonical import CanonicalMessage, TextPart
+from data_plane.canonical import CanonicalMessage, ReasoningPart, TextPart
 from data_plane.formats.openai_responses import input_of, messages_of
 
 SPELLINGS = [
@@ -59,3 +59,12 @@ def test_a_conversation_read_then_rewritten_keeps_every_turn():
         ("assistant", "Paris"),
         ("user", "And of Spain?"),
     ]
+
+
+def test_encrypted_reasoning_survives_a_follow_up_turn():
+    original = [{"type": "reasoning", "id": "rs_1", "summary": [], "encrypted_content": "opaque"}]
+    (message,) = messages_of(original)
+    (reasoning,) = message.content
+    assert isinstance(reasoning, ReasoningPart)
+    assert (reasoning.id, reasoning.data) == ("rs_1", "opaque")
+    assert input_of([message]) == original

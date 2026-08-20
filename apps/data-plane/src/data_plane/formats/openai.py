@@ -52,6 +52,8 @@ class ChatBody(BaseModel):
     tools: list[dict[str, Any]] | None = None
     tool_choice: str | dict[str, Any] | None = None
     response_format: dict[str, Any] | None = None
+    reasoning_effort: str | None = None
+    reasoning: dict[str, Any] | None = None
     stream: bool | None = None
     stream_options: dict[str, Any] | None = None
 
@@ -129,6 +131,33 @@ def body_of(req: CanonicalRequest, upstream_model: str) -> ChatBody:
     A name matching across the two schemas is coincidence, not a rule: this list is where a
     provider's spelling differences and profile-driven aliases apply, so it never gets replaced
     by a reflective copy."""
+    reasoning_effort = req.reasoning.effort if req.reasoning is not None else None
+    reasoning = None
+    if req.reasoning is not None:
+        unsupported = [
+            name
+            for name, value in (
+                ("reasoning.budget_tokens", req.reasoning.budget_tokens),
+                ("reasoning.display", req.reasoning.display),
+                ("reasoning.context", req.reasoning.context),
+                ("reasoning.mode", req.reasoning.mode),
+            )
+            if value is not None
+        ]
+        if unsupported:
+            message = f"unsupported_feature: {', '.join(unsupported)} are not representable by Chat Completions"
+            raise ValueError(message)
+        if req.reasoning.thinking == "disabled":
+            if reasoning_effort not in {None, "none"}:
+                msg = "reasoning.thinking=disabled conflicts with reasoning.effort"
+                raise ValueError(msg)
+            reasoning_effort = "none"
+        elif req.reasoning.thinking is not None and reasoning_effort is None:
+            message = "unsupported_feature: reasoning.thinking without reasoning.effort is not representable by Chat Completions"
+            raise ValueError(message)
+        if req.reasoning.summary is not None:
+            reasoning = {**({"effort": reasoning_effort} if reasoning_effort is not None else {}), "summary": req.reasoning.summary}
+            reasoning_effort = None
     return ChatBody(
         model=upstream_model,
         messages=to_messages(req.messages),
@@ -140,6 +169,8 @@ def body_of(req: CanonicalRequest, upstream_model: str) -> ChatBody:
         tools=to_tools(req.tools),
         tool_choice=to_tool_choice(req.tool_choice),
         response_format=req.response_format.model_dump(exclude_none=True) if req.response_format else None,
+        reasoning_effort=reasoning_effort,
+        reasoning=reasoning,
         stream=req.stream or None,
         stream_options={"include_usage": True} if req.stream else None,
     )

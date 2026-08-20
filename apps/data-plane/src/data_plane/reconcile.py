@@ -12,13 +12,19 @@ GATEWAY_HELD = frozenset({"n"})
 MODEL_TUNING_PARAMS = ("temperature", "top_p", "stop", "seed", "reasoning_effort", "parallel_tool_calls")
 
 
+def _param_value(request: CanonicalRequest, param: str) -> object:
+    if param == "reasoning_effort":
+        return request.reasoning.effort if request.reasoning is not None else None
+    return getattr(request, param, None)
+
+
 def _drop_reason(request: CanonicalRequest, model: ModelEntry, profile: CompiledProfile, param: str) -> str | None:
     if model.parameter_support.get(param) == "unsupported":
         return f"{model.model_id} does not support this parameter"
     if param in GATEWAY_HELD:
         return "the response carries one completion; a sampling fan-out cannot forward"
     source = profile.respelled.get(param)
-    if source is not None and getattr(request, source, None) is not None:
+    if source is not None and _param_value(request, source) is not None:
         return f"collides with {source}, which this provider spells {param}"
     if profile.params_closed and param not in profile.accepted:
         return f"{profile.provider_id} accepts only its declared params"
@@ -26,12 +32,15 @@ def _drop_reason(request: CanonicalRequest, model: ModelEntry, profile: Compiled
 
 
 def reconcile(request: CanonicalRequest, model: ModelEntry, profile: CompiledProfile) -> tuple[CanonicalRequest, list[Adjustment]]:
-    unsupported = {
-        param: None for param in MODEL_TUNING_PARAMS if model.parameter_support.get(param) == "unsupported" and getattr(request, param) is not None
-    }
+    unsupported = tuple(
+        param for param in MODEL_TUNING_PARAMS if model.parameter_support.get(param) == "unsupported" and _param_value(request, param) is not None
+    )
     adjustments = [Adjustment(param=param, action="dropped", detail=f"{model.model_id} does not support this parameter") for param in unsupported]
     if unsupported:
-        request = request.model_copy(update=unsupported)
+        update = {param: None for param in unsupported if param != "reasoning_effort"}
+        if "reasoning_effort" in unsupported and request.reasoning is not None:
+            update["reasoning"] = request.reasoning.model_copy(update={"effort": None})
+        request = request.model_copy(update=update)
     forwarded: dict[str, object] = {}
     extra = request.extra
     for param, value in extra.items():

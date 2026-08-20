@@ -63,8 +63,11 @@ class ReasoningPart(Part):
 
     type: Literal["reasoning"] = "reasoning"
     id: str | None = None
-    text: str
+    kind: Literal["text", "summary", "encrypted"] = "text"
+    text: str = ""
+    data: str | None = None
     signature: str | None = None
+    format: str | None = None
 
 
 class ToolCallPart(Part):
@@ -156,6 +159,18 @@ class ResponseFormat(BaseModel):
     json_schema: dict[str, Any] | None = None
 
 
+class ReasoningConfig(BaseModel):
+    model_config = WIRE
+
+    effort: Literal["none", "minimal", "low", "medium", "high", "xhigh", "max"] | None = None
+    thinking: Literal["enabled", "adaptive", "disabled"] | None = None
+    budget_tokens: int | None = Field(default=None, ge=1)
+    display: Literal["summarized", "omitted"] | None = None
+    summary: Literal["auto", "concise", "detailed"] | None = None
+    context: Literal["auto", "current_turn", "all_turns"] | None = None
+    mode: Literal["standard", "pro"] | None = None
+
+
 class CanonicalRequest(BaseModel):
     model_config = ConfigDict(frozen=True, extra="allow")
 
@@ -170,8 +185,24 @@ class CanonicalRequest(BaseModel):
     tools: list[ToolDef] | None = None
     tool_choice: ToolChoice | None = None
     response_format: ResponseFormat | None = None
-    reasoning_effort: str | None = None
+    reasoning: ReasoningConfig | None = None
     parallel_tool_calls: bool | None = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def reasoning_effort_shorthand(cls, value: object) -> object:
+        if not isinstance(value, dict) or "reasoning_effort" not in value:
+            return value
+        effort = value.get("reasoning_effort")
+        reasoning = value.get("reasoning")
+        if reasoning is not None:
+            if not isinstance(reasoning, dict) or reasoning.get("effort") not in {None, effort}:
+                msg = "reasoning_effort conflicts with reasoning.effort"
+                raise ValueError(msg)
+            reasoning = {**reasoning, "effort": effort}
+        else:
+            reasoning = {"effort": effort}
+        return {key: item for key, item in value.items() if key != "reasoning_effort"} | {"reasoning": reasoning}
 
     @property
     def extra(self) -> dict[str, Any]:
@@ -236,8 +267,12 @@ class ReasoningDelta(BaseModel):
     model_config = WIRE
 
     type: Literal["reasoning"] = "reasoning"
+    id: str | None = None
+    kind: Literal["text", "summary", "encrypted"] = "text"
     text: str = ""
+    data: str | None = None
     signature: str | None = None
+    format: str | None = None
 
 
 class ToolCallDelta(BaseModel):

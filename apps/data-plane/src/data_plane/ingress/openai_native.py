@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING, Any
 
 from starlette.responses import JSONResponse, Response
 
-from data_plane.canonical import Adjustment, CanonicalChunk, CanonicalRequest, GatewayInfo, ResponseFormat, ToolCallDelta
+from data_plane.canonical import Adjustment, CanonicalChunk, CanonicalRequest, GatewayInfo, ReasoningConfig, ResponseFormat, ToolCallDelta
 from data_plane.formats import openai as fmt
 from data_plane.ingress.base import DONE, IngressAdapter
 
@@ -25,7 +25,7 @@ if TYPE_CHECKING:
 
 # This dialect's alternate spellings of canonical fields: parse folds each into its canonical
 # name, and the egress side re-spells the canonical value however the provider wants it.
-ALIASED = frozenset({"max_completion_tokens"})
+ALIASED = frozenset({"max_completion_tokens", "reasoning_effort"})
 
 # Protocol plumbing with no canonical carrier because its meaning is constant under our
 # contract: the stream always reports usage, and body_of re-emits its own stream_options on
@@ -58,6 +58,29 @@ def _openai_shaped(body: dict[str, Any]) -> bool:
 def _error_body(status: int, code: str, message: str) -> dict[str, dict[str, str]]:
     kind = "invalid_request_error" if status < 500 else "api_error"  # noqa: PLR2004 the HTTP class boundary
     return {"error": {"type": kind, "code": code, "message": message}}
+
+
+def _reasoning(body: dict[str, Any]) -> ReasoningConfig | None:
+    raw = body.get("reasoning")
+    reasoning = dict(raw) if isinstance(raw, dict) else {}
+    shorthand = body.get("reasoning_effort")
+    nested = reasoning.get("effort")
+    if isinstance(shorthand, str) and isinstance(nested, str) and shorthand != nested:
+        msg = "reasoning_effort conflicts with reasoning.effort"
+        raise ValueError(msg)
+    effort = shorthand if isinstance(shorthand, str) else nested if isinstance(nested, str) else None
+    enabled = reasoning.get("enabled")
+    exclude = reasoning.get("exclude")
+    values = {
+        "effort": effort,
+        "thinking": ("enabled" if enabled is True else "disabled" if enabled is False else None),
+        "budget_tokens": reasoning.get("max_tokens") if isinstance(reasoning.get("max_tokens"), int) else None,
+        "display": ("omitted" if exclude is True else "summarized" if exclude is False else None),
+        "summary": reasoning.get("summary") if isinstance(reasoning.get("summary"), str) else None,
+        "context": reasoning.get("context") if isinstance(reasoning.get("context"), str) else None,
+        "mode": reasoning.get("mode") if isinstance(reasoning.get("mode"), str) else None,
+    }
+    return ReasoningConfig.model_validate(values) if any(value is not None for value in values.values()) else None
 
 
 class OpenAIResponseStream:
@@ -149,6 +172,7 @@ class OpenAINativeIngress(IngressAdapter):
                 "tools": fmt.from_tools(body.get("tools")),
                 "tool_choice": tool_choice,
                 "response_format": ResponseFormat.model_validate(response_format) if response_format else None,
+                "reasoning": _reasoning(body),
             }
         )
         return request, adjustments

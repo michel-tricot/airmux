@@ -47,16 +47,42 @@ $defs:
         default: reasoning
         title: Type
         type: string
+      id:
+        anyOf:
+        - type: string
+        - type: 'null'
+        default: null
+        title: Id
+      kind:
+        default: text
+        enum:
+        - text
+        - summary
+        - encrypted
+        title: Kind
+        type: string
       text:
         default: ''
         title: Text
         type: string
+      data:
+        anyOf:
+        - type: string
+        - type: 'null'
+        default: null
+        title: Data
       signature:
         anyOf:
         - type: string
         - type: 'null'
         default: null
         title: Signature
+      format:
+        anyOf:
+        - type: string
+        - type: 'null'
+        default: null
+        title: Format
     title: ReasoningDelta
     type: object
   TextDelta:

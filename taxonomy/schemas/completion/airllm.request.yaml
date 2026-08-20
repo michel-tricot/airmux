@@ -81,6 +81,80 @@ $defs:
     - name
     title: NamedTool
     type: object
+  ReasoningConfig:
+    additionalProperties: false
+    properties:
+      effort:
+        anyOf:
+        - enum:
+          - none
+          - minimal
+          - low
+          - medium
+          - high
+          - xhigh
+          - max
+          type: string
+        - type: 'null'
+        default: null
+        title: Effort
+      thinking:
+        anyOf:
+        - enum:
+          - enabled
+          - adaptive
+          - disabled
+          type: string
+        - type: 'null'
+        default: null
+        title: Thinking
+      budget_tokens:
+        anyOf:
+        - minimum: 1
+          type: integer
+        - type: 'null'
+        default: null
+        title: Budget Tokens
+      display:
+        anyOf:
+        - enum:
+          - summarized
+          - omitted
+          type: string
+        - type: 'null'
+        default: null
+        title: Display
+      summary:
+        anyOf:
+        - enum:
+          - auto
+          - concise
+          - detailed
+          type: string
+        - type: 'null'
+        default: null
+        title: Summary
+      context:
+        anyOf:
+        - enum:
+          - auto
+          - current_turn
+          - all_turns
+          type: string
+        - type: 'null'
+        default: null
+        title: Context
+      mode:
+        anyOf:
+        - enum:
+          - standard
+          - pro
+          type: string
+        - type: 'null'
+        default: null
+        title: Mode
+    title: ReasoningConfig
+    type: object
   ReasoningPart:
     additionalProperties: false
     description: 'Model reasoning. signature is an opaque provider token: a provider that issues one rejects a
@@ -105,17 +179,36 @@ $defs:
         - type: 'null'
         default: null
         title: Id
+      kind:
+        default: text
+        enum:
+        - text
+        - summary
+        - encrypted
+        title: Kind
+        type: string
       text:
+        default: ''
         title: Text
         type: string
+      data:
+        anyOf:
+        - type: string
+        - type: 'null'
+        default: null
+        title: Data
       signature:
         anyOf:
         - type: string
         - type: 'null'
         default: null
         title: Signature
-    required:
-    - text
+      format:
+        anyOf:
+        - type: string
+        - type: 'null'
+        default: null
+        title: Format
     title: ReasoningPart
     type: object
   ResponseFormat:
@@ -346,12 +439,11 @@ properties:
     - $ref: '#/$defs/ResponseFormat'
     - type: 'null'
     default: null
-  reasoning_effort:
+  reasoning:
     anyOf:
-    - type: string
+    - $ref: '#/$defs/ReasoningConfig'
     - type: 'null'
     default: null
-    title: Reasoning Effort
   parallel_tool_calls:
     anyOf:
     - type: boolean

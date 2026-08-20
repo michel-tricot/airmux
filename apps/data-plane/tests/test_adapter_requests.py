@@ -10,7 +10,7 @@ from corpus import CORPUS, request_of
 from jsonschema import Draft202012Validator
 
 from contract import Secret
-from data_plane.canonical import CanonicalRequest
+from data_plane.canonical import CanonicalMessage, CanonicalRequest, ReasoningConfig, ReasoningPart, TextPart
 from data_plane.egress import REGISTRY
 from data_plane.egress.base import UpstreamResponseError
 
@@ -145,3 +145,69 @@ def test_the_provider_spelling_wins_and_an_extra_never_overrides_it():
     sent = json.loads(adapter.transform_request(request, model).body)
     assert sent["max_completion_tokens"] == 64  # the canonical value, in the provider's spelling
     assert "max_tokens" not in sent
+
+
+@pytest.mark.parametrize(
+    ("kind", "expected"),
+    [
+        ("openai_compatible", {"reasoning_effort": "high"}),
+        ("openai_responses", {"reasoning": {"effort": "high"}}),
+        ("anthropic", {"output_config": {"effort": "high"}}),
+    ],
+)
+def test_reasoning_uses_each_upstreams_native_spelling(kind, expected):
+    adapter, model = _adapter(kind)
+    request = request_of(CORPUS[0], reasoning=ReasoningConfig(effort="high"))
+    body = json.loads(adapter.transform_request(request, model).body)
+    for key, value in expected.items():
+        assert body[key] == value
+
+
+def test_anthropic_thinking_controls_keep_their_exact_shape():
+    adapter, model = _adapter("anthropic")
+    request = request_of(
+        CORPUS[0],
+        reasoning=ReasoningConfig(effort="medium", thinking="adaptive", display="omitted"),
+    )
+    body = json.loads(adapter.transform_request(request, model).body)
+    assert body["thinking"] == {"type": "adaptive", "display": "omitted"}
+    assert body["output_config"] == {"effort": "medium"}
+
+
+def test_responses_reasoning_controls_keep_their_exact_shape():
+    adapter, model = _adapter("openai_responses")
+    request = request_of(
+        CORPUS[0],
+        reasoning=ReasoningConfig(effort="high", summary="concise", context="all_turns", mode="pro"),
+    )
+    body = json.loads(adapter.transform_request(request, model).body)
+    assert body["reasoning"] == {"effort": "high", "summary": "concise", "context": "all_turns", "mode": "pro"}
+
+
+def test_openrouter_chat_reasoning_uses_its_native_extension():
+    adapter, model = _adapter("openai_compatible")
+    request = request_of(CORPUS[0], reasoning=ReasoningConfig(effort="high", summary="concise"))
+    body = json.loads(adapter.transform_request(request, model).body)
+    assert body["reasoning"] == {"effort": "high", "summary": "concise"}
+    assert "reasoning_effort" not in body
+
+
+@pytest.mark.parametrize(
+    ("kind", "part", "expected"),
+    [
+        ("anthropic", ReasoningPart(kind="encrypted", data="opaque"), {"type": "redacted_thinking", "data": "opaque"}),
+        (
+            "openai_responses",
+            ReasoningPart(id="rs_1", kind="summary", text="brief", data="opaque"),
+            {"type": "reasoning", "id": "rs_1", "summary": [{"type": "summary_text", "text": "brief"}], "encrypted_content": "opaque"},
+        ),
+    ],
+)
+def test_opaque_reasoning_history_uses_each_upstreams_native_spelling(kind, part, expected):
+    adapter, model = _adapter(kind)
+    messages = [CanonicalMessage(role="assistant", content=[part, TextPart(text="answer")]), CanonicalMessage(role="user", content="again")]
+    body = json.loads(adapter.transform_request(request_of(CORPUS[0], messages=messages), model).body)
+    if kind == "anthropic":
+        assert body["messages"][0]["content"][0] == expected
+    else:
+        assert body["input"][0] == expected

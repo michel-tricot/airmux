@@ -98,6 +98,34 @@ def test_the_sdk_completes_a_text_round_trip(api_key, dp_app):
 
 
 @respx.mock
+def test_chat_reasoning_effort_reaches_an_openai_compatible_upstream(api_key, dp_app):
+    route = respx.post(UPSTREAM).mock(return_value=httpx.Response(200, json=TEXT_NONSTREAM))
+    mock_control_plane()
+    with TestClient(dp_app) as client:
+        completion = _sdk(client, api_key).chat.completions.create(
+            model="gpt-test",
+            messages=[{"role": "user", "content": "hi"}],
+            reasoning_effort="high",
+        )
+    assert completion.choices[0].message.content == "héllo \U0001f30d world"
+    assert json.loads(route.calls.last.request.content)["reasoning_effort"] == "high"
+
+
+@respx.mock
+def test_responses_reasoning_reaches_a_chat_completions_upstream(api_key, dp_app):
+    route = respx.post(UPSTREAM).mock(return_value=httpx.Response(200, json=TEXT_NONSTREAM))
+    mock_control_plane()
+    with TestClient(dp_app) as client:
+        response = _sdk(client, api_key).responses.create(
+            model="gpt-test",
+            input="hi",
+            reasoning={"effort": "high"},
+        )
+    assert response.output_text == "héllo \U0001f30d world"
+    assert json.loads(route.calls.last.request.content)["reasoning_effort"] == "high"
+
+
+@respx.mock
 def test_the_sdk_completes_a_tool_round_trip(api_key, dp_app):
     upstream_reply = {
         "id": "chatcmpl-9",

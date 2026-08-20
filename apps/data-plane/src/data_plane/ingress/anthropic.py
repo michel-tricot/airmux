@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING, Any
 
 from starlette.responses import JSONResponse, Response
 
-from data_plane.canonical import Adjustment, CanonicalChunk, CanonicalRequest, GatewayInfo
+from data_plane.canonical import Adjustment, CanonicalChunk, CanonicalRequest, GatewayInfo, ReasoningConfig
 from data_plane.formats import anthropic as fmt
 from data_plane.ingress.base import IngressAdapter
 
@@ -25,7 +25,21 @@ if TYPE_CHECKING:
 
 # This dialect's own spellings of canonical fields; everything else rides through as extras,
 # so thinking, top_k and metadata reach providers whose profile accepts them.
-CONSUMED = frozenset(CanonicalRequest.model_fields) | frozenset({"system", "stop_sequences"})
+CONSUMED = frozenset(CanonicalRequest.model_fields) | frozenset({"system", "stop_sequences", "thinking", "output_config"})
+
+
+def _reasoning(body: dict[str, Any]) -> ReasoningConfig | None:
+    raw_thinking = body.get("thinking")
+    raw_output_config = body.get("output_config")
+    thinking = raw_thinking if isinstance(raw_thinking, dict) else {}
+    output_config = raw_output_config if isinstance(raw_output_config, dict) else {}
+    values = {
+        "effort": output_config.get("effort") if isinstance(output_config.get("effort"), str) else None,
+        "thinking": thinking.get("type") if isinstance(thinking.get("type"), str) else None,
+        "budget_tokens": thinking.get("budget_tokens") if isinstance(thinking.get("budget_tokens"), int) else None,
+        "display": thinking.get("display") if isinstance(thinking.get("display"), str) else None,
+    }
+    return ReasoningConfig.model_validate(values) if any(item is not None for item in values.values()) else None
 
 
 @dataclass
@@ -72,6 +86,9 @@ class AnthropicResponseStream:
             events, index = self._switch("text", fmt.TextOut(text=""))
             return [*events, fmt.ContentBlockDelta(index=index, delta=fmt.TextDeltaOut(text=delta.text)).sse()]
         if delta.type == "reasoning":
+            if delta.kind == "encrypted":
+                events, _ = self._switch("redacted_thinking", fmt.RedactedThinkingOut(data=delta.data or ""))
+                return events
             events, index = self._switch("thinking", fmt.ThinkingOut(thinking=""))
             if delta.signature:
                 events.append(fmt.ContentBlockDelta(index=index, delta=fmt.SignatureDeltaOut(signature=delta.signature)).sse())
@@ -104,6 +121,9 @@ class AnthropicIngress(IngressAdapter):
 
     def parse(self, body: dict[str, Any]) -> tuple[CanonicalRequest, list[Adjustment]]:
         extras = {key: value for key, value in body.items() if key not in CONSUMED}
+        output_config = body.get("output_config")
+        if isinstance(output_config, dict) and (remaining := {key: value for key, value in output_config.items() if key != "effort"}):
+            extras["output_config"] = remaining
         adjustments = []
         tool_choice = fmt.from_tool_choice(body.get("tool_choice"))
         if body.get("tool_choice") is not None and tool_choice is None:
@@ -120,6 +140,7 @@ class AnthropicIngress(IngressAdapter):
                 "stop": body.get("stop_sequences"),
                 "tools": fmt.from_tools(body.get("tools")),
                 "tool_choice": tool_choice,
+                "reasoning": _reasoning(body),
             }
         )
         return request, adjustments

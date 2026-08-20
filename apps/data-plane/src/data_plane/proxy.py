@@ -133,6 +133,8 @@ def _authenticate(request: Request, holder: BundleHolder) -> tuple[KeyEntry, Bun
     auth_header = request.headers.get("authorization", "")
     if auth_header.startswith("Bearer "):
         token = auth_header.removeprefix("Bearer ")
+    elif request.url.path.endswith("/messages") and request.headers.get("x-api-key"):
+        token = request.headers["x-api-key"]
     else:
         token = request.cookies.get(PLAYGROUND_COOKIE, "")
         if not token:
@@ -247,9 +249,7 @@ class RequestExecution:
         if egress_kind == "openai_responses" and (self.request.stop is not None or self.request.seed is not None):
             raise RequestRejectedError(400, "unsupported_feature", "stop and seed are not representable by Responses")
         if egress_kind != "openai_responses" and (
-            self.request.reasoning_effort is not None
-            or self.request.parallel_tool_calls is not None
-            or any(tool.strict is not None for tool in self.request.tools or [])
+            self.request.parallel_tool_calls is not None or any(tool.strict is not None for tool in self.request.tools or [])
         ):
             raise RequestRejectedError(400, "unsupported_feature", "the selected egress cannot represent Responses-only request fields")
         credential = await _resolve_credential(decision, self.runtime.credentials)
@@ -268,7 +268,12 @@ class RequestExecution:
         )
         request, reconcile_adjustments = reconcile(self.request, decision.model, decision.profile)
         adjustments = [*self.parse_adjustments, *reconcile_adjustments]
-        upstream = adapter.transform_request(request, decision.model)
+        try:
+            upstream = adapter.transform_request(request, decision.model)
+        except ValueError as error:
+            message = str(error)
+            code = "unsupported_feature" if message.startswith("unsupported_feature:") else "invalid_request"
+            raise RequestRejectedError(400, code, message) from error
         if request.stream:
             session = StreamSession(
                 adapter=adapter,

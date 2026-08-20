@@ -94,7 +94,11 @@ fields are:
 
 - `model`, `messages`, and `stream`
 - `max_tokens`, `temperature`, `top_p`, `stop`, and `seed`
-- `tools`, `tool_choice`, and `response_format`
+- `tools`, `tool_choice`, `response_format`, `reasoning`, and `parallel_tool_calls`
+
+`reasoning` carries normalized controls for effort, thinking mode, token budget, display, summary,
+context, and mode. The legacy top-level `reasoning_effort` spelling remains accepted as shorthand
+for `reasoning.effort`.
 
 A minimal canonical call is:
 
@@ -110,7 +114,7 @@ Messages contain typed parts rather than provider-specific blocks:
 
 - `text`
 - `image`, by URL or base64 data plus media type
-- `reasoning`, optionally carrying an opaque provider signature
+- `reasoning`, carrying visible text or summaries and opaque signatures or encrypted state
 - `tool_call`, with arguments retained as JSON text
 - `tool_result`, represented as a user-message part
 
@@ -205,16 +209,15 @@ tool blocks, thinking blocks, signatures, stop reasons, and errors are rendered 
 shape regardless of the upstream provider family. `gateway` is an extra field on the buffered
 message and on the stream's usage-bearing `message_delta` event.
 
-The Anthropic SDK needs its normal `api_key` argument for construction, but the gateway bearer is
-passed as `auth_token`:
+The Anthropic SDK uses its normal `api_key` argument. The Messages route accepts the SDK's `x-api-key`
+header as the gateway inference key:
 
 ```python
 from anthropic import Anthropic
 
 client = Anthropic(
     base_url="http://127.0.0.1:8080/inf",
-    api_key="unused",
-    auth_token=inference_key,
+    api_key=inference_key,
 )
 message = client.messages.create(
     model="anthropic/claude-sonnet-4-6",
@@ -223,8 +226,9 @@ message = client.messages.create(
 )
 ```
 
-Anthropic request fields not consumed by the ingress, such as `thinking`, `top_k`, and `metadata`,
-become canonical extras. Provider profiles decide whether those extras are forwarded.
+Anthropic `thinking` and `output_config.effort` become canonical reasoning controls. Other request
+fields not consumed by the ingress, such as `top_k` and `metadata`, become canonical extras. Provider
+profiles decide whether those extras are forwarded.
 
 ### Errors
 
@@ -767,7 +771,7 @@ These are properties of the current implementation, not promises that another la
 - Reconciliation clamps only `max_tokens` and governs unknown top-level extras
 - Core-field support is not yet symmetric across egress families; for example Anthropic egress
   does not render canonical `seed` or `response_format`, and those losses are not adjustments
-- OpenAI egress does not replay canonical reasoning parts in prior messages
+- Chat Completions egress does not replay canonical reasoning parts in prior messages
 - `readyz` reports bundle presence only
 - Local mode synthesizes one platform credential per provider and trusts plaintext inference keys on disk
 - SQLite durability and leasing coordinate processes on one compatible filesystem, not a distributed cluster

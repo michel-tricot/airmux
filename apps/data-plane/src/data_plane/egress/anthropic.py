@@ -46,6 +46,7 @@ from data_plane.formats.anthropic import (
     UpstreamStreamEvent,
     UpstreamUsage,
     finish_reason,
+    reasoning_of,
     response_parts,
     to_request,
     to_tool_choice,
@@ -71,6 +72,7 @@ class _Block:
     type: str
     text: str = ""
     signature: str = ""
+    data: str = ""
     tool_id: str = ""
     name: str = ""
     arguments: str = ""
@@ -99,6 +101,8 @@ def _final_parts(blocks: dict[int, _Block]) -> list[AssistantPart]:
     for block in (blocks[i] for i in sorted(blocks)):
         if block.type == "thinking":
             parts.append(ReasoningPart(text=block.text, signature=block.signature or None))
+        elif block.type == "redacted_thinking":
+            parts.append(ReasoningPart(kind="encrypted", data=block.data))
         elif block.type == "text":
             parts.append(TextPart(text=block.text))
         elif block.type == "tool_use":
@@ -115,7 +119,9 @@ def _start_block(state: AnthropicStreamState, event: UpstreamStreamEvent) -> lis
         state.tool_count += 1
         state.blocks[event.index] = _Block(type="tool_use", tool_id=opened.id, name=opened.name, ordinal=ordinal)
         return [CanonicalChunk(id=state.chunk_id, delta=ToolCallDelta(index=ordinal, id=opened.id, name=opened.name or None))]
-    state.blocks[event.index] = _Block(type=opened.type, text=opened.text or opened.thinking)
+    state.blocks[event.index] = _Block(type=opened.type, text=opened.text or opened.thinking, data=opened.data)
+    if opened.type == "redacted_thinking":
+        return [CanonicalChunk(id=state.chunk_id, delta=ReasoningDelta(kind="encrypted", data=opened.data))]
     return []
 
 
@@ -152,6 +158,7 @@ class AnthropicAdapter(EgressAdapter):
     def transform_request(self, req: CanonicalRequest, m: ModelEntry) -> UpstreamRequest:
         """Transport assembly only; every field mapping lives in formats.anthropic."""
         system, messages = to_request(req.messages)
+        thinking, output_config = reasoning_of(req)
         body = MessagesBody(
             model=m.upstream_model,
             messages=messages,
@@ -162,6 +169,8 @@ class AnthropicAdapter(EgressAdapter):
             stop_sequences=req.stop,
             tools=to_tools(req.tools),
             tool_choice=to_tool_choice(req.tool_choice),
+            thinking=thinking,
+            output_config=output_config,
             stream=req.stream or None,
         )
         headers = {

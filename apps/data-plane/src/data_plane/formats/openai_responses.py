@@ -51,8 +51,10 @@ def input_of(messages: Sequence[CanonicalMessage]) -> list[dict[str, Any]]:
                 error_message = "unsupported_feature: Responses reasoning history requires its original item id"
                 raise ValueError(error_message)
             item: dict[str, Any] = {"type": "reasoning", "id": part.id, "summary": []}
-            if part.signature:
-                item["encrypted_content"] = part.signature
+            if part.text:
+                item["summary"] = [{"type": "summary_text", "text": part.text}]
+            if part.data:
+                item["encrypted_content"] = part.data
             items.append(item)
         if message.role == "assistant":
             said = "".join(part.text for part in rest if isinstance(part, TextPart))
@@ -91,6 +93,29 @@ def tool_choice_of(choice: object) -> object:
     return choice
 
 
+def _reasoning_of(request: CanonicalRequest) -> dict[str, Any] | None:
+    if request.reasoning is None:
+        return None
+    unsupported = [
+        name
+        for name, value in (
+            ("reasoning.budget_tokens", request.reasoning.budget_tokens),
+            ("reasoning.display", request.reasoning.display),
+        )
+        if value is not None
+    ]
+    if unsupported:
+        message = f"unsupported_feature: {', '.join(unsupported)} are not representable by Responses"
+        raise ValueError(message)
+    reasoning = request.reasoning.model_dump(exclude_none=True, exclude={"thinking", "budget_tokens", "display"})
+    if request.reasoning.thinking == "disabled":
+        if request.reasoning.effort not in {None, "none"}:
+            msg = "reasoning.thinking=disabled conflicts with reasoning.effort"
+            raise ValueError(msg)
+        reasoning["effort"] = "none"
+    return reasoning
+
+
 def body_of(request: CanonicalRequest, upstream_model: str) -> dict[str, Any]:
     unsupported = [name for name, value in (("stop", request.stop), ("seed", request.seed), *request.extra.items()) if value is not None]
     if unsupported:
@@ -116,8 +141,8 @@ def body_of(request: CanonicalRequest, upstream_model: str) -> dict[str, Any]:
         body["tool_choice"] = tool_choice_of(request.tool_choice)
     if request.parallel_tool_calls is not None:
         body["parallel_tool_calls"] = request.parallel_tool_calls
-    if request.reasoning_effort is not None:
-        body["reasoning"] = {"effort": request.reasoning_effort}
+    if reasoning := _reasoning_of(request):
+        body["reasoning"] = reasoning
     if request.response_format is not None:
         if request.response_format.type == "json_schema":
             body["text"] = {"format": {"type": "json_schema", **(request.response_format.json_schema or {})}}
@@ -158,14 +183,16 @@ def messages_of(value: object) -> list[CanonicalMessage]:  # noqa: PLR0912 - eac
                 )
             )
         elif kind == "reasoning":
+            text = "".join(_text(_mapping(summary).get("text")) for summary in _items(item.get("summary")))
             messages.append(
                 CanonicalMessage(
                     role="assistant",
                     content=[
                         ReasoningPart(
                             id=_text(item.get("id")) or None,
-                            text="",
-                            signature=_text(item.get("encrypted_content")) or None,
+                            kind="summary" if text else "encrypted",
+                            text=text,
+                            data=_text(item.get("encrypted_content")) or None,
                         )
                     ],
                 )
@@ -211,8 +238,9 @@ def response_parts(response: dict[str, Any]) -> list[AssistantPart]:
             parts.append(
                 ReasoningPart(
                     id=_text(item.get("id")) or None,
+                    kind="summary" if text else "encrypted",
                     text=text,
-                    signature=_text(item.get("encrypted_content")) or None,
+                    data=_text(item.get("encrypted_content")) or None,
                 )
             )
         elif item.get("type") == "function_call":
@@ -254,9 +282,9 @@ def json_response(final_id: str, model: str, parts: Sequence[AssistantPart], fin
             output.append(
                 {
                     "type": "reasoning",
-                    "id": f"rs_{index}",
+                    "id": part.id or f"rs_{index}",
                     "summary": ([{"type": "summary_text", "text": part.text}] if part.text else []),
-                    **({"encrypted_content": part.signature} if part.signature else {}),
+                    **({"encrypted_content": part.data} if part.data else {}),
                 }
             )
         else:

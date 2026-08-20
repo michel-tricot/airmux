@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from conftest import MODEL, PROVIDER
 
-from data_plane.canonical import CanonicalRequest
+from data_plane.canonical import CanonicalRequest, ReasoningConfig
 from data_plane.profiles import compile_profile
 from data_plane.reconcile import reconcile
 
@@ -78,3 +78,10 @@ def test_unknown_model_parameter_support_preserves_the_parameter():
     req, adjustments = reconcile(_request(temperature=0.7), MODEL, compile_profile(PROVIDER))
     assert req.temperature == 0.7
     assert adjustments == []
+
+
+def test_reasoning_effort_uses_its_parameter_support_entry():
+    model = MODEL.model_copy(update={"parameter_support": {"reasoning_effort": "unsupported"}})
+    req, adjustments = reconcile(_request(reasoning={"effort": "high"}), model, compile_profile(PROVIDER))
+    assert req.reasoning == ReasoningConfig()
+    assert [(a.param, a.action) for a in adjustments] == [("reasoning_effort", "dropped")]

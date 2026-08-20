@@ -16,6 +16,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from data_plane.canonical import (
     AssistantPart,
     CanonicalMessage,
+    CanonicalRequest,
     ContentPart,
     FinishReason,
     GatewayInfo,
@@ -53,7 +54,50 @@ class MessagesBody(BaseModel):
     stop_sequences: list[str] | None = None
     tools: list[dict[str, Any]] | None = None
     tool_choice: dict[str, Any] | None = None
+    thinking: dict[str, Any] | None = None
+    output_config: dict[str, Any] | None = None
     stream: bool | None = None
+
+
+def reasoning_of(request: CanonicalRequest) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
+    reasoning = request.reasoning
+    if reasoning is None:
+        return None, None
+    unsupported = [name for name, value in (("reasoning.context", reasoning.context), ("reasoning.mode", reasoning.mode)) if value is not None]
+    if reasoning.summary in {"concise", "detailed"}:
+        unsupported.append("reasoning.summary")
+    if unsupported:
+        message = f"unsupported_feature: {', '.join(unsupported)} are not representable by Anthropic Messages"
+        raise ValueError(message)
+    thinking_mode = reasoning.thinking
+    display = reasoning.display or ("summarized" if reasoning.summary == "auto" else None)
+    effort = reasoning.effort
+    if effort == "none":
+        if thinking_mode not in {None, "disabled"}:
+            msg = "reasoning.effort=none conflicts with reasoning.thinking"
+            raise ValueError(msg)
+        thinking_mode = "disabled"
+        effort = None
+    if effort == "minimal":
+        message = "unsupported_feature: reasoning.effort=minimal is not representable by Anthropic Messages"
+        raise ValueError(message)
+    if reasoning.budget_tokens is not None:
+        if thinking_mode not in {None, "enabled"}:
+            msg = "reasoning.budget_tokens requires reasoning.thinking=enabled"
+            raise ValueError(msg)
+        thinking_mode = "enabled"
+    if thinking_mode == "enabled" and reasoning.budget_tokens is None:
+        message = "unsupported_feature: Anthropic thinking=enabled requires reasoning.budget_tokens"
+        raise ValueError(message)
+    thinking = None
+    if thinking_mode is not None:
+        thinking = {
+            "type": thinking_mode,
+            **({"budget_tokens": reasoning.budget_tokens} if reasoning.budget_tokens is not None else {}),
+            **({"display": display} if display is not None and thinking_mode != "disabled" else {}),
+        }
+    output_config = {"effort": effort} if effort is not None else None
+    return thinking, output_config
 
 
 def _with_cache(block: dict[str, Any], cache: Literal["ephemeral"] | None) -> dict[str, Any]:
@@ -76,14 +120,23 @@ def _tool_input(arguments: str) -> dict[str, Any]:
     raise ValueError(msg)
 
 
+def _reasoning_block(part: ReasoningPart) -> dict[str, Any]:
+    if part.kind == "encrypted":
+        if part.data is None:
+            msg = "encrypted reasoning needs opaque data"
+            raise ValueError(msg)
+        return _with_cache({"type": "redacted_thinking", "data": part.data}, part.cache)
+    thinking: dict[str, Any] = {"type": "thinking", "thinking": part.text}
+    if part.signature:
+        thinking["signature"] = part.signature
+    return _with_cache(thinking, part.cache)
+
+
 def _block(part: ContentPart) -> dict[str, Any] | None:
     if isinstance(part, TextPart):
         return _with_cache({"type": "text", "text": part.text}, part.cache)
     if isinstance(part, ReasoningPart):
-        thinking: dict[str, Any] = {"type": "thinking", "thinking": part.text}
-        if part.signature:
-            thinking["signature"] = part.signature
-        return _with_cache(thinking, part.cache)
+        return _reasoning_block(part)
     if isinstance(part, ImagePart):
         source = {"type": "url", "url": part.url} if part.url is not None else {"type": "base64", "media_type": part.media_type, "data": part.data}
         return _with_cache({"type": "image", "source": source}, part.cache)
@@ -166,6 +219,7 @@ class UpstreamBlock(BaseModel):
     type: str = "text"
     text: str = ""
     thinking: str = ""
+    data: str = ""
     signature: str | None = None
     id: str = ""
     name: str = ""
@@ -227,13 +281,13 @@ def finish_reason(raw: str | None) -> FinishReason | None:
 
 
 def response_parts(blocks: Sequence[UpstreamBlock]) -> list[AssistantPart]:
-    """Anthropic already orders blocks the way canonical does: reasoning, then text, then tools.
-    Signatures ride with the reasoning; a redacted_thinking block has no canonical carrier yet
-    and is skipped."""
+    """Anthropic already orders blocks the way canonical does: reasoning, then text, then tools."""
     parts: list[AssistantPart] = []
     for block in blocks:
         if block.type == "thinking":
             parts.append(ReasoningPart(text=block.thinking, signature=block.signature))
+        elif block.type == "redacted_thinking":
+            parts.append(ReasoningPart(kind="encrypted", data=block.data))
         elif block.type == "text":
             parts.append(TextPart(text=block.text))
         elif block.type == "tool_use":
@@ -341,6 +395,8 @@ def _parts_from_blocks(content: object) -> list[ContentPart]:
         elif kind == "thinking":
             signature = block.get("signature")
             parts.append(ReasoningPart(text=_str(block.get("thinking")), signature=_str(signature) or None, cache=cache))
+        elif kind == "redacted_thinking":
+            parts.append(ReasoningPart(kind="encrypted", data=_str(block.get("data")), cache=cache))
         elif kind == "image":
             parts.append(_image_from_source(_mapping(block.get("source"))).model_copy(update={"cache": cache}))
         elif kind == "tool_use":
@@ -430,6 +486,11 @@ class ThinkingOut(BaseModel):
     signature: str = ""
 
 
+class RedactedThinkingOut(BaseModel):
+    type: Literal["redacted_thinking"] = "redacted_thinking"
+    data: str
+
+
 class ToolUseOut(BaseModel):
     type: Literal["tool_use"] = "tool_use"
     id: str
@@ -437,7 +498,7 @@ class ToolUseOut(BaseModel):
     input: dict[str, Any]
 
 
-BlockOut = TextOut | ThinkingOut | ToolUseOut
+BlockOut = TextOut | ThinkingOut | RedactedThinkingOut | ToolUseOut
 
 
 def _response_tool_input(arguments: str) -> dict[str, Any]:
@@ -454,7 +515,10 @@ def to_response_content(parts: Sequence[AssistantPart]) -> list[BlockOut]:
     blocks: list[BlockOut] = []
     for part in parts:
         if isinstance(part, ReasoningPart):
-            blocks.append(ThinkingOut(thinking=part.text, signature=part.signature or ""))
+            if part.kind == "encrypted":
+                blocks.append(RedactedThinkingOut(data=part.data or ""))
+            else:
+                blocks.append(ThinkingOut(thinking=part.text, signature=part.signature or ""))
         elif isinstance(part, TextPart):
             blocks.append(TextOut(text=part.text))
         elif isinstance(part, ToolCallPart):

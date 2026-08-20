@@ -12,6 +12,7 @@ import json
 import httpx
 import pytest
 import respx
+from anthropic import Anthropic
 from anthropic.types import Message, RawMessageStreamEvent
 from conftest import TEXT_LOG, TEXT_NONSTREAM, mock_control_plane
 from pydantic import TypeAdapter
@@ -36,15 +37,43 @@ def test_parse_hoists_system_and_keeps_the_rest_as_extras():
         "system": "You are terse.",
         "messages": [{"role": "user", "content": "hi"}],
         "stop_sequences": ["END"],
-        "thinking": {"type": "enabled", "budget_tokens": 512},
+        "thinking": {"type": "enabled", "budget_tokens": 2048, "display": "omitted"},
+        "output_config": {"effort": "medium"},
         "metadata": {"user_id": "u1"},
     }
     req, adjustments = AnthropicIngress().parse(body)
     assert [m.role for m in req.messages] == ["system", "user"]
     assert req.max_tokens == 64
     assert req.stop == ["END"]
-    assert req.extra == {"thinking": {"type": "enabled", "budget_tokens": 512}, "metadata": {"user_id": "u1"}}
+    assert req.reasoning is not None
+    assert req.reasoning.model_dump(exclude_none=True) == {
+        "effort": "medium",
+        "thinking": "enabled",
+        "budget_tokens": 2048,
+        "display": "omitted",
+    }
+    assert req.extra == {"metadata": {"user_id": "u1"}}
     assert adjustments == []
+
+
+@respx.mock
+def test_the_sdk_uses_its_normal_api_key_against_the_messages_route(api_key, dp_app):
+    respx.post(UPSTREAM).mock(return_value=httpx.Response(200, json=TEXT_NONSTREAM))
+    mock_control_plane()
+    with TestClient(dp_app) as client:
+
+        def send(request: httpx.Request) -> httpx.Response:
+            response = client.request(request.method, request.url.path, headers=request.headers, content=request.content)
+            return httpx.Response(response.status_code, headers=response.headers, content=response.content, request=request)
+
+        with httpx.Client(transport=httpx.MockTransport(send)) as http_client:
+            message = Anthropic(base_url="http://testserver/inf", api_key=api_key, http_client=http_client).messages.create(
+                model="gpt-test",
+                max_tokens=64,
+                messages=[{"role": "user", "content": "hi"}],
+            )
+    assert message.content[0].type == "text"
+    assert message.content[0].text == "héllo \U0001f30d world"
 
 
 def test_parse_strips_client_directive_blocks():
@@ -72,6 +101,25 @@ def test_the_sdk_reads_a_thinking_signature_back():
     thinking = message.content[0]
     assert thinking.type == "thinking"
     assert (thinking.thinking, thinking.signature) == ("think", "sig_1")
+
+
+def test_redacted_thinking_survives_both_directions():
+    request, _ = AnthropicIngress().parse(
+        {
+            "model": "m",
+            "max_tokens": 64,
+            "messages": [{"role": "assistant", "content": [{"type": "redacted_thinking", "data": "opaque"}]}],
+        }
+    )
+    reasoning = request.messages[0].content[0]
+    assert isinstance(reasoning, ReasoningPart)
+    assert (reasoning.kind, reasoning.data) == ("encrypted", "opaque")
+
+    final = CanonicalResponse(id="msg_1", model="m", content=[reasoning], finish_reason="stop", usage=Usage())
+    message = Message.model_validate_json(bytes(AnthropicIngress().render_response(final).body))
+    redacted = message.content[0]
+    assert redacted.type == "redacted_thinking"
+    assert redacted.data == "opaque"
 
 
 @respx.mock
