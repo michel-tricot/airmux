@@ -10,7 +10,7 @@ export function KeyRevealDialog({ open, onOpenChange, token }: { open: boolean; 
       warning="Please copy this key and store it somewhere safe. You will not be able to see it again."
       label="Key Secret"
       copyLabel="Copy key"
-      copyErrorMessage="Could not copy the key. Select it and copy it manually."
+      copyErrorMessage="Automatic copy was blocked. Press Command+C or Ctrl+C to copy the selected key."
     />
   );
 }

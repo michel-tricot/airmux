@@ -270,10 +270,12 @@ def json_response(final_id: str, model: str, parts: Sequence[AssistantPart], fin
                     "status": "completed",
                 }
             )
+    incomplete_reason = {"length": "max_output_tokens", "content_filter": "content_filter"}.get(finish or "")
     return {
         "id": final_id,
         "object": "response",
-        "status": "completed" if finish != "length" else "incomplete",
+        "status": "incomplete" if incomplete_reason else "completed",
+        **({"incomplete_details": {"reason": incomplete_reason}} if incomplete_reason else {}),
         "model": model,
         "output": output,
         "usage": {

@@ -100,6 +100,14 @@
       linear-gradient(to bottom, transparent 0%, rgb(0 0 0 / 50%) 100%);
     background-attachment: fixed;
   }
+  input[type='number'] {
+    appearance: textfield;
+  }
+  input[type='number']::-webkit-inner-spin-button,
+  input[type='number']::-webkit-outer-spin-button {
+    margin: 0;
+    appearance: none;
+  }
 }
 
 @layer utilities {
