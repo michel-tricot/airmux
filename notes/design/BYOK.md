@@ -130,7 +130,9 @@ The store maps the full `SecretRef` to an internal address and uses parameterize
 operation. The bundle still carries only the ref, priority, and version. A data plane reads
 PostgreSQL on cold resolution, then the existing version-keyed, single-flight cache keeps the value
 off the hot path for five minutes. Rotation increments the version and therefore bypasses the old
-cache entry immediately.
+cache entry immediately. Each process lazily creates a pool with at most four connections, keeps
+idle connections for ten minutes so the next cache refresh can reuse them, and closes the pool
+during application shutdown.
 
 The env store resolves a provider credential to **`{SERVICE}_API_KEY`**, the name every provider SDK
 documents and the one `taxonomy/taxonomy.yml` used before credentials became a resource, so an operator

@@ -149,6 +149,10 @@ class SecretStore(ABC):
         because delete is called on records whose value may already be gone."""
         raise SecretRejectedError(self.kind, ref)
 
+    async def aclose(self) -> None:
+        """Release resources held by this store."""
+        return
+
 
 class SecretStoreConfig(BaseModel, ABC):
     """What one store needs, declared beside that store and nowhere else.

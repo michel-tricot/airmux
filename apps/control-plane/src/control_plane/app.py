@@ -64,7 +64,10 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         app.state.session_factory = make_session_factory(engine)
         yield
     finally:
-        await engine.dispose()
+        try:
+            await app.state.secret_store.aclose()
+        finally:
+            await engine.dispose()
 
 
 async def not_owned_handler(_request: Request, _exc: Exception) -> JSONResponse:

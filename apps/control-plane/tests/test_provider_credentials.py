@@ -9,10 +9,12 @@ import pytest
 from fastapi.testclient import TestClient
 from helpers import MODEL, PROVIDER, make_org, make_workspace, run_in_db, setup_control_plane
 from pg import db_url_for
+from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 
 from contract import BundleV1, EnvStoreConfig, InsecureDatabaseStoreConfig, SecretNotFoundError, SecretPurpose, SecretRef, uuid7
 from control_plane.authz import Permission
+from control_plane.db import current_session
 from control_plane.models import InsecureVaultSecret, Provider, ProviderCredential, set_actor
 
 KEY = "sk-provider-abcd1234"
@@ -90,13 +92,20 @@ def test_the_insecure_database_vault_keeps_its_plaintext_out_of_the_bundle(tmp_p
         async def stored_values():
             return [secret.value for secret in await InsecureVaultSecret.find()]
 
+        async def vault_connections():
+            result = await current_session().execute(
+                text("SELECT count(*) FROM pg_stat_activity WHERE datname = current_database() AND application_name = 'airllm-insecure-vault'")
+            )
+            return result.scalar_one()
+
         assert run_in_db(tmp_path, stored_values) == ["sk-rotated-9999"]
+        assert run_in_db(tmp_path, vault_connections) == 1
         assert KEY not in bundle_response.text
         assert set(entry.model_dump()) == {"ref", "priority", "version"}
-        assert _stored(cp, credential) == "sk-rotated-9999"
         assert c.delete(_credential_path(credential), headers=org).status_code == 200
 
     assert run_in_db(tmp_path, stored_values) == []
+    assert run_in_db(tmp_path, vault_connections) == 0
 
 
 def test_an_instance_credential_can_be_created_and_listed(tmp_path):
