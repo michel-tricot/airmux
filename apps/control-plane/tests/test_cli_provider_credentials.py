@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+from contextlib import nullcontext
 
 import pytest
 from fastapi.testclient import TestClient
@@ -36,10 +37,11 @@ def cli(tmp_path, monkeypatch):
         c.post("/api/v1/instance/taxonomy/models", json=MODEL, headers=root)
         org_id = make_org(c, root)
         org = cp.headers(org_id)
+        c.headers.update(org)
         workspace = c.post(f"/api/v1/orgs/{org_id}/workspaces", json={"name": "Staging"}, headers=org).json()["data"]
 
-        def _client(token: str, control_plane_url: str) -> TestClient:
-            return TestClient(cp.app, headers=org)
+        def _client(token: str, control_plane_url: str):
+            return nullcontext(c)
 
         monkeypatch.setattr("cli.client._bearer_client", _client)
         monkeypatch.setenv("GW_ACCESS_KEY", org["authorization"].removeprefix("Bearer "))

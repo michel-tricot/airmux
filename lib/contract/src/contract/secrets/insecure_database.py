@@ -31,6 +31,10 @@ POOL_MAX_INACTIVE_S = 600.0
 POOL_MAX_SIZE = 4
 
 
+class _DatabaseUnavailableError(RuntimeError):
+    pass
+
+
 class InsecureDatabaseStoreConfig(SecretStoreConfig):
     kind: Literal["insecure_database"] = "insecure_database"
     url: SecretStr
@@ -55,20 +59,29 @@ class InsecureDatabaseSecretStore(SecretStore):
         self._closed = False
 
     async def get(self, ref: SecretRef) -> Secret:
-        async with self._connection(ref) as connection:
-            value = cast("str | None", await connection.fetchval(SELECT_VALUE, self.address_of(ref)))
+        try:
+            async with self._connection() as connection:
+                value = cast("str | None", await connection.fetchval(SELECT_VALUE, self.address_of(ref)))
+        except _DatabaseUnavailableError as error:
+            raise SecretStoreUnavailableError(ref, "database operation failed") from error
         if value is None:
             raise SecretNotFoundError(ref)
         return Secret(value)
 
     async def put(self, ref: SecretRef, secret: Secret) -> Secret:
-        async with self._connection(ref) as connection:
-            await connection.execute(UPSERT_VALUE, self.address_of(ref), secret.reveal())
+        try:
+            async with self._connection() as connection:
+                await connection.execute(UPSERT_VALUE, self.address_of(ref), secret.reveal())
+        except _DatabaseUnavailableError as error:
+            raise SecretStoreUnavailableError(ref, "database operation failed") from error
         return secret
 
     async def delete(self, ref: SecretRef) -> None:
-        async with self._connection(ref) as connection:
-            await connection.execute(DELETE_VALUE, self.address_of(ref))
+        try:
+            async with self._connection() as connection:
+                await connection.execute(DELETE_VALUE, self.address_of(ref))
+        except _DatabaseUnavailableError as error:
+            raise SecretStoreUnavailableError(ref, "database operation failed") from error
 
     async def aclose(self) -> None:
         async with self._pool_lock:
@@ -90,17 +103,17 @@ class InsecureDatabaseSecretStore(SecretStore):
         return hashlib.sha256(material).hexdigest()
 
     @asynccontextmanager
-    async def _connection(self, ref: SecretRef) -> AsyncIterator[asyncpg.Connection]:
+    async def _connection(self) -> AsyncIterator[asyncpg.Connection]:
         import asyncpg  # noqa: PLC0415 driver loads only when this backend performs an operation
 
         try:
-            pool = await self._pool_for(ref)
+            pool = await self._pool_or_create()
             async with pool.acquire(timeout=POOL_ACQUIRE_TIMEOUT_S) as connection:
                 yield connection
         except (OSError, TimeoutError, asyncpg.PostgresError) as error:
-            raise SecretStoreUnavailableError(ref, "database operation failed") from error
+            raise _DatabaseUnavailableError from error
 
-    async def _pool_for(self, ref: SecretRef) -> asyncpg.Pool:
+    async def _pool_or_create(self) -> asyncpg.Pool:
         import asyncpg  # noqa: PLC0415 driver loads only when this backend performs an operation
 
         pool = self._pool
@@ -108,7 +121,7 @@ class InsecureDatabaseSecretStore(SecretStore):
             return pool
         async with self._pool_lock:
             if self._closed:
-                raise SecretStoreUnavailableError(ref, "store is closed")
+                raise _DatabaseUnavailableError
             if self._pool is None:
                 try:
                     self._pool = await asyncpg.create_pool(
@@ -121,5 +134,5 @@ class InsecureDatabaseSecretStore(SecretStore):
                         server_settings={"application_name": "airllm-insecure-vault"},
                     )
                 except (OSError, TimeoutError, asyncpg.PostgresError) as error:
-                    raise SecretStoreUnavailableError(ref, "database operation failed") from error
+                    raise _DatabaseUnavailableError from error
             return self._pool

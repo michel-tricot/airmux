@@ -164,6 +164,13 @@ def test_a_config_builds_its_own_store(tmp_path):
     assert isinstance(InsecureDatabaseStoreConfig(url="postgresql://vault:secret@db/vault").build(), InsecureDatabaseSecretStore)
 
 
+async def test_a_store_owns_its_async_lifecycle():
+    store = MemoryStoreConfig().build()
+
+    async with store as opened:
+        assert opened is store
+
+
 def test_the_kind_selects_which_backend_parses_the_settings(tmp_path):
     configured = Configured.model_validate({"secrets": {"kind": "file", "root": str(tmp_path)}})
     assert configured.secrets == FileStoreConfig(root=tmp_path)

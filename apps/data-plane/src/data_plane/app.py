@@ -73,32 +73,28 @@ def create_app(config: Config) -> Starlette:
     async def lifespan(_app: Starlette) -> AsyncIterator[dict[str, Runtime]]:
         if config.dev:
             _configure_dev_logging()
-        secret_store = config.secrets.build()
-        try:
-            async with _build_http_client() as http_client:
-                outbox = build_outbox(config.events, http_client)
-                try:
-                    holder = BundleHolder()
-                    bundle_source = build_bundle_source(config.bundle, holder, http_client)
-                    runtime = Runtime(
-                        holder=holder,
-                        outbox=outbox,
-                        credentials=CredentialResolver(secret_store),
-                        http_client=http_client,
-                    )
-                    async with asyncio.TaskGroup() as task_group:
-                        tasks = (*bundle_source.start(task_group), *outbox.start(task_group))
+        async with config.secrets.build() as secret_store, _build_http_client() as http_client:
+            outbox = build_outbox(config.events, http_client)
+            try:
+                holder = BundleHolder()
+                bundle_source = build_bundle_source(config.bundle, holder, http_client)
+                runtime = Runtime(
+                    holder=holder,
+                    outbox=outbox,
+                    credentials=CredentialResolver(secret_store),
+                    http_client=http_client,
+                )
+                async with asyncio.TaskGroup() as task_group:
+                    tasks = (*bundle_source.start(task_group), *outbox.start(task_group))
+                    for task in tasks:
+                        task.add_done_callback(_terminate_process_on_failure)
+                    try:
+                        yield {"runtime": runtime}
+                    finally:
                         for task in tasks:
-                            task.add_done_callback(_terminate_process_on_failure)
-                        try:
-                            yield {"runtime": runtime}
-                        finally:
-                            for task in tasks:
-                                task.cancel()
-                finally:
-                    outbox.close()
-        finally:
-            await secret_store.aclose()
+                            task.cancel()
+            finally:
+                outbox.close()
 
     return Starlette(
         routes=[

@@ -16,10 +16,13 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import StrEnum
-from typing import ClassVar, Final
+from typing import TYPE_CHECKING, ClassVar, Final, Self
 from uuid import UUID  # noqa: TC003 SecretRef crosses the wire inside the bundle, so pydantic resolves this at runtime
 
 from pydantic import BaseModel, ConfigDict
+
+if TYPE_CHECKING:
+    from types import TracebackType
 
 FINGERPRINT_LENGTH: Final = 4
 REDACTED: Final = "Secret(***)"
@@ -131,6 +134,17 @@ class SecretStore(ABC):
     """
 
     kind: ClassVar[str]
+
+    async def __aenter__(self) -> Self:
+        return self
+
+    async def __aexit__(
+        self,
+        _exception_type: type[BaseException] | None,
+        _exception: BaseException | None,
+        _traceback: TracebackType | None,
+    ) -> None:
+        await self.aclose()
 
     @abstractmethod
     async def get(self, ref: SecretRef) -> Secret:
