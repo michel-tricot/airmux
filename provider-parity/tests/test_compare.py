@@ -26,7 +26,7 @@ def test_equivalent_observations_that_miss_the_oracle_are_still_parity():
 
     assert result.verdict == "parity"
     assert result.differences == ()
-    assert result.reason == "both paths matched; neither satisfied the case oracle"
+    assert result.reason == ""
     assert result.direct_satisfies_oracle is False
     assert result.gateway_satisfies_oracle is False
 

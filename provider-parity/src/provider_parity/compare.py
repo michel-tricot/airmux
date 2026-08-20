@@ -91,8 +91,7 @@ def compare(direct: Observation, gateway: Observation, oracle: Oracle) -> Compar
     elif direct.outcome != "success" and direct.outcome == gateway.outcome:
         comparison = result("upstream_failure", "both paths failed in the same outcome class")
     elif not differences:
-        reason = "" if direct_passes else "both paths matched; neither satisfied the case oracle"
-        comparison = result("parity", reason)
+        comparison = result("parity")
     else:
         comparison = result("different", "both paths completed with different normalized behavior")
     return comparison
