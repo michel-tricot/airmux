@@ -29,6 +29,7 @@ class ProviderHandler(BaseHTTPRequestHandler):
         server = self.server
         assert isinstance(server, ProviderServer)
         request = json.loads(self.rfile.read(int(self.headers["content-length"])))
+        server.paths.append(self.path)
         server.models.append(request["model"])
         server.requests.append(request)
         if not self.path.startswith("/inf") and server.direct_status is not None:
@@ -170,6 +171,7 @@ class ProviderServer(ThreadingHTTPServer):
     def __init__(self) -> None:
         super().__init__(("127.0.0.1", 0), ProviderHandler)
         self.models: list[str] = []
+        self.paths: list[str] = []
         self.requests: list[dict[str, object]] = []
         self.gateway_status: int | None = None
         self.gateway_delay_seconds = 0.0
@@ -279,6 +281,7 @@ def test_each_native_sdk_surface_is_paired_through_the_gateway(monkeypatch, surf
     assert result.direct.sdk_type == surface.sdk_type
     assert result.gateway.sdk_type == surface.sdk_type
     assert provider.models == ["upstream-model", f"{surface.provider_id}/model"]
+    assert provider.paths == [f"/v1/{surface.endpoint}", f"/inf/v1/{surface.endpoint}"]
 
 
 @pytest.mark.parametrize(

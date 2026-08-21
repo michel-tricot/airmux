@@ -93,6 +93,10 @@ def _unsupported(error: anthropic.APIStatusError) -> bool:
     return error.status_code in {400, 404, 422} and any(term in message for term in ("unsupported", "not support", "does not accept"))
 
 
+def _sdk_base_url(base_url: str) -> str:
+    return base_url.rstrip("/").removesuffix("/v1")
+
+
 class AnthropicDriver(SDKDriver):
     id = "anthropic"
     endpoints = frozenset({"messages"})
@@ -103,7 +107,7 @@ class AnthropicDriver(SDKDriver):
             raise ValueError(message)
         if connection.auth == "bearer":
             client = Anthropic(
-                base_url=connection.base_url,
+                base_url=_sdk_base_url(connection.base_url),
                 api_key="unused",
                 auth_token=connection.api_key,
                 default_headers=connection.headers,
@@ -112,7 +116,7 @@ class AnthropicDriver(SDKDriver):
             )
         else:
             client = Anthropic(
-                base_url=connection.base_url,
+                base_url=_sdk_base_url(connection.base_url),
                 api_key=connection.api_key,
                 default_headers=connection.headers,
                 timeout=connection.timeout_seconds,
