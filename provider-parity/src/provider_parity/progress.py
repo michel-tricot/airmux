@@ -28,8 +28,6 @@ VERDICT_STYLE = {
     "different": ("≠", "bold red"),
     "gateway_only_success": ("↗", "bold cyan"),
     "inconclusive": ("?", "bold yellow"),
-    "provider_limitation": ("○", "bold yellow"),
-    "upstream_failure": ("!", "bold yellow"),
     "expected_difference": ("≈", "bold blue"),
 }
 MILLISECONDS_PER_SECOND = 1000
@@ -114,24 +112,19 @@ class ConsoleProgress:
         if event.result.confirmations:
             verdicts = ", ".join(attempt.comparison.verdict.replace("_", " ") for attempt in event.result.confirmations)
             self.console.print(f"    [dim]Confirmation verdicts: {escape(verdicts)}[/dim]")
-        both_failed = comparison.direct_satisfies_oracle is False and comparison.gateway_satisfies_oracle is False
-        both_indeterminate = comparison.direct_satisfies_oracle is None and comparison.gateway_satisfies_oracle is None
-        if both_indeterminate and event.result.direct.outcome == event.result.gateway.outcome == "success":
-            self.console.print("  [bold yellow]? CASE NOT EVALUATED[/bold yellow]")
-            self.console.print("    [yellow]output token limit reached before the case oracle could be evaluated[/yellow]")
-        elif both_failed:
-            self.console.print("  [bold yellow]! CASE FAILED[/bold yellow]")
-            direct_failures = oracle_failures(event.result.direct, event.experiment.case.oracle)
-            gateway_failures = oracle_failures(event.result.gateway, event.experiment.case.oracle)
-            if direct_failures == gateway_failures:
-                for failure in direct_failures:
-                    self.console.print(f"    [yellow]{escape(failure)}[/yellow]")
-            else:
-                for failure in direct_failures:
-                    self.console.print(f"    [cyan]Direct[/cyan]: {escape(failure)}")
-                for failure in gateway_failures:
-                    self.console.print(f"    [magenta]Gateway[/magenta]: {escape(failure)}")
-        elif comparison.reason:
+        direct_support = comparison.direct_satisfies_oracle
+        if direct_support is True:
+            self.console.print("  [bold green]✓ PROVIDER FEATURE SUPPORTED[/bold green]")
+        elif direct_support is False:
+            self.console.print("  [bold yellow]○ PROVIDER FEATURE NOT SUPPORTED[/bold yellow]")
+            for failure in oracle_failures(event.result.direct, event.experiment.case.oracle):
+                self.console.print(f"    [yellow]{escape(failure)}[/yellow]")
+            self.console.print(f"    [cyan]Provider behavior[/cyan]: {escape(observation_summary(event.result.direct))}")
+        else:
+            self.console.print("  [bold yellow]? PROVIDER FEATURE NOT EVALUATED[/bold yellow]")
+            if event.result.direct.finish_reason in {"length", "max_tokens"}:
+                self.console.print("    [yellow]output token limit reached before the feature oracle could be evaluated[/yellow]")
+        if comparison.reason:
             self.console.print(f"    [dim]{escape(comparison.reason)}[/dim]")
         for detail in difference_details(event.result):
             self.console.print(f"    [bold]{escape(detail.label)}[/bold]: direct={escape(detail.direct)} | gateway={escape(detail.gateway)}")

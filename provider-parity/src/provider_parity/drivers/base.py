@@ -30,7 +30,7 @@ def access_error(connection: Connection, status_code: int) -> str | None:
     return None
 
 
-class SDKDriver(ABC):
+class ClientDriver(ABC):
     id: str
     endpoints: frozenset[str]
 

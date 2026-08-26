@@ -12,5 +12,5 @@ def test_running_gateway_uses_the_configured_origin_for_each_sdk_surface():
 
     assert openai.base_url == "http://gateway.example/inf/v1"
     assert responses.base_url == "http://gateway.example/inf/v1"
-    assert anthropic.base_url == "http://gateway.example/inf"
+    assert anthropic.base_url == "http://gateway.example/inf/v1"
     assert {openai.api_key, responses.api_key, anthropic.api_key} == {"sk-inf-parity"}

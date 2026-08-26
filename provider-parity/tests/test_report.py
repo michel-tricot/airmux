@@ -37,8 +37,8 @@ def test_report_is_machine_readable_and_self_contained(tmp_path):
     assert "run-test" in html
     assert "Direct observation" in html
     assert "Gateway observation" in html
-    assert "Case result" in html
+    assert "Feature" in html
     assert "attempt 2: different (reasoning_presence)" in html
     assert "gateway=success; text=&quot;&quot;" in html
-    assert "<td>passed</td>" in html
+    assert "<td>✓ supported</td>" in html
     assert "success; text=&quot;ok&quot;" in html

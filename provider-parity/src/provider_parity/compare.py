@@ -77,6 +77,8 @@ def _differences(direct: Observation, gateway: Observation) -> tuple[str, ...]:
         "reasoning_presence": (direct.reasoning_present, gateway.reasoning_present),
         "json": (json.dumps(direct.json_value, sort_keys=True), json.dumps(gateway.json_value, sort_keys=True)),
         "error_code": (direct.error_code, gateway.error_code),
+        "error_message": (" ".join((direct.error_message or "").split()), " ".join((gateway.error_message or "").split())),
+        "http_status": (direct.http_status, gateway.http_status),
     }
     return tuple(name for name, pair in values.items() if pair[0] != pair[1])
 
@@ -102,10 +104,6 @@ def compare(direct: Observation, gateway: Observation, oracle: Oracle) -> Compar
         comparison = result("gateway_regression", "direct satisfied the oracle and gateway did not")
     elif direct.outcome != "success" and gateway.outcome == "success":
         comparison = result("gateway_only_success", "only the gateway path succeeded")
-    elif direct.outcome == gateway.outcome == "unsupported":
-        comparison = result("provider_limitation", "both paths reported unsupported behavior")
-    elif direct.outcome != "success" and direct.outcome == gateway.outcome:
-        comparison = result("upstream_failure", "both paths failed in the same outcome class")
     elif not differences:
         comparison = result("parity")
     else:

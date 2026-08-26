@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from provider_parity.compare import compare
+from provider_parity.diagnostics import feature_display, parity_display
 from provider_parity.models import Observation, Oracle, ToolObservation
 
 ORACLE = Oracle(tool_names=("report_alpha", "report_beta"), tool_arguments_valid=True, assistant_text="forbidden")
@@ -43,12 +44,45 @@ def test_a_gateway_failure_after_direct_success_is_a_regression():
     assert result.gateway_satisfies_oracle is False
 
 
-def test_matching_unsupported_results_preserve_the_provider_limitation():
+def test_matching_unsupported_results_are_parity():
     unsupported = Observation(outcome="unsupported", error_code="unsupported_parameter")
 
     result = compare(unsupported, unsupported, Oracle(outcome="unsupported"))
 
-    assert result.verdict == "provider_limitation"
+    assert result.verdict == "parity"
+
+
+def test_matching_provider_errors_are_parity_even_when_the_feature_oracle_fails():
+    rejected = Observation(outcome="error", error_code="invalid_request_error", error_message="Could not process image")
+
+    result = compare(rejected, rejected, Oracle(text_nonempty=True))
+
+    assert result.verdict == "parity"
+    assert result.differences == ()
+    assert result.direct_satisfies_oracle is False
+    assert result.gateway_satisfies_oracle is False
+    assert parity_display(result) == "✓ parity"
+    assert feature_display(result) == "✗ not supported"
+
+
+def test_different_provider_error_messages_are_not_parity():
+    direct = Observation(outcome="error", error_code="invalid_request_error", error_message="Could not process image")
+    gateway = direct.model_copy(update={"error_message": "Invalid image URL"})
+
+    result = compare(direct, gateway, Oracle(text_nonempty=True))
+
+    assert result.verdict == "different"
+    assert result.differences == ("error_message",)
+
+
+def test_different_provider_http_statuses_are_not_parity():
+    direct = Observation(outcome="error", error_code="upstream_error", error_message="failed", http_status=400)
+    gateway = direct.model_copy(update={"http_status": 500})
+
+    result = compare(direct, gateway, Oracle(text_nonempty=True))
+
+    assert result.verdict == "different"
+    assert result.differences == ("http_status",)
 
 
 def test_gateway_only_success_is_reported_as_a_difference():

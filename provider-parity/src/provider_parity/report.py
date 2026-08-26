@@ -5,7 +5,7 @@ import json
 from collections import Counter
 from typing import TYPE_CHECKING
 
-from provider_parity.diagnostics import case_result, difference_details, observation_summary
+from provider_parity.diagnostics import difference_details, feature_display, observation_summary, parity_display
 from provider_parity.models import PairResult, ReportDocument, ReportPaths, RunMetadata
 
 if TYPE_CHECKING:
@@ -31,8 +31,8 @@ def _row(result: PairResult) -> str:
         f"<td>{html.escape(result.sdk)}</td>"
         f"<td>{html.escape(result.case_id)}</td>"
         f"<td>{html.escape(result.transport)}</td>"
-        f"<td class='{html.escape(result.comparison.verdict)}'>{html.escape(result.comparison.verdict)}</td>"
-        f"<td>{html.escape(case_result(result.comparison))}</td>"
+        f"<td class='{html.escape(result.comparison.verdict)}'>{html.escape(parity_display(result.comparison))}</td>"
+        f"<td>{html.escape(feature_display(result.comparison))}</td>"
         f"<td>{html.escape(result.comparison.reason)}</td>"
         f"<td>{confirmations or 'not needed'}</td>"
         f"<td>{html.escape(observation_summary(result.direct))}</td>"
@@ -67,8 +67,8 @@ harness <code>{html.escape(run.harness_commit)}</code>,
 taxonomy <code>{html.escape(run.taxonomy_fingerprint)}</code></p>
 <p>{html.escape(summary)}</p>
 <table><thead><tr>
-<th>Provider</th><th>Surface</th><th>Model</th><th>SDK</th><th>Case</th><th>Transport</th><th>Verdict</th>
-<th>Case result</th><th>Reason</th><th>Confirmations</th><th>Direct observation</th><th>Gateway observation</th><th>Differences</th>
+<th>Provider</th><th>Surface</th><th>Model</th><th>Client</th><th>Case</th><th>Transport</th><th>Parity</th>
+<th>Feature</th><th>Reason</th><th>Confirmations</th><th>Direct observation</th><th>Gateway observation</th><th>Differences</th>
 </tr></thead>
 <tbody>{rows}</tbody></table></body></html>
 """

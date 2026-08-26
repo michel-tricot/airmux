@@ -6,86 +6,15 @@ from typing import TYPE_CHECKING, cast
 import anthropic
 from anthropic import Anthropic
 
-from provider_parity.drivers.base import Connection, SDKDriver, access_error
+from provider_parity.drivers.base import ClientDriver, Connection, access_error
 from provider_parity.drivers.normalize import anthropic_message
+from provider_parity.drivers.wire import anthropic_parts
 from provider_parity.models import Case, Observation, Transport
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping, Sequence
+    from collections.abc import Mapping
 
     from anthropic.types import MessageParam
-    from pydantic import JsonValue
-
-
-def _content(value: JsonValue) -> JsonValue:
-    if not isinstance(value, list):
-        return value
-    content: list[JsonValue] = []
-    for item in cast("Sequence[object]", value):
-        block = cast("Mapping[str, object]", item) if isinstance(item, dict) else {}
-        if block.get("type") == "text":
-            content.append({"type": "text", "text": str(block.get("text") or "")})
-        elif block.get("type") == "image" and isinstance(block.get("url"), str):
-            content.append({"type": "image", "source": {"type": "url", "url": str(block["url"])}})
-        elif block.get("type") == "image":
-            content.append(
-                {
-                    "type": "image",
-                    "source": {
-                        "type": "base64",
-                        "media_type": str(block.get("media_type") or ""),
-                        "data": str(block.get("data") or ""),
-                    },
-                }
-            )
-        else:
-            content.append(cast("JsonValue", item))
-    return content
-
-
-def _body(case: Case) -> tuple[list[dict[str, JsonValue]], dict[str, JsonValue]]:
-    request = case.request
-    messages = [
-        {"role": cast("JsonValue", message.get("role")), "content": _content(cast("JsonValue", message.get("content")))}
-        for message in request.messages
-        if message.get("role") != "system"
-    ]
-    system = [message.get("content") for message in request.messages if message.get("role") == "system"]
-    tools = [
-        {
-            "name": tool.name,
-            "description": tool.description,
-            "input_schema": tool.parameters,
-            **({"strict": tool.strict} if tool.strict is not None else {}),
-        }
-        for tool in request.tools
-    ]
-    choice = request.tool_choice
-    if isinstance(choice, dict) and isinstance(choice.get("name"), str):
-        tool_choice: JsonValue | None = {"type": "tool", "name": str(choice["name"])}
-    elif choice == "required":
-        tool_choice = {"type": "any"}
-    elif isinstance(choice, str):
-        tool_choice = {"type": choice}
-    else:
-        tool_choice = None
-    reasoning = request.reasoning or {}
-    extra: dict[str, JsonValue] = {
-        **({"system": system[0]} if system else {}),
-        **({"temperature": request.temperature} if request.temperature is not None else {}),
-        **({"top_p": request.top_p} if request.top_p is not None else {}),
-        **({"stop_sequences": list(request.stop)} if request.stop is not None else {}),
-        **({"tools": tools} if tools else {}),
-        **({"tool_choice": tool_choice} if tool_choice is not None else {}),
-        **(
-            {"thinking": {name: value for name, value in reasoning.items() if name in {"type", "budget_tokens", "display"}}}
-            if reasoning.get("type")
-            else {}
-        ),
-        **({"output_config": {"effort": reasoning["effort"]}} if reasoning.get("effort") is not None else {}),
-        **request.extra,
-    }
-    return messages, extra
 
 
 def _unsupported(error: anthropic.APIStatusError) -> bool:
@@ -97,7 +26,7 @@ def _sdk_base_url(base_url: str) -> str:
     return base_url.rstrip("/").removesuffix("/v1")
 
 
-class AnthropicDriver(SDKDriver):
+class AnthropicDriver(ClientDriver):
     id = "anthropic"
     endpoints = frozenset({"messages"})
 
@@ -122,7 +51,7 @@ class AnthropicDriver(SDKDriver):
                 timeout=connection.timeout_seconds,
                 max_retries=0,
             )
-        messages, extra = _body(case)
+        messages, extra = anthropic_parts(case)
         started = time.perf_counter()
         try:
             message_params = cast("list[MessageParam]", messages)
@@ -140,6 +69,7 @@ class AnthropicDriver(SDKDriver):
                 outcome="inconclusive" if access_code else "unsupported" if _unsupported(error) else "error",
                 error_code=access_code or str(getattr(error, "code", None) or error.status_code),
                 error_message=str(error)[:500],
+                http_status=error.status_code,
                 duration_ms=elapsed,
                 sdk_type=type(error).__name__,
             )

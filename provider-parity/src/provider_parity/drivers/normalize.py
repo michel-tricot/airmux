@@ -18,6 +18,10 @@ def _sequence(value: object) -> Sequence[object]:
     return cast("Sequence[object]", value) if isinstance(value, Sequence) and not isinstance(value, (str, bytes)) else ()
 
 
+def _index(value: object) -> int:
+    return value if isinstance(value, int) else 0
+
+
 def _adjustments(payload: Mapping[str, object]) -> tuple[str, ...]:
     gateway = _mapping(payload.get("gateway"))
     return tuple(
@@ -111,3 +115,89 @@ def anthropic_message(payload: Mapping[str, object], duration_ms: float, sdk_typ
         duration_ms=duration_ms,
         sdk_type=sdk_type,
     )
+
+
+def openai_chat_stream(events: Sequence[Mapping[str, object]], duration_ms: float, sdk_type: str) -> Observation:
+    text = ""
+    finish_reason = None
+    usage_present = False
+    tool_fragments: dict[int, tuple[str, str]] = {}
+    reasoning_present = False
+    for event in events:
+        usage_present = usage_present or bool(event.get("usage"))
+        choices = event.get("choices")
+        if not isinstance(choices, list) or not choices:
+            continue
+        choice = _mapping(choices[0])
+        finish_reason = str(choice.get("finish_reason") or finish_reason or "") or None
+        delta = _mapping(choice.get("delta"))
+        if isinstance(delta.get("content"), str):
+            text += str(delta["content"])
+        reasoning_present = reasoning_present or bool(delta.get("reasoning_content") or delta.get("reasoning"))
+        for call_value in _sequence(delta.get("tool_calls")):
+            call = _mapping(call_value)
+            index = _index(call.get("index"))
+            function = _mapping(call.get("function"))
+            name, arguments = tool_fragments.get(index, ("", ""))
+            tool_fragments[index] = (name + str(function.get("name") or ""), arguments + str(function.get("arguments") or ""))
+    payload = {
+        "choices": [
+            {
+                "message": {
+                    "content": text,
+                    "tool_calls": [{"function": {"name": name, "arguments": arguments}} for _, (name, arguments) in sorted(tool_fragments.items())],
+                    "reasoning": "present" if reasoning_present else None,
+                },
+                "finish_reason": finish_reason,
+            }
+        ],
+        "usage": {} if not usage_present else {"streamed": True},
+    }
+    return openai_chat(payload, duration_ms, sdk_type)
+
+
+def openai_responses_stream(events: Sequence[Mapping[str, object]], duration_ms: float, sdk_type: str) -> Observation:
+    completed = next((_mapping(event.get("response")) for event in reversed(events) if event.get("type") == "response.completed"), None)
+    if completed is None:
+        message = "Responses stream did not include response.completed"
+        raise ValueError(message)
+    return openai_responses(completed, duration_ms, sdk_type)
+
+
+def anthropic_stream(events: Sequence[Mapping[str, object]], duration_ms: float, sdk_type: str) -> Observation:
+    message: dict[str, object] = {}
+    content: dict[int, dict[str, object]] = {}
+    input_fragments: dict[int, str] = {}
+    usage: dict[str, object] = {}
+    for event in events:
+        kind = event.get("type")
+        if kind == "message_start":
+            message.update(_mapping(event.get("message")))
+            usage.update(_mapping(message.get("usage")))
+        elif kind == "content_block_start":
+            index = _index(event.get("index"))
+            content[index] = dict(_mapping(event.get("content_block")))
+        elif kind == "content_block_delta":
+            index = _index(event.get("index"))
+            block = content.setdefault(index, {})
+            delta = _mapping(event.get("delta"))
+            if delta.get("type") == "text_delta":
+                block["text"] = str(block.get("text") or "") + str(delta.get("text") or "")
+            elif delta.get("type") == "thinking_delta":
+                block["thinking"] = str(block.get("thinking") or "") + str(delta.get("thinking") or "")
+            elif delta.get("type") == "signature_delta":
+                block["signature"] = str(block.get("signature") or "") + str(delta.get("signature") or "")
+            elif delta.get("type") == "input_json_delta":
+                input_fragments[index] = input_fragments.get(index, "") + str(delta.get("partial_json") or "")
+        elif kind == "message_delta":
+            delta = _mapping(event.get("delta"))
+            if delta.get("stop_reason") is not None:
+                message["stop_reason"] = delta["stop_reason"]
+            usage.update(_mapping(event.get("usage")))
+    for index, fragment in input_fragments.items():
+        try:
+            content[index]["input"] = json.loads(fragment)
+        except json.JSONDecodeError:
+            content[index]["input"] = fragment
+    payload = {**message, "content": [block for _, block in sorted(content.items())], "usage": usage}
+    return anthropic_message(payload, duration_ms, sdk_type)

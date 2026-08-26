@@ -8,6 +8,8 @@ from typing import TYPE_CHECKING, NamedTuple, cast
 
 import pytest
 
+from provider_parity.drivers.base import Connection
+from provider_parity.drivers.http import HTTPDriver
 from provider_parity.gateway import Gateway
 from provider_parity.models import Case, EgressKind, ExpectedDifference, Experiment, Oracle, Plan, Request, Target, Transport
 from provider_parity.runner import execute
@@ -25,13 +27,14 @@ class ProviderHandler(BaseHTTPRequestHandler):
             return
         self.send_error(404)
 
-    def do_POST(self) -> None:
+    def do_POST(self) -> None:  # noqa: PLR0911 HTTP fixture routes each response family explicitly
         server = self.server
         assert isinstance(server, ProviderServer)
         request = json.loads(self.rfile.read(int(self.headers["content-length"])))
         server.paths.append(self.path)
         server.models.append(request["model"])
         server.requests.append(request)
+        server.request_headers.append({name.casefold(): value for name, value in self.headers.items()})
         if not self.path.startswith("/inf") and server.direct_status is not None:
             self._send_json({"type": "error", "error": {"type": "not_found_error", "message": "Not found"}}, server.direct_status)
             return
@@ -65,6 +68,9 @@ class ProviderHandler(BaseHTTPRequestHandler):
             )
             return
         if self.path.endswith("/messages"):
+            if request.get("stream"):
+                self._send_messages_stream(request)
+                return
             self._send_json(
                 {
                     "id": "msg-parity",
@@ -105,6 +111,45 @@ class ProviderHandler(BaseHTTPRequestHandler):
             "usage": {"prompt_tokens": 3, "completion_tokens": 1, "total_tokens": 4},
         }
         self._send_json(payload)
+
+    def _send_messages_stream(self, request: dict[str, object]) -> None:
+        events = [
+            (
+                "message_start",
+                {
+                    "type": "message_start",
+                    "message": {
+                        "id": "msg-parity",
+                        "type": "message",
+                        "role": "assistant",
+                        "model": request["model"],
+                        "content": [],
+                        "stop_reason": None,
+                        "stop_sequence": None,
+                        "usage": {"input_tokens": 3, "output_tokens": 0},
+                    },
+                },
+            ),
+            ("content_block_start", {"type": "content_block_start", "index": 0, "content_block": {"type": "text", "text": ""}}),
+            ("content_block_delta", {"type": "content_block_delta", "index": 0, "delta": {"type": "text_delta", "text": "ok"}}),
+            ("content_block_stop", {"type": "content_block_stop", "index": 0}),
+            (
+                "message_delta",
+                {
+                    "type": "message_delta",
+                    "delta": {"stop_reason": "end_turn", "stop_sequence": None},
+                    "usage": {"output_tokens": 1},
+                },
+            ),
+            ("message_stop", {"type": "message_stop"}),
+        ]
+        self.send_response(200)
+        self.send_header("content-type", "text/event-stream")
+        self.end_headers()
+        for kind, payload in events:
+            self.wfile.write(b"event: " + kind.encode() + b"\n")
+            self.wfile.write(b"data: " + json.dumps(payload).encode() + b"\n\n")
+        self.wfile.flush()
 
     def _send_responses_stream(self, request: dict[str, object], malformed: bool) -> None:
         response = {
@@ -173,6 +218,7 @@ class ProviderServer(ThreadingHTTPServer):
         self.models: list[str] = []
         self.paths: list[str] = []
         self.requests: list[dict[str, object]] = []
+        self.request_headers: list[dict[str, str]] = []
         self.gateway_status: int | None = None
         self.gateway_delay_seconds = 0.0
         self.direct_status: int | None = None
@@ -284,6 +330,67 @@ def test_each_native_sdk_surface_is_paired_through_the_gateway(monkeypatch, surf
     assert provider.paths == [f"/v1/{surface.endpoint}", f"/inf/v1/{surface.endpoint}"]
 
 
+@pytest.mark.parametrize("transport", ["buffered", "streamed"])
+@pytest.mark.parametrize(
+    "surface",
+    [
+        SurfacePair("chat", "oai", "chat/completions", "openai_compatible", "http", "HTTP JSON"),
+        SurfacePair("responses", "oai_responses", "responses", "openai_responses", "http", "HTTP JSON"),
+        SurfacePair("messages", "anthropic", "messages", "anthropic", "http", "HTTP JSON"),
+    ],
+)
+def test_raw_http_client_pairs_native_provider_calls_without_an_sdk(monkeypatch, surface: SurfacePair, transport: Transport):
+    provider = ProviderServer()
+    provider.start()
+    credential_env = f"{surface.provider_id.upper()}_API_KEY"
+    monkeypatch.setenv(credential_env, "sk-provider")
+    target = Target(
+        provider_id=surface.provider_id,
+        surface_id=surface.surface_id,
+        endpoint=surface.endpoint,
+        egress_kind=surface.egress_kind,
+        base_url=f"http://127.0.0.1:{provider.server_port}/v1",
+        credential_env=credential_env,
+        auth="header_key:x-api-key" if surface.endpoint == "messages" else "bearer",
+        headers={},
+        model_id=f"{surface.provider_id}/model",
+        upstream_model="upstream-model",
+        context_window=8192,
+        max_output_tokens=1024,
+        input_modalities=frozenset({"text"}),
+        capabilities=frozenset({"streaming"}),
+        parameter_support={},
+    )
+    case = Case(
+        id="text.raw-http",
+        title="Raw HTTP pair",
+        request=Request(messages=({"role": "user", "content": "Reply with ok"},)),
+        oracle=Oracle(text_contains="ok"),
+    )
+    plan = Plan(experiments=(Experiment(target=target, case=case, driver_id="http", transport=transport),))
+
+    try:
+        (result,) = execute(plan, Gateway(base_url=f"http://127.0.0.1:{provider.server_port}", api_key="sk-inf-parity"))
+    finally:
+        provider.shutdown()
+        provider.server_close()
+
+    assert result.comparison.verdict == "parity"
+    expected_type = "HTTP SSE" if transport == "streamed" else "HTTP JSON"
+    assert result.direct.sdk_type == expected_type
+    assert result.gateway.sdk_type == expected_type
+    assert provider.models == ["upstream-model", f"{surface.provider_id}/model"]
+    assert provider.paths == [f"/v1/{surface.endpoint}", f"/inf/v1/{surface.endpoint}"]
+    direct_headers, gateway_headers = provider.request_headers
+    if surface.endpoint == "messages":
+        assert direct_headers["x-api-key"] == "sk-provider"
+        assert direct_headers["anthropic-version"] == "2023-06-01"
+        assert gateway_headers["anthropic-version"] == "2023-06-01"
+    else:
+        assert direct_headers["authorization"] == "Bearer sk-provider"
+    assert gateway_headers["authorization"] == "Bearer sk-inf-parity"
+
+
 @pytest.mark.parametrize(
     ("surface", "content_key", "block_type"),
     [
@@ -354,6 +461,8 @@ def test_image_input_uses_each_sdk_spelling_on_both_paths(monkeypatch, surface: 
     [
         SurfacePair("chat", "oai", "chat/completions", "openai_compatible", "openai", "ChatCompletion"),
         SurfacePair("messages", "anthropic", "messages", "anthropic", "anthropic", "Message"),
+        SurfacePair("raw_chat", "oai", "chat/completions", "openai_compatible", "http", "HTTP JSON"),
+        SurfacePair("raw_messages", "anthropic", "messages", "anthropic", "http", "HTTP JSON"),
     ],
 )
 def test_gateway_authentication_failure_is_inconclusive(monkeypatch, surface: SurfacePair):
@@ -399,7 +508,8 @@ def test_gateway_authentication_failure_is_inconclusive(monkeypatch, surface: Su
     assert result.comparison.verdict == "inconclusive"
 
 
-def test_direct_model_access_failure_is_inconclusive(monkeypatch):
+@pytest.mark.parametrize("driver_id", ["openai", "http"])
+def test_direct_model_access_failure_is_inconclusive(monkeypatch, driver_id: str):
     provider = ProviderServer()
     provider.direct_status = 404
     provider.start()
@@ -429,8 +539,8 @@ def test_direct_model_access_failure_is_inconclusive(monkeypatch):
     )
     plan = Plan(
         experiments=(
-            Experiment(target=target, case=case, driver_id="openai", transport="buffered"),
-            Experiment(target=target, case=case.model_copy(update={"id": "text.second"}), driver_id="openai", transport="buffered"),
+            Experiment(target=target, case=case, driver_id=driver_id, transport="buffered"),
+            Experiment(target=target, case=case.model_copy(update={"id": "text.second"}), driver_id=driver_id, transport="buffered"),
         )
     )
 
@@ -451,7 +561,8 @@ def test_direct_model_access_failure_is_inconclusive(monkeypatch):
     assert len(provider.requests) == 2
 
 
-def test_request_timeout_is_inconclusive_and_does_not_hang(monkeypatch):
+@pytest.mark.parametrize("driver_id", ["openai", "http"])
+def test_request_timeout_is_inconclusive_and_does_not_hang(monkeypatch, driver_id: str):
     provider = ProviderServer()
     provider.gateway_delay_seconds = 0.1
     provider.start()
@@ -479,7 +590,7 @@ def test_request_timeout_is_inconclusive_and_does_not_hang(monkeypatch):
         request=Request(messages=({"role": "user", "content": "Reply with ok"},)),
         oracle=Oracle(text_contains="ok"),
     )
-    plan = Plan(experiments=(Experiment(target=target, case=case, driver_id="openai", transport="buffered"),))
+    plan = Plan(experiments=(Experiment(target=target, case=case, driver_id=driver_id, transport="buffered"),))
 
     try:
         gateway = Gateway(base_url=f"http://127.0.0.1:{provider.server_port}", api_key="sk-inf-parity", request_timeout_seconds=0.02)
@@ -541,3 +652,35 @@ def test_responses_sdk_protocol_failure_is_reported_and_the_run_continues(monkey
     assert streamed.gateway.sdk_type == "IndexError"
     assert streamed.comparison.verdict == "gateway_regression"
     assert buffered.comparison.verdict == "parity"
+
+
+def test_raw_http_responses_stream_is_not_an_sdk_protocol_failure():
+    provider = ProviderServer()
+    provider.malformed_gateway_responses_stream = True
+    provider.start()
+    driver = HTTPDriver()
+    case = Case(
+        id="text.raw-stream",
+        title="Raw Responses stream",
+        request=Request(messages=({"role": "user", "content": "Reply with ok"},)),
+        oracle=Oracle(text_contains="ok"),
+    )
+    direct_connection = Connection(
+        base_url=f"http://127.0.0.1:{provider.server_port}/v1",
+        api_key="sk-provider",
+        auth="bearer",
+        headers={},
+        route="direct",
+    )
+    gateway_connection = Gateway(base_url=f"http://127.0.0.1:{provider.server_port}", api_key="sk-inf-parity").connection("responses")
+
+    try:
+        direct = driver.execute(direct_connection, "responses", "upstream-model", case, "streamed")
+        through_gateway = driver.execute(gateway_connection, "responses", "responses/model", case, "streamed")
+    finally:
+        provider.shutdown()
+        provider.server_close()
+
+    assert direct.outcome == "success"
+    assert through_gateway.outcome == "success"
+    assert direct.text == through_gateway.text == "ok"

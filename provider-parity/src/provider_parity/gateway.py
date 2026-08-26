@@ -16,9 +16,11 @@ class Gateway:
     request_timeout_seconds: float = 60
 
     def connection(self, endpoint: str) -> Connection:
-        suffix = "/inf" if endpoint == "messages" else "/inf/v1"
+        if endpoint not in {"chat/completions", "responses", "messages"}:
+            message = f"gateway does not support endpoint {endpoint}"
+            raise ValueError(message)
         return Connection(
-            base_url=f"{self.base_url.rstrip('/')}{suffix}",
+            base_url=f"{self.base_url.rstrip('/')}/inf/v1",
             api_key=self.api_key,
             auth="bearer",
             headers={},

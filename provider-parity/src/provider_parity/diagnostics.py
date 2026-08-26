@@ -24,6 +24,8 @@ LABELS = {
     "reasoning_presence": "Reasoning",
     "json": "JSON",
     "error_code": "Error code",
+    "error_message": "Error message",
+    "http_status": "HTTP status",
     "oracle": "Case oracle",
 }
 
@@ -43,6 +45,8 @@ def _value(name: str, observation: Observation, satisfies_oracle: bool | None) -
         "reasoning_presence": "present" if observation.reasoning_present else "absent",
         "json": _text(json.dumps(observation.json_value, sort_keys=True, ensure_ascii=False)),
         "error_code": observation.error_code or "none",
+        "error_message": _text(observation.error_message or "none"),
+        "http_status": str(observation.http_status) if observation.http_status is not None else "none",
         "oracle": "satisfied" if satisfies_oracle else "not satisfied" if satisfies_oracle is False else "not evaluated",
     }
     return values.get(name, "unknown")
@@ -60,16 +64,28 @@ def difference_details(result: PairResult) -> tuple[DifferenceDetail, ...]:
     )
 
 
-def case_result(comparison: Comparison) -> str:
+def feature_result(comparison: Comparison) -> str:
     direct = comparison.direct_satisfies_oracle
-    gateway = comparison.gateway_satisfies_oracle
-    if direct is None or gateway is None:
+    if direct is None:
         return "not evaluated"
-    if direct and gateway:
-        return "passed"
-    if not direct and not gateway:
-        return "failed both"
-    return "failed gateway" if direct else "failed direct"
+    return "supported" if direct else "not supported"
+
+
+def parity_display(comparison: Comparison) -> str:
+    if comparison.verdict == "parity":
+        return "✓ parity"
+    if comparison.verdict == "inconclusive":
+        return "? inconclusive"
+    return f"✗ {comparison.verdict.replace('_', ' ')}"
+
+
+def feature_display(comparison: Comparison) -> str:
+    result = feature_result(comparison)
+    if result == "supported":
+        return "✓ supported"
+    if result == "not evaluated":
+        return "? not evaluated"
+    return "✗ not supported"
 
 
 def observation_summary(observation: Observation) -> str:
@@ -81,6 +97,8 @@ def observation_summary(observation: Observation) -> str:
     values.extend((f"usage={'yes' if observation.usage_present else 'no'}", f"reasoning={'yes' if observation.reasoning_present else 'no'}"))
     if observation.error_code is not None:
         values.append(f"error={observation.error_code}")
+    if observation.http_status is not None:
+        values.append(f"http={observation.http_status}")
     if observation.error_message:
         values.append(f'message="{_text(observation.error_message)}"')
     if observation.adjustments:

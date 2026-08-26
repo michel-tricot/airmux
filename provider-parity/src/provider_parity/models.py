@@ -10,8 +10,6 @@ type Transport = Literal["buffered", "streamed"]
 type Outcome = Literal["success", "unsupported", "error", "inconclusive"]
 type Verdict = Literal[
     "parity",
-    "provider_limitation",
-    "upstream_failure",
     "gateway_regression",
     "gateway_only_success",
     "different",
@@ -155,6 +153,7 @@ class Observation(FrozenModel):
     json_value: JsonValue | None = None
     error_code: str | None = None
     error_message: str | None = None
+    http_status: int | None = None
     adjustments: tuple[str, ...] = ()
     duration_ms: float = 0
     sdk_type: str | None = None

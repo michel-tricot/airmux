@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 
 from provider_parity.cases import load_cases, load_expected_differences
 from provider_parity.catalog import load_catalog
-from provider_parity.diagnostics import case_result
+from provider_parity.diagnostics import feature_display, parity_display
 from provider_parity.drivers import supported_endpoints
 from provider_parity.gateway import Gateway
 from provider_parity.models import Plan, ReportDocument
@@ -30,7 +30,7 @@ REPORTS = ROOT / "provider-parity" / "reports"
 ProviderOption = Annotated[str | None, typer.Option("--provider")]
 ModelOption = Annotated[str | None, typer.Option("--model")]
 CaseOption = Annotated[str | None, typer.Option("--case")]
-SDKOption = Annotated[str | None, typer.Option("--sdk")]
+ClientOption = Annotated[str | None, typer.Option("--client", "--sdk", help="Caller implementation: http, openai, or anthropic")]
 SurfaceOption = Annotated[str | None, typer.Option("--surface")]
 TransportOption = Annotated[Literal["buffered", "streamed"] | None, typer.Option("--transport")]
 UnknownOption = Annotated[bool, typer.Option("--include-unknown", help="Include parameters whose support is not known")]
@@ -104,7 +104,7 @@ def runs_plan(  # noqa: PLR0913, PLR0917 command flags define the CLI surface
     provider: ProviderOption = None,
     model: ModelOption = None,
     case: CaseOption = None,
-    sdk: SDKOption = None,
+    sdk: ClientOption = None,
     surface: SurfaceOption = None,
     transport: TransportOption = None,
     include_unknown: UnknownOption = False,
@@ -139,7 +139,7 @@ def runs_plan(  # noqa: PLR0913, PLR0917 command flags define the CLI surface
             Col("provider", "Provider"),
             Col("surface", "Surface"),
             Col("model", "Model"),
-            Col("sdk", "SDK"),
+            Col("sdk", "Client"),
             Col("case", "Case"),
             Col("transport", "Transport"),
         ],
@@ -153,7 +153,7 @@ def runs_execute(  # noqa: PLR0913, PLR0917 command flags define the CLI surface
     provider: ProviderOption = None,
     model: ModelOption = None,
     case: CaseOption = None,
-    sdk: SDKOption = None,
+    sdk: ClientOption = None,
     surface: SurfaceOption = None,
     transport: TransportOption = None,
     include_unknown: UnknownOption = False,
@@ -210,8 +210,8 @@ def runs_execute(  # noqa: PLR0913, PLR0917 command flags define the CLI surface
             "surface": result.surface_id,
             "model": result.model_id,
             "case": result.case_id,
-            "verdict": result.comparison.verdict,
-            "case_result": case_result(result.comparison),
+            "parity": parity_display(result.comparison),
+            "feature": feature_display(result.comparison),
             "differences": ", ".join(result.comparison.differences),
             "attempts": len(result.confirmations) + 1,
         }
@@ -225,8 +225,8 @@ def runs_execute(  # noqa: PLR0913, PLR0917 command flags define the CLI surface
             Col("surface", "Surface"),
             Col("model", "Model"),
             Col("case", "Case"),
-            Col("verdict", "Verdict"),
-            Col("case_result", "Case result"),
+            Col("parity", "Parity"),
+            Col("feature", "Feature"),
             Col("differences", "Differences"),
             Col("attempts", "Attempts"),
         ],
@@ -251,8 +251,8 @@ def reports_show(path: Path | None = None, output_format: FormatOption = OutputF
             "surface": result.surface_id,
             "model": result.model_id,
             "case": result.case_id,
-            "verdict": result.comparison.verdict,
-            "case_result": case_result(result.comparison),
+            "parity": parity_display(result.comparison),
+            "feature": feature_display(result.comparison),
         }
         for result in results
     ]
@@ -264,8 +264,8 @@ def reports_show(path: Path | None = None, output_format: FormatOption = OutputF
             Col("surface", "Surface"),
             Col("model", "Model"),
             Col("case", "Case"),
-            Col("verdict", "Verdict"),
-            Col("case_result", "Case result"),
+            Col("parity", "Parity"),
+            Col("feature", "Feature"),
         ],
         output_format,
     )

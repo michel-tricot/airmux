@@ -9,7 +9,7 @@ from typing import Literal, Protocol
 
 from provider_parity.compare import compare
 from provider_parity.drivers import discover
-from provider_parity.drivers.base import Connection, SDKDriver
+from provider_parity.drivers.base import ClientDriver, Connection
 from provider_parity.models import Comparison, ExpectedDifference, Experiment, Observation, PairAttempt, PairResult, Plan, Verdict
 
 
@@ -46,7 +46,7 @@ DEFAULT_EXECUTION_OPTIONS = ExecutionOptions()
 
 @dataclass(frozen=True)
 class PairContext:
-    driver: SDKDriver
+    driver: ClientDriver
     direct_connection: Connection
     gateway: Gateway
     experiment: Experiment
@@ -82,14 +82,14 @@ def _accepted(result: PairResult, expected: list[ExpectedDifference]) -> PairRes
     )
 
 
-def _observe(driver: SDKDriver, connection: Connection, experiment: Experiment, model: str) -> Observation:
+def _observe(driver: ClientDriver, connection: Connection, experiment: Experiment, model: str) -> Observation:
     started = time.perf_counter()
     try:
         return driver.execute(connection, experiment.target.endpoint, model, experiment.case, experiment.transport)
-    except Exception as error:  # noqa: BLE001 vendor SDK exceptions are parity evidence for one path
+    except Exception as error:  # noqa: BLE001 client exceptions are parity evidence for one path
         return Observation(
             outcome="error",
-            error_code="sdk_exception",
+            error_code="client_exception",
             error_message=str(error)[:500] or f"{type(error).__name__} raised without a message",
             duration_ms=(time.perf_counter() - started) * 1000,
             sdk_type=type(error).__name__,

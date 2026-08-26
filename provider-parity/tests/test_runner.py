@@ -7,8 +7,8 @@ from rich.console import Console
 
 from provider_parity import runner
 from provider_parity.compare import compare
-from provider_parity.diagnostics import case_result
-from provider_parity.drivers.base import Connection, SDKDriver
+from provider_parity.diagnostics import feature_result
+from provider_parity.drivers.base import ClientDriver, Connection
 from provider_parity.models import Case, Experiment, Observation, Oracle, PairResult, Plan, Request, Target
 from provider_parity.progress import ConsoleProgress
 
@@ -24,7 +24,7 @@ class Gateway:
         return Connection(base_url="http://gateway.example/inf/v1", api_key="gateway-key", auth="bearer", headers={}, route="gateway")
 
 
-class ThrowingDriver(SDKDriver):
+class ThrowingDriver(ClientDriver):
     id = "throwing"
     endpoints = frozenset({"responses"})
 
@@ -35,7 +35,7 @@ class ThrowingDriver(SDKDriver):
         return Observation(outcome="success", text="ok", sdk_type="StubResponse")
 
 
-class FlakyDriver(SDKDriver):
+class FlakyDriver(ClientDriver):
     id = "flaky"
     endpoints = frozenset({"responses"})
 
@@ -114,7 +114,7 @@ def test_sdk_exception_is_reported_as_parity_evidence_and_the_run_continues(monk
 
     assert failed.direct.outcome == "success"
     assert failed.gateway.outcome == "error"
-    assert failed.gateway.error_code == "sdk_exception"
+    assert failed.gateway.error_code == "client_exception"
     assert failed.gateway.sdk_type == "RuntimeError"
     assert failed.comparison.verdict == "gateway_regression"
     assert passing.comparison.verdict == "parity"
@@ -148,7 +148,7 @@ def test_sdk_exception_is_reported_as_parity_evidence_and_the_run_continues(monk
     assert "text.protocol-error | buffered via throwing" in rendered
     assert "✓ SUCCESS Direct" in rendered
     assert "✗ ERROR Gateway" in rendered
-    assert "sdk_exception | RuntimeError" in rendered
+    assert "client_exception | RuntimeError" in rendered
     assert "✗ GATEWAY REGRESSION" in rendered
     assert "direct satisfied the oracle and gateway did not" in rendered
     assert "Outcome: direct=success | gateway=error" in rendered
@@ -175,9 +175,9 @@ def test_sdk_exception_is_reported_as_parity_evidence_and_the_run_continues(monk
     matched_progress(runner.ProgressEvent(kind="experiment_completed", index=1, total=1, experiment=experiment, result=matched_failure))
     rendered_match = matched_output.getvalue()
     assert "✓ PARITY" in rendered_match
-    assert "? CASE NOT EVALUATED" in rendered_match
-    assert "output token limit reached" in rendered_match
-    assert case_result(matched_failure.comparison) == "not evaluated"
+    assert "? PROVIDER FEATURE NOT EVALUATED" in rendered_match
+    assert "output token limit reached before the feature oracle" in rendered_match
+    assert feature_result(matched_failure.comparison) == "not evaluated"
 
 
 def test_a_suspected_difference_that_does_not_repeat_is_inconclusive(monkeypatch):
