@@ -65,8 +65,8 @@ def _image_to_url(part: ImagePart) -> str:
 
 def _document(part: DocumentPart) -> dict[str, Any]:
     file: dict[str, Any] = {}
-    if part.filename is not None:
-        file["filename"] = part.filename
+    if part.filename is not None or part.data is not None:
+        file["filename"] = part.filename or "document.pdf"
     if part.file_id is not None:
         file["file_id"] = part.file_id
     elif part.data is not None:
@@ -146,6 +146,17 @@ def to_tool_choice(choice: ToolChoice | None) -> str | dict[str, Any] | None:
     return choice
 
 
+def _response_format(req: CanonicalRequest) -> dict[str, Any] | None:
+    if req.response_format is None:
+        return None
+    response_format = req.response_format.model_dump(exclude_none=True)
+    if response_format.get("type") == "json_schema":
+        json_schema = dict(response_format.get("json_schema") or {})
+        json_schema.setdefault("name", "response")
+        response_format["json_schema"] = json_schema
+    return response_format
+
+
 def body_of(req: CanonicalRequest, upstream_model: str) -> ChatBody:
     """The one place canonical becomes an OpenAI chat body, every field mapped by hand.
 
@@ -164,7 +175,7 @@ def body_of(req: CanonicalRequest, upstream_model: str) -> ChatBody:
         tools=to_tools(req.tools),
         tool_choice=to_tool_choice(req.tool_choice),
         parallel_tool_calls=req.parallel_tool_calls,
-        response_format=req.response_format.model_dump(exclude_none=True) if req.response_format else None,
+        response_format=_response_format(req),
         stream=req.stream or None,
         stream_options={"include_usage": True} if req.stream else None,
     )

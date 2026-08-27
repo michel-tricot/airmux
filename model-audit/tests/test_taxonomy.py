@@ -1,7 +1,13 @@
 from __future__ import annotations
 
+from pathlib import Path
+
+import yaml
+
 from model_audit.models import BehaviorRecord, Claim
-from model_audit.taxonomy import _capabilities, _parameter_support
+from model_audit.taxonomy import _capabilities, _parameter_support, _provider_entry
+
+ROOT = Path(__file__).resolve().parents[2]
 
 
 def behavior(dimension: str, name: str, verdict: str, *, surface: str = "oai", profile: dict | None = None) -> BehaviorRecord:
@@ -33,3 +39,30 @@ def test_profile_rejection_does_not_mark_an_entire_option_unsupported():
     support = _parameter_support(model, "chat/completions", [rejected_low_effort])
 
     assert support["reasoning_effort"] == "supported"
+
+
+def test_provider_gateway_profile_is_preserved_in_generated_taxonomy():
+    provider = {
+        "id": "openai",
+        "base_url": "https://api.openai.com/v1",
+        "param_aliases": {"max_tokens": "max_completion_tokens"},
+        "params_closed": True,
+        "accepted_params": ["verbosity"],
+    }
+
+    assert _provider_entry(provider, "icon") == {
+        "provider_id": "openai",
+        "kind": "openai_compatible",
+        "base_url": "https://api.openai.com/v1",
+        "icon": "icon",
+        "param_aliases": {"max_tokens": "max_completion_tokens"},
+        "params_closed": True,
+        "accepted_params": ["verbosity"],
+    }
+
+
+def test_openai_catalog_declares_its_output_limit_alias():
+    document = yaml.safe_load((ROOT / "taxonomy/providers.yml").read_text(encoding="utf-8"))
+    provider = next(item for item in document["providers"] if item["id"] == "openai")
+
+    assert provider["param_aliases"]["max_tokens"] == "max_completion_tokens"

@@ -40,7 +40,7 @@ $defs:
     type: object
   ReasoningDelta:
     additionalProperties: false
-    description: signature arrives on the closing fragment of a reasoning block, text on the ones before it.
+    description: The provider item id opens replayable reasoning, text follows, and the signature may arrive on a later fragment.
     properties:
       type:
         const: reasoning

@@ -4,8 +4,8 @@ import json
 from pathlib import Path
 
 from model_audit.cases import load_cases, load_features
-from model_audit.drivers.wire import anthropic_body, body_of, openai_messages
-from model_audit.models import Request
+from model_audit.drivers.wire import anthropic_body, body_of, openai_chat_body, openai_messages, openai_responses_body
+from model_audit.models import Claim, Request
 from tests.helpers import case
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -50,6 +50,23 @@ def test_openai_chat_maps_inline_pdf_to_a_file_content_part():
             },
         },
     ]
+
+
+def test_openai_baseline_omits_the_optional_output_limit():
+    audit_case = case()
+
+    assert "max_tokens" not in openai_chat_body("model", audit_case, "buffered")
+    assert "max_output_tokens" not in openai_responses_body("model", audit_case, "buffered")
+
+
+def test_openai_output_limit_case_uses_each_surface_spelling():
+    audit_case = case(
+        claims=(Claim(dimension="option", name="max_tokens"),),
+        request=Request(messages=({"role": "user", "content": "Reply with ok"},), max_tokens=8),
+    )
+
+    assert openai_chat_body("model", audit_case, "buffered")["max_tokens"] == 8
+    assert openai_responses_body("model", audit_case, "buffered")["max_output_tokens"] == 8
 
 
 def test_anthropic_maps_json_schema_output_to_output_config():

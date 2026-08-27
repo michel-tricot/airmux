@@ -79,3 +79,22 @@ def test_responses_output_limit_before_oracle_is_unknown():
 
     assert result.feature == "unknown"
     assert result.parity == "match"
+
+
+def test_incidental_reasoning_does_not_create_a_mismatch():
+    direct = Observation(outcome="success", text="red", reasoning_present=True)
+    gateway = Observation(outcome="success", text="red", reasoning_present=False)
+
+    result = assess(direct, gateway, Oracle(text_contains="red"))
+
+    assert result.parity == "match"
+
+
+def test_claimed_reasoning_presence_still_participates_in_parity():
+    direct = Observation(outcome="success", text="ok", reasoning_present=True)
+    gateway = Observation(outcome="success", text="ok", reasoning_present=False)
+
+    result = assess(direct, gateway, Oracle(text_contains="ok", reasoning_present=True))
+
+    assert result.parity == "mismatch"
+    assert "reasoning_presence" in result.differences

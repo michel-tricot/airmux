@@ -29,6 +29,7 @@ from parameter_support import discovery_evidence
 
 ROOT = TAXONOMY
 FIELDS = {"id", "name", "icon_mono", "icon_color", "homepage", "docs", "base_url", "openapi", "models_url", "ingress", "auth", "env_var", "schema"}
+PROFILE_FIELDS = {"param_aliases", "params_closed", "accepted_params"}
 INGRESS = {"oai", "oai_responses", "anthropic", "google", "other_standard", "custom"}
 # ingresses that carry a schema; google is the one shape we have not extracted
 WIRE = {"oai", "oai_responses", "anthropic", "custom"}
@@ -73,8 +74,10 @@ def check_shape(all_entries: list[dict]) -> None:
     seen_ids, seen_env = set(), {}
     for e in all_entries:
         eid = e.get("id", "<unnamed>")
-        if set(e) != FIELDS:
-            fail("fields", f"{eid} has {sorted(set(e) ^ FIELDS)} differing from the standard field set")
+        if missing := FIELDS - set(e):
+            fail("fields", f"{eid} is missing {sorted(missing)} from the standard field set")
+        if extra := set(e) - FIELDS - PROFILE_FIELDS:
+            fail("fields", f"{eid} has unknown fields {sorted(extra)}")
         if eid in seen_ids:
             fail("id", f"{eid} is declared twice")
         seen_ids.add(eid)

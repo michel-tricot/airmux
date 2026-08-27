@@ -126,7 +126,7 @@ def error_category(observation: Observation) -> str | None:
     return category
 
 
-def _differences(direct: Observation, gateway: Observation) -> tuple[str, ...]:
+def _differences(direct: Observation, gateway: Observation, oracle: Oracle) -> tuple[str, ...]:
     values = {
         "outcome": (direct.outcome, gateway.outcome),
         "tool_calls": (tuple(sorted(tool.name for tool in direct.tool_calls)), tuple(sorted(tool.name for tool in gateway.tool_calls))),
@@ -136,7 +136,7 @@ def _differences(direct: Observation, gateway: Observation) -> tuple[str, ...]:
         ),
         "finish_reason": (_finish_class(direct.finish_reason), _finish_class(gateway.finish_reason)),
         "usage_presence": (direct.usage_present, gateway.usage_present),
-        "reasoning_presence": (direct.reasoning_present, gateway.reasoning_present),
+        **({"reasoning_presence": (direct.reasoning_present, gateway.reasoning_present)} if oracle.reasoning_present else {}),
         "json": (json.dumps(direct.json_value, sort_keys=True), json.dumps(gateway.json_value, sort_keys=True)),
         "error_category": (error_category(direct), error_category(gateway)),
         "adjustments": (direct.adjustments, gateway.adjustments),
@@ -156,7 +156,7 @@ def assess(direct: Observation, gateway: Observation, oracle: Oracle) -> Assessm
         execution = "harness_error"
     else:
         execution = "completed"
-    differences = _differences(direct, gateway)
+    differences = _differences(direct, gateway, oracle)
     oracle_differs = direct_satisfies is not None and gateway_satisfies is not None and direct_satisfies != gateway_satisfies
     if oracle_differs:
         differences = (*differences, "oracle")
