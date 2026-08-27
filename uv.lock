@@ -45,6 +45,11 @@ version = "0.1.0"
 source = { virtual = "." }
 
 [package.dev-dependencies]
+backend = [
+    { name = "cli" },
+    { name = "control-plane" },
+    { name = "data-plane" },
+]
 dev = [
     { name = "anthropic" },
     { name = "anyio" },
@@ -65,6 +70,11 @@ dev = [
 [package.metadata]
 
 [package.metadata.requires-dev]
+backend = [
+    { name = "cli", editable = "apps/cli" },
+    { name = "control-plane", editable = "apps/control-plane" },
+    { name = "data-plane", editable = "apps/data-plane" },
+]
 dev = [
     { name = "anthropic" },
     { name = "anyio" },
