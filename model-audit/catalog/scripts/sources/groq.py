@@ -12,12 +12,35 @@ supported_features is the authoritative tool and JSON-mode signal; do not infer 
 from the model name.
 """
 
+from model_audit.catalog_ops import ProviderDefinition, SchemaDefinition
+
 from .base import ModelSource
 
 
 class Groq(ModelSource):
     id = "groq"
     url = "https://api.groq.com/openai/v1/models"
+    definition = ProviderDefinition(
+        id=id,
+        name="Groq",
+        homepage="https://groq.com",
+        docs="https://console.groq.com/docs",
+        base_url="https://api.groq.com/openai/v1",
+        models_url=url,
+        openapi="https://raw.githubusercontent.com/groq/groq-python/main/.stats.yml",
+        ingress=("oai",),
+        auth=("bearer",),
+        env_var="GROQ_API_KEY",
+        icon_mono="groq",
+        icon_color="groq",
+    )
+    schemas = (
+        SchemaDefinition(
+            surface="oai",
+            url="https://storage.googleapis.com/stainless-sdk-openapi-specs/groqcloud/groqcloud-debd965baa031e12228c41e538741fa6055bf2813bcd062840a19f84a17cea95.yml",
+            path_pattern=r"chat/completions$",
+        ),
+    )
 
     def normalize(self, item):
         if item.get("active") is False:

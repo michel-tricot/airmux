@@ -28,6 +28,9 @@ def _usable_direct_observation(result: PairResult) -> bool:
 
 
 def records_from_report(report: ReportDocument, cases: tuple[Case, ...]) -> tuple[EvidenceRecord, ...]:
+    if not report.complete:
+        message = "report is incomplete; resume it before accepting evidence"
+        raise ValueError(message)
     active = _active_cases(cases)
     stale = sorted(result.case_id for result in report.results if active.get(result.case_id) != (result.case_version, result.case_fingerprint))
     if stale:

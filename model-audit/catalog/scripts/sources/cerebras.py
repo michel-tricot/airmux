@@ -24,6 +24,8 @@ question the catalog answers, and a router wants to see the flag rather than hav
 disappear.
 """
 
+from model_audit.catalog_ops import ProviderDefinition, SchemaDefinition
+
 from .base import ModelSource
 
 
@@ -32,6 +34,21 @@ class Cerebras(ModelSource):
     # the authenticated /v1/models 403s and carries less; see the docstring
     url = "https://api.cerebras.ai/public/v1/models"
     open_access = True
+    definition = ProviderDefinition(
+        id=id,
+        name="Cerebras",
+        homepage="https://cerebras.ai",
+        docs="https://inference-docs.cerebras.ai",
+        base_url="https://api.cerebras.ai/v1",
+        models_url=url,
+        openapi="https://storage.googleapis.com/stainless-sdk-openapi-specs/cerebras/cerebras-cloud-5471bd6d34fdddff21977458788b979ce93f6b080e11ff0d35777182b6615baa.yml",
+        ingress=("oai",),
+        auth=("bearer",),
+        env_var="CEREBRAS_API_KEY",
+        icon_mono="cerebras",
+        icon_color="cerebras-color",
+    )
+    schemas = (SchemaDefinition(surface="oai", url=definition.openapi, path_pattern=r"chat/completions$"),)
 
     def normalize(self, item):
         limits = item.get("limits") or {}

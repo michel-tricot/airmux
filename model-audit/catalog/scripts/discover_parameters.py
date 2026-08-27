@@ -1,23 +1,26 @@
 from __future__ import annotations
 
 import json
-
-import yaml
+import sys
 
 from canonical import write_catalog
+from model_audit.catalog_ops import load_provider_entries
 from parameter_support import apply_discovery_evidence, discovery_evidence
 from paths import TAXONOMY
 
 
 def main() -> int:
-    providers = {
-        provider["id"]: provider
-        for filename, group in (("providers.yml", "providers"), ("routers.yml", "routers"))
-        for provider in yaml.safe_load((TAXONOMY / filename).read_text())[group]
-    }
+    providers = load_provider_entries(TAXONOMY)
     changed = 0
     classified = 0
-    for path in sorted((TAXONOMY / "models").glob("*.json")):
+    available = sorted(path.stem for path in (TAXONOMY / "models").glob("*.json"))
+    selected = set(sys.argv[1:])
+    unknown = selected - set(available)
+    if unknown:
+        print(f"not in taxonomy/models: {sorted(unknown)}")
+        return 2
+    catalogued = sorted(selected) if selected else available
+    for path in (TAXONOMY / "models" / f"{provider}.json" for provider in catalogued):
         catalog = json.loads(path.read_text())
         provider = providers[catalog["provider"]]
         models = apply_discovery_evidence(catalog["models"], discovery_evidence(provider, TAXONOMY))

@@ -29,6 +29,8 @@ Together publishes no tool or structured-output flags, so those stay null rather
 inferred from the model name.
 """
 
+from model_audit.catalog_ops import ProviderDefinition, SchemaDefinition
+
 from .base import ModelSource
 
 
@@ -36,6 +38,21 @@ class Together(ModelSource):
     id = "together"
     url = "https://api.together.ai/v1/models"
     serverless_only = True
+    definition = ProviderDefinition(
+        id=id,
+        name="Together AI",
+        homepage="https://www.together.ai",
+        docs="https://docs.together.ai",
+        base_url="https://api.together.ai/v1",
+        models_url=url,
+        openapi="https://docs.together.ai/openapi.yaml",
+        ingress=("oai",),
+        auth=("bearer",),
+        env_var="TOGETHER_API_KEY",
+        icon_mono="together",
+        icon_color="together-color",
+    )
+    schemas = (SchemaDefinition(surface="oai", url=definition.openapi, path_pattern=r"chat/completions$"),)
 
     def items(self, payload):
         # the payload is a bare list, not the usual {"data": [...]}

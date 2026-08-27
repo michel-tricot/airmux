@@ -1,16 +1,13 @@
 from __future__ import annotations
 
 import html
-from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
 from model_audit.diagnostics import difference_details, feature_display, gap_kind, observation_summary, parity_display
-from model_audit.models import ReportDocument, ReportPaths, RunMetadata
+from model_audit.models import Experiment, PairResult, Plan, ReportDocument, ReportPaths
 
 if TYPE_CHECKING:
     from pathlib import Path
-
-    from model_audit.models import PairResult
 
 STYLE = (
     "body{font-family:ui-sans-serif,system-ui;margin:2rem;color:#17202a}"
@@ -64,34 +61,90 @@ def _html(document: ReportDocument) -> str:
     unsupported = sum(result.assessment.feature == "unsupported" for result in results)
     unknown = sum(result.assessment.feature == "unknown" for result in results)
     rows = "".join(_result_html(result, document.run.gateway_url) for result in results)
+    state = "Complete" if document.complete else "Incomplete checkpoint"
+    resume = "" if document.complete else f"<code>uv run airllm-audit runs resume model-audit/reports/{html.escape(document.run.run_id)}.json</code>"
     return f"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><title>AirLLM model audit {html.escape(document.run.run_id)}</title>
 <style>{STYLE}</style></head>
-<body><h1>AirLLM model audit</h1><p>Run {html.escape(document.run.run_id)} against {html.escape(document.run.gateway_url)}</p>
+<body><h1>AirLLM model audit</h1><p>{state}: run {html.escape(document.run.run_id)} against {html.escape(document.run.gateway_url)}</p>{resume}
 <div class="summary"><span>Parity: {matched} match, {mismatched} mismatch, {inconclusive} inconclusive</span>
 <span>Features: {supported} supported, {unsupported} unsupported, {unknown} unknown</span></div>
 <table><thead><tr><th>Provider</th><th>Model</th><th>Provider Surface</th><th>Gateway Surface</th><th>Case</th><th>Transport</th>
 <th>Feature</th><th>Parity</th><th>Gap</th></tr></thead><tbody>{rows}</tbody></table></body></html>"""
 
 
-def write_report(
-    results: list[PairResult],
-    directory: Path,
-    run_id: str,
-    run_metadata: RunMetadata | None = None,
-) -> ReportPaths:
-    directory.mkdir(parents=True, exist_ok=True)
-    fallback = RunMetadata(
-        run_id=run_id,
-        created_at=datetime.now(tz=UTC).isoformat(),
-        harness_commit="unknown",
-        gateway_url="unknown",
-        taxonomy_fingerprint="unknown",
-        client_versions={},
+def _checkpoint_html(document: ReportDocument) -> str:
+    planned = len(document.plan.experiments) if document.plan is not None else len(document.results)
+    completed = len(document.results)
+    run_id = html.escape(document.run.run_id)
+    return f"""<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>AirLLM model audit {run_id}</title>
+<style>{STYLE}</style></head><body><h1>AirLLM model audit</h1>
+<p>Incomplete checkpoint: {completed} of {planned} experiments completed</p>
+<code>uv run airllm-audit runs resume model-audit/reports/{run_id}.json</code></body></html>"""
+
+
+def _experiment_identity(experiment: Experiment) -> tuple[str, ...]:
+    target = experiment.target
+    client = (
+        experiment.direct_driver_id
+        if experiment.direct_driver_id == experiment.gateway_driver_id
+        else f"{experiment.direct_driver_id}/{experiment.gateway_driver_id}"
     )
-    document = ReportDocument(run=run_metadata or fallback, results=tuple(results))
-    json_path = directory / f"{run_id}.json"
-    html_path = directory / f"{run_id}.html"
-    json_path.write_text(document.model_dump_json(indent=2, exclude_none=True) + "\n", encoding="utf-8")
-    html_path.write_text(_html(document), encoding="utf-8")
+    return (
+        target.provider_id,
+        target.surface_id,
+        experiment.gateway_surface_id,
+        target.model_id,
+        experiment.case.id,
+        str(experiment.case.version),
+        experiment.transport,
+        client,
+    )
+
+
+def _result_identity(result: PairResult) -> tuple[str, ...]:
+    return (
+        result.provider_id,
+        result.surface_id,
+        result.gateway_surface_id,
+        result.model_id,
+        result.case_id,
+        str(result.case_version),
+        result.transport,
+        result.client,
+    )
+
+
+def remaining_plan(document: ReportDocument) -> Plan:
+    if document.plan is None:
+        message = "the report has no stored plan and cannot be resumed"
+        raise ValueError(message)
+    completed = {_result_identity(result) for result in document.results}
+    return Plan(experiments=tuple(experiment for experiment in document.plan.experiments if _experiment_identity(experiment) not in completed))
+
+
+def ordered_results(plan: Plan, results: tuple[PairResult, ...]) -> tuple[PairResult, ...]:
+    by_identity = {_result_identity(result): result for result in results}
+    return tuple(by_identity[identity] for experiment in plan.experiments if (identity := _experiment_identity(experiment)) in by_identity)
+
+
+def write_checkpoint(document: ReportDocument, directory: Path) -> ReportPaths:
+    directory.mkdir(parents=True, exist_ok=True)
+    json_path = directory / f"{document.run.run_id}.json"
+    html_path = directory / f"{document.run.run_id}.html"
+    json_temporary = json_path.with_suffix(".json.tmp")
+    html_temporary = html_path.with_suffix(".html.tmp")
+    json_temporary.write_text(document.model_dump_json(indent=2, exclude_none=True) + "\n", encoding="utf-8")
+    html_temporary.write_text(_checkpoint_html(document), encoding="utf-8")
+    json_temporary.replace(json_path)
+    html_temporary.replace(html_path)
     return ReportPaths(json_path=json_path, html_path=html_path)
+
+
+def write_report(document: ReportDocument, directory: Path) -> ReportPaths:
+    paths = write_checkpoint(document, directory)
+    html_temporary = paths.html_path.with_suffix(".html.tmp")
+    html_temporary.write_text(_html(document), encoding="utf-8")
+    html_temporary.replace(paths.html_path)
+    return paths

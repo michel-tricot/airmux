@@ -27,12 +27,29 @@ Treat a 401 on this host as no evidence either way. Only an authenticated reques
 a route that exists from one that does not.
 """
 
+from model_audit.catalog_ops import ProviderDefinition, SchemaDefinition
+
 from .base import ModelSource
 
 
 class Mistral(ModelSource):
     id = "mistral"
     url = "https://api.mistral.ai/v1/models"
+    definition = ProviderDefinition(
+        id=id,
+        name="Mistral AI",
+        homepage="https://mistral.ai",
+        docs="https://docs.mistral.ai",
+        base_url="https://api.mistral.ai/v1",
+        models_url=url,
+        openapi="https://raw.githubusercontent.com/mistralai/platform-docs-public/main/openapi.yaml",
+        ingress=("oai",),
+        auth=("bearer",),
+        env_var="MISTRAL_API_KEY",
+        icon_mono="mistral",
+        icon_color="mistral-color",
+    )
+    schemas = (SchemaDefinition(surface="oai", url=definition.openapi, path_pattern=r"^/v1/chat/completions$"),)
 
     def normalize(self, item):
         # a fine-tune belongs to one account, not to the provider's catalog

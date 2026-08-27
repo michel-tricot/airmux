@@ -31,6 +31,8 @@ chat-completions surface is declared as ingress, matching how openai is recorded
 serves /v1/responses too and the catalog does not claim it.
 """
 
+from model_audit.catalog_ops import ProviderDefinition, SchemaDefinition
+
 from .base import ModelSource
 
 # the spec quotes every token price in USD cents per 100 million tokens
@@ -40,6 +42,24 @@ CENTS_PER_HUNDRED_MILLION = 10_000
 class XAI(ModelSource):
     id = "xai"
     url = "https://api.x.ai/v1/language-models"
+    definition = ProviderDefinition(
+        id=id,
+        name="xAI",
+        homepage="https://x.ai",
+        docs="https://docs.x.ai",
+        base_url="https://api.x.ai/v1",
+        models_url=url,
+        openapi="https://docs.x.ai/openapi.json",
+        ingress=("oai", "anthropic"),
+        auth=("bearer",),
+        env_var="XAI_API_KEY",
+        icon_mono="xai",
+        icon_color="xai",
+    )
+    schemas = (
+        SchemaDefinition(surface="oai", url=definition.openapi, path_pattern=r"^/v1/chat/completions$"),
+        SchemaDefinition(surface="anthropic", url=definition.openapi, path_pattern=r"^/v1/messages$"),
+    )
 
     def fetch(self, key):
         payload = self.get(self.url, key)

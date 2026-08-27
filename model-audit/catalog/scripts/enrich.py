@@ -178,13 +178,19 @@ def fill_from_aliases(models: list[dict], counts: dict) -> None:
 
 
 def main() -> int:
-    catalogued = sorted(path.stem for path in (TAXONOMY / "models").glob("*.json"))
+    available = sorted(path.stem for path in (TAXONOMY / "models").glob("*.json"))
+    selected = set(sys.argv[1:])
+    unknown = selected - set(available)
+    if unknown:
+        print(f"not in taxonomy/models: {sorted(unknown)}")
+        return 2
+    catalogued = sorted(selected) if selected else available
     scoped, cross = load_models_dev(catalogued), load_openrouter()
     counts: dict[str, int] = {}
     totals = {"models": 0, "limits": 0, "priced": 0}
     gaps: list[tuple[str, str]] = []
 
-    for path in sorted((TAXONOMY / "models").glob("*.json")):
+    for path in (TAXONOMY / "models" / f"{provider}.json" for provider in catalogued):
         doc = json.loads(path.read_text())
         provider = doc["provider"]
         doc["models"] = text_only(doc["models"])
@@ -219,8 +225,13 @@ def main() -> int:
     for source, n in sorted(counts.items()):
         print(f"    {source:<28} {n}")
     print(f"  still missing a limit or a price: {len(gaps)}")
-    (TAXONOMY / "reports").mkdir(exist_ok=True)
-    (TAXONOMY / "reports" / "missing-limits.json").write_text(json.dumps(sorted(gaps), indent=2) + "\n")
+    reports = TAXONOMY / "reports"
+    reports.mkdir(exist_ok=True)
+    missing_path = reports / "missing-limits.json"
+    if selected and missing_path.exists():
+        previous = json.loads(missing_path.read_text())
+        gaps = [tuple(gap) for gap in previous if gap[0] not in selected] + gaps
+    missing_path.write_text(json.dumps(sorted(gaps), indent=2) + "\n")
     return 0
 
 

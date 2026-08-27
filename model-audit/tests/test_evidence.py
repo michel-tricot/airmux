@@ -67,6 +67,13 @@ def test_sdk_reports_cannot_become_provider_behavior_evidence():
         records_from_report(report, (case(),))
 
 
+def test_interrupted_reports_cannot_become_provider_behavior_evidence():
+    report = _report("partial", "2026-01-01T00:00:00+00:00", "supported").model_copy(update={"complete": False})
+
+    with pytest.raises(ValueError, match="resume it before accepting evidence"):
+        records_from_report(report, (case(),))
+
+
 def test_incomplete_runs_do_not_become_provider_behavior_evidence():
     report = _report("blocked", "2026-01-01T00:00:00+00:00", "unknown", execution="access_blocked")
     blocked = Observation(outcome="inconclusive", error_code="direct_authentication")

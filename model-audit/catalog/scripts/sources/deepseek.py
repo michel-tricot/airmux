@@ -25,12 +25,27 @@ with the SPA shell for every path, so openapi.json, api.json and static/openapi.
 doc_schemas.py instead.
 """
 
+from model_audit.catalog_ops import ProviderDefinition
+
 from .base import ModelSource
 
 
 class DeepSeek(ModelSource):
     id = "deepseek"
     url = "https://api.deepseek.com/models"
+    definition = ProviderDefinition(
+        id=id,
+        name="DeepSeek",
+        homepage="https://www.deepseek.com",
+        docs="https://api-docs.deepseek.com",
+        base_url="https://api.deepseek.com",
+        models_url=url,
+        ingress=("oai", "anthropic"),
+        auth=("bearer",),
+        env_var="DEEPSEEK_API_KEY",
+        icon_mono="deepseek",
+        icon_color="deepseek-color",
+    )
 
     def normalize(self, item):
         return self.record(item["id"], owned_by=item.get("owned_by"))

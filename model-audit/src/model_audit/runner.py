@@ -284,12 +284,24 @@ def _synchronized_progress(progress: ProgressReporter | None) -> ProgressReporte
     return report
 
 
+def _store_result(
+    results: list[PairResult | None],
+    index: int,
+    result: PairResult,
+    on_result: Callable[[PairResult], None] | None,
+) -> None:
+    results[index - 1] = result
+    if on_result is not None:
+        on_result(result)
+
+
 def execute(
     plan: Plan,
     gateway: Gateway,
     *,
     progress: ProgressReporter | None = None,
     options: ExecutionOptions = DEFAULT_EXECUTION_OPTIONS,
+    on_result: Callable[[PairResult], None] | None = None,
 ) -> list[PairResult]:
     _validate_options(options)
     drivers = discover()
@@ -317,7 +329,7 @@ def execute(
                     scheduled = ScheduledExperiment(index=index, experiment=experiment, api_key=api_key or "", access_key=access_key)
                     _progress_event(run, "experiment_started", scheduled)
                     result = _blocked_result(experiment, *block)
-                    results[index - 1] = result
+                    _store_result(results, index, result, on_result)
                     _progress_event(run, "experiment_completed", scheduled, result)
                     continue
                 scheduled = ScheduledExperiment(index=index, experiment=experiment, api_key=cast("str", api_key), access_key=access_key)
@@ -334,7 +346,7 @@ def execute(
                     result = future.result()
                 except Exception as error:  # noqa: BLE001 worker failures must become reportable evidence
                     result = _harness_result(experiment, error)
-                results[index - 1] = result
+                _store_result(results, index, result, on_result)
                 if result.direct.error_code in {"direct_authentication", "direct_model_access"}:
                     blocked[scheduled.access_key] = (str(result.direct.error_code), "direct model access could not be established")
                 if result.gateway.error_code == "gateway_authentication":

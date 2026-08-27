@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import re
 import ssl
+import sys
 import urllib.error
 import urllib.request
 from pathlib import Path
@@ -73,6 +74,14 @@ def main() -> int:
         path = ROOT / filename
         if path.exists():
             entries += [(e["id"], e.get("icon_mono"), e.get("icon_color")) for e in yaml.safe_load(path.read_text())[key]]
+
+    selected = set(sys.argv[1:])
+    known = {entry[0] for entry in entries}
+    if unknown := selected - known:
+        print(f"not in provider catalog: {sorted(unknown)}")
+        return 2
+    if selected:
+        entries = [entry for entry in entries if entry[0] in selected]
 
     slugs = sorted({s for _, mono, color in entries for s in (mono, color) if s})
     missing = sorted(eid for eid, mono, color in entries if not (mono and color))

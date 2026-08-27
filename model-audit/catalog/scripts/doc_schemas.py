@@ -6,10 +6,12 @@ providers.yml by pointing at the canonical schema instead, not by inventing one 
 """
 
 import json
+import sys
 from pathlib import Path
 
 from canonical import write_catalog, write_schema
 from paths import TAXONOMY
+from sources import registry
 
 OUT = TAXONOMY / "schemas" / "completion"
 OUT.mkdir(parents=True, exist_ok=True)
@@ -161,9 +163,18 @@ BUILD["fireworks.oai"] = schema(
     },
 )
 
+for source in registry().values():
+    for surface, document in source.documented_schemas.items():
+        BUILD[f"{source.id}.{surface}"] = document
+
+selected = set(sys.argv[1:])
+written = 0
 for name, doc in BUILD.items():
     provider, ingress = name.split(".")
+    if selected and provider not in selected and name not in selected:
+        continue
     write_schema(OUT / f"{ingress}.{provider}.request.json", doc)
     print(f"{ingress}.{provider}.request: props={len(doc['properties'])} required={doc['required']}")
+    written += 1
 
-print("\nwrote", len(BUILD), "documentation-derived schemas")
+print("\nwrote", written, "documentation-derived schemas")

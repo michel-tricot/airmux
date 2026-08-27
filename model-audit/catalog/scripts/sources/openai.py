@@ -17,12 +17,32 @@ shutdown_date is worth carrying: it is the only machine-readable deprecation sig
 provider in the catalog publishes.
 """
 
+from model_audit.catalog_ops import ProviderDefinition, SchemaDefinition
+
 from .base import ModelSource
 
 
 class OpenAI(ModelSource):
     id = "openai"
     url = "https://api.openai.com/v1/models"
+    definition = ProviderDefinition(
+        id=id,
+        name="OpenAI",
+        homepage="https://openai.com",
+        docs="https://platform.openai.com/docs",
+        base_url="https://api.openai.com/v1",
+        models_url=url,
+        openapi="https://raw.githubusercontent.com/openai/openai-openapi/master/openapi.yaml",
+        ingress=("oai", "oai_responses"),
+        auth=("bearer",),
+        env_var="OPENAI_API_KEY",
+        icon_mono="openai",
+        icon_color="openai",
+    )
+    schemas = (
+        SchemaDefinition(surface="oai", url=definition.openapi, path_pattern=r"^/chat/completions$"),
+        SchemaDefinition(surface="oai_responses", url=definition.openapi, path_pattern=r"^/responses$"),
+    )
 
     def normalize(self, item):
         return self.record(item["id"], shutdown_date=item.get("shutdown_date"))

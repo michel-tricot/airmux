@@ -4,7 +4,7 @@ import json
 
 from typer.testing import CliRunner
 
-from model_audit.cli import app
+from model_audit.cli import _sync_steps, app
 
 
 def test_cases_have_machine_readable_coverage():
@@ -105,3 +105,51 @@ def test_execute_exposes_a_single_global_concurrency_control():
     assert result.exit_code == 0
     assert "--concurrency" in result.output
     assert "--provider-concurrency" not in result.output
+
+
+def test_interrupted_runs_have_a_resume_command():
+    result = CliRunner().invoke(app, ["runs", "resume", "--help"])
+
+    assert result.exit_code == 0
+    assert "report" in result.output
+    assert "--concurrency" in result.output
+
+
+def test_provider_lifecycle_uses_onboard_and_sync_commands():
+    providers = CliRunner().invoke(app, ["providers", "--help"])
+    models = CliRunner().invoke(app, ["models", "--help"])
+
+    assert providers.exit_code == 0
+    assert "onboard" in providers.output
+    assert "sources" in providers.output
+    assert "sync" in providers.output
+    assert " add " not in providers.output
+    assert " refresh " not in providers.output
+    assert models.exit_code == 0
+    assert " refresh " not in models.output
+
+
+def test_provider_sources_report_onboarding_readiness():
+    result = CliRunner().invoke(app, ["providers", "sources", "--format", "json"])
+
+    assert result.exit_code == 0
+    sources = json.loads(result.stdout)
+    anthropic = next(source for source in sources if source["id"] == "anthropic")
+    assert anthropic["active"] == "yes"
+    assert anthropic["definition"] == "ready"
+    assert anthropic["schemas"] == 1
+
+
+def test_unknown_provider_sync_component_is_rejected_before_acquisition():
+    result = CliRunner().invoke(app, ["providers", "sync", "anthropic", "--only", "unknown"])
+
+    assert result.exit_code == 2
+    assert "unknown sync component unknown" in result.output
+
+
+def test_model_and_pricing_sync_rebuild_enrichment_from_current_provider_data():
+    pricing_steps = _sync_steps("stub", ("pricing",))
+    model_steps = _sync_steps("stub", ("models",))
+
+    assert [script for _, script, _ in pricing_steps] == ["fetch_models.py", "enrich.py"]
+    assert [script for _, script, _ in model_steps] == ["fetch_models.py", "enrich.py", "discover_parameters.py"]

@@ -22,6 +22,8 @@ import urllib.error
 import urllib.request
 from typing import Any
 
+from model_audit.catalog_ops import ProviderDefinition, SchemaDefinition
+
 CTX = ssl.create_default_context()
 UA = {"User-Agent": "airllm-taxonomy/1.0", "Accept": "application/json"}
 
@@ -48,6 +50,9 @@ class ModelSource:
     auth: str = "bearer"  # "bearer", "header:<Name>", or "none"
     open_access: bool = False  # catalog readable without a credential
     serverless_only: bool = False  # vendor lists models it will not serve on demand
+    definition: ProviderDefinition | None = None
+    schemas: tuple[SchemaDefinition, ...] = ()
+    documented_schemas: dict[str, dict] = {}
 
     # ---- transport -------------------------------------------------------------
 

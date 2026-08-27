@@ -22,7 +22,7 @@ def _git_commit(root: Path) -> str:
     return (git / common / head.removeprefix("ref: ")).resolve().read_text(encoding="utf-8").strip()
 
 
-def _taxonomy_fingerprint(root: Path) -> str:
+def taxonomy_fingerprint(root: Path) -> str:
     paths = [root / "taxonomy" / "providers.yml", root / "taxonomy" / "taxonomy.yml", *sorted((root / "taxonomy" / "models").glob("*.json"))]
     digest = sha256()
     for path in paths:
@@ -37,6 +37,6 @@ def metadata(root: Path, run_id: str, gateway_url: str) -> RunMetadata:
         created_at=datetime.now(tz=UTC).isoformat(),
         harness_commit=_git_commit(root),
         gateway_url=gateway_url,
-        taxonomy_fingerprint=_taxonomy_fingerprint(root),
+        taxonomy_fingerprint=taxonomy_fingerprint(root),
         client_versions={"anthropic": version("anthropic"), "openai": version("openai")},
     )

@@ -221,9 +221,17 @@ class RunMetadata(FrozenModel):
     client_versions: dict[str, str]
 
 
+class RunSettings(FrozenModel):
+    confirmations: int = 1
+    request_timeout_seconds: float = 60
+
+
 class ReportDocument(FrozenModel):
-    schema_version: Literal[2] = 2
+    schema_version: Literal[3] = 3
     run: RunMetadata
+    plan: Plan | None = None
+    settings: RunSettings = RunSettings()
+    complete: bool = True
     results: tuple[PairResult, ...]
 
 

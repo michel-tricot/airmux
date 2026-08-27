@@ -30,6 +30,8 @@ with OpenAI's shutdown_date it is one of only two machine-readable deprecation s
 the whole catalog.
 """
 
+from model_audit.catalog_ops import ProviderDefinition
+
 from .base import ModelSource
 
 
@@ -37,6 +39,19 @@ class Fireworks(ModelSource):
     id = "fireworks"
     url = "https://api.fireworks.ai/v1/accounts/fireworks/models?pageSize=200"
     serverless_only = True
+    definition = ProviderDefinition(
+        id=id,
+        name="Fireworks AI",
+        homepage="https://fireworks.ai",
+        docs="https://docs.fireworks.ai",
+        base_url="https://api.fireworks.ai/inference/v1",
+        models_url=url,
+        ingress=("oai",),
+        auth=("bearer",),
+        env_var="FIREWORKS_API_KEY",
+        icon_mono="fireworks",
+        icon_color="fireworks-color",
+    )
 
     def fetch(self, key):
         collected, url = [], self.url

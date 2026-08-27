@@ -40,39 +40,6 @@ CTX = ssl.create_default_context()
 UA = "airllm-taxonomy/1.0"
 
 
-# Fields the listing endpoint never returns; they are added downstream by enrich_limits.
-# Refetching must not drop them, or every refresh discards enrichment and moves the
-# fetched stamp even when the vendor returned exactly what it returned last time.
-# provenance travels with the value it describes. Carrying "pricing" without
-# "pricing_source" lets the next enrichment restamp a borrowed price as provider-supplied
-DOWNSTREAM = (
-    "kind",
-    "limits_source",
-    "pricing_source",
-    "context_length",
-    "max_output_tokens",
-    "pricing",
-    "parameter_evidence",
-)
-
-
-def carry_forward(path: Path, models: list[dict]) -> list[dict]:
-    if not path.exists():
-        return models
-    try:
-        previous = {m["id"]: m for m in json.loads(path.read_text()).get("models") or []}
-    except (json.JSONDecodeError, KeyError):
-        return models
-    for model in models:
-        old = previous.get(model.get("id"))
-        if not old:
-            continue
-        for field in DOWNSTREAM:
-            if model.get(field) in (None, [], {}) and old.get(field) is not None:
-                model[field] = old[field]
-    return models
-
-
 def main() -> int:
     providers = {p["id"]: p for p in yaml.safe_load((ROOT / "providers.yml").read_text())["providers"]}
     wanted = set(sys.argv[1:]) or set(providers)
@@ -129,7 +96,6 @@ def main() -> int:
         declared = sum(1 for m in models if m.get("context_length") or m.get("supports_tools") is not None)
         target = OUT / f"{provider}.json"
         previous_ids = {model["id"] for model in json.loads(target.read_text()).get("models") or []} if target.exists() else set()
-        models = carry_forward(target, models)
         models = apply_discovery_evidence(models, discovery_evidence(providers[provider], ROOT))
         new_models = [model for model in models if model["id"] not in previous_ids]
         write_catalog(
@@ -151,7 +117,7 @@ def main() -> int:
     for p, why in failed:
         print(f"  fail    {p:<13} {why}")
     print(f"\n{len(ok)} written, {len(skipped)} skipped, {len(failed)} failed")
-    return 0
+    return 1 if failed or (set(sys.argv[1:]) and skipped) else 0
 
 
 if __name__ == "__main__":

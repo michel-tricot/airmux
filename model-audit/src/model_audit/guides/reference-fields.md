@@ -1,6 +1,7 @@
 # Field reference
 
-`providers.yml` and `routers.yml` carry data only. Every field is defined here.
+Typed provider sources define providers. `providers.yml` and `routers.yml` are applied data
+projections. Every projected field is defined here.
 
 Both files hold the same 12 fields in the same order, so a router is readable by anything
 that reads a provider.
@@ -24,7 +25,8 @@ Neither is ever empty, so a consumer never branches on a missing icon.
   Twelve vendors have no colour variant upstream; for those this names the monochrome slug
 
 Reka has no mark upstream at all, so both fields name a generated monogram, written by
-`fetch_icons.py` on a 404. It is the only file under `icons/` not traceable to lobehub.
+`airllm-audit providers sync <provider> --only icons` on a 404. It is the only file under
+`icons/` not traceable to lobehub.
 
 Normalization: width, height and the upstream flex styling dropped so the consumer owns
 sizing and layout; titles dropped so it owns the accessible name; every local id namespaced
@@ -53,9 +55,9 @@ than at a URL that will rot.
 
 ## models_url
 
-The model listing endpoint. `fetch_models.py` reads it from here, so it is never written
-down twice. A URL containing `{...}` is account-scoped and cannot be fetched without
-substitution; the fetcher reports the template instead of failing.
+The model listing endpoint. It must agree with the provider source acquisition URL. A URL
+containing `{...}` is account-scoped and cannot be fetched without substitution; sync
+reports the template instead of failing.
 
 ## ingress
 
@@ -121,8 +123,8 @@ Four platforms are in despite needing more than a key, and each needs something 
 
 ## What is out
 
-- **Routers and gateways** in `providers.yml`: OpenRouter, Vercel AI Gateway, Portkey,
-  Requesty, AI/ML API. OpenRouter lives in `routers.yml`; the others are not catalogued yet
+- **Routers and gateways**: OpenRouter, Vercel AI Gateway, Portkey, Requesty, AI/ML API.
+  OpenRouter lives in `routers.yml`; the others are not catalogued yet
 - **Other clouds needing account-scoped config**: watsonx, OCI, Databricks, Snowflake,
   Cloudflare, Scaleway, OVHcloud
 - **Regional KYC or enterprise gating**: Volcano Engine, Baidu Qianfan, Tencent Hunyuan,

@@ -18,8 +18,8 @@ the catalog rather than carrying nulls.
 - `docs`: transcribed from a models or pricing page, or from a spec enum. Goes stale the
   moment a model ships
 
-`doc_models.py` refuses to overwrite an `api` file, so adding a key upgrades the data
-rather than fighting it. `api` always wins.
+Provider synchronization never replaces a successful API catalog with documentation-only
+data. `api` always wins.
 
 ## Limits carry `limits_source`
 
@@ -39,16 +39,10 @@ declared by its provider. Its source list points to those exact schema files. A 
 in a schema is supported; an absent field remains unknown because permissive and
 documentation-derived schemas cannot prove rejection.
 
-`parameter_evidence.live_probe` records the parameters attempted against the exact provider,
-model and endpoint, plus only the conclusive results. The applied taxonomy resolves each
-canonical parameter independently, with a conclusive live probe winning over model
-discovery. A successful request means supported; only an explicit unsupported-parameter
-response means unsupported. Every other outcome remains unknown.
-
-`fetch_models.py` adds discovery evidence before writing every returned model and probes new
-models when it has a provider credential. `validate.py` independently regenerates the
-schema-derived evidence and rejects missing or stale model records. There is no maintained
-list of model ids or parameter claims in the skill.
+`airllm-audit providers sync` adds discovery evidence after acquiring models and schemas.
+Catalog validation independently regenerates the schema-derived evidence and rejects missing
+or stale model records. Live behavioral support belongs in accepted audit evidence, never in
+the model catalog. There is no maintained list of model ids or parameter claims in the skill.
 
 ## Schemas carry provenance in the filename
 

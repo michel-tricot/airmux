@@ -18,6 +18,7 @@ import yaml
 
 from canonical import write_catalog, write_schema
 from paths import TAXONOMY
+from sources import registry
 
 UA = {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/131.0"}
 CTX = ssl.create_default_context()
@@ -61,6 +62,9 @@ SPECS = {
     ("perplexity", "custom"): ("https://docs.perplexity.ai/openapi.json", r"^/v1/sonar$"),
     ("replicate", "custom"): ("https://api.replicate.com/openapi.json", r"^/predictions$"),
 }
+for source in registry().values():
+    for schema in source.schemas:
+        SPECS[(source.id, schema.surface)] = (str(schema.url), schema.path_pattern)
 
 _cache = {}
 

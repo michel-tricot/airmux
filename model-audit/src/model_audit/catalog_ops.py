@@ -1,16 +1,26 @@
 from __future__ import annotations
 
+import importlib
 import json
 import subprocess
 import sys
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING, Literal, cast
+from typing import TYPE_CHECKING, Literal, Protocol, cast
 
 import yaml
-from pydantic import BaseModel, ConfigDict, Field, HttpUrl, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+PROVIDERS_HEADER = """# Applied provider catalog. Maintain through airllm-audit providers onboard and sync.
+# Agent field guidance: airllm-audit agent guide provider-onboarding
+
+"""
+CANDIDATES_HEADER = """# Providers tracked for future onboarding. Identity only; no derived catalog data.
+# Promote through a typed provider source and airllm-audit providers onboard.
+
+"""
 
 
 class ProviderDefinition(BaseModel):
@@ -18,16 +28,39 @@ class ProviderDefinition(BaseModel):
 
     id: str = Field(pattern=r"^[a-z0-9][a-z0-9-]*$")
     name: str
-    homepage: HttpUrl
-    docs: HttpUrl
-    base_url: HttpUrl
-    models_url: HttpUrl
-    openapi: HttpUrl | None = None
+    homepage: str = Field(pattern=r"^https?://")
+    docs: str = Field(pattern=r"^https?://")
+    base_url: str = Field(pattern=r"^https?://")
+    models_url: str = Field(pattern=r"^https?://")
+    openapi: str | None = Field(None, pattern=r"^https?://")
     ingress: tuple[Literal["oai", "oai_responses", "anthropic", "google", "other_standard", "custom"], ...]
     auth: tuple[str, ...]
     env_var: str = Field(pattern=r"^[A-Z][A-Z0-9_]+$")
     icon_mono: str | None = None
     icon_color: str | None = None
+
+
+class SchemaDefinition(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    surface: Literal["oai", "oai_responses", "anthropic", "google", "other_standard", "custom"]
+    url: str = Field(pattern=r"^https?://")
+    path_pattern: str
+
+
+class ProviderSource(Protocol):
+    id: str
+    url: str
+    open_access: bool
+    definition: ProviderDefinition | None
+    schemas: tuple[SchemaDefinition, ...]
+    documented_schemas: dict[str, dict[str, object]]
+
+    def fetch(self, key: str | None) -> object: ...
+
+    def items(self, payload: object) -> list[dict[str, object]]: ...
+
+    def normalize(self, item: dict[str, object]) -> dict[str, object] | None: ...
 
 
 class ModelDefinition(BaseModel):
@@ -51,6 +84,41 @@ def run_catalog_script(root: Path, script: str, *arguments: str) -> subprocess.C
     return subprocess.run(  # noqa: S603 repository-owned catalog scripts are selected by the CLI
         [sys.executable, str(path), *arguments], cwd=root, capture_output=True, text=True, check=False
     )
+
+
+def provider_sources(root: Path) -> dict[str, ProviderSource]:
+    scripts = root / "model-audit" / "catalog" / "scripts"
+    location = str(scripts)
+    if location not in sys.path:
+        sys.path.insert(0, location)
+    module = importlib.import_module("sources")
+    return cast("dict[str, ProviderSource]", module.registry())
+
+
+def preflight_source(source: ProviderSource, key: str | None) -> int:
+    try:
+        payload = source.fetch(key)
+    except OSError as error:
+        message = f"model acquisition failed: {error}"
+        raise RuntimeError(message) from error
+    raw = source.items(payload)
+    models = [model for model in (source.normalize(item) for item in raw) if model is not None]
+    if raw and not models:
+        message = f"{len(raw)} models returned, none kept; check the provider source filter"
+        raise RuntimeError(message)
+    if not models:
+        message = "the model endpoint returned an empty or unrecognized payload"
+        raise RuntimeError(message)
+    return len(models)
+
+
+def load_provider_entries(taxonomy: Path) -> dict[str, dict[str, object]]:
+    documents = (
+        (yaml.safe_load(path.read_text(encoding="utf-8")) or {}, group)
+        for filename, group in (("providers.yml", "providers"), ("routers.yml", "routers"))
+        if (path := taxonomy / filename).exists()
+    )
+    return {str(provider["id"]): provider for document, group in documents for provider in document.get(group, ())}
 
 
 def _provider_entry(definition: ProviderDefinition) -> dict[str, object]:
@@ -81,26 +149,33 @@ def _monogram(name: str) -> str:
     )
 
 
-def add_provider(root: Path, definition_path: Path, *, replace: bool = False) -> ProviderDefinition:
-    definition = ProviderDefinition.model_validate(yaml.safe_load(definition_path.read_text(encoding="utf-8")))
+def add_provider(root: Path, definition: ProviderDefinition, *, replace: bool = False) -> ProviderDefinition:
     taxonomy = root / "taxonomy"
+    taxonomy.mkdir(parents=True, exist_ok=True)
     providers_path = taxonomy / "providers.yml"
-    document = yaml.safe_load(providers_path.read_text(encoding="utf-8")) or {"providers": []}
+    document = yaml.safe_load(providers_path.read_text(encoding="utf-8")) if providers_path.exists() else {"providers": []}
     existing = next((provider for provider in document["providers"] if provider["id"] == definition.id), None)
     if existing is not None and not replace:
         message = f"provider {definition.id} already exists; pass --replace to update it"
         raise ValueError(message)
-    providers = [provider for provider in document["providers"] if provider["id"] != definition.id]
-    providers.append(_provider_entry(definition))
-    providers.sort(key=lambda provider: provider["id"])
-    providers_path.write_text(yaml.safe_dump({"providers": providers}, sort_keys=False, width=150, allow_unicode=True), encoding="utf-8")
+    entry = _provider_entry(definition)
+    if existing is not None:
+        entry["schema"] = existing.get("schema")
+    providers = [entry if provider["id"] == definition.id else provider for provider in document["providers"]]
+    if existing is None:
+        providers.append(entry)
+    provider_document = yaml.safe_dump({"providers": providers}, sort_keys=False, width=150, allow_unicode=True)
+    providers_path.write_text(PROVIDERS_HEADER + provider_document, encoding="utf-8")
     icon = taxonomy / "icons" / f"{definition.icon_mono or definition.id}.svg"
+    icon.parent.mkdir(parents=True, exist_ok=True)
     if not icon.exists():
         icon.write_text(_monogram(definition.name), encoding="utf-8")
-    result = run_catalog_script(root, "make_seed.py")
-    if result.returncode != 0:
-        message = result.stderr or result.stdout
-        raise RuntimeError(message.strip())
+    candidates_path = taxonomy / "candidates.yml"
+    if candidates_path.exists():
+        candidates_document = yaml.safe_load(candidates_path.read_text(encoding="utf-8")) or {"candidates": []}
+        candidates = [candidate for candidate in candidates_document["candidates"] if candidate["id"] != definition.id]
+        candidate_document = yaml.safe_dump({"candidates": candidates}, sort_keys=False, width=150, allow_unicode=True)
+        candidates_path.write_text(CANDIDATES_HEADER + candidate_document, encoding="utf-8")
     return definition
 
 

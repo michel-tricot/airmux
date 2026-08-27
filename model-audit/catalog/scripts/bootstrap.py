@@ -22,6 +22,7 @@ import yaml
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 from paths import TAXONOMY
+from model_audit.catalog_ops import PROVIDERS_HEADER
 from model_audit.taxonomy import write as write_taxonomy
 
 SEED = HERE.parent / "seed.yml"
@@ -73,10 +74,7 @@ def write_yaml(key: str, entries: list[dict]) -> None:
         entry["schema"] = schema_block(entry)
     entries = [{k: e[k] for k in FIELD_ORDER if k in e} for e in entries]
     path = TAXONOMY / f"{key.rstrip('s')}s.yml"
-    banner = (
-        "# Provider catalog. Data only; every field is defined in the provider-catalog\n"
-        "# skill, see .agents/skills/provider-catalog/references/fields.md\n\n"
-    )
+    banner = PROVIDERS_HEADER
     path.write_text(banner + yaml.safe_dump({key: entries}, sort_keys=False, width=100, allow_unicode=True))
     print(f"  wrote {path.relative_to(TAXONOMY.parent)} ({len(entries)} entries)")
 
