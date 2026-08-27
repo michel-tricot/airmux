@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING, Any
 
 from starlette.responses import JSONResponse, Response
 
-from data_plane.canonical import Adjustment, CanonicalChunk, CanonicalRequest, GatewayInfo
+from data_plane.canonical import Adjustment, CanonicalChunk, CanonicalRequest, GatewayInfo, ReasoningConfig, ResponseFormat
 from data_plane.formats import anthropic as fmt
 from data_plane.ingress.base import IngressAdapter
 
@@ -24,8 +24,12 @@ if TYPE_CHECKING:
     from data_plane.egress.base import CanonicalError, Ctx
 
 # This dialect's own spellings of canonical fields; everything else rides through as extras,
-# so thinking, top_k and metadata reach providers whose profile accepts them.
-CONSUMED = frozenset(CanonicalRequest.model_fields) | frozenset({"system", "stop_sequences"})
+# so top_k and metadata reach providers whose profile accepts them.
+CONSUMED = frozenset(CanonicalRequest.model_fields) | frozenset({"system", "stop_sequences", "thinking", "output_config"})
+
+
+def _mapping(value: object) -> dict[str, Any]:
+    return {str(key): item for key, item in value.items()} if isinstance(value, dict) else {}
 
 
 @dataclass
@@ -105,9 +109,24 @@ class AnthropicIngress(IngressAdapter):
     def parse(self, body: dict[str, Any]) -> tuple[CanonicalRequest, list[Adjustment]]:
         extras = {key: value for key, value in body.items() if key not in CONSUMED}
         adjustments = []
-        tool_choice = fmt.from_tool_choice(body.get("tool_choice"))
+        raw_tool_choice = body.get("tool_choice")
+        tool_choice = fmt.from_tool_choice(raw_tool_choice)
         if body.get("tool_choice") is not None and tool_choice is None:
             adjustments.append(Adjustment(param="tool_choice", action="dropped", detail="a tool_choice variant this dialect does not interpret"))
+        thinking = _mapping(body.get("thinking"))
+        output_config = _mapping(body.get("output_config"))
+        raw_format = output_config.get("format")
+        format_value = _mapping(raw_format) if isinstance(raw_format, dict) else None
+        response_format = None
+        if format_value is not None and format_value.get("type") == "json_schema":
+            response_format = ResponseFormat(type="json_schema", json_schema={"schema": format_value.get("schema") or {}})
+        reasoning_values = {
+            "type": thinking.get("type"),
+            "budget_tokens": thinking.get("budget_tokens"),
+            "display": thinking.get("display"),
+            "effort": output_config.get("effort"),
+        }
+        reasoning = ReasoningConfig.model_validate(reasoning_values) if any(value is not None for value in reasoning_values.values()) else None
         request = CanonicalRequest.model_validate(
             {
                 **extras,
@@ -120,6 +139,13 @@ class AnthropicIngress(IngressAdapter):
                 "stop": body.get("stop_sequences"),
                 "tools": fmt.from_tools(body.get("tools")),
                 "tool_choice": tool_choice,
+                "parallel_tool_calls": (
+                    not raw_tool_choice["disable_parallel_tool_use"]
+                    if isinstance(raw_tool_choice, dict) and isinstance(raw_tool_choice.get("disable_parallel_tool_use"), bool)
+                    else None
+                ),
+                "reasoning": reasoning,
+                "response_format": response_format,
             }
         )
         return request, adjustments

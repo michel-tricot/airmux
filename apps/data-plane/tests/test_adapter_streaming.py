@@ -8,6 +8,7 @@ import pytest
 from conftest import CTX, PROVIDER, TEXT_LOG, TEXT_NONSTREAM, delta_event, sse
 
 from contract import Secret
+from data_plane.canonical import ReasoningPart
 from data_plane.egress import REGISTRY
 from data_plane.egress.base import UpstreamStreamError
 
@@ -367,6 +368,34 @@ def test_the_thinking_signature_survives_the_stream():
     assert text.type == "text"
     signatures = [c.delta.signature for c in chunks if c.delta is not None and c.delta.type == "reasoning" and c.delta.signature]
     assert signatures == ["sig_1"]
+
+
+def test_responses_reasoning_identity_survives_the_stream():
+    events = [
+        {"type": "response.created", "response": {"id": "resp_9", "status": "in_progress", "output": []}},
+        {
+            "type": "response.output_item.added",
+            "output_index": 0,
+            "item": {"type": "reasoning", "id": "rs_provider", "summary": [], "encrypted_content": "encrypted"},
+        },
+        {"type": "response.reasoning_summary_text.delta", "output_index": 0, "summary_index": 0, "delta": "think"},
+        {
+            "type": "response.completed",
+            "response": {
+                "id": "resp_9",
+                "status": "completed",
+                "output": [],
+                "usage": {"input_tokens": 5, "output_tokens": 7, "input_tokens_details": {"cached_tokens": 0}},
+            },
+        },
+    ]
+
+    chunks, final = fold(_adapter("openai_responses"), b"".join(responses_sse(event) for event in events), 7)
+
+    reasoning_chunks = [chunk.delta for chunk in chunks if chunk.delta is not None and chunk.delta.type == "reasoning"]
+    assert reasoning_chunks[0].id == "rs_provider"
+    assert reasoning_chunks[0].signature == "encrypted"
+    assert final.content == [ReasoningPart(id="rs_provider", text="think", signature="encrypted")]
 
 
 def test_a_cancel_before_the_final_usage_reads_as_estimated():

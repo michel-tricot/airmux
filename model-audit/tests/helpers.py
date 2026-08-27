@@ -4,11 +4,12 @@ from model_audit.models import Case, Claim, Oracle, Request, Target
 
 
 def target(**changes: object) -> Target:
-    return Target(
+    target = Target(
         provider_id="stub",
         surface_id="oai",
         endpoint="chat/completions",
         egress_kind="openai_compatible",
+        gateway_egress_kind="openai_compatible",
         base_url="https://provider.example/v1",
         credential_env="STUB_API_KEY",
         auth="bearer",
@@ -17,7 +18,10 @@ def target(**changes: object) -> Target:
         upstream_model="model",
         context_window=8192,
         max_output_tokens=1024,
-    ).model_copy(update=changes)
+    )
+    if "egress_kind" in changes and "gateway_egress_kind" not in changes:
+        changes = {**changes, "gateway_egress_kind": changes["egress_kind"]}
+    return target.model_copy(update=changes)
 
 
 def case(**changes: object) -> Case:

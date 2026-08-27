@@ -63,6 +63,15 @@ def test_equivalent_cross_dialect_completion_reasons_match():
     assert result.parity == "match"
 
 
+def test_stop_sequence_and_stop_are_equivalent_completion_reasons():
+    direct = Observation(outcome="success", text="ok", finish_reason="stop_sequence")
+    gateway = Observation(outcome="success", text="ok", finish_reason="stop")
+
+    result = assess(direct, gateway, Oracle(text_contains="ok"))
+
+    assert result.parity == "match"
+
+
 def test_responses_output_limit_before_oracle_is_unknown():
     direct = Observation(outcome="success", finish_reason="max_output_tokens", usage_present=True)
 

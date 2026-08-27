@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING, Any
 
 from starlette.responses import JSONResponse, Response
 
-from data_plane.canonical import Adjustment, CanonicalChunk, CanonicalRequest, GatewayInfo, ResponseFormat, ToolCallDelta
+from data_plane.canonical import Adjustment, CanonicalChunk, CanonicalRequest, GatewayInfo, ReasoningConfig, ResponseFormat, ToolCallDelta
 from data_plane.formats import openai as fmt
 from data_plane.ingress.base import DONE, IngressAdapter
 
@@ -25,7 +25,7 @@ if TYPE_CHECKING:
 
 # This dialect's alternate spellings of canonical fields: parse folds each into its canonical
 # name, and the egress side re-spells the canonical value however the provider wants it.
-ALIASED = frozenset({"max_completion_tokens"})
+ALIASED = frozenset({"max_completion_tokens", "reasoning_effort"})
 
 # Protocol plumbing with no canonical carrier because its meaning is constant under our
 # contract: the stream always reports usage, and body_of re-emits its own stream_options on
@@ -149,6 +149,8 @@ class OpenAINativeIngress(IngressAdapter):
                 "tools": fmt.from_tools(body.get("tools")),
                 "tool_choice": tool_choice,
                 "response_format": ResponseFormat.model_validate(response_format) if response_format else None,
+                "reasoning": ReasoningConfig(effort=body["reasoning_effort"]) if isinstance(body.get("reasoning_effort"), str) else None,
+                "parallel_tool_calls": body.get("parallel_tool_calls") if isinstance(body.get("parallel_tool_calls"), bool) else None,
             }
         )
         return request, adjustments

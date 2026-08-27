@@ -5,12 +5,12 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pytest
-from conftest import MODEL, PROVIDER
+from conftest import CTX, MODEL, PROVIDER
 from corpus import CORPUS, request_of
 from jsonschema import Draft202012Validator
 
 from contract import Secret
-from data_plane.canonical import CanonicalRequest
+from data_plane.canonical import CanonicalRequest, ReasoningConfig, ResponseFormat, ToolDef
 from data_plane.egress import REGISTRY
 from data_plane.egress.base import UpstreamResponseError
 
@@ -121,6 +121,20 @@ def test_provider_http_errors_become_canonical(kind):
     assert (error.status, error.code, error.message) == (429, code, "slow down")
 
 
+def test_openai_compatible_accepts_null_prompt_token_details():
+    adapter, _ = _adapter("openai_compatible")
+    response = {
+        "id": "response-1",
+        "choices": [{"message": {"content": "ok", "reasoning_content": "brief"}, "finish_reason": "stop"}],
+        "usage": {"prompt_tokens": 17, "completion_tokens": 4, "prompt_tokens_details": None},
+    }
+
+    final = adapter.transform_response(json.dumps(response).encode(), CTX)
+
+    assert final.usage.input_tokens == 17
+    assert final.usage.cache_read_tokens == 0
+
+
 @pytest.mark.parametrize("kind", sorted(REGISTRY))
 def test_surviving_extras_merge_after_the_typed_body(kind):
     """The reconcile step upstream of the adapter decides what survives; the adapter renders
@@ -145,3 +159,44 @@ def test_the_provider_spelling_wins_and_an_extra_never_overrides_it():
     sent = json.loads(adapter.transform_request(request, model).body)
     assert sent["max_completion_tokens"] == 64  # the canonical value, in the provider's spelling
     assert "max_tokens" not in sent
+
+
+def test_openai_chat_maps_supported_reasoning_and_tool_options():
+    adapter, model = _adapter("openai_compatible")
+    request = request_of(
+        CORPUS[0],
+        reasoning=ReasoningConfig(effort="low"),
+        parallel_tool_calls=True,
+        tools=[ToolDef(name="answer", parameters={"type": "object"}, strict=True)],
+    )
+
+    sent = json.loads(adapter.transform_request(request, model).body)
+
+    assert sent["reasoning_effort"] == "low"
+    assert sent["parallel_tool_calls"] is True
+    assert sent["tools"][0]["function"]["strict"] is True
+
+
+def test_anthropic_maps_reasoning_structured_output_and_tool_options():
+    adapter, model = _adapter("anthropic")
+    request = request_of(
+        CORPUS[0],
+        reasoning=ReasoningConfig(effort="low", summary="auto"),
+        parallel_tool_calls=True,
+        tools=[ToolDef(name="answer", parameters={"type": "object"}, strict=True)],
+        tool_choice="required",
+        response_format=ResponseFormat(
+            type="json_schema",
+            json_schema={"name": "answer", "schema": {"type": "object", "properties": {"answer": {"type": "integer"}}}},
+        ),
+    )
+
+    sent = json.loads(adapter.transform_request(request, model).body)
+
+    assert sent["thinking"] == {"type": "adaptive"}
+    assert sent["output_config"] == {
+        "effort": "low",
+        "format": {"type": "json_schema", "schema": {"type": "object", "properties": {"answer": {"type": "integer"}}}},
+    }
+    assert sent["tool_choice"] == {"type": "any", "disable_parallel_tool_use": False}
+    assert sent["tools"][0]["strict"] is True

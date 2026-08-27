@@ -115,6 +115,7 @@ class Target(FrozenModel):
     surface_id: str
     endpoint: str
     egress_kind: EgressKind
+    gateway_egress_kind: EgressKind
     base_url: str
     credential_env: str
     auth: str

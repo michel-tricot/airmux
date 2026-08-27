@@ -17,7 +17,7 @@ from conftest import TEXT_LOG, TEXT_NONSTREAM, mock_control_plane
 from pydantic import TypeAdapter
 from starlette.testclient import TestClient
 
-from data_plane.canonical import CanonicalResponse, ReasoningPart, TextPart, Usage
+from data_plane.canonical import CanonicalResponse, DocumentPart, ReasoningPart, TextPart, Usage
 from data_plane.ingress.anthropic import AnthropicIngress
 
 UPSTREAM = "https://api.openai.com/v1/chat/completions"
@@ -43,7 +43,10 @@ def test_parse_hoists_system_and_keeps_the_rest_as_extras():
     assert [m.role for m in req.messages] == ["system", "user"]
     assert req.max_tokens == 64
     assert req.stop == ["END"]
-    assert req.extra == {"thinking": {"type": "enabled", "budget_tokens": 512}, "metadata": {"user_id": "u1"}}
+    assert req.reasoning is not None
+    assert req.reasoning.type == "enabled"
+    assert req.reasoning.budget_tokens == 512
+    assert req.extra == {"metadata": {"user_id": "u1"}}
     assert adjustments == []
 
 
@@ -57,6 +60,28 @@ def test_parse_strips_client_directive_blocks():
     req, _ = AnthropicIngress().parse(body)
     (system, _user) = req.messages
     assert [part.text for part in system.content if part.type == "text"] == ["Real prompt"]
+
+
+def test_parse_preserves_an_inline_document():
+    request, _ = AnthropicIngress().parse(
+        {
+            "model": "gpt-test",
+            "max_tokens": 64,
+            "messages": [
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "document",
+                            "source": {"type": "base64", "media_type": "application/pdf", "data": "JVBERi0="},
+                        }
+                    ],
+                }
+            ],
+        }
+    )
+
+    assert request.messages[0].content == [DocumentPart(media_type="application/pdf", data="JVBERi0=")]
 
 
 def test_the_sdk_reads_a_thinking_signature_back():

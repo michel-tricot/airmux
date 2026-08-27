@@ -12,6 +12,12 @@ GATEWAY_HELD = frozenset({"n"})
 MODEL_TUNING_PARAMS = ("temperature", "top_p", "stop", "seed", "reasoning_effort", "parallel_tool_calls")
 
 
+def _value(request: CanonicalRequest, param: str) -> object:
+    if param == "reasoning_effort":
+        return request.reasoning.effort if request.reasoning is not None else None
+    return getattr(request, param)
+
+
 def _drop_reason(request: CanonicalRequest, model: ModelEntry, profile: CompiledProfile, param: str) -> str | None:
     if model.parameter_support.get(param) == "unsupported":
         return f"{model.model_id} does not support this parameter"
@@ -27,11 +33,15 @@ def _drop_reason(request: CanonicalRequest, model: ModelEntry, profile: Compiled
 
 def reconcile(request: CanonicalRequest, model: ModelEntry, profile: CompiledProfile) -> tuple[CanonicalRequest, list[Adjustment]]:
     unsupported = {
-        param: None for param in MODEL_TUNING_PARAMS if model.parameter_support.get(param) == "unsupported" and getattr(request, param) is not None
+        param for param in MODEL_TUNING_PARAMS if model.parameter_support.get(param) == "unsupported" and _value(request, param) is not None
     }
     adjustments = [Adjustment(param=param, action="dropped", detail=f"{model.model_id} does not support this parameter") for param in unsupported]
     if unsupported:
-        request = request.model_copy(update=unsupported)
+        updates = {param: None for param in unsupported if param != "reasoning_effort"}
+        if "reasoning_effort" in unsupported and request.reasoning is not None:
+            reasoning = request.reasoning.model_copy(update={"effort": None})
+            updates["reasoning"] = reasoning if any(getattr(reasoning, name) is not None for name in reasoning.model_fields) else None
+        request = request.model_copy(update=updates)
     forwarded: dict[str, object] = {}
     extra = request.extra
     for param, value in extra.items():

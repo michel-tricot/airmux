@@ -17,6 +17,7 @@ from data_plane.canonical import (
     AssistantPart,
     CanonicalMessage,
     ContentPart,
+    DocumentPart,
     FinishReason,
     GatewayInfo,
     ImagePart,
@@ -32,6 +33,8 @@ from data_plane.canonical import (
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
+
+    from data_plane.canonical import CanonicalRequest
 
 logger = logging.getLogger("data_plane")
 
@@ -54,6 +57,8 @@ class MessagesBody(BaseModel):
     tools: list[dict[str, Any]] | None = None
     tool_choice: dict[str, Any] | None = None
     stream: bool | None = None
+    thinking: dict[str, Any] | None = None
+    output_config: dict[str, Any] | None = None
 
 
 def _with_cache(block: dict[str, Any], cache: Literal["ephemeral"] | None) -> dict[str, Any]:
@@ -87,18 +92,27 @@ def _block(part: ContentPart) -> dict[str, Any] | None:
     if isinstance(part, ImagePart):
         source = {"type": "url", "url": part.url} if part.url is not None else {"type": "base64", "media_type": part.media_type, "data": part.data}
         return _with_cache({"type": "image", "source": source}, part.cache)
+    if isinstance(part, DocumentPart):
+        if part.file_id is not None:
+            source = {"type": "file", "file_id": part.file_id}
+        elif part.url is not None:
+            source = {"type": "url", "url": part.url}
+        else:
+            source = {"type": "base64", "media_type": part.media_type, "data": part.data}
+        return _with_cache({"type": "document", "source": source}, part.cache)
     if isinstance(part, ToolCallPart):
-        return _with_cache({"type": "tool_use", "id": part.id, "name": part.name, "input": _tool_input(part.arguments)}, part.cache)
-    if isinstance(part, ToolResultPart):
-        result: dict[str, Any] = {
+        block = {"type": "tool_use", "id": part.id, "name": part.name, "input": _tool_input(part.arguments)}
+    elif isinstance(part, ToolResultPart):
+        block = {
             "type": "tool_result",
             "tool_use_id": part.call_id,
             "content": [b for b in (_block(inner) for inner in part.content) if b is not None],
         }
         if part.is_error:
-            result["is_error"] = True
-        return _with_cache(result, part.cache)
-    return None
+            block["is_error"] = True
+    else:
+        return None
+    return _with_cache(block, part.cache)
 
 
 def _system_field(parts: Sequence[ContentPart]) -> list[dict[str, Any]] | str | None:
@@ -143,18 +157,55 @@ def to_tools(tools: Sequence[ToolDef] | None) -> list[dict[str, Any]] | None:
         return None
     return [
         _with_cache(
-            {"name": tool.name, **({"description": tool.description} if tool.description else {}), "input_schema": tool.parameters}, tool.cache
+            {
+                "name": tool.name,
+                **({"description": tool.description} if tool.description else {}),
+                "input_schema": tool.parameters,
+                **({"strict": tool.strict} if tool.strict is not None else {}),
+            },
+            tool.cache,
         )
         for tool in tools
     ]
 
 
-def to_tool_choice(choice: ToolChoice | None) -> dict[str, Any] | None:
+def to_tool_choice(choice: ToolChoice | None, parallel: bool | None = None) -> dict[str, Any] | None:
     if choice is None:
         return None
+    selected: dict[str, Any]
     if isinstance(choice, NamedTool):
-        return {"type": "tool", "name": choice.name}
-    return {"auto": {"type": "auto"}, "required": {"type": "any"}, "none": {"type": "none"}}[choice]
+        selected = {"type": "tool", "name": choice.name}
+    else:
+        selected = {"type": {"auto": "auto", "required": "any", "none": "none"}[choice]}
+    if parallel is not None:
+        selected["disable_parallel_tool_use"] = not parallel
+    return selected
+
+
+def output_config_of(request: CanonicalRequest) -> dict[str, Any] | None:
+    output_config: dict[str, Any] = {}
+    if request.reasoning is not None and request.reasoning.effort is not None:
+        output_config["effort"] = request.reasoning.effort
+    if request.response_format is not None:
+        if request.response_format.type == "json_schema":
+            schema = request.response_format.json_schema or {}
+            output_config["format"] = {"type": "json_schema", "schema": schema.get("schema") or {}}
+        elif request.response_format.type == "json_object":
+            output_config["format"] = {"type": "json_schema", "schema": {"type": "object"}}
+    return output_config or None
+
+
+def thinking_of(request: CanonicalRequest) -> dict[str, Any] | None:
+    if request.reasoning is None:
+        return None
+    reasoning_type = request.reasoning.type or ("adaptive" if request.reasoning.effort is not None or request.reasoning.summary is not None else None)
+    if reasoning_type is None:
+        return None
+    return {
+        "type": reasoning_type,
+        **({"budget_tokens": request.reasoning.budget_tokens} if request.reasoning.budget_tokens is not None else {}),
+        **({"display": request.reasoning.display} if request.reasoning.display is not None else {}),
+    }
 
 
 # What comes back. Lenient: a missing field degrades to a default rather than failing the response.
@@ -292,6 +343,10 @@ def _str(value: object) -> str:
     return value if isinstance(value, str) else ""
 
 
+def _bool(value: object) -> bool | None:
+    return value if isinstance(value, bool) else None
+
+
 def _cache_of(block: dict[str, object]) -> Literal["ephemeral"] | None:
     return "ephemeral" if block.get("cache_control") else None
 
@@ -307,6 +362,14 @@ def _image_from_source(source: dict[str, object]) -> ImagePart:
     if source.get("type") == "url":
         return ImagePart(url=_str(source.get("url")))
     return ImagePart(media_type=_str(source.get("media_type")), data=_str(source.get("data")))
+
+
+def _document_from_source(source: dict[str, object]) -> DocumentPart:
+    if source.get("type") == "url":
+        return DocumentPart(url=_str(source.get("url")))
+    if source.get("type") == "file":
+        return DocumentPart(file_id=_str(source.get("file_id")))
+    return DocumentPart(media_type=_str(source.get("media_type")), data=_str(source.get("data")))
 
 
 def _tool_result_content(content: object) -> list[TextPart | ImagePart]:
@@ -343,6 +406,8 @@ def _parts_from_blocks(content: object) -> list[ContentPart]:
             parts.append(ReasoningPart(text=_str(block.get("thinking")), signature=_str(signature) or None, cache=cache))
         elif kind == "image":
             parts.append(_image_from_source(_mapping(block.get("source"))).model_copy(update={"cache": cache}))
+        elif kind == "document":
+            parts.append(_document_from_source(_mapping(block.get("source"))).model_copy(update={"cache": cache}))
         elif kind == "tool_use":
             parts.append(
                 ToolCallPart(
@@ -388,6 +453,7 @@ def from_tools(tools: object) -> list[ToolDef] | None:
             description=_str(_mapping(tool).get("description")) or None,
             parameters=dict(_mapping(_mapping(tool).get("input_schema"))),
             cache=_cache_of(_mapping(tool)),
+            strict=_bool(_mapping(tool).get("strict")),
         )
         for tool in tools
     ]

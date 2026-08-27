@@ -15,6 +15,7 @@ from data_plane.canonical import (
     CanonicalRequest,
     GatewayInfo,
     NamedTool,
+    ReasoningConfig,
     ResponseFormat,
     TextPart,
     ToolDef,
@@ -91,6 +92,16 @@ def _choice(value: object) -> object:
     return value if isinstance(value, str) and value in {"auto", "none", "required"} else None
 
 
+def _response_format(value: object) -> ResponseFormat | None:
+    format_value = _mapping(value)
+    kind = format_value.get("type")
+    if kind == "json_schema":
+        return ResponseFormat(type="json_schema", json_schema={key: item for key, item in format_value.items() if key != "type"})
+    if kind in {"text", "json_object"}:
+        return ResponseFormat(type=kind)
+    return None
+
+
 class ResponsesStream:
     def __init__(self) -> None:
         self.id = ""
@@ -120,7 +131,12 @@ class ResponsesStream:
                     "arguments": "",
                 }
             elif c.delta.type == "reasoning":
-                item = {"type": "reasoning", "id": f"rs_{index}", "summary": []}
+                item = {
+                    "type": "reasoning",
+                    "id": c.delta.id or f"rs_{index}",
+                    "summary": [],
+                    **({"encrypted_content": c.delta.signature} if c.delta.signature else {}),
+                }
             else:
                 item = {"type": "message", "id": f"msg_{index}", "role": "assistant", "status": "in_progress", "content": []}
             frames.append(self._event("response.output_item.added", {"output_index": index, "item": item}))
@@ -177,7 +193,7 @@ class OpenAIResponsesIngress(IngressAdapter):
                 raise ValueError(message)
             messages.insert(0, CanonicalMessage(role="system", content=[TextPart(text=instructions)]))
         text = _mapping(body.get("text"))
-        response_format = ResponseFormat.model_validate(text["format"]) if isinstance(text.get("format"), dict) else None
+        response_format = _response_format(text.get("format"))
         reasoning = _mapping(body.get("reasoning"))
         request = CanonicalRequest(
             model=str(body.get("model") or ""),
@@ -189,7 +205,7 @@ class OpenAIResponsesIngress(IngressAdapter):
             tools=_tools(body.get("tools")),
             tool_choice=_choice(body.get("tool_choice")),
             parallel_tool_calls=body.get("parallel_tool_calls") if isinstance(body.get("parallel_tool_calls"), bool) else None,
-            reasoning_effort=reasoning.get("effort") if isinstance(reasoning.get("effort"), str) else None,
+            reasoning=ReasoningConfig.model_validate(reasoning) if reasoning else None,
             response_format=response_format,
         )
         return request, []

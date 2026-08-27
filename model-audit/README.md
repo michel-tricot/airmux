@@ -65,9 +65,14 @@ affecting provider facts.
 `--provider` selects every cataloged model from one provider. Use `runs plan` before a
 large execution to inspect its request count.
 
-The provider and gateway surfaces are independent. `--gateway-surface all` compares each
-selected direct provider surface with Chat Completions, Responses, and Messages. Without
-it, the gateway uses the provider's native surface.
+The provider and gateway surfaces are independent. By default, the direct call uses the
+upstream egress configured for that model in the applied taxonomy. `--gateway-surface all`
+then sends the same semantic request through Chat Completions, Responses, and Messages
+ingress. This is the valid parity matrix because only the caller dialect changes.
+
+`--provider-surface` explicitly probes another direct provider surface. Use it for provider
+capability discovery. Its parity result is diagnostic unless the applied model uses that
+same upstream egress.
 
 Runs execute up to four experiments concurrently by default. `--concurrency 1` provides
 sequential execution for debugging. Each direct and gateway pair remains ordered, and

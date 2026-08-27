@@ -3,9 +3,15 @@ from __future__ import annotations
 import json
 
 import httpx
+import pytest
 import respx
-from conftest import ORG, WORKSPACE, make_outbox, mock_control_plane
+from conftest import MODEL, ORG, PROVIDER, WORKSPACE, make_outbox, mock_control_plane
 from starlette.testclient import TestClient
+
+from contract import Secret
+from data_plane.canonical import CanonicalRequest
+from data_plane.egress import REGISTRY
+from data_plane.proxy import RequestRejectedError, _transform
 
 
 def _recorded(tmp_path, http_client):
@@ -27,6 +33,17 @@ def test_inference_routes_use_the_inference_prefix(dp_app):
     paths = {route.path for route in dp_app.routes}
     assert {"/inf/v1/chat/completions", "/inf/v1/responses", "/inf/v1/messages"} <= paths
     assert not any(path.startswith("/v1/") for path in paths)
+
+
+def test_unrepresentable_egress_request_is_a_declared_rejection():
+    adapter = REGISTRY["openai_responses"](PROVIDER.model_copy(update={"kind": "openai_responses"}), Secret("sk-test"))
+    request = CanonicalRequest.model_validate({"model": "gpt-test", "messages": [{"role": "user", "content": "hi"}], "stop": ["END"]})
+
+    with pytest.raises(RequestRejectedError) as error:
+        _transform(adapter, request, MODEL)
+
+    assert error.value.status == 400
+    assert error.value.code == "unsupported_feature"
 
 
 @respx.mock

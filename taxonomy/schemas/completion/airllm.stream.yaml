@@ -47,6 +47,12 @@ $defs:
         default: reasoning
         title: Type
         type: string
+      id:
+        anyOf:
+        - type: string
+        - type: 'null'
+        default: null
+        title: Id
       text:
         default: ''
         title: Text
