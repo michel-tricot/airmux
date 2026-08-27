@@ -1,5 +1,5 @@
-# Provider catalog. Data only; every field is defined in the provider-catalog
-# skill, see .agents/skills/provider-catalog/references/fields.md
+# Applied provider catalog. Maintain through airllm-audit providers onboard and sync.
+# Agent field guidance: airllm-audit agent guide provider-onboarding
 
 routers:
 - id: openrouter

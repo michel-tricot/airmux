@@ -226,6 +226,7 @@ $.tools[*].custom.description,1,1,0,1,0,0,0,0,0,0,0
 $.tools[*].custom.format,1,1,0,1,0,0,0,0,0,0,0
 $.tools[*].custom.name,1,1,0,1,0,0,0,0,0,0,0
 $.tools[*].description,1,0,1,0,0,0,0,0,0,0,0
+$.tools[*].function.defer_loading,1,1,0,0,0,0,0,1,0,0,0
 $.tools[*].name,1,0,1,0,0,0,0,0,0,0,0
 $.tools[*].parameters,1,0,1,0,0,0,0,0,0,0,0
 $.tools[*].sources,1,1,0,0,0,0,0,1,0,0,0

@@ -1,0 +1,25 @@
+version: 2
+id: reasoning.exposed
+title: Exposed reasoning with low effort
+claims:
+- dimension: capability
+  name: reasoning
+  profile:
+    effort: low
+- dimension: option
+  name: reasoning_effort
+  profile:
+    value: low
+applies_to:
+  endpoints: [chat/completions, responses]
+request:
+  messages:
+  - role: user
+    content: Reason briefly and answer what is 20 plus 22
+  max_tokens: 1100
+  reasoning:
+    effort: low
+    summary: auto
+oracle:
+  reasoning_present: true
+  text_contains: "42"

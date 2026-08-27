@@ -1,0 +1,285 @@
+# AirLLM model audit
+
+Model audit acquires provider catalogs, generates the applied taxonomy, and identifies
+gateway gaps by comparing identical calls made directly and through a running AirLLM data
+plane.
+
+The project has three independent verdicts:
+
+- Execution reports whether the experiment completed, was blocked by access, or failed in the harness
+- Feature reports whether the direct provider supports the exact claimed behavior profile
+- Parity reports whether the gateway preserved the direct provider behavior
+
+A matching provider rejection is parity. It is classified as unsupported only when the
+provider explicitly rejects that feature or combination. Generic errors remain unknown.
+
+## Agent guides
+
+The package owns versioned instructions for agents. List them with:
+
+```bash
+uv run airllm-audit agent guides
+uv run airllm-audit agent guides --format json
+```
+
+Read one complete guide before an agent changes or interprets the catalog:
+
+```bash
+uv run airllm-audit agent guide provider-onboarding
+uv run airllm-audit agent guide provider-sync
+uv run airllm-audit agent guide model-update
+uv run airllm-audit agent guide behavior-audit
+uv run airllm-audit agent guide gateway-investigation
+uv run airllm-audit agent guide taxonomy-generation
+```
+
+The repository `provider-catalog` skill is only the automatic-discovery adapter. These CLI
+guides are the canonical instructions.
+
+## Daily workflow
+
+```bash
+uv run airllm-audit cases coverage
+uv run airllm-audit providers sources
+uv run airllm-audit providers list
+uv run airllm-audit models list --provider anthropic
+uv run airllm-audit runs plan --model anthropic/claude-fable-5
+uv run airllm-audit runs plan --provider anthropic --case modalities
+
+export AIRLLM_GATEWAY_URL=http://127.0.0.1:8080
+export AIRLLM_API_KEY=sk-inf-your-key
+uv run airllm-audit runs execute --model anthropic/claude-fable-5
+uv run airllm-audit runs execute --provider anthropic --case modalities --concurrency 8
+
+uv run airllm-audit reports show --gaps
+uv run airllm-audit evidence accept model-audit/reports/<run>.json
+uv run airllm-audit taxonomy validate
+```
+
+The gateway must already be running. Model audit never starts or stops it. Raw HTTP
+provider calls are the default and the only runs eligible for taxonomy evidence. `--sdk`
+runs the same cases through the matching vendor SDK for client compatibility without
+affecting provider facts.
+
+`--case` accepts an exact case id or a namespace. Repeat it to combine selections.
+`--provider` selects every cataloged model from one provider. Use `runs plan` before a
+large execution to inspect its request count.
+
+The provider and gateway surfaces are independent. `--gateway-surface all` compares each
+selected direct provider surface with Chat Completions, Responses, and Messages. Without
+it, the gateway uses the provider's native surface.
+
+Runs execute up to four experiments concurrently by default. `--concurrency 1` provides
+sequential execution for debugging. Each direct and gateway pair remains ordered, and
+reports retain plan order regardless of completion order.
+
+## Resume an interrupted run
+
+`runs execute` creates its report before issuing the first request and checkpoints it after
+every completed direct and gateway pair. If the process is interrupted, resume only the
+missing experiments:
+
+```bash
+uv run airllm-audit runs resume model-audit/reports/<run>.json
+```
+
+The checkpoint contains the complete original plan, confirmation count, request timeout,
+partial results, and completion state. Resume uses the stored gateway URL and requires the
+gateway key through `AIRLLM_API_KEY` or `--gateway-api-key`.
+
+Resume rejects a changed taxonomy rather than mixing targets from different catalog
+versions. It preserves original plan order and may override concurrency, confirmations, or
+request timeout explicitly.
+
+## Provider sources
+
+Each provider has one auto-discovered source under
+`model-audit/catalog/scripts/sources/`. The source is the reproducible recipe for provider
+identity, model acquisition, pricing supplied by the model endpoint, and schema acquisition.
+`providers.yml` and the derived files are applied projections of that recipe.
+
+Inspect source readiness:
+
+```bash
+uv run airllm-audit providers sources
+```
+
+A provider source declares a typed definition and maps its response explicitly:
+
+```python
+from model_audit.catalog_ops import ProviderDefinition, SchemaDefinition
+
+from .base import ModelSource
+
+
+class Example(ModelSource):
+    id = "example"
+    url = "https://api.example.ai/v1/models"
+    definition = ProviderDefinition(
+        id=id,
+        name="Example AI",
+        homepage="https://example.ai",
+        docs="https://docs.example.ai",
+        base_url="https://api.example.ai/v1",
+        models_url=url,
+        openapi="https://api.example.ai/openapi.json",
+        ingress=("oai",),
+        auth=("bearer",),
+        env_var="EXAMPLE_API_KEY",
+    )
+    schemas = (
+        SchemaDefinition(
+            surface="oai",
+            url=definition.openapi,
+            path_pattern=r"chat/completions$",
+        ),
+    )
+
+    def normalize(self, item):
+        return self.record(
+            item["id"],
+            context_length=item.get("context_length"),
+            max_output_tokens=item.get("max_output_tokens"),
+        )
+```
+
+OpenAI-shaped listing envelopes can inherit the generic item extraction, but every provider
+still maps its fields explicitly. Add a custom `fetch` implementation for pagination or
+multiple endpoints. Add a documentation-derived request schema only when no usable
+machine-readable schema exists.
+
+## Onboard a provider
+
+The human or agent creates the provider source once. The user never writes provider YAML.
+Set its credential and run:
+
+```bash
+export EXAMPLE_API_KEY=...
+uv run airllm-audit providers onboard example
+```
+
+Onboarding:
+
+1. Loads the source through automatic discovery
+2. Verifies its credential and model response before activating the provider
+3. Promotes a matching candidate when present
+4. Writes the typed provider definition and bootstrap seed
+5. Pulls models, pricing, schemas, parameter metadata, and icons
+6. Generates taxonomy and validates the catalog
+
+An existing provider requires `--replace`. Missing definitions, credentials, empty model
+responses, unrecognized envelopes, and source filter failures are reported as onboarding
+errors rather than empty provider catalogs.
+
+For an arbitrary provider, invoke the `provider-catalog` skill or read the
+`provider-onboarding` guide. The CLI deliberately does not perform open-ended web research
+or embed an LLM.
+
+## Synchronize models, prices, and schemas
+
+Synchronize every acquisition component for one provider:
+
+```bash
+uv run airllm-audit providers sync anthropic
+```
+
+Synchronize every active provider with available credentials:
+
+```bash
+uv run airllm-audit providers sync
+```
+
+Limit a run by repeating `--only`:
+
+```bash
+uv run airllm-audit providers sync anthropic --only models
+uv run airllm-audit providers sync anthropic --only pricing
+uv run airllm-audit providers sync anthropic --only schemas --only parameters
+uv run airllm-audit providers sync anthropic --only icons
+```
+
+Model and pricing synchronization reacquire the provider model catalog before enrichment.
+This keeps incremental synchronization equivalent to a clean rebuild and prevents stale
+secondary prices and limits from surviving indefinitely.
+
+The available components are `models`, `pricing`, `schemas`, `parameters`, and `icons`.
+Model and schema synchronization also refreshes parameter discovery because that evidence
+depends on both.
+
+The provider API remains authoritative. Missing pricing and limits are filled in this order:
+
+1. Provider model response
+2. Current official provider documentation, with its exact URL
+3. Provider-scoped `models.dev` catalog
+4. Cross-provider OpenRouter catalog
+5. Provider-declared aliases
+6. Unknown
+
+Provider values are never overwritten by secondary values. Context, maximum output, and
+pricing provenance are independent. A secondary price is useful routing metadata, not a
+billing guarantee.
+
+A scoped sync preserves the previous successful model catalog when authentication fails,
+the endpoint is unavailable, the response is empty, or its shape is unrecognized. The
+command reports the failed component and exits nonzero.
+
+## Clean rebuild and review
+
+Preserve the current directory and reconstruct every generated artifact from provider
+sources:
+
+```bash
+uv run airllm-audit taxonomy rebuild --preserve-as taxonomy_old
+uv run airllm-audit taxonomy diff taxonomy_old taxonomy --summary
+uv run airllm-audit taxonomy diff taxonomy_old taxonomy --format json
+```
+
+The diff includes provider fields, every imported model field, applied taxonomy models,
+schema hashes, and icon hashes. The rebuild fails rather than silently carrying an old
+catalog through an acquisition error.
+
+`taxonomy/reports/missing-metadata.json` is the explicit unknown-fact queue. It lists the
+missing fields for each model without turning absence into an unsupported verdict.
+
+## Add or correct one model
+
+Prefer provider synchronization when the listing contains the model:
+
+```bash
+uv run airllm-audit providers sync anthropic --only models
+```
+
+Add a source-backed model absent from the listing:
+
+```bash
+uv run airllm-audit models add anthropic claude-example \
+  --source https://docs.example.com/models/claude-example \
+  --context-window 200000 \
+  --max-output-tokens 8192
+```
+
+Both limits must be supplied together or omitted together. Correct an existing record with
+`--replace`. A later provider sync may remove a manual model that remains absent from the
+provider listing, so encode durable provider-specific behavior in its source module.
+
+## Evidence and generated taxonomy
+
+Live runs write JSON and HTML reports under `model-audit/reports/`. `evidence accept` is
+the deliberate promotion boundary. It accepts usable direct observations from completed raw
+HTTP runs, retains immutable observations, rejects SDK runs, and rebuilds generated taxonomy.
+
+The deterministic reducer applies these rules:
+
+- Confirmed direct success supports the exact claim profile
+- Explicit provider rejection makes that exact profile unsupported
+- Authentication, access, rate limits, timeouts, and generic errors remain unknown
+- Unknown evidence never overwrites conclusive evidence
+- Conflicting equally recent conclusive evidence resolves to unknown
+- Evidence stops affecting generated behavior when its case definition changes
+- Profile-specific rejection never downgrades an entire capability or option family
+- Gateway observations never change provider taxonomy
+
+`taxonomy build` writes `taxonomy/behavior.json` and `taxonomy/taxonomy.yml`. Cases live
+under `cases/` and declare exact claims, surface applicability, canonical requests, and
+semantic oracles. `cases coverage` fails for missing feature coverage, missing endpoint
+coverage, or unmapped canonical request fields.

@@ -1,0 +1,29 @@
+version: 2
+id: tools.strict
+title: Strict tool schema
+claims:
+- dimension: option
+  name: strict_tools
+  profile:
+    value: true
+request:
+  messages:
+  - role: user
+    content: Call report_result with value ok
+  max_tokens: 1024
+  tools:
+  - name: report_result
+    description: Report the requested result
+    strict: true
+    parameters:
+      type: object
+      properties:
+        value:
+          type: string
+      required: [value]
+      additionalProperties: false
+  tool_choice:
+    name: report_result
+oracle:
+  tool_names: [report_result]
+  tool_arguments_valid: true

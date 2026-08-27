@@ -2,7 +2,7 @@
   "provider": "xai",
   "source": "https://api.x.ai/v1/language-models",
   "source_type": "api",
-  "updated": "2026-08-17",
+  "updated": "2026-08-27",
   "count": 7,
   "models": [
     {
@@ -24,10 +24,9 @@
         "output_per_mtok": 2.5,
         "cached_input_per_mtok": 0.2
       },
-      "limits_source": "models.dev",
+      "context_source": "provider",
+      "max_output_source": "models.dev",
       "pricing_source": "provider",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -50,39 +49,6 @@
               "stop": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ],
-            "messages": [
-              "stop",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "seed": "supported",
-              "stop": "supported",
-              "parallel_tool_calls": "supported",
-              "logprobs": "supported"
-            },
-            "messages": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "stop": "supported"
-            }
-          }
         }
       },
       "aliases": [
@@ -95,12 +61,6 @@
         "grok-4.20-non-reasoning-gv2",
         "grok-4.20-non-reasoning-latest"
       ],
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        }
-      },
       "long_context_threshold": 200000,
       "owned_by": "xai",
       "version": "1.0"
@@ -124,10 +84,9 @@
         "output_per_mtok": 2.5,
         "cached_input_per_mtok": 0.2
       },
-      "limits_source": "models.dev",
+      "context_source": "provider",
+      "max_output_source": "models.dev",
       "pricing_source": "provider",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -150,39 +109,6 @@
               "stop": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ],
-            "messages": [
-              "stop",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "seed": "supported",
-              "stop": "unsupported",
-              "parallel_tool_calls": "supported",
-              "logprobs": "supported"
-            },
-            "messages": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "stop": "unsupported"
-            }
-          }
         }
       },
       "aliases": [
@@ -202,12 +128,6 @@
         "grok-4.20-reasoning-gv2",
         "grok-4.20-reasoning-latest"
       ],
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        }
-      },
       "long_context_threshold": 200000,
       "owned_by": "xai",
       "version": "1.0"
@@ -231,10 +151,9 @@
         "output_per_mtok": 2.5,
         "cached_input_per_mtok": 0.2
       },
-      "limits_source": "models.dev",
+      "context_source": "provider",
+      "max_output_source": "models.dev",
       "pricing_source": "provider",
-      "reachable": false,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -290,10 +209,9 @@
         "output_per_mtok": 2.5,
         "cached_input_per_mtok": 0.2
       },
-      "limits_source": "models.dev",
+      "context_source": "provider",
+      "max_output_source": "models.dev",
       "pricing_source": "provider",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -316,51 +234,11 @@
               "stop": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ],
-            "messages": [
-              "stop",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "seed": "supported",
-              "stop": "unsupported",
-              "reasoning_effort": "supported",
-              "parallel_tool_calls": "supported",
-              "logprobs": "supported"
-            },
-            "messages": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "stop": "unsupported"
-            }
-          }
         }
       },
       "aliases": [
         "grok-4.3-latest"
       ],
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        }
-      },
       "long_context_threshold": 200000,
       "owned_by": "xai",
       "version": "1.0"
@@ -384,10 +262,9 @@
         "output_per_mtok": 6.0,
         "cached_input_per_mtok": 0.3
       },
-      "limits_source": "models.dev",
+      "context_source": "provider",
+      "max_output_source": "models.dev",
       "pricing_source": "provider",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -410,52 +287,12 @@
               "stop": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ],
-            "messages": [
-              "stop",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "seed": "supported",
-              "stop": "unsupported",
-              "reasoning_effort": "supported",
-              "parallel_tool_calls": "supported",
-              "logprobs": "supported"
-            },
-            "messages": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "stop": "unsupported"
-            }
-          }
         }
       },
       "aliases": [
         "grok-4.5-latest",
         "grok-build-latest"
       ],
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        }
-      },
       "long_context_threshold": 200000,
       "owned_by": "xai",
       "version": "1.0"
@@ -479,10 +316,9 @@
         "output_per_mtok": 6.0,
         "cached_input_per_mtok": 0.5
       },
-      "limits_source": "models.dev",
+      "context_source": "provider",
+      "max_output_source": "models.dev",
       "pricing_source": "provider",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -505,46 +341,6 @@
               "stop": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ],
-            "messages": [
-              "stop",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "seed": "supported",
-              "stop": "unsupported",
-              "reasoning_effort": "supported",
-              "parallel_tool_calls": "supported",
-              "logprobs": "supported"
-            },
-            "messages": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "stop": "unsupported"
-            }
-          }
-        }
-      },
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
         }
       },
       "long_context_threshold": 200000,
@@ -570,10 +366,9 @@
         "output_per_mtok": 2.0,
         "cached_input_per_mtok": 0.2
       },
-      "limits_source": "models.dev",
+      "context_source": "provider",
+      "max_output_source": "models.dev",
       "pricing_source": "provider",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -596,39 +391,6 @@
               "stop": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ],
-            "messages": [
-              "stop",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "seed": "supported",
-              "stop": "unsupported",
-              "parallel_tool_calls": "supported",
-              "logprobs": "supported"
-            },
-            "messages": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "stop": "unsupported"
-            }
-          }
         }
       },
       "aliases": [
@@ -636,12 +398,6 @@
         "grok-code-fast-1",
         "grok-code-fast-1-0825"
       ],
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        }
-      },
       "long_context_threshold": 200000,
       "owned_by": "xai",
       "version": "1.0"

@@ -2,8 +2,8 @@
   "provider": "groq",
   "source": "https://api.groq.com/openai/v1/models",
   "source_type": "api",
-  "updated": "2026-08-17",
-  "count": 6,
+  "updated": "2026-08-27",
+  "count": 7,
   "models": [
     {
       "id": "allam-2-7b",
@@ -22,10 +22,9 @@
         "input_per_mtok": 0,
         "output_per_mtok": 0
       },
-      "limits_source": "provider",
-      "pricing_source": "provider",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "context_source": "provider",
+      "max_output_source": "provider",
+      "pricing_source": "models.dev",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -42,39 +41,9 @@
               "logprobs": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "seed": "supported",
-              "stop": "supported",
-              "reasoning_effort": "unsupported",
-              "parallel_tool_calls": "supported",
-              "logprobs": "unsupported"
-            }
-          }
         }
       },
       "display_name": "ALLaM-2-7b",
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        }
-      },
       "hugging_face_id": "ALLaM-AI/ALLaM-2.0-7B-Instruct"
     },
     {
@@ -91,9 +60,8 @@
       "supports_tools": false,
       "supports_structured_output": true,
       "pricing": null,
-      "limits_source": "provider",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "context_source": "provider",
+      "max_output_source": "provider",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -110,36 +78,9 @@
               "logprobs": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "reasoning_effort": "unsupported",
-              "logprobs": "unsupported"
-            }
-          }
         }
       },
       "display_name": "Compound",
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        }
-      },
       "hugging_face_id": "groq/compound-beta"
     },
     {
@@ -156,9 +97,8 @@
       "supports_tools": false,
       "supports_structured_output": true,
       "pricing": null,
-      "limits_source": "provider",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "context_source": "provider",
+      "max_output_source": "provider",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -175,36 +115,9 @@
               "logprobs": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "seed": "supported",
-              "reasoning_effort": "unsupported",
-              "logprobs": "unsupported",
-              "temperature": "supported"
-            }
-          }
         }
       },
       "display_name": "Compound Mini",
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        }
-      },
       "hugging_face_id": "groq/compound-beta-mini"
     },
     {
@@ -225,10 +138,9 @@
         "output_per_mtok": 0.6,
         "cached_input_per_mtok": 0.075
       },
-      "limits_source": "provider",
+      "context_source": "provider",
+      "max_output_source": "provider",
       "pricing_source": "provider",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -245,39 +157,9 @@
               "logprobs": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "seed": "supported",
-              "stop": "supported",
-              "reasoning_effort": "supported",
-              "parallel_tool_calls": "supported",
-              "logprobs": "unsupported"
-            }
-          }
         }
       },
       "display_name": "GPT OSS 120B",
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        }
-      },
       "hugging_face_id": "openai/gpt-oss-120b"
     },
     {
@@ -298,10 +180,9 @@
         "output_per_mtok": 0.3,
         "cached_input_per_mtok": 0.0375
       },
-      "limits_source": "provider",
+      "context_source": "provider",
+      "max_output_source": "provider",
       "pricing_source": "provider",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -318,39 +199,9 @@
               "logprobs": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "seed": "supported",
-              "stop": "supported",
-              "reasoning_effort": "supported",
-              "parallel_tool_calls": "supported",
-              "logprobs": "unsupported"
-            }
-          }
         }
       },
       "display_name": "GPT OSS 20B",
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        }
-      },
       "hugging_face_id": "openai/gpt-oss-20b"
     },
     {
@@ -372,10 +223,9 @@
         "output_per_mtok": 3.0,
         "cached_input_per_mtok": 0.3
       },
-      "limits_source": "provider",
+      "context_source": "provider",
+      "max_output_source": "provider",
       "pricing_source": "provider",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -392,39 +242,52 @@
               "logprobs": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ]
-          },
+        }
+      },
+      "display_name": "Qwen/Qwen3.6-27B",
+      "hugging_face_id": "Qwen/Qwen3.6-27B"
+    },
+    {
+      "id": "qwen/qwen3.8-27b",
+      "kind": "text",
+      "context_length": 131042,
+      "max_output_tokens": 16384,
+      "input_modalities": [
+        "text",
+        "image"
+      ],
+      "output_modalities": [
+        "text"
+      ],
+      "supports_tools": true,
+      "supports_structured_output": true,
+      "pricing": {
+        "input_per_mtok": 0.8,
+        "output_per_mtok": 4.0,
+        "cached_input_per_mtok": 0.4
+      },
+      "context_source": "provider",
+      "max_output_source": "provider",
+      "pricing_source": "provider",
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.groq.request.json"
+          ],
           "support": {
             "chat/completions": {
               "temperature": "supported",
               "top_p": "supported",
-              "seed": "supported",
               "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
               "parallel_tool_calls": "supported",
-              "logprobs": "unsupported"
+              "logprobs": "supported"
             }
           }
         }
       },
-      "display_name": "Qwen/Qwen3.6-27B",
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        }
-      },
-      "hugging_face_id": "Qwen/Qwen3.6-27B"
+      "display_name": "Qwen/Qwen3.8-27B"
     }
   ]
 }

@@ -1,0 +1,18 @@
+version: 2
+id: parameters.seed
+title: Seed is accepted
+claims:
+- dimension: option
+  name: seed
+  profile:
+    value: 1729
+applies_to:
+  endpoints: [chat/completions]
+request:
+  messages:
+  - role: user
+    content: Reply with ok
+  max_tokens: 1024
+  seed: 1729
+oracle:
+  text_nonempty: true

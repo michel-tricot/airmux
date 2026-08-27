@@ -4,7 +4,7 @@ version = "0.1.0"
 requires-python = ">=3.13"
 
 [tool.uv.workspace]
-members = ["lib/api-models", "lib/contract", "apps/*", "tests/*"]
+members = ["lib/api-models", "lib/contract", "apps/*", "model-audit", "tests/*"]
 exclude = ["apps/console"]
 
 [tool.uv.sources]
@@ -26,14 +26,14 @@ dev = [
 ]
 
 [tool.pytest.ini_options]
-testpaths = ["lib/contract/tests", "apps/control-plane/tests", "apps/data-plane/tests", "apps/cli/tests"]
+testpaths = ["lib/contract/tests", "apps/control-plane/tests", "apps/data-plane/tests", "apps/cli/tests", "model-audit/tests"]
 asyncio_mode = "auto"
 
 [tool.ruff]
 line-length = 150
 target-version = "py313"
-extend-exclude = [".agents", ".claude"]
-src = ["lib/api-models/src", "lib/contract/src", "apps/control-plane/src", "apps/data-plane/src", "apps/cli/src"]
+extend-exclude = [".agents", ".claude", "model-audit/catalog/scripts"]
+src = ["lib/api-models/src", "lib/contract/src", "apps/control-plane/src", "apps/data-plane/src", "apps/cli/src", "model-audit/src"]
 
 [tool.ruff.format]
 docstring-code-format = true
@@ -95,7 +95,7 @@ ignore = [
 max-complexity = 10
 
 [tool.ruff.lint.isort]
-known-first-party = ["api_models", "contract", "control_plane", "data_plane"]
+known-first-party = ["api_models", "contract", "control_plane", "data_plane", "model_audit"]
 required-imports = ["from __future__ import annotations"]
 
 [tool.ruff.lint.flake8-annotations]
@@ -111,7 +111,7 @@ runtime-evaluated-base-classes = [
 ]
 
 [tool.ty.src]
-exclude = [".agents", ".claude", "**/migrations/versions", "examples/anthropic_sdk.py"]
+exclude = [".agents", ".claude", "model-audit/catalog/scripts", "**/migrations/versions", "examples/anthropic_sdk.py"]
 
 [tool.ty.environment]
 python-version = "3.13"

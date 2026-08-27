@@ -1,0 +1,16 @@
+version: 2
+id: streaming.text
+title: Text response streams successfully
+claims:
+- dimension: capability
+  name: streaming
+  profile:
+    content: text
+transports: [streamed]
+request:
+  messages:
+  - role: user
+    content: Reply with ok
+  max_tokens: 1024
+oracle:
+  text_nonempty: true

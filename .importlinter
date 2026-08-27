@@ -3,6 +3,7 @@ root_packages =
     contract
     control_plane
     data_plane
+    model_audit
 include_external_packages = True
 
 [importlinter:contract:data-plane-isolation]
@@ -20,3 +21,12 @@ forbidden_modules =
     fastapi
 ignore_imports =
     contract.secrets.insecure_database -> asyncpg
+
+[importlinter:contract:model-audit-is-black-box]
+name = model audit reaches the gateway through public HTTP only
+type = forbidden
+source_modules =
+    model_audit
+forbidden_modules =
+    control_plane
+    data_plane

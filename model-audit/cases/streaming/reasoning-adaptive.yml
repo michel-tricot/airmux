@@ -1,0 +1,23 @@
+version: 2
+id: streaming.reasoning-adaptive
+title: Adaptive reasoning streams successfully
+claims:
+- dimension: interaction
+  name: streaming+reasoning
+  profile:
+    reasoning: adaptive
+    effort: low
+applies_to:
+  endpoints: [messages]
+transports: [streamed]
+request:
+  messages:
+  - role: user
+    content: Reason briefly and answer what is 20 plus 22
+  max_tokens: 1100
+  reasoning:
+    type: adaptive
+    effort: low
+oracle:
+  reasoning_present: true
+  text_contains: "42"

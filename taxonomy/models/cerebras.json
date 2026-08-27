@@ -2,7 +2,7 @@
   "provider": "cerebras",
   "source": "https://api.cerebras.ai/public/v1/models",
   "source_type": "api",
-  "updated": "2026-08-17",
+  "updated": "2026-08-27",
   "count": 2,
   "models": [
     {
@@ -23,10 +23,9 @@
         "input_per_mtok": 0.99,
         "output_per_mtok": 1.49
       },
-      "limits_source": "provider",
+      "context_source": "provider",
+      "max_output_source": "provider",
       "pricing_source": "provider",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -43,39 +42,9 @@
               "logprobs": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "seed": "supported",
-              "stop": "supported",
-              "reasoning_effort": "supported",
-              "parallel_tool_calls": "supported",
-              "logprobs": "supported"
-            }
-          }
         }
       },
       "display_name": "Gemma 4 31B",
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        }
-      },
       "hugging_face_id": "google/gemma-4-31B",
       "supported_parameters": [
         "frequency_penalty",
@@ -105,10 +74,9 @@
         "input_per_mtok": 0.35,
         "output_per_mtok": 0.75
       },
-      "limits_source": "provider",
+      "context_source": "provider",
+      "max_output_source": "provider",
       "pricing_source": "provider",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -125,39 +93,9 @@
               "logprobs": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "seed": "supported",
-              "stop": "supported",
-              "reasoning_effort": "supported",
-              "parallel_tool_calls": "supported",
-              "logprobs": "supported"
-            }
-          }
         }
       },
       "display_name": "OpenAI GPT OSS",
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        }
-      },
       "hugging_face_id": "openai/gpt-oss-120b",
       "quantization": "FP16/8 (weights only)",
       "supported_parameters": [

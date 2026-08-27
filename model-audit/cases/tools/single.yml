@@ -1,0 +1,29 @@
+version: 2
+id: tools.single
+title: One required tool call
+claims:
+- dimension: capability
+  name: tool_calling
+- dimension: option
+  name: tool_choice
+  profile:
+    mode: required
+request:
+  messages:
+  - role: user
+    content: Call report_result with value ok and do not answer with text
+  tools:
+  - name: report_result
+    description: Report the requested result
+    parameters:
+      type: object
+      properties:
+        value:
+          type: string
+      required: [value]
+      additionalProperties: false
+  tool_choice: required
+oracle:
+  assistant_text: forbidden
+  tool_names: [report_result]
+  tool_arguments_valid: true

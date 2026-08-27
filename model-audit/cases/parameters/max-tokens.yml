@@ -1,0 +1,15 @@
+version: 2
+id: parameters.max-tokens
+title: Output token limit is accepted
+claims:
+- dimension: option
+  name: max_tokens
+  profile:
+    value: 8
+request:
+  messages:
+  - role: user
+    content: Reply with ok
+  max_tokens: 8
+oracle:
+  usage_present: true

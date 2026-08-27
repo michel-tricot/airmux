@@ -1,0 +1,37 @@
+version: 2
+id: tools.result-round-trip
+title: Continue after a tool result
+claims:
+- dimension: interaction
+  name: tool_result_round_trip
+request:
+  messages:
+  - role: user
+    content: Look up the code word
+  - role: assistant
+    content:
+    - type: tool_call
+      id: call_audit_1
+      name: lookup_code
+      arguments:
+        topic: code
+  - role: user
+    content:
+    - type: tool_result
+      tool_call_id: call_audit_1
+      content: cobalt
+  - role: user
+    content: Reply with the code word
+  max_tokens: 1024
+  tools:
+  - name: lookup_code
+    description: Look up the code word
+    parameters:
+      type: object
+      properties:
+        topic:
+          type: string
+      required: [topic]
+      additionalProperties: false
+oracle:
+  text_contains: cobalt

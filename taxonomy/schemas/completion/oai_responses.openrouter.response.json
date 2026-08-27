@@ -639,7 +639,13 @@
                     "$ref": "#/$defs/components_schemas_FunctionTool"
                   },
                   {
-                    "properties": {},
+                    "properties": {
+                      "defer_loading": {
+                        "description": "Withhold this tool from the model until `openrouter:tool_search` finds it. Requires the tool search server tool; at least one tool must remain non-deferred.",
+                        "example": true,
+                        "type": "boolean"
+                      }
+                    },
                     "type": "object"
                   }
                 ],
@@ -1164,6 +1170,17 @@
         "available"
       ],
       "type": "object"
+    },
+    "components_schemas_FailableToolCallStatus": {
+      "enum": [
+        "in_progress",
+        "completed",
+        "incomplete",
+        "failed"
+      ],
+      "example": "completed",
+      "type": "string",
+      "x-speakeasy-unknown-values": "allow"
     },
     "components_schemas_FileCitation": {
       "example": {
@@ -2903,7 +2920,7 @@
           "type": "string"
         },
         "error": {
-          "description": "Error message when the advisor call did not produce advice.",
+          "description": "Error message when the advisor call did not produce advice. Set together with `status: 'failed'` on the terminal item.",
           "type": "string"
         },
         "id": {
@@ -2923,7 +2940,7 @@
           "type": "string"
         },
         "status": {
-          "$ref": "#/$defs/components_schemas_ToolCallStatus"
+          "$ref": "#/$defs/components_schemas_FailableToolCallStatus"
         },
         "type": {
           "enum": [
@@ -3047,8 +3064,50 @@
         "command": {
           "type": "string"
         },
+        "container_id": {
+          "description": "The canonical container id the command ran under — the `{container_id}` for the Container Files API, reusable as a `container_reference` in later requests. Present on every sandbox-executed call, even when no files changed.",
+          "type": "string"
+        },
         "exitCode": {
           "type": "integer"
+        },
+        "files": {
+          "description": "Citations for the files the sandbox command created or modified, most-recently-touched first (at most 10). Retrieve them via the Container Files API.",
+          "items": {
+            "properties": {
+              "container_id": {
+                "type": "string"
+              },
+              "end_index": {
+                "type": "integer"
+              },
+              "file_id": {
+                "type": "string"
+              },
+              "filename": {
+                "type": "string"
+              },
+              "start_index": {
+                "type": "integer"
+              },
+              "type": {
+                "enum": [
+                  "container_file_citation"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "type",
+              "container_id",
+              "file_id",
+              "filename",
+              "start_index",
+              "end_index"
+            ],
+            "type": "object"
+          },
+          "type": "array"
         },
         "id": {
           "type": "string"
@@ -4668,6 +4727,48 @@
         "call_id": {
           "type": "string"
         },
+        "container_id": {
+          "description": "The canonical container id the command ran under — the `{container_id}` for the Container Files API, reusable as a `container_reference` in later requests. Present on every sandbox-executed call, even when no files changed.",
+          "type": "string"
+        },
+        "files": {
+          "description": "Citations for the files the sandbox command created or modified, most-recently-touched first (at most 10). Retrieve them via the Container Files API.",
+          "items": {
+            "properties": {
+              "container_id": {
+                "type": "string"
+              },
+              "end_index": {
+                "type": "integer"
+              },
+              "file_id": {
+                "type": "string"
+              },
+              "filename": {
+                "type": "string"
+              },
+              "start_index": {
+                "type": "integer"
+              },
+              "type": {
+                "enum": [
+                  "container_file_citation"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "type",
+              "container_id",
+              "file_id",
+              "filename",
+              "start_index",
+              "end_index"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
         "id": {
           "type": "string"
         },
@@ -4768,6 +4869,48 @@
             "null"
           ]
         },
+        "container_id": {
+          "description": "The canonical container id the command ran under — the `{container_id}` for the Container Files API, reusable as a `container_reference` in later requests. Present on every sandbox-executed call, even when no files changed.",
+          "type": "string"
+        },
+        "files": {
+          "description": "Citations for the files the sandbox command created or modified, most-recently-touched first (at most 10). Retrieve them via the Container Files API.",
+          "items": {
+            "properties": {
+              "container_id": {
+                "type": "string"
+              },
+              "end_index": {
+                "type": "integer"
+              },
+              "file_id": {
+                "type": "string"
+              },
+              "filename": {
+                "type": "string"
+              },
+              "start_index": {
+                "type": "integer"
+              },
+              "type": {
+                "enum": [
+                  "container_file_citation"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "type",
+              "container_id",
+              "file_id",
+              "filename",
+              "start_index",
+              "end_index"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
         "id": {
           "type": "string"
         },
@@ -4806,7 +4949,7 @@
           "type": "string"
         },
         "error": {
-          "description": "Error message when the subagent task did not produce an outcome.",
+          "description": "Error message when the subagent task did not produce an outcome. Set together with `status: 'failed'` on the terminal item.",
           "type": "string"
         },
         "id": {
@@ -4831,7 +4974,7 @@
           "type": "string"
         },
         "status": {
-          "$ref": "#/$defs/components_schemas_ToolCallStatus"
+          "$ref": "#/$defs/components_schemas_FailableToolCallStatus"
         },
         "task_description": {
           "description": "The task description the delegating model sent to the worker.",
@@ -5348,6 +5491,7 @@
         "openai-responses-v1",
         "azure-openai-responses-v1",
         "bedrock-openai-responses-v1",
+        "bedrock-xai-responses-v1",
         "xai-responses-v1",
         "meta-responses-v1",
         "anthropic-claude-v1",
@@ -6035,6 +6179,14 @@
                 },
                 "cost_details": {
                   "properties": {
+                    "server_tool_cost": {
+                      "description": "Metered server-tool execution cost (for example, shell sandbox time) billed for this request, in USD. Matches the billed checkpoint and settlement amounts exactly.",
+                      "format": "double",
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
                     "upstream_inference_cost": {
                       "format": "double",
                       "type": [
@@ -6077,6 +6229,7 @@
       "example": {
         "cost": 0.0012,
         "cost_details": {
+          "server_tool_cost": null,
           "upstream_inference_cost": null,
           "upstream_inference_input_cost": 0.0008,
           "upstream_inference_output_cost": 0.0004

@@ -1,0 +1,13 @@
+version: 2
+id: text.usage
+title: Token usage is returned
+claims:
+- dimension: capability
+  name: usage
+request:
+  messages:
+  - role: user
+    content: Reply with ok
+  max_tokens: 32
+oracle:
+  usage_present: true

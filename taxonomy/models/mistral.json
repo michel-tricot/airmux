@@ -2,14 +2,14 @@
   "provider": "mistral",
   "source": "https://api.mistral.ai/v1/models",
   "source_type": "api",
-  "updated": "2026-08-17",
-  "count": 36,
+  "updated": "2026-08-27",
+  "count": 37,
   "models": [
     {
       "id": "codestral-2508",
       "kind": "text",
       "context_length": 256000,
-      "max_output_tokens": null,
+      "max_output_tokens": 204800,
       "input_modalities": [
         "text"
       ],
@@ -22,9 +22,9 @@
         "input_per_mtok": 0.3,
         "output_per_mtok": 0.9
       },
-      "pricing_source": "openrouter-index",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "context_source": "provider",
+      "max_output_source": "openrouter-index",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -39,27 +39,6 @@
               "parallel_tool_calls": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "stop": "supported",
-              "parallel_tool_calls": "supported"
-            }
-          }
         }
       },
       "aliases": [
@@ -69,12 +48,7 @@
       ],
       "default_temperature": 0.3,
       "display_name": "codestral-2508",
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        }
-      }
+      "documentation_url": "https://docs.mistral.ai/models/codestral-25-08"
     },
     {
       "id": "codestral-latest",
@@ -93,10 +67,9 @@
         "input_per_mtok": 0.3,
         "output_per_mtok": 0.9
       },
-      "limits_source": "models.dev",
-      "pricing_source": "models.dev",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "context_source": "provider",
+      "max_output_source": "models.dev",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -111,27 +84,6 @@
               "parallel_tool_calls": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "stop": "supported",
-              "parallel_tool_calls": "supported"
-            }
-          }
         }
       },
       "aliases": [
@@ -141,12 +93,7 @@
       ],
       "default_temperature": 0.3,
       "display_name": "codestral-2508",
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        }
-      }
+      "documentation_url": "https://docs.mistral.ai/models/codestral-25-08"
     },
     {
       "id": "devstral-2512",
@@ -165,10 +112,9 @@
         "input_per_mtok": 0.4,
         "output_per_mtok": 2
       },
-      "limits_source": "models.dev",
+      "context_source": "provider",
+      "max_output_source": "models.dev",
       "pricing_source": "models.dev",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -183,27 +129,6 @@
               "parallel_tool_calls": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "stop": "supported",
-              "parallel_tool_calls": "supported"
-            }
-          }
         }
       },
       "aliases": [
@@ -215,12 +140,7 @@
       "deprecation_date": "2026-08-31T12:00:00Z",
       "deprecation_replacement": "mistral-medium-3-5",
       "display_name": "devstral-2512",
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        }
-      }
+      "documentation_url": "https://docs.mistral.ai/models/devstral-2-25-12"
     },
     {
       "id": "devstral-latest",
@@ -239,10 +159,9 @@
         "input_per_mtok": 0.4,
         "output_per_mtok": 2
       },
-      "limits_source": "models.dev",
+      "context_source": "provider",
+      "max_output_source": "models.dev",
       "pricing_source": "models.dev",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -257,27 +176,6 @@
               "parallel_tool_calls": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "stop": "supported",
-              "parallel_tool_calls": "supported"
-            }
-          }
         }
       },
       "aliases": [
@@ -289,12 +187,7 @@
       "deprecation_date": "2026-08-31T12:00:00Z",
       "deprecation_replacement": "mistral-medium-3-5",
       "display_name": "devstral-2512",
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        }
-      }
+      "documentation_url": "https://docs.mistral.ai/models/devstral-2-25-12"
     },
     {
       "id": "devstral-medium-latest",
@@ -313,10 +206,9 @@
         "input_per_mtok": 0.4,
         "output_per_mtok": 2
       },
-      "limits_source": "models.dev",
+      "context_source": "provider",
+      "max_output_source": "models.dev",
       "pricing_source": "models.dev",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -328,27 +220,6 @@
               "top_p": "supported",
               "stop": "supported",
               "reasoning_effort": "supported",
-              "parallel_tool_calls": "supported"
-            }
-          }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "stop": "supported",
               "parallel_tool_calls": "supported"
             }
           }
@@ -363,18 +234,13 @@
       "deprecation_date": "2026-08-31T12:00:00Z",
       "deprecation_replacement": "mistral-medium-3-5",
       "display_name": "devstral-2512",
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        }
-      }
+      "documentation_url": "https://docs.mistral.ai/models/devstral-2-25-12"
     },
     {
       "id": "glm-5-2",
       "kind": "text",
       "context_length": 1048576,
-      "max_output_tokens": null,
+      "max_output_tokens": 131072,
       "input_modalities": [
         "text"
       ],
@@ -383,9 +249,14 @@
       ],
       "supports_tools": true,
       "supports_structured_output": null,
-      "pricing": null,
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "pricing": {
+        "input_per_mtok": 1.4,
+        "cached_input_per_mtok": 0.14,
+        "output_per_mtok": 4.4
+      },
+      "context_source": "provider",
+      "max_output_source": "alias:zai-glm-5-2",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -400,41 +271,13 @@
               "parallel_tool_calls": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "stop": "supported",
-              "reasoning_effort": "supported",
-              "parallel_tool_calls": "supported",
-              "logprobs": "supported"
-            }
-          }
         }
       },
       "aliases": [
         "zai-glm-5-2"
       ],
       "display_name": "glm-5-2",
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        }
-      }
+      "documentation_url": "https://docs.mistral.ai/models/zai-glm-5-2"
     },
     {
       "id": "labs-leanstral-1-5",
@@ -450,9 +293,12 @@
       ],
       "supports_tools": true,
       "supports_structured_output": null,
-      "pricing": null,
-      "reachable": false,
-      "reachable_checked": "2026-08-17",
+      "pricing": {
+        "input_per_mtok": 0.0,
+        "output_per_mtok": 0.0
+      },
+      "context_source": "provider",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -473,7 +319,8 @@
         "labs-leanstral-1-5-1"
       ],
       "default_temperature": 1.0,
-      "display_name": "labs-leanstral-1-5-1"
+      "display_name": "labs-leanstral-1-5-1",
+      "documentation_url": "https://docs.mistral.ai/models/leanstral-1-5"
     },
     {
       "id": "labs-leanstral-1-5-1",
@@ -489,9 +336,12 @@
       ],
       "supports_tools": true,
       "supports_structured_output": null,
-      "pricing": null,
-      "reachable": false,
-      "reachable_checked": "2026-08-17",
+      "pricing": {
+        "input_per_mtok": 0.0,
+        "output_per_mtok": 0.0
+      },
+      "context_source": "provider",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -512,7 +362,59 @@
         "labs-leanstral-1-5"
       ],
       "default_temperature": 1.0,
-      "display_name": "labs-leanstral-1-5-1"
+      "display_name": "labs-leanstral-1-5-1",
+      "documentation_url": "https://docs.mistral.ai/models/leanstral-1-5"
+    },
+    {
+      "id": "magistral-medium-latest",
+      "kind": "text",
+      "context_length": 262144,
+      "max_output_tokens": 16384,
+      "input_modalities": [
+        "text",
+        "image"
+      ],
+      "output_modalities": [
+        "text"
+      ],
+      "supports_tools": true,
+      "supports_structured_output": null,
+      "pricing": {
+        "input_per_mtok": 1.5,
+        "output_per_mtok": 7.5
+      },
+      "context_source": "provider",
+      "max_output_source": "models.dev",
+      "pricing_source": "vendor-docs",
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.mistral.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        }
+      },
+      "aliases": [
+        "mistral-medium",
+        "mistral-medium-2604",
+        "mistral-medium-3",
+        "mistral-medium-3-5",
+        "mistral-medium-3.5",
+        "mistral-medium-latest",
+        "mistral-vibe-cli-latest",
+        "mistral-vibe-cli-with-tools"
+      ],
+      "default_temperature": 1.0,
+      "display_name": "mistral-medium-latest",
+      "documentation_url": "https://docs.mistral.ai/models/mistral-medium-3-5-26-04"
     },
     {
       "id": "magistral-small-latest",
@@ -532,10 +434,9 @@
         "input_per_mtok": 0.15,
         "output_per_mtok": 0.6
       },
-      "limits_source": "alias:mistral-small-2603",
-      "pricing_source": "alias:mistral-small-2603",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "context_source": "provider",
+      "max_output_source": "alias:mistral-small-2603",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -547,28 +448,6 @@
               "top_p": "supported",
               "stop": "supported",
               "reasoning_effort": "supported",
-              "parallel_tool_calls": "supported"
-            }
-          }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "stop": "supported",
-              "reasoning_effort": "unsupported",
               "parallel_tool_calls": "supported"
             }
           }
@@ -581,18 +460,13 @@
       ],
       "default_temperature": 0.3,
       "display_name": "mistral-small-2603",
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        }
-      }
+      "documentation_url": "https://docs.mistral.ai/models/mistral-small-4-0-26-03"
     },
     {
       "id": "ministral-14b-2512",
       "kind": "text",
       "context_length": 262144,
-      "max_output_tokens": null,
+      "max_output_tokens": 209715,
       "input_modalities": [
         "text",
         "image"
@@ -606,9 +480,9 @@
         "input_per_mtok": 0.2,
         "output_per_mtok": 0.2
       },
-      "pricing_source": "openrouter-index",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "context_source": "provider",
+      "max_output_source": "openrouter-index",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -620,27 +494,6 @@
               "top_p": "supported",
               "stop": "supported",
               "reasoning_effort": "supported",
-              "parallel_tool_calls": "supported"
-            }
-          }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "stop": "supported",
               "parallel_tool_calls": "supported"
             }
           }
@@ -651,18 +504,13 @@
       ],
       "default_temperature": 0.3,
       "display_name": "ministral-14b-2512",
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        }
-      }
+      "documentation_url": "https://docs.mistral.ai/models/ministral-3-14b-25-12"
     },
     {
       "id": "ministral-14b-latest",
       "kind": "text",
       "context_length": 262144,
-      "max_output_tokens": null,
+      "max_output_tokens": 209715,
       "input_modalities": [
         "text",
         "image"
@@ -676,9 +524,9 @@
         "input_per_mtok": 0.2,
         "output_per_mtok": 0.2
       },
-      "pricing_source": "alias:ministral-14b-2512",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "context_source": "provider",
+      "max_output_source": "alias:ministral-14b-2512",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -693,27 +541,6 @@
               "parallel_tool_calls": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "stop": "supported",
-              "parallel_tool_calls": "supported"
-            }
-          }
         }
       },
       "aliases": [
@@ -721,18 +548,13 @@
       ],
       "default_temperature": 0.3,
       "display_name": "ministral-14b-2512",
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        }
-      }
+      "documentation_url": "https://docs.mistral.ai/models/ministral-3-14b-25-12"
     },
     {
       "id": "ministral-3b-2512",
       "kind": "text",
       "context_length": 131072,
-      "max_output_tokens": null,
+      "max_output_tokens": 104857,
       "input_modalities": [
         "text",
         "image"
@@ -746,9 +568,9 @@
         "input_per_mtok": 0.1,
         "output_per_mtok": 0.1
       },
-      "pricing_source": "openrouter-index",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "context_source": "provider",
+      "max_output_source": "openrouter-index",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -763,27 +585,6 @@
               "parallel_tool_calls": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "stop": "supported",
-              "parallel_tool_calls": "supported"
-            }
-          }
         }
       },
       "aliases": [
@@ -791,12 +592,7 @@
       ],
       "default_temperature": 0.3,
       "display_name": "ministral-3b-2512",
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        }
-      }
+      "documentation_url": "https://docs.mistral.ai/models/ministral-3-3b-25-12"
     },
     {
       "id": "ministral-3b-latest",
@@ -813,13 +609,12 @@
       "supports_tools": true,
       "supports_structured_output": null,
       "pricing": {
-        "input_per_mtok": 0.04,
-        "output_per_mtok": 0.04
+        "input_per_mtok": 0.1,
+        "output_per_mtok": 0.1
       },
-      "limits_source": "models.dev",
-      "pricing_source": "models.dev",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "context_source": "provider",
+      "max_output_source": "models.dev",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -834,27 +629,6 @@
               "parallel_tool_calls": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "stop": "supported",
-              "parallel_tool_calls": "supported"
-            }
-          }
         }
       },
       "aliases": [
@@ -862,18 +636,13 @@
       ],
       "default_temperature": 0.3,
       "display_name": "ministral-3b-2512",
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        }
-      }
+      "documentation_url": "https://docs.mistral.ai/models/ministral-3-3b-25-12"
     },
     {
       "id": "ministral-8b-2512",
       "kind": "text",
       "context_length": 262144,
-      "max_output_tokens": null,
+      "max_output_tokens": 209715,
       "input_modalities": [
         "text",
         "image"
@@ -887,9 +656,9 @@
         "input_per_mtok": 0.15,
         "output_per_mtok": 0.15
       },
-      "pricing_source": "openrouter-index",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "context_source": "provider",
+      "max_output_source": "openrouter-index",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -904,27 +673,6 @@
               "parallel_tool_calls": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "stop": "supported",
-              "parallel_tool_calls": "supported"
-            }
-          }
         }
       },
       "aliases": [
@@ -932,12 +680,7 @@
       ],
       "default_temperature": 0.3,
       "display_name": "ministral-8b-2512",
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        }
-      }
+      "documentation_url": "https://docs.mistral.ai/models/ministral-3-8b-25-12"
     },
     {
       "id": "ministral-8b-latest",
@@ -954,13 +697,12 @@
       "supports_tools": true,
       "supports_structured_output": null,
       "pricing": {
-        "input_per_mtok": 0.1,
-        "output_per_mtok": 0.1
+        "input_per_mtok": 0.15,
+        "output_per_mtok": 0.15
       },
-      "limits_source": "models.dev",
-      "pricing_source": "models.dev",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "context_source": "provider",
+      "max_output_source": "models.dev",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -975,27 +717,6 @@
               "parallel_tool_calls": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "stop": "supported",
-              "parallel_tool_calls": "supported"
-            }
-          }
         }
       },
       "aliases": [
@@ -1003,12 +724,7 @@
       ],
       "default_temperature": 0.3,
       "display_name": "ministral-8b-2512",
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        }
-      }
+      "documentation_url": "https://docs.mistral.ai/models/ministral-3-8b-25-12"
     },
     {
       "id": "mistral-code-agent-latest",
@@ -1027,10 +743,9 @@
         "input_per_mtok": 0.4,
         "output_per_mtok": 2
       },
-      "limits_source": "alias:devstral-2512",
+      "context_source": "provider",
+      "max_output_source": "alias:devstral-2512",
       "pricing_source": "alias:devstral-2512",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -1042,27 +757,6 @@
               "top_p": "supported",
               "stop": "supported",
               "reasoning_effort": "supported",
-              "parallel_tool_calls": "supported"
-            }
-          }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "stop": "supported",
               "parallel_tool_calls": "supported"
             }
           }
@@ -1077,18 +771,13 @@
       "deprecation_date": "2026-08-31T12:00:00Z",
       "deprecation_replacement": "mistral-medium-3-5",
       "display_name": "devstral-2512",
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        }
-      }
+      "documentation_url": "https://docs.mistral.ai/models/devstral-2-25-12"
     },
     {
       "id": "mistral-code-fim-latest",
       "kind": "text",
       "context_length": 256000,
-      "max_output_tokens": null,
+      "max_output_tokens": 204800,
       "input_modalities": [
         "text"
       ],
@@ -1101,9 +790,9 @@
         "input_per_mtok": 0.3,
         "output_per_mtok": 0.9
       },
-      "pricing_source": "alias:codestral-2508",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "context_source": "provider",
+      "max_output_source": "alias:codestral-2508",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -1115,27 +804,6 @@
               "top_p": "supported",
               "stop": "supported",
               "reasoning_effort": "supported",
-              "parallel_tool_calls": "supported"
-            }
-          }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "stop": "supported",
               "parallel_tool_calls": "supported"
             }
           }
@@ -1148,18 +816,13 @@
       ],
       "default_temperature": 0.3,
       "display_name": "codestral-2508",
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        }
-      }
+      "documentation_url": "https://docs.mistral.ai/models/codestral-25-08"
     },
     {
       "id": "mistral-code-latest",
       "kind": "text",
       "context_length": 256000,
-      "max_output_tokens": null,
+      "max_output_tokens": 204800,
       "input_modalities": [
         "text"
       ],
@@ -1172,9 +835,9 @@
         "input_per_mtok": 0.3,
         "output_per_mtok": 0.9
       },
-      "pricing_source": "alias:codestral-2508",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "context_source": "provider",
+      "max_output_source": "alias:codestral-2508",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -1189,27 +852,6 @@
               "parallel_tool_calls": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "stop": "supported",
-              "parallel_tool_calls": "supported"
-            }
-          }
         }
       },
       "aliases": [
@@ -1219,12 +861,7 @@
       ],
       "default_temperature": 0.3,
       "display_name": "codestral-2508",
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        }
-      }
+      "documentation_url": "https://docs.mistral.ai/models/codestral-25-08"
     },
     {
       "id": "mistral-large-2512",
@@ -1244,10 +881,9 @@
         "input_per_mtok": 0.5,
         "output_per_mtok": 1.5
       },
-      "limits_source": "models.dev",
-      "pricing_source": "models.dev",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "context_source": "provider",
+      "max_output_source": "models.dev",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -1262,27 +898,6 @@
               "parallel_tool_calls": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "stop": "supported",
-              "parallel_tool_calls": "supported"
-            }
-          }
         }
       },
       "aliases": [
@@ -1290,12 +905,7 @@
       ],
       "default_temperature": 0.3,
       "display_name": "mistral-large-2512",
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        }
-      }
+      "documentation_url": "https://docs.mistral.ai/models/mistral-large-3-25-12"
     },
     {
       "id": "mistral-large-latest",
@@ -1315,10 +925,9 @@
         "input_per_mtok": 0.5,
         "output_per_mtok": 1.5
       },
-      "limits_source": "models.dev",
-      "pricing_source": "models.dev",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "context_source": "provider",
+      "max_output_source": "models.dev",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -1333,27 +942,6 @@
               "parallel_tool_calls": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "stop": "supported",
-              "parallel_tool_calls": "supported"
-            }
-          }
         }
       },
       "aliases": [
@@ -1361,18 +949,13 @@
       ],
       "default_temperature": 0.3,
       "display_name": "mistral-large-2512",
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        }
-      }
+      "documentation_url": "https://docs.mistral.ai/models/mistral-large-3-25-12"
     },
     {
       "id": "mistral-medium",
       "kind": "text",
       "context_length": 262144,
-      "max_output_tokens": 262144,
+      "max_output_tokens": 16384,
       "input_modalities": [
         "text",
         "image"
@@ -1386,10 +969,9 @@
         "input_per_mtok": 1.5,
         "output_per_mtok": 7.5
       },
-      "limits_source": "alias:mistral-medium-2604",
-      "pricing_source": "alias:mistral-medium-2604",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "context_source": "provider",
+      "max_output_source": "alias:magistral-medium-latest",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -1404,31 +986,10 @@
               "parallel_tool_calls": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "stop": "supported",
-              "reasoning_effort": "unsupported",
-              "parallel_tool_calls": "supported"
-            }
-          }
         }
       },
       "aliases": [
+        "magistral-medium-latest",
         "mistral-medium-2604",
         "mistral-medium-3",
         "mistral-medium-3-5",
@@ -1439,12 +1000,7 @@
       ],
       "default_temperature": 1.0,
       "display_name": "mistral-medium-latest",
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        }
-      }
+      "documentation_url": "https://docs.mistral.ai/models/mistral-medium-3-5-26-04"
     },
     {
       "id": "mistral-medium-2505",
@@ -1464,10 +1020,9 @@
         "input_per_mtok": 0.4,
         "output_per_mtok": 2
       },
-      "limits_source": "models.dev",
+      "context_source": "provider",
+      "max_output_source": "models.dev",
       "pricing_source": "models.dev",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -1482,39 +1037,13 @@
               "parallel_tool_calls": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "stop": "supported",
-              "parallel_tool_calls": "supported"
-            }
-          }
         }
       },
       "default_temperature": 0.3,
       "deprecation_date": "2026-08-31T12:00:00Z",
       "deprecation_replacement": "mistral-medium-3-5",
       "display_name": "mistral-medium-2505",
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        }
-      }
+      "documentation_url": "https://docs.mistral.ai/models/mistral-medium-3-25-05"
     },
     {
       "id": "mistral-medium-2508",
@@ -1534,10 +1063,9 @@
         "input_per_mtok": 0.4,
         "output_per_mtok": 2
       },
-      "limits_source": "models.dev",
+      "context_source": "provider",
+      "max_output_source": "models.dev",
       "pricing_source": "models.dev",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -1552,39 +1080,13 @@
               "parallel_tool_calls": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "stop": "supported",
-              "parallel_tool_calls": "supported"
-            }
-          }
         }
       },
       "default_temperature": 0.3,
       "deprecation_date": "2026-08-31T12:00:00Z",
       "deprecation_replacement": "mistral-medium-3-5",
       "display_name": "mistral-medium-2508",
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        }
-      }
+      "documentation_url": "https://docs.mistral.ai/models/mistral-medium-3-1-25-08"
     },
     {
       "id": "mistral-medium-2604",
@@ -1604,10 +1106,9 @@
         "input_per_mtok": 1.5,
         "output_per_mtok": 7.5
       },
-      "limits_source": "models.dev",
-      "pricing_source": "models.dev",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "context_source": "provider",
+      "max_output_source": "models.dev",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -1622,31 +1123,10 @@
               "parallel_tool_calls": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "stop": "supported",
-              "reasoning_effort": "unsupported",
-              "parallel_tool_calls": "supported"
-            }
-          }
         }
       },
       "aliases": [
+        "magistral-medium-latest",
         "mistral-medium",
         "mistral-medium-3",
         "mistral-medium-3-5",
@@ -1657,18 +1137,13 @@
       ],
       "default_temperature": 1.0,
       "display_name": "mistral-medium-latest",
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        }
-      }
+      "documentation_url": "https://docs.mistral.ai/models/mistral-medium-3-5-26-04"
     },
     {
       "id": "mistral-medium-3",
       "kind": "text",
       "context_length": 262144,
-      "max_output_tokens": null,
+      "max_output_tokens": 104857,
       "input_modalities": [
         "text",
         "image"
@@ -1679,12 +1154,12 @@
       "supports_tools": true,
       "supports_structured_output": null,
       "pricing": {
-        "input_per_mtok": 0.4,
-        "output_per_mtok": 2.0
+        "input_per_mtok": 1.5,
+        "output_per_mtok": 7.5
       },
-      "pricing_source": "openrouter-index",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "context_source": "provider",
+      "max_output_source": "openrouter-index",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -1699,31 +1174,10 @@
               "parallel_tool_calls": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "stop": "supported",
-              "reasoning_effort": "unsupported",
-              "parallel_tool_calls": "supported"
-            }
-          }
         }
       },
       "aliases": [
+        "magistral-medium-latest",
         "mistral-medium",
         "mistral-medium-2604",
         "mistral-medium-3-5",
@@ -1734,18 +1188,13 @@
       ],
       "default_temperature": 1.0,
       "display_name": "mistral-medium-latest",
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        }
-      }
+      "documentation_url": "https://docs.mistral.ai/models/mistral-medium-3-5-26-04"
     },
     {
       "id": "mistral-medium-3-5",
       "kind": "text",
       "context_length": 262144,
-      "max_output_tokens": null,
+      "max_output_tokens": 209715,
       "input_modalities": [
         "text",
         "image"
@@ -1759,9 +1208,9 @@
         "input_per_mtok": 1.5,
         "output_per_mtok": 7.5
       },
-      "pricing_source": "openrouter-index",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "context_source": "provider",
+      "max_output_source": "openrouter-index",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -1776,31 +1225,10 @@
               "parallel_tool_calls": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "stop": "supported",
-              "reasoning_effort": "unsupported",
-              "parallel_tool_calls": "supported"
-            }
-          }
         }
       },
       "aliases": [
+        "magistral-medium-latest",
         "mistral-medium",
         "mistral-medium-2604",
         "mistral-medium-3",
@@ -1811,18 +1239,13 @@
       ],
       "default_temperature": 1.0,
       "display_name": "mistral-medium-latest",
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        }
-      }
+      "documentation_url": "https://docs.mistral.ai/models/mistral-medium-3-5-26-04"
     },
     {
       "id": "mistral-medium-3.5",
       "kind": "text",
       "context_length": 262144,
-      "max_output_tokens": 262144,
+      "max_output_tokens": 16384,
       "input_modalities": [
         "text",
         "image"
@@ -1836,10 +1259,9 @@
         "input_per_mtok": 1.5,
         "output_per_mtok": 7.5
       },
-      "limits_source": "alias:mistral-medium",
-      "pricing_source": "alias:mistral-medium",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "context_source": "provider",
+      "max_output_source": "alias:magistral-medium-latest",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -1854,31 +1276,10 @@
               "parallel_tool_calls": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "stop": "supported",
-              "reasoning_effort": "unsupported",
-              "parallel_tool_calls": "supported"
-            }
-          }
         }
       },
       "aliases": [
+        "magistral-medium-latest",
         "mistral-medium",
         "mistral-medium-2604",
         "mistral-medium-3",
@@ -1889,12 +1290,7 @@
       ],
       "default_temperature": 1.0,
       "display_name": "mistral-medium-latest",
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        }
-      }
+      "documentation_url": "https://docs.mistral.ai/models/mistral-medium-3-5-26-04"
     },
     {
       "id": "mistral-medium-latest",
@@ -1914,10 +1310,9 @@
         "input_per_mtok": 1.5,
         "output_per_mtok": 7.5
       },
-      "limits_source": "models.dev",
-      "pricing_source": "models.dev",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "context_source": "provider",
+      "max_output_source": "models.dev",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -1932,31 +1327,10 @@
               "parallel_tool_calls": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "stop": "supported",
-              "reasoning_effort": "unsupported",
-              "parallel_tool_calls": "supported"
-            }
-          }
         }
       },
       "aliases": [
+        "magistral-medium-latest",
         "mistral-medium",
         "mistral-medium-2604",
         "mistral-medium-3",
@@ -1967,12 +1341,7 @@
       ],
       "default_temperature": 1.0,
       "display_name": "mistral-medium-latest",
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        }
-      }
+      "documentation_url": "https://docs.mistral.ai/models/mistral-medium-3-5-26-04"
     },
     {
       "id": "mistral-small-2603",
@@ -1992,10 +1361,9 @@
         "input_per_mtok": 0.15,
         "output_per_mtok": 0.6
       },
-      "limits_source": "models.dev",
-      "pricing_source": "models.dev",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "context_source": "provider",
+      "max_output_source": "models.dev",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -2010,28 +1378,6 @@
               "parallel_tool_calls": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "stop": "supported",
-              "reasoning_effort": "unsupported",
-              "parallel_tool_calls": "supported"
-            }
-          }
         }
       },
       "aliases": [
@@ -2041,12 +1387,7 @@
       ],
       "default_temperature": 0.3,
       "display_name": "mistral-small-2603",
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        }
-      }
+      "documentation_url": "https://docs.mistral.ai/models/mistral-small-4-0-26-03"
     },
     {
       "id": "mistral-small-latest",
@@ -2066,10 +1407,9 @@
         "input_per_mtok": 0.15,
         "output_per_mtok": 0.6
       },
-      "limits_source": "models.dev",
-      "pricing_source": "models.dev",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "context_source": "provider",
+      "max_output_source": "models.dev",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -2084,28 +1424,6 @@
               "parallel_tool_calls": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "stop": "supported",
-              "reasoning_effort": "unsupported",
-              "parallel_tool_calls": "supported"
-            }
-          }
         }
       },
       "aliases": [
@@ -2115,12 +1433,7 @@
       ],
       "default_temperature": 0.3,
       "display_name": "mistral-small-2603",
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        }
-      }
+      "documentation_url": "https://docs.mistral.ai/models/mistral-small-4-0-26-03"
     },
     {
       "id": "mistral-vibe-cli-fast",
@@ -2140,10 +1453,9 @@
         "input_per_mtok": 0.15,
         "output_per_mtok": 0.6
       },
-      "limits_source": "alias:magistral-small-latest",
-      "pricing_source": "alias:magistral-small-latest",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "context_source": "provider",
+      "max_output_source": "alias:magistral-small-latest",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -2155,28 +1467,6 @@
               "top_p": "supported",
               "stop": "supported",
               "reasoning_effort": "supported",
-              "parallel_tool_calls": "supported"
-            }
-          }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "stop": "supported",
-              "reasoning_effort": "unsupported",
               "parallel_tool_calls": "supported"
             }
           }
@@ -2189,18 +1479,13 @@
       ],
       "default_temperature": 0.3,
       "display_name": "mistral-small-2603",
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        }
-      }
+      "documentation_url": "https://docs.mistral.ai/models/mistral-small-4-0-26-03"
     },
     {
       "id": "mistral-vibe-cli-latest",
       "kind": "text",
       "context_length": 262144,
-      "max_output_tokens": 262144,
+      "max_output_tokens": 16384,
       "input_modalities": [
         "text",
         "image"
@@ -2214,10 +1499,9 @@
         "input_per_mtok": 1.5,
         "output_per_mtok": 7.5
       },
-      "limits_source": "alias:mistral-medium",
-      "pricing_source": "alias:mistral-medium",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "context_source": "provider",
+      "max_output_source": "alias:magistral-medium-latest",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -2232,31 +1516,10 @@
               "parallel_tool_calls": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "stop": "supported",
-              "reasoning_effort": "unsupported",
-              "parallel_tool_calls": "supported"
-            }
-          }
         }
       },
       "aliases": [
+        "magistral-medium-latest",
         "mistral-medium",
         "mistral-medium-2604",
         "mistral-medium-3",
@@ -2267,18 +1530,13 @@
       ],
       "default_temperature": 1.0,
       "display_name": "mistral-medium-latest",
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        }
-      }
+      "documentation_url": "https://docs.mistral.ai/models/mistral-medium-3-5-26-04"
     },
     {
       "id": "mistral-vibe-cli-with-tools",
       "kind": "text",
       "context_length": 262144,
-      "max_output_tokens": 262144,
+      "max_output_tokens": 16384,
       "input_modalities": [
         "text",
         "image"
@@ -2292,10 +1550,9 @@
         "input_per_mtok": 1.5,
         "output_per_mtok": 7.5
       },
-      "limits_source": "alias:mistral-medium",
-      "pricing_source": "alias:mistral-medium",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "context_source": "provider",
+      "max_output_source": "alias:magistral-medium-latest",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -2310,31 +1567,10 @@
               "parallel_tool_calls": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "stop": "supported",
-              "reasoning_effort": "unsupported",
-              "parallel_tool_calls": "supported"
-            }
-          }
         }
       },
       "aliases": [
+        "magistral-medium-latest",
         "mistral-medium",
         "mistral-medium-2604",
         "mistral-medium-3",
@@ -2345,12 +1581,7 @@
       ],
       "default_temperature": 1.0,
       "display_name": "mistral-medium-latest",
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        }
-      }
+      "documentation_url": "https://docs.mistral.ai/models/mistral-medium-3-5-26-04"
     },
     {
       "id": "voxtral-small-2507",
@@ -2367,12 +1598,11 @@
       "supports_structured_output": null,
       "pricing": {
         "input_per_mtok": 0.1,
-        "output_per_mtok": 0.3
+        "output_per_mtok": 0.4
       },
-      "limits_source": "alias:voxtral-small-latest",
-      "pricing_source": "alias:voxtral-small-latest",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "context_source": "provider",
+      "max_output_source": "alias:voxtral-small-latest",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -2387,27 +1617,6 @@
               "parallel_tool_calls": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "stop": "supported",
-              "parallel_tool_calls": "supported"
-            }
-          }
         }
       },
       "aliases": [
@@ -2415,12 +1624,7 @@
       ],
       "default_temperature": 0.2,
       "display_name": "voxtral-small-2507",
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        }
-      }
+      "documentation_url": "https://docs.mistral.ai/models/voxtral-small-25-07"
     },
     {
       "id": "voxtral-small-latest",
@@ -2437,12 +1641,11 @@
       "supports_structured_output": null,
       "pricing": {
         "input_per_mtok": 0.1,
-        "output_per_mtok": 0.3
+        "output_per_mtok": 0.4
       },
-      "limits_source": "models.dev",
-      "pricing_source": "models.dev",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "context_source": "provider",
+      "max_output_source": "models.dev",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -2454,27 +1657,6 @@
               "top_p": "supported",
               "stop": "supported",
               "reasoning_effort": "supported",
-              "parallel_tool_calls": "supported"
-            }
-          }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "stop": "supported",
               "parallel_tool_calls": "supported"
             }
           }
@@ -2485,18 +1667,13 @@
       ],
       "default_temperature": 0.2,
       "display_name": "voxtral-small-2507",
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        }
-      }
+      "documentation_url": "https://docs.mistral.ai/models/voxtral-small-25-07"
     },
     {
       "id": "zai-glm-5-2",
       "kind": "text",
       "context_length": 1048576,
-      "max_output_tokens": null,
+      "max_output_tokens": 131072,
       "input_modalities": [
         "text"
       ],
@@ -2504,10 +1681,15 @@
         "text"
       ],
       "supports_tools": true,
-      "supports_structured_output": null,
-      "pricing": null,
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
+      "supports_structured_output": true,
+      "pricing": {
+        "input_per_mtok": 1.4,
+        "cached_input_per_mtok": 0.14,
+        "output_per_mtok": 4.4
+      },
+      "context_source": "provider",
+      "max_output_source": "models.dev",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -2522,41 +1704,13 @@
               "parallel_tool_calls": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "stop": "supported",
-              "reasoning_effort": "supported",
-              "parallel_tool_calls": "supported",
-              "logprobs": "supported"
-            }
-          }
         }
       },
       "aliases": [
         "glm-5-2"
       ],
       "display_name": "glm-5-2",
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        }
-      }
+      "documentation_url": "https://docs.mistral.ai/models/zai-glm-5-2"
     }
   ]
 }

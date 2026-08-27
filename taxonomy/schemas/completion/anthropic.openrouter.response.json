@@ -2235,11 +2235,20 @@
     "components_schemas_CostDetails": {
       "description": "Breakdown of upstream inference costs",
       "example": {
+        "server_tool_cost": null,
         "upstream_inference_completions_cost": 0.0004,
         "upstream_inference_cost": null,
         "upstream_inference_prompt_cost": 0.0008
       },
       "properties": {
+        "server_tool_cost": {
+          "description": "Metered server-tool execution cost (for example, shell sandbox time) billed for this request, in USD. Matches the billed checkpoint and settlement amounts exactly.",
+          "format": "double",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
         "upstream_inference_completions_cost": {
           "format": "double",
           "type": "number"
@@ -2454,9 +2463,51 @@
         "type": "openrouter_bash_tool_result"
       },
       "properties": {
+        "container_id": {
+          "description": "The canonical container id the command ran under — the `{container_id}` for the Container Files API, reusable as a `container_reference` in later requests. Present on every sandbox-executed call, even when no files changed.",
+          "type": "string"
+        },
         "content": {
           "additionalProperties": {},
           "type": "object"
+        },
+        "files": {
+          "description": "Citations for the files the sandbox command created or modified, most-recently-touched first (at most 10). Retrieve them via the Container Files API.",
+          "items": {
+            "properties": {
+              "container_id": {
+                "type": "string"
+              },
+              "end_index": {
+                "type": "integer"
+              },
+              "file_id": {
+                "type": "string"
+              },
+              "filename": {
+                "type": "string"
+              },
+              "start_index": {
+                "type": "integer"
+              },
+              "type": {
+                "enum": [
+                  "container_file_citation"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "type",
+              "container_id",
+              "file_id",
+              "filename",
+              "start_index",
+              "end_index"
+            ],
+            "type": "object"
+          },
+          "type": "array"
         },
         "tool_use_id": {
           "type": "string"
@@ -2634,9 +2685,51 @@
         "type": "openrouter_shell_tool_result"
       },
       "properties": {
+        "container_id": {
+          "description": "The canonical container id the command ran under — the `{container_id}` for the Container Files API, reusable as a `container_reference` in later requests. Present on every sandbox-executed call, even when no files changed.",
+          "type": "string"
+        },
         "content": {
           "additionalProperties": {},
           "type": "object"
+        },
+        "files": {
+          "description": "Citations for the files the sandbox command created or modified, most-recently-touched first (at most 10). Retrieve them via the Container Files API.",
+          "items": {
+            "properties": {
+              "container_id": {
+                "type": "string"
+              },
+              "end_index": {
+                "type": "integer"
+              },
+              "file_id": {
+                "type": "string"
+              },
+              "filename": {
+                "type": "string"
+              },
+              "start_index": {
+                "type": "integer"
+              },
+              "type": {
+                "enum": [
+                  "container_file_citation"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "type",
+              "container_id",
+              "file_id",
+              "filename",
+              "start_index",
+              "end_index"
+            ],
+            "type": "object"
+          },
+          "type": "array"
         },
         "tool_use_id": {
           "type": "string"
@@ -2864,6 +2957,7 @@
         "Inferact vLLM",
         "Inflection",
         "Liquid",
+        "Makora",
         "Mara",
         "Mancer 2",
         "Meta",

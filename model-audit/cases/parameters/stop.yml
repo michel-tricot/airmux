@@ -1,0 +1,19 @@
+version: 2
+id: parameters.stop
+title: Stop sequence is accepted
+claims:
+- dimension: option
+  name: stop
+  profile:
+    count: 1
+applies_to:
+  endpoints: [chat/completions, messages]
+request:
+  messages:
+  - role: user
+    content: Reply with ok and then the word END
+  max_tokens: 1024
+  stop: [END]
+oracle:
+  text_nonempty: true
+  text_excludes: END

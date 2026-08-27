@@ -1,0 +1,18 @@
+version: 2
+id: modalities.image
+title: Inline image input
+claims:
+- dimension: modality
+  name: input_image
+request:
+  messages:
+  - role: user
+    content:
+    - type: text
+      text: What is the dominant color of the image? Reply with one word
+    - type: image
+      media_type: image/png
+      data: iVBORw0KGgoAAAANSUhEUgAAAGAAAABACAIAAABqVuVZAAAAZUlEQVR42u3QMQ0AAAjAsPk3DQ64OZpUQZvioECQIEGCBAkSJAhBggQJEiRIkCAECRIkSJAgQYJQIEiQIEGCBAkShCBBggQJEiRIEIIECRIkSJAgQQgSJEiQIEGCBAlCkCBBgh5azsnpWtXQFHsAAAAASUVORK5CYII=
+  max_tokens: 1024
+oracle:
+  text_contains: red
