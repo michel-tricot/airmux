@@ -4,8 +4,6 @@ title: Inline PDF input
 claims:
 - dimension: modality
   name: input_pdf
-applies_to:
-  endpoints: [responses, messages]
 request:
   messages:
   - role: user

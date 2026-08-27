@@ -86,7 +86,6 @@ features:
 - dimension: modality
   name: input_pdf
   description: Uses PDF input to answer a document question
-  endpoints: [responses, messages]
 - dimension: modality
   name: output_text
   description: Produces text output

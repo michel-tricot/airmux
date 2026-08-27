@@ -100,10 +100,15 @@ def openai_messages(case: Case, responses: bool) -> list[dict[str, JsonValue]]: 
                 blocks.append(
                     {"type": "input_image", "image_url": url, "detail": "auto"} if responses else {"type": "image_url", "image_url": {"url": url}}
                 )
-            elif block.get("type") == "document" and responses:
+            elif block.get("type") == "document":
                 media_type = str(block.get("media_type") or "application/pdf")
                 data = str(block.get("data") or "")
-                blocks.append({"type": "input_file", "filename": "audit.pdf", "file_data": f"data:{media_type};base64,{data}"})
+                file_data = f"data:{media_type};base64,{data}"
+                blocks.append(
+                    {"type": "input_file", "filename": "audit.pdf", "file_data": file_data}
+                    if responses
+                    else {"type": "file", "file": {"filename": "audit.pdf", "file_data": file_data}}
+                )
             else:
                 blocks.append(cast("JsonValue", value))
         messages.append({"role": cast("JsonValue", message.get("role")), "content": blocks})

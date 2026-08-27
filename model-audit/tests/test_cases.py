@@ -22,6 +22,16 @@ def test_case_matrix_covers_every_required_feature():
     assert "interaction:streaming+tools" in result.covered
 
 
+def test_pdf_input_is_required_and_exercised_on_every_completion_surface():
+    features = load_features(ROOT / "definitions" / "features.yml")
+    cases = load_cases(ROOT / "cases", features)
+    pdf_feature = next(feature for feature in features.features if feature.name == "input_pdf")
+    pdf_case = next(case for case in cases if case.id == "modalities.pdf")
+
+    assert set(pdf_feature.endpoints) == {"chat/completions", "responses", "messages"}
+    assert pdf_case.applies_to.endpoints == frozenset()
+
+
 def test_case_ids_and_claims_are_stable_and_auditable():
     features = load_features(ROOT / "definitions" / "features.yml")
     cases = load_cases(ROOT / "cases", features)

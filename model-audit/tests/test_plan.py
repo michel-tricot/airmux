@@ -30,3 +30,15 @@ def test_sdk_selection_uses_the_vendor_family_driver():
     )
 
     assert [experiment.driver_id for experiment in plan.experiments] == ["anthropic"]
+
+
+def test_unrestricted_pdf_case_runs_on_every_completion_surface():
+    pdf_case = case(id="modalities.pdf")
+    targets = [
+        target(),
+        target(surface_id="oai_responses", endpoint="responses", egress_kind="openai_responses"),
+        target(surface_id="anthropic", endpoint="messages", egress_kind="anthropic"),
+    ]
+    plan = build_plan(targets, [pdf_case], {"http": frozenset({"chat/completions", "responses", "messages"})})
+
+    assert {experiment.target.endpoint for experiment in plan.experiments} == {"chat/completions", "responses", "messages"}

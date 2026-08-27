@@ -1,8 +1,35 @@
 from __future__ import annotations
 
-from model_audit.drivers.wire import anthropic_body
+from model_audit.drivers.wire import anthropic_body, openai_messages
 from model_audit.models import Request
 from tests.helpers import case
+
+
+def test_openai_chat_maps_inline_pdf_to_a_file_content_part():
+    request = Request(
+        messages=(
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": "Read the PDF"},
+                    {"type": "document", "media_type": "application/pdf", "data": "cGRm"},
+                ],
+            },
+        )
+    )
+
+    messages = openai_messages(case(request=request), responses=False)
+
+    assert messages[0]["content"] == [
+        {"type": "text", "text": "Read the PDF"},
+        {
+            "type": "file",
+            "file": {
+                "filename": "audit.pdf",
+                "file_data": "data:application/pdf;base64,cGRm",
+            },
+        },
+    ]
 
 
 def test_anthropic_maps_json_schema_output_to_output_config():
