@@ -1,12 +1,11 @@
 """DeepSeek.
 
-/models is as bare as OpenAI's and shorter: id, object, owned_by, and two entries. No
-context window, no output limit, no pricing, no capabilities. Limits and pricing come from
-enrich.py; models.dev carries both.
+/models is bare: id, object, and owned_by. The official pricing page supplies limits,
+modalities, capabilities, peak rates, and off-peak rates. Peak rates are the safe default;
+both schedules remain represented as named pricing tiers.
 
-Do not hardcode a price table here. The same table lived in openai.py and was wrong twice
-over: frozen on the day it was written, and stamped pricing_source "provider" for numbers
-the provider does not publish in any machine-readable form.
+Do not hardcode a price table here. The documentation extractor runs on every sync and
+records its exact source URL as vendor documentation rather than provider API metadata.
 
 Do not read the model list off the pricing page either. The docs name deepseek-v4-flash and
 deepseek-v4-pro as the ids to send while secondary catalogs still carry deepseek-chat and
@@ -26,6 +25,7 @@ doc_schemas.py instead.
 """
 
 from model_audit.catalog_ops import ProviderDefinition
+from model_audit.provider_docs import apply_documentation, fetch_text, parse_deepseek_pricing
 
 from .base import ModelSource
 
@@ -33,6 +33,7 @@ from .base import ModelSource
 class DeepSeek(ModelSource):
     id = "deepseek"
     url = "https://api.deepseek.com/models"
+    pricing_url = "https://api-docs.deepseek.com/quick_start/pricing/"
     definition = ProviderDefinition(
         id=id,
         name="DeepSeek",
@@ -49,3 +50,7 @@ class DeepSeek(ModelSource):
 
     def normalize(self, item):
         return self.record(item["id"], owned_by=item.get("owned_by"))
+
+    def enrich(self, models):
+        documents = tuple(parse_deepseek_pricing(fetch_text(self.pricing_url), self.pricing_url).values())
+        return apply_documentation(models, documents)

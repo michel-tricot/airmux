@@ -380,6 +380,13 @@
         "parameters"
       ],
       "properties": {
+        "defer_loading": {
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "description": "When true, the definition is hidden from the model's prompt but stays\ncallable, loaded via a `tool_search` step (`/v1/responses` only)."
+        },
         "description": {
           "type": [
             "string",

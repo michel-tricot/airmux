@@ -2,7 +2,7 @@
   "provider": "xai",
   "source": "https://api.x.ai/v1/language-models",
   "source_type": "api",
-  "updated": "2026-08-17",
+  "updated": "2026-08-27",
   "count": 7,
   "models": [
     {
@@ -24,7 +24,8 @@
         "output_per_mtok": 2.5,
         "cached_input_per_mtok": 0.2
       },
-      "limits_source": "models.dev",
+      "context_source": "provider",
+      "max_output_source": "models.dev",
       "pricing_source": "provider",
       "parameter_evidence": {
         "model_discovery": {
@@ -83,7 +84,8 @@
         "output_per_mtok": 2.5,
         "cached_input_per_mtok": 0.2
       },
-      "limits_source": "models.dev",
+      "context_source": "provider",
+      "max_output_source": "models.dev",
       "pricing_source": "provider",
       "parameter_evidence": {
         "model_discovery": {
@@ -149,7 +151,8 @@
         "output_per_mtok": 2.5,
         "cached_input_per_mtok": 0.2
       },
-      "limits_source": "models.dev",
+      "context_source": "provider",
+      "max_output_source": "models.dev",
       "pricing_source": "provider",
       "parameter_evidence": {
         "model_discovery": {
@@ -206,7 +209,8 @@
         "output_per_mtok": 2.5,
         "cached_input_per_mtok": 0.2
       },
-      "limits_source": "models.dev",
+      "context_source": "provider",
+      "max_output_source": "models.dev",
       "pricing_source": "provider",
       "parameter_evidence": {
         "model_discovery": {
@@ -258,7 +262,8 @@
         "output_per_mtok": 6.0,
         "cached_input_per_mtok": 0.3
       },
-      "limits_source": "models.dev",
+      "context_source": "provider",
+      "max_output_source": "models.dev",
       "pricing_source": "provider",
       "parameter_evidence": {
         "model_discovery": {
@@ -311,7 +316,8 @@
         "output_per_mtok": 6.0,
         "cached_input_per_mtok": 0.5
       },
-      "limits_source": "models.dev",
+      "context_source": "provider",
+      "max_output_source": "models.dev",
       "pricing_source": "provider",
       "parameter_evidence": {
         "model_discovery": {
@@ -360,7 +366,8 @@
         "output_per_mtok": 2.0,
         "cached_input_per_mtok": 0.2
       },
-      "limits_source": "models.dev",
+      "context_source": "provider",
+      "max_output_source": "models.dev",
       "pricing_source": "provider",
       "parameter_evidence": {
         "model_discovery": {

@@ -122,7 +122,7 @@ class Target(FrozenModel):
     model_id: str
     upstream_model: str
     context_window: int
-    max_output_tokens: int | None
+    max_output_tokens: int | None = None
 
 
 class Catalog(FrozenModel):

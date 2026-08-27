@@ -104,6 +104,7 @@ def test_execute_exposes_a_single_global_concurrency_control():
 
     assert result.exit_code == 0
     assert "--concurrency" in result.output
+    assert "1<=x<=100" in result.output
     assert "--provider-concurrency" not in result.output
 
 
@@ -127,6 +128,14 @@ def test_provider_lifecycle_uses_onboard_and_sync_commands():
     assert " refresh " not in providers.output
     assert models.exit_code == 0
     assert " refresh " not in models.output
+
+
+def test_taxonomy_exposes_a_clean_rebuild_command():
+    result = CliRunner().invoke(app, ["taxonomy", "--help"])
+
+    assert result.exit_code == 0
+    assert "rebuild" in result.output
+    assert "diff" in result.output
 
 
 def test_provider_sources_report_onboarding_readiness():

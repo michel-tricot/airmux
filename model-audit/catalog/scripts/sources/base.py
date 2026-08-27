@@ -94,6 +94,9 @@ class ModelSource:
         """
         raise NotImplementedError
 
+    def enrich(self, models: list[dict]) -> list[dict]:
+        return models
+
     # ---- helpers for subclasses ------------------------------------------------
 
     @staticmethod

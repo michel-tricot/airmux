@@ -2,7 +2,7 @@
   "provider": "anthropic",
   "source": "https://api.anthropic.com/v1/models",
   "source_type": "api",
-  "updated": "2026-08-15",
+  "updated": "2026-08-27",
   "count": 10,
   "models": [
     {
@@ -21,13 +21,19 @@
       "supports_tools": true,
       "supports_structured_output": true,
       "pricing": {
-        "input_per_mtok": 10,
-        "output_per_mtok": 50,
-        "cached_input_per_mtok": 1,
-        "cache_write_per_mtok": 12.5
+        "input_per_mtok": 10.0,
+        "output_per_mtok": 50.0,
+        "cached_input_per_mtok": 1.0,
+        "cache_write_per_mtok": 12.5,
+        "tiers": {
+          "one_hour_cache_write": {
+            "cache_write_per_mtok": 20.0
+          }
+        }
       },
-      "limits_source": "openrouter-index",
-      "pricing_source": "models.dev",
+      "context_source": "provider",
+      "max_output_source": "provider",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -43,6 +49,7 @@
         }
       },
       "display_name": "Claude Fable 5",
+      "documentation_url": "https://platform.claude.com/docs/en/models/fable-5/overview.md",
       "supports_batch": true,
       "supports_thinking": true
     },
@@ -62,13 +69,19 @@
       "supports_tools": true,
       "supports_structured_output": true,
       "pricing": {
-        "input_per_mtok": 1,
-        "output_per_mtok": 5,
+        "input_per_mtok": 1.0,
+        "output_per_mtok": 5.0,
         "cached_input_per_mtok": 0.1,
-        "cache_write_per_mtok": 1.25
+        "cache_write_per_mtok": 1.25,
+        "tiers": {
+          "one_hour_cache_write": {
+            "cache_write_per_mtok": 2.0
+          }
+        }
       },
-      "limits_source": "openrouter-index",
-      "pricing_source": "models.dev",
+      "context_source": "provider",
+      "max_output_source": "provider",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -84,6 +97,7 @@
         }
       },
       "display_name": "Claude Haiku 4.5",
+      "documentation_url": "https://platform.claude.com/docs/en/models/haiku-4-5/overview.md",
       "supports_batch": true,
       "supports_thinking": true
     },
@@ -103,13 +117,19 @@
       "supports_tools": true,
       "supports_structured_output": true,
       "pricing": {
-        "input_per_mtok": 5,
-        "output_per_mtok": 25,
+        "input_per_mtok": 5.0,
+        "output_per_mtok": 25.0,
         "cached_input_per_mtok": 0.5,
-        "cache_write_per_mtok": 6.25
+        "cache_write_per_mtok": 6.25,
+        "tiers": {
+          "one_hour_cache_write": {
+            "cache_write_per_mtok": 10.0
+          }
+        }
       },
-      "limits_source": "openrouter-index",
-      "pricing_source": "models.dev",
+      "context_source": "provider",
+      "max_output_source": "provider",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -125,6 +145,7 @@
         }
       },
       "display_name": "Claude Opus 4.5",
+      "documentation_url": "https://platform.claude.com/docs/en/models/opus-4-5/overview.md",
       "supports_batch": true,
       "supports_thinking": true
     },
@@ -144,13 +165,19 @@
       "supports_tools": true,
       "supports_structured_output": true,
       "pricing": {
-        "input_per_mtok": 5,
-        "output_per_mtok": 25,
+        "input_per_mtok": 5.0,
+        "output_per_mtok": 25.0,
         "cached_input_per_mtok": 0.5,
-        "cache_write_per_mtok": 6.25
+        "cache_write_per_mtok": 6.25,
+        "tiers": {
+          "one_hour_cache_write": {
+            "cache_write_per_mtok": 10.0
+          }
+        }
       },
-      "limits_source": "openrouter-index",
-      "pricing_source": "models.dev",
+      "context_source": "provider",
+      "max_output_source": "provider",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -166,6 +193,7 @@
         }
       },
       "display_name": "Claude Opus 4.6",
+      "documentation_url": "https://platform.claude.com/docs/en/models/opus-4-6/overview.md",
       "supports_batch": true,
       "supports_thinking": true
     },
@@ -185,13 +213,19 @@
       "supports_tools": true,
       "supports_structured_output": true,
       "pricing": {
-        "input_per_mtok": 5,
-        "output_per_mtok": 25,
+        "input_per_mtok": 5.0,
+        "output_per_mtok": 25.0,
         "cached_input_per_mtok": 0.5,
-        "cache_write_per_mtok": 6.25
+        "cache_write_per_mtok": 6.25,
+        "tiers": {
+          "one_hour_cache_write": {
+            "cache_write_per_mtok": 10.0
+          }
+        }
       },
-      "limits_source": "openrouter-index",
-      "pricing_source": "models.dev",
+      "context_source": "provider",
+      "max_output_source": "provider",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -207,6 +241,7 @@
         }
       },
       "display_name": "Claude Opus 4.7",
+      "documentation_url": "https://platform.claude.com/docs/en/models/opus-4-7/overview.md",
       "supports_batch": true,
       "supports_thinking": true
     },
@@ -226,13 +261,19 @@
       "supports_tools": true,
       "supports_structured_output": true,
       "pricing": {
-        "input_per_mtok": 5,
-        "output_per_mtok": 25,
+        "input_per_mtok": 5.0,
+        "output_per_mtok": 25.0,
         "cached_input_per_mtok": 0.5,
-        "cache_write_per_mtok": 6.25
+        "cache_write_per_mtok": 6.25,
+        "tiers": {
+          "one_hour_cache_write": {
+            "cache_write_per_mtok": 10.0
+          }
+        }
       },
-      "limits_source": "openrouter-index",
-      "pricing_source": "models.dev",
+      "context_source": "provider",
+      "max_output_source": "provider",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -248,6 +289,7 @@
         }
       },
       "display_name": "Claude Opus 4.8",
+      "documentation_url": "https://platform.claude.com/docs/en/models/opus-4-8/overview.md",
       "supports_batch": true,
       "supports_thinking": true
     },
@@ -267,13 +309,19 @@
       "supports_tools": true,
       "supports_structured_output": true,
       "pricing": {
-        "input_per_mtok": 5,
-        "output_per_mtok": 25,
+        "input_per_mtok": 5.0,
+        "output_per_mtok": 25.0,
         "cached_input_per_mtok": 0.5,
-        "cache_write_per_mtok": 6.25
+        "cache_write_per_mtok": 6.25,
+        "tiers": {
+          "one_hour_cache_write": {
+            "cache_write_per_mtok": 10.0
+          }
+        }
       },
-      "limits_source": "openrouter-index",
-      "pricing_source": "models.dev",
+      "context_source": "provider",
+      "max_output_source": "provider",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -289,6 +337,7 @@
         }
       },
       "display_name": "Claude Opus 5",
+      "documentation_url": "https://platform.claude.com/docs/en/models/opus-5/overview.md",
       "supports_batch": true,
       "supports_thinking": true
     },
@@ -308,13 +357,19 @@
       "supports_tools": true,
       "supports_structured_output": true,
       "pricing": {
-        "input_per_mtok": 3,
-        "output_per_mtok": 15,
+        "input_per_mtok": 3.0,
+        "output_per_mtok": 15.0,
         "cached_input_per_mtok": 0.3,
-        "cache_write_per_mtok": 3.75
+        "cache_write_per_mtok": 3.75,
+        "tiers": {
+          "one_hour_cache_write": {
+            "cache_write_per_mtok": 6.0
+          }
+        }
       },
-      "limits_source": "openrouter-index",
-      "pricing_source": "models.dev",
+      "context_source": "provider",
+      "max_output_source": "provider",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -330,6 +385,7 @@
         }
       },
       "display_name": "Claude Sonnet 4.5",
+      "documentation_url": "https://platform.claude.com/docs/en/models/sonnet-4-5/overview.md",
       "supports_batch": true,
       "supports_thinking": true
     },
@@ -349,13 +405,19 @@
       "supports_tools": true,
       "supports_structured_output": true,
       "pricing": {
-        "input_per_mtok": 3,
-        "output_per_mtok": 15,
+        "input_per_mtok": 3.0,
+        "output_per_mtok": 15.0,
         "cached_input_per_mtok": 0.3,
-        "cache_write_per_mtok": 3.75
+        "cache_write_per_mtok": 3.75,
+        "tiers": {
+          "one_hour_cache_write": {
+            "cache_write_per_mtok": 6.0
+          }
+        }
       },
-      "limits_source": "openrouter-index",
-      "pricing_source": "models.dev",
+      "context_source": "provider",
+      "max_output_source": "provider",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -371,6 +433,7 @@
         }
       },
       "display_name": "Claude Sonnet 4.6",
+      "documentation_url": "https://platform.claude.com/docs/en/models/sonnet-4-6/overview.md",
       "supports_batch": true,
       "supports_thinking": true
     },
@@ -390,13 +453,19 @@
       "supports_tools": true,
       "supports_structured_output": true,
       "pricing": {
-        "input_per_mtok": 2,
-        "output_per_mtok": 10,
+        "input_per_mtok": 2.0,
+        "output_per_mtok": 10.0,
         "cached_input_per_mtok": 0.2,
-        "cache_write_per_mtok": 2.5
+        "cache_write_per_mtok": 2.5,
+        "tiers": {
+          "one_hour_cache_write": {
+            "cache_write_per_mtok": 4.0
+          }
+        }
       },
-      "limits_source": "openrouter-index",
-      "pricing_source": "models.dev",
+      "context_source": "provider",
+      "max_output_source": "provider",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -412,6 +481,7 @@
         }
       },
       "display_name": "Claude Sonnet 5",
+      "documentation_url": "https://platform.claude.com/docs/en/models/sonnet-5/overview.md",
       "supports_batch": true,
       "supports_thinking": true
     }

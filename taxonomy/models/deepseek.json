@@ -2,25 +2,42 @@
   "provider": "deepseek",
   "source": "https://api.deepseek.com/models",
   "source_type": "api",
-  "updated": "2026-08-17",
-  "count": 2,
+  "updated": "2026-08-27",
+  "count": 3,
   "models": [
     {
       "id": "deepseek-v4-flash",
       "kind": "text",
       "context_length": 1000000,
       "max_output_tokens": 384000,
-      "input_modalities": null,
-      "output_modalities": null,
+      "input_modalities": [
+        "text"
+      ],
+      "output_modalities": [
+        "text"
+      ],
       "supports_tools": true,
       "supports_structured_output": true,
       "pricing": {
-        "input_per_mtok": 0.14,
-        "output_per_mtok": 0.28,
-        "cached_input_per_mtok": 0.0028
+        "input_per_mtok": 0.44,
+        "cached_input_per_mtok": 0.014,
+        "output_per_mtok": 1.32,
+        "tiers": {
+          "off_peak": {
+            "input_per_mtok": 0.22,
+            "cached_input_per_mtok": 0.007,
+            "output_per_mtok": 0.66
+          },
+          "peak": {
+            "input_per_mtok": 0.44,
+            "cached_input_per_mtok": 0.014,
+            "output_per_mtok": 1.32
+          }
+        }
       },
-      "limits_source": "models.dev",
-      "pricing_source": "models.dev",
+      "context_source": "vendor-docs",
+      "max_output_source": "vendor-docs",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -42,24 +59,102 @@
           }
         }
       },
-      "owned_by": "deepseek"
+      "documentation_url": "https://api-docs.deepseek.com/quick_start/pricing/",
+      "owned_by": "deepseek",
+      "supports_thinking": true
+    },
+    {
+      "id": "deepseek-v4-flash-vision-exp",
+      "kind": "text",
+      "context_length": 1000000,
+      "max_output_tokens": 384000,
+      "input_modalities": [
+        "text",
+        "image"
+      ],
+      "output_modalities": [
+        "text"
+      ],
+      "supports_tools": true,
+      "supports_structured_output": true,
+      "pricing": {
+        "input_per_mtok": 0.44,
+        "cached_input_per_mtok": 0.014,
+        "output_per_mtok": 1.32,
+        "tiers": {
+          "off_peak": {
+            "input_per_mtok": 0.22,
+            "cached_input_per_mtok": 0.007,
+            "output_per_mtok": 0.66
+          },
+          "peak": {
+            "input_per_mtok": 0.44,
+            "cached_input_per_mtok": 0.014,
+            "output_per_mtok": 1.32
+          }
+        }
+      },
+      "context_source": "vendor-docs",
+      "max_output_source": "vendor-docs",
+      "pricing_source": "vendor-docs",
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/anthropic.anthropic.request.json",
+            "schemas/completion/oai.deepseek.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "logprobs": "supported"
+            },
+            "messages": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported"
+            }
+          }
+        }
+      },
+      "documentation_url": "https://api-docs.deepseek.com/quick_start/pricing/",
+      "owned_by": "deepseek",
+      "supports_thinking": true
     },
     {
       "id": "deepseek-v4-pro",
       "kind": "text",
       "context_length": 1000000,
       "max_output_tokens": 384000,
-      "input_modalities": null,
-      "output_modalities": null,
+      "input_modalities": [
+        "text"
+      ],
+      "output_modalities": [
+        "text"
+      ],
       "supports_tools": true,
       "supports_structured_output": true,
       "pricing": {
-        "input_per_mtok": 0.435,
-        "output_per_mtok": 0.87,
-        "cached_input_per_mtok": 0.0036
+        "input_per_mtok": 1.32,
+        "cached_input_per_mtok": 0.044,
+        "output_per_mtok": 3.96,
+        "tiers": {
+          "off_peak": {
+            "input_per_mtok": 0.66,
+            "cached_input_per_mtok": 0.022,
+            "output_per_mtok": 1.98
+          },
+          "peak": {
+            "input_per_mtok": 1.32,
+            "cached_input_per_mtok": 0.044,
+            "output_per_mtok": 3.96
+          }
+        }
       },
-      "limits_source": "models.dev",
-      "pricing_source": "models.dev",
+      "context_source": "vendor-docs",
+      "max_output_source": "vendor-docs",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -81,7 +176,9 @@
           }
         }
       },
-      "owned_by": "deepseek"
+      "documentation_url": "https://api-docs.deepseek.com/quick_start/pricing/",
+      "owned_by": "deepseek",
+      "supports_thinking": true
     }
   ]
 }

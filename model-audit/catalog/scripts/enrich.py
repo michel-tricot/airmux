@@ -12,21 +12,28 @@ of trust, and every filled value records where it came from.
 1. **The provider itself.** Whatever its own API returned is authoritative and never
    overwritten. This is the only source that is certainly right for that host.
 
-2. **models.dev.** A community catalog, keyed by provider, so a Fireworks price is the
+2. **The provider's official documentation.** Provider source modules reacquire documented
+   limits, prices, modalities, and tiers and record the exact page URL. Documentation fills
+   only values omitted by the provider API.
+
+3. **models.dev.** A community catalog, keyed by provider, so a Fireworks price is the
    price Fireworks charges rather than someone else's for the same weights. That makes it
    the better secondary source despite being community-maintained.
 
-3. **The OpenRouter index.** Cross-provider: one entry per model, not per host. Correct for
+4. **The OpenRouter index.** Cross-provider: one entry per model, not per host. Correct for
    the model, possibly wrong for this host, because serving limits and prices differ
    between hosts for identical weights. Use it last and mark it.
 
-Nothing here overwrites a provider's own value. A secondary source only fills a hole.
+5. **Provider-declared aliases.** A sibling id for the same host can fill the final gap.
+
+Nothing overwrites a higher-ranked value. A later source only fills a hole.
 
 ## Why the distinction is recorded rather than flattened
 
-limits_source and pricing_source are separate because a record often has an authoritative
-limit and a borrowed price. Flattening them into one confidence marker would lose exactly
-the fact a reader needs before trusting a number in a routing decision.
+context_source, max_output_source, and pricing_source are separate because a record often
+combines provider limits, documented prices, and borrowed gaps. Flattening them into one
+confidence marker would lose exactly the fact a reader needs before trusting a number in a
+routing decision.
 
 A borrowed price is a good default and a bad guarantee. Do not bill from one.
 """
@@ -130,10 +137,10 @@ def apply(model: dict, candidate: dict, source: str, counts: dict) -> None:
     """Fill only what is missing. A provider's own value is never overwritten."""
     if not model.get("context_length") and candidate.get("context_length"):
         model["context_length"] = candidate["context_length"]
-        model.setdefault("limits_source", source)
+        model["context_source"] = source
     if not model.get("max_output_tokens") and candidate.get("max_output_tokens"):
         model["max_output_tokens"] = candidate["max_output_tokens"]
-        model.setdefault("limits_source", source)
+        model["max_output_source"] = source
     if not model.get("pricing") and candidate.get("pricing"):
         model["pricing"] = candidate["pricing"]
         model["pricing_source"] = source
@@ -162,19 +169,26 @@ def fill_from_aliases(models: list[dict], counts: dict) -> None:
     """
     by_id = {model["id"]: model for model in models}
     for model in models:
-        if model.get("pricing"):
-            continue
         for name in model.get("aliases") or []:
             sibling = by_id.get(name)
-            if not sibling or not sibling.get("pricing"):
+            if not sibling:
                 continue
-            model["pricing"] = sibling["pricing"]
-            model["pricing_source"] = f"alias:{name}"
-            counts["price:alias"] = counts.get("price:alias", 0) + 1
+            filled = False
+            if not model.get("pricing") and sibling.get("pricing"):
+                model["pricing"] = sibling["pricing"]
+                model["pricing_source"] = f"alias:{name}"
+                counts["price:alias"] = counts.get("price:alias", 0) + 1
+                filled = True
+            if not model.get("context_length") and sibling.get("context_length"):
+                model["context_length"] = sibling["context_length"]
+                model["context_source"] = f"alias:{name}"
+                filled = True
             if not model.get("max_output_tokens") and sibling.get("max_output_tokens"):
                 model["max_output_tokens"] = sibling["max_output_tokens"]
-                model.setdefault("limits_source", f"alias:{name}")
-            break
+                model["max_output_source"] = f"alias:{name}"
+                filled = True
+            if filled and model.get("pricing") and model.get("context_length") and model.get("max_output_tokens"):
+                break
 
 
 def main() -> int:
@@ -188,7 +202,7 @@ def main() -> int:
     scoped, cross = load_models_dev(catalogued), load_openrouter()
     counts: dict[str, int] = {}
     totals = {"models": 0, "limits": 0, "priced": 0}
-    gaps: list[tuple[str, str]] = []
+    gaps: list[dict[str, object]] = []
 
     for path in (TAXONOMY / "models" / f"{provider}.json" for provider in catalogued):
         doc = json.loads(path.read_text())
@@ -198,8 +212,10 @@ def main() -> int:
             model["kind"] = classify(model["id"], model)
             # mark what the provider itself supplied, before any gap is filled. limits and
             # pricing are marked independently: a record commonly has one and not the other
-            if model.get("context_length") and model.get("max_output_tokens"):
-                model.setdefault("limits_source", "provider")
+            if model.get("context_length"):
+                model.setdefault("context_source", "provider")
+            if model.get("max_output_tokens"):
+                model.setdefault("max_output_source", "provider")
             if model.get("pricing"):
                 model.setdefault("pricing_source", "provider")
             key = norm(model["id"])
@@ -215,8 +231,22 @@ def main() -> int:
             totals["models"] += 1
             totals["limits"] += bool(model.get("context_length") and model.get("max_output_tokens"))
             totals["priced"] += bool(model.get("pricing"))
-            if not (model.get("context_length") and model.get("pricing")):
-                gaps.append((provider, model["id"]))
+            missing = [
+                field
+                for field in (
+                    "context_length",
+                    "max_output_tokens",
+                    "input_modalities",
+                    "output_modalities",
+                    "supports_tools",
+                    "supports_structured_output",
+                    "supports_thinking",
+                    "pricing",
+                )
+                if model.get(field) is None
+            ]
+            if missing:
+                gaps.append({"provider": provider, "model": model["id"], "missing": missing})
         write_catalog(path, doc)
 
     print(f"models: {totals['models']}")
@@ -224,14 +254,14 @@ def main() -> int:
     print(f"  with pricing     : {totals['priced']}")
     for source, n in sorted(counts.items()):
         print(f"    {source:<28} {n}")
-    print(f"  still missing a limit or a price: {len(gaps)}")
+    print(f"  models with missing metadata: {len(gaps)}")
     reports = TAXONOMY / "reports"
     reports.mkdir(exist_ok=True)
-    missing_path = reports / "missing-limits.json"
+    missing_path = reports / "missing-metadata.json"
     if selected and missing_path.exists():
         previous = json.loads(missing_path.read_text())
-        gaps = [tuple(gap) for gap in previous if gap[0] not in selected] + gaps
-    missing_path.write_text(json.dumps(sorted(gaps), indent=2) + "\n")
+        gaps = [gap for gap in previous if gap["provider"] not in selected] + gaps
+    missing_path.write_text(json.dumps(sorted(gaps, key=lambda gap: (gap["provider"], gap["model"])), indent=2) + "\n")
     return 0
 
 

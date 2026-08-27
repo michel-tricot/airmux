@@ -52,7 +52,13 @@
                     "$ref": "#/$defs/components_schemas_FunctionTool"
                   },
                   {
-                    "properties": {},
+                    "properties": {
+                      "defer_loading": {
+                        "description": "Withhold this tool from the model until `openrouter:tool_search` finds it. Requires the tool search server tool; at least one tool must remain non-deferred.",
+                        "example": true,
+                        "type": "boolean"
+                      }
+                    },
                     "type": "object"
                   }
                 ],
@@ -162,6 +168,9 @@
                 "$ref": "#/$defs/components_schemas_ShellServerTool_OpenRouter"
               },
               {
+                "$ref": "#/$defs/components_schemas_ToolSearchServerTool"
+              },
+              {
                 "additionalProperties": {},
                 "properties": {
                   "type": {
@@ -188,26 +197,6 @@
         "type",
         "role",
         "tools"
-      ],
-      "type": "object"
-    },
-    "components_schemas_AdvisorNestedTool": {
-      "additionalProperties": {},
-      "description": "A tool made available to the advisor sub-agent. Only OpenRouter server tools (e.g. openrouter:web_search) are supported; function tools are rejected because the advisor has no way to execute them. The advisor tool may not list itself.",
-      "example": {
-        "type": "openrouter:web_search"
-      },
-      "properties": {
-        "parameters": {
-          "additionalProperties": {},
-          "type": "object"
-        },
-        "type": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "type"
       ],
       "type": "object"
     },
@@ -260,15 +249,8 @@
           "example": 2048,
           "type": "integer"
         },
-        "max_tool_calls": {
-          "description": "Maximum number of tool-calling steps the advisor sub-agent may take during its agentic loop. Capped at 25. Only relevant when the advisor is given tools.",
-          "example": 5,
-          "maximum": 25,
-          "minimum": 1,
-          "type": "integer"
-        },
         "model": {
-          "description": "Slug of the advisor model to consult (any OpenRouter model). When omitted, the executor can choose it via the tool call's `model` argument; if neither is set, the model from the outer API request is used. The advisor tool itself cannot be the advisor model.",
+          "description": "Slug of the advisor model to consult (any OpenRouter model). When omitted, the executor can choose it via the tool call's `model` argument; if neither is set, the model from the outer API request is used.",
           "example": "~anthropic/claude-opus-latest",
           "type": "string"
         },
@@ -293,19 +275,12 @@
           "example": 0.7,
           "format": "double",
           "type": "number"
-        },
-        "tools": {
-          "description": "Tools the advisor sub-agent may use while forming its advice. The advisor runs as an agentic sub-agent over these tools, then returns its text. Only OpenRouter server tools are supported — function tools are rejected — and the list must not include the advisor tool itself.",
-          "items": {
-            "$ref": "#/$defs/components_schemas_AdvisorNestedTool"
-          },
-          "type": "array"
         }
       },
       "type": "object"
     },
     "components_schemas_AdvisorServerTool_OpenRouter": {
-      "description": "OpenRouter built-in server tool: consults a higher-intelligence advisor model (any OpenRouter model) for guidance mid-generation and returns its response. The advisor may run as a sub-agent with its own tools. Include multiple entries to offer several named advisors; at most one entry may omit `name` to act as the default advisor.",
+      "description": "OpenRouter built-in server tool: consults a higher-intelligence advisor model (any OpenRouter model) for guidance mid-generation and returns its response. Include multiple entries to offer several named advisors; at most one entry may omit `name` to act as the default advisor.",
       "example": {
         "parameters": {
           "model": "~anthropic/claude-opus-latest",
@@ -1323,6 +1298,12 @@
         "type": "container_auto"
       },
       "properties": {
+        "file_ids": {
+          "$ref": "#/$defs/components_schemas_ContainerFileIds"
+        },
+        "network_policy": {
+          "$ref": "#/$defs/components_schemas_ContainerNetworkPolicy"
+        },
         "type": {
           "enum": [
             "container_auto"
@@ -1335,20 +1316,97 @@
       ],
       "type": "object"
     },
-    "components_schemas_ContainerReferenceEnvironment": {
-      "description": "Reference to a previously created container to reuse.",
+    "components_schemas_ContainerFileIds": {
+      "description": "Workspace file ids (or_file_…) to attach into the container before the first command runs. Each file is copied to the container home as a writable copy named {last 8 characters of the file id}-{base filename} (a file stored as data/report.csv with id or_file_…NR6q4V8w attaches to ~/NR6q4V8w-report.csv), so same-named files never collide; the source document is never modified. Unknown, foreign, or malformed ids fail the request with a 400 before any command executes. Max 20 ids.",
+      "example": [
+        "or_file_011CNha8iCJcU1wXNR6q4V8w"
+      ],
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "maxItems": 20,
+      "type": "array"
+    },
+    "components_schemas_ContainerNetworkPolicy": {
+      "anyOf": [
+        {
+          "properties": {
+            "type": {
+              "description": "No outbound internet access.",
+              "enum": [
+                "disabled"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "type"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "allowed_domains": {
+              "description": "Hostnames the container may reach over ports 80/443 (max 50). Entries are lowercase hostnames or glob patterns where * matches any run of characters (e.g. *.example.com). An exact hostname does not cover its subdomains — use a glob or list each hostname. pip needs both pypi.org and files.pythonhosted.org (or *.pythonhosted.org).",
+              "example": [
+                "pypi.org",
+                "files.pythonhosted.org"
+              ],
+              "items": {
+                "maxLength": 253,
+                "minLength": 1,
+                "pattern": "^[a-z0-9*]([a-z0-9*-]{0,61}[a-z0-9*])?(\\.[a-z0-9*]([a-z0-9*-]{0,61}[a-z0-9*])?)*$",
+                "type": "string"
+              },
+              "maxItems": 50,
+              "minItems": 1,
+              "type": "array"
+            },
+            "type": {
+              "description": "Outbound access restricted to the listed domains.",
+              "enum": [
+                "allowlist"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "type",
+            "allowed_domains"
+          ],
+          "type": "object"
+        }
+      ],
+      "description": "Network egress policy for the container. \"disabled\" blocks all outbound internet; \"allowlist\" permits only hosts matching the listed hostnames or * glob patterns (ports 80/443, DNS via Cloudflare resolvers). The policy is fixed when a container starts: sending a different policy to a warm container fails the request with a 409. Omitted: defaults to \"disabled\" (no outbound internet). For unrestricted egress, use an allowlist of [\"*\"].",
       "example": {
-        "container_id": "cntr_abc123",
+        "allowed_domains": [
+          "pypi.org",
+          "files.pythonhosted.org"
+        ],
+        "type": "allowlist"
+      }
+    },
+    "components_schemas_ContainerReferenceEnvironment": {
+      "description": "Reference to a container by its canonical id — a previously returned container_id or a fresh name to create a persistent container.",
+      "example": {
+        "container_id": "sess_abc123",
         "type": "container_reference"
       },
       "properties": {
         "container_id": {
-          "description": "Identifier of an existing container to reuse (max 20 characters).",
-          "example": "cntr_abc123",
-          "maxLength": 20,
+          "description": "Canonical container id to reuse (max 40 characters, letters/digits/underscores/hyphens). Any container_id previously returned by a bash or shell tool result works here and reattaches to the same container and files — including session-derived ids (sess_...) and generation-derived ids (gen_...). Note that a session-derived id is always sess_ + the sanitized session key, which is not necessarily the raw session id you sent. Using the same container_id from both the bash and shell tools shares the same files, with last-write-wins when both flush concurrently. A fresh name creates a new persistent container. Containers are always scoped to your account and workspace.",
+          "example": "sess_abc123",
+          "maxLength": 40,
           "minLength": 1,
           "pattern": "^[\\w-]+$",
           "type": "string"
+        },
+        "file_ids": {
+          "$ref": "#/$defs/components_schemas_ContainerFileIds"
+        },
+        "network_policy": {
+          "$ref": "#/$defs/components_schemas_ContainerNetworkPolicy"
         },
         "type": {
           "enum": [
@@ -1501,6 +1559,19 @@
       "type": "object"
     },
     "components_schemas_CustomToolCallItem": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/components_schemas_OpenAIResponseCustomToolCall"
+        },
+        {
+          "properties": {
+            "status": {
+              "$ref": "#/$defs/components_schemas_ToolCallStatus"
+            }
+          },
+          "type": "object"
+        }
+      ],
       "description": "A call to a custom (freeform-grammar) tool created by the model — distinct from `function_call`. Used for tools like Codex CLI's `apply_patch` whose payload is opaque text rather than JSON arguments.",
       "example": {
         "call_id": "call-abc123",
@@ -1508,38 +1579,7 @@
         "input": "*** Begin Patch\n*** End Patch",
         "name": "apply_patch",
         "type": "custom_tool_call"
-      },
-      "properties": {
-        "call_id": {
-          "type": "string"
-        },
-        "id": {
-          "type": "string"
-        },
-        "input": {
-          "type": "string"
-        },
-        "name": {
-          "type": "string"
-        },
-        "namespace": {
-          "description": "Namespace qualifier for tools registered as part of a namespace tool group (e.g. an MCP server)",
-          "type": "string"
-        },
-        "type": {
-          "enum": [
-            "custom_tool_call"
-          ],
-          "type": "string"
-        }
-      },
-      "required": [
-        "type",
-        "call_id",
-        "name",
-        "input"
-      ],
-      "type": "object"
+      }
     },
     "components_schemas_CustomToolCallOutputItem": {
       "allOf": [
@@ -1765,6 +1805,17 @@
         "role"
       ],
       "type": "object"
+    },
+    "components_schemas_FailableToolCallStatus": {
+      "enum": [
+        "in_progress",
+        "completed",
+        "incomplete",
+        "failed"
+      ],
+      "example": "completed",
+      "type": "string",
+      "x-speakeasy-unknown-values": "allow"
     },
     "components_schemas_FileCitation": {
       "example": {
@@ -2388,7 +2439,7 @@
       },
       "properties": {
         "analysis_models": {
-          "description": "Slugs of models to run in parallel as the \"expert panel\" the analyst analyzes. Each model receives the same user prompt with web_search + web_fetch enabled. Capped at 8 models to bound cost amplification. When omitted, defaults to the Quality preset from the /labs/fusion UI (~anthropic/claude-opus-latest, ~openai/gpt-latest, ~google/gemini-pro-latest).",
+          "description": "For a Fusion run started by the `openrouter/fusion` model slug or `openrouter:fusion` server tool, slugs of models to run in parallel as the \"expert panel\" the analyst analyzes. Each model receives the same user prompt with web_search + web_fetch enabled. Capped at 8 models to bound cost amplification. When omitted, defaults to the Quality preset from the /labs/fusion UI (~anthropic/claude-opus-latest, ~openai/gpt-latest, ~google/gemini-pro-latest).",
           "example": [
             "~anthropic/claude-opus-latest",
             "~openai/gpt-latest",
@@ -2402,7 +2453,7 @@
           "type": "array"
         },
         "enabled": {
-          "description": "Set to false to disable the fusion plugin for this request. Defaults to true.",
+          "description": "Set to false to disable Fusion configuration for a run started by the `openrouter/fusion` model slug or `openrouter:fusion` server tool. Defaults to true.",
           "type": "boolean"
         },
         "id": {
@@ -2412,19 +2463,19 @@
           "type": "string"
         },
         "max_tool_calls": {
-          "description": "Maximum number of tool-calling steps each panelist (analysis model) and the analyst model may take during their agentic web-research loop. Models with web_search/web_fetch enabled iterate until they produce a text response or hit this ceiling. Defaults to 4. Capped at 16.",
+          "description": "For a Fusion run started by the `openrouter/fusion` model slug or `openrouter:fusion` server tool, the maximum number of tool-calling steps each panelist (analysis model) and the analyst model may take during their agentic web-research loop. Models with web_search/web_fetch enabled iterate until they produce a text response or hit this ceiling. Defaults to 4. Capped at 16.",
           "example": 12,
           "maximum": 16,
           "minimum": 1,
           "type": "integer"
         },
         "model": {
-          "description": "Slug of the model that performs both the analyst step (with web_search + web_fetch) and the final synthesis. When omitted, defaults to the first model in the Quality preset.",
+          "description": "For a Fusion run started by the `openrouter/fusion` model slug or `openrouter:fusion` server tool, the slug of the model that performs both the analyst step (with web_search + web_fetch) and the final synthesis. When omitted, defaults to the first model in the Quality preset.",
           "example": "~anthropic/claude-opus-latest",
           "type": "string"
         },
         "preset": {
-          "description": "A curated OpenRouter fusion preset (slugs follow `<task>-<tier>`, e.g. `general-high`). Expands server-side into the preset's analysis_models panel and analyst model, so callers never name individual models. Explicitly provided `analysis_models` / `model` take precedence.",
+          "description": "Configuration for a Fusion run started by the `openrouter/fusion` model slug or `openrouter:fusion` server tool. A curated OpenRouter preset (slugs follow `<task>-<tier>`, e.g. `general-high`). Expands server-side into the preset's analysis_models panel and analyst model, so callers never name individual models. Explicitly provided `analysis_models` / `model` take precedence.",
           "enum": [
             "general-high",
             "general-budget",
@@ -2435,7 +2486,7 @@
           "x-speakeasy-unknown-values": "allow"
         },
         "tools": {
-          "description": "Server tools available to panelist and analyst inner calls. Each entry uses the same `{ type, parameters? }` shorthand as the outer Chat Completions request. When omitted, defaults to `[{ type: \"openrouter:web_search\" }, { type: \"openrouter:web_fetch\" }]`. Pass an empty array to disable tools entirely (panelists answer from parametric knowledge only).",
+          "description": "For a Fusion run started by the `openrouter/fusion` model slug or `openrouter:fusion` server tool, server tools available to panelist and analyst inner calls. Each entry uses the same `{ type, parameters? }` shorthand as the outer Chat Completions request. When omitted, defaults to `[{ type: \"openrouter:web_search\" }, { type: \"openrouter:web_fetch\" }]`. Pass an empty array to disable tools entirely (panelists answer from parametric knowledge only).",
           "example": [
             {
               "parameters": {
@@ -4065,6 +4116,46 @@
       ],
       "type": "object"
     },
+    "components_schemas_OpenAIResponseCustomToolCall": {
+      "example": {
+        "call_id": "call-abc123",
+        "id": "ctc-abc123",
+        "input": "*** Begin Patch\n*** End Patch",
+        "name": "apply_patch",
+        "type": "custom_tool_call"
+      },
+      "properties": {
+        "call_id": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "input": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "namespace": {
+          "description": "Namespace qualifier for tools registered as part of a namespace tool group (e.g. an MCP server)",
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "custom_tool_call"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "call_id",
+        "name",
+        "input"
+      ],
+      "type": "object"
+    },
     "components_schemas_OpenAIResponseCustomToolCallOutput": {
       "example": {
         "call_id": "call-abc123",
@@ -4421,7 +4512,7 @@
           "type": "string"
         },
         "error": {
-          "description": "Error message when the advisor call did not produce advice.",
+          "description": "Error message when the advisor call did not produce advice. Set together with `status: 'failed'` on the terminal item.",
           "type": "string"
         },
         "id": {
@@ -4441,7 +4532,7 @@
           "type": "string"
         },
         "status": {
-          "$ref": "#/$defs/components_schemas_ToolCallStatus"
+          "$ref": "#/$defs/components_schemas_FailableToolCallStatus"
         },
         "type": {
           "enum": [
@@ -4523,8 +4614,50 @@
         "command": {
           "type": "string"
         },
+        "container_id": {
+          "description": "The canonical container id the command ran under — the `{container_id}` for the Container Files API, reusable as a `container_reference` in later requests. Present on every sandbox-executed call, even when no files changed.",
+          "type": "string"
+        },
         "exitCode": {
           "type": "integer"
+        },
+        "files": {
+          "description": "Citations for the files the sandbox command created or modified, most-recently-touched first (at most 10). Retrieve them via the Container Files API.",
+          "items": {
+            "properties": {
+              "container_id": {
+                "type": "string"
+              },
+              "end_index": {
+                "type": "integer"
+              },
+              "file_id": {
+                "type": "string"
+              },
+              "filename": {
+                "type": "string"
+              },
+              "start_index": {
+                "type": "integer"
+              },
+              "type": {
+                "enum": [
+                  "container_file_citation"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "type",
+              "container_id",
+              "file_id",
+              "filename",
+              "start_index",
+              "end_index"
+            ],
+            "type": "object"
+          },
+          "type": "array"
         },
         "id": {
           "type": "string"
@@ -5869,6 +6002,48 @@
             "null"
           ]
         },
+        "container_id": {
+          "description": "The canonical container id the command ran under — the `{container_id}` for the Container Files API, reusable as a `container_reference` in later requests. Present on every sandbox-executed call, even when no files changed.",
+          "type": "string"
+        },
+        "files": {
+          "description": "Citations for the files the sandbox command created or modified, most-recently-touched first (at most 10). Retrieve them via the Container Files API.",
+          "items": {
+            "properties": {
+              "container_id": {
+                "type": "string"
+              },
+              "end_index": {
+                "type": "integer"
+              },
+              "file_id": {
+                "type": "string"
+              },
+              "filename": {
+                "type": "string"
+              },
+              "start_index": {
+                "type": "integer"
+              },
+              "type": {
+                "enum": [
+                  "container_file_citation"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "type",
+              "container_id",
+              "file_id",
+              "filename",
+              "start_index",
+              "end_index"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
         "id": {
           "type": "string"
         },
@@ -5907,7 +6082,7 @@
           "type": "string"
         },
         "error": {
-          "description": "Error message when the subagent task did not produce an outcome.",
+          "description": "Error message when the subagent task did not produce an outcome. Set together with `status: 'failed'` on the terminal item.",
           "type": "string"
         },
         "id": {
@@ -5932,7 +6107,7 @@
           "type": "string"
         },
         "status": {
-          "$ref": "#/$defs/components_schemas_ToolCallStatus"
+          "$ref": "#/$defs/components_schemas_FailableToolCallStatus"
         },
         "task_description": {
           "description": "The task description the delegating model sent to the worker.",
@@ -6598,6 +6773,7 @@
         "Inferact vLLM",
         "Inflection",
         "Liquid",
+        "Makora",
         "Mara",
         "Mancer 2",
         "Meta",
@@ -6977,6 +7153,7 @@
         "openai-responses-v1",
         "azure-openai-responses-v1",
         "bedrock-openai-responses-v1",
+        "bedrock-xai-responses-v1",
         "xai-responses-v1",
         "meta-responses-v1",
         "anthropic-claude-v1",
@@ -7504,7 +7681,13 @@
                     "$ref": "#/$defs/components_schemas_FunctionTool"
                   },
                   {
-                    "properties": {},
+                    "properties": {
+                      "defer_loading": {
+                        "description": "Withhold this tool from the model until `openrouter:tool_search` finds it. Requires the tool search server tool; at least one tool must remain non-deferred.",
+                        "example": true,
+                        "type": "boolean"
+                      }
+                    },
                     "type": "object"
                   }
                 ],
@@ -7612,6 +7795,9 @@
               },
               {
                 "$ref": "#/$defs/components_schemas_ShellServerTool_OpenRouter"
+              },
+              {
+                "$ref": "#/$defs/components_schemas_ToolSearchServerTool"
               }
             ]
           },
@@ -7648,7 +7834,7 @@
       "type": "object"
     },
     "components_schemas_SandboxSleepAfterSeconds": {
-      "description": "How long (in seconds) the container stays warm after its last command before sleeping, freeing its capacity slot. Idle-based: each command renews the timer. Defaults to 900 (15 minutes); capped at 2592000 (30 days).",
+      "description": "How long (in seconds) the container stays warm after its last command before sleeping, freeing its capacity slot. Idle-based: each command renews the timer. Defaults to 900 (15 minutes); capped at 14400 (4 hours).",
       "example": 900,
       "type": "integer"
     },
@@ -7878,6 +8064,48 @@
       "properties": {
         "call_id": {
           "type": "string"
+        },
+        "container_id": {
+          "description": "The canonical container id the command ran under — the `{container_id}` for the Container Files API, reusable as a `container_reference` in later requests. Present on every sandbox-executed call, even when no files changed.",
+          "type": "string"
+        },
+        "files": {
+          "description": "Citations for the files the sandbox command created or modified, most-recently-touched first (at most 10). Retrieve them via the Container Files API.",
+          "items": {
+            "properties": {
+              "container_id": {
+                "type": "string"
+              },
+              "end_index": {
+                "type": "integer"
+              },
+              "file_id": {
+                "type": "string"
+              },
+              "filename": {
+                "type": "string"
+              },
+              "start_index": {
+                "type": "integer"
+              },
+              "type": {
+                "enum": [
+                  "container_file_citation"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "type",
+              "container_id",
+              "file_id",
+              "filename",
+              "start_index",
+              "end_index"
+            ],
+            "type": "object"
+          },
+          "type": "array"
         },
         "id": {
           "type": [
@@ -8492,6 +8720,44 @@
         "mode",
         "tools"
       ],
+      "type": "object"
+    },
+    "components_schemas_ToolSearchServerTool": {
+      "description": "OpenRouter built-in server tool: finds tools marked `defer_loading` and makes them callable",
+      "example": {
+        "parameters": {
+          "max_results": 5
+        },
+        "type": "openrouter:tool_search"
+      },
+      "properties": {
+        "parameters": {
+          "$ref": "#/$defs/components_schemas_ToolSearchServerToolConfig"
+        },
+        "type": {
+          "enum": [
+            "openrouter:tool_search"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "type": "object"
+    },
+    "components_schemas_ToolSearchServerToolConfig": {
+      "description": "Configuration for the openrouter:tool_search server tool",
+      "example": {
+        "max_results": 5
+      },
+      "properties": {
+        "max_results": {
+          "description": "Maximum tools returned by one search. Defaults to 5.",
+          "example": 5,
+          "type": "integer"
+        }
+      },
       "type": "object"
     },
     "components_schemas_TraceConfig": {

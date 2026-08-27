@@ -21,14 +21,20 @@ the catalog rather than carrying nulls.
 Provider synchronization never replaces a successful API catalog with documentation-only
 data. `api` always wins.
 
-## Limits carry `limits_source`
+## Limits carry independent provenance
 
-- `provider`: the provider's own listing returned it
+`context_source` and `max_output_source` are separate. A model can have a provider-listed
+context window and an output limit borrowed from a secondary index. Each uses this vocabulary:
+
+- `provider`: the provider's own listing returned the value
+- `vendor-docs`: extracted from a current official model or pricing page; the model record
+  also carries the exact `documentation_url`
+- `models.dev`: borrowed from a provider-scoped community catalog
 - `openrouter-index`: borrowed from OpenRouter's cross-provider index. Correct for the
   model, possibly not for this host's serving configuration
-- `vendor-docs`: hand-transcribed from the vendor's model page
+- `alias:<model id>`: inherited from a sibling id the provider declares equivalent
 
-The distinction matters because serving limits differ per host. The same open-weights model
+Pricing uses the same vocabulary independently through `pricing_source`. The distinction matters because serving limits differ per host. The same open-weights model
 is served at different context lengths by different providers, so a borrowed limit is a
 good default and a bad guarantee.
 

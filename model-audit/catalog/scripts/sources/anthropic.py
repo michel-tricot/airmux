@@ -8,14 +8,15 @@ It also carries a nested capabilities tree, which is the only place Anthropic pu
 tool and structured-output support in machine-readable form. Read it rather than assuming:
 capability differs across the family.
 
-Pricing is not on the API and is not hardcoded here. A transcribed table lived in this
-file and was wrong twice over: it froze on the day it was written, and because it was set
-inside the source module every price was stamped pricing_source "provider", claiming
-Anthropic published numbers it does not publish. enrich.py fills them from models.dev,
-which covers the family and is fetched on every run.
+Pricing is not on the API and is not hardcoded here. The source follows Anthropic's
+official llms.txt index and extracts each current model page, including cache-read and
+cache-write tiers. models.dev and OpenRouter fill only facts still absent after that pass.
 """
 
+import re
+
 from model_audit.catalog_ops import ProviderDefinition, SchemaDefinition
+from model_audit.provider_docs import apply_documentation, fetch_text, fetch_texts, parse_anthropic_model
 
 from .base import ModelSource
 
@@ -45,6 +46,7 @@ class Anthropic(ModelSource):
             path_pattern=r"^/v1/messages$",
         ),
     )
+    docs_index = "https://platform.claude.com/llms.txt"
 
     def headers(self, key):
         head = super().headers(key)
@@ -71,3 +73,9 @@ class Anthropic(ModelSource):
             supports_thinking=supported("thinking"),
             supports_batch=supported("batch"),
         )
+
+    def enrich(self, models):
+        index = fetch_text(self.docs_index)
+        urls = tuple(sorted(set(re.findall(r"https://platform\.claude\.com/docs/en/models/[^ )]+/overview\.md", index))))
+        documents = tuple(parse_anthropic_model(markdown, url) for url, markdown in fetch_texts(urls).items())
+        return apply_documentation(models, documents)

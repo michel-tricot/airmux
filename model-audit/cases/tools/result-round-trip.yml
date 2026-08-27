@@ -22,7 +22,7 @@ request:
       content: cobalt
   - role: user
     content: Reply with the code word
-  max_tokens: 128
+  max_tokens: 1024
   tools:
   - name: lookup_code
     description: Look up the code word

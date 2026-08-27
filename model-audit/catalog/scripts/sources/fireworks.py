@@ -18,8 +18,9 @@ Serverless models come back as kind HF_BASE_MODEL, plus a couple of EMBEDDING_MO
 model_kind drops later. Do not filter on kind directly; it has more values than it looks
 and the serverless flag is the real signal.
 
-Fireworks publishes no pricing on the API. It is tiered by parameter count on their pricing
-page, so pricing stays null here rather than being scraped into a number that will rot.
+Fireworks publishes no pricing on the model API. The source reads the official serverless
+pricing document on every sync, preserves standard rates as the default, and records
+priority rates as a named tier. Community catalogs fill only models absent from that page.
 
 Model ids on the wire are fully qualified, accounts/fireworks/models/<name>. The bare name
 is accepted for some models and 404s for others, so upstream_id always carries the
@@ -31,6 +32,7 @@ the whole catalog.
 """
 
 from model_audit.catalog_ops import ProviderDefinition
+from model_audit.provider_docs import apply_documentation, fetch_text, fetch_texts, parse_fireworks_model, parse_fireworks_pricing
 
 from .base import ModelSource
 
@@ -39,6 +41,8 @@ class Fireworks(ModelSource):
     id = "fireworks"
     url = "https://api.fireworks.ai/v1/accounts/fireworks/models?pageSize=200"
     serverless_only = True
+    pricing_url = "https://docs.fireworks.ai/serverless/pricing.md"
+    model_docs = "https://app.fireworks.ai/models/fireworks/"
     definition = ProviderDefinition(
         id=id,
         name="Fireworks AI",
@@ -93,3 +97,10 @@ class Fireworks(ModelSource):
             hugging_face_id=hf_url.removeprefix("https://huggingface.co/") or None,
             deprecation_date=sunset,
         )
+
+    def enrich(self, models):
+        documents = tuple(parse_fireworks_pricing(fetch_text(self.pricing_url), self.pricing_url).values())
+        enriched = apply_documentation(models, documents)
+        urls = tuple(f"{self.model_docs}{model['id']}" for model in enriched if model.get("pricing") is None)
+        model_documents = tuple(parse_fireworks_model(document, url) for url, document in fetch_texts(urls).items())
+        return apply_documentation(enriched, model_documents)

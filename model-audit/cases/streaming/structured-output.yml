@@ -9,7 +9,7 @@ request:
   messages:
   - role: user
     content: Return a JSON object with answer set to 42
-  max_tokens: 256
+  max_tokens: 1024
   response_format:
     type: json_schema
     json_schema:

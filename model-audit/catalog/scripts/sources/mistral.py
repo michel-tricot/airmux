@@ -1,9 +1,9 @@
 """Mistral.
 
-The model card carries limits, a capability map, aliases and a deprecation date, but no
-pricing: Mistral publishes prices on its pricing page only, so pricing stays null here and
-enrich.py fills it. Do not transcribe that page into this module; a frozen price table lived
-in openai.py and was wrong twice over.
+The API model card carries limits, a capability map, aliases and a deprecation date, but no
+pricing. The source discovers Mistral's official model pages and extracts token-denominated
+rates and context limits. Mixed-unit entries such as audio per minute are not mislabeled as
+per-million-token prices. Secondary catalogs fill only remaining gaps.
 
 **capabilities.completion_chat is the membership filter.** One listing carries chat models
 alongside OCR, moderation, classification, embedding and audio models, and the ids do not
@@ -28,6 +28,7 @@ a route that exists from one that does not.
 """
 
 from model_audit.catalog_ops import ProviderDefinition, SchemaDefinition
+from model_audit.provider_docs import apply_documentation, fetch_text, fetch_texts, parse_mistral_index, parse_mistral_model
 
 from .base import ModelSource
 
@@ -35,6 +36,7 @@ from .base import ModelSource
 class Mistral(ModelSource):
     id = "mistral"
     url = "https://api.mistral.ai/v1/models"
+    docs_catalog = "https://docs.mistral.ai/models"
     definition = ProviderDefinition(
         id=id,
         name="Mistral AI",
@@ -72,3 +74,8 @@ class Mistral(ModelSource):
             deprecation_replacement=item.get("deprecation_replacement_model"),
             default_temperature=item.get("default_model_temperature"),
         )
+
+    def enrich(self, models):
+        urls = parse_mistral_index(fetch_text(self.docs_catalog), self.docs_catalog)
+        documents = tuple(parse_mistral_model(document, url) for url, document in fetch_texts(urls).items() if "Click to copy:" in document)
+        return apply_documentation(models, documents)

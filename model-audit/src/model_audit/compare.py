@@ -40,6 +40,7 @@ def _finish_class(reason: str | None) -> str | None:
         "tool_calls": "tools",
         "length": "length",
         "max_tokens": "length",
+        "max_output_tokens": "length",
     }.get(reason, reason)
 
 

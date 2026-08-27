@@ -22,7 +22,9 @@ import yaml
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 from paths import TAXONOMY
-from model_audit.catalog_ops import PROVIDERS_HEADER
+from sources import registry
+
+from model_audit.catalog_ops import CANDIDATES_HEADER, PROVIDERS_HEADER, provider_entry
 from model_audit.taxonomy import write as write_taxonomy
 
 SEED = HERE.parent / "seed.yml"
@@ -79,52 +81,88 @@ def write_yaml(key: str, entries: list[dict]) -> None:
     print(f"  wrote {path.relative_to(TAXONOMY.parent)} ({len(entries)} entries)")
 
 
-def run_with(script: str, *args: str) -> None:
-    print(f"\n=== {script} {' '.join(args)}")
-    result = subprocess.run([sys.executable, str(HERE / script), *args], capture_output=True, text=True)
-    for line in (result.stdout or result.stderr).strip().splitlines()[-4:]:
-        print(f"  {line}")
+def write_candidates(entries: list[dict]) -> None:
+    path = TAXONOMY / "candidates.yml"
+    path.write_text(CANDIDATES_HEADER + yaml.safe_dump({"candidates": entries}, sort_keys=False, width=100, allow_unicode=True))
+    print(f"  wrote {path.relative_to(TAXONOMY.parent)} ({len(entries)} entries)")
 
 
-def run(script: str) -> None:
-    print(f"\n=== {script}")
-    result = subprocess.run([sys.executable, str(HERE / script)], capture_output=True, text=True)
-    tail = (result.stdout or result.stderr).strip().splitlines()
-    for line in tail[-6:]:
+def current_provider_entries(entries: list[dict]) -> list[dict]:
+    sources = registry()
+    current = []
+    for entry in entries:
+        source = sources.get(entry["id"])
+        if source is None or source.definition is None:
+            raise RuntimeError(f"active provider {entry['id']} has no typed provider source")
+        current.append(provider_entry(source.definition))
+    return current
+
+
+def run_command(command: list[str]) -> int:
+    result = subprocess.run(command, capture_output=True, text=True, check=False)
+    for line in (result.stdout or result.stderr).strip().splitlines()[-6:]:
         print(f"  {line}")
     if result.returncode != 0:
-        print(f"  ({script} exited {result.returncode})")
+        print(f"  (exited {result.returncode})")
+    return result.returncode
+
+
+def run_with(script: str, *args: str) -> int:
+    print(f"\n=== {script} {' '.join(args)}")
+    return run_command([sys.executable, str(HERE / script), *args])
+
+
+def run(script: str) -> int:
+    print(f"\n=== {script}")
+    return run_command([sys.executable, str(HERE / script)])
+
+
+def export_canonical_schemas() -> int:
+    executable = Path(sys.executable).with_name("airllmdp")
+    print("\n=== airllmdp schema")
+    return run_command([str(executable), "schema", "--out", str(TAXONOMY / "schemas" / "completion")])
 
 
 def main() -> int:
     seed = yaml.safe_load(SEED.read_text())
+    seed["providers"] = current_provider_entries(seed.get("providers", []))
     TAXONOMY.mkdir(exist_ok=True)
     for sub in ("schemas/completion", "models", "icons", "reports"):
         (TAXONOMY / sub).mkdir(parents=True, exist_ok=True)
 
     print("restoring catalog files from seed")
-    # written twice: once so the extractors can read openapi urls, once with real schemas
     for key in ("providers", "routers"):
         if key in seed:
             write_yaml(key, [dict(e) for e in seed[key]])
+    if "candidates" in seed:
+        write_candidates([dict(entry) for entry in seed["candidates"]])
 
     if "--yaml" in sys.argv:
         return 0
 
-    for script in ("extract_schemas.py", "doc_schemas.py", "fetch_icons.py", "fetch_models.py", "enrich.py", "discover_parameters.py"):
-        run(script)
+    if run("make_seed.py") or export_canonical_schemas():
+        return 1
+    for script in ("extract_schemas.py", "doc_schemas.py"):
+        if run(script):
+            return 1
 
-    print("\nrewiring schema references now that the extractors have run")
+    print("\nwriting acquired schema references")
     for key in ("providers", "routers"):
         if key in seed:
             write_yaml(key, [dict(e) for e in seed[key]])
 
+    for script in ("fetch_icons.py", "fetch_models.py", "enrich.py", "discover_parameters.py"):
+        if run(script):
+            return 1
+
     for ingress in ("oai", "anthropic"):
-        run_with("field_matrix.py", ingress)
-    run("build_report.py")
+        if run_with("field_matrix.py", ingress):
+            return 1
+    if run("build_report.py"):
+        return 1
     write_taxonomy(TAXONOMY.parent)
     print()
-    return subprocess.run([sys.executable, str(HERE / "validate.py")]).returncode
+    return run_command([sys.executable, str(HERE / "validate.py")])
 
 
 if __name__ == "__main__":

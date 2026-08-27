@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from model_audit.models import Assessment, Experiment, Observation, PairResult, Plan, ReportDocument, RunMetadata
-from model_audit.report import remaining_plan, write_report
+from model_audit.report import checkpoint_interval, remaining_plan, write_report
 from tests.helpers import case, target
 
 
@@ -102,7 +102,7 @@ def test_incomplete_report_retains_only_missing_experiments_for_resume():
 def test_checkpoint_records_plan_and_completion_state(tmp_path):
     experiment_case = case()
     experiment = Experiment(
-        target=target(),
+        target=target(max_output_tokens=None),
         case=experiment_case,
         direct_driver_id="http",
         gateway_driver_id="http",
@@ -119,4 +119,11 @@ def test_checkpoint_records_plan_and_completion_state(tmp_path):
     assert document.complete is False
     assert document.plan is not None
     assert len(document.plan.experiments) == 1
+    assert document.plan.experiments[0].target.max_output_tokens is None
     assert "runs resume" in paths.html_path.read_text(encoding="utf-8")
+
+
+def test_checkpoint_interval_scales_with_large_plans():
+    assert checkpoint_interval(3) == 1
+    assert checkpoint_interval(100) == 1
+    assert checkpoint_interval(22_501) == 226

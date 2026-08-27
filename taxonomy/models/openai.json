@@ -2,19 +2,31 @@
   "provider": "openai",
   "source": "https://api.openai.com/v1/models",
   "source_type": "api",
-  "updated": "2026-08-17",
+  "updated": "2026-08-27",
   "count": 86,
   "models": [
     {
       "id": "chat-latest",
       "kind": "text",
-      "context_length": null,
-      "max_output_tokens": null,
-      "input_modalities": null,
-      "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
-      "pricing": null,
+      "context_length": 400000,
+      "max_output_tokens": 128000,
+      "input_modalities": [
+        "text",
+        "image"
+      ],
+      "output_modalities": [
+        "text"
+      ],
+      "supports_tools": true,
+      "supports_structured_output": true,
+      "pricing": {
+        "input_per_mtok": 5.0,
+        "cached_input_per_mtok": 0.5,
+        "output_per_mtok": 30.0
+      },
+      "context_source": "vendor-docs",
+      "max_output_source": "vendor-docs",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -39,18 +51,31 @@
             }
           }
         }
-      }
+      },
+      "documentation_url": "https://developers.openai.com/api/docs/models/chat-latest.md",
+      "supports_thinking": false
     },
     {
       "id": "computer-use-preview",
       "kind": "text",
-      "context_length": null,
-      "max_output_tokens": null,
-      "input_modalities": null,
-      "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
-      "pricing": null,
+      "context_length": 8192,
+      "max_output_tokens": 1024,
+      "input_modalities": [
+        "text",
+        "image"
+      ],
+      "output_modalities": [
+        "text"
+      ],
+      "supports_tools": true,
+      "supports_structured_output": false,
+      "pricing": {
+        "input_per_mtok": 3.0,
+        "output_per_mtok": 12.0
+      },
+      "context_source": "vendor-docs",
+      "max_output_source": "vendor-docs",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -76,18 +101,31 @@
           }
         }
       },
-      "shutdown_date": "2026-07-23"
+      "documentation_url": "https://developers.openai.com/api/docs/models/computer-use-preview.md",
+      "shutdown_date": "2026-07-23",
+      "supports_thinking": true
     },
     {
       "id": "computer-use-preview-2025-03-11",
       "kind": "text",
-      "context_length": null,
-      "max_output_tokens": null,
-      "input_modalities": null,
-      "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
-      "pricing": null,
+      "context_length": 8192,
+      "max_output_tokens": 1024,
+      "input_modalities": [
+        "text",
+        "image"
+      ],
+      "output_modalities": [
+        "text"
+      ],
+      "supports_tools": true,
+      "supports_structured_output": false,
+      "pricing": {
+        "input_per_mtok": 3.0,
+        "output_per_mtok": 12.0
+      },
+      "context_source": "vendor-docs",
+      "max_output_source": "vendor-docs",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -113,24 +151,30 @@
           }
         }
       },
-      "shutdown_date": "2026-07-23"
+      "documentation_url": "https://developers.openai.com/api/docs/models/computer-use-preview.md",
+      "shutdown_date": "2026-07-23",
+      "supports_thinking": true
     },
     {
       "id": "gpt-3.5-turbo",
       "kind": "text",
       "context_length": 16385,
       "max_output_tokens": 4096,
-      "input_modalities": null,
-      "output_modalities": null,
+      "input_modalities": [
+        "text"
+      ],
+      "output_modalities": [
+        "text"
+      ],
       "supports_tools": false,
       "supports_structured_output": false,
       "pricing": {
         "input_per_mtok": 0.5,
-        "output_per_mtok": 1.5,
-        "cached_input_per_mtok": 0
+        "output_per_mtok": 1.5
       },
-      "limits_source": "openrouter-index",
-      "pricing_source": "models.dev",
+      "context_source": "vendor-docs",
+      "max_output_source": "vendor-docs",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -156,18 +200,30 @@
           }
         }
       },
-      "shutdown_date": "2026-10-23"
+      "documentation_url": "https://developers.openai.com/api/docs/models/gpt-3.5-turbo.md",
+      "shutdown_date": "2026-10-23",
+      "supports_thinking": false
     },
     {
       "id": "gpt-3.5-turbo-0125",
       "kind": "text",
-      "context_length": null,
-      "max_output_tokens": null,
-      "input_modalities": null,
-      "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
-      "pricing": null,
+      "context_length": 16385,
+      "max_output_tokens": 4096,
+      "input_modalities": [
+        "text"
+      ],
+      "output_modalities": [
+        "text"
+      ],
+      "supports_tools": false,
+      "supports_structured_output": false,
+      "pricing": {
+        "input_per_mtok": 0.5,
+        "output_per_mtok": 1.5
+      },
+      "context_source": "vendor-docs",
+      "max_output_source": "vendor-docs",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -193,18 +249,30 @@
           }
         }
       },
-      "shutdown_date": "2026-10-23"
+      "documentation_url": "https://developers.openai.com/api/docs/models/gpt-3.5-turbo.md",
+      "shutdown_date": "2026-10-23",
+      "supports_thinking": false
     },
     {
       "id": "gpt-3.5-turbo-1106",
       "kind": "text",
-      "context_length": null,
-      "max_output_tokens": null,
-      "input_modalities": null,
-      "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
-      "pricing": null,
+      "context_length": 16385,
+      "max_output_tokens": 4096,
+      "input_modalities": [
+        "text"
+      ],
+      "output_modalities": [
+        "text"
+      ],
+      "supports_tools": false,
+      "supports_structured_output": false,
+      "pricing": {
+        "input_per_mtok": 0.5,
+        "output_per_mtok": 1.5
+      },
+      "context_source": "vendor-docs",
+      "max_output_source": "vendor-docs",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -230,7 +298,9 @@
           }
         }
       },
-      "shutdown_date": "2026-09-28"
+      "documentation_url": "https://developers.openai.com/api/docs/models/gpt-3.5-turbo.md",
+      "shutdown_date": "2026-09-28",
+      "supports_thinking": false
     },
     {
       "id": "gpt-3.5-turbo-16k",
@@ -245,7 +315,8 @@
         "input_per_mtok": 3.0,
         "output_per_mtok": 4.0
       },
-      "limits_source": "openrouter-index",
+      "context_source": "openrouter-index",
+      "max_output_source": "openrouter-index",
       "pricing_source": "openrouter-index",
       "parameter_evidence": {
         "model_discovery": {
@@ -276,18 +347,23 @@
     {
       "id": "gpt-4",
       "kind": "text",
-      "context_length": 128000,
-      "max_output_tokens": 4096,
-      "input_modalities": null,
-      "output_modalities": null,
-      "supports_tools": true,
+      "context_length": 8192,
+      "max_output_tokens": 8192,
+      "input_modalities": [
+        "text"
+      ],
+      "output_modalities": [
+        "text"
+      ],
+      "supports_tools": false,
       "supports_structured_output": false,
       "pricing": {
-        "input_per_mtok": 30,
-        "output_per_mtok": 60
+        "input_per_mtok": 30.0,
+        "output_per_mtok": 60.0
       },
-      "limits_source": "openrouter-index",
-      "pricing_source": "models.dev",
+      "context_source": "vendor-docs",
+      "max_output_source": "vendor-docs",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -313,18 +389,30 @@
           }
         }
       },
-      "shutdown_date": "2026-10-23"
+      "documentation_url": "https://developers.openai.com/api/docs/models/gpt-4.md",
+      "shutdown_date": "2026-10-23",
+      "supports_thinking": false
     },
     {
       "id": "gpt-4-0613",
       "kind": "text",
-      "context_length": null,
-      "max_output_tokens": null,
-      "input_modalities": null,
-      "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
-      "pricing": null,
+      "context_length": 8192,
+      "max_output_tokens": 8192,
+      "input_modalities": [
+        "text"
+      ],
+      "output_modalities": [
+        "text"
+      ],
+      "supports_tools": false,
+      "supports_structured_output": false,
+      "pricing": {
+        "input_per_mtok": 30.0,
+        "output_per_mtok": 60.0
+      },
+      "context_source": "vendor-docs",
+      "max_output_source": "vendor-docs",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -350,23 +438,31 @@
           }
         }
       },
-      "shutdown_date": "2026-10-23"
+      "documentation_url": "https://developers.openai.com/api/docs/models/gpt-4.md",
+      "shutdown_date": "2026-10-23",
+      "supports_thinking": false
     },
     {
       "id": "gpt-4-turbo",
       "kind": "text",
       "context_length": 128000,
       "max_output_tokens": 4096,
-      "input_modalities": null,
-      "output_modalities": null,
+      "input_modalities": [
+        "text",
+        "image"
+      ],
+      "output_modalities": [
+        "text"
+      ],
       "supports_tools": true,
       "supports_structured_output": false,
       "pricing": {
-        "input_per_mtok": 10,
-        "output_per_mtok": 30
+        "input_per_mtok": 10.0,
+        "output_per_mtok": 30.0
       },
-      "limits_source": "openrouter-index",
-      "pricing_source": "models.dev",
+      "context_source": "vendor-docs",
+      "max_output_source": "vendor-docs",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -392,18 +488,31 @@
           }
         }
       },
-      "shutdown_date": "2026-10-23"
+      "documentation_url": "https://developers.openai.com/api/docs/models/gpt-4-turbo.md",
+      "shutdown_date": "2026-10-23",
+      "supports_thinking": false
     },
     {
       "id": "gpt-4-turbo-2024-04-09",
       "kind": "text",
-      "context_length": null,
-      "max_output_tokens": null,
-      "input_modalities": null,
-      "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
-      "pricing": null,
+      "context_length": 128000,
+      "max_output_tokens": 4096,
+      "input_modalities": [
+        "text",
+        "image"
+      ],
+      "output_modalities": [
+        "text"
+      ],
+      "supports_tools": true,
+      "supports_structured_output": false,
+      "pricing": {
+        "input_per_mtok": 10.0,
+        "output_per_mtok": 30.0
+      },
+      "context_source": "vendor-docs",
+      "max_output_source": "vendor-docs",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -429,24 +538,32 @@
           }
         }
       },
-      "shutdown_date": "2026-10-23"
+      "documentation_url": "https://developers.openai.com/api/docs/models/gpt-4-turbo.md",
+      "shutdown_date": "2026-10-23",
+      "supports_thinking": false
     },
     {
       "id": "gpt-4.1",
       "kind": "text",
       "context_length": 1047576,
       "max_output_tokens": 32768,
-      "input_modalities": null,
-      "output_modalities": null,
+      "input_modalities": [
+        "text",
+        "image"
+      ],
+      "output_modalities": [
+        "text"
+      ],
       "supports_tools": true,
       "supports_structured_output": true,
       "pricing": {
-        "input_per_mtok": 2,
-        "output_per_mtok": 8,
-        "cached_input_per_mtok": 0.5
+        "input_per_mtok": 2.0,
+        "cached_input_per_mtok": 0.5,
+        "output_per_mtok": 8.0
       },
-      "limits_source": "openrouter-index",
-      "pricing_source": "models.dev",
+      "context_source": "vendor-docs",
+      "max_output_source": "vendor-docs",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -471,23 +588,32 @@
             }
           }
         }
-      }
+      },
+      "documentation_url": "https://developers.openai.com/api/docs/models/gpt-4.1.md",
+      "supports_thinking": false
     },
     {
       "id": "gpt-4.1-2025-04-14",
       "kind": "text",
       "context_length": 1047576,
       "max_output_tokens": 32768,
-      "input_modalities": null,
-      "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
+      "input_modalities": [
+        "text",
+        "image"
+      ],
+      "output_modalities": [
+        "text"
+      ],
+      "supports_tools": true,
+      "supports_structured_output": true,
       "pricing": {
         "input_per_mtok": 2.0,
+        "cached_input_per_mtok": 0.5,
         "output_per_mtok": 8.0
       },
-      "limits_source": "openrouter-index",
-      "pricing_source": "openrouter-index",
+      "context_source": "vendor-docs",
+      "max_output_source": "vendor-docs",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -512,24 +638,32 @@
             }
           }
         }
-      }
+      },
+      "documentation_url": "https://developers.openai.com/api/docs/models/gpt-4.1.md",
+      "supports_thinking": false
     },
     {
       "id": "gpt-4.1-mini",
       "kind": "text",
       "context_length": 1047576,
       "max_output_tokens": 32768,
-      "input_modalities": null,
-      "output_modalities": null,
+      "input_modalities": [
+        "text",
+        "image"
+      ],
+      "output_modalities": [
+        "text"
+      ],
       "supports_tools": true,
       "supports_structured_output": true,
       "pricing": {
         "input_per_mtok": 0.4,
-        "output_per_mtok": 1.6,
-        "cached_input_per_mtok": 0.1
+        "cached_input_per_mtok": 0.1,
+        "output_per_mtok": 1.6
       },
-      "limits_source": "openrouter-index",
-      "pricing_source": "models.dev",
+      "context_source": "vendor-docs",
+      "max_output_source": "vendor-docs",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -554,23 +688,32 @@
             }
           }
         }
-      }
+      },
+      "documentation_url": "https://developers.openai.com/api/docs/models/gpt-4.1-mini.md",
+      "supports_thinking": false
     },
     {
       "id": "gpt-4.1-mini-2025-04-14",
       "kind": "text",
       "context_length": 1047576,
       "max_output_tokens": 32768,
-      "input_modalities": null,
-      "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
+      "input_modalities": [
+        "text",
+        "image"
+      ],
+      "output_modalities": [
+        "text"
+      ],
+      "supports_tools": true,
+      "supports_structured_output": true,
       "pricing": {
         "input_per_mtok": 0.4,
+        "cached_input_per_mtok": 0.1,
         "output_per_mtok": 1.6
       },
-      "limits_source": "openrouter-index",
-      "pricing_source": "openrouter-index",
+      "context_source": "vendor-docs",
+      "max_output_source": "vendor-docs",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -595,24 +738,32 @@
             }
           }
         }
-      }
+      },
+      "documentation_url": "https://developers.openai.com/api/docs/models/gpt-4.1-mini.md",
+      "supports_thinking": false
     },
     {
       "id": "gpt-4.1-nano",
       "kind": "text",
       "context_length": 1047576,
       "max_output_tokens": 32768,
-      "input_modalities": null,
-      "output_modalities": null,
+      "input_modalities": [
+        "text",
+        "image"
+      ],
+      "output_modalities": [
+        "text"
+      ],
       "supports_tools": true,
       "supports_structured_output": true,
       "pricing": {
         "input_per_mtok": 0.1,
-        "output_per_mtok": 0.4,
-        "cached_input_per_mtok": 0.025
+        "cached_input_per_mtok": 0.025,
+        "output_per_mtok": 0.4
       },
-      "limits_source": "openrouter-index",
-      "pricing_source": "models.dev",
+      "context_source": "vendor-docs",
+      "max_output_source": "vendor-docs",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -638,23 +789,32 @@
           }
         }
       },
-      "shutdown_date": "2026-10-23"
+      "documentation_url": "https://developers.openai.com/api/docs/models/gpt-4.1-nano.md",
+      "shutdown_date": "2026-10-23",
+      "supports_thinking": false
     },
     {
       "id": "gpt-4.1-nano-2025-04-14",
       "kind": "text",
       "context_length": 1047576,
       "max_output_tokens": 32768,
-      "input_modalities": null,
-      "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
+      "input_modalities": [
+        "text",
+        "image"
+      ],
+      "output_modalities": [
+        "text"
+      ],
+      "supports_tools": true,
+      "supports_structured_output": true,
       "pricing": {
         "input_per_mtok": 0.1,
+        "cached_input_per_mtok": 0.025,
         "output_per_mtok": 0.4
       },
-      "limits_source": "openrouter-index",
-      "pricing_source": "openrouter-index",
+      "context_source": "vendor-docs",
+      "max_output_source": "vendor-docs",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -680,24 +840,32 @@
           }
         }
       },
-      "shutdown_date": "2026-10-23"
+      "documentation_url": "https://developers.openai.com/api/docs/models/gpt-4.1-nano.md",
+      "shutdown_date": "2026-10-23",
+      "supports_thinking": false
     },
     {
       "id": "gpt-4o",
       "kind": "text",
       "context_length": 128000,
       "max_output_tokens": 16384,
-      "input_modalities": null,
-      "output_modalities": null,
+      "input_modalities": [
+        "text",
+        "image"
+      ],
+      "output_modalities": [
+        "text"
+      ],
       "supports_tools": true,
       "supports_structured_output": true,
       "pricing": {
         "input_per_mtok": 2.5,
-        "output_per_mtok": 10,
-        "cached_input_per_mtok": 1.25
+        "cached_input_per_mtok": 1.25,
+        "output_per_mtok": 10.0
       },
-      "limits_source": "openrouter-index",
-      "pricing_source": "models.dev",
+      "context_source": "vendor-docs",
+      "max_output_source": "vendor-docs",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -722,23 +890,32 @@
             }
           }
         }
-      }
+      },
+      "documentation_url": "https://developers.openai.com/api/docs/models/gpt-4o.md",
+      "supports_thinking": false
     },
     {
       "id": "gpt-4o-2024-05-13",
       "kind": "text",
       "context_length": 128000,
-      "max_output_tokens": 4096,
-      "input_modalities": null,
-      "output_modalities": null,
+      "max_output_tokens": 16384,
+      "input_modalities": [
+        "text",
+        "image"
+      ],
+      "output_modalities": [
+        "text"
+      ],
       "supports_tools": true,
       "supports_structured_output": true,
       "pricing": {
-        "input_per_mtok": 5,
-        "output_per_mtok": 15
+        "input_per_mtok": 2.5,
+        "cached_input_per_mtok": 1.25,
+        "output_per_mtok": 10.0
       },
-      "limits_source": "openrouter-index",
-      "pricing_source": "models.dev",
+      "context_source": "vendor-docs",
+      "max_output_source": "vendor-docs",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -764,24 +941,32 @@
           }
         }
       },
-      "shutdown_date": "2026-10-23"
+      "documentation_url": "https://developers.openai.com/api/docs/models/gpt-4o.md",
+      "shutdown_date": "2026-10-23",
+      "supports_thinking": false
     },
     {
       "id": "gpt-4o-2024-08-06",
       "kind": "text",
       "context_length": 128000,
       "max_output_tokens": 16384,
-      "input_modalities": null,
-      "output_modalities": null,
+      "input_modalities": [
+        "text",
+        "image"
+      ],
+      "output_modalities": [
+        "text"
+      ],
       "supports_tools": true,
       "supports_structured_output": true,
       "pricing": {
         "input_per_mtok": 2.5,
-        "output_per_mtok": 10,
-        "cached_input_per_mtok": 1.25
+        "cached_input_per_mtok": 1.25,
+        "output_per_mtok": 10.0
       },
-      "limits_source": "openrouter-index",
-      "pricing_source": "models.dev",
+      "context_source": "vendor-docs",
+      "max_output_source": "vendor-docs",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -806,24 +991,32 @@
             }
           }
         }
-      }
+      },
+      "documentation_url": "https://developers.openai.com/api/docs/models/gpt-4o.md",
+      "supports_thinking": false
     },
     {
       "id": "gpt-4o-2024-11-20",
       "kind": "text",
       "context_length": 128000,
       "max_output_tokens": 16384,
-      "input_modalities": null,
-      "output_modalities": null,
+      "input_modalities": [
+        "text",
+        "image"
+      ],
+      "output_modalities": [
+        "text"
+      ],
       "supports_tools": true,
       "supports_structured_output": true,
       "pricing": {
         "input_per_mtok": 2.5,
-        "output_per_mtok": 10,
-        "cached_input_per_mtok": 1.25
+        "cached_input_per_mtok": 1.25,
+        "output_per_mtok": 10.0
       },
-      "limits_source": "openrouter-index",
-      "pricing_source": "models.dev",
+      "context_source": "vendor-docs",
+      "max_output_source": "vendor-docs",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -848,24 +1041,32 @@
             }
           }
         }
-      }
+      },
+      "documentation_url": "https://developers.openai.com/api/docs/models/gpt-4o.md",
+      "supports_thinking": false
     },
     {
       "id": "gpt-4o-mini",
       "kind": "text",
       "context_length": 128000,
       "max_output_tokens": 16384,
-      "input_modalities": null,
-      "output_modalities": null,
+      "input_modalities": [
+        "text",
+        "image"
+      ],
+      "output_modalities": [
+        "text"
+      ],
       "supports_tools": true,
       "supports_structured_output": true,
       "pricing": {
         "input_per_mtok": 0.15,
-        "output_per_mtok": 0.6,
-        "cached_input_per_mtok": 0.075
+        "cached_input_per_mtok": 0.075,
+        "output_per_mtok": 0.6
       },
-      "limits_source": "openrouter-index",
-      "pricing_source": "models.dev",
+      "context_source": "vendor-docs",
+      "max_output_source": "vendor-docs",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -890,23 +1091,32 @@
             }
           }
         }
-      }
+      },
+      "documentation_url": "https://developers.openai.com/api/docs/models/gpt-4o-mini.md",
+      "supports_thinking": false
     },
     {
       "id": "gpt-4o-mini-2024-07-18",
       "kind": "text",
       "context_length": 128000,
       "max_output_tokens": 16384,
-      "input_modalities": null,
-      "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
+      "input_modalities": [
+        "text",
+        "image"
+      ],
+      "output_modalities": [
+        "text"
+      ],
+      "supports_tools": true,
+      "supports_structured_output": true,
       "pricing": {
         "input_per_mtok": 0.15,
+        "cached_input_per_mtok": 0.075,
         "output_per_mtok": 0.6
       },
-      "limits_source": "openrouter-index",
-      "pricing_source": "openrouter-index",
+      "context_source": "vendor-docs",
+      "max_output_source": "vendor-docs",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -931,18 +1141,30 @@
             }
           }
         }
-      }
+      },
+      "documentation_url": "https://developers.openai.com/api/docs/models/gpt-4o-mini.md",
+      "supports_thinking": false
     },
     {
       "id": "gpt-4o-mini-search-preview",
       "kind": "text",
-      "context_length": null,
-      "max_output_tokens": null,
-      "input_modalities": null,
-      "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
-      "pricing": null,
+      "context_length": 128000,
+      "max_output_tokens": 16384,
+      "input_modalities": [
+        "text"
+      ],
+      "output_modalities": [
+        "text"
+      ],
+      "supports_tools": false,
+      "supports_structured_output": true,
+      "pricing": {
+        "input_per_mtok": 0.15,
+        "output_per_mtok": 0.6
+      },
+      "context_source": "vendor-docs",
+      "max_output_source": "vendor-docs",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -967,18 +1189,30 @@
             }
           }
         }
-      }
+      },
+      "documentation_url": "https://developers.openai.com/api/docs/models/gpt-4o-mini-search-preview.md",
+      "supports_thinking": false
     },
     {
       "id": "gpt-4o-mini-search-preview-2025-03-11",
       "kind": "text",
-      "context_length": null,
-      "max_output_tokens": null,
-      "input_modalities": null,
-      "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
-      "pricing": null,
+      "context_length": 128000,
+      "max_output_tokens": 16384,
+      "input_modalities": [
+        "text"
+      ],
+      "output_modalities": [
+        "text"
+      ],
+      "supports_tools": false,
+      "supports_structured_output": true,
+      "pricing": {
+        "input_per_mtok": 0.15,
+        "output_per_mtok": 0.6
+      },
+      "context_source": "vendor-docs",
+      "max_output_source": "vendor-docs",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -1004,54 +1238,30 @@
           }
         }
       },
-      "shutdown_date": "2026-07-23"
+      "documentation_url": "https://developers.openai.com/api/docs/models/gpt-4o-mini-search-preview.md",
+      "shutdown_date": "2026-07-23",
+      "supports_thinking": false
     },
     {
       "id": "gpt-4o-search-preview",
       "kind": "text",
-      "context_length": null,
-      "max_output_tokens": null,
-      "input_modalities": null,
-      "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
-      "pricing": null,
-      "parameter_evidence": {
-        "model_discovery": {
-          "sources": [
-            "schemas/completion/oai.openai.request.json",
-            "schemas/completion/oai_responses.openai.request.json"
-          ],
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "stop": "supported",
-              "seed": "supported",
-              "reasoning_effort": "supported",
-              "parallel_tool_calls": "supported",
-              "logprobs": "supported"
-            },
-            "responses": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "reasoning_effort": "supported",
-              "parallel_tool_calls": "supported"
-            }
-          }
-        }
-      }
-    },
-    {
-      "id": "gpt-4o-search-preview-2025-03-11",
-      "kind": "text",
-      "context_length": null,
-      "max_output_tokens": null,
-      "input_modalities": null,
-      "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
-      "pricing": null,
+      "context_length": 128000,
+      "max_output_tokens": 16384,
+      "input_modalities": [
+        "text"
+      ],
+      "output_modalities": [
+        "text"
+      ],
+      "supports_tools": false,
+      "supports_structured_output": true,
+      "pricing": {
+        "input_per_mtok": 2.5,
+        "output_per_mtok": 10.0
+      },
+      "context_source": "vendor-docs",
+      "max_output_source": "vendor-docs",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -1077,24 +1287,80 @@
           }
         }
       },
-      "shutdown_date": "2026-07-23"
+      "documentation_url": "https://developers.openai.com/api/docs/models/gpt-4o-search-preview.md",
+      "supports_thinking": false
+    },
+    {
+      "id": "gpt-4o-search-preview-2025-03-11",
+      "kind": "text",
+      "context_length": 128000,
+      "max_output_tokens": 16384,
+      "input_modalities": [
+        "text"
+      ],
+      "output_modalities": [
+        "text"
+      ],
+      "supports_tools": false,
+      "supports_structured_output": true,
+      "pricing": {
+        "input_per_mtok": 2.5,
+        "output_per_mtok": 10.0
+      },
+      "context_source": "vendor-docs",
+      "max_output_source": "vendor-docs",
+      "pricing_source": "vendor-docs",
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.openai.request.json",
+            "schemas/completion/oai_responses.openai.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        }
+      },
+      "documentation_url": "https://developers.openai.com/api/docs/models/gpt-4o-search-preview.md",
+      "shutdown_date": "2026-07-23",
+      "supports_thinking": false
     },
     {
       "id": "gpt-5",
       "kind": "text",
       "context_length": 400000,
       "max_output_tokens": 128000,
-      "input_modalities": null,
-      "output_modalities": null,
+      "input_modalities": [
+        "text",
+        "image"
+      ],
+      "output_modalities": [
+        "text"
+      ],
       "supports_tools": true,
       "supports_structured_output": true,
       "pricing": {
         "input_per_mtok": 1.25,
-        "output_per_mtok": 10,
-        "cached_input_per_mtok": 0.125
+        "cached_input_per_mtok": 0.125,
+        "output_per_mtok": 10.0
       },
-      "limits_source": "openrouter-index",
-      "pricing_source": "models.dev",
+      "context_source": "vendor-docs",
+      "max_output_source": "vendor-docs",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -1119,23 +1385,32 @@
             }
           }
         }
-      }
+      },
+      "documentation_url": "https://developers.openai.com/api/docs/models/gpt-5.md",
+      "supports_thinking": true
     },
     {
       "id": "gpt-5-2025-08-07",
       "kind": "text",
       "context_length": 400000,
       "max_output_tokens": 128000,
-      "input_modalities": null,
-      "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
+      "input_modalities": [
+        "text",
+        "image"
+      ],
+      "output_modalities": [
+        "text"
+      ],
+      "supports_tools": true,
+      "supports_structured_output": true,
       "pricing": {
         "input_per_mtok": 1.25,
+        "cached_input_per_mtok": 0.125,
         "output_per_mtok": 10.0
       },
-      "limits_source": "openrouter-index",
-      "pricing_source": "openrouter-index",
+      "context_source": "vendor-docs",
+      "max_output_source": "vendor-docs",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -1161,18 +1436,32 @@
           }
         }
       },
-      "shutdown_date": "2026-12-11"
+      "documentation_url": "https://developers.openai.com/api/docs/models/gpt-5.md",
+      "shutdown_date": "2026-12-11",
+      "supports_thinking": true
     },
     {
       "id": "gpt-5-chat-latest",
       "kind": "text",
-      "context_length": null,
-      "max_output_tokens": null,
-      "input_modalities": null,
-      "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
-      "pricing": null,
+      "context_length": 128000,
+      "max_output_tokens": 16384,
+      "input_modalities": [
+        "text",
+        "image"
+      ],
+      "output_modalities": [
+        "text"
+      ],
+      "supports_tools": true,
+      "supports_structured_output": true,
+      "pricing": {
+        "input_per_mtok": 1.25,
+        "cached_input_per_mtok": 0.125,
+        "output_per_mtok": 10.0
+      },
+      "context_source": "vendor-docs",
+      "max_output_source": "vendor-docs",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -1198,23 +1487,32 @@
           }
         }
       },
-      "shutdown_date": "2026-07-23"
+      "documentation_url": "https://developers.openai.com/api/docs/models/gpt-5-chat-latest.md",
+      "shutdown_date": "2026-07-23",
+      "supports_thinking": false
     },
     {
       "id": "gpt-5-codex",
       "kind": "text",
       "context_length": 400000,
       "max_output_tokens": 128000,
-      "input_modalities": null,
-      "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
+      "input_modalities": [
+        "text",
+        "image"
+      ],
+      "output_modalities": [
+        "text"
+      ],
+      "supports_tools": true,
+      "supports_structured_output": true,
       "pricing": {
-        "input_per_mtok": 0.625,
-        "output_per_mtok": 5.0
+        "input_per_mtok": 1.25,
+        "cached_input_per_mtok": 0.125,
+        "output_per_mtok": 10.0
       },
-      "limits_source": "openrouter-index",
-      "pricing_source": "openrouter-index",
+      "context_source": "vendor-docs",
+      "max_output_source": "vendor-docs",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -1240,24 +1538,32 @@
           }
         }
       },
-      "shutdown_date": "2026-07-23"
+      "documentation_url": "https://developers.openai.com/api/docs/models/gpt-5-codex.md",
+      "shutdown_date": "2026-07-23",
+      "supports_thinking": true
     },
     {
       "id": "gpt-5-mini",
       "kind": "text",
       "context_length": 400000,
       "max_output_tokens": 128000,
-      "input_modalities": null,
-      "output_modalities": null,
+      "input_modalities": [
+        "text",
+        "image"
+      ],
+      "output_modalities": [
+        "text"
+      ],
       "supports_tools": true,
       "supports_structured_output": true,
       "pricing": {
         "input_per_mtok": 0.25,
-        "output_per_mtok": 2,
-        "cached_input_per_mtok": 0.025
+        "cached_input_per_mtok": 0.025,
+        "output_per_mtok": 2.0
       },
-      "limits_source": "openrouter-index",
-      "pricing_source": "models.dev",
+      "context_source": "vendor-docs",
+      "max_output_source": "vendor-docs",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -1282,23 +1588,32 @@
             }
           }
         }
-      }
+      },
+      "documentation_url": "https://developers.openai.com/api/docs/models/gpt-5-mini.md",
+      "supports_thinking": true
     },
     {
       "id": "gpt-5-mini-2025-08-07",
       "kind": "text",
       "context_length": 400000,
       "max_output_tokens": 128000,
-      "input_modalities": null,
-      "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
+      "input_modalities": [
+        "text",
+        "image"
+      ],
+      "output_modalities": [
+        "text"
+      ],
+      "supports_tools": true,
+      "supports_structured_output": true,
       "pricing": {
         "input_per_mtok": 0.25,
+        "cached_input_per_mtok": 0.025,
         "output_per_mtok": 2.0
       },
-      "limits_source": "openrouter-index",
-      "pricing_source": "openrouter-index",
+      "context_source": "vendor-docs",
+      "max_output_source": "vendor-docs",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -1324,24 +1639,32 @@
           }
         }
       },
-      "shutdown_date": "2026-12-11"
+      "documentation_url": "https://developers.openai.com/api/docs/models/gpt-5-mini.md",
+      "shutdown_date": "2026-12-11",
+      "supports_thinking": true
     },
     {
       "id": "gpt-5-nano",
       "kind": "text",
       "context_length": 400000,
       "max_output_tokens": 128000,
-      "input_modalities": null,
-      "output_modalities": null,
+      "input_modalities": [
+        "text",
+        "image"
+      ],
+      "output_modalities": [
+        "text"
+      ],
       "supports_tools": true,
       "supports_structured_output": true,
       "pricing": {
         "input_per_mtok": 0.05,
-        "output_per_mtok": 0.4,
-        "cached_input_per_mtok": 0.005
+        "cached_input_per_mtok": 0.005,
+        "output_per_mtok": 0.4
       },
-      "limits_source": "openrouter-index",
-      "pricing_source": "models.dev",
+      "context_source": "vendor-docs",
+      "max_output_source": "vendor-docs",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -1366,23 +1689,32 @@
             }
           }
         }
-      }
+      },
+      "documentation_url": "https://developers.openai.com/api/docs/models/gpt-5-nano.md",
+      "supports_thinking": true
     },
     {
       "id": "gpt-5-nano-2025-08-07",
       "kind": "text",
       "context_length": 400000,
       "max_output_tokens": 128000,
-      "input_modalities": null,
-      "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
+      "input_modalities": [
+        "text",
+        "image"
+      ],
+      "output_modalities": [
+        "text"
+      ],
+      "supports_tools": true,
+      "supports_structured_output": true,
       "pricing": {
         "input_per_mtok": 0.05,
+        "cached_input_per_mtok": 0.005,
         "output_per_mtok": 0.4
       },
-      "limits_source": "openrouter-index",
-      "pricing_source": "openrouter-index",
+      "context_source": "vendor-docs",
+      "max_output_source": "vendor-docs",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -1408,23 +1740,31 @@
           }
         }
       },
-      "shutdown_date": "2026-12-11"
+      "documentation_url": "https://developers.openai.com/api/docs/models/gpt-5-nano.md",
+      "shutdown_date": "2026-12-11",
+      "supports_thinking": true
     },
     {
       "id": "gpt-5-pro",
       "kind": "text",
       "context_length": 400000,
-      "max_output_tokens": 128000,
-      "input_modalities": null,
-      "output_modalities": null,
+      "max_output_tokens": 272000,
+      "input_modalities": [
+        "text",
+        "image"
+      ],
+      "output_modalities": [
+        "text"
+      ],
       "supports_tools": true,
       "supports_structured_output": true,
       "pricing": {
-        "input_per_mtok": 15,
-        "output_per_mtok": 120
+        "input_per_mtok": 15.0,
+        "output_per_mtok": 120.0
       },
-      "limits_source": "openrouter-index",
-      "pricing_source": "models.dev",
+      "context_source": "vendor-docs",
+      "max_output_source": "vendor-docs",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -1449,23 +1789,31 @@
             }
           }
         }
-      }
+      },
+      "documentation_url": "https://developers.openai.com/api/docs/models/gpt-5-pro.md",
+      "supports_thinking": true
     },
     {
       "id": "gpt-5-pro-2025-10-06",
       "kind": "text",
       "context_length": 400000,
-      "max_output_tokens": 128000,
-      "input_modalities": null,
-      "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
+      "max_output_tokens": 272000,
+      "input_modalities": [
+        "text",
+        "image"
+      ],
+      "output_modalities": [
+        "text"
+      ],
+      "supports_tools": true,
+      "supports_structured_output": true,
       "pricing": {
         "input_per_mtok": 15.0,
         "output_per_mtok": 120.0
       },
-      "limits_source": "openrouter-index",
-      "pricing_source": "openrouter-index",
+      "context_source": "vendor-docs",
+      "max_output_source": "vendor-docs",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -1491,7 +1839,9 @@
           }
         }
       },
-      "shutdown_date": "2026-12-11"
+      "documentation_url": "https://developers.openai.com/api/docs/models/gpt-5-pro.md",
+      "shutdown_date": "2026-12-11",
+      "supports_thinking": true
     },
     {
       "id": "gpt-5-search-api",
@@ -1502,7 +1852,12 @@
       "output_modalities": null,
       "supports_tools": null,
       "supports_structured_output": null,
-      "pricing": null,
+      "pricing": {
+        "input_per_mtok": 1.25,
+        "cached_input_per_mtok": 0.125,
+        "output_per_mtok": 10.0
+      },
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -1527,7 +1882,8 @@
             }
           }
         }
-      }
+      },
+      "documentation_url": "https://developers.openai.com/api/docs/pricing.md"
     },
     {
       "id": "gpt-5-search-api-2025-10-14",
@@ -1570,17 +1926,23 @@
       "kind": "text",
       "context_length": 400000,
       "max_output_tokens": 128000,
-      "input_modalities": null,
-      "output_modalities": null,
+      "input_modalities": [
+        "text",
+        "image"
+      ],
+      "output_modalities": [
+        "text"
+      ],
       "supports_tools": true,
       "supports_structured_output": true,
       "pricing": {
         "input_per_mtok": 1.25,
-        "output_per_mtok": 10,
-        "cached_input_per_mtok": 0.125
+        "cached_input_per_mtok": 0.125,
+        "output_per_mtok": 10.0
       },
-      "limits_source": "openrouter-index",
-      "pricing_source": "models.dev",
+      "context_source": "vendor-docs",
+      "max_output_source": "vendor-docs",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -1605,54 +1967,32 @@
             }
           }
         }
-      }
+      },
+      "documentation_url": "https://developers.openai.com/api/docs/models/gpt-5.1.md",
+      "supports_thinking": true
     },
     {
       "id": "gpt-5.1-2025-11-13",
       "kind": "text",
-      "context_length": null,
-      "max_output_tokens": null,
-      "input_modalities": null,
-      "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
-      "pricing": null,
-      "parameter_evidence": {
-        "model_discovery": {
-          "sources": [
-            "schemas/completion/oai.openai.request.json",
-            "schemas/completion/oai_responses.openai.request.json"
-          ],
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "stop": "supported",
-              "seed": "supported",
-              "reasoning_effort": "supported",
-              "parallel_tool_calls": "supported",
-              "logprobs": "supported"
-            },
-            "responses": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "reasoning_effort": "supported",
-              "parallel_tool_calls": "supported"
-            }
-          }
-        }
-      }
-    },
-    {
-      "id": "gpt-5.1-chat-latest",
-      "kind": "text",
-      "context_length": null,
-      "max_output_tokens": null,
-      "input_modalities": null,
-      "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
-      "pricing": null,
+      "context_length": 400000,
+      "max_output_tokens": 128000,
+      "input_modalities": [
+        "text",
+        "image"
+      ],
+      "output_modalities": [
+        "text"
+      ],
+      "supports_tools": true,
+      "supports_structured_output": true,
+      "pricing": {
+        "input_per_mtok": 1.25,
+        "cached_input_per_mtok": 0.125,
+        "output_per_mtok": 10.0
+      },
+      "context_source": "vendor-docs",
+      "max_output_source": "vendor-docs",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -1678,23 +2018,82 @@
           }
         }
       },
-      "shutdown_date": "2026-07-23"
+      "documentation_url": "https://developers.openai.com/api/docs/models/gpt-5.1.md",
+      "supports_thinking": true
+    },
+    {
+      "id": "gpt-5.1-chat-latest",
+      "kind": "text",
+      "context_length": 128000,
+      "max_output_tokens": 16384,
+      "input_modalities": [
+        "text",
+        "image"
+      ],
+      "output_modalities": [
+        "text"
+      ],
+      "supports_tools": true,
+      "supports_structured_output": true,
+      "pricing": {
+        "input_per_mtok": 1.25,
+        "cached_input_per_mtok": 0.125,
+        "output_per_mtok": 10.0
+      },
+      "context_source": "vendor-docs",
+      "max_output_source": "vendor-docs",
+      "pricing_source": "vendor-docs",
+      "parameter_evidence": {
+        "model_discovery": {
+          "sources": [
+            "schemas/completion/oai.openai.request.json",
+            "schemas/completion/oai_responses.openai.request.json"
+          ],
+          "support": {
+            "chat/completions": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "stop": "supported",
+              "seed": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported",
+              "logprobs": "supported"
+            },
+            "responses": {
+              "temperature": "supported",
+              "top_p": "supported",
+              "reasoning_effort": "supported",
+              "parallel_tool_calls": "supported"
+            }
+          }
+        }
+      },
+      "documentation_url": "https://developers.openai.com/api/docs/models/gpt-5.1-chat-latest.md",
+      "shutdown_date": "2026-07-23",
+      "supports_thinking": false
     },
     {
       "id": "gpt-5.1-codex",
       "kind": "text",
       "context_length": 400000,
       "max_output_tokens": 128000,
-      "input_modalities": null,
-      "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
+      "input_modalities": [
+        "text",
+        "image"
+      ],
+      "output_modalities": [
+        "text"
+      ],
+      "supports_tools": true,
+      "supports_structured_output": true,
       "pricing": {
         "input_per_mtok": 1.25,
+        "cached_input_per_mtok": 0.125,
         "output_per_mtok": 10.0
       },
-      "limits_source": "openrouter-index",
-      "pricing_source": "openrouter-index",
+      "context_source": "vendor-docs",
+      "max_output_source": "vendor-docs",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -1720,23 +2119,32 @@
           }
         }
       },
-      "shutdown_date": "2026-07-23"
+      "documentation_url": "https://developers.openai.com/api/docs/models/gpt-5.1-codex.md",
+      "shutdown_date": "2026-07-23",
+      "supports_thinking": true
     },
     {
       "id": "gpt-5.1-codex-max",
       "kind": "text",
       "context_length": 400000,
       "max_output_tokens": 128000,
-      "input_modalities": null,
-      "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
+      "input_modalities": [
+        "text",
+        "image"
+      ],
+      "output_modalities": [
+        "text"
+      ],
+      "supports_tools": true,
+      "supports_structured_output": true,
       "pricing": {
         "input_per_mtok": 1.25,
+        "cached_input_per_mtok": 0.125,
         "output_per_mtok": 10.0
       },
-      "limits_source": "openrouter-index",
-      "pricing_source": "openrouter-index",
+      "context_source": "vendor-docs",
+      "max_output_source": "vendor-docs",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -1762,23 +2170,32 @@
           }
         }
       },
-      "shutdown_date": "2026-07-23"
+      "documentation_url": "https://developers.openai.com/api/docs/models/gpt-5.1-codex-max.md",
+      "shutdown_date": "2026-07-23",
+      "supports_thinking": true
     },
     {
       "id": "gpt-5.1-codex-mini",
       "kind": "text",
       "context_length": 400000,
       "max_output_tokens": 128000,
-      "input_modalities": null,
-      "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
+      "input_modalities": [
+        "text",
+        "image"
+      ],
+      "output_modalities": [
+        "text"
+      ],
+      "supports_tools": true,
+      "supports_structured_output": true,
       "pricing": {
         "input_per_mtok": 0.25,
+        "cached_input_per_mtok": 0.025,
         "output_per_mtok": 2.0
       },
-      "limits_source": "openrouter-index",
-      "pricing_source": "openrouter-index",
+      "context_source": "vendor-docs",
+      "max_output_source": "vendor-docs",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -1804,24 +2221,32 @@
           }
         }
       },
-      "shutdown_date": "2026-07-23"
+      "documentation_url": "https://developers.openai.com/api/docs/models/gpt-5.1-codex-mini.md",
+      "shutdown_date": "2026-07-23",
+      "supports_thinking": true
     },
     {
       "id": "gpt-5.2",
       "kind": "text",
       "context_length": 400000,
       "max_output_tokens": 128000,
-      "input_modalities": null,
-      "output_modalities": null,
+      "input_modalities": [
+        "text",
+        "image"
+      ],
+      "output_modalities": [
+        "text"
+      ],
       "supports_tools": true,
       "supports_structured_output": true,
       "pricing": {
         "input_per_mtok": 1.75,
-        "output_per_mtok": 14,
-        "cached_input_per_mtok": 0.175
+        "cached_input_per_mtok": 0.175,
+        "output_per_mtok": 14.0
       },
-      "limits_source": "openrouter-index",
-      "pricing_source": "models.dev",
+      "context_source": "vendor-docs",
+      "max_output_source": "vendor-docs",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -1846,18 +2271,32 @@
             }
           }
         }
-      }
+      },
+      "documentation_url": "https://developers.openai.com/api/docs/models/gpt-5.2.md",
+      "supports_thinking": true
     },
     {
       "id": "gpt-5.2-2025-12-11",
       "kind": "text",
-      "context_length": null,
-      "max_output_tokens": null,
-      "input_modalities": null,
-      "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
-      "pricing": null,
+      "context_length": 400000,
+      "max_output_tokens": 128000,
+      "input_modalities": [
+        "text",
+        "image"
+      ],
+      "output_modalities": [
+        "text"
+      ],
+      "supports_tools": true,
+      "supports_structured_output": true,
+      "pricing": {
+        "input_per_mtok": 1.75,
+        "cached_input_per_mtok": 0.175,
+        "output_per_mtok": 14.0
+      },
+      "context_source": "vendor-docs",
+      "max_output_source": "vendor-docs",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -1882,24 +2321,32 @@
             }
           }
         }
-      }
+      },
+      "documentation_url": "https://developers.openai.com/api/docs/models/gpt-5.2.md",
+      "supports_thinking": true
     },
     {
       "id": "gpt-5.2-chat-latest",
       "kind": "text",
       "context_length": 128000,
-      "max_output_tokens": 32000,
-      "input_modalities": null,
-      "output_modalities": null,
+      "max_output_tokens": 16384,
+      "input_modalities": [
+        "text",
+        "image"
+      ],
+      "output_modalities": [
+        "text"
+      ],
       "supports_tools": true,
       "supports_structured_output": true,
       "pricing": {
         "input_per_mtok": 1.75,
-        "output_per_mtok": 14,
-        "cached_input_per_mtok": 0.175
+        "cached_input_per_mtok": 0.175,
+        "output_per_mtok": 14.0
       },
-      "limits_source": "openrouter-index",
-      "pricing_source": "models.dev",
+      "context_source": "vendor-docs",
+      "max_output_source": "vendor-docs",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -1925,23 +2372,32 @@
           }
         }
       },
-      "shutdown_date": "2026-08-10"
+      "documentation_url": "https://developers.openai.com/api/docs/models/gpt-5.2-chat-latest.md",
+      "shutdown_date": "2026-08-10",
+      "supports_thinking": false
     },
     {
       "id": "gpt-5.2-codex",
       "kind": "text",
       "context_length": 400000,
       "max_output_tokens": 128000,
-      "input_modalities": null,
-      "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
+      "input_modalities": [
+        "text",
+        "image"
+      ],
+      "output_modalities": [
+        "text"
+      ],
+      "supports_tools": true,
+      "supports_structured_output": true,
       "pricing": {
         "input_per_mtok": 1.75,
+        "cached_input_per_mtok": 0.175,
         "output_per_mtok": 14.0
       },
-      "limits_source": "openrouter-index",
-      "pricing_source": "openrouter-index",
+      "context_source": "vendor-docs",
+      "max_output_source": "vendor-docs",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -1967,23 +2423,31 @@
           }
         }
       },
-      "shutdown_date": "2026-07-23"
+      "documentation_url": "https://developers.openai.com/api/docs/models/gpt-5.2-codex.md",
+      "shutdown_date": "2026-07-23",
+      "supports_thinking": true
     },
     {
       "id": "gpt-5.2-pro",
       "kind": "text",
       "context_length": 400000,
       "max_output_tokens": 128000,
-      "input_modalities": null,
-      "output_modalities": null,
+      "input_modalities": [
+        "text",
+        "image"
+      ],
+      "output_modalities": [
+        "text"
+      ],
       "supports_tools": true,
       "supports_structured_output": false,
       "pricing": {
-        "input_per_mtok": 21,
-        "output_per_mtok": 168
+        "input_per_mtok": 21.0,
+        "output_per_mtok": 168.0
       },
-      "limits_source": "openrouter-index",
-      "pricing_source": "models.dev",
+      "context_source": "vendor-docs",
+      "max_output_source": "vendor-docs",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -2008,18 +2472,31 @@
             }
           }
         }
-      }
+      },
+      "documentation_url": "https://developers.openai.com/api/docs/models/gpt-5.2-pro.md",
+      "supports_thinking": true
     },
     {
       "id": "gpt-5.2-pro-2025-12-11",
       "kind": "text",
-      "context_length": null,
-      "max_output_tokens": null,
-      "input_modalities": null,
-      "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
-      "pricing": null,
+      "context_length": 400000,
+      "max_output_tokens": 128000,
+      "input_modalities": [
+        "text",
+        "image"
+      ],
+      "output_modalities": [
+        "text"
+      ],
+      "supports_tools": true,
+      "supports_structured_output": false,
+      "pricing": {
+        "input_per_mtok": 21.0,
+        "output_per_mtok": 168.0
+      },
+      "context_source": "vendor-docs",
+      "max_output_source": "vendor-docs",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -2044,24 +2521,32 @@
             }
           }
         }
-      }
+      },
+      "documentation_url": "https://developers.openai.com/api/docs/models/gpt-5.2-pro.md",
+      "supports_thinking": true
     },
     {
       "id": "gpt-5.3-chat-latest",
       "kind": "text",
       "context_length": 128000,
       "max_output_tokens": 16384,
-      "input_modalities": null,
-      "output_modalities": null,
+      "input_modalities": [
+        "text",
+        "image"
+      ],
+      "output_modalities": [
+        "text"
+      ],
       "supports_tools": true,
       "supports_structured_output": true,
       "pricing": {
         "input_per_mtok": 1.75,
-        "output_per_mtok": 14,
-        "cached_input_per_mtok": 0.175
+        "cached_input_per_mtok": 0.175,
+        "output_per_mtok": 14.0
       },
-      "limits_source": "models.dev",
-      "pricing_source": "models.dev",
+      "context_source": "vendor-docs",
+      "max_output_source": "vendor-docs",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -2087,24 +2572,32 @@
           }
         }
       },
-      "shutdown_date": "2026-08-10"
+      "documentation_url": "https://developers.openai.com/api/docs/models/gpt-5.3-chat-latest.md",
+      "shutdown_date": "2026-08-10",
+      "supports_thinking": false
     },
     {
       "id": "gpt-5.3-codex",
       "kind": "text",
       "context_length": 400000,
       "max_output_tokens": 128000,
-      "input_modalities": null,
-      "output_modalities": null,
+      "input_modalities": [
+        "text",
+        "image"
+      ],
+      "output_modalities": [
+        "text"
+      ],
       "supports_tools": true,
       "supports_structured_output": true,
       "pricing": {
         "input_per_mtok": 1.75,
-        "output_per_mtok": 14,
-        "cached_input_per_mtok": 0.175
+        "cached_input_per_mtok": 0.175,
+        "output_per_mtok": 14.0
       },
-      "limits_source": "openrouter-index",
-      "pricing_source": "models.dev",
+      "context_source": "vendor-docs",
+      "max_output_source": "vendor-docs",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -2129,24 +2622,32 @@
             }
           }
         }
-      }
+      },
+      "documentation_url": "https://developers.openai.com/api/docs/models/gpt-5.3-codex.md",
+      "supports_thinking": true
     },
     {
       "id": "gpt-5.4",
       "kind": "text",
       "context_length": 1050000,
       "max_output_tokens": 128000,
-      "input_modalities": null,
-      "output_modalities": null,
+      "input_modalities": [
+        "text",
+        "image"
+      ],
+      "output_modalities": [
+        "text"
+      ],
       "supports_tools": true,
       "supports_structured_output": true,
       "pricing": {
         "input_per_mtok": 2.5,
-        "output_per_mtok": 15,
-        "cached_input_per_mtok": 0.25
+        "cached_input_per_mtok": 0.25,
+        "output_per_mtok": 15.0
       },
-      "limits_source": "openrouter-index",
-      "pricing_source": "models.dev",
+      "context_source": "vendor-docs",
+      "max_output_source": "vendor-docs",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -2171,18 +2672,32 @@
             }
           }
         }
-      }
+      },
+      "documentation_url": "https://developers.openai.com/api/docs/models/gpt-5.4.md",
+      "supports_thinking": true
     },
     {
       "id": "gpt-5.4-2026-03-05",
       "kind": "text",
-      "context_length": null,
-      "max_output_tokens": null,
-      "input_modalities": null,
-      "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
-      "pricing": null,
+      "context_length": 1050000,
+      "max_output_tokens": 128000,
+      "input_modalities": [
+        "text",
+        "image"
+      ],
+      "output_modalities": [
+        "text"
+      ],
+      "supports_tools": true,
+      "supports_structured_output": true,
+      "pricing": {
+        "input_per_mtok": 2.5,
+        "cached_input_per_mtok": 0.25,
+        "output_per_mtok": 15.0
+      },
+      "context_source": "vendor-docs",
+      "max_output_source": "vendor-docs",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -2207,24 +2722,32 @@
             }
           }
         }
-      }
+      },
+      "documentation_url": "https://developers.openai.com/api/docs/models/gpt-5.4.md",
+      "supports_thinking": true
     },
     {
       "id": "gpt-5.4-mini",
       "kind": "text",
       "context_length": 400000,
       "max_output_tokens": 128000,
-      "input_modalities": null,
-      "output_modalities": null,
+      "input_modalities": [
+        "text",
+        "image"
+      ],
+      "output_modalities": [
+        "text"
+      ],
       "supports_tools": true,
       "supports_structured_output": true,
       "pricing": {
         "input_per_mtok": 0.75,
-        "output_per_mtok": 4.5,
-        "cached_input_per_mtok": 0.075
+        "cached_input_per_mtok": 0.075,
+        "output_per_mtok": 4.5
       },
-      "limits_source": "openrouter-index",
-      "pricing_source": "models.dev",
+      "context_source": "vendor-docs",
+      "max_output_source": "vendor-docs",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -2249,18 +2772,32 @@
             }
           }
         }
-      }
+      },
+      "documentation_url": "https://developers.openai.com/api/docs/models/gpt-5.4-mini.md",
+      "supports_thinking": true
     },
     {
       "id": "gpt-5.4-mini-2026-03-17",
       "kind": "text",
-      "context_length": null,
-      "max_output_tokens": null,
-      "input_modalities": null,
-      "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
-      "pricing": null,
+      "context_length": 400000,
+      "max_output_tokens": 128000,
+      "input_modalities": [
+        "text",
+        "image"
+      ],
+      "output_modalities": [
+        "text"
+      ],
+      "supports_tools": true,
+      "supports_structured_output": true,
+      "pricing": {
+        "input_per_mtok": 0.75,
+        "cached_input_per_mtok": 0.075,
+        "output_per_mtok": 4.5
+      },
+      "context_source": "vendor-docs",
+      "max_output_source": "vendor-docs",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -2285,24 +2822,32 @@
             }
           }
         }
-      }
+      },
+      "documentation_url": "https://developers.openai.com/api/docs/models/gpt-5.4-mini.md",
+      "supports_thinking": true
     },
     {
       "id": "gpt-5.4-nano",
       "kind": "text",
       "context_length": 400000,
       "max_output_tokens": 128000,
-      "input_modalities": null,
-      "output_modalities": null,
+      "input_modalities": [
+        "text",
+        "image"
+      ],
+      "output_modalities": [
+        "text"
+      ],
       "supports_tools": true,
       "supports_structured_output": true,
       "pricing": {
         "input_per_mtok": 0.2,
-        "output_per_mtok": 1.25,
-        "cached_input_per_mtok": 0.02
+        "cached_input_per_mtok": 0.02,
+        "output_per_mtok": 1.25
       },
-      "limits_source": "openrouter-index",
-      "pricing_source": "models.dev",
+      "context_source": "vendor-docs",
+      "max_output_source": "vendor-docs",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -2327,18 +2872,32 @@
             }
           }
         }
-      }
+      },
+      "documentation_url": "https://developers.openai.com/api/docs/models/gpt-5.4-nano.md",
+      "supports_thinking": true
     },
     {
       "id": "gpt-5.4-nano-2026-03-17",
       "kind": "text",
-      "context_length": null,
-      "max_output_tokens": null,
-      "input_modalities": null,
-      "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
-      "pricing": null,
+      "context_length": 400000,
+      "max_output_tokens": 128000,
+      "input_modalities": [
+        "text",
+        "image"
+      ],
+      "output_modalities": [
+        "text"
+      ],
+      "supports_tools": true,
+      "supports_structured_output": true,
+      "pricing": {
+        "input_per_mtok": 0.2,
+        "cached_input_per_mtok": 0.02,
+        "output_per_mtok": 1.25
+      },
+      "context_source": "vendor-docs",
+      "max_output_source": "vendor-docs",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -2363,23 +2922,31 @@
             }
           }
         }
-      }
+      },
+      "documentation_url": "https://developers.openai.com/api/docs/models/gpt-5.4-nano.md",
+      "supports_thinking": true
     },
     {
       "id": "gpt-5.4-pro",
       "kind": "text",
       "context_length": 1050000,
       "max_output_tokens": 128000,
-      "input_modalities": null,
-      "output_modalities": null,
+      "input_modalities": [
+        "text",
+        "image"
+      ],
+      "output_modalities": [
+        "text"
+      ],
       "supports_tools": true,
       "supports_structured_output": false,
       "pricing": {
-        "input_per_mtok": 30,
-        "output_per_mtok": 180
+        "input_per_mtok": 30.0,
+        "output_per_mtok": 180.0
       },
-      "limits_source": "openrouter-index",
-      "pricing_source": "models.dev",
+      "context_source": "vendor-docs",
+      "max_output_source": "vendor-docs",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -2404,18 +2971,31 @@
             }
           }
         }
-      }
+      },
+      "documentation_url": "https://developers.openai.com/api/docs/models/gpt-5.4-pro.md",
+      "supports_thinking": true
     },
     {
       "id": "gpt-5.4-pro-2026-03-05",
       "kind": "text",
-      "context_length": null,
-      "max_output_tokens": null,
-      "input_modalities": null,
-      "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
-      "pricing": null,
+      "context_length": 1050000,
+      "max_output_tokens": 128000,
+      "input_modalities": [
+        "text",
+        "image"
+      ],
+      "output_modalities": [
+        "text"
+      ],
+      "supports_tools": true,
+      "supports_structured_output": false,
+      "pricing": {
+        "input_per_mtok": 30.0,
+        "output_per_mtok": 180.0
+      },
+      "context_source": "vendor-docs",
+      "max_output_source": "vendor-docs",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -2440,24 +3020,32 @@
             }
           }
         }
-      }
+      },
+      "documentation_url": "https://developers.openai.com/api/docs/models/gpt-5.4-pro.md",
+      "supports_thinking": true
     },
     {
       "id": "gpt-5.5",
       "kind": "text",
       "context_length": 1050000,
       "max_output_tokens": 128000,
-      "input_modalities": null,
-      "output_modalities": null,
+      "input_modalities": [
+        "text",
+        "image"
+      ],
+      "output_modalities": [
+        "text"
+      ],
       "supports_tools": true,
       "supports_structured_output": true,
       "pricing": {
-        "input_per_mtok": 5,
-        "output_per_mtok": 30,
-        "cached_input_per_mtok": 0.5
+        "input_per_mtok": 5.0,
+        "cached_input_per_mtok": 0.5,
+        "output_per_mtok": 30.0
       },
-      "limits_source": "openrouter-index",
-      "pricing_source": "models.dev",
+      "context_source": "vendor-docs",
+      "max_output_source": "vendor-docs",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -2482,18 +3070,32 @@
             }
           }
         }
-      }
+      },
+      "documentation_url": "https://developers.openai.com/api/docs/models/gpt-5.5.md",
+      "supports_thinking": true
     },
     {
       "id": "gpt-5.5-2026-04-23",
       "kind": "text",
-      "context_length": null,
-      "max_output_tokens": null,
-      "input_modalities": null,
-      "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
-      "pricing": null,
+      "context_length": 1050000,
+      "max_output_tokens": 128000,
+      "input_modalities": [
+        "text",
+        "image"
+      ],
+      "output_modalities": [
+        "text"
+      ],
+      "supports_tools": true,
+      "supports_structured_output": true,
+      "pricing": {
+        "input_per_mtok": 5.0,
+        "cached_input_per_mtok": 0.5,
+        "output_per_mtok": 30.0
+      },
+      "context_source": "vendor-docs",
+      "max_output_source": "vendor-docs",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -2518,23 +3120,31 @@
             }
           }
         }
-      }
+      },
+      "documentation_url": "https://developers.openai.com/api/docs/models/gpt-5.5.md",
+      "supports_thinking": true
     },
     {
       "id": "gpt-5.5-pro",
       "kind": "text",
       "context_length": 1050000,
       "max_output_tokens": 128000,
-      "input_modalities": null,
-      "output_modalities": null,
+      "input_modalities": [
+        "text",
+        "image"
+      ],
+      "output_modalities": [
+        "text"
+      ],
       "supports_tools": true,
       "supports_structured_output": true,
       "pricing": {
-        "input_per_mtok": 30,
-        "output_per_mtok": 180
+        "input_per_mtok": 30.0,
+        "output_per_mtok": 180.0
       },
-      "limits_source": "openrouter-index",
-      "pricing_source": "models.dev",
+      "context_source": "vendor-docs",
+      "max_output_source": "vendor-docs",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -2559,18 +3169,31 @@
             }
           }
         }
-      }
+      },
+      "documentation_url": "https://developers.openai.com/api/docs/models/gpt-5.5-pro.md",
+      "supports_thinking": true
     },
     {
       "id": "gpt-5.5-pro-2026-04-23",
       "kind": "text",
-      "context_length": null,
-      "max_output_tokens": null,
-      "input_modalities": null,
-      "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
-      "pricing": null,
+      "context_length": 1050000,
+      "max_output_tokens": 128000,
+      "input_modalities": [
+        "text",
+        "image"
+      ],
+      "output_modalities": [
+        "text"
+      ],
+      "supports_tools": true,
+      "supports_structured_output": true,
+      "pricing": {
+        "input_per_mtok": 30.0,
+        "output_per_mtok": 180.0
+      },
+      "context_source": "vendor-docs",
+      "max_output_source": "vendor-docs",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -2595,25 +3218,32 @@
             }
           }
         }
-      }
+      },
+      "documentation_url": "https://developers.openai.com/api/docs/models/gpt-5.5-pro.md",
+      "supports_thinking": true
     },
     {
       "id": "gpt-5.6-luna",
       "kind": "text",
       "context_length": 1050000,
       "max_output_tokens": 128000,
-      "input_modalities": null,
-      "output_modalities": null,
+      "input_modalities": [
+        "text",
+        "image"
+      ],
+      "output_modalities": [
+        "text"
+      ],
       "supports_tools": true,
       "supports_structured_output": true,
       "pricing": {
         "input_per_mtok": 0.2,
-        "output_per_mtok": 1.2,
         "cached_input_per_mtok": 0.02,
-        "cache_write_per_mtok": 0.25
+        "output_per_mtok": 1.2
       },
-      "limits_source": "openrouter-index",
-      "pricing_source": "models.dev",
+      "context_source": "vendor-docs",
+      "max_output_source": "vendor-docs",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -2638,25 +3268,32 @@
             }
           }
         }
-      }
+      },
+      "documentation_url": "https://developers.openai.com/api/docs/models/gpt-5.6-luna.md",
+      "supports_thinking": true
     },
     {
       "id": "gpt-5.6-sol",
       "kind": "text",
       "context_length": 1050000,
       "max_output_tokens": 128000,
-      "input_modalities": null,
-      "output_modalities": null,
+      "input_modalities": [
+        "text",
+        "image"
+      ],
+      "output_modalities": [
+        "text"
+      ],
       "supports_tools": true,
       "supports_structured_output": true,
       "pricing": {
-        "input_per_mtok": 5,
-        "output_per_mtok": 30,
-        "cached_input_per_mtok": 0.5,
-        "cache_write_per_mtok": 6.25
+        "input_per_mtok": 4.0,
+        "cached_input_per_mtok": 0.4,
+        "output_per_mtok": 20.0
       },
-      "limits_source": "openrouter-index",
-      "pricing_source": "models.dev",
+      "context_source": "vendor-docs",
+      "max_output_source": "vendor-docs",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -2681,25 +3318,32 @@
             }
           }
         }
-      }
+      },
+      "documentation_url": "https://developers.openai.com/api/docs/models/gpt-5.6-sol.md",
+      "supports_thinking": true
     },
     {
       "id": "gpt-5.6-terra",
       "kind": "text",
       "context_length": 1050000,
       "max_output_tokens": 128000,
-      "input_modalities": null,
-      "output_modalities": null,
+      "input_modalities": [
+        "text",
+        "image"
+      ],
+      "output_modalities": [
+        "text"
+      ],
       "supports_tools": true,
       "supports_structured_output": true,
       "pricing": {
-        "input_per_mtok": 2,
-        "output_per_mtok": 12,
+        "input_per_mtok": 2.0,
         "cached_input_per_mtok": 0.2,
-        "cache_write_per_mtok": 2.5
+        "output_per_mtok": 12.0
       },
-      "limits_source": "openrouter-index",
-      "pricing_source": "models.dev",
+      "context_source": "vendor-docs",
+      "max_output_source": "vendor-docs",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -2724,23 +3368,32 @@
             }
           }
         }
-      }
+      },
+      "documentation_url": "https://developers.openai.com/api/docs/models/gpt-5.6-terra.md",
+      "supports_thinking": true
     },
     {
       "id": "gpt-audio",
       "kind": "text",
       "context_length": 128000,
       "max_output_tokens": 16384,
-      "input_modalities": null,
-      "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
+      "input_modalities": [
+        "text",
+        "audio"
+      ],
+      "output_modalities": [
+        "text",
+        "audio"
+      ],
+      "supports_tools": true,
+      "supports_structured_output": false,
       "pricing": {
         "input_per_mtok": 2.5,
         "output_per_mtok": 10.0
       },
-      "limits_source": "openrouter-index",
-      "pricing_source": "openrouter-index",
+      "context_source": "vendor-docs",
+      "max_output_source": "vendor-docs",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -2766,18 +3419,32 @@
           }
         }
       },
-      "shutdown_date": "2027-01-20"
+      "documentation_url": "https://developers.openai.com/api/docs/models/gpt-audio.md",
+      "shutdown_date": "2027-01-20",
+      "supports_thinking": false
     },
     {
       "id": "gpt-audio-1.5",
       "kind": "text",
-      "context_length": null,
-      "max_output_tokens": null,
-      "input_modalities": null,
-      "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
-      "pricing": null,
+      "context_length": 128000,
+      "max_output_tokens": 16384,
+      "input_modalities": [
+        "text",
+        "audio"
+      ],
+      "output_modalities": [
+        "text",
+        "audio"
+      ],
+      "supports_tools": true,
+      "supports_structured_output": false,
+      "pricing": {
+        "input_per_mtok": 2.5,
+        "output_per_mtok": 10.0
+      },
+      "context_source": "vendor-docs",
+      "max_output_source": "vendor-docs",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -2802,18 +3469,32 @@
             }
           }
         }
-      }
+      },
+      "documentation_url": "https://developers.openai.com/api/docs/models/gpt-audio-1.5.md",
+      "supports_thinking": false
     },
     {
       "id": "gpt-audio-2025-08-28",
       "kind": "text",
-      "context_length": null,
-      "max_output_tokens": null,
-      "input_modalities": null,
-      "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
-      "pricing": null,
+      "context_length": 128000,
+      "max_output_tokens": 16384,
+      "input_modalities": [
+        "text",
+        "audio"
+      ],
+      "output_modalities": [
+        "text",
+        "audio"
+      ],
+      "supports_tools": true,
+      "supports_structured_output": false,
+      "pricing": {
+        "input_per_mtok": 2.5,
+        "output_per_mtok": 10.0
+      },
+      "context_source": "vendor-docs",
+      "max_output_source": "vendor-docs",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -2838,23 +3519,32 @@
             }
           }
         }
-      }
+      },
+      "documentation_url": "https://developers.openai.com/api/docs/models/gpt-audio.md",
+      "supports_thinking": false
     },
     {
       "id": "gpt-audio-mini",
       "kind": "text",
       "context_length": 128000,
       "max_output_tokens": 16384,
-      "input_modalities": null,
-      "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
+      "input_modalities": [
+        "text",
+        "audio"
+      ],
+      "output_modalities": [
+        "text",
+        "audio"
+      ],
+      "supports_tools": true,
+      "supports_structured_output": false,
       "pricing": {
         "input_per_mtok": 0.6,
         "output_per_mtok": 2.4
       },
-      "limits_source": "openrouter-index",
-      "pricing_source": "openrouter-index",
+      "context_source": "vendor-docs",
+      "max_output_source": "vendor-docs",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -2880,18 +3570,32 @@
           }
         }
       },
-      "shutdown_date": "2027-01-20"
+      "documentation_url": "https://developers.openai.com/api/docs/models/gpt-audio-mini.md",
+      "shutdown_date": "2027-01-20",
+      "supports_thinking": false
     },
     {
       "id": "gpt-audio-mini-2025-10-06",
       "kind": "text",
-      "context_length": null,
-      "max_output_tokens": null,
-      "input_modalities": null,
-      "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
-      "pricing": null,
+      "context_length": 128000,
+      "max_output_tokens": 16384,
+      "input_modalities": [
+        "text",
+        "audio"
+      ],
+      "output_modalities": [
+        "text",
+        "audio"
+      ],
+      "supports_tools": true,
+      "supports_structured_output": false,
+      "pricing": {
+        "input_per_mtok": 0.6,
+        "output_per_mtok": 2.4
+      },
+      "context_source": "vendor-docs",
+      "max_output_source": "vendor-docs",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -2917,18 +3621,32 @@
           }
         }
       },
-      "shutdown_date": "2026-07-23"
+      "documentation_url": "https://developers.openai.com/api/docs/models/gpt-audio-mini.md",
+      "shutdown_date": "2026-07-23",
+      "supports_thinking": false
     },
     {
       "id": "gpt-audio-mini-2025-12-15",
       "kind": "text",
-      "context_length": null,
-      "max_output_tokens": null,
-      "input_modalities": null,
-      "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
-      "pricing": null,
+      "context_length": 128000,
+      "max_output_tokens": 16384,
+      "input_modalities": [
+        "text",
+        "audio"
+      ],
+      "output_modalities": [
+        "text",
+        "audio"
+      ],
+      "supports_tools": true,
+      "supports_structured_output": false,
+      "pricing": {
+        "input_per_mtok": 0.6,
+        "output_per_mtok": 2.4
+      },
+      "context_source": "vendor-docs",
+      "max_output_source": "vendor-docs",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -2953,24 +3671,32 @@
             }
           }
         }
-      }
+      },
+      "documentation_url": "https://developers.openai.com/api/docs/models/gpt-audio-mini.md",
+      "supports_thinking": false
     },
     {
       "id": "o1",
       "kind": "text",
       "context_length": 200000,
       "max_output_tokens": 100000,
-      "input_modalities": null,
-      "output_modalities": null,
+      "input_modalities": [
+        "text",
+        "image"
+      ],
+      "output_modalities": [
+        "text"
+      ],
       "supports_tools": true,
       "supports_structured_output": true,
       "pricing": {
-        "input_per_mtok": 15,
-        "output_per_mtok": 60,
-        "cached_input_per_mtok": 7.5
+        "input_per_mtok": 15.0,
+        "cached_input_per_mtok": 7.5,
+        "output_per_mtok": 60.0
       },
-      "limits_source": "openrouter-index",
-      "pricing_source": "models.dev",
+      "context_source": "vendor-docs",
+      "max_output_source": "vendor-docs",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -2996,23 +3722,32 @@
           }
         }
       },
-      "shutdown_date": "2026-10-23"
+      "documentation_url": "https://developers.openai.com/api/docs/models/o1.md",
+      "shutdown_date": "2026-10-23",
+      "supports_thinking": true
     },
     {
       "id": "o1-2024-12-17",
       "kind": "text",
       "context_length": 200000,
       "max_output_tokens": 100000,
-      "input_modalities": null,
-      "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
+      "input_modalities": [
+        "text",
+        "image"
+      ],
+      "output_modalities": [
+        "text"
+      ],
+      "supports_tools": true,
+      "supports_structured_output": true,
       "pricing": {
         "input_per_mtok": 15.0,
+        "cached_input_per_mtok": 7.5,
         "output_per_mtok": 60.0
       },
-      "limits_source": "openrouter-index",
-      "pricing_source": "openrouter-index",
+      "context_source": "vendor-docs",
+      "max_output_source": "vendor-docs",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -3038,23 +3773,31 @@
           }
         }
       },
-      "shutdown_date": "2026-10-23"
+      "documentation_url": "https://developers.openai.com/api/docs/models/o1.md",
+      "shutdown_date": "2026-10-23",
+      "supports_thinking": true
     },
     {
       "id": "o1-pro",
       "kind": "text",
       "context_length": 200000,
       "max_output_tokens": 100000,
-      "input_modalities": null,
-      "output_modalities": null,
+      "input_modalities": [
+        "text",
+        "image"
+      ],
+      "output_modalities": [
+        "text"
+      ],
       "supports_tools": true,
       "supports_structured_output": true,
       "pricing": {
-        "input_per_mtok": 150,
-        "output_per_mtok": 600
+        "input_per_mtok": 150.0,
+        "output_per_mtok": 600.0
       },
-      "limits_source": "openrouter-index",
-      "pricing_source": "models.dev",
+      "context_source": "vendor-docs",
+      "max_output_source": "vendor-docs",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -3080,18 +3823,31 @@
           }
         }
       },
-      "shutdown_date": "2026-10-23"
+      "documentation_url": "https://developers.openai.com/api/docs/models/o1-pro.md",
+      "shutdown_date": "2026-10-23",
+      "supports_thinking": true
     },
     {
       "id": "o1-pro-2025-03-19",
       "kind": "text",
-      "context_length": null,
-      "max_output_tokens": null,
-      "input_modalities": null,
-      "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
-      "pricing": null,
+      "context_length": 200000,
+      "max_output_tokens": 100000,
+      "input_modalities": [
+        "text",
+        "image"
+      ],
+      "output_modalities": [
+        "text"
+      ],
+      "supports_tools": true,
+      "supports_structured_output": true,
+      "pricing": {
+        "input_per_mtok": 150.0,
+        "output_per_mtok": 600.0
+      },
+      "context_source": "vendor-docs",
+      "max_output_source": "vendor-docs",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -3117,24 +3873,32 @@
           }
         }
       },
-      "shutdown_date": "2026-10-23"
+      "documentation_url": "https://developers.openai.com/api/docs/models/o1-pro.md",
+      "shutdown_date": "2026-10-23",
+      "supports_thinking": true
     },
     {
       "id": "o3",
       "kind": "text",
       "context_length": 200000,
       "max_output_tokens": 100000,
-      "input_modalities": null,
-      "output_modalities": null,
+      "input_modalities": [
+        "text",
+        "image"
+      ],
+      "output_modalities": [
+        "text"
+      ],
       "supports_tools": true,
       "supports_structured_output": true,
       "pricing": {
-        "input_per_mtok": 2,
-        "output_per_mtok": 8,
-        "cached_input_per_mtok": 0.5
+        "input_per_mtok": 2.0,
+        "cached_input_per_mtok": 0.5,
+        "output_per_mtok": 8.0
       },
-      "limits_source": "openrouter-index",
-      "pricing_source": "models.dev",
+      "context_source": "vendor-docs",
+      "max_output_source": "vendor-docs",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -3159,23 +3923,32 @@
             }
           }
         }
-      }
+      },
+      "documentation_url": "https://developers.openai.com/api/docs/models/o3.md",
+      "supports_thinking": true
     },
     {
       "id": "o3-2025-04-16",
       "kind": "text",
       "context_length": 200000,
       "max_output_tokens": 100000,
-      "input_modalities": null,
-      "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
+      "input_modalities": [
+        "text",
+        "image"
+      ],
+      "output_modalities": [
+        "text"
+      ],
+      "supports_tools": true,
+      "supports_structured_output": true,
       "pricing": {
         "input_per_mtok": 2.0,
+        "cached_input_per_mtok": 0.5,
         "output_per_mtok": 8.0
       },
-      "limits_source": "openrouter-index",
-      "pricing_source": "openrouter-index",
+      "context_source": "vendor-docs",
+      "max_output_source": "vendor-docs",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -3201,24 +3974,31 @@
           }
         }
       },
-      "shutdown_date": "2026-12-11"
+      "documentation_url": "https://developers.openai.com/api/docs/models/o3.md",
+      "shutdown_date": "2026-12-11",
+      "supports_thinking": true
     },
     {
       "id": "o3-mini",
       "kind": "text",
       "context_length": 200000,
       "max_output_tokens": 100000,
-      "input_modalities": null,
-      "output_modalities": null,
+      "input_modalities": [
+        "text"
+      ],
+      "output_modalities": [
+        "text"
+      ],
       "supports_tools": true,
       "supports_structured_output": true,
       "pricing": {
         "input_per_mtok": 1.1,
-        "output_per_mtok": 4.4,
-        "cached_input_per_mtok": 0.55
+        "cached_input_per_mtok": 0.55,
+        "output_per_mtok": 4.4
       },
-      "limits_source": "openrouter-index",
-      "pricing_source": "models.dev",
+      "context_source": "vendor-docs",
+      "max_output_source": "vendor-docs",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -3244,23 +4024,31 @@
           }
         }
       },
-      "shutdown_date": "2026-10-23"
+      "documentation_url": "https://developers.openai.com/api/docs/models/o3-mini.md",
+      "shutdown_date": "2026-10-23",
+      "supports_thinking": true
     },
     {
       "id": "o3-mini-2025-01-31",
       "kind": "text",
       "context_length": 200000,
       "max_output_tokens": 100000,
-      "input_modalities": null,
-      "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
+      "input_modalities": [
+        "text"
+      ],
+      "output_modalities": [
+        "text"
+      ],
+      "supports_tools": true,
+      "supports_structured_output": true,
       "pricing": {
         "input_per_mtok": 1.1,
+        "cached_input_per_mtok": 0.55,
         "output_per_mtok": 4.4
       },
-      "limits_source": "openrouter-index",
-      "pricing_source": "openrouter-index",
+      "context_source": "vendor-docs",
+      "max_output_source": "vendor-docs",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -3286,24 +4074,32 @@
           }
         }
       },
-      "shutdown_date": "2026-10-23"
+      "documentation_url": "https://developers.openai.com/api/docs/models/o3-mini.md",
+      "shutdown_date": "2026-10-23",
+      "supports_thinking": true
     },
     {
       "id": "o4-mini",
       "kind": "text",
       "context_length": 200000,
       "max_output_tokens": 100000,
-      "input_modalities": null,
-      "output_modalities": null,
+      "input_modalities": [
+        "text",
+        "image"
+      ],
+      "output_modalities": [
+        "text"
+      ],
       "supports_tools": true,
       "supports_structured_output": true,
       "pricing": {
         "input_per_mtok": 1.1,
-        "output_per_mtok": 4.4,
-        "cached_input_per_mtok": 0.275
+        "cached_input_per_mtok": 0.275,
+        "output_per_mtok": 4.4
       },
-      "limits_source": "openrouter-index",
-      "pricing_source": "models.dev",
+      "context_source": "vendor-docs",
+      "max_output_source": "vendor-docs",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -3329,23 +4125,32 @@
           }
         }
       },
-      "shutdown_date": "2026-10-23"
+      "documentation_url": "https://developers.openai.com/api/docs/models/o4-mini.md",
+      "shutdown_date": "2026-10-23",
+      "supports_thinking": true
     },
     {
       "id": "o4-mini-2025-04-16",
       "kind": "text",
       "context_length": 200000,
       "max_output_tokens": 100000,
-      "input_modalities": null,
-      "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
+      "input_modalities": [
+        "text",
+        "image"
+      ],
+      "output_modalities": [
+        "text"
+      ],
+      "supports_tools": true,
+      "supports_structured_output": true,
       "pricing": {
         "input_per_mtok": 1.1,
+        "cached_input_per_mtok": 0.275,
         "output_per_mtok": 4.4
       },
-      "limits_source": "openrouter-index",
-      "pricing_source": "openrouter-index",
+      "context_source": "vendor-docs",
+      "max_output_source": "vendor-docs",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -3371,18 +4176,32 @@
           }
         }
       },
-      "shutdown_date": "2026-10-23"
+      "documentation_url": "https://developers.openai.com/api/docs/models/o4-mini.md",
+      "shutdown_date": "2026-10-23",
+      "supports_thinking": true
     },
     {
       "id": "o4-mini-deep-research",
       "kind": "text",
-      "context_length": null,
-      "max_output_tokens": null,
-      "input_modalities": null,
-      "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
-      "pricing": null,
+      "context_length": 200000,
+      "max_output_tokens": 100000,
+      "input_modalities": [
+        "text",
+        "image"
+      ],
+      "output_modalities": [
+        "text"
+      ],
+      "supports_tools": false,
+      "supports_structured_output": false,
+      "pricing": {
+        "input_per_mtok": 2.0,
+        "cached_input_per_mtok": 0.5,
+        "output_per_mtok": 8.0
+      },
+      "context_source": "vendor-docs",
+      "max_output_source": "vendor-docs",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -3408,18 +4227,32 @@
           }
         }
       },
-      "shutdown_date": "2026-07-23"
+      "documentation_url": "https://developers.openai.com/api/docs/models/o4-mini-deep-research.md",
+      "shutdown_date": "2026-07-23",
+      "supports_thinking": true
     },
     {
       "id": "o4-mini-deep-research-2025-06-26",
       "kind": "text",
-      "context_length": null,
-      "max_output_tokens": null,
-      "input_modalities": null,
-      "output_modalities": null,
-      "supports_tools": null,
-      "supports_structured_output": null,
-      "pricing": null,
+      "context_length": 200000,
+      "max_output_tokens": 100000,
+      "input_modalities": [
+        "text",
+        "image"
+      ],
+      "output_modalities": [
+        "text"
+      ],
+      "supports_tools": false,
+      "supports_structured_output": false,
+      "pricing": {
+        "input_per_mtok": 2.0,
+        "cached_input_per_mtok": 0.5,
+        "output_per_mtok": 8.0
+      },
+      "context_source": "vendor-docs",
+      "max_output_source": "vendor-docs",
+      "pricing_source": "vendor-docs",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -3445,7 +4278,9 @@
           }
         }
       },
-      "shutdown_date": "2026-07-23"
+      "documentation_url": "https://developers.openai.com/api/docs/models/o4-mini-deep-research.md",
+      "shutdown_date": "2026-07-23",
+      "supports_thinking": true
     }
   ]
 }

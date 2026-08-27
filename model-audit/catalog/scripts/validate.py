@@ -36,8 +36,7 @@ AUTH_BARE = {"bearer", "sigv4", "oauth"}
 PARTS = {"request", "response", "stream"}
 # bare markers name a source; "alias:<model id>" names the sibling a value was inherited
 # from, so an inherited number stays traceable to the record it came from
-LIMITS_SOURCE = {"provider", "models.dev", "openrouter-index", "vendor-docs"}
-PRICING_SOURCE = LIMITS_SOURCE
+VALUE_SOURCE = {"provider", "models.dev", "openrouter-index", "vendor-docs"}
 
 
 def known_source(value: str | None, vocabulary: set[str]) -> bool:
@@ -201,18 +200,27 @@ def check_models(all_entries: list[dict]) -> None:
             seen.add(mid)
             if (kind := classify(mid, m)) != "text":
                 fail("models", f"{provider}/{mid} classifies as {kind}; the catalog is text-only")
-            source = m.get("limits_source")
-            if not known_source(source, LIMITS_SOURCE):
-                fail("models", f"{provider}/{mid} has limits_source {source!r}")
-            if source in LIMITS_SOURCE and not (m.get("context_length") and m.get("max_output_tokens")):
-                fail("models", f"{provider}/{mid} claims {source} but is missing a limit")
+            context_source = m.get("context_source")
+            output_source = m.get("max_output_source")
+            if not known_source(context_source, VALUE_SOURCE):
+                fail("models", f"{provider}/{mid} has context_source {context_source!r}")
+            if not known_source(output_source, VALUE_SOURCE):
+                fail("models", f"{provider}/{mid} has max_output_source {output_source!r}")
+            if bool(m.get("context_length")) != bool(context_source):
+                fail("models", f"{provider}/{mid} must carry context_length and context_source together")
+            if bool(m.get("max_output_tokens")) != bool(output_source):
+                fail("models", f"{provider}/{mid} must carry max_output_tokens and max_output_source together")
             psource = m.get("pricing_source")
-            if not known_source(psource, PRICING_SOURCE):
+            if not known_source(psource, VALUE_SOURCE):
                 fail("models", f"{provider}/{mid} has pricing_source {psource!r}")
             if psource and not m.get("pricing"):
                 fail("models", f"{provider}/{mid} claims a pricing source but carries no price")
             if m.get("pricing") and not psource:
                 fail("models", f"{provider}/{mid} has a price with no pricing_source")
+            if "vendor-docs" in {context_source, output_source, psource} and not str(m.get("documentation_url", "")).startswith("https://"):
+                fail("models", f"{provider}/{mid} cites vendor-docs without an HTTPS documentation_url")
+            if m.get("source_conflicts") and not str(m.get("documentation_url", "")).startswith("https://"):
+                fail("models", f"{provider}/{mid} records a source conflict without an HTTPS documentation_url")
             evidence = m.get("parameter_evidence") or {}
             if extra_sources := set(evidence) - {"model_discovery"}:
                 fail("models", f"{provider}/{mid} has unknown parameter evidence {sorted(extra_sources)}")

@@ -74,6 +74,8 @@ def main() -> int:
                 continue
         try:
             payload = source.fetch(key)
+            raw = source.items(payload)
+            models = text_only(source.enrich([model for model in (source.normalize(item) for item in raw) if model]))
         except urllib.error.HTTPError as exc:
             detail = ""
             try:
@@ -83,10 +85,8 @@ def main() -> int:
             failed.append((provider, f"HTTP {exc.code}{detail}"))
             continue
         except Exception as exc:
-            failed.append((provider, type(exc).__name__))
+            failed.append((provider, f"{type(exc).__name__}: {str(exc)[:110]}"))
             continue
-        raw = source.items(payload)
-        models = text_only([m for m in (source.normalize(i) for i in raw) if m])
         if raw and not models:
             failed.append((provider, f"{len(raw)} returned, none kept; check the module's filter"))
             continue

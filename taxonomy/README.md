@@ -1,43 +1,40 @@
 # Taxonomy maintenance
 
-This directory contains the applied provider catalog, normalized model catalogs, and routing
-taxonomy consumed by AirLLM. Run all commands from the repository root through
-`airllm-audit`. Do not invoke the individual scripts under `model-audit/catalog/scripts/`.
+This directory is generated provider catalog data consumed by AirLLM. Maintain it from the
+repository root through `airllm-audit`. Do not invoke scripts under
+`model-audit/catalog/scripts/` directly and do not edit `taxonomy.yml` or `behavior.json`.
 
 ## Choose the workflow
 
 | Goal | Command or guide |
 | --- | --- |
-| See which provider sources are ready | `uv run airllm-audit providers sources` |
-| Add a provider without writing YAML | `agent guide provider-onboarding`, then `providers onboard <provider>` |
-| Pull every source for one provider | `uv run airllm-audit providers sync <provider>` |
-| Pull models | `uv run airllm-audit providers sync <provider> --only models` |
-| Pull prices | `uv run airllm-audit providers sync <provider> --only pricing` |
-| Pull schemas | `uv run airllm-audit providers sync <provider> --only schemas` |
-| Add or correct one model | `agent guide model-update`, then `models add` |
-| Measure provider behavior | `agent guide behavior-audit`, then `runs execute` |
-| Investigate a gateway difference | `agent guide gateway-investigation` |
-| Generate taxonomy | `uv run airllm-audit taxonomy build` |
-| Validate everything | `uv run airllm-audit taxonomy validate` |
+| Inspect provider source readiness | `uv run airllm-audit providers sources` |
+| Add a provider | `agent guide provider-onboarding`, then `providers onboard <provider>` |
+| Refresh one provider | `uv run airllm-audit providers sync <provider>` |
+| Refresh all active providers | `uv run airllm-audit providers sync` |
+| Refresh models or prices | `providers sync <provider> --only models` or `--only pricing` |
+| Refresh schemas or icons | `providers sync <provider> --only schemas` or `--only icons` |
+| Add a sourced exception | `agent guide model-update`, then `models add` |
+| Rebuild from nothing | `taxonomy rebuild --preserve-as taxonomy_old` |
+| Compare two taxonomies | `taxonomy diff taxonomy_old taxonomy` |
+| Measure behavior | `agent guide behavior-audit`, then `runs execute` |
+| Investigate a gateway gap | `agent guide gateway-investigation` |
+| Generate and validate | `taxonomy build`, then `taxonomy validate` |
 
-Run before and after maintenance:
+Run these before and after maintenance:
 
 ```bash
 uv run airllm-audit cases coverage
 uv run airllm-audit taxonomy validate
 ```
 
-## Skill, agent guide, and CLI
+## Skill, guide, and CLI
 
-The three layers have distinct responsibilities:
+The repository `provider-catalog` skill recognizes catalog work and routes the agent to the
+right workflow. The versioned agent guides embedded in `model-audit` contain research,
+evidence, and review rules. The CLI performs deterministic acquisition and mutation.
 
-| Layer | Responsibility |
-| --- | --- |
-| Repository skill | Automatically recognizes provider-catalog work and selects a guide |
-| CLI-owned agent guide | Supplies versioned research, judgment, evidence, and review instructions |
-| CLI operation | Performs deterministic acquisition, mutation, generation, and validation |
-
-The canonical agent instructions are embedded in the `model-audit` package:
+List and read guides with:
 
 ```bash
 uv run airllm-audit agent guides
@@ -49,172 +46,68 @@ uv run airllm-audit agent guide gateway-investigation
 uv run airllm-audit agent guide taxonomy-generation
 ```
 
-The `.agents/skills/provider-catalog` file is intentionally a small discovery adapter. It
-contains no parallel maintenance manual.
-
-Use the CLI alone for a known, reproducible operation:
-
-- List providers, sources, models, cases, evidence, or planned experiments
-- Synchronize known endpoints with unchanged response shapes
-- Pull current models, prices, schemas, parameter metadata, or icons
-- Build and validate generated taxonomy
-- Execute an already defined audit matrix
-- Run scheduled or CI maintenance
-
-Use an agent guide when judgment is required:
-
-- Research a new provider and create its source module
-- Resolve contradictory vendor documentation or acquisition results
-- Map a provider-specific model response explicitly
-- Add a documentation-derived schema when no machine-readable schema exists
-- Decide whether a failure is acquisition, access, harness, provider behavior, or a gateway gap
-- Review whether direct API evidence is authoritative enough to accept
-
-Use both for onboarding. The agent researches and implements the provider source, then the
-CLI verifies, acquires, generates, and validates it.
+Use the CLI alone for a known repeatable operation such as refreshing an unchanged model
+endpoint, rebuilding taxonomy, executing a defined audit matrix, or running validation.
+Use an agent guide when source discovery, response mapping, schema interpretation, pricing
+units, conflicting evidence, or failure classification requires judgment. Use both when
+onboarding a provider or repairing an acquisition recipe.
 
 ## Source ownership
 
-| Path | Purpose | Rule |
-| --- | --- | --- |
-| `../model-audit/catalog/scripts/sources/` | Typed provider definitions and reproducible acquisition recipes | Add one auto-discovered provider module; no registry |
-| `providers.yml` | Applied provider identity, endpoints, authentication, surfaces, and schema references | Maintained through onboarding and sync |
-| `models/<provider>.json` | Provider-listed models with limits, pricing, and provenance | Generated by sync; use `models add` only for a sourced exception |
-| `schemas/` | Provider request, response, and stream schemas | Generated from source-declared specifications or reviewed documentation schemas |
-| `icons/` | Provider presentation | Pulled or generated by sync |
-| `../model-audit/definitions/features.yml` | Finite behavior vocabulary | Edit when introducing a taxonomy concept |
-| `../model-audit/cases/` | Executable direct-provider versus gateway experiments | Add one case for one behavior |
-| `../model-audit/evidence/accepted.json` | Deliberately promoted direct API observations | Change only through `evidence accept` |
-| `behavior.json` | Projection of accepted provider behavior | Generated; never edit directly |
-| `taxonomy.yml` | Applied routing taxonomy | Generated; never edit directly |
-| `../model-audit/reports/` | Checkpoints and gateway-gap reports | Review locally; accept evidence deliberately |
+| Path | Ownership |
+| --- | --- |
+| `../model-audit/catalog/scripts/sources/` | Auto-discovered typed provider definitions and acquisition recipes |
+| `providers.yml` | Applied provider endpoints, authentication, surfaces, and schema references |
+| `models/<provider>.json` | Provider-listed text models, metadata, and provenance |
+| `schemas/` | Provider request, response, and stream schemas |
+| `../model-audit/definitions/features.yml` | Finite behavior vocabulary |
+| `../model-audit/cases/` | Executable direct-provider versus gateway experiments |
+| `../model-audit/evidence/accepted.json` | Deliberately accepted direct HTTP observations |
+| `behavior.json` | Generated provider behavior projection |
+| `taxonomy.yml` | Generated applied routing taxonomy |
+| `../model-audit/reports/` | Checkpointed runs and gateway gap reports |
 
-Provider declarations and observed behavior are different evidence sources. Vendor model
-APIs, specifications, and documentation define declared catalog metadata. Direct behavioral
-experiments define observed feature support. Gateway observations identify gateway gaps and
-never define provider capabilities.
-
-Unknown values remain unknown. Do not infer capabilities, limits, prices, or surfaces from
-model names, another provider, a gateway response, or an SDK result.
+Provider declarations and observed behavior are distinct. Provider APIs, official specs,
+and official documentation define catalog metadata. Direct raw HTTP observations define
+behavior. Gateway observations identify gateway gaps and never define provider support.
+Unknown means unknown, not unsupported.
 
 ## Add a provider
 
-Start by reading the guide:
+Read the onboarding guide. Research vendor-owned sources for the model listing, inference
+base URL, authentication, supported surfaces, schemas, pricing, documentation, and icon.
+Add one auto-discovered source module with a typed `ProviderDefinition` and explicit field
+normalization. There is no provider registry and users do not write YAML definitions.
 
 ```bash
 uv run airllm-audit agent guide provider-onboarding
-```
-
-The agent researches current vendor-owned sources and adds one provider module under
-`model-audit/catalog/scripts/sources/`. That module declares a typed `ProviderDefinition`,
-model acquisition behavior, explicit field normalization, and any schema sources. The user
-does not create a YAML definition.
-
-Inspect readiness, set the declared credential, and onboard:
-
-```bash
-uv run airllm-audit providers sources
 export EXAMPLE_API_KEY=...
 uv run airllm-audit providers onboard example
 ```
 
-Onboarding verifies a nonempty recognized model response before activating the provider. It
-then promotes a matching candidate, writes the provider and seed projections, pulls all
-components, generates taxonomy, and validates the result.
+Use `--replace` when intentionally reapplying a changed definition to an active provider.
+Onboarding verifies a nonempty recognized model response before activation, acquires every
+component, builds taxonomy, and validates it.
 
-Use `--replace` to reapply a changed source definition to an active provider:
-
-```bash
-uv run airllm-audit providers onboard example --replace
-```
-
-An OpenAI-shaped model listing can use the generic envelope handling. Provider response
-fields must still be mapped explicitly. Override `fetch` for pagination, multiple endpoints,
-account scoping, or availability filtering. Provider modules are discovered automatically.
-
-## Synchronize a provider
-
-Read the agent procedure when interpreting or repairing a sync:
-
-```bash
-uv run airllm-audit agent guide provider-sync
-```
-
-Pull everything:
+## Refresh providers and models
 
 ```bash
 uv run airllm-audit providers sync anthropic
-```
-
-Pull selected components:
-
-```bash
 uv run airllm-audit providers sync anthropic --only models
 uv run airllm-audit providers sync anthropic --only pricing
 uv run airllm-audit providers sync anthropic --only schemas --only parameters
 uv run airllm-audit providers sync anthropic --only icons
-```
-
-Both `--only models` and `--only pricing` reacquire the provider model catalog before
-enrichment. An incremental synchronization must converge with a clean rebuild; old
-provider facts and secondary prices are not carried forward as hidden state.
-
-Omit the provider to synchronize every active provider:
-
-```bash
 uv run airllm-audit providers sync
 ```
 
-The available components are:
+Model and pricing refreshes reacquire the provider catalog before enrichment. An incremental
+refresh therefore converges with a clean rebuild and cannot preserve stale facts as hidden
+state. Missing credentials, authentication errors, rate limits, empty payloads, invalid
+response shapes, and filters that keep no models are acquisition failures. They exit
+nonzero and do not replace a previous successful catalog with an empty one.
 
-- `models` for the provider model listing and explicit normalization
-- `pricing` for provider-preserved values and missing-value enrichment
-- `schemas` for source-declared OpenAPI and documentation-derived schemas
-- `parameters` for schema-backed request parameter discovery
-- `icons` for provider presentation
-
-Models and schemas automatically refresh parameter evidence because it depends on both.
-Every sync rebuilds taxonomy and runs structural catalog validation. JSON output is available
-for agents and CI with `--format json`.
-
-Missing credentials, authentication failures, rate limits, empty payloads, unrecognized
-envelopes, and filters that keep no returned models are acquisition failures. They exit
-nonzero and do not replace the previous successful model catalog with an empty one.
-
-## Pricing
-
-Routine price updates use the provider-sync guide and pricing component:
-
-```bash
-uv run airllm-audit agent guide provider-sync
-uv run airllm-audit providers sync anthropic --only pricing
-```
-
-The acquisition order is:
-
-1. Values published by the provider model API
-2. Provider-scoped values from `models.dev`
-3. Cross-provider values from OpenRouter
-4. Values inherited through provider-declared model aliases
-5. Unknown
-
-Provider values are never overwritten. Limits and prices keep separate provenance because
-one may be authoritative while the other is secondary. Treat secondary prices as useful
-routing estimates, not billing guarantees.
-
-Use the agent guide when a price source moves, identifiers do not join cleanly, currencies
-or units require interpretation, provider tiers differ, or a documentation extractor needs
-to be added. Never hardcode an undated price table without source provenance.
-
-## Add or update one model
-
-Prefer provider synchronization when the provider lists the model:
-
-```bash
-uv run airllm-audit providers sync anthropic --only models
-```
-
-For a model absent from the listing:
+For one API-listed model, refresh the provider. Use `models add` only for a current,
+vendor-sourced model that the listing omits:
 
 ```bash
 uv run airllm-audit models add anthropic claude-example \
@@ -223,82 +116,92 @@ uv run airllm-audit models add anthropic claude-example \
   --max-output-tokens 8192
 ```
 
-Supply both limits or neither. Pass `--replace` for a correction. A manually added model may
-be removed by a later provider listing refresh, so durable provider-specific inclusion rules
-belong in the provider source.
+Durable exceptions and filters belong in the provider source because a later refresh may
+remove a manual record.
 
-Do not record behavioral probes directly in a model catalog. Use audit cases and accepted
-evidence for capabilities, options, modalities, interactions, and rejection behavior.
+## Metadata and pricing provenance
 
-## Audit behavior and gateway parity
+Acquisition fills gaps in this order:
 
-Plan a bounded run:
+1. Provider model API
+2. Current official provider documentation
+3. Provider-scoped models.dev
+4. Cross-provider OpenRouter
+5. Provider-declared aliases
+6. Unknown
+
+Higher-ranked data is never overwritten. Official-document extractors must run on every
+sync, record `documentation_url`, preserve pricing tiers and schedules, and distinguish
+token, request, image, audio, and time units. Parser tests use representative frozen source
+fragments. Context windows, maximum output limits, and prices keep independent provenance
+because each can come from a different ranked source. Secondary prices are routing
+estimates, not billing facts.
+
+## Clean rebuild and difference audit
+
+```bash
+uv run airllm-audit taxonomy rebuild --preserve-as taxonomy_old
+uv run airllm-audit taxonomy diff taxonomy_old taxonomy --summary
+uv run airllm-audit taxonomy diff taxonomy_old taxonomy --format json
+```
+
+The rebuild renames the complete existing directory and reconstructs providers, candidates,
+routers, model catalogs, schemas, icons, reports, behavior, and applied taxonomy. It fails
+on acquisition errors. The diff reports provider fields, every imported model field,
+applied model fields, and schema and icon hashes. Use JSON for complete agent review and
+the summary for a human overview.
+
+`reports/missing-metadata.json` lists every unknown limit, modality, capability flag, and
+price per model. An entry is an investigation queue, not evidence that the feature is
+unsupported.
+
+When current provider-owned sources disagree, the higher-ranked source remains applied and
+the model carries `source_conflicts` plus the conflicting `documentation_url` for review.
+
+## Behavior and gateway parity
+
+The gateway must already be running. Model audit never starts or stops it.
 
 ```bash
 uv run airllm-audit runs plan --provider anthropic --case modalities
-```
-
-Execute against an already running data plane:
-
-```bash
 uv run airllm-audit runs execute \
   --provider anthropic \
   --case modalities \
   --gateway-surface all \
-  --concurrency 4
+  --concurrency 100
 ```
 
-If interrupted, resume the stored plan without repeating completed pairs:
+Raw HTTP is the default and the only client mode eligible for provider evidence. Add
+`--sdk` only to test vendor SDK compatibility. A matching direct and gateway success is
+parity. A matching explicit rejection is also parity and records that the exact provider
+feature profile is unsupported. Access failures, rate limits, timeouts, generic errors,
+and harness failures remain unknown.
+
+Interrupted runs are checkpointed after every pair:
 
 ```bash
-uv run airllm-audit runs resume model-audit/reports/<run>.json
+uv run airllm-audit runs resume model-audit/reports/<run>.json --concurrency 100
 ```
 
-The report is created at run start and checkpointed after each pair. Resume rejects taxonomy
-drift and preserves original plan order.
-
-Review and promote evidence deliberately:
+Review before accepting evidence:
 
 ```bash
-uv run airllm-audit reports show --gaps
+uv run airllm-audit reports show model-audit/reports/<run>.json --gaps
 uv run airllm-audit evidence accept model-audit/reports/<run>.json
-```
-
-Only completed raw HTTP direct observations are eligible. SDK runs test client compatibility.
-Gateway observations identify gaps. A matching provider and gateway rejection is parity, while
-access, rate-limit, timeout, generic, and harness failures remain unknown feature evidence.
-
-## Generate and validate
-
-Regenerate after a catalog or accepted-evidence change:
-
-```bash
-uv run airllm-audit taxonomy build
-```
-
-Check generated state without writing `taxonomy.yml`:
-
-```bash
-uv run airllm-audit taxonomy build --check
-```
-
-Run all maintenance gates before committing:
-
-```bash
-uv run airllm-audit cases coverage
 uv run airllm-audit taxonomy validate
-uv run pytest model-audit/tests -q
 ```
 
-Review that:
+## Review checklist
 
-- Every asserted fact has a current authoritative source
-- Unknown facts remain absent
-- Provider acquisition has no unexpected skips or failures
-- Model additions, changes, retirements, limits, and prices are understood
-- Behavioral claims came from accepted direct raw API evidence
-- `behavior.json` and `taxonomy.yml` were generated
+- Every asserted fact has current provenance
+- Official documentation records its exact URL and correct unit
+- Unknown values remain absent
+- Provider acquisition has no unexplained skip or failure
+- Additions, removals, aliases, limits, prices, and retirements are understood
+- Behavioral claims came only from accepted direct raw HTTP evidence
+- Gateway and SDK observations did not become provider capabilities
+- Generated files are current
 - No credential or transient secret appears in the diff
 
-See [`model-audit/README.md`](../model-audit/README.md) for the full audit surface matrix,
-checkpoint behavior, parity semantics, and evidence lifecycle.
+See [`model-audit/README.md`](../model-audit/README.md) for experiment semantics, surfaces,
+checkpointing, and the evidence lifecycle.

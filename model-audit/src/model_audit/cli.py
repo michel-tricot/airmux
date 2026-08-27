@@ -17,7 +17,6 @@ from model_audit.catalog_ops import (
     ModelDefinition,
     add_model,
     add_provider,
-    load_provider_entries,
     preflight_source,
     provider_sources,
     run_catalog_script,
@@ -31,9 +30,10 @@ from model_audit.output import Col, FormatOption, OutputFormat, print_rows
 from model_audit.plan import Filters, build_plan
 from model_audit.progress import ConsoleProgress
 from model_audit.provenance import metadata, taxonomy_fingerprint
-from model_audit.report import ordered_results, remaining_plan, write_checkpoint, write_report
+from model_audit.report import checkpoint_interval, ordered_results, remaining_plan, write_checkpoint, write_report
 from model_audit.runner import ExecutionOptions, execute
 from model_audit.taxonomy import write as write_taxonomy
+from model_audit.taxonomy_diff import compare_taxonomies, summarize_taxonomy_diff
 
 ROOT = Path(__file__).resolve().parents[3]
 PROJECT = ROOT / "model-audit"
@@ -55,7 +55,7 @@ GatewaySurfaceOption = Annotated[
     typer.Option("--gateway-surface", help="Gateway ingress surface; use all for the complete matrix or repeat for a subset"),
 ]
 TransportOption = Annotated[Literal["buffered", "streamed"] | None, typer.Option("--transport")]
-ConcurrencyOption = Annotated[int, typer.Option("--concurrency", min=1, max=32, help="Maximum experiments to run concurrently")]
+ConcurrencyOption = Annotated[int, typer.Option("--concurrency", min=1, max=100, help="Maximum experiments to run concurrently")]
 GatewayUrlOption = Annotated[str | None, typer.Option("--gateway-url", help="Origin of the running AirLLM data plane")]
 GatewayKeyOption = Annotated[str | None, typer.Option("--gateway-api-key", help="Inference key accepted by the running data plane")]
 SyncComponent = Literal["models", "pricing", "schemas", "parameters", "icons"]
@@ -123,7 +123,8 @@ def _catalog_detail(stdout: str, stderr: str) -> str:
 
 
 def _provider_entries() -> dict[str, dict[str, object]]:
-    return load_provider_entries(ROOT / "taxonomy")
+    document = yaml.safe_load((ROOT / "taxonomy" / "providers.yml").read_text(encoding="utf-8"))
+    return {str(provider["id"]): provider for provider in document["providers"]}
 
 
 def _sync_components(values: list[str] | None) -> tuple[SyncComponent, ...]:
@@ -157,7 +158,29 @@ def _sync_steps(provider: str, components: tuple[SyncComponent, ...]) -> tuple[t
     return tuple(steps)
 
 
-def _sync_provider(provider: str, components: tuple[SyncComponent, ...]) -> tuple[list[dict[str, object]], bool]:
+def _finish_sync(provider: str) -> tuple[list[dict[str, object]], bool]:
+    providers, models, changed = write_taxonomy(ROOT)
+    validation = run_catalog_script(ROOT, "validate.py")
+    return (
+        [
+            {
+                "provider": provider,
+                "component": "taxonomy",
+                "status": "completed",
+                "detail": f"{providers} providers, {models} models; {'written' if changed else 'current'}",
+            },
+            {
+                "provider": provider,
+                "component": "validation",
+                "status": "completed" if validation.returncode == 0 else "failed",
+                "detail": _catalog_detail(validation.stdout, validation.stderr),
+            },
+        ],
+        validation.returncode != 0,
+    )
+
+
+def _sync_provider(provider: str, components: tuple[SyncComponent, ...], *, finalize: bool = True) -> tuple[list[dict[str, object]], bool]:
     rows: list[dict[str, object]] = []
     failed = False
     for component, script, arguments in _sync_steps(provider, components):
@@ -167,27 +190,9 @@ def _sync_provider(provider: str, components: tuple[SyncComponent, ...]) -> tupl
         if result.returncode:
             failed = True
             break
-    if not failed:
-        providers, models, changed = write_taxonomy(ROOT)
-        rows.append(
-            {
-                "provider": provider,
-                "component": "taxonomy",
-                "status": "completed",
-                "detail": f"{providers} providers, {models} models; {'written' if changed else 'current'}",
-            }
-        )
-        validation = run_catalog_script(ROOT, "validate.py")
-        validation_status = "completed" if validation.returncode == 0 else "failed"
-        rows.append(
-            {
-                "provider": provider,
-                "component": "validation",
-                "status": validation_status,
-                "detail": _catalog_detail(validation.stdout, validation.stderr),
-            }
-        )
-        failed = validation.returncode != 0
+    if not failed and finalize:
+        final_rows, failed = _finish_sync(provider)
+        rows.extend(final_rows)
     return rows, failed
 
 
@@ -393,9 +398,13 @@ def providers_sync(
             rows.append({"provider": provider_id, "component": "seed", "status": "failed", "detail": _catalog_detail(seed.stdout, seed.stderr)})
             failed = True
             continue
-        synced, provider_failed = _sync_provider(provider_id, components)
+        synced, provider_failed = _sync_provider(provider_id, components, finalize=provider is not None)
         rows.extend(synced)
         failed = failed or provider_failed
+    if provider is None:
+        final_rows, final_failed = _finish_sync("all")
+        rows.extend(final_rows)
+        failed = failed or final_failed
     _print_sync(rows, output_format)
     if failed:
         raise typer.Exit(1)
@@ -543,6 +552,7 @@ def _execute_checkpointed(
     context: CheckpointContext,
 ) -> tuple[tuple[PairResult, ...], ReportPaths]:
     accumulated = list(existing)
+    interval = checkpoint_interval(len(context.plan.experiments))
     write_report(
         ReportDocument(
             run=context.run,
@@ -556,6 +566,8 @@ def _execute_checkpointed(
 
     def checkpoint(result: PairResult) -> None:
         accumulated.append(result)
+        if len(accumulated) % interval:
+            return
         write_checkpoint(
             ReportDocument(
                 run=context.run,
@@ -764,6 +776,42 @@ def taxonomy_build(check: Annotated[bool, typer.Option("--check")] = False) -> N
     typer.echo(f"taxonomy {state}: {providers} providers, {models} models")
 
 
+@taxonomy_app.command("rebuild")
+def taxonomy_rebuild(
+    preserve_as: Annotated[
+        str | None,
+        typer.Option("--preserve-as", help="Rename the current taxonomy directory before rebuilding"),
+    ] = None,
+) -> None:
+    load_dotenv(ROOT / ".env")
+    taxonomy = ROOT / "taxonomy"
+    preserved: Path | None = None
+    readme: str | None = None
+    if taxonomy.exists():
+        if preserve_as is None:
+            message = "taxonomy already exists; pass --preserve-as with a new root-level directory name"
+            raise typer.BadParameter(message)
+        if Path(preserve_as).name != preserve_as or preserve_as in {"", ".", "taxonomy"}:
+            message = "--preserve-as must be a new root-level directory name"
+            raise typer.BadParameter(message)
+        preserved = ROOT / preserve_as
+        if preserved.exists():
+            message = f"{preserve_as} already exists"
+            raise typer.BadParameter(message)
+        readme_path = taxonomy / "README.md"
+        readme = readme_path.read_text(encoding="utf-8") if readme_path.exists() else None
+        taxonomy.rename(preserved)
+        typer.echo(f"preserved taxonomy as {preserved.relative_to(ROOT)}")
+    elif preserve_as is not None:
+        message = "taxonomy does not exist, so there is nothing to preserve"
+        raise typer.BadParameter(message)
+    try:
+        _run_script("bootstrap.py")
+    finally:
+        if readme is not None and taxonomy.exists():
+            (taxonomy / "README.md").write_text(readme, encoding="utf-8")
+
+
 @taxonomy_app.command("validate")
 def taxonomy_validate() -> None:
     result = coverage(_cases(), load_features(FEATURES))
@@ -777,6 +825,42 @@ def taxonomy_validate() -> None:
         typer.echo("taxonomy is stale; run taxonomy build", err=True)
         raise typer.Exit(1)
     typer.echo(f"audit definitions and taxonomy are valid: {providers} providers, {models} models")
+
+
+@taxonomy_app.command("diff")
+def taxonomy_diff(
+    before: Path,
+    after: Path,
+    summary: Annotated[bool, typer.Option("--summary", help="Show counts instead of field-level changes")] = False,
+    output_format: FormatOption = OutputFormat.table,
+) -> None:
+    for directory in (before, after):
+        if not (directory / "providers.yml").exists() or not (directory / "models").is_dir():
+            message = f"{directory} is not a taxonomy directory"
+            raise typer.BadParameter(message)
+    rows = compare_taxonomies(before, after)
+    if summary:
+        print_rows(
+            "taxonomy differences",
+            summarize_taxonomy_diff(rows),
+            [Col("scope", "Scope"), Col("change", "Change"), Col("count", "Count")],
+            output_format,
+        )
+        return
+    print_rows(
+        "taxonomy differences",
+        rows,
+        [
+            Col("scope", "Scope"),
+            Col("provider", "Provider"),
+            Col("model", "Model or file"),
+            Col("field", "Field"),
+            Col("change", "Change"),
+            Col("before", "Before"),
+            Col("after", "After"),
+        ],
+        output_format,
+    )
 
 
 def _report(path: Path | None) -> ReportDocument:

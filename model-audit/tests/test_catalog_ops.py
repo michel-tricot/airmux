@@ -59,6 +59,9 @@ class OfflineSource:
     def normalize(self, item: dict[str, object]) -> dict[str, object] | None:
         return item
 
+    def enrich(self, models: list[dict[str, object]]) -> list[dict[str, object]]:
+        return models
+
 
 def test_provider_preflight_reports_acquisition_failures():
     with pytest.raises(RuntimeError, match="model acquisition failed: offline"):

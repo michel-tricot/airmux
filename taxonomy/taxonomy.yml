@@ -315,13 +315,14 @@ models:
 - model_id: deepseek/deepseek-v4-flash
   provider_id: deepseek
   upstream_model: deepseek-v4-flash
-  input_price_per_mtok: 0.14
-  output_price_per_mtok: 0.28
-  cache_read_price_per_mtok: 0.0028
+  input_price_per_mtok: 0.44
+  output_price_per_mtok: 1.32
+  cache_read_price_per_mtok: 0.014
   cache_write_price_per_mtok: 0.0
   context_window: 1000000
   max_output_tokens: 384000
   capabilities:
+  - reasoning
   - streaming
   - structured_output
   - tools
@@ -330,16 +331,37 @@ models:
     stop: supported
     temperature: supported
     top_p: supported
-- model_id: deepseek/deepseek-v4-pro
+- model_id: deepseek/deepseek-v4-flash-vision-exp
   provider_id: deepseek
-  upstream_model: deepseek-v4-pro
-  input_price_per_mtok: 0.435
-  output_price_per_mtok: 0.87
-  cache_read_price_per_mtok: 0.0036
+  upstream_model: deepseek-v4-flash-vision-exp
+  input_price_per_mtok: 0.44
+  output_price_per_mtok: 1.32
+  cache_read_price_per_mtok: 0.014
   cache_write_price_per_mtok: 0.0
   context_window: 1000000
   max_output_tokens: 384000
   capabilities:
+  - reasoning
+  - streaming
+  - structured_output
+  - tools
+  - vision
+  parameter_support:
+    logprobs: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
+- model_id: deepseek/deepseek-v4-pro
+  provider_id: deepseek
+  upstream_model: deepseek-v4-pro
+  input_price_per_mtok: 1.32
+  output_price_per_mtok: 3.96
+  cache_read_price_per_mtok: 0.044
+  cache_write_price_per_mtok: 0.0
+  context_window: 1000000
+  max_output_tokens: 384000
+  capabilities:
+  - reasoning
   - streaming
   - structured_output
   - tools
@@ -351,12 +373,12 @@ models:
 - model_id: fireworks/deepseek-v4-flash-0731
   provider_id: fireworks
   upstream_model: accounts/fireworks/models/deepseek-v4-flash-0731
-  input_price_per_mtok: 0.14
-  output_price_per_mtok: 0.28
-  cache_read_price_per_mtok: 0.028
+  input_price_per_mtok: 0.22
+  output_price_per_mtok: 0.66
+  cache_read_price_per_mtok: 0.007
   cache_write_price_per_mtok: 0.0
   context_window: 1048576
-  max_output_tokens: 393216
+  max_output_tokens: 384000
   capabilities:
   - streaming
   - structured_output
@@ -439,7 +461,7 @@ models:
   cache_read_price_per_mtok: 0.015
   cache_write_price_per_mtok: 0.0
   context_window: 131072
-  max_output_tokens: 131072
+  max_output_tokens: 32768
   capabilities:
   - streaming
   - tools
@@ -459,7 +481,7 @@ models:
   cache_read_price_per_mtok: 0.035
   cache_write_price_per_mtok: 0.0
   context_window: 131072
-  max_output_tokens: 131072
+  max_output_tokens: 32768
   capabilities:
   - streaming
   parameter_support:
@@ -478,7 +500,7 @@ models:
   cache_read_price_per_mtok: 0.17
   cache_write_price_per_mtok: 0.0
   context_window: 1048576
-  max_output_tokens: 262144
+  max_output_tokens: 1048576
   capabilities:
   - streaming
   - tools
@@ -541,7 +563,7 @@ models:
   cache_read_price_per_mtok: 0.3
   cache_write_price_per_mtok: 0.0
   context_window: 1048576
-  max_output_tokens: 1048576
+  max_output_tokens: 131072
   capabilities:
   - streaming
   - structured_output
@@ -622,7 +644,7 @@ models:
   upstream_model: accounts/fireworks/models/nemotron-3-ultra-nvfp4
   input_price_per_mtok: 0.6
   output_price_per_mtok: 2.4
-  cache_read_price_per_mtok: 0.119
+  cache_read_price_per_mtok: 0.12
   cache_write_price_per_mtok: 0.0
   context_window: 262144
   max_output_tokens: 128000
@@ -844,6 +866,28 @@ models:
     stop: supported
     temperature: supported
     top_p: supported
+- model_id: groq/qwen/qwen3.8-27b
+  provider_id: groq
+  upstream_model: qwen/qwen3.8-27b
+  input_price_per_mtok: 0.8
+  output_price_per_mtok: 4.0
+  cache_read_price_per_mtok: 0.4
+  cache_write_price_per_mtok: 0.0
+  context_window: 131042
+  max_output_tokens: 16384
+  capabilities:
+  - streaming
+  - structured_output
+  - tools
+  - vision
+  parameter_support:
+    logprobs: supported
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    seed: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: mistral/codestral-2508
   provider_id: mistral
   upstream_model: codestral-2508
@@ -852,7 +896,7 @@ models:
   cache_read_price_per_mtok: 0.0
   cache_write_price_per_mtok: 0.0
   context_window: 256000
-  max_output_tokens: null
+  max_output_tokens: 204800
   capabilities:
   - streaming
   - tools
@@ -937,12 +981,12 @@ models:
 - model_id: mistral/glm-5-2
   provider_id: mistral
   upstream_model: glm-5-2
-  input_price_per_mtok: 0.0
-  output_price_per_mtok: 0.0
-  cache_read_price_per_mtok: 0.0
+  input_price_per_mtok: 1.4
+  output_price_per_mtok: 4.4
+  cache_read_price_per_mtok: 0.14
   cache_write_price_per_mtok: 0.0
   context_window: 1048576
-  max_output_tokens: null
+  max_output_tokens: 131072
   capabilities:
   - streaming
   - tools
@@ -990,6 +1034,25 @@ models:
     stop: supported
     temperature: supported
     top_p: supported
+- model_id: mistral/magistral-medium-latest
+  provider_id: mistral
+  upstream_model: magistral-medium-latest
+  input_price_per_mtok: 1.5
+  output_price_per_mtok: 7.5
+  cache_read_price_per_mtok: 0.0
+  cache_write_price_per_mtok: 0.0
+  context_window: 262144
+  max_output_tokens: 16384
+  capabilities:
+  - streaming
+  - tools
+  - vision
+  parameter_support:
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: mistral/magistral-small-latest
   provider_id: mistral
   upstream_model: magistral-small-latest
@@ -1017,7 +1080,7 @@ models:
   cache_read_price_per_mtok: 0.0
   cache_write_price_per_mtok: 0.0
   context_window: 262144
-  max_output_tokens: null
+  max_output_tokens: 209715
   capabilities:
   - streaming
   - tools
@@ -1036,7 +1099,7 @@ models:
   cache_read_price_per_mtok: 0.0
   cache_write_price_per_mtok: 0.0
   context_window: 262144
-  max_output_tokens: null
+  max_output_tokens: 209715
   capabilities:
   - streaming
   - tools
@@ -1055,7 +1118,7 @@ models:
   cache_read_price_per_mtok: 0.0
   cache_write_price_per_mtok: 0.0
   context_window: 131072
-  max_output_tokens: null
+  max_output_tokens: 104857
   capabilities:
   - streaming
   - tools
@@ -1069,8 +1132,8 @@ models:
 - model_id: mistral/ministral-3b-latest
   provider_id: mistral
   upstream_model: ministral-3b-latest
-  input_price_per_mtok: 0.04
-  output_price_per_mtok: 0.04
+  input_price_per_mtok: 0.1
+  output_price_per_mtok: 0.1
   cache_read_price_per_mtok: 0.0
   cache_write_price_per_mtok: 0.0
   context_window: 131072
@@ -1093,7 +1156,7 @@ models:
   cache_read_price_per_mtok: 0.0
   cache_write_price_per_mtok: 0.0
   context_window: 262144
-  max_output_tokens: null
+  max_output_tokens: 209715
   capabilities:
   - streaming
   - tools
@@ -1107,8 +1170,8 @@ models:
 - model_id: mistral/ministral-8b-latest
   provider_id: mistral
   upstream_model: ministral-8b-latest
-  input_price_per_mtok: 0.1
-  output_price_per_mtok: 0.1
+  input_price_per_mtok: 0.15
+  output_price_per_mtok: 0.15
   cache_read_price_per_mtok: 0.0
   cache_write_price_per_mtok: 0.0
   context_window: 262144
@@ -1149,7 +1212,7 @@ models:
   cache_read_price_per_mtok: 0.0
   cache_write_price_per_mtok: 0.0
   context_window: 256000
-  max_output_tokens: null
+  max_output_tokens: 204800
   capabilities:
   - streaming
   - tools
@@ -1167,7 +1230,7 @@ models:
   cache_read_price_per_mtok: 0.0
   cache_write_price_per_mtok: 0.0
   context_window: 256000
-  max_output_tokens: null
+  max_output_tokens: 204800
   capabilities:
   - streaming
   - tools
@@ -1223,7 +1286,7 @@ models:
   cache_read_price_per_mtok: 0.0
   cache_write_price_per_mtok: 0.0
   context_window: 262144
-  max_output_tokens: 262144
+  max_output_tokens: 16384
   capabilities:
   - streaming
   - tools
@@ -1295,12 +1358,12 @@ models:
 - model_id: mistral/mistral-medium-3
   provider_id: mistral
   upstream_model: mistral-medium-3
-  input_price_per_mtok: 0.4
-  output_price_per_mtok: 2.0
+  input_price_per_mtok: 1.5
+  output_price_per_mtok: 7.5
   cache_read_price_per_mtok: 0.0
   cache_write_price_per_mtok: 0.0
   context_window: 262144
-  max_output_tokens: null
+  max_output_tokens: 104857
   capabilities:
   - streaming
   - tools
@@ -1319,7 +1382,7 @@ models:
   cache_read_price_per_mtok: 0.0
   cache_write_price_per_mtok: 0.0
   context_window: 262144
-  max_output_tokens: null
+  max_output_tokens: 209715
   capabilities:
   - streaming
   - tools
@@ -1338,7 +1401,7 @@ models:
   cache_read_price_per_mtok: 0.0
   cache_write_price_per_mtok: 0.0
   context_window: 262144
-  max_output_tokens: 262144
+  max_output_tokens: 16384
   capabilities:
   - streaming
   - tools
@@ -1434,7 +1497,7 @@ models:
   cache_read_price_per_mtok: 0.0
   cache_write_price_per_mtok: 0.0
   context_window: 262144
-  max_output_tokens: 262144
+  max_output_tokens: 16384
   capabilities:
   - streaming
   - tools
@@ -1453,7 +1516,7 @@ models:
   cache_read_price_per_mtok: 0.0
   cache_write_price_per_mtok: 0.0
   context_window: 262144
-  max_output_tokens: 262144
+  max_output_tokens: 16384
   capabilities:
   - streaming
   - tools
@@ -1468,7 +1531,7 @@ models:
   provider_id: mistral
   upstream_model: voxtral-small-2507
   input_price_per_mtok: 0.1
-  output_price_per_mtok: 0.3
+  output_price_per_mtok: 0.4
   cache_read_price_per_mtok: 0.0
   cache_write_price_per_mtok: 0.0
   context_window: 32768
@@ -1486,7 +1549,7 @@ models:
   provider_id: mistral
   upstream_model: voxtral-small-latest
   input_price_per_mtok: 0.1
-  output_price_per_mtok: 0.3
+  output_price_per_mtok: 0.4
   cache_read_price_per_mtok: 0.0
   cache_write_price_per_mtok: 0.0
   context_window: 32768
@@ -1503,14 +1566,15 @@ models:
 - model_id: mistral/zai-glm-5-2
   provider_id: mistral
   upstream_model: zai-glm-5-2
-  input_price_per_mtok: 0.0
-  output_price_per_mtok: 0.0
-  cache_read_price_per_mtok: 0.0
+  input_price_per_mtok: 1.4
+  output_price_per_mtok: 4.4
+  cache_read_price_per_mtok: 0.14
   cache_write_price_per_mtok: 0.0
   context_window: 1048576
-  max_output_tokens: null
+  max_output_tokens: 131072
   capabilities:
   - streaming
+  - structured_output
   - tools
   parameter_support:
     parallel_tool_calls: supported
@@ -1518,9 +1582,113 @@ models:
     stop: supported
     temperature: supported
     top_p: supported
+- model_id: openai/chat-latest
+  provider_id: openai
+  upstream_model: chat-latest
+  input_price_per_mtok: 5.0
+  output_price_per_mtok: 30.0
+  cache_read_price_per_mtok: 0.5
+  cache_write_price_per_mtok: 0.0
+  context_window: 400000
+  max_output_tokens: 128000
+  capabilities:
+  - streaming
+  - structured_output
+  - tools
+  - vision
+  parameter_support:
+    logprobs: supported
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    seed: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
+- model_id: openai/computer-use-preview
+  provider_id: openai
+  upstream_model: computer-use-preview
+  input_price_per_mtok: 3.0
+  output_price_per_mtok: 12.0
+  cache_read_price_per_mtok: 0.0
+  cache_write_price_per_mtok: 0.0
+  context_window: 8192
+  max_output_tokens: 1024
+  capabilities:
+  - reasoning
+  - streaming
+  - tools
+  - vision
+  parameter_support:
+    logprobs: supported
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    seed: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
+- model_id: openai/computer-use-preview-2025-03-11
+  provider_id: openai
+  upstream_model: computer-use-preview-2025-03-11
+  input_price_per_mtok: 3.0
+  output_price_per_mtok: 12.0
+  cache_read_price_per_mtok: 0.0
+  cache_write_price_per_mtok: 0.0
+  context_window: 8192
+  max_output_tokens: 1024
+  capabilities:
+  - reasoning
+  - streaming
+  - tools
+  - vision
+  parameter_support:
+    logprobs: supported
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    seed: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
 - model_id: openai/gpt-3.5-turbo
   provider_id: openai
   upstream_model: gpt-3.5-turbo
+  input_price_per_mtok: 0.5
+  output_price_per_mtok: 1.5
+  cache_read_price_per_mtok: 0.0
+  cache_write_price_per_mtok: 0.0
+  context_window: 16385
+  max_output_tokens: 4096
+  capabilities:
+  - streaming
+  parameter_support:
+    logprobs: supported
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    seed: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
+- model_id: openai/gpt-3.5-turbo-0125
+  provider_id: openai
+  upstream_model: gpt-3.5-turbo-0125
+  input_price_per_mtok: 0.5
+  output_price_per_mtok: 1.5
+  cache_read_price_per_mtok: 0.0
+  cache_write_price_per_mtok: 0.0
+  context_window: 16385
+  max_output_tokens: 4096
+  capabilities:
+  - streaming
+  parameter_support:
+    logprobs: supported
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    seed: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
+- model_id: openai/gpt-3.5-turbo-1106
+  provider_id: openai
+  upstream_model: gpt-3.5-turbo-1106
   input_price_per_mtok: 0.5
   output_price_per_mtok: 1.5
   cache_read_price_per_mtok: 0.0
@@ -1563,11 +1731,29 @@ models:
   output_price_per_mtok: 60.0
   cache_read_price_per_mtok: 0.0
   cache_write_price_per_mtok: 0.0
-  context_window: 128000
-  max_output_tokens: 4096
+  context_window: 8192
+  max_output_tokens: 8192
   capabilities:
   - streaming
-  - tools
+  parameter_support:
+    logprobs: supported
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    seed: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
+- model_id: openai/gpt-4-0613
+  provider_id: openai
+  upstream_model: gpt-4-0613
+  input_price_per_mtok: 30.0
+  output_price_per_mtok: 60.0
+  cache_read_price_per_mtok: 0.0
+  cache_write_price_per_mtok: 0.0
+  context_window: 8192
+  max_output_tokens: 8192
+  capabilities:
+  - streaming
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -1588,6 +1774,28 @@ models:
   capabilities:
   - streaming
   - tools
+  - vision
+  parameter_support:
+    logprobs: supported
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    seed: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
+- model_id: openai/gpt-4-turbo-2024-04-09
+  provider_id: openai
+  upstream_model: gpt-4-turbo-2024-04-09
+  input_price_per_mtok: 10.0
+  output_price_per_mtok: 30.0
+  cache_read_price_per_mtok: 0.0
+  cache_write_price_per_mtok: 0.0
+  context_window: 128000
+  max_output_tokens: 4096
+  capabilities:
+  - streaming
+  - tools
+  - vision
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -1609,6 +1817,7 @@ models:
   - streaming
   - structured_output
   - tools
+  - vision
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -1622,12 +1831,15 @@ models:
   upstream_model: gpt-4.1-2025-04-14
   input_price_per_mtok: 2.0
   output_price_per_mtok: 8.0
-  cache_read_price_per_mtok: 0.0
+  cache_read_price_per_mtok: 0.5
   cache_write_price_per_mtok: 0.0
   context_window: 1047576
   max_output_tokens: 32768
   capabilities:
   - streaming
+  - structured_output
+  - tools
+  - vision
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -1649,6 +1861,7 @@ models:
   - streaming
   - structured_output
   - tools
+  - vision
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -1662,12 +1875,15 @@ models:
   upstream_model: gpt-4.1-mini-2025-04-14
   input_price_per_mtok: 0.4
   output_price_per_mtok: 1.6
-  cache_read_price_per_mtok: 0.0
+  cache_read_price_per_mtok: 0.1
   cache_write_price_per_mtok: 0.0
   context_window: 1047576
   max_output_tokens: 32768
   capabilities:
   - streaming
+  - structured_output
+  - tools
+  - vision
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -1689,6 +1905,7 @@ models:
   - streaming
   - structured_output
   - tools
+  - vision
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -1702,12 +1919,15 @@ models:
   upstream_model: gpt-4.1-nano-2025-04-14
   input_price_per_mtok: 0.1
   output_price_per_mtok: 0.4
-  cache_read_price_per_mtok: 0.0
+  cache_read_price_per_mtok: 0.025
   cache_write_price_per_mtok: 0.0
   context_window: 1047576
   max_output_tokens: 32768
   capabilities:
   - streaming
+  - structured_output
+  - tools
+  - vision
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -1729,6 +1949,7 @@ models:
   - streaming
   - structured_output
   - tools
+  - vision
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -1740,16 +1961,17 @@ models:
 - model_id: openai/gpt-4o-2024-05-13
   provider_id: openai
   upstream_model: gpt-4o-2024-05-13
-  input_price_per_mtok: 5.0
-  output_price_per_mtok: 15.0
-  cache_read_price_per_mtok: 0.0
+  input_price_per_mtok: 2.5
+  output_price_per_mtok: 10.0
+  cache_read_price_per_mtok: 1.25
   cache_write_price_per_mtok: 0.0
   context_window: 128000
-  max_output_tokens: 4096
+  max_output_tokens: 16384
   capabilities:
   - streaming
   - structured_output
   - tools
+  - vision
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -1771,6 +1993,7 @@ models:
   - streaming
   - structured_output
   - tools
+  - vision
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -1792,6 +2015,7 @@ models:
   - streaming
   - structured_output
   - tools
+  - vision
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -1813,6 +2037,7 @@ models:
   - streaming
   - structured_output
   - tools
+  - vision
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -1826,12 +2051,95 @@ models:
   upstream_model: gpt-4o-mini-2024-07-18
   input_price_per_mtok: 0.15
   output_price_per_mtok: 0.6
+  cache_read_price_per_mtok: 0.075
+  cache_write_price_per_mtok: 0.0
+  context_window: 128000
+  max_output_tokens: 16384
+  capabilities:
+  - streaming
+  - structured_output
+  - tools
+  - vision
+  parameter_support:
+    logprobs: supported
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    seed: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
+- model_id: openai/gpt-4o-mini-search-preview
+  provider_id: openai
+  upstream_model: gpt-4o-mini-search-preview
+  input_price_per_mtok: 0.15
+  output_price_per_mtok: 0.6
   cache_read_price_per_mtok: 0.0
   cache_write_price_per_mtok: 0.0
   context_window: 128000
   max_output_tokens: 16384
   capabilities:
   - streaming
+  - structured_output
+  parameter_support:
+    logprobs: supported
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    seed: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
+- model_id: openai/gpt-4o-mini-search-preview-2025-03-11
+  provider_id: openai
+  upstream_model: gpt-4o-mini-search-preview-2025-03-11
+  input_price_per_mtok: 0.15
+  output_price_per_mtok: 0.6
+  cache_read_price_per_mtok: 0.0
+  cache_write_price_per_mtok: 0.0
+  context_window: 128000
+  max_output_tokens: 16384
+  capabilities:
+  - streaming
+  - structured_output
+  parameter_support:
+    logprobs: supported
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    seed: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
+- model_id: openai/gpt-4o-search-preview
+  provider_id: openai
+  upstream_model: gpt-4o-search-preview
+  input_price_per_mtok: 2.5
+  output_price_per_mtok: 10.0
+  cache_read_price_per_mtok: 0.0
+  cache_write_price_per_mtok: 0.0
+  context_window: 128000
+  max_output_tokens: 16384
+  capabilities:
+  - streaming
+  - structured_output
+  parameter_support:
+    logprobs: supported
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    seed: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
+- model_id: openai/gpt-4o-search-preview-2025-03-11
+  provider_id: openai
+  upstream_model: gpt-4o-search-preview-2025-03-11
+  input_price_per_mtok: 2.5
+  output_price_per_mtok: 10.0
+  cache_read_price_per_mtok: 0.0
+  cache_write_price_per_mtok: 0.0
+  context_window: 128000
+  max_output_tokens: 16384
+  capabilities:
+  - streaming
+  - structured_output
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -1850,9 +2158,11 @@ models:
   context_window: 400000
   max_output_tokens: 128000
   capabilities:
+  - reasoning
   - streaming
   - structured_output
   - tools
+  - vision
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -1866,12 +2176,38 @@ models:
   upstream_model: gpt-5-2025-08-07
   input_price_per_mtok: 1.25
   output_price_per_mtok: 10.0
-  cache_read_price_per_mtok: 0.0
+  cache_read_price_per_mtok: 0.125
   cache_write_price_per_mtok: 0.0
   context_window: 400000
   max_output_tokens: 128000
   capabilities:
+  - reasoning
   - streaming
+  - structured_output
+  - tools
+  - vision
+  parameter_support:
+    logprobs: supported
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    seed: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
+- model_id: openai/gpt-5-chat-latest
+  provider_id: openai
+  upstream_model: gpt-5-chat-latest
+  input_price_per_mtok: 1.25
+  output_price_per_mtok: 10.0
+  cache_read_price_per_mtok: 0.125
+  cache_write_price_per_mtok: 0.0
+  context_window: 128000
+  max_output_tokens: 16384
+  capabilities:
+  - streaming
+  - structured_output
+  - tools
+  - vision
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -1883,14 +2219,18 @@ models:
 - model_id: openai/gpt-5-codex
   provider_id: openai
   upstream_model: gpt-5-codex
-  input_price_per_mtok: 0.625
-  output_price_per_mtok: 5.0
-  cache_read_price_per_mtok: 0.0
+  input_price_per_mtok: 1.25
+  output_price_per_mtok: 10.0
+  cache_read_price_per_mtok: 0.125
   cache_write_price_per_mtok: 0.0
   context_window: 400000
   max_output_tokens: 128000
   capabilities:
+  - reasoning
   - streaming
+  - structured_output
+  - tools
+  - vision
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -1909,9 +2249,11 @@ models:
   context_window: 400000
   max_output_tokens: 128000
   capabilities:
+  - reasoning
   - streaming
   - structured_output
   - tools
+  - vision
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -1925,12 +2267,16 @@ models:
   upstream_model: gpt-5-mini-2025-08-07
   input_price_per_mtok: 0.25
   output_price_per_mtok: 2.0
-  cache_read_price_per_mtok: 0.0
+  cache_read_price_per_mtok: 0.025
   cache_write_price_per_mtok: 0.0
   context_window: 400000
   max_output_tokens: 128000
   capabilities:
+  - reasoning
   - streaming
+  - structured_output
+  - tools
+  - vision
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -1949,9 +2295,11 @@ models:
   context_window: 400000
   max_output_tokens: 128000
   capabilities:
+  - reasoning
   - streaming
   - structured_output
   - tools
+  - vision
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -1965,12 +2313,16 @@ models:
   upstream_model: gpt-5-nano-2025-08-07
   input_price_per_mtok: 0.05
   output_price_per_mtok: 0.4
-  cache_read_price_per_mtok: 0.0
+  cache_read_price_per_mtok: 0.005
   cache_write_price_per_mtok: 0.0
   context_window: 400000
   max_output_tokens: 128000
   capabilities:
+  - reasoning
   - streaming
+  - structured_output
+  - tools
+  - vision
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -1987,11 +2339,13 @@ models:
   cache_read_price_per_mtok: 0.0
   cache_write_price_per_mtok: 0.0
   context_window: 400000
-  max_output_tokens: 128000
+  max_output_tokens: 272000
   capabilities:
+  - reasoning
   - streaming
   - structured_output
   - tools
+  - vision
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -2008,9 +2362,13 @@ models:
   cache_read_price_per_mtok: 0.0
   cache_write_price_per_mtok: 0.0
   context_window: 400000
-  max_output_tokens: 128000
+  max_output_tokens: 272000
   capabilities:
+  - reasoning
   - streaming
+  - structured_output
+  - tools
+  - vision
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -2029,9 +2387,56 @@ models:
   context_window: 400000
   max_output_tokens: 128000
   capabilities:
+  - reasoning
   - streaming
   - structured_output
   - tools
+  - vision
+  parameter_support:
+    logprobs: supported
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    seed: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
+- model_id: openai/gpt-5.1-2025-11-13
+  provider_id: openai
+  upstream_model: gpt-5.1-2025-11-13
+  input_price_per_mtok: 1.25
+  output_price_per_mtok: 10.0
+  cache_read_price_per_mtok: 0.125
+  cache_write_price_per_mtok: 0.0
+  context_window: 400000
+  max_output_tokens: 128000
+  capabilities:
+  - reasoning
+  - streaming
+  - structured_output
+  - tools
+  - vision
+  parameter_support:
+    logprobs: supported
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    seed: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
+- model_id: openai/gpt-5.1-chat-latest
+  provider_id: openai
+  upstream_model: gpt-5.1-chat-latest
+  input_price_per_mtok: 1.25
+  output_price_per_mtok: 10.0
+  cache_read_price_per_mtok: 0.125
+  cache_write_price_per_mtok: 0.0
+  context_window: 128000
+  max_output_tokens: 16384
+  capabilities:
+  - streaming
+  - structured_output
+  - tools
+  - vision
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -2045,12 +2450,16 @@ models:
   upstream_model: gpt-5.1-codex
   input_price_per_mtok: 1.25
   output_price_per_mtok: 10.0
-  cache_read_price_per_mtok: 0.0
+  cache_read_price_per_mtok: 0.125
   cache_write_price_per_mtok: 0.0
   context_window: 400000
   max_output_tokens: 128000
   capabilities:
+  - reasoning
   - streaming
+  - structured_output
+  - tools
+  - vision
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -2064,12 +2473,16 @@ models:
   upstream_model: gpt-5.1-codex-max
   input_price_per_mtok: 1.25
   output_price_per_mtok: 10.0
-  cache_read_price_per_mtok: 0.0
+  cache_read_price_per_mtok: 0.125
   cache_write_price_per_mtok: 0.0
   context_window: 400000
   max_output_tokens: 128000
   capabilities:
+  - reasoning
   - streaming
+  - structured_output
+  - tools
+  - vision
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -2083,12 +2496,16 @@ models:
   upstream_model: gpt-5.1-codex-mini
   input_price_per_mtok: 0.25
   output_price_per_mtok: 2.0
-  cache_read_price_per_mtok: 0.0
+  cache_read_price_per_mtok: 0.025
   cache_write_price_per_mtok: 0.0
   context_window: 400000
   max_output_tokens: 128000
   capabilities:
+  - reasoning
   - streaming
+  - structured_output
+  - tools
+  - vision
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -2107,9 +2524,34 @@ models:
   context_window: 400000
   max_output_tokens: 128000
   capabilities:
+  - reasoning
   - streaming
   - structured_output
   - tools
+  - vision
+  parameter_support:
+    logprobs: supported
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    seed: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
+- model_id: openai/gpt-5.2-2025-12-11
+  provider_id: openai
+  upstream_model: gpt-5.2-2025-12-11
+  input_price_per_mtok: 1.75
+  output_price_per_mtok: 14.0
+  cache_read_price_per_mtok: 0.175
+  cache_write_price_per_mtok: 0.0
+  context_window: 400000
+  max_output_tokens: 128000
+  capabilities:
+  - reasoning
+  - streaming
+  - structured_output
+  - tools
+  - vision
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -2126,11 +2568,12 @@ models:
   cache_read_price_per_mtok: 0.175
   cache_write_price_per_mtok: 0.0
   context_window: 128000
-  max_output_tokens: 32000
+  max_output_tokens: 16384
   capabilities:
   - streaming
   - structured_output
   - tools
+  - vision
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -2144,12 +2587,16 @@ models:
   upstream_model: gpt-5.2-codex
   input_price_per_mtok: 1.75
   output_price_per_mtok: 14.0
-  cache_read_price_per_mtok: 0.0
+  cache_read_price_per_mtok: 0.175
   cache_write_price_per_mtok: 0.0
   context_window: 400000
   max_output_tokens: 128000
   capabilities:
+  - reasoning
   - streaming
+  - structured_output
+  - tools
+  - vision
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -2168,8 +2615,32 @@ models:
   context_window: 400000
   max_output_tokens: 128000
   capabilities:
+  - reasoning
   - streaming
   - tools
+  - vision
+  parameter_support:
+    logprobs: supported
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    seed: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
+- model_id: openai/gpt-5.2-pro-2025-12-11
+  provider_id: openai
+  upstream_model: gpt-5.2-pro-2025-12-11
+  input_price_per_mtok: 21.0
+  output_price_per_mtok: 168.0
+  cache_read_price_per_mtok: 0.0
+  cache_write_price_per_mtok: 0.0
+  context_window: 400000
+  max_output_tokens: 128000
+  capabilities:
+  - reasoning
+  - streaming
+  - tools
+  - vision
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -2191,6 +2662,7 @@ models:
   - streaming
   - structured_output
   - tools
+  - vision
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -2209,9 +2681,11 @@ models:
   context_window: 400000
   max_output_tokens: 128000
   capabilities:
+  - reasoning
   - streaming
   - structured_output
   - tools
+  - vision
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -2230,9 +2704,34 @@ models:
   context_window: 1050000
   max_output_tokens: 128000
   capabilities:
+  - reasoning
   - streaming
   - structured_output
   - tools
+  - vision
+  parameter_support:
+    logprobs: supported
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    seed: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
+- model_id: openai/gpt-5.4-2026-03-05
+  provider_id: openai
+  upstream_model: gpt-5.4-2026-03-05
+  input_price_per_mtok: 2.5
+  output_price_per_mtok: 15.0
+  cache_read_price_per_mtok: 0.25
+  cache_write_price_per_mtok: 0.0
+  context_window: 1050000
+  max_output_tokens: 128000
+  capabilities:
+  - reasoning
+  - streaming
+  - structured_output
+  - tools
+  - vision
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -2251,9 +2750,34 @@ models:
   context_window: 400000
   max_output_tokens: 128000
   capabilities:
+  - reasoning
   - streaming
   - structured_output
   - tools
+  - vision
+  parameter_support:
+    logprobs: supported
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    seed: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
+- model_id: openai/gpt-5.4-mini-2026-03-17
+  provider_id: openai
+  upstream_model: gpt-5.4-mini-2026-03-17
+  input_price_per_mtok: 0.75
+  output_price_per_mtok: 4.5
+  cache_read_price_per_mtok: 0.075
+  cache_write_price_per_mtok: 0.0
+  context_window: 400000
+  max_output_tokens: 128000
+  capabilities:
+  - reasoning
+  - streaming
+  - structured_output
+  - tools
+  - vision
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -2272,9 +2796,34 @@ models:
   context_window: 400000
   max_output_tokens: 128000
   capabilities:
+  - reasoning
   - streaming
   - structured_output
   - tools
+  - vision
+  parameter_support:
+    logprobs: supported
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    seed: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
+- model_id: openai/gpt-5.4-nano-2026-03-17
+  provider_id: openai
+  upstream_model: gpt-5.4-nano-2026-03-17
+  input_price_per_mtok: 0.2
+  output_price_per_mtok: 1.25
+  cache_read_price_per_mtok: 0.02
+  cache_write_price_per_mtok: 0.0
+  context_window: 400000
+  max_output_tokens: 128000
+  capabilities:
+  - reasoning
+  - streaming
+  - structured_output
+  - tools
+  - vision
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -2293,8 +2842,32 @@ models:
   context_window: 1050000
   max_output_tokens: 128000
   capabilities:
+  - reasoning
   - streaming
   - tools
+  - vision
+  parameter_support:
+    logprobs: supported
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    seed: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
+- model_id: openai/gpt-5.4-pro-2026-03-05
+  provider_id: openai
+  upstream_model: gpt-5.4-pro-2026-03-05
+  input_price_per_mtok: 30.0
+  output_price_per_mtok: 180.0
+  cache_read_price_per_mtok: 0.0
+  cache_write_price_per_mtok: 0.0
+  context_window: 1050000
+  max_output_tokens: 128000
+  capabilities:
+  - reasoning
+  - streaming
+  - tools
+  - vision
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -2313,9 +2886,34 @@ models:
   context_window: 1050000
   max_output_tokens: 128000
   capabilities:
+  - reasoning
   - streaming
   - structured_output
   - tools
+  - vision
+  parameter_support:
+    logprobs: supported
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    seed: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
+- model_id: openai/gpt-5.5-2026-04-23
+  provider_id: openai
+  upstream_model: gpt-5.5-2026-04-23
+  input_price_per_mtok: 5.0
+  output_price_per_mtok: 30.0
+  cache_read_price_per_mtok: 0.5
+  cache_write_price_per_mtok: 0.0
+  context_window: 1050000
+  max_output_tokens: 128000
+  capabilities:
+  - reasoning
+  - streaming
+  - structured_output
+  - tools
+  - vision
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -2334,9 +2932,34 @@ models:
   context_window: 1050000
   max_output_tokens: 128000
   capabilities:
+  - reasoning
   - streaming
   - structured_output
   - tools
+  - vision
+  parameter_support:
+    logprobs: supported
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    seed: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
+- model_id: openai/gpt-5.5-pro-2026-04-23
+  provider_id: openai
+  upstream_model: gpt-5.5-pro-2026-04-23
+  input_price_per_mtok: 30.0
+  output_price_per_mtok: 180.0
+  cache_read_price_per_mtok: 0.0
+  cache_write_price_per_mtok: 0.0
+  context_window: 1050000
+  max_output_tokens: 128000
+  capabilities:
+  - reasoning
+  - streaming
+  - structured_output
+  - tools
+  - vision
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -2351,13 +2974,15 @@ models:
   input_price_per_mtok: 0.2
   output_price_per_mtok: 1.2
   cache_read_price_per_mtok: 0.02
-  cache_write_price_per_mtok: 0.25
+  cache_write_price_per_mtok: 0.0
   context_window: 1050000
   max_output_tokens: 128000
   capabilities:
+  - reasoning
   - streaming
   - structured_output
   - tools
+  - vision
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -2369,16 +2994,18 @@ models:
 - model_id: openai/gpt-5.6-sol
   provider_id: openai
   upstream_model: gpt-5.6-sol
-  input_price_per_mtok: 5.0
-  output_price_per_mtok: 30.0
-  cache_read_price_per_mtok: 0.5
-  cache_write_price_per_mtok: 6.25
+  input_price_per_mtok: 4.0
+  output_price_per_mtok: 20.0
+  cache_read_price_per_mtok: 0.4
+  cache_write_price_per_mtok: 0.0
   context_window: 1050000
   max_output_tokens: 128000
   capabilities:
+  - reasoning
   - streaming
   - structured_output
   - tools
+  - vision
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -2393,13 +3020,15 @@ models:
   input_price_per_mtok: 2.0
   output_price_per_mtok: 12.0
   cache_read_price_per_mtok: 0.2
-  cache_write_price_per_mtok: 2.5
+  cache_write_price_per_mtok: 0.0
   context_window: 1050000
   max_output_tokens: 128000
   capabilities:
+  - reasoning
   - streaming
   - structured_output
   - tools
+  - vision
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -2419,6 +3048,47 @@ models:
   max_output_tokens: 16384
   capabilities:
   - streaming
+  - tools
+  parameter_support:
+    logprobs: supported
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    seed: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
+- model_id: openai/gpt-audio-1.5
+  provider_id: openai
+  upstream_model: gpt-audio-1.5
+  input_price_per_mtok: 2.5
+  output_price_per_mtok: 10.0
+  cache_read_price_per_mtok: 0.0
+  cache_write_price_per_mtok: 0.0
+  context_window: 128000
+  max_output_tokens: 16384
+  capabilities:
+  - streaming
+  - tools
+  parameter_support:
+    logprobs: supported
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    seed: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
+- model_id: openai/gpt-audio-2025-08-28
+  provider_id: openai
+  upstream_model: gpt-audio-2025-08-28
+  input_price_per_mtok: 2.5
+  output_price_per_mtok: 10.0
+  cache_read_price_per_mtok: 0.0
+  cache_write_price_per_mtok: 0.0
+  context_window: 128000
+  max_output_tokens: 16384
+  capabilities:
+  - streaming
+  - tools
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -2438,6 +3108,47 @@ models:
   max_output_tokens: 16384
   capabilities:
   - streaming
+  - tools
+  parameter_support:
+    logprobs: supported
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    seed: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
+- model_id: openai/gpt-audio-mini-2025-10-06
+  provider_id: openai
+  upstream_model: gpt-audio-mini-2025-10-06
+  input_price_per_mtok: 0.6
+  output_price_per_mtok: 2.4
+  cache_read_price_per_mtok: 0.0
+  cache_write_price_per_mtok: 0.0
+  context_window: 128000
+  max_output_tokens: 16384
+  capabilities:
+  - streaming
+  - tools
+  parameter_support:
+    logprobs: supported
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    seed: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
+- model_id: openai/gpt-audio-mini-2025-12-15
+  provider_id: openai
+  upstream_model: gpt-audio-mini-2025-12-15
+  input_price_per_mtok: 0.6
+  output_price_per_mtok: 2.4
+  cache_read_price_per_mtok: 0.0
+  cache_write_price_per_mtok: 0.0
+  context_window: 128000
+  max_output_tokens: 16384
+  capabilities:
+  - streaming
+  - tools
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -2456,9 +3167,11 @@ models:
   context_window: 200000
   max_output_tokens: 100000
   capabilities:
+  - reasoning
   - streaming
   - structured_output
   - tools
+  - vision
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -2472,12 +3185,16 @@ models:
   upstream_model: o1-2024-12-17
   input_price_per_mtok: 15.0
   output_price_per_mtok: 60.0
-  cache_read_price_per_mtok: 0.0
+  cache_read_price_per_mtok: 7.5
   cache_write_price_per_mtok: 0.0
   context_window: 200000
   max_output_tokens: 100000
   capabilities:
+  - reasoning
   - streaming
+  - structured_output
+  - tools
+  - vision
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -2496,9 +3213,34 @@ models:
   context_window: 200000
   max_output_tokens: 100000
   capabilities:
+  - reasoning
   - streaming
   - structured_output
   - tools
+  - vision
+  parameter_support:
+    logprobs: supported
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    seed: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
+- model_id: openai/o1-pro-2025-03-19
+  provider_id: openai
+  upstream_model: o1-pro-2025-03-19
+  input_price_per_mtok: 150.0
+  output_price_per_mtok: 600.0
+  cache_read_price_per_mtok: 0.0
+  cache_write_price_per_mtok: 0.0
+  context_window: 200000
+  max_output_tokens: 100000
+  capabilities:
+  - reasoning
+  - streaming
+  - structured_output
+  - tools
+  - vision
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -2517,9 +3259,11 @@ models:
   context_window: 200000
   max_output_tokens: 100000
   capabilities:
+  - reasoning
   - streaming
   - structured_output
   - tools
+  - vision
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -2533,12 +3277,16 @@ models:
   upstream_model: o3-2025-04-16
   input_price_per_mtok: 2.0
   output_price_per_mtok: 8.0
-  cache_read_price_per_mtok: 0.0
+  cache_read_price_per_mtok: 0.5
   cache_write_price_per_mtok: 0.0
   context_window: 200000
   max_output_tokens: 100000
   capabilities:
+  - reasoning
   - streaming
+  - structured_output
+  - tools
+  - vision
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -2557,6 +3305,7 @@ models:
   context_window: 200000
   max_output_tokens: 100000
   capabilities:
+  - reasoning
   - streaming
   - structured_output
   - tools
@@ -2573,12 +3322,15 @@ models:
   upstream_model: o3-mini-2025-01-31
   input_price_per_mtok: 1.1
   output_price_per_mtok: 4.4
-  cache_read_price_per_mtok: 0.0
+  cache_read_price_per_mtok: 0.55
   cache_write_price_per_mtok: 0.0
   context_window: 200000
   max_output_tokens: 100000
   capabilities:
+  - reasoning
   - streaming
+  - structured_output
+  - tools
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -2597,9 +3349,11 @@ models:
   context_window: 200000
   max_output_tokens: 100000
   capabilities:
+  - reasoning
   - streaming
   - structured_output
   - tools
+  - vision
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -2613,12 +3367,16 @@ models:
   upstream_model: o4-mini-2025-04-16
   input_price_per_mtok: 1.1
   output_price_per_mtok: 4.4
-  cache_read_price_per_mtok: 0.0
+  cache_read_price_per_mtok: 0.275
   cache_write_price_per_mtok: 0.0
   context_window: 200000
   max_output_tokens: 100000
   capabilities:
+  - reasoning
   - streaming
+  - structured_output
+  - tools
+  - vision
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
@@ -2627,19 +3385,43 @@ models:
     stop: supported
     temperature: supported
     top_p: supported
-- model_id: together/LiquidAI/LFM2.5-8B-A1B
-  provider_id: together
-  upstream_model: LiquidAI/LFM2.5-8B-A1B
-  input_price_per_mtok: 0.03
-  output_price_per_mtok: 0.12
-  cache_read_price_per_mtok: 0.0
+- model_id: openai/o4-mini-deep-research
+  provider_id: openai
+  upstream_model: o4-mini-deep-research
+  input_price_per_mtok: 2.0
+  output_price_per_mtok: 8.0
+  cache_read_price_per_mtok: 0.5
   cache_write_price_per_mtok: 0.0
-  context_window: 128000
-  max_output_tokens: null
+  context_window: 200000
+  max_output_tokens: 100000
   capabilities:
+  - reasoning
   - streaming
+  - vision
   parameter_support:
     logprobs: supported
+    parallel_tool_calls: supported
+    reasoning_effort: supported
+    seed: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
+- model_id: openai/o4-mini-deep-research-2025-06-26
+  provider_id: openai
+  upstream_model: o4-mini-deep-research-2025-06-26
+  input_price_per_mtok: 2.0
+  output_price_per_mtok: 8.0
+  cache_read_price_per_mtok: 0.5
+  cache_write_price_per_mtok: 0.0
+  context_window: 200000
+  max_output_tokens: 100000
+  capabilities:
+  - reasoning
+  - streaming
+  - vision
+  parameter_support:
+    logprobs: supported
+    parallel_tool_calls: supported
     reasoning_effort: supported
     seed: supported
     stop: supported
@@ -2673,7 +3455,7 @@ models:
   cache_read_price_per_mtok: 0.06
   cache_write_price_per_mtok: 0.0
   context_window: 524288
-  max_output_tokens: 512000
+  max_output_tokens: 250000
   capabilities:
   - streaming
   - structured_output
@@ -2857,7 +3639,7 @@ models:
   cache_read_price_per_mtok: 0.0
   cache_write_price_per_mtok: 0.0
   context_window: 16384
-  max_output_tokens: 32768
+  max_output_tokens: 29491
   capabilities:
   - streaming
   parameter_support:
@@ -2875,7 +3657,7 @@ models:
   cache_read_price_per_mtok: 0.0
   cache_write_price_per_mtok: 0.0
   context_window: 32768
-  max_output_tokens: 128000
+  max_output_tokens: 28800
   capabilities:
   - streaming
   parameter_support:
@@ -2931,7 +3713,7 @@ models:
   cache_read_price_per_mtok: 0.0
   cache_write_price_per_mtok: 0.0
   context_window: 262144
-  max_output_tokens: 262144
+  max_output_tokens: 235929
   capabilities:
   - streaming
   parameter_support:
@@ -3003,7 +3785,7 @@ models:
   cache_read_price_per_mtok: 0.35
   cache_write_price_per_mtok: 0.0
   context_window: 262144
-  max_output_tokens: 65536
+  max_output_tokens: 130000
   capabilities:
   - streaming
   - tools
@@ -3022,7 +3804,7 @@ models:
   cache_read_price_per_mtok: 0.0
   cache_write_price_per_mtok: 0.0
   context_window: 262144
-  max_output_tokens: 262144
+  max_output_tokens: 65536
   capabilities:
   - streaming
   - structured_output
@@ -3042,7 +3824,7 @@ models:
   cache_read_price_per_mtok: 0.0
   cache_write_price_per_mtok: 0.0
   context_window: 1000000
-  max_output_tokens: 65536
+  max_output_tokens: 500000
   capabilities:
   - streaming
   - tools
@@ -3056,12 +3838,12 @@ models:
 - model_id: together/Qwen/Qwen3.7-Max
   provider_id: together
   upstream_model: Qwen/Qwen3.7-Max
-  input_price_per_mtok: 1.25
-  output_price_per_mtok: 3.75
-  cache_read_price_per_mtok: 0.125
+  input_price_per_mtok: 2.5
+  output_price_per_mtok: 7.5
+  cache_read_price_per_mtok: 0.5
   cache_write_price_per_mtok: 0.0
   context_window: 1000000
-  max_output_tokens: 131072
+  max_output_tokens: 500000
   capabilities:
   - streaming
   - tools
@@ -3098,7 +3880,7 @@ models:
   cache_read_price_per_mtok: 0.5
   cache_write_price_per_mtok: 0.0
   context_window: 1010000
-  max_output_tokens: 262144
+  max_output_tokens: 131072
   capabilities:
   - streaming
   parameter_support:
@@ -3144,24 +3926,6 @@ models:
     stop: supported
     temperature: supported
     top_p: supported
-- model_id: together/deepcogito/cogito-v2-1-671b
-  provider_id: together
-  upstream_model: deepcogito/cogito-v2-1-671b
-  input_price_per_mtok: 1.25
-  output_price_per_mtok: 1.25
-  cache_read_price_per_mtok: 0.0
-  cache_write_price_per_mtok: 0.0
-  context_window: 163840
-  max_output_tokens: 128000
-  capabilities:
-  - streaming
-  parameter_support:
-    logprobs: supported
-    reasoning_effort: supported
-    seed: supported
-    stop: supported
-    temperature: supported
-    top_p: supported
 - model_id: together/deepseek-ai/DeepSeek-R1-0528
   provider_id: together
   upstream_model: deepseek-ai/DeepSeek-R1-0528
@@ -3188,7 +3952,7 @@ models:
   cache_read_price_per_mtok: 0.0
   cache_write_price_per_mtok: 0.0
   context_window: 131072
-  max_output_tokens: 8192
+  max_output_tokens: 7372
   capabilities:
   - streaming
   parameter_support:
@@ -3242,7 +4006,7 @@ models:
   cache_read_price_per_mtok: 0.0
   cache_write_price_per_mtok: 0.0
   context_window: 131072
-  max_output_tokens: 32768
+  max_output_tokens: 144900
   capabilities:
   - streaming
   parameter_support:
@@ -3280,7 +4044,7 @@ models:
   cache_read_price_per_mtok: 0.2
   cache_write_price_per_mtok: 0.0
   context_window: 512000
-  max_output_tokens: 393216
+  max_output_tokens: 384000
   capabilities:
   - streaming
   - structured_output
@@ -3348,25 +4112,6 @@ models:
     stop: supported
     temperature: supported
     top_p: supported
-- model_id: together/google/gemma-3n-E4B-it
-  provider_id: together
-  upstream_model: google/gemma-3n-E4B-it
-  input_price_per_mtok: 0.06
-  output_price_per_mtok: 0.12
-  cache_read_price_per_mtok: 0.0
-  cache_write_price_per_mtok: 0.0
-  context_window: 32768
-  max_output_tokens: 32768
-  capabilities:
-  - streaming
-  - structured_output
-  parameter_support:
-    logprobs: supported
-    reasoning_effort: supported
-    seed: supported
-    stop: supported
-    temperature: supported
-    top_p: supported
 - model_id: together/google/gemma-4-31B-it
   provider_id: together
   upstream_model: google/gemma-4-31B-it
@@ -3375,9 +4120,11 @@ models:
   cache_read_price_per_mtok: 0.0
   cache_write_price_per_mtok: 0.0
   context_window: 262144
-  max_output_tokens: 262144
+  max_output_tokens: 32000
   capabilities:
   - streaming
+  - structured_output
+  - tools
   parameter_support:
     logprobs: supported
     reasoning_effort: supported
@@ -3429,7 +4176,7 @@ models:
   cache_read_price_per_mtok: 0.0
   cache_write_price_per_mtok: 0.0
   context_window: 131072
-  max_output_tokens: 60000
+  max_output_tokens: 54000
   capabilities:
   - streaming
   parameter_support:
@@ -3447,7 +4194,7 @@ models:
   cache_read_price_per_mtok: 0.0
   cache_write_price_per_mtok: 0.0
   context_window: 131072
-  max_output_tokens: 131072
+  max_output_tokens: 117964
   capabilities:
   - streaming
   parameter_support:
@@ -3468,6 +4215,7 @@ models:
   max_output_tokens: 131072
   capabilities:
   - streaming
+  - structured_output
   - tools
   parameter_support:
     logprobs: supported
@@ -3484,7 +4232,7 @@ models:
   cache_read_price_per_mtok: 0.0
   cache_write_price_per_mtok: 0.0
   context_window: 1048576
-  max_output_tokens: 16384
+  max_output_tokens: 8192
   capabilities:
   - streaming
   parameter_support:
@@ -3574,7 +4322,7 @@ models:
   cache_read_price_per_mtok: 0.04
   cache_write_price_per_mtok: 0.0
   context_window: 131072
-  max_output_tokens: 131072
+  max_output_tokens: 117964
   capabilities:
   - streaming
   parameter_support:
@@ -3592,7 +4340,7 @@ models:
   cache_read_price_per_mtok: 0.0
   cache_write_price_per_mtok: 0.0
   context_window: 262144
-  max_output_tokens: 262144
+  max_output_tokens: 209715
   capabilities:
   - streaming
   parameter_support:
@@ -3700,7 +4448,7 @@ models:
   cache_read_price_per_mtok: 0.2
   cache_write_price_per_mtok: 0.0
   context_window: 262144
-  max_output_tokens: 262144
+  max_output_tokens: 131000
   capabilities:
   - streaming
   - structured_output
@@ -3720,7 +4468,7 @@ models:
   cache_read_price_per_mtok: 0.19
   cache_write_price_per_mtok: 0.0
   context_window: 262144
-  max_output_tokens: 262144
+  max_output_tokens: 131072
   capabilities:
   - streaming
   - structured_output
@@ -3739,8 +4487,8 @@ models:
   output_price_per_mtok: 15.0
   cache_read_price_per_mtok: 0.3
   cache_write_price_per_mtok: 0.0
-  context_window: 1000000
-  max_output_tokens: 1048576
+  context_window: 1048576
+  max_output_tokens: 131072
   capabilities:
   - streaming
   - structured_output
@@ -3778,7 +4526,7 @@ models:
   cache_read_price_per_mtok: 0.0
   cache_write_price_per_mtok: 0.0
   context_window: 131072
-  max_output_tokens: 128000
+  max_output_tokens: null
   capabilities:
   - streaming
   parameter_support:
@@ -3796,7 +4544,7 @@ models:
   cache_read_price_per_mtok: 0.2
   cache_write_price_per_mtok: 0.0
   context_window: 512288
-  max_output_tokens: 512288
+  max_output_tokens: 512300
   capabilities:
   - streaming
   - structured_output
@@ -3819,6 +4567,7 @@ models:
   max_output_tokens: 131072
   capabilities:
   - streaming
+  - structured_output
   - tools
   parameter_support:
     logprobs: supported
@@ -3855,7 +4604,7 @@ models:
   cache_read_price_per_mtok: 0.0
   cache_write_price_per_mtok: 0.0
   context_window: 262144
-  max_output_tokens: 262144
+  max_output_tokens: 32000
   capabilities:
   - streaming
   parameter_support:
@@ -3873,7 +4622,7 @@ models:
   cache_read_price_per_mtok: 0.17
   cache_write_price_per_mtok: 0.0
   context_window: 524288
-  max_output_tokens: 262144
+  max_output_tokens: 131072
   capabilities:
   - streaming
   - structured_output
@@ -3911,7 +4660,7 @@ models:
   cache_read_price_per_mtok: 0.0
   cache_write_price_per_mtok: 0.0
   context_window: 131072
-  max_output_tokens: 98304
+  max_output_tokens: null
   capabilities:
   - streaming
   parameter_support:
@@ -3929,7 +4678,7 @@ models:
   cache_read_price_per_mtok: 0.0
   cache_write_price_per_mtok: 0.0
   context_window: 202752
-  max_output_tokens: 131072
+  max_output_tokens: 16384
   capabilities:
   - streaming
   parameter_support:
@@ -3965,7 +4714,7 @@ models:
   cache_read_price_per_mtok: 0.0
   cache_write_price_per_mtok: 0.0
   context_window: 202752
-  max_output_tokens: 128000
+  max_output_tokens: 131072
   capabilities:
   - streaming
   - structured_output
@@ -4004,7 +4753,27 @@ models:
   output_price_per_mtok: 4.4
   cache_read_price_per_mtok: 0.26
   cache_write_price_per_mtok: 0.0
-  context_window: 512000
+  context_window: 1048575
+  max_output_tokens: 164000
+  capabilities:
+  - streaming
+  - structured_output
+  - tools
+  parameter_support:
+    logprobs: supported
+    reasoning_effort: supported
+    seed: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
+- model_id: together/zai-org/GLM-5.3-Flash
+  provider_id: together
+  upstream_model: zai-org/GLM-5.3-Flash
+  input_price_per_mtok: 0.15
+  output_price_per_mtok: 0.5
+  cache_read_price_per_mtok: 0.03
+  cache_write_price_per_mtok: 0.0
+  context_window: 1048575
   max_output_tokens: 131072
   capabilities:
   - streaming

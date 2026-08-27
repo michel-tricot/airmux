@@ -65,6 +65,19 @@ def openai_chat(payload: Mapping[str, object], duration_ms: float, client_type: 
 
 
 def openai_responses(payload: Mapping[str, object], duration_ms: float, client_type: str) -> Observation:
+    status = str(payload.get("status") or "completed")
+    error = _mapping(payload.get("error"))
+    if status == "failed":
+        return Observation(
+            outcome="error",
+            error_code=str(error.get("code") or "response_failed"),
+            error_message=str(error.get("message") or "response generation failed"),
+            finish_reason=status,
+            usage_present=bool(payload.get("usage")),
+            adjustments=_adjustments(payload),
+            duration_ms=duration_ms,
+            client_type=client_type,
+        )
     output = [_mapping(item) for item in _sequence(payload.get("output"))]
     calls = tuple(
         ToolObservation(name=str(item.get("name") or ""), arguments=str(item.get("arguments") or ""))
@@ -80,11 +93,12 @@ def openai_responses(payload: Mapping[str, object], duration_ms: float, client_t
         if (part := _mapping(value)).get("type") in {"output_text", "text"}
     )
     reasoning = any(item.get("type") == "reasoning" for item in output)
+    incomplete = _mapping(payload.get("incomplete_details"))
     return Observation(
         outcome="success",
         text=text,
         tool_calls=calls,
-        finish_reason=str(payload.get("status") or "stop"),
+        finish_reason=str(incomplete.get("reason") or status or "stop"),
         usage_present=bool(payload.get("usage")),
         reasoning_present=reasoning,
         json_value=_json_value(text),
@@ -157,11 +171,18 @@ def openai_chat_stream(events: Sequence[Mapping[str, object]], duration_ms: floa
 
 
 def openai_responses_stream(events: Sequence[Mapping[str, object]], duration_ms: float, client_type: str) -> Observation:
-    completed = next((_mapping(event.get("response")) for event in reversed(events) if event.get("type") == "response.completed"), None)
-    if completed is None:
-        message = "Responses stream did not include response.completed"
+    terminal = next(
+        (
+            _mapping(event.get("response"))
+            for event in reversed(events)
+            if event.get("type") in {"response.completed", "response.failed", "response.incomplete"}
+        ),
+        None,
+    )
+    if terminal is None:
+        message = "Responses stream did not include a terminal response event"
         raise ValueError(message)
-    return openai_responses(completed, duration_ms, client_type)
+    return openai_responses(terminal, duration_ms, client_type)
 
 
 def anthropic_stream(events: Sequence[Mapping[str, object]], duration_ms: float, client_type: str) -> Observation:

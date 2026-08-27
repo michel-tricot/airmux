@@ -2,7 +2,7 @@
   "provider": "cerebras",
   "source": "https://api.cerebras.ai/public/v1/models",
   "source_type": "api",
-  "updated": "2026-08-17",
+  "updated": "2026-08-27",
   "count": 2,
   "models": [
     {
@@ -23,7 +23,8 @@
         "input_per_mtok": 0.99,
         "output_per_mtok": 1.49
       },
-      "limits_source": "provider",
+      "context_source": "provider",
+      "max_output_source": "provider",
       "pricing_source": "provider",
       "parameter_evidence": {
         "model_discovery": {
@@ -73,7 +74,8 @@
         "input_per_mtok": 0.35,
         "output_per_mtok": 0.75
       },
-      "limits_source": "provider",
+      "context_source": "provider",
+      "max_output_source": "provider",
       "pricing_source": "provider",
       "parameter_evidence": {
         "model_discovery": {

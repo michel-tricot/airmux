@@ -61,3 +61,12 @@ def test_equivalent_cross_dialect_completion_reasons_match():
     result = assess(direct, gateway, Oracle(text_contains="ok"))
 
     assert result.parity == "match"
+
+
+def test_responses_output_limit_before_oracle_is_unknown():
+    direct = Observation(outcome="success", finish_reason="max_output_tokens", usage_present=True)
+
+    result = assess(direct, direct, Oracle(text_nonempty=True))
+
+    assert result.feature == "unknown"
+    assert result.parity == "match"

@@ -209,17 +209,37 @@ depends on both.
 The provider API remains authoritative. Missing pricing and limits are filled in this order:
 
 1. Provider model response
-2. Provider-scoped `models.dev` catalog
-3. Cross-provider OpenRouter catalog
-4. Provider-declared aliases
-5. Unknown
+2. Current official provider documentation, with its exact URL
+3. Provider-scoped `models.dev` catalog
+4. Cross-provider OpenRouter catalog
+5. Provider-declared aliases
+6. Unknown
 
-Provider values are never overwritten by secondary values. Limit and pricing provenance
-are independent. A secondary price is useful routing metadata, not a billing guarantee.
+Provider values are never overwritten by secondary values. Context, maximum output, and
+pricing provenance are independent. A secondary price is useful routing metadata, not a
+billing guarantee.
 
 A scoped sync preserves the previous successful model catalog when authentication fails,
 the endpoint is unavailable, the response is empty, or its shape is unrecognized. The
 command reports the failed component and exits nonzero.
+
+## Clean rebuild and review
+
+Preserve the current directory and reconstruct every generated artifact from provider
+sources:
+
+```bash
+uv run airllm-audit taxonomy rebuild --preserve-as taxonomy_old
+uv run airllm-audit taxonomy diff taxonomy_old taxonomy --summary
+uv run airllm-audit taxonomy diff taxonomy_old taxonomy --format json
+```
+
+The diff includes provider fields, every imported model field, applied taxonomy models,
+schema hashes, and icon hashes. The rebuild fails rather than silently carrying an old
+catalog through an acquisition error.
+
+`taxonomy/reports/missing-metadata.json` is the explicit unknown-fact queue. It lists the
+missing fields for each model without turning absence into an unsupported verdict.
 
 ## Add or correct one model
 

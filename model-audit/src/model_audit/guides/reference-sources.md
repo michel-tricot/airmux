@@ -49,6 +49,10 @@ rejected, so schemas transcribed from one get `additionalProperties: true` and a
 `x-notes` array for rules a schema cannot express, such as "accepted then ignored".
 
 Mintlify sites often expose `/llms.txt` listing every page, which beats guessing URLs.
+Provider source modules should extract official model pages on every sync when the model
+API omits limits, prices, modalities, tiers, or deprecations. Record the exact page in
+`documentation_url`, preserve units and pricing tiers, and test the parser against a frozen
+representative fragment. Never label a per-minute or per-image rate as a token rate.
 
 ## 5. Probing the live API
 
@@ -60,9 +64,9 @@ For things nobody documents:
 - **Whether a surface exists at all.** POST with a bogus body; a 404 and a 400 mean
   different things
 
-## 6. Cross-provider indexes, for limits only
+## 6. Secondary indexes, for remaining gaps only
 
-OpenRouter's `/api/v1/models` publishes `context_length` for every model it serves and
+Prefer provider-scoped models.dev before OpenRouter. OpenRouter's `/api/v1/models` publishes `context_length` for every model it serves and
 `max_completion_tokens` for most, plus `hugging_face_id` and `canonical_slug` so the same
 open-weights model matches across vendors. It filled 289 gaps.
 

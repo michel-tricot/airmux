@@ -74,7 +74,7 @@ providers:
   docs: https://docs.fireworks.ai
   base_url: https://api.fireworks.ai/inference/v1
   openapi: null
-  models_url: https://api.fireworks.ai/inference/v1/models
+  models_url: https://api.fireworks.ai/v1/accounts/fireworks/models?pageSize=200
   ingress:
   - oai
   auth:

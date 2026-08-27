@@ -61,6 +61,10 @@ Model and pricing synchronization both reacquire the provider model catalog befo
 enrichment. This makes an incremental refresh converge with a clean rebuild and prevents
 removed provider facts or stale secondary prices from being carried forward.
 
+The acquisition order is provider model API, current official provider documentation,
+provider-scoped models.dev, cross-provider OpenRouter, provider-declared aliases, then
+unknown. Official documentation extractors must preserve URLs, units, schedules, and tiers.
+
 Use the provider-catalog skill again when an endpoint moved, a response shape changed,
 documented facts conflict, a schema is not machine-readable, or a pricing extractor needs
 judgment. Missing credentials, access failures, rate limits, empty payloads, and unrecognized
@@ -132,6 +136,10 @@ provider behavior.
 Run `uv run airllm-audit taxonomy build`, then `uv run airllm-audit cases coverage` and
 `uv run airllm-audit taxonomy validate`. Review `taxonomy/behavior.json` and
 `taxonomy/taxonomy.yml` as generated projections; never edit them directly.
+
+For a clean source audit, run `uv run airllm-audit taxonomy rebuild --preserve-as <name>`.
+Compare every field with `uv run airllm-audit taxonomy diff <name> taxonomy`; use
+`--summary` for counts and `--format json` for machine review.
 
 Provider identity and declared metadata come from the catalog. Behavioral support comes only
 from accepted direct API evidence. Unknown values stay unknown, stale case fingerprints cannot

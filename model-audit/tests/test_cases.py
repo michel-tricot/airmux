@@ -58,6 +58,28 @@ def test_case_ids_and_claims_are_stable_and_auditable():
     assert all(case.version == 2 and case.oracle.has_assertion and case.claims for case in cases)
 
 
+def test_semantic_oracles_have_room_for_reasoning_models():
+    features = load_features(ROOT / "definitions" / "features.yml")
+    cases = load_cases(ROOT / "cases", features)
+    semantic_cases = tuple(
+        audit_case
+        for audit_case in cases
+        if any(
+            (
+                audit_case.oracle.text_nonempty,
+                audit_case.oracle.text_contains is not None,
+                audit_case.oracle.text_excludes is not None,
+                audit_case.oracle.assistant_text != "allowed",
+                bool(audit_case.oracle.tool_names),
+                audit_case.oracle.json_equals is not None,
+                audit_case.oracle.reasoning_present,
+            )
+        )
+    )
+
+    assert [audit_case.id for audit_case in semantic_cases if audit_case.request.max_tokens < 1024] == []
+
+
 def test_embedded_media_matches_its_semantic_oracle():
     features = load_features(ROOT / "definitions" / "features.yml")
     cases = load_cases(ROOT / "cases", features)

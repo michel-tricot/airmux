@@ -25,11 +25,14 @@ video, audio, rerank and embedding, and model_kind would drop most of them anywa
 completion models are text but not chat-shaped, so they are excluded deliberately rather
 than by accident.
 
-Together publishes no tool or structured-output flags, so those stay null rather than being
-inferred from the model name.
+The API publishes no tool or structured-output flags. The source fills those fields from
+the current official serverless model table when it lists the same API id. The API remains
+authoritative for context and pricing, and disagreements with the shorter documentation
+catalog are retained as source conflicts.
 """
 
 from model_audit.catalog_ops import ProviderDefinition, SchemaDefinition
+from model_audit.provider_docs import apply_documentation, fetch_text, parse_together_models
 
 from .base import ModelSource
 
@@ -38,6 +41,7 @@ class Together(ModelSource):
     id = "together"
     url = "https://api.together.ai/v1/models"
     serverless_only = True
+    docs_catalog = "https://docs.together.ai/docs/serverless-models"
     definition = ProviderDefinition(
         id=id,
         name="Together AI",
@@ -80,3 +84,7 @@ class Together(ModelSource):
             license=item.get("license"),
             hugging_face_id=link.removeprefix("https://huggingface.co/") if "huggingface.co" in link else None,
         )
+
+    def enrich(self, models):
+        documents = parse_together_models(fetch_text(self.docs_catalog), self.docs_catalog)
+        return apply_documentation(models, documents)

@@ -35,7 +35,8 @@ MODEL_ORDER = (
     "supports_tools",
     "supports_structured_output",
     "pricing",
-    "limits_source",
+    "context_source",
+    "max_output_source",
     "pricing_source",
     "parameter_evidence",
 )

@@ -20,6 +20,10 @@ STYLE = (
 )
 
 
+def checkpoint_interval(experiment_count: int) -> int:
+    return max(1, (experiment_count + 99) // 100)
+
+
 def _reproduce(result: PairResult, gateway_url: str) -> str:
     return (
         f"uv run airllm-audit runs execute --model {result.model_id} --provider-surface {result.surface_id} "

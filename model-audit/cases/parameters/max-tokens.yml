@@ -12,4 +12,4 @@ request:
     content: Reply with ok
   max_tokens: 8
 oracle:
-  text_nonempty: true
+  usage_present: true

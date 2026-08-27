@@ -62,6 +62,8 @@ class ProviderSource(Protocol):
 
     def normalize(self, item: dict[str, object]) -> dict[str, object] | None: ...
 
+    def enrich(self, models: list[dict[str, object]]) -> list[dict[str, object]]: ...
+
 
 class ModelDefinition(BaseModel):
     model_config = ConfigDict(frozen=True)
@@ -121,7 +123,7 @@ def load_provider_entries(taxonomy: Path) -> dict[str, dict[str, object]]:
     return {str(provider["id"]): provider for document, group in documents for provider in document.get(group, ())}
 
 
-def _provider_entry(definition: ProviderDefinition) -> dict[str, object]:
+def provider_entry(definition: ProviderDefinition) -> dict[str, object]:
     icon_mono = definition.icon_mono or definition.id
     return {
         "id": definition.id,
@@ -158,7 +160,7 @@ def add_provider(root: Path, definition: ProviderDefinition, *, replace: bool = 
     if existing is not None and not replace:
         message = f"provider {definition.id} already exists; pass --replace to update it"
         raise ValueError(message)
-    entry = _provider_entry(definition)
+    entry = provider_entry(definition)
     if existing is not None:
         entry["schema"] = existing.get("schema")
     providers = [entry if provider["id"] == definition.id else provider for provider in document["providers"]]
@@ -215,7 +217,9 @@ def add_model(root: Path, provider_id: str, definition: ModelDefinition, *, repl
             {
                 "context_length": definition.context_window,
                 "max_output_tokens": definition.max_output_tokens,
-                "limits_source": "vendor-docs",
+                "context_source": "vendor-docs",
+                "max_output_source": "vendor-docs",
+                "documentation_url": definition.source,
             }
         )
     models.append(model)
