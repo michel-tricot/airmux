@@ -132,7 +132,10 @@ class Catalog(FrozenModel):
 class Experiment(FrozenModel):
     target: Target
     case: Case
-    driver_id: str
+    direct_driver_id: str
+    gateway_driver_id: str
+    gateway_surface_id: str
+    gateway_endpoint: str
     transport: Transport
 
 
@@ -197,6 +200,8 @@ class PairResult(FrozenModel):
     provider_id: str
     surface_id: str
     endpoint: str
+    gateway_surface_id: str
+    gateway_endpoint: str
     model_id: str
     upstream_model: str
     client: str
@@ -217,7 +222,7 @@ class RunMetadata(FrozenModel):
 
 
 class ReportDocument(FrozenModel):
-    schema_version: Literal[1] = 1
+    schema_version: Literal[2] = 2
     run: RunMetadata
     results: tuple[PairResult, ...]
 

@@ -46,7 +46,8 @@ DEFAULT_EXECUTION_OPTIONS = ExecutionOptions()
 
 @dataclass(frozen=True)
 class PairContext:
-    driver: ClientDriver
+    direct_driver: ClientDriver
+    gateway_driver: ClientDriver
     direct_connection: Connection
     gateway: Gateway
     experiment: Experiment
@@ -68,10 +69,10 @@ def _direct_connection(experiment: Experiment, api_key: str, timeout_seconds: fl
     )
 
 
-def _observe(driver: ClientDriver, connection: Connection, experiment: Experiment, model: str) -> Observation:
+def _observe(driver: ClientDriver, connection: Connection, endpoint: str, experiment: Experiment, model: str) -> Observation:
     started = time.perf_counter()
     try:
-        return driver.execute(connection, experiment.target.endpoint, model, experiment.case, experiment.transport)
+        return driver.execute(connection, endpoint, model, experiment.case, experiment.transport)
     except Exception as error:  # noqa: BLE001 client boundaries must become reportable evidence
         return Observation(
             outcome="error",
@@ -104,13 +105,20 @@ def _event(
 def _pair(context: PairContext, attempt: int) -> PairAttempt:
     if context.progress is not None:
         context.progress(_event(context, "path_started", "direct", attempt))
-    direct = _observe(context.driver, context.direct_connection, context.experiment, context.experiment.target.upstream_model)
+    direct = _observe(
+        context.direct_driver,
+        context.direct_connection,
+        context.experiment.target.endpoint,
+        context.experiment,
+        context.experiment.target.upstream_model,
+    )
     if context.progress is not None:
         context.progress(_event(context, "path_completed", "direct", attempt, direct))
         context.progress(_event(context, "path_started", "gateway", attempt))
     gateway = _observe(
-        context.driver,
-        context.gateway.connection(context.experiment.target.endpoint),
+        context.gateway_driver,
+        context.gateway.connection(context.experiment.gateway_endpoint),
+        context.experiment.gateway_endpoint,
         context.experiment,
         context.experiment.target.model_id,
     )
@@ -156,9 +164,15 @@ def _result(
         provider_id=target.provider_id,
         surface_id=target.surface_id,
         endpoint=target.endpoint,
+        gateway_surface_id=experiment.gateway_surface_id,
+        gateway_endpoint=experiment.gateway_endpoint,
         model_id=target.model_id,
         upstream_model=target.upstream_model,
-        client=experiment.driver_id,
+        client=(
+            experiment.direct_driver_id
+            if experiment.direct_driver_id == experiment.gateway_driver_id
+            else f"{experiment.direct_driver_id}/{experiment.gateway_driver_id}"
+        ),
         transport=experiment.transport,
         direct=attempt.direct,
         gateway=attempt.gateway,
@@ -197,7 +211,7 @@ def execute(
                 )
             )
         target = experiment.target
-        access_key = (target.model_id, target.surface_id, experiment.driver_id)
+        access_key = (target.model_id, target.surface_id, experiment.gateway_surface_id)
         block = blocked.get(access_key)
         api_key = os.environ.get(target.credential_env)
         if block is None and api_key is None:
@@ -207,7 +221,8 @@ def execute(
             result = _blocked_result(experiment, *block)
         else:
             context = PairContext(
-                driver=drivers[experiment.driver_id],
+                direct_driver=drivers[experiment.direct_driver_id],
+                gateway_driver=drivers[experiment.gateway_driver_id],
                 direct_connection=_direct_connection(experiment, cast("str", api_key), options.request_timeout_seconds),
                 gateway=gateway,
                 experiment=experiment,

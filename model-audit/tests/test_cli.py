@@ -25,7 +25,7 @@ def test_one_model_and_case_produces_a_bounded_plan():
     assert result.exit_code == 0
     experiments = json.loads(result.stdout)
     assert experiments[0]["model"] == "openai/gpt-3.5-turbo"
-    assert experiments[0]["client"] == "http"
+    assert experiments[0]["clients"] == "http"
 
 
 def test_sdk_is_an_explicit_non_default_client_mode():
@@ -35,4 +35,47 @@ def test_sdk_is_an_explicit_non_default_client_mode():
     )
 
     assert result.exit_code == 0
-    assert json.loads(result.stdout)[0]["client"] == "openai"
+    assert json.loads(result.stdout)[0]["clients"] == "openai"
+
+
+def test_case_option_accepts_namespaces_and_repeated_values():
+    result = CliRunner().invoke(
+        app,
+        [
+            "runs",
+            "plan",
+            "--model",
+            "anthropic/claude-fable-5",
+            "--case",
+            "modalities",
+            "--case",
+            "text.basic",
+            "--format",
+            "json",
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert {experiment["case"] for experiment in json.loads(result.stdout)} == {"modalities.image", "modalities.pdf", "text.basic"}
+
+
+def test_provider_option_selects_all_cataloged_models():
+    result = CliRunner().invoke(app, ["runs", "plan", "--provider", "anthropic", "--case", "text.basic", "--format", "json"])
+
+    assert result.exit_code == 0
+    experiments = json.loads(result.stdout)
+    assert len({experiment["model"] for experiment in experiments}) > 1
+    assert {experiment["provider"] for experiment in experiments} == {"anthropic"}
+
+
+def test_anthropic_models_can_use_the_openai_gateway_surface():
+    result = CliRunner().invoke(
+        app,
+        ["runs", "plan", "--provider", "anthropic", "--surface", "oai", "--case", "text.basic", "--format", "json"],
+    )
+
+    assert result.exit_code == 0
+    experiments = json.loads(result.stdout)
+    assert experiments
+    assert {experiment["provider_surface"] for experiment in experiments} == {"anthropic"}
+    assert {experiment["gateway_surface"] for experiment in experiments} == {"oai"}

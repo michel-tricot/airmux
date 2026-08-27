@@ -32,11 +32,18 @@ FEATURES = PROJECT / "definitions" / "features.yml"
 REPORTS = PROJECT / "reports"
 LEDGER = PROJECT / "evidence" / "accepted.json"
 
-ProviderOption = Annotated[str | None, typer.Option("--provider")]
+ProviderOption = Annotated[str | None, typer.Option("--provider", help="Select every cataloged model from one provider")]
 ModelOption = Annotated[str | None, typer.Option("--model")]
-CaseOption = Annotated[str | None, typer.Option("--case")]
+CaseOption = Annotated[
+    list[str] | None,
+    typer.Option("--case", help="Select an exact case or a namespace such as modalities; repeat to combine selections"),
+]
 SDKOption = Annotated[bool, typer.Option("--sdk", help="Use the matching vendor SDK instead of direct HTTP API calls")]
-SurfaceOption = Annotated[str | None, typer.Option("--surface")]
+ProviderSurfaceOption = Annotated[Literal["oai", "oai_responses", "anthropic"] | None, typer.Option("--provider-surface")]
+GatewaySurfaceOption = Annotated[
+    Literal["oai", "oai_responses", "anthropic"] | None,
+    typer.Option("--surface", help="Gateway ingress surface, independent of the provider API surface"),
+]
 TransportOption = Annotated[Literal["buffered", "streamed"] | None, typer.Option("--transport")]
 GatewayUrlOption = Annotated[str | None, typer.Option("--gateway-url", help="Origin of the running AirLLM data plane")]
 GatewayKeyOption = Annotated[str | None, typer.Option("--gateway-api-key", help="Inference key accepted by the running data plane")]
@@ -170,7 +177,10 @@ def providers_refresh(provider: Annotated[str | None, typer.Argument()] = None) 
 
 @models_app.command("list")
 def models_list(
-    provider: ProviderOption = None, model: ModelOption = None, surface: SurfaceOption = None, output_format: FormatOption = OutputFormat.table
+    provider: ProviderOption = None,
+    model: ModelOption = None,
+    surface: Annotated[Literal["oai", "oai_responses", "anthropic"] | None, typer.Option("--surface")] = None,
+    output_format: FormatOption = OutputFormat.table,
 ) -> None:
     targets = load_catalog(ROOT / "taxonomy").targets
     rows = [
@@ -227,17 +237,34 @@ def runs_plan(  # noqa: PLR0913, PLR0917 command flags define the CLI surface
     model: ModelOption = None,
     case: CaseOption = None,
     sdk: SDKOption = False,
-    surface: SurfaceOption = None,
+    provider_surface: ProviderSurfaceOption = None,
+    surface: GatewaySurfaceOption = None,
     transport: TransportOption = None,
     output_format: FormatOption = OutputFormat.table,
 ) -> None:
-    plan = _plan(Filters(provider=provider, model=model, case=case, client_mode="sdk" if sdk else "api", surface=surface, transport=transport))
+    plan = _plan(
+        Filters(
+            provider=provider,
+            model=model,
+            cases=tuple(case or ()),
+            client_mode="sdk" if sdk else "api",
+            direct_surface=provider_surface,
+            gateway_surface=surface,
+            transport=transport,
+        )
+    )
     rows = [
         {
             "provider": experiment.target.provider_id,
             "model": experiment.target.model_id,
-            "surface": experiment.target.surface_id,
-            "client": experiment.driver_id,
+            "provider_surface": experiment.target.surface_id,
+            "gateway_surface": experiment.gateway_surface_id,
+            "route": f"{experiment.target.surface_id} -> {experiment.gateway_surface_id}",
+            "clients": (
+                experiment.direct_driver_id
+                if experiment.direct_driver_id == experiment.gateway_driver_id
+                else f"{experiment.direct_driver_id} -> {experiment.gateway_driver_id}"
+            ),
             "case": experiment.case.id,
             "transport": experiment.transport,
         }
@@ -247,10 +274,9 @@ def runs_plan(  # noqa: PLR0913, PLR0917 command flags define the CLI surface
         "experiments",
         rows,
         [
-            Col("provider", "Provider"),
             Col("model", "Model"),
-            Col("surface", "Surface"),
-            Col("client", "Client"),
+            Col("route", "Provider -> Gateway"),
+            Col("clients", "Client"),
             Col("case", "Case"),
             Col("transport", "Transport"),
         ],
@@ -265,7 +291,8 @@ def runs_execute(  # noqa: PLR0913, PLR0917 command flags define the CLI surface
     model: ModelOption = None,
     case: CaseOption = None,
     sdk: SDKOption = False,
-    surface: SurfaceOption = None,
+    provider_surface: ProviderSurfaceOption = None,
+    surface: GatewaySurfaceOption = None,
     transport: TransportOption = None,
     gateway_url: GatewayUrlOption = None,
     gateway_api_key: GatewayKeyOption = None,
@@ -281,7 +308,17 @@ def runs_execute(  # noqa: PLR0913, PLR0917 command flags define the CLI surface
     if gateway_url is None or gateway_api_key is None:
         message = "set AIRLLM_GATEWAY_URL and AIRLLM_API_KEY, or pass both gateway options"
         raise typer.BadParameter(message)
-    plan = _plan(Filters(provider=provider, model=model, case=case, client_mode="sdk" if sdk else "api", surface=surface, transport=transport))
+    plan = _plan(
+        Filters(
+            provider=provider,
+            model=model,
+            cases=tuple(case or ()),
+            client_mode="sdk" if sdk else "api",
+            direct_surface=provider_surface,
+            gateway_surface=surface,
+            transport=transport,
+        )
+    )
     if not plan.experiments:
         message = "the selected run has no applicable experiments"
         raise typer.BadParameter(message)
@@ -304,7 +341,9 @@ def runs_execute(  # noqa: PLR0913, PLR0917 command flags define the CLI surface
         {
             "provider": result.provider_id,
             "model": result.model_id,
-            "surface": result.surface_id,
+            "provider_surface": result.surface_id,
+            "gateway_surface": result.gateway_surface_id,
+            "route": f"{result.surface_id} -> {result.gateway_surface_id}",
             "case": result.case_id,
             "feature": feature_display(result.assessment),
             "parity": parity_display(result.assessment),
@@ -318,9 +357,8 @@ def runs_execute(  # noqa: PLR0913, PLR0917 command flags define the CLI surface
         "results",
         rows,
         [
-            Col("provider", "Provider"),
             Col("model", "Model"),
-            Col("surface", "Surface"),
+            Col("route", "Provider -> Gateway"),
             Col("case", "Case"),
             Col("feature", "Feature"),
             Col("parity", "Parity"),

@@ -25,7 +25,8 @@ STYLE = (
 
 def _reproduce(result: PairResult, gateway_url: str) -> str:
     return (
-        f"uv run airllm-audit runs execute --model {result.model_id} --surface {result.surface_id} "
+        f"uv run airllm-audit runs execute --model {result.model_id} --provider-surface {result.surface_id} "
+        f"--surface {result.gateway_surface_id} "
         f"--case {result.case_id} --transport {result.transport} --gateway-url {gateway_url}"
     )
 
@@ -39,11 +40,12 @@ def _result_html(result: PairResult, gateway_url: str) -> str:
     return f"""
 <tr>
   <td>{html.escape(result.provider_id)}</td><td>{html.escape(result.model_id)}</td><td>{html.escape(result.surface_id)}</td>
+  <td>{html.escape(result.gateway_surface_id)}</td>
   <td>{html.escape(result.case_id)}</td><td>{html.escape(result.transport)}</td>
   <td>{html.escape(feature_display(result.assessment))}</td><td>{html.escape(parity_display(result.assessment))}</td>
   <td>{html.escape(gap_kind(result))}</td>
 </tr>
-<tr class="detail"><td colspan="8">
+<tr class="detail"><td colspan="9">
   <div><strong>Claims:</strong> {html.escape(claims)}</div>
   <div><strong>Direct:</strong> {html.escape(observation_summary(result.direct))}</div>
   <div><strong>Gateway:</strong> {html.escape(observation_summary(result.gateway))}</div>
@@ -68,7 +70,7 @@ def _html(document: ReportDocument) -> str:
 <body><h1>AirLLM model audit</h1><p>Run {html.escape(document.run.run_id)} against {html.escape(document.run.gateway_url)}</p>
 <div class="summary"><span>Parity: {matched} match, {mismatched} mismatch, {inconclusive} inconclusive</span>
 <span>Features: {supported} supported, {unsupported} unsupported, {unknown} unknown</span></div>
-<table><thead><tr><th>Provider</th><th>Model</th><th>Surface</th><th>Case</th><th>Transport</th>
+<table><thead><tr><th>Provider</th><th>Model</th><th>Provider Surface</th><th>Gateway Surface</th><th>Case</th><th>Transport</th>
 <th>Feature</th><th>Parity</th><th>Gap</th></tr></thead><tbody>{rows}</tbody></table></body></html>"""
 
 

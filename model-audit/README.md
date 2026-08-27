@@ -16,10 +16,14 @@ A matching provider rejection is parity. It is classified as unsupported only wh
 uv run airllm-audit cases coverage
 uv run airllm-audit models list --provider anthropic
 uv run airllm-audit runs plan --model anthropic/claude-fable-5
+uv run airllm-audit runs plan --model anthropic/claude-fable-5 --case modalities
+uv run airllm-audit runs plan --provider anthropic --case modalities
+uv run airllm-audit runs plan --provider anthropic --surface oai --case modalities
 
 export AIRLLM_GATEWAY_URL=http://127.0.0.1:8080
 export AIRLLM_API_KEY=sk-inf-your-key
 uv run airllm-audit runs execute --model anthropic/claude-fable-5
+uv run airllm-audit runs execute --provider anthropic --case modalities
 
 uv run airllm-audit reports show --gaps
 uv run airllm-audit evidence accept model-audit/reports/<run>.json
@@ -27,6 +31,10 @@ uv run airllm-audit taxonomy validate
 ```
 
 The gateway must already be running. Model audit never starts or stops it. Raw HTTP provider calls are the default and the only runs eligible for taxonomy evidence. `--sdk` runs the same cases through the matching vendor SDK for client compatibility without affecting provider facts.
+
+`--case` accepts an exact case id or a namespace. For example, `--case modalities` selects every `modalities.*` case. Repeat the option to combine selections, such as `--case modalities.image --case text.basic`. `--provider anthropic` selects every cataloged Anthropic model and composes with the same case filters. Use `runs plan` before a large execution to inspect its request count.
+
+The provider and gateway surfaces are independent. `--provider anthropic --surface oai` calls Anthropic directly through Messages and calls the same AirLLM model through Chat Completions. Without `--surface`, the gateway uses the provider's native surface. `--provider-surface` narrows providers that expose more than one direct API surface.
 
 ## Add one model
 

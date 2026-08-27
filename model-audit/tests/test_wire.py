@@ -1,8 +1,28 @@
 from __future__ import annotations
 
-from model_audit.drivers.wire import anthropic_body, openai_messages
+import json
+from pathlib import Path
+
+from model_audit.cases import load_cases, load_features
+from model_audit.drivers.wire import anthropic_body, body_of, openai_messages
 from model_audit.models import Request
 from tests.helpers import case
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def test_every_case_compiles_to_json_for_each_applicable_wire_surface():
+    cases = load_cases(ROOT / "cases", load_features(ROOT / "definitions" / "features.yml"))
+    all_endpoints = {"chat/completions", "responses", "messages"}
+
+    payloads = [
+        body_of(endpoint, "model", audit_case, transport)
+        for audit_case in cases
+        for endpoint in audit_case.applies_to.endpoints or all_endpoints
+        for transport in audit_case.transports
+    ]
+
+    assert all(json.loads(json.dumps(payload)) == payload for payload in payloads)
 
 
 def test_openai_chat_maps_inline_pdf_to_a_file_content_part():

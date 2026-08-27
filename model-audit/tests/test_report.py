@@ -15,6 +15,8 @@ def test_report_is_machine_readable_and_explains_gateway_gaps(tmp_path):
         provider_id="stub",
         surface_id="oai",
         endpoint="chat/completions",
+        gateway_surface_id="oai",
+        gateway_endpoint="chat/completions",
         model_id="stub/model",
         upstream_model="model",
         client="http",

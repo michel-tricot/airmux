@@ -39,7 +39,11 @@ class ConsoleProgress:
         if event.kind == "experiment_started":
             experiment = event.experiment
             self.console.print(f"\n[{event.index}/{event.total}] [bold]{experiment.target.model_id}[/bold]")
-            self.console.print(f"      {experiment.case.id} | {experiment.transport} via {experiment.driver_id}")
+            self.console.print(
+                f"      {experiment.case.id} | {experiment.transport} | "
+                f"{experiment.target.surface_id} via {experiment.direct_driver_id} -> "
+                f"{experiment.gateway_surface_id} via {experiment.gateway_driver_id}"
+            )
         elif event.kind == "path_started" and event.path is not None:
             self._stop()
             self.status = self.console.status(f"  … {event.path.title()} attempt {event.attempt}/{event.max_attempts}")
