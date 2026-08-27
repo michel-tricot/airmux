@@ -1,0 +1,20 @@
+version: 2
+id: parameters.logprobs
+title: Token log probabilities are accepted
+claims:
+- dimension: option
+  name: logprobs
+  profile:
+    enabled: true
+    top: 2
+applies_to:
+  endpoints: [chat/completions]
+request:
+  messages:
+  - role: user
+    content: Reply with ok
+  max_tokens: 32
+  logprobs: true
+  top_logprobs: 2
+oracle:
+  text_nonempty: true

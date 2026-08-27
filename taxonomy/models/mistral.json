@@ -23,8 +23,6 @@
         "output_per_mtok": 0.9
       },
       "pricing_source": "openrouter-index",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -39,27 +37,6 @@
               "parallel_tool_calls": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "stop": "supported",
-              "parallel_tool_calls": "supported"
-            }
-          }
         }
       },
       "aliases": [
@@ -68,13 +45,7 @@
         "mistral-code-latest"
       ],
       "default_temperature": 0.3,
-      "display_name": "codestral-2508",
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        }
-      }
+      "display_name": "codestral-2508"
     },
     {
       "id": "codestral-latest",
@@ -95,8 +66,6 @@
       },
       "limits_source": "models.dev",
       "pricing_source": "models.dev",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -111,27 +80,6 @@
               "parallel_tool_calls": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "stop": "supported",
-              "parallel_tool_calls": "supported"
-            }
-          }
         }
       },
       "aliases": [
@@ -140,13 +88,7 @@
         "mistral-code-latest"
       ],
       "default_temperature": 0.3,
-      "display_name": "codestral-2508",
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        }
-      }
+      "display_name": "codestral-2508"
     },
     {
       "id": "devstral-2512",
@@ -167,8 +109,6 @@
       },
       "limits_source": "models.dev",
       "pricing_source": "models.dev",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -183,27 +123,6 @@
               "parallel_tool_calls": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "stop": "supported",
-              "parallel_tool_calls": "supported"
-            }
-          }
         }
       },
       "aliases": [
@@ -214,13 +133,7 @@
       "default_temperature": 0.2,
       "deprecation_date": "2026-08-31T12:00:00Z",
       "deprecation_replacement": "mistral-medium-3-5",
-      "display_name": "devstral-2512",
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        }
-      }
+      "display_name": "devstral-2512"
     },
     {
       "id": "devstral-latest",
@@ -241,8 +154,6 @@
       },
       "limits_source": "models.dev",
       "pricing_source": "models.dev",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -257,27 +168,6 @@
               "parallel_tool_calls": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "stop": "supported",
-              "parallel_tool_calls": "supported"
-            }
-          }
         }
       },
       "aliases": [
@@ -288,13 +178,7 @@
       "default_temperature": 0.2,
       "deprecation_date": "2026-08-31T12:00:00Z",
       "deprecation_replacement": "mistral-medium-3-5",
-      "display_name": "devstral-2512",
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        }
-      }
+      "display_name": "devstral-2512"
     },
     {
       "id": "devstral-medium-latest",
@@ -315,8 +199,6 @@
       },
       "limits_source": "models.dev",
       "pricing_source": "models.dev",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -331,27 +213,6 @@
               "parallel_tool_calls": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "stop": "supported",
-              "parallel_tool_calls": "supported"
-            }
-          }
         }
       },
       "aliases": [
@@ -362,13 +223,7 @@
       "default_temperature": 0.2,
       "deprecation_date": "2026-08-31T12:00:00Z",
       "deprecation_replacement": "mistral-medium-3-5",
-      "display_name": "devstral-2512",
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        }
-      }
+      "display_name": "devstral-2512"
     },
     {
       "id": "glm-5-2",
@@ -384,8 +239,6 @@
       "supports_tools": true,
       "supports_structured_output": null,
       "pricing": null,
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -400,41 +253,12 @@
               "parallel_tool_calls": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "stop": "supported",
-              "reasoning_effort": "supported",
-              "parallel_tool_calls": "supported",
-              "logprobs": "supported"
-            }
-          }
         }
       },
       "aliases": [
         "zai-glm-5-2"
       ],
-      "display_name": "glm-5-2",
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        }
-      }
+      "display_name": "glm-5-2"
     },
     {
       "id": "labs-leanstral-1-5",
@@ -451,8 +275,6 @@
       "supports_tools": true,
       "supports_structured_output": null,
       "pricing": null,
-      "reachable": false,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -490,8 +312,6 @@
       "supports_tools": true,
       "supports_structured_output": null,
       "pricing": null,
-      "reachable": false,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -534,8 +354,6 @@
       },
       "limits_source": "alias:mistral-small-2603",
       "pricing_source": "alias:mistral-small-2603",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -550,28 +368,6 @@
               "parallel_tool_calls": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "stop": "supported",
-              "reasoning_effort": "unsupported",
-              "parallel_tool_calls": "supported"
-            }
-          }
         }
       },
       "aliases": [
@@ -580,13 +376,7 @@
         "mistral-vibe-cli-fast"
       ],
       "default_temperature": 0.3,
-      "display_name": "mistral-small-2603",
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        }
-      }
+      "display_name": "mistral-small-2603"
     },
     {
       "id": "ministral-14b-2512",
@@ -607,8 +397,6 @@
         "output_per_mtok": 0.2
       },
       "pricing_source": "openrouter-index",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -623,40 +411,13 @@
               "parallel_tool_calls": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "stop": "supported",
-              "parallel_tool_calls": "supported"
-            }
-          }
         }
       },
       "aliases": [
         "ministral-14b-latest"
       ],
       "default_temperature": 0.3,
-      "display_name": "ministral-14b-2512",
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        }
-      }
+      "display_name": "ministral-14b-2512"
     },
     {
       "id": "ministral-14b-latest",
@@ -677,8 +438,6 @@
         "output_per_mtok": 0.2
       },
       "pricing_source": "alias:ministral-14b-2512",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -693,40 +452,13 @@
               "parallel_tool_calls": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "stop": "supported",
-              "parallel_tool_calls": "supported"
-            }
-          }
         }
       },
       "aliases": [
         "ministral-14b-2512"
       ],
       "default_temperature": 0.3,
-      "display_name": "ministral-14b-2512",
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        }
-      }
+      "display_name": "ministral-14b-2512"
     },
     {
       "id": "ministral-3b-2512",
@@ -747,8 +479,6 @@
         "output_per_mtok": 0.1
       },
       "pricing_source": "openrouter-index",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -763,40 +493,13 @@
               "parallel_tool_calls": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "stop": "supported",
-              "parallel_tool_calls": "supported"
-            }
-          }
         }
       },
       "aliases": [
         "ministral-3b-latest"
       ],
       "default_temperature": 0.3,
-      "display_name": "ministral-3b-2512",
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        }
-      }
+      "display_name": "ministral-3b-2512"
     },
     {
       "id": "ministral-3b-latest",
@@ -818,8 +521,6 @@
       },
       "limits_source": "models.dev",
       "pricing_source": "models.dev",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -834,40 +535,13 @@
               "parallel_tool_calls": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "stop": "supported",
-              "parallel_tool_calls": "supported"
-            }
-          }
         }
       },
       "aliases": [
         "ministral-3b-2512"
       ],
       "default_temperature": 0.3,
-      "display_name": "ministral-3b-2512",
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        }
-      }
+      "display_name": "ministral-3b-2512"
     },
     {
       "id": "ministral-8b-2512",
@@ -888,8 +562,6 @@
         "output_per_mtok": 0.15
       },
       "pricing_source": "openrouter-index",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -904,40 +576,13 @@
               "parallel_tool_calls": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "stop": "supported",
-              "parallel_tool_calls": "supported"
-            }
-          }
         }
       },
       "aliases": [
         "ministral-8b-latest"
       ],
       "default_temperature": 0.3,
-      "display_name": "ministral-8b-2512",
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        }
-      }
+      "display_name": "ministral-8b-2512"
     },
     {
       "id": "ministral-8b-latest",
@@ -959,8 +604,6 @@
       },
       "limits_source": "models.dev",
       "pricing_source": "models.dev",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -975,40 +618,13 @@
               "parallel_tool_calls": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "stop": "supported",
-              "parallel_tool_calls": "supported"
-            }
-          }
         }
       },
       "aliases": [
         "ministral-8b-2512"
       ],
       "default_temperature": 0.3,
-      "display_name": "ministral-8b-2512",
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        }
-      }
+      "display_name": "ministral-8b-2512"
     },
     {
       "id": "mistral-code-agent-latest",
@@ -1029,8 +645,6 @@
       },
       "limits_source": "alias:devstral-2512",
       "pricing_source": "alias:devstral-2512",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -1045,27 +659,6 @@
               "parallel_tool_calls": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "stop": "supported",
-              "parallel_tool_calls": "supported"
-            }
-          }
         }
       },
       "aliases": [
@@ -1076,13 +669,7 @@
       "default_temperature": 0.2,
       "deprecation_date": "2026-08-31T12:00:00Z",
       "deprecation_replacement": "mistral-medium-3-5",
-      "display_name": "devstral-2512",
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        }
-      }
+      "display_name": "devstral-2512"
     },
     {
       "id": "mistral-code-fim-latest",
@@ -1102,8 +689,6 @@
         "output_per_mtok": 0.9
       },
       "pricing_source": "alias:codestral-2508",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -1118,27 +703,6 @@
               "parallel_tool_calls": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "stop": "supported",
-              "parallel_tool_calls": "supported"
-            }
-          }
         }
       },
       "aliases": [
@@ -1147,13 +711,7 @@
         "mistral-code-latest"
       ],
       "default_temperature": 0.3,
-      "display_name": "codestral-2508",
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        }
-      }
+      "display_name": "codestral-2508"
     },
     {
       "id": "mistral-code-latest",
@@ -1173,8 +731,6 @@
         "output_per_mtok": 0.9
       },
       "pricing_source": "alias:codestral-2508",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -1189,27 +745,6 @@
               "parallel_tool_calls": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "stop": "supported",
-              "parallel_tool_calls": "supported"
-            }
-          }
         }
       },
       "aliases": [
@@ -1218,13 +753,7 @@
         "mistral-code-fim-latest"
       ],
       "default_temperature": 0.3,
-      "display_name": "codestral-2508",
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        }
-      }
+      "display_name": "codestral-2508"
     },
     {
       "id": "mistral-large-2512",
@@ -1246,8 +775,6 @@
       },
       "limits_source": "models.dev",
       "pricing_source": "models.dev",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -1262,40 +789,13 @@
               "parallel_tool_calls": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "stop": "supported",
-              "parallel_tool_calls": "supported"
-            }
-          }
         }
       },
       "aliases": [
         "mistral-large-latest"
       ],
       "default_temperature": 0.3,
-      "display_name": "mistral-large-2512",
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        }
-      }
+      "display_name": "mistral-large-2512"
     },
     {
       "id": "mistral-large-latest",
@@ -1317,8 +817,6 @@
       },
       "limits_source": "models.dev",
       "pricing_source": "models.dev",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -1333,40 +831,13 @@
               "parallel_tool_calls": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "stop": "supported",
-              "parallel_tool_calls": "supported"
-            }
-          }
         }
       },
       "aliases": [
         "mistral-large-2512"
       ],
       "default_temperature": 0.3,
-      "display_name": "mistral-large-2512",
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        }
-      }
+      "display_name": "mistral-large-2512"
     },
     {
       "id": "mistral-medium",
@@ -1388,8 +859,6 @@
       },
       "limits_source": "alias:mistral-medium-2604",
       "pricing_source": "alias:mistral-medium-2604",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -1401,28 +870,6 @@
               "top_p": "supported",
               "stop": "supported",
               "reasoning_effort": "supported",
-              "parallel_tool_calls": "supported"
-            }
-          }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "stop": "supported",
-              "reasoning_effort": "unsupported",
               "parallel_tool_calls": "supported"
             }
           }
@@ -1438,13 +885,7 @@
         "mistral-vibe-cli-with-tools"
       ],
       "default_temperature": 1.0,
-      "display_name": "mistral-medium-latest",
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        }
-      }
+      "display_name": "mistral-medium-latest"
     },
     {
       "id": "mistral-medium-2505",
@@ -1466,8 +907,6 @@
       },
       "limits_source": "models.dev",
       "pricing_source": "models.dev",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -1482,39 +921,12 @@
               "parallel_tool_calls": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "stop": "supported",
-              "parallel_tool_calls": "supported"
-            }
-          }
         }
       },
       "default_temperature": 0.3,
       "deprecation_date": "2026-08-31T12:00:00Z",
       "deprecation_replacement": "mistral-medium-3-5",
-      "display_name": "mistral-medium-2505",
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        }
-      }
+      "display_name": "mistral-medium-2505"
     },
     {
       "id": "mistral-medium-2508",
@@ -1536,8 +948,6 @@
       },
       "limits_source": "models.dev",
       "pricing_source": "models.dev",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -1552,39 +962,12 @@
               "parallel_tool_calls": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "stop": "supported",
-              "parallel_tool_calls": "supported"
-            }
-          }
         }
       },
       "default_temperature": 0.3,
       "deprecation_date": "2026-08-31T12:00:00Z",
       "deprecation_replacement": "mistral-medium-3-5",
-      "display_name": "mistral-medium-2508",
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        }
-      }
+      "display_name": "mistral-medium-2508"
     },
     {
       "id": "mistral-medium-2604",
@@ -1606,8 +989,6 @@
       },
       "limits_source": "models.dev",
       "pricing_source": "models.dev",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -1619,28 +1000,6 @@
               "top_p": "supported",
               "stop": "supported",
               "reasoning_effort": "supported",
-              "parallel_tool_calls": "supported"
-            }
-          }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "stop": "supported",
-              "reasoning_effort": "unsupported",
               "parallel_tool_calls": "supported"
             }
           }
@@ -1656,13 +1015,7 @@
         "mistral-vibe-cli-with-tools"
       ],
       "default_temperature": 1.0,
-      "display_name": "mistral-medium-latest",
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        }
-      }
+      "display_name": "mistral-medium-latest"
     },
     {
       "id": "mistral-medium-3",
@@ -1683,8 +1036,6 @@
         "output_per_mtok": 2.0
       },
       "pricing_source": "openrouter-index",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -1696,28 +1047,6 @@
               "top_p": "supported",
               "stop": "supported",
               "reasoning_effort": "supported",
-              "parallel_tool_calls": "supported"
-            }
-          }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "stop": "supported",
-              "reasoning_effort": "unsupported",
               "parallel_tool_calls": "supported"
             }
           }
@@ -1733,13 +1062,7 @@
         "mistral-vibe-cli-with-tools"
       ],
       "default_temperature": 1.0,
-      "display_name": "mistral-medium-latest",
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        }
-      }
+      "display_name": "mistral-medium-latest"
     },
     {
       "id": "mistral-medium-3-5",
@@ -1760,8 +1083,6 @@
         "output_per_mtok": 7.5
       },
       "pricing_source": "openrouter-index",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -1773,28 +1094,6 @@
               "top_p": "supported",
               "stop": "supported",
               "reasoning_effort": "supported",
-              "parallel_tool_calls": "supported"
-            }
-          }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "stop": "supported",
-              "reasoning_effort": "unsupported",
               "parallel_tool_calls": "supported"
             }
           }
@@ -1810,13 +1109,7 @@
         "mistral-vibe-cli-with-tools"
       ],
       "default_temperature": 1.0,
-      "display_name": "mistral-medium-latest",
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        }
-      }
+      "display_name": "mistral-medium-latest"
     },
     {
       "id": "mistral-medium-3.5",
@@ -1838,8 +1131,6 @@
       },
       "limits_source": "alias:mistral-medium",
       "pricing_source": "alias:mistral-medium",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -1851,28 +1142,6 @@
               "top_p": "supported",
               "stop": "supported",
               "reasoning_effort": "supported",
-              "parallel_tool_calls": "supported"
-            }
-          }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "stop": "supported",
-              "reasoning_effort": "unsupported",
               "parallel_tool_calls": "supported"
             }
           }
@@ -1888,13 +1157,7 @@
         "mistral-vibe-cli-with-tools"
       ],
       "default_temperature": 1.0,
-      "display_name": "mistral-medium-latest",
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        }
-      }
+      "display_name": "mistral-medium-latest"
     },
     {
       "id": "mistral-medium-latest",
@@ -1916,8 +1179,6 @@
       },
       "limits_source": "models.dev",
       "pricing_source": "models.dev",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -1929,28 +1190,6 @@
               "top_p": "supported",
               "stop": "supported",
               "reasoning_effort": "supported",
-              "parallel_tool_calls": "supported"
-            }
-          }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "stop": "supported",
-              "reasoning_effort": "unsupported",
               "parallel_tool_calls": "supported"
             }
           }
@@ -1966,13 +1205,7 @@
         "mistral-vibe-cli-with-tools"
       ],
       "default_temperature": 1.0,
-      "display_name": "mistral-medium-latest",
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        }
-      }
+      "display_name": "mistral-medium-latest"
     },
     {
       "id": "mistral-small-2603",
@@ -1994,8 +1227,6 @@
       },
       "limits_source": "models.dev",
       "pricing_source": "models.dev",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -2010,28 +1241,6 @@
               "parallel_tool_calls": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "stop": "supported",
-              "reasoning_effort": "unsupported",
-              "parallel_tool_calls": "supported"
-            }
-          }
         }
       },
       "aliases": [
@@ -2040,13 +1249,7 @@
         "mistral-vibe-cli-fast"
       ],
       "default_temperature": 0.3,
-      "display_name": "mistral-small-2603",
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        }
-      }
+      "display_name": "mistral-small-2603"
     },
     {
       "id": "mistral-small-latest",
@@ -2068,8 +1271,6 @@
       },
       "limits_source": "models.dev",
       "pricing_source": "models.dev",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -2084,28 +1285,6 @@
               "parallel_tool_calls": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "stop": "supported",
-              "reasoning_effort": "unsupported",
-              "parallel_tool_calls": "supported"
-            }
-          }
         }
       },
       "aliases": [
@@ -2114,13 +1293,7 @@
         "mistral-vibe-cli-fast"
       ],
       "default_temperature": 0.3,
-      "display_name": "mistral-small-2603",
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        }
-      }
+      "display_name": "mistral-small-2603"
     },
     {
       "id": "mistral-vibe-cli-fast",
@@ -2142,8 +1315,6 @@
       },
       "limits_source": "alias:magistral-small-latest",
       "pricing_source": "alias:magistral-small-latest",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -2158,28 +1329,6 @@
               "parallel_tool_calls": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "stop": "supported",
-              "reasoning_effort": "unsupported",
-              "parallel_tool_calls": "supported"
-            }
-          }
         }
       },
       "aliases": [
@@ -2188,13 +1337,7 @@
         "mistral-small-latest"
       ],
       "default_temperature": 0.3,
-      "display_name": "mistral-small-2603",
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        }
-      }
+      "display_name": "mistral-small-2603"
     },
     {
       "id": "mistral-vibe-cli-latest",
@@ -2216,8 +1359,6 @@
       },
       "limits_source": "alias:mistral-medium",
       "pricing_source": "alias:mistral-medium",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -2229,28 +1370,6 @@
               "top_p": "supported",
               "stop": "supported",
               "reasoning_effort": "supported",
-              "parallel_tool_calls": "supported"
-            }
-          }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "stop": "supported",
-              "reasoning_effort": "unsupported",
               "parallel_tool_calls": "supported"
             }
           }
@@ -2266,13 +1385,7 @@
         "mistral-vibe-cli-with-tools"
       ],
       "default_temperature": 1.0,
-      "display_name": "mistral-medium-latest",
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        }
-      }
+      "display_name": "mistral-medium-latest"
     },
     {
       "id": "mistral-vibe-cli-with-tools",
@@ -2294,8 +1407,6 @@
       },
       "limits_source": "alias:mistral-medium",
       "pricing_source": "alias:mistral-medium",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -2307,28 +1418,6 @@
               "top_p": "supported",
               "stop": "supported",
               "reasoning_effort": "supported",
-              "parallel_tool_calls": "supported"
-            }
-          }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "stop": "supported",
-              "reasoning_effort": "unsupported",
               "parallel_tool_calls": "supported"
             }
           }
@@ -2344,13 +1433,7 @@
         "mistral-vibe-cli-latest"
       ],
       "default_temperature": 1.0,
-      "display_name": "mistral-medium-latest",
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        }
-      }
+      "display_name": "mistral-medium-latest"
     },
     {
       "id": "voxtral-small-2507",
@@ -2371,8 +1454,6 @@
       },
       "limits_source": "alias:voxtral-small-latest",
       "pricing_source": "alias:voxtral-small-latest",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -2387,40 +1468,13 @@
               "parallel_tool_calls": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "stop": "supported",
-              "parallel_tool_calls": "supported"
-            }
-          }
         }
       },
       "aliases": [
         "voxtral-small-latest"
       ],
       "default_temperature": 0.2,
-      "display_name": "voxtral-small-2507",
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        }
-      }
+      "display_name": "voxtral-small-2507"
     },
     {
       "id": "voxtral-small-latest",
@@ -2441,8 +1495,6 @@
       },
       "limits_source": "models.dev",
       "pricing_source": "models.dev",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -2457,40 +1509,13 @@
               "parallel_tool_calls": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "stop": "supported",
-              "parallel_tool_calls": "supported"
-            }
-          }
         }
       },
       "aliases": [
         "voxtral-small-2507"
       ],
       "default_temperature": 0.2,
-      "display_name": "voxtral-small-2507",
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        }
-      }
+      "display_name": "voxtral-small-2507"
     },
     {
       "id": "zai-glm-5-2",
@@ -2506,8 +1531,6 @@
       "supports_tools": true,
       "supports_structured_output": null,
       "pricing": null,
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -2522,41 +1545,12 @@
               "parallel_tool_calls": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "stop": "supported",
-              "reasoning_effort": "supported",
-              "parallel_tool_calls": "supported",
-              "logprobs": "supported"
-            }
-          }
         }
       },
       "aliases": [
         "glm-5-2"
       ],
-      "display_name": "glm-5-2",
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        }
-      }
+      "display_name": "glm-5-2"
     }
   ]
 }

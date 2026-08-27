@@ -1,0 +1,27 @@
+version: 2
+id: streaming.tools
+title: Tool calls stream successfully
+claims:
+- dimension: interaction
+  name: streaming+tools
+transports: [streamed]
+request:
+  messages:
+  - role: user
+    content: Call report_result with value ok
+  max_tokens: 256
+  tools:
+  - name: report_result
+    description: Report the requested result
+    parameters:
+      type: object
+      properties:
+        value:
+          type: string
+      required: [value]
+      additionalProperties: false
+  tool_choice:
+    name: report_result
+oracle:
+  tool_names: [report_result]
+  tool_arguments_valid: true

@@ -1,0 +1,35 @@
+version: 2
+id: reasoning.with-tool-adaptive
+title: Adaptive reasoning followed by a tool call
+claims:
+- dimension: interaction
+  name: reasoning+tools
+  profile:
+    reasoning: adaptive
+    reasoning_effort: low
+    tool_choice: named
+applies_to:
+  endpoints: [messages]
+request:
+  messages:
+  - role: user
+    content: Think briefly and call report_result with value ok
+  max_tokens: 1100
+  tools:
+  - name: report_result
+    description: Report the requested result
+    parameters:
+      type: object
+      properties:
+        value:
+          type: string
+      required: [value]
+      additionalProperties: false
+  tool_choice:
+    name: report_result
+  reasoning:
+    type: adaptive
+    effort: low
+oracle:
+  tool_names: [report_result]
+  tool_arguments_valid: true

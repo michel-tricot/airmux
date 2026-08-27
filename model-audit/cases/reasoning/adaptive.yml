@@ -1,0 +1,24 @@
+version: 2
+id: reasoning.adaptive
+title: Anthropic adaptive reasoning
+claims:
+- dimension: capability
+  name: reasoning
+  profile:
+    mode: adaptive
+- dimension: option
+  name: reasoning_effort
+  profile:
+    value: low
+applies_to:
+  endpoints: [messages]
+request:
+  messages:
+  - role: user
+    content: Reason briefly and answer what is 20 plus 22
+  max_tokens: 1024
+  reasoning:
+    type: adaptive
+    effort: low
+oracle:
+  text_contains: "42"

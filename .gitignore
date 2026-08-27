@@ -34,4 +34,4 @@ attached_assets/
 # smoke run log: carries each model's reply, so it differs every run
 taxonomy/reports/smoke.json
 
-provider-parity/reports/
+model-audit/reports/

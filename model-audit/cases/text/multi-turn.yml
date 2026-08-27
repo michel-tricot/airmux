@@ -1,0 +1,17 @@
+version: 2
+id: text.multi-turn
+title: Multi-turn conversation history
+claims:
+- dimension: capability
+  name: multi_turn
+request:
+  messages:
+  - role: user
+    content: The code word is cobalt
+  - role: assistant
+    content: Understood
+  - role: user
+    content: What is the code word
+  max_tokens: 1024
+oracle:
+  text_contains: cobalt

@@ -1,0 +1,16 @@
+version: 2
+id: parameters.top-p
+title: Non-default top-p is accepted
+claims:
+- dimension: option
+  name: top_p
+  profile:
+    value: 0.83
+request:
+  messages:
+  - role: user
+    content: Reply with ok
+  max_tokens: 1024
+  top_p: 0.83
+oracle:
+  text_nonempty: true

@@ -38,41 +38,6 @@
               "parallel_tool_calls": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ],
-            "responses": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "unsupported",
-              "seed": "supported",
-              "stop": "unsupported",
-              "reasoning_effort": "supported"
-            },
-            "responses": {
-              "temperature": "supported",
-              "top_p": "unsupported",
-              "reasoning_effort": "supported",
-              "parallel_tool_calls": "supported"
-            }
-          }
         }
       }
     },
@@ -166,8 +131,6 @@
       },
       "limits_source": "openrouter-index",
       "pricing_source": "models.dev",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -191,51 +154,6 @@
               "parallel_tool_calls": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ],
-            "responses": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "seed": "supported",
-              "stop": "supported",
-              "logprobs": "supported"
-            },
-            "responses": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "reasoning_effort": "unsupported",
-              "parallel_tool_calls": "supported"
-            }
-          }
-        }
-      },
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        },
-        "responses": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
         }
       },
       "shutdown_date": "2026-10-23"
@@ -329,8 +247,6 @@
       },
       "limits_source": "openrouter-index",
       "pricing_source": "openrouter-index",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -354,45 +270,6 @@
               "parallel_tool_calls": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ],
-            "responses": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "seed": "supported",
-              "stop": "supported",
-              "logprobs": "supported"
-            }
-          }
-        }
-      },
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        },
-        "responses": {
-          "outcome": "not_found",
-          "checked": "2026-08-17"
         }
       }
     },
@@ -411,8 +288,6 @@
       },
       "limits_source": "openrouter-index",
       "pricing_source": "models.dev",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -436,51 +311,6 @@
               "parallel_tool_calls": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ],
-            "responses": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "seed": "supported",
-              "stop": "supported",
-              "logprobs": "supported"
-            },
-            "responses": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "reasoning_effort": "unsupported",
-              "parallel_tool_calls": "supported"
-            }
-          }
-        }
-      },
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        },
-        "responses": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
         }
       },
       "shutdown_date": "2026-10-23"
@@ -537,8 +367,6 @@
       },
       "limits_source": "openrouter-index",
       "pricing_source": "models.dev",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -562,51 +390,6 @@
               "parallel_tool_calls": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ],
-            "responses": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "seed": "supported",
-              "stop": "supported",
-              "logprobs": "supported"
-            },
-            "responses": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "reasoning_effort": "unsupported",
-              "parallel_tool_calls": "supported"
-            }
-          }
-        }
-      },
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        },
-        "responses": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
         }
       },
       "shutdown_date": "2026-10-23"
@@ -664,8 +447,6 @@
       },
       "limits_source": "openrouter-index",
       "pricing_source": "models.dev",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -689,51 +470,6 @@
               "parallel_tool_calls": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ],
-            "responses": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "seed": "supported",
-              "stop": "supported",
-              "logprobs": "supported"
-            },
-            "responses": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "reasoning_effort": "unsupported",
-              "parallel_tool_calls": "supported"
-            }
-          }
-        }
-      },
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        },
-        "responses": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
         }
       }
     },
@@ -752,8 +488,6 @@
       },
       "limits_source": "openrouter-index",
       "pricing_source": "openrouter-index",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -777,51 +511,6 @@
               "parallel_tool_calls": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ],
-            "responses": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "seed": "supported",
-              "stop": "supported",
-              "logprobs": "supported"
-            },
-            "responses": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "reasoning_effort": "unsupported",
-              "parallel_tool_calls": "supported"
-            }
-          }
-        }
-      },
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        },
-        "responses": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
         }
       }
     },
@@ -841,8 +530,6 @@
       },
       "limits_source": "openrouter-index",
       "pricing_source": "models.dev",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -866,51 +553,6 @@
               "parallel_tool_calls": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ],
-            "responses": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "seed": "supported",
-              "stop": "supported",
-              "logprobs": "supported"
-            },
-            "responses": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "reasoning_effort": "unsupported",
-              "parallel_tool_calls": "supported"
-            }
-          }
-        }
-      },
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        },
-        "responses": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
         }
       }
     },
@@ -929,8 +571,6 @@
       },
       "limits_source": "openrouter-index",
       "pricing_source": "openrouter-index",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -954,51 +594,6 @@
               "parallel_tool_calls": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ],
-            "responses": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "seed": "supported",
-              "stop": "supported",
-              "logprobs": "supported"
-            },
-            "responses": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "reasoning_effort": "unsupported",
-              "parallel_tool_calls": "supported"
-            }
-          }
-        }
-      },
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        },
-        "responses": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
         }
       }
     },
@@ -1018,8 +613,6 @@
       },
       "limits_source": "openrouter-index",
       "pricing_source": "models.dev",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -1043,51 +636,6 @@
               "parallel_tool_calls": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ],
-            "responses": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "seed": "supported",
-              "stop": "supported",
-              "logprobs": "supported"
-            },
-            "responses": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "reasoning_effort": "unsupported",
-              "parallel_tool_calls": "supported"
-            }
-          }
-        }
-      },
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        },
-        "responses": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
         }
       },
       "shutdown_date": "2026-10-23"
@@ -1107,8 +655,6 @@
       },
       "limits_source": "openrouter-index",
       "pricing_source": "openrouter-index",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -1132,51 +678,6 @@
               "parallel_tool_calls": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ],
-            "responses": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "seed": "supported",
-              "stop": "supported",
-              "logprobs": "supported"
-            },
-            "responses": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "reasoning_effort": "unsupported",
-              "parallel_tool_calls": "supported"
-            }
-          }
-        }
-      },
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        },
-        "responses": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
         }
       },
       "shutdown_date": "2026-10-23"
@@ -1197,8 +698,6 @@
       },
       "limits_source": "openrouter-index",
       "pricing_source": "models.dev",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -1222,51 +721,6 @@
               "parallel_tool_calls": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ],
-            "responses": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "seed": "supported",
-              "stop": "supported",
-              "logprobs": "supported"
-            },
-            "responses": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "reasoning_effort": "unsupported",
-              "parallel_tool_calls": "supported"
-            }
-          }
-        }
-      },
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        },
-        "responses": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
         }
       }
     },
@@ -1285,8 +739,6 @@
       },
       "limits_source": "openrouter-index",
       "pricing_source": "models.dev",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -1310,51 +762,6 @@
               "parallel_tool_calls": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ],
-            "responses": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "seed": "supported",
-              "stop": "supported",
-              "logprobs": "supported"
-            },
-            "responses": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "reasoning_effort": "unsupported",
-              "parallel_tool_calls": "supported"
-            }
-          }
-        }
-      },
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        },
-        "responses": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
         }
       },
       "shutdown_date": "2026-10-23"
@@ -1375,8 +782,6 @@
       },
       "limits_source": "openrouter-index",
       "pricing_source": "models.dev",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -1400,51 +805,6 @@
               "parallel_tool_calls": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ],
-            "responses": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "seed": "supported",
-              "stop": "supported",
-              "logprobs": "supported"
-            },
-            "responses": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "reasoning_effort": "unsupported",
-              "parallel_tool_calls": "supported"
-            }
-          }
-        }
-      },
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        },
-        "responses": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
         }
       }
     },
@@ -1464,8 +824,6 @@
       },
       "limits_source": "openrouter-index",
       "pricing_source": "models.dev",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -1489,51 +847,6 @@
               "parallel_tool_calls": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ],
-            "responses": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "seed": "supported",
-              "stop": "supported",
-              "logprobs": "supported"
-            },
-            "responses": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "reasoning_effort": "unsupported",
-              "parallel_tool_calls": "supported"
-            }
-          }
-        }
-      },
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        },
-        "responses": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
         }
       }
     },
@@ -1553,8 +866,6 @@
       },
       "limits_source": "openrouter-index",
       "pricing_source": "models.dev",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -1578,51 +889,6 @@
               "parallel_tool_calls": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ],
-            "responses": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "seed": "supported",
-              "stop": "supported",
-              "logprobs": "supported"
-            },
-            "responses": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "reasoning_effort": "unsupported",
-              "parallel_tool_calls": "supported"
-            }
-          }
-        }
-      },
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        },
-        "responses": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
         }
       }
     },
@@ -1641,8 +907,6 @@
       },
       "limits_source": "openrouter-index",
       "pricing_source": "openrouter-index",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -1666,51 +930,6 @@
               "parallel_tool_calls": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ],
-            "responses": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "seed": "supported",
-              "stop": "supported",
-              "logprobs": "supported"
-            },
-            "responses": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "reasoning_effort": "unsupported",
-              "parallel_tool_calls": "supported"
-            }
-          }
-        }
-      },
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        },
-        "responses": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
         }
       }
     },
@@ -1876,8 +1095,6 @@
       },
       "limits_source": "openrouter-index",
       "pricing_source": "models.dev",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -1901,51 +1118,6 @@
               "parallel_tool_calls": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ],
-            "responses": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "unsupported",
-              "top_p": "unsupported",
-              "seed": "supported",
-              "stop": "unsupported",
-              "reasoning_effort": "supported"
-            },
-            "responses": {
-              "temperature": "unsupported",
-              "top_p": "unsupported",
-              "reasoning_effort": "supported",
-              "parallel_tool_calls": "supported"
-            }
-          }
-        }
-      },
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        },
-        "responses": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
         }
       }
     },
@@ -1964,8 +1136,6 @@
       },
       "limits_source": "openrouter-index",
       "pricing_source": "openrouter-index",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -1989,51 +1159,6 @@
               "parallel_tool_calls": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ],
-            "responses": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "unsupported",
-              "top_p": "unsupported",
-              "seed": "supported",
-              "stop": "unsupported",
-              "reasoning_effort": "supported"
-            },
-            "responses": {
-              "temperature": "unsupported",
-              "top_p": "unsupported",
-              "reasoning_effort": "supported",
-              "parallel_tool_calls": "supported"
-            }
-          }
-        }
-      },
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        },
-        "responses": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
         }
       },
       "shutdown_date": "2026-12-11"
@@ -2090,8 +1215,6 @@
       },
       "limits_source": "openrouter-index",
       "pricing_source": "openrouter-index",
-      "reachable": false,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -2135,8 +1258,6 @@
       },
       "limits_source": "openrouter-index",
       "pricing_source": "models.dev",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -2160,51 +1281,6 @@
               "parallel_tool_calls": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ],
-            "responses": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "unsupported",
-              "top_p": "unsupported",
-              "seed": "supported",
-              "stop": "unsupported",
-              "reasoning_effort": "supported"
-            },
-            "responses": {
-              "temperature": "unsupported",
-              "top_p": "unsupported",
-              "reasoning_effort": "supported",
-              "parallel_tool_calls": "supported"
-            }
-          }
-        }
-      },
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        },
-        "responses": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
         }
       }
     },
@@ -2223,8 +1299,6 @@
       },
       "limits_source": "openrouter-index",
       "pricing_source": "openrouter-index",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -2248,51 +1322,6 @@
               "parallel_tool_calls": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ],
-            "responses": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "unsupported",
-              "top_p": "unsupported",
-              "seed": "supported",
-              "stop": "unsupported",
-              "reasoning_effort": "supported"
-            },
-            "responses": {
-              "temperature": "unsupported",
-              "top_p": "unsupported",
-              "reasoning_effort": "supported",
-              "parallel_tool_calls": "supported"
-            }
-          }
-        }
-      },
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        },
-        "responses": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
         }
       },
       "shutdown_date": "2026-12-11"
@@ -2313,8 +1342,6 @@
       },
       "limits_source": "openrouter-index",
       "pricing_source": "models.dev",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -2338,51 +1365,6 @@
               "parallel_tool_calls": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "responses": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "temperature",
-              "top_p"
-            ],
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "responses": {
-              "temperature": "unsupported",
-              "top_p": "unsupported",
-              "reasoning_effort": "supported",
-              "parallel_tool_calls": "supported"
-            },
-            "chat/completions": {
-              "temperature": "unsupported",
-              "top_p": "unsupported",
-              "seed": "supported",
-              "stop": "unsupported",
-              "reasoning_effort": "supported"
-            }
-          }
-        }
-      },
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        },
-        "responses": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
         }
       }
     },
@@ -2401,8 +1383,6 @@
       },
       "limits_source": "openrouter-index",
       "pricing_source": "openrouter-index",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -2426,51 +1406,6 @@
               "parallel_tool_calls": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ],
-            "responses": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "unsupported",
-              "top_p": "unsupported",
-              "seed": "supported",
-              "stop": "unsupported",
-              "reasoning_effort": "supported"
-            },
-            "responses": {
-              "temperature": "unsupported",
-              "top_p": "unsupported",
-              "reasoning_effort": "supported",
-              "parallel_tool_calls": "supported"
-            }
-          }
-        }
-      },
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        },
-        "responses": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
         }
       },
       "shutdown_date": "2026-12-11"
@@ -2490,8 +1425,6 @@
       },
       "limits_source": "openrouter-index",
       "pricing_source": "models.dev",
-      "reachable": false,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -2533,8 +1466,6 @@
       },
       "limits_source": "openrouter-index",
       "pricing_source": "openrouter-index",
-      "reachable": false,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -2650,8 +1581,6 @@
       },
       "limits_source": "openrouter-index",
       "pricing_source": "models.dev",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -2675,52 +1604,6 @@
               "parallel_tool_calls": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ],
-            "responses": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "seed": "supported",
-              "stop": "unsupported",
-              "reasoning_effort": "supported",
-              "logprobs": "supported"
-            },
-            "responses": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "reasoning_effort": "supported",
-              "parallel_tool_calls": "supported"
-            }
-          }
-        }
-      },
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        },
-        "responses": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
         }
       }
     },
@@ -2812,8 +1695,6 @@
       },
       "limits_source": "openrouter-index",
       "pricing_source": "openrouter-index",
-      "reachable": false,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -2856,8 +1737,6 @@
       },
       "limits_source": "openrouter-index",
       "pricing_source": "openrouter-index",
-      "reachable": false,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -2900,8 +1779,6 @@
       },
       "limits_source": "openrouter-index",
       "pricing_source": "openrouter-index",
-      "reachable": false,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -2945,8 +1822,6 @@
       },
       "limits_source": "openrouter-index",
       "pricing_source": "models.dev",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -2970,52 +1845,6 @@
               "parallel_tool_calls": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ],
-            "responses": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "seed": "supported",
-              "stop": "unsupported",
-              "reasoning_effort": "supported",
-              "logprobs": "supported"
-            },
-            "responses": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "reasoning_effort": "supported",
-              "parallel_tool_calls": "supported"
-            }
-          }
-        }
-      },
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        },
-        "responses": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
         }
       }
     },
@@ -3071,8 +1900,6 @@
       },
       "limits_source": "openrouter-index",
       "pricing_source": "models.dev",
-      "reachable": false,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -3115,8 +1942,6 @@
       },
       "limits_source": "openrouter-index",
       "pricing_source": "openrouter-index",
-      "reachable": false,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -3159,8 +1984,6 @@
       },
       "limits_source": "openrouter-index",
       "pricing_source": "models.dev",
-      "reachable": false,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -3239,8 +2062,6 @@
       },
       "limits_source": "models.dev",
       "pricing_source": "models.dev",
-      "reachable": false,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -3284,8 +2105,6 @@
       },
       "limits_source": "openrouter-index",
       "pricing_source": "models.dev",
-      "reachable": false,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -3328,8 +2147,6 @@
       },
       "limits_source": "openrouter-index",
       "pricing_source": "models.dev",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -3353,52 +2170,6 @@
               "parallel_tool_calls": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ],
-            "responses": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "seed": "supported",
-              "stop": "unsupported",
-              "reasoning_effort": "supported",
-              "logprobs": "supported"
-            },
-            "responses": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "reasoning_effort": "supported",
-              "parallel_tool_calls": "supported"
-            }
-          }
-        }
-      },
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        },
-        "responses": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
         }
       }
     },
@@ -3454,8 +2225,6 @@
       },
       "limits_source": "openrouter-index",
       "pricing_source": "models.dev",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -3479,52 +2248,6 @@
               "parallel_tool_calls": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ],
-            "responses": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "seed": "supported",
-              "stop": "unsupported",
-              "reasoning_effort": "supported",
-              "logprobs": "supported"
-            },
-            "responses": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "reasoning_effort": "supported",
-              "parallel_tool_calls": "supported"
-            }
-          }
-        }
-      },
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        },
-        "responses": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
         }
       }
     },
@@ -3580,8 +2303,6 @@
       },
       "limits_source": "openrouter-index",
       "pricing_source": "models.dev",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -3605,52 +2326,6 @@
               "parallel_tool_calls": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ],
-            "responses": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "seed": "supported",
-              "stop": "unsupported",
-              "reasoning_effort": "supported",
-              "logprobs": "supported"
-            },
-            "responses": {
-              "temperature": "supported",
-              "top_p": "supported",
-              "reasoning_effort": "supported",
-              "parallel_tool_calls": "supported"
-            }
-          }
-        }
-      },
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        },
-        "responses": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
         }
       }
     },
@@ -3705,8 +2380,6 @@
       },
       "limits_source": "openrouter-index",
       "pricing_source": "models.dev",
-      "reachable": false,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -3785,8 +2458,6 @@
       },
       "limits_source": "openrouter-index",
       "pricing_source": "models.dev",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -3810,52 +2481,6 @@
               "parallel_tool_calls": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ],
-            "responses": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "unsupported",
-              "top_p": "unsupported",
-              "seed": "supported",
-              "stop": "unsupported",
-              "reasoning_effort": "supported",
-              "logprobs": "unsupported"
-            },
-            "responses": {
-              "temperature": "unsupported",
-              "top_p": "unsupported",
-              "reasoning_effort": "supported",
-              "parallel_tool_calls": "supported"
-            }
-          }
-        }
-      },
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        },
-        "responses": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
         }
       }
     },
@@ -3910,8 +2535,6 @@
       },
       "limits_source": "openrouter-index",
       "pricing_source": "models.dev",
-      "reachable": false,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -3991,8 +2614,6 @@
       },
       "limits_source": "openrouter-index",
       "pricing_source": "models.dev",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -4016,52 +2637,6 @@
               "parallel_tool_calls": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ],
-            "responses": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "unsupported",
-              "top_p": "unsupported",
-              "seed": "supported",
-              "stop": "unsupported",
-              "reasoning_effort": "supported",
-              "logprobs": "unsupported"
-            },
-            "responses": {
-              "temperature": "unsupported",
-              "top_p": "unsupported",
-              "reasoning_effort": "supported",
-              "parallel_tool_calls": "supported"
-            }
-          }
-        }
-      },
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        },
-        "responses": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
         }
       }
     },
@@ -4082,8 +2657,6 @@
       },
       "limits_source": "openrouter-index",
       "pricing_source": "models.dev",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -4107,52 +2680,6 @@
               "parallel_tool_calls": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ],
-            "responses": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "unsupported",
-              "top_p": "unsupported",
-              "seed": "supported",
-              "stop": "unsupported",
-              "reasoning_effort": "supported",
-              "logprobs": "unsupported"
-            },
-            "responses": {
-              "temperature": "unsupported",
-              "top_p": "unsupported",
-              "reasoning_effort": "supported",
-              "parallel_tool_calls": "supported"
-            }
-          }
-        }
-      },
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        },
-        "responses": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
         }
       }
     },
@@ -4173,8 +2700,6 @@
       },
       "limits_source": "openrouter-index",
       "pricing_source": "models.dev",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -4198,52 +2723,6 @@
               "parallel_tool_calls": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ],
-            "responses": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "unsupported",
-              "top_p": "unsupported",
-              "seed": "supported",
-              "stop": "unsupported",
-              "reasoning_effort": "supported",
-              "logprobs": "unsupported"
-            },
-            "responses": {
-              "temperature": "unsupported",
-              "top_p": "unsupported",
-              "reasoning_effort": "supported",
-              "parallel_tool_calls": "supported"
-            }
-          }
-        }
-      },
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        },
-        "responses": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
         }
       }
     },
@@ -4262,8 +2741,6 @@
       },
       "limits_source": "openrouter-index",
       "pricing_source": "openrouter-index",
-      "reachable": false,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -4378,8 +2855,6 @@
       },
       "limits_source": "openrouter-index",
       "pricing_source": "openrouter-index",
-      "reachable": false,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -4496,8 +2971,6 @@
       },
       "limits_source": "openrouter-index",
       "pricing_source": "models.dev",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -4521,52 +2994,6 @@
               "parallel_tool_calls": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ],
-            "responses": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "unsupported",
-              "top_p": "unsupported",
-              "seed": "supported",
-              "stop": "supported",
-              "reasoning_effort": "supported",
-              "parallel_tool_calls": "unsupported"
-            },
-            "responses": {
-              "temperature": "unsupported",
-              "top_p": "unsupported",
-              "reasoning_effort": "supported",
-              "parallel_tool_calls": "supported"
-            }
-          }
-        }
-      },
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        },
-        "responses": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
         }
       },
       "shutdown_date": "2026-10-23"
@@ -4586,8 +3013,6 @@
       },
       "limits_source": "openrouter-index",
       "pricing_source": "openrouter-index",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -4611,52 +3036,6 @@
               "parallel_tool_calls": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ],
-            "responses": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "unsupported",
-              "top_p": "unsupported",
-              "seed": "supported",
-              "stop": "supported",
-              "reasoning_effort": "supported",
-              "parallel_tool_calls": "unsupported"
-            },
-            "responses": {
-              "temperature": "unsupported",
-              "top_p": "unsupported",
-              "reasoning_effort": "supported",
-              "parallel_tool_calls": "supported"
-            }
-          }
-        }
-      },
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        },
-        "responses": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
         }
       },
       "shutdown_date": "2026-10-23"
@@ -4676,8 +3055,6 @@
       },
       "limits_source": "openrouter-index",
       "pricing_source": "models.dev",
-      "reachable": false,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -4758,8 +3135,6 @@
       },
       "limits_source": "openrouter-index",
       "pricing_source": "models.dev",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -4783,52 +3158,6 @@
               "parallel_tool_calls": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ],
-            "responses": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "unsupported",
-              "top_p": "unsupported",
-              "seed": "supported",
-              "stop": "unsupported",
-              "reasoning_effort": "supported",
-              "parallel_tool_calls": "unsupported"
-            },
-            "responses": {
-              "temperature": "unsupported",
-              "top_p": "unsupported",
-              "reasoning_effort": "supported",
-              "parallel_tool_calls": "supported"
-            }
-          }
-        }
-      },
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        },
-        "responses": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
         }
       }
     },
@@ -4847,8 +3176,6 @@
       },
       "limits_source": "openrouter-index",
       "pricing_source": "openrouter-index",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -4872,52 +3199,6 @@
               "parallel_tool_calls": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ],
-            "responses": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "unsupported",
-              "top_p": "unsupported",
-              "seed": "supported",
-              "stop": "unsupported",
-              "reasoning_effort": "supported",
-              "parallel_tool_calls": "unsupported"
-            },
-            "responses": {
-              "temperature": "unsupported",
-              "top_p": "unsupported",
-              "reasoning_effort": "supported",
-              "parallel_tool_calls": "supported"
-            }
-          }
-        }
-      },
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        },
-        "responses": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
         }
       },
       "shutdown_date": "2026-12-11"
@@ -4938,8 +3219,6 @@
       },
       "limits_source": "openrouter-index",
       "pricing_source": "models.dev",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -4963,52 +3242,6 @@
               "parallel_tool_calls": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ],
-            "responses": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "unsupported",
-              "top_p": "unsupported",
-              "seed": "supported",
-              "stop": "supported",
-              "reasoning_effort": "supported",
-              "parallel_tool_calls": "unsupported"
-            },
-            "responses": {
-              "temperature": "unsupported",
-              "top_p": "unsupported",
-              "reasoning_effort": "supported",
-              "parallel_tool_calls": "supported"
-            }
-          }
-        }
-      },
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        },
-        "responses": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
         }
       },
       "shutdown_date": "2026-10-23"
@@ -5028,8 +3261,6 @@
       },
       "limits_source": "openrouter-index",
       "pricing_source": "openrouter-index",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -5053,52 +3284,6 @@
               "parallel_tool_calls": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ],
-            "responses": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "unsupported",
-              "top_p": "unsupported",
-              "seed": "supported",
-              "stop": "supported",
-              "reasoning_effort": "supported",
-              "parallel_tool_calls": "unsupported"
-            },
-            "responses": {
-              "temperature": "unsupported",
-              "top_p": "unsupported",
-              "reasoning_effort": "supported",
-              "parallel_tool_calls": "supported"
-            }
-          }
-        }
-      },
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        },
-        "responses": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
         }
       },
       "shutdown_date": "2026-10-23"
@@ -5119,8 +3304,6 @@
       },
       "limits_source": "openrouter-index",
       "pricing_source": "models.dev",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -5144,52 +3327,6 @@
               "parallel_tool_calls": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ],
-            "responses": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "unsupported",
-              "top_p": "unsupported",
-              "seed": "supported",
-              "stop": "unsupported",
-              "reasoning_effort": "supported",
-              "parallel_tool_calls": "unsupported"
-            },
-            "responses": {
-              "temperature": "unsupported",
-              "top_p": "unsupported",
-              "reasoning_effort": "supported",
-              "parallel_tool_calls": "supported"
-            }
-          }
-        }
-      },
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        },
-        "responses": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
         }
       },
       "shutdown_date": "2026-10-23"
@@ -5209,8 +3346,6 @@
       },
       "limits_source": "openrouter-index",
       "pricing_source": "openrouter-index",
-      "reachable": true,
-      "reachable_checked": "2026-08-17",
       "parameter_evidence": {
         "model_discovery": {
           "sources": [
@@ -5234,52 +3369,6 @@
               "parallel_tool_calls": "supported"
             }
           }
-        },
-        "live_probe": {
-          "attempted": {
-            "chat/completions": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "seed",
-              "stop",
-              "temperature",
-              "top_p"
-            ],
-            "responses": [
-              "logprobs",
-              "parallel_tool_calls",
-              "reasoning_effort",
-              "temperature",
-              "top_p"
-            ]
-          },
-          "support": {
-            "chat/completions": {
-              "temperature": "unsupported",
-              "top_p": "unsupported",
-              "seed": "supported",
-              "stop": "unsupported",
-              "reasoning_effort": "supported",
-              "parallel_tool_calls": "unsupported"
-            },
-            "responses": {
-              "temperature": "unsupported",
-              "top_p": "unsupported",
-              "reasoning_effort": "supported",
-              "parallel_tool_calls": "supported"
-            }
-          }
-        }
-      },
-      "endpoint_status": {
-        "chat/completions": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
-        },
-        "responses": {
-          "outcome": "ok",
-          "checked": "2026-08-17"
         }
       },
       "shutdown_date": "2026-10-23"

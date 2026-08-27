@@ -1,0 +1,20 @@
+version: 2
+id: streaming.reasoning
+title: Reasoning streams successfully
+claims:
+- dimension: interaction
+  name: streaming+reasoning
+applies_to:
+  endpoints: [chat/completions, responses]
+transports: [streamed]
+request:
+  messages:
+  - role: user
+    content: Reason briefly and answer what is 20 plus 22
+  max_tokens: 1100
+  reasoning:
+    effort: low
+    summary: auto
+oracle:
+  reasoning_present: true
+  text_contains: "42"

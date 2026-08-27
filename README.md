@@ -194,7 +194,7 @@ resolution and isolation.
 - `bundle.standalone.yml` is the editable local catalog, policy, and development inference-key bundle
 - `airllm.yml` configures the control plane and managed data plane used by Docker Compose
 - `deploy/fly` contains the two-image Fly.io deployment and bootstrap guide
-- `taxonomy/taxonomy.yml` is the provider and model catalog applied by the control plane
+- `taxonomy/taxonomy.yml` is the generated provider and model catalog applied by the control plane
 - `.env` holds local secrets and is loaded automatically
 
 Do not commit real provider or AirLLM keys. In managed mode, add provider credentials through
@@ -266,7 +266,8 @@ See [AGENTS.md](AGENTS.md) for the complete development conventions and boundary
 - `apps/console`: React management console
 - `apps/cli`: setup and resource-management CLI
 - `lib/contract`: signed bundle, event, token, and shared wire contracts
-- `taxonomy`: provider definitions, model catalog, and canonical completion schemas
+- `model-audit`: provider discovery, behavioral evidence, taxonomy generation, and gateway-gap reporting
+- `taxonomy`: generated provider definitions, model catalog, behavioral evidence, and canonical completion schemas
 - `tests/acceptance`: black-box gateway scenarios
 
 ## Project status

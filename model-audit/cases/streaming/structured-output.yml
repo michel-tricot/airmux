@@ -1,0 +1,28 @@
+version: 2
+id: streaming.structured-output
+title: Structured output streams successfully
+claims:
+- dimension: interaction
+  name: streaming+structured_output
+transports: [streamed]
+request:
+  messages:
+  - role: user
+    content: Return a JSON object with answer set to 42
+  max_tokens: 256
+  response_format:
+    type: json_schema
+    json_schema:
+      name: audit_answer
+      strict: true
+      schema:
+        type: object
+        properties:
+          answer:
+            type: integer
+            const: 42
+        required: [answer]
+        additionalProperties: false
+oracle:
+  json_equals:
+    answer: 42

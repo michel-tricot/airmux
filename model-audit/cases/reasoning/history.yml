@@ -1,0 +1,29 @@
+version: 2
+id: reasoning.history
+title: Continue from provider-issued reasoning history
+claims:
+- dimension: interaction
+  name: reasoning_history
+applies_to:
+  endpoints: [responses, messages]
+  client_modes: [api]
+request:
+  messages:
+  - role: user
+    content: Remember the number 42 and explain briefly why it is even
+  max_tokens: 1024
+  reasoning:
+    type: adaptive
+    effort: low
+    summary: auto
+follow_up:
+  messages:
+  - role: user
+    content: Reply with only the number I asked you to remember
+  max_tokens: 1024
+  reasoning:
+    type: adaptive
+    effort: low
+    summary: auto
+oracle:
+  text_contains: "42"

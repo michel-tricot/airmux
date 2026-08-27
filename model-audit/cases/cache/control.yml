@@ -1,0 +1,23 @@
+version: 2
+id: cache.control
+title: Prompt cache breakpoint
+claims:
+- dimension: interaction
+  name: cache_control
+  profile:
+    type: ephemeral
+applies_to:
+  endpoints: [messages]
+request:
+  messages:
+  - role: user
+    content:
+    - type: text
+      text: Remember that the code word is cobalt
+      cache_control:
+        type: ephemeral
+  - role: user
+    content: Reply with the code word
+  max_tokens: 128
+oracle:
+  text_contains: cobalt

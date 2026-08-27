@@ -1,0 +1,21 @@
+version: 2
+id: structured-output.json-object
+title: JSON object output
+claims:
+- dimension: capability
+  name: structured_output
+  profile:
+    mode: json_object
+- dimension: option
+  name: response_format
+  profile:
+    mode: json_object
+request:
+  messages:
+  - role: user
+    content: Return a JSON object with answer set to 42
+  response_format:
+    type: json_object
+oracle:
+  json_equals:
+    answer: 42

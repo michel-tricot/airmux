@@ -1,0 +1,34 @@
+version: 2
+id: reasoning.with-tool
+title: Reasoning followed by a tool call
+claims:
+- dimension: interaction
+  name: reasoning+tools
+  profile:
+    reasoning_effort: low
+    tool_choice: named
+applies_to:
+  endpoints: [chat/completions, responses]
+request:
+  messages:
+  - role: user
+    content: Think briefly and call report_result with value ok
+  max_tokens: 1100
+  tools:
+  - name: report_result
+    description: Report the requested result
+    parameters:
+      type: object
+      properties:
+        value:
+          type: string
+      required: [value]
+      additionalProperties: false
+  tool_choice:
+    name: report_result
+  reasoning:
+    effort: low
+    summary: auto
+oracle:
+  tool_names: [report_result]
+  tool_arguments_valid: true

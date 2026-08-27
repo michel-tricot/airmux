@@ -1,0 +1,120 @@
+features:
+- dimension: capability
+  name: text_generation
+  description: Produces assistant text from text input
+  request_fields: [messages]
+- dimension: capability
+  name: system_messages
+  description: Applies system instructions
+- dimension: capability
+  name: multi_turn
+  description: Uses assistant and user conversation history
+- dimension: capability
+  name: tool_calling
+  description: Produces typed tool calls
+  request_fields: [tools]
+- dimension: capability
+  name: structured_output
+  description: Produces structured JSON output
+- dimension: capability
+  name: reasoning
+  description: Accepts reasoning controls and exposes reasoning output
+  request_fields: [reasoning]
+- dimension: capability
+  name: streaming
+  description: Streams a response over the provider surface
+- dimension: capability
+  name: usage
+  description: Returns token usage information
+- dimension: option
+  name: max_tokens
+  description: Accepts an output-token limit
+  request_fields: [max_tokens]
+- dimension: option
+  name: temperature
+  description: Accepts a non-default temperature
+  request_fields: [temperature]
+- dimension: option
+  name: top_p
+  description: Accepts a non-default top-p value
+  request_fields: [top_p]
+- dimension: option
+  name: stop
+  description: Accepts stop sequences and applies them
+  endpoints: [chat/completions, messages]
+  request_fields: [stop]
+- dimension: option
+  name: seed
+  description: Accepts a deterministic sampling seed
+  endpoints: [chat/completions]
+  request_fields: [seed]
+- dimension: option
+  name: logprobs
+  description: Returns token log probabilities
+  endpoints: [chat/completions]
+  request_fields: [logprobs, top_logprobs]
+- dimension: option
+  name: tool_choice
+  description: Accepts tool-choice modes
+  request_fields: [tool_choice]
+- dimension: option
+  name: parallel_tool_calls
+  description: Accepts parallel tool-call control
+  request_fields: [parallel_tool_calls]
+- dimension: option
+  name: strict_tools
+  description: Accepts strict tool schemas
+- dimension: option
+  name: response_format
+  description: Accepts structured-output controls
+  request_fields: [response_format]
+- dimension: option
+  name: provider_extensions
+  description: Passes explicitly provider-specific request fields
+  request_fields: [extra]
+  required: false
+  exclusion: Extension keys have no finite vocabulary and are covered by focused cases when promoted to canonical fields
+- dimension: option
+  name: reasoning_effort
+  description: Accepts reasoning-effort controls
+- dimension: modality
+  name: input_text
+  description: Accepts text input
+- dimension: modality
+  name: input_image
+  description: Uses image input to answer a visual question
+- dimension: modality
+  name: input_pdf
+  description: Uses PDF input to answer a document question
+  endpoints: [responses, messages]
+- dimension: modality
+  name: output_text
+  description: Produces text output
+- dimension: interaction
+  name: reasoning+tools
+  description: Combines reasoning with tool calling
+- dimension: interaction
+  name: streaming+tools
+  description: Streams tool calls
+- dimension: interaction
+  name: streaming+reasoning
+  description: Streams reasoning output
+- dimension: interaction
+  name: streaming+structured_output
+  description: Streams structured output
+- dimension: interaction
+  name: tool_result_round_trip
+  description: Continues after a tool result
+- dimension: interaction
+  name: reasoning_history
+  description: Continues from reasoning-bearing assistant history
+  endpoints: [responses, messages]
+- dimension: interaction
+  name: cache_control
+  description: Accepts provider cache-control breakpoints
+  endpoints: [messages]
+- dimension: behavior
+  name: rejection_errors
+  description: Preserves provider rejection semantics through the gateway
+  required: false
+  exclusion: Rejection parity is classified for every case rather than generated as provider feature evidence
