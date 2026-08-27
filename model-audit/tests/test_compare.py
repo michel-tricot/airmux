@@ -52,3 +52,12 @@ def test_success_without_the_claimed_behavior_is_unsupported():
 
     assert result.feature == "unsupported"
     assert result.parity == "match"
+
+
+def test_equivalent_cross_dialect_completion_reasons_match():
+    direct = Observation(outcome="success", text="ok", finish_reason="end_turn")
+    gateway = Observation(outcome="success", text="ok", finish_reason="completed")
+
+    result = assess(direct, gateway, Oracle(text_contains="ok"))
+
+    assert result.parity == "match"

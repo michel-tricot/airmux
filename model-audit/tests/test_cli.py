@@ -71,7 +71,7 @@ def test_provider_option_selects_all_cataloged_models():
 def test_anthropic_models_can_use_the_openai_gateway_surface():
     result = CliRunner().invoke(
         app,
-        ["runs", "plan", "--provider", "anthropic", "--surface", "oai", "--case", "text.basic", "--format", "json"],
+        ["runs", "plan", "--provider", "anthropic", "--gateway-surface", "oai", "--case", "text.basic", "--format", "json"],
     )
 
     assert result.exit_code == 0
@@ -79,3 +79,29 @@ def test_anthropic_models_can_use_the_openai_gateway_surface():
     assert experiments
     assert {experiment["provider_surface"] for experiment in experiments} == {"anthropic"}
     assert {experiment["gateway_surface"] for experiment in experiments} == {"oai"}
+
+
+def test_all_gateway_surfaces_expand_the_matrix():
+    result = CliRunner().invoke(
+        app,
+        ["runs", "plan", "--model", "anthropic/claude-fable-5", "--gateway-surface", "all", "--case", "text.basic", "--format", "json"],
+    )
+
+    assert result.exit_code == 0
+    experiments = json.loads(result.stdout)
+    assert {experiment["gateway_surface"] for experiment in experiments} == {"oai", "oai_responses", "anthropic"}
+
+
+def test_unknown_gateway_surface_has_an_actionable_error():
+    result = CliRunner().invoke(app, ["runs", "plan", "--gateway-surface", "unknown"])
+
+    assert result.exit_code == 2
+    assert "unknown gateway surface unknown" in result.output
+
+
+def test_execute_exposes_a_single_global_concurrency_control():
+    result = CliRunner().invoke(app, ["runs", "execute", "--help"])
+
+    assert result.exit_code == 0
+    assert "--concurrency" in result.output
+    assert "--provider-concurrency" not in result.output

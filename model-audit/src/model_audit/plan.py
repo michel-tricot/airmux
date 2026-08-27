@@ -17,7 +17,7 @@ class Filters:
     cases: tuple[str, ...] = ()
     client_mode: ClientMode = "api"
     direct_surface: str | None = None
-    gateway_surface: str | None = None
+    gateway_surfaces: tuple[str, ...] = ()
     transport: Transport | None = None
 
 
@@ -46,6 +46,14 @@ def _driver(kind: str, client_mode: ClientMode) -> str:
     return "anthropic" if kind == "anthropic" else "openai"
 
 
+def _gateway_surfaces(target: Target, filters: Filters) -> tuple[str, ...]:
+    if not filters.gateway_surfaces:
+        return (target.surface_id,)
+    if "all" in filters.gateway_surfaces:
+        return tuple(SURFACES)
+    return tuple(dict.fromkeys(filters.gateway_surfaces))
+
+
 def build_plan(
     targets: Sequence[Target],
     cases: Sequence[Case],
@@ -58,32 +66,32 @@ def build_plan(
         for case in sorted(cases, key=lambda item: item.id):
             if not _selected(target, case, filters):
                 continue
-            gateway_surface_id = filters.gateway_surface or target.surface_id
-            gateway_definition = SURFACES.get(gateway_surface_id)
-            if gateway_definition is None:
-                unavailable += len(case.transports)
-                continue
-            _, gateway_endpoint, gateway_kind = gateway_definition
-            if not case.applies_to.accepts(gateway_endpoint, target.egress_kind, filters.client_mode):
-                continue
-            direct_driver_id = _driver(target.egress_kind, filters.client_mode)
-            gateway_driver_id = _driver(gateway_kind, filters.client_mode)
-            if target.endpoint not in driver_endpoints.get(direct_driver_id, frozenset()) or gateway_endpoint not in driver_endpoints.get(
-                gateway_driver_id, frozenset()
-            ):
-                unavailable += len(case.transports)
-                continue
-            experiments.extend(
-                Experiment(
-                    target=target,
-                    case=case,
-                    direct_driver_id=direct_driver_id,
-                    gateway_driver_id=gateway_driver_id,
-                    gateway_surface_id=gateway_surface_id,
-                    gateway_endpoint=gateway_endpoint,
-                    transport=transport,
+            for gateway_surface_id in _gateway_surfaces(target, filters):
+                gateway_definition = SURFACES.get(gateway_surface_id)
+                if gateway_definition is None:
+                    unavailable += len(case.transports)
+                    continue
+                _, gateway_endpoint, gateway_kind = gateway_definition
+                if not case.applies_to.accepts(gateway_endpoint, target.egress_kind, filters.client_mode):
+                    continue
+                direct_driver_id = _driver(target.egress_kind, filters.client_mode)
+                gateway_driver_id = _driver(gateway_kind, filters.client_mode)
+                if target.endpoint not in driver_endpoints.get(direct_driver_id, frozenset()) or gateway_endpoint not in driver_endpoints.get(
+                    gateway_driver_id, frozenset()
+                ):
+                    unavailable += len(case.transports)
+                    continue
+                experiments.extend(
+                    Experiment(
+                        target=target,
+                        case=case,
+                        direct_driver_id=direct_driver_id,
+                        gateway_driver_id=gateway_driver_id,
+                        gateway_surface_id=gateway_surface_id,
+                        gateway_endpoint=gateway_endpoint,
+                        transport=transport,
+                    )
+                    for transport in case.transports
+                    if filters.transport is None or filters.transport == transport
                 )
-                for transport in case.transports
-                if filters.transport is None or filters.transport == transport
-            )
     return Plan(experiments=tuple(experiments), unavailable=unavailable)

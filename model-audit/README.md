@@ -18,12 +18,14 @@ uv run airllm-audit models list --provider anthropic
 uv run airllm-audit runs plan --model anthropic/claude-fable-5
 uv run airllm-audit runs plan --model anthropic/claude-fable-5 --case modalities
 uv run airllm-audit runs plan --provider anthropic --case modalities
-uv run airllm-audit runs plan --provider anthropic --surface oai --case modalities
+uv run airllm-audit runs plan --provider anthropic --gateway-surface oai --case modalities
+uv run airllm-audit runs plan --provider anthropic --gateway-surface all --case modalities
 
 export AIRLLM_GATEWAY_URL=http://127.0.0.1:8080
 export AIRLLM_API_KEY=sk-inf-your-key
 uv run airllm-audit runs execute --model anthropic/claude-fable-5
 uv run airllm-audit runs execute --provider anthropic --case modalities
+uv run airllm-audit runs execute --provider anthropic --case modalities --concurrency 8
 
 uv run airllm-audit reports show --gaps
 uv run airllm-audit evidence accept model-audit/reports/<run>.json
@@ -34,7 +36,9 @@ The gateway must already be running. Model audit never starts or stops it. Raw H
 
 `--case` accepts an exact case id or a namespace. For example, `--case modalities` selects every `modalities.*` case. Repeat the option to combine selections, such as `--case modalities.image --case text.basic`. `--provider anthropic` selects every cataloged Anthropic model and composes with the same case filters. Use `runs plan` before a large execution to inspect its request count.
 
-The provider and gateway surfaces are independent. `--provider anthropic --surface oai` calls Anthropic directly through Messages and calls the same AirLLM model through Chat Completions. Without `--surface`, the gateway uses the provider's native surface. `--provider-surface` narrows providers that expose more than one direct API surface.
+The provider and gateway surfaces are independent. `--provider anthropic --gateway-surface oai` calls Anthropic directly through Messages and calls the same AirLLM model through Chat Completions. `--gateway-surface all` expands each selection across Chat Completions, Responses, and Messages. Repeat `--gateway-surface` to select a subset. Without it, the gateway uses the provider's native surface. `--provider-surface` narrows providers that expose more than one direct API surface.
+
+Runs execute up to four experiments concurrently by default. `--concurrency 1` provides sequential execution for debugging, while a higher value speeds up larger model and case selections. Each direct and gateway pair remains ordered, and reports retain plan order regardless of completion order.
 
 ## Add one model
 

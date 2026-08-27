@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import os
+import threading
 import time
-from collections.abc import Callable
+from collections import deque
+from collections.abc import Callable, Mapping
+from concurrent.futures import FIRST_COMPLETED, Future, ThreadPoolExecutor, wait
 from dataclasses import dataclass
 from typing import Literal, Protocol, cast
 
@@ -39,9 +42,27 @@ type ProgressReporter = Callable[[ProgressEvent], None]
 class ExecutionOptions:
     confirmations: int = 1
     request_timeout_seconds: float = 60
+    concurrency: int = 4
 
 
 DEFAULT_EXECUTION_OPTIONS = ExecutionOptions()
+
+
+@dataclass(frozen=True)
+class RunContext:
+    drivers: Mapping[str, ClientDriver]
+    gateway: Gateway
+    progress: ProgressReporter | None
+    options: ExecutionOptions
+    total: int
+
+
+@dataclass(frozen=True)
+class ScheduledExperiment:
+    index: int
+    experiment: Experiment
+    api_key: str
+    access_key: tuple[str, str, str]
 
 
 @dataclass(frozen=True)
@@ -187,6 +208,82 @@ def _blocked_result(experiment: Experiment, code: str, message: str) -> PairResu
     return _result(experiment, attempt, attempt.assessment)
 
 
+def _harness_result(experiment: Experiment, error: Exception) -> PairResult:
+    observation = Observation(
+        outcome="error",
+        error_code="client_exception",
+        error_message=str(error)[:500] or f"{type(error).__name__} raised without a message",
+        client_type=type(error).__name__,
+    )
+    attempt = PairAttempt(direct=observation, gateway=observation, assessment=assess(observation, observation, experiment.case.oracle))
+    return _result(experiment, attempt, attempt.assessment)
+
+
+def _progress_event(
+    context: RunContext,
+    kind: Literal["experiment_started", "experiment_completed"],
+    scheduled: ScheduledExperiment,
+    result: PairResult | None = None,
+) -> None:
+    if context.progress is not None:
+        context.progress(
+            ProgressEvent(
+                kind=kind,
+                index=scheduled.index,
+                total=context.total,
+                experiment=scheduled.experiment,
+                result=result,
+                max_attempts=context.options.confirmations + 1,
+            )
+        )
+
+
+def _execute_experiment(scheduled: ScheduledExperiment, run: RunContext) -> PairResult:
+    experiment = scheduled.experiment
+    options = run.options
+    context = PairContext(
+        direct_driver=run.drivers[experiment.direct_driver_id],
+        gateway_driver=run.drivers[experiment.gateway_driver_id],
+        direct_connection=_direct_connection(experiment, scheduled.api_key, options.request_timeout_seconds),
+        gateway=run.gateway,
+        experiment=experiment,
+        index=scheduled.index,
+        total=run.total,
+        max_attempts=options.confirmations + 1,
+        progress=run.progress,
+    )
+    initial = _pair(context, 1)
+    should_confirm = initial.assessment.execution == "completed" and (
+        initial.assessment.parity != "match" or initial.assessment.feature != "supported"
+    )
+    confirmations = tuple(_pair(context, attempt) for attempt in range(2, options.confirmations + 2)) if should_confirm else ()
+    assessment = _confirmed(initial, confirmations) if confirmations else initial.assessment
+    return _result(experiment, initial, assessment, confirmations)
+
+
+def _access_key(experiment: Experiment) -> tuple[str, str, str]:
+    target = experiment.target
+    return target.model_id, target.surface_id, experiment.gateway_surface_id
+
+
+def _validate_options(options: ExecutionOptions) -> None:
+    if options.concurrency < 1:
+        message = "concurrency must be at least one"
+        raise ValueError(message)
+
+
+def _synchronized_progress(progress: ProgressReporter | None) -> ProgressReporter | None:
+    if progress is None:
+        return None
+    lock = threading.Lock()
+
+    def report(event: ProgressEvent) -> None:
+        with lock:
+            progress(event)
+
+    return report
+
+
 def execute(
     plan: Plan,
     gateway: Gateway,
@@ -194,53 +291,53 @@ def execute(
     progress: ProgressReporter | None = None,
     options: ExecutionOptions = DEFAULT_EXECUTION_OPTIONS,
 ) -> list[PairResult]:
+    _validate_options(options)
     drivers = discover()
     gateway.require_ready()
-    results = []
-    blocked: dict[tuple[str, str, str], tuple[str, str]] = {}
     total = len(plan.experiments)
-    for index, experiment in enumerate(plan.experiments, start=1):
-        if progress is not None:
-            progress(
-                ProgressEvent(
-                    kind="experiment_started",
-                    index=index,
-                    total=total,
-                    experiment=experiment,
-                    max_attempts=options.confirmations + 1,
-                )
-            )
-        target = experiment.target
-        access_key = (target.model_id, target.surface_id, experiment.gateway_surface_id)
-        block = blocked.get(access_key)
-        api_key = os.environ.get(target.credential_env)
-        if block is None and api_key is None:
-            block = ("direct_authentication", f"{target.credential_env} is not set")
-            blocked[access_key] = block
-        if block is not None:
-            result = _blocked_result(experiment, *block)
-        else:
-            context = PairContext(
-                direct_driver=drivers[experiment.direct_driver_id],
-                gateway_driver=drivers[experiment.gateway_driver_id],
-                direct_connection=_direct_connection(experiment, cast("str", api_key), options.request_timeout_seconds),
-                gateway=gateway,
-                experiment=experiment,
-                index=index,
-                total=total,
-                max_attempts=options.confirmations + 1,
-                progress=progress,
-            )
-            initial = _pair(context, 1)
-            should_confirm = initial.assessment.parity != "match" or initial.assessment.feature != "supported"
-            confirmations = tuple(_pair(context, attempt) for attempt in range(2, options.confirmations + 2)) if should_confirm else ()
-            assessment = _confirmed(initial, confirmations) if confirmations else initial.assessment
-            if initial.direct.error_code in {"direct_authentication", "direct_model_access"}:
-                blocked[access_key] = (str(initial.direct.error_code), "direct model access could not be established")
-            if initial.gateway.error_code == "gateway_authentication":
-                blocked[access_key] = ("gateway_authentication", "gateway authentication could not be established")
-            result = _result(experiment, initial, assessment, confirmations)
-        results.append(result)
-        if progress is not None:
-            progress(ProgressEvent(kind="experiment_completed", index=index, total=total, experiment=experiment, result=result))
-    return results
+    results: list[PairResult | None] = [None] * total
+    pending = deque(enumerate(plan.experiments, start=1))
+    blocked: dict[tuple[str, str, str], tuple[str, str]] = {}
+    gateway_block: tuple[str, str] | None = None
+    reporter = _synchronized_progress(progress)
+    run = RunContext(drivers=drivers, gateway=gateway, progress=reporter, options=options, total=total)
+    in_flight: dict[Future[PairResult], ScheduledExperiment] = {}
+    with ThreadPoolExecutor(max_workers=options.concurrency, thread_name_prefix="model-audit") as executor:
+        while pending or in_flight:
+            while pending and len(in_flight) < options.concurrency:
+                index, experiment = pending.popleft()
+                target = experiment.target
+                access_key = _access_key(experiment)
+                block = gateway_block or blocked.get(access_key)
+                api_key = os.environ.get(target.credential_env)
+                if block is None and api_key is None:
+                    block = ("direct_authentication", f"{target.credential_env} is not set")
+                    blocked[access_key] = block
+                if block is not None:
+                    scheduled = ScheduledExperiment(index=index, experiment=experiment, api_key=api_key or "", access_key=access_key)
+                    _progress_event(run, "experiment_started", scheduled)
+                    result = _blocked_result(experiment, *block)
+                    results[index - 1] = result
+                    _progress_event(run, "experiment_completed", scheduled, result)
+                    continue
+                scheduled = ScheduledExperiment(index=index, experiment=experiment, api_key=cast("str", api_key), access_key=access_key)
+                _progress_event(run, "experiment_started", scheduled)
+                in_flight[executor.submit(_execute_experiment, scheduled, run)] = scheduled
+            if not in_flight:
+                continue
+            completed, _ = wait(tuple(in_flight), return_when=FIRST_COMPLETED)
+            for future in sorted(completed, key=lambda item: in_flight[item].index):
+                scheduled = in_flight.pop(future)
+                index = scheduled.index
+                experiment = scheduled.experiment
+                try:
+                    result = future.result()
+                except Exception as error:  # noqa: BLE001 worker failures must become reportable evidence
+                    result = _harness_result(experiment, error)
+                results[index - 1] = result
+                if result.direct.error_code in {"direct_authentication", "direct_model_access"}:
+                    blocked[scheduled.access_key] = (str(result.direct.error_code), "direct model access could not be established")
+                if result.gateway.error_code == "gateway_authentication":
+                    gateway_block = ("gateway_authentication", "gateway authentication could not be established")
+                _progress_event(run, "experiment_completed", scheduled, result)
+    return [cast("PairResult", result) for result in results]

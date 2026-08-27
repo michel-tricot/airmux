@@ -10,7 +10,7 @@ import yaml
 from dotenv import load_dotenv
 
 from model_audit.cases import coverage, load_cases, load_features
-from model_audit.catalog import load_catalog
+from model_audit.catalog import SURFACES, load_catalog
 from model_audit.catalog_ops import ModelDefinition, add_model, add_provider, run_catalog_script
 from model_audit.diagnostics import execution_display, feature_display, gap_kind, parity_display, validation_failed
 from model_audit.drivers import supported_endpoints
@@ -41,10 +41,11 @@ CaseOption = Annotated[
 SDKOption = Annotated[bool, typer.Option("--sdk", help="Use the matching vendor SDK instead of direct HTTP API calls")]
 ProviderSurfaceOption = Annotated[Literal["oai", "oai_responses", "anthropic"] | None, typer.Option("--provider-surface")]
 GatewaySurfaceOption = Annotated[
-    Literal["oai", "oai_responses", "anthropic"] | None,
-    typer.Option("--surface", help="Gateway ingress surface, independent of the provider API surface"),
+    list[str] | None,
+    typer.Option("--gateway-surface", help="Gateway ingress surface; use all for the complete matrix or repeat for a subset"),
 ]
 TransportOption = Annotated[Literal["buffered", "streamed"] | None, typer.Option("--transport")]
+ConcurrencyOption = Annotated[int, typer.Option("--concurrency", min=1, max=32, help="Maximum experiments to run concurrently")]
 GatewayUrlOption = Annotated[str | None, typer.Option("--gateway-url", help="Origin of the running AirLLM data plane")]
 GatewayKeyOption = Annotated[str | None, typer.Option("--gateway-api-key", help="Inference key accepted by the running data plane")]
 
@@ -68,6 +69,16 @@ def _cases() -> list[Case]:
 def _plan(filters: Filters) -> Plan:
     catalog = load_catalog(ROOT / "taxonomy")
     return build_plan(catalog.targets, _cases(), supported_endpoints(filters.client_mode), filters)
+
+
+def _surface_selection(surfaces: list[str] | None) -> tuple[str, ...]:
+    selected = tuple(surfaces or ())
+    invalid = sorted(set(selected) - set(SURFACES) - {"all"})
+    if invalid:
+        choices = ", ".join((*SURFACES, "all"))
+        message = f"unknown gateway surface {', '.join(invalid)}; choose from {choices}"
+        raise typer.BadParameter(message)
+    return selected
 
 
 def _run_script(script: str, *arguments: str) -> None:
@@ -179,7 +190,7 @@ def providers_refresh(provider: Annotated[str | None, typer.Argument()] = None) 
 def models_list(
     provider: ProviderOption = None,
     model: ModelOption = None,
-    surface: Annotated[Literal["oai", "oai_responses", "anthropic"] | None, typer.Option("--surface")] = None,
+    provider_surface: ProviderSurfaceOption = None,
     output_format: FormatOption = OutputFormat.table,
 ) -> None:
     targets = load_catalog(ROOT / "taxonomy").targets
@@ -194,7 +205,7 @@ def models_list(
         for target in targets
         if (provider is None or target.provider_id == provider)
         and (model is None or target.model_id == model)
-        and (surface is None or target.surface_id == surface)
+        and (provider_surface is None or target.surface_id == provider_surface)
     ]
     print_rows(
         "models",
@@ -238,7 +249,7 @@ def runs_plan(  # noqa: PLR0913, PLR0917 command flags define the CLI surface
     case: CaseOption = None,
     sdk: SDKOption = False,
     provider_surface: ProviderSurfaceOption = None,
-    surface: GatewaySurfaceOption = None,
+    gateway_surface: GatewaySurfaceOption = None,
     transport: TransportOption = None,
     output_format: FormatOption = OutputFormat.table,
 ) -> None:
@@ -249,7 +260,7 @@ def runs_plan(  # noqa: PLR0913, PLR0917 command flags define the CLI surface
             cases=tuple(case or ()),
             client_mode="sdk" if sdk else "api",
             direct_surface=provider_surface,
-            gateway_surface=surface,
+            gateway_surfaces=_surface_selection(gateway_surface),
             transport=transport,
         )
     )
@@ -292,13 +303,14 @@ def runs_execute(  # noqa: PLR0913, PLR0917 command flags define the CLI surface
     case: CaseOption = None,
     sdk: SDKOption = False,
     provider_surface: ProviderSurfaceOption = None,
-    surface: GatewaySurfaceOption = None,
+    gateway_surface: GatewaySurfaceOption = None,
     transport: TransportOption = None,
     gateway_url: GatewayUrlOption = None,
     gateway_api_key: GatewayKeyOption = None,
     yes: Annotated[bool, typer.Option("--yes", help="Confirm a run above the request guardrail")] = False,
     max_requests: Annotated[int, typer.Option("--max-requests", min=1)] = 500,
     confirmations: Annotated[int, typer.Option("--confirmations", min=0, max=5)] = 1,
+    concurrency: ConcurrencyOption = 4,
     request_timeout: Annotated[float, typer.Option("--request-timeout", min=0.1)] = 60,
     output_format: FormatOption = OutputFormat.table,
 ) -> None:
@@ -315,7 +327,7 @@ def runs_execute(  # noqa: PLR0913, PLR0917 command flags define the CLI surface
             cases=tuple(case or ()),
             client_mode="sdk" if sdk else "api",
             direct_surface=provider_surface,
-            gateway_surface=surface,
+            gateway_surfaces=_surface_selection(gateway_surface),
             transport=transport,
         )
     )
@@ -328,12 +340,12 @@ def runs_execute(  # noqa: PLR0913, PLR0917 command flags define the CLI surface
         raise typer.BadParameter(message)
     gateway = Gateway(base_url=gateway_url, api_key=gateway_api_key, request_timeout_seconds=request_timeout)
     progress = ConsoleProgress()
-    progress.start(plan, gateway.base_url, confirmations)
+    progress.start(plan, gateway.base_url, confirmations, concurrency)
     results = execute(
         plan,
         gateway,
         progress=progress,
-        options=ExecutionOptions(confirmations=confirmations, request_timeout_seconds=request_timeout),
+        options=ExecutionOptions(confirmations=confirmations, request_timeout_seconds=request_timeout, concurrency=concurrency),
     )
     run_id = datetime.now(tz=UTC).strftime("%Y%m%dT%H%M%SZ")
     paths = write_report(results, REPORTS, run_id, metadata(ROOT, run_id, gateway.base_url))
@@ -356,16 +368,16 @@ def runs_execute(  # noqa: PLR0913, PLR0917 command flags define the CLI surface
     print_rows(
         "results",
         rows,
-        [
+        (
             Col("model", "Model"),
             Col("route", "Provider -> Gateway"),
             Col("case", "Case"),
             Col("feature", "Feature"),
             Col("parity", "Parity"),
-            Col("execution", "Execution"),
+            *((Col("execution", "Execution"),) if any(result.assessment.execution != "completed" for result in results) else ()),
             Col("gap", "Gap"),
-            Col("attempts", "Attempts"),
-        ],
+            *((Col("attempts", "Attempts"),) if any(result.confirmations for result in results) else ()),
+        ),
         output_format,
     )
     typer.echo(f"wrote {paths.json_path} and {paths.html_path}", err=True)

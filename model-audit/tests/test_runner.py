@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import threading
+
 from model_audit import runner
 from model_audit.drivers.base import ClientDriver, Connection
 from model_audit.models import Experiment, Observation, Plan
@@ -33,6 +35,60 @@ class EndpointDriver(ClientDriver):
 
     def execute(self, connection, endpoint, model, case, transport):
         return Observation(outcome="success", text="ok", client_type=endpoint)
+
+
+class ConcurrentDriver(ClientDriver):
+    id = "concurrent"
+    mode = "api"
+    endpoints = frozenset({"chat/completions"})
+
+    def __init__(self) -> None:
+        self.barrier = threading.Barrier(2)
+        self.lock = threading.Lock()
+        self.active = 0
+        self.maximum_active = 0
+
+    def execute(self, connection, endpoint, model, case, transport):
+        with self.lock:
+            self.active += 1
+            self.maximum_active = max(self.maximum_active, self.active)
+        try:
+            self.barrier.wait(timeout=1)
+        except threading.BrokenBarrierError:
+            pass
+        finally:
+            with self.lock:
+                self.active -= 1
+        return Observation(outcome="success", text="ok", client_type=model)
+
+
+class GatewayAuthDriver(ClientDriver):
+    id = "gateway-auth"
+    mode = "api"
+    endpoints = frozenset({"chat/completions"})
+
+    def __init__(self) -> None:
+        self.lock = threading.Lock()
+        self.direct_calls = 0
+
+    def execute(self, connection, endpoint, model, case, transport):
+        if connection.route == "gateway":
+            return Observation(outcome="inconclusive", error_code="gateway_authentication", http_status=401)
+        with self.lock:
+            self.direct_calls += 1
+        return Observation(outcome="success", text="ok")
+
+
+def experiment(model_id: str, driver_id: str = "concurrent", provider_id: str = "stub") -> Experiment:
+    return Experiment(
+        target=target(provider_id=provider_id, model_id=model_id),
+        case=case(),
+        direct_driver_id=driver_id,
+        gateway_driver_id=driver_id,
+        gateway_surface_id="oai",
+        gateway_endpoint="chat/completions",
+        transport="buffered",
+    )
 
 
 def test_runner_confirms_and_reports_a_gateway_gap(monkeypatch):
@@ -116,3 +172,29 @@ def test_runner_uses_independent_provider_and_gateway_endpoints(monkeypatch):
     assert result.direct.client_type == "messages"
     assert result.gateway.client_type == "chat/completions"
     assert result.assessment.parity == "match"
+
+
+def test_runner_parallelizes_experiments_and_preserves_plan_order(monkeypatch):
+    monkeypatch.setenv("STUB_API_KEY", "provider")
+    driver = ConcurrentDriver()
+    monkeypatch.setattr(runner, "discover", lambda: {driver.id: driver})
+    plan = Plan(experiments=(experiment("stub/first"), experiment("stub/second")))
+
+    results = runner.execute(plan, Gateway(), options=runner.ExecutionOptions(confirmations=2, concurrency=2))
+
+    assert driver.maximum_active == 2
+    assert [result.model_id for result in results] == ["stub/first", "stub/second"]
+
+
+def test_gateway_authentication_stops_scheduling_new_experiments(monkeypatch):
+    monkeypatch.setenv("STUB_API_KEY", "provider")
+    driver = GatewayAuthDriver()
+    monkeypatch.setattr(runner, "discover", lambda: {driver.id: driver})
+    plan = Plan(experiments=tuple(experiment(f"stub/{index}", driver.id) for index in range(4)))
+
+    results = runner.execute(plan, Gateway(), options=runner.ExecutionOptions(confirmations=0, concurrency=2))
+
+    assert driver.direct_calls == 2
+    assert [result.model_id for result in results] == [f"stub/{index}" for index in range(4)]
+    assert all(result.assessment.execution == "access_blocked" for result in results)
+    assert all(not result.confirmations for result in results)

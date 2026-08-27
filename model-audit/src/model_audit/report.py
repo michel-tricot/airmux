@@ -26,7 +26,7 @@ STYLE = (
 def _reproduce(result: PairResult, gateway_url: str) -> str:
     return (
         f"uv run airllm-audit runs execute --model {result.model_id} --provider-surface {result.surface_id} "
-        f"--surface {result.gateway_surface_id} "
+        f"--gateway-surface {result.gateway_surface_id} "
         f"--case {result.case_id} --transport {result.transport} --gateway-url {gateway_url}"
     )
 

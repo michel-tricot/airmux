@@ -35,6 +35,7 @@ def _finish_class(reason: str | None) -> str | None:
     return {
         "end_turn": "stop",
         "stop": "stop",
+        "completed": "stop",
         "tool_use": "tools",
         "tool_calls": "tools",
         "length": "length",

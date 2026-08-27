@@ -92,7 +92,7 @@ def test_gateway_surface_is_independent_from_the_provider_surface():
         [provider_target],
         [case()],
         {"http": frozenset({"chat/completions", "messages"})},
-        Filters(provider="anthropic", gateway_surface="oai"),
+        Filters(provider="anthropic", gateway_surfaces=("oai",)),
     )
 
     experiment = plan.experiments[0]
@@ -109,9 +109,22 @@ def test_sdk_cross_surface_uses_each_dialects_vendor_driver():
         [provider_target],
         [case()],
         {"anthropic": frozenset({"messages"}), "openai": frozenset({"chat/completions", "responses"})},
-        Filters(client_mode="sdk", gateway_surface="oai"),
+        Filters(client_mode="sdk", gateway_surfaces=("oai",)),
     )
 
     experiment = plan.experiments[0]
     assert experiment.direct_driver_id == "anthropic"
     assert experiment.gateway_driver_id == "openai"
+
+
+def test_multiple_gateway_surfaces_expand_the_plan():
+    provider_target = target(surface_id="anthropic", endpoint="messages", egress_kind="anthropic")
+
+    plan = build_plan(
+        [provider_target],
+        [case()],
+        {"http": frozenset({"chat/completions", "responses", "messages"})},
+        Filters(gateway_surfaces=("oai", "oai_responses", "anthropic")),
+    )
+
+    assert [experiment.gateway_surface_id for experiment in plan.experiments] == ["oai", "oai_responses", "anthropic"]
