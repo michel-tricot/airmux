@@ -10,7 +10,7 @@ from corpus import CORPUS, request_of
 from jsonschema import Draft202012Validator
 
 from contract import Secret
-from data_plane.canonical import CanonicalMessage, CanonicalRequest, DocumentPart, ReasoningConfig, ResponseFormat, ToolDef
+from data_plane.canonical import CanonicalMessage, CanonicalRequest, DocumentPart, ReasoningConfig, ReasoningPart, ResponseFormat, TextPart, ToolDef
 from data_plane.egress import REGISTRY
 from data_plane.egress.base import UpstreamResponseError
 
@@ -133,6 +133,19 @@ def test_openai_compatible_accepts_null_prompt_token_details():
 
     assert final.usage.input_tokens == 17
     assert final.usage.cache_read_tokens == 0
+
+
+def test_openai_compatible_preserves_reasoning_spelled_without_content():
+    adapter, _ = _adapter("openai_compatible")
+    response = {
+        "id": "response-1",
+        "choices": [{"message": {"content": "42", "reasoning": "20 + 22"}, "finish_reason": "stop"}],
+        "usage": {"prompt_tokens": 17, "completion_tokens": 4},
+    }
+
+    final = adapter.transform_response(json.dumps(response).encode(), CTX)
+
+    assert final.content == [ReasoningPart(text="20 + 22"), TextPart(text="42")]
 
 
 @pytest.mark.parametrize("kind", sorted(REGISTRY))

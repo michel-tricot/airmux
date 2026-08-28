@@ -99,9 +99,10 @@ the manual record.
 1. Inspect the plan with `uv run airllm-audit runs plan`
 2. Execute raw HTTP comparisons against an already running gateway with `uv run airllm-audit runs execute`
 3. Treat matching success and matching explicit rejection as parity
-4. Keep access failures, rate limits, timeouts, generic failures, and harness failures unknown
-5. Review the report before running `uv run airllm-audit evidence accept <report>`
-6. Validate the generated taxonomy
+4. Retry transient failures; exhausted transients are not evaluated and cannot become evidence
+5. Keep access, generic, and harness failures unknown
+6. Review the report before running `uv run airllm-audit evidence accept <report>`
+7. Validate the generated taxonomy
 
 Only direct raw API observations can define provider behavior. SDK runs check client
 compatibility, and gateway observations identify gaps; neither can become provider capability
@@ -124,6 +125,10 @@ Classify the result as translation, semantic, error-mapping, streaming, gateway 
 access, or harness behavior. A provider failure mirrored by the gateway is parity. Do not
 change provider taxonomy to hide a gateway mismatch, and do not accept SDK evidence as
 provider behavior.
+
+Rate limits, timeouts, connection failures, and direct provider 5xx responses are transient.
+Retry the affected side; if retries are exhausted, report parity as not evaluated rather than
+inconclusive or mismatched.
 """,
         references=("traps",),
     ),

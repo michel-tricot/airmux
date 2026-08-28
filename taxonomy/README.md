@@ -174,8 +174,8 @@ uv run airllm-audit runs execute \
 Raw HTTP is the default and the only client mode eligible for provider evidence. Add
 `--sdk` only to test vendor SDK compatibility. A matching direct and gateway success is
 parity. A matching explicit rejection is also parity and records that the exact provider
-feature profile is unsupported. Access failures, rate limits, timeouts, generic errors,
-and harness failures remain unknown.
+feature profile is unsupported. Transient failures are retried and become `not evaluated`
+if exhausted. Access and harness failures are inconclusive. Generic errors remain unknown.
 
 By default, the direct request uses the model's applied upstream egress while
 `--gateway-surface all` varies only the caller dialect. Use `--provider-surface` for an

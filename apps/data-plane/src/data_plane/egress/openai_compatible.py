@@ -86,9 +86,9 @@ def _fold_choice(state: OpenAIStreamState, choice: UpstreamChunkChoice) -> list[
     if choice.finish_reason:
         state.finish = choice.finish_reason
     deltas: list[Delta] = []
-    if choice.delta.reasoning_content:
-        state.reasoning.append(choice.delta.reasoning_content)
-        deltas.append(ReasoningDelta(text=choice.delta.reasoning_content))
+    if reasoning := choice.delta.reasoning_content or choice.delta.reasoning:
+        state.reasoning.append(reasoning)
+        deltas.append(ReasoningDelta(text=reasoning))
     if choice.delta.content:
         state.text.append(choice.delta.content)
         deltas.append(TextDelta(text=choice.delta.content))

@@ -8,10 +8,10 @@ from pydantic import BaseModel, ConfigDict, Field, JsonValue, computed_field
 
 type Transport = Literal["buffered", "streamed"]
 type ClientMode = Literal["api", "sdk"]
-type Outcome = Literal["success", "rejected", "error", "inconclusive"]
+type Outcome = Literal["success", "rejected", "error", "transient", "inconclusive"]
 type FeatureVerdict = Literal["supported", "unsupported", "unknown"]
-type ParityVerdict = Literal["match", "mismatch", "inconclusive"]
-type ExecutionVerdict = Literal["completed", "access_blocked", "harness_error"]
+type ParityVerdict = Literal["match", "mismatch", "not_evaluated", "inconclusive"]
+type ExecutionVerdict = Literal["completed", "transient_failure", "access_blocked", "harness_error"]
 type ClaimDimension = Literal["capability", "option", "modality", "interaction", "behavior"]
 type EvidenceSource = Literal["live_api", "schema", "provider_catalog", "docs"]
 type EgressKind = Literal["openai_compatible", "openai_responses", "anthropic"]
@@ -210,7 +210,7 @@ class PairResult(FrozenModel):
     direct: Observation
     gateway: Observation
     assessment: Assessment
-    confirmations: tuple[PairAttempt, ...] = ()
+    attempts: tuple[PairAttempt, ...] = ()
 
 
 class RunMetadata(FrozenModel):
@@ -224,11 +224,13 @@ class RunMetadata(FrozenModel):
 
 class RunSettings(FrozenModel):
     confirmations: int = 1
+    transient_retries: int = 2
+    retry_backoff_seconds: float = 2
     request_timeout_seconds: float = 60
 
 
 class ReportDocument(FrozenModel):
-    schema_version: Literal[3] = 3
+    schema_version: Literal[4] = 4
     run: RunMetadata
     plan: Plan | None = None
     settings: RunSettings = RunSettings()

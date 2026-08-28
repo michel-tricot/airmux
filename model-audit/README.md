@@ -6,7 +6,7 @@ plane.
 
 The project has three independent verdicts:
 
-- Execution reports whether the experiment completed, was blocked by access, or failed in the harness
+- Execution reports whether the experiment completed, exhausted transient retries, was blocked by access, or failed in the harness
 - Feature reports whether the direct provider supports the exact claimed behavior profile
 - Parity reports whether the gateway preserved the direct provider behavior
 
@@ -78,6 +78,12 @@ Runs execute up to four experiments concurrently by default. `--concurrency 1` p
 sequential execution for debugging. Each direct and gateway pair remains ordered, and
 reports retain plan order regardless of completion order.
 
+Rate limits, timeouts, connection failures, and direct provider 5xx responses are transient.
+The runner retries only the affected side twice by default with exponential backoff. Configure
+this with `--transient-retries` and `--retry-backoff`. If retries are exhausted, execution is
+`transient failure` and parity is `not evaluated`; `inconclusive` is reserved for experiments
+that cannot be compared because access or the harness prevents the test.
+
 ## Resume an interrupted run
 
 `runs execute` creates its report before issuing the first request and checkpoints it after
@@ -88,13 +94,13 @@ missing experiments:
 uv run airllm-audit runs resume model-audit/reports/<run>.json
 ```
 
-The checkpoint contains the complete original plan, confirmation count, request timeout,
-partial results, and completion state. Resume uses the stored gateway URL and requires the
-gateway key through `AIRLLM_API_KEY` or `--gateway-api-key`.
+The checkpoint contains the complete original plan, confirmation count, transient retry policy,
+request timeout, partial results, and completion state. Resume uses the stored gateway URL and
+requires the gateway key through `AIRLLM_API_KEY` or `--gateway-api-key`.
 
 Resume rejects a changed taxonomy rather than mixing targets from different catalog
-versions. It preserves original plan order and may override concurrency, confirmations, or
-request timeout explicitly.
+versions. It preserves original plan order and may override concurrency, confirmations,
+transient retries, retry backoff, or request timeout explicitly.
 
 ## Provider sources
 
@@ -277,7 +283,8 @@ The deterministic reducer applies these rules:
 
 - Confirmed direct success supports the exact claim profile
 - Explicit provider rejection makes that exact profile unsupported
-- Authentication, access, rate limits, timeouts, and generic errors remain unknown
+- Authentication and access failures remain unknown; exhausted transient failures are not promoted as evidence
+- Generic provider errors remain unknown
 - Unknown evidence never overwrites conclusive evidence
 - Conflicting equally recent conclusive evidence resolves to unknown
 - Evidence stops affecting generated behavior when its case definition changes

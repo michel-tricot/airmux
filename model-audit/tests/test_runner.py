@@ -3,7 +3,7 @@ from __future__ import annotations
 import threading
 
 from model_audit import runner
-from model_audit.drivers.base import ClientDriver, Connection
+from model_audit.drivers.base import ClientDriver, Connection, status_outcome
 from model_audit.models import Experiment, Observation, Plan
 from tests.helpers import case, target
 
@@ -111,7 +111,7 @@ def test_runner_confirms_and_reports_a_gateway_gap(monkeypatch):
     assert result.assessment.feature == "supported"
     assert result.assessment.parity == "mismatch"
     assert result.assessment.reason == "reproduced across 2 attempts"
-    assert len(result.confirmations) == 1
+    assert len(result.attempts) == 2
 
 
 def test_missing_provider_credential_is_an_access_result(monkeypatch):
@@ -152,6 +152,55 @@ def test_gateway_client_failure_is_a_harness_result(monkeypatch):
 
     assert result.assessment.execution == "harness_error"
     assert result.assessment.parity == "inconclusive"
+
+
+def test_gateway_rate_limit_is_transient():
+    gateway = Connection(base_url="http://gateway/inf/v1", api_key="gateway", auth="bearer", headers={}, route="gateway")
+    direct = Connection(base_url="http://provider/v1", api_key="provider", auth="bearer", headers={}, route="direct")
+
+    assert status_outcome(gateway, 429) == "transient"
+    assert status_outcome(gateway, 500) == "error"
+    assert status_outcome(direct, 500) == "transient"
+
+
+def test_runner_retries_only_the_transient_path(monkeypatch):
+    monkeypatch.setenv("STUB_API_KEY", "provider")
+    direct = Observation(outcome="success", text="ok")
+    transient = Observation(outcome="transient", error_code="rate_limit", http_status=429)
+    gateway = Observation(outcome="success", text="ok")
+    monkeypatch.setattr(runner, "discover", lambda: {"sequence": SequenceDriver((direct, transient, gateway))})
+    selected = experiment("stub/model", driver_id="sequence")
+
+    result = runner.execute(
+        Plan(experiments=(selected,)),
+        Gateway(),
+        options=runner.ExecutionOptions(confirmations=0, transient_retries=1, retry_backoff_seconds=0),
+    )[0]
+
+    assert result.assessment.execution == "completed"
+    assert result.assessment.parity == "match"
+    assert len(result.attempts) == 2
+    assert result.attempts[0].gateway.outcome == "transient"
+    assert result.attempts[1].direct == direct
+    assert result.attempts[1].gateway == gateway
+
+
+def test_runner_reports_exhausted_transient_failures_separately(monkeypatch):
+    monkeypatch.setenv("STUB_API_KEY", "provider")
+    direct = Observation(outcome="success", text="ok")
+    transient = Observation(outcome="transient", error_code="rate_limit", http_status=429)
+    monkeypatch.setattr(runner, "discover", lambda: {"sequence": SequenceDriver((direct, transient, transient))})
+    selected = experiment("stub/model", driver_id="sequence")
+
+    result = runner.execute(
+        Plan(experiments=(selected,)),
+        Gateway(),
+        options=runner.ExecutionOptions(confirmations=0, transient_retries=1, retry_backoff_seconds=0),
+    )[0]
+
+    assert result.assessment.execution == "transient_failure"
+    assert result.assessment.parity == "not_evaluated"
+    assert len(result.attempts) == 2
 
 
 def test_runner_uses_independent_provider_and_gateway_endpoints(monkeypatch):
@@ -197,4 +246,4 @@ def test_gateway_authentication_stops_scheduling_new_experiments(monkeypatch):
     assert driver.direct_calls == 2
     assert [result.model_id for result in results] == [f"stub/{index}" for index in range(4)]
     assert all(result.assessment.execution == "access_blocked" for result in results)
-    assert all(not result.confirmations for result in results)
+    assert all(len(result.attempts) == 1 for result in results)

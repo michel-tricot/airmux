@@ -72,7 +72,7 @@ class AnthropicDriver(ClientDriver):
         except anthropic.APITimeoutError as error:
             elapsed = (time.perf_counter() - started) * 1000
             return Observation(
-                outcome="inconclusive",
+                outcome="transient",
                 error_code="request_timeout",
                 error_message=str(error)[:500],
                 duration_ms=elapsed,
@@ -81,7 +81,7 @@ class AnthropicDriver(ClientDriver):
         except anthropic.APIConnectionError as error:
             elapsed = (time.perf_counter() - started) * 1000
             return Observation(
-                outcome="inconclusive",
+                outcome="transient",
                 error_code="connection_error",
                 error_message=str(error)[:500],
                 duration_ms=elapsed,

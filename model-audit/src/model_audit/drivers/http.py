@@ -129,9 +129,9 @@ def _send(
                 response = client.post(url, headers=_headers(connection, endpoint), json=request)
                 content = ""
     except httpx.TimeoutException as error:
-        return _failure(error, started, "request_timeout", "inconclusive")
+        return _failure(error, started, "request_timeout", "transient")
     except httpx.HTTPError as error:
-        return _failure(error, started, "connection_error", "inconclusive")
+        return _failure(error, started, "connection_error", "transient")
     try:
         elapsed = (time.perf_counter() - started) * 1000
         if response.is_error:
@@ -156,9 +156,9 @@ def _post_buffered(
     try:
         response = httpx.post(url, headers=_headers(connection, endpoint), json=request, timeout=connection.timeout_seconds)
     except httpx.TimeoutException as error:
-        return _failure(error, started, "request_timeout", "inconclusive"), None
+        return _failure(error, started, "request_timeout", "transient"), None
     except httpx.HTTPError as error:
-        return _failure(error, started, "connection_error", "inconclusive"), None
+        return _failure(error, started, "connection_error", "transient"), None
     elapsed = (time.perf_counter() - started) * 1000
     if response.is_error:
         return _error_observation(connection, response, elapsed), None

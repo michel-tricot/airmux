@@ -98,3 +98,14 @@ def test_claimed_reasoning_presence_still_participates_in_parity():
 
     assert result.parity == "mismatch"
     assert "reasoning_presence" in result.differences
+
+
+def test_transient_failure_does_not_produce_a_parity_verdict():
+    direct = Observation(outcome="success", text="ok")
+    gateway = Observation(outcome="transient", error_code="rate_limit", http_status=429)
+
+    result = assess(direct, gateway, Oracle(text_contains="ok"))
+
+    assert result.execution == "transient_failure"
+    assert result.parity == "not_evaluated"
+    assert result.feature == "supported"

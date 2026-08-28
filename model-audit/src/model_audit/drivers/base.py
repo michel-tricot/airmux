@@ -36,8 +36,8 @@ def access_error(connection: Connection, status_code: int) -> str | None:
 def status_outcome(connection: Connection, status_code: int) -> Outcome:
     if access_error(connection, status_code) is not None:
         return "inconclusive"
-    if connection.route == "direct" and (status_code == TOO_MANY_REQUESTS or status_code >= SERVER_ERROR):
-        return "inconclusive"
+    if status_code == TOO_MANY_REQUESTS or (connection.route == "direct" and status_code >= SERVER_ERROR):
+        return "transient"
     return "rejected" if status_code in REJECTION_STATUSES else "error"
 
 

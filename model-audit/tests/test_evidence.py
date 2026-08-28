@@ -82,6 +82,14 @@ def test_incomplete_runs_do_not_become_provider_behavior_evidence():
     assert records_from_report(report, (case(),)) == ()
 
 
+def test_transient_provider_failures_do_not_become_evidence():
+    report = _report("transient", "2026-01-01T00:00:00+00:00", "unknown", execution="transient_failure")
+    transient = Observation(outcome="transient", error_code="rate_limit", http_status=429)
+    report = report.model_copy(update={"results": (report.results[0].model_copy(update={"direct": transient}),)})
+
+    assert records_from_report(report, (case(),)) == ()
+
+
 def test_gateway_failure_does_not_discard_a_valid_direct_observation():
     report = _report("gateway-failed", "2026-01-01T00:00:00+00:00", "supported", execution="harness_error")
 
