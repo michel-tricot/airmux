@@ -29,6 +29,24 @@ ERROR_CASES = (
     ("openai_compatible", {"error": {"code": "rate_limit_exceeded", "message": "slow down"}}, "rate_limit_exceeded", "slow down"),
     ("openai_compatible", {"error": "File content is not supported"}, "upstream_error", "File content is not supported"),
     ("openai_compatible", {"code": "invalid-argument", "error": "Model does not support stop"}, "invalid-argument", "Model does not support stop"),
+    (
+        "openai_compatible",
+        {
+            "object": "error",
+            "message": "reasoning_effort is not enabled for this model",
+            "type": "invalid_request_invalid_args",
+            "code": "3051",
+        },
+        "3051",
+        "reasoning_effort is not enabled for this model",
+    ),
+    (
+        "openai_compatible",
+        {"detail": [{"type": "string_type", "loc": ["body", "messages", 0, "content"], "msg": "Input should be a valid string"}]},
+        "upstream_error",
+        '{"detail":[{"type":"string_type","loc":["body","messages",0,"content"],"msg":"Input should be a valid string"}]}',
+    ),
+    ("openai_compatible", "temporary provider failure", "upstream_error", "temporary provider failure"),
     ("openai_responses", {"error": {"code": "rate_limit_exceeded", "message": "slow down"}}, "rate_limit_exceeded", "slow down"),
     ("anthropic", {"type": "error", "error": {"type": "rate_limit_error", "message": "slow down"}}, "rate_limit_error", "slow down"),
 )

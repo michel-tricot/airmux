@@ -14,6 +14,17 @@ def test_matching_explicit_rejections_are_parity_and_unsupported():
     assert result.parity == "match"
 
 
+def test_model_specific_not_enabled_rejection_is_unsupported():
+    messages = ("reasoning_effort is not enabled for this model", "Logprobs are not enabled for this model")
+
+    for message in messages:
+        direct = Observation(outcome="rejected", http_status=400, error_code="3051", error_message=message)
+        result = assess(direct, direct, Oracle(text_nonempty=True))
+
+        assert result.feature == "unsupported"
+        assert result.parity == "match"
+
+
 def test_matching_generic_rejections_are_parity_but_unknown_support():
     direct = Observation(outcome="rejected", http_status=400, error_code="invalid_request_error", error_message="Could not process image")
 

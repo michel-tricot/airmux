@@ -7,6 +7,7 @@ to a default rather than failing the response."""
 
 from __future__ import annotations
 
+import json
 from typing import TYPE_CHECKING, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -207,17 +208,24 @@ class UpstreamErrorBody(BaseModel):
     @model_validator(mode="before")
     @classmethod
     def normalize_error(cls, value: object) -> object:
+        if isinstance(value, str):
+            return {"error": {"message": value}}
         if not isinstance(value, dict):
             return value
         error = value.get("error")
-        if not isinstance(error, str):
-            return value
-        return {
-            "error": {
-                "code": value.get("code"),
-                "message": error,
+        if isinstance(error, str):
+            return {
+                "error": {
+                    "code": value.get("code"),
+                    "message": error,
+                }
             }
-        }
+        if error is not None:
+            return value
+        message = value.get("message")
+        if not isinstance(message, str) and "detail" in value:
+            message = json.dumps(value, ensure_ascii=False, separators=(",", ":"))
+        return {"error": {"code": value.get("code"), "message": message}} if isinstance(message, str) else value
 
 
 class UpstreamToolCall(BaseModel):
