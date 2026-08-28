@@ -66,3 +66,10 @@ def test_openai_catalog_declares_its_output_limit_alias():
     provider = next(item for item in document["providers"] if item["id"] == "openai")
 
     assert provider["param_aliases"]["max_tokens"] == "max_completion_tokens"
+
+
+def test_gpt_5_6_sol_routes_through_responses():
+    document = yaml.safe_load((ROOT / "taxonomy/taxonomy.yml").read_text(encoding="utf-8"))
+    model = next(item for item in document["models"] if item["model_id"] == "openai/gpt-5.6-sol")
+
+    assert model["egress_kind"] == "openai_responses"

@@ -1,5 +1,171 @@
 {
   "schema_version": 1,
-  "generated_from": "4f53cda18c2baa0c",
-  "behaviors": []
+  "generated_from": "1679c20751ee9dba",
+  "behaviors": [
+    {
+      "provider_id": "openai",
+      "model_id": "openai/gpt-5.6-sol",
+      "surface_id": "oai_responses",
+      "endpoint": "responses",
+      "claim": {
+        "dimension": "capability",
+        "name": "structured_output",
+        "profile": {
+          "mode": "json_schema"
+        },
+        "key": "capability:structured_output:{\"mode\":\"json_schema\"}"
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "45d89f812ec585f7c8c1b2eb"
+      ],
+      "observed_at": "2026-08-28T22:52:56.653613+00:00"
+    },
+    {
+      "provider_id": "openai",
+      "model_id": "openai/gpt-5.6-sol",
+      "surface_id": "oai_responses",
+      "endpoint": "responses",
+      "claim": {
+        "dimension": "capability",
+        "name": "tool_calling",
+        "profile": {},
+        "key": "capability:tool_calling:{}"
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "e997d3521fa85d0b753324ab"
+      ],
+      "observed_at": "2026-08-28T22:52:56.653613+00:00"
+    },
+    {
+      "provider_id": "openai",
+      "model_id": "openai/gpt-5.6-sol",
+      "surface_id": "oai_responses",
+      "endpoint": "responses",
+      "claim": {
+        "dimension": "interaction",
+        "name": "streaming+tools",
+        "profile": {},
+        "key": "interaction:streaming+tools:{}"
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "d1b6227ce3e2cf2cb566d30b"
+      ],
+      "observed_at": "2026-08-28T22:52:56.653613+00:00"
+    },
+    {
+      "provider_id": "openai",
+      "model_id": "openai/gpt-5.6-sol",
+      "surface_id": "oai_responses",
+      "endpoint": "responses",
+      "claim": {
+        "dimension": "interaction",
+        "name": "tool_result_round_trip",
+        "profile": {},
+        "key": "interaction:tool_result_round_trip:{}"
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "74093c337c817741ce19e0f6"
+      ],
+      "observed_at": "2026-08-28T22:52:56.653613+00:00"
+    },
+    {
+      "provider_id": "openai",
+      "model_id": "openai/gpt-5.6-sol",
+      "surface_id": "oai_responses",
+      "endpoint": "responses",
+      "claim": {
+        "dimension": "option",
+        "name": "parallel_tool_calls",
+        "profile": {
+          "value": true
+        },
+        "key": "option:parallel_tool_calls:{\"value\":true}"
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "c854d5cb21d9cc015b7d54c3"
+      ],
+      "observed_at": "2026-08-28T22:52:56.653613+00:00"
+    },
+    {
+      "provider_id": "openai",
+      "model_id": "openai/gpt-5.6-sol",
+      "surface_id": "oai_responses",
+      "endpoint": "responses",
+      "claim": {
+        "dimension": "option",
+        "name": "response_format",
+        "profile": {
+          "mode": "json_schema"
+        },
+        "key": "option:response_format:{\"mode\":\"json_schema\"}"
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "719264f3245348bb87c6fbb9"
+      ],
+      "observed_at": "2026-08-28T22:52:56.653613+00:00"
+    },
+    {
+      "provider_id": "openai",
+      "model_id": "openai/gpt-5.6-sol",
+      "surface_id": "oai_responses",
+      "endpoint": "responses",
+      "claim": {
+        "dimension": "option",
+        "name": "strict_tools",
+        "profile": {
+          "value": true
+        },
+        "key": "option:strict_tools:{\"value\":true}"
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "beeca366734706ea3e4b26ca"
+      ],
+      "observed_at": "2026-08-28T22:52:56.653613+00:00"
+    },
+    {
+      "provider_id": "openai",
+      "model_id": "openai/gpt-5.6-sol",
+      "surface_id": "oai_responses",
+      "endpoint": "responses",
+      "claim": {
+        "dimension": "option",
+        "name": "tool_choice",
+        "profile": {
+          "mode": "named"
+        },
+        "key": "option:tool_choice:{\"mode\":\"named\"}"
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "fbfdc187fc54b049f820d3e9"
+      ],
+      "observed_at": "2026-08-28T22:52:56.653613+00:00"
+    },
+    {
+      "provider_id": "openai",
+      "model_id": "openai/gpt-5.6-sol",
+      "surface_id": "oai_responses",
+      "endpoint": "responses",
+      "claim": {
+        "dimension": "option",
+        "name": "tool_choice",
+        "profile": {
+          "mode": "required"
+        },
+        "key": "option:tool_choice:{\"mode\":\"required\"}"
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "2c64beb6fc314fd94b90a433"
+      ],
+      "observed_at": "2026-08-28T22:52:56.653613+00:00"
+    }
+  ]
 }
