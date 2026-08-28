@@ -55,9 +55,14 @@ def test_report_is_machine_readable_and_explains_gateway_gaps(tmp_path):
     assert '"stability": "flaky"' in document
     assert "Stability: 0 stable, 1 flaky" in report
     assert "gateway_rejection" in report
+    assert 'class="result gap-gateway_rejection"' in report
+    assert "<details" in report
+    assert "<summary>" in report
+    assert "<table" not in report
+    assert "color-scheme: dark" in report
+    assert "Provider observation" in report
+    assert "Gateway observation" in report
     assert "runs execute --model stub/model" in report
-    assert "Direct:" in report
-    assert "Gateway:" in report
 
 
 def test_incomplete_report_retains_only_missing_experiments_for_resume():
