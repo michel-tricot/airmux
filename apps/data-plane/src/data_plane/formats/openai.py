@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from data_plane.canonical import (
     AssistantPart,
@@ -203,6 +203,21 @@ class UpstreamErrorBody(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
     error: UpstreamErrorDetail
+
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_error(cls, value: object) -> object:
+        if not isinstance(value, dict):
+            return value
+        error = value.get("error")
+        if not isinstance(error, str):
+            return value
+        return {
+            "error": {
+                "code": value.get("code"),
+                "message": error,
+            }
+        }
 
 
 class UpstreamToolCall(BaseModel):

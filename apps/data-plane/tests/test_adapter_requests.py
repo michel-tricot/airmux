@@ -25,11 +25,13 @@ REFERENCE_SCHEMA = {
     "openai_responses": "oai_responses.openai.request.json",
     "anthropic": "anthropic.anthropic.request.json",
 }
-ERROR_BODY = {
-    "openai_compatible": ({"error": {"code": "rate_limit_exceeded", "message": "slow down"}}, "rate_limit_exceeded"),
-    "openai_responses": ({"error": {"code": "rate_limit_exceeded", "message": "slow down"}}, "rate_limit_exceeded"),
-    "anthropic": ({"type": "error", "error": {"type": "rate_limit_error", "message": "slow down"}}, "rate_limit_error"),
-}
+ERROR_CASES = (
+    ("openai_compatible", {"error": {"code": "rate_limit_exceeded", "message": "slow down"}}, "rate_limit_exceeded", "slow down"),
+    ("openai_compatible", {"error": "File content is not supported"}, "upstream_error", "File content is not supported"),
+    ("openai_compatible", {"code": "invalid-argument", "error": "Model does not support stop"}, "invalid-argument", "Model does not support stop"),
+    ("openai_responses", {"error": {"code": "rate_limit_exceeded", "message": "slow down"}}, "rate_limit_exceeded", "slow down"),
+    ("anthropic", {"type": "error", "error": {"type": "rate_limit_error", "message": "slow down"}}, "rate_limit_error", "slow down"),
+)
 ASSISTANT_PART_TYPES = {kind: set() for kind in REGISTRY}
 
 
@@ -113,12 +115,11 @@ def test_the_upstream_request_names_the_upstream_model_and_spends_the_injected_c
     assert "sk-test" in upstream.headers.get("authorization", "") or "sk-test" in upstream.headers.get("x-api-key", "")
 
 
-@pytest.mark.parametrize("kind", sorted(REGISTRY))
-def test_provider_http_errors_become_canonical(kind):
+@pytest.mark.parametrize(("kind", "body", "code", "message"), ERROR_CASES)
+def test_provider_http_errors_become_canonical(kind, body, code, message):
     adapter, _ = _adapter(kind)
-    body, code = ERROR_BODY[kind]
     error = adapter.map_error(UpstreamResponseError(429, json.dumps(body).encode()))
-    assert (error.status, error.code, error.message) == (429, code, "slow down")
+    assert (error.status, error.code, error.message) == (429, code, message)
 
 
 def test_openai_compatible_accepts_null_prompt_token_details():
