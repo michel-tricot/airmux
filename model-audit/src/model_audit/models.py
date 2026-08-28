@@ -120,6 +120,7 @@ class Target(FrozenModel):
     credential_env: str
     auth: str
     headers: dict[str, str]
+    param_aliases: dict[str, str]
     model_id: str
     upstream_model: str
     context_window: int
@@ -230,7 +231,7 @@ class RunSettings(FrozenModel):
 
 
 class ReportDocument(FrozenModel):
-    schema_version: Literal[4] = 4
+    schema_version: Literal[5] = 5
     run: RunMetadata
     plan: Plan | None = None
     settings: RunSettings = RunSettings()

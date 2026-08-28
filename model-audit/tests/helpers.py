@@ -14,6 +14,7 @@ def target(**changes: object) -> Target:
         credential_env="STUB_API_KEY",
         auth="bearer",
         headers={},
+        param_aliases={},
         model_id="stub/model",
         upstream_model="model",
         context_window=8192,

@@ -181,6 +181,8 @@ By default, the direct request uses the model's applied upstream egress while
 `--gateway-surface all` varies only the caller dialect. Use `--provider-surface` for an
 explicit provider capability probe; parity is diagnostic when that surface differs from
 the model's applied egress.
+Direct raw HTTP requests apply the provider's cataloged parameter aliases. Gateway requests
+keep the selected caller surface spelling so the gateway remains responsible for translation.
 
 Interrupted runs are checkpointed after every pair:
 

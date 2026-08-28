@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Literal
 
 if TYPE_CHECKING:
@@ -23,6 +23,7 @@ class Connection:
     headers: dict[str, str]
     route: Literal["direct", "gateway"]
     timeout_seconds: float = 60
+    param_aliases: dict[str, str] = field(default_factory=dict)
 
 
 def access_error(connection: Connection, status_code: int) -> str | None:

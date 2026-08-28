@@ -69,6 +69,8 @@ The provider and gateway surfaces are independent. By default, the direct call u
 upstream egress configured for that model in the applied taxonomy. `--gateway-surface all`
 then sends the same semantic request through Chat Completions, Responses, and Messages
 ingress. This is the valid parity matrix because only the caller dialect changes.
+Direct raw HTTP requests apply provider-declared parameter aliases from the catalog, while
+gateway requests retain the selected caller surface spelling.
 
 `--provider-surface` explicitly probes another direct provider surface. Use it for provider
 capability discovery. Its parity result is diagnostic unless the applied model uses that

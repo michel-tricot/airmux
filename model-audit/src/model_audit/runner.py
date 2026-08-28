@@ -90,6 +90,7 @@ def _direct_connection(experiment: Experiment, api_key: str, timeout_seconds: fl
         headers=target.headers,
         route="direct",
         timeout_seconds=timeout_seconds,
+        param_aliases=target.param_aliases,
     )
 
 

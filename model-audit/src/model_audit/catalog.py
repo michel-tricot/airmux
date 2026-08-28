@@ -72,6 +72,7 @@ def _target(provider: Mapping[str, object], model: Mapping[str, object], surface
         credential_env=str(provider["env_var"]),
         auth=surface.auth,
         headers=surface.headers,
+        param_aliases={str(name): str(alias) for name, alias in _mapping(provider.get("param_aliases")).items()},
         model_id=f"{provider_id}/{model['id']}",
         upstream_model=str(model.get("upstream_id") or model["id"]),
         context_window=context if isinstance(context, int) else 0,
