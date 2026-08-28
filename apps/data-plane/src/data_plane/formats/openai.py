@@ -10,7 +10,7 @@ from __future__ import annotations
 import json
 from typing import TYPE_CHECKING, Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from data_plane.canonical import (
     AssistantPart,
@@ -191,6 +191,11 @@ class UpstreamFunction(BaseModel):
 
     name: str = ""
     arguments: str = ""
+
+    @field_validator("name", "arguments", mode="before")
+    @classmethod
+    def null_as_empty(cls, value: object) -> object:
+        return "" if value is None else value
 
 
 class UpstreamErrorDetail(BaseModel):
