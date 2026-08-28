@@ -1,6 +1,20 @@
 from __future__ import annotations
 
-from model_audit.drivers.normalize import openai_responses_stream
+from model_audit.drivers.normalize import openai_responses, openai_responses_stream
+
+
+def test_responses_function_call_has_a_tool_finish_reason():
+    observation = openai_responses(
+        {
+            "status": "completed",
+            "output": [{"type": "function_call", "name": "lookup", "arguments": "{}"}],
+            "usage": {"output_tokens": 8},
+        },
+        10,
+        "HTTP JSON",
+    )
+
+    assert observation.finish_reason == "tool_calls"
 
 
 def test_responses_stream_preserves_failed_terminal_event():

@@ -128,3 +128,30 @@ def test_multiple_gateway_surfaces_expand_the_plan():
     )
 
     assert [experiment.gateway_surface_id for experiment in plan.experiments] == ["oai", "oai_responses", "anthropic"]
+
+
+def test_default_plan_compares_the_gateway_with_its_configured_upstream_surface():
+    targets = [
+        target(surface_id="oai", endpoint="chat/completions", egress_kind="openai_compatible", gateway_egress_kind="openai_compatible"),
+        target(surface_id="oai_responses", endpoint="responses", egress_kind="openai_responses", gateway_egress_kind="openai_compatible"),
+    ]
+
+    plan = build_plan(targets, [case()], {"http": frozenset({"chat/completions", "responses"})})
+
+    assert [experiment.target.surface_id for experiment in plan.experiments] == ["oai"]
+
+
+def test_explicit_provider_surface_can_probe_a_nonconfigured_provider_surface():
+    targets = [
+        target(surface_id="oai", endpoint="chat/completions", egress_kind="openai_compatible", gateway_egress_kind="openai_compatible"),
+        target(surface_id="oai_responses", endpoint="responses", egress_kind="openai_responses", gateway_egress_kind="openai_compatible"),
+    ]
+
+    plan = build_plan(
+        targets,
+        [case()],
+        {"http": frozenset({"chat/completions", "responses"})},
+        Filters(direct_surface="oai_responses"),
+    )
+
+    assert [experiment.target.surface_id for experiment in plan.experiments] == ["oai_responses"]

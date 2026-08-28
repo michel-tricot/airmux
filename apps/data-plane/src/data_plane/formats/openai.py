@@ -16,6 +16,7 @@ from data_plane.canonical import (
     CanonicalMessage,
     CanonicalRequest,
     ContentPart,
+    DocumentPart,
     FinishReason,
     GatewayInfo,
     ImagePart,
@@ -49,8 +50,10 @@ class ChatBody(BaseModel):
     top_p: float | None = None
     stop: list[str] | None = None
     seed: int | None = None
+    reasoning_effort: str | None = None
     tools: list[dict[str, Any]] | None = None
     tool_choice: str | dict[str, Any] | None = None
+    parallel_tool_calls: bool | None = None
     response_format: dict[str, Any] | None = None
     stream: bool | None = None
     stream_options: dict[str, Any] | None = None
@@ -58,6 +61,19 @@ class ChatBody(BaseModel):
 
 def _image_to_url(part: ImagePart) -> str:
     return part.url if part.url is not None else f"{DATA_URL}{part.media_type};base64,{part.data}"
+
+
+def _document(part: DocumentPart) -> dict[str, Any]:
+    file: dict[str, Any] = {}
+    if part.filename is not None or part.data is not None:
+        file["filename"] = part.filename or "document.pdf"
+    if part.file_id is not None:
+        file["file_id"] = part.file_id
+    elif part.data is not None:
+        file["file_data"] = f"{DATA_URL}{part.media_type};base64,{part.data}"
+    else:
+        file["file_data"] = part.url
+    return {"type": "file", "file": file}
 
 
 def _text_of_parts(parts: Sequence[Part]) -> str:
@@ -73,6 +89,8 @@ def _user_content(parts: Sequence[ContentPart]) -> str | list[dict[str, Any]]:
             blocks.append({"type": "text", "text": part.text})
         elif isinstance(part, ImagePart):
             blocks.append({"type": "image_url", "image_url": {"url": _image_to_url(part)}})
+        elif isinstance(part, DocumentPart):
+            blocks.append(_document(part))
     return blocks
 
 
@@ -109,7 +127,12 @@ def to_tools(tools: Sequence[ToolDef] | None) -> list[dict[str, Any]] | None:
     return [
         {
             "type": "function",
-            "function": {"name": tool.name, **({"description": tool.description} if tool.description else {}), "parameters": tool.parameters},
+            "function": {
+                "name": tool.name,
+                **({"description": tool.description} if tool.description else {}),
+                "parameters": tool.parameters,
+                **({"strict": tool.strict} if tool.strict is not None else {}),
+            },
         }
         for tool in tools
     ]
@@ -121,6 +144,17 @@ def to_tool_choice(choice: ToolChoice | None) -> str | dict[str, Any] | None:
     if isinstance(choice, NamedTool):
         return {"type": "function", "function": {"name": choice.name}}
     return choice
+
+
+def _response_format(req: CanonicalRequest) -> dict[str, Any] | None:
+    if req.response_format is None:
+        return None
+    response_format = req.response_format.model_dump(exclude_none=True)
+    if response_format.get("type") == "json_schema":
+        json_schema = dict(response_format.get("json_schema") or {})
+        json_schema.setdefault("name", "response")
+        response_format["json_schema"] = json_schema
+    return response_format
 
 
 def body_of(req: CanonicalRequest, upstream_model: str) -> ChatBody:
@@ -137,9 +171,11 @@ def body_of(req: CanonicalRequest, upstream_model: str) -> ChatBody:
         top_p=req.top_p,
         stop=req.stop,
         seed=req.seed,
+        reasoning_effort=req.reasoning.effort if req.reasoning is not None else None,
         tools=to_tools(req.tools),
         tool_choice=to_tool_choice(req.tool_choice),
-        response_format=req.response_format.model_dump(exclude_none=True) if req.response_format else None,
+        parallel_tool_calls=req.parallel_tool_calls,
+        response_format=_response_format(req),
         stream=req.stream or None,
         stream_options={"include_usage": True} if req.stream else None,
     )
@@ -202,7 +238,7 @@ class UpstreamUsage(BaseModel):
 
     prompt_tokens: int = 0
     completion_tokens: int = 0
-    prompt_tokens_details: UpstreamTokenDetails = Field(default_factory=UpstreamTokenDetails)
+    prompt_tokens_details: UpstreamTokenDetails | None = None
 
 
 class UpstreamCompletion(BaseModel):
@@ -282,7 +318,7 @@ def usage_of(reported: UpstreamUsage | None) -> Usage:
     return Usage(
         input_tokens=reported.prompt_tokens,
         output_tokens=reported.completion_tokens,
-        cache_read_tokens=reported.prompt_tokens_details.cached_tokens,
+        cache_read_tokens=reported.prompt_tokens_details.cached_tokens if reported.prompt_tokens_details is not None else 0,
     )
 
 
@@ -298,11 +334,27 @@ def _str(value: object) -> str:
     return value if isinstance(value, str) else ""
 
 
+def _bool(value: object) -> bool | None:
+    return value if isinstance(value, bool) else None
+
+
 def _image_from_url(url: str) -> ImagePart:
     if not url.startswith(DATA_URL):
         return ImagePart(url=url)
     header, _, payload = url[len(DATA_URL) :].partition(",")
     return ImagePart(media_type=header.removesuffix(";base64"), data=payload)
+
+
+def _document_from_file(value: object) -> DocumentPart:
+    file = _mapping(value)
+    filename = _str(file.get("filename")) or None
+    if file_id := _str(file.get("file_id")):
+        return DocumentPart(filename=filename, file_id=file_id)
+    file_data = _str(file.get("file_data"))
+    if file_data.startswith(DATA_URL) and "," in file_data:
+        header, payload = file_data[len(DATA_URL) :].split(",", 1)
+        return DocumentPart(filename=filename, media_type=header.removesuffix(";base64"), data=payload)
+    return DocumentPart(filename=filename, url=file_data)
 
 
 def _text_of(content: object) -> str:
@@ -326,6 +378,8 @@ def _user_parts(content: object) -> list[ContentPart]:
             parts.append(TextPart(text=_str(block.get("text"))))
         elif block.get("type") == "image_url":
             parts.append(_image_from_url(_str(_mapping(block.get("image_url")).get("url"))))
+        elif block.get("type") == "file":
+            parts.append(_document_from_file(block.get("file")))
     return parts
 
 
@@ -382,6 +436,7 @@ def from_tools(tools: object) -> list[ToolDef] | None:
                 name=_str(function.get("name")),
                 description=_str(function.get("description")) or None,
                 parameters=dict(_mapping(function.get("parameters"))),
+                strict=_bool(function.get("strict")),
             )
         )
     return defs

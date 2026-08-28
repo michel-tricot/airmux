@@ -10,12 +10,12 @@ COPY lib/contract/pyproject.toml lib/contract/
 COPY apps/cli/pyproject.toml apps/cli/
 COPY apps/control-plane/pyproject.toml apps/control-plane/
 COPY apps/data-plane/pyproject.toml apps/data-plane/
-RUN uv sync --all-packages --no-dev --frozen --no-install-workspace
+RUN uv sync --only-group backend --frozen --no-install-workspace
 
 # Source layer: any code change invalidates this COPY, so the workspace packages are always
 # reinstalled from current source, never served stale from the dependency layer.
 COPY . .
-RUN uv sync --all-packages --no-dev --frozen
+RUN uv sync --only-group backend --frozen
 
 FROM python:3.13-slim
 COPY --from=build /app /app

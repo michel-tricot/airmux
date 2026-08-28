@@ -8,6 +8,7 @@ from data_plane.canonical import (
     AssistantPart,
     CanonicalMessage,
     CanonicalRequest,
+    DocumentPart,
     FinishReason,
     ImagePart,
     NamedTool,
@@ -27,6 +28,19 @@ def _image(part: ImagePart) -> dict[str, str]:
     if part.url is not None:
         return {"type": "input_image", "image_url": part.url, "detail": "auto"}
     return {"type": "input_image", "image_url": f"data:{part.media_type};base64,{part.data}", "detail": "auto"}
+
+
+def _document(part: DocumentPart) -> dict[str, str]:
+    item = {"type": "input_file"}
+    if part.filename is not None:
+        item["filename"] = part.filename
+    if part.file_id is not None:
+        item["file_id"] = part.file_id
+    elif part.data is not None:
+        item["file_data"] = f"data:{part.media_type};base64,{part.data}"
+    else:
+        item["file_url"] = part.url or ""
+    return item
 
 
 def input_of(messages: Sequence[CanonicalMessage]) -> list[dict[str, Any]]:
@@ -65,6 +79,8 @@ def input_of(messages: Sequence[CanonicalMessage]) -> list[dict[str, Any]]:
                 content.append({"type": "input_text", "text": part.text})
             elif isinstance(part, ImagePart):
                 content.append(_image(part))
+            elif isinstance(part, DocumentPart):
+                content.append(_document(part))
         if content:
             items.append({"type": "message", "role": message.role, "content": content})
     return items
@@ -89,6 +105,13 @@ def tool_choice_of(choice: object) -> object:
     if isinstance(choice, NamedTool):
         return {"type": "function", "name": choice.name}
     return choice
+
+
+def _reasoning_of(request: CanonicalRequest) -> dict[str, str] | None:
+    if request.reasoning is None:
+        return None
+    reasoning = {name: value for name in ("effort", "summary") if (value := getattr(request.reasoning, name)) is not None}
+    return reasoning or None
 
 
 def body_of(request: CanonicalRequest, upstream_model: str) -> dict[str, Any]:
@@ -116,8 +139,8 @@ def body_of(request: CanonicalRequest, upstream_model: str) -> dict[str, Any]:
         body["tool_choice"] = tool_choice_of(request.tool_choice)
     if request.parallel_tool_calls is not None:
         body["parallel_tool_calls"] = request.parallel_tool_calls
-    if request.reasoning_effort is not None:
-        body["reasoning"] = {"effort": request.reasoning_effort}
+    if reasoning := _reasoning_of(request):
+        body["reasoning"] = reasoning
     if request.response_format is not None:
         if request.response_format.type == "json_schema":
             body["text"] = {"format": {"type": "json_schema", **(request.response_format.json_schema or {})}}
@@ -190,6 +213,15 @@ def messages_of(value: object) -> list[CanonicalMessage]:  # noqa: PLR0912 - eac
                         parts.append(ImagePart(data=payload, media_type=header.removesuffix(";base64")))
                     elif url:
                         parts.append(ImagePart(url=url))
+                elif block.get("type") == "input_file":
+                    filename = _text(block.get("filename")) or None
+                    if file_id := _text(block.get("file_id")):
+                        parts.append(DocumentPart(filename=filename, file_id=file_id))
+                    elif file_data := _text(block.get("file_data")):
+                        header, payload = file_data[5:].split(",", 1)
+                        parts.append(DocumentPart(filename=filename, media_type=header.removesuffix(";base64"), data=payload))
+                    elif file_url := _text(block.get("file_url")):
+                        parts.append(DocumentPart(filename=filename, url=file_url))
             if parts:
                 messages.append(CanonicalMessage(role=canonical_role, content=parts))
     if pending_results:
@@ -254,7 +286,7 @@ def json_response(final_id: str, model: str, parts: Sequence[AssistantPart], fin
             output.append(
                 {
                     "type": "reasoning",
-                    "id": f"rs_{index}",
+                    "id": part.id or f"rs_{index}",
                     "summary": ([{"type": "summary_text", "text": part.text}] if part.text else []),
                     **({"encrypted_content": part.signature} if part.signature else {}),
                 }

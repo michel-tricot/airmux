@@ -142,6 +142,13 @@ class OpenAIResponsesAdapter(EgressAdapter):
                         "text": "",
                         "signature": str(item.get("encrypted_content") or ""),
                     }
+                    reasoning = state.reasoning[index]
+                    return [
+                        CanonicalChunk(
+                            id=state.chunk_id,
+                            delta=ReasoningDelta(id=reasoning["id"] or None, signature=reasoning["signature"] or None),
+                        )
+                    ]
             return []
         if kind == "response.output_text.delta":
             delta = str(data.get("delta") or "")

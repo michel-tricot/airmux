@@ -14,6 +14,7 @@ from data_plane.canonical import (
     CanonicalMessage,
     CanonicalRequest,
     CanonicalResponse,
+    DocumentPart,
     GatewayInfo,
     ImagePart,
     ReasoningDelta,
@@ -39,18 +40,20 @@ def test_every_corpus_request_survives_a_json_round_trip(case):
 def test_the_corpus_reaches_every_part_type():
     """The corpus is the shared fixture of the rebuild; a part type it never exercises is untested everywhere downstream."""
     reached = {part.type for case in CORPUS for message in case.messages for part in message.content}
-    assert reached == {"text", "image", "reasoning", "tool_call", "tool_result"}
+    assert reached == {"text", "image", "document", "reasoning", "tool_call", "tool_result"}
 
 
 @pytest.mark.parametrize(
     ("role", "part"),
     [
         ("system", ImagePart(url="https://example.com/cat.png")),
+        ("system", DocumentPart(url="https://example.com/report.pdf")),
         ("system", ToolCallPart(id="c1", name="f", arguments="{}")),
         ("user", ToolCallPart(id="c1", name="f", arguments="{}")),
         ("user", ReasoningPart(text="hm")),
         ("assistant", ToolResultPart(call_id="c1", content=[TextPart(text="out")])),
         ("assistant", ImagePart(url="https://example.com/cat.png")),
+        ("assistant", DocumentPart(url="https://example.com/report.pdf")),
     ],
 )
 def test_a_part_outside_its_role_is_rejected(role, part):
@@ -65,6 +68,15 @@ def test_an_image_needs_exactly_one_source():
         ImagePart(media_type="image/png")
     with pytest.raises(ValidationError, match="media_type"):
         ImagePart(data="iVBORw0KGgo=")
+
+
+def test_a_document_needs_exactly_one_source():
+    with pytest.raises(ValidationError, match="exactly one"):
+        DocumentPart(url="https://example.com/report.pdf", data="JVBERi0=", media_type="application/pdf")
+    with pytest.raises(ValidationError, match="exactly one"):
+        DocumentPart(media_type="application/pdf")
+    with pytest.raises(ValidationError, match="media_type"):
+        DocumentPart(data="JVBERi0=")
 
 
 def test_tool_arguments_stay_json_text():

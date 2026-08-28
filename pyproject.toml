@@ -9,9 +9,13 @@ exclude = ["apps/console"]
 
 [tool.uv.sources]
 api-models = { workspace = true }
+cli = { workspace = true }
 contract = { workspace = true }
+control-plane = { workspace = true }
+data-plane = { workspace = true }
 
 [dependency-groups]
+backend = ["cli", "control-plane", "data-plane"]
 dev = [
   "ruff>=0.14",
   "ty>=0.0.50",

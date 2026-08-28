@@ -15,6 +15,7 @@ $defs:
         - items:
             discriminator:
               mapping:
+                document: '#/$defs/DocumentPart'
                 image: '#/$defs/ImagePart'
                 reasoning: '#/$defs/ReasoningPart'
                 text: '#/$defs/TextPart'
@@ -24,6 +25,7 @@ $defs:
             oneOf:
             - $ref: '#/$defs/TextPart'
             - $ref: '#/$defs/ImagePart'
+            - $ref: '#/$defs/DocumentPart'
             - $ref: '#/$defs/ReasoningPart'
             - $ref: '#/$defs/ToolCallPart'
             - $ref: '#/$defs/ToolResultPart'
@@ -34,6 +36,53 @@ $defs:
     - role
     - content
     title: CanonicalMessage
+    type: object
+  DocumentPart:
+    additionalProperties: false
+    properties:
+      cache:
+        anyOf:
+        - const: ephemeral
+          type: string
+        - type: 'null'
+        default: null
+        title: Cache
+      type:
+        const: document
+        default: document
+        title: Type
+        type: string
+      filename:
+        anyOf:
+        - type: string
+        - type: 'null'
+        default: null
+        title: Filename
+      url:
+        anyOf:
+        - type: string
+        - type: 'null'
+        default: null
+        title: Url
+      data:
+        anyOf:
+        - type: string
+        - type: 'null'
+        default: null
+        title: Data
+      file_id:
+        anyOf:
+        - type: string
+        - type: 'null'
+        default: null
+        title: File Id
+      media_type:
+        anyOf:
+        - type: string
+        - type: 'null'
+        default: null
+        title: Media Type
+    title: DocumentPart
     type: object
   ImagePart:
     additionalProperties: false
@@ -80,6 +129,42 @@ $defs:
     required:
     - name
     title: NamedTool
+    type: object
+  ReasoningConfig:
+    additionalProperties: false
+    properties:
+      type:
+        anyOf:
+        - type: string
+        - type: 'null'
+        default: null
+        title: Type
+      effort:
+        anyOf:
+        - type: string
+        - type: 'null'
+        default: null
+        title: Effort
+      summary:
+        anyOf:
+        - type: string
+        - type: 'null'
+        default: null
+        title: Summary
+      budget_tokens:
+        anyOf:
+        - minimum: 1
+          type: integer
+        - type: 'null'
+        default: null
+        title: Budget Tokens
+      display:
+        anyOf:
+        - type: string
+        - type: 'null'
+        default: null
+        title: Display
+    title: ReasoningConfig
     type: object
   ReasoningPart:
     additionalProperties: false
@@ -346,12 +431,11 @@ properties:
     - $ref: '#/$defs/ResponseFormat'
     - type: 'null'
     default: null
-  reasoning_effort:
+  reasoning:
     anyOf:
-    - type: string
+    - $ref: '#/$defs/ReasoningConfig'
     - type: 'null'
     default: null
-    title: Reasoning Effort
   parallel_tool_calls:
     anyOf:
     - type: boolean

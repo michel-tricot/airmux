@@ -19,6 +19,7 @@ from openai.types.chat import ChatCompletionMessageFunctionToolCall
 from starlette.datastructures import Headers
 from starlette.testclient import TestClient
 
+from data_plane.canonical import DocumentPart
 from data_plane.ingress import resolve
 from data_plane.ingress.openai_native import OpenAINativeIngress
 from data_plane.profiles import compile_profile
@@ -79,6 +80,27 @@ def test_parse_translates_the_openai_shapes_and_keeps_the_rest():
     assert getattr(req.tool_choice, "name", None) == "w"
     assert req.max_tokens == 64
     assert req.extra == {"frequency_penalty": 0.5}  # stream_options consumed silently, the rest kept for the reconcile step
+
+
+def test_parse_preserves_an_inline_document():
+    request, _ = OpenAINativeIngress().parse(
+        {
+            **TEXT_BODY,
+            "messages": [
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "file",
+                            "file": {"filename": "audit.pdf", "file_data": "data:application/pdf;base64,JVBERi0="},
+                        }
+                    ],
+                }
+            ],
+        }
+    )
+
+    assert request.messages[0].content == [DocumentPart(filename="audit.pdf", media_type="application/pdf", data="JVBERi0=")]
 
 
 def _sdk(client: TestClient, api_key: str) -> OpenAI:
@@ -182,6 +204,29 @@ def test_the_aligned_path_is_a_fixpoint():
     upstream = make_adapter().transform_request(first, MODEL)
     again, _ = ingress.parse(json.loads(upstream.body))
     assert again.model_dump(exclude={"model"}) == first.model_dump(exclude={"model"})
+
+
+@respx.mock
+def test_supported_chat_reasoning_and_tool_options_reach_the_provider(api_key, dp_app):
+    route = respx.post(UPSTREAM).mock(return_value=httpx.Response(200, json=TEXT_NONSTREAM))
+    mock_control_plane()
+    with TestClient(dp_app) as client:
+        response = client.post(
+            "/inf/v1/chat/completions",
+            headers={"Authorization": f"Bearer {api_key}", "x-airllm-dialect": "openai_native"},
+            json={
+                **TEXT_BODY,
+                "reasoning_effort": "low",
+                "parallel_tool_calls": True,
+                "tools": [{"type": "function", "function": {"name": "answer", "parameters": {}, "strict": True}}],
+            },
+        )
+
+    assert response.status_code == 200
+    sent = json.loads(route.calls.last.request.content)
+    assert sent["reasoning_effort"] == "low"
+    assert sent["parallel_tool_calls"] is True
+    assert sent["tools"][0]["function"]["strict"] is True
 
 
 def test_an_unknown_tool_choice_variant_is_never_silently_none():

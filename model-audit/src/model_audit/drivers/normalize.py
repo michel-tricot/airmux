@@ -98,7 +98,7 @@ def openai_responses(payload: Mapping[str, object], duration_ms: float, client_t
         outcome="success",
         text=text,
         tool_calls=calls,
-        finish_reason=str(incomplete.get("reason") or status or "stop"),
+        finish_reason=str(incomplete.get("reason") or ("tool_calls" if calls else status) or "stop"),
         usage_present=bool(payload.get("usage")),
         reasoning_present=reasoning,
         json_value=_json_value(text),

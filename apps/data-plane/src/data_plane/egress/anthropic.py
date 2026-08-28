@@ -46,7 +46,9 @@ from data_plane.formats.anthropic import (
     UpstreamStreamEvent,
     UpstreamUsage,
     finish_reason,
+    output_config_of,
     response_parts,
+    thinking_of,
     to_request,
     to_tool_choice,
     to_tools,
@@ -161,8 +163,10 @@ class AnthropicAdapter(EgressAdapter):
             top_p=req.top_p,
             stop_sequences=req.stop,
             tools=to_tools(req.tools),
-            tool_choice=to_tool_choice(req.tool_choice),
+            tool_choice=to_tool_choice(req.tool_choice, req.parallel_tool_calls),
             stream=req.stream or None,
+            thinking=thinking_of(req),
+            output_config=output_config_of(req),
         )
         headers = {
             "x-api-key": self.credential.reveal(),

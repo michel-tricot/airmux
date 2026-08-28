@@ -6,6 +6,7 @@ from data_plane.canonical import (
     CanonicalMessage,
     CanonicalRequest,
     ContentPart,
+    DocumentPart,
     ImagePart,
     NamedTool,
     ReasoningPart,
@@ -95,6 +96,12 @@ CORPUS: list[Case] = [
     Case(
         name="image_by_value",
         messages=[user(TextPart(text="What is in this image?"), ImagePart(media_type="image/png", data="iVBORw0KGgo="))],
+    ),
+    Case(
+        name="document_by_value",
+        messages=[
+            user(TextPart(text="What is in this document?"), DocumentPart(filename="audit.pdf", media_type="application/pdf", data="JVBERi0="))
+        ],
     ),
     Case(
         name="tool_declared_and_called",

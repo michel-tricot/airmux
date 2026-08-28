@@ -36,7 +36,7 @@ if TYPE_CHECKING:
 
     from starlette.requests import Request
 
-    from contract import CredentialEntry, KeyEntry, Secret
+    from contract import CredentialEntry, KeyEntry, ModelEntry, Secret
     from data_plane.bundle.holder import BundleHolder, BundleSnapshot
     from data_plane.credentials import CredentialResolver
     from data_plane.egress.base import EgressAdapter, StreamState, UpstreamRequest
@@ -159,6 +159,17 @@ def _parse(body: dict[str, Any], ingress: IngressAdapter) -> tuple[CanonicalRequ
         raise RequestRejectedError(400, code, message) from error
 
 
+def _transform(adapter: EgressAdapter, request: CanonicalRequest, model: ModelEntry) -> UpstreamRequest:
+    try:
+        return adapter.transform_request(request, model)
+    except ValidationError as error:
+        raise RequestRejectedError(400, "invalid_request", str(error.errors(include_url=False)[:3])) from error
+    except (TypeError, ValueError) as error:
+        message = str(error)
+        code = "unsupported_feature" if message.startswith("unsupported_feature:") else "invalid_request"
+        raise RequestRejectedError(400, code, message) from error
+
+
 @dataclass(frozen=True)
 class StreamSession:
     """Request state shared by opening and folding one provider stream."""
@@ -244,14 +255,6 @@ class RequestExecution:
 
         entry = decision.candidates[0]
         egress_kind = decision.model.egress_kind or decision.provider.kind
-        if egress_kind == "openai_responses" and (self.request.stop is not None or self.request.seed is not None):
-            raise RequestRejectedError(400, "unsupported_feature", "stop and seed are not representable by Responses")
-        if egress_kind != "openai_responses" and (
-            self.request.reasoning_effort is not None
-            or self.request.parallel_tool_calls is not None
-            or any(tool.strict is not None for tool in self.request.tools or [])
-        ):
-            raise RequestRejectedError(400, "unsupported_feature", "the selected egress cannot represent Responses-only request fields")
         credential = await _resolve_credential(decision, self.runtime.credentials)
         adapter = REGISTRY[egress_kind](decision.provider, credential)
         ctx = Ctx(
@@ -268,7 +271,7 @@ class RequestExecution:
         )
         request, reconcile_adjustments = reconcile(self.request, decision.model, decision.profile)
         adjustments = [*self.parse_adjustments, *reconcile_adjustments]
-        upstream = adapter.transform_request(request, decision.model)
+        upstream = _transform(adapter, request, decision.model)
         if request.stream:
             session = StreamSession(
                 adapter=adapter,

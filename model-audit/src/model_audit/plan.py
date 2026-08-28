@@ -33,6 +33,7 @@ def _selected(target: Target, case: Case, filters: Filters) -> bool:
         (
             filters.provider is not None and target.provider_id != filters.provider,
             filters.model is not None and target.model_id != filters.model,
+            filters.direct_surface is None and target.egress_kind != target.gateway_egress_kind,
             not _case_selected(case.id, filters.cases),
             filters.direct_surface is not None and target.surface_id != filters.direct_surface,
             not case.applies_to.accepts(target.endpoint, target.egress_kind, filters.client_mode),

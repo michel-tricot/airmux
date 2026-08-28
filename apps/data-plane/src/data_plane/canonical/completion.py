@@ -57,6 +57,25 @@ class ImagePart(Part):
         return self
 
 
+class DocumentPart(Part):
+    type: Literal["document"] = "document"
+    filename: str | None = None
+    url: str | None = None
+    data: str | None = None
+    file_id: str | None = None
+    media_type: str | None = None
+
+    @model_validator(mode="after")
+    def one_source(self) -> DocumentPart:
+        if sum(source is not None for source in (self.url, self.data, self.file_id)) != 1:
+            msg = "document part needs exactly one of url, data or file_id"
+            raise ValueError(msg)
+        if self.data is not None and not self.media_type:
+            msg = "inline document data needs a media_type"
+            raise ValueError(msg)
+        return self
+
+
 class ReasoningPart(Part):
     """Model reasoning. signature is an opaque provider token: a provider that issues one rejects a
     later turn whose reasoning comes back without it."""
@@ -95,7 +114,7 @@ class ToolResultPart(Part):
 
 
 ContentPart = Annotated[
-    TextPart | ImagePart | ReasoningPart | ToolCallPart | ToolResultPart,
+    TextPart | ImagePart | DocumentPart | ReasoningPart | ToolCallPart | ToolResultPart,
     Field(discriminator="type"),
 ]
 
@@ -105,7 +124,7 @@ Role = Literal["system", "user", "assistant"]
 
 ALLOWED_PARTS: dict[Role, frozenset[str]] = {
     "system": frozenset({"text"}),
-    "user": frozenset({"text", "image", "tool_result"}),
+    "user": frozenset({"text", "image", "document", "tool_result"}),
     "assistant": frozenset({"text", "reasoning", "tool_call"}),
 }
 
@@ -156,6 +175,16 @@ class ResponseFormat(BaseModel):
     json_schema: dict[str, Any] | None = None
 
 
+class ReasoningConfig(BaseModel):
+    model_config = WIRE
+
+    type: str | None = None
+    effort: str | None = None
+    summary: str | None = None
+    budget_tokens: int | None = Field(default=None, ge=1)
+    display: str | None = None
+
+
 class CanonicalRequest(BaseModel):
     model_config = ConfigDict(frozen=True, extra="allow")
 
@@ -170,7 +199,7 @@ class CanonicalRequest(BaseModel):
     tools: list[ToolDef] | None = None
     tool_choice: ToolChoice | None = None
     response_format: ResponseFormat | None = None
-    reasoning_effort: str | None = None
+    reasoning: ReasoningConfig | None = None
     parallel_tool_calls: bool | None = None
 
     @property
@@ -231,11 +260,12 @@ class TextDelta(BaseModel):
 
 
 class ReasoningDelta(BaseModel):
-    """signature arrives on the closing fragment of a reasoning block, text on the ones before it."""
+    """The provider item id opens replayable reasoning, text follows, and the signature may arrive on a later fragment."""
 
     model_config = WIRE
 
     type: Literal["reasoning"] = "reasoning"
+    id: str | None = None
     text: str = ""
     signature: str | None = None
 

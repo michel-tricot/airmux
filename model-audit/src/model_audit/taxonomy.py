@@ -92,6 +92,22 @@ def _parameter_support(model: dict, endpoint: str, behaviors: list[BehaviorRecor
     return dict(sorted(resolved.items()))
 
 
+def _provider_entry(provider: dict, icon: str) -> dict[str, object]:
+    default_surface = "anthropic" if provider.get("ingress") == ["anthropic"] else "oai"
+    profile = {
+        field: provider[field]
+        for field in ("param_aliases", "params_closed", "accepted_params")
+        if field in provider
+    }
+    return {
+        "provider_id": provider["id"],
+        "kind": SURFACE_KIND[default_surface],
+        "base_url": provider["base_url"],
+        "icon": icon,
+        **profile,
+    }
+
+
 def build(root: Path) -> dict[str, list[dict[str, object]]]:
     taxonomy = root / "taxonomy"
     provider_document = yaml.safe_load((taxonomy / "providers.yml").read_text(encoding="utf-8"))
@@ -105,14 +121,7 @@ def build(root: Path) -> dict[str, list[dict[str, object]]]:
         provider_id = provider["id"]
         default_surface = "anthropic" if provider.get("ingress") == ["anthropic"] else "oai"
         icon_path = taxonomy / "icons" / f"{provider['icon_mono']}.svg"
-        emitted_providers.append(
-            {
-                "provider_id": provider_id,
-                "kind": SURFACE_KIND[default_surface],
-                "base_url": provider["base_url"],
-                "icon": icon_path.read_text(encoding="utf-8").strip() if icon_path.exists() else "",
-            }
-        )
+        emitted_providers.append(_provider_entry(provider, icon_path.read_text(encoding="utf-8").strip() if icon_path.exists() else ""))
         models_path = taxonomy / "models" / f"{provider_id}.json"
         if not models_path.exists():
             continue

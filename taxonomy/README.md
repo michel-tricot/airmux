@@ -177,6 +177,11 @@ parity. A matching explicit rejection is also parity and records that the exact 
 feature profile is unsupported. Access failures, rate limits, timeouts, generic errors,
 and harness failures remain unknown.
 
+By default, the direct request uses the model's applied upstream egress while
+`--gateway-surface all` varies only the caller dialect. Use `--provider-surface` for an
+explicit provider capability probe; parity is diagnostic when that surface differs from
+the model's applied egress.
+
 Interrupted runs are checkpointed after every pair:
 
 ```bash
