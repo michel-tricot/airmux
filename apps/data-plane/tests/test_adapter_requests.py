@@ -42,6 +42,12 @@ ERROR_CASES = (
     ),
     (
         "openai_compatible",
+        {"object": "error", "message": "25 validation errors", "code": 400},
+        "400",
+        "25 validation errors",
+    ),
+    (
+        "openai_compatible",
         {"detail": [{"type": "string_type", "loc": ["body", "messages", 0, "content"], "msg": "Input should be a valid string"}]},
         "upstream_error",
         '{"detail":[{"type":"string_type","loc":["body","messages",0,"content"],"msg":"Input should be a valid string"}]}',
