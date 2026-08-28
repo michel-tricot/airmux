@@ -214,6 +214,22 @@ def test_openai_inline_document_without_a_name_gets_a_pdf_filename():
     }
 
 
+def test_responses_inline_document_without_a_name_gets_a_pdf_filename():
+    adapter, model = _adapter("openai_responses")
+    request = CanonicalRequest(
+        model=model.model_id,
+        messages=[CanonicalMessage(role="user", content=[DocumentPart(media_type="application/pdf", data="JVBERi0=")])],
+    )
+
+    sent = json.loads(adapter.transform_request(request, model).body)
+
+    assert sent["input"][0]["content"][0] == {
+        "type": "input_file",
+        "filename": "document.pdf",
+        "file_data": "data:application/pdf;base64,JVBERi0=",
+    }
+
+
 def test_openai_json_schema_without_a_name_gets_a_stable_name():
     adapter, model = _adapter("openai_compatible")
     request = request_of(
@@ -224,6 +240,18 @@ def test_openai_json_schema_without_a_name_gets_a_stable_name():
     sent = json.loads(adapter.transform_request(request, model).body)
 
     assert sent["response_format"]["json_schema"] == {"name": "response", "schema": {"type": "object"}}
+
+
+def test_responses_json_schema_without_a_name_gets_a_stable_name():
+    adapter, model = _adapter("openai_responses")
+    request = request_of(
+        CORPUS[0],
+        response_format=ResponseFormat(type="json_schema", json_schema={"schema": {"type": "object"}}),
+    )
+
+    sent = json.loads(adapter.transform_request(request, model).body)
+
+    assert sent["text"]["format"] == {"type": "json_schema", "name": "response", "schema": {"type": "object"}}
 
 
 def test_openai_chat_maps_supported_reasoning_and_tool_options():

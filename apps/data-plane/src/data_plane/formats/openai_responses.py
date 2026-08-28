@@ -37,6 +37,7 @@ def _document(part: DocumentPart) -> dict[str, str]:
     if part.file_id is not None:
         item["file_id"] = part.file_id
     elif part.data is not None:
+        item["filename"] = part.filename or "document.pdf"
         item["file_data"] = f"data:{part.media_type};base64,{part.data}"
     else:
         item["file_url"] = part.url or ""
@@ -143,7 +144,9 @@ def body_of(request: CanonicalRequest, upstream_model: str) -> dict[str, Any]:
         body["reasoning"] = reasoning
     if request.response_format is not None:
         if request.response_format.type == "json_schema":
-            body["text"] = {"format": {"type": "json_schema", **(request.response_format.json_schema or {})}}
+            json_schema = dict(request.response_format.json_schema or {})
+            json_schema.setdefault("name", "response")
+            body["text"] = {"format": {"type": "json_schema", **json_schema}}
         elif request.response_format.type == "json_object":
             body["text"] = {"format": {"type": "json_object"}}
     return body
