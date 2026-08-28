@@ -3,7 +3,7 @@ from __future__ import annotations
 import threading
 
 from model_audit import runner
-from model_audit.drivers.base import ClientDriver, Connection
+from model_audit.drivers.base import ClientDriver, Connection, status_outcome
 from model_audit.models import Experiment, Observation, Plan
 from tests.helpers import case, target
 
@@ -152,6 +152,15 @@ def test_gateway_client_failure_is_a_harness_result(monkeypatch):
 
     assert result.assessment.execution == "harness_error"
     assert result.assessment.parity == "inconclusive"
+
+
+def test_gateway_rate_limit_is_inconclusive():
+    gateway = Connection(base_url="http://gateway/inf/v1", api_key="gateway", auth="bearer", headers={}, route="gateway")
+    direct = Connection(base_url="http://provider/v1", api_key="provider", auth="bearer", headers={}, route="direct")
+
+    assert status_outcome(gateway, 429) == "inconclusive"
+    assert status_outcome(gateway, 500) == "error"
+    assert status_outcome(direct, 500) == "inconclusive"
 
 
 def test_runner_uses_independent_provider_and_gateway_endpoints(monkeypatch):

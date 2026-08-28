@@ -341,6 +341,22 @@ def test_usage_reported_in_an_unknown_shape_reads_as_estimated():
     assert response.usage.estimated
 
 
+def test_openai_compatible_stream_preserves_reasoning_spelled_without_content():
+    events = [
+        delta_event({"role": "assistant"}),
+        delta_event({"reasoning": "20 + "}),
+        delta_event({"reasoning": "22"}),
+        delta_event({"content": "42"}),
+        delta_event({}, finish="stop"),
+        {"id": "chatcmpl-9", "model": "gpt-real", "choices": [], "usage": {"prompt_tokens": 5, "completion_tokens": 7}},
+    ]
+
+    chunks, final = fold(_adapter("openai_compatible"), b"".join(sse(event) for event in events) + b"data: [DONE]\n\n", 7)
+
+    assert [chunk.delta.text for chunk in chunks if chunk.delta is not None and chunk.delta.type == "reasoning"] == ["20 + ", "22"]
+    assert final.content[0] == ReasoningPart(text="20 + 22")
+
+
 ANTHROPIC_THINKING_EVENTS = [
     {"type": "message_start", "message": {"id": "msg_9", "usage": {"input_tokens": 5, "output_tokens": 1}}},
     {"type": "content_block_start", "index": 0, "content_block": {"type": "thinking", "thinking": ""}},

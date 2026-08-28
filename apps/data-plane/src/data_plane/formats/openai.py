@@ -217,6 +217,7 @@ class UpstreamMessage(BaseModel):
 
     content: str | None = None
     reasoning_content: str | None = None
+    reasoning: str | None = None
     tool_calls: list[UpstreamToolCall] | None = None
 
 
@@ -262,6 +263,7 @@ class UpstreamDelta(BaseModel):
 
     content: str | None = None
     reasoning_content: str | None = None
+    reasoning: str | None = None
     tool_calls: list[UpstreamToolCallDelta] | None = None
 
 
@@ -300,8 +302,8 @@ def response_parts(message: UpstreamMessage) -> list[AssistantPart]:
     """Order is reasoning, then text, then tool calls; empty parts are omitted so the streaming and
     non-streaming paths agree."""
     parts: list[AssistantPart] = []
-    if message.reasoning_content:
-        parts.append(ReasoningPart(text=message.reasoning_content))
+    if reasoning := message.reasoning_content or message.reasoning:
+        parts.append(ReasoningPart(text=reasoning))
     if message.content:
         parts.append(TextPart(text=message.content))
     parts.extend(ToolCallPart(id=call.id, name=call.function.name, arguments=call.function.arguments) for call in message.tool_calls or [])
@@ -385,7 +387,7 @@ def _user_parts(content: object) -> list[ContentPart]:
 
 def _assistant_parts(message: dict[str, object]) -> list[ContentPart]:
     parts: list[ContentPart] = []
-    if reasoning := _str(message.get("reasoning_content")):
+    if reasoning := _str(message.get("reasoning_content")) or _str(message.get("reasoning")):
         parts.append(ReasoningPart(text=reasoning))
     if text := _text_of(message.get("content")):
         parts.append(TextPart(text=text))
