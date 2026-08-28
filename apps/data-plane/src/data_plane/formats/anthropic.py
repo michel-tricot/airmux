@@ -23,6 +23,7 @@ from data_plane.canonical import (
     ImagePart,
     NamedTool,
     ReasoningPart,
+    ResponseFormat,
     TextPart,
     ToolCallPart,
     ToolChoice,
@@ -193,6 +194,18 @@ def output_config_of(request: CanonicalRequest) -> dict[str, Any] | None:
         elif request.response_format.type == "json_object":
             output_config["format"] = {"type": "json_schema", "schema": {"type": "object"}}
     return output_config or None
+
+
+def response_format_from(output_config: object) -> ResponseFormat | None:
+    if not isinstance(output_config, dict):
+        return None
+    format_value = output_config.get("format")
+    if not isinstance(format_value, dict) or format_value.get("type") != "json_schema":
+        return None
+    schema = format_value.get("schema") or {}
+    if schema == {"type": "object"}:
+        return ResponseFormat(type="json_object")
+    return ResponseFormat(type="json_schema", json_schema={"schema": schema})
 
 
 def thinking_of(request: CanonicalRequest) -> dict[str, Any] | None:

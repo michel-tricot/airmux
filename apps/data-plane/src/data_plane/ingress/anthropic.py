@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING, Any
 
 from starlette.responses import JSONResponse, Response
 
-from data_plane.canonical import Adjustment, CanonicalChunk, CanonicalRequest, GatewayInfo, ReasoningConfig, ResponseFormat
+from data_plane.canonical import Adjustment, CanonicalChunk, CanonicalRequest, GatewayInfo, ReasoningConfig
 from data_plane.formats import anthropic as fmt
 from data_plane.ingress.base import IngressAdapter
 
@@ -115,11 +115,6 @@ class AnthropicIngress(IngressAdapter):
             adjustments.append(Adjustment(param="tool_choice", action="dropped", detail="a tool_choice variant this dialect does not interpret"))
         thinking = _mapping(body.get("thinking"))
         output_config = _mapping(body.get("output_config"))
-        raw_format = output_config.get("format")
-        format_value = _mapping(raw_format) if isinstance(raw_format, dict) else None
-        response_format = None
-        if format_value is not None and format_value.get("type") == "json_schema":
-            response_format = ResponseFormat(type="json_schema", json_schema={"schema": format_value.get("schema") or {}})
         reasoning_values = {
             "type": thinking.get("type"),
             "budget_tokens": thinking.get("budget_tokens"),
@@ -145,7 +140,7 @@ class AnthropicIngress(IngressAdapter):
                     else None
                 ),
                 "reasoning": reasoning,
-                "response_format": response_format,
+                "response_format": fmt.response_format_from(output_config),
             }
         )
         return request, adjustments
