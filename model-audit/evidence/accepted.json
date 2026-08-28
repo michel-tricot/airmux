@@ -1,4 +1,560 @@
 {
   "schema_version": 1,
-  "records": []
+  "records": [
+    {
+      "schema_version": 1,
+      "evidence_id": "046d8958271a8ebf9b4e3ec9",
+      "provider_id": "openai",
+      "model_id": "openai/gpt-5.6-sol",
+      "upstream_model": "gpt-5.6-sol",
+      "surface_id": "oai_responses",
+      "endpoint": "responses",
+      "case_id": "reasoning.exposed",
+      "case_version": 2,
+      "case_fingerprint": "a52dcffeac5fd960",
+      "claim": {
+        "dimension": "option",
+        "name": "reasoning_effort",
+        "profile": {
+          "value": "low"
+        },
+        "key": "option:reasoning_effort:{\"value\":\"low\"}"
+      },
+      "verdict": "unsupported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "20 + 22 = 42.",
+        "tool_calls": [],
+        "finish_reason": "completed",
+        "usage_present": true,
+        "reasoning_present": false,
+        "adjustments": [],
+        "duration_ms": 3454.657624941319,
+        "client_type": "HTTP JSON"
+      },
+      "attempts": 3,
+      "observed_at": "2026-08-28T22:52:56.653613+00:00",
+      "harness_commit": "f3a24231f784113b2eab2ef800ba3bcf46d7c0c0",
+      "taxonomy_fingerprint": "83fc61086fd4665e545b"
+    },
+    {
+      "schema_version": 1,
+      "evidence_id": "06a64864fd106aab3726876d",
+      "provider_id": "openai",
+      "model_id": "openai/gpt-5.6-sol",
+      "upstream_model": "gpt-5.6-sol",
+      "surface_id": "oai_responses",
+      "endpoint": "responses",
+      "case_id": "streaming.reasoning",
+      "case_version": 2,
+      "case_fingerprint": "41107fcda8778eec",
+      "claim": {
+        "dimension": "interaction",
+        "name": "streaming+reasoning",
+        "profile": {},
+        "key": "interaction:streaming+reasoning:{}"
+      },
+      "verdict": "unsupported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "20 + 22 = 42.",
+        "tool_calls": [],
+        "finish_reason": "completed",
+        "usage_present": true,
+        "reasoning_present": false,
+        "adjustments": [],
+        "duration_ms": 2671.4187918696553,
+        "client_type": "HTTP SSE"
+      },
+      "attempts": 3,
+      "observed_at": "2026-08-28T22:52:56.653613+00:00",
+      "harness_commit": "f3a24231f784113b2eab2ef800ba3bcf46d7c0c0",
+      "taxonomy_fingerprint": "83fc61086fd4665e545b"
+    },
+    {
+      "schema_version": 1,
+      "evidence_id": "24e5df858eb95700a735a8f4",
+      "provider_id": "openai",
+      "model_id": "openai/gpt-5.6-sol",
+      "upstream_model": "gpt-5.6-sol",
+      "surface_id": "oai_responses",
+      "endpoint": "responses",
+      "case_id": "reasoning.exposed",
+      "case_version": 2,
+      "case_fingerprint": "a52dcffeac5fd960",
+      "claim": {
+        "dimension": "capability",
+        "name": "reasoning",
+        "profile": {
+          "effort": "low"
+        },
+        "key": "capability:reasoning:{\"effort\":\"low\"}"
+      },
+      "verdict": "unsupported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "20 + 22 = 42.",
+        "tool_calls": [],
+        "finish_reason": "completed",
+        "usage_present": true,
+        "reasoning_present": false,
+        "adjustments": [],
+        "duration_ms": 3454.657624941319,
+        "client_type": "HTTP JSON"
+      },
+      "attempts": 3,
+      "observed_at": "2026-08-28T22:52:56.653613+00:00",
+      "harness_commit": "f3a24231f784113b2eab2ef800ba3bcf46d7c0c0",
+      "taxonomy_fingerprint": "83fc61086fd4665e545b"
+    },
+    {
+      "schema_version": 1,
+      "evidence_id": "2c64beb6fc314fd94b90a433",
+      "provider_id": "openai",
+      "model_id": "openai/gpt-5.6-sol",
+      "upstream_model": "gpt-5.6-sol",
+      "surface_id": "oai_responses",
+      "endpoint": "responses",
+      "case_id": "tools.single",
+      "case_version": 2,
+      "case_fingerprint": "b8091f75e071d2d6",
+      "claim": {
+        "dimension": "option",
+        "name": "tool_choice",
+        "profile": {
+          "mode": "required"
+        },
+        "key": "option:tool_choice:{\"mode\":\"required\"}"
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "",
+        "tool_calls": [
+          {
+            "name": "report_result",
+            "arguments": "{\"value\":\"ok\"}"
+          }
+        ],
+        "finish_reason": "tool_calls",
+        "usage_present": true,
+        "reasoning_present": false,
+        "adjustments": [],
+        "duration_ms": 1497.3105418030173,
+        "client_type": "HTTP JSON"
+      },
+      "attempts": 3,
+      "observed_at": "2026-08-28T22:52:56.653613+00:00",
+      "harness_commit": "f3a24231f784113b2eab2ef800ba3bcf46d7c0c0",
+      "taxonomy_fingerprint": "83fc61086fd4665e545b"
+    },
+    {
+      "schema_version": 1,
+      "evidence_id": "45d89f812ec585f7c8c1b2eb",
+      "provider_id": "openai",
+      "model_id": "openai/gpt-5.6-sol",
+      "upstream_model": "gpt-5.6-sol",
+      "surface_id": "oai_responses",
+      "endpoint": "responses",
+      "case_id": "structured-output.json-schema",
+      "case_version": 2,
+      "case_fingerprint": "853d17f6c24b8818",
+      "claim": {
+        "dimension": "capability",
+        "name": "structured_output",
+        "profile": {
+          "mode": "json_schema"
+        },
+        "key": "capability:structured_output:{\"mode\":\"json_schema\"}"
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "{\"answer\":42}",
+        "tool_calls": [],
+        "finish_reason": "completed",
+        "usage_present": true,
+        "reasoning_present": false,
+        "json_value": {
+          "answer": 42
+        },
+        "adjustments": [],
+        "duration_ms": 4490.158291067928,
+        "client_type": "HTTP JSON"
+      },
+      "attempts": 1,
+      "observed_at": "2026-08-28T22:52:56.653613+00:00",
+      "harness_commit": "f3a24231f784113b2eab2ef800ba3bcf46d7c0c0",
+      "taxonomy_fingerprint": "83fc61086fd4665e545b"
+    },
+    {
+      "schema_version": 1,
+      "evidence_id": "61edcedbd417dd5028f17ca8",
+      "provider_id": "openai",
+      "model_id": "openai/gpt-5.6-sol",
+      "upstream_model": "gpt-5.6-sol",
+      "surface_id": "oai_responses",
+      "endpoint": "responses",
+      "case_id": "reasoning.with-tool",
+      "case_version": 2,
+      "case_fingerprint": "a1cfb555434ca64e",
+      "claim": {
+        "dimension": "interaction",
+        "name": "reasoning+tools",
+        "profile": {
+          "reasoning_effort": "low",
+          "tool_choice": "named"
+        },
+        "key": "interaction:reasoning+tools:{\"reasoning_effort\":\"low\",\"tool_choice\":\"named\"}"
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "",
+        "tool_calls": [
+          {
+            "name": "report_result",
+            "arguments": "{\"value\":\"ok\"}"
+          }
+        ],
+        "finish_reason": "tool_calls",
+        "usage_present": true,
+        "reasoning_present": false,
+        "adjustments": [],
+        "duration_ms": 990.806374931708,
+        "client_type": "HTTP JSON"
+      },
+      "attempts": 3,
+      "observed_at": "2026-08-28T22:52:56.653613+00:00",
+      "harness_commit": "f3a24231f784113b2eab2ef800ba3bcf46d7c0c0",
+      "taxonomy_fingerprint": "83fc61086fd4665e545b"
+    },
+    {
+      "schema_version": 1,
+      "evidence_id": "719264f3245348bb87c6fbb9",
+      "provider_id": "openai",
+      "model_id": "openai/gpt-5.6-sol",
+      "upstream_model": "gpt-5.6-sol",
+      "surface_id": "oai_responses",
+      "endpoint": "responses",
+      "case_id": "structured-output.json-schema",
+      "case_version": 2,
+      "case_fingerprint": "853d17f6c24b8818",
+      "claim": {
+        "dimension": "option",
+        "name": "response_format",
+        "profile": {
+          "mode": "json_schema"
+        },
+        "key": "option:response_format:{\"mode\":\"json_schema\"}"
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "{\"answer\":42}",
+        "tool_calls": [],
+        "finish_reason": "completed",
+        "usage_present": true,
+        "reasoning_present": false,
+        "json_value": {
+          "answer": 42
+        },
+        "adjustments": [],
+        "duration_ms": 4490.158291067928,
+        "client_type": "HTTP JSON"
+      },
+      "attempts": 1,
+      "observed_at": "2026-08-28T22:52:56.653613+00:00",
+      "harness_commit": "f3a24231f784113b2eab2ef800ba3bcf46d7c0c0",
+      "taxonomy_fingerprint": "83fc61086fd4665e545b"
+    },
+    {
+      "schema_version": 1,
+      "evidence_id": "74093c337c817741ce19e0f6",
+      "provider_id": "openai",
+      "model_id": "openai/gpt-5.6-sol",
+      "upstream_model": "gpt-5.6-sol",
+      "surface_id": "oai_responses",
+      "endpoint": "responses",
+      "case_id": "tools.result-round-trip",
+      "case_version": 2,
+      "case_fingerprint": "0e3d95fcbda09341",
+      "claim": {
+        "dimension": "interaction",
+        "name": "tool_result_round_trip",
+        "profile": {},
+        "key": "interaction:tool_result_round_trip:{}"
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "cobalt",
+        "tool_calls": [],
+        "finish_reason": "completed",
+        "usage_present": true,
+        "reasoning_present": false,
+        "adjustments": [],
+        "duration_ms": 1106.3080839812756,
+        "client_type": "HTTP JSON"
+      },
+      "attempts": 3,
+      "observed_at": "2026-08-28T22:52:56.653613+00:00",
+      "harness_commit": "f3a24231f784113b2eab2ef800ba3bcf46d7c0c0",
+      "taxonomy_fingerprint": "83fc61086fd4665e545b"
+    },
+    {
+      "schema_version": 1,
+      "evidence_id": "beeca366734706ea3e4b26ca",
+      "provider_id": "openai",
+      "model_id": "openai/gpt-5.6-sol",
+      "upstream_model": "gpt-5.6-sol",
+      "surface_id": "oai_responses",
+      "endpoint": "responses",
+      "case_id": "tools.strict",
+      "case_version": 2,
+      "case_fingerprint": "a9fa4a98daa11084",
+      "claim": {
+        "dimension": "option",
+        "name": "strict_tools",
+        "profile": {
+          "value": true
+        },
+        "key": "option:strict_tools:{\"value\":true}"
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "",
+        "tool_calls": [
+          {
+            "name": "report_result",
+            "arguments": "{\"value\":\"ok\"}"
+          }
+        ],
+        "finish_reason": "tool_calls",
+        "usage_present": true,
+        "reasoning_present": false,
+        "adjustments": [],
+        "duration_ms": 1057.8037081286311,
+        "client_type": "HTTP JSON"
+      },
+      "attempts": 3,
+      "observed_at": "2026-08-28T22:52:56.653613+00:00",
+      "harness_commit": "f3a24231f784113b2eab2ef800ba3bcf46d7c0c0",
+      "taxonomy_fingerprint": "83fc61086fd4665e545b"
+    },
+    {
+      "schema_version": 1,
+      "evidence_id": "c854d5cb21d9cc015b7d54c3",
+      "provider_id": "openai",
+      "model_id": "openai/gpt-5.6-sol",
+      "upstream_model": "gpt-5.6-sol",
+      "surface_id": "oai_responses",
+      "endpoint": "responses",
+      "case_id": "tools.parallel",
+      "case_version": 2,
+      "case_fingerprint": "cc2f0316a4b3ac66",
+      "claim": {
+        "dimension": "option",
+        "name": "parallel_tool_calls",
+        "profile": {
+          "value": true
+        },
+        "key": "option:parallel_tool_calls:{\"value\":true}"
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "",
+        "tool_calls": [
+          {
+            "name": "report_alpha",
+            "arguments": "{}"
+          },
+          {
+            "name": "report_beta",
+            "arguments": "{}"
+          }
+        ],
+        "finish_reason": "tool_calls",
+        "usage_present": true,
+        "reasoning_present": false,
+        "adjustments": [],
+        "duration_ms": 1779.736208030954,
+        "client_type": "HTTP JSON"
+      },
+      "attempts": 3,
+      "observed_at": "2026-08-28T22:52:56.653613+00:00",
+      "harness_commit": "f3a24231f784113b2eab2ef800ba3bcf46d7c0c0",
+      "taxonomy_fingerprint": "83fc61086fd4665e545b"
+    },
+    {
+      "schema_version": 1,
+      "evidence_id": "d1b6227ce3e2cf2cb566d30b",
+      "provider_id": "openai",
+      "model_id": "openai/gpt-5.6-sol",
+      "upstream_model": "gpt-5.6-sol",
+      "surface_id": "oai_responses",
+      "endpoint": "responses",
+      "case_id": "streaming.tools",
+      "case_version": 2,
+      "case_fingerprint": "a9778bfe33cd644f",
+      "claim": {
+        "dimension": "interaction",
+        "name": "streaming+tools",
+        "profile": {},
+        "key": "interaction:streaming+tools:{}"
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "",
+        "tool_calls": [
+          {
+            "name": "report_result",
+            "arguments": "{\"value\":\"ok\"}"
+          }
+        ],
+        "finish_reason": "tool_calls",
+        "usage_present": true,
+        "reasoning_present": false,
+        "adjustments": [],
+        "duration_ms": 1144.7665831074119,
+        "client_type": "HTTP SSE"
+      },
+      "attempts": 3,
+      "observed_at": "2026-08-28T22:52:56.653613+00:00",
+      "harness_commit": "f3a24231f784113b2eab2ef800ba3bcf46d7c0c0",
+      "taxonomy_fingerprint": "83fc61086fd4665e545b"
+    },
+    {
+      "schema_version": 1,
+      "evidence_id": "d66ab30b161ce16fa4f5cc41",
+      "provider_id": "openai",
+      "model_id": "openai/gpt-5.6-sol",
+      "upstream_model": "gpt-5.6-sol",
+      "surface_id": "oai_responses",
+      "endpoint": "responses",
+      "case_id": "reasoning.history",
+      "case_version": 2,
+      "case_fingerprint": "645744087b1ab647",
+      "claim": {
+        "dimension": "interaction",
+        "name": "reasoning_history",
+        "profile": {},
+        "key": "interaction:reasoning_history:{}"
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "42",
+        "tool_calls": [],
+        "finish_reason": "completed",
+        "usage_present": true,
+        "reasoning_present": false,
+        "json_value": 42,
+        "adjustments": [],
+        "duration_ms": 4700.305042089894,
+        "client_type": "HTTP JSON"
+      },
+      "attempts": 1,
+      "observed_at": "2026-08-28T22:52:56.653613+00:00",
+      "harness_commit": "f3a24231f784113b2eab2ef800ba3bcf46d7c0c0",
+      "taxonomy_fingerprint": "83fc61086fd4665e545b"
+    },
+    {
+      "schema_version": 1,
+      "evidence_id": "e997d3521fa85d0b753324ab",
+      "provider_id": "openai",
+      "model_id": "openai/gpt-5.6-sol",
+      "upstream_model": "gpt-5.6-sol",
+      "surface_id": "oai_responses",
+      "endpoint": "responses",
+      "case_id": "tools.single",
+      "case_version": 2,
+      "case_fingerprint": "b8091f75e071d2d6",
+      "claim": {
+        "dimension": "capability",
+        "name": "tool_calling",
+        "profile": {},
+        "key": "capability:tool_calling:{}"
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "",
+        "tool_calls": [
+          {
+            "name": "report_result",
+            "arguments": "{\"value\":\"ok\"}"
+          }
+        ],
+        "finish_reason": "tool_calls",
+        "usage_present": true,
+        "reasoning_present": false,
+        "adjustments": [],
+        "duration_ms": 1497.3105418030173,
+        "client_type": "HTTP JSON"
+      },
+      "attempts": 3,
+      "observed_at": "2026-08-28T22:52:56.653613+00:00",
+      "harness_commit": "f3a24231f784113b2eab2ef800ba3bcf46d7c0c0",
+      "taxonomy_fingerprint": "83fc61086fd4665e545b"
+    },
+    {
+      "schema_version": 1,
+      "evidence_id": "fbfdc187fc54b049f820d3e9",
+      "provider_id": "openai",
+      "model_id": "openai/gpt-5.6-sol",
+      "upstream_model": "gpt-5.6-sol",
+      "surface_id": "oai_responses",
+      "endpoint": "responses",
+      "case_id": "tools.named-choice",
+      "case_version": 2,
+      "case_fingerprint": "1b7f5e339c1d2e48",
+      "claim": {
+        "dimension": "option",
+        "name": "tool_choice",
+        "profile": {
+          "mode": "named"
+        },
+        "key": "option:tool_choice:{\"mode\":\"named\"}"
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "",
+        "tool_calls": [
+          {
+            "name": "report_result",
+            "arguments": "{\"value\":\"ok\"}"
+          }
+        ],
+        "finish_reason": "tool_calls",
+        "usage_present": true,
+        "reasoning_present": false,
+        "adjustments": [],
+        "duration_ms": 1474.6990841813385,
+        "client_type": "HTTP JSON"
+      },
+      "attempts": 3,
+      "observed_at": "2026-08-28T22:52:56.653613+00:00",
+      "harness_commit": "f3a24231f784113b2eab2ef800ba3bcf46d7c0c0",
+      "taxonomy_fingerprint": "83fc61086fd4665e545b"
+    }
+  ]
 }

@@ -149,6 +149,14 @@ class OpenAIResponsesAdapter(EgressAdapter):
                             delta=ReasoningDelta(id=reasoning["id"] or None, signature=reasoning["signature"] or None),
                         )
                     ]
+                if item.get("type") == "function_call":
+                    output = state.output[index]
+                    return [
+                        CanonicalChunk(
+                            id=state.chunk_id,
+                            delta=ToolCallDelta(index=index, id=output["id"] or None, name=output["name"] or None),
+                        )
+                    ]
             return []
         if kind == "response.output_text.delta":
             delta = str(data.get("delta") or "")
@@ -163,15 +171,7 @@ class OpenAIResponsesAdapter(EgressAdapter):
             delta = str(data.get("delta") or "")
             draft = state.output.setdefault(index, {"type": "function_call", "id": "", "name": "", "arguments": ""})
             draft["arguments"] += delta
-            return (
-                [
-                    CanonicalChunk(
-                        id=state.chunk_id, delta=ToolCallDelta(index=index, id=draft["id"] or None, name=draft["name"] or None, arguments=delta)
-                    )
-                ]
-                if delta
-                else []
-            )
+            return [CanonicalChunk(id=state.chunk_id, delta=ToolCallDelta(index=index, arguments=delta))] if delta else []
         return []
 
     def validate_stream(self, state: StreamState) -> None:

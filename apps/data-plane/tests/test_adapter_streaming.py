@@ -267,6 +267,18 @@ def test_stream_and_buffered_agree(kind, modality):
 
 
 @pytest.mark.parametrize("kind", KINDS)
+def test_stream_tool_identity_is_emitted_once(kind):
+    chunks, final = fold(_adapter(kind), CASES[kind]["tools"].log, 7)
+    deltas = [chunk.delta for chunk in chunks if chunk.delta is not None and chunk.delta.type == "tool_call"]
+    calls = [part for part in final.content if part.type == "tool_call"]
+
+    for index, call in enumerate(calls):
+        matching = [delta for delta in deltas if delta.index == index]
+        assert [delta.id for delta in matching if delta.id] == [call.id]
+        assert [delta.name for delta in matching if delta.name] == [call.name]
+
+
+@pytest.mark.parametrize("kind", KINDS)
 def test_a_stream_truncated_before_its_terminal_event_is_rejected(kind):
     adapter = _adapter(kind)
     state = adapter.new_stream_state(CTX)
