@@ -138,7 +138,11 @@ def _differences(direct: Observation, gateway: Observation, oracle: Oracle) -> t
         "finish_reason": (_finish_class(direct.finish_reason), _finish_class(gateway.finish_reason)),
         "usage_presence": (direct.usage_present, gateway.usage_present),
         **({"reasoning_presence": (direct.reasoning_present, gateway.reasoning_present)} if oracle.reasoning_present else {}),
-        "json": (json.dumps(direct.json_value, sort_keys=True), json.dumps(gateway.json_value, sort_keys=True)),
+        **(
+            {"json": (json.dumps(direct.json_value, sort_keys=True), json.dumps(gateway.json_value, sort_keys=True))}
+            if oracle.json_equals is not None
+            else {}
+        ),
         "error_category": (error_category(direct), error_category(gateway)),
         "adjustments": (direct.adjustments, gateway.adjustments),
     }

@@ -101,6 +101,16 @@ def test_incidental_reasoning_does_not_create_a_mismatch():
     assert result.parity == "match"
 
 
+def test_incidental_parseable_json_does_not_create_a_mismatch():
+    direct = Observation(outcome="success", text="20 + 22 = 42", reasoning_present=True)
+    gateway = Observation(outcome="success", text="42", json_value=42, reasoning_present=True)
+
+    result = assess(direct, gateway, Oracle(text_contains="42", reasoning_present=True))
+
+    assert result.parity == "match"
+    assert "json" not in result.differences
+
+
 def test_claimed_reasoning_presence_still_participates_in_parity():
     direct = Observation(outcome="success", text="ok", reasoning_present=True)
     gateway = Observation(outcome="success", text="ok", reasoning_present=False)

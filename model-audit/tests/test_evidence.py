@@ -4,7 +4,15 @@ import pytest
 
 from model_audit.cases import fingerprint
 from model_audit.evidence import records_from_report, reduce
-from model_audit.models import Assessment, EvidenceLedger, ExecutionVerdict, FeatureVerdict, Observation, PairResult, ReportDocument, RunMetadata
+from model_audit.models import (
+    Assessment,
+    EvidenceLedger,
+    FeatureVerdict,
+    Observation,
+    PairResult,
+    ReportDocument,
+    RunMetadata,
+)
 from tests.helpers import case
 
 
@@ -13,7 +21,7 @@ def _report(
     created_at: str,
     feature: FeatureVerdict,
     client: str = "http",
-    execution: ExecutionVerdict = "completed",
+    assessment: Assessment | None = None,
 ) -> ReportDocument:
     experiment_case = case()
     observation = Observation(outcome="success", text="ok")
@@ -43,7 +51,7 @@ def _report(
                 transport="buffered",
                 direct=observation,
                 gateway=observation,
-                assessment=Assessment(execution=execution, feature=feature, parity="match"),
+                assessment=assessment or Assessment(execution="completed", feature=feature, parity="match"),
             ),
         ),
     )
@@ -75,7 +83,8 @@ def test_interrupted_reports_cannot_become_provider_behavior_evidence():
 
 
 def test_incomplete_runs_do_not_become_provider_behavior_evidence():
-    report = _report("blocked", "2026-01-01T00:00:00+00:00", "unknown", execution="access_blocked")
+    assessment = Assessment(execution="access_blocked", feature="unknown", parity="inconclusive")
+    report = _report("blocked", "2026-01-01T00:00:00+00:00", "unknown", assessment=assessment)
     blocked = Observation(outcome="inconclusive", error_code="direct_authentication")
     report = report.model_copy(update={"results": (report.results[0].model_copy(update={"direct": blocked}),)})
 
@@ -83,15 +92,24 @@ def test_incomplete_runs_do_not_become_provider_behavior_evidence():
 
 
 def test_transient_provider_failures_do_not_become_evidence():
-    report = _report("transient", "2026-01-01T00:00:00+00:00", "unknown", execution="transient_failure")
+    assessment = Assessment(execution="transient_failure", feature="unknown", parity="not_evaluated")
+    report = _report("transient", "2026-01-01T00:00:00+00:00", "unknown", assessment=assessment)
     transient = Observation(outcome="transient", error_code="rate_limit", http_status=429)
     report = report.model_copy(update={"results": (report.results[0].model_copy(update={"direct": transient}),)})
 
     assert records_from_report(report, (case(),)) == ()
 
 
+def test_flaky_provider_behavior_does_not_become_evidence():
+    assessment = Assessment(execution="completed", feature="supported", parity="match", stability="flaky")
+    report = _report("flaky", "2026-01-01T00:00:00+00:00", "supported", assessment=assessment)
+
+    assert records_from_report(report, (case(),)) == ()
+
+
 def test_gateway_failure_does_not_discard_a_valid_direct_observation():
-    report = _report("gateway-failed", "2026-01-01T00:00:00+00:00", "supported", execution="harness_error")
+    assessment = Assessment(execution="harness_error", feature="supported", parity="inconclusive")
+    report = _report("gateway-failed", "2026-01-01T00:00:00+00:00", "supported", assessment=assessment)
 
     records = records_from_report(report, (case(),))
 

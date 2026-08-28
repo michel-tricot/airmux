@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
 
-from model_audit.diagnostics import difference_details, execution_display, feature_display, observation_summary, parity_display
+from model_audit.diagnostics import difference_details, execution_display, feature_display, observation_summary, parity_display, stability_display
 
 if TYPE_CHECKING:
     from rich.progress import TaskID
@@ -67,6 +67,8 @@ class ConsoleProgress:
         result = event.result
         self.console.print(f"{prefix}{parity_display(result.assessment).upper()}")
         self.console.print(f"{prefix}{feature_display(result.assessment).upper()}")
+        if result.assessment.stability == "flaky":
+            self.console.print(f"{prefix}{stability_display(result.assessment).upper()}")
         if result.assessment.execution != "completed":
             self.console.print(f"{prefix}{execution_display(result.assessment).upper()}")
         if result.assessment.differences:

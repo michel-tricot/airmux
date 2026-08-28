@@ -4,9 +4,10 @@ Model audit acquires provider catalogs, generates the applied taxonomy, and iden
 gateway gaps by comparing identical calls made directly and through a running AirLLM data
 plane.
 
-The project has three independent verdicts:
+The project has four independent verdicts:
 
 - Execution reports whether the experiment completed, exhausted transient retries, was blocked by access, or failed in the harness
+- Stability reports whether completed confirmation attempts agreed
 - Feature reports whether the direct provider supports the exact claimed behavior profile
 - Parity reports whether the gateway preserved the direct provider behavior
 
@@ -85,6 +86,10 @@ The runner retries only the affected side twice by default with exponential back
 this with `--transient-retries` and `--retry-backoff`. If retries are exhausted, execution is
 `transient failure` and parity is `not evaluated`; `inconclusive` is reserved for experiments
 that cannot be compared because access or the harness prevents the test.
+
+When completed confirmation attempts disagree, stability is `flaky`. A strict majority
+determines feature and parity when one exists; otherwise feature remains `unknown` and parity
+is `not evaluated`. Flaky results remain visible in reports but cannot become taxonomy evidence.
 
 ## Resume an interrupted run
 
@@ -286,6 +291,7 @@ The deterministic reducer applies these rules:
 - Confirmed direct success supports the exact claim profile
 - Explicit provider rejection makes that exact profile unsupported
 - Authentication and access failures remain unknown; exhausted transient failures are not promoted as evidence
+- Flaky provider behavior is retained in reports but is not promoted as evidence
 - Generic provider errors remain unknown
 - Unknown evidence never overwrites conclusive evidence
 - Conflicting equally recent conclusive evidence resolves to unknown

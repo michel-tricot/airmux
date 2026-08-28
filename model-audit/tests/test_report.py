@@ -36,6 +36,7 @@ def test_report_is_machine_readable_and_explains_gateway_gaps(tmp_path):
         gateway=Observation(outcome="rejected", http_status=400, error_code="invalid_request_error", error_message="bad request"),
         assessment=Assessment(
             execution="completed",
+            stability="flaky",
             feature="supported",
             parity="mismatch",
             differences=("outcome", "error_category", "oracle"),
@@ -51,10 +52,17 @@ def test_report_is_machine_readable_and_explains_gateway_gaps(tmp_path):
     report = paths.html_path.read_text(encoding="utf-8")
     assert '"feature": "supported"' in document
     assert '"parity": "mismatch"' in document
+    assert '"stability": "flaky"' in document
+    assert "Stability: 0 stable, 1 flaky" in report
     assert "gateway_rejection" in report
+    assert 'class="result gap-gateway_rejection"' in report
+    assert "<details" in report
+    assert "<summary>" in report
+    assert "<table" not in report
+    assert "color-scheme: dark" in report
+    assert "Provider observation" in report
+    assert "Gateway observation" in report
     assert "runs execute --model stub/model" in report
-    assert "Direct:" in report
-    assert "Gateway:" in report
 
 
 def test_incomplete_report_retains_only_missing_experiments_for_resume():
@@ -116,7 +124,7 @@ def test_checkpoint_records_plan_and_completion_state(tmp_path):
     )
 
     document = ReportDocument.model_validate_json(paths.json_path.read_text(encoding="utf-8"))
-    assert document.schema_version == 5
+    assert document.schema_version == 6
     assert document.complete is False
     assert document.plan is not None
     assert len(document.plan.experiments) == 1

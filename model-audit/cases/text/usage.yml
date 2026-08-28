@@ -8,6 +8,6 @@ request:
   messages:
   - role: user
     content: Reply with ok
-  max_tokens: 32
+  max_tokens: 1024
 oracle:
   usage_present: true

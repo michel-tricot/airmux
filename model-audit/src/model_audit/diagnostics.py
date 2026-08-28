@@ -57,6 +57,10 @@ def feature_display(assessment: Assessment) -> str:
     return {"supported": "✓ supported", "unsupported": "○ unsupported", "unknown": "? unknown"}[assessment.feature]
 
 
+def stability_display(assessment: Assessment) -> str:
+    return {"stable": "stable", "flaky": "~ flaky"}[assessment.stability]
+
+
 def execution_display(assessment: Assessment) -> str:
     return {
         "completed": "✓ completed",
@@ -79,7 +83,9 @@ def gap_kind(result: PairResult) -> str:
     elif assessment.parity == "inconclusive":
         kind = "inconclusive"
     elif assessment.parity == "match":
-        kind = "none"
+        kind = "flaky" if assessment.stability == "flaky" else "none"
+    elif assessment.parity == "not_evaluated" and assessment.stability == "flaky":
+        kind = "flaky"
     elif assessment.feature == "supported" and result.gateway.outcome != "success":
         kind = "gateway_rejection"
     elif "oracle" in assessment.differences:

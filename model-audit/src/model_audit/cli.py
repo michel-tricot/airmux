@@ -21,7 +21,7 @@ from model_audit.catalog_ops import (
     provider_sources,
     run_catalog_script,
 )
-from model_audit.diagnostics import execution_display, feature_display, gap_kind, parity_display, validation_failed
+from model_audit.diagnostics import execution_display, feature_display, gap_kind, parity_display, stability_display, validation_failed
 from model_audit.drivers import supported_endpoints
 from model_audit.evidence import accept, load_ledger, reduce
 from model_audit.gateway import Gateway
@@ -523,6 +523,7 @@ def _print_run_results(results: tuple[PairResult, ...], output_format: OutputFor
             "case": result.case_id,
             "feature": feature_display(result.assessment),
             "parity": parity_display(result.assessment),
+            "stability": stability_display(result.assessment),
             "execution": execution_display(result.assessment),
             "gap": gap_kind(result),
             "attempts": len(result.attempts),
@@ -538,6 +539,7 @@ def _print_run_results(results: tuple[PairResult, ...], output_format: OutputFor
             Col("case", "Case"),
             Col("feature", "Feature"),
             Col("parity", "Parity"),
+            *((Col("stability", "Stability"),) if any(result.assessment.stability == "flaky" for result in results) else ()),
             *((Col("execution", "Execution"),) if any(result.assessment.execution != "completed" for result in results) else ()),
             Col("gap", "Gap"),
             *((Col("attempts", "Attempts"),) if any(len(result.attempts) > 1 for result in results) else ()),
@@ -916,6 +918,7 @@ def reports_show(
             "case": result.case_id,
             "feature": feature_display(result.assessment),
             "parity": parity_display(result.assessment),
+            "stability": stability_display(result.assessment),
             "execution": execution_display(result.assessment),
             "gap": gap_kind(result),
         }
@@ -932,6 +935,7 @@ def reports_show(
             Col("case", "Case"),
             Col("feature", "Feature"),
             Col("parity", "Parity"),
+            Col("stability", "Stability"),
             Col("execution", "Execution"),
             Col("gap", "Gap"),
         ],
