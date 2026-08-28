@@ -369,6 +369,21 @@ def test_openai_compatible_stream_preserves_reasoning_spelled_without_content():
     assert final.content[0] == ReasoningPart(text="20 + 22")
 
 
+def test_openai_compatible_stream_accepts_null_tool_fragment_metadata():
+    events = [
+        delta_event({"tool_calls": [{"id": "call_1", "index": 0, "type": "function", "function": {"name": "report_result", "arguments": ""}}]}),
+        delta_event({"tool_calls": [{"id": None, "index": 0, "type": "function", "function": {"name": None, "arguments": '{"value":"ok"}'}}]}),
+        delta_event({}, finish="tool_calls"),
+        {"id": "chatcmpl-9", "model": "gpt-real", "choices": [], "usage": {"prompt_tokens": 5, "completion_tokens": 7}},
+    ]
+
+    _, final = fold(_adapter("openai_compatible"), b"".join(sse(event) for event in events) + b"data: [DONE]\n\n", 7)
+
+    assert [(part.id, part.name, part.arguments) for part in final.content] == [("call_1", "report_result", '{"value":"ok"}')]
+    assert final.finish_reason == "tool_calls"
+    assert not final.usage.estimated
+
+
 ANTHROPIC_THINKING_EVENTS = [
     {"type": "message_start", "message": {"id": "msg_9", "usage": {"input_tokens": 5, "output_tokens": 1}}},
     {"type": "content_block_start", "index": 0, "content_block": {"type": "thinking", "thinking": ""}},
