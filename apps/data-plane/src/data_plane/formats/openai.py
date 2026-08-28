@@ -214,18 +214,23 @@ class UpstreamErrorBody(BaseModel):
             return value
         error = value.get("error")
         if isinstance(error, str):
+            code = value.get("code")
             return {
                 "error": {
-                    "code": value.get("code"),
+                    "code": str(code) if code is not None else None,
                     "message": error,
                 }
             }
+        if isinstance(error, dict):
+            code = error.get("code")
+            return {**value, "error": {**error, **({"code": str(code)} if code is not None else {})}}
         if error is not None:
             return value
         message = value.get("message")
         if not isinstance(message, str) and "detail" in value:
             message = json.dumps(value, ensure_ascii=False, separators=(",", ":"))
-        return {"error": {"code": value.get("code"), "message": message}} if isinstance(message, str) else value
+        code = value.get("code")
+        return {"error": {"code": str(code) if code is not None else None, "message": message}} if isinstance(message, str) else value
 
 
 class UpstreamToolCall(BaseModel):
