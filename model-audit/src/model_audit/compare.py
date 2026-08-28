@@ -10,6 +10,7 @@ UNSUPPORTED_PATTERNS = (
     "unsupported",
     "does not support",
     "is not available",
+    "not enabled for",
     "cannot be used with",
     "may not be enabled when",
     "is incompatible with",
