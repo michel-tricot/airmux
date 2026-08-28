@@ -17,8 +17,18 @@ from conftest import TEXT_LOG, TEXT_NONSTREAM, mock_control_plane
 from pydantic import TypeAdapter
 from starlette.testclient import TestClient
 
-from data_plane.canonical import CanonicalResponse, DocumentPart, ReasoningPart, ResponseFormat, TextPart, Usage
-from data_plane.ingress.anthropic import AnthropicIngress
+from data_plane.canonical import (
+    CanonicalChunk,
+    CanonicalResponse,
+    DocumentPart,
+    ReasoningDelta,
+    ReasoningPart,
+    ResponseFormat,
+    TextDelta,
+    TextPart,
+    Usage,
+)
+from data_plane.ingress.anthropic import AnthropicIngress, AnthropicResponseStream
 
 UPSTREAM = "https://api.openai.com/v1/chat/completions"
 
@@ -124,6 +134,53 @@ def test_the_sdk_reads_a_thinking_signature_back():
     thinking = message.content[0]
     assert thinking.type == "thinking"
     assert (thinking.thinking, thinking.signature) == ("think", "sig_1")
+
+
+def test_the_sdk_replays_cross_provider_reasoning_identity():
+    final = CanonicalResponse(
+        id="msg_1",
+        model="m",
+        content=[ReasoningPart(id="rs_provider", text="think", signature="encrypted"), TextPart(text="ok")],
+        finish_reason="stop",
+        usage=Usage(input_tokens=3, output_tokens=2),
+    )
+    message = Message.model_validate_json(bytes(AnthropicIngress().render_response(final).body))
+
+    request, _ = AnthropicIngress().parse(
+        {
+            "model": "m",
+            "max_tokens": 64,
+            "messages": [
+                {"role": "assistant", "content": [block.model_dump() for block in message.content]},
+                {"role": "user", "content": "continue"},
+            ],
+        }
+    )
+
+    assert request.messages[0].content[0] == ReasoningPart(id="rs_provider", text="think", signature="encrypted")
+
+
+def test_the_stream_replays_cross_provider_reasoning_identity():
+    stream = AnthropicResponseStream()
+    frames = [
+        *stream.chunk(CanonicalChunk(id="response-1", delta=ReasoningDelta(id="rs_provider", text="think", signature="encr"))),
+        *stream.chunk(CanonicalChunk(id="response-1", delta=ReasoningDelta(signature="ypted"))),
+        *stream.chunk(CanonicalChunk(id="response-1", delta=TextDelta(text="ok"))),
+    ]
+    events = [json.loads(frame.split(b"data: ", 1)[1]) for frame in frames]
+    signature = next(
+        event["delta"]["signature"] for event in events if event["type"] == "content_block_delta" and event["delta"]["type"] == "signature_delta"
+    )
+
+    request, _ = AnthropicIngress().parse(
+        {
+            "model": "m",
+            "max_tokens": 64,
+            "messages": [{"role": "assistant", "content": [{"type": "thinking", "thinking": "think", "signature": signature}]}],
+        }
+    )
+
+    assert request.messages[0].content == [ReasoningPart(id="rs_provider", text="think", signature="encrypted")]
 
 
 @respx.mock

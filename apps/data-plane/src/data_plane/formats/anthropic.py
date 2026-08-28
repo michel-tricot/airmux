@@ -7,6 +7,7 @@ round-trip everywhere, because a later turn without one is rejected."""
 
 from __future__ import annotations
 
+import base64
 import json
 import logging
 from typing import TYPE_CHECKING, Any, Literal
@@ -40,6 +41,33 @@ if TYPE_CHECKING:
 logger = logging.getLogger("data_plane")
 
 CACHE_CONTROL = {"type": "ephemeral"}
+REASONING_IDENTITY_PREFIX = "airllm-reasoning-v1:"
+
+
+def reasoning_signature(reasoning_id: str | None, signature: str | None) -> str:
+    if reasoning_id is None:
+        return signature or ""
+    payload = json.dumps([reasoning_id, signature], separators=(",", ":")).encode()
+    return REASONING_IDENTITY_PREFIX + base64.urlsafe_b64encode(payload).decode()
+
+
+def reasoning_identity(signature: str) -> tuple[str | None, str | None]:
+    if not signature.startswith(REASONING_IDENTITY_PREFIX):
+        return None, signature or None
+    encoded = signature.removeprefix(REASONING_IDENTITY_PREFIX)
+    try:
+        payload = json.loads(base64.urlsafe_b64decode(encoded).decode())
+    except (ValueError, UnicodeDecodeError):
+        return None, signature
+    if not isinstance(payload, list):
+        return None, signature
+    try:
+        reasoning_id, original = payload
+    except ValueError:
+        return None, signature
+    if not isinstance(reasoning_id, str) or (original is not None and not isinstance(original, str)):
+        return None, signature
+    return reasoning_id, original
 
 
 class MessagesBody(BaseModel):
@@ -415,8 +443,8 @@ def _parts_from_blocks(content: object) -> list[ContentPart]:
         if kind == "text":
             parts.append(TextPart(text=_str(block.get("text")), cache=cache))
         elif kind == "thinking":
-            signature = block.get("signature")
-            parts.append(ReasoningPart(text=_str(block.get("thinking")), signature=_str(signature) or None, cache=cache))
+            reasoning_id, signature = reasoning_identity(_str(block.get("signature")))
+            parts.append(ReasoningPart(id=reasoning_id, text=_str(block.get("thinking")), signature=signature, cache=cache))
         elif kind == "image":
             parts.append(_image_from_source(_mapping(block.get("source"))).model_copy(update={"cache": cache}))
         elif kind == "document":
@@ -533,7 +561,7 @@ def to_response_content(parts: Sequence[AssistantPart]) -> list[BlockOut]:
     blocks: list[BlockOut] = []
     for part in parts:
         if isinstance(part, ReasoningPart):
-            blocks.append(ThinkingOut(thinking=part.text, signature=part.signature or ""))
+            blocks.append(ThinkingOut(thinking=part.text, signature=reasoning_signature(part.id, part.signature)))
         elif isinstance(part, TextPart):
             blocks.append(TextOut(text=part.text))
         elif isinstance(part, ToolCallPart):

@@ -36,6 +36,8 @@ def _mapping(value: object) -> dict[str, Any]:
 class _OpenBlock:
     index: int
     key: str  # what the block holds: "text", "thinking", or one tool call
+    reasoning_id: str | None = None
+    signature: str = ""
 
 
 class AnthropicResponseStream:
@@ -57,7 +59,11 @@ class AnthropicResponseStream:
         if self.open is None:
             return []
         block, self.open = self.open, None
-        return [fmt.ContentBlockStop(index=block.index).sse()]
+        events = []
+        if block.key == "thinking" and (block.reasoning_id is not None or block.signature):
+            signature = fmt.reasoning_signature(block.reasoning_id, block.signature or None)
+            events.append(fmt.ContentBlockDelta(index=block.index, delta=fmt.SignatureDeltaOut(signature=signature)).sse())
+        return [*events, fmt.ContentBlockStop(index=block.index).sse()]
 
     def _switch(self, key: str, opening: fmt.BlockOut) -> tuple[list[bytes], int]:
         """The one boundary rule: same key keeps the open block, a new key ends it and starts the next."""
@@ -77,8 +83,9 @@ class AnthropicResponseStream:
             return [*events, fmt.ContentBlockDelta(index=index, delta=fmt.TextDeltaOut(text=delta.text)).sse()]
         if delta.type == "reasoning":
             events, index = self._switch("thinking", fmt.ThinkingOut(thinking=""))
-            if delta.signature:
-                events.append(fmt.ContentBlockDelta(index=index, delta=fmt.SignatureDeltaOut(signature=delta.signature)).sse())
+            if self.open is not None:
+                self.open.reasoning_id = delta.id or self.open.reasoning_id
+                self.open.signature += delta.signature or ""
             if delta.text:
                 events.append(fmt.ContentBlockDelta(index=index, delta=fmt.ThinkingDeltaOut(thinking=delta.text)).sse())
             return events
