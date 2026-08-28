@@ -24,7 +24,7 @@ def _active_cases(cases: tuple[Case, ...]) -> dict[str, tuple[int, str]]:
 
 
 def _usable_direct_observation(result: PairResult) -> bool:
-    return result.direct.outcome != "inconclusive" and result.direct.error_code not in ACCESS_CODES | HARNESS_CODES
+    return result.direct.outcome not in {"inconclusive", "transient"} and result.direct.error_code not in ACCESS_CODES | HARNESS_CODES
 
 
 def records_from_report(report: ReportDocument, cases: tuple[Case, ...]) -> tuple[EvidenceRecord, ...]:
@@ -59,7 +59,7 @@ def records_from_report(report: ReportDocument, cases: tuple[Case, ...]) -> tupl
                     claim=claim,
                     verdict=result.assessment.feature,
                     observation=result.direct,
-                    attempts=len(result.confirmations) + 1,
+                    attempts=max(1, len(result.attempts)),
                     observed_at=report.run.created_at,
                     harness_commit=report.run.harness_commit,
                     taxonomy_fingerprint=report.run.taxonomy_fingerprint,

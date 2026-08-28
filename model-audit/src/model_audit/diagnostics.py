@@ -45,7 +45,12 @@ def observation_summary(observation: Observation) -> str:
 
 
 def parity_display(assessment: Assessment) -> str:
-    return {"match": "✓ match", "mismatch": "✗ mismatch", "inconclusive": "? inconclusive"}[assessment.parity]
+    return {
+        "match": "✓ match",
+        "mismatch": "✗ mismatch",
+        "not_evaluated": "↻ not evaluated",
+        "inconclusive": "? inconclusive",
+    }[assessment.parity]
 
 
 def feature_display(assessment: Assessment) -> str:
@@ -53,7 +58,12 @@ def feature_display(assessment: Assessment) -> str:
 
 
 def execution_display(assessment: Assessment) -> str:
-    return {"completed": "✓ completed", "access_blocked": "? access blocked", "harness_error": "✗ harness error"}[assessment.execution]
+    return {
+        "completed": "✓ completed",
+        "transient_failure": "↻ transient failure",
+        "access_blocked": "? access blocked",
+        "harness_error": "✗ harness error",
+    }[assessment.execution]
 
 
 def validation_failed(result: PairResult) -> bool:
@@ -64,6 +74,8 @@ def gap_kind(result: PairResult) -> str:
     assessment = result.assessment
     if assessment.execution == "harness_error":
         kind = "harness"
+    elif assessment.execution == "transient_failure":
+        kind = "transient"
     elif assessment.parity == "inconclusive":
         kind = "inconclusive"
     elif assessment.parity == "match":

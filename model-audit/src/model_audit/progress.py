@@ -26,8 +26,8 @@ class ConsoleProgress:
         self.completed = 0
         self.lock = threading.RLock()
 
-    def start(self, plan: Plan, gateway_url: str, confirmations: int = 1, concurrency: int = 1) -> None:
-        attempts = confirmations + 1
+    def start(self, plan: Plan, gateway_url: str, confirmations: int = 1, transient_retries: int = 2, concurrency: int = 1) -> None:
+        attempts = (confirmations + 1) * (transient_retries + 1)
         maximum = plan.requests * attempts
         self.parallel = concurrency > 1
         self.console.print(
@@ -41,7 +41,7 @@ class ConsoleProgress:
 
     @staticmethod
     def _path_text(path: str, observation: Observation) -> str:
-        icon = {"success": "✓", "rejected": "○", "error": "✗", "inconclusive": "?"}[observation.outcome]
+        icon = {"success": "✓", "rejected": "○", "error": "✗", "transient": "↻", "inconclusive": "?"}[observation.outcome]
         detail = observation.error_code or observation.client_type or ""
         http = f" | HTTP {observation.http_status}" if observation.http_status is not None else ""
         return f"{icon} {observation.outcome.upper()} {path.title()} | {detail}{http} | {observation.duration_ms:.0f}ms"

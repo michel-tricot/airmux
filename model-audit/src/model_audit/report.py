@@ -60,6 +60,7 @@ def _html(document: ReportDocument) -> str:
     results = document.results
     matched = sum(result.assessment.parity == "match" for result in results)
     mismatched = sum(result.assessment.parity == "mismatch" for result in results)
+    not_evaluated = sum(result.assessment.parity == "not_evaluated" for result in results)
     inconclusive = sum(result.assessment.parity == "inconclusive" for result in results)
     supported = sum(result.assessment.feature == "supported" for result in results)
     unsupported = sum(result.assessment.feature == "unsupported" for result in results)
@@ -71,7 +72,7 @@ def _html(document: ReportDocument) -> str:
 <html lang="en"><head><meta charset="utf-8"><title>AirLLM model audit {html.escape(document.run.run_id)}</title>
 <style>{STYLE}</style></head>
 <body><h1>AirLLM model audit</h1><p>{state}: run {html.escape(document.run.run_id)} against {html.escape(document.run.gateway_url)}</p>{resume}
-<div class="summary"><span>Parity: {matched} match, {mismatched} mismatch, {inconclusive} inconclusive</span>
+<div class="summary"><span>Parity: {matched} match, {mismatched} mismatch, {not_evaluated} not evaluated, {inconclusive} inconclusive</span>
 <span>Features: {supported} supported, {unsupported} unsupported, {unknown} unknown</span></div>
 <table><thead><tr><th>Provider</th><th>Model</th><th>Provider Surface</th><th>Gateway Surface</th><th>Case</th><th>Transport</th>
 <th>Feature</th><th>Parity</th><th>Gap</th></tr></thead><tbody>{rows}</tbody></table></body></html>"""

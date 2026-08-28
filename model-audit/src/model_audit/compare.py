@@ -15,7 +15,7 @@ UNSUPPORTED_PATTERNS = (
     "is incompatible with",
 )
 ACCESS_CODES = {"direct_authentication", "direct_model_access", "gateway_authentication", "not_run"}
-HARNESS_CODES = {"client_exception", "connection_error", "harness_request_error", "http_protocol_error", "request_timeout", "sdk_protocol_error"}
+HARNESS_CODES = {"client_exception", "harness_request_error", "http_protocol_error", "sdk_protocol_error"}
 ERROR_TOPICS = {
     "image": ("image", "vision"),
     "pdf": ("pdf", "document"),
@@ -82,7 +82,7 @@ def _truncated_before_assertion(observation: Observation, oracle: Oracle) -> boo
 
 
 def satisfies(observation: Observation, oracle: Oracle) -> bool | None:
-    if observation.outcome == "inconclusive" or _truncated_before_assertion(observation, oracle):
+    if observation.outcome in {"inconclusive", "transient"} or _truncated_before_assertion(observation, oracle):
         return None
     return not oracle_failures(observation, oracle)
 
@@ -150,17 +150,23 @@ def assess(direct: Observation, gateway: Observation, oracle: Oracle) -> Assessm
     feature = feature_verdict(direct, oracle)
     access_blocked = direct.error_code in ACCESS_CODES or gateway.error_code in ACCESS_CODES
     harness_error = direct.error_code in HARNESS_CODES or gateway.error_code in HARNESS_CODES
+    transient_failure = direct.outcome == "transient" or gateway.outcome == "transient"
     if access_blocked:
         execution = "access_blocked"
     elif harness_error:
         execution = "harness_error"
+    elif transient_failure:
+        execution = "transient_failure"
     else:
         execution = "completed"
     differences = _differences(direct, gateway, oracle)
     oracle_differs = direct_satisfies is not None and gateway_satisfies is not None and direct_satisfies != gateway_satisfies
     if oracle_differs:
         differences = (*differences, "oracle")
-    if access_blocked or harness_error or direct.outcome == "inconclusive" or gateway.outcome == "inconclusive":
+    if transient_failure and not access_blocked and not harness_error:
+        parity = "not_evaluated"
+        reason = "a transient failure prevented comparison"
+    elif access_blocked or harness_error or direct.outcome == "inconclusive" or gateway.outcome == "inconclusive":
         parity = "inconclusive"
         reason = "access or transport prevented a meaningful comparison"
     elif differences:

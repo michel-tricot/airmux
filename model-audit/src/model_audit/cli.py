@@ -525,7 +525,7 @@ def _print_run_results(results: tuple[PairResult, ...], output_format: OutputFor
             "parity": parity_display(result.assessment),
             "execution": execution_display(result.assessment),
             "gap": gap_kind(result),
-            "attempts": len(result.confirmations) + 1,
+            "attempts": len(result.attempts),
         }
         for result in results
     ]
@@ -540,7 +540,7 @@ def _print_run_results(results: tuple[PairResult, ...], output_format: OutputFor
             Col("parity", "Parity"),
             *((Col("execution", "Execution"),) if any(result.assessment.execution != "completed" for result in results) else ()),
             Col("gap", "Gap"),
-            *((Col("attempts", "Attempts"),) if any(result.confirmations for result in results) else ()),
+            *((Col("attempts", "Attempts"),) if any(len(result.attempts) > 1 for result in results) else ()),
         ),
         output_format,
     )
@@ -580,13 +580,21 @@ def _execute_checkpointed(
         )
 
     progress = ConsoleProgress()
-    progress.start(pending, context.gateway.base_url, context.settings.confirmations, context.concurrency)
+    progress.start(
+        pending,
+        context.gateway.base_url,
+        context.settings.confirmations,
+        context.settings.transient_retries,
+        context.concurrency,
+    )
     execute(
         pending,
         context.gateway,
         progress=progress,
         options=ExecutionOptions(
             confirmations=context.settings.confirmations,
+            transient_retries=context.settings.transient_retries,
+            retry_backoff_seconds=context.settings.retry_backoff_seconds,
             request_timeout_seconds=context.settings.request_timeout_seconds,
             concurrency=context.concurrency,
         ),
@@ -614,6 +622,14 @@ def runs_execute(  # noqa: PLR0913, PLR0917 command flags define the CLI surface
     yes: Annotated[bool, typer.Option("--yes", help="Confirm a run above the request guardrail")] = False,
     max_requests: Annotated[int, typer.Option("--max-requests", min=1)] = 500,
     confirmations: Annotated[int, typer.Option("--confirmations", min=0, max=5)] = 1,
+    transient_retries: Annotated[
+        int,
+        typer.Option("--transient-retries", min=0, max=5, help="Retries for rate limits and other transient path failures"),
+    ] = 2,
+    retry_backoff: Annotated[
+        float,
+        typer.Option("--retry-backoff", min=0, max=60, help="Initial retry delay in seconds; later retries back off exponentially"),
+    ] = 2,
     concurrency: ConcurrencyOption = 4,
     request_timeout: Annotated[float, typer.Option("--request-timeout", min=0.1)] = 60,
     output_format: FormatOption = OutputFormat.table,
@@ -638,13 +654,18 @@ def runs_execute(  # noqa: PLR0913, PLR0917 command flags define the CLI surface
     if not plan.experiments:
         message = "the selected run has no applicable experiments"
         raise typer.BadParameter(message)
-    maximum_requests = plan.requests * (confirmations + 1)
+    maximum_requests = plan.requests * (confirmations + 1) * (transient_retries + 1)
     if maximum_requests > max_requests and not yes:
         message = f"the run can schedule up to {maximum_requests} requests; pass --yes or narrow the selection"
         raise typer.BadParameter(message)
     run_id = datetime.now(tz=UTC).strftime("%Y%m%dT%H%M%SZ")
     gateway = Gateway(base_url=gateway_url, api_key=gateway_api_key, request_timeout_seconds=request_timeout)
-    settings = RunSettings(confirmations=confirmations, request_timeout_seconds=request_timeout)
+    settings = RunSettings(
+        confirmations=confirmations,
+        transient_retries=transient_retries,
+        retry_backoff_seconds=retry_backoff,
+        request_timeout_seconds=request_timeout,
+    )
     results, paths = _execute_checkpointed(
         plan,
         (),
@@ -668,6 +689,14 @@ def runs_resume(  # noqa: PLR0913, PLR0917 command flags define the CLI surface
     report: Annotated[Path, typer.Argument(exists=True, dir_okay=False, help="Incomplete JSON report")],
     gateway_api_key: GatewayKeyOption = None,
     confirmations: Annotated[int | None, typer.Option("--confirmations", min=0, max=5)] = None,
+    transient_retries: Annotated[
+        int | None,
+        typer.Option("--transient-retries", min=0, max=5, help="Override retries for transient path failures"),
+    ] = None,
+    retry_backoff: Annotated[
+        float | None,
+        typer.Option("--retry-backoff", min=0, max=60, help="Override the initial exponential backoff delay"),
+    ] = None,
     concurrency: ConcurrencyOption = 4,
     request_timeout: Annotated[float | None, typer.Option("--request-timeout", min=0.1)] = None,
     output_format: FormatOption = OutputFormat.table,
@@ -699,6 +728,8 @@ def runs_resume(  # noqa: PLR0913, PLR0917 command flags define the CLI surface
     settings = document.settings.model_copy(
         update={
             "confirmations": confirmations if confirmations is not None else document.settings.confirmations,
+            "transient_retries": transient_retries if transient_retries is not None else document.settings.transient_retries,
+            "retry_backoff_seconds": retry_backoff if retry_backoff is not None else document.settings.retry_backoff_seconds,
             "request_timeout_seconds": request_timeout if request_timeout is not None else document.settings.request_timeout_seconds,
         }
     )

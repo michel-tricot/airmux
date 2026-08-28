@@ -41,11 +41,14 @@ type ProgressReporter = Callable[[ProgressEvent], None]
 @dataclass(frozen=True)
 class ExecutionOptions:
     confirmations: int = 1
+    transient_retries: int = 2
+    retry_backoff_seconds: float = 2
     request_timeout_seconds: float = 60
     concurrency: int = 4
 
 
 DEFAULT_EXECUTION_OPTIONS = ExecutionOptions()
+MAX_RETRY_DELAY_SECONDS = 60
 
 
 @dataclass(frozen=True)
@@ -148,6 +151,47 @@ def _pair(context: PairContext, attempt: int) -> PairAttempt:
     return PairAttempt(direct=direct, gateway=gateway, assessment=assess(direct, gateway, context.experiment.case.oracle))
 
 
+def _retry_transient(context: PairContext, previous: PairAttempt, attempt: int) -> PairAttempt:
+    direct = previous.direct
+    if direct.outcome == "transient":
+        if context.progress is not None:
+            context.progress(_event(context, "path_started", "direct", attempt))
+        direct = _observe(
+            context.direct_driver,
+            context.direct_connection,
+            context.experiment.target.endpoint,
+            context.experiment,
+            context.experiment.target.upstream_model,
+        )
+        if context.progress is not None:
+            context.progress(_event(context, "path_completed", "direct", attempt, direct))
+    gateway = previous.gateway
+    if gateway.outcome == "transient":
+        if context.progress is not None:
+            context.progress(_event(context, "path_started", "gateway", attempt))
+        gateway = _observe(
+            context.gateway_driver,
+            context.gateway.connection(context.experiment.gateway_endpoint),
+            context.experiment.gateway_endpoint,
+            context.experiment,
+            context.experiment.target.model_id,
+        )
+        if context.progress is not None:
+            context.progress(_event(context, "path_completed", "gateway", attempt, gateway))
+    return PairAttempt(direct=direct, gateway=gateway, assessment=assess(direct, gateway, context.experiment.case.oracle))
+
+
+def _with_transient_retries(context: PairContext, first_attempt: int, options: ExecutionOptions) -> tuple[PairAttempt, ...]:
+    attempts = [_pair(context, first_attempt)]
+    for retry in range(options.transient_retries):
+        if attempts[-1].assessment.execution != "transient_failure":
+            break
+        if delay := min(MAX_RETRY_DELAY_SECONDS, options.retry_backoff_seconds * 2**retry):
+            time.sleep(delay)
+        attempts.append(_retry_transient(context, attempts[-1], first_attempt + retry + 1))
+    return tuple(attempts)
+
+
 def _confirmed(initial: PairAttempt, confirmations: tuple[PairAttempt, ...]) -> Assessment:
     assessments = tuple(attempt.assessment for attempt in (initial, *confirmations))
     first = assessments[0]
@@ -160,6 +204,13 @@ def _confirmed(initial: PairAttempt, confirmations: tuple[PairAttempt, ...]) -> 
     )
     if stable:
         return first.model_copy(update={"reason": f"reproduced across {len(assessments)} attempts"})
+    if any(assessment.execution == "transient_failure" for assessment in assessments):
+        return Assessment(
+            execution="transient_failure",
+            feature=first.feature,
+            parity="not_evaluated",
+            reason="a transient failure prevented confirmation",
+        )
     executions = {item.execution for item in assessments}
     execution = "harness_error" if "harness_error" in executions else "access_blocked" if "access_blocked" in executions else "completed"
     return Assessment(
@@ -174,7 +225,7 @@ def _result(
     experiment: Experiment,
     attempt: PairAttempt,
     assessment: Assessment,
-    confirmations: tuple[PairAttempt, ...] = (),
+    attempts: tuple[PairAttempt, ...],
 ) -> PairResult:
     target = experiment.target
     return PairResult(
@@ -198,14 +249,14 @@ def _result(
         direct=attempt.direct,
         gateway=attempt.gateway,
         assessment=assessment,
-        confirmations=confirmations,
+        attempts=attempts,
     )
 
 
 def _blocked_result(experiment: Experiment, code: str, message: str) -> PairResult:
     observation = Observation(outcome="inconclusive", error_code=code, error_message=message)
     attempt = PairAttempt(direct=observation, gateway=observation, assessment=assess(observation, observation, experiment.case.oracle))
-    return _result(experiment, attempt, attempt.assessment)
+    return _result(experiment, attempt, attempt.assessment, (attempt,))
 
 
 def _harness_result(experiment: Experiment, error: Exception) -> PairResult:
@@ -216,7 +267,7 @@ def _harness_result(experiment: Experiment, error: Exception) -> PairResult:
         client_type=type(error).__name__,
     )
     attempt = PairAttempt(direct=observation, gateway=observation, assessment=assess(observation, observation, experiment.case.oracle))
-    return _result(experiment, attempt, attempt.assessment)
+    return _result(experiment, attempt, attempt.assessment, (attempt,))
 
 
 def _progress_event(
@@ -233,7 +284,7 @@ def _progress_event(
                 total=context.total,
                 experiment=scheduled.experiment,
                 result=result,
-                max_attempts=context.options.confirmations + 1,
+                max_attempts=(context.options.confirmations + 1) * (context.options.transient_retries + 1),
             )
         )
 
@@ -249,16 +300,23 @@ def _execute_experiment(scheduled: ScheduledExperiment, run: RunContext) -> Pair
         experiment=experiment,
         index=scheduled.index,
         total=run.total,
-        max_attempts=options.confirmations + 1,
+        max_attempts=(options.confirmations + 1) * (options.transient_retries + 1),
         progress=run.progress,
     )
-    initial = _pair(context, 1)
+    attempts = list(_with_transient_retries(context, 1, options))
+    initial = attempts[-1]
     should_confirm = initial.assessment.execution == "completed" and (
         initial.assessment.parity != "match" or initial.assessment.feature != "supported"
     )
-    confirmations = tuple(_pair(context, attempt) for attempt in range(2, options.confirmations + 2)) if should_confirm else ()
-    assessment = _confirmed(initial, confirmations) if confirmations else initial.assessment
-    return _result(experiment, initial, assessment, confirmations)
+    confirmations = []
+    for _ in range(options.confirmations if should_confirm else 0):
+        confirmation_attempts = _with_transient_retries(context, len(attempts) + 1, options)
+        attempts.extend(confirmation_attempts)
+        confirmations.append(confirmation_attempts[-1])
+    confirmed = tuple(confirmations)
+    assessment = _confirmed(initial, confirmed) if confirmed else initial.assessment
+    final = attempts[-1]
+    return _result(experiment, final, assessment, tuple(attempts))
 
 
 def _access_key(experiment: Experiment) -> tuple[str, str, str]:
@@ -269,6 +327,12 @@ def _access_key(experiment: Experiment) -> tuple[str, str, str]:
 def _validate_options(options: ExecutionOptions) -> None:
     if options.concurrency < 1:
         message = "concurrency must be at least one"
+        raise ValueError(message)
+    if options.transient_retries < 0:
+        message = "transient retries cannot be negative"
+        raise ValueError(message)
+    if options.retry_backoff_seconds < 0:
+        message = "retry backoff cannot be negative"
         raise ValueError(message)
 
 
