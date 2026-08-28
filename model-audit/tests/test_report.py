@@ -116,6 +116,7 @@ def test_checkpoint_records_plan_and_completion_state(tmp_path):
     )
 
     document = ReportDocument.model_validate_json(paths.json_path.read_text(encoding="utf-8"))
+    assert document.schema_version == 5
     assert document.complete is False
     assert document.plan is not None
     assert len(document.plan.experiments) == 1

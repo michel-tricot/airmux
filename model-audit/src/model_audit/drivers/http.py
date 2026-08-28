@@ -169,13 +169,18 @@ def _post_buffered(
         return _failure(error, started, "http_protocol_error", "error"), None
 
 
-def _follow_up_body(endpoint: str, model: str, case: Case, payload: Mapping[str, object]) -> dict[str, object]:
+def _body_of(connection: Connection, endpoint: str, model: str, case: Case, transport: Transport) -> dict[str, object]:
+    body = body_of(endpoint, model, case, transport)
+    return {connection.param_aliases.get(name, name): value for name, value in body.items()}
+
+
+def _follow_up_body(connection: Connection, endpoint: str, model: str, case: Case, payload: Mapping[str, object]) -> dict[str, object]:
     if case.follow_up is None:
         message = "reasoning history case needs a follow-up request"
         raise ValueError(message)
     follow_up = case.model_copy(update={"request": case.follow_up, "follow_up": None})
-    first = cast("dict[str, object]", body_of(endpoint, model, case, "buffered"))
-    second = cast("dict[str, object]", body_of(endpoint, model, follow_up, "buffered"))
+    first = _body_of(connection, endpoint, model, case, "buffered")
+    second = _body_of(connection, endpoint, model, follow_up, "buffered")
     if endpoint == "responses":
         second["input"] = [
             *cast("list[object]", first["input"]),
@@ -195,12 +200,12 @@ def _follow_up_body(endpoint: str, model: str, case: Case, payload: Mapping[str,
 
 
 def _history(connection: Connection, endpoint: str, model: str, case: Case, started: float) -> Observation:
-    first = cast("dict[str, object]", body_of(endpoint, model, case, "buffered"))
+    first = _body_of(connection, endpoint, model, case, "buffered")
     observation, payload = _post_buffered(connection, endpoint, first, started)
     if payload is None:
         return observation
     try:
-        follow_up = _follow_up_body(endpoint, model, case, payload)
+        follow_up = _follow_up_body(connection, endpoint, model, case, payload)
     except (TypeError, ValueError) as error:
         return _failure(error, started, "harness_request_error", "error")
     final, _ = _post_buffered(connection, endpoint, follow_up, started)
@@ -217,7 +222,7 @@ class HTTPDriver(ClientDriver):
         if case.follow_up is not None:
             return _history(connection, endpoint, model, case, started)
         try:
-            request = body_of(endpoint, model, case, transport)
+            request = _body_of(connection, endpoint, model, case, transport)
         except (TypeError, ValueError) as error:
             return Observation(
                 outcome="inconclusive",
@@ -226,4 +231,4 @@ class HTTPDriver(ClientDriver):
                 duration_ms=(time.perf_counter() - started) * 1000,
                 client_type="HTTP",
             )
-        return _send(connection, endpoint, cast("dict[str, object]", request), transport, started)
+        return _send(connection, endpoint, request, transport, started)

@@ -9,6 +9,8 @@ import respx
 from model_audit.cases import load_cases, load_features
 from model_audit.drivers.base import Connection
 from model_audit.drivers.http import HTTPDriver
+from model_audit.models import Claim, Request
+from tests.helpers import case
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -16,6 +18,39 @@ ROOT = Path(__file__).resolve().parents[1]
 def _case():
     cases = load_cases(ROOT / "cases", load_features(ROOT / "definitions" / "features.yml"))
     return next(case for case in cases if case.id == "reasoning.history")
+
+
+@respx.mock
+def test_direct_http_requests_use_provider_parameter_aliases():
+    route = respx.post("https://provider.example/v1/chat/completions").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "id": "response-1",
+                "choices": [{"message": {"content": "ok"}, "finish_reason": "stop"}],
+                "usage": {"prompt_tokens": 1, "completion_tokens": 1},
+            },
+        )
+    )
+    connection = Connection(
+        base_url="https://provider.example/v1",
+        api_key="key",
+        auth="bearer",
+        headers={},
+        route="direct",
+        param_aliases={"max_tokens": "max_completion_tokens"},
+    )
+    audit_case = case(
+        claims=(Claim(dimension="option", name="max_tokens"),),
+        request=Request(messages=({"role": "user", "content": "Reply with ok"},), max_tokens=8),
+    )
+
+    observation = HTTPDriver().execute(connection, "chat/completions", "model", audit_case, "buffered")
+
+    request = json.loads(route.calls[0].request.content)
+    assert observation.text == "ok"
+    assert request["max_completion_tokens"] == 8
+    assert "max_tokens" not in request
 
 
 @respx.mock

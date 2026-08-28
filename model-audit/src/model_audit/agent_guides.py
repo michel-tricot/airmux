@@ -119,7 +119,8 @@ evidence.
 Run the smallest reproducing model, case, provider surface, gateway surface, and transport.
 Compare normalized status, semantic output, usage, reasoning, tool calls, error classification,
 and streaming behavior. Confirm that direct authentication and gateway authentication are
-independently valid.
+independently valid. Direct raw HTTP requests must use provider-declared parameter aliases;
+gateway requests keep the caller surface spelling.
 
 Classify the result as translation, semantic, error-mapping, streaming, gateway rejection,
 access, or harness behavior. A provider failure mirrored by the gateway is parity. Do not

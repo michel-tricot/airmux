@@ -5,11 +5,11 @@ claims:
 - dimension: option
   name: max_tokens
   profile:
-    value: 8
+    value: 1024
 request:
   messages:
   - role: user
     content: Reply with ok
-  max_tokens: 8
+  max_tokens: 1024
 oracle:
   usage_present: true

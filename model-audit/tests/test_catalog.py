@@ -19,6 +19,7 @@ def test_catalog_targets_carry_the_applied_gateway_egress(tmp_path):
                         "env_var": "OPENAI_API_KEY",
                         "ingress": ["oai", "oai_responses"],
                         "auth": ["bearer"],
+                        "param_aliases": {"max_tokens": "max_completion_tokens"},
                     }
                 ]
             }
@@ -51,3 +52,4 @@ def test_catalog_targets_carry_the_applied_gateway_egress(tmp_path):
         ("openai/gpt-test", "oai", "openai_responses"),
         ("openai/gpt-test", "oai_responses", "openai_responses"),
     ]
+    assert all(target.param_aliases == {"max_tokens": "max_completion_tokens"} for target in catalog.targets)
