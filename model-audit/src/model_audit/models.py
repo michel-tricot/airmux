@@ -12,6 +12,7 @@ type Outcome = Literal["success", "rejected", "error", "transient", "inconclusiv
 type FeatureVerdict = Literal["supported", "unsupported", "unknown"]
 type ParityVerdict = Literal["match", "mismatch", "not_evaluated", "inconclusive"]
 type ExecutionVerdict = Literal["completed", "transient_failure", "access_blocked", "harness_error"]
+type StabilityVerdict = Literal["stable", "flaky"]
 type ClaimDimension = Literal["capability", "option", "modality", "interaction", "behavior"]
 type EvidenceSource = Literal["live_api", "schema", "provider_catalog", "docs"]
 type EgressKind = Literal["openai_compatible", "openai_responses", "anthropic"]
@@ -180,6 +181,7 @@ class Observation(FrozenModel):
 
 class Assessment(FrozenModel):
     execution: ExecutionVerdict
+    stability: StabilityVerdict = "stable"
     feature: FeatureVerdict
     parity: ParityVerdict
     differences: tuple[str, ...] = ()
@@ -231,7 +233,7 @@ class RunSettings(FrozenModel):
 
 
 class ReportDocument(FrozenModel):
-    schema_version: Literal[5] = 5
+    schema_version: Literal[6] = 6
     run: RunMetadata
     plan: Plan | None = None
     settings: RunSettings = RunSettings()

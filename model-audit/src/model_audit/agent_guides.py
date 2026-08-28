@@ -130,6 +130,9 @@ provider behavior.
 Rate limits, timeouts, connection failures, and direct provider 5xx responses are transient.
 Retry the affected side; if retries are exhausted, report parity as not evaluated rather than
 inconclusive or mismatched.
+
+Completed attempts that disagree are flaky, not inconclusive. Preserve every attempt and use
+a strict majority for feature and parity; without a majority, leave parity not evaluated.
 """,
         references=("traps",),
     ),

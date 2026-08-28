@@ -24,7 +24,11 @@ def _active_cases(cases: tuple[Case, ...]) -> dict[str, tuple[int, str]]:
 
 
 def _usable_direct_observation(result: PairResult) -> bool:
-    return result.direct.outcome not in {"inconclusive", "transient"} and result.direct.error_code not in ACCESS_CODES | HARNESS_CODES
+    return (
+        result.assessment.stability == "stable"
+        and result.direct.outcome not in {"inconclusive", "transient"}
+        and result.direct.error_code not in ACCESS_CODES | HARNESS_CODES
+    )
 
 
 def records_from_report(report: ReportDocument, cases: tuple[Case, ...]) -> tuple[EvidenceRecord, ...]:

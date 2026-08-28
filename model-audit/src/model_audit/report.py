@@ -3,7 +3,7 @@ from __future__ import annotations
 import html
 from typing import TYPE_CHECKING
 
-from model_audit.diagnostics import difference_details, feature_display, gap_kind, observation_summary, parity_display
+from model_audit.diagnostics import difference_details, feature_display, gap_kind, observation_summary, parity_display, stability_display
 from model_audit.models import Experiment, PairResult, Plan, ReportDocument, ReportPaths
 
 if TYPE_CHECKING:
@@ -44,9 +44,10 @@ def _result_html(result: PairResult, gateway_url: str) -> str:
   <td>{html.escape(result.gateway_surface_id)}</td>
   <td>{html.escape(result.case_id)}</td><td>{html.escape(result.transport)}</td>
   <td>{html.escape(feature_display(result.assessment))}</td><td>{html.escape(parity_display(result.assessment))}</td>
+  <td>{html.escape(stability_display(result.assessment))}</td>
   <td>{html.escape(gap_kind(result))}</td>
 </tr>
-<tr class="detail"><td colspan="9">
+<tr class="detail"><td colspan="10">
   <div><strong>Claims:</strong> {html.escape(claims)}</div>
   <div><strong>Direct:</strong> {html.escape(observation_summary(result.direct))}</div>
   <div><strong>Gateway:</strong> {html.escape(observation_summary(result.gateway))}</div>
@@ -62,6 +63,7 @@ def _html(document: ReportDocument) -> str:
     mismatched = sum(result.assessment.parity == "mismatch" for result in results)
     not_evaluated = sum(result.assessment.parity == "not_evaluated" for result in results)
     inconclusive = sum(result.assessment.parity == "inconclusive" for result in results)
+    flaky = sum(result.assessment.stability == "flaky" for result in results)
     supported = sum(result.assessment.feature == "supported" for result in results)
     unsupported = sum(result.assessment.feature == "unsupported" for result in results)
     unknown = sum(result.assessment.feature == "unknown" for result in results)
@@ -73,9 +75,10 @@ def _html(document: ReportDocument) -> str:
 <style>{STYLE}</style></head>
 <body><h1>AirLLM model audit</h1><p>{state}: run {html.escape(document.run.run_id)} against {html.escape(document.run.gateway_url)}</p>{resume}
 <div class="summary"><span>Parity: {matched} match, {mismatched} mismatch, {not_evaluated} not evaluated, {inconclusive} inconclusive</span>
+<span>Stability: {len(results) - flaky} stable, {flaky} flaky</span>
 <span>Features: {supported} supported, {unsupported} unsupported, {unknown} unknown</span></div>
 <table><thead><tr><th>Provider</th><th>Model</th><th>Provider Surface</th><th>Gateway Surface</th><th>Case</th><th>Transport</th>
-<th>Feature</th><th>Parity</th><th>Gap</th></tr></thead><tbody>{rows}</tbody></table></body></html>"""
+<th>Feature</th><th>Parity</th><th>Stability</th><th>Gap</th></tr></thead><tbody>{rows}</tbody></table></body></html>"""
 
 
 def _checkpoint_html(document: ReportDocument) -> str:

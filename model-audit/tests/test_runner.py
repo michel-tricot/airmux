@@ -114,6 +114,39 @@ def test_runner_confirms_and_reports_a_gateway_gap(monkeypatch):
     assert len(result.attempts) == 2
 
 
+def test_runner_reports_a_majority_verdict_as_flaky(monkeypatch):
+    monkeypatch.setenv("STUB_API_KEY", "provider")
+    failed = Observation(outcome="success", text="wrong")
+    passed = Observation(outcome="success", text="ok")
+    observations = (failed, passed, passed, passed, passed, passed)
+    monkeypatch.setattr(runner, "discover", lambda: {"sequence": SequenceDriver(observations)})
+    selected = experiment("stub/model", driver_id="sequence")
+
+    result = runner.execute(Plan(experiments=(selected,)), Gateway(), options=runner.ExecutionOptions(confirmations=2))[0]
+
+    assert result.assessment.feature == "supported"
+    assert result.assessment.parity == "match"
+    assert result.assessment.stability == "flaky"
+    assert result.assessment.reason == "behavior varied across 3 attempts; 2 agreed on match"
+    assert result.direct == passed
+    assert result.gateway == passed
+
+
+def test_runner_reports_a_tied_classification_as_flaky_not_evaluated(monkeypatch):
+    monkeypatch.setenv("STUB_API_KEY", "provider")
+    failed = Observation(outcome="success", text="wrong")
+    passed = Observation(outcome="success", text="ok")
+    monkeypatch.setattr(runner, "discover", lambda: {"sequence": SequenceDriver((failed, passed, passed, passed))})
+    selected = experiment("stub/model", driver_id="sequence")
+
+    result = runner.execute(Plan(experiments=(selected,)), Gateway(), options=runner.ExecutionOptions(confirmations=1))[0]
+
+    assert result.assessment.feature == "unknown"
+    assert result.assessment.parity == "not_evaluated"
+    assert result.assessment.stability == "flaky"
+    assert result.assessment.reason == "behavior varied across 2 attempts with no majority"
+
+
 def test_missing_provider_credential_is_an_access_result(monkeypatch):
     monkeypatch.delenv("STUB_API_KEY", raising=False)
     experiment = Experiment(

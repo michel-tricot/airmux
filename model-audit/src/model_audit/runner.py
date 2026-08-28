@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 import threading
 import time
-from collections import deque
+from collections import Counter, deque
 from collections.abc import Callable, Mapping
 from concurrent.futures import FIRST_COMPLETED, Future, ThreadPoolExecutor, wait
 from dataclasses import dataclass
@@ -193,33 +193,51 @@ def _with_transient_retries(context: PairContext, first_attempt: int, options: E
     return tuple(attempts)
 
 
-def _confirmed(initial: PairAttempt, confirmations: tuple[PairAttempt, ...]) -> Assessment:
-    assessments = tuple(attempt.assessment for attempt in (initial, *confirmations))
+def _classification(assessment: Assessment) -> tuple[str, str, str, tuple[str, ...]]:
+    return assessment.feature, assessment.parity, assessment.execution, assessment.differences
+
+
+def _confirmed(attempts: tuple[PairAttempt, ...]) -> tuple[Assessment, PairAttempt]:
+    assessments = tuple(attempt.assessment for attempt in attempts)
     first = assessments[0]
-    stable = all(
-        assessment.feature == first.feature
-        and assessment.parity == first.parity
-        and assessment.execution == first.execution
-        and assessment.differences == first.differences
-        for assessment in assessments[1:]
-    )
+    stable = all(_classification(assessment) == _classification(first) for assessment in assessments[1:])
     if stable:
-        return first.model_copy(update={"reason": f"reproduced across {len(assessments)} attempts"})
+        final = attempts[-1]
+        return final.assessment.model_copy(update={"reason": f"reproduced across {len(assessments)} attempts"}), final
     if any(assessment.execution == "transient_failure" for assessment in assessments):
-        return Assessment(
-            execution="transient_failure",
-            feature=first.feature,
-            parity="not_evaluated",
-            reason="a transient failure prevented confirmation",
+        assessment = Assessment(
+            execution="transient_failure", feature=first.feature, parity="not_evaluated", reason="a transient failure prevented confirmation"
         )
+        return assessment, attempts[-1]
     executions = {item.execution for item in assessments}
-    execution = "harness_error" if "harness_error" in executions else "access_blocked" if "access_blocked" in executions else "completed"
-    return Assessment(
-        execution=execution,
-        feature="unknown",
-        parity="inconclusive",
-        reason=f"classification changed across {len(assessments)} attempts",
+    if "harness_error" in executions or "access_blocked" in executions:
+        execution = "harness_error" if "harness_error" in executions else "access_blocked"
+        assessment = Assessment(
+            execution=execution,
+            feature="unknown",
+            parity="inconclusive",
+            reason=f"access or harness behavior changed across {len(assessments)} attempts",
+        )
+        return assessment, attempts[-1]
+    classifications = Counter(_classification(assessment) for assessment in assessments)
+    dominant, votes = classifications.most_common(1)[0]
+    if votes * 2 <= len(assessments):
+        assessment = Assessment(
+            execution="completed",
+            stability="flaky",
+            feature="unknown",
+            parity="not_evaluated",
+            reason=f"behavior varied across {len(assessments)} attempts with no majority",
+        )
+        return assessment, attempts[-1]
+    representative = next(attempt for attempt in reversed(attempts) if _classification(attempt.assessment) == dominant)
+    assessment = representative.assessment.model_copy(
+        update={
+            "stability": "flaky",
+            "reason": f"behavior varied across {len(assessments)} attempts; {votes} agreed on {representative.assessment.parity}",
+        }
     )
+    return assessment, representative
 
 
 def _result(
@@ -315,8 +333,7 @@ def _execute_experiment(scheduled: ScheduledExperiment, run: RunContext) -> Pair
         attempts.extend(confirmation_attempts)
         confirmations.append(confirmation_attempts[-1])
     confirmed = tuple(confirmations)
-    assessment = _confirmed(initial, confirmed) if confirmed else initial.assessment
-    final = attempts[-1]
+    assessment, final = _confirmed((initial, *confirmed)) if confirmed else (initial.assessment, initial)
     return _result(experiment, final, assessment, tuple(attempts))
 
 
