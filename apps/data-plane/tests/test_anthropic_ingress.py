@@ -17,7 +17,7 @@ from conftest import TEXT_LOG, TEXT_NONSTREAM, mock_control_plane
 from pydantic import TypeAdapter
 from starlette.testclient import TestClient
 
-from data_plane.canonical import CanonicalResponse, DocumentPart, ReasoningPart, TextPart, Usage
+from data_plane.canonical import CanonicalResponse, DocumentPart, ReasoningPart, ResponseFormat, TextPart, Usage
 from data_plane.ingress.anthropic import AnthropicIngress
 
 UPSTREAM = "https://api.openai.com/v1/chat/completions"
@@ -82,6 +82,33 @@ def test_parse_preserves_an_inline_document():
     )
 
     assert request.messages[0].content == [DocumentPart(media_type="application/pdf", data="JVBERi0=")]
+
+
+def test_parse_recovers_json_object_from_anthropic_generic_object_schema():
+    request, _ = AnthropicIngress().parse(
+        {
+            "model": "gpt-test",
+            "max_tokens": 64,
+            "messages": [{"role": "user", "content": "answer with JSON"}],
+            "output_config": {"format": {"type": "json_schema", "schema": {"type": "object"}}},
+        }
+    )
+
+    assert request.response_format == ResponseFormat(type="json_object")
+
+
+def test_parse_keeps_a_constrained_anthropic_schema_as_json_schema():
+    schema = {"type": "object", "properties": {"answer": {"type": "integer"}}}
+    request, _ = AnthropicIngress().parse(
+        {
+            "model": "gpt-test",
+            "max_tokens": 64,
+            "messages": [{"role": "user", "content": "answer with JSON"}],
+            "output_config": {"format": {"type": "json_schema", "schema": schema}},
+        }
+    )
+
+    assert request.response_format == ResponseFormat(type="json_schema", json_schema={"schema": schema})
 
 
 def test_the_sdk_reads_a_thinking_signature_back():
