@@ -81,3 +81,23 @@ def test_gpt_5_3_codex_routes_through_responses():
     models = {item["model_id"]: item for item in document["models"]}
 
     assert models["openai/gpt-5.3-codex"]["egress_kind"] == "openai_responses"
+
+
+def test_pro_models_route_through_responses():
+    document = yaml.safe_load((ROOT / "taxonomy/taxonomy.yml").read_text(encoding="utf-8"))
+    models = {item["model_id"]: item for item in document["models"]}
+    model_ids = (
+        "openai/gpt-5-pro",
+        "openai/gpt-5-pro-2025-10-06",
+        "openai/gpt-5.2-pro",
+        "openai/gpt-5.2-pro-2025-12-11",
+        "openai/gpt-5.4-pro",
+        "openai/gpt-5.4-pro-2026-03-05",
+        "openai/gpt-5.5-pro",
+        "openai/gpt-5.5-pro-2026-04-23",
+        "openai/o1-pro",
+        "openai/o1-pro-2025-03-19",
+    )
+
+    for model_id in model_ids:
+        assert models[model_id]["egress_kind"] == "openai_responses"
