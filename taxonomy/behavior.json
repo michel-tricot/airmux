@@ -1,7 +1,211 @@
 {
   "schema_version": 1,
-  "generated_from": "1679c20751ee9dba",
+  "generated_from": "d7a5d2e8ada6f1c8",
   "behaviors": [
+    {
+      "provider_id": "openai",
+      "model_id": "openai/gpt-5.6-luna",
+      "surface_id": "oai_responses",
+      "endpoint": "responses",
+      "claim": {
+        "dimension": "capability",
+        "name": "reasoning",
+        "profile": {
+          "effort": "low"
+        },
+        "key": "capability:reasoning:{\"effort\":\"low\"}"
+      },
+      "verdict": "unsupported",
+      "evidence_ids": [
+        "5cdbfe7d937b6bb02a96ca49"
+      ],
+      "observed_at": "2026-08-29T00:06:03.046268+00:00"
+    },
+    {
+      "provider_id": "openai",
+      "model_id": "openai/gpt-5.6-luna",
+      "surface_id": "oai_responses",
+      "endpoint": "responses",
+      "claim": {
+        "dimension": "capability",
+        "name": "tool_calling",
+        "profile": {},
+        "key": "capability:tool_calling:{}"
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "baf8827eba2ab5ea941d90da"
+      ],
+      "observed_at": "2026-08-29T00:06:03.046268+00:00"
+    },
+    {
+      "provider_id": "openai",
+      "model_id": "openai/gpt-5.6-luna",
+      "surface_id": "oai_responses",
+      "endpoint": "responses",
+      "claim": {
+        "dimension": "interaction",
+        "name": "reasoning+tools",
+        "profile": {
+          "reasoning_effort": "low",
+          "tool_choice": "named"
+        },
+        "key": "interaction:reasoning+tools:{\"reasoning_effort\":\"low\",\"tool_choice\":\"named\"}"
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "43fc567973e2a0d2f6e1dc7e"
+      ],
+      "observed_at": "2026-08-29T00:06:03.046268+00:00"
+    },
+    {
+      "provider_id": "openai",
+      "model_id": "openai/gpt-5.6-luna",
+      "surface_id": "oai_responses",
+      "endpoint": "responses",
+      "claim": {
+        "dimension": "interaction",
+        "name": "streaming+tools",
+        "profile": {},
+        "key": "interaction:streaming+tools:{}"
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "fd2c7fa8daa953e7f0f1e2f8"
+      ],
+      "observed_at": "2026-08-29T00:06:03.046268+00:00"
+    },
+    {
+      "provider_id": "openai",
+      "model_id": "openai/gpt-5.6-luna",
+      "surface_id": "oai_responses",
+      "endpoint": "responses",
+      "claim": {
+        "dimension": "interaction",
+        "name": "tool_result_round_trip",
+        "profile": {},
+        "key": "interaction:tool_result_round_trip:{}"
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "5dc3004d71b9af285fa77b9d"
+      ],
+      "observed_at": "2026-08-29T00:06:03.046268+00:00"
+    },
+    {
+      "provider_id": "openai",
+      "model_id": "openai/gpt-5.6-luna",
+      "surface_id": "oai_responses",
+      "endpoint": "responses",
+      "claim": {
+        "dimension": "option",
+        "name": "parallel_tool_calls",
+        "profile": {
+          "value": true
+        },
+        "key": "option:parallel_tool_calls:{\"value\":true}"
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "c22abc302e63a2aa3b229be0"
+      ],
+      "observed_at": "2026-08-29T00:06:03.046268+00:00"
+    },
+    {
+      "provider_id": "openai",
+      "model_id": "openai/gpt-5.6-luna",
+      "surface_id": "oai_responses",
+      "endpoint": "responses",
+      "claim": {
+        "dimension": "option",
+        "name": "reasoning_effort",
+        "profile": {
+          "value": "low"
+        },
+        "key": "option:reasoning_effort:{\"value\":\"low\"}"
+      },
+      "verdict": "unsupported",
+      "evidence_ids": [
+        "42c46aa958874b5764071229"
+      ],
+      "observed_at": "2026-08-29T00:06:03.046268+00:00"
+    },
+    {
+      "provider_id": "openai",
+      "model_id": "openai/gpt-5.6-luna",
+      "surface_id": "oai_responses",
+      "endpoint": "responses",
+      "claim": {
+        "dimension": "option",
+        "name": "strict_tools",
+        "profile": {
+          "value": true
+        },
+        "key": "option:strict_tools:{\"value\":true}"
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "6cd0d3308ccf703dae8e9183"
+      ],
+      "observed_at": "2026-08-29T00:06:03.046268+00:00"
+    },
+    {
+      "provider_id": "openai",
+      "model_id": "openai/gpt-5.6-luna",
+      "surface_id": "oai_responses",
+      "endpoint": "responses",
+      "claim": {
+        "dimension": "option",
+        "name": "tool_choice",
+        "profile": {
+          "mode": "named"
+        },
+        "key": "option:tool_choice:{\"mode\":\"named\"}"
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "42760df63d32b54f09daccde"
+      ],
+      "observed_at": "2026-08-29T00:06:03.046268+00:00"
+    },
+    {
+      "provider_id": "openai",
+      "model_id": "openai/gpt-5.6-luna",
+      "surface_id": "oai_responses",
+      "endpoint": "responses",
+      "claim": {
+        "dimension": "option",
+        "name": "tool_choice",
+        "profile": {
+          "mode": "required"
+        },
+        "key": "option:tool_choice:{\"mode\":\"required\"}"
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "56ee2d56152846525eeeedcf"
+      ],
+      "observed_at": "2026-08-29T00:06:03.046268+00:00"
+    },
+    {
+      "provider_id": "openai",
+      "model_id": "openai/gpt-5.6-sol",
+      "surface_id": "oai_responses",
+      "endpoint": "responses",
+      "claim": {
+        "dimension": "capability",
+        "name": "reasoning",
+        "profile": {
+          "effort": "low"
+        },
+        "key": "capability:reasoning:{\"effort\":\"low\"}"
+      },
+      "verdict": "unsupported",
+      "evidence_ids": [
+        "24e5df858eb95700a735a8f4"
+      ],
+      "observed_at": "2026-08-28T22:52:56.653613+00:00"
+    },
     {
       "provider_id": "openai",
       "model_id": "openai/gpt-5.6-sol",
@@ -35,6 +239,43 @@
       "verdict": "supported",
       "evidence_ids": [
         "e997d3521fa85d0b753324ab"
+      ],
+      "observed_at": "2026-08-28T22:52:56.653613+00:00"
+    },
+    {
+      "provider_id": "openai",
+      "model_id": "openai/gpt-5.6-sol",
+      "surface_id": "oai_responses",
+      "endpoint": "responses",
+      "claim": {
+        "dimension": "interaction",
+        "name": "reasoning+tools",
+        "profile": {
+          "reasoning_effort": "low",
+          "tool_choice": "named"
+        },
+        "key": "interaction:reasoning+tools:{\"reasoning_effort\":\"low\",\"tool_choice\":\"named\"}"
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "61edcedbd417dd5028f17ca8"
+      ],
+      "observed_at": "2026-08-28T22:52:56.653613+00:00"
+    },
+    {
+      "provider_id": "openai",
+      "model_id": "openai/gpt-5.6-sol",
+      "surface_id": "oai_responses",
+      "endpoint": "responses",
+      "claim": {
+        "dimension": "interaction",
+        "name": "streaming+reasoning",
+        "profile": {},
+        "key": "interaction:streaming+reasoning:{}"
+      },
+      "verdict": "unsupported",
+      "evidence_ids": [
+        "06a64864fd106aab3726876d"
       ],
       "observed_at": "2026-08-28T22:52:56.653613+00:00"
     },
@@ -88,6 +329,25 @@
       "verdict": "supported",
       "evidence_ids": [
         "c854d5cb21d9cc015b7d54c3"
+      ],
+      "observed_at": "2026-08-28T22:52:56.653613+00:00"
+    },
+    {
+      "provider_id": "openai",
+      "model_id": "openai/gpt-5.6-sol",
+      "surface_id": "oai_responses",
+      "endpoint": "responses",
+      "claim": {
+        "dimension": "option",
+        "name": "reasoning_effort",
+        "profile": {
+          "value": "low"
+        },
+        "key": "option:reasoning_effort:{\"value\":\"low\"}"
+      },
+      "verdict": "unsupported",
+      "evidence_ids": [
+        "046d8958271a8ebf9b4e3ec9"
       ],
       "observed_at": "2026-08-28T22:52:56.653613+00:00"
     },
@@ -166,6 +426,455 @@
         "2c64beb6fc314fd94b90a433"
       ],
       "observed_at": "2026-08-28T22:52:56.653613+00:00"
+    },
+    {
+      "provider_id": "openai",
+      "model_id": "openai/gpt-5.6-terra",
+      "surface_id": "oai_responses",
+      "endpoint": "responses",
+      "claim": {
+        "dimension": "capability",
+        "name": "multi_turn",
+        "profile": {},
+        "key": "capability:multi_turn:{}"
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "659cd9e58700d56469acce40"
+      ],
+      "observed_at": "2026-08-29T00:05:38.702329+00:00"
+    },
+    {
+      "provider_id": "openai",
+      "model_id": "openai/gpt-5.6-terra",
+      "surface_id": "oai_responses",
+      "endpoint": "responses",
+      "claim": {
+        "dimension": "capability",
+        "name": "streaming",
+        "profile": {
+          "content": "text"
+        },
+        "key": "capability:streaming:{\"content\":\"text\"}"
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "a8484529ecee9b21750b7d84"
+      ],
+      "observed_at": "2026-08-29T00:05:38.702329+00:00"
+    },
+    {
+      "provider_id": "openai",
+      "model_id": "openai/gpt-5.6-terra",
+      "surface_id": "oai_responses",
+      "endpoint": "responses",
+      "claim": {
+        "dimension": "capability",
+        "name": "structured_output",
+        "profile": {
+          "mode": "json_object"
+        },
+        "key": "capability:structured_output:{\"mode\":\"json_object\"}"
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "5355bdc64134ee5f9fa48919"
+      ],
+      "observed_at": "2026-08-29T00:05:38.702329+00:00"
+    },
+    {
+      "provider_id": "openai",
+      "model_id": "openai/gpt-5.6-terra",
+      "surface_id": "oai_responses",
+      "endpoint": "responses",
+      "claim": {
+        "dimension": "capability",
+        "name": "structured_output",
+        "profile": {
+          "mode": "json_schema"
+        },
+        "key": "capability:structured_output:{\"mode\":\"json_schema\"}"
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "867702eec5c53f0b0cd8e06c"
+      ],
+      "observed_at": "2026-08-29T00:05:38.702329+00:00"
+    },
+    {
+      "provider_id": "openai",
+      "model_id": "openai/gpt-5.6-terra",
+      "surface_id": "oai_responses",
+      "endpoint": "responses",
+      "claim": {
+        "dimension": "capability",
+        "name": "system_messages",
+        "profile": {},
+        "key": "capability:system_messages:{}"
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "1051a8550bf0ba5d36c212e4"
+      ],
+      "observed_at": "2026-08-29T00:05:38.702329+00:00"
+    },
+    {
+      "provider_id": "openai",
+      "model_id": "openai/gpt-5.6-terra",
+      "surface_id": "oai_responses",
+      "endpoint": "responses",
+      "claim": {
+        "dimension": "capability",
+        "name": "text_generation",
+        "profile": {},
+        "key": "capability:text_generation:{}"
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "e5b108237e5c7b1684cf1775"
+      ],
+      "observed_at": "2026-08-29T00:05:38.702329+00:00"
+    },
+    {
+      "provider_id": "openai",
+      "model_id": "openai/gpt-5.6-terra",
+      "surface_id": "oai_responses",
+      "endpoint": "responses",
+      "claim": {
+        "dimension": "capability",
+        "name": "tool_calling",
+        "profile": {},
+        "key": "capability:tool_calling:{}"
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "9503917f78c40b4988e15ea5"
+      ],
+      "observed_at": "2026-08-29T00:05:38.702329+00:00"
+    },
+    {
+      "provider_id": "openai",
+      "model_id": "openai/gpt-5.6-terra",
+      "surface_id": "oai_responses",
+      "endpoint": "responses",
+      "claim": {
+        "dimension": "capability",
+        "name": "usage",
+        "profile": {},
+        "key": "capability:usage:{}"
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "fc28ef5821456fe53f24ce4b"
+      ],
+      "observed_at": "2026-08-29T00:05:38.702329+00:00"
+    },
+    {
+      "provider_id": "openai",
+      "model_id": "openai/gpt-5.6-terra",
+      "surface_id": "oai_responses",
+      "endpoint": "responses",
+      "claim": {
+        "dimension": "interaction",
+        "name": "reasoning_history",
+        "profile": {},
+        "key": "interaction:reasoning_history:{}"
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "e9cadc630a064a3b2a259a79"
+      ],
+      "observed_at": "2026-08-29T00:05:38.702329+00:00"
+    },
+    {
+      "provider_id": "openai",
+      "model_id": "openai/gpt-5.6-terra",
+      "surface_id": "oai_responses",
+      "endpoint": "responses",
+      "claim": {
+        "dimension": "interaction",
+        "name": "streaming+structured_output",
+        "profile": {},
+        "key": "interaction:streaming+structured_output:{}"
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "bb3ac6659a25a153b43f263f"
+      ],
+      "observed_at": "2026-08-29T00:05:38.702329+00:00"
+    },
+    {
+      "provider_id": "openai",
+      "model_id": "openai/gpt-5.6-terra",
+      "surface_id": "oai_responses",
+      "endpoint": "responses",
+      "claim": {
+        "dimension": "interaction",
+        "name": "streaming+tools",
+        "profile": {},
+        "key": "interaction:streaming+tools:{}"
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "50b0ce3ca496a32ba6cd6284"
+      ],
+      "observed_at": "2026-08-29T00:05:38.702329+00:00"
+    },
+    {
+      "provider_id": "openai",
+      "model_id": "openai/gpt-5.6-terra",
+      "surface_id": "oai_responses",
+      "endpoint": "responses",
+      "claim": {
+        "dimension": "interaction",
+        "name": "tool_result_round_trip",
+        "profile": {},
+        "key": "interaction:tool_result_round_trip:{}"
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "c33fc28aca5b222607cfe232"
+      ],
+      "observed_at": "2026-08-29T00:05:38.702329+00:00"
+    },
+    {
+      "provider_id": "openai",
+      "model_id": "openai/gpt-5.6-terra",
+      "surface_id": "oai_responses",
+      "endpoint": "responses",
+      "claim": {
+        "dimension": "modality",
+        "name": "input_image",
+        "profile": {},
+        "key": "modality:input_image:{}"
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "fd5da47554764bba63152ae4"
+      ],
+      "observed_at": "2026-08-29T00:05:38.702329+00:00"
+    },
+    {
+      "provider_id": "openai",
+      "model_id": "openai/gpt-5.6-terra",
+      "surface_id": "oai_responses",
+      "endpoint": "responses",
+      "claim": {
+        "dimension": "modality",
+        "name": "input_pdf",
+        "profile": {},
+        "key": "modality:input_pdf:{}"
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "cec5b37a07768c5323b4441b"
+      ],
+      "observed_at": "2026-08-29T00:05:38.702329+00:00"
+    },
+    {
+      "provider_id": "openai",
+      "model_id": "openai/gpt-5.6-terra",
+      "surface_id": "oai_responses",
+      "endpoint": "responses",
+      "claim": {
+        "dimension": "modality",
+        "name": "input_text",
+        "profile": {},
+        "key": "modality:input_text:{}"
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "fbce4f28d0216d5cac76ff45"
+      ],
+      "observed_at": "2026-08-29T00:05:38.702329+00:00"
+    },
+    {
+      "provider_id": "openai",
+      "model_id": "openai/gpt-5.6-terra",
+      "surface_id": "oai_responses",
+      "endpoint": "responses",
+      "claim": {
+        "dimension": "modality",
+        "name": "output_text",
+        "profile": {},
+        "key": "modality:output_text:{}"
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "cc8988d847463bb805538dbf"
+      ],
+      "observed_at": "2026-08-29T00:05:38.702329+00:00"
+    },
+    {
+      "provider_id": "openai",
+      "model_id": "openai/gpt-5.6-terra",
+      "surface_id": "oai_responses",
+      "endpoint": "responses",
+      "claim": {
+        "dimension": "option",
+        "name": "max_tokens",
+        "profile": {
+          "value": 1024
+        },
+        "key": "option:max_tokens:{\"value\":1024}"
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "429a2c518b5cc2a1de629570"
+      ],
+      "observed_at": "2026-08-29T00:05:38.702329+00:00"
+    },
+    {
+      "provider_id": "openai",
+      "model_id": "openai/gpt-5.6-terra",
+      "surface_id": "oai_responses",
+      "endpoint": "responses",
+      "claim": {
+        "dimension": "option",
+        "name": "parallel_tool_calls",
+        "profile": {
+          "value": true
+        },
+        "key": "option:parallel_tool_calls:{\"value\":true}"
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "86a3c1aef0be7528bcaa067f"
+      ],
+      "observed_at": "2026-08-29T00:05:38.702329+00:00"
+    },
+    {
+      "provider_id": "openai",
+      "model_id": "openai/gpt-5.6-terra",
+      "surface_id": "oai_responses",
+      "endpoint": "responses",
+      "claim": {
+        "dimension": "option",
+        "name": "response_format",
+        "profile": {
+          "mode": "json_object"
+        },
+        "key": "option:response_format:{\"mode\":\"json_object\"}"
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "3f98d85c8b79b37729712637"
+      ],
+      "observed_at": "2026-08-29T00:05:38.702329+00:00"
+    },
+    {
+      "provider_id": "openai",
+      "model_id": "openai/gpt-5.6-terra",
+      "surface_id": "oai_responses",
+      "endpoint": "responses",
+      "claim": {
+        "dimension": "option",
+        "name": "response_format",
+        "profile": {
+          "mode": "json_schema"
+        },
+        "key": "option:response_format:{\"mode\":\"json_schema\"}"
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "920216500da43eeccf9a8cdd"
+      ],
+      "observed_at": "2026-08-29T00:05:38.702329+00:00"
+    },
+    {
+      "provider_id": "openai",
+      "model_id": "openai/gpt-5.6-terra",
+      "surface_id": "oai_responses",
+      "endpoint": "responses",
+      "claim": {
+        "dimension": "option",
+        "name": "strict_tools",
+        "profile": {
+          "value": true
+        },
+        "key": "option:strict_tools:{\"value\":true}"
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "6757288390c955b37f943a08"
+      ],
+      "observed_at": "2026-08-29T00:05:38.702329+00:00"
+    },
+    {
+      "provider_id": "openai",
+      "model_id": "openai/gpt-5.6-terra",
+      "surface_id": "oai_responses",
+      "endpoint": "responses",
+      "claim": {
+        "dimension": "option",
+        "name": "temperature",
+        "profile": {
+          "value": 0.37
+        },
+        "key": "option:temperature:{\"value\":0.37}"
+      },
+      "verdict": "unsupported",
+      "evidence_ids": [
+        "1f0ef12910c23f3cd54db46b"
+      ],
+      "observed_at": "2026-08-29T00:05:38.702329+00:00"
+    },
+    {
+      "provider_id": "openai",
+      "model_id": "openai/gpt-5.6-terra",
+      "surface_id": "oai_responses",
+      "endpoint": "responses",
+      "claim": {
+        "dimension": "option",
+        "name": "tool_choice",
+        "profile": {
+          "mode": "named"
+        },
+        "key": "option:tool_choice:{\"mode\":\"named\"}"
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "eda35945b042c9ab71e7b0ed"
+      ],
+      "observed_at": "2026-08-29T00:05:38.702329+00:00"
+    },
+    {
+      "provider_id": "openai",
+      "model_id": "openai/gpt-5.6-terra",
+      "surface_id": "oai_responses",
+      "endpoint": "responses",
+      "claim": {
+        "dimension": "option",
+        "name": "tool_choice",
+        "profile": {
+          "mode": "required"
+        },
+        "key": "option:tool_choice:{\"mode\":\"required\"}"
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "6dd80c99cbb0a3f5a93991c8"
+      ],
+      "observed_at": "2026-08-29T00:05:38.702329+00:00"
+    },
+    {
+      "provider_id": "openai",
+      "model_id": "openai/gpt-5.6-terra",
+      "surface_id": "oai_responses",
+      "endpoint": "responses",
+      "claim": {
+        "dimension": "option",
+        "name": "top_p",
+        "profile": {
+          "value": 0.83
+        },
+        "key": "option:top_p:{\"value\":0.83}"
+      },
+      "verdict": "unsupported",
+      "evidence_ids": [
+        "896e927e88e8fe5a9a51e9eb"
+      ],
+      "observed_at": "2026-08-29T00:05:38.702329+00:00"
     }
   ]
 }

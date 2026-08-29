@@ -49,14 +49,14 @@ def openai_chat(payload: Mapping[str, object], duration_ms: float, client_type: 
         for item in _sequence(message.get("tool_calls"))
         if (function := _mapping(_mapping(item).get("function"))).get("name")
     )
-    reasoning = message.get("reasoning_content") or message.get("reasoning")
+    reasoning_present = any(name in message and message[name] is not None for name in ("reasoning_content", "reasoning"))
     return Observation(
         outcome="success",
         text=text,
         tool_calls=calls,
         finish_reason=str(choice["finish_reason"]) if choice.get("finish_reason") is not None else None,
         usage_present=bool(payload.get("usage")),
-        reasoning_present=bool(reasoning),
+        reasoning_present=reasoning_present,
         json_value=_json_value(text),
         adjustments=_adjustments(payload),
         duration_ms=duration_ms,
@@ -147,7 +147,7 @@ def openai_chat_stream(events: Sequence[Mapping[str, object]], duration_ms: floa
         delta = _mapping(choice.get("delta"))
         if isinstance(delta.get("content"), str):
             text += str(delta["content"])
-        reasoning_present = reasoning_present or bool(delta.get("reasoning_content") or delta.get("reasoning"))
+        reasoning_present = reasoning_present or any(name in delta and delta[name] is not None for name in ("reasoning_content", "reasoning"))
         for call_value in _sequence(delta.get("tool_calls")):
             call = _mapping(call_value)
             index = _index(call.get("index"))
