@@ -74,3 +74,10 @@ def test_gpt_5_6_models_route_through_responses():
 
     for model_id in ("openai/gpt-5.6-luna", "openai/gpt-5.6-sol", "openai/gpt-5.6-terra"):
         assert models[model_id]["egress_kind"] == "openai_responses"
+
+
+def test_gpt_5_3_codex_routes_through_responses():
+    document = yaml.safe_load((ROOT / "taxonomy/taxonomy.yml").read_text(encoding="utf-8"))
+    models = {item["model_id"]: item for item in document["models"]}
+
+    assert models["openai/gpt-5.3-codex"]["egress_kind"] == "openai_responses"

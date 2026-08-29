@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+import os
+import subprocess
+import sys
+
 import pytest
 
 from model_audit.cases import fingerprint
@@ -14,6 +18,25 @@ from model_audit.models import (
     RunMetadata,
 )
 from tests.helpers import case
+
+
+def test_case_fingerprint_is_stable_across_hash_seeds():
+    script = """
+from model_audit.cli import _cases
+from model_audit.cases import fingerprint
+
+case = next(case for case in _cases() if case.id == "reasoning.exposed")
+print(fingerprint(case))
+"""
+
+    def fingerprint_with_seed(seed: int) -> str:
+        environment = {**os.environ, "PYTHONHASHSEED": str(seed)}
+        result = subprocess.run(  # noqa: S603 fixed interpreter and static script are test-controlled
+            [sys.executable, "-c", script], check=True, capture_output=True, text=True, env=environment
+        )
+        return result.stdout.strip()
+
+    assert fingerprint_with_seed(1) == fingerprint_with_seed(4)
 
 
 def _report(
