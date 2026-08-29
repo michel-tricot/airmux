@@ -2986,13 +2986,13 @@ models:
   - tools
   - vision
   parameter_support:
-    logprobs: supported
     parallel_tool_calls: supported
     reasoning_effort: supported
-    seed: supported
-    stop: supported
+    strict_tools: supported
     temperature: supported
+    tool_choice: supported
     top_p: supported
+  egress_kind: openai_responses
 - model_id: openai/gpt-5.6-sol
   provider_id: openai
   upstream_model: gpt-5.6-sol
@@ -3027,19 +3027,23 @@ models:
   context_window: 1050000
   max_output_tokens: 128000
   capabilities:
+  - pdf
   - reasoning
   - streaming
   - structured_output
+  - text
   - tools
   - vision
   parameter_support:
-    logprobs: supported
+    max_tokens: supported
     parallel_tool_calls: supported
     reasoning_effort: supported
-    seed: supported
-    stop: supported
+    response_format: supported
+    strict_tools: supported
     temperature: supported
+    tool_choice: supported
     top_p: supported
+  egress_kind: openai_responses
 - model_id: openai/gpt-audio
   provider_id: openai
   upstream_model: gpt-audio

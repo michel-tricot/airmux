@@ -1,6 +1,30 @@
 from __future__ import annotations
 
-from model_audit.drivers.normalize import openai_responses, openai_responses_stream
+from model_audit.drivers.normalize import openai_chat, openai_chat_stream, openai_responses, openai_responses_stream
+
+
+def test_chat_preserves_empty_reasoning_presence():
+    observation = openai_chat(
+        {"choices": [{"message": {"content": "42", "reasoning_content": ""}, "finish_reason": "stop"}], "usage": {"output_tokens": 8}},
+        10,
+        "HTTP JSON",
+    )
+
+    assert observation.reasoning_present is True
+
+
+def test_chat_stream_preserves_empty_reasoning_presence():
+    observation = openai_chat_stream(
+        (
+            {"choices": [{"delta": {"reasoning_content": ""}}]},
+            {"choices": [{"delta": {"content": "42"}, "finish_reason": "stop"}]},
+            {"choices": [], "usage": {"output_tokens": 8}},
+        ),
+        10,
+        "HTTP SSE",
+    )
+
+    assert observation.reasoning_present is True
 
 
 def test_responses_function_call_has_a_tool_finish_reason():

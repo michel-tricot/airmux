@@ -68,8 +68,9 @@ def test_openai_catalog_declares_its_output_limit_alias():
     assert provider["param_aliases"]["max_tokens"] == "max_completion_tokens"
 
 
-def test_gpt_5_6_sol_routes_through_responses():
+def test_gpt_5_6_models_route_through_responses():
     document = yaml.safe_load((ROOT / "taxonomy/taxonomy.yml").read_text(encoding="utf-8"))
-    model = next(item for item in document["models"] if item["model_id"] == "openai/gpt-5.6-sol")
+    models = {item["model_id"]: item for item in document["models"]}
 
-    assert model["egress_kind"] == "openai_responses"
+    for model_id in ("openai/gpt-5.6-luna", "openai/gpt-5.6-sol", "openai/gpt-5.6-terra"):
+        assert models[model_id]["egress_kind"] == "openai_responses"

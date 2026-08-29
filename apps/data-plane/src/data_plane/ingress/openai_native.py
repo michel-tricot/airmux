@@ -86,7 +86,7 @@ class OpenAIResponseStream:
         if c.delta.type == "text":
             return [self._chunk(fmt.DeltaOut(content=c.delta.text))]
         if c.delta.type == "reasoning":
-            return [self._chunk(fmt.DeltaOut(reasoning_content=c.delta.text))] if c.delta.text else []
+            return [self._chunk(fmt.DeltaOut(reasoning_content=c.delta.text))]
         return [self._chunk(fmt.DeltaOut(tool_calls=[_tool_call_delta(c.delta)]))]
 
     def closing(self, final: CanonicalResponse, adjustments: list[Adjustment]) -> list[bytes]:

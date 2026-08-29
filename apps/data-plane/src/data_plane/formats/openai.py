@@ -576,6 +576,7 @@ def to_message(parts: Sequence[ContentPart]) -> MessageOut:
     """Canonical response content as one assistant message. content is null rather than empty when the
     turn is only tool calls, which is the shape OpenAI itself returns."""
     text = _text_of_parts(parts)
-    reasoning = "".join(part.text for part in parts if isinstance(part, ReasoningPart))
+    reasoning_parts = [part for part in parts if isinstance(part, ReasoningPart)]
+    reasoning = "".join(part.text for part in reasoning_parts)
     calls = [ToolCallOut(id=part.id, function={"name": part.name, "arguments": part.arguments}) for part in parts if isinstance(part, ToolCallPart)]
-    return MessageOut(content=text or None, reasoning_content=reasoning or None, tool_calls=calls or None)
+    return MessageOut(content=text or None, reasoning_content=reasoning if reasoning_parts else None, tool_calls=calls or None)

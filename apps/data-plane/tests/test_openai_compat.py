@@ -19,9 +19,9 @@ from openai.types.chat import ChatCompletionMessageFunctionToolCall
 from starlette.datastructures import Headers
 from starlette.testclient import TestClient
 
-from data_plane.canonical import DocumentPart
+from data_plane.canonical import CanonicalChunk, CanonicalResponse, DocumentPart, ReasoningDelta, ReasoningPart, Usage
 from data_plane.ingress import resolve
-from data_plane.ingress.openai_native import OpenAINativeIngress
+from data_plane.ingress.openai_native import OpenAINativeIngress, OpenAIResponseStream
 from data_plane.profiles import compile_profile
 from data_plane.reconcile import reconcile
 
@@ -105,6 +105,26 @@ def test_parse_preserves_an_inline_document():
 
 def _sdk(client: TestClient, api_key: str) -> OpenAI:
     return OpenAI(base_url="http://testserver/inf/v1", api_key=api_key, http_client=client)
+
+
+def test_buffered_chat_preserves_an_empty_reasoning_part():
+    final = CanonicalResponse(
+        id="response-1",
+        model="gpt-test",
+        content=[ReasoningPart(id="rs_1", text="", signature="encrypted")],
+        finish_reason="stop",
+        usage=Usage(input_tokens=3, output_tokens=2),
+    )
+
+    payload = json.loads(OpenAINativeIngress().render_response(final).body)
+
+    assert payload["choices"][0]["message"]["reasoning_content"] == ""
+
+
+def test_streamed_chat_preserves_an_empty_reasoning_part():
+    frames = OpenAIResponseStream().chunk(CanonicalChunk(id="response-1", delta=ReasoningDelta(id="rs_1", signature="encrypted")))
+
+    assert json.loads(frames[0].removeprefix(b"data: "))["choices"][0]["delta"]["reasoning_content"] == ""
 
 
 @respx.mock
