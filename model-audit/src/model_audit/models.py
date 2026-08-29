@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, JsonValue, computed_field
+from pydantic import BaseModel, ConfigDict, Field, JsonValue, computed_field, field_serializer
 
 type Transport = Literal["buffered", "streamed"]
 type ClientMode = Literal["api", "sdk"]
@@ -38,6 +38,10 @@ class Applicability(FrozenModel):
     endpoints: frozenset[str] = frozenset()
     egress_kinds: frozenset[EgressKind] = frozenset()
     client_modes: frozenset[ClientMode] = frozenset()
+
+    @field_serializer("endpoints", "egress_kinds", "client_modes")
+    def sorted_values(self, values: frozenset[str]) -> list[str]:
+        return sorted(values)
 
     def accepts(self, endpoint: str, egress_kind: EgressKind, client_mode: ClientMode) -> bool:
         return (
