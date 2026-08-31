@@ -13,6 +13,5 @@ request:
     - type: image
       media_type: image/png
       data: iVBORw0KGgoAAAANSUhEUgAAAGAAAABACAIAAABqVuVZAAAAZUlEQVR42u3QMQ0AAAjAsPk3DQ64OZpUQZvioECQIEGCBAkSJAhBggQJEiRIkCAECRIkSJAgQYJQIEiQIEGCBAkShCBBggQJEiRIEIIECRIkSJAgQQgSJEiQIEGCBAlCkCBBgh5azsnpWtXQFHsAAAAASUVORK5CYII=
-  max_tokens: 1024
 oracle:
   text_contains: red

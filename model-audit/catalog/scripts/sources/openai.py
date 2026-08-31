@@ -36,6 +36,7 @@ class OpenAI(ModelSource):
         models_url=url,
         openapi="https://raw.githubusercontent.com/openai/openai-openapi/master/openapi.yaml",
         ingress=("oai", "oai_responses"),
+        primary_surface="oai",
         auth=("bearer",),
         env_var="OPENAI_API_KEY",
         icon_mono="openai",

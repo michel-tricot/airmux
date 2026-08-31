@@ -4,7 +4,7 @@ import threading
 
 from model_audit import runner
 from model_audit.drivers.base import ClientDriver, Connection, status_outcome
-from model_audit.models import Experiment, Observation, Plan
+from model_audit.models import Experiment, Failure, Observation, Plan
 from tests.helpers import case, target
 
 
@@ -94,6 +94,21 @@ class ProviderBillingDriver(ClientDriver):
         return Observation(outcome="success", text="ok")
 
 
+class DirectAuthDriver(ClientDriver):
+    id = "direct-auth"
+    mode = "api"
+    endpoints = frozenset({"chat/completions", "responses"})
+
+    def __init__(self) -> None:
+        self.direct_calls = 0
+
+    def execute(self, connection, endpoint, model, case, transport):
+        if connection.route == "direct":
+            self.direct_calls += 1
+            return Observation(outcome="inconclusive", error_code="direct_authentication", http_status=401)
+        return Observation(outcome="success", text="ok")
+
+
 def experiment(model_id: str, driver_id: str = "concurrent", provider_id: str = "stub") -> Experiment:
     return Experiment(
         target=target(provider_id=provider_id, model_id=model_id, upstream_model=model_id),
@@ -160,6 +175,35 @@ def test_runner_reports_a_tied_classification_as_flaky_not_evaluated(monkeypatch
     assert result.assessment.parity == "not_evaluated"
     assert result.assessment.stability == "flaky"
     assert result.assessment.reason == "behavior varied across 2 attempts with no majority"
+    assert result.assessment.variance == "provider"
+
+
+def test_runner_attributes_direct_control_variation_to_the_provider(monkeypatch):
+    monkeypatch.setenv("STUB_API_KEY", "provider")
+    passed = Observation(outcome="success", text="ok")
+    failed = Observation(outcome="success", text="wrong")
+    monkeypatch.setattr(runner, "discover", lambda: {"sequence": SequenceDriver((failed, passed, passed, passed))})
+    selected = experiment("stub/model", driver_id="sequence")
+
+    result = runner.execute(Plan(experiments=(selected,)), Gateway(), options=runner.ExecutionOptions(confirmations=1))[0]
+
+    assert result.assessment.stability == "flaky"
+    assert result.assessment.variance == "provider"
+    assert result.assessment.parity == "not_evaluated"
+
+
+def test_runner_attributes_gateway_control_variation_to_the_gateway(monkeypatch):
+    monkeypatch.setenv("STUB_API_KEY", "provider")
+    passed = Observation(outcome="success", text="ok")
+    failed = Observation(outcome="success", text="wrong")
+    monkeypatch.setattr(runner, "discover", lambda: {"sequence": SequenceDriver((passed, failed, passed, passed))})
+    selected = experiment("stub/model", driver_id="sequence")
+
+    result = runner.execute(Plan(experiments=(selected,)), Gateway(), options=runner.ExecutionOptions(confirmations=1))[0]
+
+    assert result.assessment.stability == "flaky"
+    assert result.assessment.variance == "gateway"
+    assert result.assessment.parity == "not_evaluated"
 
 
 def test_runner_confirms_a_mismatch_when_only_the_details_vary(monkeypatch):
@@ -194,7 +238,7 @@ def test_runner_keeps_stable_parity_when_feature_support_varies(monkeypatch):
     assert result.assessment.feature == "unknown"
     assert result.assessment.parity == "mismatch"
     assert result.assessment.stability == "flaky"
-    assert result.assessment.differences == ("oracle",)
+    assert result.assessment.difference_codes == ("oracle",)
 
 
 def test_missing_provider_credential_is_an_access_result(monkeypatch):
@@ -286,6 +330,29 @@ def test_runner_reports_exhausted_transient_failures_separately(monkeypatch):
     assert len(result.attempts) == 2
 
 
+def test_runner_retries_a_retryable_gateway_error_then_reports_the_persistent_gap(monkeypatch):
+    monkeypatch.setenv("STUB_API_KEY", "provider")
+    direct = Observation(outcome="success", text="ok")
+    gateway = Observation(
+        outcome="error",
+        error_code="gateway_internal",
+        http_status=500,
+        failure=Failure(kind="gateway", origin="gateway", retryable=True, code="gateway_internal", http_status=500),
+    )
+    monkeypatch.setattr(runner, "discover", lambda: {"sequence": SequenceDriver((direct, gateway, gateway))})
+    selected = experiment("stub/model", driver_id="sequence")
+
+    result = runner.execute(
+        Plan(experiments=(selected,)),
+        Gateway(),
+        options=runner.ExecutionOptions(confirmations=0, transient_retries=1, retry_backoff_seconds=0),
+    )[0]
+
+    assert len(result.attempts) == 2
+    assert result.assessment.execution == "completed"
+    assert result.assessment.parity == "mismatch"
+
+
 def test_runner_uses_independent_provider_and_gateway_endpoints(monkeypatch):
     monkeypatch.setenv("STUB_API_KEY", "provider")
     monkeypatch.setattr(runner, "discover", lambda: {"direct": EndpointDriver(), "gateway": EndpointDriver()})
@@ -348,3 +415,16 @@ def test_provider_billing_failure_stops_only_that_provider(monkeypatch):
 
     assert driver.calls == ["billed/first", "billed/first", "healthy/first", "healthy/first"]
     assert [result.assessment.execution for result in results] == ["access_blocked", "access_blocked", "completed"]
+
+
+def test_direct_access_block_is_shared_across_gateway_surfaces(monkeypatch):
+    monkeypatch.setenv("STUB_API_KEY", "provider")
+    driver = DirectAuthDriver()
+    monkeypatch.setattr(runner, "discover", lambda: {driver.id: driver})
+    first = experiment("stub/model", driver.id)
+    second = first.model_copy(update={"gateway_surface_id": "oai_responses", "gateway_endpoint": "responses"})
+
+    results = runner.execute(Plan(experiments=(first, second)), Gateway(), options=runner.ExecutionOptions(confirmations=0, concurrency=1))
+
+    assert driver.direct_calls == 1
+    assert all(result.assessment.execution == "access_blocked" for result in results)

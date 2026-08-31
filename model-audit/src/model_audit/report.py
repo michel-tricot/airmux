@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import html
+import json
 from typing import TYPE_CHECKING
 
 from model_audit.diagnostics import (
@@ -12,7 +13,7 @@ from model_audit.diagnostics import (
     parity_display,
     stability_display,
 )
-from model_audit.models import Experiment, PairResult, Plan, ReportDocument, ReportPaths
+from model_audit.models import Experiment, ExperimentReference, PairResult, Plan, PlanArchive, ReportDocument, ReportPaths, Target
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -139,6 +140,18 @@ summary:hover { background: rgba(128, 191, 255, .035); }
 .differences { margin: 0; padding-left: 18px; color: #c7d2df; }
 .differences li + li { margin-top: 5px; }
 .differences strong { color: var(--text); }
+.request-details { margin-top: 20px; border: 1px solid var(--border); border-radius: 10px; background: #0b1019; }
+.request-details > summary { display: block; min-height: 0; padding: 12px 16px 12px 38px; color: var(--blue); font-size: 12px; }
+.request-details > summary::before { left: 15px; font-size: 18px; }
+.request-details > .observation-grid { padding: 0 14px 14px; }
+.request-details > p {
+  margin: 0;
+  padding: 0 14px 14px;
+  color: var(--muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 11px;
+}
+.request-details pre { max-height: 360px; margin: 10px 0 0; overflow: auto; color: #b8c4d3; font-size: 11px; white-space: pre-wrap; }
 .command {
   display: block;
   margin-top: 20px;
@@ -197,7 +210,12 @@ def _result_html(result: PairResult, gateway_url: str) -> str:
     difference_block = (
         f'<ul class="differences">{differences}</ul>' if differences else '<span class="metric-detail">No normalized differences</span>'
     )
-    claims = "".join(f'<span class="pill">{html.escape(claim.dimension)}:{html.escape(claim.name)}</span>' for claim in result.claims)
+    claim_verdicts = {claim.claim.key: claim.feature for claim in result.assessment.claims}
+    claims = "".join(
+        f'<span class="pill">{html.escape(claim.dimension)}:{html.escape(claim.name)} · '
+        f"{html.escape(claim_verdicts.get(claim.key, 'unknown'))}</span>"
+        for claim in result.claims
+    )
     assessment = result.assessment
     gap = gap_kind(result)
     badges = [
@@ -212,6 +230,20 @@ def _result_html(result: PairResult, gateway_url: str) -> str:
         badges.append(_badge(gap.replace("_", " "), gap))
     route = f"{result.surface_id} → {result.gateway_surface_id}"
     context = f"{result.transport} · {result.client} · {len(result.attempts)} attempt{'s' if len(result.attempts) != 1 else ''}"
+    request_details = ""
+    if result.direct_request is not None and result.gateway_request is not None:
+        direct_request = html.escape(json.dumps(result.direct_request.redacted_body, indent=2, ensure_ascii=False))
+        gateway_request = html.escape(json.dumps(result.gateway_request.redacted_body, indent=2, ensure_ascii=False))
+        request_details = f"""
+    <details class="request-details"><summary>Rendered requests and fingerprints</summary>
+      <div class="observation-grid">
+        <section class="panel"><h3>Provider request</h3>
+          <p>{html.escape(result.direct_request.body_fingerprint)}</p><pre>{direct_request}</pre></section>
+        <section class="panel"><h3>Gateway request</h3>
+          <p>{html.escape(result.gateway_request.body_fingerprint)}</p><pre>{gateway_request}</pre></section>
+      </div>
+      <p>Semantic fingerprint: {html.escape(result.direct_request.semantic_fingerprint)}</p>
+    </details>"""
     return f"""
 <details class="result gap-{html.escape(gap)}">
   <summary>
@@ -229,6 +261,7 @@ def _result_html(result: PairResult, gateway_url: str) -> str:
       <section class="detail-block"><h3>Claims</h3><div class="pills">{claims}</div></section>
       <section class="detail-block"><h3>Differences</h3>{difference_block}</section>
     </div>
+    {request_details}
     <code class="command">{html.escape(_reproduce(result, gateway_url))}</code>
   </div>
 </details>"""
@@ -244,12 +277,13 @@ def _html(document: ReportDocument) -> str:
     supported = sum(result.assessment.feature == "supported" for result in results)
     unsupported = sum(result.assessment.feature == "unsupported" for result in results)
     unknown = sum(result.assessment.feature == "unknown" for result in results)
+    mixed = sum(result.assessment.feature == "mixed" for result in results)
     gaps = sum(gap_kind(result) != "none" for result in results)
     rows = "".join(_result_html(result, document.run.gateway_url) for result in results)
     state = "Complete" if document.complete else "Incomplete checkpoint"
     state_class = "complete" if document.complete else "incomplete"
     parity_tone = "good" if mismatched == 0 and inconclusive == 0 and not_evaluated == 0 else "bad"
-    feature_tone = "good" if unsupported == 0 and unknown == 0 else ""
+    feature_tone = "good" if unsupported == 0 and unknown == 0 and mixed == 0 else ""
     stability_tone = "good" if flaky == 0 else "bad"
     resume = (
         ""
@@ -269,7 +303,7 @@ def _html(document: ReportDocument) -> str:
   <div class="metric {parity_tone}"><span class="metric-label">Parity</span><span class="metric-value">{matched} match</span>
     <span class="metric-detail">{mismatched} mismatch · {not_evaluated} not evaluated · {inconclusive} inconclusive</span></div>
   <div class="metric {feature_tone}"><span class="metric-label">Provider features</span><span class="metric-value">{supported} supported</span>
-    <span class="metric-detail">{unsupported} unsupported · {unknown} unknown</span></div>
+    <span class="metric-detail">{unsupported} unsupported · {mixed} mixed · {unknown} unknown</span></div>
   <div class="metric {stability_tone}"><span class="metric-label">Stability</span><span class="metric-value">{len(results) - flaky} stable</span>
     <span class="metric-detail">Stability: {len(results) - flaky} stable, {flaky} flaky</span></div>
 </section>
@@ -310,6 +344,50 @@ def _experiment_identity(experiment: Experiment) -> tuple[str, ...]:
     )
 
 
+def _target_key(target: Target) -> str:
+    return f"{target.provider_id}:{target.model_id}:{target.surface_id}"
+
+
+def archive_plan(plan: Plan) -> PlanArchive:
+    targets = {_target_key(experiment.target): experiment.target for experiment in plan.experiments}
+    cases = {experiment.case.id: experiment.case for experiment in plan.experiments}
+    experiments = tuple(
+        ExperimentReference(
+            target_key=_target_key(experiment.target),
+            case_id=experiment.case.id,
+            direct_driver_id=experiment.direct_driver_id,
+            gateway_driver_id=experiment.gateway_driver_id,
+            gateway_surface_id=experiment.gateway_surface_id,
+            gateway_endpoint=experiment.gateway_endpoint,
+            transport=experiment.transport,
+            direct_request=experiment.direct_request,
+            gateway_request=experiment.gateway_request,
+        )
+        for experiment in plan.experiments
+    )
+    return PlanArchive(targets=targets, cases=cases, experiments=experiments, unavailable=plan.unavailable)
+
+
+def restore_plan(plan: PlanArchive) -> Plan:
+    return Plan(
+        experiments=tuple(
+            Experiment(
+                target=plan.targets[experiment.target_key],
+                case=plan.cases[experiment.case_id],
+                direct_driver_id=experiment.direct_driver_id,
+                gateway_driver_id=experiment.gateway_driver_id,
+                gateway_surface_id=experiment.gateway_surface_id,
+                gateway_endpoint=experiment.gateway_endpoint,
+                transport=experiment.transport,
+                direct_request=experiment.direct_request,
+                gateway_request=experiment.gateway_request,
+            )
+            for experiment in plan.experiments
+        ),
+        unavailable=plan.unavailable,
+    )
+
+
 def _result_identity(result: PairResult) -> tuple[str, ...]:
     return (
         result.provider_id,
@@ -327,8 +405,9 @@ def remaining_plan(document: ReportDocument) -> Plan:
     if document.plan is None:
         message = "the report has no stored plan and cannot be resumed"
         raise ValueError(message)
+    plan = restore_plan(document.plan)
     completed = {_result_identity(result) for result in document.results}
-    return Plan(experiments=tuple(experiment for experiment in document.plan.experiments if _experiment_identity(experiment) not in completed))
+    return Plan(experiments=tuple(experiment for experiment in plan.experiments if _experiment_identity(experiment) not in completed))
 
 
 def ordered_results(plan: Plan, results: tuple[PairResult, ...]) -> tuple[PairResult, ...]:

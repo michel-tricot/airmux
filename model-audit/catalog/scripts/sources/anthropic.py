@@ -34,6 +34,7 @@ class Anthropic(ModelSource):
         models_url=url,
         openapi="https://raw.githubusercontent.com/anthropics/anthropic-sdk-typescript/main/.stats.yml",
         ingress=("anthropic",),
+        primary_surface="anthropic",
         auth=("header_key:x-api-key",),
         env_var="ANTHROPIC_API_KEY",
         icon_mono="anthropic",

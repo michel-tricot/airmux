@@ -4,14 +4,19 @@ title: Basic text completion
 claims:
 - dimension: capability
   name: text_generation
+  assertion:
+    text_nonempty: true
 - dimension: modality
   name: input_text
+  assertion:
+    text_nonempty: true
 - dimension: modality
   name: output_text
+  assertion:
+    text_nonempty: true
 request:
   messages:
   - role: user
     content: Reply with the single word ok
-  max_tokens: 1024
 oracle:
   text_nonempty: true

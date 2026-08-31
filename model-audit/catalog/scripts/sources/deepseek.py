@@ -42,6 +42,7 @@ class DeepSeek(ModelSource):
         base_url="https://api.deepseek.com",
         models_url=url,
         ingress=("oai", "anthropic"),
+        primary_surface="oai",
         auth=("bearer",),
         env_var="DEEPSEEK_API_KEY",
         icon_mono="deepseek",

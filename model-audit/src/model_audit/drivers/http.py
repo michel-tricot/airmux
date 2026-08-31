@@ -2,55 +2,25 @@ from __future__ import annotations
 
 import json
 import time
-from collections.abc import Mapping, Sequence
+from collections.abc import Mapping
 from typing import cast
 
 import httpx
 
-from model_audit.drivers.base import ClientDriver, Connection, access_error, status_outcome
-from model_audit.drivers.normalize import (
-    anthropic_message,
-    anthropic_stream,
-    openai_chat,
-    openai_chat_stream,
-    openai_responses,
-    openai_responses_stream,
-)
-from model_audit.drivers.wire import body_of
-from model_audit.models import Case, Observation, Outcome, Transport
+from model_audit.drivers.base import ClientDriver, Connection, access_error, status_failure, status_outcome
+from model_audit.models import Case, Failure, Observation, Outcome, Transport
+from model_audit.scenario import compile_scenario
+from model_audit.surfaces import by_endpoint, discover
+from model_audit.surfaces.base import SurfaceCodec, parse_sse
 
 
-def _headers(connection: Connection, endpoint: str) -> dict[str, str]:
+def _headers(connection: Connection, codec: SurfaceCodec) -> dict[str, str]:
     authentication = (
         {"Authorization": f"Bearer {connection.api_key}"}
         if connection.auth == "bearer"
         else {connection.auth.removeprefix("header_key:"): connection.api_key}
     )
-    return {
-        **connection.headers,
-        **authentication,
-        **({"anthropic-version": "2023-06-01"} if endpoint == "messages" else {}),
-        "accept": "application/json, text/event-stream",
-    }
-
-
-def _data_values(body: str) -> tuple[str, ...]:
-    return tuple(
-        data
-        for block in body.replace("\r\n", "\n").split("\n\n")
-        if (data := "\n".join(line.removeprefix("data:").lstrip() for line in block.splitlines() if line.startswith("data:")))
-    )
-
-
-def _events(body: str) -> tuple[Mapping[str, object], ...]:
-    events: list[Mapping[str, object]] = []
-    for data in _data_values(body):
-        if data == "[DONE]":
-            continue
-        value = json.loads(data)
-        if isinstance(value, Mapping):
-            events.append(cast("Mapping[str, object]", value))
-    return tuple(events)
+    return {**connection.headers, **authentication, **codec.headers(), "accept": "application/json, text/event-stream"}
 
 
 def _error_detail(payload: object, status_code: int) -> tuple[str, str]:
@@ -69,67 +39,16 @@ def _error_observation(connection: Connection, response: httpx.Response, duratio
         payload = response.text
     code, message = _error_detail(payload, response.status_code)
     access_code = access_error(connection, response.status_code, code)
+    outcome = status_outcome(connection, response.status_code, code)
     return Observation(
-        outcome=status_outcome(connection, response.status_code, code),
+        outcome=outcome,
         error_code=access_code or code,
         error_message=message,
         http_status=response.status_code,
         duration_ms=duration_ms,
         client_type=f"HTTP {response.status_code}",
+        failure=status_failure(connection, response.status_code, code, message),
     )
-
-
-def _buffered(endpoint: str, payload: Mapping[str, object], duration_ms: float) -> Observation:
-    if endpoint == "chat/completions":
-        return openai_chat(payload, duration_ms, "HTTP JSON")
-    if endpoint == "responses":
-        return openai_responses(payload, duration_ms, "HTTP JSON")
-    if endpoint == "messages":
-        return anthropic_message(payload, duration_ms, "HTTP JSON")
-    message = f"raw HTTP client does not support endpoint {endpoint}"
-    raise ValueError(message)
-
-
-def _stream_error(events: Sequence[Mapping[str, object]], duration_ms: float) -> Observation | None:
-    event = next((item for item in events if item.get("type") == "error" or isinstance(item.get("error"), Mapping)), None)
-    if event is None:
-        return None
-    detail = cast("Mapping[str, object]", event.get("error")) if isinstance(event.get("error"), Mapping) else event
-    return Observation(
-        outcome="error",
-        error_code=str(detail.get("code") or detail.get("type") or "upstream_error"),
-        error_message=str(detail.get("message") or ""),
-        duration_ms=duration_ms,
-        client_type="HTTP SSE",
-    )
-
-
-def _protocol_error(message: str, duration_ms: float) -> Observation:
-    return Observation(
-        outcome="error",
-        error_code="invalid_upstream_response",
-        error_message=message,
-        duration_ms=duration_ms,
-        client_type="HTTP SSE",
-    )
-
-
-def _streamed(endpoint: str, body: str, duration_ms: float) -> Observation:
-    events = _events(body)
-    if error := _stream_error(events, duration_ms):
-        return error
-    if endpoint == "chat/completions":
-        if "[DONE]" not in _data_values(body):
-            return _protocol_error("provider stream ended before its terminal event", duration_ms)
-        return openai_chat_stream(events, duration_ms, "HTTP SSE")
-    if endpoint == "responses":
-        return openai_responses_stream(events, duration_ms, "HTTP SSE")
-    if endpoint == "messages":
-        if not any(event.get("type") == "message_stop" for event in events):
-            return _protocol_error("provider stream ended before its terminal event", duration_ms)
-        return anthropic_stream(events, duration_ms, "HTTP SSE")
-    message = f"raw HTTP client does not support endpoint {endpoint}"
-    raise ValueError(message)
 
 
 def _json_payload(response: httpx.Response) -> Mapping[str, object]:
@@ -147,120 +66,93 @@ def _failure(error: Exception, started: float, code: str, outcome: Outcome) -> O
         error_message=str(error)[:500],
         duration_ms=(time.perf_counter() - started) * 1000,
         client_type=type(error).__name__,
+        failure=Failure(
+            kind="transient" if outcome == "transient" else "protocol",
+            origin="client",
+            retryable=outcome == "transient",
+            code=code,
+            message=str(error)[:500],
+        ),
     )
+
+
+def _body(connection: Connection, codec: SurfaceCodec, model: str, case: Case, transport: Transport) -> dict[str, object]:
+    body = codec.encode(model, case, transport)
+    return {connection.param_aliases.get(name, name): value for name, value in body.items()}
 
 
 def _send(
     connection: Connection,
-    endpoint: str,
+    codec: SurfaceCodec,
     request: dict[str, object],
     transport: Transport,
     started: float,
-) -> Observation:
-    url = f"{connection.base_url.rstrip('/')}/{endpoint}"
+) -> tuple[Observation, Mapping[str, object] | None]:
+    url = f"{connection.base_url.rstrip('/')}/{codec.endpoint}"
     try:
         with httpx.Client(timeout=connection.timeout_seconds) as client:
             if transport == "streamed":
-                with client.stream("POST", url, headers=_headers(connection, endpoint), json=request) as response:
+                with client.stream("POST", url, headers=_headers(connection, codec), json=request) as response:
                     content = response.read().decode()
             else:
-                response = client.post(url, headers=_headers(connection, endpoint), json=request)
+                response = client.post(url, headers=_headers(connection, codec), json=request)
                 content = ""
-    except httpx.TimeoutException as error:
-        return _failure(error, started, "request_timeout", "transient")
-    except httpx.HTTPError as error:
-        return _failure(error, started, "connection_error", "transient")
-    try:
-        elapsed = (time.perf_counter() - started) * 1000
-        if response.is_error:
-            observation = _error_observation(connection, response, elapsed)
-        elif transport == "streamed":
-            observation = _streamed(endpoint, content, elapsed)
-        else:
-            observation = _buffered(endpoint, _json_payload(response), elapsed)
-    except (json.JSONDecodeError, UnicodeDecodeError, TypeError, ValueError) as error:
-        return _failure(error, started, "http_protocol_error", "error")
-    else:
-        return observation
-
-
-def _post_buffered(
-    connection: Connection,
-    endpoint: str,
-    request: dict[str, object],
-    started: float,
-) -> tuple[Observation, Mapping[str, object] | None]:
-    url = f"{connection.base_url.rstrip('/')}/{endpoint}"
-    try:
-        response = httpx.post(url, headers=_headers(connection, endpoint), json=request, timeout=connection.timeout_seconds)
     except httpx.TimeoutException as error:
         return _failure(error, started, "request_timeout", "transient"), None
     except httpx.HTTPError as error:
         return _failure(error, started, "connection_error", "transient"), None
-    elapsed = (time.perf_counter() - started) * 1000
-    if response.is_error:
-        return _error_observation(connection, response, elapsed), None
     try:
+        elapsed = (time.perf_counter() - started) * 1000
+        if response.is_error:
+            return _error_observation(connection, response, elapsed), None
+        if transport == "streamed":
+            observation = codec.decode_stream(parse_sse(content), elapsed)
+            if observation.failure is not None:
+                observation = observation.model_copy(update={"failure": observation.failure.model_copy(update={"origin": connection.route})})
+            return observation, None
         payload = _json_payload(response)
-        return _buffered(endpoint, payload, elapsed), payload
-    except (json.JSONDecodeError, TypeError, ValueError) as error:
+        return codec.decode_buffered(payload, elapsed), payload
+    except (json.JSONDecodeError, UnicodeDecodeError, TypeError, ValueError) as error:
         return _failure(error, started, "http_protocol_error", "error"), None
 
 
-def _body_of(connection: Connection, endpoint: str, model: str, case: Case, transport: Transport) -> dict[str, object]:
-    body = body_of(endpoint, model, case, transport)
-    return {connection.param_aliases.get(name, name): value for name, value in body.items()}
-
-
-def _follow_up_body(connection: Connection, endpoint: str, model: str, case: Case, payload: Mapping[str, object]) -> dict[str, object]:
-    if case.follow_up is None:
-        message = "reasoning history case needs a follow-up request"
-        raise ValueError(message)
-    follow_up = case.model_copy(update={"request": case.follow_up, "follow_up": None})
-    first = _body_of(connection, endpoint, model, case, "buffered")
-    second = _body_of(connection, endpoint, model, follow_up, "buffered")
-    if endpoint == "responses":
-        second["input"] = [
-            *cast("list[object]", first["input"]),
-            *cast("list[object]", payload.get("output") or []),
-            *cast("list[object]", second["input"]),
-        ]
-    elif endpoint == "messages":
-        second["messages"] = [
-            *cast("list[object]", first["messages"]),
-            {"role": "assistant", "content": payload.get("content") or []},
-            *cast("list[object]", second["messages"]),
-        ]
-    else:
-        message = f"reasoning history is not implemented for {endpoint}"
-        raise ValueError(message)
-    return second
-
-
-def _history(connection: Connection, endpoint: str, model: str, case: Case, started: float) -> Observation:
-    first = _body_of(connection, endpoint, model, case, "buffered")
-    observation, payload = _post_buffered(connection, endpoint, first, started)
-    if payload is None:
-        return observation
-    try:
-        follow_up = _follow_up_body(connection, endpoint, model, case, payload)
-    except (TypeError, ValueError) as error:
-        return _failure(error, started, "harness_request_error", "error")
-    final, _ = _post_buffered(connection, endpoint, follow_up, started)
-    return final
+def _execute_scenario(connection: Connection, codec: SurfaceCodec, model: str, case: Case, transport: Transport) -> Observation:
+    started = time.perf_counter()
+    scenario = compile_scenario(case)
+    if scenario.request_count > 1 and transport == "streamed":
+        message = "provider-state continuation requires buffered transport"
+        return _failure(ValueError(message), started, "harness_request_error", "error")
+    first_body = _body(connection, codec, model, scenario.steps[0].case, transport)
+    request = first_body
+    payload = None
+    observation = Observation(outcome="inconclusive", error_code="not_run")
+    for index, step in enumerate(scenario.steps):
+        if index > 0:
+            if payload is None:
+                return observation
+            next_body = _body(connection, codec, model, step.case, transport)
+            try:
+                request = codec.continuation(first_body, payload, next_body)
+            except ValueError as error:
+                return _failure(error, started, "harness_request_error", "error")
+        observation, payload = _send(connection, codec, request, transport, started)
+        if observation.outcome != "success":
+            return observation
+    return observation
 
 
 class HTTPDriver(ClientDriver):
     id = "http"
     mode = "api"
-    endpoints = frozenset({"chat/completions", "responses", "messages"})
+
+    def __init__(self) -> None:
+        self.endpoints = frozenset(codec.endpoint for codec in discover().values())
 
     def execute(self, connection: Connection, endpoint: str, model: str, case: Case, transport: Transport) -> Observation:
         started = time.perf_counter()
-        if case.follow_up is not None:
-            return _history(connection, endpoint, model, case, started)
         try:
-            request = _body_of(connection, endpoint, model, case, transport)
+            codec = by_endpoint(endpoint)
+            return _execute_scenario(connection, codec, model, case, transport)
         except (TypeError, ValueError) as error:
             return Observation(
                 outcome="inconclusive",
@@ -268,5 +160,5 @@ class HTTPDriver(ClientDriver):
                 error_message=str(error)[:500],
                 duration_ms=(time.perf_counter() - started) * 1000,
                 client_type="HTTP",
+                failure=Failure(kind="protocol", origin="harness", code="harness_request_error", message=str(error)[:500]),
             )
-        return _send(connection, endpoint, request, transport, started)

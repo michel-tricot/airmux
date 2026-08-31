@@ -116,6 +116,14 @@ def test_interrupted_runs_have_a_resume_command():
     assert "--concurrency" in result.output
 
 
+def test_reports_expose_listing_and_retention_commands():
+    result = CliRunner().invoke(app, ["reports", "--help"])
+
+    assert result.exit_code == 0
+    assert "list" in result.output
+    assert "prune" in result.output
+
+
 def test_provider_lifecycle_uses_onboard_and_sync_commands():
     providers = CliRunner().invoke(app, ["providers", "--help"])
     models = CliRunner().invoke(app, ["models", "--help"])

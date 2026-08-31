@@ -5,6 +5,7 @@ from hashlib import sha256
 from importlib.metadata import version
 from pathlib import Path
 
+from contract import uuid7
 from model_audit.models import RunMetadata
 
 
@@ -31,11 +32,31 @@ def taxonomy_fingerprint(root: Path) -> str:
     return digest.hexdigest()[:20]
 
 
+def harness_fingerprint(root: Path) -> str:
+    project = root / "model-audit"
+    paths = [
+        project / "pyproject.toml",
+        *sorted((project / "src" / "model_audit").rglob("*.py")),
+        *sorted((project / "cases").rglob("*.yml")),
+        *sorted((project / "definitions").rglob("*.yml")),
+    ]
+    digest = sha256()
+    for path in paths:
+        digest.update(path.relative_to(root).as_posix().encode())
+        digest.update(path.read_bytes())
+    return digest.hexdigest()[:20]
+
+
+def new_run_id() -> str:
+    return str(uuid7())
+
+
 def metadata(root: Path, run_id: str, gateway_url: str) -> RunMetadata:
     return RunMetadata(
         run_id=run_id,
         created_at=datetime.now(tz=UTC).isoformat(),
         harness_commit=_git_commit(root),
+        harness_fingerprint=harness_fingerprint(root),
         gateway_url=gateway_url,
         taxonomy_fingerprint=taxonomy_fingerprint(root),
         client_versions={"anthropic": version("anthropic"), "openai": version("openai")},

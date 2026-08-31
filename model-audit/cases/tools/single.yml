@@ -4,10 +4,16 @@ title: One required tool call
 claims:
 - dimension: capability
   name: tool_calling
+  assertion:
+    tool_names: [report_result]
+    tool_arguments_valid: true
 - dimension: option
   name: tool_choice
   profile:
     mode: required
+  assertion:
+    tool_names: [report_result]
+    tool_arguments_valid: true
 request:
   messages:
   - role: user

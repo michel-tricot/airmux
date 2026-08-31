@@ -25,10 +25,6 @@ def _openai_tool_choice(choice: JsonValue, responses: bool) -> JsonValue:
     return {"type": "function", "name": name} if responses else {"type": "function", "function": {"name": name}}
 
 
-def _tests_max_tokens(case: Case) -> bool:
-    return any(claim.dimension == "option" and claim.name == "max_tokens" for claim in case.claims)
-
-
 def _image_url(block: Mapping[str, object]) -> str:
     if isinstance(block.get("url"), str):
         return str(block["url"])
@@ -123,7 +119,7 @@ def openai_chat_options(case: Case) -> dict[str, JsonValue]:
     request = case.request
     reasoning = request.reasoning or {}
     return {
-        **({"max_tokens": request.max_tokens} if _tests_max_tokens(case) else {}),
+        "max_tokens": case.max_output_tokens,
         **({"temperature": request.temperature} if request.temperature is not None else {}),
         **({"top_p": request.top_p} if request.top_p is not None else {}),
         **({"stop": list(request.stop)} if request.stop is not None else {}),
@@ -135,7 +131,6 @@ def openai_chat_options(case: Case) -> dict[str, JsonValue]:
         **({"parallel_tool_calls": request.parallel_tool_calls} if request.parallel_tool_calls is not None else {}),
         **({"response_format": request.response_format} if request.response_format is not None else {}),
         **({"reasoning_effort": reasoning["effort"]} if reasoning.get("effort") is not None else {}),
-        **request.extra,
     }
 
 
@@ -158,7 +153,7 @@ def openai_responses_options(case: Case) -> dict[str, JsonValue]:
     else:
         output_format = cast("dict[str, JsonValue]", response_format or {})
     return {
-        **({"max_output_tokens": request.max_tokens} if _tests_max_tokens(case) else {}),
+        "max_output_tokens": case.max_output_tokens,
         **({"temperature": request.temperature} if request.temperature is not None else {}),
         **({"top_p": request.top_p} if request.top_p is not None else {}),
         **({"tools": [_openai_tool(tool, True) for tool in request.tools]} if request.tools else {}),
@@ -170,7 +165,6 @@ def openai_responses_options(case: Case) -> dict[str, JsonValue]:
             if request.reasoning is not None
             else {}
         ),
-        **request.extra,
     }
 
 
@@ -301,7 +295,6 @@ def anthropic_parts(case: Case) -> tuple[list[dict[str, JsonValue]], dict[str, J
             else {}
         ),
         **({"output_config": output_config} if output_config else {}),
-        **request.extra,
     }
     return messages, extra
 
@@ -310,7 +303,7 @@ def anthropic_body(model: str, case: Case, transport: Transport) -> dict[str, Js
     messages, extra = anthropic_parts(case)
     return {
         "model": model,
-        "max_tokens": case.request.max_tokens,
+        "max_tokens": case.max_output_tokens,
         "messages": messages,
         **extra,
         **({"stream": True} if transport == "streamed" else {}),

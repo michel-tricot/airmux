@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from model_audit.models import Applicability
+from model_audit.models import Applicability, Request
 from model_audit.plan import Filters, build_plan
 from tests.helpers import case, target
 
@@ -155,3 +155,12 @@ def test_explicit_provider_surface_can_probe_a_nonconfigured_provider_surface():
     )
 
     assert [experiment.target.surface_id for experiment in plan.experiments] == ["oai_responses"]
+
+
+def test_plan_request_count_includes_every_scenario_step_on_both_paths():
+    history = case(follow_up=Request(messages=({"role": "user", "content": "Continue"},)))
+    responses = target(surface_id="oai_responses", endpoint="responses", egress_kind="openai_responses")
+
+    plan = build_plan([responses], [history], {"http": frozenset({"responses"})})
+
+    assert plan.requests == 4

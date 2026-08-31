@@ -14,6 +14,27 @@ The project has four independent verdicts:
 A matching provider rejection is parity. It is classified as unsupported only when the
 provider explicitly rejects that feature or combination. Generic errors remain unknown.
 
+Each claim in a case has its own assertion and feature verdict. A case that covers several
+claims can therefore be `mixed` without hiding which capability or option passed. Parity is
+evaluated independently from feature support.
+
+## Architecture
+
+Cases are semantic scenarios, not provider payloads. A discovered surface codec owns the
+endpoint, request spelling, response normalization, streaming protocol, and continuation
+state for one API dialect. Planning compiles both routes before a request is scheduled and
+stores redacted rendered bodies plus semantic fingerprints in the report. A request that a
+surface cannot represent is unavailable at planning time instead of failing during execution.
+
+The execution output limit is separate from the request under test. `execution.max_output_tokens`
+is a harness safety budget and does not claim model support. Only a case that sets
+`request.max_tokens`, such as `parameters.max-tokens`, tests that option.
+
+Observations retain normalized token counts, reasoning metadata, tool identities, typed
+failure origin and retryability, and structured differences. Provider and gateway confirmation
+attempts act as separate control arms, so a flaky result identifies provider, gateway, or
+two-sided variance.
+
 ## Agent guides
 
 The package owns versioned instructions for agents. List them with:
@@ -53,6 +74,8 @@ uv run airllm-audit runs execute --model anthropic/claude-fable-5
 uv run airllm-audit runs execute --provider anthropic --case modalities --concurrency 8
 
 uv run airllm-audit reports show --gaps
+uv run airllm-audit reports list
+uv run airllm-audit reports prune --keep 20 --yes
 uv run airllm-audit evidence accept model-audit/reports/<run>.json
 uv run airllm-audit taxonomy validate
 ```
@@ -105,9 +128,10 @@ The checkpoint contains the complete original plan, confirmation count, transien
 request timeout, partial results, and completion state. Resume uses the stored gateway URL and
 requires the gateway key through `AIRLLM_API_KEY` or `--gateway-api-key`.
 
-Resume rejects a changed taxonomy rather than mixing targets from different catalog
-versions. It preserves original plan order and may override concurrency, confirmations,
-transient retries, retry backoff, or request timeout explicitly.
+Resume rejects a changed taxonomy, case suite, audit source, or provider definition rather
+than mixing evidence from different harness versions. It preserves original plan order and
+may override concurrency, confirmations, transient retries, retry backoff, or request timeout
+explicitly.
 
 ## Provider sources
 
@@ -115,6 +139,11 @@ Each provider has one auto-discovered source under
 `model-audit/catalog/scripts/sources/`. The source is the reproducible recipe for provider
 identity, model acquisition, pricing supplied by the model endpoint, and schema acquisition.
 `providers.yml` and the derived files are applied projections of that recipe.
+
+Official documentation parsing lives under `model_audit/provider_docs/`, one module per
+provider. Shared code only fetches documents, applies missing values, records exact source
+URLs, and preserves conflicts. Provider-specific page structure never belongs in the shared
+merger.
 
 Inspect source readiness:
 
@@ -142,6 +171,7 @@ class Example(ModelSource):
         models_url=url,
         openapi="https://api.example.ai/openapi.json",
         ingress=("oai",),
+        primary_surface="oai",
         auth=("bearer",),
         env_var="EXAMPLE_API_KEY",
     )

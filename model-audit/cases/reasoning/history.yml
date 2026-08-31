@@ -11,7 +11,6 @@ request:
   messages:
   - role: user
     content: Remember the number 42 and explain briefly why it is even
-  max_tokens: 1024
   reasoning:
     type: adaptive
     effort: low
@@ -20,7 +19,6 @@ follow_up:
   messages:
   - role: user
     content: Reply with only the number I asked you to remember
-  max_tokens: 1024
   reasoning:
     type: adaptive
     effort: low

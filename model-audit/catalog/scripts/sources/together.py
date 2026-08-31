@@ -51,6 +51,7 @@ class Together(ModelSource):
         models_url=url,
         openapi="https://docs.together.ai/openapi.yaml",
         ingress=("oai",),
+        primary_surface="oai",
         auth=("bearer",),
         env_var="TOGETHER_API_KEY",
         icon_mono="together",

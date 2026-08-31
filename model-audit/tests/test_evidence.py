@@ -10,9 +10,12 @@ from model_audit.cases import fingerprint
 from model_audit.evidence import records_from_report, reduce
 from model_audit.models import (
     Assessment,
+    Claim,
+    ClaimAssessment,
     EvidenceLedger,
-    FeatureVerdict,
+    FeatureSummary,
     Observation,
+    Oracle,
     PairResult,
     ReportDocument,
     RunMetadata,
@@ -42,17 +45,30 @@ print(fingerprint(case))
 def _report(
     run_id: str,
     created_at: str,
-    feature: FeatureVerdict,
+    feature: FeatureSummary,
     client: str = "http",
     assessment: Assessment | None = None,
 ) -> ReportDocument:
     experiment_case = case()
     observation = Observation(outcome="success", text="ok")
+    default_claims = tuple(
+        ClaimAssessment(
+            claim=claim,
+            feature=feature if feature != "mixed" else "unknown",
+            direct_satisfies=feature == "supported",
+            gateway_satisfies=feature == "supported",
+        )
+        for claim in experiment_case.claims
+    )
+    resolved_assessment = assessment or Assessment(execution="completed", feature=feature, parity="match")
+    if not resolved_assessment.claims:
+        resolved_assessment = resolved_assessment.model_copy(update={"claims": default_claims})
     return ReportDocument(
         run=RunMetadata(
             run_id=run_id,
             created_at=created_at,
             harness_commit="abc",
+            harness_fingerprint="harness",
             gateway_url="http://gateway",
             taxonomy_fingerprint="catalog",
             client_versions={},
@@ -74,7 +90,7 @@ def _report(
                 transport="buffered",
                 direct=observation,
                 gateway=observation,
-                assessment=assessment or Assessment(execution="completed", feature=feature, parity="match"),
+                assessment=resolved_assessment,
             ),
         ),
     )
@@ -155,3 +171,57 @@ def test_reports_for_changed_cases_are_rejected_at_the_promotion_boundary():
 
     with pytest.raises(ValueError, match="stale or unknown cases"):
         records_from_report(_report("one", "2026-01-01T00:00:00+00:00", "supported"), (changed_case,))
+
+
+def test_evidence_uses_each_claims_own_feature_verdict():
+    report = _report("claims", "2026-01-01T00:00:00+00:00", "mixed")
+    result = report.results[0]
+    supported = Claim(dimension="capability", name="tool_calling")
+    unsupported = Claim(dimension="option", name="tool_choice", profile={"mode": "required"})
+    assessment = result.assessment.model_copy(
+        update={
+            "claims": (
+                ClaimAssessment(claim=supported, feature="supported", direct_satisfies=True, gateway_satisfies=True),
+                ClaimAssessment(claim=unsupported, feature="unsupported", direct_satisfies=False, gateway_satisfies=False),
+            )
+        }
+    )
+    result = result.model_copy(update={"claims": (supported, unsupported), "assessment": assessment})
+    changed_case = case(claims=(supported, unsupported))
+    result = result.model_copy(update={"case_fingerprint": fingerprint(changed_case)})
+    report = report.model_copy(update={"results": (result,)})
+
+    records = records_from_report(report, (changed_case,))
+
+    assert [(record.claim.name, record.verdict) for record in records] == [
+        ("tool_calling", "supported"),
+        ("tool_choice", "unsupported"),
+    ]
+
+
+def test_evidence_stores_claim_identity_without_case_assertions():
+    experiment_case = case(claims=(Claim(dimension="capability", name="text_generation", assertion=Oracle(text_nonempty=True)),))
+    report = _report("assertion", "2026-01-01T00:00:00+00:00", "supported")
+    result = report.results[0].model_copy(
+        update={
+            "claims": experiment_case.claims,
+            "case_fingerprint": fingerprint(experiment_case),
+            "assessment": report.results[0].assessment.model_copy(
+                update={
+                    "claims": (
+                        ClaimAssessment(
+                            claim=experiment_case.claims[0],
+                            feature="supported",
+                            direct_satisfies=True,
+                            gateway_satisfies=True,
+                        ),
+                    )
+                }
+            ),
+        }
+    )
+    report = report.model_copy(update={"results": (result,)})
+
+    records = records_from_report(report, (experiment_case,))
+
+    assert records[0].claim.assertion is None

@@ -6,10 +6,10 @@ from typing import TYPE_CHECKING, cast
 import anthropic
 from anthropic import Anthropic
 
-from model_audit.drivers.base import ClientDriver, Connection, access_error, status_outcome
+from model_audit.drivers.base import ClientDriver, Connection, access_error, status_failure, status_outcome
 from model_audit.drivers.normalize import anthropic_message
 from model_audit.drivers.wire import anthropic_parts
-from model_audit.models import Case, Observation, Transport
+from model_audit.models import Case, Failure, Observation, Transport
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -52,23 +52,25 @@ class AnthropicDriver(ClientDriver):
         try:
             message_params = cast("list[MessageParam]", messages)
             if transport == "streamed":
-                with client.messages.stream(model=model, max_tokens=case.request.max_tokens, messages=message_params, extra_body=extra) as stream:
+                with client.messages.stream(model=model, max_tokens=case.max_output_tokens, messages=message_params, extra_body=extra) as stream:
                     message = stream.get_final_message()
             else:
-                message = client.messages.create(model=model, max_tokens=case.request.max_tokens, messages=message_params, extra_body=extra)
+                message = client.messages.create(model=model, max_tokens=case.max_output_tokens, messages=message_params, extra_body=extra)
             elapsed = (time.perf_counter() - started) * 1000
             return anthropic_message(cast("Mapping[str, object]", message.model_dump()), elapsed, type(message).__name__)
         except anthropic.APIStatusError as error:
             elapsed = (time.perf_counter() - started) * 1000
             error_code = str(getattr(error, "code", None) or error.status_code)
             access_code = access_error(connection, error.status_code, error_code)
+            error_message = str(error)[:500]
             return Observation(
                 outcome=status_outcome(connection, error.status_code, error_code),
                 error_code=access_code or error_code,
-                error_message=str(error)[:500],
+                error_message=error_message,
                 http_status=error.status_code,
                 duration_ms=elapsed,
                 client_type=type(error).__name__,
+                failure=status_failure(connection, error.status_code, error_code, error_message),
             )
         except anthropic.APITimeoutError as error:
             elapsed = (time.perf_counter() - started) * 1000
@@ -78,6 +80,7 @@ class AnthropicDriver(ClientDriver):
                 error_message=str(error)[:500],
                 duration_ms=elapsed,
                 client_type=type(error).__name__,
+                failure=Failure(kind="transient", origin="client", retryable=True, code="request_timeout", message=str(error)[:500]),
             )
         except anthropic.APIConnectionError as error:
             elapsed = (time.perf_counter() - started) * 1000
@@ -87,4 +90,5 @@ class AnthropicDriver(ClientDriver):
                 error_message=str(error)[:500],
                 duration_ms=elapsed,
                 client_type=type(error).__name__,
+                failure=Failure(kind="transient", origin="client", retryable=True, code="connection_error", message=str(error)[:500]),
             )

@@ -6,7 +6,7 @@ from hashlib import sha256
 from typing import TYPE_CHECKING
 
 from model_audit.cases import fingerprint
-from model_audit.compare import ACCESS_CODES, HARNESS_CODES
+from model_audit.failures import ACCESS_CODES, HARNESS_CODES
 from model_audit.models import BehaviorRecord, BehaviorTaxonomy, Case, EvidenceLedger, EvidenceRecord, PairResult, ReportDocument
 
 if TYPE_CHECKING:
@@ -47,7 +47,13 @@ def records_from_report(report: ReportDocument, cases: tuple[Case, ...]) -> tupl
             raise ValueError(message)
         if not _usable_direct_observation(result):
             continue
+        claim_assessments = {claim.claim.key: claim for claim in result.assessment.claims}
+        missing = [claim.name for claim in result.claims if claim.key not in claim_assessments]
+        if missing:
+            message = f"report has no claim assessment for {result.case_id}: {', '.join(missing)}"
+            raise ValueError(message)
         for claim in result.claims:
+            claim_assessment = claim_assessments[claim.key]
             identity = f"{report.run.run_id}:{result.model_id}:{result.surface_id}:{result.case_id}:{result.transport}:{claim.key}"
             records.append(
                 EvidenceRecord(
@@ -60,12 +66,13 @@ def records_from_report(report: ReportDocument, cases: tuple[Case, ...]) -> tupl
                     case_id=result.case_id,
                     case_version=result.case_version,
                     case_fingerprint=result.case_fingerprint,
-                    claim=claim,
-                    verdict=result.assessment.feature,
+                    claim=claim.model_copy(update={"assertion": None}),
+                    verdict=claim_assessment.feature,
                     observation=result.direct,
                     attempts=max(1, len(result.attempts)),
                     observed_at=report.run.created_at,
                     harness_commit=report.run.harness_commit,
+                    harness_fingerprint=report.run.harness_fingerprint,
                     taxonomy_fingerprint=report.run.taxonomy_fingerprint,
                 )
             )
@@ -119,12 +126,14 @@ def reduce(ledger: EvidenceLedger, cases: tuple[Case, ...]) -> BehaviorTaxonomy:
     ordered_behaviors = tuple(
         sorted(behaviors, key=lambda behavior: (behavior.provider_id, behavior.model_id, behavior.surface_id, behavior.claim.key))
     )
-    fingerprint = sha256(json.dumps([record.model_dump(mode="json") for record in ordered_behaviors], sort_keys=True).encode()).hexdigest()[:16]
+    fingerprint = sha256(
+        json.dumps([record.model_dump(mode="json", exclude_none=True) for record in ordered_behaviors], sort_keys=True).encode()
+    ).hexdigest()[:16]
     return BehaviorTaxonomy(generated_from=fingerprint, behaviors=ordered_behaviors)
 
 
 def write_behavior(ledger_path: Path, output_path: Path, cases: tuple[Case, ...]) -> BehaviorTaxonomy:
     behavior = reduce(load_ledger(ledger_path), cases)
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_text(json.dumps(behavior.model_dump(mode="json"), indent=2, sort_keys=False) + "\n", encoding="utf-8")
+    output_path.write_text(json.dumps(behavior.model_dump(mode="json", exclude_none=True), indent=2, sort_keys=False) + "\n", encoding="utf-8")
     return behavior

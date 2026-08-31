@@ -4,6 +4,8 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Literal
 
+from model_audit.models import Failure, FailureKind
+
 if TYPE_CHECKING:
     from model_audit.models import Case, ClientMode, Observation, Outcome, Transport
 
@@ -46,6 +48,30 @@ def status_outcome(connection: Connection, status_code: int, error_code: str | N
     if status_code == TOO_MANY_REQUESTS or (connection.route == "direct" and status_code >= SERVER_ERROR):
         return "transient"
     return "rejected" if status_code in REJECTION_STATUSES else "error"
+
+
+def status_failure(connection: Connection, status_code: int, error_code: str, message: str) -> Failure:
+    access_code = access_error(connection, status_code, error_code)
+    outcome = status_outcome(connection, status_code, error_code)
+    kind: FailureKind = (
+        "access"
+        if access_code is not None
+        else "transient"
+        if outcome == "transient"
+        else "rejection"
+        if outcome == "rejected"
+        else "gateway"
+        if connection.route == "gateway"
+        else "provider"
+    )
+    return Failure(
+        kind=kind,
+        origin=connection.route,
+        retryable=status_code == TOO_MANY_REQUESTS or status_code >= SERVER_ERROR,
+        code=access_code or error_code,
+        message=message,
+        http_status=status_code,
+    )
 
 
 class ClientDriver(ABC):

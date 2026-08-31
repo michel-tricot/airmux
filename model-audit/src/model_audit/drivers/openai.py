@@ -6,10 +6,10 @@ from typing import TYPE_CHECKING, cast
 import openai
 from openai import OpenAI
 
-from model_audit.drivers.base import ClientDriver, Connection, access_error, status_outcome
+from model_audit.drivers.base import ClientDriver, Connection, access_error, status_failure, status_outcome
 from model_audit.drivers.normalize import openai_chat, openai_chat_stream, openai_responses
 from model_audit.drivers.wire import openai_chat_options, openai_messages, openai_responses_options
-from model_audit.models import Case, Observation, Transport
+from model_audit.models import Case, Failure, Observation, Transport
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -43,13 +43,15 @@ class OpenAIDriver(ClientDriver):
             elapsed = (time.perf_counter() - started) * 1000
             error_code = str(getattr(error, "code", None) or error.status_code)
             access_code = access_error(connection, error.status_code, error_code)
+            error_message = str(error)[:500]
             return Observation(
                 outcome=status_outcome(connection, error.status_code, error_code),
                 error_code=access_code or error_code,
-                error_message=str(error)[:500],
+                error_message=error_message,
                 http_status=error.status_code,
                 duration_ms=elapsed,
                 client_type=type(error).__name__,
+                failure=status_failure(connection, error.status_code, error_code, error_message),
             )
         except openai.APITimeoutError as error:
             elapsed = (time.perf_counter() - started) * 1000
@@ -59,6 +61,7 @@ class OpenAIDriver(ClientDriver):
                 error_message=str(error)[:500],
                 duration_ms=elapsed,
                 client_type=type(error).__name__,
+                failure=Failure(kind="transient", origin="client", retryable=True, code="request_timeout", message=str(error)[:500]),
             )
         except openai.APIConnectionError as error:
             elapsed = (time.perf_counter() - started) * 1000
@@ -68,6 +71,7 @@ class OpenAIDriver(ClientDriver):
                 error_message=str(error)[:500],
                 duration_ms=elapsed,
                 client_type=type(error).__name__,
+                failure=Failure(kind="transient", origin="client", retryable=True, code="connection_error", message=str(error)[:500]),
             )
         except IndexError as error:
             elapsed = (time.perf_counter() - started) * 1000
@@ -77,6 +81,7 @@ class OpenAIDriver(ClientDriver):
                 error_message=str(error)[:500] or "OpenAI SDK could not fold the response stream",
                 duration_ms=elapsed,
                 client_type=type(error).__name__,
+                failure=Failure(kind="protocol", origin="client", code="sdk_protocol_error", message=str(error)[:500]),
             )
 
     @staticmethod
