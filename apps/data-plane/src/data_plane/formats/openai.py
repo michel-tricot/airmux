@@ -232,8 +232,9 @@ class UpstreamErrorBody(BaseModel):
         if error is not None:
             return value
         message = value.get("message")
-        if not isinstance(message, str) and "detail" in value:
-            message = json.dumps(value, ensure_ascii=False, separators=(",", ":"))
+        if not isinstance(message, str):
+            detail = value if "detail" in value else message
+            message = json.dumps(detail, ensure_ascii=False, separators=(",", ":")) if detail is not None else None
         code = value.get("code")
         return {"error": {"code": str(code) if code is not None else None, "message": message}} if isinstance(message, str) else value
 
@@ -245,10 +246,27 @@ class UpstreamToolCall(BaseModel):
     function: UpstreamFunction = Field(default_factory=UpstreamFunction)
 
 
+class UpstreamThinkingText(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    text: str = ""
+
+
+class UpstreamContentBlock(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    type: str
+    text: str = ""
+    thinking: list[UpstreamThinkingText] = Field(default_factory=list)
+
+
+UpstreamContent = str | list[UpstreamContentBlock]
+
+
 class UpstreamMessage(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
-    content: str | None = None
+    content: UpstreamContent | None = None
     reasoning_content: str | None = None
     reasoning: str | None = None
     tool_calls: list[UpstreamToolCall] | None = None
@@ -294,7 +312,7 @@ class UpstreamToolCallDelta(BaseModel):
 class UpstreamDelta(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
-    content: str | None = None
+    content: UpstreamContent | None = None
     reasoning_content: str | None = None
     reasoning: str | None = None
     tool_calls: list[UpstreamToolCallDelta] | None = None
@@ -331,14 +349,24 @@ def finish_reason(raw: str | None) -> FinishReason | None:
     return FINISH_REASONS.get(raw, "stop")
 
 
+def content_texts(content: UpstreamContent | None) -> tuple[str, str]:
+    if isinstance(content, str):
+        return "", content
+    blocks = content or []
+    reasoning = "".join(item.text for block in blocks if block.type == "thinking" for item in block.thinking)
+    text = "".join(block.text for block in blocks if block.type == "text")
+    return reasoning, text
+
+
 def response_parts(message: UpstreamMessage) -> list[AssistantPart]:
     """Order is reasoning, then text, then tool calls; empty parts are omitted so the streaming and
     non-streaming paths agree."""
     parts: list[AssistantPart] = []
-    if reasoning := message.reasoning_content or message.reasoning:
+    block_reasoning, text = content_texts(message.content)
+    if reasoning := (message.reasoning_content or message.reasoning or "") + block_reasoning:
         parts.append(ReasoningPart(text=reasoning))
-    if message.content:
-        parts.append(TextPart(text=message.content))
+    if text:
+        parts.append(TextPart(text=text))
     parts.extend(ToolCallPart(id=call.id, name=call.function.name, arguments=call.function.arguments) for call in message.tool_calls or [])
     return parts
 

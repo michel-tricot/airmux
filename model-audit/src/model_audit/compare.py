@@ -14,6 +14,8 @@ UNSUPPORTED_PATTERNS = (
     "cannot be used with",
     "may not be enabled when",
     "is incompatible with",
+    "extra inputs are not permitted",
+    "extra_forbidden",
 )
 ACCESS_CODES = {"direct_authentication", "direct_model_access", "gateway_authentication", "not_run", "provider_billing_access"}
 HARNESS_CODES = {"client_exception", "harness_request_error", "sdk_protocol_error"}
@@ -44,6 +46,13 @@ def _finish_class(reason: str | None) -> str | None:
         "max_tokens": "length",
         "max_output_tokens": "length",
     }.get(reason, reason)
+
+
+def _semantic_finish(observation: Observation) -> str | None:
+    finish = _finish_class(observation.finish_reason)
+    if observation.tool_calls and finish in {"stop", "tools"}:
+        return "tools"
+    return finish
 
 
 def oracle_failures(observation: Observation, oracle: Oracle) -> tuple[str, ...]:
@@ -135,8 +144,8 @@ def _differences(direct: Observation, gateway: Observation, oracle: Oracle) -> t
             tuple(tool.valid_arguments for tool in direct.tool_calls),
             tuple(tool.valid_arguments for tool in gateway.tool_calls),
         ),
-        "finish_reason": (_finish_class(direct.finish_reason), _finish_class(gateway.finish_reason)),
-        "usage_presence": (direct.usage_present, gateway.usage_present),
+        "finish_reason": (_semantic_finish(direct), _semantic_finish(gateway)),
+        **({"usage_presence": (direct.usage_present, gateway.usage_present)} if oracle.usage_present else {}),
         **({"reasoning_presence": (direct.reasoning_present, gateway.reasoning_present)} if oracle.reasoning_present else {}),
         **(
             {"json": (json.dumps(direct.json_value, sort_keys=True), json.dumps(gateway.json_value, sort_keys=True))}
