@@ -11,6 +11,7 @@ from typing import Literal, Protocol, cast
 
 from model_audit.cases import fingerprint
 from model_audit.compare import assess, behavior_signature
+from model_audit.compiler import execution_case
 from model_audit.drivers import discover
 from model_audit.drivers.base import ClientDriver, Connection
 from model_audit.models import Assessment, Experiment, Failure, Observation, PairAttempt, PairResult, Plan
@@ -97,7 +98,8 @@ def _direct_connection(experiment: Experiment, api_key: str, timeout_seconds: fl
 def _observe(driver: ClientDriver, connection: Connection, endpoint: str, experiment: Experiment, model: str) -> Observation:
     started = time.perf_counter()
     try:
-        return driver.execute(connection, endpoint, model, experiment.case, experiment.transport)
+        case = execution_case(experiment.target, experiment.case)
+        return driver.execute(connection, endpoint, model, case, experiment.transport)
     except Exception as error:  # noqa: BLE001 client boundaries must become reportable evidence
         return Observation(
             outcome="error",

@@ -207,7 +207,7 @@ class ResponsesStream:
         frames = [self._event("response.output_item.done", {"output_index": item.output_index, "item": item.body("completed")}) for item in ordered]
         metadata = fmt.ResponseMetadata(id=final.id, model=final.model, created_at=self.created_at)
         response = fmt.json_response(metadata, final.content, final.finish_reason, final.usage)
-        response["gateway"] = GatewayInfo(adjustments=adjustments).model_dump(mode="json")
+        response["gateway"] = GatewayInfo(finish_reason=final.finish_reason, adjustments=adjustments).model_dump(mode="json")
         frames.append(self._event("response.completed", {"response": response}))
         return frames
 

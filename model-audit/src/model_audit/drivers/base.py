@@ -7,6 +7,8 @@ from typing import TYPE_CHECKING, Literal
 from model_audit.models import Failure, FailureKind
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
+
     from model_audit.models import Case, ClientMode, Observation, Outcome, Transport
 
 UNAUTHORIZED = 401
@@ -28,6 +30,10 @@ class Connection:
     route: Literal["direct", "gateway"]
     timeout_seconds: float = 60
     param_aliases: dict[str, str] = field(default_factory=dict)
+
+
+def alias_params[T](values: Mapping[str, T], aliases: Mapping[str, str]) -> dict[str, T]:
+    return {aliases.get(name, name): value for name, value in values.items()}
 
 
 def access_error(connection: Connection, status_code: int, error_code: str | None = None) -> str | None:

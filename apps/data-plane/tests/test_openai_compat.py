@@ -257,6 +257,20 @@ def test_an_unknown_tool_choice_variant_is_never_silently_none():
     assert [(a.param, a.action) for a in carried] == [("tool_choice", "dropped")]
 
 
+def test_chat_reasoning_extension_preserves_summary_configuration():
+    request, _ = OpenAINativeIngress().parse(
+        {
+            **TEXT_BODY,
+            "reasoning_effort": "low",
+            "reasoning": {"summary": "auto"},
+        }
+    )
+
+    assert request.reasoning is not None
+    assert request.reasoning.effort == "low"
+    assert request.reasoning.summary == "auto"
+
+
 @respx.mock
 def test_a_forwardable_extra_reaches_the_provider_with_no_adjustment(api_key, dp_app):
     route = respx.post(UPSTREAM).mock(return_value=httpx.Response(200, json=TEXT_NONSTREAM))
@@ -267,7 +281,7 @@ def test_a_forwardable_extra_reaches_the_provider_with_no_adjustment(api_key, dp
         )
     assert json.loads(route.calls.last.request.content)["frequency_penalty"] == 0.5
     gateway = (completion.model_extra or {}).get("gateway")
-    assert gateway == {"adjustments": []}
+    assert gateway == {"finish_reason": "stop", "adjustments": []}
 
 
 def test_errors_come_back_in_the_callers_dialect(api_key, dp_app):

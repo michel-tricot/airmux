@@ -65,6 +65,21 @@ def test_responses_function_call_has_a_tool_finish_reason():
     assert observation.finish_reason == "tool_calls"
 
 
+def test_responses_prefers_the_gateway_canonical_finish_reason():
+    observation = openai_responses(
+        {
+            "status": "completed",
+            "output": [{"type": "function_call", "name": "lookup", "arguments": "{}"}],
+            "gateway": {"finish_reason": "stop", "adjustments": []},
+            "usage": {"output_tokens": 8},
+        },
+        10,
+        "HTTP JSON",
+    )
+
+    assert observation.finish_reason == "stop"
+
+
 def test_responses_stream_preserves_failed_terminal_event():
     observation = openai_responses_stream(
         (

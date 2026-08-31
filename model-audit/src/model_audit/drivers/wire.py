@@ -134,6 +134,19 @@ def openai_chat_options(case: Case) -> dict[str, JsonValue]:
     }
 
 
+def gateway_options(endpoint: str, case: Case) -> dict[str, JsonValue]:
+    reasoning = case.request.reasoning or {}
+    values = {
+        "type": reasoning.get("type"),
+        "effort": reasoning.get("effort"),
+        "summary": reasoning.get("summary"),
+        "budget_tokens": reasoning.get("budget_tokens"),
+        "display": reasoning.get("display"),
+    }
+    explicit = {name: value for name, value in values.items() if value is not None}
+    return {"reasoning": explicit} if endpoint == "chat/completions" and explicit else {}
+
+
 def openai_chat_body(model: str, case: Case, transport: Transport) -> dict[str, JsonValue]:
     streamed = transport == "streamed"
     return {

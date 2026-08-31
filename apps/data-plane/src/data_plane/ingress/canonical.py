@@ -34,7 +34,12 @@ class CanonicalResponseStream:
         return [sse(c.model_dump_json(exclude_none=True).encode())]
 
     def closing(self, final: CanonicalResponse, adjustments: list[Adjustment]) -> list[bytes]:
-        closing = CanonicalChunk(id=final.id, finish_reason=final.finish_reason, usage=final.usage, gateway=GatewayInfo(adjustments=adjustments))
+        closing = CanonicalChunk(
+            id=final.id,
+            finish_reason=final.finish_reason,
+            usage=final.usage,
+            gateway=GatewayInfo(finish_reason=final.finish_reason, adjustments=adjustments),
+        )
         return [sse(closing.model_dump_json(exclude_none=True).encode()), DONE]
 
     def error(self, err: CanonicalError) -> list[bytes]:

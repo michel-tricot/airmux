@@ -222,3 +222,18 @@ def test_responses_output_events_match_the_checked_in_openai_schema():
 
     assert errors
     assert not any(errors.values()), errors
+
+
+def test_streaming_response_reports_the_canonical_finish_reason():
+    final = CanonicalResponse(
+        id="response-1",
+        model="model-1",
+        content=[TextPart(text="done")],
+        finish_reason="stop",
+        usage=Usage(input_tokens=3, output_tokens=2),
+    )
+
+    terminal = ResponsesStream().closing(final, [])[-1]
+    event = json.loads(terminal.split(b"data: ", 1)[1])
+
+    assert event["response"]["gateway"]["finish_reason"] == "stop"

@@ -6,6 +6,7 @@ from hashlib import sha256
 from typing import TYPE_CHECKING, cast
 
 from model_audit.cases import fingerprint
+from model_audit.drivers.wire import gateway_options
 from model_audit.models import Case, Request, RequestArtifact
 
 if TYPE_CHECKING:
@@ -21,10 +22,22 @@ class UnrepresentableRequestError(ValueError):
     pass
 
 
+PAIRED_OUTPUT_FLOOR = 4096
+
+
 @dataclass(frozen=True)
 class CompiledPair:
     direct: RequestArtifact
     gateway: RequestArtifact
+
+
+@dataclass(frozen=True)
+class CompileOptions:
+    aliases: Mapping[str, str] | None = None
+    gateway: bool = False
+
+
+DEFAULT_COMPILE_OPTIONS = CompileOptions()
 
 
 def _digest(value: object) -> str:
@@ -78,12 +91,12 @@ def compile_request(
     model: str,
     case: Case,
     transport: Transport,
-    aliases: Mapping[str, str] | None = None,
+    options: CompileOptions = DEFAULT_COMPILE_OPTIONS,
 ) -> RequestArtifact:
     _validate(codec, case)
-    body = codec.encode(model, case, transport)
-    if aliases:
-        body = {aliases.get(name, name): value for name, value in body.items()}
+    body = {**codec.encode(model, case, transport), **(gateway_options(codec.endpoint, case) if options.gateway else {})}
+    if options.aliases:
+        body = {options.aliases.get(name, name): value for name, value in body.items()}
     semantic = _semantic(case)
     redacted = cast("dict[str, JsonValue]", _redact(cast("JsonValue", body)))
     return RequestArtifact(
@@ -102,9 +115,20 @@ def compile_pair(
     case: Case,
     transport: Transport,
 ) -> CompiledPair:
-    direct = compile_request(direct_codec, target.upstream_model, case, transport, target.param_aliases)
-    gateway = compile_request(gateway_codec, target.model_id, case, transport)
+    direct = compile_request(direct_codec, target.upstream_model, case, transport, CompileOptions(aliases=target.param_aliases))
+    gateway = compile_request(gateway_codec, target.model_id, case, transport, CompileOptions(gateway=True))
     if direct.semantic_fingerprint != gateway.semantic_fingerprint:
         message = f"{direct_codec.id} and {gateway_codec.id} compiled different semantic requests"
         raise UnrepresentableRequestError(message)
     return CompiledPair(direct=direct, gateway=gateway)
+
+
+def execution_case(target: Target, case: Case) -> Case:
+    tests_output_limit = any(claim.dimension == "option" and claim.name == "max_tokens" for claim in case.claims)
+    if tests_output_limit:
+        return case
+    requested = max(case.max_output_tokens, PAIRED_OUTPUT_FLOOR)
+    maximum = min(requested, target.max_output_tokens) if target.max_output_tokens is not None else requested
+    request = case.request.model_copy(update={"max_tokens": maximum})
+    follow_up = case.follow_up.model_copy(update={"max_tokens": maximum}) if case.follow_up is not None else None
+    return case.model_copy(update={"request": request, "follow_up": follow_up})
