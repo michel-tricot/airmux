@@ -291,7 +291,8 @@ class RequestExecution:
             error = UpstreamResponseError(response.status_code, response.content)
             return self.ingress.render_error(_record_upstream_error(adapter, ctx, error, request, self.runtime.outbox))
         try:
-            final = adapter.transform_response(response.content, ctx).model_copy(update={"gateway": GatewayInfo(adjustments=adjustments)})
+            final = adapter.transform_response(response.content, ctx)
+            final = final.model_copy(update={"gateway": GatewayInfo(finish_reason=final.finish_reason, adjustments=adjustments)})
         except UpstreamProtocolError as error:
             return self.ingress.render_error(_record_upstream_error(adapter, ctx, error, request, self.runtime.outbox))
         record_usage(self.runtime.outbox, ctx, final, status="ok", request=request)

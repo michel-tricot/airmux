@@ -96,7 +96,7 @@ class OpenAIResponseStream:
             model=self.model,
             choices=[],
             usage=fmt.usage_out(final.usage),
-            gateway=GatewayInfo(adjustments=adjustments),
+            gateway=GatewayInfo(finish_reason=final.finish_reason, adjustments=adjustments),
         )
         return [self._chunk(fmt.DeltaOut(), finish_reason=final.finish_reason), usage_chunk.sse(), DONE]
 
@@ -135,6 +135,16 @@ class OpenAINativeIngress(IngressAdapter):
         if body.get("tool_choice") is not None and tool_choice is None:
             adjustments.append(Adjustment(param="tool_choice", action="dropped", detail="a tool_choice variant this dialect does not interpret"))
         response_format = body.get("response_format")
+        reasoning_value = body.get("reasoning")
+        reasoning: dict[str, Any] = reasoning_value if isinstance(reasoning_value, dict) else {}
+        reasoning_values = {
+            "type": reasoning.get("type"),
+            "effort": reasoning.get("effort") or body.get("reasoning_effort"),
+            "summary": reasoning.get("summary"),
+            "budget_tokens": reasoning.get("budget_tokens"),
+            "display": reasoning.get("display"),
+        }
+        has_reasoning = bool(reasoning) or isinstance(body.get("reasoning_effort"), str)
         request = CanonicalRequest.model_validate(
             {
                 **extras,
@@ -149,7 +159,7 @@ class OpenAINativeIngress(IngressAdapter):
                 "tools": fmt.from_tools(body.get("tools")),
                 "tool_choice": tool_choice,
                 "response_format": ResponseFormat.model_validate(response_format) if response_format else None,
-                "reasoning": ReasoningConfig(effort=body["reasoning_effort"]) if isinstance(body.get("reasoning_effort"), str) else None,
+                "reasoning": ReasoningConfig.model_validate(reasoning_values) if has_reasoning else None,
                 "parallel_tool_calls": body.get("parallel_tool_calls") if isinstance(body.get("parallel_tool_calls"), bool) else None,
             }
         )

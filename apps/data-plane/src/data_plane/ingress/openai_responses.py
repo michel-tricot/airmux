@@ -155,7 +155,7 @@ class ResponsesStream:
             for index in sorted(self.open_items)
         ]
         response = fmt.json_response(final.id, final.model, final.content, final.finish_reason, final.usage)
-        response["gateway"] = GatewayInfo(adjustments=adjustments).model_dump(mode="json")
+        response["gateway"] = GatewayInfo(finish_reason=final.finish_reason, adjustments=adjustments).model_dump(mode="json")
         frames.append(self._event("response.completed", {"response": response}))
         return frames
 

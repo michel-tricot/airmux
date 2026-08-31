@@ -48,14 +48,15 @@ class AnthropicDriver(ClientDriver):
                 max_retries=0,
             )
         messages, extra = anthropic_parts(case)
+        output_limit = case.request.max_tokens if connection.output_limit is None else connection.output_limit
         started = time.perf_counter()
         try:
             message_params = cast("list[MessageParam]", messages)
             if transport == "streamed":
-                with client.messages.stream(model=model, max_tokens=case.request.max_tokens, messages=message_params, extra_body=extra) as stream:
+                with client.messages.stream(model=model, max_tokens=output_limit, messages=message_params, extra_body=extra) as stream:
                     message = stream.get_final_message()
             else:
-                message = client.messages.create(model=model, max_tokens=case.request.max_tokens, messages=message_params, extra_body=extra)
+                message = client.messages.create(model=model, max_tokens=output_limit, messages=message_params, extra_body=extra)
             elapsed = (time.perf_counter() - started) * 1000
             return anthropic_message(cast("Mapping[str, object]", message.model_dump()), elapsed, type(message).__name__)
         except anthropic.APIStatusError as error:

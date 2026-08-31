@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, cast
 
 if TYPE_CHECKING:
@@ -9,6 +10,15 @@ if TYPE_CHECKING:
     from pydantic import JsonValue
 
     from model_audit.models import Case, Tool, Transport
+
+
+@dataclass(frozen=True)
+class WireOptions:
+    output_limit: int | None = None
+    gateway: bool = False
+
+
+DEFAULT_WIRE_OPTIONS = WireOptions()
 
 
 def _openai_tool(tool: Tool, responses: bool) -> dict[str, JsonValue]:
@@ -119,11 +129,12 @@ def openai_messages(case: Case, responses: bool) -> list[dict[str, JsonValue]]: 
     return messages
 
 
-def openai_chat_options(case: Case) -> dict[str, JsonValue]:
+def openai_chat_options(case: Case, *, output_limit: int | None = None, gateway: bool = False) -> dict[str, JsonValue]:
     request = case.request
     reasoning = request.reasoning or {}
+    maximum = request.max_tokens if output_limit is None else output_limit
     return {
-        **({"max_tokens": request.max_tokens} if _tests_max_tokens(case) else {}),
+        **({"max_tokens": maximum} if output_limit is not None or _tests_max_tokens(case) else {}),
         **({"temperature": request.temperature} if request.temperature is not None else {}),
         **({"top_p": request.top_p} if request.top_p is not None else {}),
         **({"stop": list(request.stop)} if request.stop is not None else {}),
@@ -135,22 +146,31 @@ def openai_chat_options(case: Case) -> dict[str, JsonValue]:
         **({"parallel_tool_calls": request.parallel_tool_calls} if request.parallel_tool_calls is not None else {}),
         **({"response_format": request.response_format} if request.response_format is not None else {}),
         **({"reasoning_effort": reasoning["effort"]} if reasoning.get("effort") is not None else {}),
+        **({"reasoning": reasoning} if gateway and reasoning else {}),
         **request.extra,
     }
 
 
-def openai_chat_body(model: str, case: Case, transport: Transport) -> dict[str, JsonValue]:
+def openai_chat_body(
+    model: str,
+    case: Case,
+    transport: Transport,
+    *,
+    output_limit: int | None = None,
+    gateway: bool = False,
+) -> dict[str, JsonValue]:
     streamed = transport == "streamed"
     return {
         "model": model,
         "messages": openai_messages(case, False),
-        **openai_chat_options(case),
+        **openai_chat_options(case, output_limit=output_limit, gateway=gateway),
         **({"stream": True, "stream_options": {"include_usage": True}} if streamed else {}),
     }
 
 
-def openai_responses_options(case: Case) -> dict[str, JsonValue]:
+def openai_responses_options(case: Case, *, output_limit: int | None = None) -> dict[str, JsonValue]:
     request = case.request
+    maximum = request.max_tokens if output_limit is None else output_limit
     response_format = request.response_format
     if response_format is not None and response_format.get("type") == "json_schema":
         schema = cast("dict[str, JsonValue]", response_format.get("json_schema") or {})
@@ -158,7 +178,7 @@ def openai_responses_options(case: Case) -> dict[str, JsonValue]:
     else:
         output_format = cast("dict[str, JsonValue]", response_format or {})
     return {
-        **({"max_output_tokens": request.max_tokens} if _tests_max_tokens(case) else {}),
+        **({"max_output_tokens": maximum} if output_limit is not None or _tests_max_tokens(case) else {}),
         **({"temperature": request.temperature} if request.temperature is not None else {}),
         **({"top_p": request.top_p} if request.top_p is not None else {}),
         **({"tools": [_openai_tool(tool, True) for tool in request.tools]} if request.tools else {}),
@@ -174,11 +194,11 @@ def openai_responses_options(case: Case) -> dict[str, JsonValue]:
     }
 
 
-def openai_responses_body(model: str, case: Case, transport: Transport) -> dict[str, JsonValue]:
+def openai_responses_body(model: str, case: Case, transport: Transport, *, output_limit: int | None = None) -> dict[str, JsonValue]:
     return {
         "model": model,
         "input": openai_messages(case, True),
-        **openai_responses_options(case),
+        **openai_responses_options(case, output_limit=output_limit),
         **({"store": False, "include": ["reasoning.encrypted_content"]} if case.request.reasoning is not None else {}),
         **({"stream": True} if transport == "streamed" else {}),
     }
@@ -306,23 +326,30 @@ def anthropic_parts(case: Case) -> tuple[list[dict[str, JsonValue]], dict[str, J
     return messages, extra
 
 
-def anthropic_body(model: str, case: Case, transport: Transport) -> dict[str, JsonValue]:
+def anthropic_body(model: str, case: Case, transport: Transport, *, output_limit: int | None = None) -> dict[str, JsonValue]:
     messages, extra = anthropic_parts(case)
+    maximum = case.request.max_tokens if output_limit is None else output_limit
     return {
         "model": model,
-        "max_tokens": case.request.max_tokens,
+        "max_tokens": maximum,
         "messages": messages,
         **extra,
         **({"stream": True} if transport == "streamed" else {}),
     }
 
 
-def body_of(endpoint: str, model: str, case: Case, transport: Transport) -> dict[str, JsonValue]:
+def body_of(
+    endpoint: str,
+    model: str,
+    case: Case,
+    transport: Transport,
+    options: WireOptions = DEFAULT_WIRE_OPTIONS,
+) -> dict[str, JsonValue]:
     if endpoint == "chat/completions":
-        return openai_chat_body(model, case, transport)
+        return openai_chat_body(model, case, transport, output_limit=options.output_limit, gateway=options.gateway)
     if endpoint == "responses":
-        return openai_responses_body(model, case, transport)
+        return openai_responses_body(model, case, transport, output_limit=options.output_limit)
     if endpoint == "messages":
-        return anthropic_body(model, case, transport)
+        return anthropic_body(model, case, transport, output_limit=options.output_limit)
     message = f"raw HTTP client does not support endpoint {endpoint}"
     raise ValueError(message)

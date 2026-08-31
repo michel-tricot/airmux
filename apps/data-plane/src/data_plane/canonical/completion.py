@@ -228,6 +228,7 @@ class GatewayInfo(BaseModel):
 
     model_config = WIRE
 
+    finish_reason: FinishReason | None = None
     adjustments: list[Adjustment] = Field(default_factory=list)
 
 

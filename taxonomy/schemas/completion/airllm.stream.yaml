@@ -31,6 +31,17 @@ $defs:
 
       additively as the router grows.'
     properties:
+      finish_reason:
+        anyOf:
+        - enum:
+          - stop
+          - length
+          - tool_calls
+          - content_filter
+          type: string
+        - type: 'null'
+        default: null
+        title: Finish Reason
       adjustments:
         items:
           $ref: '#/$defs/Adjustment'

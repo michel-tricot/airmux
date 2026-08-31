@@ -4,7 +4,7 @@ import threading
 
 from model_audit import runner
 from model_audit.drivers.base import ClientDriver, Connection, status_outcome
-from model_audit.models import Experiment, Observation, Plan
+from model_audit.models import Claim, Experiment, Observation, Plan
 from tests.helpers import case, target
 
 
@@ -104,6 +104,37 @@ def experiment(model_id: str, driver_id: str = "concurrent", provider_id: str = 
         gateway_endpoint="chat/completions",
         transport="buffered",
     )
+
+
+def test_anthropic_pair_uses_the_models_maximum_when_the_paired_budget_is_higher():
+    selected = Experiment(
+        target=target(max_output_tokens=2048),
+        case=case(),
+        direct_driver_id="endpoint",
+        gateway_driver_id="endpoint",
+        gateway_surface_id="anthropic",
+        gateway_endpoint="messages",
+        transport="buffered",
+    )
+
+    assert runner._output_limit(selected) == 2048
+
+
+def test_anthropic_pair_preserves_an_explicit_output_limit_test():
+    selected = Experiment(
+        target=target(max_output_tokens=8192),
+        case=case(
+            claims=(Claim(dimension="option", name="max_tokens"),),
+            request=case().request.model_copy(update={"max_tokens": 1024}),
+        ),
+        direct_driver_id="endpoint",
+        gateway_driver_id="endpoint",
+        gateway_surface_id="anthropic",
+        gateway_endpoint="messages",
+        transport="buffered",
+    )
+
+    assert runner._output_limit(selected) == 1024
 
 
 def test_runner_confirms_and_reports_a_gateway_gap(monkeypatch):

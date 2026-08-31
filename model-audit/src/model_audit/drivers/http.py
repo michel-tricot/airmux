@@ -7,7 +7,7 @@ from typing import cast
 
 import httpx
 
-from model_audit.drivers.base import ClientDriver, Connection, access_error, status_outcome
+from model_audit.drivers.base import ClientDriver, Connection, access_error, alias_params, status_outcome
 from model_audit.drivers.normalize import (
     anthropic_message,
     anthropic_stream,
@@ -16,7 +16,7 @@ from model_audit.drivers.normalize import (
     openai_responses,
     openai_responses_stream,
 )
-from model_audit.drivers.wire import body_of
+from model_audit.drivers.wire import WireOptions, body_of
 from model_audit.models import Case, Observation, Outcome, Transport
 
 
@@ -170,8 +170,9 @@ def _post_buffered(
 
 
 def _body_of(connection: Connection, endpoint: str, model: str, case: Case, transport: Transport) -> dict[str, object]:
-    body = body_of(endpoint, model, case, transport)
-    return {connection.param_aliases.get(name, name): value for name, value in body.items()}
+    options = WireOptions(output_limit=connection.output_limit, gateway=connection.route == "gateway")
+    body = body_of(endpoint, model, case, transport, options)
+    return alias_params(body, connection.param_aliases)
 
 
 def _follow_up_body(connection: Connection, endpoint: str, model: str, case: Case, payload: Mapping[str, object]) -> dict[str, object]:

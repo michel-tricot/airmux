@@ -6,7 +6,7 @@ import time
 from collections import Counter, deque
 from collections.abc import Callable, Mapping
 from concurrent.futures import FIRST_COMPLETED, Future, ThreadPoolExecutor, wait
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Literal, Protocol, cast
 
 from model_audit.cases import fingerprint
@@ -14,6 +14,8 @@ from model_audit.compare import assess
 from model_audit.drivers import discover
 from model_audit.drivers.base import ClientDriver, Connection
 from model_audit.models import Assessment, Experiment, Observation, PairAttempt, PairResult, Plan
+
+PAIRED_OUTPUT_FLOOR = 4096
 
 
 class Gateway(Protocol):
@@ -91,7 +93,21 @@ def _direct_connection(experiment: Experiment, api_key: str, timeout_seconds: fl
         route="direct",
         timeout_seconds=timeout_seconds,
         param_aliases=target.param_aliases,
+        output_limit=_output_limit(experiment),
     )
+
+
+def _output_limit(experiment: Experiment) -> int | None:
+    if experiment.gateway_endpoint != "messages":
+        return None
+    tests_output_limit = any(claim.dimension == "option" and claim.name == "max_tokens" for claim in experiment.case.claims)
+    requested = experiment.case.request.max_tokens if tests_output_limit else max(experiment.case.request.max_tokens, PAIRED_OUTPUT_FLOOR)
+    maximum = experiment.target.max_output_tokens
+    return min(requested, maximum) if maximum is not None else requested
+
+
+def _gateway_connection(context: PairContext) -> Connection:
+    return replace(context.gateway.connection(context.experiment.gateway_endpoint), output_limit=_output_limit(context.experiment))
 
 
 def _observe(driver: ClientDriver, connection: Connection, endpoint: str, experiment: Experiment, model: str) -> Observation:
@@ -142,7 +158,7 @@ def _pair(context: PairContext, attempt: int) -> PairAttempt:
         context.progress(_event(context, "path_started", "gateway", attempt))
     gateway = _observe(
         context.gateway_driver,
-        context.gateway.connection(context.experiment.gateway_endpoint),
+        _gateway_connection(context),
         context.experiment.gateway_endpoint,
         context.experiment,
         context.experiment.target.model_id,
@@ -172,7 +188,7 @@ def _retry_transient(context: PairContext, previous: PairAttempt, attempt: int) 
             context.progress(_event(context, "path_started", "gateway", attempt))
         gateway = _observe(
             context.gateway_driver,
-            context.gateway.connection(context.experiment.gateway_endpoint),
+            _gateway_connection(context),
             context.experiment.gateway_endpoint,
             context.experiment,
             context.experiment.target.model_id,

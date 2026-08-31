@@ -97,11 +97,12 @@ def openai_responses(payload: Mapping[str, object], duration_ms: float, client_t
     )
     reasoning = any(item.get("type") == "reasoning" for item in output)
     incomplete = _mapping(payload.get("incomplete_details"))
+    gateway = _mapping(payload.get("gateway"))
     return Observation(
         outcome="success",
         text=text,
         tool_calls=calls,
-        finish_reason=str(incomplete.get("reason") or ("tool_calls" if calls else status) or "stop"),
+        finish_reason=str(gateway.get("finish_reason") or incomplete.get("reason") or ("tool_calls" if calls else status) or "stop"),
         usage_present=bool(payload.get("usage")),
         reasoning_present=reasoning,
         json_value=_json_value(text),

@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, cast
 import openai
 from openai import OpenAI
 
-from model_audit.drivers.base import ClientDriver, Connection, access_error, status_outcome
+from model_audit.drivers.base import ClientDriver, Connection, access_error, alias_params, status_outcome
 from model_audit.drivers.normalize import openai_chat, openai_chat_stream, openai_responses
 from model_audit.drivers.wire import openai_chat_options, openai_messages, openai_responses_options
 from model_audit.models import Case, Observation, Transport
@@ -34,9 +34,9 @@ class OpenAIDriver(ClientDriver):
         started = time.perf_counter()
         try:
             if endpoint == "responses":
-                return self._responses(client, model, case, transport, started)
+                return self._responses(client, model, case, transport, connection)
             if endpoint == "chat/completions":
-                return self._chat(client, model, case, transport, started)
+                return self._chat(client, model, case, transport, connection)
             message = f"OpenAI SDK does not support endpoint {endpoint}"
             raise ValueError(message)
         except openai.APIStatusError as error:
@@ -80,9 +80,10 @@ class OpenAIDriver(ClientDriver):
             )
 
     @staticmethod
-    def _responses(client: OpenAI, model: str, case: Case, transport: Transport, started: float) -> Observation:
+    def _responses(client: OpenAI, model: str, case: Case, transport: Transport, connection: Connection) -> Observation:
+        started = time.perf_counter()
         response_input = cast("ResponseInputParam", openai_messages(case, True))
-        body = openai_responses_options(case)
+        body = alias_params(openai_responses_options(case, output_limit=connection.output_limit), connection.param_aliases)
         if transport == "streamed":
             with client.responses.stream(model=model, input=response_input, extra_body=body) as stream:
                 response = stream.get_final_response()
@@ -91,10 +92,13 @@ class OpenAIDriver(ClientDriver):
         elapsed = (time.perf_counter() - started) * 1000
         return openai_responses(cast("Mapping[str, object]", response.model_dump()), elapsed, type(response).__name__)
 
-    @classmethod
-    def _chat(cls, client: OpenAI, model: str, case: Case, transport: Transport, started: float) -> Observation:
+    @staticmethod
+    def _chat(client: OpenAI, model: str, case: Case, transport: Transport, connection: Connection) -> Observation:
+        started = time.perf_counter()
         messages = cast("list[ChatCompletionMessageParam]", openai_messages(case, False))
-        body = openai_chat_options(case)
+        body = alias_params(
+            openai_chat_options(case, output_limit=connection.output_limit, gateway=connection.route == "gateway"), connection.param_aliases
+        )
         if transport == "buffered":
             completion = client.chat.completions.create(model=model, messages=messages, extra_body=body)
             elapsed = (time.perf_counter() - started) * 1000
