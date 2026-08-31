@@ -345,6 +345,27 @@ def test_a_mid_stream_error_event_raises(kind):
     assert err.value.code == "overloaded"
 
 
+def test_responses_failed_event_preserves_the_provider_error():
+    event = {
+        "type": "response.failed",
+        "response": {
+            "id": "resp_9",
+            "status": "failed",
+            "error": {"code": "rate_limit_exceeded", "message": "Please try again later"},
+            "output": [],
+        },
+    }
+    adapter = _adapter("openai_responses")
+    state = adapter.new_stream_state(CTX)
+    (raw_event,) = list(adapter.frame(responses_sse(event), state))
+
+    with pytest.raises(UpstreamStreamError) as error:
+        adapter.transform_stream_event(raw_event, state)
+
+    assert error.value.code == "rate_limit_exceeded"
+    assert error.value.message == "Please try again later"
+
+
 def test_usage_reported_in_an_unknown_shape_reads_as_estimated():
     """A provider reporting usage the adapter cannot recognize must never meter as free."""
     adapter = _adapter("openai_compatible")

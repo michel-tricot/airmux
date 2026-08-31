@@ -9,6 +9,8 @@ from model_audit.models import Observation, ReasoningObservation, ToolObservatio
 if TYPE_CHECKING:
     from pydantic import JsonValue
 
+RESPONSES_TRANSIENT_CODES = frozenset({"rate_limit", "rate_limit_exceeded", "slow_down"})
+
 
 def _mapping(value: object) -> Mapping[str, object]:
     return cast("Mapping[str, object]", value) if isinstance(value, Mapping) else {}
@@ -104,9 +106,10 @@ def openai_responses(payload: Mapping[str, object], duration_ms: float, client_t
     error = _mapping(payload.get("error"))
     usage = _usage(payload)
     if status == "failed":
+        error_code = str(error.get("code") or "response_failed")
         return Observation(
-            outcome="error",
-            error_code=str(error.get("code") or "response_failed"),
+            outcome="transient" if error_code in RESPONSES_TRANSIENT_CODES else "error",
+            error_code=error_code,
             error_message=str(error.get("message") or "response generation failed"),
             finish_reason=status,
             usage_present=usage is not None,
@@ -232,18 +235,14 @@ def openai_chat_stream(events: Sequence[Mapping[str, object]], duration_ms: floa
 
 
 def openai_responses_stream(events: Sequence[Mapping[str, object]], duration_ms: float, client_type: str) -> Observation:
-    terminal = next(
-        (
-            _mapping(event.get("response"))
-            for event in reversed(events)
-            if event.get("type") in {"response.completed", "response.failed", "response.incomplete"}
-        ),
-        None,
-    )
-    if terminal is None:
-        message = "Responses stream did not include a terminal response event"
-        raise ValueError(message)
-    return openai_responses(terminal, duration_ms, client_type)
+    for event in reversed(events):
+        if event.get("type") in {"response.completed", "response.failed", "response.incomplete"}:
+            return openai_responses(_mapping(event.get("response")), duration_ms, client_type)
+        if event.get("type") == "error":
+            payload = {"status": "failed", "error": event.get("error"), "gateway": event.get("gateway")}
+            return openai_responses(payload, duration_ms, client_type)
+    message = "Responses stream did not include a terminal response event"
+    raise ValueError(message)
 
 
 def anthropic_stream(events: Sequence[Mapping[str, object]], duration_ms: float, client_type: str) -> Observation:

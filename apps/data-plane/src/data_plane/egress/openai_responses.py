@@ -141,7 +141,12 @@ class OpenAIResponsesAdapter(EgressAdapter[ResponsesStreamState]):
             state.terminal_seen = True
             state.incomplete = kind == "response.incomplete"
             return []
-        if kind in {"response.failed", "error"}:
+        if kind == "response.failed":
+            if isinstance(response, dict) and (error := _error(response)):
+                raise error
+            code, message = "upstream_error", "response failed"
+            raise UpstreamStreamError(code, message)
+        if kind == "error":
             code, message = "upstream_error", "response failed"
             raise UpstreamStreamError(code, message)
         index = event.output_index

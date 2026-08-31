@@ -86,6 +86,38 @@ def test_responses_stream_preserves_failed_terminal_event():
     assert observation.error_message == "generation failed"
 
 
+def test_responses_failed_rate_limit_is_transient():
+    observation = openai_responses(
+        {
+            "status": "failed",
+            "error": {"code": "rate_limit_exceeded", "message": "Please try again later"},
+            "output": [],
+        },
+        10,
+        "HTTP JSON",
+    )
+
+    assert observation.outcome == "transient"
+    assert observation.error_code == "rate_limit_exceeded"
+
+
+def test_responses_stream_preserves_top_level_error_event():
+    observation = openai_responses_stream(
+        (
+            {
+                "type": "error",
+                "error": {"type": "upstream_error", "code": "slow_down", "message": "Please reduce request rate"},
+            },
+        ),
+        10,
+        "HTTP SSE",
+    )
+
+    assert observation.outcome == "transient"
+    assert observation.error_code == "slow_down"
+    assert observation.error_message == "Please reduce request rate"
+
+
 def test_responses_stream_preserves_incomplete_terminal_event():
     observation = openai_responses_stream(
         (
