@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
-import json
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
+
+from pydantic import ValidationError
 
 from data_plane.canonical import CanonicalChunk, CanonicalResponse, ReasoningDelta, ReasoningPart, TextDelta, TextPart, ToolCallDelta, ToolCallPart
 from data_plane.egress.base import (
@@ -16,6 +17,7 @@ from data_plane.egress.base import (
     UpstreamRequest,
     UpstreamResponseError,
     UpstreamStreamError,
+    encode,
     frame_sse,
 )
 from data_plane.formats import openai_responses as fmt
@@ -29,13 +31,30 @@ if TYPE_CHECKING:
 
 
 @dataclass
+class ResponsesOutputDraft:
+    type: str = ""
+    id: str = ""
+    name: str = ""
+    arguments: str = ""
+    ordinal: int | None = None
+
+
+@dataclass
+class ResponsesReasoningDraft:
+    id: str = ""
+    text: str = ""
+    signature: str = ""
+
+
+@dataclass
 class ResponsesStreamState(StreamState):
     ctx: Ctx = field(kw_only=True)
     response_id: str | None = None
-    output: dict[int, dict[str, str]] = field(default_factory=dict)
-    reasoning: dict[int, dict[str, str]] = field(default_factory=dict)
+    output: dict[int, ResponsesOutputDraft] = field(default_factory=dict)
+    reasoning: dict[int, ResponsesReasoningDraft] = field(default_factory=dict)
     text: dict[int, str] = field(default_factory=dict)
-    usage: object = None
+    usage: dict[str, object] | None = None
+    tool_count: int = 0
     terminal_seen: bool = False
     incomplete: bool = False
 
@@ -44,14 +63,21 @@ class ResponsesStreamState(StreamState):
         return self.response_id or self.ctx.request_id
 
 
-def _error(data: dict) -> UpstreamStreamError | None:
-    error = data.get("error")
-    if not isinstance(error, dict):
+def _error(error: fmt.UpstreamError | None) -> UpstreamStreamError | None:
+    if error is None:
         return None
-    return UpstreamStreamError(str(error.get("code") or "upstream_error"), str(error.get("message") or ""))
+    return UpstreamStreamError(error.code or "upstream_error", error.message)
 
 
-class OpenAIResponsesAdapter(EgressAdapter):
+def _tool_draft(state: ResponsesStreamState, index: int) -> ResponsesOutputDraft:
+    draft = state.output.setdefault(index, ResponsesOutputDraft(type="function_call"))
+    if draft.ordinal is None:
+        draft.ordinal = state.tool_count
+        state.tool_count += 1
+    return draft
+
+
+class OpenAIResponsesAdapter(EgressAdapter[ResponsesStreamState]):
     kind = "openai_responses"
 
     def transform_request(self, req: CanonicalRequest, m: ModelEntry) -> UpstreamRequest:
@@ -60,18 +86,17 @@ class OpenAIResponsesAdapter(EgressAdapter):
             method="POST",
             url=str(self.provider.base_url).rstrip("/") + "/responses",
             headers={"authorization": f"Bearer {self.credential.reveal()}", "content-type": "application/json"},
-            body=json.dumps(body).encode(),
+            body=encode(body, aliases=self.provider.param_aliases, extras=req.extra),
         )
 
     def transform_response(self, raw: bytes, ctx: Ctx) -> CanonicalResponse:
         try:
-            response = json.loads(raw)
-        except (json.JSONDecodeError, UnicodeDecodeError) as error:
+            parsed = fmt.UpstreamResponse.model_validate_json(raw)
+        except ValidationError as error:
             raise UpstreamProtocolError.buffered_response() from error
-        if not isinstance(response, dict):
+        if parsed.status == "failed" or parsed.error is not None:
             raise UpstreamProtocolError.buffered_response()
-        if not isinstance(response.get("output"), list):
-            raise UpstreamProtocolError.buffered_response()
+        response = parsed.model_dump(mode="json", exclude_none=True)
         parts = fmt.response_parts(response)
         return CanonicalResponse(
             id=str(response.get("id") or ctx.request_id),
@@ -85,38 +110,33 @@ class OpenAIResponsesAdapter(EgressAdapter):
         if not isinstance(error, UpstreamResponseError):
             return super().map_error(error)
         try:
-            data = json.loads(error.body)
-        except (json.JSONDecodeError, UnicodeDecodeError):
+            detail = fmt.UpstreamResponseEvent.model_validate_json(error.body).error
+        except ValidationError:
             return super().map_error(error)
-        detail = data.get("error") if isinstance(data, dict) else None
-        if not isinstance(detail, dict):
+        if detail is None:
             return super().map_error(error)
-        return CanonicalError(status=error.status, code=str(detail.get("code") or "upstream_error"), message=str(detail.get("message") or ""))
+        return CanonicalError(status=error.status, code=detail.code or "upstream_error", message=detail.message)
 
     def new_stream_state(self, ctx: Ctx) -> ResponsesStreamState:
         return ResponsesStreamState(ctx=ctx)
 
-    def frame(self, chunk: bytes, state: StreamState) -> Iterator[RawEvent]:
-        assert isinstance(state, ResponsesStreamState)  # noqa: S101 state comes from new_stream_state
+    def frame(self, chunk: bytes, state: ResponsesStreamState) -> Iterator[RawEvent]:
         if not state.terminal_seen:
             yield from frame_sse(chunk, state)
 
-    def transform_stream_event(self, ev: RawEvent, state: StreamState) -> list[CanonicalChunk]:  # noqa: PLR0911, PLR0912 - event lifecycle branches are explicit
-        assert isinstance(state, ResponsesStreamState)  # noqa: S101 state comes from new_stream_state
+    def transform_stream_event(self, ev: RawEvent, state: ResponsesStreamState) -> list[CanonicalChunk]:  # noqa: PLR0911, PLR0912 - event lifecycle branches are explicit
         try:
-            data = json.loads(ev.data)
-        except (json.JSONDecodeError, UnicodeDecodeError) as error:
+            event = fmt.UpstreamResponseEvent.model_validate_json(ev.data)
+        except ValidationError as error:
             raise UpstreamProtocolError.stream_event() from error
-        if not isinstance(data, dict):
-            raise UpstreamProtocolError.stream_event()
-        if error := _error(data):
+        response_error = event.response.error if event.response is not None else None
+        if error := _error(event.error or response_error):
             raise error
-        kind = data.get("type") or ev.name
-        response = data.get("response")
-        if isinstance(response, dict):
-            state.response_id = str(response.get("id") or state.response_id or "") or None
-            if "usage" in response:
-                state.usage = response["usage"]
+        kind = event.type or ev.name
+        if event.response is not None:
+            state.response_id = event.response.id or state.response_id
+            if event.response.usage is not None:
+                state.usage = event.response.usage
         if kind in {"response.completed", "response.incomplete"}:
             state.terminal_seen = True
             state.incomplete = kind == "response.incomplete"
@@ -124,73 +144,68 @@ class OpenAIResponsesAdapter(EgressAdapter):
         if kind in {"response.failed", "error"}:
             code, message = "upstream_error", "response failed"
             raise UpstreamStreamError(code, message)
-        index = data.get("output_index")
-        if not isinstance(index, int):
+        index = event.output_index
+        if index is None:
             return []
         if kind == "response.output_item.added":
-            item = data.get("item")
-            if isinstance(item, dict):
-                state.output[index] = {
-                    "type": str(item.get("type") or ""),
-                    "id": str(item.get("call_id") or ""),
-                    "name": str(item.get("name") or ""),
-                    "arguments": str(item.get("arguments") or ""),
-                }
-                if item.get("type") == "reasoning":
-                    state.reasoning[index] = {
-                        "id": str(item.get("id") or ""),
-                        "text": "",
-                        "signature": str(item.get("encrypted_content") or ""),
-                    }
+            item = event.item
+            if item is not None:
+                if item.type == "reasoning":
+                    state.reasoning[index] = ResponsesReasoningDraft(
+                        id=item.id,
+                        signature=item.encrypted_content,
+                    )
                     reasoning = state.reasoning[index]
                     return [
                         CanonicalChunk(
                             id=state.chunk_id,
-                            delta=ReasoningDelta(id=reasoning["id"] or None, signature=reasoning["signature"] or None),
+                            delta=ReasoningDelta(id=reasoning.id or None, signature=reasoning.signature or None),
                         )
                     ]
-                if item.get("type") == "function_call":
-                    output = state.output[index]
+                if item.type == "function_call":
+                    output = _tool_draft(state, index)
+                    output.id = item.call_id
+                    output.name = item.name
+                    output.arguments = item.arguments
                     return [
                         CanonicalChunk(
                             id=state.chunk_id,
-                            delta=ToolCallDelta(index=index, id=output["id"] or None, name=output["name"] or None),
+                            delta=ToolCallDelta(index=output.ordinal or 0, id=output.id or None, name=output.name or None),
                         )
                     ]
+                state.output[index] = ResponsesOutputDraft(type=item.type)
             return []
         if kind == "response.output_text.delta":
-            delta = str(data.get("delta") or "")
+            delta = event.delta
             state.text[index] = state.text.get(index, "") + delta
             return [CanonicalChunk(id=state.chunk_id, delta=TextDelta(text=delta))] if delta else []
         if kind in {"response.reasoning_summary_text.delta", "response.reasoning_text.delta"}:
-            delta = str(data.get("delta") or "")
-            draft = state.reasoning.setdefault(index, {"id": "", "text": "", "signature": ""})
-            draft["text"] += delta
+            delta = event.delta
+            draft = state.reasoning.setdefault(index, ResponsesReasoningDraft())
+            draft.text += delta
             return [CanonicalChunk(id=state.chunk_id, delta=ReasoningDelta(text=delta))] if delta else []
         if kind == "response.function_call_arguments.delta":
-            delta = str(data.get("delta") or "")
-            draft = state.output.setdefault(index, {"type": "function_call", "id": "", "name": "", "arguments": ""})
-            draft["arguments"] += delta
-            return [CanonicalChunk(id=state.chunk_id, delta=ToolCallDelta(index=index, arguments=delta))] if delta else []
+            delta = event.delta
+            draft = _tool_draft(state, index)
+            draft.arguments += delta
+            return [CanonicalChunk(id=state.chunk_id, delta=ToolCallDelta(index=draft.ordinal or 0, arguments=delta))] if delta else []
         return []
 
-    def validate_stream(self, state: StreamState) -> None:
-        assert isinstance(state, ResponsesStreamState)  # noqa: S101 state comes from new_stream_state
+    def validate_stream(self, state: ResponsesStreamState) -> None:
         if not state.terminal_seen:
             raise UpstreamProtocolError.incomplete_stream()
 
-    def finalize(self, state: StreamState) -> CanonicalResponse:
-        assert isinstance(state, ResponsesStreamState)  # noqa: S101 state comes from new_stream_state
+    def finalize(self, state: ResponsesStreamState) -> CanonicalResponse:
         parts = []
         for index in sorted(set(state.output) | set(state.text) | set(state.reasoning)):
             if index in state.reasoning:
                 draft = state.reasoning[index]
-                parts.append(ReasoningPart(id=draft["id"] or None, text=draft["text"], signature=draft["signature"] or None))
+                parts.append(ReasoningPart(id=draft.id or None, text=draft.text, signature=draft.signature or None))
             if text := state.text.get(index):
                 parts.append(TextPart(text=text))
             output = state.output.get(index)
-            if output and output["type"] == "function_call":
-                parts.append(ToolCallPart(id=output["id"], name=output["name"], arguments=output["arguments"]))
+            if output and output.type == "function_call":
+                parts.append(ToolCallPart(id=output.id, name=output.name, arguments=output.arguments))
         finish = (
             "length"
             if state.incomplete

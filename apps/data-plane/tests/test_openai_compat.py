@@ -116,7 +116,7 @@ def test_buffered_chat_preserves_an_empty_reasoning_part():
         usage=Usage(input_tokens=3, output_tokens=2),
     )
 
-    payload = json.loads(OpenAINativeIngress().render_response(final).body)
+    payload = json.loads(bytes(OpenAINativeIngress().render_response(final).body))
 
     assert payload["choices"][0]["message"]["reasoning_content"] == ""
 

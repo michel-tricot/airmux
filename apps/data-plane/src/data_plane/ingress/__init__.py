@@ -20,6 +20,10 @@ if TYPE_CHECKING:
 CANONICAL = "canonical"
 
 
+class UnknownDialectError(ValueError):
+    pass
+
+
 def _discover() -> dict[str, IngressAdapter]:
     registry: dict[str, IngressAdapter] = {}
     for mod_info in pkgutil.iter_modules(__path__):
@@ -39,12 +43,14 @@ REGISTRY = _discover()
 
 def resolve(headers: Headers, body: dict[str, Any]) -> IngressAdapter:
     override = headers.get(DIALECT_HEADER, "").lower()
-    if override in REGISTRY:
+    if override:
+        if override not in REGISTRY:
+            raise UnknownDialectError(override)
         return REGISTRY[override]
-    for dialect in sorted(REGISTRY):
-        if dialect != CANONICAL and REGISTRY[dialect].claims(headers, body):
-            return REGISTRY[dialect]
+    for dialect, adapter in REGISTRY.items():
+        if dialect != CANONICAL and adapter.claims(headers, body):
+            return adapter
     return REGISTRY[CANONICAL]
 
 
-__all__ = ["REGISTRY", "IngressAdapter", "resolve"]
+__all__ = ["REGISTRY", "IngressAdapter", "UnknownDialectError", "resolve"]

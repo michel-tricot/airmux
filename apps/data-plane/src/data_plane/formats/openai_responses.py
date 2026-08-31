@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
+
+from pydantic import BaseModel, ConfigDict, Field
 
 from data_plane.canonical import (
     AssistantPart,
@@ -22,6 +25,54 @@ from data_plane.canonical import (
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
+
+
+class UpstreamError(BaseModel):
+    model_config = ConfigDict(extra="ignore", frozen=True)
+
+    code: str | None = None
+    message: str = ""
+
+
+class UpstreamOutputItem(BaseModel):
+    model_config = ConfigDict(extra="allow", frozen=True)
+
+    type: str = ""
+    id: str = ""
+    call_id: str = ""
+    name: str = ""
+    arguments: str = ""
+    encrypted_content: str = ""
+    content: list[dict[str, Any]] = Field(default_factory=list)
+    summary: list[dict[str, Any]] = Field(default_factory=list)
+
+
+class UpstreamResponse(BaseModel):
+    model_config = ConfigDict(extra="allow", frozen=True)
+
+    id: str = ""
+    status: str | None = None
+    output: list[UpstreamOutputItem]
+    usage: dict[str, Any] | None = None
+    error: UpstreamError | None = None
+
+
+class UpstreamResponseEvent(BaseModel):
+    model_config = ConfigDict(extra="ignore", frozen=True)
+
+    type: str | None = None
+    response: UpstreamResponse | None = None
+    error: UpstreamError | None = None
+    output_index: int | None = None
+    item: UpstreamOutputItem | None = None
+    delta: str = ""
+
+
+@dataclass(frozen=True)
+class ResponseMetadata:
+    id: str
+    model: str
+    created_at: int
 
 
 def _image(part: ImagePart) -> dict[str, str]:
@@ -116,7 +167,7 @@ def _reasoning_of(request: CanonicalRequest) -> dict[str, str] | None:
 
 
 def body_of(request: CanonicalRequest, upstream_model: str) -> dict[str, Any]:
-    unsupported = [name for name, value in (("stop", request.stop), ("seed", request.seed), *request.extra.items()) if value is not None]
+    unsupported = [name for name, value in (("stop", request.stop), ("seed", request.seed)) if value is not None]
     if unsupported:
         message = f"unsupported_feature: {', '.join(unsupported)} are not representable by Responses"
         raise ValueError(message)
@@ -272,7 +323,25 @@ def finish_reason(response: dict[str, Any], parts: Sequence[AssistantPart]) -> F
     return "tool_calls" if any(isinstance(part, ToolCallPart) for part in parts) else "stop"
 
 
-def json_response(final_id: str, model: str, parts: Sequence[AssistantPart], finish: str | None, usage: Usage) -> dict[str, Any]:
+def response_metadata(metadata: ResponseMetadata) -> dict[str, Any]:
+    return {
+        "id": metadata.id,
+        "object": "response",
+        "created_at": metadata.created_at,
+        "error": None,
+        "incomplete_details": None,
+        "instructions": None,
+        "model": metadata.model,
+        "tools": [],
+        "parallel_tool_calls": True,
+        "metadata": {},
+        "tool_choice": "auto",
+        "temperature": 1,
+        "top_p": 1,
+    }
+
+
+def json_response(metadata: ResponseMetadata, parts: Sequence[AssistantPart], finish: str | None, usage: Usage) -> dict[str, Any]:
     output: list[dict[str, Any]] = []
     for index, part in enumerate(parts):
         if isinstance(part, TextPart):
@@ -307,17 +376,15 @@ def json_response(final_id: str, model: str, parts: Sequence[AssistantPart], fin
             )
     incomplete_reason = {"length": "max_output_tokens", "content_filter": "content_filter"}.get(finish or "")
     return {
-        "id": final_id,
-        "object": "response",
+        **response_metadata(metadata),
         "status": "incomplete" if incomplete_reason else "completed",
         **({"incomplete_details": {"reason": incomplete_reason}} if incomplete_reason else {}),
-        "model": model,
         "output": output,
         "usage": {
             "input_tokens": usage.input_tokens,
             "output_tokens": usage.output_tokens,
             "total_tokens": usage.input_tokens + usage.output_tokens,
-            "input_tokens_details": {"cached_tokens": usage.cache_read_tokens},
+            "input_tokens_details": {"cached_tokens": usage.cache_read_tokens, "cache_write_tokens": usage.cache_write_tokens},
             "output_tokens_details": {"reasoning_tokens": 0},
         },
     }

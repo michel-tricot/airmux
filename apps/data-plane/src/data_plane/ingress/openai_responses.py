@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import time
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 from starlette.responses import JSONResponse, Response
@@ -47,9 +48,6 @@ SUPPORTED = frozenset(
         "store",
         "include",
     }
-)
-REJECTED = frozenset(
-    {"previous_response_id", "conversation", "background", "prompt", "truncation", "metadata", "service_tier", "safety_identifier", "user"}
 )
 SERVER_ERROR = 500
 
@@ -102,65 +100,119 @@ def _response_format(value: object) -> ResponseFormat | None:
     return None
 
 
+@dataclass
+class _ResponseItem:
+    output_index: int
+    kind: str
+    item_id: str
+    call_id: str = ""
+    name: str = ""
+    text: str = ""
+    arguments: str = ""
+    signature: str = ""
+
+    def body(self, status: str) -> dict[str, Any]:
+        if self.kind == "message":
+            content = [] if status == "in_progress" else [{"type": "output_text", "text": self.text, "annotations": []}]
+            return {"type": "message", "id": self.item_id, "role": "assistant", "status": status, "content": content}
+        if self.kind == "reasoning":
+            summary = [] if not self.text else [{"type": "summary_text", "text": self.text}]
+            return {
+                "type": "reasoning",
+                "id": self.item_id,
+                "summary": summary,
+                **({"encrypted_content": self.signature} if self.signature else {}),
+            }
+        return {
+            "type": "function_call",
+            "id": self.item_id,
+            "call_id": self.call_id,
+            "name": self.name,
+            "arguments": self.arguments,
+            "status": status,
+        }
+
+
 class ResponsesStream:
     def __init__(self) -> None:
         self.id = ""
         self.model = ""
-        self.open_items: set[int] = set()
+        self.created_at = 0
+        self.sequence = 0
+        self.items: dict[tuple[str, int], _ResponseItem] = {}
 
     def _event(self, kind: str, payload: dict[str, Any]) -> bytes:
-        return b"event: " + kind.encode() + b"\n" + sse(json.dumps({"type": kind, **payload}, separators=(",", ":")).encode())
+        body = {"type": kind, **payload, "sequence_number": self.sequence}
+        self.sequence += 1
+        return b"event: " + kind.encode() + b"\n" + sse(json.dumps(body, separators=(",", ":")).encode())
 
     def start(self, ctx: Ctx, /) -> list[bytes]:
-        self.id, self.model = ctx.request_id, ctx.model.model_id
-        response = {"id": self.id, "object": "response", "created_at": int(time.time()), "status": "in_progress", "model": self.model, "output": []}
+        self.id, self.model, self.created_at = ctx.request_id, ctx.model.model_id, int(time.time())
+        metadata = fmt.ResponseMetadata(id=self.id, model=self.model, created_at=self.created_at)
+        response = {**fmt.response_metadata(metadata), "status": "in_progress", "output": []}
         return [self._event("response.created", {"response": response}), self._event("response.in_progress", {"response": response})]
 
     def chunk(self, c: CanonicalChunk) -> list[bytes]:
         if c.delta is None:
             return []
-        index = 0 if c.delta.type != "tool_call" else c.delta.index
+        ordinal = c.delta.index if c.delta.type == "tool_call" else 0
+        key = (c.delta.type, ordinal)
         frames = []
-        if index not in self.open_items:
+        item = self.items.get(key)
+        opened = item is None
+        if item is None:
+            index = len(self.items)
             if c.delta.type == "tool_call":
-                item = {
-                    "type": "function_call",
-                    "id": f"fc_{index}",
-                    "call_id": c.delta.id or "",
-                    "name": c.delta.name or "",
-                    "arguments": "",
-                }
+                item = _ResponseItem(index, "function_call", f"fc_{index}", call_id=c.delta.id or "", name=c.delta.name or "")
             elif c.delta.type == "reasoning":
-                item = {
-                    "type": "reasoning",
-                    "id": c.delta.id or f"rs_{index}",
-                    "summary": [],
-                    **({"encrypted_content": c.delta.signature} if c.delta.signature else {}),
-                }
+                item = _ResponseItem(index, "reasoning", c.delta.id or f"rs_{index}", signature=c.delta.signature or "")
             else:
-                item = {"type": "message", "id": f"msg_{index}", "role": "assistant", "status": "in_progress", "content": []}
-            frames.append(self._event("response.output_item.added", {"output_index": index, "item": item}))
-            self.open_items.add(index)
+                item = _ResponseItem(index, "message", f"msg_{index}")
+            self.items[key] = item
+            frames.append(self._event("response.output_item.added", {"output_index": index, "item": item.body("in_progress")}))
         if c.delta.type == "text":
-            frames.append(self._event("response.output_text.delta", {"output_index": index, "content_index": 0, "delta": c.delta.text}))
+            item.text += c.delta.text
+            frames.append(
+                self._event(
+                    "response.output_text.delta",
+                    {"item_id": item.item_id, "output_index": item.output_index, "content_index": 0, "delta": c.delta.text, "logprobs": []},
+                )
+            )
         elif c.delta.type == "reasoning":
-            frames.append(self._event("response.reasoning_summary_text.delta", {"output_index": index, "summary_index": 0, "delta": c.delta.text}))
+            item.text += c.delta.text
+            if not opened:
+                item.signature += c.delta.signature or ""
+            if c.delta.text:
+                frames.append(
+                    self._event(
+                        "response.reasoning_summary_text.delta",
+                        {"item_id": item.item_id, "output_index": item.output_index, "summary_index": 0, "delta": c.delta.text},
+                    )
+                )
         else:
-            frames.append(self._event("response.function_call_arguments.delta", {"output_index": index, "delta": c.delta.arguments}))
+            item.call_id = c.delta.id or item.call_id
+            item.name = c.delta.name or item.name
+            item.arguments += c.delta.arguments
+            if c.delta.arguments:
+                frames.append(
+                    self._event(
+                        "response.function_call_arguments.delta",
+                        {"item_id": item.item_id, "output_index": item.output_index, "delta": c.delta.arguments},
+                    )
+                )
         return frames
 
     def closing(self, final: CanonicalResponse, adjustments: list[Adjustment]) -> list[bytes]:
-        frames = [
-            self._event("response.output_item.done", {"output_index": index, "item": {"id": f"item_{index}", "status": "completed"}})
-            for index in sorted(self.open_items)
-        ]
-        response = fmt.json_response(final.id, final.model, final.content, final.finish_reason, final.usage)
+        ordered = sorted(self.items.values(), key=lambda item: item.output_index)
+        frames = [self._event("response.output_item.done", {"output_index": item.output_index, "item": item.body("completed")}) for item in ordered]
+        metadata = fmt.ResponseMetadata(id=final.id, model=final.model, created_at=self.created_at)
+        response = fmt.json_response(metadata, final.content, final.finish_reason, final.usage)
         response["gateway"] = GatewayInfo(adjustments=adjustments).model_dump(mode="json")
         frames.append(self._event("response.completed", {"response": response}))
         return frames
 
     def error(self, err: CanonicalError) -> list[bytes]:
-        return [self._event("error", _error(err.status, err.code, err.message))]
+        return [self._event("error", {"code": err.code, "message": err.message, "param": None})]
 
 
 class OpenAIResponsesIngress(IngressAdapter):
@@ -211,7 +263,8 @@ class OpenAIResponsesIngress(IngressAdapter):
         return request, []
 
     def render_response(self, final: CanonicalResponse) -> Response:
-        body = fmt.json_response(final.id, final.model, final.content, final.finish_reason, final.usage)
+        metadata = fmt.ResponseMetadata(id=final.id, model=final.model, created_at=int(time.time()))
+        body = fmt.json_response(metadata, final.content, final.finish_reason, final.usage)
         body["gateway"] = final.gateway.model_dump(mode="json")
         return JSONResponse(body)
 

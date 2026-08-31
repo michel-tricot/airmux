@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 import httpx
 
 from contract import UsageEventV1
-from data_plane.outbox.base import EventOutbox
+from data_plane.outbox.base import EventOutbox, OutboxStats
 from data_plane.tasks import run_periodic
 
 if TYPE_CHECKING:
@@ -22,6 +22,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger("data_plane")
 
 BATCH_SIZE = 1000
+MAX_BATCHES_PER_FLUSH = 20
 
 # A durable event queue backed by SQLite in WAL mode. Many data plane processes may share one cache
 # dir: SQLite serializes their writes, so every worker records into the same queue and a single
@@ -99,6 +100,12 @@ class SqliteOutbox(EventOutbox):
         with self._conn:
             self._conn.executemany("DELETE FROM outbox WHERE event_id = ?", [(event_id,) for event_id in event_ids])
 
+    def stats(self) -> OutboxStats:
+        pending = self._conn.execute("SELECT COUNT(*) FROM outbox").fetchone()[0]
+        first = self._conn.execute("SELECT body FROM outbox ORDER BY rowid LIMIT 1").fetchone()
+        oldest = UsageEventV1.model_validate_json(first[0]).occurred_at if first is not None else None
+        return OutboxStats(pending=pending, oldest_event_at=oldest)
+
     async def export_once(self) -> int:
         if not self.claim_export(self._lease_ttl(), time.time()):
             return 0
@@ -114,6 +121,15 @@ class SqliteOutbox(EventOutbox):
         self.acknowledge([str(event.event_id) for event in events])
         return len(events)
 
+    async def export_available(self) -> int:
+        sent_total = 0
+        for _ in range(MAX_BATCHES_PER_FLUSH):
+            sent = await self.export_once()
+            sent_total += sent
+            if sent < BATCH_SIZE:
+                break
+        return sent_total
+
     async def _run_export(self) -> None:
         await run_periodic(
             self._export_and_log,
@@ -123,9 +139,9 @@ class SqliteOutbox(EventOutbox):
         )
 
     async def _export_and_log(self) -> None:
-        sent = await self.export_once()
+        sent = await self.export_available()
         if sent:
-            logger.info("exported %d usage events to the control plane", sent)
+            logger.info("exported %d usage events to the control plane, %d remain", sent, self.stats().pending)
 
     def _lease_ttl(self) -> float:
         return max(self._config.flush_interval_s * 3, 5.0)

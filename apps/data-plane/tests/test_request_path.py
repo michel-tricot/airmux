@@ -68,6 +68,24 @@ def test_chat_completion_end_to_end(api_key, dp_app, tmp_path, http_client):
 
 
 @respx.mock
+def test_health_reports_the_pending_event_backlog(api_key, dp_app):
+    respx.post("https://api.openai.com/v1/chat/completions").mock(return_value=httpx.Response(200, json=OPENAI_RESPONSE))
+    mock_control_plane()
+    with TestClient(dp_app) as client:
+        response = client.post(
+            "/inf/v1/chat/completions",
+            headers={"Authorization": f"Bearer {api_key}"},
+            json={"model": "gpt-test", "messages": [{"role": "user", "content": "say hi"}]},
+        )
+        health = client.get("/healthz")
+
+    assert response.status_code == 200
+    assert health.status_code == 200
+    assert health.json()["events"]["pending"] == 1
+    assert health.json()["events"]["oldest_age_s"] >= 0
+
+
+@respx.mock
 def test_malformed_buffered_provider_response_is_rejected(api_key, dp_app, tmp_path, http_client):
     respx.post("https://api.openai.com/v1/chat/completions").mock(return_value=httpx.Response(200, json={}))
     mock_control_plane()
@@ -88,6 +106,32 @@ def test_missing_token_rejected(api_key, dp_app):
     with TestClient(dp_app) as client:
         r = client.post("/inf/v1/chat/completions", json={"model": "gpt-test", "messages": []})
     assert r.status_code == 401
+
+
+@respx.mock
+def test_bearer_authentication_scheme_is_case_insensitive(api_key, dp_app):
+    respx.post("https://api.openai.com/v1/chat/completions").mock(return_value=httpx.Response(200, json=OPENAI_RESPONSE))
+    mock_control_plane()
+    with TestClient(dp_app) as client:
+        response = client.post(
+            "/inf/v1/chat/completions",
+            headers={"Authorization": f"bearer {api_key}"},
+            json={"model": "gpt-test", "messages": [{"role": "user", "content": "hi"}]},
+        )
+    assert response.status_code == 200
+
+
+@respx.mock
+def test_unknown_explicit_dialect_is_rejected_instead_of_falling_back(api_key, dp_app):
+    mock_control_plane()
+    with TestClient(dp_app) as client:
+        response = client.post(
+            "/inf/v1/chat/completions",
+            headers={"Authorization": f"Bearer {api_key}", "X-Airllm-Dialect": "unknown"},
+            json={"model": "gpt-test", "messages": [{"role": "user", "content": "hi"}]},
+        )
+    assert response.status_code == 400
+    assert response.json()["error"]["code"] == "invalid_dialect"
 
 
 @respx.mock

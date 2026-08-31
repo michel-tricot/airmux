@@ -4,6 +4,7 @@ from types import ModuleType, SimpleNamespace
 
 import pytest
 
+from contract import ProviderEntry
 from data_plane import egress, ingress
 from data_plane.egress.openai_compatible import OpenAICompatibleAdapter
 from data_plane.ingress.canonical import CanonicalIngress
@@ -39,3 +40,9 @@ def test_duplicate_ingress_dialect_fails_discovery(monkeypatch):
 
     with pytest.raises(RuntimeError, match="duplicate ingress dialect 'duplicate'"):
         ingress._discover()
+
+
+def test_the_bundle_contract_does_not_close_the_discovered_adapter_namespace():
+    provider = ProviderEntry(provider_id="future", kind="future_family", base_url="https://example.com/v1")
+
+    assert provider.kind == "future_family"

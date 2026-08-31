@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING
 from contract import CredentialEntry, SecretNotFoundError, SecretStoreUnavailableError
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
     from uuid import UUID
 
     from contract import BundleV1, Secret, SecretStore
@@ -23,8 +24,9 @@ logger = logging.getLogger("data_plane")
 
 CACHE_TTL_S = 300.0
 NEGATIVE_TTL_S = 15.0
+RATE_LIMIT_COOLDOWN_S = 30.0
 
-type CredentialIndex = dict[tuple[UUID | None, str], tuple[CredentialEntry, ...]]
+type CredentialIndex = Mapping[tuple[UUID | None, str], tuple[CredentialEntry, ...]]
 
 
 def index_credentials(bundle: BundleV1) -> CredentialIndex:
@@ -73,11 +75,24 @@ class CredentialResolver:
         self.negative_ttl_s = negative_ttl_s
         self._values: dict[tuple[UUID, int], tuple[float, Secret | None]] = {}
         self._locks: dict[tuple[UUID, int], asyncio.Lock] = {}
+        self._cooldowns: dict[tuple[UUID, int], float] = {}
 
     def forget(self, entry: CredentialEntry) -> None:
         """Drop a cached value after upstream rejected it, so a key rotated out of band is refetched
         on the next attempt rather than at the end of the TTL."""
-        self._values.pop((entry.ref.secret_id, entry.version), None)
+        key = (entry.ref.secret_id, entry.version)
+        self._values.pop(key, None)
+        lock = self._locks.get(key)
+        if lock is not None and not lock.locked():
+            self._locks.pop(key, None)
+
+    def available(self, entries: tuple[CredentialEntry, ...]) -> tuple[CredentialEntry, ...]:
+        now = time.monotonic()
+        self._prune(now)
+        return tuple(entry for entry in entries if self._cooldowns.get((entry.ref.secret_id, entry.version), 0) <= now)
+
+    def rate_limit(self, entry: CredentialEntry) -> None:
+        self._cooldowns[(entry.ref.secret_id, entry.version)] = time.monotonic() + RATE_LIMIT_COOLDOWN_S
 
     async def fetch(self, entry: CredentialEntry) -> Secret | None:
         """The value, or None when there is none. Raises only when the store could not answer.
@@ -86,8 +101,9 @@ class CredentialResolver:
         concurrent request for the same credential.
         """
         key = (entry.ref.secret_id, entry.version)
-        cached = self._values.get(key)
         now = time.monotonic()
+        self._prune(now)
+        cached = self._values.get(key)
         if cached is not None and cached[0] > now:
             return cached[1]
         lock = self._locks.setdefault(key, asyncio.Lock())
@@ -109,3 +125,15 @@ class CredentialResolver:
             raise
         self._values[key] = (time.monotonic() + self.ttl_s, secret)
         return secret
+
+    def _prune(self, now: float) -> None:
+        for key, (expires, _) in tuple(self._values.items()):
+            if expires > now:
+                continue
+            self._values.pop(key, None)
+            lock = self._locks.get(key)
+            if lock is not None and not lock.locked():
+                self._locks.pop(key, None)
+        for key, expires in tuple(self._cooldowns.items()):
+            if expires <= now:
+                self._cooldowns.pop(key, None)

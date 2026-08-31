@@ -1,13 +1,16 @@
 from __future__ import annotations
 
 import functools
+import json
 import logging
 import time
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
 import httpx
 import tiktoken
+from pydantic import BaseModel
 
 from contract import UsageEventV1, uuid7
 from data_plane.canonical import TextPart, Usage
@@ -25,6 +28,12 @@ if TYPE_CHECKING:
 logger = logging.getLogger("data_plane")
 
 REJECTS_CREDENTIAL = frozenset({httpx.codes.UNAUTHORIZED, httpx.codes.FORBIDDEN})
+
+
+@dataclass(frozen=True)
+class RequestStart:
+    request_id: UUID
+    started_at: float
 
 
 def cost_breakdown(usage: Usage, model: ModelEntry) -> tuple[float, float]:
@@ -63,18 +72,35 @@ def status_for_upstream(status_code: int) -> UsageStatus:
 
 
 def _text_of(parts: Sequence[object]) -> str:
-    return "\n".join(part.text for part in parts if isinstance(part, TextPart))
+    rendered = []
+    for part in parts:
+        if isinstance(part, TextPart):
+            rendered.append(part.text)
+        elif isinstance(part, BaseModel):
+            payload = part.model_dump(mode="json", exclude_none=True, exclude={"data"})
+            rendered.append(json.dumps(payload, ensure_ascii=False, separators=(",", ":")))
+    return "\n".join(rendered)
 
 
 def _prompt_text(request: CanonicalRequest) -> str:
-    return "\n".join(_text_of(message.content) for message in request.messages)
+    messages = "\n".join(f"{message.role}: {_text_of(message.content)}" for message in request.messages)
+    tools = "\n".join(tool.model_dump_json(exclude_none=True) for tool in request.tools or ())
+    response_format = request.response_format.model_dump_json(exclude_none=True) if request.response_format is not None else ""
+    reasoning = request.reasoning.model_dump_json(exclude_none=True) if request.reasoning is not None else ""
+    return "\n".join(value for value in (messages, tools, response_format, reasoning) if value)
 
 
-def record_denied(outbox: EventOutbox, key: KeyEntry, bundle_id: UUID, request: CanonicalRequest) -> None:
+def record_denied(
+    outbox: EventOutbox,
+    key: KeyEntry,
+    bundle_id: UUID,
+    request: CanonicalRequest,
+    start: RequestStart,
+) -> None:
     outbox.record(
         UsageEventV1(
             event_id=uuid7(),
-            request_id=uuid7(),
+            request_id=start.request_id,
             occurred_at=datetime.now(tz=UTC),
             org_id=key.org_id,
             workspace_id=key.workspace_id,
@@ -85,7 +111,7 @@ def record_denied(outbox: EventOutbox, key: KeyEntry, bundle_id: UUID, request: 
             input_tokens=0,
             output_tokens=0,
             cost_usd=0.0,
-            latency_ms=0,
+            latency_ms=int((time.monotonic() - start.started_at) * 1000),
             status="denied",
             stream=request.stream,
         )
@@ -102,8 +128,10 @@ def record_usage(
     usage = response.usage
     if usage.estimated:
         usage = Usage(
-            input_tokens=estimate_tokens(_prompt_text(request), ctx.model),
-            output_tokens=estimate_tokens(_text_of(response.content), ctx.model),
+            input_tokens=usage.input_tokens or estimate_tokens(_prompt_text(request), ctx.model),
+            output_tokens=usage.output_tokens or estimate_tokens(_text_of(response.content), ctx.model),
+            cache_read_tokens=usage.cache_read_tokens,
+            cache_write_tokens=usage.cache_write_tokens,
             estimated=True,
         )
     cost_in, cost_out = cost_breakdown(usage, ctx.model)
