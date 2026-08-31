@@ -304,6 +304,30 @@ def test_a_rejected_or_limited_credential_fails_over_within_the_tier(tmp_path, h
 
 
 @respx.mock
+def test_an_all_limited_tier_preserves_the_provider_error_on_the_next_request(tmp_path):
+    credential = make_credential(workspace=WORKSPACE, name="only")
+    app, caller_token, store = _byok_app(tmp_path, [credential])
+    asyncio.run(store.put(credential.ref, Secret("sk-workspace")))
+    route = respx.post("https://api.openai.com/v1/chat/completions").mock(
+        return_value=httpx.Response(429, json={"error": {"code": "rate_limit_exceeded", "message": "slow down"}})
+    )
+    mock_control_plane()
+    body = {"model": "gpt-test", "max_tokens": 8, "messages": [{"role": "user", "content": "hi"}]}
+    with TestClient(app) as client:
+        responses = [
+            client.post("/inf/v1/messages", headers={"Authorization": f"Bearer {caller_token}"}, json=body),
+            client.post("/inf/v1/messages", headers={"Authorization": f"Bearer {caller_token}"}, json=body),
+        ]
+
+    assert [response.status_code for response in responses] == [429, 429]
+    assert [response.json() for response in responses] == [
+        {"type": "error", "error": {"type": "rate_limit_exceeded", "message": "slow down"}},
+        {"type": "error", "error": {"type": "rate_limit_exceeded", "message": "slow down"}},
+    ]
+    assert len(route.calls) == 2
+
+
+@respx.mock
 def test_an_upstream_rejection_invalidates_the_cached_secret(tmp_path):
     credential = make_credential(workspace=WORKSPACE, name="only")
     app, caller_token, store = _byok_app(tmp_path, [credential])

@@ -94,11 +94,7 @@ def _parameter_support(model: dict, endpoint: str, behaviors: list[BehaviorRecor
 
 def _provider_entry(provider: dict, icon: str) -> dict[str, object]:
     default_surface = "anthropic" if provider.get("ingress") == ["anthropic"] else "oai"
-    profile = {
-        field: provider[field]
-        for field in ("param_aliases", "params_closed", "accepted_params")
-        if field in provider
-    }
+    profile = {field: provider[field] for field in ("param_aliases", "params_closed", "accepted_params") if field in provider}
     return {
         "provider_id": provider["id"],
         "kind": SURFACE_KIND[default_surface],

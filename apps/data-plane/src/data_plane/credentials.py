@@ -89,7 +89,11 @@ class CredentialResolver:
     def available(self, entries: tuple[CredentialEntry, ...]) -> tuple[CredentialEntry, ...]:
         now = time.monotonic()
         self._prune(now)
-        return tuple(entry for entry in entries if self._cooldowns.get((entry.ref.secret_id, entry.version), 0) <= now)
+        available = tuple(entry for entry in entries if self._cooldowns.get((entry.ref.secret_id, entry.version), 0) <= now)
+        if available or not entries:
+            return available
+        earliest = min(entries, key=lambda entry: self._cooldowns[(entry.ref.secret_id, entry.version)])
+        return (earliest,)
 
     def rate_limit(self, entry: CredentialEntry) -> None:
         self._cooldowns[(entry.ref.secret_id, entry.version)] = time.monotonic() + RATE_LIMIT_COOLDOWN_S

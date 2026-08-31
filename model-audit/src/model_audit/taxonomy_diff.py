@@ -129,6 +129,5 @@ def compare_taxonomies(before: Path, after: Path) -> list[dict[str, object]]:
 def summarize_taxonomy_diff(rows: list[dict[str, object]]) -> list[dict[str, object]]:
     keys = sorted({(str(row["scope"]), str(row["change"])) for row in rows})
     return [
-        {"scope": scope, "change": change, "count": sum(row["scope"] == scope and row["change"] == change for row in rows)}
-        for scope, change in keys
+        {"scope": scope, "change": change, "count": sum(row["scope"] == scope and row["change"] == change for row in rows)} for scope, change in keys
     ]

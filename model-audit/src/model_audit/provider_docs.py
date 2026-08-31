@@ -183,7 +183,7 @@ def parse_mistral_model(document: str, source: str) -> ModelDocumentation:
         message = f"Mistral model page has no API model id: {source}"
         raise ValueError(message)
     context = re.search(r">Context</span>.*?<div[^>]*text-lg[^>]*>([\d,.]+\s*[KMB]?)</div>", document, flags=re.DOTALL | re.IGNORECASE)
-    serialized = html.unescape(document).replace(r'\"', '"')
+    serialized = html.unescape(document).replace(r"\"", '"')
     pricing_match = re.search(
         r'"pricing":\{"type":"custom".*?"input":\[(.*?)\],\s*"output":\[(.*?)\]\}',
         serialized,
