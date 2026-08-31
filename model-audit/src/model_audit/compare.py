@@ -15,8 +15,8 @@ UNSUPPORTED_PATTERNS = (
     "may not be enabled when",
     "is incompatible with",
 )
-ACCESS_CODES = {"direct_authentication", "direct_model_access", "gateway_authentication", "not_run"}
-HARNESS_CODES = {"client_exception", "harness_request_error", "http_protocol_error", "sdk_protocol_error"}
+ACCESS_CODES = {"direct_authentication", "direct_model_access", "gateway_authentication", "not_run", "provider_billing_access"}
+HARNESS_CODES = {"client_exception", "harness_request_error", "sdk_protocol_error"}
 ERROR_TOPICS = {
     "image": ("image", "vision"),
     "pdf": ("pdf", "document"),
@@ -149,6 +149,18 @@ def _differences(direct: Observation, gateway: Observation, oracle: Oracle) -> t
     return tuple(name for name, pair in values.items() if pair[0] != pair[1])
 
 
+def _mirrored_access_failure(direct: Observation, gateway: Observation) -> bool:
+    direct_message = " ".join((direct.error_message or "").casefold().split())
+    gateway_message = " ".join((gateway.error_message or "").casefold().split())
+    return (
+        (direct.error_code in ACCESS_CODES or gateway.error_code in ACCESS_CODES)
+        and direct.http_status in {401, 403, 404, 429}
+        and direct.http_status == gateway.http_status
+        and bool(direct_message)
+        and direct_message == gateway_message
+    )
+
+
 def assess(direct: Observation, gateway: Observation, oracle: Oracle) -> Assessment:
     direct_satisfies = satisfies(direct, oracle)
     gateway_satisfies = satisfies(gateway, oracle)
@@ -164,11 +176,15 @@ def assess(direct: Observation, gateway: Observation, oracle: Oracle) -> Assessm
         execution = "transient_failure"
     else:
         execution = "completed"
-    differences = _differences(direct, gateway, oracle)
+    mirrored_access_failure = _mirrored_access_failure(direct, gateway)
+    differences = () if mirrored_access_failure else _differences(direct, gateway, oracle)
     oracle_differs = direct_satisfies is not None and gateway_satisfies is not None and direct_satisfies != gateway_satisfies
     if oracle_differs:
         differences = (*differences, "oracle")
-    if transient_failure and not access_blocked and not harness_error:
+    if mirrored_access_failure:
+        parity = "match"
+        reason = "gateway mirrors provider access failure"
+    elif transient_failure and not access_blocked and not harness_error:
         parity = "not_evaluated"
         reason = "a transient failure prevented comparison"
     elif access_blocked or harness_error or direct.outcome == "inconclusive" or gateway.outcome == "inconclusive":

@@ -34,6 +34,32 @@ def test_matching_generic_rejections_are_parity_but_unknown_support():
     assert result.parity == "match"
 
 
+def test_matching_provider_access_denials_are_parity_but_unknown_support():
+    message = "Model access must be enabled for this organization"
+    direct = Observation(outcome="inconclusive", http_status=403, error_code="direct_authentication", error_message=message)
+    gateway = Observation(outcome="error", http_status=403, error_code="1913", error_message=message)
+
+    result = assess(direct, gateway, Oracle(text_nonempty=True))
+
+    assert result.execution == "access_blocked"
+    assert result.feature == "unknown"
+    assert result.parity == "match"
+    assert result.differences == ()
+
+
+def test_matching_model_not_found_responses_are_parity_but_unknown_support():
+    message = "Model not found, inaccessible, and/or not deployed"
+    direct = Observation(outcome="inconclusive", http_status=404, error_code="direct_model_access", error_message=message)
+    gateway = Observation(outcome="rejected", http_status=404, error_code="NOT_FOUND", error_message=message)
+
+    result = assess(direct, gateway, Oracle(text_nonempty=True))
+
+    assert result.execution == "access_blocked"
+    assert result.feature == "unknown"
+    assert result.parity == "match"
+    assert result.differences == ()
+
+
 def test_different_generic_rejection_topics_are_not_false_parity():
     direct = Observation(outcome="rejected", http_status=400, error_code="invalid_request_error", error_message="Could not process image")
     gateway = direct.model_copy(update={"error_message": "Tool choice is invalid"})
@@ -130,3 +156,26 @@ def test_transient_failure_does_not_produce_a_parity_verdict():
     assert result.execution == "transient_failure"
     assert result.parity == "not_evaluated"
     assert result.feature == "supported"
+
+
+def test_malformed_gateway_response_is_a_protocol_mismatch():
+    direct = Observation(outcome="success", text="ok")
+    gateway = Observation(outcome="error", error_code="http_protocol_error", error_message="missing terminal event")
+
+    result = assess(direct, gateway, Oracle(text_contains="ok"))
+
+    assert result.execution == "completed"
+    assert result.parity == "mismatch"
+    assert result.feature == "supported"
+
+
+def test_matching_provider_billing_failures_are_parity_but_access_blocked():
+    message = "The provider account credit balance is exhausted"
+    direct = Observation(outcome="inconclusive", http_status=429, error_code="provider_billing_access", error_message=message)
+    gateway = direct.model_copy()
+
+    result = assess(direct, gateway, Oracle(text_nonempty=True))
+
+    assert result.execution == "access_blocked"
+    assert result.feature == "unknown"
+    assert result.parity == "match"
