@@ -474,18 +474,6 @@ export interface MembershipOut {
 }
 
 /**
- * Per-model egress adapter override
- */
-export type ModelInEgressKind = typeof ModelInEgressKind[keyof typeof ModelInEgressKind] | null;
-
-
-export const ModelInEgressKind = {
-  openai_compatible: 'openai_compatible',
-  openai_responses: 'openai_responses',
-  anthropic: 'anthropic',
-} as const;
-
-/**
  * Known support for canonical request parameters; an absent parameter is unknown
  */
 export type ModelInParameterSupport = {[key: string]: 'supported' | 'unsupported'};
@@ -510,7 +498,7 @@ export interface ModelIn {
      */
   upstream_model?: string;
   /** Per-model egress adapter override */
-  egress_kind?: ModelInEgressKind;
+  egress_kind?: string | null;
   /**
      * USD per million input tokens
      * @minimum 0
@@ -810,18 +798,6 @@ export interface ProviderCredentialValueIn {
 }
 
 /**
- * Adapter kind
- */
-export type ProviderInKind = typeof ProviderInKind[keyof typeof ProviderInKind];
-
-
-export const ProviderInKind = {
-  openai_compatible: 'openai_compatible',
-  openai_responses: 'openai_responses',
-  anthropic: 'anthropic',
-} as const;
-
-/**
  * Canonical param name to this provider's spelling
  */
 export type ProviderInParamAliases = {[key: string]: string};
@@ -837,8 +813,13 @@ export interface ProviderIn {
      * @pattern ^[a-z0-9][a-z0-9_-]*$
      */
   provider_id: string;
-  /** Adapter kind */
-  kind?: ProviderInKind;
+  /**
+     * Adapter kind
+     * @minLength 1
+     * @maxLength 63
+     * @pattern ^[a-z0-9][a-z0-9_]*$
+     */
+  kind?: string;
   /**
      * OpenAI-compatible endpoint, e.g. https://api.groq.com/openai/v1
      * @minLength 1

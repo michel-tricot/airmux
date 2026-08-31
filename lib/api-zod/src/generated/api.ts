@@ -2333,6 +2333,10 @@ export const createProviderBodyProviderIdMax = 63;
 
 export const createProviderBodyProviderIdRegExp = new RegExp('^[a-z0-9][a-z0-9_-]*$');
 export const createProviderBodyKindDefault = `openai_compatible`;
+export const createProviderBodyKindMax = 63;
+
+
+export const createProviderBodyKindRegExp = new RegExp('^[a-z0-9][a-z0-9_]*$');
 export const createProviderBodyBaseUrlMax = 2083;
 
 export const createProviderBodyIconDefault = ``;
@@ -2344,7 +2348,7 @@ export const createProviderBodyParamsClosedDefault = false;
 
 export const CreateProviderBody = zod.object({
   "provider_id": zod.string().min(1).max(createProviderBodyProviderIdMax).regex(createProviderBodyProviderIdRegExp).describe('Provider name, e.g. openai'),
-  "kind": zod.enum(['openai_compatible', 'openai_responses', 'anthropic']).default(createProviderBodyKindDefault).describe('Adapter kind'),
+  "kind": zod.string().min(1).max(createProviderBodyKindMax).regex(createProviderBodyKindRegExp).default(createProviderBodyKindDefault).describe('Adapter kind'),
   "base_url": zod.url().min(1).max(createProviderBodyBaseUrlMax).describe('OpenAI-compatible endpoint, e.g. https:\/\/api.groq.com\/openai\/v1'),
   "icon": zod.string().max(createProviderBodyIconMax).default(createProviderBodyIconDefault).describe('Provider mark as a standalone 24x24 SVG document, or an empty string when no icon is available. Clients must sanitize this untrusted markup before rendering it'),
   "param_aliases": zod.record(zod.string(), zod.string()).optional().describe('Canonical param name to this provider\'s spelling'),
@@ -2382,6 +2386,10 @@ export const createModelBodyProviderIdRegExp = new RegExp('^[a-z0-9][a-z0-9_-]*$
 export const createModelBodyUpstreamModelDefault = ``;
 export const createModelBodyUpstreamModelMax = 255;
 
+export const createModelBodyEgressKindOneMax = 63;
+
+
+export const createModelBodyEgressKindOneRegExp = new RegExp('^[a-z0-9][a-z0-9_]*$');
 export const createModelBodyInputPricePerMtokDefault = 0;
 export const createModelBodyInputPricePerMtokMin = 0;
 
@@ -2407,7 +2415,7 @@ export const CreateModelBody = zod.object({
   "model_id": zod.string().min(1).max(createModelBodyModelIdMax).describe('Caller-facing model name'),
   "provider_id": zod.string().min(1).max(createModelBodyProviderIdMax).regex(createModelBodyProviderIdRegExp).describe('Provider id the model routes to'),
   "upstream_model": zod.string().max(createModelBodyUpstreamModelMax).default(createModelBodyUpstreamModelDefault).describe('Model name sent to the provider, lets model_id be an alias; defaults to model_id'),
-  "egress_kind": zod.union([zod.enum(['openai_compatible', 'openai_responses', 'anthropic']),zod.null()]).optional().describe('Per-model egress adapter override'),
+  "egress_kind": zod.union([zod.string().min(1).max(createModelBodyEgressKindOneMax).regex(createModelBodyEgressKindOneRegExp),zod.null()]).optional().describe('Per-model egress adapter override'),
   "input_price_per_mtok": zod.number().min(createModelBodyInputPricePerMtokMin).default(createModelBodyInputPricePerMtokDefault).describe('USD per million input tokens'),
   "output_price_per_mtok": zod.number().min(createModelBodyOutputPricePerMtokMin).default(createModelBodyOutputPricePerMtokDefault).describe('USD per million output tokens'),
   "cache_read_price_per_mtok": zod.number().min(createModelBodyCacheReadPricePerMtokMin).default(createModelBodyCacheReadPricePerMtokDefault).describe('USD per million cache-read input tokens'),

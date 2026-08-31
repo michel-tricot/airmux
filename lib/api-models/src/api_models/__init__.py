@@ -360,6 +360,19 @@ class MeOut(BaseModel):
     orgs: Annotated[list[UUID], Field(title="Orgs")]
 
 
+class EgressKind(RootModel[str]):
+    root: Annotated[
+        str,
+        Field(
+            description="Per-model egress adapter override",
+            max_length=63,
+            min_length=1,
+            pattern="^[a-z0-9][a-z0-9_]*$",
+            title="Egress Kind",
+        ),
+    ]
+
+
 class MaxOutputTokens(RootModel[int]):
     root: Annotated[
         int,
@@ -404,7 +417,7 @@ class ModelIn(BaseModel):
         ),
     ] = ""
     egress_kind: Annotated[
-        Literal["openai_compatible", "openai_responses", "anthropic"] | None,
+        EgressKind | None,
         Field(description="Per-model egress adapter override", title="Egress Kind"),
     ] = None
     input_price_per_mtok: Annotated[
@@ -876,8 +889,14 @@ class ProviderIn(BaseModel):
         ),
     ]
     kind: Annotated[
-        Literal["openai_compatible", "openai_responses", "anthropic"] | None,
-        Field(description="Adapter kind", title="Kind"),
+        str | None,
+        Field(
+            description="Adapter kind",
+            max_length=63,
+            min_length=1,
+            pattern="^[a-z0-9][a-z0-9_]*$",
+            title="Kind",
+        ),
     ] = "openai_compatible"
     base_url: Annotated[
         AnyUrl,

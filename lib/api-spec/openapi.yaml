@@ -5150,10 +5150,9 @@ components:
         egress_kind:
           anyOf:
           - type: string
-            enum:
-            - openai_compatible
-            - openai_responses
-            - anthropic
+            maxLength: 63
+            minLength: 1
+            pattern: ^[a-z0-9][a-z0-9_]*$
           - type: 'null'
           title: Egress Kind
           description: Per-model egress adapter override
@@ -5909,10 +5908,9 @@ components:
           description: Provider name, e.g. openai
         kind:
           type: string
-          enum:
-          - openai_compatible
-          - openai_responses
-          - anthropic
+          maxLength: 63
+          minLength: 1
+          pattern: ^[a-z0-9][a-z0-9_]*$
           title: Kind
           description: Adapter kind
           default: openai_compatible

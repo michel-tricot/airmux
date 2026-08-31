@@ -10,7 +10,6 @@
  *
  * OpenAPI spec version: 0.1.0
  */
-import type { ModelInEgressKind } from './modelInEgressKind';
 import type { ModelInParameterSupport } from './modelInParameterSupport';
 
 export interface ModelIn {
@@ -33,7 +32,7 @@ export interface ModelIn {
      */
   upstream_model?: string;
   /** Per-model egress adapter override */
-  egress_kind?: ModelInEgressKind;
+  egress_kind?: string | null;
   /**
      * USD per million input tokens
      * @minimum 0
