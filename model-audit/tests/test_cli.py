@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 
+from click import unstyle
 from typer.testing import CliRunner
 
 from model_audit.cli import _sync_steps, app
@@ -101,19 +102,21 @@ def test_unknown_gateway_surface_has_an_actionable_error():
 
 def test_execute_exposes_a_single_global_concurrency_control():
     result = CliRunner().invoke(app, ["runs", "execute", "--help"])
+    output = unstyle(result.output)
 
     assert result.exit_code == 0
-    assert "--concurrency" in result.output
-    assert "1<=x<=100" in result.output
-    assert "--provider-concurrency" not in result.output
+    assert "--concurrency" in output
+    assert "1<=x<=100" in output
+    assert "--provider-concurrency" not in output
 
 
 def test_interrupted_runs_have_a_resume_command():
     result = CliRunner().invoke(app, ["runs", "resume", "--help"])
+    output = unstyle(result.output)
 
     assert result.exit_code == 0
-    assert "report" in result.output
-    assert "--concurrency" in result.output
+    assert "report" in output
+    assert "--concurrency" in output
 
 
 def test_reports_expose_listing_and_retention_commands():
