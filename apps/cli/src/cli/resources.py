@@ -4,9 +4,11 @@ import json
 import sys
 import time
 from collections import deque
+from pathlib import Path  # noqa: TC003 Typer resolves command annotations at runtime
 from typing import TYPE_CHECKING, Annotated
 
 import typer
+import yaml
 from dotenv import find_dotenv, load_dotenv
 from rich.live import Live
 
@@ -35,6 +37,7 @@ from cli.common import (
     provider_credentials_app,
     providers_app,
     service_accounts_app,
+    taxonomy_app,
     users_app,
     workspace_members_app,
     workspaces_app,
@@ -388,6 +391,35 @@ def providers_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat
 def models_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
     """List the models you can route to, with pricing."""
     print_rows("models", _taxonomy(control_plane_url)["models"], MODEL_COLS, fmt)
+
+
+def _change_summary(changes: dict) -> str:
+    return f"{changes['created']} created, {changes['updated']} updated, {changes['unchanged']} unchanged"
+
+
+@taxonomy_app.command("apply")
+def taxonomy_apply(
+    file: Annotated[Path, typer.Option("--file", exists=True, file_okay=True, dir_okay=False, readable=True, resolve_path=True)],
+    dry_run: Annotated[bool, typer.Option("--dry-run", help="Validate and report changes without applying them")] = False,
+    control_plane_url: str = "",
+) -> None:
+    """Apply a generated taxonomy to the instance catalog."""
+    try:
+        document = yaml.safe_load(file.read_text(encoding="utf-8"))
+    except (OSError, yaml.YAMLError) as error:
+        console.print(f"[red]Invalid taxonomy YAML: {error}[/red]")
+        raise typer.Exit(1) from None
+    if not isinstance(document, dict):
+        console.print("[red]Invalid taxonomy YAML: expected a mapping with providers and models[/red]")
+        raise typer.Exit(1)
+    with access_client(control_plane_url) as client:
+        response = client.post("/api/v1/instance/taxonomy", params={"dry_run": dry_run}, json=document, timeout=120.0)
+        applied = payload(ensure_ok(response))
+    action = "Dry run" if applied["dry_run"] else "Applied"
+    console.print(f"{action}: providers {_change_summary(applied['providers'])}; models {_change_summary(applied['models'])}")
+    if not applied["dry_run"]:
+        publications = ", ".join(f"{bundle['org_id']} v{bundle['version']}" for bundle in applied["published"])
+        console.print(f"Published: {publications or 'no bundle changes'}")
 
 
 @bundles_app.command("list")
