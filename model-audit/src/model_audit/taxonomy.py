@@ -38,12 +38,13 @@ def _behaviors(root: Path) -> tuple[BehaviorRecord, ...]:
     return behavior.behaviors
 
 
-def _surface(provider: dict, behaviors: list[BehaviorRecord]) -> str:
-    codecs = discover()
-    observed = sorted({behavior.surface_id for behavior in behaviors}, key=lambda surface: codecs[surface].priority if surface in codecs else 99)
-    if observed:
-        return observed[0]
-    return str(provider["primary_surface"])
+def _model_routes(taxonomy: Path) -> dict[str, str]:
+    document = yaml.safe_load((taxonomy / "model-routes.yml").read_text(encoding="utf-8"))
+    return {str(model_id): str(surface) for model_id, surface in (document.get("models") or {}).items()}
+
+
+def _surface(provider: dict, model_id: str, routes: dict[str, str]) -> str:
+    return routes.get(model_id, str(provider["primary_surface"]))
 
 
 def _capabilities(model: dict, behaviors: list[BehaviorRecord]) -> list[str]:
@@ -106,6 +107,8 @@ def build(root: Path) -> dict[str, list[dict[str, object]]]:
     taxonomy = root / "taxonomy"
     provider_document = yaml.safe_load((taxonomy / "providers.yml").read_text(encoding="utf-8"))
     providers = sorted(provider_document["providers"], key=lambda provider: provider["id"])
+    routes = _model_routes(taxonomy)
+    routed_models = set()
     behavior_by_model: dict[str, list[BehaviorRecord]] = defaultdict(list)
     for behavior in _behaviors(root):
         behavior_by_model[behavior.model_id].append(behavior)
@@ -124,7 +127,12 @@ def build(root: Path) -> dict[str, list[dict[str, object]]]:
                 continue
             model_id = f"{provider_id}/{model['id']}"
             behaviors = behavior_by_model[model_id]
-            surface = _surface(provider, behaviors)
+            surface = _surface(provider, model_id, routes)
+            if surface not in provider["ingress"]:
+                message = f"{model_id} routes through {surface}, which {provider_id} does not expose"
+                raise ValueError(message)
+            if model_id in routes:
+                routed_models.add(model_id)
             surface_behaviors = [behavior for behavior in behaviors if behavior.surface_id == surface]
             price = model.get("pricing") or {}
             codecs = discover()
@@ -146,6 +154,9 @@ def build(root: Path) -> dict[str, list[dict[str, object]]]:
                 }
             )
     emitted_models.sort(key=lambda model: (str(model["provider_id"]), str(model["model_id"])))
+    if unknown_routes := sorted(set(routes) - routed_models):
+        message = f"model routes name unknown models: {', '.join(unknown_routes)}"
+        raise ValueError(message)
     return {"providers": emitted_providers, "models": emitted_models}
 
 

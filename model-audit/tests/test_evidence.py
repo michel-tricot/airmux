@@ -7,7 +7,7 @@ import sys
 import pytest
 
 from model_audit.cases import fingerprint
-from model_audit.evidence import records_from_report, reduce
+from model_audit.evidence import accept, load_ledger, records_from_report, reduce
 from model_audit.models import (
     Assessment,
     Claim,
@@ -164,6 +164,23 @@ def test_changed_cases_invalidate_previous_evidence():
     behavior = reduce(EvidenceLedger(records=records), (changed_case,))
 
     assert behavior.behaviors == ()
+
+
+def test_accept_can_replace_the_existing_ledger(tmp_path):
+    experiment_case = case()
+    ledger_path = tmp_path / "accepted.json"
+    first_path = tmp_path / "first.json"
+    second_path = tmp_path / "second.json"
+    first_path.write_text(_report("first", "2026-01-01T00:00:00+00:00", "supported").model_dump_json(), encoding="utf-8")
+    second_path.write_text(_report("second", "2026-01-02T00:00:00+00:00", "supported").model_dump_json(), encoding="utf-8")
+    accept(first_path, ledger_path, (experiment_case,))
+
+    accept(second_path, ledger_path, (experiment_case,), replace=True)
+
+    records = load_ledger(ledger_path).records
+    assert len(records) == 1
+    assert records[0].harness_fingerprint == "harness"
+    assert records[0].observed_at == "2026-01-02T00:00:00+00:00"
 
 
 def test_reports_for_changed_cases_are_rejected_at_the_promotion_boundary():

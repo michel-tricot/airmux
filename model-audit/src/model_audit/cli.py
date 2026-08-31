@@ -690,9 +690,12 @@ def runs_resume(  # noqa: PLR0913, PLR0917 command flags define the CLI surface
 
 
 @evidence_app.command("accept")
-def evidence_accept(report: Annotated[Path, typer.Argument(exists=True, dir_okay=False)]) -> None:
+def evidence_accept(
+    report: Annotated[Path, typer.Argument(exists=True, dir_okay=False)],
+    replace_ledger: Annotated[bool, typer.Option("--replace-ledger", help="Discard all accepted evidence before adding this report")] = False,
+) -> None:
     try:
-        added, total, skipped = accept(report, LEDGER, tuple(_cases()))
+        added, total, skipped = accept(report, LEDGER, tuple(_cases()), replace=replace_ledger)
     except ValueError as error:
         raise typer.BadParameter(str(error)) from error
     providers, models, _ = write_taxonomy(ROOT)

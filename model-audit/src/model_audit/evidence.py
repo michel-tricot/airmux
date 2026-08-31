@@ -79,9 +79,9 @@ def records_from_report(report: ReportDocument, cases: tuple[Case, ...]) -> tupl
     return tuple(records)
 
 
-def accept(report_path: Path, ledger_path: Path, cases: tuple[Case, ...]) -> tuple[int, int, int]:
+def accept(report_path: Path, ledger_path: Path, cases: tuple[Case, ...], *, replace: bool = False) -> tuple[int, int, int]:
     report = ReportDocument.model_validate_json(report_path.read_text(encoding="utf-8"))
-    previous = load_ledger(ledger_path)
+    previous = EvidenceLedger() if replace else load_ledger(ledger_path)
     incoming = records_from_report(report, cases)
     eligible_results = sum(_usable_direct_observation(result) for result in report.results)
     skipped = len(report.results) - eligible_results
