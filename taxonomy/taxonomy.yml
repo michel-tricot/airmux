@@ -105,11 +105,17 @@ models:
   - reasoning
   - streaming
   - structured_output
+  - text
   - tools
   - vision
   parameter_support:
+    max_tokens: supported
+    parallel_tool_calls: supported
+    response_format: supported
     stop: supported
+    strict_tools: supported
     temperature: supported
+    tool_choice: supported
     top_p: supported
 - model_id: anthropic/claude-opus-4-5-20251101
   provider_id: anthropic
@@ -281,17 +287,23 @@ models:
   context_window: 131072
   max_output_tokens: 40960
   capabilities:
+  - reasoning
   - streaming
   - structured_output
+  - text
   - tools
   - vision
   parameter_support:
     logprobs: supported
+    max_tokens: supported
     parallel_tool_calls: supported
     reasoning_effort: supported
+    response_format: supported
     seed: supported
     stop: supported
+    strict_tools: supported
     temperature: supported
+    tool_choice: supported
     top_p: supported
 - model_id: cerebras/gpt-oss-120b
   provider_id: cerebras
@@ -303,13 +315,16 @@ models:
   context_window: 131072
   max_output_tokens: 40960
   capabilities:
+  - reasoning
   - streaming
   - structured_output
+  - text
   - tools
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
     reasoning_effort: supported
+    response_format: supported
     seed: supported
     stop: supported
     temperature: supported
@@ -327,6 +342,7 @@ models:
   - reasoning
   - streaming
   - structured_output
+  - text
   - tools
   parameter_support:
     logprobs: supported
@@ -671,13 +687,16 @@ models:
   context_window: 262144
   max_output_tokens: 262144
   capabilities:
+  - reasoning
   - streaming
   - structured_output
+  - text
   - tools
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
     reasoning_effort: supported
+    response_format: supported
     seed: supported
     stop: supported
     temperature: supported
@@ -835,6 +854,7 @@ models:
   context_window: 131072
   max_output_tokens: 65536
   capabilities:
+  - reasoning
   - streaming
   - structured_output
   - tools
@@ -842,6 +862,7 @@ models:
     logprobs: supported
     parallel_tool_calls: supported
     reasoning_effort: supported
+    response_format: supported
     seed: supported
     stop: supported
     temperature: supported
@@ -1575,12 +1596,15 @@ models:
   context_window: 1048576
   max_output_tokens: 131072
   capabilities:
+  - reasoning
   - streaming
   - structured_output
+  - text
   - tools
   parameter_support:
     parallel_tool_calls: supported
     reasoning_effort: supported
+    response_format: supported
     stop: supported
     temperature: supported
     top_p: supported
@@ -2346,7 +2370,6 @@ models:
   - reasoning
   - streaming
   - structured_output
-  - text
   - tools
   - vision
   parameter_support:
@@ -2368,7 +2391,6 @@ models:
   - reasoning
   - streaming
   - structured_output
-  - text
   - tools
   - vision
   parameter_support:
@@ -2617,7 +2639,6 @@ models:
   capabilities:
   - reasoning
   - streaming
-  - text
   - tools
   - vision
   parameter_support:
@@ -2638,7 +2659,6 @@ models:
   capabilities:
   - reasoning
   - streaming
-  - text
   - tools
   - vision
   parameter_support:
@@ -2679,21 +2699,15 @@ models:
   context_window: 400000
   max_output_tokens: 128000
   capabilities:
-  - pdf
   - reasoning
   - streaming
   - structured_output
-  - text
   - tools
   - vision
   parameter_support:
-    max_tokens: supported
     parallel_tool_calls: supported
     reasoning_effort: supported
-    response_format: supported
-    strict_tools: supported
     temperature: supported
-    tool_choice: supported
     top_p: supported
   egress_kind: openai_responses
 - model_id: openai/gpt-5.4
@@ -2846,7 +2860,6 @@ models:
   capabilities:
   - reasoning
   - streaming
-  - text
   - tools
   - vision
   parameter_support:
@@ -2867,7 +2880,6 @@ models:
   capabilities:
   - reasoning
   - streaming
-  - text
   - tools
   - vision
   parameter_support:
@@ -2935,7 +2947,6 @@ models:
   - reasoning
   - streaming
   - structured_output
-  - text
   - tools
   - vision
   parameter_support:
@@ -2957,7 +2968,6 @@ models:
   - reasoning
   - streaming
   - structured_output
-  - text
   - tools
   - vision
   parameter_support:
@@ -2976,14 +2986,18 @@ models:
   context_window: 1050000
   max_output_tokens: 128000
   capabilities:
+  - pdf
   - reasoning
   - streaming
   - structured_output
+  - text
   - tools
   - vision
   parameter_support:
+    max_tokens: supported
     parallel_tool_calls: supported
     reasoning_effort: supported
+    response_format: supported
     strict_tools: supported
     temperature: supported
     tool_choice: supported
@@ -3007,10 +3021,7 @@ models:
   parameter_support:
     parallel_tool_calls: supported
     reasoning_effort: supported
-    response_format: supported
-    strict_tools: supported
     temperature: supported
-    tool_choice: supported
     top_p: supported
   egress_kind: openai_responses
 - model_id: openai/gpt-5.6-terra
@@ -3023,21 +3034,15 @@ models:
   context_window: 1050000
   max_output_tokens: 128000
   capabilities:
-  - pdf
   - reasoning
   - streaming
   - structured_output
-  - text
   - tools
   - vision
   parameter_support:
-    max_tokens: supported
     parallel_tool_calls: supported
     reasoning_effort: supported
-    response_format: supported
-    strict_tools: supported
     temperature: supported
-    tool_choice: supported
     top_p: supported
   egress_kind: openai_responses
 - model_id: openai/gpt-audio
@@ -3219,7 +3224,6 @@ models:
   - reasoning
   - streaming
   - structured_output
-  - text
   - tools
   - vision
   parameter_support:
@@ -3241,7 +3245,6 @@ models:
   - reasoning
   - streaming
   - structured_output
-  - text
   - tools
   - vision
   parameter_support:
@@ -4587,12 +4590,15 @@ models:
   context_window: 131072
   max_output_tokens: 131072
   capabilities:
+  - reasoning
   - streaming
   - structured_output
+  - text
   - tools
   parameter_support:
     logprobs: supported
     reasoning_effort: supported
+    response_format: supported
     seed: supported
     stop: supported
     temperature: supported
@@ -4930,12 +4936,14 @@ models:
   capabilities:
   - streaming
   - structured_output
+  - text
   - tools
   - vision
   parameter_support:
     logprobs: supported
     parallel_tool_calls: supported
     reasoning_effort: supported
+    response_format: supported
     seed: supported
     stop: supported
     temperature: supported

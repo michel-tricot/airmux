@@ -1,12 +1,116 @@
 {
   "schema_version": 2,
-  "generated_from": "f2416d15fbf9880e",
+  "generated_from": "1a35cee1ea692003",
   "behaviors": [
     {
-      "provider_id": "openai",
-      "model_id": "openai/gpt-5-pro",
-      "surface_id": "oai_responses",
-      "endpoint": "responses",
+      "provider_id": "anthropic",
+      "model_id": "anthropic/claude-haiku-4-5-20251001",
+      "surface_id": "anthropic",
+      "endpoint": "messages",
+      "claim": {
+        "dimension": "capability",
+        "name": "multi_turn",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "071f24ff7514709726beef05"
+      ],
+      "observed_at": "2026-08-31T20:17:19.267585+00:00"
+    },
+    {
+      "provider_id": "anthropic",
+      "model_id": "anthropic/claude-haiku-4-5-20251001",
+      "surface_id": "anthropic",
+      "endpoint": "messages",
+      "claim": {
+        "dimension": "capability",
+        "name": "reasoning",
+        "profile": {
+          "mode": "adaptive"
+        }
+      },
+      "verdict": "unsupported",
+      "evidence_ids": [
+        "b55f9543f1e7130167e5e3e0"
+      ],
+      "observed_at": "2026-08-31T20:17:19.267585+00:00"
+    },
+    {
+      "provider_id": "anthropic",
+      "model_id": "anthropic/claude-haiku-4-5-20251001",
+      "surface_id": "anthropic",
+      "endpoint": "messages",
+      "claim": {
+        "dimension": "capability",
+        "name": "streaming",
+        "profile": {
+          "content": "text"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "d77850b9a51ae0891b71e66d"
+      ],
+      "observed_at": "2026-08-31T20:17:19.267585+00:00"
+    },
+    {
+      "provider_id": "anthropic",
+      "model_id": "anthropic/claude-haiku-4-5-20251001",
+      "surface_id": "anthropic",
+      "endpoint": "messages",
+      "claim": {
+        "dimension": "capability",
+        "name": "structured_output",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "unknown",
+      "evidence_ids": [
+        "fea8df06fd88c6500242028d"
+      ],
+      "observed_at": "2026-08-31T20:17:19.267585+00:00"
+    },
+    {
+      "provider_id": "anthropic",
+      "model_id": "anthropic/claude-haiku-4-5-20251001",
+      "surface_id": "anthropic",
+      "endpoint": "messages",
+      "claim": {
+        "dimension": "capability",
+        "name": "structured_output",
+        "profile": {
+          "mode": "json_schema"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "b423e37eac2ea268bef31354"
+      ],
+      "observed_at": "2026-08-31T20:17:19.267585+00:00"
+    },
+    {
+      "provider_id": "anthropic",
+      "model_id": "anthropic/claude-haiku-4-5-20251001",
+      "surface_id": "anthropic",
+      "endpoint": "messages",
+      "claim": {
+        "dimension": "capability",
+        "name": "system_messages",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "2604d6dc58ae5f75b16d14f8"
+      ],
+      "observed_at": "2026-08-31T20:17:19.267585+00:00"
+    },
+    {
+      "provider_id": "anthropic",
+      "model_id": "anthropic/claude-haiku-4-5-20251001",
+      "surface_id": "anthropic",
+      "endpoint": "messages",
       "claim": {
         "dimension": "capability",
         "name": "text_generation",
@@ -14,15 +118,182 @@
       },
       "verdict": "supported",
       "evidence_ids": [
-        "e1de236bfc6e003bc71c6c2e"
+        "72f7547d41ed9bdaff19184c"
       ],
-      "observed_at": "2026-08-29T00:37:48.673748+00:00"
+      "observed_at": "2026-08-31T20:17:19.267585+00:00"
     },
     {
-      "provider_id": "openai",
-      "model_id": "openai/gpt-5-pro",
-      "surface_id": "oai_responses",
-      "endpoint": "responses",
+      "provider_id": "anthropic",
+      "model_id": "anthropic/claude-haiku-4-5-20251001",
+      "surface_id": "anthropic",
+      "endpoint": "messages",
+      "claim": {
+        "dimension": "capability",
+        "name": "tool_calling",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "426ec436d6fb09a1c8b90c2f"
+      ],
+      "observed_at": "2026-08-31T20:17:19.267585+00:00"
+    },
+    {
+      "provider_id": "anthropic",
+      "model_id": "anthropic/claude-haiku-4-5-20251001",
+      "surface_id": "anthropic",
+      "endpoint": "messages",
+      "claim": {
+        "dimension": "capability",
+        "name": "usage",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "011f7b6a369ed9b65b2fc715"
+      ],
+      "observed_at": "2026-08-31T20:17:19.267585+00:00"
+    },
+    {
+      "provider_id": "anthropic",
+      "model_id": "anthropic/claude-haiku-4-5-20251001",
+      "surface_id": "anthropic",
+      "endpoint": "messages",
+      "claim": {
+        "dimension": "interaction",
+        "name": "reasoning+tools",
+        "profile": {
+          "reasoning": "adaptive",
+          "reasoning_effort": "low",
+          "tool_choice": "named"
+        }
+      },
+      "verdict": "unsupported",
+      "evidence_ids": [
+        "ff6b9b496d2c949893f57dec"
+      ],
+      "observed_at": "2026-08-31T20:17:19.267585+00:00"
+    },
+    {
+      "provider_id": "anthropic",
+      "model_id": "anthropic/claude-haiku-4-5-20251001",
+      "surface_id": "anthropic",
+      "endpoint": "messages",
+      "claim": {
+        "dimension": "interaction",
+        "name": "reasoning_history",
+        "profile": {}
+      },
+      "verdict": "unsupported",
+      "evidence_ids": [
+        "2abde79833eccaf5d266b388"
+      ],
+      "observed_at": "2026-08-31T20:17:19.267585+00:00"
+    },
+    {
+      "provider_id": "anthropic",
+      "model_id": "anthropic/claude-haiku-4-5-20251001",
+      "surface_id": "anthropic",
+      "endpoint": "messages",
+      "claim": {
+        "dimension": "interaction",
+        "name": "streaming+reasoning",
+        "profile": {
+          "reasoning": "adaptive",
+          "effort": "low"
+        }
+      },
+      "verdict": "unsupported",
+      "evidence_ids": [
+        "383304b26f3f375c80b74ee4"
+      ],
+      "observed_at": "2026-08-31T20:17:19.267585+00:00"
+    },
+    {
+      "provider_id": "anthropic",
+      "model_id": "anthropic/claude-haiku-4-5-20251001",
+      "surface_id": "anthropic",
+      "endpoint": "messages",
+      "claim": {
+        "dimension": "interaction",
+        "name": "streaming+structured_output",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "b41bd9a44ffbd65c5e31d0a8"
+      ],
+      "observed_at": "2026-08-31T20:17:19.267585+00:00"
+    },
+    {
+      "provider_id": "anthropic",
+      "model_id": "anthropic/claude-haiku-4-5-20251001",
+      "surface_id": "anthropic",
+      "endpoint": "messages",
+      "claim": {
+        "dimension": "interaction",
+        "name": "streaming+tools",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "ebdb6c849eb554ac147d5481"
+      ],
+      "observed_at": "2026-08-31T20:17:19.267585+00:00"
+    },
+    {
+      "provider_id": "anthropic",
+      "model_id": "anthropic/claude-haiku-4-5-20251001",
+      "surface_id": "anthropic",
+      "endpoint": "messages",
+      "claim": {
+        "dimension": "interaction",
+        "name": "tool_result_round_trip",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "f65d14c6633298de51966c32"
+      ],
+      "observed_at": "2026-08-31T20:17:19.267585+00:00"
+    },
+    {
+      "provider_id": "anthropic",
+      "model_id": "anthropic/claude-haiku-4-5-20251001",
+      "surface_id": "anthropic",
+      "endpoint": "messages",
+      "claim": {
+        "dimension": "modality",
+        "name": "input_image",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "2e91ce5f45151c69061f9f16"
+      ],
+      "observed_at": "2026-08-31T20:17:19.267585+00:00"
+    },
+    {
+      "provider_id": "anthropic",
+      "model_id": "anthropic/claude-haiku-4-5-20251001",
+      "surface_id": "anthropic",
+      "endpoint": "messages",
+      "claim": {
+        "dimension": "modality",
+        "name": "input_pdf",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "741819517a252d6ea79195f4"
+      ],
+      "observed_at": "2026-08-31T20:17:19.267585+00:00"
+    },
+    {
+      "provider_id": "anthropic",
+      "model_id": "anthropic/claude-haiku-4-5-20251001",
+      "surface_id": "anthropic",
+      "endpoint": "messages",
       "claim": {
         "dimension": "modality",
         "name": "input_text",
@@ -30,15 +301,15 @@
       },
       "verdict": "supported",
       "evidence_ids": [
-        "0c120d6f52eb1d4783288901"
+        "a014dd1569499cbc6347a3d7"
       ],
-      "observed_at": "2026-08-29T00:37:48.673748+00:00"
+      "observed_at": "2026-08-31T20:17:19.267585+00:00"
     },
     {
-      "provider_id": "openai",
-      "model_id": "openai/gpt-5-pro",
-      "surface_id": "oai_responses",
-      "endpoint": "responses",
+      "provider_id": "anthropic",
+      "model_id": "anthropic/claude-haiku-4-5-20251001",
+      "surface_id": "anthropic",
+      "endpoint": "messages",
       "claim": {
         "dimension": "modality",
         "name": "output_text",
@@ -46,15 +317,299 @@
       },
       "verdict": "supported",
       "evidence_ids": [
-        "c6f95f16f8f8aa93956b798e"
+        "62f7c2d8f15730d469aa9e90"
       ],
-      "observed_at": "2026-08-29T00:37:48.673748+00:00"
+      "observed_at": "2026-08-31T20:17:19.267585+00:00"
     },
     {
-      "provider_id": "openai",
-      "model_id": "openai/gpt-5-pro-2025-10-06",
-      "surface_id": "oai_responses",
-      "endpoint": "responses",
+      "provider_id": "anthropic",
+      "model_id": "anthropic/claude-haiku-4-5-20251001",
+      "surface_id": "anthropic",
+      "endpoint": "messages",
+      "claim": {
+        "dimension": "option",
+        "name": "max_tokens",
+        "profile": {
+          "value": 1024
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "e07668cef047827d58bde440"
+      ],
+      "observed_at": "2026-08-31T20:17:19.267585+00:00"
+    },
+    {
+      "provider_id": "anthropic",
+      "model_id": "anthropic/claude-haiku-4-5-20251001",
+      "surface_id": "anthropic",
+      "endpoint": "messages",
+      "claim": {
+        "dimension": "option",
+        "name": "parallel_tool_calls",
+        "profile": {
+          "value": true
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "09393c865059657650e6be77"
+      ],
+      "observed_at": "2026-08-31T20:17:19.267585+00:00"
+    },
+    {
+      "provider_id": "anthropic",
+      "model_id": "anthropic/claude-haiku-4-5-20251001",
+      "surface_id": "anthropic",
+      "endpoint": "messages",
+      "claim": {
+        "dimension": "option",
+        "name": "reasoning_effort",
+        "profile": {
+          "value": "low"
+        }
+      },
+      "verdict": "unsupported",
+      "evidence_ids": [
+        "f851930edf8efd2b24405fcc"
+      ],
+      "observed_at": "2026-08-31T20:17:19.267585+00:00"
+    },
+    {
+      "provider_id": "anthropic",
+      "model_id": "anthropic/claude-haiku-4-5-20251001",
+      "surface_id": "anthropic",
+      "endpoint": "messages",
+      "claim": {
+        "dimension": "option",
+        "name": "response_format",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "unknown",
+      "evidence_ids": [
+        "132ecc70531818fc749a157e"
+      ],
+      "observed_at": "2026-08-31T20:17:19.267585+00:00"
+    },
+    {
+      "provider_id": "anthropic",
+      "model_id": "anthropic/claude-haiku-4-5-20251001",
+      "surface_id": "anthropic",
+      "endpoint": "messages",
+      "claim": {
+        "dimension": "option",
+        "name": "response_format",
+        "profile": {
+          "mode": "json_schema"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "dd48c85a207b80d02765c4a9"
+      ],
+      "observed_at": "2026-08-31T20:17:19.267585+00:00"
+    },
+    {
+      "provider_id": "anthropic",
+      "model_id": "anthropic/claude-haiku-4-5-20251001",
+      "surface_id": "anthropic",
+      "endpoint": "messages",
+      "claim": {
+        "dimension": "option",
+        "name": "stop",
+        "profile": {
+          "count": 1
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "43bf36b1185b9ad507231829"
+      ],
+      "observed_at": "2026-08-31T20:17:19.267585+00:00"
+    },
+    {
+      "provider_id": "anthropic",
+      "model_id": "anthropic/claude-haiku-4-5-20251001",
+      "surface_id": "anthropic",
+      "endpoint": "messages",
+      "claim": {
+        "dimension": "option",
+        "name": "strict_tools",
+        "profile": {
+          "value": true
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "9dbcba373326a4ecf23c7181"
+      ],
+      "observed_at": "2026-08-31T20:17:19.267585+00:00"
+    },
+    {
+      "provider_id": "anthropic",
+      "model_id": "anthropic/claude-haiku-4-5-20251001",
+      "surface_id": "anthropic",
+      "endpoint": "messages",
+      "claim": {
+        "dimension": "option",
+        "name": "temperature",
+        "profile": {
+          "value": 0.37
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "f2dbbec752458769b9393d13"
+      ],
+      "observed_at": "2026-08-31T20:17:19.267585+00:00"
+    },
+    {
+      "provider_id": "anthropic",
+      "model_id": "anthropic/claude-haiku-4-5-20251001",
+      "surface_id": "anthropic",
+      "endpoint": "messages",
+      "claim": {
+        "dimension": "option",
+        "name": "tool_choice",
+        "profile": {
+          "mode": "named"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "fe2cfa3a7538af1cf40d3ed5"
+      ],
+      "observed_at": "2026-08-31T20:17:19.267585+00:00"
+    },
+    {
+      "provider_id": "anthropic",
+      "model_id": "anthropic/claude-haiku-4-5-20251001",
+      "surface_id": "anthropic",
+      "endpoint": "messages",
+      "claim": {
+        "dimension": "option",
+        "name": "tool_choice",
+        "profile": {
+          "mode": "required"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "f43dd5e9cc33b7289f92c704"
+      ],
+      "observed_at": "2026-08-31T20:17:19.267585+00:00"
+    },
+    {
+      "provider_id": "anthropic",
+      "model_id": "anthropic/claude-haiku-4-5-20251001",
+      "surface_id": "anthropic",
+      "endpoint": "messages",
+      "claim": {
+        "dimension": "option",
+        "name": "top_p",
+        "profile": {
+          "value": 0.83
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "cde5a25599e46db5a7298b45"
+      ],
+      "observed_at": "2026-08-31T20:17:19.267585+00:00"
+    },
+    {
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "multi_turn",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "f6a0fb31b2d7ed19a418de84"
+      ],
+      "observed_at": "2026-08-31T20:13:30.318753+00:00"
+    },
+    {
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "streaming",
+        "profile": {
+          "content": "text"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "7f65c31911804d95356c86c0"
+      ],
+      "observed_at": "2026-08-31T20:13:30.318753+00:00"
+    },
+    {
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "structured_output",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "9df1887d36c399fdf859ba05"
+      ],
+      "observed_at": "2026-08-31T20:13:30.318753+00:00"
+    },
+    {
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "structured_output",
+        "profile": {
+          "mode": "json_schema"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "03bdfdfbdc8951323e3b8196"
+      ],
+      "observed_at": "2026-08-31T20:13:30.318753+00:00"
+    },
+    {
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "system_messages",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "f4ff01e81cba68dda1a11cf7"
+      ],
+      "observed_at": "2026-08-31T20:13:30.318753+00:00"
+    },
+    {
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
       "claim": {
         "dimension": "capability",
         "name": "text_generation",
@@ -62,15 +617,162 @@
       },
       "verdict": "supported",
       "evidence_ids": [
-        "9b0463768f7fccc0ef68c9b5"
+        "4be96071691f4ea1ea51532b"
       ],
-      "observed_at": "2026-08-29T00:40:20.676544+00:00"
+      "observed_at": "2026-08-31T20:13:30.318753+00:00"
     },
     {
-      "provider_id": "openai",
-      "model_id": "openai/gpt-5-pro-2025-10-06",
-      "surface_id": "oai_responses",
-      "endpoint": "responses",
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "tool_calling",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "7e5751765afdb8d584966fd2"
+      ],
+      "observed_at": "2026-08-31T20:13:30.318753+00:00"
+    },
+    {
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "usage",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "9cd5b1cac0f8b801850187b2"
+      ],
+      "observed_at": "2026-08-31T20:13:30.318753+00:00"
+    },
+    {
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "interaction",
+        "name": "reasoning+tools",
+        "profile": {
+          "reasoning_effort": "low",
+          "tool_choice": "named"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "fba957a81e60445079874f10"
+      ],
+      "observed_at": "2026-08-31T20:13:30.318753+00:00"
+    },
+    {
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "interaction",
+        "name": "streaming+reasoning",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "5711b3a7195c14263dd86a27"
+      ],
+      "observed_at": "2026-08-31T20:13:30.318753+00:00"
+    },
+    {
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "interaction",
+        "name": "streaming+structured_output",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "8db7edf898e30b1e108c51f8"
+      ],
+      "observed_at": "2026-08-31T20:13:30.318753+00:00"
+    },
+    {
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "interaction",
+        "name": "streaming+tools",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "1dc771163754e444a4a3fa83"
+      ],
+      "observed_at": "2026-08-31T20:13:30.318753+00:00"
+    },
+    {
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "interaction",
+        "name": "tool_result_round_trip",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "447d28594a32a5f82cfc4cfd"
+      ],
+      "observed_at": "2026-08-31T20:13:30.318753+00:00"
+    },
+    {
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "modality",
+        "name": "input_image",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "6e118df30ba366ffbfbec1e8"
+      ],
+      "observed_at": "2026-08-31T20:13:30.318753+00:00"
+    },
+    {
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "modality",
+        "name": "input_pdf",
+        "profile": {}
+      },
+      "verdict": "unknown",
+      "evidence_ids": [
+        "4295126eacfd551d3847bd7b"
+      ],
+      "observed_at": "2026-08-31T20:13:30.318753+00:00"
+    },
+    {
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
       "claim": {
         "dimension": "modality",
         "name": "input_text",
@@ -78,15 +780,15 @@
       },
       "verdict": "supported",
       "evidence_ids": [
-        "6bc137fed0ef96fdd05275ae"
+        "f55aed417e58d7c7b4f0c536"
       ],
-      "observed_at": "2026-08-29T00:40:20.676544+00:00"
+      "observed_at": "2026-08-31T20:13:30.318753+00:00"
     },
     {
-      "provider_id": "openai",
-      "model_id": "openai/gpt-5-pro-2025-10-06",
-      "surface_id": "oai_responses",
-      "endpoint": "responses",
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
       "claim": {
         "dimension": "modality",
         "name": "output_text",
@@ -94,15 +796,250 @@
       },
       "verdict": "supported",
       "evidence_ids": [
-        "5cdde95d48c294afadeed5ff"
+        "269886a933077d25e7d78c3b"
       ],
-      "observed_at": "2026-08-29T00:40:20.676544+00:00"
+      "observed_at": "2026-08-31T20:13:30.318753+00:00"
     },
     {
-      "provider_id": "openai",
-      "model_id": "openai/gpt-5.2-pro",
-      "surface_id": "oai_responses",
-      "endpoint": "responses",
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "logprobs",
+        "profile": {
+          "enabled": true,
+          "top": 2
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "2d8e59221c7bc66ead354f77"
+      ],
+      "observed_at": "2026-08-31T20:13:30.318753+00:00"
+    },
+    {
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "max_tokens",
+        "profile": {
+          "value": 1024
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "1f4394e3cf1c133ecdec425f"
+      ],
+      "observed_at": "2026-08-31T20:13:30.318753+00:00"
+    },
+    {
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "parallel_tool_calls",
+        "profile": {
+          "value": true
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "327994be7e8cc3c2299a4af5"
+      ],
+      "observed_at": "2026-08-31T20:13:30.318753+00:00"
+    },
+    {
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "response_format",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "cf1fbf152a75bef095d4a910"
+      ],
+      "observed_at": "2026-08-31T20:13:30.318753+00:00"
+    },
+    {
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "response_format",
+        "profile": {
+          "mode": "json_schema"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "0aa33f874d904206ea5bd0a7"
+      ],
+      "observed_at": "2026-08-31T20:13:30.318753+00:00"
+    },
+    {
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "seed",
+        "profile": {
+          "value": 1729
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "4465ae3d4e87666b324b6910"
+      ],
+      "observed_at": "2026-08-31T20:13:30.318753+00:00"
+    },
+    {
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "stop",
+        "profile": {
+          "count": 1
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "ee7ecd0c0a41a5477ed4e653"
+      ],
+      "observed_at": "2026-08-31T20:13:30.318753+00:00"
+    },
+    {
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "strict_tools",
+        "profile": {
+          "value": true
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "8dbac865c246ff2020723820"
+      ],
+      "observed_at": "2026-08-31T20:13:30.318753+00:00"
+    },
+    {
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "temperature",
+        "profile": {
+          "value": 0.37
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "b1c0e07815370a418e1aaa33"
+      ],
+      "observed_at": "2026-08-31T20:13:30.318753+00:00"
+    },
+    {
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "tool_choice",
+        "profile": {
+          "mode": "named"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "ebb1360ce5479cd65b825d5c"
+      ],
+      "observed_at": "2026-08-31T20:13:30.318753+00:00"
+    },
+    {
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "tool_choice",
+        "profile": {
+          "mode": "required"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "bbef2df2ce566c9285bc6d23"
+      ],
+      "observed_at": "2026-08-31T20:13:30.318753+00:00"
+    },
+    {
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "top_p",
+        "profile": {
+          "value": 0.83
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "c1b9edf634ebd1b490a63875"
+      ],
+      "observed_at": "2026-08-31T20:13:30.318753+00:00"
+    },
+    {
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gpt-oss-120b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "structured_output",
+        "profile": {
+          "mode": "json_schema"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "9fbff3277453478c578dd26f"
+      ],
+      "observed_at": "2026-08-31T21:41:21.507779+00:00"
+    },
+    {
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gpt-oss-120b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
       "claim": {
         "dimension": "capability",
         "name": "text_generation",
@@ -110,15 +1047,66 @@
       },
       "verdict": "supported",
       "evidence_ids": [
-        "543e4f7335464e8e658f11f8"
+        "059d5b6e9540e03c490bc0e2"
       ],
-      "observed_at": "2026-08-29T00:38:51.776832+00:00"
+      "observed_at": "2026-08-31T21:41:21.507779+00:00"
     },
     {
-      "provider_id": "openai",
-      "model_id": "openai/gpt-5.2-pro",
-      "surface_id": "oai_responses",
-      "endpoint": "responses",
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gpt-oss-120b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "interaction",
+        "name": "reasoning+tools",
+        "profile": {
+          "reasoning_effort": "low",
+          "tool_choice": "named"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "0b4b8399fcd696e0346e65de"
+      ],
+      "observed_at": "2026-08-31T21:41:21.507779+00:00"
+    },
+    {
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gpt-oss-120b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "interaction",
+        "name": "streaming+tools",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "c889da62f467b3cfbe318778"
+      ],
+      "observed_at": "2026-08-31T21:41:21.507779+00:00"
+    },
+    {
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gpt-oss-120b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "modality",
+        "name": "input_pdf",
+        "profile": {}
+      },
+      "verdict": "unknown",
+      "evidence_ids": [
+        "c08bae014d6c8e7ca0999b2d"
+      ],
+      "observed_at": "2026-08-31T21:41:21.507779+00:00"
+    },
+    {
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gpt-oss-120b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
       "claim": {
         "dimension": "modality",
         "name": "input_text",
@@ -126,15 +1114,15 @@
       },
       "verdict": "supported",
       "evidence_ids": [
-        "f0748c749c833169ff57846b"
+        "6e93055ef608f25d0dc9adbd"
       ],
-      "observed_at": "2026-08-29T00:38:51.776832+00:00"
+      "observed_at": "2026-08-31T21:41:21.507779+00:00"
     },
     {
-      "provider_id": "openai",
-      "model_id": "openai/gpt-5.2-pro",
-      "surface_id": "oai_responses",
-      "endpoint": "responses",
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gpt-oss-120b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
       "claim": {
         "dimension": "modality",
         "name": "output_text",
@@ -142,15 +1130,51 @@
       },
       "verdict": "supported",
       "evidence_ids": [
-        "8abd84ff5fedf7250abb9c27"
+        "6e7317400e4e735da64662b5"
       ],
-      "observed_at": "2026-08-29T00:38:51.776832+00:00"
+      "observed_at": "2026-08-31T21:41:21.507779+00:00"
     },
     {
-      "provider_id": "openai",
-      "model_id": "openai/gpt-5.2-pro-2025-12-11",
-      "surface_id": "oai_responses",
-      "endpoint": "responses",
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gpt-oss-120b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "response_format",
+        "profile": {
+          "mode": "json_schema"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "8fc19ac3d64b99682bcd7033"
+      ],
+      "observed_at": "2026-08-31T21:41:21.507779+00:00"
+    },
+    {
+      "provider_id": "deepseek",
+      "model_id": "deepseek/deepseek-v4-flash",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "structured_output",
+        "profile": {
+          "mode": "json_schema"
+        }
+      },
+      "verdict": "unknown",
+      "evidence_ids": [
+        "a37c070c17375bcd72915974"
+      ],
+      "observed_at": "2026-08-31T21:58:37.651410+00:00"
+    },
+    {
+      "provider_id": "deepseek",
+      "model_id": "deepseek/deepseek-v4-flash",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
       "claim": {
         "dimension": "capability",
         "name": "text_generation",
@@ -158,15 +1182,66 @@
       },
       "verdict": "supported",
       "evidence_ids": [
-        "2244eb96e6136d68b36b0278"
+        "bd626edbd9717003018d8083"
       ],
-      "observed_at": "2026-08-29T00:41:18.270868+00:00"
+      "observed_at": "2026-08-31T21:58:37.651410+00:00"
     },
     {
-      "provider_id": "openai",
-      "model_id": "openai/gpt-5.2-pro-2025-12-11",
-      "surface_id": "oai_responses",
-      "endpoint": "responses",
+      "provider_id": "deepseek",
+      "model_id": "deepseek/deepseek-v4-flash",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "interaction",
+        "name": "reasoning+tools",
+        "profile": {
+          "reasoning_effort": "low",
+          "tool_choice": "named"
+        }
+      },
+      "verdict": "unsupported",
+      "evidence_ids": [
+        "d951a19dd7df785bf470a7d0"
+      ],
+      "observed_at": "2026-08-31T21:58:37.651410+00:00"
+    },
+    {
+      "provider_id": "deepseek",
+      "model_id": "deepseek/deepseek-v4-flash",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "interaction",
+        "name": "streaming+tools",
+        "profile": {}
+      },
+      "verdict": "unsupported",
+      "evidence_ids": [
+        "a51e1d4b178e9d6d67eeafe6"
+      ],
+      "observed_at": "2026-08-31T21:58:37.651410+00:00"
+    },
+    {
+      "provider_id": "deepseek",
+      "model_id": "deepseek/deepseek-v4-flash",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "modality",
+        "name": "input_pdf",
+        "profile": {}
+      },
+      "verdict": "unknown",
+      "evidence_ids": [
+        "713289da7f47ebbf5d82603d"
+      ],
+      "observed_at": "2026-08-31T21:58:37.651410+00:00"
+    },
+    {
+      "provider_id": "deepseek",
+      "model_id": "deepseek/deepseek-v4-flash",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
       "claim": {
         "dimension": "modality",
         "name": "input_text",
@@ -174,15 +1249,15 @@
       },
       "verdict": "supported",
       "evidence_ids": [
-        "1656d4ff96a8b6eda9e620b5"
+        "a5b7cd43ce0183d9de5b58b5"
       ],
-      "observed_at": "2026-08-29T00:41:18.270868+00:00"
+      "observed_at": "2026-08-31T21:58:37.651410+00:00"
     },
     {
-      "provider_id": "openai",
-      "model_id": "openai/gpt-5.2-pro-2025-12-11",
-      "surface_id": "oai_responses",
-      "endpoint": "responses",
+      "provider_id": "deepseek",
+      "model_id": "deepseek/deepseek-v4-flash",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
       "claim": {
         "dimension": "modality",
         "name": "output_text",
@@ -190,13 +1265,388 @@
       },
       "verdict": "supported",
       "evidence_ids": [
-        "1cf1557b002d56cd7f34d1f1"
+        "42e0b597df3ffe968fd10db8"
       ],
-      "observed_at": "2026-08-29T00:41:18.270868+00:00"
+      "observed_at": "2026-08-31T21:58:37.651410+00:00"
+    },
+    {
+      "provider_id": "deepseek",
+      "model_id": "deepseek/deepseek-v4-flash",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "response_format",
+        "profile": {
+          "mode": "json_schema"
+        }
+      },
+      "verdict": "unknown",
+      "evidence_ids": [
+        "548f78f0ba32f9f2faa71dea"
+      ],
+      "observed_at": "2026-08-31T21:58:37.651410+00:00"
+    },
+    {
+      "provider_id": "fireworks",
+      "model_id": "fireworks/nemotron-lightning-3p5-30b-a3b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "structured_output",
+        "profile": {
+          "mode": "json_schema"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "f2ecedb867df89f2defafc4e"
+      ],
+      "observed_at": "2026-08-31T21:58:43.431162+00:00"
+    },
+    {
+      "provider_id": "fireworks",
+      "model_id": "fireworks/nemotron-lightning-3p5-30b-a3b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "text_generation",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "98d0548555bea117c59c54b5"
+      ],
+      "observed_at": "2026-08-31T21:58:43.431162+00:00"
+    },
+    {
+      "provider_id": "fireworks",
+      "model_id": "fireworks/nemotron-lightning-3p5-30b-a3b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "interaction",
+        "name": "reasoning+tools",
+        "profile": {
+          "reasoning_effort": "low",
+          "tool_choice": "named"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "f789b1edd4b195da920efcd3"
+      ],
+      "observed_at": "2026-08-31T21:58:43.431162+00:00"
+    },
+    {
+      "provider_id": "fireworks",
+      "model_id": "fireworks/nemotron-lightning-3p5-30b-a3b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "interaction",
+        "name": "streaming+tools",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "aa34d067af7224ae698d0387"
+      ],
+      "observed_at": "2026-08-31T21:58:43.431162+00:00"
+    },
+    {
+      "provider_id": "fireworks",
+      "model_id": "fireworks/nemotron-lightning-3p5-30b-a3b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "modality",
+        "name": "input_pdf",
+        "profile": {}
+      },
+      "verdict": "unknown",
+      "evidence_ids": [
+        "be443f0bee9507a766a7b8ba"
+      ],
+      "observed_at": "2026-08-31T21:58:43.431162+00:00"
+    },
+    {
+      "provider_id": "fireworks",
+      "model_id": "fireworks/nemotron-lightning-3p5-30b-a3b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "modality",
+        "name": "input_text",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "2ebeee0c4ef02f49b2f5209c"
+      ],
+      "observed_at": "2026-08-31T21:58:43.431162+00:00"
+    },
+    {
+      "provider_id": "fireworks",
+      "model_id": "fireworks/nemotron-lightning-3p5-30b-a3b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "modality",
+        "name": "output_text",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "11761d4407802f539cd31c3e"
+      ],
+      "observed_at": "2026-08-31T21:58:43.431162+00:00"
+    },
+    {
+      "provider_id": "fireworks",
+      "model_id": "fireworks/nemotron-lightning-3p5-30b-a3b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "response_format",
+        "profile": {
+          "mode": "json_schema"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "e0ef866de839c7d60e2304d4"
+      ],
+      "observed_at": "2026-08-31T21:58:43.431162+00:00"
+    },
+    {
+      "provider_id": "groq",
+      "model_id": "groq/openai/gpt-oss-20b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "structured_output",
+        "profile": {
+          "mode": "json_schema"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "484168c6176f95ff5ab634b5"
+      ],
+      "observed_at": "2026-08-31T21:58:48.548471+00:00"
+    },
+    {
+      "provider_id": "groq",
+      "model_id": "groq/openai/gpt-oss-20b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "interaction",
+        "name": "reasoning+tools",
+        "profile": {
+          "reasoning_effort": "low",
+          "tool_choice": "named"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "27b2e847946ce9fd9558eaaa"
+      ],
+      "observed_at": "2026-08-31T21:58:48.548471+00:00"
+    },
+    {
+      "provider_id": "groq",
+      "model_id": "groq/openai/gpt-oss-20b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "interaction",
+        "name": "streaming+tools",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "eadd83a8af4e7f58651c2ad8"
+      ],
+      "observed_at": "2026-08-31T21:58:48.548471+00:00"
+    },
+    {
+      "provider_id": "groq",
+      "model_id": "groq/openai/gpt-oss-20b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "modality",
+        "name": "input_pdf",
+        "profile": {}
+      },
+      "verdict": "unknown",
+      "evidence_ids": [
+        "db9841a8a6418cbd5182ec53"
+      ],
+      "observed_at": "2026-08-31T21:58:48.548471+00:00"
+    },
+    {
+      "provider_id": "groq",
+      "model_id": "groq/openai/gpt-oss-20b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "response_format",
+        "profile": {
+          "mode": "json_schema"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "14af79f887ff2d19d8e1a6cd"
+      ],
+      "observed_at": "2026-08-31T21:58:48.548471+00:00"
+    },
+    {
+      "provider_id": "mistral",
+      "model_id": "mistral/zai-glm-5-2",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "structured_output",
+        "profile": {
+          "mode": "json_schema"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "1e00da5338b60ce4c37fa420"
+      ],
+      "observed_at": "2026-08-31T21:59:03.867752+00:00"
+    },
+    {
+      "provider_id": "mistral",
+      "model_id": "mistral/zai-glm-5-2",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "text_generation",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "4772bba54ffcd197db54cf6f"
+      ],
+      "observed_at": "2026-08-31T21:59:03.867752+00:00"
+    },
+    {
+      "provider_id": "mistral",
+      "model_id": "mistral/zai-glm-5-2",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "interaction",
+        "name": "reasoning+tools",
+        "profile": {
+          "reasoning_effort": "low",
+          "tool_choice": "named"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "5895a8f3f5d06d5f91c76a1e"
+      ],
+      "observed_at": "2026-08-31T21:59:03.867752+00:00"
+    },
+    {
+      "provider_id": "mistral",
+      "model_id": "mistral/zai-glm-5-2",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "interaction",
+        "name": "streaming+tools",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "a0465f77ce76e20ceb6d2c3f"
+      ],
+      "observed_at": "2026-08-31T21:59:03.867752+00:00"
+    },
+    {
+      "provider_id": "mistral",
+      "model_id": "mistral/zai-glm-5-2",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "modality",
+        "name": "input_pdf",
+        "profile": {}
+      },
+      "verdict": "unknown",
+      "evidence_ids": [
+        "f691fdf563b0a356998638b5"
+      ],
+      "observed_at": "2026-08-31T21:59:03.867752+00:00"
+    },
+    {
+      "provider_id": "mistral",
+      "model_id": "mistral/zai-glm-5-2",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "modality",
+        "name": "input_text",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "489991a1f1ce005f7bba5102"
+      ],
+      "observed_at": "2026-08-31T21:59:03.867752+00:00"
+    },
+    {
+      "provider_id": "mistral",
+      "model_id": "mistral/zai-glm-5-2",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "modality",
+        "name": "output_text",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "4ecb8b8e691da84cffcc86d6"
+      ],
+      "observed_at": "2026-08-31T21:59:03.867752+00:00"
+    },
+    {
+      "provider_id": "mistral",
+      "model_id": "mistral/zai-glm-5-2",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "response_format",
+        "profile": {
+          "mode": "json_schema"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "56bda6ceb30bf99f8dd0213a"
+      ],
+      "observed_at": "2026-08-31T21:59:03.867752+00:00"
     },
     {
       "provider_id": "openai",
-      "model_id": "openai/gpt-5.3-codex",
+      "model_id": "openai/gpt-5.6-luna",
       "surface_id": "oai_responses",
       "endpoint": "responses",
       "claim": {
@@ -206,31 +1656,13 @@
       },
       "verdict": "supported",
       "evidence_ids": [
-        "c098e48fc67a481e763910a9"
+        "c6cbc0d733ddcf7af28ad64e"
       ],
-      "observed_at": "2026-08-29T00:33:45.617657+00:00"
+      "observed_at": "2026-08-31T21:11:22.409453+00:00"
     },
     {
       "provider_id": "openai",
-      "model_id": "openai/gpt-5.3-codex",
-      "surface_id": "oai_responses",
-      "endpoint": "responses",
-      "claim": {
-        "dimension": "capability",
-        "name": "reasoning",
-        "profile": {
-          "effort": "low"
-        }
-      },
-      "verdict": "unsupported",
-      "evidence_ids": [
-        "12c0347a6088564bdb926598"
-      ],
-      "observed_at": "2026-08-29T00:33:45.617657+00:00"
-    },
-    {
-      "provider_id": "openai",
-      "model_id": "openai/gpt-5.3-codex",
+      "model_id": "openai/gpt-5.6-luna",
       "surface_id": "oai_responses",
       "endpoint": "responses",
       "claim": {
@@ -242,13 +1674,13 @@
       },
       "verdict": "supported",
       "evidence_ids": [
-        "748c645c707dfdec3ddda133"
+        "2b4d6c660b548440c4338050"
       ],
-      "observed_at": "2026-08-29T00:33:45.617657+00:00"
+      "observed_at": "2026-08-31T21:11:22.409453+00:00"
     },
     {
       "provider_id": "openai",
-      "model_id": "openai/gpt-5.3-codex",
+      "model_id": "openai/gpt-5.6-luna",
       "surface_id": "oai_responses",
       "endpoint": "responses",
       "claim": {
@@ -260,13 +1692,13 @@
       },
       "verdict": "supported",
       "evidence_ids": [
-        "23f66ab49e914e97f982e0ee"
+        "d6a9f4504e163de36ac97922"
       ],
-      "observed_at": "2026-08-29T00:33:45.617657+00:00"
+      "observed_at": "2026-08-31T21:11:22.409453+00:00"
     },
     {
       "provider_id": "openai",
-      "model_id": "openai/gpt-5.3-codex",
+      "model_id": "openai/gpt-5.6-luna",
       "surface_id": "oai_responses",
       "endpoint": "responses",
       "claim": {
@@ -278,13 +1710,13 @@
       },
       "verdict": "supported",
       "evidence_ids": [
-        "3c4c01d3f78f3bd13312c160"
+        "dccc7e071d86e4e2f2783ecc"
       ],
-      "observed_at": "2026-08-29T00:33:45.617657+00:00"
+      "observed_at": "2026-08-31T21:59:08.615869+00:00"
     },
     {
       "provider_id": "openai",
-      "model_id": "openai/gpt-5.3-codex",
+      "model_id": "openai/gpt-5.6-luna",
       "surface_id": "oai_responses",
       "endpoint": "responses",
       "claim": {
@@ -294,13 +1726,13 @@
       },
       "verdict": "supported",
       "evidence_ids": [
-        "b551114f6850f9e5d8245f00"
+        "0a904d917c2f0caa4d879377"
       ],
-      "observed_at": "2026-08-29T00:33:45.617657+00:00"
+      "observed_at": "2026-08-31T21:11:22.409453+00:00"
     },
     {
       "provider_id": "openai",
-      "model_id": "openai/gpt-5.3-codex",
+      "model_id": "openai/gpt-5.6-luna",
       "surface_id": "oai_responses",
       "endpoint": "responses",
       "claim": {
@@ -310,13 +1742,13 @@
       },
       "verdict": "supported",
       "evidence_ids": [
-        "7c6ae1ebdcbdaaa15ebd290e"
+        "cf9bdb62dea71d7f702b121e"
       ],
-      "observed_at": "2026-08-29T00:33:45.617657+00:00"
+      "observed_at": "2026-08-31T21:59:08.615869+00:00"
     },
     {
       "provider_id": "openai",
-      "model_id": "openai/gpt-5.3-codex",
+      "model_id": "openai/gpt-5.6-luna",
       "surface_id": "oai_responses",
       "endpoint": "responses",
       "claim": {
@@ -326,13 +1758,13 @@
       },
       "verdict": "supported",
       "evidence_ids": [
-        "43729bbf92f7dea4f2b0c9a9"
+        "cdbf2f1eb79ae6e4fd8c4136"
       ],
-      "observed_at": "2026-08-29T00:33:45.617657+00:00"
+      "observed_at": "2026-08-31T21:11:22.409453+00:00"
     },
     {
       "provider_id": "openai",
-      "model_id": "openai/gpt-5.3-codex",
+      "model_id": "openai/gpt-5.6-luna",
       "surface_id": "oai_responses",
       "endpoint": "responses",
       "claim": {
@@ -342,13 +1774,13 @@
       },
       "verdict": "supported",
       "evidence_ids": [
-        "46fac0ffd13f149a42b198b5"
+        "3ca58ee07e0629b4236c0203"
       ],
-      "observed_at": "2026-08-29T00:33:45.617657+00:00"
+      "observed_at": "2026-08-31T21:11:22.409453+00:00"
     },
     {
       "provider_id": "openai",
-      "model_id": "openai/gpt-5.3-codex",
+      "model_id": "openai/gpt-5.6-luna",
       "surface_id": "oai_responses",
       "endpoint": "responses",
       "claim": {
@@ -361,13 +1793,13 @@
       },
       "verdict": "supported",
       "evidence_ids": [
-        "771ae58fa6def4ad2becbfee"
+        "f2d75224ab79947829d2b4b7"
       ],
-      "observed_at": "2026-08-29T00:33:45.617657+00:00"
+      "observed_at": "2026-08-31T21:59:08.615869+00:00"
     },
     {
       "provider_id": "openai",
-      "model_id": "openai/gpt-5.3-codex",
+      "model_id": "openai/gpt-5.6-luna",
       "surface_id": "oai_responses",
       "endpoint": "responses",
       "claim": {
@@ -377,13 +1809,13 @@
       },
       "verdict": "supported",
       "evidence_ids": [
-        "191e87d8b5b15e063c4513e7"
+        "664700ab445f559535bce650"
       ],
-      "observed_at": "2026-08-29T00:33:45.617657+00:00"
+      "observed_at": "2026-08-31T21:11:22.409453+00:00"
     },
     {
       "provider_id": "openai",
-      "model_id": "openai/gpt-5.3-codex",
+      "model_id": "openai/gpt-5.6-luna",
       "surface_id": "oai_responses",
       "endpoint": "responses",
       "claim": {
@@ -393,13 +1825,13 @@
       },
       "verdict": "unsupported",
       "evidence_ids": [
-        "1784e097768a66b2c7c95bd2"
+        "0aeb58f765636a834859cdfd"
       ],
-      "observed_at": "2026-08-29T00:33:45.617657+00:00"
+      "observed_at": "2026-08-31T21:11:22.409453+00:00"
     },
     {
       "provider_id": "openai",
-      "model_id": "openai/gpt-5.3-codex",
+      "model_id": "openai/gpt-5.6-luna",
       "surface_id": "oai_responses",
       "endpoint": "responses",
       "claim": {
@@ -409,13 +1841,13 @@
       },
       "verdict": "supported",
       "evidence_ids": [
-        "8d02d164fbd0746505c30607"
+        "06dcc180208344b8d3392da1"
       ],
-      "observed_at": "2026-08-29T00:33:45.617657+00:00"
+      "observed_at": "2026-08-31T21:11:22.409453+00:00"
     },
     {
       "provider_id": "openai",
-      "model_id": "openai/gpt-5.3-codex",
+      "model_id": "openai/gpt-5.6-luna",
       "surface_id": "oai_responses",
       "endpoint": "responses",
       "claim": {
@@ -425,13 +1857,13 @@
       },
       "verdict": "supported",
       "evidence_ids": [
-        "495c8fc4e288fc5f69fbe7e7"
+        "e79542bc18d6a950367bf17e"
       ],
-      "observed_at": "2026-08-29T00:33:45.617657+00:00"
+      "observed_at": "2026-08-31T21:59:08.615869+00:00"
     },
     {
       "provider_id": "openai",
-      "model_id": "openai/gpt-5.3-codex",
+      "model_id": "openai/gpt-5.6-luna",
       "surface_id": "oai_responses",
       "endpoint": "responses",
       "claim": {
@@ -441,13 +1873,13 @@
       },
       "verdict": "supported",
       "evidence_ids": [
-        "e7c973907a76436b95481e1e"
+        "afbf5395ca3fda1a650fd8d8"
       ],
-      "observed_at": "2026-08-29T00:33:45.617657+00:00"
+      "observed_at": "2026-08-31T21:11:22.409453+00:00"
     },
     {
       "provider_id": "openai",
-      "model_id": "openai/gpt-5.3-codex",
+      "model_id": "openai/gpt-5.6-luna",
       "surface_id": "oai_responses",
       "endpoint": "responses",
       "claim": {
@@ -457,13 +1889,13 @@
       },
       "verdict": "supported",
       "evidence_ids": [
-        "ac1978dd22c1b5ead77b93d6"
+        "10fdc9314d417e61a319615f"
       ],
-      "observed_at": "2026-08-29T00:33:45.617657+00:00"
+      "observed_at": "2026-08-31T21:11:22.409453+00:00"
     },
     {
       "provider_id": "openai",
-      "model_id": "openai/gpt-5.3-codex",
+      "model_id": "openai/gpt-5.6-luna",
       "surface_id": "oai_responses",
       "endpoint": "responses",
       "claim": {
@@ -473,13 +1905,13 @@
       },
       "verdict": "supported",
       "evidence_ids": [
-        "3eda1a778aab506060f64f54"
+        "c32981e04c3a8036acdfa1f4"
       ],
-      "observed_at": "2026-08-29T00:33:45.617657+00:00"
+      "observed_at": "2026-08-31T21:59:08.615869+00:00"
     },
     {
       "provider_id": "openai",
-      "model_id": "openai/gpt-5.3-codex",
+      "model_id": "openai/gpt-5.6-luna",
       "surface_id": "oai_responses",
       "endpoint": "responses",
       "claim": {
@@ -489,13 +1921,13 @@
       },
       "verdict": "supported",
       "evidence_ids": [
-        "7ca97a6a099c86a7a005d16b"
+        "0613e8cf9e4beabca620734e"
       ],
-      "observed_at": "2026-08-29T00:33:45.617657+00:00"
+      "observed_at": "2026-08-31T21:59:08.615869+00:00"
     },
     {
       "provider_id": "openai",
-      "model_id": "openai/gpt-5.3-codex",
+      "model_id": "openai/gpt-5.6-luna",
       "surface_id": "oai_responses",
       "endpoint": "responses",
       "claim": {
@@ -505,13 +1937,13 @@
       },
       "verdict": "supported",
       "evidence_ids": [
-        "1d77797a424576322a6886f6"
+        "fa7f4fef6fc82165f59b5c2e"
       ],
-      "observed_at": "2026-08-29T00:33:45.617657+00:00"
+      "observed_at": "2026-08-31T21:59:08.615869+00:00"
     },
     {
       "provider_id": "openai",
-      "model_id": "openai/gpt-5.3-codex",
+      "model_id": "openai/gpt-5.6-luna",
       "surface_id": "oai_responses",
       "endpoint": "responses",
       "claim": {
@@ -523,13 +1955,13 @@
       },
       "verdict": "supported",
       "evidence_ids": [
-        "3eb225b0c8d91201ff475383"
+        "1386fb28a5d20192f0ae99b3"
       ],
-      "observed_at": "2026-08-29T00:33:45.617657+00:00"
+      "observed_at": "2026-08-31T21:11:22.409453+00:00"
     },
     {
       "provider_id": "openai",
-      "model_id": "openai/gpt-5.3-codex",
+      "model_id": "openai/gpt-5.6-luna",
       "surface_id": "oai_responses",
       "endpoint": "responses",
       "claim": {
@@ -541,31 +1973,13 @@
       },
       "verdict": "supported",
       "evidence_ids": [
-        "b4d92308770b0516c3a7add3"
+        "ef1eb7b7fe1ad673bb846607"
       ],
-      "observed_at": "2026-08-29T00:33:45.617657+00:00"
+      "observed_at": "2026-08-31T21:11:22.409453+00:00"
     },
     {
       "provider_id": "openai",
-      "model_id": "openai/gpt-5.3-codex",
-      "surface_id": "oai_responses",
-      "endpoint": "responses",
-      "claim": {
-        "dimension": "option",
-        "name": "reasoning_effort",
-        "profile": {
-          "value": "low"
-        }
-      },
-      "verdict": "unsupported",
-      "evidence_ids": [
-        "7de56fc68b53479fee45fa9e"
-      ],
-      "observed_at": "2026-08-29T00:33:45.617657+00:00"
-    },
-    {
-      "provider_id": "openai",
-      "model_id": "openai/gpt-5.3-codex",
+      "model_id": "openai/gpt-5.6-luna",
       "surface_id": "oai_responses",
       "endpoint": "responses",
       "claim": {
@@ -577,13 +1991,13 @@
       },
       "verdict": "supported",
       "evidence_ids": [
-        "f0c51b763540736c255d2238"
+        "0b9d48ec85e78e29ecf6ce5f"
       ],
-      "observed_at": "2026-08-29T00:33:45.617657+00:00"
+      "observed_at": "2026-08-31T21:11:22.409453+00:00"
     },
     {
       "provider_id": "openai",
-      "model_id": "openai/gpt-5.3-codex",
+      "model_id": "openai/gpt-5.6-luna",
       "surface_id": "oai_responses",
       "endpoint": "responses",
       "claim": {
@@ -595,13 +2009,13 @@
       },
       "verdict": "supported",
       "evidence_ids": [
-        "06fec6f11a7711cbb8eeceb3"
+        "2cdacb8c90898bf8e684f54c"
       ],
-      "observed_at": "2026-08-29T00:33:45.617657+00:00"
+      "observed_at": "2026-08-31T21:59:08.615869+00:00"
     },
     {
       "provider_id": "openai",
-      "model_id": "openai/gpt-5.3-codex",
+      "model_id": "openai/gpt-5.6-luna",
       "surface_id": "oai_responses",
       "endpoint": "responses",
       "claim": {
@@ -613,13 +2027,13 @@
       },
       "verdict": "supported",
       "evidence_ids": [
-        "3881b964553f42defd9d5c96"
+        "6f1c7b01b9682f6927c59c02"
       ],
-      "observed_at": "2026-08-29T00:33:45.617657+00:00"
+      "observed_at": "2026-08-31T21:11:22.409453+00:00"
     },
     {
       "provider_id": "openai",
-      "model_id": "openai/gpt-5.3-codex",
+      "model_id": "openai/gpt-5.6-luna",
       "surface_id": "oai_responses",
       "endpoint": "responses",
       "claim": {
@@ -629,15 +2043,15 @@
           "value": 0.37
         }
       },
-      "verdict": "supported",
+      "verdict": "unsupported",
       "evidence_ids": [
-        "d6076eed9a946d8fef7a8283"
+        "ddbe1fe9dd72fec1439406f3"
       ],
-      "observed_at": "2026-08-29T00:33:45.617657+00:00"
+      "observed_at": "2026-08-31T21:11:22.409453+00:00"
     },
     {
       "provider_id": "openai",
-      "model_id": "openai/gpt-5.3-codex",
+      "model_id": "openai/gpt-5.6-luna",
       "surface_id": "oai_responses",
       "endpoint": "responses",
       "claim": {
@@ -649,13 +2063,13 @@
       },
       "verdict": "supported",
       "evidence_ids": [
-        "d305fdff044212578208cb8f"
+        "3762d7e6bc834e637a6ca35c"
       ],
-      "observed_at": "2026-08-29T00:33:45.617657+00:00"
+      "observed_at": "2026-08-31T21:11:22.409453+00:00"
     },
     {
       "provider_id": "openai",
-      "model_id": "openai/gpt-5.3-codex",
+      "model_id": "openai/gpt-5.6-luna",
       "surface_id": "oai_responses",
       "endpoint": "responses",
       "claim": {
@@ -667,13 +2081,13 @@
       },
       "verdict": "supported",
       "evidence_ids": [
-        "4f434e23c50958f2fef30db1"
+        "986c87b53fbc70ed551558a2"
       ],
-      "observed_at": "2026-08-29T00:33:45.617657+00:00"
+      "observed_at": "2026-08-31T21:11:22.409453+00:00"
     },
     {
       "provider_id": "openai",
-      "model_id": "openai/gpt-5.3-codex",
+      "model_id": "openai/gpt-5.6-luna",
       "surface_id": "oai_responses",
       "endpoint": "responses",
       "claim": {
@@ -683,243 +2097,51 @@
           "value": 0.83
         }
       },
-      "verdict": "supported",
-      "evidence_ids": [
-        "c95c6d0bbead67456c17957e"
-      ],
-      "observed_at": "2026-08-29T00:33:45.617657+00:00"
-    },
-    {
-      "provider_id": "openai",
-      "model_id": "openai/gpt-5.4-pro",
-      "surface_id": "oai_responses",
-      "endpoint": "responses",
-      "claim": {
-        "dimension": "capability",
-        "name": "text_generation",
-        "profile": {}
-      },
-      "verdict": "supported",
-      "evidence_ids": [
-        "ee957f5927c575aba1345a98"
-      ],
-      "observed_at": "2026-08-29T00:39:01.983519+00:00"
-    },
-    {
-      "provider_id": "openai",
-      "model_id": "openai/gpt-5.4-pro",
-      "surface_id": "oai_responses",
-      "endpoint": "responses",
-      "claim": {
-        "dimension": "modality",
-        "name": "input_text",
-        "profile": {}
-      },
-      "verdict": "supported",
-      "evidence_ids": [
-        "c0c2b17dc24ebc75f87f1e13"
-      ],
-      "observed_at": "2026-08-29T00:39:01.983519+00:00"
-    },
-    {
-      "provider_id": "openai",
-      "model_id": "openai/gpt-5.4-pro",
-      "surface_id": "oai_responses",
-      "endpoint": "responses",
-      "claim": {
-        "dimension": "modality",
-        "name": "output_text",
-        "profile": {}
-      },
-      "verdict": "supported",
-      "evidence_ids": [
-        "6a21ae38a7f0f71f2dce3efd"
-      ],
-      "observed_at": "2026-08-29T00:39:01.983519+00:00"
-    },
-    {
-      "provider_id": "openai",
-      "model_id": "openai/gpt-5.4-pro-2026-03-05",
-      "surface_id": "oai_responses",
-      "endpoint": "responses",
-      "claim": {
-        "dimension": "capability",
-        "name": "text_generation",
-        "profile": {}
-      },
-      "verdict": "supported",
-      "evidence_ids": [
-        "319353c01b8553c7a92b2dfa"
-      ],
-      "observed_at": "2026-08-29T00:41:28.322176+00:00"
-    },
-    {
-      "provider_id": "openai",
-      "model_id": "openai/gpt-5.4-pro-2026-03-05",
-      "surface_id": "oai_responses",
-      "endpoint": "responses",
-      "claim": {
-        "dimension": "modality",
-        "name": "input_text",
-        "profile": {}
-      },
-      "verdict": "supported",
-      "evidence_ids": [
-        "c13b2ee1f3fe7526543b63cb"
-      ],
-      "observed_at": "2026-08-29T00:41:28.322176+00:00"
-    },
-    {
-      "provider_id": "openai",
-      "model_id": "openai/gpt-5.4-pro-2026-03-05",
-      "surface_id": "oai_responses",
-      "endpoint": "responses",
-      "claim": {
-        "dimension": "modality",
-        "name": "output_text",
-        "profile": {}
-      },
-      "verdict": "supported",
-      "evidence_ids": [
-        "83746d346eca84925573f41f"
-      ],
-      "observed_at": "2026-08-29T00:41:28.322176+00:00"
-    },
-    {
-      "provider_id": "openai",
-      "model_id": "openai/gpt-5.5-pro",
-      "surface_id": "oai_responses",
-      "endpoint": "responses",
-      "claim": {
-        "dimension": "capability",
-        "name": "text_generation",
-        "profile": {}
-      },
-      "verdict": "supported",
-      "evidence_ids": [
-        "4918776c82422b6ade3eae7f"
-      ],
-      "observed_at": "2026-08-29T00:39:23.331344+00:00"
-    },
-    {
-      "provider_id": "openai",
-      "model_id": "openai/gpt-5.5-pro",
-      "surface_id": "oai_responses",
-      "endpoint": "responses",
-      "claim": {
-        "dimension": "modality",
-        "name": "input_text",
-        "profile": {}
-      },
-      "verdict": "supported",
-      "evidence_ids": [
-        "b08ee356ddb85d2c7b4e3efa"
-      ],
-      "observed_at": "2026-08-29T00:39:23.331344+00:00"
-    },
-    {
-      "provider_id": "openai",
-      "model_id": "openai/gpt-5.5-pro",
-      "surface_id": "oai_responses",
-      "endpoint": "responses",
-      "claim": {
-        "dimension": "modality",
-        "name": "output_text",
-        "profile": {}
-      },
-      "verdict": "supported",
-      "evidence_ids": [
-        "3506b1cdbdc6cf53fa497207"
-      ],
-      "observed_at": "2026-08-29T00:39:23.331344+00:00"
-    },
-    {
-      "provider_id": "openai",
-      "model_id": "openai/gpt-5.5-pro-2026-04-23",
-      "surface_id": "oai_responses",
-      "endpoint": "responses",
-      "claim": {
-        "dimension": "capability",
-        "name": "text_generation",
-        "profile": {}
-      },
-      "verdict": "supported",
-      "evidence_ids": [
-        "526d52eb8eced2ee75fe925e"
-      ],
-      "observed_at": "2026-08-29T00:41:40.882350+00:00"
-    },
-    {
-      "provider_id": "openai",
-      "model_id": "openai/gpt-5.5-pro-2026-04-23",
-      "surface_id": "oai_responses",
-      "endpoint": "responses",
-      "claim": {
-        "dimension": "modality",
-        "name": "input_text",
-        "profile": {}
-      },
-      "verdict": "supported",
-      "evidence_ids": [
-        "e755fed5b91e559afb7a88b4"
-      ],
-      "observed_at": "2026-08-29T00:41:40.882350+00:00"
-    },
-    {
-      "provider_id": "openai",
-      "model_id": "openai/gpt-5.5-pro-2026-04-23",
-      "surface_id": "oai_responses",
-      "endpoint": "responses",
-      "claim": {
-        "dimension": "modality",
-        "name": "output_text",
-        "profile": {}
-      },
-      "verdict": "supported",
-      "evidence_ids": [
-        "7cb665165a4db4c81fbb7347"
-      ],
-      "observed_at": "2026-08-29T00:41:40.882350+00:00"
-    },
-    {
-      "provider_id": "openai",
-      "model_id": "openai/gpt-5.6-luna",
-      "surface_id": "oai_responses",
-      "endpoint": "responses",
-      "claim": {
-        "dimension": "capability",
-        "name": "reasoning",
-        "profile": {
-          "effort": "low"
-        }
-      },
       "verdict": "unsupported",
       "evidence_ids": [
-        "5cdbfe7d937b6bb02a96ca49"
+        "f5b66b0f99efebffc2c845bd"
       ],
-      "observed_at": "2026-08-29T00:06:03.046268+00:00"
+      "observed_at": "2026-08-31T21:11:22.409453+00:00"
     },
     {
-      "provider_id": "openai",
-      "model_id": "openai/gpt-5.6-luna",
-      "surface_id": "oai_responses",
-      "endpoint": "responses",
+      "provider_id": "together",
+      "model_id": "together/openai/gpt-oss-20b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
       "claim": {
         "dimension": "capability",
-        "name": "tool_calling",
+        "name": "structured_output",
+        "profile": {
+          "mode": "json_schema"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "cdee591d43bbb5b5844a326d"
+      ],
+      "observed_at": "2026-08-31T21:59:18.705731+00:00"
+    },
+    {
+      "provider_id": "together",
+      "model_id": "together/openai/gpt-oss-20b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "text_generation",
         "profile": {}
       },
       "verdict": "supported",
       "evidence_ids": [
-        "baf8827eba2ab5ea941d90da"
+        "f156835fab805fe7c00581ee"
       ],
-      "observed_at": "2026-08-29T00:06:03.046268+00:00"
+      "observed_at": "2026-08-31T21:59:18.705731+00:00"
     },
     {
-      "provider_id": "openai",
-      "model_id": "openai/gpt-5.6-luna",
-      "surface_id": "oai_responses",
-      "endpoint": "responses",
+      "provider_id": "together",
+      "model_id": "together/openai/gpt-oss-20b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
       "claim": {
         "dimension": "interaction",
         "name": "reasoning+tools",
@@ -930,31 +2152,15 @@
       },
       "verdict": "supported",
       "evidence_ids": [
-        "43fc567973e2a0d2f6e1dc7e"
+        "a34ba9d21ea6dd3f49f5f1e3"
       ],
-      "observed_at": "2026-08-29T00:06:03.046268+00:00"
+      "observed_at": "2026-08-31T21:59:18.705731+00:00"
     },
     {
-      "provider_id": "openai",
-      "model_id": "openai/gpt-5.6-luna",
-      "surface_id": "oai_responses",
-      "endpoint": "responses",
-      "claim": {
-        "dimension": "interaction",
-        "name": "reasoning_history",
-        "profile": {}
-      },
-      "verdict": "supported",
-      "evidence_ids": [
-        "f4cbcd67f73f1213f992f8c3"
-      ],
-      "observed_at": "2026-08-29T00:06:03.046268+00:00"
-    },
-    {
-      "provider_id": "openai",
-      "model_id": "openai/gpt-5.6-luna",
-      "surface_id": "oai_responses",
-      "endpoint": "responses",
+      "provider_id": "together",
+      "model_id": "together/openai/gpt-oss-20b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
       "claim": {
         "dimension": "interaction",
         "name": "streaming+tools",
@@ -962,647 +2168,31 @@
       },
       "verdict": "supported",
       "evidence_ids": [
-        "fd2c7fa8daa953e7f0f1e2f8"
+        "85f7308db5b553e1a996864b"
       ],
-      "observed_at": "2026-08-29T00:06:03.046268+00:00"
+      "observed_at": "2026-08-31T21:59:18.705731+00:00"
     },
     {
-      "provider_id": "openai",
-      "model_id": "openai/gpt-5.6-luna",
-      "surface_id": "oai_responses",
-      "endpoint": "responses",
-      "claim": {
-        "dimension": "interaction",
-        "name": "tool_result_round_trip",
-        "profile": {}
-      },
-      "verdict": "supported",
-      "evidence_ids": [
-        "5dc3004d71b9af285fa77b9d"
-      ],
-      "observed_at": "2026-08-29T00:06:03.046268+00:00"
-    },
-    {
-      "provider_id": "openai",
-      "model_id": "openai/gpt-5.6-luna",
-      "surface_id": "oai_responses",
-      "endpoint": "responses",
-      "claim": {
-        "dimension": "option",
-        "name": "parallel_tool_calls",
-        "profile": {
-          "value": true
-        }
-      },
-      "verdict": "supported",
-      "evidence_ids": [
-        "c22abc302e63a2aa3b229be0"
-      ],
-      "observed_at": "2026-08-29T00:06:03.046268+00:00"
-    },
-    {
-      "provider_id": "openai",
-      "model_id": "openai/gpt-5.6-luna",
-      "surface_id": "oai_responses",
-      "endpoint": "responses",
-      "claim": {
-        "dimension": "option",
-        "name": "reasoning_effort",
-        "profile": {
-          "value": "low"
-        }
-      },
-      "verdict": "unsupported",
-      "evidence_ids": [
-        "42c46aa958874b5764071229"
-      ],
-      "observed_at": "2026-08-29T00:06:03.046268+00:00"
-    },
-    {
-      "provider_id": "openai",
-      "model_id": "openai/gpt-5.6-luna",
-      "surface_id": "oai_responses",
-      "endpoint": "responses",
-      "claim": {
-        "dimension": "option",
-        "name": "strict_tools",
-        "profile": {
-          "value": true
-        }
-      },
-      "verdict": "supported",
-      "evidence_ids": [
-        "6cd0d3308ccf703dae8e9183"
-      ],
-      "observed_at": "2026-08-29T00:06:03.046268+00:00"
-    },
-    {
-      "provider_id": "openai",
-      "model_id": "openai/gpt-5.6-luna",
-      "surface_id": "oai_responses",
-      "endpoint": "responses",
-      "claim": {
-        "dimension": "option",
-        "name": "tool_choice",
-        "profile": {
-          "mode": "named"
-        }
-      },
-      "verdict": "supported",
-      "evidence_ids": [
-        "42760df63d32b54f09daccde"
-      ],
-      "observed_at": "2026-08-29T00:06:03.046268+00:00"
-    },
-    {
-      "provider_id": "openai",
-      "model_id": "openai/gpt-5.6-luna",
-      "surface_id": "oai_responses",
-      "endpoint": "responses",
-      "claim": {
-        "dimension": "option",
-        "name": "tool_choice",
-        "profile": {
-          "mode": "required"
-        }
-      },
-      "verdict": "supported",
-      "evidence_ids": [
-        "56ee2d56152846525eeeedcf"
-      ],
-      "observed_at": "2026-08-29T00:06:03.046268+00:00"
-    },
-    {
-      "provider_id": "openai",
-      "model_id": "openai/gpt-5.6-sol",
-      "surface_id": "oai_responses",
-      "endpoint": "responses",
-      "claim": {
-        "dimension": "capability",
-        "name": "reasoning",
-        "profile": {
-          "effort": "low"
-        }
-      },
-      "verdict": "unsupported",
-      "evidence_ids": [
-        "24e5df858eb95700a735a8f4"
-      ],
-      "observed_at": "2026-08-28T22:52:56.653613+00:00"
-    },
-    {
-      "provider_id": "openai",
-      "model_id": "openai/gpt-5.6-sol",
-      "surface_id": "oai_responses",
-      "endpoint": "responses",
-      "claim": {
-        "dimension": "capability",
-        "name": "structured_output",
-        "profile": {
-          "mode": "json_schema"
-        }
-      },
-      "verdict": "supported",
-      "evidence_ids": [
-        "45d89f812ec585f7c8c1b2eb"
-      ],
-      "observed_at": "2026-08-28T22:52:56.653613+00:00"
-    },
-    {
-      "provider_id": "openai",
-      "model_id": "openai/gpt-5.6-sol",
-      "surface_id": "oai_responses",
-      "endpoint": "responses",
-      "claim": {
-        "dimension": "capability",
-        "name": "tool_calling",
-        "profile": {}
-      },
-      "verdict": "supported",
-      "evidence_ids": [
-        "e997d3521fa85d0b753324ab"
-      ],
-      "observed_at": "2026-08-28T22:52:56.653613+00:00"
-    },
-    {
-      "provider_id": "openai",
-      "model_id": "openai/gpt-5.6-sol",
-      "surface_id": "oai_responses",
-      "endpoint": "responses",
-      "claim": {
-        "dimension": "interaction",
-        "name": "reasoning+tools",
-        "profile": {
-          "reasoning_effort": "low",
-          "tool_choice": "named"
-        }
-      },
-      "verdict": "supported",
-      "evidence_ids": [
-        "61edcedbd417dd5028f17ca8"
-      ],
-      "observed_at": "2026-08-28T22:52:56.653613+00:00"
-    },
-    {
-      "provider_id": "openai",
-      "model_id": "openai/gpt-5.6-sol",
-      "surface_id": "oai_responses",
-      "endpoint": "responses",
-      "claim": {
-        "dimension": "interaction",
-        "name": "reasoning_history",
-        "profile": {}
-      },
-      "verdict": "supported",
-      "evidence_ids": [
-        "d66ab30b161ce16fa4f5cc41"
-      ],
-      "observed_at": "2026-08-28T22:52:56.653613+00:00"
-    },
-    {
-      "provider_id": "openai",
-      "model_id": "openai/gpt-5.6-sol",
-      "surface_id": "oai_responses",
-      "endpoint": "responses",
-      "claim": {
-        "dimension": "interaction",
-        "name": "streaming+reasoning",
-        "profile": {}
-      },
-      "verdict": "unsupported",
-      "evidence_ids": [
-        "06a64864fd106aab3726876d"
-      ],
-      "observed_at": "2026-08-28T22:52:56.653613+00:00"
-    },
-    {
-      "provider_id": "openai",
-      "model_id": "openai/gpt-5.6-sol",
-      "surface_id": "oai_responses",
-      "endpoint": "responses",
-      "claim": {
-        "dimension": "interaction",
-        "name": "streaming+tools",
-        "profile": {}
-      },
-      "verdict": "supported",
-      "evidence_ids": [
-        "d1b6227ce3e2cf2cb566d30b"
-      ],
-      "observed_at": "2026-08-28T22:52:56.653613+00:00"
-    },
-    {
-      "provider_id": "openai",
-      "model_id": "openai/gpt-5.6-sol",
-      "surface_id": "oai_responses",
-      "endpoint": "responses",
-      "claim": {
-        "dimension": "interaction",
-        "name": "tool_result_round_trip",
-        "profile": {}
-      },
-      "verdict": "supported",
-      "evidence_ids": [
-        "74093c337c817741ce19e0f6"
-      ],
-      "observed_at": "2026-08-28T22:52:56.653613+00:00"
-    },
-    {
-      "provider_id": "openai",
-      "model_id": "openai/gpt-5.6-sol",
-      "surface_id": "oai_responses",
-      "endpoint": "responses",
-      "claim": {
-        "dimension": "option",
-        "name": "parallel_tool_calls",
-        "profile": {
-          "value": true
-        }
-      },
-      "verdict": "supported",
-      "evidence_ids": [
-        "c854d5cb21d9cc015b7d54c3"
-      ],
-      "observed_at": "2026-08-28T22:52:56.653613+00:00"
-    },
-    {
-      "provider_id": "openai",
-      "model_id": "openai/gpt-5.6-sol",
-      "surface_id": "oai_responses",
-      "endpoint": "responses",
-      "claim": {
-        "dimension": "option",
-        "name": "reasoning_effort",
-        "profile": {
-          "value": "low"
-        }
-      },
-      "verdict": "unsupported",
-      "evidence_ids": [
-        "046d8958271a8ebf9b4e3ec9"
-      ],
-      "observed_at": "2026-08-28T22:52:56.653613+00:00"
-    },
-    {
-      "provider_id": "openai",
-      "model_id": "openai/gpt-5.6-sol",
-      "surface_id": "oai_responses",
-      "endpoint": "responses",
-      "claim": {
-        "dimension": "option",
-        "name": "response_format",
-        "profile": {
-          "mode": "json_schema"
-        }
-      },
-      "verdict": "supported",
-      "evidence_ids": [
-        "719264f3245348bb87c6fbb9"
-      ],
-      "observed_at": "2026-08-28T22:52:56.653613+00:00"
-    },
-    {
-      "provider_id": "openai",
-      "model_id": "openai/gpt-5.6-sol",
-      "surface_id": "oai_responses",
-      "endpoint": "responses",
-      "claim": {
-        "dimension": "option",
-        "name": "strict_tools",
-        "profile": {
-          "value": true
-        }
-      },
-      "verdict": "supported",
-      "evidence_ids": [
-        "beeca366734706ea3e4b26ca"
-      ],
-      "observed_at": "2026-08-28T22:52:56.653613+00:00"
-    },
-    {
-      "provider_id": "openai",
-      "model_id": "openai/gpt-5.6-sol",
-      "surface_id": "oai_responses",
-      "endpoint": "responses",
-      "claim": {
-        "dimension": "option",
-        "name": "tool_choice",
-        "profile": {
-          "mode": "named"
-        }
-      },
-      "verdict": "supported",
-      "evidence_ids": [
-        "fbfdc187fc54b049f820d3e9"
-      ],
-      "observed_at": "2026-08-28T22:52:56.653613+00:00"
-    },
-    {
-      "provider_id": "openai",
-      "model_id": "openai/gpt-5.6-sol",
-      "surface_id": "oai_responses",
-      "endpoint": "responses",
-      "claim": {
-        "dimension": "option",
-        "name": "tool_choice",
-        "profile": {
-          "mode": "required"
-        }
-      },
-      "verdict": "supported",
-      "evidence_ids": [
-        "2c64beb6fc314fd94b90a433"
-      ],
-      "observed_at": "2026-08-28T22:52:56.653613+00:00"
-    },
-    {
-      "provider_id": "openai",
-      "model_id": "openai/gpt-5.6-terra",
-      "surface_id": "oai_responses",
-      "endpoint": "responses",
-      "claim": {
-        "dimension": "capability",
-        "name": "multi_turn",
-        "profile": {}
-      },
-      "verdict": "supported",
-      "evidence_ids": [
-        "659cd9e58700d56469acce40"
-      ],
-      "observed_at": "2026-08-29T00:05:38.702329+00:00"
-    },
-    {
-      "provider_id": "openai",
-      "model_id": "openai/gpt-5.6-terra",
-      "surface_id": "oai_responses",
-      "endpoint": "responses",
-      "claim": {
-        "dimension": "capability",
-        "name": "reasoning",
-        "profile": {
-          "effort": "low"
-        }
-      },
-      "verdict": "supported",
-      "evidence_ids": [
-        "832d6067150f185092d5c024"
-      ],
-      "observed_at": "2026-08-29T00:05:38.702329+00:00"
-    },
-    {
-      "provider_id": "openai",
-      "model_id": "openai/gpt-5.6-terra",
-      "surface_id": "oai_responses",
-      "endpoint": "responses",
-      "claim": {
-        "dimension": "capability",
-        "name": "streaming",
-        "profile": {
-          "content": "text"
-        }
-      },
-      "verdict": "supported",
-      "evidence_ids": [
-        "a8484529ecee9b21750b7d84"
-      ],
-      "observed_at": "2026-08-29T00:05:38.702329+00:00"
-    },
-    {
-      "provider_id": "openai",
-      "model_id": "openai/gpt-5.6-terra",
-      "surface_id": "oai_responses",
-      "endpoint": "responses",
-      "claim": {
-        "dimension": "capability",
-        "name": "structured_output",
-        "profile": {
-          "mode": "json_object"
-        }
-      },
-      "verdict": "supported",
-      "evidence_ids": [
-        "5355bdc64134ee5f9fa48919"
-      ],
-      "observed_at": "2026-08-29T00:05:38.702329+00:00"
-    },
-    {
-      "provider_id": "openai",
-      "model_id": "openai/gpt-5.6-terra",
-      "surface_id": "oai_responses",
-      "endpoint": "responses",
-      "claim": {
-        "dimension": "capability",
-        "name": "structured_output",
-        "profile": {
-          "mode": "json_schema"
-        }
-      },
-      "verdict": "supported",
-      "evidence_ids": [
-        "867702eec5c53f0b0cd8e06c"
-      ],
-      "observed_at": "2026-08-29T00:05:38.702329+00:00"
-    },
-    {
-      "provider_id": "openai",
-      "model_id": "openai/gpt-5.6-terra",
-      "surface_id": "oai_responses",
-      "endpoint": "responses",
-      "claim": {
-        "dimension": "capability",
-        "name": "system_messages",
-        "profile": {}
-      },
-      "verdict": "supported",
-      "evidence_ids": [
-        "1051a8550bf0ba5d36c212e4"
-      ],
-      "observed_at": "2026-08-29T00:05:38.702329+00:00"
-    },
-    {
-      "provider_id": "openai",
-      "model_id": "openai/gpt-5.6-terra",
-      "surface_id": "oai_responses",
-      "endpoint": "responses",
-      "claim": {
-        "dimension": "capability",
-        "name": "text_generation",
-        "profile": {}
-      },
-      "verdict": "supported",
-      "evidence_ids": [
-        "e5b108237e5c7b1684cf1775"
-      ],
-      "observed_at": "2026-08-29T00:05:38.702329+00:00"
-    },
-    {
-      "provider_id": "openai",
-      "model_id": "openai/gpt-5.6-terra",
-      "surface_id": "oai_responses",
-      "endpoint": "responses",
-      "claim": {
-        "dimension": "capability",
-        "name": "tool_calling",
-        "profile": {}
-      },
-      "verdict": "supported",
-      "evidence_ids": [
-        "9503917f78c40b4988e15ea5"
-      ],
-      "observed_at": "2026-08-29T00:05:38.702329+00:00"
-    },
-    {
-      "provider_id": "openai",
-      "model_id": "openai/gpt-5.6-terra",
-      "surface_id": "oai_responses",
-      "endpoint": "responses",
-      "claim": {
-        "dimension": "capability",
-        "name": "usage",
-        "profile": {}
-      },
-      "verdict": "supported",
-      "evidence_ids": [
-        "fc28ef5821456fe53f24ce4b"
-      ],
-      "observed_at": "2026-08-29T00:05:38.702329+00:00"
-    },
-    {
-      "provider_id": "openai",
-      "model_id": "openai/gpt-5.6-terra",
-      "surface_id": "oai_responses",
-      "endpoint": "responses",
-      "claim": {
-        "dimension": "interaction",
-        "name": "reasoning+tools",
-        "profile": {
-          "reasoning_effort": "low",
-          "tool_choice": "named"
-        }
-      },
-      "verdict": "supported",
-      "evidence_ids": [
-        "d3b471a4736e291cc81a062c"
-      ],
-      "observed_at": "2026-08-29T00:05:38.702329+00:00"
-    },
-    {
-      "provider_id": "openai",
-      "model_id": "openai/gpt-5.6-terra",
-      "surface_id": "oai_responses",
-      "endpoint": "responses",
-      "claim": {
-        "dimension": "interaction",
-        "name": "reasoning_history",
-        "profile": {}
-      },
-      "verdict": "supported",
-      "evidence_ids": [
-        "e9cadc630a064a3b2a259a79"
-      ],
-      "observed_at": "2026-08-29T00:05:38.702329+00:00"
-    },
-    {
-      "provider_id": "openai",
-      "model_id": "openai/gpt-5.6-terra",
-      "surface_id": "oai_responses",
-      "endpoint": "responses",
-      "claim": {
-        "dimension": "interaction",
-        "name": "streaming+reasoning",
-        "profile": {}
-      },
-      "verdict": "supported",
-      "evidence_ids": [
-        "15e6d17a2504231d8059f771"
-      ],
-      "observed_at": "2026-08-29T00:05:38.702329+00:00"
-    },
-    {
-      "provider_id": "openai",
-      "model_id": "openai/gpt-5.6-terra",
-      "surface_id": "oai_responses",
-      "endpoint": "responses",
-      "claim": {
-        "dimension": "interaction",
-        "name": "streaming+structured_output",
-        "profile": {}
-      },
-      "verdict": "supported",
-      "evidence_ids": [
-        "bb3ac6659a25a153b43f263f"
-      ],
-      "observed_at": "2026-08-29T00:05:38.702329+00:00"
-    },
-    {
-      "provider_id": "openai",
-      "model_id": "openai/gpt-5.6-terra",
-      "surface_id": "oai_responses",
-      "endpoint": "responses",
-      "claim": {
-        "dimension": "interaction",
-        "name": "streaming+tools",
-        "profile": {}
-      },
-      "verdict": "supported",
-      "evidence_ids": [
-        "50b0ce3ca496a32ba6cd6284"
-      ],
-      "observed_at": "2026-08-29T00:05:38.702329+00:00"
-    },
-    {
-      "provider_id": "openai",
-      "model_id": "openai/gpt-5.6-terra",
-      "surface_id": "oai_responses",
-      "endpoint": "responses",
-      "claim": {
-        "dimension": "interaction",
-        "name": "tool_result_round_trip",
-        "profile": {}
-      },
-      "verdict": "supported",
-      "evidence_ids": [
-        "c33fc28aca5b222607cfe232"
-      ],
-      "observed_at": "2026-08-29T00:05:38.702329+00:00"
-    },
-    {
-      "provider_id": "openai",
-      "model_id": "openai/gpt-5.6-terra",
-      "surface_id": "oai_responses",
-      "endpoint": "responses",
-      "claim": {
-        "dimension": "modality",
-        "name": "input_image",
-        "profile": {}
-      },
-      "verdict": "supported",
-      "evidence_ids": [
-        "fd5da47554764bba63152ae4"
-      ],
-      "observed_at": "2026-08-29T00:05:38.702329+00:00"
-    },
-    {
-      "provider_id": "openai",
-      "model_id": "openai/gpt-5.6-terra",
-      "surface_id": "oai_responses",
-      "endpoint": "responses",
+      "provider_id": "together",
+      "model_id": "together/openai/gpt-oss-20b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
       "claim": {
         "dimension": "modality",
         "name": "input_pdf",
         "profile": {}
       },
-      "verdict": "supported",
+      "verdict": "unknown",
       "evidence_ids": [
-        "cec5b37a07768c5323b4441b"
+        "271a050bacc6404b28889cf9"
       ],
-      "observed_at": "2026-08-29T00:05:38.702329+00:00"
+      "observed_at": "2026-08-31T21:59:18.705731+00:00"
     },
     {
-      "provider_id": "openai",
-      "model_id": "openai/gpt-5.6-terra",
-      "surface_id": "oai_responses",
-      "endpoint": "responses",
+      "provider_id": "together",
+      "model_id": "together/openai/gpt-oss-20b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
       "claim": {
         "dimension": "modality",
         "name": "input_text",
@@ -1610,15 +2200,15 @@
       },
       "verdict": "supported",
       "evidence_ids": [
-        "fbce4f28d0216d5cac76ff45"
+        "d6cac207a2fb3080ccdd3630"
       ],
-      "observed_at": "2026-08-29T00:05:38.702329+00:00"
+      "observed_at": "2026-08-31T21:59:18.705731+00:00"
     },
     {
-      "provider_id": "openai",
-      "model_id": "openai/gpt-5.6-terra",
-      "surface_id": "oai_responses",
-      "endpoint": "responses",
+      "provider_id": "together",
+      "model_id": "together/openai/gpt-oss-20b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
       "claim": {
         "dimension": "modality",
         "name": "output_text",
@@ -1626,87 +2216,15 @@
       },
       "verdict": "supported",
       "evidence_ids": [
-        "cc8988d847463bb805538dbf"
+        "0ed511f9dd658f25cbc2b50a"
       ],
-      "observed_at": "2026-08-29T00:05:38.702329+00:00"
+      "observed_at": "2026-08-31T21:59:18.705731+00:00"
     },
     {
-      "provider_id": "openai",
-      "model_id": "openai/gpt-5.6-terra",
-      "surface_id": "oai_responses",
-      "endpoint": "responses",
-      "claim": {
-        "dimension": "option",
-        "name": "max_tokens",
-        "profile": {
-          "value": 1024
-        }
-      },
-      "verdict": "supported",
-      "evidence_ids": [
-        "429a2c518b5cc2a1de629570"
-      ],
-      "observed_at": "2026-08-29T00:05:38.702329+00:00"
-    },
-    {
-      "provider_id": "openai",
-      "model_id": "openai/gpt-5.6-terra",
-      "surface_id": "oai_responses",
-      "endpoint": "responses",
-      "claim": {
-        "dimension": "option",
-        "name": "parallel_tool_calls",
-        "profile": {
-          "value": true
-        }
-      },
-      "verdict": "supported",
-      "evidence_ids": [
-        "86a3c1aef0be7528bcaa067f"
-      ],
-      "observed_at": "2026-08-29T00:05:38.702329+00:00"
-    },
-    {
-      "provider_id": "openai",
-      "model_id": "openai/gpt-5.6-terra",
-      "surface_id": "oai_responses",
-      "endpoint": "responses",
-      "claim": {
-        "dimension": "option",
-        "name": "reasoning_effort",
-        "profile": {
-          "value": "low"
-        }
-      },
-      "verdict": "supported",
-      "evidence_ids": [
-        "7c62c8bd4fabdea2d478aa5c"
-      ],
-      "observed_at": "2026-08-29T00:05:38.702329+00:00"
-    },
-    {
-      "provider_id": "openai",
-      "model_id": "openai/gpt-5.6-terra",
-      "surface_id": "oai_responses",
-      "endpoint": "responses",
-      "claim": {
-        "dimension": "option",
-        "name": "response_format",
-        "profile": {
-          "mode": "json_object"
-        }
-      },
-      "verdict": "supported",
-      "evidence_ids": [
-        "3f98d85c8b79b37729712637"
-      ],
-      "observed_at": "2026-08-29T00:05:38.702329+00:00"
-    },
-    {
-      "provider_id": "openai",
-      "model_id": "openai/gpt-5.6-terra",
-      "surface_id": "oai_responses",
-      "endpoint": "responses",
+      "provider_id": "together",
+      "model_id": "together/openai/gpt-oss-20b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
       "claim": {
         "dimension": "option",
         "name": "response_format",
@@ -1716,105 +2234,33 @@
       },
       "verdict": "supported",
       "evidence_ids": [
-        "920216500da43eeccf9a8cdd"
+        "e2e160297028b3986d106439"
       ],
-      "observed_at": "2026-08-29T00:05:38.702329+00:00"
+      "observed_at": "2026-08-31T21:59:18.705731+00:00"
     },
     {
-      "provider_id": "openai",
-      "model_id": "openai/gpt-5.6-terra",
-      "surface_id": "oai_responses",
-      "endpoint": "responses",
+      "provider_id": "xai",
+      "model_id": "xai/grok-build-0.1",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
       "claim": {
-        "dimension": "option",
-        "name": "strict_tools",
+        "dimension": "capability",
+        "name": "structured_output",
         "profile": {
-          "value": true
+          "mode": "json_schema"
         }
       },
       "verdict": "supported",
       "evidence_ids": [
-        "6757288390c955b37f943a08"
+        "1d4475e1f7af2a5dbc18479a"
       ],
-      "observed_at": "2026-08-29T00:05:38.702329+00:00"
+      "observed_at": "2026-08-31T21:59:23.882601+00:00"
     },
     {
-      "provider_id": "openai",
-      "model_id": "openai/gpt-5.6-terra",
-      "surface_id": "oai_responses",
-      "endpoint": "responses",
-      "claim": {
-        "dimension": "option",
-        "name": "temperature",
-        "profile": {
-          "value": 0.37
-        }
-      },
-      "verdict": "unsupported",
-      "evidence_ids": [
-        "1f0ef12910c23f3cd54db46b"
-      ],
-      "observed_at": "2026-08-29T00:05:38.702329+00:00"
-    },
-    {
-      "provider_id": "openai",
-      "model_id": "openai/gpt-5.6-terra",
-      "surface_id": "oai_responses",
-      "endpoint": "responses",
-      "claim": {
-        "dimension": "option",
-        "name": "tool_choice",
-        "profile": {
-          "mode": "named"
-        }
-      },
-      "verdict": "supported",
-      "evidence_ids": [
-        "eda35945b042c9ab71e7b0ed"
-      ],
-      "observed_at": "2026-08-29T00:05:38.702329+00:00"
-    },
-    {
-      "provider_id": "openai",
-      "model_id": "openai/gpt-5.6-terra",
-      "surface_id": "oai_responses",
-      "endpoint": "responses",
-      "claim": {
-        "dimension": "option",
-        "name": "tool_choice",
-        "profile": {
-          "mode": "required"
-        }
-      },
-      "verdict": "supported",
-      "evidence_ids": [
-        "6dd80c99cbb0a3f5a93991c8"
-      ],
-      "observed_at": "2026-08-29T00:05:38.702329+00:00"
-    },
-    {
-      "provider_id": "openai",
-      "model_id": "openai/gpt-5.6-terra",
-      "surface_id": "oai_responses",
-      "endpoint": "responses",
-      "claim": {
-        "dimension": "option",
-        "name": "top_p",
-        "profile": {
-          "value": 0.83
-        }
-      },
-      "verdict": "unsupported",
-      "evidence_ids": [
-        "896e927e88e8fe5a9a51e9eb"
-      ],
-      "observed_at": "2026-08-29T00:05:38.702329+00:00"
-    },
-    {
-      "provider_id": "openai",
-      "model_id": "openai/o1-pro",
-      "surface_id": "oai_responses",
-      "endpoint": "responses",
+      "provider_id": "xai",
+      "model_id": "xai/grok-build-0.1",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
       "claim": {
         "dimension": "capability",
         "name": "text_generation",
@@ -1822,15 +2268,66 @@
       },
       "verdict": "supported",
       "evidence_ids": [
-        "8ef3f923a09c1dedd08f5829"
+        "b7cc1800549c81d3bb206048"
       ],
-      "observed_at": "2026-08-29T00:39:44.971415+00:00"
+      "observed_at": "2026-08-31T21:59:23.882601+00:00"
     },
     {
-      "provider_id": "openai",
-      "model_id": "openai/o1-pro",
-      "surface_id": "oai_responses",
-      "endpoint": "responses",
+      "provider_id": "xai",
+      "model_id": "xai/grok-build-0.1",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "interaction",
+        "name": "reasoning+tools",
+        "profile": {
+          "reasoning_effort": "low",
+          "tool_choice": "named"
+        }
+      },
+      "verdict": "unsupported",
+      "evidence_ids": [
+        "0c1e34e11c646c37007926ff"
+      ],
+      "observed_at": "2026-08-31T21:59:23.882601+00:00"
+    },
+    {
+      "provider_id": "xai",
+      "model_id": "xai/grok-build-0.1",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "interaction",
+        "name": "streaming+tools",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "c5d6faa6ee7d7a18fe39af37"
+      ],
+      "observed_at": "2026-08-31T21:59:23.882601+00:00"
+    },
+    {
+      "provider_id": "xai",
+      "model_id": "xai/grok-build-0.1",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "modality",
+        "name": "input_pdf",
+        "profile": {}
+      },
+      "verdict": "unsupported",
+      "evidence_ids": [
+        "dbb84d306de26211a8008972"
+      ],
+      "observed_at": "2026-08-31T21:59:23.882601+00:00"
+    },
+    {
+      "provider_id": "xai",
+      "model_id": "xai/grok-build-0.1",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
       "claim": {
         "dimension": "modality",
         "name": "input_text",
@@ -1838,15 +2335,15 @@
       },
       "verdict": "supported",
       "evidence_ids": [
-        "95d0d121044e37c20913f7d0"
+        "da25a8bd9a38a988531231f7"
       ],
-      "observed_at": "2026-08-29T00:39:44.971415+00:00"
+      "observed_at": "2026-08-31T21:59:23.882601+00:00"
     },
     {
-      "provider_id": "openai",
-      "model_id": "openai/o1-pro",
-      "surface_id": "oai_responses",
-      "endpoint": "responses",
+      "provider_id": "xai",
+      "model_id": "xai/grok-build-0.1",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
       "claim": {
         "dimension": "modality",
         "name": "output_text",
@@ -1854,57 +2351,27 @@
       },
       "verdict": "supported",
       "evidence_ids": [
-        "fdc6b829800bd28e34ec3cfe"
+        "8d6d94d505613cb4b59930cd"
       ],
-      "observed_at": "2026-08-29T00:39:44.971415+00:00"
+      "observed_at": "2026-08-31T21:59:23.882601+00:00"
     },
     {
-      "provider_id": "openai",
-      "model_id": "openai/o1-pro-2025-03-19",
-      "surface_id": "oai_responses",
-      "endpoint": "responses",
+      "provider_id": "xai",
+      "model_id": "xai/grok-build-0.1",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
       "claim": {
-        "dimension": "capability",
-        "name": "text_generation",
-        "profile": {}
+        "dimension": "option",
+        "name": "response_format",
+        "profile": {
+          "mode": "json_schema"
+        }
       },
       "verdict": "supported",
       "evidence_ids": [
-        "4d7219ec28f1ffb344052684"
+        "9bdd5c31572abc5a62e94be9"
       ],
-      "observed_at": "2026-08-29T00:41:53.963366+00:00"
-    },
-    {
-      "provider_id": "openai",
-      "model_id": "openai/o1-pro-2025-03-19",
-      "surface_id": "oai_responses",
-      "endpoint": "responses",
-      "claim": {
-        "dimension": "modality",
-        "name": "input_text",
-        "profile": {}
-      },
-      "verdict": "supported",
-      "evidence_ids": [
-        "ec0dcfd93e16d35b219b0534"
-      ],
-      "observed_at": "2026-08-29T00:41:53.963366+00:00"
-    },
-    {
-      "provider_id": "openai",
-      "model_id": "openai/o1-pro-2025-03-19",
-      "surface_id": "oai_responses",
-      "endpoint": "responses",
-      "claim": {
-        "dimension": "modality",
-        "name": "output_text",
-        "profile": {}
-      },
-      "verdict": "supported",
-      "evidence_ids": [
-        "973f0671504e5a8bed9c2729"
-      ],
-      "observed_at": "2026-08-29T00:41:53.963366+00:00"
+      "observed_at": "2026-08-31T21:59:23.882601+00:00"
     }
   ]
 }

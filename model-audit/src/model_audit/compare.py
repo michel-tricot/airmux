@@ -11,6 +11,8 @@ if TYPE_CHECKING:
 
     from pydantic import JsonValue
 
+HTTP_CLIENT_ERROR_CLASS = 4
+
 
 def _finish_class(reason: str | None) -> str | None:
     return {
@@ -95,6 +97,24 @@ def error_category(observation: Observation) -> str | None:
     return failure.category if failure is not None else None
 
 
+def _error_categories(direct: Observation, gateway: Observation) -> tuple[str | None, str | None]:
+    direct_failure = classify(direct)
+    gateway_failure = classify(gateway)
+    client_errors = all(status is not None and status // 100 == HTTP_CLIENT_ERROR_CLASS for status in (direct.http_status, gateway.http_status))
+    feature_boundary = (
+        direct.outcome == "rejected"
+        and gateway.outcome == "rejected"
+        and any(failure is not None and failure.kind == "unsupported" for failure in (direct_failure, gateway_failure))
+        and client_errors
+    )
+    if feature_boundary:
+        return "feature_rejection", "feature_rejection"
+    return (
+        direct_failure.category if direct_failure is not None else None,
+        gateway_failure.category if gateway_failure is not None else None,
+    )
+
+
 def _json_value(value: object) -> JsonValue:
     return cast("JsonValue", json.loads(json.dumps(value, sort_keys=True, ensure_ascii=False)))
 
@@ -136,7 +156,7 @@ def _differences(direct: Observation, gateway: Observation, case: Case) -> tuple
         ),
         "reasoning": (direct.reasoning_present, gateway.reasoning_present),
         "json": (direct.json_value, gateway.json_value),
-        "error": (error_category(direct), error_category(gateway)),
+        "error": _error_categories(direct, gateway),
         "adjustments": (direct.adjustments, gateway.adjustments),
     }
     return tuple(

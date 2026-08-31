@@ -35,7 +35,10 @@ async def healthz(request: Request) -> JSONResponse:
 
 
 async def readyz(request: Request) -> JSONResponse:
-    if not runtime_of(request).holder.current.snapshots:
+    holder = runtime_of(request).holder
+    if holder.rejected_manifest is not None:
+        return JSONResponse({"status": "bundle rejected"}, status_code=503)
+    if not holder.current.snapshots:
         return JSONResponse({"status": "no bundle"}, status_code=503)
     return JSONResponse({"status": "ready"})
 

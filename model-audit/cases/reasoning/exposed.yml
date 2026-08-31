@@ -8,25 +8,25 @@ claims:
     effort: low
   assertion:
     reasoning_present: true
-    text_contains: "42"
+    text_contains: "210"
 - dimension: option
   name: reasoning_effort
   profile:
     value: low
   assertion:
     reasoning_present: true
-    text_contains: "42"
+    text_contains: "210"
 applies_to:
   endpoints: [chat/completions, responses]
 request:
   messages:
   - role: user
-    content: Reason briefly and answer what is 20 plus 22
+    content: Reason briefly, then answer the sum of the integers from 1 through 20
   reasoning:
     effort: low
     summary: auto
 oracle:
   reasoning_present: true
-  text_contains: "42"
+  text_contains: "210"
 execution:
   max_output_tokens: 1100

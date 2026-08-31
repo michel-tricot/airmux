@@ -76,14 +76,26 @@ class BundleSet:
 class BundleHolder:
     def __init__(self) -> None:
         self._current = BundleSet.from_bundles(())
+        self._rejected_manifest: str | None = None
 
     @property
     def current(self) -> BundleSet:
         return self._current
 
+    @property
+    def rejected_manifest(self) -> str | None:
+        return self._rejected_manifest
+
     def swap(self, current: BundleSet, source: str) -> None:
         self._current = current
+        self._rejected_manifest = None
         logger.info("adopted %s bundle manifest with %d organizations", source, len(current.snapshots))
+
+    def reject_manifest(self, error: str) -> None:
+        self._rejected_manifest = error
+
+    def accept_manifest(self) -> None:
+        self._rejected_manifest = None
 
 
 def _unique_index[T](entries: Iterable[T], key: Callable[[T], str], label: str) -> dict[str, T]:
