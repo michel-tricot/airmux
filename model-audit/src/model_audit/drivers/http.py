@@ -34,11 +34,18 @@ def _headers(connection: Connection, endpoint: str) -> dict[str, str]:
     }
 
 
+def _data_values(body: str) -> tuple[str, ...]:
+    return tuple(
+        data
+        for block in body.replace("\r\n", "\n").split("\n\n")
+        if (data := "\n".join(line.removeprefix("data:").lstrip() for line in block.splitlines() if line.startswith("data:")))
+    )
+
+
 def _events(body: str) -> tuple[Mapping[str, object], ...]:
     events: list[Mapping[str, object]] = []
-    for block in body.replace("\r\n", "\n").split("\n\n"):
-        data = "\n".join(line.removeprefix("data:").lstrip() for line in block.splitlines() if line.startswith("data:"))
-        if not data or data == "[DONE]":
+    for data in _data_values(body):
+        if data == "[DONE]":
             continue
         value = json.loads(data)
         if isinstance(value, Mapping):
@@ -83,12 +90,43 @@ def _buffered(endpoint: str, payload: Mapping[str, object], duration_ms: float) 
     raise ValueError(message)
 
 
-def _streamed(endpoint: str, events: Sequence[Mapping[str, object]], duration_ms: float) -> Observation:
+def _stream_error(events: Sequence[Mapping[str, object]], duration_ms: float) -> Observation | None:
+    event = next((item for item in events if item.get("type") == "error" or isinstance(item.get("error"), Mapping)), None)
+    if event is None:
+        return None
+    detail = cast("Mapping[str, object]", event.get("error")) if isinstance(event.get("error"), Mapping) else event
+    return Observation(
+        outcome="error",
+        error_code=str(detail.get("code") or detail.get("type") or "upstream_error"),
+        error_message=str(detail.get("message") or ""),
+        duration_ms=duration_ms,
+        client_type="HTTP SSE",
+    )
+
+
+def _protocol_error(message: str, duration_ms: float) -> Observation:
+    return Observation(
+        outcome="error",
+        error_code="invalid_upstream_response",
+        error_message=message,
+        duration_ms=duration_ms,
+        client_type="HTTP SSE",
+    )
+
+
+def _streamed(endpoint: str, body: str, duration_ms: float) -> Observation:
+    events = _events(body)
+    if error := _stream_error(events, duration_ms):
+        return error
     if endpoint == "chat/completions":
+        if "[DONE]" not in _data_values(body):
+            return _protocol_error("provider stream ended before its terminal event", duration_ms)
         return openai_chat_stream(events, duration_ms, "HTTP SSE")
     if endpoint == "responses":
         return openai_responses_stream(events, duration_ms, "HTTP SSE")
     if endpoint == "messages":
+        if not any(event.get("type") == "message_stop" for event in events):
+            return _protocol_error("provider stream ended before its terminal event", duration_ms)
         return anthropic_stream(events, duration_ms, "HTTP SSE")
     message = f"raw HTTP client does not support endpoint {endpoint}"
     raise ValueError(message)
@@ -137,7 +175,7 @@ def _send(
         if response.is_error:
             observation = _error_observation(connection, response, elapsed)
         elif transport == "streamed":
-            observation = _streamed(endpoint, _events(content), elapsed)
+            observation = _streamed(endpoint, content, elapsed)
         else:
             observation = _buffered(endpoint, _json_payload(response), elapsed)
     except (json.JSONDecodeError, UnicodeDecodeError, TypeError, ValueError) as error:

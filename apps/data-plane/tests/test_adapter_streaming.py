@@ -8,7 +8,7 @@ import pytest
 from conftest import CTX, PROVIDER, TEXT_LOG, TEXT_NONSTREAM, delta_event, sse
 
 from contract import Secret
-from data_plane.canonical import ReasoningPart
+from data_plane.canonical import ReasoningPart, TextPart, ToolCallPart
 from data_plane.egress import REGISTRY
 from data_plane.egress.base import UpstreamStreamError
 
@@ -369,6 +369,27 @@ def test_openai_compatible_stream_preserves_reasoning_spelled_without_content():
     assert final.content[0] == ReasoningPart(text="20 + 22")
 
 
+def test_openai_compatible_stream_preserves_mistral_content_blocks():
+    events = [
+        delta_event({"content": [{"type": "thinking", "thinking": [{"type": "text", "text": "20 + "}], "closed": True}]}),
+        delta_event(
+            {
+                "content": [
+                    {"type": "thinking", "thinking": [{"type": "text", "text": "22"}], "closed": True},
+                    {"type": "text", "text": "The answer is"},
+                ]
+            }
+        ),
+        delta_event({"content": " 42"}),
+        delta_event({}, finish="stop"),
+    ]
+
+    chunks, final = fold(_adapter("openai_compatible"), b"".join(sse(event) for event in events) + b"data: [DONE]\n\n", 7)
+
+    assert [chunk.delta.text for chunk in chunks if chunk.delta is not None and chunk.delta.type == "reasoning"] == ["20 + ", "22"]
+    assert final.content == [ReasoningPart(text="20 + 22"), TextPart(text="The answer is 42")]
+
+
 def test_openai_compatible_stream_accepts_null_tool_fragment_metadata():
     events = [
         delta_event({"tool_calls": [{"id": "call_1", "index": 0, "type": "function", "function": {"name": "report_result", "arguments": ""}}]}),
@@ -379,7 +400,8 @@ def test_openai_compatible_stream_accepts_null_tool_fragment_metadata():
 
     _, final = fold(_adapter("openai_compatible"), b"".join(sse(event) for event in events) + b"data: [DONE]\n\n", 7)
 
-    assert [(part.id, part.name, part.arguments) for part in final.content] == [("call_1", "report_result", '{"value":"ok"}')]
+    calls = [part for part in final.content if isinstance(part, ToolCallPart)]
+    assert [(part.id, part.name, part.arguments) for part in calls] == [("call_1", "report_result", '{"value":"ok"}')]
     assert final.finish_reason == "tool_calls"
     assert not final.usage.estimated
 

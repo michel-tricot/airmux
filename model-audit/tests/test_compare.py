@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from model_audit.compare import assess
-from model_audit.models import Observation, Oracle
+from model_audit.models import Observation, Oracle, ToolObservation
 
 
 def test_matching_explicit_rejections_are_parity_and_unsupported():
@@ -23,6 +23,20 @@ def test_model_specific_not_enabled_rejection_is_unsupported():
 
         assert result.feature == "unsupported"
         assert result.parity == "match"
+
+
+def test_provider_schema_rejection_is_unsupported():
+    direct = Observation(
+        outcome="rejected",
+        http_status=422,
+        error_code="422",
+        error_message="extra_forbidden: Extra inputs are not permitted for seed",
+    )
+
+    result = assess(direct, direct, Oracle(text_nonempty=True))
+
+    assert result.feature == "unsupported"
+    assert result.parity == "match"
 
 
 def test_matching_generic_rejections_are_parity_but_unknown_support():
@@ -109,6 +123,17 @@ def test_stop_sequence_and_stop_are_equivalent_completion_reasons():
     assert result.parity == "match"
 
 
+def test_a_tool_call_makes_stop_and_tool_completion_reasons_equivalent():
+    tool_call = ToolObservation(name="lookup", arguments='{"query":"weather"}')
+    direct = Observation(outcome="success", tool_calls=(tool_call,), finish_reason="stop")
+    gateway = Observation(outcome="success", tool_calls=(tool_call,), finish_reason="tool_calls")
+
+    result = assess(direct, gateway, Oracle(tool_names=("lookup",)))
+
+    assert result.parity == "match"
+    assert "finish_reason" not in result.differences
+
+
 def test_responses_output_limit_before_oracle_is_unknown():
     direct = Observation(outcome="success", finish_reason="max_output_tokens", usage_present=True)
 
@@ -125,6 +150,25 @@ def test_incidental_reasoning_does_not_create_a_mismatch():
     result = assess(direct, gateway, Oracle(text_contains="red"))
 
     assert result.parity == "match"
+
+
+def test_incidental_usage_does_not_create_a_mismatch():
+    direct = Observation(outcome="success", text="ok", usage_present=False)
+    gateway = Observation(outcome="success", text="ok", usage_present=True)
+
+    result = assess(direct, gateway, Oracle(text_contains="ok"))
+
+    assert result.parity == "match"
+
+
+def test_claimed_usage_presence_still_participates_in_parity():
+    direct = Observation(outcome="success", text="ok", usage_present=True)
+    gateway = Observation(outcome="success", text="ok", usage_present=False)
+
+    result = assess(direct, gateway, Oracle(text_contains="ok", usage_present=True))
+
+    assert result.parity == "mismatch"
+    assert "usage_presence" in result.differences
 
 
 def test_incidental_parseable_json_does_not_create_a_mismatch():

@@ -38,18 +38,26 @@ def _json_value(text: str) -> JsonValue | None:
         return None
 
 
+def _openai_content(value: object) -> tuple[str, bool]:
+    if isinstance(value, str):
+        return value, False
+    blocks = [_mapping(item) for item in _sequence(value)]
+    text = "".join(str(block.get("text") or "") for block in blocks if block.get("type") == "text")
+    reasoning = any(block.get("type") == "thinking" for block in blocks)
+    return text, reasoning
+
+
 def openai_chat(payload: Mapping[str, object], duration_ms: float, client_type: str) -> Observation:
     choices = _sequence(payload.get("choices"))
     choice = _mapping(choices[0]) if choices else {}
     message = _mapping(choice.get("message"))
-    content = message.get("content")
-    text = content if isinstance(content, str) else ""
+    text, content_reasoning = _openai_content(message.get("content"))
     calls = tuple(
         ToolObservation(name=str(function.get("name") or ""), arguments=str(function.get("arguments") or ""))
         for item in _sequence(message.get("tool_calls"))
         if (function := _mapping(_mapping(item).get("function"))).get("name")
     )
-    reasoning_present = any(name in message and message[name] is not None for name in ("reasoning_content", "reasoning"))
+    reasoning_present = content_reasoning or any(name in message and message[name] is not None for name in ("reasoning_content", "reasoning"))
     return Observation(
         outcome="success",
         text=text,
@@ -145,9 +153,11 @@ def openai_chat_stream(events: Sequence[Mapping[str, object]], duration_ms: floa
         choice = _mapping(choices[0])
         finish_reason = str(choice.get("finish_reason") or finish_reason or "") or None
         delta = _mapping(choice.get("delta"))
-        if isinstance(delta.get("content"), str):
-            text += str(delta["content"])
-        reasoning_present = reasoning_present or any(name in delta and delta[name] is not None for name in ("reasoning_content", "reasoning"))
+        content_text, content_reasoning = _openai_content(delta.get("content"))
+        text += content_text
+        reasoning_present = (
+            reasoning_present or content_reasoning or any(name in delta and delta[name] is not None for name in ("reasoning_content", "reasoning"))
+        )
         for call_value in _sequence(delta.get("tool_calls")):
             call = _mapping(call_value)
             index = _index(call.get("index"))

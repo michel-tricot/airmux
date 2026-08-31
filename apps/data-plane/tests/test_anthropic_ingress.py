@@ -118,7 +118,7 @@ def test_parse_keeps_a_constrained_anthropic_schema_as_json_schema():
         }
     )
 
-    assert request.response_format == ResponseFormat(type="json_schema", json_schema={"schema": schema})
+    assert request.response_format == ResponseFormat(type="json_schema", json_schema={"name": "response", "strict": True, "schema": schema})
 
 
 def test_the_sdk_reads_a_thinking_signature_back():
