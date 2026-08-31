@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from model_audit.models import Assessment, Difference, Experiment, Observation, PairResult, Plan, ReportDocument, RunMetadata
+from model_audit.models import Assessment, ClaimAssessment, Difference, Experiment, Observation, PairResult, Plan, ReportDocument, RunMetadata
 from model_audit.report import archive_plan, checkpoint_interval, remaining_plan, write_report
 from tests.helpers import case, target
 
@@ -45,6 +45,7 @@ def test_report_is_machine_readable_and_explains_gateway_gaps(tmp_path):
                 Difference(code="error", direct=None, gateway="http_4xx"),
                 Difference(code="oracle", direct=True, gateway=False),
             ),
+            claims=(ClaimAssessment(claim=experiment_case.claims[0], feature="unknown", direct_satisfies=None, gateway_satisfies=None),),
             reason="direct and gateway behavior differ",
             direct_satisfies_oracle=True,
             gateway_satisfies_oracle=False,
@@ -54,7 +55,11 @@ def test_report_is_machine_readable_and_explains_gateway_gaps(tmp_path):
     paths = write_report(ReportDocument(run=run_metadata("run-test"), results=(result,)), tmp_path)
 
     document = paths.json_path.read_text(encoding="utf-8")
+    restored = ReportDocument.model_validate_json(document)
     report = paths.html_path.read_text(encoding="utf-8")
+    assert restored.results[0].assessment.differences[1].direct is None
+    assert restored.results[0].assessment.claims[0].direct_satisfies is None
+    assert restored.results[0].assessment.claims[0].gateway_satisfies is None
     assert '"feature": "supported"' in document
     assert '"parity": "mismatch"' in document
     assert '"stability": "flaky"' in document

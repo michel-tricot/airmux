@@ -105,11 +105,17 @@ models:
   - reasoning
   - streaming
   - structured_output
+  - text
   - tools
   - vision
   parameter_support:
+    max_tokens: supported
+    parallel_tool_calls: supported
+    response_format: supported
     stop: supported
+    strict_tools: supported
     temperature: supported
+    tool_choice: supported
     top_p: supported
 - model_id: anthropic/claude-opus-4-5-20251101
   provider_id: anthropic
@@ -281,17 +287,23 @@ models:
   context_window: 131072
   max_output_tokens: 40960
   capabilities:
+  - reasoning
   - streaming
   - structured_output
+  - text
   - tools
   - vision
   parameter_support:
     logprobs: supported
+    max_tokens: supported
     parallel_tool_calls: supported
     reasoning_effort: supported
+    response_format: supported
     seed: supported
     stop: supported
+    strict_tools: supported
     temperature: supported
+    tool_choice: supported
     top_p: supported
 - model_id: cerebras/gpt-oss-120b
   provider_id: cerebras

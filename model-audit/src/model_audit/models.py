@@ -321,15 +321,15 @@ class Observation(FrozenModel):
 
 class Difference(FrozenModel):
     code: str
-    direct: JsonValue
-    gateway: JsonValue
+    direct: JsonValue = None
+    gateway: JsonValue = None
 
 
 class ClaimAssessment(FrozenModel):
     claim: Claim
     feature: FeatureVerdict
-    direct_satisfies: bool | None
-    gateway_satisfies: bool | None
+    direct_satisfies: bool | None = None
+    gateway_satisfies: bool | None = None
 
 
 class Assessment(FrozenModel):

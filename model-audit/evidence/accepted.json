@@ -30,13 +30,16 @@
         "reasoning_present": false,
         "adjustments": [],
         "duration_ms": 3454.657624941319,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        }
       },
       "attempts": 3,
       "observed_at": "2026-08-28T22:52:56.653613+00:00",
       "harness_commit": "f3a24231f784113b2eab2ef800ba3bcf46d7c0c0",
-      "taxonomy_fingerprint": "83fc61086fd4665e545b",
-      "harness_fingerprint": "legacy:f3a24231f784113b2eab2ef800ba3bcf46d7c0c0"
+      "harness_fingerprint": "legacy:f3a24231f784113b2eab2ef800ba3bcf46d7c0c0",
+      "taxonomy_fingerprint": "83fc61086fd4665e545b"
     },
     {
       "schema_version": 2,
@@ -65,13 +68,16 @@
         "reasoning_present": false,
         "adjustments": [],
         "duration_ms": 2671.4187918696553,
-        "client_type": "HTTP SSE"
+        "client_type": "HTTP SSE",
+        "usage": {
+          "source": "reported"
+        }
       },
       "attempts": 3,
       "observed_at": "2026-08-28T22:52:56.653613+00:00",
       "harness_commit": "f3a24231f784113b2eab2ef800ba3bcf46d7c0c0",
-      "taxonomy_fingerprint": "83fc61086fd4665e545b",
-      "harness_fingerprint": "legacy:f3a24231f784113b2eab2ef800ba3bcf46d7c0c0"
+      "harness_fingerprint": "legacy:f3a24231f784113b2eab2ef800ba3bcf46d7c0c0",
+      "taxonomy_fingerprint": "83fc61086fd4665e545b"
     },
     {
       "schema_version": 2,
@@ -102,13 +108,16 @@
         "reasoning_present": false,
         "adjustments": [],
         "duration_ms": 3454.657624941319,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        }
       },
       "attempts": 3,
       "observed_at": "2026-08-28T22:52:56.653613+00:00",
       "harness_commit": "f3a24231f784113b2eab2ef800ba3bcf46d7c0c0",
-      "taxonomy_fingerprint": "83fc61086fd4665e545b",
-      "harness_fingerprint": "legacy:f3a24231f784113b2eab2ef800ba3bcf46d7c0c0"
+      "harness_fingerprint": "legacy:f3a24231f784113b2eab2ef800ba3bcf46d7c0c0",
+      "taxonomy_fingerprint": "83fc61086fd4665e545b"
     },
     {
       "schema_version": 2,
@@ -144,13 +153,16 @@
         "reasoning_present": false,
         "adjustments": [],
         "duration_ms": 1497.3105418030173,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        }
       },
       "attempts": 3,
       "observed_at": "2026-08-28T22:52:56.653613+00:00",
       "harness_commit": "f3a24231f784113b2eab2ef800ba3bcf46d7c0c0",
-      "taxonomy_fingerprint": "83fc61086fd4665e545b",
-      "harness_fingerprint": "legacy:f3a24231f784113b2eab2ef800ba3bcf46d7c0c0"
+      "harness_fingerprint": "legacy:f3a24231f784113b2eab2ef800ba3bcf46d7c0c0",
+      "taxonomy_fingerprint": "83fc61086fd4665e545b"
     },
     {
       "schema_version": 2,
@@ -184,13 +196,16 @@
         },
         "adjustments": [],
         "duration_ms": 4490.158291067928,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        }
       },
       "attempts": 1,
       "observed_at": "2026-08-28T22:52:56.653613+00:00",
       "harness_commit": "f3a24231f784113b2eab2ef800ba3bcf46d7c0c0",
-      "taxonomy_fingerprint": "83fc61086fd4665e545b",
-      "harness_fingerprint": "legacy:f3a24231f784113b2eab2ef800ba3bcf46d7c0c0"
+      "harness_fingerprint": "legacy:f3a24231f784113b2eab2ef800ba3bcf46d7c0c0",
+      "taxonomy_fingerprint": "83fc61086fd4665e545b"
     },
     {
       "schema_version": 2,
@@ -227,13 +242,16 @@
         "reasoning_present": false,
         "adjustments": [],
         "duration_ms": 990.806374931708,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        }
       },
       "attempts": 3,
       "observed_at": "2026-08-28T22:52:56.653613+00:00",
       "harness_commit": "f3a24231f784113b2eab2ef800ba3bcf46d7c0c0",
-      "taxonomy_fingerprint": "83fc61086fd4665e545b",
-      "harness_fingerprint": "legacy:f3a24231f784113b2eab2ef800ba3bcf46d7c0c0"
+      "harness_fingerprint": "legacy:f3a24231f784113b2eab2ef800ba3bcf46d7c0c0",
+      "taxonomy_fingerprint": "83fc61086fd4665e545b"
     },
     {
       "schema_version": 2,
@@ -267,13 +285,16 @@
         },
         "adjustments": [],
         "duration_ms": 4490.158291067928,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        }
       },
       "attempts": 1,
       "observed_at": "2026-08-28T22:52:56.653613+00:00",
       "harness_commit": "f3a24231f784113b2eab2ef800ba3bcf46d7c0c0",
-      "taxonomy_fingerprint": "83fc61086fd4665e545b",
-      "harness_fingerprint": "legacy:f3a24231f784113b2eab2ef800ba3bcf46d7c0c0"
+      "harness_fingerprint": "legacy:f3a24231f784113b2eab2ef800ba3bcf46d7c0c0",
+      "taxonomy_fingerprint": "83fc61086fd4665e545b"
     },
     {
       "schema_version": 2,
@@ -302,13 +323,16 @@
         "reasoning_present": false,
         "adjustments": [],
         "duration_ms": 1106.3080839812756,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        }
       },
       "attempts": 3,
       "observed_at": "2026-08-28T22:52:56.653613+00:00",
       "harness_commit": "f3a24231f784113b2eab2ef800ba3bcf46d7c0c0",
-      "taxonomy_fingerprint": "83fc61086fd4665e545b",
-      "harness_fingerprint": "legacy:f3a24231f784113b2eab2ef800ba3bcf46d7c0c0"
+      "harness_fingerprint": "legacy:f3a24231f784113b2eab2ef800ba3bcf46d7c0c0",
+      "taxonomy_fingerprint": "83fc61086fd4665e545b"
     },
     {
       "schema_version": 2,
@@ -344,13 +368,16 @@
         "reasoning_present": false,
         "adjustments": [],
         "duration_ms": 1057.8037081286311,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        }
       },
       "attempts": 3,
       "observed_at": "2026-08-28T22:52:56.653613+00:00",
       "harness_commit": "f3a24231f784113b2eab2ef800ba3bcf46d7c0c0",
-      "taxonomy_fingerprint": "83fc61086fd4665e545b",
-      "harness_fingerprint": "legacy:f3a24231f784113b2eab2ef800ba3bcf46d7c0c0"
+      "harness_fingerprint": "legacy:f3a24231f784113b2eab2ef800ba3bcf46d7c0c0",
+      "taxonomy_fingerprint": "83fc61086fd4665e545b"
     },
     {
       "schema_version": 2,
@@ -390,13 +417,16 @@
         "reasoning_present": false,
         "adjustments": [],
         "duration_ms": 1779.736208030954,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        }
       },
       "attempts": 3,
       "observed_at": "2026-08-28T22:52:56.653613+00:00",
       "harness_commit": "f3a24231f784113b2eab2ef800ba3bcf46d7c0c0",
-      "taxonomy_fingerprint": "83fc61086fd4665e545b",
-      "harness_fingerprint": "legacy:f3a24231f784113b2eab2ef800ba3bcf46d7c0c0"
+      "harness_fingerprint": "legacy:f3a24231f784113b2eab2ef800ba3bcf46d7c0c0",
+      "taxonomy_fingerprint": "83fc61086fd4665e545b"
     },
     {
       "schema_version": 2,
@@ -430,13 +460,16 @@
         "reasoning_present": false,
         "adjustments": [],
         "duration_ms": 1144.7665831074119,
-        "client_type": "HTTP SSE"
+        "client_type": "HTTP SSE",
+        "usage": {
+          "source": "reported"
+        }
       },
       "attempts": 3,
       "observed_at": "2026-08-28T22:52:56.653613+00:00",
       "harness_commit": "f3a24231f784113b2eab2ef800ba3bcf46d7c0c0",
-      "taxonomy_fingerprint": "83fc61086fd4665e545b",
-      "harness_fingerprint": "legacy:f3a24231f784113b2eab2ef800ba3bcf46d7c0c0"
+      "harness_fingerprint": "legacy:f3a24231f784113b2eab2ef800ba3bcf46d7c0c0",
+      "taxonomy_fingerprint": "83fc61086fd4665e545b"
     },
     {
       "schema_version": 2,
@@ -466,13 +499,16 @@
         "json_value": 42,
         "adjustments": [],
         "duration_ms": 4700.305042089894,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        }
       },
       "attempts": 1,
       "observed_at": "2026-08-28T22:52:56.653613+00:00",
       "harness_commit": "f3a24231f784113b2eab2ef800ba3bcf46d7c0c0",
-      "taxonomy_fingerprint": "83fc61086fd4665e545b",
-      "harness_fingerprint": "legacy:f3a24231f784113b2eab2ef800ba3bcf46d7c0c0"
+      "harness_fingerprint": "legacy:f3a24231f784113b2eab2ef800ba3bcf46d7c0c0",
+      "taxonomy_fingerprint": "83fc61086fd4665e545b"
     },
     {
       "schema_version": 2,
@@ -506,13 +542,16 @@
         "reasoning_present": false,
         "adjustments": [],
         "duration_ms": 1497.3105418030173,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        }
       },
       "attempts": 3,
       "observed_at": "2026-08-28T22:52:56.653613+00:00",
       "harness_commit": "f3a24231f784113b2eab2ef800ba3bcf46d7c0c0",
-      "taxonomy_fingerprint": "83fc61086fd4665e545b",
-      "harness_fingerprint": "legacy:f3a24231f784113b2eab2ef800ba3bcf46d7c0c0"
+      "harness_fingerprint": "legacy:f3a24231f784113b2eab2ef800ba3bcf46d7c0c0",
+      "taxonomy_fingerprint": "83fc61086fd4665e545b"
     },
     {
       "schema_version": 2,
@@ -548,13 +587,16 @@
         "reasoning_present": false,
         "adjustments": [],
         "duration_ms": 1474.6990841813385,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        }
       },
       "attempts": 3,
       "observed_at": "2026-08-28T22:52:56.653613+00:00",
       "harness_commit": "f3a24231f784113b2eab2ef800ba3bcf46d7c0c0",
-      "taxonomy_fingerprint": "83fc61086fd4665e545b",
-      "harness_fingerprint": "legacy:f3a24231f784113b2eab2ef800ba3bcf46d7c0c0"
+      "harness_fingerprint": "legacy:f3a24231f784113b2eab2ef800ba3bcf46d7c0c0",
+      "taxonomy_fingerprint": "83fc61086fd4665e545b"
     },
     {
       "schema_version": 2,
@@ -583,13 +625,16 @@
         "reasoning_present": false,
         "adjustments": [],
         "duration_ms": 782.5035839341581,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        }
       },
       "attempts": 1,
       "observed_at": "2026-08-29T00:05:38.702329+00:00",
       "harness_commit": "3b7495ec949b7f9250923acf3335ac3ecebc970a",
-      "taxonomy_fingerprint": "0eaab0c235393d80ad44",
-      "harness_fingerprint": "legacy:3b7495ec949b7f9250923acf3335ac3ecebc970a"
+      "harness_fingerprint": "legacy:3b7495ec949b7f9250923acf3335ac3ecebc970a",
+      "taxonomy_fingerprint": "0eaab0c235393d80ad44"
     },
     {
       "schema_version": 2,
@@ -619,13 +664,20 @@
         "json_value": 42,
         "adjustments": [],
         "duration_ms": 1062.3870841227472,
-        "client_type": "HTTP SSE"
+        "client_type": "HTTP SSE",
+        "usage": {
+          "source": "reported"
+        },
+        "reasoning": {
+          "exposed": true,
+          "signature_present": false
+        }
       },
       "attempts": 2,
       "observed_at": "2026-08-29T00:05:38.702329+00:00",
       "harness_commit": "3b7495ec949b7f9250923acf3335ac3ecebc970a",
-      "taxonomy_fingerprint": "0eaab0c235393d80ad44",
-      "harness_fingerprint": "legacy:3b7495ec949b7f9250923acf3335ac3ecebc970a"
+      "harness_fingerprint": "legacy:3b7495ec949b7f9250923acf3335ac3ecebc970a",
+      "taxonomy_fingerprint": "0eaab0c235393d80ad44"
     },
     {
       "schema_version": 2,
@@ -658,13 +710,21 @@
         "http_status": 400,
         "adjustments": [],
         "duration_ms": 196.10758288763463,
-        "client_type": "HTTP 400"
+        "client_type": "HTTP 400",
+        "failure": {
+          "kind": "rejection",
+          "origin": "unknown",
+          "retryable": false,
+          "code": "invalid_request_error",
+          "message": "Unsupported parameter: 'temperature' is not supported with this model.",
+          "http_status": 400
+        }
       },
       "attempts": 2,
       "observed_at": "2026-08-29T00:05:38.702329+00:00",
       "harness_commit": "3b7495ec949b7f9250923acf3335ac3ecebc970a",
-      "taxonomy_fingerprint": "0eaab0c235393d80ad44",
-      "harness_fingerprint": "legacy:3b7495ec949b7f9250923acf3335ac3ecebc970a"
+      "harness_fingerprint": "legacy:3b7495ec949b7f9250923acf3335ac3ecebc970a",
+      "taxonomy_fingerprint": "0eaab0c235393d80ad44"
     },
     {
       "schema_version": 2,
@@ -698,13 +758,16 @@
         },
         "adjustments": [],
         "duration_ms": 1119.4781670346856,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        }
       },
       "attempts": 1,
       "observed_at": "2026-08-29T00:05:38.702329+00:00",
       "harness_commit": "3b7495ec949b7f9250923acf3335ac3ecebc970a",
-      "taxonomy_fingerprint": "0eaab0c235393d80ad44",
-      "harness_fingerprint": "legacy:3b7495ec949b7f9250923acf3335ac3ecebc970a"
+      "harness_fingerprint": "legacy:3b7495ec949b7f9250923acf3335ac3ecebc970a",
+      "taxonomy_fingerprint": "0eaab0c235393d80ad44"
     },
     {
       "schema_version": 2,
@@ -735,13 +798,16 @@
         "reasoning_present": false,
         "adjustments": [],
         "duration_ms": 1242.047084029764,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        }
       },
       "attempts": 1,
       "observed_at": "2026-08-29T00:05:38.702329+00:00",
       "harness_commit": "3b7495ec949b7f9250923acf3335ac3ecebc970a",
-      "taxonomy_fingerprint": "0eaab0c235393d80ad44",
-      "harness_fingerprint": "legacy:3b7495ec949b7f9250923acf3335ac3ecebc970a"
+      "harness_fingerprint": "legacy:3b7495ec949b7f9250923acf3335ac3ecebc970a",
+      "taxonomy_fingerprint": "0eaab0c235393d80ad44"
     },
     {
       "schema_version": 2,
@@ -775,13 +841,16 @@
         "reasoning_present": false,
         "adjustments": [],
         "duration_ms": 1493.4405002277344,
-        "client_type": "HTTP SSE"
+        "client_type": "HTTP SSE",
+        "usage": {
+          "source": "reported"
+        }
       },
       "attempts": 2,
       "observed_at": "2026-08-29T00:05:38.702329+00:00",
       "harness_commit": "3b7495ec949b7f9250923acf3335ac3ecebc970a",
-      "taxonomy_fingerprint": "0eaab0c235393d80ad44",
-      "harness_fingerprint": "legacy:3b7495ec949b7f9250923acf3335ac3ecebc970a"
+      "harness_fingerprint": "legacy:3b7495ec949b7f9250923acf3335ac3ecebc970a",
+      "taxonomy_fingerprint": "0eaab0c235393d80ad44"
     },
     {
       "schema_version": 2,
@@ -815,13 +884,16 @@
         },
         "adjustments": [],
         "duration_ms": 1119.4781670346856,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        }
       },
       "attempts": 1,
       "observed_at": "2026-08-29T00:05:38.702329+00:00",
       "harness_commit": "3b7495ec949b7f9250923acf3335ac3ecebc970a",
-      "taxonomy_fingerprint": "0eaab0c235393d80ad44",
-      "harness_fingerprint": "legacy:3b7495ec949b7f9250923acf3335ac3ecebc970a"
+      "harness_fingerprint": "legacy:3b7495ec949b7f9250923acf3335ac3ecebc970a",
+      "taxonomy_fingerprint": "0eaab0c235393d80ad44"
     },
     {
       "schema_version": 2,
@@ -850,13 +922,20 @@
         "reasoning_present": true,
         "adjustments": [],
         "duration_ms": 989.5510000642389,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        },
+        "reasoning": {
+          "exposed": true,
+          "signature_present": false
+        }
       },
       "attempts": 1,
       "observed_at": "2026-08-29T00:05:38.702329+00:00",
       "harness_commit": "3b7495ec949b7f9250923acf3335ac3ecebc970a",
-      "taxonomy_fingerprint": "0eaab0c235393d80ad44",
-      "harness_fingerprint": "legacy:3b7495ec949b7f9250923acf3335ac3ecebc970a"
+      "harness_fingerprint": "legacy:3b7495ec949b7f9250923acf3335ac3ecebc970a",
+      "taxonomy_fingerprint": "0eaab0c235393d80ad44"
     },
     {
       "schema_version": 2,
@@ -892,13 +971,16 @@
         "reasoning_present": false,
         "adjustments": [],
         "duration_ms": 1237.9078750964254,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        }
       },
       "attempts": 2,
       "observed_at": "2026-08-29T00:05:38.702329+00:00",
       "harness_commit": "3b7495ec949b7f9250923acf3335ac3ecebc970a",
-      "taxonomy_fingerprint": "0eaab0c235393d80ad44",
-      "harness_fingerprint": "legacy:3b7495ec949b7f9250923acf3335ac3ecebc970a"
+      "harness_fingerprint": "legacy:3b7495ec949b7f9250923acf3335ac3ecebc970a",
+      "taxonomy_fingerprint": "0eaab0c235393d80ad44"
     },
     {
       "schema_version": 2,
@@ -934,13 +1016,20 @@
         "reasoning_present": true,
         "adjustments": [],
         "duration_ms": 1033.6008749436587,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        },
+        "reasoning": {
+          "exposed": true,
+          "signature_present": false
+        }
       },
       "attempts": 2,
       "observed_at": "2026-08-29T00:05:38.702329+00:00",
       "harness_commit": "3b7495ec949b7f9250923acf3335ac3ecebc970a",
-      "taxonomy_fingerprint": "0eaab0c235393d80ad44",
-      "harness_fingerprint": "legacy:3b7495ec949b7f9250923acf3335ac3ecebc970a"
+      "harness_fingerprint": "legacy:3b7495ec949b7f9250923acf3335ac3ecebc970a",
+      "taxonomy_fingerprint": "0eaab0c235393d80ad44"
     },
     {
       "schema_version": 2,
@@ -971,13 +1060,20 @@
         "reasoning_present": true,
         "adjustments": [],
         "duration_ms": 2278.7036248482764,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        },
+        "reasoning": {
+          "exposed": true,
+          "signature_present": false
+        }
       },
       "attempts": 2,
       "observed_at": "2026-08-29T00:05:38.702329+00:00",
       "harness_commit": "3b7495ec949b7f9250923acf3335ac3ecebc970a",
-      "taxonomy_fingerprint": "0eaab0c235393d80ad44",
-      "harness_fingerprint": "legacy:3b7495ec949b7f9250923acf3335ac3ecebc970a"
+      "harness_fingerprint": "legacy:3b7495ec949b7f9250923acf3335ac3ecebc970a",
+      "taxonomy_fingerprint": "0eaab0c235393d80ad44"
     },
     {
       "schema_version": 2,
@@ -1008,13 +1104,20 @@
         "reasoning_present": true,
         "adjustments": [],
         "duration_ms": 2278.7036248482764,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        },
+        "reasoning": {
+          "exposed": true,
+          "signature_present": false
+        }
       },
       "attempts": 2,
       "observed_at": "2026-08-29T00:05:38.702329+00:00",
       "harness_commit": "3b7495ec949b7f9250923acf3335ac3ecebc970a",
-      "taxonomy_fingerprint": "0eaab0c235393d80ad44",
-      "harness_fingerprint": "legacy:3b7495ec949b7f9250923acf3335ac3ecebc970a"
+      "harness_fingerprint": "legacy:3b7495ec949b7f9250923acf3335ac3ecebc970a",
+      "taxonomy_fingerprint": "0eaab0c235393d80ad44"
     },
     {
       "schema_version": 2,
@@ -1048,13 +1151,16 @@
         },
         "adjustments": [],
         "duration_ms": 1020.2795839868486,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        }
       },
       "attempts": 1,
       "observed_at": "2026-08-29T00:05:38.702329+00:00",
       "harness_commit": "3b7495ec949b7f9250923acf3335ac3ecebc970a",
-      "taxonomy_fingerprint": "0eaab0c235393d80ad44",
-      "harness_fingerprint": "legacy:3b7495ec949b7f9250923acf3335ac3ecebc970a"
+      "harness_fingerprint": "legacy:3b7495ec949b7f9250923acf3335ac3ecebc970a",
+      "taxonomy_fingerprint": "0eaab0c235393d80ad44"
     },
     {
       "schema_version": 2,
@@ -1094,13 +1200,20 @@
         "reasoning_present": true,
         "adjustments": [],
         "duration_ms": 1417.639167048037,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        },
+        "reasoning": {
+          "exposed": true,
+          "signature_present": false
+        }
       },
       "attempts": 2,
       "observed_at": "2026-08-29T00:05:38.702329+00:00",
       "harness_commit": "3b7495ec949b7f9250923acf3335ac3ecebc970a",
-      "taxonomy_fingerprint": "0eaab0c235393d80ad44",
-      "harness_fingerprint": "legacy:3b7495ec949b7f9250923acf3335ac3ecebc970a"
+      "harness_fingerprint": "legacy:3b7495ec949b7f9250923acf3335ac3ecebc970a",
+      "taxonomy_fingerprint": "0eaab0c235393d80ad44"
     },
     {
       "schema_version": 2,
@@ -1133,13 +1246,21 @@
         "http_status": 400,
         "adjustments": [],
         "duration_ms": 230.93379102647305,
-        "client_type": "HTTP 400"
+        "client_type": "HTTP 400",
+        "failure": {
+          "kind": "rejection",
+          "origin": "unknown",
+          "retryable": false,
+          "code": "invalid_request_error",
+          "message": "Unsupported parameter: 'top_p' is not supported with this model.",
+          "http_status": 400
+        }
       },
       "attempts": 2,
       "observed_at": "2026-08-29T00:05:38.702329+00:00",
       "harness_commit": "3b7495ec949b7f9250923acf3335ac3ecebc970a",
-      "taxonomy_fingerprint": "0eaab0c235393d80ad44",
-      "harness_fingerprint": "legacy:3b7495ec949b7f9250923acf3335ac3ecebc970a"
+      "harness_fingerprint": "legacy:3b7495ec949b7f9250923acf3335ac3ecebc970a",
+      "taxonomy_fingerprint": "0eaab0c235393d80ad44"
     },
     {
       "schema_version": 2,
@@ -1173,13 +1294,16 @@
         },
         "adjustments": [],
         "duration_ms": 1020.2795839868486,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        }
       },
       "attempts": 1,
       "observed_at": "2026-08-29T00:05:38.702329+00:00",
       "harness_commit": "3b7495ec949b7f9250923acf3335ac3ecebc970a",
-      "taxonomy_fingerprint": "0eaab0c235393d80ad44",
-      "harness_fingerprint": "legacy:3b7495ec949b7f9250923acf3335ac3ecebc970a"
+      "harness_fingerprint": "legacy:3b7495ec949b7f9250923acf3335ac3ecebc970a",
+      "taxonomy_fingerprint": "0eaab0c235393d80ad44"
     },
     {
       "schema_version": 2,
@@ -1213,13 +1337,20 @@
         "reasoning_present": true,
         "adjustments": [],
         "duration_ms": 1033.6008749436587,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        },
+        "reasoning": {
+          "exposed": true,
+          "signature_present": false
+        }
       },
       "attempts": 2,
       "observed_at": "2026-08-29T00:05:38.702329+00:00",
       "harness_commit": "3b7495ec949b7f9250923acf3335ac3ecebc970a",
-      "taxonomy_fingerprint": "0eaab0c235393d80ad44",
-      "harness_fingerprint": "legacy:3b7495ec949b7f9250923acf3335ac3ecebc970a"
+      "harness_fingerprint": "legacy:3b7495ec949b7f9250923acf3335ac3ecebc970a",
+      "taxonomy_fingerprint": "0eaab0c235393d80ad44"
     },
     {
       "schema_version": 2,
@@ -1250,13 +1381,16 @@
         "reasoning_present": false,
         "adjustments": [],
         "duration_ms": 1025.7928338833153,
-        "client_type": "HTTP SSE"
+        "client_type": "HTTP SSE",
+        "usage": {
+          "source": "reported"
+        }
       },
       "attempts": 1,
       "observed_at": "2026-08-29T00:05:38.702329+00:00",
       "harness_commit": "3b7495ec949b7f9250923acf3335ac3ecebc970a",
-      "taxonomy_fingerprint": "0eaab0c235393d80ad44",
-      "harness_fingerprint": "legacy:3b7495ec949b7f9250923acf3335ac3ecebc970a"
+      "harness_fingerprint": "legacy:3b7495ec949b7f9250923acf3335ac3ecebc970a",
+      "taxonomy_fingerprint": "0eaab0c235393d80ad44"
     },
     {
       "schema_version": 2,
@@ -1288,13 +1422,16 @@
         },
         "adjustments": [],
         "duration_ms": 1103.3126250840724,
-        "client_type": "HTTP SSE"
+        "client_type": "HTTP SSE",
+        "usage": {
+          "source": "reported"
+        }
       },
       "attempts": 1,
       "observed_at": "2026-08-29T00:05:38.702329+00:00",
       "harness_commit": "3b7495ec949b7f9250923acf3335ac3ecebc970a",
-      "taxonomy_fingerprint": "0eaab0c235393d80ad44",
-      "harness_fingerprint": "legacy:3b7495ec949b7f9250923acf3335ac3ecebc970a"
+      "harness_fingerprint": "legacy:3b7495ec949b7f9250923acf3335ac3ecebc970a",
+      "taxonomy_fingerprint": "0eaab0c235393d80ad44"
     },
     {
       "schema_version": 2,
@@ -1323,13 +1460,16 @@
         "reasoning_present": false,
         "adjustments": [],
         "duration_ms": 896.0317501332611,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        }
       },
       "attempts": 2,
       "observed_at": "2026-08-29T00:05:38.702329+00:00",
       "harness_commit": "3b7495ec949b7f9250923acf3335ac3ecebc970a",
-      "taxonomy_fingerprint": "0eaab0c235393d80ad44",
-      "harness_fingerprint": "legacy:3b7495ec949b7f9250923acf3335ac3ecebc970a"
+      "harness_fingerprint": "legacy:3b7495ec949b7f9250923acf3335ac3ecebc970a",
+      "taxonomy_fingerprint": "0eaab0c235393d80ad44"
     },
     {
       "schema_version": 2,
@@ -1358,13 +1498,16 @@
         "reasoning_present": false,
         "adjustments": [],
         "duration_ms": 929.8012091312557,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        }
       },
       "attempts": 1,
       "observed_at": "2026-08-29T00:05:38.702329+00:00",
       "harness_commit": "3b7495ec949b7f9250923acf3335ac3ecebc970a",
-      "taxonomy_fingerprint": "0eaab0c235393d80ad44",
-      "harness_fingerprint": "legacy:3b7495ec949b7f9250923acf3335ac3ecebc970a"
+      "harness_fingerprint": "legacy:3b7495ec949b7f9250923acf3335ac3ecebc970a",
+      "taxonomy_fingerprint": "0eaab0c235393d80ad44"
     },
     {
       "schema_version": 2,
@@ -1393,13 +1536,16 @@
         "reasoning_present": false,
         "adjustments": [],
         "duration_ms": 1595.81487509422,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        }
       },
       "attempts": 1,
       "observed_at": "2026-08-29T00:05:38.702329+00:00",
       "harness_commit": "3b7495ec949b7f9250923acf3335ac3ecebc970a",
-      "taxonomy_fingerprint": "0eaab0c235393d80ad44",
-      "harness_fingerprint": "legacy:3b7495ec949b7f9250923acf3335ac3ecebc970a"
+      "harness_fingerprint": "legacy:3b7495ec949b7f9250923acf3335ac3ecebc970a",
+      "taxonomy_fingerprint": "0eaab0c235393d80ad44"
     },
     {
       "schema_version": 2,
@@ -1436,13 +1582,16 @@
         "reasoning_present": false,
         "adjustments": [],
         "duration_ms": 946.5985831338912,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        }
       },
       "attempts": 2,
       "observed_at": "2026-08-29T00:05:38.702329+00:00",
       "harness_commit": "3b7495ec949b7f9250923acf3335ac3ecebc970a",
-      "taxonomy_fingerprint": "0eaab0c235393d80ad44",
-      "harness_fingerprint": "legacy:3b7495ec949b7f9250923acf3335ac3ecebc970a"
+      "harness_fingerprint": "legacy:3b7495ec949b7f9250923acf3335ac3ecebc970a",
+      "taxonomy_fingerprint": "0eaab0c235393d80ad44"
     },
     {
       "schema_version": 2,
@@ -1471,13 +1620,16 @@
         "reasoning_present": false,
         "adjustments": [],
         "duration_ms": 929.8012091312557,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        }
       },
       "attempts": 1,
       "observed_at": "2026-08-29T00:05:38.702329+00:00",
       "harness_commit": "3b7495ec949b7f9250923acf3335ac3ecebc970a",
-      "taxonomy_fingerprint": "0eaab0c235393d80ad44",
-      "harness_fingerprint": "legacy:3b7495ec949b7f9250923acf3335ac3ecebc970a"
+      "harness_fingerprint": "legacy:3b7495ec949b7f9250923acf3335ac3ecebc970a",
+      "taxonomy_fingerprint": "0eaab0c235393d80ad44"
     },
     {
       "schema_version": 2,
@@ -1507,13 +1659,20 @@
         "json_value": 42,
         "adjustments": [],
         "duration_ms": 2407.966790953651,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        },
+        "reasoning": {
+          "exposed": true,
+          "signature_present": false
+        }
       },
       "attempts": 1,
       "observed_at": "2026-08-29T00:05:38.702329+00:00",
       "harness_commit": "3b7495ec949b7f9250923acf3335ac3ecebc970a",
-      "taxonomy_fingerprint": "0eaab0c235393d80ad44",
-      "harness_fingerprint": "legacy:3b7495ec949b7f9250923acf3335ac3ecebc970a"
+      "harness_fingerprint": "legacy:3b7495ec949b7f9250923acf3335ac3ecebc970a",
+      "taxonomy_fingerprint": "0eaab0c235393d80ad44"
     },
     {
       "schema_version": 2,
@@ -1549,13 +1708,16 @@
         "reasoning_present": false,
         "adjustments": [],
         "duration_ms": 1006.272834027186,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        }
       },
       "attempts": 2,
       "observed_at": "2026-08-29T00:05:38.702329+00:00",
       "harness_commit": "3b7495ec949b7f9250923acf3335ac3ecebc970a",
-      "taxonomy_fingerprint": "0eaab0c235393d80ad44",
-      "harness_fingerprint": "legacy:3b7495ec949b7f9250923acf3335ac3ecebc970a"
+      "harness_fingerprint": "legacy:3b7495ec949b7f9250923acf3335ac3ecebc970a",
+      "taxonomy_fingerprint": "0eaab0c235393d80ad44"
     },
     {
       "schema_version": 2,
@@ -1584,13 +1746,16 @@
         "reasoning_present": false,
         "adjustments": [],
         "duration_ms": 929.8012091312557,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        }
       },
       "attempts": 1,
       "observed_at": "2026-08-29T00:05:38.702329+00:00",
       "harness_commit": "3b7495ec949b7f9250923acf3335ac3ecebc970a",
-      "taxonomy_fingerprint": "0eaab0c235393d80ad44",
-      "harness_fingerprint": "legacy:3b7495ec949b7f9250923acf3335ac3ecebc970a"
+      "harness_fingerprint": "legacy:3b7495ec949b7f9250923acf3335ac3ecebc970a",
+      "taxonomy_fingerprint": "0eaab0c235393d80ad44"
     },
     {
       "schema_version": 2,
@@ -1619,13 +1784,16 @@
         "reasoning_present": false,
         "adjustments": [],
         "duration_ms": 925.7782080676407,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        }
       },
       "attempts": 1,
       "observed_at": "2026-08-29T00:05:38.702329+00:00",
       "harness_commit": "3b7495ec949b7f9250923acf3335ac3ecebc970a",
-      "taxonomy_fingerprint": "0eaab0c235393d80ad44",
-      "harness_fingerprint": "legacy:3b7495ec949b7f9250923acf3335ac3ecebc970a"
+      "harness_fingerprint": "legacy:3b7495ec949b7f9250923acf3335ac3ecebc970a",
+      "taxonomy_fingerprint": "0eaab0c235393d80ad44"
     },
     {
       "schema_version": 2,
@@ -1654,13 +1822,20 @@
         "reasoning_present": true,
         "adjustments": [],
         "duration_ms": 1693.4094580356032,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        },
+        "reasoning": {
+          "exposed": true,
+          "signature_present": false
+        }
       },
       "attempts": 1,
       "observed_at": "2026-08-29T00:05:38.702329+00:00",
       "harness_commit": "3b7495ec949b7f9250923acf3335ac3ecebc970a",
-      "taxonomy_fingerprint": "0eaab0c235393d80ad44",
-      "harness_fingerprint": "legacy:3b7495ec949b7f9250923acf3335ac3ecebc970a"
+      "harness_fingerprint": "legacy:3b7495ec949b7f9250923acf3335ac3ecebc970a",
+      "taxonomy_fingerprint": "0eaab0c235393d80ad44"
     },
     {
       "schema_version": 2,
@@ -1696,13 +1871,16 @@
         "reasoning_present": false,
         "adjustments": [],
         "duration_ms": 1117.0562498737127,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        }
       },
       "attempts": 2,
       "observed_at": "2026-08-29T00:06:03.046268+00:00",
       "harness_commit": "3b7495ec949b7f9250923acf3335ac3ecebc970a",
-      "taxonomy_fingerprint": "0eaab0c235393d80ad44",
-      "harness_fingerprint": "legacy:3b7495ec949b7f9250923acf3335ac3ecebc970a"
+      "harness_fingerprint": "legacy:3b7495ec949b7f9250923acf3335ac3ecebc970a",
+      "taxonomy_fingerprint": "0eaab0c235393d80ad44"
     },
     {
       "schema_version": 2,
@@ -1733,13 +1911,16 @@
         "reasoning_present": false,
         "adjustments": [],
         "duration_ms": 1079.105209093541,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        }
       },
       "attempts": 2,
       "observed_at": "2026-08-29T00:06:03.046268+00:00",
       "harness_commit": "3b7495ec949b7f9250923acf3335ac3ecebc970a",
-      "taxonomy_fingerprint": "0eaab0c235393d80ad44",
-      "harness_fingerprint": "legacy:3b7495ec949b7f9250923acf3335ac3ecebc970a"
+      "harness_fingerprint": "legacy:3b7495ec949b7f9250923acf3335ac3ecebc970a",
+      "taxonomy_fingerprint": "0eaab0c235393d80ad44"
     },
     {
       "schema_version": 2,
@@ -1776,13 +1957,16 @@
         "reasoning_present": false,
         "adjustments": [],
         "duration_ms": 873.0488328728825,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        }
       },
       "attempts": 2,
       "observed_at": "2026-08-29T00:06:03.046268+00:00",
       "harness_commit": "3b7495ec949b7f9250923acf3335ac3ecebc970a",
-      "taxonomy_fingerprint": "0eaab0c235393d80ad44",
-      "harness_fingerprint": "legacy:3b7495ec949b7f9250923acf3335ac3ecebc970a"
+      "harness_fingerprint": "legacy:3b7495ec949b7f9250923acf3335ac3ecebc970a",
+      "taxonomy_fingerprint": "0eaab0c235393d80ad44"
     },
     {
       "schema_version": 2,
@@ -1818,13 +2002,16 @@
         "reasoning_present": false,
         "adjustments": [],
         "duration_ms": 1245.5963341053575,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        }
       },
       "attempts": 2,
       "observed_at": "2026-08-29T00:06:03.046268+00:00",
       "harness_commit": "3b7495ec949b7f9250923acf3335ac3ecebc970a",
-      "taxonomy_fingerprint": "0eaab0c235393d80ad44",
-      "harness_fingerprint": "legacy:3b7495ec949b7f9250923acf3335ac3ecebc970a"
+      "harness_fingerprint": "legacy:3b7495ec949b7f9250923acf3335ac3ecebc970a",
+      "taxonomy_fingerprint": "0eaab0c235393d80ad44"
     },
     {
       "schema_version": 2,
@@ -1855,13 +2042,16 @@
         "reasoning_present": false,
         "adjustments": [],
         "duration_ms": 1079.105209093541,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        }
       },
       "attempts": 2,
       "observed_at": "2026-08-29T00:06:03.046268+00:00",
       "harness_commit": "3b7495ec949b7f9250923acf3335ac3ecebc970a",
-      "taxonomy_fingerprint": "0eaab0c235393d80ad44",
-      "harness_fingerprint": "legacy:3b7495ec949b7f9250923acf3335ac3ecebc970a"
+      "harness_fingerprint": "legacy:3b7495ec949b7f9250923acf3335ac3ecebc970a",
+      "taxonomy_fingerprint": "0eaab0c235393d80ad44"
     },
     {
       "schema_version": 2,
@@ -1890,13 +2080,16 @@
         "reasoning_present": false,
         "adjustments": [],
         "duration_ms": 980.9813329484314,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        }
       },
       "attempts": 2,
       "observed_at": "2026-08-29T00:06:03.046268+00:00",
       "harness_commit": "3b7495ec949b7f9250923acf3335ac3ecebc970a",
-      "taxonomy_fingerprint": "0eaab0c235393d80ad44",
-      "harness_fingerprint": "legacy:3b7495ec949b7f9250923acf3335ac3ecebc970a"
+      "harness_fingerprint": "legacy:3b7495ec949b7f9250923acf3335ac3ecebc970a",
+      "taxonomy_fingerprint": "0eaab0c235393d80ad44"
     },
     {
       "schema_version": 2,
@@ -1932,13 +2125,16 @@
         "reasoning_present": false,
         "adjustments": [],
         "duration_ms": 1090.2101248502731,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        }
       },
       "attempts": 2,
       "observed_at": "2026-08-29T00:06:03.046268+00:00",
       "harness_commit": "3b7495ec949b7f9250923acf3335ac3ecebc970a",
-      "taxonomy_fingerprint": "0eaab0c235393d80ad44",
-      "harness_fingerprint": "legacy:3b7495ec949b7f9250923acf3335ac3ecebc970a"
+      "harness_fingerprint": "legacy:3b7495ec949b7f9250923acf3335ac3ecebc970a",
+      "taxonomy_fingerprint": "0eaab0c235393d80ad44"
     },
     {
       "schema_version": 2,
@@ -1972,13 +2168,16 @@
         "reasoning_present": false,
         "adjustments": [],
         "duration_ms": 1245.5963341053575,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        }
       },
       "attempts": 2,
       "observed_at": "2026-08-29T00:06:03.046268+00:00",
       "harness_commit": "3b7495ec949b7f9250923acf3335ac3ecebc970a",
-      "taxonomy_fingerprint": "0eaab0c235393d80ad44",
-      "harness_fingerprint": "legacy:3b7495ec949b7f9250923acf3335ac3ecebc970a"
+      "harness_fingerprint": "legacy:3b7495ec949b7f9250923acf3335ac3ecebc970a",
+      "taxonomy_fingerprint": "0eaab0c235393d80ad44"
     },
     {
       "schema_version": 2,
@@ -2018,13 +2217,20 @@
         "reasoning_present": true,
         "adjustments": [],
         "duration_ms": 1651.0830000042915,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        },
+        "reasoning": {
+          "exposed": true,
+          "signature_present": false
+        }
       },
       "attempts": 2,
       "observed_at": "2026-08-29T00:06:03.046268+00:00",
       "harness_commit": "3b7495ec949b7f9250923acf3335ac3ecebc970a",
-      "taxonomy_fingerprint": "0eaab0c235393d80ad44",
-      "harness_fingerprint": "legacy:3b7495ec949b7f9250923acf3335ac3ecebc970a"
+      "harness_fingerprint": "legacy:3b7495ec949b7f9250923acf3335ac3ecebc970a",
+      "taxonomy_fingerprint": "0eaab0c235393d80ad44"
     },
     {
       "schema_version": 2,
@@ -2054,13 +2260,16 @@
         "json_value": 42,
         "adjustments": [],
         "duration_ms": 2091.9837919063866,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        }
       },
       "attempts": 1,
       "observed_at": "2026-08-29T00:06:03.046268+00:00",
       "harness_commit": "3b7495ec949b7f9250923acf3335ac3ecebc970a",
-      "taxonomy_fingerprint": "0eaab0c235393d80ad44",
-      "harness_fingerprint": "legacy:3b7495ec949b7f9250923acf3335ac3ecebc970a"
+      "harness_fingerprint": "legacy:3b7495ec949b7f9250923acf3335ac3ecebc970a",
+      "taxonomy_fingerprint": "0eaab0c235393d80ad44"
     },
     {
       "schema_version": 2,
@@ -2094,13 +2303,16 @@
         "reasoning_present": false,
         "adjustments": [],
         "duration_ms": 1186.5787918213755,
-        "client_type": "HTTP SSE"
+        "client_type": "HTTP SSE",
+        "usage": {
+          "source": "reported"
+        }
       },
       "attempts": 2,
       "observed_at": "2026-08-29T00:06:03.046268+00:00",
       "harness_commit": "3b7495ec949b7f9250923acf3335ac3ecebc970a",
-      "taxonomy_fingerprint": "0eaab0c235393d80ad44",
-      "harness_fingerprint": "legacy:3b7495ec949b7f9250923acf3335ac3ecebc970a"
+      "harness_fingerprint": "legacy:3b7495ec949b7f9250923acf3335ac3ecebc970a",
+      "taxonomy_fingerprint": "0eaab0c235393d80ad44"
     },
     {
       "schema_version": 2,
@@ -2129,13 +2341,16 @@
         "reasoning_present": false,
         "adjustments": [],
         "duration_ms": 1169.6389578282833,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        }
       },
       "attempts": 2,
       "observed_at": "2026-08-29T00:25:39.225699+00:00",
       "harness_commit": "d56d7a0654da28ee5050d1b994b446fbf0f69cc9",
-      "taxonomy_fingerprint": "89b2b0860f3f96d56b82",
-      "harness_fingerprint": "legacy:d56d7a0654da28ee5050d1b994b446fbf0f69cc9"
+      "harness_fingerprint": "legacy:d56d7a0654da28ee5050d1b994b446fbf0f69cc9",
+      "taxonomy_fingerprint": "89b2b0860f3f96d56b82"
     },
     {
       "schema_version": 2,
@@ -2164,13 +2379,16 @@
         "reasoning_present": false,
         "adjustments": [],
         "duration_ms": 1169.6389578282833,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        }
       },
       "attempts": 2,
       "observed_at": "2026-08-29T00:25:39.225699+00:00",
       "harness_commit": "d56d7a0654da28ee5050d1b994b446fbf0f69cc9",
-      "taxonomy_fingerprint": "89b2b0860f3f96d56b82",
-      "harness_fingerprint": "legacy:d56d7a0654da28ee5050d1b994b446fbf0f69cc9"
+      "harness_fingerprint": "legacy:d56d7a0654da28ee5050d1b994b446fbf0f69cc9",
+      "taxonomy_fingerprint": "89b2b0860f3f96d56b82"
     },
     {
       "schema_version": 2,
@@ -2199,13 +2417,16 @@
         "reasoning_present": false,
         "adjustments": [],
         "duration_ms": 1169.6389578282833,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        }
       },
       "attempts": 2,
       "observed_at": "2026-08-29T00:25:39.225699+00:00",
       "harness_commit": "d56d7a0654da28ee5050d1b994b446fbf0f69cc9",
-      "taxonomy_fingerprint": "89b2b0860f3f96d56b82",
-      "harness_fingerprint": "legacy:d56d7a0654da28ee5050d1b994b446fbf0f69cc9"
+      "harness_fingerprint": "legacy:d56d7a0654da28ee5050d1b994b446fbf0f69cc9",
+      "taxonomy_fingerprint": "89b2b0860f3f96d56b82"
     },
     {
       "schema_version": 2,
@@ -2239,13 +2460,16 @@
         },
         "adjustments": [],
         "duration_ms": 988.3817920926958,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        }
       },
       "attempts": 1,
       "observed_at": "2026-08-29T00:33:45.617657+00:00",
       "harness_commit": "d56d7a0654da28ee5050d1b994b446fbf0f69cc9",
-      "taxonomy_fingerprint": "42b1dceddb03dfc7aaca",
-      "harness_fingerprint": "legacy:d56d7a0654da28ee5050d1b994b446fbf0f69cc9"
+      "harness_fingerprint": "legacy:d56d7a0654da28ee5050d1b994b446fbf0f69cc9",
+      "taxonomy_fingerprint": "42b1dceddb03dfc7aaca"
     },
     {
       "schema_version": 2,
@@ -2276,13 +2500,16 @@
         "reasoning_present": false,
         "adjustments": [],
         "duration_ms": 936.489624902606,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        }
       },
       "attempts": 2,
       "observed_at": "2026-08-29T00:33:45.617657+00:00",
       "harness_commit": "d56d7a0654da28ee5050d1b994b446fbf0f69cc9",
-      "taxonomy_fingerprint": "42b1dceddb03dfc7aaca",
-      "harness_fingerprint": "legacy:d56d7a0654da28ee5050d1b994b446fbf0f69cc9"
+      "harness_fingerprint": "legacy:d56d7a0654da28ee5050d1b994b446fbf0f69cc9",
+      "taxonomy_fingerprint": "42b1dceddb03dfc7aaca"
     },
     {
       "schema_version": 2,
@@ -2311,13 +2538,16 @@
         "reasoning_present": false,
         "adjustments": [],
         "duration_ms": 895.3372079413384,
-        "client_type": "HTTP SSE"
+        "client_type": "HTTP SSE",
+        "usage": {
+          "source": "reported"
+        }
       },
       "attempts": 2,
       "observed_at": "2026-08-29T00:33:45.617657+00:00",
       "harness_commit": "d56d7a0654da28ee5050d1b994b446fbf0f69cc9",
-      "taxonomy_fingerprint": "42b1dceddb03dfc7aaca",
-      "harness_fingerprint": "legacy:d56d7a0654da28ee5050d1b994b446fbf0f69cc9"
+      "harness_fingerprint": "legacy:d56d7a0654da28ee5050d1b994b446fbf0f69cc9",
+      "taxonomy_fingerprint": "42b1dceddb03dfc7aaca"
     },
     {
       "schema_version": 2,
@@ -2347,13 +2577,20 @@
         "json_value": 42,
         "adjustments": [],
         "duration_ms": 3249.3693330325186,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        },
+        "reasoning": {
+          "exposed": true,
+          "signature_present": false
+        }
       },
       "attempts": 1,
       "observed_at": "2026-08-29T00:33:45.617657+00:00",
       "harness_commit": "d56d7a0654da28ee5050d1b994b446fbf0f69cc9",
-      "taxonomy_fingerprint": "42b1dceddb03dfc7aaca",
-      "harness_fingerprint": "legacy:d56d7a0654da28ee5050d1b994b446fbf0f69cc9"
+      "harness_fingerprint": "legacy:d56d7a0654da28ee5050d1b994b446fbf0f69cc9",
+      "taxonomy_fingerprint": "42b1dceddb03dfc7aaca"
     },
     {
       "schema_version": 2,
@@ -2382,13 +2619,16 @@
         "reasoning_present": false,
         "adjustments": [],
         "duration_ms": 1062.3775830026716,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        }
       },
       "attempts": 1,
       "observed_at": "2026-08-29T00:33:45.617657+00:00",
       "harness_commit": "d56d7a0654da28ee5050d1b994b446fbf0f69cc9",
-      "taxonomy_fingerprint": "42b1dceddb03dfc7aaca",
-      "harness_fingerprint": "legacy:d56d7a0654da28ee5050d1b994b446fbf0f69cc9"
+      "harness_fingerprint": "legacy:d56d7a0654da28ee5050d1b994b446fbf0f69cc9",
+      "taxonomy_fingerprint": "42b1dceddb03dfc7aaca"
     },
     {
       "schema_version": 2,
@@ -2422,13 +2662,16 @@
         },
         "adjustments": [],
         "duration_ms": 1134.3971251044422,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        }
       },
       "attempts": 1,
       "observed_at": "2026-08-29T00:33:45.617657+00:00",
       "harness_commit": "d56d7a0654da28ee5050d1b994b446fbf0f69cc9",
-      "taxonomy_fingerprint": "42b1dceddb03dfc7aaca",
-      "harness_fingerprint": "legacy:d56d7a0654da28ee5050d1b994b446fbf0f69cc9"
+      "harness_fingerprint": "legacy:d56d7a0654da28ee5050d1b994b446fbf0f69cc9",
+      "taxonomy_fingerprint": "42b1dceddb03dfc7aaca"
     },
     {
       "schema_version": 2,
@@ -2464,13 +2707,16 @@
         "reasoning_present": false,
         "adjustments": [],
         "duration_ms": 1276.987582910806,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        }
       },
       "attempts": 1,
       "observed_at": "2026-08-29T00:33:45.617657+00:00",
       "harness_commit": "d56d7a0654da28ee5050d1b994b446fbf0f69cc9",
-      "taxonomy_fingerprint": "42b1dceddb03dfc7aaca",
-      "harness_fingerprint": "legacy:d56d7a0654da28ee5050d1b994b446fbf0f69cc9"
+      "harness_fingerprint": "legacy:d56d7a0654da28ee5050d1b994b446fbf0f69cc9",
+      "taxonomy_fingerprint": "42b1dceddb03dfc7aaca"
     },
     {
       "schema_version": 2,
@@ -2504,13 +2750,16 @@
         },
         "adjustments": [],
         "duration_ms": 988.3817920926958,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        }
       },
       "attempts": 1,
       "observed_at": "2026-08-29T00:33:45.617657+00:00",
       "harness_commit": "d56d7a0654da28ee5050d1b994b446fbf0f69cc9",
-      "taxonomy_fingerprint": "42b1dceddb03dfc7aaca",
-      "harness_fingerprint": "legacy:d56d7a0654da28ee5050d1b994b446fbf0f69cc9"
+      "harness_fingerprint": "legacy:d56d7a0654da28ee5050d1b994b446fbf0f69cc9",
+      "taxonomy_fingerprint": "42b1dceddb03dfc7aaca"
     },
     {
       "schema_version": 2,
@@ -2541,13 +2790,16 @@
         "reasoning_present": false,
         "adjustments": [],
         "duration_ms": 1175.3721670247614,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        }
       },
       "attempts": 1,
       "observed_at": "2026-08-29T00:33:45.617657+00:00",
       "harness_commit": "d56d7a0654da28ee5050d1b994b446fbf0f69cc9",
-      "taxonomy_fingerprint": "42b1dceddb03dfc7aaca",
-      "harness_fingerprint": "legacy:d56d7a0654da28ee5050d1b994b446fbf0f69cc9"
+      "harness_fingerprint": "legacy:d56d7a0654da28ee5050d1b994b446fbf0f69cc9",
+      "taxonomy_fingerprint": "42b1dceddb03dfc7aaca"
     },
     {
       "schema_version": 2,
@@ -2576,13 +2828,16 @@
         "reasoning_present": false,
         "adjustments": [],
         "duration_ms": 1420.5024999100715,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        }
       },
       "attempts": 1,
       "observed_at": "2026-08-29T00:33:45.617657+00:00",
       "harness_commit": "d56d7a0654da28ee5050d1b994b446fbf0f69cc9",
-      "taxonomy_fingerprint": "42b1dceddb03dfc7aaca",
-      "harness_fingerprint": "legacy:d56d7a0654da28ee5050d1b994b446fbf0f69cc9"
+      "harness_fingerprint": "legacy:d56d7a0654da28ee5050d1b994b446fbf0f69cc9",
+      "taxonomy_fingerprint": "42b1dceddb03dfc7aaca"
     },
     {
       "schema_version": 2,
@@ -2616,13 +2871,16 @@
         "reasoning_present": false,
         "adjustments": [],
         "duration_ms": 1427.9429169837385,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        }
       },
       "attempts": 1,
       "observed_at": "2026-08-29T00:33:45.617657+00:00",
       "harness_commit": "d56d7a0654da28ee5050d1b994b446fbf0f69cc9",
-      "taxonomy_fingerprint": "42b1dceddb03dfc7aaca",
-      "harness_fingerprint": "legacy:d56d7a0654da28ee5050d1b994b446fbf0f69cc9"
+      "harness_fingerprint": "legacy:d56d7a0654da28ee5050d1b994b446fbf0f69cc9",
+      "taxonomy_fingerprint": "42b1dceddb03dfc7aaca"
     },
     {
       "schema_version": 2,
@@ -2651,13 +2909,16 @@
         "reasoning_present": false,
         "adjustments": [],
         "duration_ms": 936.6948751267046,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        }
       },
       "attempts": 1,
       "observed_at": "2026-08-29T00:33:45.617657+00:00",
       "harness_commit": "d56d7a0654da28ee5050d1b994b446fbf0f69cc9",
-      "taxonomy_fingerprint": "42b1dceddb03dfc7aaca",
-      "harness_fingerprint": "legacy:d56d7a0654da28ee5050d1b994b446fbf0f69cc9"
+      "harness_fingerprint": "legacy:d56d7a0654da28ee5050d1b994b446fbf0f69cc9",
+      "taxonomy_fingerprint": "42b1dceddb03dfc7aaca"
     },
     {
       "schema_version": 2,
@@ -2691,13 +2952,16 @@
         "reasoning_present": false,
         "adjustments": [],
         "duration_ms": 1342.7485830616206,
-        "client_type": "HTTP SSE"
+        "client_type": "HTTP SSE",
+        "usage": {
+          "source": "reported"
+        }
       },
       "attempts": 1,
       "observed_at": "2026-08-29T00:33:45.617657+00:00",
       "harness_commit": "d56d7a0654da28ee5050d1b994b446fbf0f69cc9",
-      "taxonomy_fingerprint": "42b1dceddb03dfc7aaca",
-      "harness_fingerprint": "legacy:d56d7a0654da28ee5050d1b994b446fbf0f69cc9"
+      "harness_fingerprint": "legacy:d56d7a0654da28ee5050d1b994b446fbf0f69cc9",
+      "taxonomy_fingerprint": "42b1dceddb03dfc7aaca"
     },
     {
       "schema_version": 2,
@@ -2733,13 +2997,16 @@
         "reasoning_present": false,
         "adjustments": [],
         "duration_ms": 1427.9429169837385,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        }
       },
       "attempts": 1,
       "observed_at": "2026-08-29T00:33:45.617657+00:00",
       "harness_commit": "d56d7a0654da28ee5050d1b994b446fbf0f69cc9",
-      "taxonomy_fingerprint": "42b1dceddb03dfc7aaca",
-      "harness_fingerprint": "legacy:d56d7a0654da28ee5050d1b994b446fbf0f69cc9"
+      "harness_fingerprint": "legacy:d56d7a0654da28ee5050d1b994b446fbf0f69cc9",
+      "taxonomy_fingerprint": "42b1dceddb03dfc7aaca"
     },
     {
       "schema_version": 2,
@@ -2770,13 +3037,16 @@
         "reasoning_present": false,
         "adjustments": [],
         "duration_ms": 1158.224374987185,
-        "client_type": "HTTP SSE"
+        "client_type": "HTTP SSE",
+        "usage": {
+          "source": "reported"
+        }
       },
       "attempts": 1,
       "observed_at": "2026-08-29T00:33:45.617657+00:00",
       "harness_commit": "d56d7a0654da28ee5050d1b994b446fbf0f69cc9",
-      "taxonomy_fingerprint": "42b1dceddb03dfc7aaca",
-      "harness_fingerprint": "legacy:d56d7a0654da28ee5050d1b994b446fbf0f69cc9"
+      "harness_fingerprint": "legacy:d56d7a0654da28ee5050d1b994b446fbf0f69cc9",
+      "taxonomy_fingerprint": "42b1dceddb03dfc7aaca"
     },
     {
       "schema_version": 2,
@@ -2813,13 +3083,20 @@
         "reasoning_present": true,
         "adjustments": [],
         "duration_ms": 1621.280541876331,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        },
+        "reasoning": {
+          "exposed": true,
+          "signature_present": false
+        }
       },
       "attempts": 1,
       "observed_at": "2026-08-29T00:33:45.617657+00:00",
       "harness_commit": "d56d7a0654da28ee5050d1b994b446fbf0f69cc9",
-      "taxonomy_fingerprint": "42b1dceddb03dfc7aaca",
-      "harness_fingerprint": "legacy:d56d7a0654da28ee5050d1b994b446fbf0f69cc9"
+      "harness_fingerprint": "legacy:d56d7a0654da28ee5050d1b994b446fbf0f69cc9",
+      "taxonomy_fingerprint": "42b1dceddb03dfc7aaca"
     },
     {
       "schema_version": 2,
@@ -2848,13 +3125,16 @@
         "reasoning_present": false,
         "adjustments": [],
         "duration_ms": 1062.3775830026716,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        }
       },
       "attempts": 1,
       "observed_at": "2026-08-29T00:33:45.617657+00:00",
       "harness_commit": "d56d7a0654da28ee5050d1b994b446fbf0f69cc9",
-      "taxonomy_fingerprint": "42b1dceddb03dfc7aaca",
-      "harness_fingerprint": "legacy:d56d7a0654da28ee5050d1b994b446fbf0f69cc9"
+      "harness_fingerprint": "legacy:d56d7a0654da28ee5050d1b994b446fbf0f69cc9",
+      "taxonomy_fingerprint": "42b1dceddb03dfc7aaca"
     },
     {
       "schema_version": 2,
@@ -2883,13 +3163,16 @@
         "reasoning_present": false,
         "adjustments": [],
         "duration_ms": 1062.3775830026716,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        }
       },
       "attempts": 1,
       "observed_at": "2026-08-29T00:33:45.617657+00:00",
       "harness_commit": "d56d7a0654da28ee5050d1b994b446fbf0f69cc9",
-      "taxonomy_fingerprint": "42b1dceddb03dfc7aaca",
-      "harness_fingerprint": "legacy:d56d7a0654da28ee5050d1b994b446fbf0f69cc9"
+      "harness_fingerprint": "legacy:d56d7a0654da28ee5050d1b994b446fbf0f69cc9",
+      "taxonomy_fingerprint": "42b1dceddb03dfc7aaca"
     },
     {
       "schema_version": 2,
@@ -2920,13 +3203,16 @@
         "reasoning_present": false,
         "adjustments": [],
         "duration_ms": 936.489624902606,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        }
       },
       "attempts": 2,
       "observed_at": "2026-08-29T00:33:45.617657+00:00",
       "harness_commit": "d56d7a0654da28ee5050d1b994b446fbf0f69cc9",
-      "taxonomy_fingerprint": "42b1dceddb03dfc7aaca",
-      "harness_fingerprint": "legacy:d56d7a0654da28ee5050d1b994b446fbf0f69cc9"
+      "harness_fingerprint": "legacy:d56d7a0654da28ee5050d1b994b446fbf0f69cc9",
+      "taxonomy_fingerprint": "42b1dceddb03dfc7aaca"
     },
     {
       "schema_version": 2,
@@ -2958,13 +3244,16 @@
         },
         "adjustments": [],
         "duration_ms": 1673.741792095825,
-        "client_type": "HTTP SSE"
+        "client_type": "HTTP SSE",
+        "usage": {
+          "source": "reported"
+        }
       },
       "attempts": 1,
       "observed_at": "2026-08-29T00:33:45.617657+00:00",
       "harness_commit": "d56d7a0654da28ee5050d1b994b446fbf0f69cc9",
-      "taxonomy_fingerprint": "42b1dceddb03dfc7aaca",
-      "harness_fingerprint": "legacy:d56d7a0654da28ee5050d1b994b446fbf0f69cc9"
+      "harness_fingerprint": "legacy:d56d7a0654da28ee5050d1b994b446fbf0f69cc9",
+      "taxonomy_fingerprint": "42b1dceddb03dfc7aaca"
     },
     {
       "schema_version": 2,
@@ -2993,13 +3282,16 @@
         "reasoning_present": false,
         "adjustments": [],
         "duration_ms": 1349.5744580868632,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        }
       },
       "attempts": 1,
       "observed_at": "2026-08-29T00:33:45.617657+00:00",
       "harness_commit": "d56d7a0654da28ee5050d1b994b446fbf0f69cc9",
-      "taxonomy_fingerprint": "42b1dceddb03dfc7aaca",
-      "harness_fingerprint": "legacy:d56d7a0654da28ee5050d1b994b446fbf0f69cc9"
+      "harness_fingerprint": "legacy:d56d7a0654da28ee5050d1b994b446fbf0f69cc9",
+      "taxonomy_fingerprint": "42b1dceddb03dfc7aaca"
     },
     {
       "schema_version": 2,
@@ -3039,13 +3331,16 @@
         "reasoning_present": false,
         "adjustments": [],
         "duration_ms": 1136.0949999652803,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        }
       },
       "attempts": 1,
       "observed_at": "2026-08-29T00:33:45.617657+00:00",
       "harness_commit": "d56d7a0654da28ee5050d1b994b446fbf0f69cc9",
-      "taxonomy_fingerprint": "42b1dceddb03dfc7aaca",
-      "harness_fingerprint": "legacy:d56d7a0654da28ee5050d1b994b446fbf0f69cc9"
+      "harness_fingerprint": "legacy:d56d7a0654da28ee5050d1b994b446fbf0f69cc9",
+      "taxonomy_fingerprint": "42b1dceddb03dfc7aaca"
     },
     {
       "schema_version": 2,
@@ -3074,13 +3369,16 @@
         "reasoning_present": false,
         "adjustments": [],
         "duration_ms": 948.4466249123216,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        }
       },
       "attempts": 1,
       "observed_at": "2026-08-29T00:33:45.617657+00:00",
       "harness_commit": "d56d7a0654da28ee5050d1b994b446fbf0f69cc9",
-      "taxonomy_fingerprint": "42b1dceddb03dfc7aaca",
-      "harness_fingerprint": "legacy:d56d7a0654da28ee5050d1b994b446fbf0f69cc9"
+      "harness_fingerprint": "legacy:d56d7a0654da28ee5050d1b994b446fbf0f69cc9",
+      "taxonomy_fingerprint": "42b1dceddb03dfc7aaca"
     },
     {
       "schema_version": 2,
@@ -3109,13 +3407,16 @@
         "reasoning_present": false,
         "adjustments": [],
         "duration_ms": 1297.1715829335153,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        }
       },
       "attempts": 1,
       "observed_at": "2026-08-29T00:33:45.617657+00:00",
       "harness_commit": "d56d7a0654da28ee5050d1b994b446fbf0f69cc9",
-      "taxonomy_fingerprint": "42b1dceddb03dfc7aaca",
-      "harness_fingerprint": "legacy:d56d7a0654da28ee5050d1b994b446fbf0f69cc9"
+      "harness_fingerprint": "legacy:d56d7a0654da28ee5050d1b994b446fbf0f69cc9",
+      "taxonomy_fingerprint": "42b1dceddb03dfc7aaca"
     },
     {
       "schema_version": 2,
@@ -3146,13 +3447,16 @@
         "reasoning_present": false,
         "adjustments": [],
         "duration_ms": 1041.23445879668,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        }
       },
       "attempts": 1,
       "observed_at": "2026-08-29T00:33:45.617657+00:00",
       "harness_commit": "d56d7a0654da28ee5050d1b994b446fbf0f69cc9",
-      "taxonomy_fingerprint": "42b1dceddb03dfc7aaca",
-      "harness_fingerprint": "legacy:d56d7a0654da28ee5050d1b994b446fbf0f69cc9"
+      "harness_fingerprint": "legacy:d56d7a0654da28ee5050d1b994b446fbf0f69cc9",
+      "taxonomy_fingerprint": "42b1dceddb03dfc7aaca"
     },
     {
       "schema_version": 2,
@@ -3188,13 +3492,16 @@
         "reasoning_present": false,
         "adjustments": [],
         "duration_ms": 1161.5279167890549,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        }
       },
       "attempts": 1,
       "observed_at": "2026-08-29T00:33:45.617657+00:00",
       "harness_commit": "d56d7a0654da28ee5050d1b994b446fbf0f69cc9",
-      "taxonomy_fingerprint": "42b1dceddb03dfc7aaca",
-      "harness_fingerprint": "legacy:d56d7a0654da28ee5050d1b994b446fbf0f69cc9"
+      "harness_fingerprint": "legacy:d56d7a0654da28ee5050d1b994b446fbf0f69cc9",
+      "taxonomy_fingerprint": "42b1dceddb03dfc7aaca"
     },
     {
       "schema_version": 2,
@@ -3225,13 +3532,16 @@
         "reasoning_present": false,
         "adjustments": [],
         "duration_ms": 1196.622374933213,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        }
       },
       "attempts": 1,
       "observed_at": "2026-08-29T00:33:45.617657+00:00",
       "harness_commit": "d56d7a0654da28ee5050d1b994b446fbf0f69cc9",
-      "taxonomy_fingerprint": "42b1dceddb03dfc7aaca",
-      "harness_fingerprint": "legacy:d56d7a0654da28ee5050d1b994b446fbf0f69cc9"
+      "harness_fingerprint": "legacy:d56d7a0654da28ee5050d1b994b446fbf0f69cc9",
+      "taxonomy_fingerprint": "42b1dceddb03dfc7aaca"
     },
     {
       "schema_version": 2,
@@ -3260,13 +3570,16 @@
         "reasoning_present": false,
         "adjustments": [],
         "duration_ms": 1421.5209998656064,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        }
       },
       "attempts": 1,
       "observed_at": "2026-08-29T00:33:45.617657+00:00",
       "harness_commit": "d56d7a0654da28ee5050d1b994b446fbf0f69cc9",
-      "taxonomy_fingerprint": "42b1dceddb03dfc7aaca",
-      "harness_fingerprint": "legacy:d56d7a0654da28ee5050d1b994b446fbf0f69cc9"
+      "harness_fingerprint": "legacy:d56d7a0654da28ee5050d1b994b446fbf0f69cc9",
+      "taxonomy_fingerprint": "42b1dceddb03dfc7aaca"
     },
     {
       "schema_version": 2,
@@ -3300,13 +3613,16 @@
         },
         "adjustments": [],
         "duration_ms": 1134.3971251044422,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        }
       },
       "attempts": 1,
       "observed_at": "2026-08-29T00:33:45.617657+00:00",
       "harness_commit": "d56d7a0654da28ee5050d1b994b446fbf0f69cc9",
-      "taxonomy_fingerprint": "42b1dceddb03dfc7aaca",
-      "harness_fingerprint": "legacy:d56d7a0654da28ee5050d1b994b446fbf0f69cc9"
+      "harness_fingerprint": "legacy:d56d7a0654da28ee5050d1b994b446fbf0f69cc9",
+      "taxonomy_fingerprint": "42b1dceddb03dfc7aaca"
     },
     {
       "schema_version": 2,
@@ -3335,13 +3651,20 @@
         "reasoning_present": true,
         "adjustments": [],
         "duration_ms": 25813.22183413431,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        },
+        "reasoning": {
+          "exposed": true,
+          "signature_present": false
+        }
       },
       "attempts": 2,
       "observed_at": "2026-08-29T00:37:48.673748+00:00",
       "harness_commit": "e1ced39df2c3b112ead7780563b2925615786dce",
-      "taxonomy_fingerprint": "a64f1320b1a45d735e81",
-      "harness_fingerprint": "legacy:e1ced39df2c3b112ead7780563b2925615786dce"
+      "harness_fingerprint": "legacy:e1ced39df2c3b112ead7780563b2925615786dce",
+      "taxonomy_fingerprint": "a64f1320b1a45d735e81"
     },
     {
       "schema_version": 2,
@@ -3370,13 +3693,20 @@
         "reasoning_present": true,
         "adjustments": [],
         "duration_ms": 25813.22183413431,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        },
+        "reasoning": {
+          "exposed": true,
+          "signature_present": false
+        }
       },
       "attempts": 2,
       "observed_at": "2026-08-29T00:37:48.673748+00:00",
       "harness_commit": "e1ced39df2c3b112ead7780563b2925615786dce",
-      "taxonomy_fingerprint": "a64f1320b1a45d735e81",
-      "harness_fingerprint": "legacy:e1ced39df2c3b112ead7780563b2925615786dce"
+      "harness_fingerprint": "legacy:e1ced39df2c3b112ead7780563b2925615786dce",
+      "taxonomy_fingerprint": "a64f1320b1a45d735e81"
     },
     {
       "schema_version": 2,
@@ -3405,13 +3735,20 @@
         "reasoning_present": true,
         "adjustments": [],
         "duration_ms": 25813.22183413431,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        },
+        "reasoning": {
+          "exposed": true,
+          "signature_present": false
+        }
       },
       "attempts": 2,
       "observed_at": "2026-08-29T00:37:48.673748+00:00",
       "harness_commit": "e1ced39df2c3b112ead7780563b2925615786dce",
-      "taxonomy_fingerprint": "a64f1320b1a45d735e81",
-      "harness_fingerprint": "legacy:e1ced39df2c3b112ead7780563b2925615786dce"
+      "harness_fingerprint": "legacy:e1ced39df2c3b112ead7780563b2925615786dce",
+      "taxonomy_fingerprint": "a64f1320b1a45d735e81"
     },
     {
       "schema_version": 2,
@@ -3440,13 +3777,16 @@
         "reasoning_present": false,
         "adjustments": [],
         "duration_ms": 3714.3568340688944,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        }
       },
       "attempts": 2,
       "observed_at": "2026-08-29T00:38:51.776832+00:00",
       "harness_commit": "e1ced39df2c3b112ead7780563b2925615786dce",
-      "taxonomy_fingerprint": "a64f1320b1a45d735e81",
-      "harness_fingerprint": "legacy:e1ced39df2c3b112ead7780563b2925615786dce"
+      "harness_fingerprint": "legacy:e1ced39df2c3b112ead7780563b2925615786dce",
+      "taxonomy_fingerprint": "a64f1320b1a45d735e81"
     },
     {
       "schema_version": 2,
@@ -3475,13 +3815,16 @@
         "reasoning_present": false,
         "adjustments": [],
         "duration_ms": 3714.3568340688944,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        }
       },
       "attempts": 2,
       "observed_at": "2026-08-29T00:38:51.776832+00:00",
       "harness_commit": "e1ced39df2c3b112ead7780563b2925615786dce",
-      "taxonomy_fingerprint": "a64f1320b1a45d735e81",
-      "harness_fingerprint": "legacy:e1ced39df2c3b112ead7780563b2925615786dce"
+      "harness_fingerprint": "legacy:e1ced39df2c3b112ead7780563b2925615786dce",
+      "taxonomy_fingerprint": "a64f1320b1a45d735e81"
     },
     {
       "schema_version": 2,
@@ -3510,13 +3853,16 @@
         "reasoning_present": false,
         "adjustments": [],
         "duration_ms": 3714.3568340688944,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        }
       },
       "attempts": 2,
       "observed_at": "2026-08-29T00:38:51.776832+00:00",
       "harness_commit": "e1ced39df2c3b112ead7780563b2925615786dce",
-      "taxonomy_fingerprint": "a64f1320b1a45d735e81",
-      "harness_fingerprint": "legacy:e1ced39df2c3b112ead7780563b2925615786dce"
+      "harness_fingerprint": "legacy:e1ced39df2c3b112ead7780563b2925615786dce",
+      "taxonomy_fingerprint": "a64f1320b1a45d735e81"
     },
     {
       "schema_version": 2,
@@ -3545,13 +3891,20 @@
         "reasoning_present": true,
         "adjustments": [],
         "duration_ms": 6870.202915975824,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        },
+        "reasoning": {
+          "exposed": true,
+          "signature_present": false
+        }
       },
       "attempts": 2,
       "observed_at": "2026-08-29T00:39:01.983519+00:00",
       "harness_commit": "e1ced39df2c3b112ead7780563b2925615786dce",
-      "taxonomy_fingerprint": "a64f1320b1a45d735e81",
-      "harness_fingerprint": "legacy:e1ced39df2c3b112ead7780563b2925615786dce"
+      "harness_fingerprint": "legacy:e1ced39df2c3b112ead7780563b2925615786dce",
+      "taxonomy_fingerprint": "a64f1320b1a45d735e81"
     },
     {
       "schema_version": 2,
@@ -3580,13 +3933,20 @@
         "reasoning_present": true,
         "adjustments": [],
         "duration_ms": 6870.202915975824,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        },
+        "reasoning": {
+          "exposed": true,
+          "signature_present": false
+        }
       },
       "attempts": 2,
       "observed_at": "2026-08-29T00:39:01.983519+00:00",
       "harness_commit": "e1ced39df2c3b112ead7780563b2925615786dce",
-      "taxonomy_fingerprint": "a64f1320b1a45d735e81",
-      "harness_fingerprint": "legacy:e1ced39df2c3b112ead7780563b2925615786dce"
+      "harness_fingerprint": "legacy:e1ced39df2c3b112ead7780563b2925615786dce",
+      "taxonomy_fingerprint": "a64f1320b1a45d735e81"
     },
     {
       "schema_version": 2,
@@ -3615,13 +3975,20 @@
         "reasoning_present": true,
         "adjustments": [],
         "duration_ms": 6870.202915975824,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        },
+        "reasoning": {
+          "exposed": true,
+          "signature_present": false
+        }
       },
       "attempts": 2,
       "observed_at": "2026-08-29T00:39:01.983519+00:00",
       "harness_commit": "e1ced39df2c3b112ead7780563b2925615786dce",
-      "taxonomy_fingerprint": "a64f1320b1a45d735e81",
-      "harness_fingerprint": "legacy:e1ced39df2c3b112ead7780563b2925615786dce"
+      "harness_fingerprint": "legacy:e1ced39df2c3b112ead7780563b2925615786dce",
+      "taxonomy_fingerprint": "a64f1320b1a45d735e81"
     },
     {
       "schema_version": 2,
@@ -3650,13 +4017,20 @@
         "reasoning_present": true,
         "adjustments": [],
         "duration_ms": 5304.457833059132,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        },
+        "reasoning": {
+          "exposed": true,
+          "signature_present": false
+        }
       },
       "attempts": 2,
       "observed_at": "2026-08-29T00:39:23.331344+00:00",
       "harness_commit": "e1ced39df2c3b112ead7780563b2925615786dce",
-      "taxonomy_fingerprint": "a64f1320b1a45d735e81",
-      "harness_fingerprint": "legacy:e1ced39df2c3b112ead7780563b2925615786dce"
+      "harness_fingerprint": "legacy:e1ced39df2c3b112ead7780563b2925615786dce",
+      "taxonomy_fingerprint": "a64f1320b1a45d735e81"
     },
     {
       "schema_version": 2,
@@ -3685,13 +4059,20 @@
         "reasoning_present": true,
         "adjustments": [],
         "duration_ms": 5304.457833059132,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        },
+        "reasoning": {
+          "exposed": true,
+          "signature_present": false
+        }
       },
       "attempts": 2,
       "observed_at": "2026-08-29T00:39:23.331344+00:00",
       "harness_commit": "e1ced39df2c3b112ead7780563b2925615786dce",
-      "taxonomy_fingerprint": "a64f1320b1a45d735e81",
-      "harness_fingerprint": "legacy:e1ced39df2c3b112ead7780563b2925615786dce"
+      "harness_fingerprint": "legacy:e1ced39df2c3b112ead7780563b2925615786dce",
+      "taxonomy_fingerprint": "a64f1320b1a45d735e81"
     },
     {
       "schema_version": 2,
@@ -3720,13 +4101,20 @@
         "reasoning_present": true,
         "adjustments": [],
         "duration_ms": 5304.457833059132,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        },
+        "reasoning": {
+          "exposed": true,
+          "signature_present": false
+        }
       },
       "attempts": 2,
       "observed_at": "2026-08-29T00:39:23.331344+00:00",
       "harness_commit": "e1ced39df2c3b112ead7780563b2925615786dce",
-      "taxonomy_fingerprint": "a64f1320b1a45d735e81",
-      "harness_fingerprint": "legacy:e1ced39df2c3b112ead7780563b2925615786dce"
+      "harness_fingerprint": "legacy:e1ced39df2c3b112ead7780563b2925615786dce",
+      "taxonomy_fingerprint": "a64f1320b1a45d735e81"
     },
     {
       "schema_version": 2,
@@ -3755,13 +4143,20 @@
         "reasoning_present": true,
         "adjustments": [],
         "duration_ms": 6788.52566704154,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        },
+        "reasoning": {
+          "exposed": true,
+          "signature_present": false
+        }
       },
       "attempts": 2,
       "observed_at": "2026-08-29T00:39:44.971415+00:00",
       "harness_commit": "e1ced39df2c3b112ead7780563b2925615786dce",
-      "taxonomy_fingerprint": "a64f1320b1a45d735e81",
-      "harness_fingerprint": "legacy:e1ced39df2c3b112ead7780563b2925615786dce"
+      "harness_fingerprint": "legacy:e1ced39df2c3b112ead7780563b2925615786dce",
+      "taxonomy_fingerprint": "a64f1320b1a45d735e81"
     },
     {
       "schema_version": 2,
@@ -3790,13 +4185,20 @@
         "reasoning_present": true,
         "adjustments": [],
         "duration_ms": 6788.52566704154,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        },
+        "reasoning": {
+          "exposed": true,
+          "signature_present": false
+        }
       },
       "attempts": 2,
       "observed_at": "2026-08-29T00:39:44.971415+00:00",
       "harness_commit": "e1ced39df2c3b112ead7780563b2925615786dce",
-      "taxonomy_fingerprint": "a64f1320b1a45d735e81",
-      "harness_fingerprint": "legacy:e1ced39df2c3b112ead7780563b2925615786dce"
+      "harness_fingerprint": "legacy:e1ced39df2c3b112ead7780563b2925615786dce",
+      "taxonomy_fingerprint": "a64f1320b1a45d735e81"
     },
     {
       "schema_version": 2,
@@ -3825,13 +4227,20 @@
         "reasoning_present": true,
         "adjustments": [],
         "duration_ms": 6788.52566704154,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        },
+        "reasoning": {
+          "exposed": true,
+          "signature_present": false
+        }
       },
       "attempts": 2,
       "observed_at": "2026-08-29T00:39:44.971415+00:00",
       "harness_commit": "e1ced39df2c3b112ead7780563b2925615786dce",
-      "taxonomy_fingerprint": "a64f1320b1a45d735e81",
-      "harness_fingerprint": "legacy:e1ced39df2c3b112ead7780563b2925615786dce"
+      "harness_fingerprint": "legacy:e1ced39df2c3b112ead7780563b2925615786dce",
+      "taxonomy_fingerprint": "a64f1320b1a45d735e81"
     },
     {
       "schema_version": 2,
@@ -3860,13 +4269,20 @@
         "reasoning_present": true,
         "adjustments": [],
         "duration_ms": 17312.472749967128,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        },
+        "reasoning": {
+          "exposed": true,
+          "signature_present": false
+        }
       },
       "attempts": 2,
       "observed_at": "2026-08-29T00:40:20.676544+00:00",
       "harness_commit": "e1ced39df2c3b112ead7780563b2925615786dce",
-      "taxonomy_fingerprint": "a64f1320b1a45d735e81",
-      "harness_fingerprint": "legacy:e1ced39df2c3b112ead7780563b2925615786dce"
+      "harness_fingerprint": "legacy:e1ced39df2c3b112ead7780563b2925615786dce",
+      "taxonomy_fingerprint": "a64f1320b1a45d735e81"
     },
     {
       "schema_version": 2,
@@ -3895,13 +4311,20 @@
         "reasoning_present": true,
         "adjustments": [],
         "duration_ms": 17312.472749967128,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        },
+        "reasoning": {
+          "exposed": true,
+          "signature_present": false
+        }
       },
       "attempts": 2,
       "observed_at": "2026-08-29T00:40:20.676544+00:00",
       "harness_commit": "e1ced39df2c3b112ead7780563b2925615786dce",
-      "taxonomy_fingerprint": "a64f1320b1a45d735e81",
-      "harness_fingerprint": "legacy:e1ced39df2c3b112ead7780563b2925615786dce"
+      "harness_fingerprint": "legacy:e1ced39df2c3b112ead7780563b2925615786dce",
+      "taxonomy_fingerprint": "a64f1320b1a45d735e81"
     },
     {
       "schema_version": 2,
@@ -3930,13 +4353,20 @@
         "reasoning_present": true,
         "adjustments": [],
         "duration_ms": 17312.472749967128,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        },
+        "reasoning": {
+          "exposed": true,
+          "signature_present": false
+        }
       },
       "attempts": 2,
       "observed_at": "2026-08-29T00:40:20.676544+00:00",
       "harness_commit": "e1ced39df2c3b112ead7780563b2925615786dce",
-      "taxonomy_fingerprint": "a64f1320b1a45d735e81",
-      "harness_fingerprint": "legacy:e1ced39df2c3b112ead7780563b2925615786dce"
+      "harness_fingerprint": "legacy:e1ced39df2c3b112ead7780563b2925615786dce",
+      "taxonomy_fingerprint": "a64f1320b1a45d735e81"
     },
     {
       "schema_version": 2,
@@ -3965,13 +4395,16 @@
         "reasoning_present": false,
         "adjustments": [],
         "duration_ms": 3365.0990419555455,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        }
       },
       "attempts": 2,
       "observed_at": "2026-08-29T00:41:18.270868+00:00",
       "harness_commit": "e1ced39df2c3b112ead7780563b2925615786dce",
-      "taxonomy_fingerprint": "a64f1320b1a45d735e81",
-      "harness_fingerprint": "legacy:e1ced39df2c3b112ead7780563b2925615786dce"
+      "harness_fingerprint": "legacy:e1ced39df2c3b112ead7780563b2925615786dce",
+      "taxonomy_fingerprint": "a64f1320b1a45d735e81"
     },
     {
       "schema_version": 2,
@@ -4000,13 +4433,16 @@
         "reasoning_present": false,
         "adjustments": [],
         "duration_ms": 3365.0990419555455,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        }
       },
       "attempts": 2,
       "observed_at": "2026-08-29T00:41:18.270868+00:00",
       "harness_commit": "e1ced39df2c3b112ead7780563b2925615786dce",
-      "taxonomy_fingerprint": "a64f1320b1a45d735e81",
-      "harness_fingerprint": "legacy:e1ced39df2c3b112ead7780563b2925615786dce"
+      "harness_fingerprint": "legacy:e1ced39df2c3b112ead7780563b2925615786dce",
+      "taxonomy_fingerprint": "a64f1320b1a45d735e81"
     },
     {
       "schema_version": 2,
@@ -4035,13 +4471,16 @@
         "reasoning_present": false,
         "adjustments": [],
         "duration_ms": 3365.0990419555455,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        }
       },
       "attempts": 2,
       "observed_at": "2026-08-29T00:41:18.270868+00:00",
       "harness_commit": "e1ced39df2c3b112ead7780563b2925615786dce",
-      "taxonomy_fingerprint": "a64f1320b1a45d735e81",
-      "harness_fingerprint": "legacy:e1ced39df2c3b112ead7780563b2925615786dce"
+      "harness_fingerprint": "legacy:e1ced39df2c3b112ead7780563b2925615786dce",
+      "taxonomy_fingerprint": "a64f1320b1a45d735e81"
     },
     {
       "schema_version": 2,
@@ -4070,13 +4509,20 @@
         "reasoning_present": true,
         "adjustments": [],
         "duration_ms": 4822.130208136514,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        },
+        "reasoning": {
+          "exposed": true,
+          "signature_present": false
+        }
       },
       "attempts": 2,
       "observed_at": "2026-08-29T00:41:28.322176+00:00",
       "harness_commit": "e1ced39df2c3b112ead7780563b2925615786dce",
-      "taxonomy_fingerprint": "a64f1320b1a45d735e81",
-      "harness_fingerprint": "legacy:e1ced39df2c3b112ead7780563b2925615786dce"
+      "harness_fingerprint": "legacy:e1ced39df2c3b112ead7780563b2925615786dce",
+      "taxonomy_fingerprint": "a64f1320b1a45d735e81"
     },
     {
       "schema_version": 2,
@@ -4105,13 +4551,20 @@
         "reasoning_present": true,
         "adjustments": [],
         "duration_ms": 4822.130208136514,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        },
+        "reasoning": {
+          "exposed": true,
+          "signature_present": false
+        }
       },
       "attempts": 2,
       "observed_at": "2026-08-29T00:41:28.322176+00:00",
       "harness_commit": "e1ced39df2c3b112ead7780563b2925615786dce",
-      "taxonomy_fingerprint": "a64f1320b1a45d735e81",
-      "harness_fingerprint": "legacy:e1ced39df2c3b112ead7780563b2925615786dce"
+      "harness_fingerprint": "legacy:e1ced39df2c3b112ead7780563b2925615786dce",
+      "taxonomy_fingerprint": "a64f1320b1a45d735e81"
     },
     {
       "schema_version": 2,
@@ -4140,13 +4593,20 @@
         "reasoning_present": true,
         "adjustments": [],
         "duration_ms": 4822.130208136514,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        },
+        "reasoning": {
+          "exposed": true,
+          "signature_present": false
+        }
       },
       "attempts": 2,
       "observed_at": "2026-08-29T00:41:28.322176+00:00",
       "harness_commit": "e1ced39df2c3b112ead7780563b2925615786dce",
-      "taxonomy_fingerprint": "a64f1320b1a45d735e81",
-      "harness_fingerprint": "legacy:e1ced39df2c3b112ead7780563b2925615786dce"
+      "harness_fingerprint": "legacy:e1ced39df2c3b112ead7780563b2925615786dce",
+      "taxonomy_fingerprint": "a64f1320b1a45d735e81"
     },
     {
       "schema_version": 2,
@@ -4175,13 +4635,20 @@
         "reasoning_present": true,
         "adjustments": [],
         "duration_ms": 2985.0481250323355,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        },
+        "reasoning": {
+          "exposed": true,
+          "signature_present": false
+        }
       },
       "attempts": 2,
       "observed_at": "2026-08-29T00:41:40.882350+00:00",
       "harness_commit": "e1ced39df2c3b112ead7780563b2925615786dce",
-      "taxonomy_fingerprint": "a64f1320b1a45d735e81",
-      "harness_fingerprint": "legacy:e1ced39df2c3b112ead7780563b2925615786dce"
+      "harness_fingerprint": "legacy:e1ced39df2c3b112ead7780563b2925615786dce",
+      "taxonomy_fingerprint": "a64f1320b1a45d735e81"
     },
     {
       "schema_version": 2,
@@ -4210,13 +4677,20 @@
         "reasoning_present": true,
         "adjustments": [],
         "duration_ms": 2985.0481250323355,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        },
+        "reasoning": {
+          "exposed": true,
+          "signature_present": false
+        }
       },
       "attempts": 2,
       "observed_at": "2026-08-29T00:41:40.882350+00:00",
       "harness_commit": "e1ced39df2c3b112ead7780563b2925615786dce",
-      "taxonomy_fingerprint": "a64f1320b1a45d735e81",
-      "harness_fingerprint": "legacy:e1ced39df2c3b112ead7780563b2925615786dce"
+      "harness_fingerprint": "legacy:e1ced39df2c3b112ead7780563b2925615786dce",
+      "taxonomy_fingerprint": "a64f1320b1a45d735e81"
     },
     {
       "schema_version": 2,
@@ -4245,13 +4719,20 @@
         "reasoning_present": true,
         "adjustments": [],
         "duration_ms": 2985.0481250323355,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        },
+        "reasoning": {
+          "exposed": true,
+          "signature_present": false
+        }
       },
       "attempts": 2,
       "observed_at": "2026-08-29T00:41:40.882350+00:00",
       "harness_commit": "e1ced39df2c3b112ead7780563b2925615786dce",
-      "taxonomy_fingerprint": "a64f1320b1a45d735e81",
-      "harness_fingerprint": "legacy:e1ced39df2c3b112ead7780563b2925615786dce"
+      "harness_fingerprint": "legacy:e1ced39df2c3b112ead7780563b2925615786dce",
+      "taxonomy_fingerprint": "a64f1320b1a45d735e81"
     },
     {
       "schema_version": 2,
@@ -4280,13 +4761,20 @@
         "reasoning_present": true,
         "adjustments": [],
         "duration_ms": 5852.89983288385,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        },
+        "reasoning": {
+          "exposed": true,
+          "signature_present": false
+        }
       },
       "attempts": 2,
       "observed_at": "2026-08-29T00:41:53.963366+00:00",
       "harness_commit": "e1ced39df2c3b112ead7780563b2925615786dce",
-      "taxonomy_fingerprint": "a64f1320b1a45d735e81",
-      "harness_fingerprint": "legacy:e1ced39df2c3b112ead7780563b2925615786dce"
+      "harness_fingerprint": "legacy:e1ced39df2c3b112ead7780563b2925615786dce",
+      "taxonomy_fingerprint": "a64f1320b1a45d735e81"
     },
     {
       "schema_version": 2,
@@ -4315,13 +4803,20 @@
         "reasoning_present": true,
         "adjustments": [],
         "duration_ms": 5852.89983288385,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        },
+        "reasoning": {
+          "exposed": true,
+          "signature_present": false
+        }
       },
       "attempts": 2,
       "observed_at": "2026-08-29T00:41:53.963366+00:00",
       "harness_commit": "e1ced39df2c3b112ead7780563b2925615786dce",
-      "taxonomy_fingerprint": "a64f1320b1a45d735e81",
-      "harness_fingerprint": "legacy:e1ced39df2c3b112ead7780563b2925615786dce"
+      "harness_fingerprint": "legacy:e1ced39df2c3b112ead7780563b2925615786dce",
+      "taxonomy_fingerprint": "a64f1320b1a45d735e81"
     },
     {
       "schema_version": 2,
@@ -4350,13 +4845,2799 @@
         "reasoning_present": true,
         "adjustments": [],
         "duration_ms": 5852.89983288385,
-        "client_type": "HTTP JSON"
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported"
+        },
+        "reasoning": {
+          "exposed": true,
+          "signature_present": false
+        }
       },
       "attempts": 2,
       "observed_at": "2026-08-29T00:41:53.963366+00:00",
       "harness_commit": "e1ced39df2c3b112ead7780563b2925615786dce",
-      "taxonomy_fingerprint": "a64f1320b1a45d735e81",
-      "harness_fingerprint": "legacy:e1ced39df2c3b112ead7780563b2925615786dce"
+      "harness_fingerprint": "legacy:e1ced39df2c3b112ead7780563b2925615786dce",
+      "taxonomy_fingerprint": "a64f1320b1a45d735e81"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "03bdfdfbdc8951323e3b8196",
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gemma-4-31b",
+      "upstream_model": "gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "case_id": "structured-output.json-schema",
+      "case_version": 2,
+      "case_fingerprint": "4348ddb52773997c",
+      "claim": {
+        "dimension": "capability",
+        "name": "structured_output",
+        "profile": {
+          "mode": "json_schema"
+        }
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "{\"answer\": 42}",
+        "tool_calls": [],
+        "finish_reason": "stop",
+        "usage_present": true,
+        "reasoning_present": false,
+        "json_value": {
+          "answer": 42
+        },
+        "adjustments": [],
+        "duration_ms": 484.39425020478666,
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 153,
+          "output_tokens": 8,
+          "total_tokens": 161
+        }
+      },
+      "attempts": 1,
+      "observed_at": "2026-08-31T20:13:30.318753+00:00",
+      "harness_commit": "f35ee9f28e61f898cede20f2fff0f61af01072e6",
+      "harness_fingerprint": "c5c652c26402d546ef59",
+      "taxonomy_fingerprint": "49e645f0a91273cac37c"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "0aa33f874d904206ea5bd0a7",
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gemma-4-31b",
+      "upstream_model": "gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "case_id": "structured-output.json-schema",
+      "case_version": 2,
+      "case_fingerprint": "4348ddb52773997c",
+      "claim": {
+        "dimension": "option",
+        "name": "response_format",
+        "profile": {
+          "mode": "json_schema"
+        }
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "{\"answer\": 42}",
+        "tool_calls": [],
+        "finish_reason": "stop",
+        "usage_present": true,
+        "reasoning_present": false,
+        "json_value": {
+          "answer": 42
+        },
+        "adjustments": [],
+        "duration_ms": 484.39425020478666,
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 153,
+          "output_tokens": 8,
+          "total_tokens": 161
+        }
+      },
+      "attempts": 1,
+      "observed_at": "2026-08-31T20:13:30.318753+00:00",
+      "harness_commit": "f35ee9f28e61f898cede20f2fff0f61af01072e6",
+      "harness_fingerprint": "c5c652c26402d546ef59",
+      "taxonomy_fingerprint": "49e645f0a91273cac37c"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "1dc771163754e444a4a3fa83",
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gemma-4-31b",
+      "upstream_model": "gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "case_id": "streaming.tools",
+      "case_version": 2,
+      "case_fingerprint": "12126bb252649974",
+      "claim": {
+        "dimension": "interaction",
+        "name": "streaming+tools",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "",
+        "tool_calls": [
+          {
+            "id": "52d4f3e4a",
+            "name": "report_result",
+            "arguments": "{\"value\": \"ok\"}"
+          }
+        ],
+        "finish_reason": "tool_calls",
+        "usage_present": true,
+        "reasoning_present": false,
+        "adjustments": [],
+        "duration_ms": 801.3661250006407,
+        "client_type": "HTTP SSE",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 66,
+          "output_tokens": 15,
+          "total_tokens": 81
+        }
+      },
+      "attempts": 1,
+      "observed_at": "2026-08-31T20:13:30.318753+00:00",
+      "harness_commit": "f35ee9f28e61f898cede20f2fff0f61af01072e6",
+      "harness_fingerprint": "c5c652c26402d546ef59",
+      "taxonomy_fingerprint": "49e645f0a91273cac37c"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "1f4394e3cf1c133ecdec425f",
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gemma-4-31b",
+      "upstream_model": "gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "case_id": "parameters.max-tokens",
+      "case_version": 2,
+      "case_fingerprint": "39d285116b4a2722",
+      "claim": {
+        "dimension": "option",
+        "name": "max_tokens",
+        "profile": {
+          "value": 1024
+        }
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "ok",
+        "tool_calls": [],
+        "finish_reason": "stop",
+        "usage_present": true,
+        "reasoning_present": false,
+        "adjustments": [],
+        "duration_ms": 263.1594589911401,
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 16,
+          "output_tokens": 2,
+          "total_tokens": 18
+        }
+      },
+      "attempts": 1,
+      "observed_at": "2026-08-31T20:13:30.318753+00:00",
+      "harness_commit": "f35ee9f28e61f898cede20f2fff0f61af01072e6",
+      "harness_fingerprint": "c5c652c26402d546ef59",
+      "taxonomy_fingerprint": "49e645f0a91273cac37c"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "269886a933077d25e7d78c3b",
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gemma-4-31b",
+      "upstream_model": "gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "case_id": "text.basic",
+      "case_version": 2,
+      "case_fingerprint": "10971dd682e989f4",
+      "claim": {
+        "dimension": "modality",
+        "name": "output_text",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "ok",
+        "tool_calls": [],
+        "finish_reason": "stop",
+        "usage_present": true,
+        "reasoning_present": false,
+        "adjustments": [],
+        "duration_ms": 204.65674996376038,
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 19,
+          "output_tokens": 2,
+          "total_tokens": 21
+        }
+      },
+      "attempts": 1,
+      "observed_at": "2026-08-31T20:13:30.318753+00:00",
+      "harness_commit": "f35ee9f28e61f898cede20f2fff0f61af01072e6",
+      "harness_fingerprint": "c5c652c26402d546ef59",
+      "taxonomy_fingerprint": "49e645f0a91273cac37c"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "2d8e59221c7bc66ead354f77",
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gemma-4-31b",
+      "upstream_model": "gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "case_id": "parameters.logprobs",
+      "case_version": 2,
+      "case_fingerprint": "3c090fb81703841d",
+      "claim": {
+        "dimension": "option",
+        "name": "logprobs",
+        "profile": {
+          "enabled": true,
+          "top": 2
+        }
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "ok",
+        "tool_calls": [],
+        "finish_reason": "stop",
+        "usage_present": true,
+        "reasoning_present": false,
+        "adjustments": [],
+        "duration_ms": 265.93862497247756,
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 16,
+          "output_tokens": 2,
+          "total_tokens": 18
+        }
+      },
+      "attempts": 1,
+      "observed_at": "2026-08-31T20:13:30.318753+00:00",
+      "harness_commit": "f35ee9f28e61f898cede20f2fff0f61af01072e6",
+      "harness_fingerprint": "c5c652c26402d546ef59",
+      "taxonomy_fingerprint": "49e645f0a91273cac37c"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "327994be7e8cc3c2299a4af5",
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gemma-4-31b",
+      "upstream_model": "gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "case_id": "tools.parallel",
+      "case_version": 2,
+      "case_fingerprint": "d52ccad65e323df5",
+      "claim": {
+        "dimension": "option",
+        "name": "parallel_tool_calls",
+        "profile": {
+          "value": true
+        }
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "",
+        "tool_calls": [
+          {
+            "id": "9bb0de955",
+            "name": "report_alpha",
+            "arguments": "{}"
+          },
+          {
+            "id": "fa26ae2c6",
+            "name": "report_beta",
+            "arguments": "{}"
+          }
+        ],
+        "finish_reason": "tool_calls",
+        "usage_present": true,
+        "reasoning_present": false,
+        "adjustments": [],
+        "duration_ms": 749.5723750907928,
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 80,
+          "output_tokens": 17,
+          "total_tokens": 97
+        }
+      },
+      "attempts": 1,
+      "observed_at": "2026-08-31T20:13:30.318753+00:00",
+      "harness_commit": "f35ee9f28e61f898cede20f2fff0f61af01072e6",
+      "harness_fingerprint": "c5c652c26402d546ef59",
+      "taxonomy_fingerprint": "49e645f0a91273cac37c"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "32bb542e23387d433b6c479f",
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gemma-4-31b",
+      "upstream_model": "gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "case_id": "reasoning.exposed",
+      "case_version": 2,
+      "case_fingerprint": "55ed23a5a4957b1f",
+      "claim": {
+        "dimension": "capability",
+        "name": "reasoning",
+        "profile": {
+          "effort": "low"
+        }
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "Adding 20 and 20 gives 40, and adding the remaining 2 results in 42.\n\n20 + 22 = 42",
+        "tool_calls": [],
+        "finish_reason": "stop",
+        "usage_present": true,
+        "reasoning_present": true,
+        "adjustments": [],
+        "duration_ms": 560.800958191976,
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 29,
+          "output_tokens": 149,
+          "total_tokens": 178
+        },
+        "reasoning": {
+          "exposed": true,
+          "signature_present": false
+        }
+      },
+      "attempts": 2,
+      "observed_at": "2026-08-31T20:13:30.318753+00:00",
+      "harness_commit": "f35ee9f28e61f898cede20f2fff0f61af01072e6",
+      "harness_fingerprint": "c5c652c26402d546ef59",
+      "taxonomy_fingerprint": "49e645f0a91273cac37c"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "4295126eacfd551d3847bd7b",
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gemma-4-31b",
+      "upstream_model": "gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "case_id": "modalities.pdf",
+      "case_version": 2,
+      "case_fingerprint": "ca2d457d49373fb3",
+      "claim": {
+        "dimension": "modality",
+        "name": "input_pdf",
+        "profile": {}
+      },
+      "verdict": "unknown",
+      "source": "live_api",
+      "observation": {
+        "outcome": "rejected",
+        "text": "",
+        "tool_calls": [],
+        "usage_present": false,
+        "reasoning_present": false,
+        "error_code": "400",
+        "error_message": "messages.0.user.content.str: Input should be a valid string\nmessages.0.user.content.list[tagged-union[TextContent,ImageUrlContent,ImageContent]].1: Input tag 'file' found using 'type' does not match any of the expected tags: 'text', 'image_url', 'image'",
+        "http_status": 400,
+        "adjustments": [],
+        "duration_ms": 144.56387516111135,
+        "client_type": "HTTP 400",
+        "failure": {
+          "kind": "rejection",
+          "origin": "direct",
+          "retryable": false,
+          "code": "400",
+          "message": "messages.0.user.content.str: Input should be a valid string\nmessages.0.user.content.list[tagged-union[TextContent,ImageUrlContent,ImageContent]].1: Input tag 'file' found using 'type' does not match any of the expected tags: 'text', 'image_url', 'image'",
+          "http_status": 400
+        }
+      },
+      "attempts": 2,
+      "observed_at": "2026-08-31T20:13:30.318753+00:00",
+      "harness_commit": "f35ee9f28e61f898cede20f2fff0f61af01072e6",
+      "harness_fingerprint": "c5c652c26402d546ef59",
+      "taxonomy_fingerprint": "49e645f0a91273cac37c"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "4465ae3d4e87666b324b6910",
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gemma-4-31b",
+      "upstream_model": "gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "case_id": "parameters.seed",
+      "case_version": 2,
+      "case_fingerprint": "6c7b287c74f0d721",
+      "claim": {
+        "dimension": "option",
+        "name": "seed",
+        "profile": {
+          "value": 1729
+        }
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "ok",
+        "tool_calls": [],
+        "finish_reason": "stop",
+        "usage_present": true,
+        "reasoning_present": false,
+        "adjustments": [],
+        "duration_ms": 180.73016684502363,
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 16,
+          "output_tokens": 2,
+          "total_tokens": 18
+        }
+      },
+      "attempts": 1,
+      "observed_at": "2026-08-31T20:13:30.318753+00:00",
+      "harness_commit": "f35ee9f28e61f898cede20f2fff0f61af01072e6",
+      "harness_fingerprint": "c5c652c26402d546ef59",
+      "taxonomy_fingerprint": "49e645f0a91273cac37c"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "447d28594a32a5f82cfc4cfd",
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gemma-4-31b",
+      "upstream_model": "gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "case_id": "tools.result-round-trip",
+      "case_version": 2,
+      "case_fingerprint": "b1a288a2227dd298",
+      "claim": {
+        "dimension": "interaction",
+        "name": "tool_result_round_trip",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "cobalt",
+        "tool_calls": [],
+        "finish_reason": "stop",
+        "usage_present": true,
+        "reasoning_present": false,
+        "adjustments": [],
+        "duration_ms": 250.57108281180263,
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 107,
+          "output_tokens": 3,
+          "total_tokens": 110
+        }
+      },
+      "attempts": 1,
+      "observed_at": "2026-08-31T20:13:30.318753+00:00",
+      "harness_commit": "f35ee9f28e61f898cede20f2fff0f61af01072e6",
+      "harness_fingerprint": "c5c652c26402d546ef59",
+      "taxonomy_fingerprint": "49e645f0a91273cac37c"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "4be96071691f4ea1ea51532b",
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gemma-4-31b",
+      "upstream_model": "gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "case_id": "text.basic",
+      "case_version": 2,
+      "case_fingerprint": "10971dd682e989f4",
+      "claim": {
+        "dimension": "capability",
+        "name": "text_generation",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "ok",
+        "tool_calls": [],
+        "finish_reason": "stop",
+        "usage_present": true,
+        "reasoning_present": false,
+        "adjustments": [],
+        "duration_ms": 204.65674996376038,
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 19,
+          "output_tokens": 2,
+          "total_tokens": 21
+        }
+      },
+      "attempts": 1,
+      "observed_at": "2026-08-31T20:13:30.318753+00:00",
+      "harness_commit": "f35ee9f28e61f898cede20f2fff0f61af01072e6",
+      "harness_fingerprint": "c5c652c26402d546ef59",
+      "taxonomy_fingerprint": "49e645f0a91273cac37c"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "5711b3a7195c14263dd86a27",
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gemma-4-31b",
+      "upstream_model": "gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "case_id": "streaming.reasoning",
+      "case_version": 2,
+      "case_fingerprint": "313ba8185c3722f0",
+      "claim": {
+        "dimension": "interaction",
+        "name": "streaming+reasoning",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "20 plus 20 is 40, plus the remaining 2 equals 42.\n\n**Answer: 42**",
+        "tool_calls": [],
+        "finish_reason": "stop",
+        "usage_present": true,
+        "reasoning_present": true,
+        "adjustments": [],
+        "duration_ms": 2617.215999867767,
+        "client_type": "HTTP SSE",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 29,
+          "output_tokens": 135,
+          "total_tokens": 164
+        },
+        "reasoning": {
+          "exposed": true,
+          "signature_present": false
+        }
+      },
+      "attempts": 2,
+      "observed_at": "2026-08-31T20:13:30.318753+00:00",
+      "harness_commit": "f35ee9f28e61f898cede20f2fff0f61af01072e6",
+      "harness_fingerprint": "c5c652c26402d546ef59",
+      "taxonomy_fingerprint": "49e645f0a91273cac37c"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "6e118df30ba366ffbfbec1e8",
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gemma-4-31b",
+      "upstream_model": "gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "case_id": "modalities.image",
+      "case_version": 2,
+      "case_fingerprint": "6141fe554407fda3",
+      "claim": {
+        "dimension": "modality",
+        "name": "input_image",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "Red",
+        "tool_calls": [],
+        "finish_reason": "stop",
+        "usage_present": true,
+        "reasoning_present": false,
+        "adjustments": [],
+        "duration_ms": 367.3210418783128,
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 288,
+          "output_tokens": 2,
+          "total_tokens": 290
+        }
+      },
+      "attempts": 1,
+      "observed_at": "2026-08-31T20:13:30.318753+00:00",
+      "harness_commit": "f35ee9f28e61f898cede20f2fff0f61af01072e6",
+      "harness_fingerprint": "c5c652c26402d546ef59",
+      "taxonomy_fingerprint": "49e645f0a91273cac37c"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "7e5751765afdb8d584966fd2",
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gemma-4-31b",
+      "upstream_model": "gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "case_id": "tools.single",
+      "case_version": 2,
+      "case_fingerprint": "c10a642bb2fbfa4d",
+      "claim": {
+        "dimension": "capability",
+        "name": "tool_calling",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "",
+        "tool_calls": [
+          {
+            "id": "da9028a11",
+            "name": "report_result",
+            "arguments": "{\"value\": \"ok\"}"
+          }
+        ],
+        "finish_reason": "tool_calls",
+        "usage_present": true,
+        "reasoning_present": false,
+        "adjustments": [],
+        "duration_ms": 573.0892920400947,
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 72,
+          "output_tokens": 15,
+          "total_tokens": 87
+        }
+      },
+      "attempts": 1,
+      "observed_at": "2026-08-31T20:13:30.318753+00:00",
+      "harness_commit": "f35ee9f28e61f898cede20f2fff0f61af01072e6",
+      "harness_fingerprint": "c5c652c26402d546ef59",
+      "taxonomy_fingerprint": "49e645f0a91273cac37c"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "7f65c31911804d95356c86c0",
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gemma-4-31b",
+      "upstream_model": "gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "case_id": "streaming.text",
+      "case_version": 2,
+      "case_fingerprint": "abace9f926b15bf6",
+      "claim": {
+        "dimension": "capability",
+        "name": "streaming",
+        "profile": {
+          "content": "text"
+        }
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "ok",
+        "tool_calls": [],
+        "finish_reason": "stop",
+        "usage_present": true,
+        "reasoning_present": false,
+        "adjustments": [],
+        "duration_ms": 268.6256670858711,
+        "client_type": "HTTP SSE",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 16,
+          "output_tokens": 2,
+          "total_tokens": 18
+        }
+      },
+      "attempts": 1,
+      "observed_at": "2026-08-31T20:13:30.318753+00:00",
+      "harness_commit": "f35ee9f28e61f898cede20f2fff0f61af01072e6",
+      "harness_fingerprint": "c5c652c26402d546ef59",
+      "taxonomy_fingerprint": "49e645f0a91273cac37c"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "8db7edf898e30b1e108c51f8",
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gemma-4-31b",
+      "upstream_model": "gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "case_id": "streaming.structured-output",
+      "case_version": 2,
+      "case_fingerprint": "3a2c13d4975288ba",
+      "claim": {
+        "dimension": "interaction",
+        "name": "streaming+structured_output",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "{\"answer\": 42}",
+        "tool_calls": [],
+        "finish_reason": "stop",
+        "usage_present": true,
+        "reasoning_present": false,
+        "json_value": {
+          "answer": 42
+        },
+        "adjustments": [],
+        "duration_ms": 251.90291716717184,
+        "client_type": "HTTP SSE",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 153,
+          "output_tokens": 8,
+          "total_tokens": 161
+        }
+      },
+      "attempts": 1,
+      "observed_at": "2026-08-31T20:13:30.318753+00:00",
+      "harness_commit": "f35ee9f28e61f898cede20f2fff0f61af01072e6",
+      "harness_fingerprint": "c5c652c26402d546ef59",
+      "taxonomy_fingerprint": "49e645f0a91273cac37c"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "8dbac865c246ff2020723820",
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gemma-4-31b",
+      "upstream_model": "gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "case_id": "tools.strict",
+      "case_version": 2,
+      "case_fingerprint": "425669de1ca5c52b",
+      "claim": {
+        "dimension": "option",
+        "name": "strict_tools",
+        "profile": {
+          "value": true
+        }
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "",
+        "tool_calls": [
+          {
+            "id": "04a47c42b",
+            "name": "report_result",
+            "arguments": "{\"value\": \"ok\"}"
+          }
+        ],
+        "finish_reason": "tool_calls",
+        "usage_present": true,
+        "reasoning_present": false,
+        "adjustments": [],
+        "duration_ms": 402.9938329476863,
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 66,
+          "output_tokens": 15,
+          "total_tokens": 81
+        }
+      },
+      "attempts": 1,
+      "observed_at": "2026-08-31T20:13:30.318753+00:00",
+      "harness_commit": "f35ee9f28e61f898cede20f2fff0f61af01072e6",
+      "harness_fingerprint": "c5c652c26402d546ef59",
+      "taxonomy_fingerprint": "49e645f0a91273cac37c"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "9cd5b1cac0f8b801850187b2",
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gemma-4-31b",
+      "upstream_model": "gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "case_id": "text.usage",
+      "case_version": 2,
+      "case_fingerprint": "0860b58ed7bb898f",
+      "claim": {
+        "dimension": "capability",
+        "name": "usage",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "ok",
+        "tool_calls": [],
+        "finish_reason": "stop",
+        "usage_present": true,
+        "reasoning_present": false,
+        "adjustments": [],
+        "duration_ms": 216.51941700838506,
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 16,
+          "output_tokens": 2,
+          "total_tokens": 18
+        }
+      },
+      "attempts": 1,
+      "observed_at": "2026-08-31T20:13:30.318753+00:00",
+      "harness_commit": "f35ee9f28e61f898cede20f2fff0f61af01072e6",
+      "harness_fingerprint": "c5c652c26402d546ef59",
+      "taxonomy_fingerprint": "49e645f0a91273cac37c"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "9df1887d36c399fdf859ba05",
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gemma-4-31b",
+      "upstream_model": "gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "case_id": "structured-output.json-object",
+      "case_version": 2,
+      "case_fingerprint": "9983e71e32556b9e",
+      "claim": {
+        "dimension": "capability",
+        "name": "structured_output",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "{\"answer\": 42}",
+        "tool_calls": [],
+        "finish_reason": "stop",
+        "usage_present": true,
+        "reasoning_present": false,
+        "json_value": {
+          "answer": 42
+        },
+        "adjustments": [],
+        "duration_ms": 314.79808292351663,
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 110,
+          "output_tokens": 8,
+          "total_tokens": 118
+        }
+      },
+      "attempts": 1,
+      "observed_at": "2026-08-31T20:13:30.318753+00:00",
+      "harness_commit": "f35ee9f28e61f898cede20f2fff0f61af01072e6",
+      "harness_fingerprint": "c5c652c26402d546ef59",
+      "taxonomy_fingerprint": "49e645f0a91273cac37c"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "b1c0e07815370a418e1aaa33",
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gemma-4-31b",
+      "upstream_model": "gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "case_id": "parameters.temperature",
+      "case_version": 2,
+      "case_fingerprint": "d9f29aa1dd014e38",
+      "claim": {
+        "dimension": "option",
+        "name": "temperature",
+        "profile": {
+          "value": 0.37
+        }
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "ok",
+        "tool_calls": [],
+        "finish_reason": "stop",
+        "usage_present": true,
+        "reasoning_present": false,
+        "adjustments": [],
+        "duration_ms": 242.76149994693696,
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 16,
+          "output_tokens": 2,
+          "total_tokens": 18
+        }
+      },
+      "attempts": 1,
+      "observed_at": "2026-08-31T20:13:30.318753+00:00",
+      "harness_commit": "f35ee9f28e61f898cede20f2fff0f61af01072e6",
+      "harness_fingerprint": "c5c652c26402d546ef59",
+      "taxonomy_fingerprint": "49e645f0a91273cac37c"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "bbef2df2ce566c9285bc6d23",
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gemma-4-31b",
+      "upstream_model": "gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "case_id": "tools.single",
+      "case_version": 2,
+      "case_fingerprint": "c10a642bb2fbfa4d",
+      "claim": {
+        "dimension": "option",
+        "name": "tool_choice",
+        "profile": {
+          "mode": "required"
+        }
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "",
+        "tool_calls": [
+          {
+            "id": "da9028a11",
+            "name": "report_result",
+            "arguments": "{\"value\": \"ok\"}"
+          }
+        ],
+        "finish_reason": "tool_calls",
+        "usage_present": true,
+        "reasoning_present": false,
+        "adjustments": [],
+        "duration_ms": 573.0892920400947,
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 72,
+          "output_tokens": 15,
+          "total_tokens": 87
+        }
+      },
+      "attempts": 1,
+      "observed_at": "2026-08-31T20:13:30.318753+00:00",
+      "harness_commit": "f35ee9f28e61f898cede20f2fff0f61af01072e6",
+      "harness_fingerprint": "c5c652c26402d546ef59",
+      "taxonomy_fingerprint": "49e645f0a91273cac37c"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "c1b9edf634ebd1b490a63875",
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gemma-4-31b",
+      "upstream_model": "gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "case_id": "parameters.top-p",
+      "case_version": 2,
+      "case_fingerprint": "49d0c70d1202883f",
+      "claim": {
+        "dimension": "option",
+        "name": "top_p",
+        "profile": {
+          "value": 0.83
+        }
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "ok",
+        "tool_calls": [],
+        "finish_reason": "stop",
+        "usage_present": true,
+        "reasoning_present": false,
+        "adjustments": [],
+        "duration_ms": 220.61137505806983,
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 16,
+          "output_tokens": 2,
+          "total_tokens": 18
+        }
+      },
+      "attempts": 1,
+      "observed_at": "2026-08-31T20:13:30.318753+00:00",
+      "harness_commit": "f35ee9f28e61f898cede20f2fff0f61af01072e6",
+      "harness_fingerprint": "c5c652c26402d546ef59",
+      "taxonomy_fingerprint": "49e645f0a91273cac37c"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "cf1fbf152a75bef095d4a910",
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gemma-4-31b",
+      "upstream_model": "gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "case_id": "structured-output.json-object",
+      "case_version": 2,
+      "case_fingerprint": "9983e71e32556b9e",
+      "claim": {
+        "dimension": "option",
+        "name": "response_format",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "{\"answer\": 42}",
+        "tool_calls": [],
+        "finish_reason": "stop",
+        "usage_present": true,
+        "reasoning_present": false,
+        "json_value": {
+          "answer": 42
+        },
+        "adjustments": [],
+        "duration_ms": 314.79808292351663,
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 110,
+          "output_tokens": 8,
+          "total_tokens": 118
+        }
+      },
+      "attempts": 1,
+      "observed_at": "2026-08-31T20:13:30.318753+00:00",
+      "harness_commit": "f35ee9f28e61f898cede20f2fff0f61af01072e6",
+      "harness_fingerprint": "c5c652c26402d546ef59",
+      "taxonomy_fingerprint": "49e645f0a91273cac37c"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "ebb1360ce5479cd65b825d5c",
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gemma-4-31b",
+      "upstream_model": "gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "case_id": "tools.named-choice",
+      "case_version": 2,
+      "case_fingerprint": "869e4a037869d076",
+      "claim": {
+        "dimension": "option",
+        "name": "tool_choice",
+        "profile": {
+          "mode": "named"
+        }
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "",
+        "tool_calls": [
+          {
+            "id": "822df3c9f",
+            "name": "report_result",
+            "arguments": "{\"value\": \"ok\"}"
+          }
+        ],
+        "finish_reason": "tool_calls",
+        "usage_present": true,
+        "reasoning_present": false,
+        "adjustments": [],
+        "duration_ms": 827.7687500230968,
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 63,
+          "output_tokens": 15,
+          "total_tokens": 78
+        }
+      },
+      "attempts": 1,
+      "observed_at": "2026-08-31T20:13:30.318753+00:00",
+      "harness_commit": "f35ee9f28e61f898cede20f2fff0f61af01072e6",
+      "harness_fingerprint": "c5c652c26402d546ef59",
+      "taxonomy_fingerprint": "49e645f0a91273cac37c"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "ee7ecd0c0a41a5477ed4e653",
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gemma-4-31b",
+      "upstream_model": "gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "case_id": "parameters.stop",
+      "case_version": 2,
+      "case_fingerprint": "2e0b1afce0be7b71",
+      "claim": {
+        "dimension": "option",
+        "name": "stop",
+        "profile": {
+          "count": 1
+        }
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "ok ",
+        "tool_calls": [],
+        "finish_reason": "stop",
+        "usage_present": true,
+        "reasoning_present": false,
+        "adjustments": [],
+        "duration_ms": 285.82325018942356,
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 21,
+          "output_tokens": 2,
+          "total_tokens": 24
+        }
+      },
+      "attempts": 1,
+      "observed_at": "2026-08-31T20:13:30.318753+00:00",
+      "harness_commit": "f35ee9f28e61f898cede20f2fff0f61af01072e6",
+      "harness_fingerprint": "c5c652c26402d546ef59",
+      "taxonomy_fingerprint": "49e645f0a91273cac37c"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "f4ff01e81cba68dda1a11cf7",
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gemma-4-31b",
+      "upstream_model": "gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "case_id": "text.system",
+      "case_version": 2,
+      "case_fingerprint": "68ee6322a5c5ddb3",
+      "claim": {
+        "dimension": "capability",
+        "name": "system_messages",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "Ok",
+        "tool_calls": [],
+        "finish_reason": "stop",
+        "usage_present": true,
+        "reasoning_present": false,
+        "adjustments": [],
+        "duration_ms": 273.2685001101345,
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 24,
+          "output_tokens": 2,
+          "total_tokens": 26
+        }
+      },
+      "attempts": 1,
+      "observed_at": "2026-08-31T20:13:30.318753+00:00",
+      "harness_commit": "f35ee9f28e61f898cede20f2fff0f61af01072e6",
+      "harness_fingerprint": "c5c652c26402d546ef59",
+      "taxonomy_fingerprint": "49e645f0a91273cac37c"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "f55aed417e58d7c7b4f0c536",
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gemma-4-31b",
+      "upstream_model": "gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "case_id": "text.basic",
+      "case_version": 2,
+      "case_fingerprint": "10971dd682e989f4",
+      "claim": {
+        "dimension": "modality",
+        "name": "input_text",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "ok",
+        "tool_calls": [],
+        "finish_reason": "stop",
+        "usage_present": true,
+        "reasoning_present": false,
+        "adjustments": [],
+        "duration_ms": 204.65674996376038,
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 19,
+          "output_tokens": 2,
+          "total_tokens": 21
+        }
+      },
+      "attempts": 1,
+      "observed_at": "2026-08-31T20:13:30.318753+00:00",
+      "harness_commit": "f35ee9f28e61f898cede20f2fff0f61af01072e6",
+      "harness_fingerprint": "c5c652c26402d546ef59",
+      "taxonomy_fingerprint": "49e645f0a91273cac37c"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "f6a0fb31b2d7ed19a418de84",
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gemma-4-31b",
+      "upstream_model": "gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "case_id": "text.multi-turn",
+      "case_version": 2,
+      "case_fingerprint": "af38fd79c92a76a4",
+      "claim": {
+        "dimension": "capability",
+        "name": "multi_turn",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "The code word is cobalt.",
+        "tool_calls": [],
+        "finish_reason": "stop",
+        "usage_present": true,
+        "reasoning_present": false,
+        "adjustments": [],
+        "duration_ms": 580.9641249943525,
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 35,
+          "output_tokens": 7,
+          "total_tokens": 42
+        }
+      },
+      "attempts": 1,
+      "observed_at": "2026-08-31T20:13:30.318753+00:00",
+      "harness_commit": "f35ee9f28e61f898cede20f2fff0f61af01072e6",
+      "harness_fingerprint": "c5c652c26402d546ef59",
+      "taxonomy_fingerprint": "49e645f0a91273cac37c"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "f9b01b136c2ca4c4256df6da",
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gemma-4-31b",
+      "upstream_model": "gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "case_id": "reasoning.exposed",
+      "case_version": 2,
+      "case_fingerprint": "55ed23a5a4957b1f",
+      "claim": {
+        "dimension": "option",
+        "name": "reasoning_effort",
+        "profile": {
+          "value": "low"
+        }
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "Adding 20 and 20 gives 40, and adding the remaining 2 results in 42.\n\n20 + 22 = 42",
+        "tool_calls": [],
+        "finish_reason": "stop",
+        "usage_present": true,
+        "reasoning_present": true,
+        "adjustments": [],
+        "duration_ms": 560.800958191976,
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 29,
+          "output_tokens": 149,
+          "total_tokens": 178
+        },
+        "reasoning": {
+          "exposed": true,
+          "signature_present": false
+        }
+      },
+      "attempts": 2,
+      "observed_at": "2026-08-31T20:13:30.318753+00:00",
+      "harness_commit": "f35ee9f28e61f898cede20f2fff0f61af01072e6",
+      "harness_fingerprint": "c5c652c26402d546ef59",
+      "taxonomy_fingerprint": "49e645f0a91273cac37c"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "fba957a81e60445079874f10",
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gemma-4-31b",
+      "upstream_model": "gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "case_id": "reasoning.with-tool",
+      "case_version": 2,
+      "case_fingerprint": "07fb0ec14b14dfdb",
+      "claim": {
+        "dimension": "interaction",
+        "name": "reasoning+tools",
+        "profile": {
+          "reasoning_effort": "low",
+          "tool_choice": "named"
+        }
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "",
+        "tool_calls": [
+          {
+            "id": "1d3c8a6b8",
+            "name": "report_result",
+            "arguments": "{\"value\": \"ok\"}"
+          }
+        ],
+        "finish_reason": "tool_calls",
+        "usage_present": true,
+        "reasoning_present": true,
+        "adjustments": [],
+        "duration_ms": 1339.3275840207934,
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 67,
+          "output_tokens": 63,
+          "total_tokens": 130
+        },
+        "reasoning": {
+          "exposed": true,
+          "signature_present": false
+        }
+      },
+      "attempts": 2,
+      "observed_at": "2026-08-31T20:13:30.318753+00:00",
+      "harness_commit": "f35ee9f28e61f898cede20f2fff0f61af01072e6",
+      "harness_fingerprint": "c5c652c26402d546ef59",
+      "taxonomy_fingerprint": "49e645f0a91273cac37c"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "011f7b6a369ed9b65b2fc715",
+      "provider_id": "anthropic",
+      "model_id": "anthropic/claude-haiku-4-5-20251001",
+      "upstream_model": "claude-haiku-4-5-20251001",
+      "surface_id": "anthropic",
+      "endpoint": "messages",
+      "case_id": "text.usage",
+      "case_version": 2,
+      "case_fingerprint": "0860b58ed7bb898f",
+      "claim": {
+        "dimension": "capability",
+        "name": "usage",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "ok",
+        "tool_calls": [],
+        "finish_reason": "end_turn",
+        "usage_present": true,
+        "reasoning_present": false,
+        "adjustments": [],
+        "duration_ms": 587.7656249795109,
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 10,
+          "output_tokens": 4,
+          "total_tokens": 14
+        }
+      },
+      "attempts": 1,
+      "observed_at": "2026-08-31T20:17:19.267585+00:00",
+      "harness_commit": "f35ee9f28e61f898cede20f2fff0f61af01072e6",
+      "harness_fingerprint": "99a50e8f4f5d8f728b3a",
+      "taxonomy_fingerprint": "ad03dc9ec82a81eed42e"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "071f24ff7514709726beef05",
+      "provider_id": "anthropic",
+      "model_id": "anthropic/claude-haiku-4-5-20251001",
+      "upstream_model": "claude-haiku-4-5-20251001",
+      "surface_id": "anthropic",
+      "endpoint": "messages",
+      "case_id": "text.multi-turn",
+      "case_version": 2,
+      "case_fingerprint": "af38fd79c92a76a4",
+      "claim": {
+        "dimension": "capability",
+        "name": "multi_turn",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "The code word is **cobalt**.",
+        "tool_calls": [],
+        "finish_reason": "end_turn",
+        "usage_present": true,
+        "reasoning_present": false,
+        "adjustments": [],
+        "duration_ms": 693.8735840376467,
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 26,
+          "output_tokens": 11,
+          "total_tokens": 37
+        }
+      },
+      "attempts": 1,
+      "observed_at": "2026-08-31T20:17:19.267585+00:00",
+      "harness_commit": "f35ee9f28e61f898cede20f2fff0f61af01072e6",
+      "harness_fingerprint": "99a50e8f4f5d8f728b3a",
+      "taxonomy_fingerprint": "ad03dc9ec82a81eed42e"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "09393c865059657650e6be77",
+      "provider_id": "anthropic",
+      "model_id": "anthropic/claude-haiku-4-5-20251001",
+      "upstream_model": "claude-haiku-4-5-20251001",
+      "surface_id": "anthropic",
+      "endpoint": "messages",
+      "case_id": "tools.parallel",
+      "case_version": 2,
+      "case_fingerprint": "d52ccad65e323df5",
+      "claim": {
+        "dimension": "option",
+        "name": "parallel_tool_calls",
+        "profile": {
+          "value": true
+        }
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "",
+        "tool_calls": [
+          {
+            "id": "toolu_014ogtbgPYuf1YExKxdP1tJL",
+            "name": "report_alpha",
+            "arguments": "{}"
+          },
+          {
+            "id": "toolu_01Gr1VbQW3npaFVrfd11DVFV",
+            "name": "report_beta",
+            "arguments": "{}"
+          }
+        ],
+        "finish_reason": "tool_use",
+        "usage_present": true,
+        "reasoning_present": false,
+        "adjustments": [],
+        "duration_ms": 631.9783751387149,
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 697,
+          "output_tokens": 40,
+          "total_tokens": 737
+        }
+      },
+      "attempts": 1,
+      "observed_at": "2026-08-31T20:17:19.267585+00:00",
+      "harness_commit": "f35ee9f28e61f898cede20f2fff0f61af01072e6",
+      "harness_fingerprint": "99a50e8f4f5d8f728b3a",
+      "taxonomy_fingerprint": "ad03dc9ec82a81eed42e"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "132ecc70531818fc749a157e",
+      "provider_id": "anthropic",
+      "model_id": "anthropic/claude-haiku-4-5-20251001",
+      "upstream_model": "claude-haiku-4-5-20251001",
+      "surface_id": "anthropic",
+      "endpoint": "messages",
+      "case_id": "structured-output.json-object",
+      "case_version": 2,
+      "case_fingerprint": "9983e71e32556b9e",
+      "claim": {
+        "dimension": "option",
+        "name": "response_format",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "unknown",
+      "source": "live_api",
+      "observation": {
+        "outcome": "rejected",
+        "text": "",
+        "tool_calls": [],
+        "usage_present": false,
+        "reasoning_present": false,
+        "error_code": "invalid_request_error",
+        "error_message": "output_config.format.schema: For 'object' type, 'additionalProperties' must be explicitly set to false",
+        "http_status": 400,
+        "adjustments": [],
+        "duration_ms": 182.80670791864395,
+        "client_type": "HTTP 400",
+        "failure": {
+          "kind": "rejection",
+          "origin": "direct",
+          "retryable": false,
+          "code": "invalid_request_error",
+          "message": "output_config.format.schema: For 'object' type, 'additionalProperties' must be explicitly set to false",
+          "http_status": 400
+        }
+      },
+      "attempts": 2,
+      "observed_at": "2026-08-31T20:17:19.267585+00:00",
+      "harness_commit": "f35ee9f28e61f898cede20f2fff0f61af01072e6",
+      "harness_fingerprint": "99a50e8f4f5d8f728b3a",
+      "taxonomy_fingerprint": "ad03dc9ec82a81eed42e"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "2604d6dc58ae5f75b16d14f8",
+      "provider_id": "anthropic",
+      "model_id": "anthropic/claude-haiku-4-5-20251001",
+      "upstream_model": "claude-haiku-4-5-20251001",
+      "surface_id": "anthropic",
+      "endpoint": "messages",
+      "case_id": "text.system",
+      "case_version": 2,
+      "case_fingerprint": "68ee6322a5c5ddb3",
+      "claim": {
+        "dimension": "capability",
+        "name": "system_messages",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "ok",
+        "tool_calls": [],
+        "finish_reason": "end_turn",
+        "usage_present": true,
+        "reasoning_present": false,
+        "adjustments": [],
+        "duration_ms": 742.6666668616235,
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 13,
+          "output_tokens": 4,
+          "total_tokens": 17
+        }
+      },
+      "attempts": 1,
+      "observed_at": "2026-08-31T20:17:19.267585+00:00",
+      "harness_commit": "f35ee9f28e61f898cede20f2fff0f61af01072e6",
+      "harness_fingerprint": "99a50e8f4f5d8f728b3a",
+      "taxonomy_fingerprint": "ad03dc9ec82a81eed42e"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "2abde79833eccaf5d266b388",
+      "provider_id": "anthropic",
+      "model_id": "anthropic/claude-haiku-4-5-20251001",
+      "upstream_model": "claude-haiku-4-5-20251001",
+      "surface_id": "anthropic",
+      "endpoint": "messages",
+      "case_id": "reasoning.history",
+      "case_version": 2,
+      "case_fingerprint": "f0a6c8e50ec59a6e",
+      "claim": {
+        "dimension": "interaction",
+        "name": "reasoning_history",
+        "profile": {}
+      },
+      "verdict": "unsupported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "rejected",
+        "text": "",
+        "tool_calls": [],
+        "usage_present": false,
+        "reasoning_present": false,
+        "error_code": "invalid_request_error",
+        "error_message": "adaptive thinking is not supported on this model",
+        "http_status": 400,
+        "adjustments": [],
+        "duration_ms": 260.64404216594994,
+        "client_type": "HTTP 400",
+        "failure": {
+          "kind": "rejection",
+          "origin": "direct",
+          "retryable": false,
+          "code": "invalid_request_error",
+          "message": "adaptive thinking is not supported on this model",
+          "http_status": 400
+        }
+      },
+      "attempts": 2,
+      "observed_at": "2026-08-31T20:17:19.267585+00:00",
+      "harness_commit": "f35ee9f28e61f898cede20f2fff0f61af01072e6",
+      "harness_fingerprint": "99a50e8f4f5d8f728b3a",
+      "taxonomy_fingerprint": "ad03dc9ec82a81eed42e"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "2e91ce5f45151c69061f9f16",
+      "provider_id": "anthropic",
+      "model_id": "anthropic/claude-haiku-4-5-20251001",
+      "upstream_model": "claude-haiku-4-5-20251001",
+      "surface_id": "anthropic",
+      "endpoint": "messages",
+      "case_id": "modalities.image",
+      "case_version": 2,
+      "case_fingerprint": "6141fe554407fda3",
+      "claim": {
+        "dimension": "modality",
+        "name": "input_image",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "Red",
+        "tool_calls": [],
+        "finish_reason": "end_turn",
+        "usage_present": true,
+        "reasoning_present": false,
+        "adjustments": [],
+        "duration_ms": 679.2559158056974,
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 35,
+          "output_tokens": 4,
+          "total_tokens": 39
+        }
+      },
+      "attempts": 1,
+      "observed_at": "2026-08-31T20:17:19.267585+00:00",
+      "harness_commit": "f35ee9f28e61f898cede20f2fff0f61af01072e6",
+      "harness_fingerprint": "99a50e8f4f5d8f728b3a",
+      "taxonomy_fingerprint": "ad03dc9ec82a81eed42e"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "364461f1c70be5707fc203c7",
+      "provider_id": "anthropic",
+      "model_id": "anthropic/claude-haiku-4-5-20251001",
+      "upstream_model": "claude-haiku-4-5-20251001",
+      "surface_id": "anthropic",
+      "endpoint": "messages",
+      "case_id": "cache.control",
+      "case_version": 2,
+      "case_fingerprint": "3e530d57678f6503",
+      "claim": {
+        "dimension": "interaction",
+        "name": "cache_control",
+        "profile": {
+          "type": "ephemeral"
+        }
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "I don't have any previous conversation history with you, so I have no record of you telling me a code word. This appears to be the first message in our conversation.\n\nHowever, you've now told me the code word is: **cobalt**\n\nIf you'd like me to remember this for future reference within our conversation, I can do that going forward in this chat thread.",
+        "tool_calls": [],
+        "finish_reason": "end_turn",
+        "usage_present": true,
+        "reasoning_present": false,
+        "adjustments": [],
+        "duration_ms": 1457.6670001260936,
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 21,
+          "output_tokens": 82,
+          "total_tokens": 103
+        }
+      },
+      "attempts": 2,
+      "observed_at": "2026-08-31T20:17:19.267585+00:00",
+      "harness_commit": "f35ee9f28e61f898cede20f2fff0f61af01072e6",
+      "harness_fingerprint": "99a50e8f4f5d8f728b3a",
+      "taxonomy_fingerprint": "ad03dc9ec82a81eed42e"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "383304b26f3f375c80b74ee4",
+      "provider_id": "anthropic",
+      "model_id": "anthropic/claude-haiku-4-5-20251001",
+      "upstream_model": "claude-haiku-4-5-20251001",
+      "surface_id": "anthropic",
+      "endpoint": "messages",
+      "case_id": "streaming.reasoning-adaptive",
+      "case_version": 2,
+      "case_fingerprint": "d4751e9131891183",
+      "claim": {
+        "dimension": "interaction",
+        "name": "streaming+reasoning",
+        "profile": {
+          "reasoning": "adaptive",
+          "effort": "low"
+        }
+      },
+      "verdict": "unsupported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "rejected",
+        "text": "",
+        "tool_calls": [],
+        "usage_present": false,
+        "reasoning_present": false,
+        "error_code": "invalid_request_error",
+        "error_message": "adaptive thinking is not supported on this model",
+        "http_status": 400,
+        "adjustments": [],
+        "duration_ms": 360.7569579035044,
+        "client_type": "HTTP 400",
+        "failure": {
+          "kind": "rejection",
+          "origin": "direct",
+          "retryable": false,
+          "code": "invalid_request_error",
+          "message": "adaptive thinking is not supported on this model",
+          "http_status": 400
+        }
+      },
+      "attempts": 2,
+      "observed_at": "2026-08-31T20:17:19.267585+00:00",
+      "harness_commit": "f35ee9f28e61f898cede20f2fff0f61af01072e6",
+      "harness_fingerprint": "99a50e8f4f5d8f728b3a",
+      "taxonomy_fingerprint": "ad03dc9ec82a81eed42e"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "426ec436d6fb09a1c8b90c2f",
+      "provider_id": "anthropic",
+      "model_id": "anthropic/claude-haiku-4-5-20251001",
+      "upstream_model": "claude-haiku-4-5-20251001",
+      "surface_id": "anthropic",
+      "endpoint": "messages",
+      "case_id": "tools.single",
+      "case_version": 2,
+      "case_fingerprint": "c10a642bb2fbfa4d",
+      "claim": {
+        "dimension": "capability",
+        "name": "tool_calling",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "",
+        "tool_calls": [
+          {
+            "id": "toolu_0153zdjK7TSwmpWvPPweb6Pt",
+            "name": "report_result",
+            "arguments": "{\"value\":\"ok\"}"
+          }
+        ],
+        "finish_reason": "tool_use",
+        "usage_present": true,
+        "reasoning_present": false,
+        "adjustments": [],
+        "duration_ms": 792.0821660663933,
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 667,
+          "output_tokens": 38,
+          "total_tokens": 705
+        }
+      },
+      "attempts": 1,
+      "observed_at": "2026-08-31T20:17:19.267585+00:00",
+      "harness_commit": "f35ee9f28e61f898cede20f2fff0f61af01072e6",
+      "harness_fingerprint": "99a50e8f4f5d8f728b3a",
+      "taxonomy_fingerprint": "ad03dc9ec82a81eed42e"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "43bf36b1185b9ad507231829",
+      "provider_id": "anthropic",
+      "model_id": "anthropic/claude-haiku-4-5-20251001",
+      "upstream_model": "claude-haiku-4-5-20251001",
+      "surface_id": "anthropic",
+      "endpoint": "messages",
+      "case_id": "parameters.stop",
+      "case_version": 2,
+      "case_fingerprint": "2e0b1afce0be7b71",
+      "claim": {
+        "dimension": "option",
+        "name": "stop",
+        "profile": {
+          "count": 1
+        }
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "ok\n\n",
+        "tool_calls": [],
+        "finish_reason": "stop_sequence",
+        "usage_present": true,
+        "reasoning_present": false,
+        "adjustments": [],
+        "duration_ms": 1076.8821248784661,
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 15,
+          "output_tokens": 3,
+          "total_tokens": 18
+        }
+      },
+      "attempts": 1,
+      "observed_at": "2026-08-31T20:17:19.267585+00:00",
+      "harness_commit": "f35ee9f28e61f898cede20f2fff0f61af01072e6",
+      "harness_fingerprint": "99a50e8f4f5d8f728b3a",
+      "taxonomy_fingerprint": "ad03dc9ec82a81eed42e"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "62f7c2d8f15730d469aa9e90",
+      "provider_id": "anthropic",
+      "model_id": "anthropic/claude-haiku-4-5-20251001",
+      "upstream_model": "claude-haiku-4-5-20251001",
+      "surface_id": "anthropic",
+      "endpoint": "messages",
+      "case_id": "text.basic",
+      "case_version": 2,
+      "case_fingerprint": "10971dd682e989f4",
+      "claim": {
+        "dimension": "modality",
+        "name": "output_text",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "ok",
+        "tool_calls": [],
+        "finish_reason": "end_turn",
+        "usage_present": true,
+        "reasoning_present": false,
+        "adjustments": [],
+        "duration_ms": 596.1263328790665,
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 13,
+          "output_tokens": 4,
+          "total_tokens": 17
+        }
+      },
+      "attempts": 1,
+      "observed_at": "2026-08-31T20:17:19.267585+00:00",
+      "harness_commit": "f35ee9f28e61f898cede20f2fff0f61af01072e6",
+      "harness_fingerprint": "99a50e8f4f5d8f728b3a",
+      "taxonomy_fingerprint": "ad03dc9ec82a81eed42e"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "72f7547d41ed9bdaff19184c",
+      "provider_id": "anthropic",
+      "model_id": "anthropic/claude-haiku-4-5-20251001",
+      "upstream_model": "claude-haiku-4-5-20251001",
+      "surface_id": "anthropic",
+      "endpoint": "messages",
+      "case_id": "text.basic",
+      "case_version": 2,
+      "case_fingerprint": "10971dd682e989f4",
+      "claim": {
+        "dimension": "capability",
+        "name": "text_generation",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "ok",
+        "tool_calls": [],
+        "finish_reason": "end_turn",
+        "usage_present": true,
+        "reasoning_present": false,
+        "adjustments": [],
+        "duration_ms": 596.1263328790665,
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 13,
+          "output_tokens": 4,
+          "total_tokens": 17
+        }
+      },
+      "attempts": 1,
+      "observed_at": "2026-08-31T20:17:19.267585+00:00",
+      "harness_commit": "f35ee9f28e61f898cede20f2fff0f61af01072e6",
+      "harness_fingerprint": "99a50e8f4f5d8f728b3a",
+      "taxonomy_fingerprint": "ad03dc9ec82a81eed42e"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "741819517a252d6ea79195f4",
+      "provider_id": "anthropic",
+      "model_id": "anthropic/claude-haiku-4-5-20251001",
+      "upstream_model": "claude-haiku-4-5-20251001",
+      "surface_id": "anthropic",
+      "endpoint": "messages",
+      "case_id": "modalities.pdf",
+      "case_version": 2,
+      "case_fingerprint": "ca2d457d49373fb3",
+      "claim": {
+        "dimension": "modality",
+        "name": "input_pdf",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "COBALT",
+        "tool_calls": [],
+        "finish_reason": "end_turn",
+        "usage_present": true,
+        "reasoning_present": false,
+        "adjustments": [],
+        "duration_ms": 769.0493329428136,
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 1576,
+          "output_tokens": 6,
+          "total_tokens": 1582
+        }
+      },
+      "attempts": 1,
+      "observed_at": "2026-08-31T20:17:19.267585+00:00",
+      "harness_commit": "f35ee9f28e61f898cede20f2fff0f61af01072e6",
+      "harness_fingerprint": "99a50e8f4f5d8f728b3a",
+      "taxonomy_fingerprint": "ad03dc9ec82a81eed42e"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "9dbcba373326a4ecf23c7181",
+      "provider_id": "anthropic",
+      "model_id": "anthropic/claude-haiku-4-5-20251001",
+      "upstream_model": "claude-haiku-4-5-20251001",
+      "surface_id": "anthropic",
+      "endpoint": "messages",
+      "case_id": "tools.strict",
+      "case_version": 2,
+      "case_fingerprint": "425669de1ca5c52b",
+      "claim": {
+        "dimension": "option",
+        "name": "strict_tools",
+        "profile": {
+          "value": true
+        }
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "",
+        "tool_calls": [
+          {
+            "id": "toolu_01NSH4LnpqNogsL7g3yXgx1V",
+            "name": "report_result",
+            "arguments": "{\"value\":\"ok\"}"
+          }
+        ],
+        "finish_reason": "tool_use",
+        "usage_present": true,
+        "reasoning_present": false,
+        "adjustments": [],
+        "duration_ms": 1044.7742498945445,
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 666,
+          "output_tokens": 33,
+          "total_tokens": 699
+        }
+      },
+      "attempts": 1,
+      "observed_at": "2026-08-31T20:17:19.267585+00:00",
+      "harness_commit": "f35ee9f28e61f898cede20f2fff0f61af01072e6",
+      "harness_fingerprint": "99a50e8f4f5d8f728b3a",
+      "taxonomy_fingerprint": "ad03dc9ec82a81eed42e"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "a014dd1569499cbc6347a3d7",
+      "provider_id": "anthropic",
+      "model_id": "anthropic/claude-haiku-4-5-20251001",
+      "upstream_model": "claude-haiku-4-5-20251001",
+      "surface_id": "anthropic",
+      "endpoint": "messages",
+      "case_id": "text.basic",
+      "case_version": 2,
+      "case_fingerprint": "10971dd682e989f4",
+      "claim": {
+        "dimension": "modality",
+        "name": "input_text",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "ok",
+        "tool_calls": [],
+        "finish_reason": "end_turn",
+        "usage_present": true,
+        "reasoning_present": false,
+        "adjustments": [],
+        "duration_ms": 596.1263328790665,
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 13,
+          "output_tokens": 4,
+          "total_tokens": 17
+        }
+      },
+      "attempts": 1,
+      "observed_at": "2026-08-31T20:17:19.267585+00:00",
+      "harness_commit": "f35ee9f28e61f898cede20f2fff0f61af01072e6",
+      "harness_fingerprint": "99a50e8f4f5d8f728b3a",
+      "taxonomy_fingerprint": "ad03dc9ec82a81eed42e"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "b41bd9a44ffbd65c5e31d0a8",
+      "provider_id": "anthropic",
+      "model_id": "anthropic/claude-haiku-4-5-20251001",
+      "upstream_model": "claude-haiku-4-5-20251001",
+      "surface_id": "anthropic",
+      "endpoint": "messages",
+      "case_id": "streaming.structured-output",
+      "case_version": 2,
+      "case_fingerprint": "3a2c13d4975288ba",
+      "claim": {
+        "dimension": "interaction",
+        "name": "streaming+structured_output",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "{\"answer\":42}",
+        "tool_calls": [],
+        "finish_reason": "end_turn",
+        "usage_present": true,
+        "reasoning_present": false,
+        "json_value": {
+          "answer": 42
+        },
+        "adjustments": [],
+        "duration_ms": 914.9352919775993,
+        "client_type": "HTTP SSE",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 164,
+          "output_tokens": 8,
+          "total_tokens": 172
+        }
+      },
+      "attempts": 1,
+      "observed_at": "2026-08-31T20:17:19.267585+00:00",
+      "harness_commit": "f35ee9f28e61f898cede20f2fff0f61af01072e6",
+      "harness_fingerprint": "99a50e8f4f5d8f728b3a",
+      "taxonomy_fingerprint": "ad03dc9ec82a81eed42e"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "b423e37eac2ea268bef31354",
+      "provider_id": "anthropic",
+      "model_id": "anthropic/claude-haiku-4-5-20251001",
+      "upstream_model": "claude-haiku-4-5-20251001",
+      "surface_id": "anthropic",
+      "endpoint": "messages",
+      "case_id": "structured-output.json-schema",
+      "case_version": 2,
+      "case_fingerprint": "4348ddb52773997c",
+      "claim": {
+        "dimension": "capability",
+        "name": "structured_output",
+        "profile": {
+          "mode": "json_schema"
+        }
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "{\"answer\":42}",
+        "tool_calls": [],
+        "finish_reason": "end_turn",
+        "usage_present": true,
+        "reasoning_present": false,
+        "json_value": {
+          "answer": 42
+        },
+        "adjustments": [],
+        "duration_ms": 872.7371250279248,
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 164,
+          "output_tokens": 8,
+          "total_tokens": 172
+        }
+      },
+      "attempts": 1,
+      "observed_at": "2026-08-31T20:17:19.267585+00:00",
+      "harness_commit": "f35ee9f28e61f898cede20f2fff0f61af01072e6",
+      "harness_fingerprint": "99a50e8f4f5d8f728b3a",
+      "taxonomy_fingerprint": "ad03dc9ec82a81eed42e"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "b55f9543f1e7130167e5e3e0",
+      "provider_id": "anthropic",
+      "model_id": "anthropic/claude-haiku-4-5-20251001",
+      "upstream_model": "claude-haiku-4-5-20251001",
+      "surface_id": "anthropic",
+      "endpoint": "messages",
+      "case_id": "reasoning.adaptive",
+      "case_version": 2,
+      "case_fingerprint": "3be2fd3cb37c68f1",
+      "claim": {
+        "dimension": "capability",
+        "name": "reasoning",
+        "profile": {
+          "mode": "adaptive"
+        }
+      },
+      "verdict": "unsupported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "rejected",
+        "text": "",
+        "tool_calls": [],
+        "usage_present": false,
+        "reasoning_present": false,
+        "error_code": "invalid_request_error",
+        "error_message": "adaptive thinking is not supported on this model",
+        "http_status": 400,
+        "adjustments": [],
+        "duration_ms": 159.69687514007092,
+        "client_type": "HTTP 400",
+        "failure": {
+          "kind": "rejection",
+          "origin": "direct",
+          "retryable": false,
+          "code": "invalid_request_error",
+          "message": "adaptive thinking is not supported on this model",
+          "http_status": 400
+        }
+      },
+      "attempts": 2,
+      "observed_at": "2026-08-31T20:17:19.267585+00:00",
+      "harness_commit": "f35ee9f28e61f898cede20f2fff0f61af01072e6",
+      "harness_fingerprint": "99a50e8f4f5d8f728b3a",
+      "taxonomy_fingerprint": "ad03dc9ec82a81eed42e"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "cde5a25599e46db5a7298b45",
+      "provider_id": "anthropic",
+      "model_id": "anthropic/claude-haiku-4-5-20251001",
+      "upstream_model": "claude-haiku-4-5-20251001",
+      "surface_id": "anthropic",
+      "endpoint": "messages",
+      "case_id": "parameters.top-p",
+      "case_version": 2,
+      "case_fingerprint": "49d0c70d1202883f",
+      "claim": {
+        "dimension": "option",
+        "name": "top_p",
+        "profile": {
+          "value": 0.83
+        }
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "ok",
+        "tool_calls": [],
+        "finish_reason": "end_turn",
+        "usage_present": true,
+        "reasoning_present": false,
+        "adjustments": [],
+        "duration_ms": 725.701916962862,
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 10,
+          "output_tokens": 4,
+          "total_tokens": 14
+        }
+      },
+      "attempts": 1,
+      "observed_at": "2026-08-31T20:17:19.267585+00:00",
+      "harness_commit": "f35ee9f28e61f898cede20f2fff0f61af01072e6",
+      "harness_fingerprint": "99a50e8f4f5d8f728b3a",
+      "taxonomy_fingerprint": "ad03dc9ec82a81eed42e"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "d77850b9a51ae0891b71e66d",
+      "provider_id": "anthropic",
+      "model_id": "anthropic/claude-haiku-4-5-20251001",
+      "upstream_model": "claude-haiku-4-5-20251001",
+      "surface_id": "anthropic",
+      "endpoint": "messages",
+      "case_id": "streaming.text",
+      "case_version": 2,
+      "case_fingerprint": "abace9f926b15bf6",
+      "claim": {
+        "dimension": "capability",
+        "name": "streaming",
+        "profile": {
+          "content": "text"
+        }
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "ok",
+        "tool_calls": [],
+        "finish_reason": "end_turn",
+        "usage_present": true,
+        "reasoning_present": false,
+        "adjustments": [],
+        "duration_ms": 655.9196668677032,
+        "client_type": "HTTP SSE",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 10,
+          "output_tokens": 4,
+          "total_tokens": 14
+        }
+      },
+      "attempts": 1,
+      "observed_at": "2026-08-31T20:17:19.267585+00:00",
+      "harness_commit": "f35ee9f28e61f898cede20f2fff0f61af01072e6",
+      "harness_fingerprint": "99a50e8f4f5d8f728b3a",
+      "taxonomy_fingerprint": "ad03dc9ec82a81eed42e"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "dd48c85a207b80d02765c4a9",
+      "provider_id": "anthropic",
+      "model_id": "anthropic/claude-haiku-4-5-20251001",
+      "upstream_model": "claude-haiku-4-5-20251001",
+      "surface_id": "anthropic",
+      "endpoint": "messages",
+      "case_id": "structured-output.json-schema",
+      "case_version": 2,
+      "case_fingerprint": "4348ddb52773997c",
+      "claim": {
+        "dimension": "option",
+        "name": "response_format",
+        "profile": {
+          "mode": "json_schema"
+        }
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "{\"answer\":42}",
+        "tool_calls": [],
+        "finish_reason": "end_turn",
+        "usage_present": true,
+        "reasoning_present": false,
+        "json_value": {
+          "answer": 42
+        },
+        "adjustments": [],
+        "duration_ms": 872.7371250279248,
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 164,
+          "output_tokens": 8,
+          "total_tokens": 172
+        }
+      },
+      "attempts": 1,
+      "observed_at": "2026-08-31T20:17:19.267585+00:00",
+      "harness_commit": "f35ee9f28e61f898cede20f2fff0f61af01072e6",
+      "harness_fingerprint": "99a50e8f4f5d8f728b3a",
+      "taxonomy_fingerprint": "ad03dc9ec82a81eed42e"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "e07668cef047827d58bde440",
+      "provider_id": "anthropic",
+      "model_id": "anthropic/claude-haiku-4-5-20251001",
+      "upstream_model": "claude-haiku-4-5-20251001",
+      "surface_id": "anthropic",
+      "endpoint": "messages",
+      "case_id": "parameters.max-tokens",
+      "case_version": 2,
+      "case_fingerprint": "39d285116b4a2722",
+      "claim": {
+        "dimension": "option",
+        "name": "max_tokens",
+        "profile": {
+          "value": 1024
+        }
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "ok",
+        "tool_calls": [],
+        "finish_reason": "end_turn",
+        "usage_present": true,
+        "reasoning_present": false,
+        "adjustments": [],
+        "duration_ms": 635.3889580350369,
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 10,
+          "output_tokens": 4,
+          "total_tokens": 14
+        }
+      },
+      "attempts": 1,
+      "observed_at": "2026-08-31T20:17:19.267585+00:00",
+      "harness_commit": "f35ee9f28e61f898cede20f2fff0f61af01072e6",
+      "harness_fingerprint": "99a50e8f4f5d8f728b3a",
+      "taxonomy_fingerprint": "ad03dc9ec82a81eed42e"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "ebdb6c849eb554ac147d5481",
+      "provider_id": "anthropic",
+      "model_id": "anthropic/claude-haiku-4-5-20251001",
+      "upstream_model": "claude-haiku-4-5-20251001",
+      "surface_id": "anthropic",
+      "endpoint": "messages",
+      "case_id": "streaming.tools",
+      "case_version": 2,
+      "case_fingerprint": "12126bb252649974",
+      "claim": {
+        "dimension": "interaction",
+        "name": "streaming+tools",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "",
+        "tool_calls": [
+          {
+            "id": "toolu_01EjyuzwFnt6iyVNLn7dxhwa",
+            "name": "report_result",
+            "arguments": "{\"value\":\"ok\"}"
+          }
+        ],
+        "finish_reason": "tool_use",
+        "usage_present": true,
+        "reasoning_present": false,
+        "adjustments": [],
+        "duration_ms": 1001.0461669880897,
+        "client_type": "HTTP SSE",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 666,
+          "output_tokens": 33,
+          "total_tokens": 699
+        }
+      },
+      "attempts": 1,
+      "observed_at": "2026-08-31T20:17:19.267585+00:00",
+      "harness_commit": "f35ee9f28e61f898cede20f2fff0f61af01072e6",
+      "harness_fingerprint": "99a50e8f4f5d8f728b3a",
+      "taxonomy_fingerprint": "ad03dc9ec82a81eed42e"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "f2dbbec752458769b9393d13",
+      "provider_id": "anthropic",
+      "model_id": "anthropic/claude-haiku-4-5-20251001",
+      "upstream_model": "claude-haiku-4-5-20251001",
+      "surface_id": "anthropic",
+      "endpoint": "messages",
+      "case_id": "parameters.temperature",
+      "case_version": 2,
+      "case_fingerprint": "d9f29aa1dd014e38",
+      "claim": {
+        "dimension": "option",
+        "name": "temperature",
+        "profile": {
+          "value": 0.37
+        }
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "ok",
+        "tool_calls": [],
+        "finish_reason": "end_turn",
+        "usage_present": true,
+        "reasoning_present": false,
+        "adjustments": [],
+        "duration_ms": 643.754290882498,
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 10,
+          "output_tokens": 4,
+          "total_tokens": 14
+        }
+      },
+      "attempts": 1,
+      "observed_at": "2026-08-31T20:17:19.267585+00:00",
+      "harness_commit": "f35ee9f28e61f898cede20f2fff0f61af01072e6",
+      "harness_fingerprint": "99a50e8f4f5d8f728b3a",
+      "taxonomy_fingerprint": "ad03dc9ec82a81eed42e"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "f43dd5e9cc33b7289f92c704",
+      "provider_id": "anthropic",
+      "model_id": "anthropic/claude-haiku-4-5-20251001",
+      "upstream_model": "claude-haiku-4-5-20251001",
+      "surface_id": "anthropic",
+      "endpoint": "messages",
+      "case_id": "tools.single",
+      "case_version": 2,
+      "case_fingerprint": "c10a642bb2fbfa4d",
+      "claim": {
+        "dimension": "option",
+        "name": "tool_choice",
+        "profile": {
+          "mode": "required"
+        }
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "",
+        "tool_calls": [
+          {
+            "id": "toolu_0153zdjK7TSwmpWvPPweb6Pt",
+            "name": "report_result",
+            "arguments": "{\"value\":\"ok\"}"
+          }
+        ],
+        "finish_reason": "tool_use",
+        "usage_present": true,
+        "reasoning_present": false,
+        "adjustments": [],
+        "duration_ms": 792.0821660663933,
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 667,
+          "output_tokens": 38,
+          "total_tokens": 705
+        }
+      },
+      "attempts": 1,
+      "observed_at": "2026-08-31T20:17:19.267585+00:00",
+      "harness_commit": "f35ee9f28e61f898cede20f2fff0f61af01072e6",
+      "harness_fingerprint": "99a50e8f4f5d8f728b3a",
+      "taxonomy_fingerprint": "ad03dc9ec82a81eed42e"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "f65d14c6633298de51966c32",
+      "provider_id": "anthropic",
+      "model_id": "anthropic/claude-haiku-4-5-20251001",
+      "upstream_model": "claude-haiku-4-5-20251001",
+      "surface_id": "anthropic",
+      "endpoint": "messages",
+      "case_id": "tools.result-round-trip",
+      "case_version": 2,
+      "case_fingerprint": "b1a288a2227dd298",
+      "claim": {
+        "dimension": "interaction",
+        "name": "tool_result_round_trip",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "The code word is: **cobalt**",
+        "tool_calls": [],
+        "finish_reason": "end_turn",
+        "usage_present": true,
+        "reasoning_present": false,
+        "adjustments": [],
+        "duration_ms": 653.1684580259025,
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 646,
+          "output_tokens": 12,
+          "total_tokens": 658
+        }
+      },
+      "attempts": 1,
+      "observed_at": "2026-08-31T20:17:19.267585+00:00",
+      "harness_commit": "f35ee9f28e61f898cede20f2fff0f61af01072e6",
+      "harness_fingerprint": "99a50e8f4f5d8f728b3a",
+      "taxonomy_fingerprint": "ad03dc9ec82a81eed42e"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "f851930edf8efd2b24405fcc",
+      "provider_id": "anthropic",
+      "model_id": "anthropic/claude-haiku-4-5-20251001",
+      "upstream_model": "claude-haiku-4-5-20251001",
+      "surface_id": "anthropic",
+      "endpoint": "messages",
+      "case_id": "reasoning.adaptive",
+      "case_version": 2,
+      "case_fingerprint": "3be2fd3cb37c68f1",
+      "claim": {
+        "dimension": "option",
+        "name": "reasoning_effort",
+        "profile": {
+          "value": "low"
+        }
+      },
+      "verdict": "unsupported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "rejected",
+        "text": "",
+        "tool_calls": [],
+        "usage_present": false,
+        "reasoning_present": false,
+        "error_code": "invalid_request_error",
+        "error_message": "adaptive thinking is not supported on this model",
+        "http_status": 400,
+        "adjustments": [],
+        "duration_ms": 159.69687514007092,
+        "client_type": "HTTP 400",
+        "failure": {
+          "kind": "rejection",
+          "origin": "direct",
+          "retryable": false,
+          "code": "invalid_request_error",
+          "message": "adaptive thinking is not supported on this model",
+          "http_status": 400
+        }
+      },
+      "attempts": 2,
+      "observed_at": "2026-08-31T20:17:19.267585+00:00",
+      "harness_commit": "f35ee9f28e61f898cede20f2fff0f61af01072e6",
+      "harness_fingerprint": "99a50e8f4f5d8f728b3a",
+      "taxonomy_fingerprint": "ad03dc9ec82a81eed42e"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "fe2cfa3a7538af1cf40d3ed5",
+      "provider_id": "anthropic",
+      "model_id": "anthropic/claude-haiku-4-5-20251001",
+      "upstream_model": "claude-haiku-4-5-20251001",
+      "surface_id": "anthropic",
+      "endpoint": "messages",
+      "case_id": "tools.named-choice",
+      "case_version": 2,
+      "case_fingerprint": "869e4a037869d076",
+      "claim": {
+        "dimension": "option",
+        "name": "tool_choice",
+        "profile": {
+          "mode": "named"
+        }
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "",
+        "tool_calls": [
+          {
+            "id": "toolu_01EY4n4fUzdAQaqrpJWmxESY",
+            "name": "report_result",
+            "arguments": "{\"value\":\"ok\"}"
+          }
+        ],
+        "finish_reason": "tool_use",
+        "usage_present": true,
+        "reasoning_present": false,
+        "adjustments": [],
+        "duration_ms": 614.8597919382155,
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 663,
+          "output_tokens": 33,
+          "total_tokens": 696
+        }
+      },
+      "attempts": 1,
+      "observed_at": "2026-08-31T20:17:19.267585+00:00",
+      "harness_commit": "f35ee9f28e61f898cede20f2fff0f61af01072e6",
+      "harness_fingerprint": "99a50e8f4f5d8f728b3a",
+      "taxonomy_fingerprint": "ad03dc9ec82a81eed42e"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "fea8df06fd88c6500242028d",
+      "provider_id": "anthropic",
+      "model_id": "anthropic/claude-haiku-4-5-20251001",
+      "upstream_model": "claude-haiku-4-5-20251001",
+      "surface_id": "anthropic",
+      "endpoint": "messages",
+      "case_id": "structured-output.json-object",
+      "case_version": 2,
+      "case_fingerprint": "9983e71e32556b9e",
+      "claim": {
+        "dimension": "capability",
+        "name": "structured_output",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "unknown",
+      "source": "live_api",
+      "observation": {
+        "outcome": "rejected",
+        "text": "",
+        "tool_calls": [],
+        "usage_present": false,
+        "reasoning_present": false,
+        "error_code": "invalid_request_error",
+        "error_message": "output_config.format.schema: For 'object' type, 'additionalProperties' must be explicitly set to false",
+        "http_status": 400,
+        "adjustments": [],
+        "duration_ms": 182.80670791864395,
+        "client_type": "HTTP 400",
+        "failure": {
+          "kind": "rejection",
+          "origin": "direct",
+          "retryable": false,
+          "code": "invalid_request_error",
+          "message": "output_config.format.schema: For 'object' type, 'additionalProperties' must be explicitly set to false",
+          "http_status": 400
+        }
+      },
+      "attempts": 2,
+      "observed_at": "2026-08-31T20:17:19.267585+00:00",
+      "harness_commit": "f35ee9f28e61f898cede20f2fff0f61af01072e6",
+      "harness_fingerprint": "99a50e8f4f5d8f728b3a",
+      "taxonomy_fingerprint": "ad03dc9ec82a81eed42e"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "ff6b9b496d2c949893f57dec",
+      "provider_id": "anthropic",
+      "model_id": "anthropic/claude-haiku-4-5-20251001",
+      "upstream_model": "claude-haiku-4-5-20251001",
+      "surface_id": "anthropic",
+      "endpoint": "messages",
+      "case_id": "reasoning.with-tool-adaptive",
+      "case_version": 2,
+      "case_fingerprint": "d493440b8e445a3f",
+      "claim": {
+        "dimension": "interaction",
+        "name": "reasoning+tools",
+        "profile": {
+          "reasoning": "adaptive",
+          "reasoning_effort": "low",
+          "tool_choice": "named"
+        }
+      },
+      "verdict": "unsupported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "rejected",
+        "text": "",
+        "tool_calls": [],
+        "usage_present": false,
+        "reasoning_present": false,
+        "error_code": "invalid_request_error",
+        "error_message": "adaptive thinking is not supported on this model",
+        "http_status": 400,
+        "adjustments": [],
+        "duration_ms": 193.18958302028477,
+        "client_type": "HTTP 400",
+        "failure": {
+          "kind": "rejection",
+          "origin": "direct",
+          "retryable": false,
+          "code": "invalid_request_error",
+          "message": "adaptive thinking is not supported on this model",
+          "http_status": 400
+        }
+      },
+      "attempts": 2,
+      "observed_at": "2026-08-31T20:17:19.267585+00:00",
+      "harness_commit": "f35ee9f28e61f898cede20f2fff0f61af01072e6",
+      "harness_fingerprint": "99a50e8f4f5d8f728b3a",
+      "taxonomy_fingerprint": "ad03dc9ec82a81eed42e"
     }
   ]
 }

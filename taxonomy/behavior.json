@@ -1,7 +1,1076 @@
 {
   "schema_version": 2,
-  "generated_from": "f2416d15fbf9880e",
+  "generated_from": "a3392b00d931eb94",
   "behaviors": [
+    {
+      "provider_id": "anthropic",
+      "model_id": "anthropic/claude-haiku-4-5-20251001",
+      "surface_id": "anthropic",
+      "endpoint": "messages",
+      "claim": {
+        "dimension": "capability",
+        "name": "multi_turn",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "071f24ff7514709726beef05"
+      ],
+      "observed_at": "2026-08-31T20:17:19.267585+00:00"
+    },
+    {
+      "provider_id": "anthropic",
+      "model_id": "anthropic/claude-haiku-4-5-20251001",
+      "surface_id": "anthropic",
+      "endpoint": "messages",
+      "claim": {
+        "dimension": "capability",
+        "name": "reasoning",
+        "profile": {
+          "mode": "adaptive"
+        }
+      },
+      "verdict": "unsupported",
+      "evidence_ids": [
+        "b55f9543f1e7130167e5e3e0"
+      ],
+      "observed_at": "2026-08-31T20:17:19.267585+00:00"
+    },
+    {
+      "provider_id": "anthropic",
+      "model_id": "anthropic/claude-haiku-4-5-20251001",
+      "surface_id": "anthropic",
+      "endpoint": "messages",
+      "claim": {
+        "dimension": "capability",
+        "name": "streaming",
+        "profile": {
+          "content": "text"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "d77850b9a51ae0891b71e66d"
+      ],
+      "observed_at": "2026-08-31T20:17:19.267585+00:00"
+    },
+    {
+      "provider_id": "anthropic",
+      "model_id": "anthropic/claude-haiku-4-5-20251001",
+      "surface_id": "anthropic",
+      "endpoint": "messages",
+      "claim": {
+        "dimension": "capability",
+        "name": "structured_output",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "unknown",
+      "evidence_ids": [
+        "fea8df06fd88c6500242028d"
+      ],
+      "observed_at": "2026-08-31T20:17:19.267585+00:00"
+    },
+    {
+      "provider_id": "anthropic",
+      "model_id": "anthropic/claude-haiku-4-5-20251001",
+      "surface_id": "anthropic",
+      "endpoint": "messages",
+      "claim": {
+        "dimension": "capability",
+        "name": "structured_output",
+        "profile": {
+          "mode": "json_schema"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "b423e37eac2ea268bef31354"
+      ],
+      "observed_at": "2026-08-31T20:17:19.267585+00:00"
+    },
+    {
+      "provider_id": "anthropic",
+      "model_id": "anthropic/claude-haiku-4-5-20251001",
+      "surface_id": "anthropic",
+      "endpoint": "messages",
+      "claim": {
+        "dimension": "capability",
+        "name": "system_messages",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "2604d6dc58ae5f75b16d14f8"
+      ],
+      "observed_at": "2026-08-31T20:17:19.267585+00:00"
+    },
+    {
+      "provider_id": "anthropic",
+      "model_id": "anthropic/claude-haiku-4-5-20251001",
+      "surface_id": "anthropic",
+      "endpoint": "messages",
+      "claim": {
+        "dimension": "capability",
+        "name": "text_generation",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "72f7547d41ed9bdaff19184c"
+      ],
+      "observed_at": "2026-08-31T20:17:19.267585+00:00"
+    },
+    {
+      "provider_id": "anthropic",
+      "model_id": "anthropic/claude-haiku-4-5-20251001",
+      "surface_id": "anthropic",
+      "endpoint": "messages",
+      "claim": {
+        "dimension": "capability",
+        "name": "tool_calling",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "426ec436d6fb09a1c8b90c2f"
+      ],
+      "observed_at": "2026-08-31T20:17:19.267585+00:00"
+    },
+    {
+      "provider_id": "anthropic",
+      "model_id": "anthropic/claude-haiku-4-5-20251001",
+      "surface_id": "anthropic",
+      "endpoint": "messages",
+      "claim": {
+        "dimension": "capability",
+        "name": "usage",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "011f7b6a369ed9b65b2fc715"
+      ],
+      "observed_at": "2026-08-31T20:17:19.267585+00:00"
+    },
+    {
+      "provider_id": "anthropic",
+      "model_id": "anthropic/claude-haiku-4-5-20251001",
+      "surface_id": "anthropic",
+      "endpoint": "messages",
+      "claim": {
+        "dimension": "interaction",
+        "name": "cache_control",
+        "profile": {
+          "type": "ephemeral"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "364461f1c70be5707fc203c7"
+      ],
+      "observed_at": "2026-08-31T20:17:19.267585+00:00"
+    },
+    {
+      "provider_id": "anthropic",
+      "model_id": "anthropic/claude-haiku-4-5-20251001",
+      "surface_id": "anthropic",
+      "endpoint": "messages",
+      "claim": {
+        "dimension": "interaction",
+        "name": "reasoning+tools",
+        "profile": {
+          "reasoning": "adaptive",
+          "reasoning_effort": "low",
+          "tool_choice": "named"
+        }
+      },
+      "verdict": "unsupported",
+      "evidence_ids": [
+        "ff6b9b496d2c949893f57dec"
+      ],
+      "observed_at": "2026-08-31T20:17:19.267585+00:00"
+    },
+    {
+      "provider_id": "anthropic",
+      "model_id": "anthropic/claude-haiku-4-5-20251001",
+      "surface_id": "anthropic",
+      "endpoint": "messages",
+      "claim": {
+        "dimension": "interaction",
+        "name": "reasoning_history",
+        "profile": {}
+      },
+      "verdict": "unsupported",
+      "evidence_ids": [
+        "2abde79833eccaf5d266b388"
+      ],
+      "observed_at": "2026-08-31T20:17:19.267585+00:00"
+    },
+    {
+      "provider_id": "anthropic",
+      "model_id": "anthropic/claude-haiku-4-5-20251001",
+      "surface_id": "anthropic",
+      "endpoint": "messages",
+      "claim": {
+        "dimension": "interaction",
+        "name": "streaming+reasoning",
+        "profile": {
+          "reasoning": "adaptive",
+          "effort": "low"
+        }
+      },
+      "verdict": "unsupported",
+      "evidence_ids": [
+        "383304b26f3f375c80b74ee4"
+      ],
+      "observed_at": "2026-08-31T20:17:19.267585+00:00"
+    },
+    {
+      "provider_id": "anthropic",
+      "model_id": "anthropic/claude-haiku-4-5-20251001",
+      "surface_id": "anthropic",
+      "endpoint": "messages",
+      "claim": {
+        "dimension": "interaction",
+        "name": "streaming+structured_output",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "b41bd9a44ffbd65c5e31d0a8"
+      ],
+      "observed_at": "2026-08-31T20:17:19.267585+00:00"
+    },
+    {
+      "provider_id": "anthropic",
+      "model_id": "anthropic/claude-haiku-4-5-20251001",
+      "surface_id": "anthropic",
+      "endpoint": "messages",
+      "claim": {
+        "dimension": "interaction",
+        "name": "streaming+tools",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "ebdb6c849eb554ac147d5481"
+      ],
+      "observed_at": "2026-08-31T20:17:19.267585+00:00"
+    },
+    {
+      "provider_id": "anthropic",
+      "model_id": "anthropic/claude-haiku-4-5-20251001",
+      "surface_id": "anthropic",
+      "endpoint": "messages",
+      "claim": {
+        "dimension": "interaction",
+        "name": "tool_result_round_trip",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "f65d14c6633298de51966c32"
+      ],
+      "observed_at": "2026-08-31T20:17:19.267585+00:00"
+    },
+    {
+      "provider_id": "anthropic",
+      "model_id": "anthropic/claude-haiku-4-5-20251001",
+      "surface_id": "anthropic",
+      "endpoint": "messages",
+      "claim": {
+        "dimension": "modality",
+        "name": "input_image",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "2e91ce5f45151c69061f9f16"
+      ],
+      "observed_at": "2026-08-31T20:17:19.267585+00:00"
+    },
+    {
+      "provider_id": "anthropic",
+      "model_id": "anthropic/claude-haiku-4-5-20251001",
+      "surface_id": "anthropic",
+      "endpoint": "messages",
+      "claim": {
+        "dimension": "modality",
+        "name": "input_pdf",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "741819517a252d6ea79195f4"
+      ],
+      "observed_at": "2026-08-31T20:17:19.267585+00:00"
+    },
+    {
+      "provider_id": "anthropic",
+      "model_id": "anthropic/claude-haiku-4-5-20251001",
+      "surface_id": "anthropic",
+      "endpoint": "messages",
+      "claim": {
+        "dimension": "modality",
+        "name": "input_text",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "a014dd1569499cbc6347a3d7"
+      ],
+      "observed_at": "2026-08-31T20:17:19.267585+00:00"
+    },
+    {
+      "provider_id": "anthropic",
+      "model_id": "anthropic/claude-haiku-4-5-20251001",
+      "surface_id": "anthropic",
+      "endpoint": "messages",
+      "claim": {
+        "dimension": "modality",
+        "name": "output_text",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "62f7c2d8f15730d469aa9e90"
+      ],
+      "observed_at": "2026-08-31T20:17:19.267585+00:00"
+    },
+    {
+      "provider_id": "anthropic",
+      "model_id": "anthropic/claude-haiku-4-5-20251001",
+      "surface_id": "anthropic",
+      "endpoint": "messages",
+      "claim": {
+        "dimension": "option",
+        "name": "max_tokens",
+        "profile": {
+          "value": 1024
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "e07668cef047827d58bde440"
+      ],
+      "observed_at": "2026-08-31T20:17:19.267585+00:00"
+    },
+    {
+      "provider_id": "anthropic",
+      "model_id": "anthropic/claude-haiku-4-5-20251001",
+      "surface_id": "anthropic",
+      "endpoint": "messages",
+      "claim": {
+        "dimension": "option",
+        "name": "parallel_tool_calls",
+        "profile": {
+          "value": true
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "09393c865059657650e6be77"
+      ],
+      "observed_at": "2026-08-31T20:17:19.267585+00:00"
+    },
+    {
+      "provider_id": "anthropic",
+      "model_id": "anthropic/claude-haiku-4-5-20251001",
+      "surface_id": "anthropic",
+      "endpoint": "messages",
+      "claim": {
+        "dimension": "option",
+        "name": "reasoning_effort",
+        "profile": {
+          "value": "low"
+        }
+      },
+      "verdict": "unsupported",
+      "evidence_ids": [
+        "f851930edf8efd2b24405fcc"
+      ],
+      "observed_at": "2026-08-31T20:17:19.267585+00:00"
+    },
+    {
+      "provider_id": "anthropic",
+      "model_id": "anthropic/claude-haiku-4-5-20251001",
+      "surface_id": "anthropic",
+      "endpoint": "messages",
+      "claim": {
+        "dimension": "option",
+        "name": "response_format",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "unknown",
+      "evidence_ids": [
+        "132ecc70531818fc749a157e"
+      ],
+      "observed_at": "2026-08-31T20:17:19.267585+00:00"
+    },
+    {
+      "provider_id": "anthropic",
+      "model_id": "anthropic/claude-haiku-4-5-20251001",
+      "surface_id": "anthropic",
+      "endpoint": "messages",
+      "claim": {
+        "dimension": "option",
+        "name": "response_format",
+        "profile": {
+          "mode": "json_schema"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "dd48c85a207b80d02765c4a9"
+      ],
+      "observed_at": "2026-08-31T20:17:19.267585+00:00"
+    },
+    {
+      "provider_id": "anthropic",
+      "model_id": "anthropic/claude-haiku-4-5-20251001",
+      "surface_id": "anthropic",
+      "endpoint": "messages",
+      "claim": {
+        "dimension": "option",
+        "name": "stop",
+        "profile": {
+          "count": 1
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "43bf36b1185b9ad507231829"
+      ],
+      "observed_at": "2026-08-31T20:17:19.267585+00:00"
+    },
+    {
+      "provider_id": "anthropic",
+      "model_id": "anthropic/claude-haiku-4-5-20251001",
+      "surface_id": "anthropic",
+      "endpoint": "messages",
+      "claim": {
+        "dimension": "option",
+        "name": "strict_tools",
+        "profile": {
+          "value": true
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "9dbcba373326a4ecf23c7181"
+      ],
+      "observed_at": "2026-08-31T20:17:19.267585+00:00"
+    },
+    {
+      "provider_id": "anthropic",
+      "model_id": "anthropic/claude-haiku-4-5-20251001",
+      "surface_id": "anthropic",
+      "endpoint": "messages",
+      "claim": {
+        "dimension": "option",
+        "name": "temperature",
+        "profile": {
+          "value": 0.37
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "f2dbbec752458769b9393d13"
+      ],
+      "observed_at": "2026-08-31T20:17:19.267585+00:00"
+    },
+    {
+      "provider_id": "anthropic",
+      "model_id": "anthropic/claude-haiku-4-5-20251001",
+      "surface_id": "anthropic",
+      "endpoint": "messages",
+      "claim": {
+        "dimension": "option",
+        "name": "tool_choice",
+        "profile": {
+          "mode": "named"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "fe2cfa3a7538af1cf40d3ed5"
+      ],
+      "observed_at": "2026-08-31T20:17:19.267585+00:00"
+    },
+    {
+      "provider_id": "anthropic",
+      "model_id": "anthropic/claude-haiku-4-5-20251001",
+      "surface_id": "anthropic",
+      "endpoint": "messages",
+      "claim": {
+        "dimension": "option",
+        "name": "tool_choice",
+        "profile": {
+          "mode": "required"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "f43dd5e9cc33b7289f92c704"
+      ],
+      "observed_at": "2026-08-31T20:17:19.267585+00:00"
+    },
+    {
+      "provider_id": "anthropic",
+      "model_id": "anthropic/claude-haiku-4-5-20251001",
+      "surface_id": "anthropic",
+      "endpoint": "messages",
+      "claim": {
+        "dimension": "option",
+        "name": "top_p",
+        "profile": {
+          "value": 0.83
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "cde5a25599e46db5a7298b45"
+      ],
+      "observed_at": "2026-08-31T20:17:19.267585+00:00"
+    },
+    {
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "multi_turn",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "f6a0fb31b2d7ed19a418de84"
+      ],
+      "observed_at": "2026-08-31T20:13:30.318753+00:00"
+    },
+    {
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "reasoning",
+        "profile": {
+          "effort": "low"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "32bb542e23387d433b6c479f"
+      ],
+      "observed_at": "2026-08-31T20:13:30.318753+00:00"
+    },
+    {
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "streaming",
+        "profile": {
+          "content": "text"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "7f65c31911804d95356c86c0"
+      ],
+      "observed_at": "2026-08-31T20:13:30.318753+00:00"
+    },
+    {
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "structured_output",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "9df1887d36c399fdf859ba05"
+      ],
+      "observed_at": "2026-08-31T20:13:30.318753+00:00"
+    },
+    {
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "structured_output",
+        "profile": {
+          "mode": "json_schema"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "03bdfdfbdc8951323e3b8196"
+      ],
+      "observed_at": "2026-08-31T20:13:30.318753+00:00"
+    },
+    {
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "system_messages",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "f4ff01e81cba68dda1a11cf7"
+      ],
+      "observed_at": "2026-08-31T20:13:30.318753+00:00"
+    },
+    {
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "text_generation",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "4be96071691f4ea1ea51532b"
+      ],
+      "observed_at": "2026-08-31T20:13:30.318753+00:00"
+    },
+    {
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "tool_calling",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "7e5751765afdb8d584966fd2"
+      ],
+      "observed_at": "2026-08-31T20:13:30.318753+00:00"
+    },
+    {
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "usage",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "9cd5b1cac0f8b801850187b2"
+      ],
+      "observed_at": "2026-08-31T20:13:30.318753+00:00"
+    },
+    {
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "interaction",
+        "name": "reasoning+tools",
+        "profile": {
+          "reasoning_effort": "low",
+          "tool_choice": "named"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "fba957a81e60445079874f10"
+      ],
+      "observed_at": "2026-08-31T20:13:30.318753+00:00"
+    },
+    {
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "interaction",
+        "name": "streaming+reasoning",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "5711b3a7195c14263dd86a27"
+      ],
+      "observed_at": "2026-08-31T20:13:30.318753+00:00"
+    },
+    {
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "interaction",
+        "name": "streaming+structured_output",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "8db7edf898e30b1e108c51f8"
+      ],
+      "observed_at": "2026-08-31T20:13:30.318753+00:00"
+    },
+    {
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "interaction",
+        "name": "streaming+tools",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "1dc771163754e444a4a3fa83"
+      ],
+      "observed_at": "2026-08-31T20:13:30.318753+00:00"
+    },
+    {
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "interaction",
+        "name": "tool_result_round_trip",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "447d28594a32a5f82cfc4cfd"
+      ],
+      "observed_at": "2026-08-31T20:13:30.318753+00:00"
+    },
+    {
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "modality",
+        "name": "input_image",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "6e118df30ba366ffbfbec1e8"
+      ],
+      "observed_at": "2026-08-31T20:13:30.318753+00:00"
+    },
+    {
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "modality",
+        "name": "input_pdf",
+        "profile": {}
+      },
+      "verdict": "unknown",
+      "evidence_ids": [
+        "4295126eacfd551d3847bd7b"
+      ],
+      "observed_at": "2026-08-31T20:13:30.318753+00:00"
+    },
+    {
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "modality",
+        "name": "input_text",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "f55aed417e58d7c7b4f0c536"
+      ],
+      "observed_at": "2026-08-31T20:13:30.318753+00:00"
+    },
+    {
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "modality",
+        "name": "output_text",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "269886a933077d25e7d78c3b"
+      ],
+      "observed_at": "2026-08-31T20:13:30.318753+00:00"
+    },
+    {
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "logprobs",
+        "profile": {
+          "enabled": true,
+          "top": 2
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "2d8e59221c7bc66ead354f77"
+      ],
+      "observed_at": "2026-08-31T20:13:30.318753+00:00"
+    },
+    {
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "max_tokens",
+        "profile": {
+          "value": 1024
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "1f4394e3cf1c133ecdec425f"
+      ],
+      "observed_at": "2026-08-31T20:13:30.318753+00:00"
+    },
+    {
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "parallel_tool_calls",
+        "profile": {
+          "value": true
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "327994be7e8cc3c2299a4af5"
+      ],
+      "observed_at": "2026-08-31T20:13:30.318753+00:00"
+    },
+    {
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "reasoning_effort",
+        "profile": {
+          "value": "low"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "f9b01b136c2ca4c4256df6da"
+      ],
+      "observed_at": "2026-08-31T20:13:30.318753+00:00"
+    },
+    {
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "response_format",
+        "profile": {
+          "mode": "json_object"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "cf1fbf152a75bef095d4a910"
+      ],
+      "observed_at": "2026-08-31T20:13:30.318753+00:00"
+    },
+    {
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "response_format",
+        "profile": {
+          "mode": "json_schema"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "0aa33f874d904206ea5bd0a7"
+      ],
+      "observed_at": "2026-08-31T20:13:30.318753+00:00"
+    },
+    {
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "seed",
+        "profile": {
+          "value": 1729
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "4465ae3d4e87666b324b6910"
+      ],
+      "observed_at": "2026-08-31T20:13:30.318753+00:00"
+    },
+    {
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "stop",
+        "profile": {
+          "count": 1
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "ee7ecd0c0a41a5477ed4e653"
+      ],
+      "observed_at": "2026-08-31T20:13:30.318753+00:00"
+    },
+    {
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "strict_tools",
+        "profile": {
+          "value": true
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "8dbac865c246ff2020723820"
+      ],
+      "observed_at": "2026-08-31T20:13:30.318753+00:00"
+    },
+    {
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "temperature",
+        "profile": {
+          "value": 0.37
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "b1c0e07815370a418e1aaa33"
+      ],
+      "observed_at": "2026-08-31T20:13:30.318753+00:00"
+    },
+    {
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "tool_choice",
+        "profile": {
+          "mode": "named"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "ebb1360ce5479cd65b825d5c"
+      ],
+      "observed_at": "2026-08-31T20:13:30.318753+00:00"
+    },
+    {
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "tool_choice",
+        "profile": {
+          "mode": "required"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "bbef2df2ce566c9285bc6d23"
+      ],
+      "observed_at": "2026-08-31T20:13:30.318753+00:00"
+    },
+    {
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gemma-4-31b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "top_p",
+        "profile": {
+          "value": 0.83
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "c1b9edf634ebd1b490a63875"
+      ],
+      "observed_at": "2026-08-31T20:13:30.318753+00:00"
+    },
     {
       "provider_id": "openai",
       "model_id": "openai/gpt-5-pro",
