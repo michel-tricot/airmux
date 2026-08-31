@@ -10,6 +10,8 @@
  *
  * OpenAPI spec version: 0.1.0
  */
+import type { ModelOutInputModalitiesItem } from './modelOutInputModalitiesItem';
+import type { ModelOutOutputModalitiesItem } from './modelOutOutputModalitiesItem';
 import type { ModelOutParameterSupport } from './modelOutParameterSupport';
 
 export interface ModelOut {
@@ -24,6 +26,8 @@ export interface ModelOut {
   cache_write_price_per_mtok: number;
   context_window: number;
   max_output_tokens: number | null;
+  input_modalities: ModelOutInputModalitiesItem[];
+  output_modalities: ModelOutOutputModalitiesItem[];
   capabilities: string[];
   parameter_support: ModelOutParameterSupport;
   created_at: Date;

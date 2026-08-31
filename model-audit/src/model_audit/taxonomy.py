@@ -155,6 +155,8 @@ def build(root: Path) -> dict[str, list[dict[str, object]]]:
                     "cache_write_price_per_mtok": float(price.get("cache_write_per_mtok") or 0),
                     "context_window": int(model["context_length"]),
                     "max_output_tokens": cast("int | None", model.get("max_output_tokens")),
+                    "input_modalities": model.get("input_modalities") or ["text"],
+                    "output_modalities": model.get("output_modalities") or ["text"],
                     "capabilities": _capabilities(model, surface_behaviors),
                     **({"parameter_support": support} if (support := _parameter_support(model, codecs[surface].endpoint, surface_behaviors)) else {}),
                     **({"egress_kind": kind} if kind != codecs[default_surface].kind else {}),

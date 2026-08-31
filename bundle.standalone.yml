@@ -37,6 +37,8 @@ models:
     cache_write_price_per_mtok: 1.75
     context_window: 272000
     max_output_tokens: 128000
+    input_modalities: [text, image]
+    output_modalities: [text]
     capabilities: [streaming, tools, vision]
   - model_id: gpt-5.4-mini
     provider_id: openai
@@ -47,6 +49,8 @@ models:
     cache_write_price_per_mtok: 0.75
     context_window: 272000
     max_output_tokens: 128000
+    input_modalities: [text, image]
+    output_modalities: [text]
     capabilities: [streaming, tools, vision]
   - model_id: gpt-5-nano
     provider_id: openai
@@ -57,6 +61,8 @@ models:
     cache_write_price_per_mtok: 0.05
     context_window: 272000
     max_output_tokens: 128000
+    input_modalities: [text, image]
+    output_modalities: [text]
     capabilities: [streaming, tools, vision]
     parameter_support:
       temperature: unsupported
@@ -72,6 +78,8 @@ models:
     cache_write_price_per_mtok: 6.25
     context_window: 1000000
     max_output_tokens: 128000
+    input_modalities: [text, image, pdf]
+    output_modalities: [text]
     capabilities: [streaming, tools, vision]
   - model_id: claude-sonnet-5
     provider_id: anthropic
@@ -82,6 +90,8 @@ models:
     cache_write_price_per_mtok: 2.5
     context_window: 1000000
     max_output_tokens: 128000
+    input_modalities: [text, image, pdf]
+    output_modalities: [text]
     capabilities: [streaming, tools, vision]
   - model_id: claude-haiku-4-5
     provider_id: anthropic
@@ -92,6 +102,8 @@ models:
     cache_write_price_per_mtok: 1.25
     context_window: 200000
     max_output_tokens: 64000
+    input_modalities: [text, image, pdf]
+    output_modalities: [text]
     capabilities: [streaming, tools, vision]
 
   - model_id: llama-3.3-70b-versatile
@@ -103,6 +115,8 @@ models:
     cache_write_price_per_mtok: 0.59
     context_window: 128000
     max_output_tokens: 32768
+    input_modalities: [text]
+    output_modalities: [text]
     capabilities: [streaming, tools]
   - model_id: llama-3.1-8b-instant
     provider_id: groq
@@ -113,6 +127,8 @@ models:
     cache_write_price_per_mtok: 0.05
     context_window: 128000
     max_output_tokens: 8192
+    input_modalities: [text]
+    output_modalities: [text]
     capabilities: [streaming, tools]
   - model_id: gpt-oss-120b
     provider_id: groq
@@ -123,4 +139,6 @@ models:
     cache_write_price_per_mtok: 0.15
     context_window: 131072
     max_output_tokens: 131072
+    input_modalities: [text]
+    output_modalities: [text]
     capabilities: [streaming, tools]

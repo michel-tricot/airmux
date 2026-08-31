@@ -46,6 +46,8 @@ const models = [
     cache_write_price_per_mtok: 3.75,
     context_window: 200000,
     max_output_tokens: 64000,
+    input_modalities: ['text'],
+    output_modalities: ['text'],
     capabilities: ['streaming', 'tools'],
     created_at: now,
     updated_at: now,
@@ -62,7 +64,9 @@ const models = [
     cache_write_price_per_mtok: 1.25,
     context_window: 400000,
     max_output_tokens: 128000,
-    capabilities: ['streaming', 'tools', 'vision'],
+    input_modalities: ['text', 'image'],
+    output_modalities: ['text'],
+    capabilities: ['streaming', 'tools', 'json_schema', 'parallel_tools', 'reasoning'],
     created_at: now,
     updated_at: now,
     deleted_at: null,
@@ -94,9 +98,11 @@ describe('organization models', () => {
     expect(claude).not.toBeNull();
     expect(claude).toHaveTextContent('anthropic');
     expect(claude).not.toHaveTextContent('claude-sonnet-4-5-20250929');
-    expect(within(claude!).getByText('anthropic/claude-sonnet-4-5')).toHaveClass('border-border', 'font-mono');
-    expect(within(claude!).getByText('streaming')).toHaveClass('rounded-full');
-    expect(within(claude!).getByText('tools')).toHaveClass('rounded-full');
+    const modelCell = within(claude!).getByText('anthropic/claude-sonnet-4-5').closest('td');
+    expect(modelCell).not.toBeNull();
+    expect(within(modelCell!).getByText('anthropic/claude-sonnet-4-5')).toHaveClass('border-border', 'font-mono');
+    expect(within(modelCell!).getByLabelText('Show model metadata')).toHaveClass('text-muted-foreground');
+    expect(within(modelCell!).queryByText('streaming')).not.toBeInTheDocument();
     expect(claude).toHaveTextContent('$3.00');
     expect(claude).toHaveTextContent('$15.00');
     expect(claude).toHaveTextContent('$0.30');
@@ -114,26 +120,24 @@ describe('organization models', () => {
     ]) {
       expect(screen.getByRole('button', { name: new RegExp(`Sort by ${label}`, 'i') })).toBeInTheDocument();
     }
+    expect(screen.getByRole('button', { name: 'Clear filters' })).toBeDisabled();
   });
 
-  it('adds visual hierarchy to the catalog summary, groups, capabilities, and active sort', async () => {
+  it('adds visual hierarchy to the catalog summary, groups, and active sort', async () => {
     renderModels();
 
-    const claude = (await screen.findByText('anthropic/claude-sonnet-4-5')).closest('tr');
-    const gpt = screen.getByText('openai/gpt-5').closest('tr');
+    await screen.findByText('anthropic/claude-sonnet-4-5');
     expect(screen.getByLabelText('2 models')).toBeInTheDocument();
     expect(screen.getByLabelText('2 providers')).toBeInTheDocument();
     expect(screen.getByLabelText('2 tool-capable models')).toBeInTheDocument();
     expect(screen.getByRole('columnheader', { name: 'Catalog' })).toHaveAttribute('colspan', '2');
     expect(screen.getByRole('columnheader', { name: 'Limits' })).toHaveAttribute('colspan', '2');
     expect(screen.getByRole('columnheader', { name: 'Pricing' })).toHaveAttribute('colspan', '4');
-    expect(within(claude!).getByText('streaming')).toHaveClass('text-primary');
-    expect(within(claude!).getByText('tools')).toHaveClass('text-warning');
-    expect(within(gpt!).getByText('vision')).toHaveClass('text-success');
     expect(screen.getByRole('button', { name: /Sort by Model/i })).toHaveClass('text-primary');
+    expect(screen.getByRole('button', { name: 'Filter by provider' })).toHaveClass('text-[13px]');
   });
 
-  it('combines search and dropdown filters and sorts numeric columns in both directions', async () => {
+  it('combines search and multi-select filters and sorts numeric columns in both directions', async () => {
     const user = userEvent.setup();
     renderModels();
     await screen.findByText('anthropic/claude-sonnet-4-5');
@@ -144,20 +148,64 @@ describe('organization models', () => {
     await user.click(screen.getByRole('button', { name: /Sort by Input price/i }));
     expect(modelRows()[0]).toHaveTextContent('anthropic/claude-sonnet-4-5');
 
-    await user.click(screen.getByRole('combobox', { name: 'Filter by provider' }));
-    await user.click(await screen.findByRole('option', { name: 'openai' }));
+    await user.click(screen.getByRole('button', { name: 'Filter by provider' }));
+    await user.click(await screen.findByRole('menuitemcheckbox', { name: 'openai' }));
     expect(screen.getByText('openai/gpt-5')).toBeInTheDocument();
     expect(screen.queryByText('anthropic/claude-sonnet-4-5')).not.toBeInTheDocument();
     expect(screen.getByText('1 of 2 models')).toBeInTheDocument();
+    await user.click(screen.getByRole('menuitemcheckbox', { name: 'anthropic' }));
+    expect(screen.getByText('anthropic/claude-sonnet-4-5')).toBeInTheDocument();
+    expect(screen.getByText('2 of 2 models')).toBeInTheDocument();
+    await user.click(screen.getByRole('menuitemcheckbox', { name: 'All providers' }));
+    await user.keyboard('{Escape}');
 
-    await user.click(screen.getByRole('combobox', { name: 'Filter by provider' }));
-    await user.click(await screen.findByRole('option', { name: 'All providers' }));
-    await user.click(screen.getByRole('combobox', { name: 'Filter by capability' }));
-    await user.click(await screen.findByRole('option', { name: 'vision' }));
+    await user.click(screen.getByRole('button', { name: 'Filter by capability' }));
+    await user.click(await screen.findByRole('menuitemcheckbox', { name: 'tools' }));
+    await user.click(screen.getByRole('menuitemcheckbox', { name: 'reasoning' }));
     expect(screen.getByText('openai/gpt-5')).toBeInTheDocument();
     expect(screen.queryByText('anthropic/claude-sonnet-4-5')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('menuitemcheckbox', { name: 'All capabilities' }));
+    await user.keyboard('{Escape}');
+
+    await user.click(screen.getByRole('button', { name: 'Filter by modality' }));
+    await user.click(await screen.findByRole('menuitemcheckbox', { name: 'Input: text' }));
+    expect(screen.getByText('2 of 2 models')).toBeInTheDocument();
+    await user.click(screen.getByRole('menuitemcheckbox', { name: 'Input: image' }));
+    expect(screen.getByText('openai/gpt-5')).toBeInTheDocument();
+    expect(screen.queryByText('anthropic/claude-sonnet-4-5')).not.toBeInTheDocument();
+    await user.keyboard('{Escape}');
 
     await user.type(screen.getByRole('textbox', { name: 'Filter models' }), 'not-a-model');
     expect(screen.getByText('No models match these filters.')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Clear filters' }));
+    expect(screen.getByText('anthropic/claude-sonnet-4-5')).toBeInTheDocument();
+    expect(screen.getByText('openai/gpt-5')).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'Filter models' })).toHaveValue('');
+    expect(screen.getByRole('button', { name: 'Filter by modality' })).toHaveTextContent('All modalities');
+    expect(screen.getByRole('button', { name: 'Clear filters' })).toBeDisabled();
+  });
+
+  it('keeps capabilities and modalities in a discoverable metadata tooltip', async () => {
+    const user = userEvent.setup();
+    renderModels();
+
+    const gpt = (await screen.findByText('openai/gpt-5')).closest('tr');
+    const metadata = within(gpt!).getByLabelText('Show model metadata');
+    expect(metadata.querySelector('svg')).toBeInTheDocument();
+    expect(within(gpt!).queryByText('streaming')).not.toBeInTheDocument();
+
+    await user.hover(metadata);
+    const tooltip = await screen.findByRole('tooltip');
+    for (const capability of ['streaming', 'tools', 'json_schema', 'parallel_tools', 'reasoning']) {
+      expect(within(tooltip).getByText(capability)).toBeInTheDocument();
+    }
+    expect(within(tooltip).getByText('streaming')).toHaveClass('text-primary');
+    expect(within(tooltip).getByText('tools')).toHaveClass('text-warning');
+    const imageModality = within(within(tooltip).getByLabelText('Input modalities')).getByText('image').parentElement;
+    const textOutputModality = within(within(tooltip).getByLabelText('Output modalities')).getByText('text').parentElement;
+    expect(imageModality).toHaveClass('border-success/40', 'text-success');
+    expect(imageModality?.querySelector('svg')).toBeInTheDocument();
+    expect(textOutputModality).toHaveClass('border-primary/40', 'text-primary');
+    expect(textOutputModality?.querySelector('svg')).toBeInTheDocument();
   });
 });
