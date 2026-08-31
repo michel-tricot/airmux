@@ -34,6 +34,7 @@ def provider_definition() -> ProviderDefinition:
         base_url="https://api.provider.example/v1",
         models_url="https://api.provider.example/v1/models",
         ingress=("oai",),
+        primary_surface="oai",
         auth=("bearer",),
         env_var="STUB_API_KEY",
     )
@@ -83,6 +84,7 @@ def test_adding_a_provider_uses_a_typed_definition_and_removes_its_candidate(tmp
     candidates = yaml.safe_load((taxonomy / "candidates.yml").read_text(encoding="utf-8"))["candidates"]
     assert added.id == "stub"
     assert providers[0]["models_url"] == "https://api.provider.example/v1/models"
+    assert providers[0]["primary_surface"] == "oai"
     assert [candidate["id"] for candidate in candidates] == ["other"]
     assert (taxonomy / "icons" / "stub.svg").exists()
 

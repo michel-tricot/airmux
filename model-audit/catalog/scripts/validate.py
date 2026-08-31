@@ -28,7 +28,22 @@ from model_kind import classify
 from parameter_support import discovery_evidence
 
 ROOT = TAXONOMY
-FIELDS = {"id", "name", "icon_mono", "icon_color", "homepage", "docs", "base_url", "openapi", "models_url", "ingress", "auth", "env_var", "schema"}
+FIELDS = {
+    "id",
+    "name",
+    "icon_mono",
+    "icon_color",
+    "homepage",
+    "docs",
+    "base_url",
+    "openapi",
+    "models_url",
+    "ingress",
+    "primary_surface",
+    "auth",
+    "env_var",
+    "schema",
+}
 PROFILE_FIELDS = {"param_aliases", "params_closed", "accepted_params"}
 INGRESS = {"oai", "oai_responses", "anthropic", "google", "other_standard", "custom"}
 # ingresses that carry a schema; google is the one shape we have not extracted
@@ -83,6 +98,8 @@ def check_shape(all_entries: list[dict]) -> None:
         seen_ids.add(eid)
         if bad := set(e.get("ingress") or []) - INGRESS:
             fail("ingress", f"{eid} uses {sorted(bad)}, outside the vocabulary")
+        if e.get("primary_surface") not in (e.get("ingress") or []):
+            fail("ingress", f"{eid} primary_surface is not one of its ingresses")
         for value in e.get("auth") or []:
             if value not in AUTH_BARE and not value.startswith("header_key:"):
                 fail("auth", f"{eid} uses {value}, outside the vocabulary")

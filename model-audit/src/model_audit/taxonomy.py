@@ -8,15 +8,13 @@ import yaml
 
 from model_audit.cases import load_cases, load_features
 from model_audit.evidence import write_behavior
+from model_audit.surfaces import discover
 
 if TYPE_CHECKING:
     from pathlib import Path
 
     from model_audit.models import BehaviorRecord
 
-SURFACE_KIND = {"oai": "openai_compatible", "oai_responses": "openai_responses", "anthropic": "anthropic"}
-SURFACE_ENDPOINT = {"oai": "chat/completions", "oai_responses": "responses", "anthropic": "messages"}
-SURFACE_PRIORITY = {"oai_responses": 0, "oai": 1, "anthropic": 2}
 CAPABILITY_PROJECTION = {
     "reasoning": "reasoning",
     "streaming": "streaming",
@@ -41,11 +39,11 @@ def _behaviors(root: Path) -> tuple[BehaviorRecord, ...]:
 
 
 def _surface(provider: dict, behaviors: list[BehaviorRecord]) -> str:
-    observed = sorted({behavior.surface_id for behavior in behaviors}, key=lambda surface: SURFACE_PRIORITY.get(surface, 99))
+    codecs = discover()
+    observed = sorted({behavior.surface_id for behavior in behaviors}, key=lambda surface: codecs[surface].priority if surface in codecs else 99)
     if observed:
         return observed[0]
-    ingresses = provider.get("ingress") or []
-    return "anthropic" if ingresses == ["anthropic"] else "oai"
+    return str(provider["primary_surface"])
 
 
 def _capabilities(model: dict, behaviors: list[BehaviorRecord]) -> list[str]:
@@ -93,15 +91,11 @@ def _parameter_support(model: dict, endpoint: str, behaviors: list[BehaviorRecor
 
 
 def _provider_entry(provider: dict, icon: str) -> dict[str, object]:
-    default_surface = "anthropic" if provider.get("ingress") == ["anthropic"] else "oai"
-    profile = {
-        field: provider[field]
-        for field in ("param_aliases", "params_closed", "accepted_params")
-        if field in provider
-    }
+    default_surface = str(provider["primary_surface"])
+    profile = {field: provider[field] for field in ("param_aliases", "params_closed", "accepted_params") if field in provider}
     return {
         "provider_id": provider["id"],
-        "kind": SURFACE_KIND[default_surface],
+        "kind": discover()[default_surface].kind,
         "base_url": provider["base_url"],
         "icon": icon,
         **profile,
@@ -119,7 +113,7 @@ def build(root: Path) -> dict[str, list[dict[str, object]]]:
     emitted_models = []
     for provider in providers:
         provider_id = provider["id"]
-        default_surface = "anthropic" if provider.get("ingress") == ["anthropic"] else "oai"
+        default_surface = str(provider["primary_surface"])
         icon_path = taxonomy / "icons" / f"{provider['icon_mono']}.svg"
         emitted_providers.append(_provider_entry(provider, icon_path.read_text(encoding="utf-8").strip() if icon_path.exists() else ""))
         models_path = taxonomy / "models" / f"{provider_id}.json"
@@ -133,7 +127,8 @@ def build(root: Path) -> dict[str, list[dict[str, object]]]:
             surface = _surface(provider, behaviors)
             surface_behaviors = [behavior for behavior in behaviors if behavior.surface_id == surface]
             price = model.get("pricing") or {}
-            kind = SURFACE_KIND[surface]
+            codecs = discover()
+            kind = codecs[surface].kind
             emitted_models.append(
                 {
                     "model_id": model_id,
@@ -146,10 +141,8 @@ def build(root: Path) -> dict[str, list[dict[str, object]]]:
                     "context_window": int(model["context_length"]),
                     "max_output_tokens": cast("int | None", model.get("max_output_tokens")),
                     "capabilities": _capabilities(model, surface_behaviors),
-                    **(
-                        {"parameter_support": support} if (support := _parameter_support(model, SURFACE_ENDPOINT[surface], surface_behaviors)) else {}
-                    ),
-                    **({"egress_kind": kind} if kind != SURFACE_KIND[default_surface] else {}),
+                    **({"parameter_support": support} if (support := _parameter_support(model, codecs[surface].endpoint, surface_behaviors)) else {}),
+                    **({"egress_kind": kind} if kind != codecs[default_surface].kind else {}),
                 }
             )
     emitted_models.sort(key=lambda model: (str(model["provider_id"]), str(model["model_id"])))

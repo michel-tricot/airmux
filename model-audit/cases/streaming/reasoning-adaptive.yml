@@ -14,10 +14,11 @@ request:
   messages:
   - role: user
     content: Reason briefly and answer what is 20 plus 22
-  max_tokens: 1100
   reasoning:
     type: adaptive
     effort: low
 oracle:
   reasoning_present: true
   text_contains: "42"
+execution:
+  max_output_tokens: 1100

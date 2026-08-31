@@ -33,11 +33,22 @@ class ProviderDefinition(BaseModel):
     base_url: str = Field(pattern=r"^https?://")
     models_url: str = Field(pattern=r"^https?://")
     openapi: str | None = Field(None, pattern=r"^https?://")
-    ingress: tuple[Literal["oai", "oai_responses", "anthropic", "google", "other_standard", "custom"], ...]
-    auth: tuple[str, ...]
+    ingress: tuple[Literal["oai", "oai_responses", "anthropic", "google", "other_standard", "custom"], ...] = Field(min_length=1)
+    primary_surface: Literal["oai", "oai_responses", "anthropic", "google", "other_standard", "custom"]
+    auth: tuple[str, ...] = Field(min_length=1)
     env_var: str = Field(pattern=r"^[A-Z][A-Z0-9_]+$")
     icon_mono: str | None = None
     icon_color: str | None = None
+
+    @model_validator(mode="after")
+    def valid_primary_surface(self) -> ProviderDefinition:
+        if self.primary_surface not in self.ingress:
+            message = f"primary surface {self.primary_surface} is not one of {', '.join(self.ingress)}"
+            raise ValueError(message)
+        if len(self.auth) not in {1, len(self.ingress)}:
+            message = "auth must contain one shared scheme or one scheme per ingress"
+            raise ValueError(message)
+        return self
 
 
 class SchemaDefinition(BaseModel):
@@ -136,6 +147,7 @@ def provider_entry(definition: ProviderDefinition) -> dict[str, object]:
         "openapi": str(definition.openapi) if definition.openapi is not None else None,
         "models_url": str(definition.models_url),
         "ingress": list(definition.ingress),
+        "primary_surface": definition.primary_surface,
         "auth": list(definition.auth),
         "env_var": definition.env_var,
         "schema": None,

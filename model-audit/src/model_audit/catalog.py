@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, cast
 import yaml
 
 from model_audit.models import Catalog, EgressKind, Target
+from model_audit.surfaces import discover
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -30,24 +31,16 @@ class Surface:
     headers: dict[str, str]
 
 
-SURFACES: dict[str, tuple[str, str, EgressKind]] = {
-    "oai": ("oai", "chat/completions", "openai_compatible"),
-    "oai_responses": ("oai_responses", "responses", "openai_responses"),
-    "anthropic": ("anthropic", "messages", "anthropic"),
-}
-
-
 def _surfaces(provider: Mapping[str, object]) -> tuple[Surface, ...]:
     ingresses = [str(value) for value in _sequence(provider.get("ingress"))]
     auths = [str(value) for value in _sequence(provider.get("auth"))]
     surfaces = []
     for index, ingress in enumerate(ingresses):
-        definition = SURFACES.get(ingress)
+        definition = discover().get(ingress)
         if definition is None:
             continue
-        surface_id, endpoint, kind = definition
         auth = auths[index] if len(auths) == len(ingresses) else auths[0]
-        surfaces.append(Surface(id=surface_id, endpoint=endpoint, kind=kind, auth=auth, headers={}))
+        surfaces.append(Surface(id=definition.id, endpoint=definition.endpoint, kind=definition.kind, auth=auth, headers={}))
     return tuple(surfaces)
 
 

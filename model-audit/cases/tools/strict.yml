@@ -10,7 +10,6 @@ request:
   messages:
   - role: user
     content: Call report_result with value ok
-  max_tokens: 1024
   tools:
   - name: report_result
     description: Report the requested result

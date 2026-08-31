@@ -52,11 +52,12 @@ def test_openai_chat_maps_inline_pdf_to_a_file_content_part():
     ]
 
 
-def test_openai_baseline_omits_the_optional_output_limit():
+def test_every_surface_receives_the_same_baseline_output_limit():
     audit_case = case()
 
-    assert "max_tokens" not in openai_chat_body("model", audit_case, "buffered")
-    assert "max_output_tokens" not in openai_responses_body("model", audit_case, "buffered")
+    assert openai_chat_body("model", audit_case, "buffered")["max_tokens"] == 1024
+    assert openai_responses_body("model", audit_case, "buffered")["max_output_tokens"] == 1024
+    assert anthropic_body("model", audit_case, "buffered")["max_tokens"] == 1024
 
 
 def test_openai_output_limit_case_uses_each_surface_spelling():

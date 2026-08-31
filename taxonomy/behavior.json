@@ -1,6 +1,6 @@
 {
-  "schema_version": 1,
-  "generated_from": "a62e87c18460d862",
+  "schema_version": 2,
+  "generated_from": "f2416d15fbf9880e",
   "behaviors": [
     {
       "provider_id": "openai",
@@ -10,8 +10,7 @@
       "claim": {
         "dimension": "capability",
         "name": "text_generation",
-        "profile": {},
-        "key": "capability:text_generation:{}"
+        "profile": {}
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -27,8 +26,7 @@
       "claim": {
         "dimension": "modality",
         "name": "input_text",
-        "profile": {},
-        "key": "modality:input_text:{}"
+        "profile": {}
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -44,8 +42,7 @@
       "claim": {
         "dimension": "modality",
         "name": "output_text",
-        "profile": {},
-        "key": "modality:output_text:{}"
+        "profile": {}
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -61,8 +58,7 @@
       "claim": {
         "dimension": "capability",
         "name": "text_generation",
-        "profile": {},
-        "key": "capability:text_generation:{}"
+        "profile": {}
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -78,8 +74,7 @@
       "claim": {
         "dimension": "modality",
         "name": "input_text",
-        "profile": {},
-        "key": "modality:input_text:{}"
+        "profile": {}
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -95,8 +90,7 @@
       "claim": {
         "dimension": "modality",
         "name": "output_text",
-        "profile": {},
-        "key": "modality:output_text:{}"
+        "profile": {}
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -112,8 +106,7 @@
       "claim": {
         "dimension": "capability",
         "name": "text_generation",
-        "profile": {},
-        "key": "capability:text_generation:{}"
+        "profile": {}
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -129,8 +122,7 @@
       "claim": {
         "dimension": "modality",
         "name": "input_text",
-        "profile": {},
-        "key": "modality:input_text:{}"
+        "profile": {}
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -146,8 +138,7 @@
       "claim": {
         "dimension": "modality",
         "name": "output_text",
-        "profile": {},
-        "key": "modality:output_text:{}"
+        "profile": {}
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -163,8 +154,7 @@
       "claim": {
         "dimension": "capability",
         "name": "text_generation",
-        "profile": {},
-        "key": "capability:text_generation:{}"
+        "profile": {}
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -180,8 +170,7 @@
       "claim": {
         "dimension": "modality",
         "name": "input_text",
-        "profile": {},
-        "key": "modality:input_text:{}"
+        "profile": {}
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -197,8 +186,7 @@
       "claim": {
         "dimension": "modality",
         "name": "output_text",
-        "profile": {},
-        "key": "modality:output_text:{}"
+        "profile": {}
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -214,8 +202,7 @@
       "claim": {
         "dimension": "capability",
         "name": "multi_turn",
-        "profile": {},
-        "key": "capability:multi_turn:{}"
+        "profile": {}
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -233,8 +220,7 @@
         "name": "reasoning",
         "profile": {
           "effort": "low"
-        },
-        "key": "capability:reasoning:{\"effort\":\"low\"}"
+        }
       },
       "verdict": "unsupported",
       "evidence_ids": [
@@ -252,8 +238,7 @@
         "name": "streaming",
         "profile": {
           "content": "text"
-        },
-        "key": "capability:streaming:{\"content\":\"text\"}"
+        }
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -271,8 +256,7 @@
         "name": "structured_output",
         "profile": {
           "mode": "json_object"
-        },
-        "key": "capability:structured_output:{\"mode\":\"json_object\"}"
+        }
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -290,8 +274,7 @@
         "name": "structured_output",
         "profile": {
           "mode": "json_schema"
-        },
-        "key": "capability:structured_output:{\"mode\":\"json_schema\"}"
+        }
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -307,8 +290,7 @@
       "claim": {
         "dimension": "capability",
         "name": "system_messages",
-        "profile": {},
-        "key": "capability:system_messages:{}"
+        "profile": {}
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -324,8 +306,7 @@
       "claim": {
         "dimension": "capability",
         "name": "text_generation",
-        "profile": {},
-        "key": "capability:text_generation:{}"
+        "profile": {}
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -341,8 +322,7 @@
       "claim": {
         "dimension": "capability",
         "name": "tool_calling",
-        "profile": {},
-        "key": "capability:tool_calling:{}"
+        "profile": {}
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -358,8 +338,7 @@
       "claim": {
         "dimension": "capability",
         "name": "usage",
-        "profile": {},
-        "key": "capability:usage:{}"
+        "profile": {}
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -378,8 +357,7 @@
         "profile": {
           "reasoning_effort": "low",
           "tool_choice": "named"
-        },
-        "key": "interaction:reasoning+tools:{\"reasoning_effort\":\"low\",\"tool_choice\":\"named\"}"
+        }
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -395,8 +373,7 @@
       "claim": {
         "dimension": "interaction",
         "name": "reasoning_history",
-        "profile": {},
-        "key": "interaction:reasoning_history:{}"
+        "profile": {}
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -412,8 +389,7 @@
       "claim": {
         "dimension": "interaction",
         "name": "streaming+reasoning",
-        "profile": {},
-        "key": "interaction:streaming+reasoning:{}"
+        "profile": {}
       },
       "verdict": "unsupported",
       "evidence_ids": [
@@ -429,8 +405,7 @@
       "claim": {
         "dimension": "interaction",
         "name": "streaming+structured_output",
-        "profile": {},
-        "key": "interaction:streaming+structured_output:{}"
+        "profile": {}
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -446,8 +421,7 @@
       "claim": {
         "dimension": "interaction",
         "name": "streaming+tools",
-        "profile": {},
-        "key": "interaction:streaming+tools:{}"
+        "profile": {}
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -463,8 +437,7 @@
       "claim": {
         "dimension": "interaction",
         "name": "tool_result_round_trip",
-        "profile": {},
-        "key": "interaction:tool_result_round_trip:{}"
+        "profile": {}
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -480,8 +453,7 @@
       "claim": {
         "dimension": "modality",
         "name": "input_image",
-        "profile": {},
-        "key": "modality:input_image:{}"
+        "profile": {}
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -497,8 +469,7 @@
       "claim": {
         "dimension": "modality",
         "name": "input_pdf",
-        "profile": {},
-        "key": "modality:input_pdf:{}"
+        "profile": {}
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -514,8 +485,7 @@
       "claim": {
         "dimension": "modality",
         "name": "input_text",
-        "profile": {},
-        "key": "modality:input_text:{}"
+        "profile": {}
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -531,8 +501,7 @@
       "claim": {
         "dimension": "modality",
         "name": "output_text",
-        "profile": {},
-        "key": "modality:output_text:{}"
+        "profile": {}
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -550,8 +519,7 @@
         "name": "max_tokens",
         "profile": {
           "value": 1024
-        },
-        "key": "option:max_tokens:{\"value\":1024}"
+        }
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -569,8 +537,7 @@
         "name": "parallel_tool_calls",
         "profile": {
           "value": true
-        },
-        "key": "option:parallel_tool_calls:{\"value\":true}"
+        }
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -588,8 +555,7 @@
         "name": "reasoning_effort",
         "profile": {
           "value": "low"
-        },
-        "key": "option:reasoning_effort:{\"value\":\"low\"}"
+        }
       },
       "verdict": "unsupported",
       "evidence_ids": [
@@ -607,8 +573,7 @@
         "name": "response_format",
         "profile": {
           "mode": "json_object"
-        },
-        "key": "option:response_format:{\"mode\":\"json_object\"}"
+        }
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -626,8 +591,7 @@
         "name": "response_format",
         "profile": {
           "mode": "json_schema"
-        },
-        "key": "option:response_format:{\"mode\":\"json_schema\"}"
+        }
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -645,8 +609,7 @@
         "name": "strict_tools",
         "profile": {
           "value": true
-        },
-        "key": "option:strict_tools:{\"value\":true}"
+        }
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -664,8 +627,7 @@
         "name": "temperature",
         "profile": {
           "value": 0.37
-        },
-        "key": "option:temperature:{\"value\":0.37}"
+        }
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -683,8 +645,7 @@
         "name": "tool_choice",
         "profile": {
           "mode": "named"
-        },
-        "key": "option:tool_choice:{\"mode\":\"named\"}"
+        }
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -702,8 +663,7 @@
         "name": "tool_choice",
         "profile": {
           "mode": "required"
-        },
-        "key": "option:tool_choice:{\"mode\":\"required\"}"
+        }
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -721,8 +681,7 @@
         "name": "top_p",
         "profile": {
           "value": 0.83
-        },
-        "key": "option:top_p:{\"value\":0.83}"
+        }
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -738,8 +697,7 @@
       "claim": {
         "dimension": "capability",
         "name": "text_generation",
-        "profile": {},
-        "key": "capability:text_generation:{}"
+        "profile": {}
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -755,8 +713,7 @@
       "claim": {
         "dimension": "modality",
         "name": "input_text",
-        "profile": {},
-        "key": "modality:input_text:{}"
+        "profile": {}
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -772,8 +729,7 @@
       "claim": {
         "dimension": "modality",
         "name": "output_text",
-        "profile": {},
-        "key": "modality:output_text:{}"
+        "profile": {}
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -789,8 +745,7 @@
       "claim": {
         "dimension": "capability",
         "name": "text_generation",
-        "profile": {},
-        "key": "capability:text_generation:{}"
+        "profile": {}
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -806,8 +761,7 @@
       "claim": {
         "dimension": "modality",
         "name": "input_text",
-        "profile": {},
-        "key": "modality:input_text:{}"
+        "profile": {}
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -823,8 +777,7 @@
       "claim": {
         "dimension": "modality",
         "name": "output_text",
-        "profile": {},
-        "key": "modality:output_text:{}"
+        "profile": {}
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -840,8 +793,7 @@
       "claim": {
         "dimension": "capability",
         "name": "text_generation",
-        "profile": {},
-        "key": "capability:text_generation:{}"
+        "profile": {}
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -857,8 +809,7 @@
       "claim": {
         "dimension": "modality",
         "name": "input_text",
-        "profile": {},
-        "key": "modality:input_text:{}"
+        "profile": {}
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -874,8 +825,7 @@
       "claim": {
         "dimension": "modality",
         "name": "output_text",
-        "profile": {},
-        "key": "modality:output_text:{}"
+        "profile": {}
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -891,8 +841,7 @@
       "claim": {
         "dimension": "capability",
         "name": "text_generation",
-        "profile": {},
-        "key": "capability:text_generation:{}"
+        "profile": {}
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -908,8 +857,7 @@
       "claim": {
         "dimension": "modality",
         "name": "input_text",
-        "profile": {},
-        "key": "modality:input_text:{}"
+        "profile": {}
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -925,8 +873,7 @@
       "claim": {
         "dimension": "modality",
         "name": "output_text",
-        "profile": {},
-        "key": "modality:output_text:{}"
+        "profile": {}
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -944,8 +891,7 @@
         "name": "reasoning",
         "profile": {
           "effort": "low"
-        },
-        "key": "capability:reasoning:{\"effort\":\"low\"}"
+        }
       },
       "verdict": "unsupported",
       "evidence_ids": [
@@ -961,8 +907,7 @@
       "claim": {
         "dimension": "capability",
         "name": "tool_calling",
-        "profile": {},
-        "key": "capability:tool_calling:{}"
+        "profile": {}
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -981,8 +926,7 @@
         "profile": {
           "reasoning_effort": "low",
           "tool_choice": "named"
-        },
-        "key": "interaction:reasoning+tools:{\"reasoning_effort\":\"low\",\"tool_choice\":\"named\"}"
+        }
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -998,8 +942,7 @@
       "claim": {
         "dimension": "interaction",
         "name": "reasoning_history",
-        "profile": {},
-        "key": "interaction:reasoning_history:{}"
+        "profile": {}
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -1015,8 +958,7 @@
       "claim": {
         "dimension": "interaction",
         "name": "streaming+tools",
-        "profile": {},
-        "key": "interaction:streaming+tools:{}"
+        "profile": {}
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -1032,8 +974,7 @@
       "claim": {
         "dimension": "interaction",
         "name": "tool_result_round_trip",
-        "profile": {},
-        "key": "interaction:tool_result_round_trip:{}"
+        "profile": {}
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -1051,8 +992,7 @@
         "name": "parallel_tool_calls",
         "profile": {
           "value": true
-        },
-        "key": "option:parallel_tool_calls:{\"value\":true}"
+        }
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -1070,8 +1010,7 @@
         "name": "reasoning_effort",
         "profile": {
           "value": "low"
-        },
-        "key": "option:reasoning_effort:{\"value\":\"low\"}"
+        }
       },
       "verdict": "unsupported",
       "evidence_ids": [
@@ -1089,8 +1028,7 @@
         "name": "strict_tools",
         "profile": {
           "value": true
-        },
-        "key": "option:strict_tools:{\"value\":true}"
+        }
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -1108,8 +1046,7 @@
         "name": "tool_choice",
         "profile": {
           "mode": "named"
-        },
-        "key": "option:tool_choice:{\"mode\":\"named\"}"
+        }
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -1127,8 +1064,7 @@
         "name": "tool_choice",
         "profile": {
           "mode": "required"
-        },
-        "key": "option:tool_choice:{\"mode\":\"required\"}"
+        }
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -1146,8 +1082,7 @@
         "name": "reasoning",
         "profile": {
           "effort": "low"
-        },
-        "key": "capability:reasoning:{\"effort\":\"low\"}"
+        }
       },
       "verdict": "unsupported",
       "evidence_ids": [
@@ -1165,8 +1100,7 @@
         "name": "structured_output",
         "profile": {
           "mode": "json_schema"
-        },
-        "key": "capability:structured_output:{\"mode\":\"json_schema\"}"
+        }
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -1182,8 +1116,7 @@
       "claim": {
         "dimension": "capability",
         "name": "tool_calling",
-        "profile": {},
-        "key": "capability:tool_calling:{}"
+        "profile": {}
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -1202,8 +1135,7 @@
         "profile": {
           "reasoning_effort": "low",
           "tool_choice": "named"
-        },
-        "key": "interaction:reasoning+tools:{\"reasoning_effort\":\"low\",\"tool_choice\":\"named\"}"
+        }
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -1219,8 +1151,7 @@
       "claim": {
         "dimension": "interaction",
         "name": "reasoning_history",
-        "profile": {},
-        "key": "interaction:reasoning_history:{}"
+        "profile": {}
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -1236,8 +1167,7 @@
       "claim": {
         "dimension": "interaction",
         "name": "streaming+reasoning",
-        "profile": {},
-        "key": "interaction:streaming+reasoning:{}"
+        "profile": {}
       },
       "verdict": "unsupported",
       "evidence_ids": [
@@ -1253,8 +1183,7 @@
       "claim": {
         "dimension": "interaction",
         "name": "streaming+tools",
-        "profile": {},
-        "key": "interaction:streaming+tools:{}"
+        "profile": {}
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -1270,8 +1199,7 @@
       "claim": {
         "dimension": "interaction",
         "name": "tool_result_round_trip",
-        "profile": {},
-        "key": "interaction:tool_result_round_trip:{}"
+        "profile": {}
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -1289,8 +1217,7 @@
         "name": "parallel_tool_calls",
         "profile": {
           "value": true
-        },
-        "key": "option:parallel_tool_calls:{\"value\":true}"
+        }
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -1308,8 +1235,7 @@
         "name": "reasoning_effort",
         "profile": {
           "value": "low"
-        },
-        "key": "option:reasoning_effort:{\"value\":\"low\"}"
+        }
       },
       "verdict": "unsupported",
       "evidence_ids": [
@@ -1327,8 +1253,7 @@
         "name": "response_format",
         "profile": {
           "mode": "json_schema"
-        },
-        "key": "option:response_format:{\"mode\":\"json_schema\"}"
+        }
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -1346,8 +1271,7 @@
         "name": "strict_tools",
         "profile": {
           "value": true
-        },
-        "key": "option:strict_tools:{\"value\":true}"
+        }
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -1365,8 +1289,7 @@
         "name": "tool_choice",
         "profile": {
           "mode": "named"
-        },
-        "key": "option:tool_choice:{\"mode\":\"named\"}"
+        }
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -1384,8 +1307,7 @@
         "name": "tool_choice",
         "profile": {
           "mode": "required"
-        },
-        "key": "option:tool_choice:{\"mode\":\"required\"}"
+        }
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -1401,8 +1323,7 @@
       "claim": {
         "dimension": "capability",
         "name": "multi_turn",
-        "profile": {},
-        "key": "capability:multi_turn:{}"
+        "profile": {}
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -1420,8 +1341,7 @@
         "name": "reasoning",
         "profile": {
           "effort": "low"
-        },
-        "key": "capability:reasoning:{\"effort\":\"low\"}"
+        }
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -1439,8 +1359,7 @@
         "name": "streaming",
         "profile": {
           "content": "text"
-        },
-        "key": "capability:streaming:{\"content\":\"text\"}"
+        }
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -1458,8 +1377,7 @@
         "name": "structured_output",
         "profile": {
           "mode": "json_object"
-        },
-        "key": "capability:structured_output:{\"mode\":\"json_object\"}"
+        }
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -1477,8 +1395,7 @@
         "name": "structured_output",
         "profile": {
           "mode": "json_schema"
-        },
-        "key": "capability:structured_output:{\"mode\":\"json_schema\"}"
+        }
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -1494,8 +1411,7 @@
       "claim": {
         "dimension": "capability",
         "name": "system_messages",
-        "profile": {},
-        "key": "capability:system_messages:{}"
+        "profile": {}
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -1511,8 +1427,7 @@
       "claim": {
         "dimension": "capability",
         "name": "text_generation",
-        "profile": {},
-        "key": "capability:text_generation:{}"
+        "profile": {}
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -1528,8 +1443,7 @@
       "claim": {
         "dimension": "capability",
         "name": "tool_calling",
-        "profile": {},
-        "key": "capability:tool_calling:{}"
+        "profile": {}
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -1545,8 +1459,7 @@
       "claim": {
         "dimension": "capability",
         "name": "usage",
-        "profile": {},
-        "key": "capability:usage:{}"
+        "profile": {}
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -1565,8 +1478,7 @@
         "profile": {
           "reasoning_effort": "low",
           "tool_choice": "named"
-        },
-        "key": "interaction:reasoning+tools:{\"reasoning_effort\":\"low\",\"tool_choice\":\"named\"}"
+        }
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -1582,8 +1494,7 @@
       "claim": {
         "dimension": "interaction",
         "name": "reasoning_history",
-        "profile": {},
-        "key": "interaction:reasoning_history:{}"
+        "profile": {}
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -1599,8 +1510,7 @@
       "claim": {
         "dimension": "interaction",
         "name": "streaming+reasoning",
-        "profile": {},
-        "key": "interaction:streaming+reasoning:{}"
+        "profile": {}
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -1616,8 +1526,7 @@
       "claim": {
         "dimension": "interaction",
         "name": "streaming+structured_output",
-        "profile": {},
-        "key": "interaction:streaming+structured_output:{}"
+        "profile": {}
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -1633,8 +1542,7 @@
       "claim": {
         "dimension": "interaction",
         "name": "streaming+tools",
-        "profile": {},
-        "key": "interaction:streaming+tools:{}"
+        "profile": {}
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -1650,8 +1558,7 @@
       "claim": {
         "dimension": "interaction",
         "name": "tool_result_round_trip",
-        "profile": {},
-        "key": "interaction:tool_result_round_trip:{}"
+        "profile": {}
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -1667,8 +1574,7 @@
       "claim": {
         "dimension": "modality",
         "name": "input_image",
-        "profile": {},
-        "key": "modality:input_image:{}"
+        "profile": {}
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -1684,8 +1590,7 @@
       "claim": {
         "dimension": "modality",
         "name": "input_pdf",
-        "profile": {},
-        "key": "modality:input_pdf:{}"
+        "profile": {}
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -1701,8 +1606,7 @@
       "claim": {
         "dimension": "modality",
         "name": "input_text",
-        "profile": {},
-        "key": "modality:input_text:{}"
+        "profile": {}
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -1718,8 +1622,7 @@
       "claim": {
         "dimension": "modality",
         "name": "output_text",
-        "profile": {},
-        "key": "modality:output_text:{}"
+        "profile": {}
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -1737,8 +1640,7 @@
         "name": "max_tokens",
         "profile": {
           "value": 1024
-        },
-        "key": "option:max_tokens:{\"value\":1024}"
+        }
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -1756,8 +1658,7 @@
         "name": "parallel_tool_calls",
         "profile": {
           "value": true
-        },
-        "key": "option:parallel_tool_calls:{\"value\":true}"
+        }
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -1775,8 +1676,7 @@
         "name": "reasoning_effort",
         "profile": {
           "value": "low"
-        },
-        "key": "option:reasoning_effort:{\"value\":\"low\"}"
+        }
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -1794,8 +1694,7 @@
         "name": "response_format",
         "profile": {
           "mode": "json_object"
-        },
-        "key": "option:response_format:{\"mode\":\"json_object\"}"
+        }
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -1813,8 +1712,7 @@
         "name": "response_format",
         "profile": {
           "mode": "json_schema"
-        },
-        "key": "option:response_format:{\"mode\":\"json_schema\"}"
+        }
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -1832,8 +1730,7 @@
         "name": "strict_tools",
         "profile": {
           "value": true
-        },
-        "key": "option:strict_tools:{\"value\":true}"
+        }
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -1851,8 +1748,7 @@
         "name": "temperature",
         "profile": {
           "value": 0.37
-        },
-        "key": "option:temperature:{\"value\":0.37}"
+        }
       },
       "verdict": "unsupported",
       "evidence_ids": [
@@ -1870,8 +1766,7 @@
         "name": "tool_choice",
         "profile": {
           "mode": "named"
-        },
-        "key": "option:tool_choice:{\"mode\":\"named\"}"
+        }
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -1889,8 +1784,7 @@
         "name": "tool_choice",
         "profile": {
           "mode": "required"
-        },
-        "key": "option:tool_choice:{\"mode\":\"required\"}"
+        }
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -1908,8 +1802,7 @@
         "name": "top_p",
         "profile": {
           "value": 0.83
-        },
-        "key": "option:top_p:{\"value\":0.83}"
+        }
       },
       "verdict": "unsupported",
       "evidence_ids": [
@@ -1925,8 +1818,7 @@
       "claim": {
         "dimension": "capability",
         "name": "text_generation",
-        "profile": {},
-        "key": "capability:text_generation:{}"
+        "profile": {}
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -1942,8 +1834,7 @@
       "claim": {
         "dimension": "modality",
         "name": "input_text",
-        "profile": {},
-        "key": "modality:input_text:{}"
+        "profile": {}
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -1959,8 +1850,7 @@
       "claim": {
         "dimension": "modality",
         "name": "output_text",
-        "profile": {},
-        "key": "modality:output_text:{}"
+        "profile": {}
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -1976,8 +1866,7 @@
       "claim": {
         "dimension": "capability",
         "name": "text_generation",
-        "profile": {},
-        "key": "capability:text_generation:{}"
+        "profile": {}
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -1993,8 +1882,7 @@
       "claim": {
         "dimension": "modality",
         "name": "input_text",
-        "profile": {},
-        "key": "modality:input_text:{}"
+        "profile": {}
       },
       "verdict": "supported",
       "evidence_ids": [
@@ -2010,8 +1898,7 @@
       "claim": {
         "dimension": "modality",
         "name": "output_text",
-        "profile": {},
-        "key": "modality:output_text:{}"
+        "profile": {}
       },
       "verdict": "supported",
       "evidence_ids": [

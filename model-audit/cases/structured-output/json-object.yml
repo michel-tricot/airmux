@@ -6,10 +6,16 @@ claims:
   name: structured_output
   profile:
     mode: json_object
+  assertion:
+    json_equals:
+      answer: 42
 - dimension: option
   name: response_format
   profile:
     mode: json_object
+  assertion:
+    json_equals:
+      answer: 42
 request:
   messages:
   - role: user

@@ -43,6 +43,7 @@ class Cerebras(ModelSource):
         models_url=url,
         openapi="https://storage.googleapis.com/stainless-sdk-openapi-specs/cerebras/cerebras-cloud-5471bd6d34fdddff21977458788b979ce93f6b080e11ff0d35777182b6615baa.yml",
         ingress=("oai",),
+        primary_surface="oai",
         auth=("bearer",),
         env_var="CEREBRAS_API_KEY",
         icon_mono="cerebras",

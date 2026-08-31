@@ -4,7 +4,7 @@ import json
 from collections.abc import Mapping, Sequence
 from typing import TYPE_CHECKING, cast
 
-from model_audit.models import Observation, ToolObservation
+from model_audit.models import Observation, ReasoningObservation, ToolObservation, UsageObservation
 
 if TYPE_CHECKING:
     from pydantic import JsonValue
@@ -20,6 +20,26 @@ def _sequence(value: object) -> Sequence[object]:
 
 def _index(value: object) -> int:
     return value if isinstance(value, int) else 0
+
+
+def _integer(value: object) -> int | None:
+    return value if isinstance(value, int) else None
+
+
+def _first_integer(payload: Mapping[str, object], *names: str) -> int | None:
+    return next((_integer(payload.get(name)) for name in names if _integer(payload.get(name)) is not None), None)
+
+
+def _usage(payload: Mapping[str, object]) -> UsageObservation | None:
+    raw = _mapping(payload.get("usage"))
+    if not raw:
+        return None
+    input_tokens = _first_integer(raw, "input_tokens", "prompt_tokens")
+    output_tokens = _first_integer(raw, "output_tokens", "completion_tokens")
+    total_tokens = _integer(raw.get("total_tokens"))
+    if total_tokens is None and input_tokens is not None and output_tokens is not None:
+        total_tokens = input_tokens + output_tokens
+    return UsageObservation(input_tokens=input_tokens, output_tokens=output_tokens, total_tokens=total_tokens)
 
 
 def _adjustments(payload: Mapping[str, object]) -> tuple[str, ...]:
@@ -53,18 +73,25 @@ def openai_chat(payload: Mapping[str, object], duration_ms: float, client_type: 
     message = _mapping(choice.get("message"))
     text, content_reasoning = _openai_content(message.get("content"))
     calls = tuple(
-        ToolObservation(name=str(function.get("name") or ""), arguments=str(function.get("arguments") or ""))
+        ToolObservation(
+            id=str(call.get("id")) if call.get("id") is not None else None,
+            name=str(function.get("name") or ""),
+            arguments=str(function.get("arguments") or ""),
+        )
         for item in _sequence(message.get("tool_calls"))
-        if (function := _mapping(_mapping(item).get("function"))).get("name")
+        if (call := _mapping(item)) and (function := _mapping(call.get("function"))).get("name")
     )
     reasoning_present = content_reasoning or any(name in message and message[name] is not None for name in ("reasoning_content", "reasoning"))
+    usage = _usage(payload)
     return Observation(
         outcome="success",
         text=text,
         tool_calls=calls,
         finish_reason=str(choice["finish_reason"]) if choice.get("finish_reason") is not None else None,
-        usage_present=bool(payload.get("usage")),
+        usage_present=usage is not None,
         reasoning_present=reasoning_present,
+        usage=usage,
+        reasoning=ReasoningObservation(exposed=True, kind="thinking" if content_reasoning else None) if reasoning_present else None,
         json_value=_json_value(text),
         adjustments=_adjustments(payload),
         duration_ms=duration_ms,
@@ -75,20 +102,26 @@ def openai_chat(payload: Mapping[str, object], duration_ms: float, client_type: 
 def openai_responses(payload: Mapping[str, object], duration_ms: float, client_type: str) -> Observation:
     status = str(payload.get("status") or "completed")
     error = _mapping(payload.get("error"))
+    usage = _usage(payload)
     if status == "failed":
         return Observation(
             outcome="error",
             error_code=str(error.get("code") or "response_failed"),
             error_message=str(error.get("message") or "response generation failed"),
             finish_reason=status,
-            usage_present=bool(payload.get("usage")),
+            usage_present=usage is not None,
+            usage=usage,
             adjustments=_adjustments(payload),
             duration_ms=duration_ms,
             client_type=client_type,
         )
     output = [_mapping(item) for item in _sequence(payload.get("output"))]
     calls = tuple(
-        ToolObservation(name=str(item.get("name") or ""), arguments=str(item.get("arguments") or ""))
+        ToolObservation(
+            id=str(item.get("call_id")) if item.get("call_id") is not None else None,
+            name=str(item.get("name") or ""),
+            arguments=str(item.get("arguments") or ""),
+        )
         for item in output
         if item.get("type") == "function_call"
     )
@@ -107,8 +140,10 @@ def openai_responses(payload: Mapping[str, object], duration_ms: float, client_t
         text=text,
         tool_calls=calls,
         finish_reason=str(incomplete.get("reason") or ("tool_calls" if calls else status) or "stop"),
-        usage_present=bool(payload.get("usage")),
+        usage_present=usage is not None,
         reasoning_present=reasoning,
+        usage=usage,
+        reasoning=ReasoningObservation(exposed=True, kind="reasoning") if reasoning else None,
         json_value=_json_value(text),
         adjustments=_adjustments(payload),
         duration_ms=duration_ms,
@@ -120,18 +155,26 @@ def anthropic_message(payload: Mapping[str, object], duration_ms: float, client_
     content = [_mapping(item) for item in _sequence(payload.get("content"))]
     text = "".join(str(item.get("text") or "") for item in content if item.get("type") == "text")
     calls = tuple(
-        ToolObservation(name=str(item.get("name") or ""), arguments=json.dumps(item.get("input") or {}, separators=(",", ":")))
+        ToolObservation(
+            id=str(item.get("id")) if item.get("id") is not None else None,
+            name=str(item.get("name") or ""),
+            arguments=json.dumps(item.get("input") or {}, separators=(",", ":")),
+        )
         for item in content
         if item.get("type") == "tool_use"
     )
     reasoning = any(item.get("type") in {"thinking", "redacted_thinking"} for item in content)
+    signature_present = any(item.get("type") == "thinking" and item.get("signature") is not None for item in content)
+    usage = _usage(payload)
     return Observation(
         outcome="success",
         text=text,
         tool_calls=calls,
         finish_reason=str(payload["stop_reason"]) if payload.get("stop_reason") is not None else None,
-        usage_present=bool(payload.get("usage")),
+        usage_present=usage is not None,
         reasoning_present=reasoning,
+        usage=usage,
+        reasoning=ReasoningObservation(exposed=True, kind="thinking", signature_present=signature_present) if reasoning else None,
         json_value=_json_value(text),
         adjustments=_adjustments(payload),
         duration_ms=duration_ms,
@@ -142,11 +185,12 @@ def anthropic_message(payload: Mapping[str, object], duration_ms: float, client_
 def openai_chat_stream(events: Sequence[Mapping[str, object]], duration_ms: float, client_type: str) -> Observation:
     text = ""
     finish_reason = None
-    usage_present = False
-    tool_fragments: dict[int, tuple[str, str]] = {}
+    usage: Mapping[str, object] = {}
+    tool_fragments: dict[int, tuple[str | None, str, str]] = {}
     reasoning_present = False
     for event in events:
-        usage_present = usage_present or bool(event.get("usage"))
+        if event.get("usage"):
+            usage = _mapping(event.get("usage"))
         choices = event.get("choices")
         if not isinstance(choices, list) or not choices:
             continue
@@ -162,20 +206,27 @@ def openai_chat_stream(events: Sequence[Mapping[str, object]], duration_ms: floa
             call = _mapping(call_value)
             index = _index(call.get("index"))
             function = _mapping(call.get("function"))
-            name, arguments = tool_fragments.get(index, ("", ""))
-            tool_fragments[index] = (name + str(function.get("name") or ""), arguments + str(function.get("arguments") or ""))
+            call_id, name, arguments = tool_fragments.get(index, (None, "", ""))
+            tool_fragments[index] = (
+                str(call.get("id")) if call.get("id") is not None else call_id,
+                name + str(function.get("name") or ""),
+                arguments + str(function.get("arguments") or ""),
+            )
     payload = {
         "choices": [
             {
                 "message": {
                     "content": text,
-                    "tool_calls": [{"function": {"name": name, "arguments": arguments}} for _, (name, arguments) in sorted(tool_fragments.items())],
+                    "tool_calls": [
+                        {"id": call_id, "function": {"name": name, "arguments": arguments}}
+                        for _, (call_id, name, arguments) in sorted(tool_fragments.items())
+                    ],
                     "reasoning": "present" if reasoning_present else None,
                 },
                 "finish_reason": finish_reason,
             }
         ],
-        "usage": {} if not usage_present else {"streamed": True},
+        "usage": usage,
     }
     return openai_chat(payload, duration_ms, client_type)
 

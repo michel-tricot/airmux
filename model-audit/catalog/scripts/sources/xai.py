@@ -51,6 +51,7 @@ class XAI(ModelSource):
         models_url=url,
         openapi="https://docs.x.ai/openapi.json",
         ingress=("oai", "anthropic"),
+        primary_surface="oai",
         auth=("bearer",),
         env_var="XAI_API_KEY",
         icon_mono="xai",

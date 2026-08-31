@@ -45,6 +45,8 @@ def test_provider_gateway_profile_is_preserved_in_generated_taxonomy():
     provider = {
         "id": "openai",
         "base_url": "https://api.openai.com/v1",
+        "ingress": ["oai"],
+        "primary_surface": "oai",
         "param_aliases": {"max_tokens": "max_completion_tokens"},
         "params_closed": True,
         "accepted_params": ["verbosity"],
