@@ -27,7 +27,7 @@ REFERENCE_SCHEMA = {
 }
 ERROR_CASES = (
     ("openai_compatible", {"error": {"code": "rate_limit_exceeded", "message": "slow down"}}, "rate_limit_exceeded", "slow down"),
-    ("openai_compatible", {"error": "File content is not supported"}, "upstream_error", "File content is not supported"),
+    ("openai_compatible", {"error": "File content is not supported"}, "429", "File content is not supported"),
     ("openai_compatible", {"code": "invalid-argument", "error": "Model does not support stop"}, "invalid-argument", "Model does not support stop"),
     (
         "openai_compatible",
@@ -49,10 +49,10 @@ ERROR_CASES = (
     (
         "openai_compatible",
         {"detail": [{"type": "string_type", "loc": ["body", "messages", 0, "content"], "msg": "Input should be a valid string"}]},
-        "upstream_error",
+        "429",
         '{"detail":[{"type":"string_type","loc":["body","messages",0,"content"],"msg":"Input should be a valid string"}]}',
     ),
-    ("openai_compatible", "temporary provider failure", "upstream_error", "temporary provider failure"),
+    ("openai_compatible", "temporary provider failure", "429", "temporary provider failure"),
     ("openai_responses", {"error": {"code": "rate_limit_exceeded", "message": "slow down"}}, "rate_limit_exceeded", "slow down"),
     ("anthropic", {"type": "error", "error": {"type": "rate_limit_error", "message": "slow down"}}, "rate_limit_error", "slow down"),
 )
@@ -146,6 +146,32 @@ def test_provider_http_errors_become_canonical(kind, body, code, message):
     assert (error.status, error.code, error.message) == (429, code, message)
 
 
+def test_openai_compatible_validation_error_uses_the_http_status_as_its_code():
+    adapter, _ = _adapter("openai_compatible")
+    body = {"detail": [{"type": "extra_forbidden", "loc": ["body", "seed"], "msg": "Extra inputs are not permitted"}]}
+
+    error = adapter.map_error(UpstreamResponseError(422, json.dumps(body).encode()))
+
+    assert error.code == "422"
+    assert "seed" in error.message
+
+
+def test_openai_compatible_preserves_mistral_nested_validation_details():
+    adapter, _ = _adapter("openai_compatible")
+    body = {
+        "object": "error",
+        "message": {"detail": [{"type": "extra_forbidden", "loc": ["body", "seed"], "msg": "Extra inputs are not permitted"}]},
+        "type": "invalid_request_error",
+        "code": None,
+        "raw_status_code": 422,
+    }
+
+    error = adapter.map_error(UpstreamResponseError(422, json.dumps(body).encode()))
+
+    assert error.code == "422"
+    assert "seed" in error.message
+
+
 def test_openai_compatible_accepts_null_prompt_token_details():
     adapter, _ = _adapter("openai_compatible")
     response = {
@@ -165,6 +191,29 @@ def test_openai_compatible_preserves_reasoning_spelled_without_content():
     response = {
         "id": "response-1",
         "choices": [{"message": {"content": "42", "reasoning": "20 + 22"}, "finish_reason": "stop"}],
+        "usage": {"prompt_tokens": 17, "completion_tokens": 4},
+    }
+
+    final = adapter.transform_response(json.dumps(response).encode(), CTX)
+
+    assert final.content == [ReasoningPart(text="20 + 22"), TextPart(text="42")]
+
+
+def test_openai_compatible_preserves_mistral_content_blocks():
+    adapter, _ = _adapter("openai_compatible")
+    response = {
+        "id": "response-1",
+        "choices": [
+            {
+                "message": {
+                    "content": [
+                        {"type": "thinking", "thinking": [{"type": "text", "text": "20 + 22"}], "closed": True},
+                        {"type": "text", "text": "42"},
+                    ]
+                },
+                "finish_reason": "stop",
+            }
+        ],
         "usage": {"prompt_tokens": 17, "completion_tokens": 4},
     }
 

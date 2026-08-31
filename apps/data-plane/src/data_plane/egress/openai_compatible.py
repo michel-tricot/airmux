@@ -43,6 +43,7 @@ from data_plane.formats.openai import (
     UpstreamErrorBody,
     UpstreamUsage,
     body_of,
+    content_texts,
     finish_reason,
     response_parts,
     usage_of,
@@ -89,9 +90,13 @@ def _fold_choice(state: OpenAIStreamState, choice: UpstreamChunkChoice) -> list[
     if reasoning := choice.delta.reasoning_content or choice.delta.reasoning:
         state.reasoning.append(reasoning)
         deltas.append(ReasoningDelta(text=reasoning))
-    if choice.delta.content:
-        state.text.append(choice.delta.content)
-        deltas.append(TextDelta(text=choice.delta.content))
+    block_reasoning, text = content_texts(choice.delta.content)
+    if block_reasoning:
+        state.reasoning.append(block_reasoning)
+        deltas.append(ReasoningDelta(text=block_reasoning))
+    if text:
+        state.text.append(text)
+        deltas.append(TextDelta(text=text))
     for tc in choice.delta.tool_calls or []:
         draft = state.tool_drafts.setdefault(tc.index, ToolCallDraft())
         if tc.id:
@@ -142,7 +147,7 @@ class OpenAICompatibleAdapter(EgressAdapter[OpenAIStreamState]):
             return super().map_error(error)
         return CanonicalError(
             status=error.status,
-            code=upstream_error.error.code or "upstream_error",
+            code=upstream_error.error.code or str(error.status),
             message=upstream_error.error.message,
         )
 

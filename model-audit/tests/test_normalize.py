@@ -13,6 +13,30 @@ def test_chat_preserves_empty_reasoning_presence():
     assert observation.reasoning_present is True
 
 
+def test_chat_preserves_mistral_content_blocks():
+    observation = openai_chat(
+        {
+            "choices": [
+                {
+                    "message": {
+                        "content": [
+                            {"type": "thinking", "thinking": [{"type": "text", "text": "20 + 22"}]},
+                            {"type": "text", "text": "42"},
+                        ]
+                    },
+                    "finish_reason": "stop",
+                }
+            ],
+            "usage": {"output_tokens": 8},
+        },
+        10,
+        "HTTP JSON",
+    )
+
+    assert observation.text == "42"
+    assert observation.reasoning_present is True
+
+
 def test_chat_stream_preserves_empty_reasoning_presence():
     observation = openai_chat_stream(
         (

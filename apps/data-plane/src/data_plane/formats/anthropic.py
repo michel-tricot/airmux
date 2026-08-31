@@ -233,7 +233,7 @@ def response_format_from(output_config: object) -> ResponseFormat | None:
     schema = format_value.get("schema") or {}
     if schema == {"type": "object"}:
         return ResponseFormat(type="json_object")
-    return ResponseFormat(type="json_schema", json_schema={"schema": schema})
+    return ResponseFormat(type="json_schema", json_schema={"name": "response", "strict": True, "schema": schema})
 
 
 def thinking_of(request: CanonicalRequest) -> dict[str, Any] | None:
