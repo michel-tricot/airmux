@@ -193,8 +193,8 @@ def _with_transient_retries(context: PairContext, first_attempt: int, options: E
     return tuple(attempts)
 
 
-def _classification(assessment: Assessment) -> tuple[str, str, str, tuple[str, ...]]:
-    return assessment.feature, assessment.parity, assessment.execution, assessment.differences
+def _classification(assessment: Assessment) -> tuple[str, str, str]:
+    return assessment.feature, assessment.parity, assessment.execution
 
 
 def _confirmed(attempts: tuple[PairAttempt, ...]) -> tuple[Assessment, PairAttempt]:
@@ -222,12 +222,25 @@ def _confirmed(attempts: tuple[PairAttempt, ...]) -> tuple[Assessment, PairAttem
     classifications = Counter(_classification(assessment) for assessment in assessments)
     dominant, votes = classifications.most_common(1)[0]
     if votes * 2 <= len(assessments):
+        parity, parity_votes = Counter(assessment.parity for assessment in assessments).most_common(1)[0]
+        feature, feature_votes = Counter(assessment.feature for assessment in assessments).most_common(1)[0]
+        parity = parity if parity_votes * 2 > len(assessments) else "not_evaluated"
+        feature = feature if feature_votes * 2 > len(assessments) else "unknown"
+        differences = tuple(
+            sorted({difference for assessment in assessments if assessment.parity == parity for difference in assessment.differences})
+        )
+        reason = (
+            f"behavior varied across {len(assessments)} attempts; {parity_votes} agreed on {parity} parity"
+            if parity != "not_evaluated"
+            else f"behavior varied across {len(assessments)} attempts with no majority"
+        )
         assessment = Assessment(
             execution="completed",
             stability="flaky",
-            feature="unknown",
-            parity="not_evaluated",
-            reason=f"behavior varied across {len(assessments)} attempts with no majority",
+            feature=feature,
+            parity=parity,
+            differences=differences,
+            reason=reason,
         )
         return assessment, attempts[-1]
     representative = next(attempt for attempt in reversed(attempts) if _classification(attempt.assessment) == dominant)
@@ -377,6 +390,24 @@ def _store_result(
         on_result(result)
 
 
+def _record_access_blocks(
+    result: PairResult,
+    scheduled: ScheduledExperiment,
+    blocked: dict[tuple[str, str, str], tuple[str, str]],
+    provider_blocks: dict[str, tuple[str, str]],
+) -> tuple[str, str] | None:
+    if result.direct.error_code in {"direct_authentication", "direct_model_access"}:
+        blocked[scheduled.access_key] = (str(result.direct.error_code), "direct model access could not be established")
+    if result.direct.error_code == "provider_billing_access":
+        provider_blocks[scheduled.experiment.target.provider_id] = (
+            "provider_billing_access",
+            "provider billing access could not be established",
+        )
+    if result.gateway.error_code == "gateway_authentication":
+        return "gateway_authentication", "gateway authentication could not be established"
+    return None
+
+
 def execute(
     plan: Plan,
     gateway: Gateway,
@@ -392,6 +423,7 @@ def execute(
     results: list[PairResult | None] = [None] * total
     pending = deque(enumerate(plan.experiments, start=1))
     blocked: dict[tuple[str, str, str], tuple[str, str]] = {}
+    provider_blocks: dict[str, tuple[str, str]] = {}
     gateway_block: tuple[str, str] | None = None
     reporter = _synchronized_progress(progress)
     run = RunContext(drivers=drivers, gateway=gateway, progress=reporter, options=options, total=total)
@@ -402,7 +434,7 @@ def execute(
                 index, experiment = pending.popleft()
                 target = experiment.target
                 access_key = _access_key(experiment)
-                block = gateway_block or blocked.get(access_key)
+                block = gateway_block or provider_blocks.get(target.provider_id) or blocked.get(access_key)
                 api_key = os.environ.get(target.credential_env)
                 if block is None and api_key is None:
                     block = ("direct_authentication", f"{target.credential_env} is not set")
@@ -429,9 +461,6 @@ def execute(
                 except Exception as error:  # noqa: BLE001 worker failures must become reportable evidence
                     result = _harness_result(experiment, error)
                 _store_result(results, index, result, on_result)
-                if result.direct.error_code in {"direct_authentication", "direct_model_access"}:
-                    blocked[scheduled.access_key] = (str(result.direct.error_code), "direct model access could not be established")
-                if result.gateway.error_code == "gateway_authentication":
-                    gateway_block = ("gateway_authentication", "gateway authentication could not be established")
+                gateway_block = _record_access_blocks(result, scheduled, blocked, provider_blocks) or gateway_block
                 _progress_event(run, "experiment_completed", scheduled, result)
     return [cast("PairResult", result) for result in results]

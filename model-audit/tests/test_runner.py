@@ -79,9 +79,24 @@ class GatewayAuthDriver(ClientDriver):
         return Observation(outcome="success", text="ok")
 
 
+class ProviderBillingDriver(ClientDriver):
+    id = "provider-billing"
+    mode = "api"
+    endpoints = frozenset({"chat/completions"})
+
+    def __init__(self) -> None:
+        self.calls: list[str] = []
+
+    def execute(self, connection, endpoint, model, case, transport):
+        self.calls.append(model)
+        if model.startswith("billed/"):
+            return Observation(outcome="inconclusive", error_code="provider_billing_access", http_status=429)
+        return Observation(outcome="success", text="ok")
+
+
 def experiment(model_id: str, driver_id: str = "concurrent", provider_id: str = "stub") -> Experiment:
     return Experiment(
-        target=target(provider_id=provider_id, model_id=model_id),
+        target=target(provider_id=provider_id, model_id=model_id, upstream_model=model_id),
         case=case(),
         direct_driver_id=driver_id,
         gateway_driver_id=driver_id,
@@ -145,6 +160,41 @@ def test_runner_reports_a_tied_classification_as_flaky_not_evaluated(monkeypatch
     assert result.assessment.parity == "not_evaluated"
     assert result.assessment.stability == "flaky"
     assert result.assessment.reason == "behavior varied across 2 attempts with no majority"
+
+
+def test_runner_confirms_a_mismatch_when_only_the_details_vary(monkeypatch):
+    monkeypatch.setenv("STUB_API_KEY", "provider")
+    direct = Observation(outcome="success", text="ok")
+    gateway_without_text = Observation(outcome="success", text="wrong")
+    gateway_error = Observation(outcome="error", error_code="http_protocol_error")
+    observations = (direct, gateway_without_text, direct, gateway_error)
+    monkeypatch.setattr(runner, "discover", lambda: {"sequence": SequenceDriver(observations)})
+    selected = experiment("stub/model", driver_id="sequence")
+
+    result = runner.execute(Plan(experiments=(selected,)), Gateway(), options=runner.ExecutionOptions(confirmations=1))[0]
+
+    assert result.assessment.execution == "completed"
+    assert result.assessment.feature == "supported"
+    assert result.assessment.parity == "mismatch"
+    assert result.assessment.stability == "stable"
+    assert result.assessment.reason == "reproduced across 2 attempts"
+
+
+def test_runner_keeps_stable_parity_when_feature_support_varies(monkeypatch):
+    monkeypatch.setenv("STUB_API_KEY", "provider")
+    passed = Observation(outcome="success", text="ok")
+    failed = Observation(outcome="success", text="wrong")
+    observations = (passed, failed, failed, passed)
+    monkeypatch.setattr(runner, "discover", lambda: {"sequence": SequenceDriver(observations)})
+    selected = experiment("stub/model", driver_id="sequence")
+
+    result = runner.execute(Plan(experiments=(selected,)), Gateway(), options=runner.ExecutionOptions(confirmations=1))[0]
+
+    assert result.assessment.execution == "completed"
+    assert result.assessment.feature == "unknown"
+    assert result.assessment.parity == "mismatch"
+    assert result.assessment.stability == "flaky"
+    assert result.assessment.differences == ("oracle",)
 
 
 def test_missing_provider_credential_is_an_access_result(monkeypatch):
@@ -280,3 +330,21 @@ def test_gateway_authentication_stops_scheduling_new_experiments(monkeypatch):
     assert [result.model_id for result in results] == [f"stub/{index}" for index in range(4)]
     assert all(result.assessment.execution == "access_blocked" for result in results)
     assert all(len(result.attempts) == 1 for result in results)
+
+
+def test_provider_billing_failure_stops_only_that_provider(monkeypatch):
+    monkeypatch.setenv("STUB_API_KEY", "provider")
+    driver = ProviderBillingDriver()
+    monkeypatch.setattr(runner, "discover", lambda: {driver.id: driver})
+    plan = Plan(
+        experiments=(
+            experiment("billed/first", driver.id, provider_id="billed"),
+            experiment("billed/second", driver.id, provider_id="billed"),
+            experiment("healthy/first", driver.id, provider_id="healthy"),
+        )
+    )
+
+    results = runner.execute(plan, Gateway(), options=runner.ExecutionOptions(confirmations=0, concurrency=1))
+
+    assert driver.calls == ["billed/first", "billed/first", "healthy/first", "healthy/first"]
+    assert [result.assessment.execution for result in results] == ["access_blocked", "access_blocked", "completed"]

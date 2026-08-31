@@ -41,10 +41,11 @@ class OpenAIDriver(ClientDriver):
             raise ValueError(message)
         except openai.APIStatusError as error:
             elapsed = (time.perf_counter() - started) * 1000
-            access_code = access_error(connection, error.status_code)
+            error_code = str(getattr(error, "code", None) or error.status_code)
+            access_code = access_error(connection, error.status_code, error_code)
             return Observation(
-                outcome=status_outcome(connection, error.status_code),
-                error_code=access_code or str(getattr(error, "code", None) or error.status_code),
+                outcome=status_outcome(connection, error.status_code, error_code),
+                error_code=access_code or error_code,
                 error_message=str(error)[:500],
                 http_status=error.status_code,
                 duration_ms=elapsed,

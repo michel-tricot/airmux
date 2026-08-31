@@ -61,9 +61,9 @@ def _error_observation(connection: Connection, response: httpx.Response, duratio
     except json.JSONDecodeError:
         payload = response.text
     code, message = _error_detail(payload, response.status_code)
-    access_code = access_error(connection, response.status_code)
+    access_code = access_error(connection, response.status_code, code)
     return Observation(
-        outcome=status_outcome(connection, response.status_code),
+        outcome=status_outcome(connection, response.status_code, code),
         error_code=access_code or code,
         error_message=message,
         http_status=response.status_code,

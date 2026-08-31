@@ -13,6 +13,8 @@ NOT_FOUND = 404
 TOO_MANY_REQUESTS = 429
 SERVER_ERROR = 500
 REJECTION_STATUSES = {400, 404, 422}
+GATEWAY_AUTHENTICATION_CODES = frozenset({"missing_bearer_token", "missing_requested_with", "cross_site_request", "invalid_token"})
+PROVIDER_BILLING_CODES = frozenset({"billing_hard_limit_reached", "credit_balance_exhausted", "insufficient_quota"})
 
 
 @dataclass(frozen=True)
@@ -26,16 +28,20 @@ class Connection:
     param_aliases: dict[str, str] = field(default_factory=dict)
 
 
-def access_error(connection: Connection, status_code: int) -> str | None:
-    if status_code in {UNAUTHORIZED, FORBIDDEN}:
-        return f"{connection.route}_authentication"
+def access_error(connection: Connection, status_code: int, error_code: str | None = None) -> str | None:
+    if status_code == TOO_MANY_REQUESTS and error_code in PROVIDER_BILLING_CODES:
+        return "provider_billing_access"
+    if connection.route == "direct" and status_code == UNAUTHORIZED:
+        return "direct_authentication"
+    if connection.route == "gateway" and status_code in {UNAUTHORIZED, FORBIDDEN} and error_code in GATEWAY_AUTHENTICATION_CODES:
+        return "gateway_authentication"
     if connection.route == "direct" and status_code == NOT_FOUND:
         return "direct_model_access"
     return None
 
 
-def status_outcome(connection: Connection, status_code: int) -> Outcome:
-    if access_error(connection, status_code) is not None:
+def status_outcome(connection: Connection, status_code: int, error_code: str | None = None) -> Outcome:
+    if access_error(connection, status_code, error_code) is not None:
         return "inconclusive"
     if status_code == TOO_MANY_REQUESTS or (connection.route == "direct" and status_code >= SERVER_ERROR):
         return "transient"
