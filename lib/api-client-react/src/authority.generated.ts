@@ -514,6 +514,14 @@ export const operationAuthority = {
       },
     ],
   },
+  applyInstanceTaxonomy: {
+    checks: [
+      {
+        scope: "instance_scope",
+        anyOf: ["catalog.manage"],
+      },
+    ],
+  },
   getOrgTaxonomy: {
     checks: [
       {

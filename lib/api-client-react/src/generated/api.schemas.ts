@@ -910,9 +910,40 @@ export interface SignupIn {
   password: string;
 }
 
+export interface TaxonomyChangeCounts {
+  created: number;
+  updated: number;
+  unchanged: number;
+}
+
+export interface TaxonomyPublicationOut {
+  org_id: string;
+  version: number;
+}
+
+export interface TaxonomyApplyOut {
+  dry_run: boolean;
+  providers: TaxonomyChangeCounts;
+  models: TaxonomyChangeCounts;
+  published: TaxonomyPublicationOut[];
+}
+
 export interface TaxonomyOut {
   providers: ProviderOut[];
   models: ModelOut[];
+}
+
+export interface TaxonomySpec {
+  /**
+     * Provider endpoints to create or update
+     * @maxItems 1000
+     */
+  providers?: ProviderIn[];
+  /**
+     * Routable models to create or update
+     * @maxItems 10000
+     */
+  models?: ModelIn[];
 }
 
 export interface UsageEventOut {
@@ -1246,5 +1277,12 @@ export type BundleLatestParams = {
  * Organization whose latest bundle to return; omit to use the credential's scope
  */
 org_id?: string | null;
+};
+
+export type ApplyInstanceTaxonomyParams = {
+/**
+ * Validate and report changes without applying them
+ */
+dry_run?: boolean;
 };
 

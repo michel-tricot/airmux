@@ -225,6 +225,7 @@ OPERATION_SUMMARIES = {
     "ingest_events": "Ingest Usage Events",
     "heartbeat": "Record Data Plane Heartbeat",
     "get_instance_taxonomy": "Get Instance Model Catalog",
+    "apply_instance_taxonomy": "Apply Instance Model Catalog",
     "get_org_taxonomy": "Get Organization Model Catalog",
     "get_workspace_taxonomy": "Get Workspace Model Catalog",
     "create_provider": "Create or Update Provider",
