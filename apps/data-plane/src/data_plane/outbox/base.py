@@ -1,12 +1,20 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     import asyncio
+    from datetime import datetime
 
     from contract import UsageEventV1
+
+
+@dataclass(frozen=True)
+class OutboxStats:
+    pending: int
+    oldest_event_at: datetime | None = None
 
 
 class EventOutbox(ABC):
@@ -22,3 +30,6 @@ class EventOutbox(ABC):
     def close(self) -> None:
         """Release owned resources on shutdown."""
         return
+
+    def stats(self) -> OutboxStats:
+        return OutboxStats(pending=0)

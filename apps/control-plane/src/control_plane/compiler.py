@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal, cast
+from typing import TYPE_CHECKING
 
 from sqlalchemy import func
 from sqlmodel import col, or_, select
@@ -119,7 +119,7 @@ async def compile_bundle(org_id: UUID, bundle_id: UUID, now: datetime) -> Bundle
                     model_id=r.name,
                     provider_id=provider_names[r.provider_id],
                     upstream_model=r.upstream_model,
-                    egress_kind=cast("Literal['openai_compatible', 'openai_responses', 'anthropic'] | None", r.egress_kind),
+                    egress_kind=r.egress_kind,
                     input_price_per_mtok=r.input_price_per_mtok,
                     output_price_per_mtok=r.output_price_per_mtok,
                     cache_read_price_per_mtok=r.cache_read_price_per_mtok,

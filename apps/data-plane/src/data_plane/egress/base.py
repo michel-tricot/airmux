@@ -23,11 +23,12 @@ class CanonicalError(BaseModel):
     message: str
 
 
-def encode(body: BaseModel, aliases: Mapping[str, str], extras: Mapping[str, Any]) -> bytes:
+def encode(body: BaseModel | Mapping[str, Any], aliases: Mapping[str, str], extras: Mapping[str, Any]) -> bytes:
     """The wire body: typed fields spelled per the provider's aliases, then the forwardable
     extras merged after them, typed fields winning any collision. Absent fields are omitted:
     a provider must never see a null it would reject."""
-    rendered = {aliases.get(key, key): value for key, value in body.model_dump(mode="json", exclude_none=True).items()}
+    fields = body.model_dump(mode="json", exclude_none=True) if isinstance(body, BaseModel) else body
+    rendered = {aliases.get(key, key): value for key, value in fields.items() if value is not None}
     return json.dumps({**dict(extras), **rendered}).encode()
 
 
@@ -130,7 +131,7 @@ class Ctx:
     started_at: float = field(default_factory=time.monotonic)
 
 
-class EgressAdapter(ABC):
+class EgressAdapter[StateT: StreamState](ABC):
     kind: ClassVar[str]
 
     def __init__(self, provider: ProviderEntry, credential: Secret) -> None:
@@ -147,24 +148,24 @@ class EgressAdapter(ABC):
     def transform_response(self, raw: bytes, ctx: Ctx) -> CanonicalResponse: ...
 
     @abstractmethod
-    def new_stream_state(self, ctx: Ctx) -> StreamState: ...
+    def new_stream_state(self, ctx: Ctx) -> StateT: ...
 
     @abstractmethod
-    def frame(self, chunk: bytes, state: StreamState) -> Iterator[RawEvent]:
+    def frame(self, chunk: bytes, state: StateT) -> Iterator[RawEvent]:
         """Bytes to wire events. Owns the framing and the partial-line buffer; the transport never parses SSE.
 
         Synchronous on purpose: the streaming path stays testable as a pure fold over a recorded byte log.
         """
 
     @abstractmethod
-    def transform_stream_event(self, ev: RawEvent, state: StreamState) -> list[CanonicalChunk]:
+    def transform_stream_event(self, ev: RawEvent, state: StateT) -> list[CanonicalChunk]:
         """One wire event into canonical chunks, folding what finalize needs into the state. Synchronous, like frame."""
 
     @abstractmethod
-    def validate_stream(self, state: StreamState) -> None: ...
+    def validate_stream(self, state: StateT) -> None: ...
 
     @abstractmethod
-    def finalize(self, state: StreamState) -> CanonicalResponse:
+    def finalize(self, state: StateT) -> CanonicalResponse:
         """Return a valid CanonicalResponse at ANY point in the stream.
 
         Called after the last event for a normal completion, and from the

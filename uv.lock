@@ -1206,6 +1206,7 @@ version = "0.1.0"
 source = { editable = "model-audit" }
 dependencies = [
     { name = "anthropic" },
+    { name = "contract" },
     { name = "httpx" },
     { name = "openai" },
     { name = "pydantic" },
@@ -1218,6 +1219,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "anthropic" },
+    { name = "contract", editable = "lib/contract" },
     { name = "httpx" },
     { name = "openai" },
     { name = "pydantic", specifier = ">=2" },

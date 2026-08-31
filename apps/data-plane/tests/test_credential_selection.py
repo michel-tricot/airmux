@@ -93,7 +93,13 @@ def test_candidates_come_back_in_try_order():
 
 
 def test_a_key_for_another_provider_is_not_a_candidate():
-    assert decide(make_credential(service="other")) == Deny(reason="credential_unavailable", status=402)
+    other = PROVIDER.model_copy(update={"provider_id": "other"})
+    credential = make_credential(service="other")
+    bundle = make_bundle(catalog=Catalog(providers=[PROVIDER, other], models=[MODEL], credentials=[credential]), org=ORG)
+    request = CanonicalRequest(model="gpt-test", messages=[{"role": "user", "content": "hi"}])
+    key = make_key("k1", org=ORG, workspace=WORKSPACE)[1]
+
+    assert evaluate(request, key, BundleSnapshot.from_bundle(bundle)) == Deny(reason="credential_unavailable", status=402)
 
 
 async def test_the_resolver_fetches_and_caches():
@@ -256,6 +262,93 @@ def test_a_credential_with_no_value_fails_the_request(tmp_path):
     asyncio.run(store.put(make_credential(org=None, name="platform").ref, Secret("sk-platform")))
     respx.post("https://api.openai.com/v1/chat/completions").mock(return_value=httpx.Response(200, json=BYOK_RESPONSE))
     assert _complete(app, caller_token).status_code == 502
+
+
+@respx.mock
+def test_a_missing_credential_falls_through_only_within_its_selected_tier(tmp_path):
+    missing = make_credential(workspace=WORKSPACE, name="first", priority=10)
+    working = make_credential(workspace=WORKSPACE, name="second", priority=20)
+    platform = make_credential(org=None, name="platform", priority=1)
+    app, caller_token, store = _byok_app(tmp_path, [missing, working, platform])
+    asyncio.run(store.put(working.ref, Secret("sk-working")))
+    asyncio.run(store.put(platform.ref, Secret("sk-platform")))
+    route = respx.post("https://api.openai.com/v1/chat/completions").mock(return_value=httpx.Response(200, json=BYOK_RESPONSE))
+
+    response = _complete(app, caller_token)
+
+    assert response.status_code == 200
+    assert route.calls.last.request.headers["authorization"] == "Bearer sk-working"
+
+
+@respx.mock
+@pytest.mark.parametrize(("failed_status", "metered"), [(401, "credential_rejected"), (429, "rate_limited")])
+def test_a_rejected_or_limited_credential_fails_over_within_the_tier(tmp_path, http_client, failed_status, metered):
+    first = make_credential(workspace=WORKSPACE, name="first", priority=10)
+    second = make_credential(workspace=WORKSPACE, name="second", priority=20)
+    app, caller_token, store = _byok_app(tmp_path, [first, second])
+    asyncio.run(store.put(first.ref, Secret("sk-first")))
+    asyncio.run(store.put(second.ref, Secret("sk-second")))
+
+    def upstream(request: httpx.Request) -> httpx.Response:
+        if request.headers["authorization"] == "Bearer sk-first":
+            return httpx.Response(failed_status, json={"error": {"code": "rejected", "message": "try another"}})
+        return httpx.Response(200, json=BYOK_RESPONSE)
+
+    route = respx.post("https://api.openai.com/v1/chat/completions").mock(side_effect=upstream)
+
+    response = _complete(app, caller_token)
+
+    assert response.status_code == 200
+    assert [call.request.headers["authorization"] for call in route.calls] == ["Bearer sk-first", "Bearer sk-second"]
+    assert [event.status for event in _recorded(tmp_path, http_client)] == [metered, "ok"]
+
+
+@respx.mock
+def test_an_all_limited_tier_preserves_the_provider_error_on_the_next_request(tmp_path):
+    credential = make_credential(workspace=WORKSPACE, name="only")
+    app, caller_token, store = _byok_app(tmp_path, [credential])
+    asyncio.run(store.put(credential.ref, Secret("sk-workspace")))
+    route = respx.post("https://api.openai.com/v1/chat/completions").mock(
+        return_value=httpx.Response(429, json={"error": {"code": "rate_limit_exceeded", "message": "slow down"}})
+    )
+    mock_control_plane()
+    body = {"model": "gpt-test", "max_tokens": 8, "messages": [{"role": "user", "content": "hi"}]}
+    with TestClient(app) as client:
+        responses = [
+            client.post("/inf/v1/messages", headers={"Authorization": f"Bearer {caller_token}"}, json=body),
+            client.post("/inf/v1/messages", headers={"Authorization": f"Bearer {caller_token}"}, json=body),
+        ]
+
+    assert [response.status_code for response in responses] == [429, 429]
+    assert [response.json() for response in responses] == [
+        {"type": "error", "error": {"type": "rate_limit_exceeded", "message": "slow down"}},
+        {"type": "error", "error": {"type": "rate_limit_exceeded", "message": "slow down"}},
+    ]
+    assert len(route.calls) == 2
+
+
+@respx.mock
+def test_an_upstream_rejection_invalidates_the_cached_secret(tmp_path):
+    credential = make_credential(workspace=WORKSPACE, name="only")
+    app, caller_token, store = _byok_app(tmp_path, [credential])
+    asyncio.run(store.put(credential.ref, Secret("sk-stale")))
+
+    def upstream(request: httpx.Request) -> httpx.Response:
+        if request.headers["authorization"] == "Bearer sk-stale":
+            return httpx.Response(401, json={"error": {"code": "invalid_key", "message": "stale"}})
+        return httpx.Response(200, json=BYOK_RESPONSE)
+
+    route = respx.post("https://api.openai.com/v1/chat/completions").mock(side_effect=upstream)
+    mock_control_plane()
+    body = {"model": "gpt-test", "messages": [{"role": "user", "content": "hi"}]}
+    with TestClient(app) as client:
+        first = client.post("/inf/v1/chat/completions", headers={"Authorization": f"Bearer {caller_token}"}, json=body)
+        asyncio.run(store.put(credential.ref, Secret("sk-fresh")))
+        second = client.post("/inf/v1/chat/completions", headers={"Authorization": f"Bearer {caller_token}"}, json=body)
+
+    assert first.status_code == 401
+    assert second.status_code == 200
+    assert [call.request.headers["authorization"] for call in route.calls] == ["Bearer sk-stale", "Bearer sk-fresh"]
 
 
 @respx.mock

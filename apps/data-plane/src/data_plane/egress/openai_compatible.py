@@ -108,7 +108,7 @@ def _fold_choice(state: OpenAIStreamState, choice: UpstreamChunkChoice) -> list[
     return [CanonicalChunk(id=state.chunk_id, delta=delta) for delta in deltas]
 
 
-class OpenAICompatibleAdapter(EgressAdapter):
+class OpenAICompatibleAdapter(EgressAdapter[OpenAIStreamState]):
     kind = "openai_compatible"
 
     def transform_request(self, req: CanonicalRequest, m: ModelEntry) -> UpstreamRequest:
@@ -154,9 +154,8 @@ class OpenAICompatibleAdapter(EgressAdapter):
     def new_stream_state(self, ctx: Ctx) -> OpenAIStreamState:
         return OpenAIStreamState(ctx=ctx)
 
-    def frame(self, chunk: bytes, state: StreamState) -> Iterator[RawEvent]:
+    def frame(self, chunk: bytes, state: OpenAIStreamState) -> Iterator[RawEvent]:
         """The shared SSE machine, plus this dialect's one addition: the [DONE] sentinel."""
-        assert isinstance(state, OpenAIStreamState)  # noqa: S101 state comes from new_stream_state
         if state.terminal_seen:
             return
         for event in frame_sse(chunk, state):
@@ -165,8 +164,7 @@ class OpenAICompatibleAdapter(EgressAdapter):
                 return
             yield event
 
-    def transform_stream_event(self, ev: RawEvent, state: StreamState) -> list[CanonicalChunk]:
-        assert isinstance(state, OpenAIStreamState)  # noqa: S101 state comes from new_stream_state
+    def transform_stream_event(self, ev: RawEvent, state: OpenAIStreamState) -> list[CanonicalChunk]:
         try:
             data = json.loads(ev.data)
         except (json.JSONDecodeError, UnicodeDecodeError) as error:
@@ -189,13 +187,11 @@ class OpenAICompatibleAdapter(EgressAdapter):
             state.usage = chunk.usage
         return [c for choice in chunk.choices for c in _fold_choice(state, choice)]
 
-    def validate_stream(self, state: StreamState) -> None:
-        assert isinstance(state, OpenAIStreamState)  # noqa: S101 state comes from new_stream_state
+    def validate_stream(self, state: OpenAIStreamState) -> None:
         if not state.terminal_seen or state.finish is None:
             raise UpstreamProtocolError.incomplete_stream()
 
-    def finalize(self, state: StreamState) -> CanonicalResponse:
-        assert isinstance(state, OpenAIStreamState)  # noqa: S101 state comes from new_stream_state
+    def finalize(self, state: OpenAIStreamState) -> CanonicalResponse:
         parts: list[AssistantPart] = []
         if reasoning := "".join(state.reasoning):
             parts.append(ReasoningPart(text=reasoning))

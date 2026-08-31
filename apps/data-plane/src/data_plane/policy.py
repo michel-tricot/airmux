@@ -29,6 +29,20 @@ class Deny:
 type Decision = Allow | Deny
 
 
+def required_capabilities(req: CanonicalRequest) -> frozenset[str]:
+    part_capabilities = {"image": "vision", "document": "pdf", "reasoning": "reasoning", "tool_call": "tools", "tool_result": "tools"}
+    capabilities = {capability for message in req.messages for part in message.content if (capability := part_capabilities.get(part.type))}
+    if req.stream:
+        capabilities.add("streaming")
+    if req.tools or req.tool_choice is not None:
+        capabilities.add("tools")
+    if req.reasoning is not None:
+        capabilities.add("reasoning")
+    if req.response_format is not None and req.response_format.type != "text":
+        capabilities.add("structured_output")
+    return frozenset(capabilities)
+
+
 def evaluate(req: CanonicalRequest, key: KeyEntry, snap: BundleSnapshot) -> Decision:
     """Pure and synchronous: no async, no network, no I/O, no datetime.now(). Under 100 lines.
 
@@ -38,6 +52,9 @@ def evaluate(req: CanonicalRequest, key: KeyEntry, snap: BundleSnapshot) -> Deci
     model = snap.model_index.get(req.model)
     if model is None:
         return Deny(reason="unknown_model", status=404)
+    missing = sorted(required_capabilities(req) - set(model.capabilities))
+    if missing:
+        return Deny(reason=f"unsupported_feature: {', '.join(missing)}", status=400)
     provider = snap.provider_index.get(model.provider_id)
     if provider is None:
         return Deny(reason="provider_not_configured", status=502)

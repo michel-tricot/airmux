@@ -463,6 +463,29 @@ def test_responses_reasoning_identity_survives_the_stream():
     assert final.content == [ReasoningPart(id="rs_provider", text="think", signature="encrypted")]
 
 
+def test_responses_tool_indices_are_ordinals_not_provider_output_indices():
+    events = [
+        {"type": "response.created", "response": {"id": "resp_9", "status": "in_progress", "output": []}},
+        {"type": "response.output_item.added", "output_index": 0, "item": {"type": "reasoning", "id": "rs_1", "summary": []}},
+        {"type": "response.reasoning_summary_text.delta", "output_index": 0, "summary_index": 0, "delta": "think"},
+        {
+            "type": "response.output_item.added",
+            "output_index": 1,
+            "item": {"type": "function_call", "id": "fc_1", "call_id": "call_1", "name": "lookup", "arguments": ""},
+        },
+        {"type": "response.function_call_arguments.delta", "output_index": 1, "delta": "{}"},
+        {
+            "type": "response.completed",
+            "response": {"id": "resp_9", "status": "completed", "output": [], "usage": {"input_tokens": 5, "output_tokens": 3}},
+        },
+    ]
+
+    chunks, _ = fold(_adapter("openai_responses"), b"".join(responses_sse(event) for event in events), 7)
+    tool_deltas = [chunk.delta for chunk in chunks if chunk.delta is not None and chunk.delta.type == "tool_call"]
+
+    assert {delta.index for delta in tool_deltas} == {0}
+
+
 def test_a_cancel_before_the_final_usage_reads_as_estimated():
     """message_delta carries the real output count; a disconnect before it must meter as an
     estimate, never as an authoritative zero."""

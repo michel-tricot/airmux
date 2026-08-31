@@ -11,6 +11,7 @@ from conftest import make_config, make_outbox
 
 from contract import UsageEventV1, uuid7
 from data_plane.outbox import DevNullOutbox, SqliteOutbox, build_outbox
+from data_plane.outbox.sqlite import BATCH_SIZE
 
 
 def make_event(request_id) -> UsageEventV1:
@@ -90,3 +91,26 @@ def test_build_outbox_selects_kind(tmp_path, http_client):
     assert isinstance(build_outbox(config.events, http_client), SqliteOutbox)
     devnull = make_config(tmp_path, outbox_kind="devnull")
     assert isinstance(build_outbox(devnull.events, http_client), DevNullOutbox)
+
+
+@respx.mock
+async def test_a_flush_cycle_drains_more_than_one_batch(tmp_path, http_client):
+    route = respx.post("http://cp.test/api/v1/events").mock(return_value=httpx.Response(200, json={"received": BATCH_SIZE, "ingested": BATCH_SIZE}))
+    outbox = make_outbox(tmp_path, http_client)
+    for _ in range(BATCH_SIZE + 1):
+        outbox.record(make_event(uuid7()))
+
+    assert await outbox.export_available() == BATCH_SIZE + 1
+    assert outbox.next_batch(1) == []
+    assert route.call_count == 2
+
+
+def test_outbox_stats_report_backlog_and_oldest_event(tmp_path, http_client):
+    outbox = make_outbox(tmp_path, http_client)
+    event = make_event(uuid7())
+    outbox.record(event)
+
+    stats = outbox.stats()
+
+    assert stats.pending == 1
+    assert stats.oldest_event_at == event.occurred_at

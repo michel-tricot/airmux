@@ -10,7 +10,6 @@
  *
  * OpenAPI spec version: 0.1.0
  */
-import type { ProviderInKind } from './providerInKind';
 import type { ProviderInParamAliases } from './providerInParamAliases';
 
 /**
@@ -24,8 +23,13 @@ export interface ProviderIn {
      * @pattern ^[a-z0-9][a-z0-9_-]*$
      */
   provider_id: string;
-  /** Adapter kind */
-  kind?: ProviderInKind;
+  /**
+     * Adapter kind
+     * @minLength 1
+     * @maxLength 63
+     * @pattern ^[a-z0-9][a-z0-9_]*$
+     */
+  kind?: string;
   /**
      * OpenAI-compatible endpoint, e.g. https://api.groq.com/openai/v1
      * @minLength 1

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING
 
 import yaml
 from pydantic import BaseModel, Field, HttpUrl, field_validator
@@ -23,7 +23,7 @@ class ProviderIn(RequestModel):
     """An upstream provider endpoint and its request-profile settings."""
 
     provider_id: str = Field(description="Provider name, e.g. openai", min_length=1, max_length=63, pattern=r"^[a-z0-9][a-z0-9_-]*$")
-    kind: Literal["openai_compatible", "openai_responses", "anthropic"] = Field("openai_compatible", description="Adapter kind")
+    kind: str = Field("openai_compatible", description="Adapter kind", min_length=1, max_length=63, pattern=r"^[a-z0-9][a-z0-9_]*$")
     base_url: HttpUrl = Field(description="OpenAI-compatible endpoint, e.g. https://api.groq.com/openai/v1")
     icon: str = Field(
         "",
@@ -47,7 +47,9 @@ class ModelIn(RequestModel):
     model_id: str = Field(description="Caller-facing model name", min_length=1, max_length=255)
     provider_id: str = Field(description="Provider id the model routes to", min_length=1, max_length=63, pattern=r"^[a-z0-9][a-z0-9_-]*$")
     upstream_model: str = Field("", max_length=255, description="Model name sent to the provider, lets model_id be an alias; defaults to model_id")
-    egress_kind: Literal["openai_compatible", "openai_responses", "anthropic"] | None = Field(None, description="Per-model egress adapter override")
+    egress_kind: str | None = Field(
+        None, description="Per-model egress adapter override", min_length=1, max_length=63, pattern=r"^[a-z0-9][a-z0-9_]*$"
+    )
     input_price_per_mtok: float = Field(0.0, ge=0, description="USD per million input tokens")
     output_price_per_mtok: float = Field(0.0, ge=0, description="USD per million output tokens")
     cache_read_price_per_mtok: float = Field(0.0, ge=0, description="USD per million cache-read input tokens")

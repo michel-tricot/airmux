@@ -63,7 +63,6 @@ if TYPE_CHECKING:
     from data_plane.egress.base import Ctx
 
 ANTHROPIC_VERSION = "2023-06-01"
-DEFAULT_MAX_TOKENS = 4096  # last resort only: Anthropic requires max_tokens and the catalog may not carry a cap
 
 
 @dataclass
@@ -148,16 +147,20 @@ def _raise_stream_error(data: dict[str, object]) -> None:
     raise UpstreamStreamError(code=upstream_error.error.type, message=upstream_error.error.message)
 
 
-class AnthropicAdapter(EgressAdapter):
+class AnthropicAdapter(EgressAdapter[AnthropicStreamState]):
     kind = "anthropic"
 
     def transform_request(self, req: CanonicalRequest, m: ModelEntry) -> UpstreamRequest:
         """Transport assembly only; every field mapping lives in formats.anthropic."""
         system, messages = to_request(req.messages)
+        max_tokens = req.max_tokens or m.max_output_tokens
+        if max_tokens is None:
+            message = f"anthropic model {m.model_id} requires max_output_tokens in the bundle"
+            raise ValueError(message)
         body = MessagesBody(
             model=m.upstream_model,
             messages=messages,
-            max_tokens=req.max_tokens or m.max_output_tokens or DEFAULT_MAX_TOKENS,
+            max_tokens=max_tokens,
             system=system,
             temperature=req.temperature,
             top_p=req.top_p,
@@ -201,12 +204,11 @@ class AnthropicAdapter(EgressAdapter):
     def new_stream_state(self, ctx: Ctx) -> AnthropicStreamState:
         return AnthropicStreamState(ctx=ctx)
 
-    def frame(self, chunk: bytes, state: StreamState) -> Iterator[RawEvent]:
+    def frame(self, chunk: bytes, state: AnthropicStreamState) -> Iterator[RawEvent]:
         """The shared SSE machine; this dialect's event names ride RawEvent.name."""
         return frame_sse(chunk, state)
 
-    def transform_stream_event(self, ev: RawEvent, state: StreamState) -> list[CanonicalChunk]:
-        assert isinstance(state, AnthropicStreamState)  # noqa: S101 state comes from new_stream_state
+    def transform_stream_event(self, ev: RawEvent, state: AnthropicStreamState) -> list[CanonicalChunk]:
         try:
             data = json.loads(ev.data)
         except (json.JSONDecodeError, UnicodeDecodeError) as error:
@@ -243,17 +245,18 @@ class AnthropicAdapter(EgressAdapter):
             state.terminal_seen = True
         return []
 
-    def validate_stream(self, state: StreamState) -> None:
-        assert isinstance(state, AnthropicStreamState)  # noqa: S101 state comes from new_stream_state
+    def validate_stream(self, state: AnthropicStreamState) -> None:
         if not state.started or not state.terminal_seen or state.stop is None:
             raise UpstreamProtocolError.incomplete_stream()
 
-    def finalize(self, state: StreamState) -> CanonicalResponse:
-        assert isinstance(state, AnthropicStreamState)  # noqa: S101 state comes from new_stream_state
+    def finalize(self, state: AnthropicStreamState) -> CanonicalResponse:
+        usage = usage_of(state.usage)
+        if not state.usage_final:
+            usage = Usage(estimated=True) if usage.estimated else usage.model_copy(update={"output_tokens": 0, "estimated": True})
         return CanonicalResponse(
             id=state.chunk_id,
             model=state.ctx.model.model_id,
             content=_final_parts(state.blocks),
             finish_reason=finish_reason(state.stop),
-            usage=usage_of(state.usage) if state.usage_final else Usage(estimated=True),
+            usage=usage,
         )

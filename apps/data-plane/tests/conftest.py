@@ -57,7 +57,8 @@ MODEL = ModelEntry(
     cache_read_price_per_mtok=0.1,
     cache_write_price_per_mtok=1.25,
     context_window=128000,
-    capabilities=["streaming"],
+    max_output_tokens=4096,
+    capabilities=["streaming", "tools", "vision", "pdf", "reasoning", "structured_output"],
 )
 
 

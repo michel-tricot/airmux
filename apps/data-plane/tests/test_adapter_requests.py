@@ -229,12 +229,19 @@ def test_surviving_extras_merge_after_the_typed_body(kind):
     adapter, model = _adapter(kind)
     body = json.loads(request_of(CORPUS[0]).model_dump_json())
     request = CanonicalRequest.model_validate({**body, "frequency_penalty": 0.5})
-    if kind == "openai_responses":
-        with pytest.raises(ValueError, match="not representable by Responses"):
-            adapter.transform_request(request, model)
-        return
     upstream = adapter.transform_request(request, model)
     assert json.loads(upstream.body)["frequency_penalty"] == 0.5
+
+
+def test_responses_applies_provider_aliases_after_the_explicit_field_mapping():
+    provider = PROVIDER.model_copy(update={"kind": "openai_responses", "param_aliases": {"max_output_tokens": "max_tokens"}})
+    adapter = REGISTRY["openai_responses"](provider, Secret("sk-test"))
+    request = request_of(CORPUS[0], max_tokens=64)
+
+    sent = json.loads(adapter.transform_request(request, MODEL).body)
+
+    assert sent["max_tokens"] == 64
+    assert "max_output_tokens" not in sent
 
 
 def test_the_provider_spelling_wins_and_an_extra_never_overrides_it():
@@ -277,6 +284,14 @@ def test_responses_inline_document_without_a_name_gets_a_pdf_filename():
         "filename": "document.pdf",
         "file_data": "data:application/pdf;base64,JVBERi0=",
     }
+
+
+def test_a_failed_buffered_responses_result_is_not_rendered_as_success():
+    adapter, _ = _adapter("openai_responses")
+    response = {"id": "response-1", "status": "failed", "output": [], "error": {"code": "server_error", "message": "failed"}}
+
+    with pytest.raises(ValueError, match="invalid upstream response"):
+        adapter.transform_response(json.dumps(response).encode(), CTX)
 
 
 def test_openai_json_schema_without_a_name_gets_a_stable_name():
