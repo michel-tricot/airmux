@@ -39,17 +39,21 @@ class RemoteBundleSource(BundleSource):
         self._signed_by_ref: dict[tuple[UUID, UUID], SignedBundle] = {}
 
     async def once(self) -> None:
-        response = await self._http_client.get(
-            f"{self._config.control_plane.url}/api/v1/bundles/manifest",
-            headers={"authorization": f"Bearer {self._config.control_plane.token}"},
-        )
-        response.raise_for_status()
-        manifest = BundleManifest.model_validate(response.json()["data"])
-        current_refs = tuple(sorted(self._signed_by_ref))
-        if _manifest_refs(manifest) == current_refs:
-            return
-        signed_bundles = list(await asyncio.gather(*(self._resolve(entry) for entry in manifest.bundles)))
-        self._adopt(signed_bundles, source="polled", persist=True, expected=manifest.bundles)
+        try:
+            response = await self._http_client.get(
+                f"{self._config.control_plane.url}/api/v1/bundles/manifest",
+                headers={"authorization": f"Bearer {self._config.control_plane.token}"},
+            )
+            response.raise_for_status()
+            manifest = BundleManifest.model_validate(response.json()["data"])
+            current_refs = tuple(sorted(self._signed_by_ref))
+            if _manifest_refs(manifest) != current_refs:
+                signed_bundles = list(await asyncio.gather(*(self._resolve(entry) for entry in manifest.bundles)))
+                self._adopt(signed_bundles, source="polled", persist=True, expected=manifest.bundles)
+        except (InvalidSignature, ValidationError, ValueError) as error:
+            self._holder.reject_manifest(str(error))
+            raise
+        self._holder.accept_manifest()
 
     async def run(self) -> None:
         await run_periodic(

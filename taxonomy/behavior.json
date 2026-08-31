@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "generated_from": "046fe4ea52caf439",
+  "generated_from": "1a35cee1ea692003",
   "behaviors": [
     {
       "provider_id": "anthropic",
@@ -151,24 +151,6 @@
       "verdict": "supported",
       "evidence_ids": [
         "011f7b6a369ed9b65b2fc715"
-      ],
-      "observed_at": "2026-08-31T20:17:19.267585+00:00"
-    },
-    {
-      "provider_id": "anthropic",
-      "model_id": "anthropic/claude-haiku-4-5-20251001",
-      "surface_id": "anthropic",
-      "endpoint": "messages",
-      "claim": {
-        "dimension": "interaction",
-        "name": "cache_control",
-        "profile": {
-          "type": "ephemeral"
-        }
-      },
-      "verdict": "supported",
-      "evidence_ids": [
-        "364461f1c70be5707fc203c7"
       ],
       "observed_at": "2026-08-31T20:17:19.267585+00:00"
     },
@@ -560,24 +542,6 @@
       "endpoint": "chat/completions",
       "claim": {
         "dimension": "capability",
-        "name": "reasoning",
-        "profile": {
-          "effort": "low"
-        }
-      },
-      "verdict": "supported",
-      "evidence_ids": [
-        "32bb542e23387d433b6c479f"
-      ],
-      "observed_at": "2026-08-31T20:13:30.318753+00:00"
-    },
-    {
-      "provider_id": "cerebras",
-      "model_id": "cerebras/gemma-4-31b",
-      "surface_id": "oai",
-      "endpoint": "chat/completions",
-      "claim": {
-        "dimension": "capability",
         "name": "streaming",
         "profile": {
           "content": "text"
@@ -898,24 +862,6 @@
       "endpoint": "chat/completions",
       "claim": {
         "dimension": "option",
-        "name": "reasoning_effort",
-        "profile": {
-          "value": "low"
-        }
-      },
-      "verdict": "supported",
-      "evidence_ids": [
-        "f9b01b136c2ca4c4256df6da"
-      ],
-      "observed_at": "2026-08-31T20:13:30.318753+00:00"
-    },
-    {
-      "provider_id": "cerebras",
-      "model_id": "cerebras/gemma-4-31b",
-      "surface_id": "oai",
-      "endpoint": "chat/completions",
-      "claim": {
-        "dimension": "option",
         "name": "response_format",
         "profile": {
           "mode": "json_object"
@@ -1072,6 +1018,633 @@
       "observed_at": "2026-08-31T20:13:30.318753+00:00"
     },
     {
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gpt-oss-120b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "structured_output",
+        "profile": {
+          "mode": "json_schema"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "9fbff3277453478c578dd26f"
+      ],
+      "observed_at": "2026-08-31T21:41:21.507779+00:00"
+    },
+    {
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gpt-oss-120b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "text_generation",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "059d5b6e9540e03c490bc0e2"
+      ],
+      "observed_at": "2026-08-31T21:41:21.507779+00:00"
+    },
+    {
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gpt-oss-120b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "interaction",
+        "name": "reasoning+tools",
+        "profile": {
+          "reasoning_effort": "low",
+          "tool_choice": "named"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "0b4b8399fcd696e0346e65de"
+      ],
+      "observed_at": "2026-08-31T21:41:21.507779+00:00"
+    },
+    {
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gpt-oss-120b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "interaction",
+        "name": "streaming+tools",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "c889da62f467b3cfbe318778"
+      ],
+      "observed_at": "2026-08-31T21:41:21.507779+00:00"
+    },
+    {
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gpt-oss-120b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "modality",
+        "name": "input_pdf",
+        "profile": {}
+      },
+      "verdict": "unknown",
+      "evidence_ids": [
+        "c08bae014d6c8e7ca0999b2d"
+      ],
+      "observed_at": "2026-08-31T21:41:21.507779+00:00"
+    },
+    {
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gpt-oss-120b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "modality",
+        "name": "input_text",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "6e93055ef608f25d0dc9adbd"
+      ],
+      "observed_at": "2026-08-31T21:41:21.507779+00:00"
+    },
+    {
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gpt-oss-120b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "modality",
+        "name": "output_text",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "6e7317400e4e735da64662b5"
+      ],
+      "observed_at": "2026-08-31T21:41:21.507779+00:00"
+    },
+    {
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gpt-oss-120b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "response_format",
+        "profile": {
+          "mode": "json_schema"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "8fc19ac3d64b99682bcd7033"
+      ],
+      "observed_at": "2026-08-31T21:41:21.507779+00:00"
+    },
+    {
+      "provider_id": "deepseek",
+      "model_id": "deepseek/deepseek-v4-flash",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "structured_output",
+        "profile": {
+          "mode": "json_schema"
+        }
+      },
+      "verdict": "unknown",
+      "evidence_ids": [
+        "a37c070c17375bcd72915974"
+      ],
+      "observed_at": "2026-08-31T21:58:37.651410+00:00"
+    },
+    {
+      "provider_id": "deepseek",
+      "model_id": "deepseek/deepseek-v4-flash",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "text_generation",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "bd626edbd9717003018d8083"
+      ],
+      "observed_at": "2026-08-31T21:58:37.651410+00:00"
+    },
+    {
+      "provider_id": "deepseek",
+      "model_id": "deepseek/deepseek-v4-flash",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "interaction",
+        "name": "reasoning+tools",
+        "profile": {
+          "reasoning_effort": "low",
+          "tool_choice": "named"
+        }
+      },
+      "verdict": "unsupported",
+      "evidence_ids": [
+        "d951a19dd7df785bf470a7d0"
+      ],
+      "observed_at": "2026-08-31T21:58:37.651410+00:00"
+    },
+    {
+      "provider_id": "deepseek",
+      "model_id": "deepseek/deepseek-v4-flash",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "interaction",
+        "name": "streaming+tools",
+        "profile": {}
+      },
+      "verdict": "unsupported",
+      "evidence_ids": [
+        "a51e1d4b178e9d6d67eeafe6"
+      ],
+      "observed_at": "2026-08-31T21:58:37.651410+00:00"
+    },
+    {
+      "provider_id": "deepseek",
+      "model_id": "deepseek/deepseek-v4-flash",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "modality",
+        "name": "input_pdf",
+        "profile": {}
+      },
+      "verdict": "unknown",
+      "evidence_ids": [
+        "713289da7f47ebbf5d82603d"
+      ],
+      "observed_at": "2026-08-31T21:58:37.651410+00:00"
+    },
+    {
+      "provider_id": "deepseek",
+      "model_id": "deepseek/deepseek-v4-flash",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "modality",
+        "name": "input_text",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "a5b7cd43ce0183d9de5b58b5"
+      ],
+      "observed_at": "2026-08-31T21:58:37.651410+00:00"
+    },
+    {
+      "provider_id": "deepseek",
+      "model_id": "deepseek/deepseek-v4-flash",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "modality",
+        "name": "output_text",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "42e0b597df3ffe968fd10db8"
+      ],
+      "observed_at": "2026-08-31T21:58:37.651410+00:00"
+    },
+    {
+      "provider_id": "deepseek",
+      "model_id": "deepseek/deepseek-v4-flash",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "response_format",
+        "profile": {
+          "mode": "json_schema"
+        }
+      },
+      "verdict": "unknown",
+      "evidence_ids": [
+        "548f78f0ba32f9f2faa71dea"
+      ],
+      "observed_at": "2026-08-31T21:58:37.651410+00:00"
+    },
+    {
+      "provider_id": "fireworks",
+      "model_id": "fireworks/nemotron-lightning-3p5-30b-a3b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "structured_output",
+        "profile": {
+          "mode": "json_schema"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "f2ecedb867df89f2defafc4e"
+      ],
+      "observed_at": "2026-08-31T21:58:43.431162+00:00"
+    },
+    {
+      "provider_id": "fireworks",
+      "model_id": "fireworks/nemotron-lightning-3p5-30b-a3b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "text_generation",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "98d0548555bea117c59c54b5"
+      ],
+      "observed_at": "2026-08-31T21:58:43.431162+00:00"
+    },
+    {
+      "provider_id": "fireworks",
+      "model_id": "fireworks/nemotron-lightning-3p5-30b-a3b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "interaction",
+        "name": "reasoning+tools",
+        "profile": {
+          "reasoning_effort": "low",
+          "tool_choice": "named"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "f789b1edd4b195da920efcd3"
+      ],
+      "observed_at": "2026-08-31T21:58:43.431162+00:00"
+    },
+    {
+      "provider_id": "fireworks",
+      "model_id": "fireworks/nemotron-lightning-3p5-30b-a3b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "interaction",
+        "name": "streaming+tools",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "aa34d067af7224ae698d0387"
+      ],
+      "observed_at": "2026-08-31T21:58:43.431162+00:00"
+    },
+    {
+      "provider_id": "fireworks",
+      "model_id": "fireworks/nemotron-lightning-3p5-30b-a3b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "modality",
+        "name": "input_pdf",
+        "profile": {}
+      },
+      "verdict": "unknown",
+      "evidence_ids": [
+        "be443f0bee9507a766a7b8ba"
+      ],
+      "observed_at": "2026-08-31T21:58:43.431162+00:00"
+    },
+    {
+      "provider_id": "fireworks",
+      "model_id": "fireworks/nemotron-lightning-3p5-30b-a3b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "modality",
+        "name": "input_text",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "2ebeee0c4ef02f49b2f5209c"
+      ],
+      "observed_at": "2026-08-31T21:58:43.431162+00:00"
+    },
+    {
+      "provider_id": "fireworks",
+      "model_id": "fireworks/nemotron-lightning-3p5-30b-a3b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "modality",
+        "name": "output_text",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "11761d4407802f539cd31c3e"
+      ],
+      "observed_at": "2026-08-31T21:58:43.431162+00:00"
+    },
+    {
+      "provider_id": "fireworks",
+      "model_id": "fireworks/nemotron-lightning-3p5-30b-a3b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "response_format",
+        "profile": {
+          "mode": "json_schema"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "e0ef866de839c7d60e2304d4"
+      ],
+      "observed_at": "2026-08-31T21:58:43.431162+00:00"
+    },
+    {
+      "provider_id": "groq",
+      "model_id": "groq/openai/gpt-oss-20b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "structured_output",
+        "profile": {
+          "mode": "json_schema"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "484168c6176f95ff5ab634b5"
+      ],
+      "observed_at": "2026-08-31T21:58:48.548471+00:00"
+    },
+    {
+      "provider_id": "groq",
+      "model_id": "groq/openai/gpt-oss-20b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "interaction",
+        "name": "reasoning+tools",
+        "profile": {
+          "reasoning_effort": "low",
+          "tool_choice": "named"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "27b2e847946ce9fd9558eaaa"
+      ],
+      "observed_at": "2026-08-31T21:58:48.548471+00:00"
+    },
+    {
+      "provider_id": "groq",
+      "model_id": "groq/openai/gpt-oss-20b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "interaction",
+        "name": "streaming+tools",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "eadd83a8af4e7f58651c2ad8"
+      ],
+      "observed_at": "2026-08-31T21:58:48.548471+00:00"
+    },
+    {
+      "provider_id": "groq",
+      "model_id": "groq/openai/gpt-oss-20b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "modality",
+        "name": "input_pdf",
+        "profile": {}
+      },
+      "verdict": "unknown",
+      "evidence_ids": [
+        "db9841a8a6418cbd5182ec53"
+      ],
+      "observed_at": "2026-08-31T21:58:48.548471+00:00"
+    },
+    {
+      "provider_id": "groq",
+      "model_id": "groq/openai/gpt-oss-20b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "response_format",
+        "profile": {
+          "mode": "json_schema"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "14af79f887ff2d19d8e1a6cd"
+      ],
+      "observed_at": "2026-08-31T21:58:48.548471+00:00"
+    },
+    {
+      "provider_id": "mistral",
+      "model_id": "mistral/zai-glm-5-2",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "structured_output",
+        "profile": {
+          "mode": "json_schema"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "1e00da5338b60ce4c37fa420"
+      ],
+      "observed_at": "2026-08-31T21:59:03.867752+00:00"
+    },
+    {
+      "provider_id": "mistral",
+      "model_id": "mistral/zai-glm-5-2",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "text_generation",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "4772bba54ffcd197db54cf6f"
+      ],
+      "observed_at": "2026-08-31T21:59:03.867752+00:00"
+    },
+    {
+      "provider_id": "mistral",
+      "model_id": "mistral/zai-glm-5-2",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "interaction",
+        "name": "reasoning+tools",
+        "profile": {
+          "reasoning_effort": "low",
+          "tool_choice": "named"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "5895a8f3f5d06d5f91c76a1e"
+      ],
+      "observed_at": "2026-08-31T21:59:03.867752+00:00"
+    },
+    {
+      "provider_id": "mistral",
+      "model_id": "mistral/zai-glm-5-2",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "interaction",
+        "name": "streaming+tools",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "a0465f77ce76e20ceb6d2c3f"
+      ],
+      "observed_at": "2026-08-31T21:59:03.867752+00:00"
+    },
+    {
+      "provider_id": "mistral",
+      "model_id": "mistral/zai-glm-5-2",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "modality",
+        "name": "input_pdf",
+        "profile": {}
+      },
+      "verdict": "unknown",
+      "evidence_ids": [
+        "f691fdf563b0a356998638b5"
+      ],
+      "observed_at": "2026-08-31T21:59:03.867752+00:00"
+    },
+    {
+      "provider_id": "mistral",
+      "model_id": "mistral/zai-glm-5-2",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "modality",
+        "name": "input_text",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "489991a1f1ce005f7bba5102"
+      ],
+      "observed_at": "2026-08-31T21:59:03.867752+00:00"
+    },
+    {
+      "provider_id": "mistral",
+      "model_id": "mistral/zai-glm-5-2",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "modality",
+        "name": "output_text",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "4ecb8b8e691da84cffcc86d6"
+      ],
+      "observed_at": "2026-08-31T21:59:03.867752+00:00"
+    },
+    {
+      "provider_id": "mistral",
+      "model_id": "mistral/zai-glm-5-2",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "response_format",
+        "profile": {
+          "mode": "json_schema"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "56bda6ceb30bf99f8dd0213a"
+      ],
+      "observed_at": "2026-08-31T21:59:03.867752+00:00"
+    },
+    {
       "provider_id": "openai",
       "model_id": "openai/gpt-5.6-luna",
       "surface_id": "oai_responses",
@@ -1084,24 +1657,6 @@
       "verdict": "supported",
       "evidence_ids": [
         "c6cbc0d733ddcf7af28ad64e"
-      ],
-      "observed_at": "2026-08-31T21:11:22.409453+00:00"
-    },
-    {
-      "provider_id": "openai",
-      "model_id": "openai/gpt-5.6-luna",
-      "surface_id": "oai_responses",
-      "endpoint": "responses",
-      "claim": {
-        "dimension": "capability",
-        "name": "reasoning",
-        "profile": {
-          "effort": "low"
-        }
-      },
-      "verdict": "unsupported",
-      "evidence_ids": [
-        "1a2ff8db720beecfc01c3ab0"
       ],
       "observed_at": "2026-08-31T21:11:22.409453+00:00"
     },
@@ -1155,9 +1710,9 @@
       },
       "verdict": "supported",
       "evidence_ids": [
-        "f3460c5ef670df2f274aec0f"
+        "dccc7e071d86e4e2f2783ecc"
       ],
-      "observed_at": "2026-08-31T21:11:22.409453+00:00"
+      "observed_at": "2026-08-31T21:59:08.615869+00:00"
     },
     {
       "provider_id": "openai",
@@ -1187,9 +1742,9 @@
       },
       "verdict": "supported",
       "evidence_ids": [
-        "3c4ecea8e10534cc25c94f17"
+        "cf9bdb62dea71d7f702b121e"
       ],
-      "observed_at": "2026-08-31T21:11:22.409453+00:00"
+      "observed_at": "2026-08-31T21:59:08.615869+00:00"
     },
     {
       "provider_id": "openai",
@@ -1238,9 +1793,9 @@
       },
       "verdict": "supported",
       "evidence_ids": [
-        "a6ff7d02218fe01716cf099a"
+        "f2d75224ab79947829d2b4b7"
       ],
-      "observed_at": "2026-08-31T21:11:22.409453+00:00"
+      "observed_at": "2026-08-31T21:59:08.615869+00:00"
     },
     {
       "provider_id": "openai",
@@ -1302,9 +1857,9 @@
       },
       "verdict": "supported",
       "evidence_ids": [
-        "05af3efe45b83a81df1f03b3"
+        "e79542bc18d6a950367bf17e"
       ],
-      "observed_at": "2026-08-31T21:11:22.409453+00:00"
+      "observed_at": "2026-08-31T21:59:08.615869+00:00"
     },
     {
       "provider_id": "openai",
@@ -1350,9 +1905,9 @@
       },
       "verdict": "supported",
       "evidence_ids": [
-        "fce69dd17d1711af71a94ea3"
+        "c32981e04c3a8036acdfa1f4"
       ],
-      "observed_at": "2026-08-31T21:11:22.409453+00:00"
+      "observed_at": "2026-08-31T21:59:08.615869+00:00"
     },
     {
       "provider_id": "openai",
@@ -1366,9 +1921,9 @@
       },
       "verdict": "supported",
       "evidence_ids": [
-        "9495919cf5982ce52d309147"
+        "0613e8cf9e4beabca620734e"
       ],
-      "observed_at": "2026-08-31T21:11:22.409453+00:00"
+      "observed_at": "2026-08-31T21:59:08.615869+00:00"
     },
     {
       "provider_id": "openai",
@@ -1382,9 +1937,9 @@
       },
       "verdict": "supported",
       "evidence_ids": [
-        "b2c3f01444cef01f92c4b9a7"
+        "fa7f4fef6fc82165f59b5c2e"
       ],
-      "observed_at": "2026-08-31T21:11:22.409453+00:00"
+      "observed_at": "2026-08-31T21:59:08.615869+00:00"
     },
     {
       "provider_id": "openai",
@@ -1429,24 +1984,6 @@
       "endpoint": "responses",
       "claim": {
         "dimension": "option",
-        "name": "reasoning_effort",
-        "profile": {
-          "value": "low"
-        }
-      },
-      "verdict": "unsupported",
-      "evidence_ids": [
-        "b6c87f89b8c22a82dc424326"
-      ],
-      "observed_at": "2026-08-31T21:11:22.409453+00:00"
-    },
-    {
-      "provider_id": "openai",
-      "model_id": "openai/gpt-5.6-luna",
-      "surface_id": "oai_responses",
-      "endpoint": "responses",
-      "claim": {
-        "dimension": "option",
         "name": "response_format",
         "profile": {
           "mode": "json_object"
@@ -1472,9 +2009,9 @@
       },
       "verdict": "supported",
       "evidence_ids": [
-        "f470289d412ead9bb98bb808"
+        "2cdacb8c90898bf8e684f54c"
       ],
-      "observed_at": "2026-08-31T21:11:22.409453+00:00"
+      "observed_at": "2026-08-31T21:59:08.615869+00:00"
     },
     {
       "provider_id": "openai",
@@ -1565,6 +2102,276 @@
         "f5b66b0f99efebffc2c845bd"
       ],
       "observed_at": "2026-08-31T21:11:22.409453+00:00"
+    },
+    {
+      "provider_id": "together",
+      "model_id": "together/openai/gpt-oss-20b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "structured_output",
+        "profile": {
+          "mode": "json_schema"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "cdee591d43bbb5b5844a326d"
+      ],
+      "observed_at": "2026-08-31T21:59:18.705731+00:00"
+    },
+    {
+      "provider_id": "together",
+      "model_id": "together/openai/gpt-oss-20b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "text_generation",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "f156835fab805fe7c00581ee"
+      ],
+      "observed_at": "2026-08-31T21:59:18.705731+00:00"
+    },
+    {
+      "provider_id": "together",
+      "model_id": "together/openai/gpt-oss-20b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "interaction",
+        "name": "reasoning+tools",
+        "profile": {
+          "reasoning_effort": "low",
+          "tool_choice": "named"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "a34ba9d21ea6dd3f49f5f1e3"
+      ],
+      "observed_at": "2026-08-31T21:59:18.705731+00:00"
+    },
+    {
+      "provider_id": "together",
+      "model_id": "together/openai/gpt-oss-20b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "interaction",
+        "name": "streaming+tools",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "85f7308db5b553e1a996864b"
+      ],
+      "observed_at": "2026-08-31T21:59:18.705731+00:00"
+    },
+    {
+      "provider_id": "together",
+      "model_id": "together/openai/gpt-oss-20b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "modality",
+        "name": "input_pdf",
+        "profile": {}
+      },
+      "verdict": "unknown",
+      "evidence_ids": [
+        "271a050bacc6404b28889cf9"
+      ],
+      "observed_at": "2026-08-31T21:59:18.705731+00:00"
+    },
+    {
+      "provider_id": "together",
+      "model_id": "together/openai/gpt-oss-20b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "modality",
+        "name": "input_text",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "d6cac207a2fb3080ccdd3630"
+      ],
+      "observed_at": "2026-08-31T21:59:18.705731+00:00"
+    },
+    {
+      "provider_id": "together",
+      "model_id": "together/openai/gpt-oss-20b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "modality",
+        "name": "output_text",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "0ed511f9dd658f25cbc2b50a"
+      ],
+      "observed_at": "2026-08-31T21:59:18.705731+00:00"
+    },
+    {
+      "provider_id": "together",
+      "model_id": "together/openai/gpt-oss-20b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "response_format",
+        "profile": {
+          "mode": "json_schema"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "e2e160297028b3986d106439"
+      ],
+      "observed_at": "2026-08-31T21:59:18.705731+00:00"
+    },
+    {
+      "provider_id": "xai",
+      "model_id": "xai/grok-build-0.1",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "structured_output",
+        "profile": {
+          "mode": "json_schema"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "1d4475e1f7af2a5dbc18479a"
+      ],
+      "observed_at": "2026-08-31T21:59:23.882601+00:00"
+    },
+    {
+      "provider_id": "xai",
+      "model_id": "xai/grok-build-0.1",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "capability",
+        "name": "text_generation",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "b7cc1800549c81d3bb206048"
+      ],
+      "observed_at": "2026-08-31T21:59:23.882601+00:00"
+    },
+    {
+      "provider_id": "xai",
+      "model_id": "xai/grok-build-0.1",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "interaction",
+        "name": "reasoning+tools",
+        "profile": {
+          "reasoning_effort": "low",
+          "tool_choice": "named"
+        }
+      },
+      "verdict": "unsupported",
+      "evidence_ids": [
+        "0c1e34e11c646c37007926ff"
+      ],
+      "observed_at": "2026-08-31T21:59:23.882601+00:00"
+    },
+    {
+      "provider_id": "xai",
+      "model_id": "xai/grok-build-0.1",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "interaction",
+        "name": "streaming+tools",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "c5d6faa6ee7d7a18fe39af37"
+      ],
+      "observed_at": "2026-08-31T21:59:23.882601+00:00"
+    },
+    {
+      "provider_id": "xai",
+      "model_id": "xai/grok-build-0.1",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "modality",
+        "name": "input_pdf",
+        "profile": {}
+      },
+      "verdict": "unsupported",
+      "evidence_ids": [
+        "dbb84d306de26211a8008972"
+      ],
+      "observed_at": "2026-08-31T21:59:23.882601+00:00"
+    },
+    {
+      "provider_id": "xai",
+      "model_id": "xai/grok-build-0.1",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "modality",
+        "name": "input_text",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "da25a8bd9a38a988531231f7"
+      ],
+      "observed_at": "2026-08-31T21:59:23.882601+00:00"
+    },
+    {
+      "provider_id": "xai",
+      "model_id": "xai/grok-build-0.1",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "modality",
+        "name": "output_text",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "8d6d94d505613cb4b59930cd"
+      ],
+      "observed_at": "2026-08-31T21:59:23.882601+00:00"
+    },
+    {
+      "provider_id": "xai",
+      "model_id": "xai/grok-build-0.1",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "claim": {
+        "dimension": "option",
+        "name": "response_format",
+        "profile": {
+          "mode": "json_schema"
+        }
+      },
+      "verdict": "supported",
+      "evidence_ids": [
+        "9bdd5c31572abc5a62e94be9"
+      ],
+      "observed_at": "2026-08-31T21:59:23.882601+00:00"
     }
   ]
 }

@@ -13,10 +13,10 @@ request:
   - role: user
     content:
     - type: text
-      text: Remember that the code word is cobalt
+      text: The code word is cobalt.
       cache_control:
         type: ephemeral
-  - role: user
-    content: Reply with the code word
+    - type: text
+      text: "Reply with exactly: cobalt"
 oracle:
   text_contains: cobalt

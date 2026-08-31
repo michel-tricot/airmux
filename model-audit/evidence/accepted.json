@@ -4075,6 +4075,2872 @@
       "harness_commit": "63fa65680842c9526cd36b89268d24ff3ed66e0f",
       "harness_fingerprint": "4a18cdb06d3aaba191c2",
       "taxonomy_fingerprint": "ea34d75e7917224a248a"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "059d5b6e9540e03c490bc0e2",
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gpt-oss-120b",
+      "upstream_model": "gpt-oss-120b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "case_id": "text.basic",
+      "case_version": 2,
+      "case_fingerprint": "10971dd682e989f4",
+      "claim": {
+        "dimension": "capability",
+        "name": "text_generation",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "ok",
+        "tool_calls": [],
+        "finish_reason": "stop",
+        "usage_present": true,
+        "reasoning_present": true,
+        "adjustments": [],
+        "duration_ms": 201.29108312539756,
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 73,
+          "output_tokens": 38,
+          "total_tokens": 111
+        },
+        "reasoning": {
+          "exposed": true,
+          "signature_present": false
+        }
+      },
+      "attempts": 1,
+      "observed_at": "2026-08-31T21:41:21.507779+00:00",
+      "harness_commit": "d26972bb00760d2c43dd2866ac82396cee7080ac",
+      "harness_fingerprint": "64d6a8a41925e48e7dad",
+      "taxonomy_fingerprint": "6e50bb111dbf2feb4dea"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "0b4b8399fcd696e0346e65de",
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gpt-oss-120b",
+      "upstream_model": "gpt-oss-120b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "case_id": "reasoning.with-tool",
+      "case_version": 2,
+      "case_fingerprint": "07fb0ec14b14dfdb",
+      "claim": {
+        "dimension": "interaction",
+        "name": "reasoning+tools",
+        "profile": {
+          "reasoning_effort": "low",
+          "tool_choice": "named"
+        }
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "",
+        "tool_calls": [
+          {
+            "id": "abcab65cf",
+            "name": "report_result",
+            "arguments": "{\"value\":\"ok\"}"
+          }
+        ],
+        "finish_reason": "tool_calls",
+        "usage_present": true,
+        "reasoning_present": true,
+        "adjustments": [],
+        "duration_ms": 220.48470797017217,
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 127,
+          "output_tokens": 30,
+          "total_tokens": 157
+        },
+        "reasoning": {
+          "exposed": true,
+          "signature_present": false
+        }
+      },
+      "attempts": 2,
+      "observed_at": "2026-08-31T21:41:21.507779+00:00",
+      "harness_commit": "d26972bb00760d2c43dd2866ac82396cee7080ac",
+      "harness_fingerprint": "64d6a8a41925e48e7dad",
+      "taxonomy_fingerprint": "6e50bb111dbf2feb4dea"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "6e7317400e4e735da64662b5",
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gpt-oss-120b",
+      "upstream_model": "gpt-oss-120b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "case_id": "text.basic",
+      "case_version": 2,
+      "case_fingerprint": "10971dd682e989f4",
+      "claim": {
+        "dimension": "modality",
+        "name": "output_text",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "ok",
+        "tool_calls": [],
+        "finish_reason": "stop",
+        "usage_present": true,
+        "reasoning_present": true,
+        "adjustments": [],
+        "duration_ms": 201.29108312539756,
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 73,
+          "output_tokens": 38,
+          "total_tokens": 111
+        },
+        "reasoning": {
+          "exposed": true,
+          "signature_present": false
+        }
+      },
+      "attempts": 1,
+      "observed_at": "2026-08-31T21:41:21.507779+00:00",
+      "harness_commit": "d26972bb00760d2c43dd2866ac82396cee7080ac",
+      "harness_fingerprint": "64d6a8a41925e48e7dad",
+      "taxonomy_fingerprint": "6e50bb111dbf2feb4dea"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "6e93055ef608f25d0dc9adbd",
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gpt-oss-120b",
+      "upstream_model": "gpt-oss-120b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "case_id": "text.basic",
+      "case_version": 2,
+      "case_fingerprint": "10971dd682e989f4",
+      "claim": {
+        "dimension": "modality",
+        "name": "input_text",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "ok",
+        "tool_calls": [],
+        "finish_reason": "stop",
+        "usage_present": true,
+        "reasoning_present": true,
+        "adjustments": [],
+        "duration_ms": 201.29108312539756,
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 73,
+          "output_tokens": 38,
+          "total_tokens": 111
+        },
+        "reasoning": {
+          "exposed": true,
+          "signature_present": false
+        }
+      },
+      "attempts": 1,
+      "observed_at": "2026-08-31T21:41:21.507779+00:00",
+      "harness_commit": "d26972bb00760d2c43dd2866ac82396cee7080ac",
+      "harness_fingerprint": "64d6a8a41925e48e7dad",
+      "taxonomy_fingerprint": "6e50bb111dbf2feb4dea"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "8fc19ac3d64b99682bcd7033",
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gpt-oss-120b",
+      "upstream_model": "gpt-oss-120b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "case_id": "structured-output.json-schema",
+      "case_version": 2,
+      "case_fingerprint": "4348ddb52773997c",
+      "claim": {
+        "dimension": "option",
+        "name": "response_format",
+        "profile": {
+          "mode": "json_schema"
+        }
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "{\"answer\": 42}",
+        "tool_calls": [],
+        "finish_reason": "stop",
+        "usage_present": true,
+        "reasoning_present": true,
+        "json_value": {
+          "answer": 42
+        },
+        "adjustments": [],
+        "duration_ms": 345.23575007915497,
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 202,
+          "output_tokens": 47,
+          "total_tokens": 249
+        },
+        "reasoning": {
+          "exposed": true,
+          "signature_present": false
+        }
+      },
+      "attempts": 1,
+      "observed_at": "2026-08-31T21:41:21.507779+00:00",
+      "harness_commit": "d26972bb00760d2c43dd2866ac82396cee7080ac",
+      "harness_fingerprint": "64d6a8a41925e48e7dad",
+      "taxonomy_fingerprint": "6e50bb111dbf2feb4dea"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "9fbff3277453478c578dd26f",
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gpt-oss-120b",
+      "upstream_model": "gpt-oss-120b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "case_id": "structured-output.json-schema",
+      "case_version": 2,
+      "case_fingerprint": "4348ddb52773997c",
+      "claim": {
+        "dimension": "capability",
+        "name": "structured_output",
+        "profile": {
+          "mode": "json_schema"
+        }
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "{\"answer\": 42}",
+        "tool_calls": [],
+        "finish_reason": "stop",
+        "usage_present": true,
+        "reasoning_present": true,
+        "json_value": {
+          "answer": 42
+        },
+        "adjustments": [],
+        "duration_ms": 345.23575007915497,
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 202,
+          "output_tokens": 47,
+          "total_tokens": 249
+        },
+        "reasoning": {
+          "exposed": true,
+          "signature_present": false
+        }
+      },
+      "attempts": 1,
+      "observed_at": "2026-08-31T21:41:21.507779+00:00",
+      "harness_commit": "d26972bb00760d2c43dd2866ac82396cee7080ac",
+      "harness_fingerprint": "64d6a8a41925e48e7dad",
+      "taxonomy_fingerprint": "6e50bb111dbf2feb4dea"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "c08bae014d6c8e7ca0999b2d",
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gpt-oss-120b",
+      "upstream_model": "gpt-oss-120b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "case_id": "modalities.pdf",
+      "case_version": 2,
+      "case_fingerprint": "ca2d457d49373fb3",
+      "claim": {
+        "dimension": "modality",
+        "name": "input_pdf",
+        "profile": {}
+      },
+      "verdict": "unknown",
+      "source": "live_api",
+      "observation": {
+        "outcome": "rejected",
+        "text": "",
+        "tool_calls": [],
+        "usage_present": false,
+        "reasoning_present": false,
+        "error_code": "400",
+        "error_message": "messages.0.user.content.str: Input should be a valid string\nmessages.0.user.content.list[tagged-union[TextContent,ImageUrlContent,ImageContent]].1: Input tag 'file' found using 'type' does not match any of the expected tags: 'text', 'image_url', 'image'",
+        "http_status": 400,
+        "adjustments": [],
+        "duration_ms": 147.2651669755578,
+        "client_type": "HTTP 400",
+        "failure": {
+          "kind": "rejection",
+          "origin": "direct",
+          "retryable": false,
+          "code": "400",
+          "message": "messages.0.user.content.str: Input should be a valid string\nmessages.0.user.content.list[tagged-union[TextContent,ImageUrlContent,ImageContent]].1: Input tag 'file' found using 'type' does not match any of the expected tags: 'text', 'image_url', 'image'",
+          "http_status": 400
+        }
+      },
+      "attempts": 2,
+      "observed_at": "2026-08-31T21:41:21.507779+00:00",
+      "harness_commit": "d26972bb00760d2c43dd2866ac82396cee7080ac",
+      "harness_fingerprint": "64d6a8a41925e48e7dad",
+      "taxonomy_fingerprint": "6e50bb111dbf2feb4dea"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "c889da62f467b3cfbe318778",
+      "provider_id": "cerebras",
+      "model_id": "cerebras/gpt-oss-120b",
+      "upstream_model": "gpt-oss-120b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "case_id": "streaming.tools",
+      "case_version": 2,
+      "case_fingerprint": "12126bb252649974",
+      "claim": {
+        "dimension": "interaction",
+        "name": "streaming+tools",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "",
+        "tool_calls": [
+          {
+            "id": "0c88a7b4c",
+            "name": "report_result",
+            "arguments": "{\"value\":\"ok\"}"
+          }
+        ],
+        "finish_reason": "tool_calls",
+        "usage_present": true,
+        "reasoning_present": true,
+        "adjustments": [],
+        "duration_ms": 306.7272079642862,
+        "client_type": "HTTP SSE",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 124,
+          "output_tokens": 41,
+          "total_tokens": 165
+        },
+        "reasoning": {
+          "exposed": true,
+          "signature_present": false
+        }
+      },
+      "attempts": 1,
+      "observed_at": "2026-08-31T21:41:21.507779+00:00",
+      "harness_commit": "d26972bb00760d2c43dd2866ac82396cee7080ac",
+      "harness_fingerprint": "64d6a8a41925e48e7dad",
+      "taxonomy_fingerprint": "6e50bb111dbf2feb4dea"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "42e0b597df3ffe968fd10db8",
+      "provider_id": "deepseek",
+      "model_id": "deepseek/deepseek-v4-flash",
+      "upstream_model": "deepseek-v4-flash",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "case_id": "text.basic",
+      "case_version": 2,
+      "case_fingerprint": "10971dd682e989f4",
+      "claim": {
+        "dimension": "modality",
+        "name": "output_text",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "ok",
+        "tool_calls": [],
+        "finish_reason": "stop",
+        "usage_present": true,
+        "reasoning_present": true,
+        "adjustments": [],
+        "duration_ms": 1054.246624931693,
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 89,
+          "output_tokens": 24,
+          "total_tokens": 113
+        },
+        "reasoning": {
+          "exposed": true,
+          "signature_present": false
+        }
+      },
+      "attempts": 1,
+      "observed_at": "2026-08-31T21:58:37.651410+00:00",
+      "harness_commit": "d26972bb00760d2c43dd2866ac82396cee7080ac",
+      "harness_fingerprint": "f53c8840b4cccc66c80a",
+      "taxonomy_fingerprint": "86c9cca08e7fb81e5aff"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "548f78f0ba32f9f2faa71dea",
+      "provider_id": "deepseek",
+      "model_id": "deepseek/deepseek-v4-flash",
+      "upstream_model": "deepseek-v4-flash",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "case_id": "structured-output.json-schema",
+      "case_version": 2,
+      "case_fingerprint": "4348ddb52773997c",
+      "claim": {
+        "dimension": "option",
+        "name": "response_format",
+        "profile": {
+          "mode": "json_schema"
+        }
+      },
+      "verdict": "unknown",
+      "source": "live_api",
+      "observation": {
+        "outcome": "rejected",
+        "text": "",
+        "tool_calls": [],
+        "usage_present": false,
+        "reasoning_present": false,
+        "error_code": "invalid_request_error",
+        "error_message": "This response_format type is unavailable now",
+        "http_status": 400,
+        "adjustments": [],
+        "duration_ms": 325.1580831129104,
+        "client_type": "HTTP 400",
+        "failure": {
+          "kind": "rejection",
+          "origin": "direct",
+          "retryable": false,
+          "code": "invalid_request_error",
+          "message": "This response_format type is unavailable now",
+          "http_status": 400
+        }
+      },
+      "attempts": 2,
+      "observed_at": "2026-08-31T21:58:37.651410+00:00",
+      "harness_commit": "d26972bb00760d2c43dd2866ac82396cee7080ac",
+      "harness_fingerprint": "f53c8840b4cccc66c80a",
+      "taxonomy_fingerprint": "86c9cca08e7fb81e5aff"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "713289da7f47ebbf5d82603d",
+      "provider_id": "deepseek",
+      "model_id": "deepseek/deepseek-v4-flash",
+      "upstream_model": "deepseek-v4-flash",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "case_id": "modalities.pdf",
+      "case_version": 2,
+      "case_fingerprint": "ca2d457d49373fb3",
+      "claim": {
+        "dimension": "modality",
+        "name": "input_pdf",
+        "profile": {}
+      },
+      "verdict": "unknown",
+      "source": "live_api",
+      "observation": {
+        "outcome": "rejected",
+        "text": "",
+        "tool_calls": [],
+        "usage_present": false,
+        "reasoning_present": false,
+        "error_code": "invalid_request_error",
+        "error_message": ".messages[0]: file must have a file_id or file_data",
+        "http_status": 400,
+        "adjustments": [],
+        "duration_ms": 327.8880000580102,
+        "client_type": "HTTP 400",
+        "failure": {
+          "kind": "rejection",
+          "origin": "direct",
+          "retryable": false,
+          "code": "invalid_request_error",
+          "message": ".messages[0]: file must have a file_id or file_data",
+          "http_status": 400
+        }
+      },
+      "attempts": 2,
+      "observed_at": "2026-08-31T21:58:37.651410+00:00",
+      "harness_commit": "d26972bb00760d2c43dd2866ac82396cee7080ac",
+      "harness_fingerprint": "f53c8840b4cccc66c80a",
+      "taxonomy_fingerprint": "86c9cca08e7fb81e5aff"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "a37c070c17375bcd72915974",
+      "provider_id": "deepseek",
+      "model_id": "deepseek/deepseek-v4-flash",
+      "upstream_model": "deepseek-v4-flash",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "case_id": "structured-output.json-schema",
+      "case_version": 2,
+      "case_fingerprint": "4348ddb52773997c",
+      "claim": {
+        "dimension": "capability",
+        "name": "structured_output",
+        "profile": {
+          "mode": "json_schema"
+        }
+      },
+      "verdict": "unknown",
+      "source": "live_api",
+      "observation": {
+        "outcome": "rejected",
+        "text": "",
+        "tool_calls": [],
+        "usage_present": false,
+        "reasoning_present": false,
+        "error_code": "invalid_request_error",
+        "error_message": "This response_format type is unavailable now",
+        "http_status": 400,
+        "adjustments": [],
+        "duration_ms": 325.1580831129104,
+        "client_type": "HTTP 400",
+        "failure": {
+          "kind": "rejection",
+          "origin": "direct",
+          "retryable": false,
+          "code": "invalid_request_error",
+          "message": "This response_format type is unavailable now",
+          "http_status": 400
+        }
+      },
+      "attempts": 2,
+      "observed_at": "2026-08-31T21:58:37.651410+00:00",
+      "harness_commit": "d26972bb00760d2c43dd2866ac82396cee7080ac",
+      "harness_fingerprint": "f53c8840b4cccc66c80a",
+      "taxonomy_fingerprint": "86c9cca08e7fb81e5aff"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "a51e1d4b178e9d6d67eeafe6",
+      "provider_id": "deepseek",
+      "model_id": "deepseek/deepseek-v4-flash",
+      "upstream_model": "deepseek-v4-flash",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "case_id": "streaming.tools",
+      "case_version": 2,
+      "case_fingerprint": "12126bb252649974",
+      "claim": {
+        "dimension": "interaction",
+        "name": "streaming+tools",
+        "profile": {}
+      },
+      "verdict": "unsupported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "rejected",
+        "text": "",
+        "tool_calls": [],
+        "usage_present": false,
+        "reasoning_present": false,
+        "error_code": "invalid_request_error",
+        "error_message": "Thinking mode does not support this tool_choice",
+        "http_status": 400,
+        "adjustments": [],
+        "duration_ms": 353.2422089483589,
+        "client_type": "HTTP 400",
+        "failure": {
+          "kind": "rejection",
+          "origin": "direct",
+          "retryable": false,
+          "code": "invalid_request_error",
+          "message": "Thinking mode does not support this tool_choice",
+          "http_status": 400
+        }
+      },
+      "attempts": 2,
+      "observed_at": "2026-08-31T21:58:37.651410+00:00",
+      "harness_commit": "d26972bb00760d2c43dd2866ac82396cee7080ac",
+      "harness_fingerprint": "f53c8840b4cccc66c80a",
+      "taxonomy_fingerprint": "86c9cca08e7fb81e5aff"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "a5b7cd43ce0183d9de5b58b5",
+      "provider_id": "deepseek",
+      "model_id": "deepseek/deepseek-v4-flash",
+      "upstream_model": "deepseek-v4-flash",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "case_id": "text.basic",
+      "case_version": 2,
+      "case_fingerprint": "10971dd682e989f4",
+      "claim": {
+        "dimension": "modality",
+        "name": "input_text",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "ok",
+        "tool_calls": [],
+        "finish_reason": "stop",
+        "usage_present": true,
+        "reasoning_present": true,
+        "adjustments": [],
+        "duration_ms": 1054.246624931693,
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 89,
+          "output_tokens": 24,
+          "total_tokens": 113
+        },
+        "reasoning": {
+          "exposed": true,
+          "signature_present": false
+        }
+      },
+      "attempts": 1,
+      "observed_at": "2026-08-31T21:58:37.651410+00:00",
+      "harness_commit": "d26972bb00760d2c43dd2866ac82396cee7080ac",
+      "harness_fingerprint": "f53c8840b4cccc66c80a",
+      "taxonomy_fingerprint": "86c9cca08e7fb81e5aff"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "bd626edbd9717003018d8083",
+      "provider_id": "deepseek",
+      "model_id": "deepseek/deepseek-v4-flash",
+      "upstream_model": "deepseek-v4-flash",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "case_id": "text.basic",
+      "case_version": 2,
+      "case_fingerprint": "10971dd682e989f4",
+      "claim": {
+        "dimension": "capability",
+        "name": "text_generation",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "ok",
+        "tool_calls": [],
+        "finish_reason": "stop",
+        "usage_present": true,
+        "reasoning_present": true,
+        "adjustments": [],
+        "duration_ms": 1054.246624931693,
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 89,
+          "output_tokens": 24,
+          "total_tokens": 113
+        },
+        "reasoning": {
+          "exposed": true,
+          "signature_present": false
+        }
+      },
+      "attempts": 1,
+      "observed_at": "2026-08-31T21:58:37.651410+00:00",
+      "harness_commit": "d26972bb00760d2c43dd2866ac82396cee7080ac",
+      "harness_fingerprint": "f53c8840b4cccc66c80a",
+      "taxonomy_fingerprint": "86c9cca08e7fb81e5aff"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "d951a19dd7df785bf470a7d0",
+      "provider_id": "deepseek",
+      "model_id": "deepseek/deepseek-v4-flash",
+      "upstream_model": "deepseek-v4-flash",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "case_id": "reasoning.with-tool",
+      "case_version": 2,
+      "case_fingerprint": "07fb0ec14b14dfdb",
+      "claim": {
+        "dimension": "interaction",
+        "name": "reasoning+tools",
+        "profile": {
+          "reasoning_effort": "low",
+          "tool_choice": "named"
+        }
+      },
+      "verdict": "unsupported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "rejected",
+        "text": "",
+        "tool_calls": [],
+        "usage_present": false,
+        "reasoning_present": false,
+        "error_code": "invalid_request_error",
+        "error_message": "Thinking mode does not support this tool_choice",
+        "http_status": 400,
+        "adjustments": [],
+        "duration_ms": 406.05341689661145,
+        "client_type": "HTTP 400",
+        "failure": {
+          "kind": "rejection",
+          "origin": "direct",
+          "retryable": false,
+          "code": "invalid_request_error",
+          "message": "Thinking mode does not support this tool_choice",
+          "http_status": 400
+        }
+      },
+      "attempts": 2,
+      "observed_at": "2026-08-31T21:58:37.651410+00:00",
+      "harness_commit": "d26972bb00760d2c43dd2866ac82396cee7080ac",
+      "harness_fingerprint": "f53c8840b4cccc66c80a",
+      "taxonomy_fingerprint": "86c9cca08e7fb81e5aff"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "11761d4407802f539cd31c3e",
+      "provider_id": "fireworks",
+      "model_id": "fireworks/nemotron-lightning-3p5-30b-a3b",
+      "upstream_model": "accounts/fireworks/models/nemotron-lightning-3p5-30b-a3b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "case_id": "text.basic",
+      "case_version": 2,
+      "case_fingerprint": "10971dd682e989f4",
+      "claim": {
+        "dimension": "modality",
+        "name": "output_text",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "ok",
+        "tool_calls": [],
+        "finish_reason": "stop",
+        "usage_present": true,
+        "reasoning_present": true,
+        "adjustments": [],
+        "duration_ms": 440.98808290436864,
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 22,
+          "output_tokens": 106,
+          "total_tokens": 128
+        },
+        "reasoning": {
+          "exposed": true,
+          "signature_present": false
+        }
+      },
+      "attempts": 1,
+      "observed_at": "2026-08-31T21:58:43.431162+00:00",
+      "harness_commit": "d26972bb00760d2c43dd2866ac82396cee7080ac",
+      "harness_fingerprint": "f53c8840b4cccc66c80a",
+      "taxonomy_fingerprint": "86c9cca08e7fb81e5aff"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "2ebeee0c4ef02f49b2f5209c",
+      "provider_id": "fireworks",
+      "model_id": "fireworks/nemotron-lightning-3p5-30b-a3b",
+      "upstream_model": "accounts/fireworks/models/nemotron-lightning-3p5-30b-a3b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "case_id": "text.basic",
+      "case_version": 2,
+      "case_fingerprint": "10971dd682e989f4",
+      "claim": {
+        "dimension": "modality",
+        "name": "input_text",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "ok",
+        "tool_calls": [],
+        "finish_reason": "stop",
+        "usage_present": true,
+        "reasoning_present": true,
+        "adjustments": [],
+        "duration_ms": 440.98808290436864,
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 22,
+          "output_tokens": 106,
+          "total_tokens": 128
+        },
+        "reasoning": {
+          "exposed": true,
+          "signature_present": false
+        }
+      },
+      "attempts": 1,
+      "observed_at": "2026-08-31T21:58:43.431162+00:00",
+      "harness_commit": "d26972bb00760d2c43dd2866ac82396cee7080ac",
+      "harness_fingerprint": "f53c8840b4cccc66c80a",
+      "taxonomy_fingerprint": "86c9cca08e7fb81e5aff"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "98d0548555bea117c59c54b5",
+      "provider_id": "fireworks",
+      "model_id": "fireworks/nemotron-lightning-3p5-30b-a3b",
+      "upstream_model": "accounts/fireworks/models/nemotron-lightning-3p5-30b-a3b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "case_id": "text.basic",
+      "case_version": 2,
+      "case_fingerprint": "10971dd682e989f4",
+      "claim": {
+        "dimension": "capability",
+        "name": "text_generation",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "ok",
+        "tool_calls": [],
+        "finish_reason": "stop",
+        "usage_present": true,
+        "reasoning_present": true,
+        "adjustments": [],
+        "duration_ms": 440.98808290436864,
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 22,
+          "output_tokens": 106,
+          "total_tokens": 128
+        },
+        "reasoning": {
+          "exposed": true,
+          "signature_present": false
+        }
+      },
+      "attempts": 1,
+      "observed_at": "2026-08-31T21:58:43.431162+00:00",
+      "harness_commit": "d26972bb00760d2c43dd2866ac82396cee7080ac",
+      "harness_fingerprint": "f53c8840b4cccc66c80a",
+      "taxonomy_fingerprint": "86c9cca08e7fb81e5aff"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "aa34d067af7224ae698d0387",
+      "provider_id": "fireworks",
+      "model_id": "fireworks/nemotron-lightning-3p5-30b-a3b",
+      "upstream_model": "accounts/fireworks/models/nemotron-lightning-3p5-30b-a3b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "case_id": "streaming.tools",
+      "case_version": 2,
+      "case_fingerprint": "12126bb252649974",
+      "claim": {
+        "dimension": "interaction",
+        "name": "streaming+tools",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "",
+        "tool_calls": [
+          {
+            "id": "chatcmpl-tool-bdb55bbb777f56c7",
+            "name": "report_result",
+            "arguments": "{\"value\": \"ok\"}"
+          }
+        ],
+        "finish_reason": "tool_calls",
+        "usage_present": true,
+        "reasoning_present": true,
+        "adjustments": [],
+        "duration_ms": 394.1244159359485,
+        "client_type": "HTTP SSE",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 280,
+          "output_tokens": 57,
+          "total_tokens": 337
+        },
+        "reasoning": {
+          "exposed": true,
+          "signature_present": false
+        }
+      },
+      "attempts": 1,
+      "observed_at": "2026-08-31T21:58:43.431162+00:00",
+      "harness_commit": "d26972bb00760d2c43dd2866ac82396cee7080ac",
+      "harness_fingerprint": "f53c8840b4cccc66c80a",
+      "taxonomy_fingerprint": "86c9cca08e7fb81e5aff"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "be443f0bee9507a766a7b8ba",
+      "provider_id": "fireworks",
+      "model_id": "fireworks/nemotron-lightning-3p5-30b-a3b",
+      "upstream_model": "accounts/fireworks/models/nemotron-lightning-3p5-30b-a3b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "case_id": "modalities.pdf",
+      "case_version": 2,
+      "case_fingerprint": "ca2d457d49373fb3",
+      "claim": {
+        "dimension": "modality",
+        "name": "input_pdf",
+        "profile": {}
+      },
+      "verdict": "unknown",
+      "source": "live_api",
+      "observation": {
+        "outcome": "rejected",
+        "text": "",
+        "tool_calls": [],
+        "usage_present": false,
+        "reasoning_present": false,
+        "error_code": "invalid_request_error",
+        "error_message": "2 request validation errors: Input should be a valid string, field: 'messages[0].content.str', value: [{'type': 'text', 'text': 'Read the document and reply with its single uppercase word'}, {'type': 'file', 'file': {'filename': 'audit.pdf', 'file_data': 'data:application/pdf;base64,JVBERi0xLjQKMSAwIG9iago8PCAvVHlwZSAvQ2F0YWxvZyAvUGFnZXMgMiAwIFIgPj4KZW5kb2JqCjIgMCBvYmoKPDwgL1R5cGUgL1BhZ2VzIC9LaWRzIFszIDAgUl0gL0NvdW50IDEgPj4KZW5kb2JqCjMgMCBvYmoKPDwgL1R5cGUgL1BhZ2UgL1BhcmVudCAyIDAgUiAvTWVkaWFCb3gg",
+        "http_status": 400,
+        "adjustments": [],
+        "duration_ms": 134.34091699309647,
+        "client_type": "HTTP 400",
+        "failure": {
+          "kind": "rejection",
+          "origin": "direct",
+          "retryable": false,
+          "code": "invalid_request_error",
+          "message": "2 request validation errors: Input should be a valid string, field: 'messages[0].content.str', value: [{'type': 'text', 'text': 'Read the document and reply with its single uppercase word'}, {'type': 'file', 'file': {'filename': 'audit.pdf', 'file_data': 'data:application/pdf;base64,JVBERi0xLjQKMSAwIG9iago8PCAvVHlwZSAvQ2F0YWxvZyAvUGFnZXMgMiAwIFIgPj4KZW5kb2JqCjIgMCBvYmoKPDwgL1R5cGUgL1BhZ2VzIC9LaWRzIFszIDAgUl0gL0NvdW50IDEgPj4KZW5kb2JqCjMgMCBvYmoKPDwgL1R5cGUgL1BhZ2UgL1BhcmVudCAyIDAgUiAvTWVkaWFCb3gg",
+          "http_status": 400
+        }
+      },
+      "attempts": 2,
+      "observed_at": "2026-08-31T21:58:43.431162+00:00",
+      "harness_commit": "d26972bb00760d2c43dd2866ac82396cee7080ac",
+      "harness_fingerprint": "f53c8840b4cccc66c80a",
+      "taxonomy_fingerprint": "86c9cca08e7fb81e5aff"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "e0ef866de839c7d60e2304d4",
+      "provider_id": "fireworks",
+      "model_id": "fireworks/nemotron-lightning-3p5-30b-a3b",
+      "upstream_model": "accounts/fireworks/models/nemotron-lightning-3p5-30b-a3b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "case_id": "structured-output.json-schema",
+      "case_version": 2,
+      "case_fingerprint": "4348ddb52773997c",
+      "claim": {
+        "dimension": "option",
+        "name": "response_format",
+        "profile": {
+          "mode": "json_schema"
+        }
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "{\"answer\": 42}",
+        "tool_calls": [],
+        "finish_reason": "stop",
+        "usage_present": true,
+        "reasoning_present": true,
+        "json_value": {
+          "answer": 42
+        },
+        "adjustments": [],
+        "duration_ms": 1139.0369171276689,
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 27,
+          "output_tokens": 362,
+          "total_tokens": 389
+        },
+        "reasoning": {
+          "exposed": true,
+          "signature_present": false
+        }
+      },
+      "attempts": 1,
+      "observed_at": "2026-08-31T21:58:43.431162+00:00",
+      "harness_commit": "d26972bb00760d2c43dd2866ac82396cee7080ac",
+      "harness_fingerprint": "f53c8840b4cccc66c80a",
+      "taxonomy_fingerprint": "86c9cca08e7fb81e5aff"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "f2ecedb867df89f2defafc4e",
+      "provider_id": "fireworks",
+      "model_id": "fireworks/nemotron-lightning-3p5-30b-a3b",
+      "upstream_model": "accounts/fireworks/models/nemotron-lightning-3p5-30b-a3b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "case_id": "structured-output.json-schema",
+      "case_version": 2,
+      "case_fingerprint": "4348ddb52773997c",
+      "claim": {
+        "dimension": "capability",
+        "name": "structured_output",
+        "profile": {
+          "mode": "json_schema"
+        }
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "{\"answer\": 42}",
+        "tool_calls": [],
+        "finish_reason": "stop",
+        "usage_present": true,
+        "reasoning_present": true,
+        "json_value": {
+          "answer": 42
+        },
+        "adjustments": [],
+        "duration_ms": 1139.0369171276689,
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 27,
+          "output_tokens": 362,
+          "total_tokens": 389
+        },
+        "reasoning": {
+          "exposed": true,
+          "signature_present": false
+        }
+      },
+      "attempts": 1,
+      "observed_at": "2026-08-31T21:58:43.431162+00:00",
+      "harness_commit": "d26972bb00760d2c43dd2866ac82396cee7080ac",
+      "harness_fingerprint": "f53c8840b4cccc66c80a",
+      "taxonomy_fingerprint": "86c9cca08e7fb81e5aff"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "f789b1edd4b195da920efcd3",
+      "provider_id": "fireworks",
+      "model_id": "fireworks/nemotron-lightning-3p5-30b-a3b",
+      "upstream_model": "accounts/fireworks/models/nemotron-lightning-3p5-30b-a3b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "case_id": "reasoning.with-tool",
+      "case_version": 2,
+      "case_fingerprint": "07fb0ec14b14dfdb",
+      "claim": {
+        "dimension": "interaction",
+        "name": "reasoning+tools",
+        "profile": {
+          "reasoning_effort": "low",
+          "tool_choice": "named"
+        }
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "",
+        "tool_calls": [
+          {
+            "id": "chatcmpl-tool-b54a14da6ab22ece",
+            "name": "report_result",
+            "arguments": "{\"value\": \"ok\"}"
+          }
+        ],
+        "finish_reason": "tool_calls",
+        "usage_present": true,
+        "reasoning_present": true,
+        "adjustments": [],
+        "duration_ms": 528.333333088085,
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 283,
+          "output_tokens": 56,
+          "total_tokens": 339
+        },
+        "reasoning": {
+          "exposed": true,
+          "signature_present": false
+        }
+      },
+      "attempts": 2,
+      "observed_at": "2026-08-31T21:58:43.431162+00:00",
+      "harness_commit": "d26972bb00760d2c43dd2866ac82396cee7080ac",
+      "harness_fingerprint": "f53c8840b4cccc66c80a",
+      "taxonomy_fingerprint": "86c9cca08e7fb81e5aff"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "14af79f887ff2d19d8e1a6cd",
+      "provider_id": "groq",
+      "model_id": "groq/openai/gpt-oss-20b",
+      "upstream_model": "openai/gpt-oss-20b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "case_id": "structured-output.json-schema",
+      "case_version": 2,
+      "case_fingerprint": "4348ddb52773997c",
+      "claim": {
+        "dimension": "option",
+        "name": "response_format",
+        "profile": {
+          "mode": "json_schema"
+        }
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "{\"answer\":42}",
+        "tool_calls": [],
+        "finish_reason": "stop",
+        "usage_present": true,
+        "reasoning_present": true,
+        "json_value": {
+          "answer": 42
+        },
+        "adjustments": [],
+        "duration_ms": 393.47416581586003,
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 168,
+          "output_tokens": 76,
+          "total_tokens": 244
+        },
+        "reasoning": {
+          "exposed": true,
+          "signature_present": false
+        }
+      },
+      "attempts": 3,
+      "observed_at": "2026-08-31T21:58:48.548471+00:00",
+      "harness_commit": "d26972bb00760d2c43dd2866ac82396cee7080ac",
+      "harness_fingerprint": "f53c8840b4cccc66c80a",
+      "taxonomy_fingerprint": "86c9cca08e7fb81e5aff"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "27b2e847946ce9fd9558eaaa",
+      "provider_id": "groq",
+      "model_id": "groq/openai/gpt-oss-20b",
+      "upstream_model": "openai/gpt-oss-20b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "case_id": "reasoning.with-tool",
+      "case_version": 2,
+      "case_fingerprint": "07fb0ec14b14dfdb",
+      "claim": {
+        "dimension": "interaction",
+        "name": "reasoning+tools",
+        "profile": {
+          "reasoning_effort": "low",
+          "tool_choice": "named"
+        }
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "",
+        "tool_calls": [
+          {
+            "id": "fc_a725eb62-1c36-4970-8c38-3c0ec9ae6b02",
+            "name": "report_result",
+            "arguments": "{\"value\":\"ok\"}"
+          }
+        ],
+        "finish_reason": "tool_calls",
+        "usage_present": true,
+        "reasoning_present": true,
+        "adjustments": [],
+        "duration_ms": 141.78895903751254,
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 133,
+          "output_tokens": 31,
+          "total_tokens": 164
+        },
+        "reasoning": {
+          "exposed": true,
+          "signature_present": false
+        }
+      },
+      "attempts": 3,
+      "observed_at": "2026-08-31T21:58:48.548471+00:00",
+      "harness_commit": "d26972bb00760d2c43dd2866ac82396cee7080ac",
+      "harness_fingerprint": "f53c8840b4cccc66c80a",
+      "taxonomy_fingerprint": "86c9cca08e7fb81e5aff"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "484168c6176f95ff5ab634b5",
+      "provider_id": "groq",
+      "model_id": "groq/openai/gpt-oss-20b",
+      "upstream_model": "openai/gpt-oss-20b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "case_id": "structured-output.json-schema",
+      "case_version": 2,
+      "case_fingerprint": "4348ddb52773997c",
+      "claim": {
+        "dimension": "capability",
+        "name": "structured_output",
+        "profile": {
+          "mode": "json_schema"
+        }
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "{\"answer\":42}",
+        "tool_calls": [],
+        "finish_reason": "stop",
+        "usage_present": true,
+        "reasoning_present": true,
+        "json_value": {
+          "answer": 42
+        },
+        "adjustments": [],
+        "duration_ms": 393.47416581586003,
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 168,
+          "output_tokens": 76,
+          "total_tokens": 244
+        },
+        "reasoning": {
+          "exposed": true,
+          "signature_present": false
+        }
+      },
+      "attempts": 3,
+      "observed_at": "2026-08-31T21:58:48.548471+00:00",
+      "harness_commit": "d26972bb00760d2c43dd2866ac82396cee7080ac",
+      "harness_fingerprint": "f53c8840b4cccc66c80a",
+      "taxonomy_fingerprint": "86c9cca08e7fb81e5aff"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "db9841a8a6418cbd5182ec53",
+      "provider_id": "groq",
+      "model_id": "groq/openai/gpt-oss-20b",
+      "upstream_model": "openai/gpt-oss-20b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "case_id": "modalities.pdf",
+      "case_version": 2,
+      "case_fingerprint": "ca2d457d49373fb3",
+      "claim": {
+        "dimension": "modality",
+        "name": "input_pdf",
+        "profile": {}
+      },
+      "verdict": "unknown",
+      "source": "live_api",
+      "observation": {
+        "outcome": "rejected",
+        "text": "",
+        "tool_calls": [],
+        "usage_present": false,
+        "reasoning_present": false,
+        "error_code": "invalid_request_error",
+        "error_message": "'messages.0' : for 'role:user' the following must be satisfied[('messages.0.content' : one of the following must be satisfied[('messages.0.content' : value must be a string) OR ('messages.0.content.1' : one of the following must be satisfied[('messages.0.content.1.type' : value is not one of the allowed values ['text']) OR ('messages.0.content.1.type' : value is not one of the allowed values ['image_url']) OR ('messages.0.content.1.type' : value is not one of the allowed values ['document'])])])",
+        "http_status": 400,
+        "adjustments": [],
+        "duration_ms": 102.1350419614464,
+        "client_type": "HTTP 400",
+        "failure": {
+          "kind": "rejection",
+          "origin": "direct",
+          "retryable": false,
+          "code": "invalid_request_error",
+          "message": "'messages.0' : for 'role:user' the following must be satisfied[('messages.0.content' : one of the following must be satisfied[('messages.0.content' : value must be a string) OR ('messages.0.content.1' : one of the following must be satisfied[('messages.0.content.1.type' : value is not one of the allowed values ['text']) OR ('messages.0.content.1.type' : value is not one of the allowed values ['image_url']) OR ('messages.0.content.1.type' : value is not one of the allowed values ['document'])])])",
+          "http_status": 400
+        }
+      },
+      "attempts": 2,
+      "observed_at": "2026-08-31T21:58:48.548471+00:00",
+      "harness_commit": "d26972bb00760d2c43dd2866ac82396cee7080ac",
+      "harness_fingerprint": "f53c8840b4cccc66c80a",
+      "taxonomy_fingerprint": "86c9cca08e7fb81e5aff"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "eadd83a8af4e7f58651c2ad8",
+      "provider_id": "groq",
+      "model_id": "groq/openai/gpt-oss-20b",
+      "upstream_model": "openai/gpt-oss-20b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "case_id": "streaming.tools",
+      "case_version": 2,
+      "case_fingerprint": "12126bb252649974",
+      "claim": {
+        "dimension": "interaction",
+        "name": "streaming+tools",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "",
+        "tool_calls": [
+          {
+            "id": "fc_56f62eaf-f2c2-484c-a4d8-21075e791c9e",
+            "name": "report_result",
+            "arguments": "{\"value\":\"ok\"}"
+          }
+        ],
+        "finish_reason": "tool_calls",
+        "usage_present": true,
+        "reasoning_present": true,
+        "adjustments": [],
+        "duration_ms": 322.4063750822097,
+        "client_type": "HTTP SSE",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 130,
+          "output_tokens": 51,
+          "total_tokens": 181
+        },
+        "reasoning": {
+          "exposed": true,
+          "signature_present": false
+        }
+      },
+      "attempts": 3,
+      "observed_at": "2026-08-31T21:58:48.548471+00:00",
+      "harness_commit": "d26972bb00760d2c43dd2866ac82396cee7080ac",
+      "harness_fingerprint": "f53c8840b4cccc66c80a",
+      "taxonomy_fingerprint": "86c9cca08e7fb81e5aff"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "1e00da5338b60ce4c37fa420",
+      "provider_id": "mistral",
+      "model_id": "mistral/zai-glm-5-2",
+      "upstream_model": "zai-glm-5-2",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "case_id": "structured-output.json-schema",
+      "case_version": 2,
+      "case_fingerprint": "4348ddb52773997c",
+      "claim": {
+        "dimension": "capability",
+        "name": "structured_output",
+        "profile": {
+          "mode": "json_schema"
+        }
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "{\n  \"answer\": 42\n}",
+        "tool_calls": [],
+        "finish_reason": "stop",
+        "usage_present": true,
+        "reasoning_present": false,
+        "json_value": {
+          "answer": 42
+        },
+        "adjustments": [],
+        "duration_ms": 658.8752078823745,
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 16,
+          "output_tokens": 10,
+          "total_tokens": 26
+        }
+      },
+      "attempts": 1,
+      "observed_at": "2026-08-31T21:59:03.867752+00:00",
+      "harness_commit": "d26972bb00760d2c43dd2866ac82396cee7080ac",
+      "harness_fingerprint": "f53c8840b4cccc66c80a",
+      "taxonomy_fingerprint": "86c9cca08e7fb81e5aff"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "4772bba54ffcd197db54cf6f",
+      "provider_id": "mistral",
+      "model_id": "mistral/zai-glm-5-2",
+      "upstream_model": "zai-glm-5-2",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "case_id": "text.basic",
+      "case_version": 2,
+      "case_fingerprint": "10971dd682e989f4",
+      "claim": {
+        "dimension": "capability",
+        "name": "text_generation",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "ok",
+        "tool_calls": [],
+        "finish_reason": "stop",
+        "usage_present": true,
+        "reasoning_present": false,
+        "adjustments": [],
+        "duration_ms": 761.9501249864697,
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 12,
+          "output_tokens": 2,
+          "total_tokens": 14
+        }
+      },
+      "attempts": 1,
+      "observed_at": "2026-08-31T21:59:03.867752+00:00",
+      "harness_commit": "d26972bb00760d2c43dd2866ac82396cee7080ac",
+      "harness_fingerprint": "f53c8840b4cccc66c80a",
+      "taxonomy_fingerprint": "86c9cca08e7fb81e5aff"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "489991a1f1ce005f7bba5102",
+      "provider_id": "mistral",
+      "model_id": "mistral/zai-glm-5-2",
+      "upstream_model": "zai-glm-5-2",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "case_id": "text.basic",
+      "case_version": 2,
+      "case_fingerprint": "10971dd682e989f4",
+      "claim": {
+        "dimension": "modality",
+        "name": "input_text",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "ok",
+        "tool_calls": [],
+        "finish_reason": "stop",
+        "usage_present": true,
+        "reasoning_present": false,
+        "adjustments": [],
+        "duration_ms": 761.9501249864697,
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 12,
+          "output_tokens": 2,
+          "total_tokens": 14
+        }
+      },
+      "attempts": 1,
+      "observed_at": "2026-08-31T21:59:03.867752+00:00",
+      "harness_commit": "d26972bb00760d2c43dd2866ac82396cee7080ac",
+      "harness_fingerprint": "f53c8840b4cccc66c80a",
+      "taxonomy_fingerprint": "86c9cca08e7fb81e5aff"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "4ecb8b8e691da84cffcc86d6",
+      "provider_id": "mistral",
+      "model_id": "mistral/zai-glm-5-2",
+      "upstream_model": "zai-glm-5-2",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "case_id": "text.basic",
+      "case_version": 2,
+      "case_fingerprint": "10971dd682e989f4",
+      "claim": {
+        "dimension": "modality",
+        "name": "output_text",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "ok",
+        "tool_calls": [],
+        "finish_reason": "stop",
+        "usage_present": true,
+        "reasoning_present": false,
+        "adjustments": [],
+        "duration_ms": 761.9501249864697,
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 12,
+          "output_tokens": 2,
+          "total_tokens": 14
+        }
+      },
+      "attempts": 1,
+      "observed_at": "2026-08-31T21:59:03.867752+00:00",
+      "harness_commit": "d26972bb00760d2c43dd2866ac82396cee7080ac",
+      "harness_fingerprint": "f53c8840b4cccc66c80a",
+      "taxonomy_fingerprint": "86c9cca08e7fb81e5aff"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "56bda6ceb30bf99f8dd0213a",
+      "provider_id": "mistral",
+      "model_id": "mistral/zai-glm-5-2",
+      "upstream_model": "zai-glm-5-2",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "case_id": "structured-output.json-schema",
+      "case_version": 2,
+      "case_fingerprint": "4348ddb52773997c",
+      "claim": {
+        "dimension": "option",
+        "name": "response_format",
+        "profile": {
+          "mode": "json_schema"
+        }
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "{\n  \"answer\": 42\n}",
+        "tool_calls": [],
+        "finish_reason": "stop",
+        "usage_present": true,
+        "reasoning_present": false,
+        "json_value": {
+          "answer": 42
+        },
+        "adjustments": [],
+        "duration_ms": 658.8752078823745,
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 16,
+          "output_tokens": 10,
+          "total_tokens": 26
+        }
+      },
+      "attempts": 1,
+      "observed_at": "2026-08-31T21:59:03.867752+00:00",
+      "harness_commit": "d26972bb00760d2c43dd2866ac82396cee7080ac",
+      "harness_fingerprint": "f53c8840b4cccc66c80a",
+      "taxonomy_fingerprint": "86c9cca08e7fb81e5aff"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "5895a8f3f5d06d5f91c76a1e",
+      "provider_id": "mistral",
+      "model_id": "mistral/zai-glm-5-2",
+      "upstream_model": "zai-glm-5-2",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "case_id": "reasoning.with-tool",
+      "case_version": 2,
+      "case_fingerprint": "07fb0ec14b14dfdb",
+      "claim": {
+        "dimension": "interaction",
+        "name": "reasoning+tools",
+        "profile": {
+          "reasoning_effort": "low",
+          "tool_choice": "named"
+        }
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "",
+        "tool_calls": [
+          {
+            "id": "chatcmpl-tool-b34e099d4a5453da",
+            "name": "report_result",
+            "arguments": "{\"value\": \"ok\"}"
+          }
+        ],
+        "finish_reason": "tool_calls",
+        "usage_present": true,
+        "reasoning_present": true,
+        "adjustments": [],
+        "duration_ms": 699.8829590156674,
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 161,
+          "output_tokens": 25,
+          "total_tokens": 186
+        },
+        "reasoning": {
+          "exposed": true,
+          "kind": "thinking",
+          "signature_present": false
+        }
+      },
+      "attempts": 2,
+      "observed_at": "2026-08-31T21:59:03.867752+00:00",
+      "harness_commit": "d26972bb00760d2c43dd2866ac82396cee7080ac",
+      "harness_fingerprint": "f53c8840b4cccc66c80a",
+      "taxonomy_fingerprint": "86c9cca08e7fb81e5aff"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "a0465f77ce76e20ceb6d2c3f",
+      "provider_id": "mistral",
+      "model_id": "mistral/zai-glm-5-2",
+      "upstream_model": "zai-glm-5-2",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "case_id": "streaming.tools",
+      "case_version": 2,
+      "case_fingerprint": "12126bb252649974",
+      "claim": {
+        "dimension": "interaction",
+        "name": "streaming+tools",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "",
+        "tool_calls": [
+          {
+            "id": "chatcmpl-tool-9cceffbfaf65af76",
+            "name": "report_result",
+            "arguments": "{\"value\": \"ok\"}"
+          }
+        ],
+        "finish_reason": "stop",
+        "usage_present": true,
+        "reasoning_present": false,
+        "adjustments": [],
+        "duration_ms": 796.1639161221683,
+        "client_type": "HTTP SSE",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 152,
+          "output_tokens": 11,
+          "total_tokens": 163
+        }
+      },
+      "attempts": 1,
+      "observed_at": "2026-08-31T21:59:03.867752+00:00",
+      "harness_commit": "d26972bb00760d2c43dd2866ac82396cee7080ac",
+      "harness_fingerprint": "f53c8840b4cccc66c80a",
+      "taxonomy_fingerprint": "86c9cca08e7fb81e5aff"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "f691fdf563b0a356998638b5",
+      "provider_id": "mistral",
+      "model_id": "mistral/zai-glm-5-2",
+      "upstream_model": "zai-glm-5-2",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "case_id": "modalities.pdf",
+      "case_version": 2,
+      "case_fingerprint": "ca2d457d49373fb3",
+      "claim": {
+        "dimension": "modality",
+        "name": "input_pdf",
+        "profile": {}
+      },
+      "verdict": "unknown",
+      "source": "live_api",
+      "observation": {
+        "outcome": "rejected",
+        "text": "",
+        "tool_calls": [],
+        "usage_present": false,
+        "reasoning_present": false,
+        "error_code": "422",
+        "error_message": "{'detail': [{'type': 'string_type', 'loc': ['body', 'messages', 0, 'user', 'content', 'str'], 'msg': 'Input should be a valid string', 'input': [{'type': 'text', 'text': 'Read the document and reply with its single uppercase word'}, {'type': 'file', 'file': {'filename': 'audit.pdf', 'file_data': 'data:application/pdf;base64,JVBERi0xLjQKMSAwIG9iago8PCAvVHlwZSAvQ2F0YWxvZyAvUGFnZXMgMiAwIFIgPj4KZW5kb2JqCjIgMCBvYmoKPDwgL1R5cGUgL1BhZ2VzIC9LaWRzIFszIDAgUl0gL0NvdW50IDEgPj4KZW5kb2JqCjMgMCBvYmoKPDwgL1R5cG",
+        "http_status": 422,
+        "adjustments": [],
+        "duration_ms": 236.6941669024527,
+        "client_type": "HTTP 422",
+        "failure": {
+          "kind": "rejection",
+          "origin": "direct",
+          "retryable": false,
+          "code": "422",
+          "message": "{'detail': [{'type': 'string_type', 'loc': ['body', 'messages', 0, 'user', 'content', 'str'], 'msg': 'Input should be a valid string', 'input': [{'type': 'text', 'text': 'Read the document and reply with its single uppercase word'}, {'type': 'file', 'file': {'filename': 'audit.pdf', 'file_data': 'data:application/pdf;base64,JVBERi0xLjQKMSAwIG9iago8PCAvVHlwZSAvQ2F0YWxvZyAvUGFnZXMgMiAwIFIgPj4KZW5kb2JqCjIgMCBvYmoKPDwgL1R5cGUgL1BhZ2VzIC9LaWRzIFszIDAgUl0gL0NvdW50IDEgPj4KZW5kb2JqCjMgMCBvYmoKPDwgL1R5cG",
+          "http_status": 422
+        }
+      },
+      "attempts": 2,
+      "observed_at": "2026-08-31T21:59:03.867752+00:00",
+      "harness_commit": "d26972bb00760d2c43dd2866ac82396cee7080ac",
+      "harness_fingerprint": "f53c8840b4cccc66c80a",
+      "taxonomy_fingerprint": "86c9cca08e7fb81e5aff"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "0613e8cf9e4beabca620734e",
+      "provider_id": "openai",
+      "model_id": "openai/gpt-5.6-luna",
+      "upstream_model": "gpt-5.6-luna",
+      "surface_id": "oai_responses",
+      "endpoint": "responses",
+      "case_id": "text.basic",
+      "case_version": 2,
+      "case_fingerprint": "10971dd682e989f4",
+      "claim": {
+        "dimension": "modality",
+        "name": "input_text",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "ok",
+        "tool_calls": [],
+        "finish_reason": "completed",
+        "usage_present": true,
+        "reasoning_present": false,
+        "adjustments": [],
+        "duration_ms": 1068.6757089570165,
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 12,
+          "output_tokens": 5,
+          "total_tokens": 17
+        }
+      },
+      "attempts": 1,
+      "observed_at": "2026-08-31T21:59:08.615869+00:00",
+      "harness_commit": "d26972bb00760d2c43dd2866ac82396cee7080ac",
+      "harness_fingerprint": "f53c8840b4cccc66c80a",
+      "taxonomy_fingerprint": "86c9cca08e7fb81e5aff"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "2cdacb8c90898bf8e684f54c",
+      "provider_id": "openai",
+      "model_id": "openai/gpt-5.6-luna",
+      "upstream_model": "gpt-5.6-luna",
+      "surface_id": "oai_responses",
+      "endpoint": "responses",
+      "case_id": "structured-output.json-schema",
+      "case_version": 2,
+      "case_fingerprint": "4348ddb52773997c",
+      "claim": {
+        "dimension": "option",
+        "name": "response_format",
+        "profile": {
+          "mode": "json_schema"
+        }
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "{\"answer\":42}",
+        "tool_calls": [],
+        "finish_reason": "completed",
+        "usage_present": true,
+        "reasoning_present": false,
+        "json_value": {
+          "answer": 42
+        },
+        "adjustments": [],
+        "duration_ms": 1840.957332868129,
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 42,
+          "output_tokens": 14,
+          "total_tokens": 56
+        }
+      },
+      "attempts": 1,
+      "observed_at": "2026-08-31T21:59:08.615869+00:00",
+      "harness_commit": "d26972bb00760d2c43dd2866ac82396cee7080ac",
+      "harness_fingerprint": "f53c8840b4cccc66c80a",
+      "taxonomy_fingerprint": "86c9cca08e7fb81e5aff"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "c32981e04c3a8036acdfa1f4",
+      "provider_id": "openai",
+      "model_id": "openai/gpt-5.6-luna",
+      "upstream_model": "gpt-5.6-luna",
+      "surface_id": "oai_responses",
+      "endpoint": "responses",
+      "case_id": "modalities.pdf",
+      "case_version": 2,
+      "case_fingerprint": "ca2d457d49373fb3",
+      "claim": {
+        "dimension": "modality",
+        "name": "input_pdf",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "COBALT",
+        "tool_calls": [],
+        "finish_reason": "completed",
+        "usage_present": true,
+        "reasoning_present": false,
+        "adjustments": [],
+        "duration_ms": 1770.0211249757558,
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 41,
+          "output_tokens": 7,
+          "total_tokens": 48
+        }
+      },
+      "attempts": 1,
+      "observed_at": "2026-08-31T21:59:08.615869+00:00",
+      "harness_commit": "d26972bb00760d2c43dd2866ac82396cee7080ac",
+      "harness_fingerprint": "f53c8840b4cccc66c80a",
+      "taxonomy_fingerprint": "86c9cca08e7fb81e5aff"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "cf9bdb62dea71d7f702b121e",
+      "provider_id": "openai",
+      "model_id": "openai/gpt-5.6-luna",
+      "upstream_model": "gpt-5.6-luna",
+      "surface_id": "oai_responses",
+      "endpoint": "responses",
+      "case_id": "text.basic",
+      "case_version": 2,
+      "case_fingerprint": "10971dd682e989f4",
+      "claim": {
+        "dimension": "capability",
+        "name": "text_generation",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "ok",
+        "tool_calls": [],
+        "finish_reason": "completed",
+        "usage_present": true,
+        "reasoning_present": false,
+        "adjustments": [],
+        "duration_ms": 1068.6757089570165,
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 12,
+          "output_tokens": 5,
+          "total_tokens": 17
+        }
+      },
+      "attempts": 1,
+      "observed_at": "2026-08-31T21:59:08.615869+00:00",
+      "harness_commit": "d26972bb00760d2c43dd2866ac82396cee7080ac",
+      "harness_fingerprint": "f53c8840b4cccc66c80a",
+      "taxonomy_fingerprint": "86c9cca08e7fb81e5aff"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "dccc7e071d86e4e2f2783ecc",
+      "provider_id": "openai",
+      "model_id": "openai/gpt-5.6-luna",
+      "upstream_model": "gpt-5.6-luna",
+      "surface_id": "oai_responses",
+      "endpoint": "responses",
+      "case_id": "structured-output.json-schema",
+      "case_version": 2,
+      "case_fingerprint": "4348ddb52773997c",
+      "claim": {
+        "dimension": "capability",
+        "name": "structured_output",
+        "profile": {
+          "mode": "json_schema"
+        }
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "{\"answer\":42}",
+        "tool_calls": [],
+        "finish_reason": "completed",
+        "usage_present": true,
+        "reasoning_present": false,
+        "json_value": {
+          "answer": 42
+        },
+        "adjustments": [],
+        "duration_ms": 1840.957332868129,
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 42,
+          "output_tokens": 14,
+          "total_tokens": 56
+        }
+      },
+      "attempts": 1,
+      "observed_at": "2026-08-31T21:59:08.615869+00:00",
+      "harness_commit": "d26972bb00760d2c43dd2866ac82396cee7080ac",
+      "harness_fingerprint": "f53c8840b4cccc66c80a",
+      "taxonomy_fingerprint": "86c9cca08e7fb81e5aff"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "e79542bc18d6a950367bf17e",
+      "provider_id": "openai",
+      "model_id": "openai/gpt-5.6-luna",
+      "upstream_model": "gpt-5.6-luna",
+      "surface_id": "oai_responses",
+      "endpoint": "responses",
+      "case_id": "streaming.tools",
+      "case_version": 2,
+      "case_fingerprint": "12126bb252649974",
+      "claim": {
+        "dimension": "interaction",
+        "name": "streaming+tools",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "",
+        "tool_calls": [
+          {
+            "id": "call_0FKxpqQ9XB33nhE0djhuyq4u",
+            "name": "report_result",
+            "arguments": "{\"value\":\"ok\"}"
+          }
+        ],
+        "finish_reason": "tool_calls",
+        "usage_present": true,
+        "reasoning_present": false,
+        "adjustments": [],
+        "duration_ms": 1664.7465419955552,
+        "client_type": "HTTP SSE",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 47,
+          "output_tokens": 18,
+          "total_tokens": 65
+        }
+      },
+      "attempts": 1,
+      "observed_at": "2026-08-31T21:59:08.615869+00:00",
+      "harness_commit": "d26972bb00760d2c43dd2866ac82396cee7080ac",
+      "harness_fingerprint": "f53c8840b4cccc66c80a",
+      "taxonomy_fingerprint": "86c9cca08e7fb81e5aff"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "f2d75224ab79947829d2b4b7",
+      "provider_id": "openai",
+      "model_id": "openai/gpt-5.6-luna",
+      "upstream_model": "gpt-5.6-luna",
+      "surface_id": "oai_responses",
+      "endpoint": "responses",
+      "case_id": "reasoning.with-tool",
+      "case_version": 2,
+      "case_fingerprint": "07fb0ec14b14dfdb",
+      "claim": {
+        "dimension": "interaction",
+        "name": "reasoning+tools",
+        "profile": {
+          "reasoning_effort": "low",
+          "tool_choice": "named"
+        }
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "",
+        "tool_calls": [
+          {
+            "id": "call_aejhhBZMtWCENzjD1wSe8eYL",
+            "name": "report_result",
+            "arguments": "{\"value\":\"ok\"}"
+          }
+        ],
+        "finish_reason": "tool_calls",
+        "usage_present": true,
+        "reasoning_present": false,
+        "adjustments": [],
+        "duration_ms": 1068.9686248078942,
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 50,
+          "output_tokens": 18,
+          "total_tokens": 68
+        }
+      },
+      "attempts": 1,
+      "observed_at": "2026-08-31T21:59:08.615869+00:00",
+      "harness_commit": "d26972bb00760d2c43dd2866ac82396cee7080ac",
+      "harness_fingerprint": "f53c8840b4cccc66c80a",
+      "taxonomy_fingerprint": "86c9cca08e7fb81e5aff"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "fa7f4fef6fc82165f59b5c2e",
+      "provider_id": "openai",
+      "model_id": "openai/gpt-5.6-luna",
+      "upstream_model": "gpt-5.6-luna",
+      "surface_id": "oai_responses",
+      "endpoint": "responses",
+      "case_id": "text.basic",
+      "case_version": 2,
+      "case_fingerprint": "10971dd682e989f4",
+      "claim": {
+        "dimension": "modality",
+        "name": "output_text",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "ok",
+        "tool_calls": [],
+        "finish_reason": "completed",
+        "usage_present": true,
+        "reasoning_present": false,
+        "adjustments": [],
+        "duration_ms": 1068.6757089570165,
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 12,
+          "output_tokens": 5,
+          "total_tokens": 17
+        }
+      },
+      "attempts": 1,
+      "observed_at": "2026-08-31T21:59:08.615869+00:00",
+      "harness_commit": "d26972bb00760d2c43dd2866ac82396cee7080ac",
+      "harness_fingerprint": "f53c8840b4cccc66c80a",
+      "taxonomy_fingerprint": "86c9cca08e7fb81e5aff"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "0ed511f9dd658f25cbc2b50a",
+      "provider_id": "together",
+      "model_id": "together/openai/gpt-oss-20b",
+      "upstream_model": "openai/gpt-oss-20b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "case_id": "text.basic",
+      "case_version": 2,
+      "case_fingerprint": "10971dd682e989f4",
+      "claim": {
+        "dimension": "modality",
+        "name": "output_text",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "ok",
+        "tool_calls": [],
+        "finish_reason": "stop",
+        "usage_present": true,
+        "reasoning_present": true,
+        "adjustments": [],
+        "duration_ms": 655.6883330922574,
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 73,
+          "output_tokens": 31,
+          "total_tokens": 104
+        },
+        "reasoning": {
+          "exposed": true,
+          "signature_present": false
+        }
+      },
+      "attempts": 1,
+      "observed_at": "2026-08-31T21:59:18.705731+00:00",
+      "harness_commit": "d26972bb00760d2c43dd2866ac82396cee7080ac",
+      "harness_fingerprint": "f53c8840b4cccc66c80a",
+      "taxonomy_fingerprint": "86c9cca08e7fb81e5aff"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "271a050bacc6404b28889cf9",
+      "provider_id": "together",
+      "model_id": "together/openai/gpt-oss-20b",
+      "upstream_model": "openai/gpt-oss-20b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "case_id": "modalities.pdf",
+      "case_version": 2,
+      "case_fingerprint": "ca2d457d49373fb3",
+      "claim": {
+        "dimension": "modality",
+        "name": "input_pdf",
+        "profile": {}
+      },
+      "verdict": "unknown",
+      "source": "live_api",
+      "observation": {
+        "outcome": "rejected",
+        "text": "",
+        "tool_calls": [],
+        "usage_present": false,
+        "reasoning_present": false,
+        "error_code": "invalid_request_error",
+        "error_message": "Invalid JSON data: Failed to deserialize the JSON body into the target type: messages[0]: data did not match any variant of untagged enum MessageContent at line 1 column 1071",
+        "http_status": 400,
+        "adjustments": [],
+        "duration_ms": 421.62650008685887,
+        "client_type": "HTTP 400",
+        "failure": {
+          "kind": "rejection",
+          "origin": "direct",
+          "retryable": false,
+          "code": "invalid_request_error",
+          "message": "Invalid JSON data: Failed to deserialize the JSON body into the target type: messages[0]: data did not match any variant of untagged enum MessageContent at line 1 column 1071",
+          "http_status": 400
+        }
+      },
+      "attempts": 2,
+      "observed_at": "2026-08-31T21:59:18.705731+00:00",
+      "harness_commit": "d26972bb00760d2c43dd2866ac82396cee7080ac",
+      "harness_fingerprint": "f53c8840b4cccc66c80a",
+      "taxonomy_fingerprint": "86c9cca08e7fb81e5aff"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "85f7308db5b553e1a996864b",
+      "provider_id": "together",
+      "model_id": "together/openai/gpt-oss-20b",
+      "upstream_model": "openai/gpt-oss-20b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "case_id": "streaming.tools",
+      "case_version": 2,
+      "case_fingerprint": "12126bb252649974",
+      "claim": {
+        "dimension": "interaction",
+        "name": "streaming+tools",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "",
+        "tool_calls": [
+          {
+            "id": "call_d57d29a6d09b46498913856c",
+            "name": "report_result",
+            "arguments": "{\"value\": \"ok\"}"
+          }
+        ],
+        "finish_reason": "tool_calls",
+        "usage_present": true,
+        "reasoning_present": true,
+        "adjustments": [],
+        "duration_ms": 791.8329590465873,
+        "client_type": "HTTP SSE",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 126,
+          "output_tokens": 49,
+          "total_tokens": 175
+        },
+        "reasoning": {
+          "exposed": true,
+          "signature_present": false
+        }
+      },
+      "attempts": 1,
+      "observed_at": "2026-08-31T21:59:18.705731+00:00",
+      "harness_commit": "d26972bb00760d2c43dd2866ac82396cee7080ac",
+      "harness_fingerprint": "f53c8840b4cccc66c80a",
+      "taxonomy_fingerprint": "86c9cca08e7fb81e5aff"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "a34ba9d21ea6dd3f49f5f1e3",
+      "provider_id": "together",
+      "model_id": "together/openai/gpt-oss-20b",
+      "upstream_model": "openai/gpt-oss-20b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "case_id": "reasoning.with-tool",
+      "case_version": 2,
+      "case_fingerprint": "07fb0ec14b14dfdb",
+      "claim": {
+        "dimension": "interaction",
+        "name": "reasoning+tools",
+        "profile": {
+          "reasoning_effort": "low",
+          "tool_choice": "named"
+        }
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "",
+        "tool_calls": [
+          {
+            "id": "call_4844d1c9ba5245c1ab424448",
+            "name": "report_result",
+            "arguments": "{\"value\": \"ok\"}"
+          }
+        ],
+        "finish_reason": "tool_calls",
+        "usage_present": true,
+        "reasoning_present": true,
+        "adjustments": [],
+        "duration_ms": 676.9071249291301,
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 129,
+          "output_tokens": 30,
+          "total_tokens": 159
+        },
+        "reasoning": {
+          "exposed": true,
+          "signature_present": false
+        }
+      },
+      "attempts": 2,
+      "observed_at": "2026-08-31T21:59:18.705731+00:00",
+      "harness_commit": "d26972bb00760d2c43dd2866ac82396cee7080ac",
+      "harness_fingerprint": "f53c8840b4cccc66c80a",
+      "taxonomy_fingerprint": "86c9cca08e7fb81e5aff"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "cdee591d43bbb5b5844a326d",
+      "provider_id": "together",
+      "model_id": "together/openai/gpt-oss-20b",
+      "upstream_model": "openai/gpt-oss-20b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "case_id": "structured-output.json-schema",
+      "case_version": 2,
+      "case_fingerprint": "4348ddb52773997c",
+      "claim": {
+        "dimension": "capability",
+        "name": "structured_output",
+        "profile": {
+          "mode": "json_schema"
+        }
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "{\"answer\": 42}",
+        "tool_calls": [],
+        "finish_reason": "stop",
+        "usage_present": true,
+        "reasoning_present": true,
+        "json_value": {
+          "answer": 42
+        },
+        "adjustments": [],
+        "duration_ms": 774.7180829755962,
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 77,
+          "output_tokens": 40,
+          "total_tokens": 117
+        },
+        "reasoning": {
+          "exposed": true,
+          "signature_present": false
+        }
+      },
+      "attempts": 1,
+      "observed_at": "2026-08-31T21:59:18.705731+00:00",
+      "harness_commit": "d26972bb00760d2c43dd2866ac82396cee7080ac",
+      "harness_fingerprint": "f53c8840b4cccc66c80a",
+      "taxonomy_fingerprint": "86c9cca08e7fb81e5aff"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "d6cac207a2fb3080ccdd3630",
+      "provider_id": "together",
+      "model_id": "together/openai/gpt-oss-20b",
+      "upstream_model": "openai/gpt-oss-20b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "case_id": "text.basic",
+      "case_version": 2,
+      "case_fingerprint": "10971dd682e989f4",
+      "claim": {
+        "dimension": "modality",
+        "name": "input_text",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "ok",
+        "tool_calls": [],
+        "finish_reason": "stop",
+        "usage_present": true,
+        "reasoning_present": true,
+        "adjustments": [],
+        "duration_ms": 655.6883330922574,
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 73,
+          "output_tokens": 31,
+          "total_tokens": 104
+        },
+        "reasoning": {
+          "exposed": true,
+          "signature_present": false
+        }
+      },
+      "attempts": 1,
+      "observed_at": "2026-08-31T21:59:18.705731+00:00",
+      "harness_commit": "d26972bb00760d2c43dd2866ac82396cee7080ac",
+      "harness_fingerprint": "f53c8840b4cccc66c80a",
+      "taxonomy_fingerprint": "86c9cca08e7fb81e5aff"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "e2e160297028b3986d106439",
+      "provider_id": "together",
+      "model_id": "together/openai/gpt-oss-20b",
+      "upstream_model": "openai/gpt-oss-20b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "case_id": "structured-output.json-schema",
+      "case_version": 2,
+      "case_fingerprint": "4348ddb52773997c",
+      "claim": {
+        "dimension": "option",
+        "name": "response_format",
+        "profile": {
+          "mode": "json_schema"
+        }
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "{\"answer\": 42}",
+        "tool_calls": [],
+        "finish_reason": "stop",
+        "usage_present": true,
+        "reasoning_present": true,
+        "json_value": {
+          "answer": 42
+        },
+        "adjustments": [],
+        "duration_ms": 774.7180829755962,
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 77,
+          "output_tokens": 40,
+          "total_tokens": 117
+        },
+        "reasoning": {
+          "exposed": true,
+          "signature_present": false
+        }
+      },
+      "attempts": 1,
+      "observed_at": "2026-08-31T21:59:18.705731+00:00",
+      "harness_commit": "d26972bb00760d2c43dd2866ac82396cee7080ac",
+      "harness_fingerprint": "f53c8840b4cccc66c80a",
+      "taxonomy_fingerprint": "86c9cca08e7fb81e5aff"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "f156835fab805fe7c00581ee",
+      "provider_id": "together",
+      "model_id": "together/openai/gpt-oss-20b",
+      "upstream_model": "openai/gpt-oss-20b",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "case_id": "text.basic",
+      "case_version": 2,
+      "case_fingerprint": "10971dd682e989f4",
+      "claim": {
+        "dimension": "capability",
+        "name": "text_generation",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "ok",
+        "tool_calls": [],
+        "finish_reason": "stop",
+        "usage_present": true,
+        "reasoning_present": true,
+        "adjustments": [],
+        "duration_ms": 655.6883330922574,
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 73,
+          "output_tokens": 31,
+          "total_tokens": 104
+        },
+        "reasoning": {
+          "exposed": true,
+          "signature_present": false
+        }
+      },
+      "attempts": 1,
+      "observed_at": "2026-08-31T21:59:18.705731+00:00",
+      "harness_commit": "d26972bb00760d2c43dd2866ac82396cee7080ac",
+      "harness_fingerprint": "f53c8840b4cccc66c80a",
+      "taxonomy_fingerprint": "86c9cca08e7fb81e5aff"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "0c1e34e11c646c37007926ff",
+      "provider_id": "xai",
+      "model_id": "xai/grok-build-0.1",
+      "upstream_model": "grok-build-0.1",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "case_id": "reasoning.with-tool",
+      "case_version": 2,
+      "case_fingerprint": "07fb0ec14b14dfdb",
+      "claim": {
+        "dimension": "interaction",
+        "name": "reasoning+tools",
+        "profile": {
+          "reasoning_effort": "low",
+          "tool_choice": "named"
+        }
+      },
+      "verdict": "unsupported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "rejected",
+        "text": "",
+        "tool_calls": [],
+        "usage_present": false,
+        "reasoning_present": false,
+        "error_code": "400",
+        "error_message": "{'code': 'invalid-argument', 'error': 'Model grok-build-0.1 does not support parameter reasoningEffort.'}",
+        "http_status": 400,
+        "adjustments": [],
+        "duration_ms": 128.04787512868643,
+        "client_type": "HTTP 400",
+        "failure": {
+          "kind": "rejection",
+          "origin": "direct",
+          "retryable": false,
+          "code": "400",
+          "message": "{'code': 'invalid-argument', 'error': 'Model grok-build-0.1 does not support parameter reasoningEffort.'}",
+          "http_status": 400
+        }
+      },
+      "attempts": 2,
+      "observed_at": "2026-08-31T21:59:23.882601+00:00",
+      "harness_commit": "d26972bb00760d2c43dd2866ac82396cee7080ac",
+      "harness_fingerprint": "f53c8840b4cccc66c80a",
+      "taxonomy_fingerprint": "86c9cca08e7fb81e5aff"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "1d4475e1f7af2a5dbc18479a",
+      "provider_id": "xai",
+      "model_id": "xai/grok-build-0.1",
+      "upstream_model": "grok-build-0.1",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "case_id": "structured-output.json-schema",
+      "case_version": 2,
+      "case_fingerprint": "4348ddb52773997c",
+      "claim": {
+        "dimension": "capability",
+        "name": "structured_output",
+        "profile": {
+          "mode": "json_schema"
+        }
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "{\"answer\":42}",
+        "tool_calls": [],
+        "finish_reason": "stop",
+        "usage_present": true,
+        "reasoning_present": true,
+        "json_value": {
+          "answer": 42
+        },
+        "adjustments": [],
+        "duration_ms": 2136.451791971922,
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 243,
+          "output_tokens": 5,
+          "total_tokens": 470
+        },
+        "reasoning": {
+          "exposed": true,
+          "signature_present": false
+        }
+      },
+      "attempts": 1,
+      "observed_at": "2026-08-31T21:59:23.882601+00:00",
+      "harness_commit": "d26972bb00760d2c43dd2866ac82396cee7080ac",
+      "harness_fingerprint": "f53c8840b4cccc66c80a",
+      "taxonomy_fingerprint": "86c9cca08e7fb81e5aff"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "8d6d94d505613cb4b59930cd",
+      "provider_id": "xai",
+      "model_id": "xai/grok-build-0.1",
+      "upstream_model": "grok-build-0.1",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "case_id": "text.basic",
+      "case_version": 2,
+      "case_fingerprint": "10971dd682e989f4",
+      "claim": {
+        "dimension": "modality",
+        "name": "output_text",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "ok",
+        "tool_calls": [],
+        "finish_reason": "stop",
+        "usage_present": true,
+        "reasoning_present": true,
+        "adjustments": [],
+        "duration_ms": 2633.0186249688268,
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 192,
+          "output_tokens": 1,
+          "total_tokens": 375
+        },
+        "reasoning": {
+          "exposed": true,
+          "signature_present": false
+        }
+      },
+      "attempts": 1,
+      "observed_at": "2026-08-31T21:59:23.882601+00:00",
+      "harness_commit": "d26972bb00760d2c43dd2866ac82396cee7080ac",
+      "harness_fingerprint": "f53c8840b4cccc66c80a",
+      "taxonomy_fingerprint": "86c9cca08e7fb81e5aff"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "9bdd5c31572abc5a62e94be9",
+      "provider_id": "xai",
+      "model_id": "xai/grok-build-0.1",
+      "upstream_model": "grok-build-0.1",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "case_id": "structured-output.json-schema",
+      "case_version": 2,
+      "case_fingerprint": "4348ddb52773997c",
+      "claim": {
+        "dimension": "option",
+        "name": "response_format",
+        "profile": {
+          "mode": "json_schema"
+        }
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "{\"answer\":42}",
+        "tool_calls": [],
+        "finish_reason": "stop",
+        "usage_present": true,
+        "reasoning_present": true,
+        "json_value": {
+          "answer": 42
+        },
+        "adjustments": [],
+        "duration_ms": 2136.451791971922,
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 243,
+          "output_tokens": 5,
+          "total_tokens": 470
+        },
+        "reasoning": {
+          "exposed": true,
+          "signature_present": false
+        }
+      },
+      "attempts": 1,
+      "observed_at": "2026-08-31T21:59:23.882601+00:00",
+      "harness_commit": "d26972bb00760d2c43dd2866ac82396cee7080ac",
+      "harness_fingerprint": "f53c8840b4cccc66c80a",
+      "taxonomy_fingerprint": "86c9cca08e7fb81e5aff"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "b7cc1800549c81d3bb206048",
+      "provider_id": "xai",
+      "model_id": "xai/grok-build-0.1",
+      "upstream_model": "grok-build-0.1",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "case_id": "text.basic",
+      "case_version": 2,
+      "case_fingerprint": "10971dd682e989f4",
+      "claim": {
+        "dimension": "capability",
+        "name": "text_generation",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "ok",
+        "tool_calls": [],
+        "finish_reason": "stop",
+        "usage_present": true,
+        "reasoning_present": true,
+        "adjustments": [],
+        "duration_ms": 2633.0186249688268,
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 192,
+          "output_tokens": 1,
+          "total_tokens": 375
+        },
+        "reasoning": {
+          "exposed": true,
+          "signature_present": false
+        }
+      },
+      "attempts": 1,
+      "observed_at": "2026-08-31T21:59:23.882601+00:00",
+      "harness_commit": "d26972bb00760d2c43dd2866ac82396cee7080ac",
+      "harness_fingerprint": "f53c8840b4cccc66c80a",
+      "taxonomy_fingerprint": "86c9cca08e7fb81e5aff"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "c5d6faa6ee7d7a18fe39af37",
+      "provider_id": "xai",
+      "model_id": "xai/grok-build-0.1",
+      "upstream_model": "grok-build-0.1",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "case_id": "streaming.tools",
+      "case_version": 2,
+      "case_fingerprint": "12126bb252649974",
+      "claim": {
+        "dimension": "interaction",
+        "name": "streaming+tools",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "",
+        "tool_calls": [
+          {
+            "id": "call-c9e96b89-4a43-4db7-991e-b888daf2e245-0",
+            "name": "report_result",
+            "arguments": "{\"value\":\"ok\"}"
+          }
+        ],
+        "finish_reason": "tool_calls",
+        "usage_present": true,
+        "reasoning_present": true,
+        "adjustments": [],
+        "duration_ms": 2557.158499956131,
+        "client_type": "HTTP SSE",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 286,
+          "output_tokens": 11,
+          "total_tokens": 543
+        },
+        "reasoning": {
+          "exposed": true,
+          "signature_present": false
+        }
+      },
+      "attempts": 1,
+      "observed_at": "2026-08-31T21:59:23.882601+00:00",
+      "harness_commit": "d26972bb00760d2c43dd2866ac82396cee7080ac",
+      "harness_fingerprint": "f53c8840b4cccc66c80a",
+      "taxonomy_fingerprint": "86c9cca08e7fb81e5aff"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "da25a8bd9a38a988531231f7",
+      "provider_id": "xai",
+      "model_id": "xai/grok-build-0.1",
+      "upstream_model": "grok-build-0.1",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "case_id": "text.basic",
+      "case_version": 2,
+      "case_fingerprint": "10971dd682e989f4",
+      "claim": {
+        "dimension": "modality",
+        "name": "input_text",
+        "profile": {}
+      },
+      "verdict": "supported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "success",
+        "text": "ok",
+        "tool_calls": [],
+        "finish_reason": "stop",
+        "usage_present": true,
+        "reasoning_present": true,
+        "adjustments": [],
+        "duration_ms": 2633.0186249688268,
+        "client_type": "HTTP JSON",
+        "usage": {
+          "source": "reported",
+          "input_tokens": 192,
+          "output_tokens": 1,
+          "total_tokens": 375
+        },
+        "reasoning": {
+          "exposed": true,
+          "signature_present": false
+        }
+      },
+      "attempts": 1,
+      "observed_at": "2026-08-31T21:59:23.882601+00:00",
+      "harness_commit": "d26972bb00760d2c43dd2866ac82396cee7080ac",
+      "harness_fingerprint": "f53c8840b4cccc66c80a",
+      "taxonomy_fingerprint": "86c9cca08e7fb81e5aff"
+    },
+    {
+      "schema_version": 2,
+      "evidence_id": "dbb84d306de26211a8008972",
+      "provider_id": "xai",
+      "model_id": "xai/grok-build-0.1",
+      "upstream_model": "grok-build-0.1",
+      "surface_id": "oai",
+      "endpoint": "chat/completions",
+      "case_id": "modalities.pdf",
+      "case_version": 2,
+      "case_fingerprint": "ca2d457d49373fb3",
+      "claim": {
+        "dimension": "modality",
+        "name": "input_pdf",
+        "profile": {}
+      },
+      "verdict": "unsupported",
+      "source": "live_api",
+      "observation": {
+        "outcome": "rejected",
+        "text": "",
+        "tool_calls": [],
+        "usage_present": false,
+        "reasoning_present": false,
+        "error_code": "400",
+        "error_message": "{'error': 'File content is not supported on /v1/chat/completions. Please use /v1/responses instead.'}",
+        "http_status": 400,
+        "adjustments": [],
+        "duration_ms": 143.46925006248057,
+        "client_type": "HTTP 400",
+        "failure": {
+          "kind": "rejection",
+          "origin": "direct",
+          "retryable": false,
+          "code": "400",
+          "message": "{'error': 'File content is not supported on /v1/chat/completions. Please use /v1/responses instead.'}",
+          "http_status": 400
+        }
+      },
+      "attempts": 2,
+      "observed_at": "2026-08-31T21:59:23.882601+00:00",
+      "harness_commit": "d26972bb00760d2c43dd2866ac82396cee7080ac",
+      "harness_fingerprint": "f53c8840b4cccc66c80a",
+      "taxonomy_fingerprint": "86c9cca08e7fb81e5aff"
     }
   ]
 }

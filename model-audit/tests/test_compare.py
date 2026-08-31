@@ -76,6 +76,21 @@ def test_different_generic_rejection_topics_are_not_false_parity():
     assert "error" in result.difference_codes
 
 
+def test_provider_schema_rejection_matches_gateway_feature_rejection():
+    direct = Observation(
+        outcome="rejected",
+        http_status=400,
+        error_code="invalid_request_error",
+        error_message="file must have a file_id or file_data",
+    )
+    gateway = Observation(outcome="rejected", http_status=400, error_code="unsupported_feature", error_message="pdf")
+
+    result = assess(direct, gateway, _case(Oracle(text_nonempty=True)))
+
+    assert result.feature == "unknown"
+    assert result.parity == "match"
+
+
 def test_direct_success_and_gateway_rejection_is_a_gateway_gap():
     direct = Observation(outcome="success", text="ok", usage_present=True)
     gateway = Observation(outcome="rejected", http_status=400, error_code="invalid_request_error", error_message="bad request")

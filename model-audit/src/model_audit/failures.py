@@ -21,9 +21,9 @@ UNSUPPORTED_PATTERNS = (
 )
 ACCESS_CODES = {"direct_authentication", "direct_model_access", "gateway_authentication", "not_run", "provider_billing_access"}
 HARNESS_CODES = {"client_exception", "harness_request_error", "sdk_protocol_error"}
+UNSUPPORTED_CODES = {"unknown_parameter", "unsupported_feature", "unsupported_parameter", "unsupported_value"}
 ERROR_TOPICS = {
-    "image": ("image", "vision"),
-    "pdf": ("pdf", "document"),
+    "media": ("image", "vision", "pdf", "document"),
     "reasoning": ("reasoning", "thinking", "effort"),
     "structured_output": ("json", "schema", "response_format"),
     "tools": ("tool", "function"),
@@ -70,7 +70,7 @@ def classify(observation: Observation) -> ClassifiedFailure | None:
     elif observation.error_code in HARNESS_CODES:
         kind = "protocol"
         category = "client_protocol"
-    elif explicit_unsupported(observation):
+    elif code in UNSUPPORTED_CODES or explicit_unsupported(observation):
         kind = "unsupported"
         category = "unsupported"
     elif "rate" in code or "rate limit" in message:

@@ -1,14 +1,19 @@
 from __future__ import annotations
 
+from types import SimpleNamespace
+
 import httpx
 import pytest
 import respx
 from conftest import ORG, make_config, make_key, make_signed
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+from starlette.requests import Request
 
 from contract import BundleManifest, BundleManifestEntry, BundleV1, uuid7
+from data_plane.app import readyz
 from data_plane.bundle import BundleHolder, RemoteBundleConfig
+from data_plane.bundle.holder import BundleSet
 from data_plane.bundle.remote import RemoteBundleSource
 from data_plane.cache import read_cached_bundles
 
@@ -146,8 +151,22 @@ async def test_poll_signature_failure_identifies_the_signing_key(tmp_path, http_
 
     message = str(error.value)
     assert signed.signing_key_id in message
+    assert holder.rejected_manifest == message
     assert holder.current.snapshots == {}
     assert read_cached_bundles(tmp_path) is None
+
+
+async def test_readiness_rejects_a_new_invalid_manifest_even_with_a_cached_bundle():
+    private_key = Ed25519PrivateKey.generate()
+    holder = BundleHolder()
+    holder.swap(BundleSet.from_bundles((bundle_of(make_signed(private_key)),)), "cached")
+    request = Request({"type": "http"})
+    request.state.runtime = SimpleNamespace(holder=holder)
+
+    assert (await readyz(request)).status_code == 200
+    holder.reject_manifest("signature mismatch")
+
+    assert (await readyz(request)).status_code == 503
 
 
 @respx.mock

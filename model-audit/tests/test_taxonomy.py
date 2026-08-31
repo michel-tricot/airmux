@@ -32,6 +32,14 @@ def test_profile_rejection_does_not_erase_a_broader_capability():
     assert "reasoning" in _capabilities(model, [rejected_low_effort])
 
 
+def test_supported_interaction_projects_its_atomic_capabilities():
+    supported_reasoning_tool = behavior("interaction", "reasoning+tools", "supported")
+
+    capabilities = _capabilities({}, [supported_reasoning_tool])
+
+    assert {"reasoning", "tools"} <= set(capabilities)
+
+
 def test_profile_rejection_does_not_mark_an_entire_option_unsupported():
     model = {"parameter_evidence": {"model_discovery": {"support": {"chat/completions": {"reasoning_effort": "supported"}}}}}
     rejected_low_effort = behavior("option", "reasoning_effort", "unsupported", profile={"value": "low"})
