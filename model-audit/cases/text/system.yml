@@ -10,6 +10,5 @@ request:
     content: Reply with one word
   - role: user
     content: Say ok
-  max_tokens: 1024
 oracle:
   text_nonempty: true

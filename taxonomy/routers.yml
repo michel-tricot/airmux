@@ -15,6 +15,7 @@ routers:
   - oai
   - oai_responses
   - anthropic
+  primary_surface: oai
   auth:
   - bearer
   env_var: OPENROUTER_API_KEY

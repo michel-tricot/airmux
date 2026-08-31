@@ -10,10 +10,10 @@ from dataclasses import dataclass
 from typing import Literal, Protocol, cast
 
 from model_audit.cases import fingerprint
-from model_audit.compare import assess
+from model_audit.compare import assess, behavior_signature
 from model_audit.drivers import discover
 from model_audit.drivers.base import ClientDriver, Connection
-from model_audit.models import Assessment, Experiment, Observation, PairAttempt, PairResult, Plan
+from model_audit.models import Assessment, Experiment, Failure, Observation, PairAttempt, PairResult, Plan
 
 
 class Gateway(Protocol):
@@ -105,6 +105,7 @@ def _observe(driver: ClientDriver, connection: Connection, endpoint: str, experi
             error_message=str(error)[:500] or f"{type(error).__name__} raised without a message",
             duration_ms=(time.perf_counter() - started) * 1000,
             client_type=type(error).__name__,
+            failure=Failure(kind="protocol", origin="client", code="client_exception", message=str(error)[:500]),
         )
 
 
@@ -127,65 +128,45 @@ def _event(
     )
 
 
+def _observe_path(context: PairContext, path: Literal["direct", "gateway"], attempt: int) -> Observation:
+    if context.progress is not None:
+        context.progress(_event(context, "path_started", path, attempt))
+    if path == "direct":
+        driver = context.direct_driver
+        connection = context.direct_connection
+        endpoint = context.experiment.target.endpoint
+        model = context.experiment.target.upstream_model
+    else:
+        driver = context.gateway_driver
+        endpoint = context.experiment.gateway_endpoint
+        connection = context.gateway.connection(endpoint)
+        model = context.experiment.target.model_id
+    observation = _observe(driver, connection, endpoint, context.experiment, model)
+    if context.progress is not None:
+        context.progress(_event(context, "path_completed", path, attempt, observation))
+    return observation
+
+
 def _pair(context: PairContext, attempt: int) -> PairAttempt:
-    if context.progress is not None:
-        context.progress(_event(context, "path_started", "direct", attempt))
-    direct = _observe(
-        context.direct_driver,
-        context.direct_connection,
-        context.experiment.target.endpoint,
-        context.experiment,
-        context.experiment.target.upstream_model,
-    )
-    if context.progress is not None:
-        context.progress(_event(context, "path_completed", "direct", attempt, direct))
-        context.progress(_event(context, "path_started", "gateway", attempt))
-    gateway = _observe(
-        context.gateway_driver,
-        context.gateway.connection(context.experiment.gateway_endpoint),
-        context.experiment.gateway_endpoint,
-        context.experiment,
-        context.experiment.target.model_id,
-    )
-    if context.progress is not None:
-        context.progress(_event(context, "path_completed", "gateway", attempt, gateway))
-    return PairAttempt(direct=direct, gateway=gateway, assessment=assess(direct, gateway, context.experiment.case.oracle))
+    direct = _observe_path(context, "direct", attempt)
+    gateway = _observe_path(context, "gateway", attempt)
+    return PairAttempt(direct=direct, gateway=gateway, assessment=assess(direct, gateway, context.experiment.case))
 
 
 def _retry_transient(context: PairContext, previous: PairAttempt, attempt: int) -> PairAttempt:
     direct = previous.direct
-    if direct.outcome == "transient":
-        if context.progress is not None:
-            context.progress(_event(context, "path_started", "direct", attempt))
-        direct = _observe(
-            context.direct_driver,
-            context.direct_connection,
-            context.experiment.target.endpoint,
-            context.experiment,
-            context.experiment.target.upstream_model,
-        )
-        if context.progress is not None:
-            context.progress(_event(context, "path_completed", "direct", attempt, direct))
+    if direct.retryable:
+        direct = _observe_path(context, "direct", attempt)
     gateway = previous.gateway
-    if gateway.outcome == "transient":
-        if context.progress is not None:
-            context.progress(_event(context, "path_started", "gateway", attempt))
-        gateway = _observe(
-            context.gateway_driver,
-            context.gateway.connection(context.experiment.gateway_endpoint),
-            context.experiment.gateway_endpoint,
-            context.experiment,
-            context.experiment.target.model_id,
-        )
-        if context.progress is not None:
-            context.progress(_event(context, "path_completed", "gateway", attempt, gateway))
-    return PairAttempt(direct=direct, gateway=gateway, assessment=assess(direct, gateway, context.experiment.case.oracle))
+    if gateway.retryable:
+        gateway = _observe_path(context, "gateway", attempt)
+    return PairAttempt(direct=direct, gateway=gateway, assessment=assess(direct, gateway, context.experiment.case))
 
 
 def _with_transient_retries(context: PairContext, first_attempt: int, options: ExecutionOptions) -> tuple[PairAttempt, ...]:
     attempts = [_pair(context, first_attempt)]
     for retry in range(options.transient_retries):
-        if attempts[-1].assessment.execution != "transient_failure":
+        if not (attempts[-1].direct.retryable or attempts[-1].gateway.retryable):
             break
         if delay := min(MAX_RETRY_DELAY_SECONDS, options.retry_backoff_seconds * 2**retry):
             time.sleep(delay)
@@ -197,16 +178,34 @@ def _classification(assessment: Assessment) -> tuple[str, str, str]:
     return assessment.feature, assessment.parity, assessment.execution
 
 
-def _confirmed(attempts: tuple[PairAttempt, ...]) -> tuple[Assessment, PairAttempt]:
+def _variance(attempts: tuple[PairAttempt, ...], experiment: Experiment) -> Literal["none", "provider", "gateway", "both"]:
+    direct_varies = len({behavior_signature(attempt.direct, experiment.case) for attempt in attempts}) > 1
+    gateway_varies = len({behavior_signature(attempt.gateway, experiment.case) for attempt in attempts}) > 1
+    if direct_varies and gateway_varies:
+        return "both"
+    if direct_varies:
+        return "provider"
+    if gateway_varies:
+        return "gateway"
+    return "none"
+
+
+def _confirmed(attempts: tuple[PairAttempt, ...], experiment: Experiment) -> tuple[Assessment, PairAttempt]:
     assessments = tuple(attempt.assessment for attempt in attempts)
     first = assessments[0]
+    variance = _variance(attempts, experiment)
     stable = all(_classification(assessment) == _classification(first) for assessment in assessments[1:])
     if stable:
         final = attempts[-1]
-        return final.assessment.model_copy(update={"reason": f"reproduced across {len(assessments)} attempts"}), final
+        return final.assessment.model_copy(update={"variance": variance, "reason": f"reproduced across {len(assessments)} attempts"}), final
     if any(assessment.execution == "transient_failure" for assessment in assessments):
         assessment = Assessment(
-            execution="transient_failure", feature=first.feature, parity="not_evaluated", reason="a transient failure prevented confirmation"
+            execution="transient_failure",
+            feature=first.feature,
+            parity="not_evaluated",
+            claims=first.claims,
+            variance=variance,
+            reason="a transient failure prevented confirmation",
         )
         return assessment, attempts[-1]
     executions = {item.execution for item in assessments}
@@ -216,6 +215,8 @@ def _confirmed(attempts: tuple[PairAttempt, ...]) -> tuple[Assessment, PairAttem
             execution=execution,
             feature="unknown",
             parity="inconclusive",
+            claims=first.claims,
+            variance=variance,
             reason=f"access or harness behavior changed across {len(assessments)} attempts",
         )
         return assessment, attempts[-1]
@@ -227,7 +228,9 @@ def _confirmed(attempts: tuple[PairAttempt, ...]) -> tuple[Assessment, PairAttem
         parity = parity if parity_votes * 2 > len(assessments) else "not_evaluated"
         feature = feature if feature_votes * 2 > len(assessments) else "unknown"
         differences = tuple(
-            sorted({difference for assessment in assessments if assessment.parity == parity for difference in assessment.differences})
+            {
+                difference.code: difference for assessment in assessments if assessment.parity == parity for difference in assessment.differences
+            }.values()
         )
         reason = (
             f"behavior varied across {len(assessments)} attempts; {parity_votes} agreed on {parity} parity"
@@ -237,9 +240,11 @@ def _confirmed(attempts: tuple[PairAttempt, ...]) -> tuple[Assessment, PairAttem
         assessment = Assessment(
             execution="completed",
             stability="flaky",
+            variance=variance,
             feature=feature,
             parity=parity,
             differences=differences,
+            claims=first.claims,
             reason=reason,
         )
         return assessment, attempts[-1]
@@ -247,6 +252,7 @@ def _confirmed(attempts: tuple[PairAttempt, ...]) -> tuple[Assessment, PairAttem
     assessment = representative.assessment.model_copy(
         update={
             "stability": "flaky",
+            "variance": variance,
             "reason": f"behavior varied across {len(assessments)} attempts; {votes} agreed on {representative.assessment.parity}",
         }
     )
@@ -282,12 +288,25 @@ def _result(
         gateway=attempt.gateway,
         assessment=assessment,
         attempts=attempts,
+        direct_request=experiment.direct_request,
+        gateway_request=experiment.gateway_request,
     )
 
 
 def _blocked_result(experiment: Experiment, code: str, message: str) -> PairResult:
-    observation = Observation(outcome="inconclusive", error_code=code, error_message=message)
-    attempt = PairAttempt(direct=observation, gateway=observation, assessment=assess(observation, observation, experiment.case.oracle))
+    direct = Observation(
+        outcome="inconclusive",
+        error_code=code,
+        error_message=message,
+        failure=Failure(kind="access", origin="direct", code=code, message=message),
+    )
+    gateway = Observation(
+        outcome="inconclusive",
+        error_code="not_run",
+        error_message="gateway path was not run without a direct control arm",
+        failure=Failure(kind="access", origin="harness", code="not_run", message="gateway path was not run without a direct control arm"),
+    )
+    attempt = PairAttempt(direct=direct, gateway=gateway, assessment=assess(direct, gateway, experiment.case))
     return _result(experiment, attempt, attempt.assessment, (attempt,))
 
 
@@ -297,8 +316,9 @@ def _harness_result(experiment: Experiment, error: Exception) -> PairResult:
         error_code="client_exception",
         error_message=str(error)[:500] or f"{type(error).__name__} raised without a message",
         client_type=type(error).__name__,
+        failure=Failure(kind="protocol", origin="client", code="client_exception", message=str(error)[:500]),
     )
-    attempt = PairAttempt(direct=observation, gateway=observation, assessment=assess(observation, observation, experiment.case.oracle))
+    attempt = PairAttempt(direct=observation, gateway=observation, assessment=assess(observation, observation, experiment.case))
     return _result(experiment, attempt, attempt.assessment, (attempt,))
 
 
@@ -346,13 +366,13 @@ def _execute_experiment(scheduled: ScheduledExperiment, run: RunContext) -> Pair
         attempts.extend(confirmation_attempts)
         confirmations.append(confirmation_attempts[-1])
     confirmed = tuple(confirmations)
-    assessment, final = _confirmed((initial, *confirmed)) if confirmed else (initial.assessment, initial)
+    assessment, final = _confirmed((initial, *confirmed), experiment) if confirmed else (initial.assessment, initial)
     return _result(experiment, final, assessment, tuple(attempts))
 
 
 def _access_key(experiment: Experiment) -> tuple[str, str, str]:
     target = experiment.target
-    return target.model_id, target.surface_id, experiment.gateway_surface_id
+    return target.provider_id, target.model_id, target.surface_id
 
 
 def _validate_options(options: ExecutionOptions) -> None:

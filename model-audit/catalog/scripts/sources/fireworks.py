@@ -51,6 +51,7 @@ class Fireworks(ModelSource):
         base_url="https://api.fireworks.ai/inference/v1",
         models_url=url,
         ingress=("oai",),
+        primary_surface="oai",
         auth=("bearer",),
         env_var="FIREWORKS_API_KEY",
         icon_mono="fireworks",

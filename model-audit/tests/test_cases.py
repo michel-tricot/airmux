@@ -9,7 +9,7 @@ import pytest
 import yaml
 
 from model_audit.cases import coverage, load_cases, load_features
-from model_audit.models import Case, Oracle, Request
+from model_audit.models import Case, Claim, Oracle, Request
 from tests.helpers import case
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -62,7 +62,7 @@ def test_cases_have_room_for_reasoning_models():
     features = load_features(ROOT / "definitions" / "features.yml")
     cases = load_cases(ROOT / "cases", features)
 
-    assert [audit_case.id for audit_case in cases if audit_case.request.max_tokens < 1024] == []
+    assert [audit_case.id for audit_case in cases if audit_case.max_output_tokens < 1024] == []
 
 
 def test_embedded_media_matches_its_semantic_oracle():
@@ -139,4 +139,17 @@ def test_case_loading_rejects_oracles_for_undeclared_tools(tmp_path):
     (tmp_path / "invalid.yml").write_text(yaml.safe_dump(invalid.model_dump(mode="json")), encoding="utf-8")
 
     with pytest.raises(ValueError, match="expects undeclared tools: missing_tool"):
+        load_cases(tmp_path)
+
+
+def test_case_loading_requires_independent_assertions_for_multiple_claims(tmp_path):
+    invalid = case(
+        claims=(
+            Claim(dimension="capability", name="tool_calling"),
+            Claim(dimension="option", name="tool_choice", profile={"mode": "required"}),
+        )
+    )
+    (tmp_path / "invalid.yml").write_text(yaml.safe_dump(invalid.model_dump(mode="json")), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="multiple claims need independent assertions"):
         load_cases(tmp_path)

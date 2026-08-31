@@ -14,7 +14,6 @@ request:
   messages:
   - role: user
     content: Think briefly and call report_result with value ok
-  max_tokens: 1100
   tools:
   - name: report_result
     description: Report the requested result
@@ -33,3 +32,5 @@ request:
 oracle:
   tool_names: [report_result]
   tool_arguments_valid: true
+execution:
+  max_output_tokens: 1100

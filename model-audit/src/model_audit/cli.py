@@ -1,8 +1,6 @@
 from __future__ import annotations
 
 import os
-from dataclasses import dataclass
-from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated, Literal
 
@@ -12,7 +10,7 @@ from dotenv import load_dotenv
 
 from model_audit.agent_guides import guide, guides
 from model_audit.cases import coverage, load_cases, load_features
-from model_audit.catalog import SURFACES, load_catalog
+from model_audit.catalog import load_catalog
 from model_audit.catalog_ops import (
     ModelDefinition,
     add_model,
@@ -25,13 +23,13 @@ from model_audit.diagnostics import execution_display, feature_display, gap_kind
 from model_audit.drivers import supported_endpoints
 from model_audit.evidence import accept, load_ledger, reduce
 from model_audit.gateway import Gateway
-from model_audit.models import Case, PairResult, Plan, ReportDocument, ReportPaths, RunMetadata, RunSettings
+from model_audit.models import Case, PairResult, Plan, ReportDocument, RunSettings
 from model_audit.output import Col, FormatOption, OutputFormat, print_rows
 from model_audit.plan import Filters, build_plan
-from model_audit.progress import ConsoleProgress
-from model_audit.provenance import metadata, taxonomy_fingerprint
-from model_audit.report import checkpoint_interval, ordered_results, remaining_plan, write_checkpoint, write_report
-from model_audit.runner import ExecutionOptions, execute
+from model_audit.provenance import harness_fingerprint, metadata, new_run_id, taxonomy_fingerprint
+from model_audit.report import remaining_plan, restore_plan, write_report
+from model_audit.run_service import RunContext, execute_checkpointed
+from model_audit.surfaces import discover as discover_surfaces
 from model_audit.taxonomy import write as write_taxonomy
 from model_audit.taxonomy_diff import compare_taxonomies, summarize_taxonomy_diff
 
@@ -49,7 +47,7 @@ CaseOption = Annotated[
     typer.Option("--case", help="Select an exact case or a namespace such as modalities; repeat to combine selections"),
 ]
 SDKOption = Annotated[bool, typer.Option("--sdk", help="Use the matching vendor SDK instead of direct HTTP API calls")]
-ProviderSurfaceOption = Annotated[Literal["oai", "oai_responses", "anthropic"] | None, typer.Option("--provider-surface")]
+ProviderSurfaceOption = Annotated[str | None, typer.Option("--provider-surface")]
 GatewaySurfaceOption = Annotated[
     list[str] | None,
     typer.Option("--gateway-surface", help="Gateway ingress surface; use all for the complete matrix or repeat for a subset"),
@@ -63,16 +61,6 @@ SyncOption = Annotated[
     list[str] | None,
     typer.Option("--only", help="Synchronize only this component; repeat to combine components"),
 ]
-
-
-@dataclass(frozen=True)
-class CheckpointContext:
-    plan: Plan
-    gateway: Gateway
-    run: RunMetadata
-    settings: RunSettings
-    concurrency: int
-    directory: Path
 
 
 app = typer.Typer(name="airllm-audit", no_args_is_help=True, help="Discover model behavior, compile taxonomy, and find gateway gaps")
@@ -99,10 +87,11 @@ def _plan(filters: Filters) -> Plan:
 
 
 def _surface_selection(surfaces: list[str] | None) -> tuple[str, ...]:
+    available = discover_surfaces()
     selected = tuple(surfaces or ())
-    invalid = sorted(set(selected) - set(SURFACES) - {"all"})
+    invalid = sorted(set(selected) - set(available) - {"all"})
     if invalid:
-        choices = ", ".join((*SURFACES, "all"))
+        choices = ", ".join((*available, "all"))
         message = f"unknown gateway surface {', '.join(invalid)}; choose from {choices}"
         raise typer.BadParameter(message)
     return selected
@@ -548,68 +537,6 @@ def _print_run_results(results: tuple[PairResult, ...], output_format: OutputFor
     )
 
 
-def _execute_checkpointed(
-    pending: Plan,
-    existing: tuple[PairResult, ...],
-    context: CheckpointContext,
-) -> tuple[tuple[PairResult, ...], ReportPaths]:
-    accumulated = list(existing)
-    interval = checkpoint_interval(len(context.plan.experiments))
-    write_report(
-        ReportDocument(
-            run=context.run,
-            plan=context.plan,
-            settings=context.settings,
-            complete=False,
-            results=ordered_results(context.plan, tuple(accumulated)),
-        ),
-        context.directory,
-    )
-
-    def checkpoint(result: PairResult) -> None:
-        accumulated.append(result)
-        if len(accumulated) % interval:
-            return
-        write_checkpoint(
-            ReportDocument(
-                run=context.run,
-                plan=context.plan,
-                settings=context.settings,
-                complete=False,
-                results=ordered_results(context.plan, tuple(accumulated)),
-            ),
-            context.directory,
-        )
-
-    progress = ConsoleProgress()
-    progress.start(
-        pending,
-        context.gateway.base_url,
-        context.settings.confirmations,
-        context.settings.transient_retries,
-        context.concurrency,
-    )
-    execute(
-        pending,
-        context.gateway,
-        progress=progress,
-        options=ExecutionOptions(
-            confirmations=context.settings.confirmations,
-            transient_retries=context.settings.transient_retries,
-            retry_backoff_seconds=context.settings.retry_backoff_seconds,
-            request_timeout_seconds=context.settings.request_timeout_seconds,
-            concurrency=context.concurrency,
-        ),
-        on_result=checkpoint,
-    )
-    results = ordered_results(context.plan, tuple(accumulated))
-    paths = write_report(
-        ReportDocument(run=context.run, plan=context.plan, settings=context.settings, complete=True, results=results),
-        context.directory,
-    )
-    return results, paths
-
-
 @runs_app.command("execute")
 def runs_execute(  # noqa: PLR0913, PLR0917 command flags define the CLI surface
     provider: ProviderOption = None,
@@ -660,7 +587,7 @@ def runs_execute(  # noqa: PLR0913, PLR0917 command flags define the CLI surface
     if maximum_requests > max_requests and not yes:
         message = f"the run can schedule up to {maximum_requests} requests; pass --yes or narrow the selection"
         raise typer.BadParameter(message)
-    run_id = datetime.now(tz=UTC).strftime("%Y%m%dT%H%M%SZ")
+    run_id = new_run_id()
     gateway = Gateway(base_url=gateway_url, api_key=gateway_api_key, request_timeout_seconds=request_timeout)
     settings = RunSettings(
         confirmations=confirmations,
@@ -668,10 +595,10 @@ def runs_execute(  # noqa: PLR0913, PLR0917 command flags define the CLI surface
         retry_backoff_seconds=retry_backoff,
         request_timeout_seconds=request_timeout,
     )
-    results, paths = _execute_checkpointed(
+    results, paths = execute_checkpointed(
         plan,
         (),
-        CheckpointContext(
+        RunContext(
             plan=plan,
             gateway=gateway,
             run=metadata(ROOT, run_id, gateway.base_url),
@@ -715,6 +642,10 @@ def runs_resume(  # noqa: PLR0913, PLR0917 command flags define the CLI surface
     if fingerprint != document.run.taxonomy_fingerprint:
         message = f"taxonomy changed since the run started: expected {document.run.taxonomy_fingerprint}, found {fingerprint}"
         raise typer.BadParameter(message)
+    current_harness = harness_fingerprint(ROOT)
+    if current_harness != document.run.harness_fingerprint:
+        message = f"audit harness changed since the run started: expected {document.run.harness_fingerprint}, found {current_harness}"
+        raise typer.BadParameter(message)
     gateway_api_key = gateway_api_key or os.environ.get("AIRLLM_API_KEY")
     if gateway_api_key is None:
         message = "set AIRLLM_API_KEY or pass --gateway-api-key"
@@ -740,11 +671,11 @@ def runs_resume(  # noqa: PLR0913, PLR0917 command flags define the CLI surface
         api_key=gateway_api_key,
         request_timeout_seconds=settings.request_timeout_seconds,
     )
-    results, paths = _execute_checkpointed(
+    results, paths = execute_checkpointed(
         pending,
         document.results,
-        CheckpointContext(
-            plan=document.plan,
+        RunContext(
+            plan=restore_plan(document.plan),
             gateway=gateway,
             run=document.run,
             settings=settings,
@@ -941,3 +872,55 @@ def reports_show(
         ],
         output_format,
     )
+
+
+@reports_app.command("list")
+def reports_list(output_format: FormatOption = OutputFormat.table) -> None:
+    rows = []
+    for path in sorted(REPORTS.glob("*.json"), reverse=True):
+        try:
+            document = ReportDocument.model_validate_json(path.read_text(encoding="utf-8"))
+        except ValueError:
+            continue
+        rows.append(
+            {
+                "run": document.run.run_id,
+                "created": document.run.created_at,
+                "complete": "yes" if document.complete else "no",
+                "experiments": len(document.results),
+                "size": path.stat().st_size,
+                "path": str(path),
+            }
+        )
+    print_rows(
+        "reports",
+        rows,
+        (
+            Col("run", "Run"),
+            Col("created", "Created"),
+            Col("complete", "Complete"),
+            Col("experiments", "Experiments"),
+            Col("size", "Bytes"),
+            Col("path", "Path"),
+        ),
+        output_format,
+    )
+
+
+@reports_app.command("prune")
+def reports_prune(
+    keep: Annotated[int, typer.Option("--keep", min=0, help="Number of newest report pairs to retain")] = 20,
+    yes: Annotated[bool, typer.Option("--yes", help="Confirm deletion of older report files")] = False,
+) -> None:
+    reports = sorted(REPORTS.glob("*.json"), key=lambda path: path.stat().st_mtime, reverse=True)
+    selected = reports[keep:]
+    if selected and not yes:
+        message = f"would remove {len(selected)} report pairs; pass --yes to confirm"
+        raise typer.BadParameter(message)
+    removed = 0
+    for path in selected:
+        for artifact in (path, path.with_suffix(".html")):
+            if artifact.exists():
+                artifact.unlink()
+                removed += 1
+    typer.echo(f"removed {removed} report files; retained {min(keep, len(reports))} runs")

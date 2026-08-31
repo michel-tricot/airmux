@@ -29,6 +29,7 @@ class Groq(ModelSource):
         models_url=url,
         openapi="https://raw.githubusercontent.com/groq/groq-python/main/.stats.yml",
         ingress=("oai",),
+        primary_surface="oai",
         auth=("bearer",),
         env_var="GROQ_API_KEY",
         icon_mono="groq",

@@ -3,11 +3,14 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from model_audit.catalog import SURFACES
+from model_audit.compiler import UnrepresentableRequestError, compile_pair
 from model_audit.models import Case, ClientMode, Experiment, Plan, Target, Transport
+from model_audit.surfaces import discover
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
+
+    from model_audit.surfaces.base import SurfaceCodec
 
 
 @dataclass(frozen=True)
@@ -41,17 +44,15 @@ def _selected(target: Target, case: Case, filters: Filters) -> bool:
     )
 
 
-def _driver(kind: str, client_mode: ClientMode) -> str:
-    if client_mode == "api":
-        return "http"
-    return "anthropic" if kind == "anthropic" else "openai"
+def _driver(codec: SurfaceCodec, client_mode: ClientMode) -> str:
+    return "http" if client_mode == "api" else codec.sdk_driver_id
 
 
 def _gateway_surfaces(target: Target, filters: Filters) -> tuple[str, ...]:
     if not filters.gateway_surfaces:
         return (target.surface_id,)
     if "all" in filters.gateway_surfaces:
-        return tuple(SURFACES)
+        return tuple(discover())
     return tuple(dict.fromkeys(filters.gateway_surfaces))
 
 
@@ -63,36 +64,46 @@ def build_plan(
 ) -> Plan:
     experiments: list[Experiment] = []
     unavailable = 0
+    codecs = discover()
     for target in sorted(targets, key=lambda item: (item.provider_id, item.model_id, item.surface_id)):
         for case in sorted(cases, key=lambda item: item.id):
             if not _selected(target, case, filters):
                 continue
             for gateway_surface_id in _gateway_surfaces(target, filters):
-                gateway_definition = SURFACES.get(gateway_surface_id)
-                if gateway_definition is None:
+                gateway_codec = codecs.get(gateway_surface_id)
+                direct_codec = codecs.get(target.surface_id)
+                if gateway_codec is None or direct_codec is None:
                     unavailable += len(case.transports)
                     continue
-                _, gateway_endpoint, gateway_kind = gateway_definition
+                gateway_endpoint = gateway_codec.endpoint
                 if not case.applies_to.accepts(gateway_endpoint, target.egress_kind, filters.client_mode):
                     continue
-                direct_driver_id = _driver(target.egress_kind, filters.client_mode)
-                gateway_driver_id = _driver(gateway_kind, filters.client_mode)
+                direct_driver_id = _driver(direct_codec, filters.client_mode)
+                gateway_driver_id = _driver(gateway_codec, filters.client_mode)
                 if target.endpoint not in driver_endpoints.get(direct_driver_id, frozenset()) or gateway_endpoint not in driver_endpoints.get(
                     gateway_driver_id, frozenset()
                 ):
                     unavailable += len(case.transports)
                     continue
-                experiments.extend(
-                    Experiment(
-                        target=target,
-                        case=case,
-                        direct_driver_id=direct_driver_id,
-                        gateway_driver_id=gateway_driver_id,
-                        gateway_surface_id=gateway_surface_id,
-                        gateway_endpoint=gateway_endpoint,
-                        transport=transport,
+                for transport in case.transports:
+                    if filters.transport is not None and filters.transport != transport:
+                        continue
+                    try:
+                        compiled = compile_pair(target, direct_codec, gateway_codec, case, transport)
+                    except UnrepresentableRequestError:
+                        unavailable += 1
+                        continue
+                    experiments.append(
+                        Experiment(
+                            target=target,
+                            case=case,
+                            direct_driver_id=direct_driver_id,
+                            gateway_driver_id=gateway_driver_id,
+                            gateway_surface_id=gateway_surface_id,
+                            gateway_endpoint=gateway_endpoint,
+                            transport=transport,
+                            direct_request=compiled.direct,
+                            gateway_request=compiled.gateway,
+                        )
                     )
-                    for transport in case.transports
-                    if filters.transport is None or filters.transport == transport
-                )
     return Plan(experiments=tuple(experiments), unavailable=unavailable)

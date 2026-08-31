@@ -78,18 +78,24 @@ def _media_errors(cases: list[Case]) -> list[str]:
 def _oracle_errors(cases: list[Case]) -> list[str]:
     errors = []
     for case in cases:
+        if len(case.claims) > 1 and any(claim.assertion is None for claim in case.claims):
+            errors.append(f"{case.id} multiple claims need independent assertions")
         tool_names = {tool.name for tool in case.request.tools}
-        missing_tools = sorted(set(case.oracle.tool_names) - tool_names)
-        if missing_tools:
-            errors.append(f"{case.id} expects undeclared tools: {', '.join(missing_tools)}")
-        if case.oracle.tool_arguments_valid and not case.oracle.tool_names:
-            errors.append(f"{case.id} validates tool arguments without naming an expected tool")
-        if case.oracle.json_equals is not None and case.request.response_format is None:
-            errors.append(f"{case.id} expects JSON without requesting a response format")
-        if case.oracle.reasoning_present and case.request.reasoning is None:
-            errors.append(f"{case.id} expects reasoning without enabling it")
-        if case.oracle.assistant_text != "allowed" and not case.request.tools:
-            errors.append(f"{case.id} constrains assistant text without declaring tools")
+        oracles = (("case", case.oracle), *((claim.name, claim.assertion) for claim in case.claims if claim.assertion is not None))
+        for owner, oracle in oracles:
+            missing_tools = sorted(set(oracle.tool_names) - tool_names)
+            if missing_tools:
+                errors.append(f"{case.id} {owner} expects undeclared tools: {', '.join(missing_tools)}")
+            if (oracle.tool_arguments_valid or oracle.tool_arguments) and not oracle.tool_names:
+                errors.append(f"{case.id} {owner} validates tool arguments without naming an expected tool")
+            if set(oracle.tool_arguments) - set(oracle.tool_names):
+                errors.append(f"{case.id} {owner} has arguments for an unexpected tool")
+            if oracle.json_equals is not None and case.request.response_format is None:
+                errors.append(f"{case.id} {owner} expects JSON without requesting a response format")
+            if oracle.reasoning_present and case.request.reasoning is None:
+                errors.append(f"{case.id} {owner} expects reasoning without enabling it")
+            if oracle.assistant_text != "allowed" and not case.request.tools:
+                errors.append(f"{case.id} {owner} constrains assistant text without declaring tools")
     return errors
 
 

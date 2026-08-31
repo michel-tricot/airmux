@@ -46,6 +46,7 @@ class Mistral(ModelSource):
         models_url=url,
         openapi="https://raw.githubusercontent.com/mistralai/platform-docs-public/main/openapi.yaml",
         ingress=("oai",),
+        primary_surface="oai",
         auth=("bearer",),
         env_var="MISTRAL_API_KEY",
         icon_mono="mistral",

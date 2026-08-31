@@ -6,17 +6,21 @@ claims:
   name: reasoning
   profile:
     mode: adaptive
+  assertion:
+    reasoning_present: true
+    text_contains: "42"
 - dimension: option
   name: reasoning_effort
   profile:
     value: low
+  assertion:
+    text_contains: "42"
 applies_to:
   endpoints: [messages]
 request:
   messages:
   - role: user
     content: Reason briefly and answer what is 20 plus 22
-  max_tokens: 1024
   reasoning:
     type: adaptive
     effort: low

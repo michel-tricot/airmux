@@ -20,10 +20,10 @@ LABELS = {
     "tool_calls": "Tool calls",
     "tool_arguments": "Tool arguments",
     "finish_reason": "Finish reason",
-    "usage_presence": "Usage",
-    "reasoning_presence": "Reasoning",
+    "usage": "Usage",
+    "reasoning": "Reasoning",
     "json": "JSON",
-    "error_category": "Error category",
+    "error": "Error category",
     "adjustments": "Adjustments",
     "oracle": "Case oracle",
 }
@@ -38,9 +38,16 @@ def observation_summary(observation: Observation) -> str:
     calls = ",".join(call.name for call in observation.tool_calls) or "none"
     error = observation.error_code or "none"
     message = _text(observation.error_message or "")
+    usage = "no"
+    if observation.usage is not None:
+        input_tokens = "?" if observation.usage.input_tokens is None else str(observation.usage.input_tokens)
+        output_tokens = "?" if observation.usage.output_tokens is None else str(observation.usage.output_tokens)
+        total_tokens = "?" if observation.usage.total_tokens is None else str(observation.usage.total_tokens)
+        usage = f"{input_tokens} in/{output_tokens} out/{total_tokens} total"
+    reasoning = (observation.reasoning.kind or "yes") if observation.reasoning is not None else "no"
     return (
-        f'{observation.outcome}; text="{_text(observation.text)}"; tools={calls}; usage={"yes" if observation.usage_present else "no"}; '
-        f'reasoning={"yes" if observation.reasoning_present else "no"}; error={error}; http={observation.http_status or "none"}; message="{message}"'
+        f'{observation.outcome}; text="{_text(observation.text)}"; tools={calls}; usage={usage}; reasoning={reasoning}; '
+        f'error={error}; http={observation.http_status or "none"}; message="{message}"'
     )
 
 
@@ -54,11 +61,11 @@ def parity_display(assessment: Assessment) -> str:
 
 
 def feature_display(assessment: Assessment) -> str:
-    return {"supported": "✓ supported", "unsupported": "○ unsupported", "unknown": "? unknown"}[assessment.feature]
+    return {"supported": "✓ supported", "unsupported": "○ unsupported", "unknown": "? unknown", "mixed": "~ mixed"}[assessment.feature]
 
 
 def stability_display(assessment: Assessment) -> str:
-    return {"stable": "stable", "flaky": "~ flaky"}[assessment.stability]
+    return "stable" if assessment.stability == "stable" else f"~ flaky ({assessment.variance} variance)"
 
 
 def execution_display(assessment: Assessment) -> str:
@@ -82,15 +89,17 @@ def gap_kind(result: PairResult) -> str:
         kind = "transient"
     elif assessment.parity == "inconclusive":
         kind = "inconclusive"
+    elif assessment.variance in {"provider", "both"}:
+        kind = "provider_variance"
     elif assessment.parity == "match":
         kind = "flaky" if assessment.stability == "flaky" else "none"
     elif assessment.parity == "not_evaluated" and assessment.stability == "flaky":
         kind = "flaky"
     elif assessment.feature == "supported" and result.gateway.outcome != "success":
         kind = "gateway_rejection"
-    elif "oracle" in assessment.differences:
+    elif "oracle" in assessment.difference_codes:
         kind = "semantic"
-    elif "error_category" in assessment.differences:
+    elif "error" in assessment.difference_codes:
         kind = "error_mapping"
     elif result.transport == "streamed":
         kind = "streaming"
@@ -100,24 +109,14 @@ def gap_kind(result: PairResult) -> str:
 
 
 def difference_details(result: PairResult) -> tuple[DifferenceDetail, ...]:
-    direct = result.direct
-    gateway = result.gateway
-    values = {
-        "outcome": (direct.outcome, gateway.outcome),
-        "tool_calls": (", ".join(call.name for call in direct.tool_calls) or "none", ", ".join(call.name for call in gateway.tool_calls) or "none"),
-        "tool_arguments": (
-            "; ".join(f"{call.name}={_text(call.arguments)}" for call in direct.tool_calls) or "none",
-            "; ".join(f"{call.name}={_text(call.arguments)}" for call in gateway.tool_calls) or "none",
-        ),
-        "finish_reason": (direct.finish_reason or "none", gateway.finish_reason or "none"),
-        "usage_presence": ("present" if direct.usage_present else "absent", "present" if gateway.usage_present else "absent"),
-        "reasoning_presence": ("present" if direct.reasoning_present else "absent", "present" if gateway.reasoning_present else "absent"),
-        "json": (json.dumps(direct.json_value, sort_keys=True), json.dumps(gateway.json_value, sort_keys=True)),
-        "error_category": (direct.error_code or direct.outcome, gateway.error_code or gateway.outcome),
-        "adjustments": (", ".join(direct.adjustments) or "none", ", ".join(gateway.adjustments) or "none"),
-        "oracle": (
-            str(result.assessment.direct_satisfies_oracle),
-            str(result.assessment.gateway_satisfies_oracle),
-        ),
-    }
-    return tuple(DifferenceDetail(LABELS[name], *values[name]) for name in result.assessment.differences)
+    def display(value: object) -> str:
+        if isinstance(value, str):
+            return _text(value)
+        return _text(json.dumps(value, sort_keys=True, ensure_ascii=False))
+
+    return tuple(
+        DifferenceDetail(
+            LABELS.get(difference.code, difference.code.replace("_", " ").title()), display(difference.direct), display(difference.gateway)
+        )
+        for difference in result.assessment.differences
+    )

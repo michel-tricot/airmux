@@ -13,7 +13,6 @@ request:
   messages:
   - role: user
     content: Reply with ok
-  max_tokens: 1024
   logprobs: true
   top_logprobs: 2
 oracle:
