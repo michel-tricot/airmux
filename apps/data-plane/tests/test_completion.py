@@ -134,7 +134,10 @@ def test_what_the_gateway_did_is_reported_under_its_own_field():
         content=[TextPart(text="ok")],
         finish_reason="stop",
         usage=Usage(),
-        gateway=GatewayInfo(adjustments=[Adjustment(param="logit_bias", action="dropped", detail="upstream does not accept it")]),
+        gateway=GatewayInfo(
+            finish_reason="stop",
+            adjustments=[Adjustment(param="logit_bias", action="dropped", detail="upstream does not accept it")],
+        ),
     )
     assert CanonicalResponse.model_validate_json(response.model_dump_json()) == response
     bare = CanonicalResponse(id="r2", model="m", content=[TextPart(text="ok")], finish_reason="stop", usage=Usage())

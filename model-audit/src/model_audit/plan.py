@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from model_audit.compiler import UnrepresentableRequestError, compile_pair
+from model_audit.compiler import UnrepresentableRequestError, compile_pair, execution_case
 from model_audit.models import Case, ClientMode, Experiment, Plan, Target, Transport
 from model_audit.surfaces import discover
 
@@ -89,7 +89,7 @@ def build_plan(
                     if filters.transport is not None and filters.transport != transport:
                         continue
                     try:
-                        compiled = compile_pair(target, direct_codec, gateway_codec, case, transport)
+                        compiled = compile_pair(target, direct_codec, gateway_codec, execution_case(target, case), transport)
                     except UnrepresentableRequestError:
                         unavailable += 1
                         continue

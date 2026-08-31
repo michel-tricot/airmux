@@ -99,7 +99,11 @@ class AnthropicResponseStream:
         # Usage is only known at stream end (canonical chunks carry none), so the full breakdown
         # lands in message_delta rather than message_start; gateway rides there as an extra field.
         stop = fmt.StopDeltaOut(stop_reason=fmt.stop_reason(final.finish_reason))
-        delta = fmt.MessageDelta(delta=stop, usage=fmt.usage_out(final.usage), gateway=GatewayInfo(adjustments=adjustments))
+        delta = fmt.MessageDelta(
+            delta=stop,
+            usage=fmt.usage_out(final.usage),
+            gateway=GatewayInfo(finish_reason=final.finish_reason, adjustments=adjustments),
+        )
         return [*self._close(), delta.sse(), fmt.MessageStop().sse()]
 
     def error(self, err: CanonicalError) -> list[bytes]:

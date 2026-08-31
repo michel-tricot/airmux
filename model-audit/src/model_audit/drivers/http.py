@@ -7,7 +7,8 @@ from typing import cast
 
 import httpx
 
-from model_audit.drivers.base import ClientDriver, Connection, access_error, status_failure, status_outcome
+from model_audit.drivers.base import ClientDriver, Connection, access_error, alias_params, status_failure, status_outcome
+from model_audit.drivers.wire import gateway_options
 from model_audit.models import Case, Failure, Observation, Outcome, Transport
 from model_audit.scenario import compile_scenario
 from model_audit.surfaces import by_endpoint, discover
@@ -77,8 +78,8 @@ def _failure(error: Exception, started: float, code: str, outcome: Outcome) -> O
 
 
 def _body(connection: Connection, codec: SurfaceCodec, model: str, case: Case, transport: Transport) -> dict[str, object]:
-    body = codec.encode(model, case, transport)
-    return {connection.param_aliases.get(name, name): value for name, value in body.items()}
+    body = {**codec.encode(model, case, transport), **(gateway_options(codec.endpoint, case) if connection.route == "gateway" else {})}
+    return alias_params(body, connection.param_aliases)
 
 
 def _send(

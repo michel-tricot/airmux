@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 from model_audit.cases import load_cases, load_features
+from model_audit.drivers.base import alias_params
 from model_audit.drivers.wire import anthropic_body, body_of, openai_chat_body, openai_messages, openai_responses_body
 from model_audit.models import Claim, Request
 from tests.helpers import case
@@ -68,6 +69,14 @@ def test_openai_output_limit_case_uses_each_surface_spelling():
 
     assert openai_chat_body("model", audit_case, "buffered")["max_tokens"] == 8
     assert openai_responses_body("model", audit_case, "buffered")["max_output_tokens"] == 8
+
+
+def test_catalog_parameter_aliases_apply_to_sdk_options():
+    options = {"max_tokens": 4096, "temperature": 0.2}
+
+    aliased = alias_params(options, {"max_tokens": "max_completion_tokens"})
+
+    assert aliased == {"max_completion_tokens": 4096, "temperature": 0.2}
 
 
 def test_anthropic_maps_json_schema_output_to_output_config():
