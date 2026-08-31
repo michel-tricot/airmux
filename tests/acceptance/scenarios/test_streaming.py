@@ -63,7 +63,7 @@ def test_streamed_completion_and_disconnect_accounting(stack: Stack) -> None:
     assert "delta" not in closing
     assert closing["finish_reason"] == "stop"
     assert closing["usage"]["output_tokens"] == 60
-    assert closing["gateway"] == {"adjustments": []}
+    assert closing["gateway"] == {"finish_reason": "stop", "adjustments": []}
 
     ok_events = _events_until(stack, lambda events: any(e["status"] == "ok" and e["stream"] for e in events))
     assert any(e["status"] == "ok" and e["stream"] and e["output_tokens"] == 60 for e in ok_events)
