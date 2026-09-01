@@ -123,9 +123,14 @@ def seed_provider_credentials(
     catalog = client.get("/api/v1/instance/taxonomy")
     if not catalog.is_success:
         return []
+    credentials = client.get("/api/v1/instance/provider-credentials")
+    existing = {credential["provider_name"]: credential["enabled"] for credential in payload(credentials)} if credentials.is_success else {}
     results = []
     for provider in catalog.json()["data"]["providers"]:
         name = provider["name"]
+        if name in existing:
+            results.append(ProviderKey(name, "already configured", "" if existing[name] else "credential exists but is disabled"))
+            continue
         value, source = _provider_key(name, overrides)
         if not value:
             continue
@@ -134,6 +139,155 @@ def seed_provider_credentials(
         error = "" if created.is_success else api_error(created)
         results.append(ProviderKey(name, source, error))
     return results
+
+
+def configured_model(client: httpx.Client) -> str | None:
+    catalog = client.get("/api/v1/instance/taxonomy")
+    credentials = client.get("/api/v1/instance/provider-credentials")
+    if not catalog.is_success or not credentials.is_success:
+        return None
+    taxonomy = payload(catalog)
+    configured = {credential["provider_name"] for credential in payload(credentials) if credential["enabled"]}
+    provider_ids = {provider["id"] for provider in taxonomy["providers"] if provider["name"] in configured}
+    models = sorted(model["name"] for model in taxonomy["models"] if model["provider_id"] in provider_ids)
+    return models[0] if models else None
+
+
+def _login_or_signup(client: httpx.Client, claimed: bool, email: str, password: str) -> None:
+    if claimed:
+        account = _payload_or_die(client.post("/api/v1/auth/login", json={"email": email, "password": password}), "sign in")
+        if account.get("instance_role") != "owner":
+            console.print("[red]Quickstart requires the instance owner account.[/red]")
+            raise typer.Exit(1)
+        _step(f"Signed in as [bold]{email}[/bold]")
+        return
+    _payload_or_die(client.post("/api/v1/auth/signup", json={"email": email, "name": email, "password": password}), "sign up")
+    _step(f"Account [bold]{email}[/bold]")
+
+
+def _personal_org(client: httpx.Client, email: str, requested_name: str) -> dict:
+    enrollment = _payload_or_die(client.get("/api/v1/enroll"), "organization lookup")
+    personal_id = enrollment.get("personal_org_id")
+    existing = next((organization for organization in enrollment["orgs"] if organization["id"] == personal_id), None)
+    if existing is not None:
+        _step(f"Organization [bold]{existing['name']}[/bold]")
+        return existing
+    organization = _payload_or_die(
+        client.post("/api/v1/enroll/org", json={"name": requested_name or email.split("@", maxsplit=1)[0]}),
+        "org creation",
+    )
+    _step(f"Organization [bold]{organization['name']}[/bold]")
+    return organization
+
+
+def _organization_access_key(client: httpx.Client, org_id: str) -> str:
+    started = _payload_or_die(client.post("/api/v1/auth/cli/start", json={"client_name": _client_name()}), "access key request")
+    _payload_or_die(
+        client.post(
+            "/api/v1/auth/cli/approve",
+            json={"user_code": started["user_code"], "scope": "org", "org_id": org_id},
+        ),
+        "access key approval",
+    )
+    delivered = _payload_or_die(
+        client.post(
+            "/api/v1/auth/cli/poll",
+            json={"poll_secret": started["poll_secret"]},
+        ),
+        "access key delivery",
+    )
+    return str(delivered["token"])
+
+
+def _default_workspace(client: httpx.Client, org_id: str, bearer: dict[str, str]) -> dict:
+    listed = _payload_or_die(client.get(f"/api/v1/orgs/{org_id}/workspaces", headers=bearer), "workspace lookup")
+    workspace = next((candidate for candidate in listed if candidate["slug"] == "default"), None)
+    if workspace is None:
+        workspace = _payload_or_die(
+            client.post(f"/api/v1/orgs/{org_id}/workspaces", json={"name": "default"}, headers=bearer),
+            "workspace creation",
+        )
+    return workspace
+
+
+def _install_data_plane_key(client: httpx.Client) -> str | None:
+    instances = _payload_or_die(client.get("/api/v1/instance/data-planes", params={"include_offline": True}), "gateway lookup")
+    if instances:
+        _step("Gateway already connected")
+        return None
+    users = _payload_or_die(client.get("/api/v1/users", params={"service_account": True}), "data-plane principal lookup")
+    data_plane = next((user for user in users if user["name"] == "data-plane" and user["instance_role"] == "data_plane"), None)
+    if data_plane is None:
+        data_plane = _payload_or_die(
+            client.post("/api/v1/service-accounts", json={"name": "data-plane", "instance_role": "data_plane"}),
+            "data-plane principal creation",
+        )
+    data_plane_key = _payload_or_die(
+        client.post(
+            "/api/v1/instance/access-keys",
+            json={"label": "data-plane", "user_id": data_plane["id"], "permissions": DATA_PLANE_PERMISSIONS},
+        ),
+        "data-plane key creation",
+    )
+    connected = client.post("/api/v1/instance/oss/quickstart", json={"token": data_plane_key["token"]})
+    if connected.is_success:
+        _step("Connected your gateway")
+        return None
+    console.print(f"  [yellow]![/yellow] Could not connect your gateway ({connected.status_code}: {api_error(connected)})")
+    return str(data_plane_key["token"])
+
+
+def _inference_key(client: httpx.Client, org_id: str, workspace: dict, bearer: dict[str, str]) -> dict:
+    path = f"/api/v1/orgs/{org_id}/workspaces/{workspace['id']}/inference-keys"
+    return _payload_or_die(client.post(path, json={"label": "quickstart"}, headers=bearer), "key mint")
+
+
+def _gateway_error(response: httpx.Response) -> str:
+    try:
+        body = response.json()
+        error = body.get("error") or {}
+        return str(error.get("message") or error.get("code") or body.get("detail") or body.get("status") or response.text)
+    except (ValueError, AttributeError):
+        return response.text or response.reason_phrase
+
+
+def verify_gateway(gateway_url: str, token: str, model: str) -> str:
+    import httpx  # noqa: PLC0415 lazy import keeps CLI startup fast
+
+    with httpx.Client(base_url=gateway_url.rstrip("/"), timeout=30.0) as gateway:
+        for _ in range(20):
+            try:
+                ready = gateway.get("/readyz", timeout=2.0)
+            except httpx.HTTPError:
+                ready = None
+            if ready is not None and ready.is_success:
+                break
+            time.sleep(0.5)
+        else:
+            return "gateway did not become ready"
+        try:
+            response = gateway.post(
+                "/inf/v1/chat/completions",
+                headers={"authorization": f"Bearer {token}", "x-airllm-dialect": "canonical"},
+                json={
+                    "model": model,
+                    "messages": [{"role": "user", "content": [{"type": "text", "text": "Reply with exactly: airllm ready"}]}],
+                    "stream": False,
+                },
+            )
+        except httpx.HTTPError as error:
+            return str(error)
+    return "" if response.is_success else f"HTTP {response.status_code}: {_gateway_error(response)}"
+
+
+def _curl(gateway_url: str, token: str, model: str) -> str:
+    return (
+        f"curl {gateway_url.rstrip('/')}/inf/v1/chat/completions \\\n"
+        f"  -H 'Authorization: Bearer {token}' \\\n"
+        "  -H 'Content-Type: application/json' \\\n"
+        "  -H 'x-airllm-dialect: canonical' \\\n"
+        f'  -d \'{{"model": "{model}", "messages": [{{"role": "user", "content": [{{"type": "text", "text": "hi"}}]}}]}}\''
+    )
 
 
 @app.command(rich_help_panel=SETUP)
@@ -147,50 +301,25 @@ def quickstart(  # noqa: PLR0913, PLR0917 flags are the command's interface
     anthropic_key: str = typer.Option("", help="Anthropic key; otherwise read from ANTHROPIC_API_KEY or prompted for"),
     console_url: str = typer.Option("", help="Web console URL, printed at the end"),
 ) -> None:
-    """Set up a new instance: account, organization, workspace, global provider keys, and an API key you can call."""
+    """Set up or resume an instance and verify a new API key through the gateway."""
     import httpx  # noqa: PLC0415 lazy import keeps CLI startup fast
 
     url, console_url = resolve_urls(control_plane_url, console_url)
     console.print("[bold]airllm quickstart[/bold]")
     with httpx.Client(base_url=url, timeout=10.0, headers=CSRF) as c:
-        if _payload_or_die(c.get("/api/v1/instance/oss/claim"), "claim check")["claimed"]:
-            console.print(f"[red]{url} is already set up. Run [bold]airllm login[/bold] instead.[/red]")
-            raise typer.Exit(1)
-
-        _payload_or_die(c.post("/api/v1/auth/signup", json={"email": email, "name": email, "password": password}), "sign up")
-        _step(f"Account [bold]{email}[/bold]")
-
-        created = _payload_or_die(c.post("/api/v1/enroll/org", json={"name": org or email.split("@", maxsplit=1)[0]}), "org creation")
-        org_id, org_name = created["id"], created["name"]
-        _step(f"Organization [bold]{org_name}[/bold]")
-
-        data_plane = _payload_or_die(
-            c.post("/api/v1/service-accounts", json={"name": "data-plane", "instance_role": "data_plane"}),
-            "data-plane principal creation",
-        )
-        data_plane_key = _payload_or_die(
-            c.post(
-                "/api/v1/instance/access-keys",
-                json={
-                    "label": "data-plane",
-                    "user_id": data_plane["id"],
-                    "permissions": DATA_PLANE_PERMISSIONS,
-                },
-            ),
-            "data-plane key creation",
-        )
-
-        started = _payload_or_die(c.post("/api/v1/auth/cli/start", json={"client_name": _client_name()}), "access key request")
-        _payload_or_die(c.post("/api/v1/auth/cli/approve", json={"user_code": started["user_code"], "org_id": org_id}), "access key approval")
-        token = _payload_or_die(c.post("/api/v1/auth/cli/poll", json={"poll_secret": started["poll_secret"]}), "access key delivery")["token"]
-
+        claimed = bool(_payload_or_die(c.get("/api/v1/instance/oss/claim"), "claim check")["claimed"])
+        _login_or_signup(c, claimed, email, password)
+        organization = _personal_org(c, email, org)
+        org_id, org_name = organization["id"], organization["name"]
+        token = _organization_access_key(c, org_id)
         bearer = {"authorization": f"Bearer {token}"}
-        workspace = _payload_or_die(c.post(f"/api/v1/orgs/{org_id}/workspaces", json={"name": "default"}, headers=bearer), "workspace creation")
+        workspace = _default_workspace(c, org_id, bearer)
         upsert_url_profile(
             org_name,
             {
                 "control_plane_url": url,
                 "console_url": console_url,
+                "gateway_url": gateway_url.rstrip("/"),
                 "org_id": org_id,
                 "org_name": org_name,
                 "token": token,
@@ -199,17 +328,11 @@ def quickstart(  # noqa: PLR0913, PLR0917 flags are the command's interface
             },
         )
         _step(f"Workspace [bold]{workspace['name']}[/bold], signed in and saved to {config_path()}")
-
-        quick = c.post("/api/v1/instance/oss/quickstart", json={"token": data_plane_key["token"]})
-        if quick.is_success:
-            _step("Connected your gateway")
-        else:
-            console.print(f"  [yellow]![/yellow] Could not connect your gateway ({quick.status_code}).")
-            console.print(f"  Set GW_DATAPLANE_TOKEN={data_plane_key['token']}")
-
-        key = _payload_or_die(
-            c.post(f"/api/v1/orgs/{org_id}/workspaces/{workspace['id']}/inference-keys", json={"label": "quickstart"}, headers=bearer), "key mint"
-        )
+        data_plane_token = _install_data_plane_key(c)
+        key = _inference_key(c, org_id, workspace, bearer)
+        _step("API key created")
+        console.print(f"\nYour API key for [bold]{org_name}[/bold], shown once:")
+        console.print(Panel(key["token"], title="AIRLLM_API_KEY", border_style="cyan", expand=False))
         overrides = {name: value for name, value in (("openai", openai_key), ("anthropic", anthropic_key)) if value}
         console.print("\n[dim]Global provider keys. Press enter to skip a provider.[/dim]")
         results = seed_provider_credentials(c, overrides)
@@ -220,19 +343,23 @@ def quickstart(  # noqa: PLR0913, PLR0917 flags are the command's interface
                 _step(f"[bold]{result.provider}[/bold] key {result.source}")
         if not any(not result.error for result in results):
             console.print("  [yellow]![/yellow] No global provider key set. Add one in the instance console.")
+        model = configured_model(c)
 
-        _step("API key created and published")
+    if data_plane_token:
+        console.print(f"  Set GW_DATAPLANE_TOKEN={data_plane_token}")
+    if model is None:
+        console.print("\n[red]Setup is incomplete: no model has a configured provider credential.[/red]")
+        console.print("Enable or add a provider key, then run [bold]airllm quickstart[/bold] again.")
+        raise typer.Exit(1)
+    error = verify_gateway(gateway_url, key["token"], model)
+    if error:
+        console.print(f"\n[red]Setup is incomplete: the gateway request failed: {error}[/red]")
+        console.print("Run [bold]airllm doctor[/bold] after resolving the reported gateway issue.")
+        raise typer.Exit(1)
 
-    curl = (
-        f"curl {gateway_url}/inf/v1/chat/completions \\\n"
-        f"  -H 'Authorization: Bearer {key['token']}' \\\n"
-        f"  -H 'Content-Type: application/json' \\\n"
-        f'  -d \'{{"model": "openai/gpt-5-nano", "messages": [{{"role": "user", "content": "hi"}}]}}\''
-    )
-    console.print(f"\n[green]Ready.[/green] Your API key for [bold]{org_name}[/bold]:")
-    console.print(Panel(key["token"], title="AIRLLM_API_KEY", border_style="cyan", expand=False))
+    console.print(f"\n[green]Ready.[/green] Verified [bold]{model}[/bold] through the gateway.")
     console.print("\n[dim]Try it:[/dim]")
-    print(curl)
+    print(_curl(gateway_url, key["token"], model))
     console.print(f"\n[dim]Console:[/dim] {console_url}")
 
 
@@ -242,11 +369,13 @@ def login(
     control_plane_url: str = typer.Option("", help="Control plane API URL, for split development deployments"),
     no_browser: bool = typer.Option(False, "--no-browser", help="Print the URL instead of opening a browser"),
     console_url: str = typer.Option("", help="Web console URL, for split development deployments"),
+    gateway_url: str = typer.Option("", help="Gateway URL, for split deployments"),
 ) -> None:
     """Sign in through your browser. Creates an account and organization if you do not have one."""
     import httpx  # noqa: PLC0415 lazy import keeps CLI startup fast
 
     control_plane_url, console_url = resolve_login_urls(url, control_plane_url, console_url)
+    gateway_url = (gateway_url or url or "http://localhost:8080").rstrip("/")
     client_name = _client_name()
     existing_access_key = _existing_access_key(control_plane_url)
     with httpx.Client(base_url=control_plane_url, timeout=10.0) as c:
@@ -275,6 +404,7 @@ def login(
                     {
                         "control_plane_url": control_plane_url,
                         "console_url": console_url,
+                        "gateway_url": gateway_url,
                         "scope": scope,
                         "token": done["token"],
                         **scoped_values,
@@ -297,7 +427,7 @@ def orgs_switch(name: str, control_plane_url: str = "") -> None:
         console.print(f"Switched to [bold]{name}[/bold]")
         return
     console.print(f"Not signed in to [bold]{name}[/bold]. Opening browser login, pick [bold]{name}[/bold] to approve.")
-    login(url="", control_plane_url=control_plane_url, no_browser=False, console_url="")
+    login(url="", control_plane_url=control_plane_url, no_browser=False, console_url="", gateway_url="")
     active = load_config().get("active")
     if active != name:
         console.print(f"[yellow]You approved [bold]{active}[/bold], not {name}. It is now active.[/yellow]")

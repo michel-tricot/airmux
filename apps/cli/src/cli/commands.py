@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import typer
 
-from cli.common import RESOURCES, SETUP, TESTING, app, console
+from cli.common import RESOURCES, SETUP, app, console
 from cli.output import Col, FormatOption, OutputFormat, build_table, print_rows
 
 COMMAND_COLS = [
@@ -18,7 +18,7 @@ sentence do not fit a terminal and rich answers that by wrapping every summary o
 
 TABLE_COLS = [Col("command", "Command", style="bold", no_wrap=True), Col("summary", "What it does")]
 
-CATEGORY_ORDER = [SETUP, RESOURCES, TESTING]
+CATEGORY_ORDER = [SETUP, RESOURCES]
 UNCATEGORISED = "Other"
 
 
