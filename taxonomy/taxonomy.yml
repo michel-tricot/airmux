@@ -2060,14 +2060,16 @@ models:
 - model_id: openai/gpt-3.5-turbo-16k
   provider_id: openai
   upstream_model: gpt-3.5-turbo-16k
-  input_price_per_mtok: 3.0
-  output_price_per_mtok: 4.0
+  input_price_per_mtok: 0.5
+  output_price_per_mtok: 1.5
   cache_read_price_per_mtok: 0.0
   cache_write_price_per_mtok: 0.0
   context_window: 16385
   max_output_tokens: 4096
-  input_modalities: null
-  output_modalities: null
+  input_modalities:
+  - text
+  output_modalities:
+  - text
   capabilities:
   - streaming
   parameter_support:
@@ -3564,7 +3566,7 @@ models:
   input_price_per_mtok: 4.0
   output_price_per_mtok: 20.0
   cache_read_price_per_mtok: 0.4
-  cache_write_price_per_mtok: 0.0
+  cache_write_price_per_mtok: 5.0
   context_window: 1050000
   max_output_tokens: 128000
   input_modalities:
@@ -4087,7 +4089,8 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 196608
   max_output_tokens: 131072
-  input_modalities: null
+  input_modalities:
+  - text
   output_modalities:
   - text
   capabilities:
@@ -4110,7 +4113,9 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 524288
   max_output_tokens: 250000
-  input_modalities: null
+  input_modalities:
+  - text
+  - image
   output_modalities:
   - text
   capabilities:
@@ -4133,7 +4138,8 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 32768
   max_output_tokens: null
-  input_modalities: null
+  input_modalities:
+  - text
   output_modalities:
   - text
   capabilities:
@@ -4154,7 +4160,8 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 131072
   max_output_tokens: null
-  input_modalities: null
+  input_modalities:
+  - text
   output_modalities:
   - text
   capabilities:
@@ -4175,7 +4182,8 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 32768
   max_output_tokens: null
-  input_modalities: null
+  input_modalities:
+  - text
   output_modalities:
   - text
   capabilities:
@@ -4196,7 +4204,8 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 32768
   max_output_tokens: null
-  input_modalities: null
+  input_modalities:
+  - text
   output_modalities:
   - text
   capabilities:
@@ -4217,7 +4226,8 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 32768
   max_output_tokens: null
-  input_modalities: null
+  input_modalities:
+  - text
   output_modalities:
   - text
   capabilities:
@@ -4238,7 +4248,8 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 32768
   max_output_tokens: null
-  input_modalities: null
+  input_modalities:
+  - text
   output_modalities:
   - text
   capabilities:
@@ -4259,7 +4270,8 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 32768
   max_output_tokens: 16384
-  input_modalities: null
+  input_modalities:
+  - text
   output_modalities:
   - text
   capabilities:
@@ -4280,7 +4292,8 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 131072
   max_output_tokens: null
-  input_modalities: null
+  input_modalities:
+  - text
   output_modalities:
   - text
   capabilities:
@@ -4301,7 +4314,8 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 32768
   max_output_tokens: 32768
-  input_modalities: null
+  input_modalities:
+  - text
   output_modalities:
   - text
   capabilities:
@@ -4324,7 +4338,8 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 16384
   max_output_tokens: 29491
-  input_modalities: null
+  input_modalities:
+  - text
   output_modalities:
   - text
   capabilities:
@@ -4345,7 +4360,8 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 32768
   max_output_tokens: 28800
-  input_modalities: null
+  input_modalities:
+  - text
   output_modalities:
   - text
   capabilities:
@@ -4366,7 +4382,8 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 262144
   max_output_tokens: 262144
-  input_modalities: null
+  input_modalities:
+  - text
   output_modalities:
   - text
   capabilities:
@@ -4388,7 +4405,8 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 262144
   max_output_tokens: 262144
-  input_modalities: null
+  input_modalities:
+  - text
   output_modalities:
   - text
   capabilities:
@@ -4410,7 +4428,8 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 262144
   max_output_tokens: 235929
-  input_modalities: null
+  input_modalities:
+  - text
   output_modalities:
   - text
   capabilities:
@@ -4431,7 +4450,8 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 262144
   max_output_tokens: 32768
-  input_modalities: null
+  input_modalities:
+  - text
   output_modalities:
   - text
   capabilities:
@@ -4452,7 +4472,8 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 262144
   max_output_tokens: 32768
-  input_modalities: null
+  input_modalities:
+  - text
   output_modalities:
   - text
   capabilities:
@@ -4473,7 +4494,8 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 262144
   max_output_tokens: 32768
-  input_modalities: null
+  input_modalities:
+  - text
   output_modalities:
   - text
   capabilities:
@@ -4494,7 +4516,8 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 262144
   max_output_tokens: 130000
-  input_modalities: null
+  input_modalities:
+  - text
   output_modalities:
   - text
   capabilities:
@@ -4516,7 +4539,9 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 262144
   max_output_tokens: 65536
-  input_modalities: null
+  input_modalities:
+  - text
+  - image
   output_modalities:
   - text
   capabilities:
@@ -4539,7 +4564,8 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 1000000
   max_output_tokens: 500000
-  input_modalities: null
+  input_modalities:
+  - text
   output_modalities:
   - text
   capabilities:
@@ -4561,7 +4587,8 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 1000000
   max_output_tokens: 500000
-  input_modalities: null
+  input_modalities:
+  - text
   output_modalities:
   - text
   capabilities:
@@ -4583,7 +4610,8 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 1000000
   max_output_tokens: 131072
-  input_modalities: null
+  input_modalities:
+  - text
   output_modalities:
   - text
   capabilities:
@@ -4603,8 +4631,31 @@ models:
   cache_read_price_per_mtok: 0.5
   cache_write_price_per_mtok: 0.0
   context_window: 1010000
+  max_output_tokens: 262144
+  input_modalities:
+  - text
+  output_modalities:
+  - text
+  capabilities:
+  - streaming
+  parameter_support:
+    logprobs: supported
+    reasoning_effort: supported
+    seed: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
+- model_id: together/Qwen/Qwen3.8-Flash
+  provider_id: together
+  upstream_model: Qwen/Qwen3.8-Flash
+  input_price_per_mtok: 0.15
+  output_price_per_mtok: 0.47
+  cache_read_price_per_mtok: 0.0
+  cache_write_price_per_mtok: 0.0
+  context_window: 1000000
   max_output_tokens: 131072
-  input_modalities: null
+  input_modalities:
+  - text
   output_modalities:
   - text
   capabilities:
@@ -4625,7 +4676,8 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 128000
   max_output_tokens: null
-  input_modalities: null
+  input_modalities:
+  - text
   output_modalities:
   - text
   capabilities:
@@ -4646,7 +4698,8 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 32768
   max_output_tokens: null
-  input_modalities: null
+  input_modalities:
+  - text
   output_modalities:
   - text
   capabilities:
@@ -4667,7 +4720,8 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 163840
   max_output_tokens: 32768
-  input_modalities: null
+  input_modalities:
+  - text
   output_modalities:
   - text
   capabilities:
@@ -4688,7 +4742,8 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 131072
   max_output_tokens: 7372
-  input_modalities: null
+  input_modalities:
+  - text
   output_modalities:
   - text
   capabilities:
@@ -4709,7 +4764,8 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 131072
   max_output_tokens: null
-  input_modalities: null
+  input_modalities:
+  - text
   output_modalities:
   - text
   capabilities:
@@ -4730,7 +4786,8 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 131072
   max_output_tokens: null
-  input_modalities: null
+  input_modalities:
+  - text
   output_modalities:
   - text
   capabilities:
@@ -4751,7 +4808,8 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 131072
   max_output_tokens: 144900
-  input_modalities: null
+  input_modalities:
+  - text
   output_modalities:
   - text
   capabilities:
@@ -4772,7 +4830,8 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 1048576
   max_output_tokens: 384000
-  input_modalities: null
+  input_modalities:
+  - text
   output_modalities:
   - text
   capabilities:
@@ -4795,7 +4854,8 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 512000
   max_output_tokens: 384000
-  input_modalities: null
+  input_modalities:
+  - text
   output_modalities:
   - text
   capabilities:
@@ -4818,7 +4878,8 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 1048576
   max_output_tokens: 384000
-  input_modalities: null
+  input_modalities:
+  - text
   output_modalities:
   - text
   capabilities:
@@ -4841,7 +4902,8 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 16384
   max_output_tokens: null
-  input_modalities: null
+  input_modalities:
+  - text
   output_modalities:
   - text
   capabilities:
@@ -4862,7 +4924,8 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 8192
   max_output_tokens: 2048
-  input_modalities: null
+  input_modalities:
+  - text
   output_modalities:
   - text
   capabilities:
@@ -4883,7 +4946,9 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 262144
   max_output_tokens: 32000
-  input_modalities: null
+  input_modalities:
+  - text
+  - image
   output_modalities:
   - text
   capabilities:
@@ -4906,7 +4971,8 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 8192
   max_output_tokens: null
-  input_modalities: null
+  input_modalities:
+  - text
   output_modalities:
   - text
   capabilities:
@@ -4927,7 +4993,8 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 4096
   max_output_tokens: null
-  input_modalities: null
+  input_modalities:
+  - text
   output_modalities:
   - text
   capabilities:
@@ -4948,7 +5015,8 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 131072
   max_output_tokens: 54000
-  input_modalities: null
+  input_modalities:
+  - text
   output_modalities:
   - text
   capabilities:
@@ -4969,7 +5037,8 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 131072
   max_output_tokens: 117964
-  input_modalities: null
+  input_modalities:
+  - text
   output_modalities:
   - text
   capabilities:
@@ -4990,7 +5059,8 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 131072
   max_output_tokens: 131072
-  input_modalities: null
+  input_modalities:
+  - text
   output_modalities:
   - text
   capabilities:
@@ -5013,7 +5083,8 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 1048576
   max_output_tokens: 8192
-  input_modalities: null
+  input_modalities:
+  - text
   output_modalities:
   - text
   capabilities:
@@ -5034,7 +5105,8 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 8192
   max_output_tokens: null
-  input_modalities: null
+  input_modalities:
+  - text
   output_modalities:
   - text
   capabilities:
@@ -5055,7 +5127,8 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 8192
   max_output_tokens: null
-  input_modalities: null
+  input_modalities:
+  - text
   output_modalities:
   - text
   capabilities:
@@ -5076,7 +5149,8 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 131072
   max_output_tokens: null
-  input_modalities: null
+  input_modalities:
+  - text
   output_modalities:
   - text
   capabilities:
@@ -5097,7 +5171,8 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 131072
   max_output_tokens: null
-  input_modalities: null
+  input_modalities:
+  - text
   output_modalities:
   - text
   capabilities:
@@ -5117,8 +5192,9 @@ models:
   cache_read_price_per_mtok: 0.04
   cache_write_price_per_mtok: 0.0
   context_window: 131072
-  max_output_tokens: 117964
-  input_modalities: null
+  max_output_tokens: 16384
+  input_modalities:
+  - text
   output_modalities:
   - text
   capabilities:
@@ -5139,7 +5215,8 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 262144
   max_output_tokens: 209715
-  input_modalities: null
+  input_modalities:
+  - text
   output_modalities:
   - text
   capabilities:
@@ -5160,7 +5237,8 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 32768
   max_output_tokens: null
-  input_modalities: null
+  input_modalities:
+  - text
   output_modalities:
   - text
   capabilities:
@@ -5181,7 +5259,8 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 32768
   max_output_tokens: null
-  input_modalities: null
+  input_modalities:
+  - text
   output_modalities:
   - text
   capabilities:
@@ -5202,7 +5281,8 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 32768
   max_output_tokens: 16384
-  input_modalities: null
+  input_modalities:
+  - text
   output_modalities:
   - text
   capabilities:
@@ -5223,7 +5303,8 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 32768
   max_output_tokens: null
-  input_modalities: null
+  input_modalities:
+  - text
   output_modalities:
   - text
   capabilities:
@@ -5244,7 +5325,8 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 262144
   max_output_tokens: null
-  input_modalities: null
+  input_modalities:
+  - text
   output_modalities:
   - text
   capabilities:
@@ -5265,7 +5347,8 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 262144
   max_output_tokens: 131000
-  input_modalities: null
+  input_modalities:
+  - text
   output_modalities:
   - text
   capabilities:
@@ -5288,7 +5371,8 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 262144
   max_output_tokens: 131072
-  input_modalities: null
+  input_modalities:
+  - text
   output_modalities:
   - text
   capabilities:
@@ -5311,7 +5395,9 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 1048576
   max_output_tokens: 131072
-  input_modalities: null
+  input_modalities:
+  - text
+  - image
   output_modalities:
   - text
   capabilities:
@@ -5334,7 +5420,8 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 32768
   max_output_tokens: null
-  input_modalities: null
+  input_modalities:
+  - text
   output_modalities:
   - text
   capabilities:
@@ -5355,7 +5442,8 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 131072
   max_output_tokens: null
-  input_modalities: null
+  input_modalities:
+  - text
   output_modalities:
   - text
   capabilities:
@@ -5376,7 +5464,8 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 512288
   max_output_tokens: 512300
-  input_modalities: null
+  input_modalities:
+  - text
   output_modalities:
   - text
   capabilities:
@@ -5399,7 +5488,8 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 131072
   max_output_tokens: 131072
-  input_modalities: null
+  input_modalities:
+  - text
   output_modalities:
   - text
   capabilities:
@@ -5439,27 +5529,6 @@ models:
     stop: supported
     temperature: supported
     top_p: supported
-- model_id: together/pearl-ai/gemma-4-31b-it
-  provider_id: together
-  upstream_model: pearl-ai/gemma-4-31b-it
-  input_price_per_mtok: 0.28
-  output_price_per_mtok: 0.86
-  cache_read_price_per_mtok: 0.0
-  cache_write_price_per_mtok: 0.0
-  context_window: 262144
-  max_output_tokens: 32000
-  input_modalities: null
-  output_modalities:
-  - text
-  capabilities:
-  - streaming
-  parameter_support:
-    logprobs: supported
-    reasoning_effort: supported
-    seed: supported
-    stop: supported
-    temperature: supported
-    top_p: supported
 - model_id: together/thinkingmachines/Inkling
   provider_id: together
   upstream_model: thinkingmachines/Inkling
@@ -5469,7 +5538,8 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 524288
   max_output_tokens: 131072
-  input_modalities: null
+  input_modalities:
+  - text
   output_modalities:
   - text
   capabilities:
@@ -5492,7 +5562,8 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 524288
   max_output_tokens: 262144
-  input_modalities: null
+  input_modalities:
+  - text
   output_modalities:
   - text
   capabilities:
@@ -5513,7 +5584,8 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 131072
   max_output_tokens: null
-  input_modalities: null
+  input_modalities:
+  - text
   output_modalities:
   - text
   capabilities:
@@ -5534,7 +5606,8 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 202752
   max_output_tokens: 16384
-  input_modalities: null
+  input_modalities:
+  - text
   output_modalities:
   - text
   capabilities:
@@ -5555,7 +5628,8 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 202752
   max_output_tokens: 131072
-  input_modalities: null
+  input_modalities:
+  - text
   output_modalities:
   - text
   capabilities:
@@ -5576,7 +5650,8 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 202752
   max_output_tokens: 131072
-  input_modalities: null
+  input_modalities:
+  - text
   output_modalities:
   - text
   capabilities:
@@ -5599,7 +5674,8 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 202752
   max_output_tokens: 131072
-  input_modalities: null
+  input_modalities:
+  - text
   output_modalities:
   - text
   capabilities:
@@ -5622,7 +5698,32 @@ models:
   cache_write_price_per_mtok: 0.0
   context_window: 1048575
   max_output_tokens: 164000
-  input_modalities: null
+  input_modalities:
+  - text
+  output_modalities:
+  - text
+  capabilities:
+  - streaming
+  - structured_output
+  - tools
+  parameter_support:
+    logprobs: supported
+    reasoning_effort: supported
+    seed: supported
+    stop: supported
+    temperature: supported
+    top_p: supported
+- model_id: together/zai-org/GLM-5.3
+  provider_id: together
+  upstream_model: zai-org/GLM-5.3
+  input_price_per_mtok: 1.4
+  output_price_per_mtok: 4.4
+  cache_read_price_per_mtok: 0.26
+  cache_write_price_per_mtok: 0.0
+  context_window: 1048575
+  max_output_tokens: 262144
+  input_modalities:
+  - text
   output_modalities:
   - text
   capabilities:
@@ -5644,8 +5745,9 @@ models:
   cache_read_price_per_mtok: 0.03
   cache_write_price_per_mtok: 0.0
   context_window: 1048575
-  max_output_tokens: 131072
-  input_modalities: null
+  max_output_tokens: 400000
+  input_modalities:
+  - text
   output_modalities:
   - text
   capabilities:

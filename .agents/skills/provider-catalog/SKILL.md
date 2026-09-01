@@ -27,3 +27,8 @@ uv run airllm-audit agent guide <guide> --format text
 Follow the returned guide as the authority for the workflow. Use the root `airllm-audit`
 CLI for every catalog mutation, live experiment, evidence promotion, generation, and
 validation. Do not run the individual scripts under `model-audit/catalog/scripts/`.
+
+Every retained model must have non-empty canonical input and output modality lists. When a
+provider omits them, establish a conservative chat baseline from its surface, enrich it from
+provider-owned documentation or direct evidence, or exclude the model. Never allow onboarding,
+synchronization, manual model addition, or taxonomy generation to preserve an empty direction.

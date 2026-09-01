@@ -2294,9 +2294,9 @@ export const applyInstanceTaxonomyBodyModelsItemContextWindowMax = 100000000;
 
 export const applyInstanceTaxonomyBodyModelsItemMaxOutputTokensOneMax = 100000000;
 
-export const applyInstanceTaxonomyBodyModelsItemInputModalitiesOneMax = 16;
+export const applyInstanceTaxonomyBodyModelsItemInputModalitiesMax = 16;
 
-export const applyInstanceTaxonomyBodyModelsItemOutputModalitiesOneMax = 16;
+export const applyInstanceTaxonomyBodyModelsItemOutputModalitiesMax = 16;
 
 export const applyInstanceTaxonomyBodyModelsItemCapabilitiesMax = 128;
 
@@ -2325,8 +2325,8 @@ export const ApplyInstanceTaxonomyBody = zod.object({
   "cache_write_price_per_mtok": zod.number().min(applyInstanceTaxonomyBodyModelsItemCacheWritePricePerMtokMin).default(applyInstanceTaxonomyBodyModelsItemCacheWritePricePerMtokDefault).describe('USD per million cache-write input tokens'),
   "context_window": zod.int().min(1).max(applyInstanceTaxonomyBodyModelsItemContextWindowMax).default(applyInstanceTaxonomyBodyModelsItemContextWindowDefault).describe('Context window in tokens'),
   "max_output_tokens": zod.union([zod.int().min(1).max(applyInstanceTaxonomyBodyModelsItemMaxOutputTokensOneMax),zod.null()]).optional().describe('Max completion tokens; requests are clamped to it'),
-  "input_modalities": zod.union([zod.array(zod.enum(['text', 'image', 'audio', 'video', 'pdf'])).max(applyInstanceTaxonomyBodyModelsItemInputModalitiesOneMax),zod.null()]).optional().describe('Accepted input modalities; null means unknown'),
-  "output_modalities": zod.union([zod.array(zod.enum(['text', 'image', 'audio', 'video', 'pdf'])).max(applyInstanceTaxonomyBodyModelsItemOutputModalitiesOneMax),zod.null()]).optional().describe('Produced output modalities; null means unknown'),
+  "input_modalities": zod.array(zod.enum(['text', 'image', 'audio', 'video', 'pdf'])).min(1).max(applyInstanceTaxonomyBodyModelsItemInputModalitiesMax).describe('Accepted input modalities'),
+  "output_modalities": zod.array(zod.enum(['text', 'image', 'audio', 'video', 'pdf'])).min(1).max(applyInstanceTaxonomyBodyModelsItemOutputModalitiesMax).describe('Produced output modalities'),
   "capabilities": zod.array(zod.string()).max(applyInstanceTaxonomyBodyModelsItemCapabilitiesMax).optional().describe('Capabilities supported by the model'),
   "parameter_support": zod.record(zod.string(), zod.enum(['supported', 'unsupported'])).optional().describe('Known support for canonical request parameters; an absent parameter is unknown')
 })).max(applyInstanceTaxonomyBodyModelsMax).optional().describe('Routable models to create or update')
@@ -2531,9 +2531,9 @@ export const createModelBodyContextWindowMax = 100000000;
 
 export const createModelBodyMaxOutputTokensOneMax = 100000000;
 
-export const createModelBodyInputModalitiesOneMax = 16;
+export const createModelBodyInputModalitiesMax = 16;
 
-export const createModelBodyOutputModalitiesOneMax = 16;
+export const createModelBodyOutputModalitiesMax = 16;
 
 export const createModelBodyCapabilitiesMax = 128;
 
@@ -2550,8 +2550,8 @@ export const CreateModelBody = zod.object({
   "cache_write_price_per_mtok": zod.number().min(createModelBodyCacheWritePricePerMtokMin).default(createModelBodyCacheWritePricePerMtokDefault).describe('USD per million cache-write input tokens'),
   "context_window": zod.int().min(1).max(createModelBodyContextWindowMax).default(createModelBodyContextWindowDefault).describe('Context window in tokens'),
   "max_output_tokens": zod.union([zod.int().min(1).max(createModelBodyMaxOutputTokensOneMax),zod.null()]).optional().describe('Max completion tokens; requests are clamped to it'),
-  "input_modalities": zod.union([zod.array(zod.enum(['text', 'image', 'audio', 'video', 'pdf'])).max(createModelBodyInputModalitiesOneMax),zod.null()]).optional().describe('Accepted input modalities; null means unknown'),
-  "output_modalities": zod.union([zod.array(zod.enum(['text', 'image', 'audio', 'video', 'pdf'])).max(createModelBodyOutputModalitiesOneMax),zod.null()]).optional().describe('Produced output modalities; null means unknown'),
+  "input_modalities": zod.array(zod.enum(['text', 'image', 'audio', 'video', 'pdf'])).min(1).max(createModelBodyInputModalitiesMax).describe('Accepted input modalities'),
+  "output_modalities": zod.array(zod.enum(['text', 'image', 'audio', 'video', 'pdf'])).min(1).max(createModelBodyOutputModalitiesMax).describe('Produced output modalities'),
   "capabilities": zod.array(zod.string()).max(createModelBodyCapabilitiesMax).optional().describe('Capabilities supported by the model'),
   "parameter_support": zod.record(zod.string(), zod.enum(['supported', 'unsupported'])).optional().describe('Known support for canonical request parameters; an absent parameter is unknown')
 })

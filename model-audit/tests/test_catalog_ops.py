@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import json
+import sys
 from pathlib import Path
+from typing import cast
 
 import pytest
 import yaml
@@ -64,9 +66,30 @@ class OfflineSource:
         return models
 
 
+class IncompleteSource(OfflineSource):
+    id = "incomplete"
+
+    def fetch(self, key: str | None) -> object:
+        return [{"id": "model"}]
+
+    def items(self, payload: object) -> list[dict[str, object]]:
+        return cast("list[dict[str, object]]", payload) if isinstance(payload, list) else []
+
+    def normalize(self, item: dict[str, object]) -> dict[str, object] | None:
+        return {"id": item["id"], "input_modalities": None, "output_modalities": []}
+
+
 def test_provider_preflight_reports_acquisition_failures():
     with pytest.raises(RuntimeError, match="model acquisition failed: offline"):
         preflight_source(OfflineSource(), None)
+
+
+def test_provider_preflight_names_models_with_incomplete_modalities():
+    with pytest.raises(
+        RuntimeError,
+        match=r"incomplete/model\.input_modalities, incomplete/model\.output_modalities",
+    ):
+        preflight_source(IncompleteSource(), None)
 
 
 def test_adding_a_provider_uses_a_typed_definition_and_removes_its_candidate(tmp_path):
@@ -167,6 +190,8 @@ def test_adding_one_model_keeps_its_authoritative_source(tmp_path):
         ModelDefinition(
             id="new-model",
             source="https://provider.example/docs/models/new-model",
+            input_modalities=("text", "image"),
+            output_modalities=("text",),
             context_window=8192,
             max_output_tokens=1024,
         ),
@@ -175,13 +200,38 @@ def test_adding_one_model_keeps_its_authoritative_source(tmp_path):
     model = json.loads(path.read_text(encoding="utf-8"))["models"][0]
     assert model["source"] == "https://provider.example/docs/models/new-model"
     assert model["context_length"] == 8192
+    assert model["input_modalities"] == ["text", "image"]
+    assert model["output_modalities"] == ["text"]
+
+
+@pytest.mark.parametrize("field", ["input_modalities", "output_modalities"])
+def test_adding_a_model_requires_each_modality_direction(field):
+    values = {
+        "id": "model",
+        "source": "https://provider.example/models/model",
+        "input_modalities": ("text",),
+        "output_modalities": ("text",),
+    }
+    values[field] = ()
+
+    with pytest.raises(ValueError, match="at least 1 item"):
+        ModelDefinition.model_validate(values)
 
 
 def test_adding_a_model_requires_a_known_provider(tmp_path):
     root = root_with_provider(tmp_path)
 
     with pytest.raises(ValueError, match=r"provider unknown is not in providers\.yml"):
-        add_model(root, "unknown", ModelDefinition(id="model", source="https://provider.example/models/model"))
+        add_model(
+            root,
+            "unknown",
+            ModelDefinition(
+                id="model",
+                source="https://provider.example/models/model",
+                input_modalities=("text",),
+                output_modalities=("text",),
+            ),
+        )
 
 
 def test_replacing_a_model_is_explicit_and_preserves_existing_metadata(tmp_path):
@@ -189,6 +239,8 @@ def test_replacing_a_model_is_explicit_and_preserves_existing_metadata(tmp_path)
     definition = ModelDefinition(
         id="new-model",
         source="https://provider.example/docs/models/new-model",
+        input_modalities=("text",),
+        output_modalities=("text",),
         context_window=8192,
         max_output_tokens=1024,
     )
@@ -205,3 +257,46 @@ def test_replacing_a_model_is_explicit_and_preserves_existing_metadata(tmp_path)
     model = json.loads(path.read_text(encoding="utf-8"))["models"][0]
     assert model["context_length"] == 16384
     assert model["supports_tools"] is True
+
+
+def test_together_source_starts_chat_models_at_text_to_text():
+    source = provider_sources(Path(__file__).parents[2])["together"]
+
+    model = source.normalize({"id": "org/model", "type": "chat", "pricing": {"input": 1, "output": 2}})
+
+    assert model is not None
+    assert model["input_modalities"] == ["text"]
+    assert model["output_modalities"] == ["text"]
+
+
+def test_together_source_adds_documented_vision_input(monkeypatch):
+    source = provider_sources(Path(__file__).parents[2])["together"]
+    module = sys.modules[type(source).__module__]
+    monkeypatch.setattr(
+        module,
+        "fetch_text",
+        lambda _: (
+            """
+## Chat models
+| Org | Model | org/model | 8192 | $1 | - | $2 | FP8 | Yes | Yes |
+## Vision models
+| Org | Model | org/model | 8192 | $1 | $2 |
+"""
+        ),
+    )
+    models: list[dict[str, object]] = [{"id": "org/model", "input_modalities": ["text"], "output_modalities": ["text"]}]
+
+    enriched = source.enrich(models)
+
+    assert enriched[0]["input_modalities"] == ["text", "image"]
+
+
+@pytest.mark.parametrize("model_id", ["gpt-3.5-turbo-16k", "gpt-5-search-api", "gpt-5-search-api-2025-10-14"])
+def test_openai_source_keeps_directly_verified_text_models_complete(model_id):
+    source = provider_sources(Path(__file__).parents[2])["openai"]
+
+    model = source.normalize({"id": model_id})
+
+    assert model is not None
+    assert model["input_modalities"] == ["text"]
+    assert model["output_modalities"] == ["text"]

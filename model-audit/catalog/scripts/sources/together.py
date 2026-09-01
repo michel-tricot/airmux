@@ -29,6 +29,9 @@ The API publishes no tool or structured-output flags. The source fills those fie
 the current official serverless model table when it lists the same API id. The API remains
 authoritative for context and pricing, and disagreements with the shorter documentation
 catalog are retained as source conflicts.
+
+Every callable chat model starts at text input and text output. Models repeated in the
+official Vision table add image input without losing their text input.
 """
 
 from model_audit.catalog_ops import ProviderDefinition, SchemaDefinition
@@ -74,6 +77,7 @@ class Together(ModelSource):
         return self.record(
             item["id"],
             context_length=item.get("context_length"),
+            input_modalities=["text"],
             output_modalities=["text"],
             pricing={
                 "input_per_mtok": pricing.get("input"),
@@ -88,4 +92,13 @@ class Together(ModelSource):
 
     def enrich(self, models):
         documents = parse_together_models(fetch_text(self.docs_catalog), self.docs_catalog)
+        by_id = {model_id: document for document in documents for model_id in document.ids}
+        for model in models:
+            document = by_id.get(str(model.get("id")))
+            if document is None:
+                continue
+            for field in ("input_modalities", "output_modalities"):
+                documented = document.values.get(field)
+                if isinstance(documented, list):
+                    model[field] = list(dict.fromkeys([*(model.get(field) or []), *documented]))
         return apply_documentation(models, documents)

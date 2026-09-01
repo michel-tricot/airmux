@@ -13,9 +13,15 @@ context windows, and the mapping has broken at every generation.
 
 shutdown_date is worth carrying: it is the only machine-readable deprecation signal any
 provider in the catalog publishes.
+
+The API-listed gpt-3.5-turbo-16k and gpt-5-search-api aliases have no exact current model
+page. Minimal Chat Completions calls verified text input and text output for both aliases and
+their returned snapshots. The 16k alias also inherits the current gpt-3.5-turbo page because
+the provider resolves it to that documented family.
 """
 
 import re
+from dataclasses import replace
 from urllib.parse import urljoin
 
 from model_audit.catalog_ops import ProviderDefinition, SchemaDefinition
@@ -48,16 +54,24 @@ class OpenAI(ModelSource):
     )
     docs_catalog = "https://developers.openai.com/api/docs/models/all.md"
     docs_pricing = "https://developers.openai.com/api/docs/pricing.md"
+    verified_text_models = frozenset({"gpt-3.5-turbo-16k", "gpt-5-search-api", "gpt-5-search-api-2025-10-14"})
+    documented_aliases = {"gpt-3.5-turbo": ("gpt-3.5-turbo-16k",)}
 
     def normalize(self, item):
-        return self.record(item["id"], shutdown_date=item.get("shutdown_date"))
+        model_id = item["id"]
+        modalities = ["text"] if model_id in self.verified_text_models else None
+        return self.record(model_id, input_modalities=modalities, output_modalities=modalities, shutdown_date=item.get("shutdown_date"))
 
     def enrich(self, models):
         catalog = fetch_text(self.docs_catalog)
         paths = tuple(sorted(set(re.findall(r"\((/api/docs/models/[^)]+\.md)\)", catalog)) - {"/api/docs/models/all.md"}))
         urls = tuple(urljoin(self.docs_catalog, path) for path in paths)
+        model_documents = tuple(parse_openai_model(markdown, url) for url, markdown in fetch_texts(urls).items())
+        model_documents = tuple(
+            replace(document, ids=(*document.ids, *self.documented_aliases.get(document.ids[0], ()))) for document in model_documents
+        )
         documents = (
             *parse_openai_pricing(fetch_text(self.docs_pricing), self.docs_pricing),
-            *(parse_openai_model(markdown, url) for url, markdown in fetch_texts(urls).items()),
+            *model_documents,
         )
         return apply_documentation(models, documents)

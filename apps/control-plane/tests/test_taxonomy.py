@@ -24,6 +24,8 @@ providers:
 models:
   - model_id: echo
     provider_id: stub
+    input_modalities: [text]
+    output_modalities: [text]
 """
 
 STUB_ICON = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M0 0h24v24H0z"/></svg>'
@@ -115,6 +117,8 @@ providers:
 models:
   - model_id: echo
     provider_id: stub
+    input_modalities: [text]
+    output_modalities: [text]
     input_price_per_mtok: 2.0
     output_price_per_mtok: 5.0
     cache_read_price_per_mtok: 0.25
@@ -148,6 +152,8 @@ providers:
 models:
   - model_id: echo
     provider_id: stub
+    input_modalities: [text]
+    output_modalities: [text]
     parameter_support:
       temperature: unsupported
 """
@@ -190,29 +196,17 @@ models:
     assert model.output_modalities == ["text"]
 
 
-def test_apply_taxonomy_preserves_unknown_model_modalities(tmp_path):
-    setup_db(tmp_path)
-    spec = TaxonomySpec.model_validate(
-        yaml.safe_load(
-            """
-providers:
-  - provider_id: stub
-    base_url: https://stub.example/v1
-models:
-  - model_id: echo
-    provider_id: stub
-"""
-        )
-    )
-
-    async def apply():
-        await set_actor("u-test")
-        return await apply_taxonomy(spec)
-
-    run_in_db(tmp_path, apply)
-    (model,) = run_in_db(tmp_path, Model.find)
-    assert model.input_modalities is None
-    assert model.output_modalities is None
+@pytest.mark.parametrize(
+    "modalities",
+    [
+        {},
+        {"input_modalities": [], "output_modalities": ["text"]},
+        {"input_modalities": ["text"], "output_modalities": []},
+    ],
+)
+def test_taxonomy_rejects_missing_or_empty_model_modalities(modalities):
+    with pytest.raises(ValueError, match=r"input_modalities|output_modalities"):
+        TaxonomySpec.model_validate({"models": [{"model_id": "echo", "provider_id": "stub", **modalities}]})
 
 
 def test_a_provider_declaring_no_icon_has_none(tmp_path):
@@ -253,7 +247,9 @@ def test_shipped_taxonomy_prices_each_model_directly():
 
 def test_apply_taxonomy_rejects_a_model_with_an_unknown_provider(tmp_path):
     setup_db(tmp_path)
-    spec = TaxonomySpec.model_validate({"models": [{"model_id": "ghost", "provider_id": "nope"}]})
+    spec = TaxonomySpec.model_validate(
+        {"models": [{"model_id": "ghost", "provider_id": "nope", "input_modalities": ["text"], "output_modalities": ["text"]}]}
+    )
 
     async def apply():
         await set_actor("u-test")
@@ -281,7 +277,7 @@ def test_taxonomy_command_applies_and_compiles(tmp_path):
     tax_path.write_text(TAXONOMY, encoding="utf-8")
     assert runner.invoke(app, ["taxonomy", "--config", cfg]).exit_code == 0
     doc = yaml.safe_load(tax_path.read_text(encoding="utf-8"))
-    doc["models"].append({"model_id": "echo-2", "provider_id": "stub"})
+    doc["models"].append({"model_id": "echo-2", "provider_id": "stub", "input_modalities": ["text"], "output_modalities": ["text"]})
     tax_path.write_text(yaml.safe_dump(doc), encoding="utf-8")
     result = runner.invoke(app, ["taxonomy", "--config", cfg])
     assert result.exit_code == 0, result.output

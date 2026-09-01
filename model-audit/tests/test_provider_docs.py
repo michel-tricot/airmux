@@ -218,6 +218,7 @@ def test_official_documentation_applies_through_provider_declared_aliases():
 def test_together_serverless_table_maps_declared_features_and_prices():
     documents = parse_together_models(
         r"""
+## Chat models
 | Qwen | Example | Qwen/Example | 262144 | \$1.25 | \$0.25 | \$3.75 | FP8 | Yes | No |
 """,
         "https://provider.example/serverless-models",
@@ -227,8 +228,26 @@ def test_together_serverless_table_maps_declared_features_and_prices():
     assert documents[0].values["context_length"] == 262144
     assert documents[0].values["supports_tools"] is True
     assert documents[0].values["supports_structured_output"] is False
+    assert documents[0].values["input_modalities"] == ["text"]
+    assert documents[0].values["output_modalities"] == ["text"]
     assert documents[0].values["pricing"] == {
         "input_per_mtok": 1.25,
         "cached_input_per_mtok": 0.25,
         "output_per_mtok": 3.75,
     }
+
+
+def test_together_vision_table_augments_the_chat_model_modalities():
+    documents = parse_together_models(
+        r"""
+## Chat models
+| Qwen | Example | Qwen/Example | 262144 | \$1.25 | \$0.25 | \$3.75 | FP8 | Yes | No |
+## Vision models
+| Qwen | Example | Qwen/Example | 262144 | \$1.25 | \$3.75 |
+""",
+        "https://provider.example/serverless-models",
+    )
+
+    assert len(documents) == 1
+    assert documents[0].values["input_modalities"] == ["text", "image"]
+    assert documents[0].values["output_modalities"] == ["text"]

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
 import yaml
 
 from model_audit.models import BehaviorRecord, Claim
@@ -55,14 +56,23 @@ def test_direct_modality_evidence_overrides_catalog_metadata():
     assert _modalities(model, [rejected_image, supported_output]) == (["text", "pdf"], ["text"])
 
 
-def test_unknown_modalities_remain_unknown():
-    assert _modalities({}, []) == (None, None)
+def test_unknown_modalities_are_rejected():
+    with pytest.raises(ValueError, match=r"stub/model is missing required input_modalities, output_modalities"):
+        _modalities({}, [], model_id="stub/model")
 
 
-def test_direct_evidence_can_establish_an_unknown_modality():
+def test_direct_evidence_must_establish_both_modality_directions():
     supported_image = behavior("modality", "input_image", "supported")
 
-    assert _modalities({}, [supported_image]) == (["image"], None)
+    with pytest.raises(ValueError, match=r"stub/model is missing required output_modalities"):
+        _modalities({}, [supported_image], model_id="stub/model")
+
+
+def test_direct_evidence_cannot_empty_a_modality_direction():
+    rejected_text = behavior("modality", "output_text", "unsupported")
+
+    with pytest.raises(ValueError, match=r"stub/model is missing required output_modalities"):
+        _modalities({"input_modalities": ["text"], "output_modalities": ["text"]}, [rejected_text], model_id="stub/model")
 
 
 def test_profile_rejection_does_not_mark_an_entire_option_unsupported():

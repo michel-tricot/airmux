@@ -10,6 +10,8 @@ from typing import TYPE_CHECKING, Literal, Protocol, cast
 import yaml
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from contract import Modality
+
 if TYPE_CHECKING:
     from pathlib import Path
 
@@ -81,6 +83,8 @@ class ModelDefinition(BaseModel):
 
     id: str
     source: str
+    input_modalities: tuple[Modality, ...] = Field(min_length=1)
+    output_modalities: tuple[Modality, ...] = Field(min_length=1)
     context_window: int | None = Field(None, ge=1)
     max_output_tokens: int | None = Field(None, ge=1)
 
@@ -108,19 +112,33 @@ def provider_sources(root: Path) -> dict[str, ProviderSource]:
     return cast("dict[str, ProviderSource]", module.registry())
 
 
+def incomplete_model_modalities(provider_id: str, models: list[dict[str, object]]) -> tuple[str, ...]:
+    return tuple(
+        f"{provider_id}/{model.get('id', '<unnamed>')}.{field}"
+        for model in models
+        for field in ("input_modalities", "output_modalities")
+        if not isinstance(model.get(field), list) or not model[field]
+    )
+
+
 def preflight_source(source: ProviderSource, key: str | None) -> int:
     try:
         payload = source.fetch(key)
+        raw = source.items(payload)
+        models = [model for model in (source.normalize(item) for item in raw) if model is not None]
+        models = source.enrich(models)
     except OSError as error:
         message = f"model acquisition failed: {error}"
         raise RuntimeError(message) from error
-    raw = source.items(payload)
-    models = [model for model in (source.normalize(item) for item in raw) if model is not None]
     if raw and not models:
         message = f"{len(raw)} models returned, none kept; check the provider source filter"
         raise RuntimeError(message)
     if not models:
         message = "the model endpoint returned an empty or unrecognized payload"
+        raise RuntimeError(message)
+    incomplete = incomplete_model_modalities(source.id, models)
+    if incomplete:
+        message = f"models without required modalities: {', '.join(incomplete)}"
         raise RuntimeError(message)
     return len(models)
 
@@ -223,6 +241,8 @@ def add_model(root: Path, provider_id: str, definition: ModelDefinition, *, repl
         "id": definition.id,
         "kind": "text",
         "source": definition.source,
+        "input_modalities": list(definition.input_modalities),
+        "output_modalities": list(definition.output_modalities),
     }
     if definition.context_window is not None:
         model.update(
