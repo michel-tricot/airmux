@@ -150,11 +150,13 @@ def test_models_add_requires_both_modality_directions():
         app,
         ["models", "add", "anthropic", "example", "--source", "https://provider.example/model", "--input-modality", "text"],
     )
+    missing_input_output = unstyle(missing_input.output)
+    missing_output_output = unstyle(missing_output.output)
 
     assert missing_input.exit_code == 2
-    assert "--input-modality" in missing_input.output
+    assert "--input-modality" in missing_input_output
     assert missing_output.exit_code == 2
-    assert "--output-modality" in missing_output.output
+    assert "--output-modality" in missing_output_output
 
 
 def test_taxonomy_exposes_a_clean_rebuild_command():
