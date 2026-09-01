@@ -213,6 +213,8 @@ describe('organization models', () => {
     const gpt = (await screen.findByText('openai/gpt-5')).closest('tr');
     const modelName = within(gpt!).getByText('openai/gpt-5');
     expect(modelName).toHaveAttribute('tabindex', '0');
+    expect(modelName).toHaveClass('focus:ring-0', 'focus:ring-offset-0', 'focus-visible:ring-2', 'focus-visible:ring-ring');
+    expect(modelName).not.toHaveClass('cursor-help');
     expect(within(gpt!).queryByRole('button', { name: 'Show model metadata' })).not.toBeInTheDocument();
     expect(within(gpt!).queryByText('streaming')).not.toBeInTheDocument();
 

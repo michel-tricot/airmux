@@ -130,7 +130,11 @@ function ModelName({ name, capabilities }: Pick<ModelOut, 'name' | 'capabilities
   return (
     <Tooltip delayDuration={150}>
       <TooltipTrigger asChild>
-        <Badge variant="outline" tabIndex={0} className="font-mono">
+        <Badge
+          variant="outline"
+          tabIndex={0}
+          className="font-mono focus:ring-0 focus:ring-offset-0 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        >
           {name}
         </Badge>
       </TooltipTrigger>
