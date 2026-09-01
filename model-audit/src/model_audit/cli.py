@@ -433,12 +433,16 @@ def models_add(  # noqa: PLR0913, PLR0917 command flags define the CLI surface
     provider: Annotated[str, typer.Argument()],
     model: Annotated[str, typer.Argument()],
     source: Annotated[str, typer.Option("--source", help="Vendor page or API response supporting this model")],
-    input_modality: Annotated[list[str], typer.Option("--input-modality", help="Accepted input modality; repeat for multiple")],
-    output_modality: Annotated[list[str], typer.Option("--output-modality", help="Produced output modality; repeat for multiple")],
+    input_modality: Annotated[list[str] | None, typer.Option("--input-modality", help="Accepted input modality; repeat for multiple")] = None,
+    output_modality: Annotated[list[str] | None, typer.Option("--output-modality", help="Produced output modality; repeat for multiple")] = None,
     context_window: Annotated[int | None, typer.Option("--context-window", min=1)] = None,
     max_output_tokens: Annotated[int | None, typer.Option("--max-output-tokens", min=1)] = None,
     replace: Annotated[bool, typer.Option("--replace", help="Replace an existing model while preserving discovered metadata")] = False,
 ) -> None:
+    if not input_modality or not output_modality:
+        missing_option = "--input-modality" if not input_modality else "--output-modality"
+        detail = f"{missing_option} is required"
+        raise typer.BadParameter(detail)
     try:
         definition = ModelDefinition.model_validate(
             {
