@@ -19,8 +19,6 @@ const SECTIONS: Array<{ suffix: string; heading: string | RegExp }> = [
   { suffix: '', heading: WS.name },
   { suffix: '/keys', heading: 'Inference Keys' },
   { suffix: '/byok', heading: 'Provider Keys' },
-  { suffix: '/routing', heading: 'Routing' },
-  { suffix: '/policies', heading: 'Policies' },
   { suffix: '/settings', heading: 'Workspace Settings' },
 ];
 
@@ -137,23 +135,11 @@ describe('workspace route state', () => {
   });
 });
 
-describe('workspace URL compatibility', () => {
-  it('redirects a legacy UUID URL to the workspace slug', async () => {
-    renderAt(`/org/workspaces/${WORKSPACES[0].id}`);
-    expect(await screen.findByRole('heading', { level: 1, name: WORKSPACES[0].name })).toBeInTheDocument();
-    await waitFor(() => {
-      expect(window.location.pathname).toBe(`/org/workspaces/${WORKSPACES[0].slug}`);
-    });
-  });
-});
-
 function sectionLabel(suffix: string): string {
   return {
     '': 'Overview',
     '/keys': 'Inference Keys',
     '/byok': 'BYOK',
-    '/routing': 'Routing',
-    '/policies': 'Policies',
     '/settings': 'Settings',
   }[suffix]!;
 }

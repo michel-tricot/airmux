@@ -18,9 +18,8 @@ import sys
 from pathlib import Path
 from typing import TypedDict
 
-from paths import TAXONOMY
-
 import yaml
+from paths import TAXONOMY
 
 ROOT = TAXONOMY
 OUT = ROOT / "reports"
@@ -126,7 +125,7 @@ def main() -> int:
     rows: list[MatrixRow] = []
     for path in paths:
         flags = [1 if path in support[c["id"]] else 0 for c in columns]
-        verified = sum(f for f, c in zip(flags, columns) if c["kind"] == "provider" and not c["standin"])
+        verified = sum(f for f, c in zip(flags, columns, strict=True) if c["kind"] == "provider" and not c["standin"])
         rows.append({"path": path, "flags": flags, "total": sum(flags), "verified": verified})
     rows.sort(key=lambda r: (-r["total"], r["path"]))
 

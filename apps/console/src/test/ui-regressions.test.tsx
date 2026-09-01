@@ -307,10 +307,9 @@ describe('playground', () => {
         requestBody = (await request.json()) as Record<string, unknown>;
         return HttpResponse.text(
           [
-            'data: {"choices":[{"delta":{"content":"hello from the gateway"}}]}',
+            'data: {"delta":{"type":"text","text":"hello from the gateway"}}',
             '',
-            'data: {"choices":[{"finish_reason":"stop"}],"usage":{"prompt_tokens":12,"completion_tokens":4,' +
-              '"prompt_tokens_details":{"cached_tokens":2}}}',
+            'data: {"finish_reason":"stop","usage":{"input_tokens":12,"output_tokens":4,"cache_read_tokens":2}}',
             '',
             'data: [DONE]',
             '',
@@ -327,12 +326,7 @@ describe('playground', () => {
 
     const composer = await screen.findByPlaceholderText('Send a message... (Shift+Enter for newline)');
     expect(document.querySelector('[data-playground-scroll-anchor]')).not.toBeInTheDocument();
-    await user.click(screen.getByRole('combobox', { name: 'API surface' }));
-    expect(screen.getByRole('option', { name: 'OpenAI Chat (oai)' })).toBeInTheDocument();
-    expect(screen.getByRole('option', { name: 'OpenAI-compatible (oai_compatible)' })).toBeInTheDocument();
-    expect(screen.getByRole('option', { name: 'Responses API' })).toBeInTheDocument();
-    expect(screen.getByRole('option', { name: 'Messages API' })).toBeInTheDocument();
-    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('combobox', { name: 'API surface' })).not.toBeInTheDocument();
     const maxTokens = screen.getByLabelText('Max tokens');
     await user.click(screen.getByRole('button', { name: 'Increase Max tokens' }));
     expect(maxTokens).toHaveValue(1);
@@ -359,8 +353,9 @@ describe('playground', () => {
     const curlDialog = screen.getByRole('dialog', { name: 'Replicate request' });
     expect(curlDialog).toHaveTextContent('/inf/v1/chat/completions');
     expect(curlDialog).toHaveTextContent('Authorization: Bearer $AIRLLM_API_KEY');
+    expect(curlDialog).toHaveTextContent('x-airllm-dialect: canonical');
     expect(curlDialog).toHaveTextContent('openai/gpt-test');
-    expect(curlDialog).toHaveTextContent('"content": "hello"');
+    expect(curlDialog).toHaveTextContent('"text": "hello"');
     expect(curlDialog).toHaveTextContent('"temperature": 1');
     expect(curlDialog).toHaveTextContent('"stream": true');
     const copyCurl = within(curlDialog).getByRole('button', { name: 'Copy cURL' });
@@ -372,9 +367,9 @@ describe('playground', () => {
     await user.click(within(curlDialog).getByRole('button', { name: 'Close' }));
     expect(screen.queryByRole('button', { name: 'Generate playground key' })).not.toBeInTheDocument();
     expect(sessions).toBe(1);
-    expect(dialect).toBe('openai_native');
+    expect(dialect).toBe('canonical');
     expect(requestedWith).toBe('fetch');
-    expect(requestBody.messages).toEqual([{ role: 'user', content: 'hello' }]);
+    expect(requestBody.messages).toEqual([{ role: 'user', content: [{ type: 'text', text: 'hello' }] }]);
 
     const workspaceNavigation = screen.getByRole('navigation', { name: 'Workspace navigation' });
     const workspaceOverview = within(workspaceNavigation)
@@ -416,7 +411,7 @@ describe('playground', () => {
         HttpResponse.json({ id: 'session-1', expires_at: '2026-01-01T01:00:00Z', status: 'ready' }),
       ),
       http.post('/inf/v1/chat/completions', () =>
-        HttpResponse.text('data: {"choices":[{"finish_reason":"content_filter"}]}\n\ndata: [DONE]\n\n', {
+        HttpResponse.text('data: {"finish_reason":"content_filter"}\n\ndata: [DONE]\n\n', {
           headers: { 'content-type': 'text/event-stream' },
         }),
       ),
@@ -518,12 +513,9 @@ describe('playground', () => {
       ),
       http.post('/inf/v1/chat/completions', async ({ request }) => {
         requestBody = (await request.json()) as Record<string, unknown>;
-        return HttpResponse.text(
-          'data: {"choices":[{"delta":{"content":"ok"}}]}\n\ndata: {"choices":[{"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n',
-          {
-            headers: { 'content-type': 'text/event-stream' },
-          },
-        );
+        return HttpResponse.text('data: {"delta":{"type":"text","text":"ok"}}\n\ndata: {"finish_reason":"stop"}\n\ndata: [DONE]\n\n', {
+          headers: { 'content-type': 'text/event-stream' },
+        });
       }),
     );
     window.history.replaceState(null, '', `/org/workspaces/${WORKSPACES[0].slug}/playground`);

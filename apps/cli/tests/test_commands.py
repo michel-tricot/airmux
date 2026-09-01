@@ -26,6 +26,10 @@ def test_every_command_is_listed_once():
     assert len(paths) == len(set(paths))
     for path in (
         "airllm quickstart",
+        "airllm status",
+        "airllm doctor",
+        "airllm profiles list",
+        "airllm profiles use",
         "airllm orgs mine",
         "airllm provider-credentials add",
         "airllm access-keys mint",
@@ -35,6 +39,8 @@ def test_every_command_is_listed_once():
 
     assert "airllm bundles republish" in paths
     assert "airllm bundles compile" not in paths
+    assert "airllm test verify" not in paths
+    assert "airllm test loadgen" not in paths
 
 
 def test_the_listing_does_not_list_itself():
@@ -55,10 +61,10 @@ def test_all_resource_commands_share_one_category():
 
     assert rows["airllm orgs list"] == RESOURCES
     assert rows["airllm orgs create"] == RESOURCES
-    assert rows["airllm providers create"] == RESOURCES
     assert rows["airllm providers list"] == RESOURCES
-    assert rows["airllm models create"] == RESOURCES
     assert rows["airllm models list"] == RESOURCES
+    assert "airllm providers create" not in rows
+    assert "airllm models create" not in rows
 
 
 def test_every_command_says_what_it_does():

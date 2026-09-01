@@ -7,16 +7,16 @@ differs per vendor, so it is recorded rather than guessed.
     uv run python extract_schemas.py
 """
 
+from __future__ import annotations
+
 import json
 import re
 import ssl
 import sys
 import urllib.request
-from pathlib import Path
 
 import yaml
-
-from canonical import write_catalog, write_schema
+from canonical import write_schema
 from paths import TAXONOMY
 from sources import registry
 

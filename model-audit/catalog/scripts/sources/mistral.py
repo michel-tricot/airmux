@@ -27,10 +27,12 @@ Treat a 401 on this host as no evidence either way. Only an authenticated reques
 a route that exists from one that does not.
 """
 
+from __future__ import annotations
+
 from model_audit.catalog_ops import ProviderDefinition, SchemaDefinition
 from model_audit.provider_docs import apply_documentation, fetch_text, fetch_texts, parse_mistral_index, parse_mistral_model
 
-from .base import ModelSource
+from .base import ModelSource, required_openapi
 
 
 class Mistral(ModelSource):
@@ -52,7 +54,7 @@ class Mistral(ModelSource):
         icon_mono="mistral",
         icon_color="mistral-color",
     )
-    schemas = (SchemaDefinition(surface="oai", url=definition.openapi, path_pattern=r"^/v1/chat/completions$"),)
+    schemas = (SchemaDefinition(surface="oai", url=required_openapi(definition), path_pattern=r"^/v1/chat/completions$"),)
 
     def normalize(self, item):
         # a fine-tune belongs to one account, not to the provider's catalog

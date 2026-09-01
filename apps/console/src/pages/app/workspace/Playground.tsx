@@ -3,13 +3,13 @@ import { Send, Trash2, Loader2, User, Bot, AlertCircle, Zap, ShieldCheck, Chevro
 import { useRequiredOrgId } from '@/lib/session';
 import { useRequiredParam } from '@/lib/route';
 import { useProviders } from '@/features/credentials/hooks';
-import { Alert, AlertDescription, AlertTitle, Badge, Button, Dropdown, Input, Label, Modal, Switch } from '@/components/ui/elements';
+import { Alert, AlertDescription, AlertTitle, Badge, Button, Input, Label, Modal, Switch } from '@/components/ui/elements';
 import { Textarea } from '@/components/ui/textarea';
 import { PageShell } from '@/components/shared/page-shell';
 import { LoadingState, ErrorState, EmptyState } from '@/components/shared/states';
 import { ProviderIcon } from '@/components/ProviderIcon';
 import { cn } from '@/lib/utils';
-import { inferenceCompletion, prepareInferenceRequest, type InferenceMessage, type InferenceSurface } from '@/lib/inference';
+import { inferenceCompletion, prepareInferenceRequest, type InferenceMessage } from '@/lib/inference';
 import { useAuthorization } from '@/features/permissions/hooks';
 import { catalogAccess } from '@/features/catalog/policy';
 import { useEndPlaygroundSessionMutation, useEnsurePlaygroundSessionMutation } from '@/features/playground/hooks';
@@ -25,23 +25,14 @@ function formatCost(costUsd: number) {
   return `$${costUsd.toFixed(costUsd < 0.01 ? 4 : 2)}`;
 }
 
-const SURFACE_OPTIONS: { value: InferenceSurface; label: string }[] = [
-  { value: 'oai', label: 'OpenAI Chat (oai)' },
-  { value: 'oai_compatible', label: 'OpenAI-compatible (oai_compatible)' },
-  { value: 'responses', label: 'Responses API' },
-  { value: 'messages', label: 'Messages API' },
-];
-
 function curlFor(request: PlaygroundRequest) {
   const prepared = prepareInferenceRequest(request);
   const body = JSON.stringify(prepared.body, null, 2).replaceAll("'", "'\"'\"'");
-  const apiKeyHeader =
-    prepared.apiKeyHeader === 'Authorization' ? '  -H "Authorization: Bearer $AIRLLM_API_KEY" \\' : '  -H "x-api-key: $AIRLLM_API_KEY" \\';
   return [
     "curl '" + window.location.origin + prepared.path + "' \\",
-    apiKeyHeader,
+    '  -H "Authorization: Bearer $AIRLLM_API_KEY" \\',
     "  -H 'Content-Type: application/json' \\",
-    ...(prepared.dialect ? ["  -H 'x-airllm-dialect: " + prepared.dialect + "' \\"] : []),
+    "  -H 'x-airllm-dialect: " + prepared.dialect + "' \\",
     "  --data-raw '" + body + "'",
   ].join('\n');
 }
@@ -202,7 +193,7 @@ function Playground({ orgId, workspaceRef }: { orgId: string; workspaceRef: stri
   const ensureSession = useEnsurePlaygroundSessionMutation();
   const endSession = useEndPlaygroundSessionMutation();
   const [playground, setPlayground] = usePlaygroundState(`${orgId}:${workspaceRef}`);
-  const { surface, selectedModel, systemPrompt, temperature, maxTokens, streamEnabled, messages, input, sessionExpiresAt } = playground;
+  const { selectedModel, systemPrompt, temperature, maxTokens, streamEnabled, messages, input, sessionExpiresAt } = playground;
   const updatePlayground = (update: Partial<typeof playground>) => setPlayground((current) => ({ ...current, ...update }));
 
   const models = taxonomyQuery.data?.models ?? [];
@@ -271,7 +262,6 @@ function Playground({ orgId, workspaceRef }: { orgId: string; workspaceRef: stri
         ...history.map(({ role, content }) => ({ role, content })),
       ];
       const request: PlaygroundRequest = {
-        surface,
         model: activeModel,
         messages: requestMessages,
         temperature: temperatureUnsupported ? undefined : Number(temperature),
@@ -384,18 +374,6 @@ function Playground({ orgId, workspaceRef }: { orgId: string; workspaceRef: stri
               onSelectionComplete={() => composerRef.current?.focus()}
               options={modelOptions}
               placeholder="Select model"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="playground-surface">API surface</Label>
-            <Dropdown
-              id="playground-surface"
-              aria-label="API surface"
-              value={surface}
-              onValueChange={(value) => updatePlayground({ surface: value as InferenceSurface })}
-              options={SURFACE_OPTIONS}
-              className="h-8 text-xs"
             />
           </div>
 
@@ -577,9 +555,6 @@ function Playground({ orgId, workspaceRef }: { orgId: string; workspaceRef: stri
               <div className="mt-2 flex items-center gap-1.5">
                 <Badge variant="outline" className="font-mono text-[10px]">
                   {activeModel}
-                </Badge>
-                <Badge variant="outline" className="font-mono text-[10px]">
-                  {surface}
                 </Badge>
                 {streamEnabled && (
                   <Badge variant="secondary" className="text-[10px]">

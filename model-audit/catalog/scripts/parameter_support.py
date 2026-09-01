@@ -34,10 +34,15 @@ PARAMETER_PATHS = {
         "logprobs": "$.logprobs",
     },
 }
-def _deref(node: object, definitions: Mapping, seen: frozenset[str]) -> object:
+
+
+def _deref(node: object, definitions: Mapping[str, object], seen: frozenset[str]) -> object:
     hops = 0
-    while isinstance(node, dict) and "$ref" in node and hops < 20:
-        key = str(node["$ref"]).removeprefix("#/$defs/")
+    while isinstance(node, dict) and hops < 20:
+        reference = node.get("$ref")
+        if not isinstance(reference, str):
+            break
+        key = reference.removeprefix("#/$defs/")
         if key in seen:
             return None
         seen = seen | {key}
@@ -46,7 +51,7 @@ def _deref(node: object, definitions: Mapping, seen: frozenset[str]) -> object:
     return node
 
 
-def _variants(node: object, definitions: Mapping, seen: frozenset[str]) -> list[dict]:
+def _variants(node: object, definitions: Mapping[str, object], seen: frozenset[str]) -> list[dict]:
     variants = []
     queue = [node]
     budget = 40
@@ -58,11 +63,20 @@ def _variants(node: object, definitions: Mapping, seen: frozenset[str]) -> list[
         if current.get("properties") or current.get("items") is not None:
             variants.append(current)
         for keyword in ("oneOf", "anyOf", "allOf"):
-            queue.extend(current.get(keyword) or [])
+            nested = current.get(keyword)
+            if isinstance(nested, list):
+                queue.extend(nested)
     return variants
 
 
-def _walk_paths(node: object, definitions: Mapping, prefix: str, depth: int, paths: set[str], seen: frozenset[str] = frozenset()) -> None:
+def _walk_paths(
+    node: object,
+    definitions: Mapping[str, object],
+    prefix: str,
+    depth: int,
+    paths: set[str],
+    seen: frozenset[str] = frozenset(),
+) -> None:
     if depth > 2:
         return
     for variant in _variants(node, definitions, seen):

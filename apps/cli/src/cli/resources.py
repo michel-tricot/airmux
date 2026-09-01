@@ -24,7 +24,6 @@ from cli.client import (
     resolve_workspace,
 )
 from cli.common import (
-    RESOURCES,
     access_keys_app,
     bundles_app,
     console,
@@ -42,13 +41,11 @@ from cli.common import (
     workspace_members_app,
     workspaces_app,
 )
-from cli.forms import register_create
 from cli.output import Col, FormatOption, OutputFormat, build_table, fmt_when, print_rows
 from cli.profiles import active_profile, upsert_profile
 
 if TYPE_CHECKING:
     from rich.table import Table
-from cli.specs import ModelCreate, OrgCreate, ProviderCreate
 
 ORG_COLS = [
     Col("id", "ID", style="dim", no_wrap=True),
@@ -74,13 +71,13 @@ MEMBER_COLS = [
     Col("status", "Status", style="yellow"),
 ]
 PROVIDER_COLS = [
-    Col("id", "ID", style="dim", no_wrap=True),
+    Col("name", "Name", no_wrap=True),
     Col("kind", "Kind"),
     Col("base_url", "Base URL", max_width=45),
 ]
 MODEL_COLS = [
-    Col("id", "ID", style="dim", no_wrap=True),
-    Col("provider_id", "Provider"),
+    Col("name", "Name", no_wrap=True),
+    Col("provider", "Provider"),
     Col("upstream_model", "Upstream model"),
     Col("input_price_per_mtok", "$/Mtok in"),
     Col("output_price_per_mtok", "$/Mtok out"),
@@ -390,7 +387,10 @@ def providers_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat
 @models_app.command("list")
 def models_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
     """List the models you can route to, with pricing."""
-    print_rows("models", _taxonomy(control_plane_url)["models"], MODEL_COLS, fmt)
+    taxonomy = _taxonomy(control_plane_url)
+    providers = {provider["id"]: provider["name"] for provider in taxonomy["providers"]}
+    models = [{**model, "provider": providers.get(model["provider_id"], model["provider_id"])} for model in taxonomy["models"]]
+    print_rows("models", models, MODEL_COLS, fmt)
 
 
 def _change_summary(changes: dict) -> str:
@@ -516,15 +516,17 @@ def _key_created(resp: dict) -> None:
     console.print(resp["token"])
 
 
-register_create(
-    orgs_app,
-    OrgCreate,
-    "/api/v1/orgs",
-    "Create an organization.",
-    lambda resp: console.print(f"Created [bold]{resp['name']}[/bold]. Add people with airllm orgs members add <user>."),
-    client=access_client,
-    panel=RESOURCES,
-)
+@orgs_app.command("create")
+def orgs_create(
+    name: str = typer.Argument(..., help="Organization name, e.g. My Org"),
+    slug: str = typer.Option("", "--slug", help="Organization handle; derived from the name when omitted"),
+    control_plane_url: str = "",
+) -> None:
+    """Create an organization."""
+    body = {"name": name, "slug": slug}
+    with access_client(control_plane_url) as client:
+        organization = payload(post_expecting(client, "/api/v1/orgs", body, ok=(200,)))
+    console.print(f"Created [bold]{organization['name']}[/bold]. Add people with airllm orgs members add <user>.")
 
 
 @inference_keys_app.command("create")
@@ -550,26 +552,6 @@ def workspaces_create(
         body = {"name": name, "slug": slug} if slug else {"name": name}
         created = payload(post_expecting(c, org_path("/workspaces"), body, ok=(200,)))
     console.print(f"Created [bold]{created['slug']}[/bold]. Select it with airllm workspaces use {created['slug']}.")
-
-
-register_create(
-    providers_app,
-    ProviderCreate,
-    "/api/v1/instance/taxonomy/providers",
-    "Add an upstream provider for every organization on this instance.",
-    lambda resp: console.print(f"Added [bold]{resp['name']}[/bold]. Add models to make it routable."),
-    client=access_client,
-    panel=RESOURCES,
-)
-register_create(
-    models_app,
-    ModelCreate,
-    "/api/v1/instance/taxonomy/models",
-    "Add a routable model for every organization on this instance.",
-    lambda resp: console.print(f"Added [bold]{resp['name']}[/bold]."),
-    client=access_client,
-    panel=RESOURCES,
-)
 
 
 PROVIDER_CREDENTIAL_COLS = [

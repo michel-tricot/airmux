@@ -5,7 +5,7 @@ import { useWorkspaces, useCreateWorkspaceMutation } from '@/features/workspaces
 import { Link, useLocation } from 'wouter';
 import { LogOut, Shield, ArrowLeftRight, Plus } from 'lucide-react';
 import { useEnrollment } from '@workspace/api-client-react';
-import { Avatar, AvatarFallback, Badge, Button, Input, Dropdown } from '@/components/ui/elements';
+import { Avatar, AvatarFallback, Button, Input, Dropdown } from '@/components/ui/elements';
 import { cn } from '@/lib/utils';
 import { FormDialog } from '@/components/shared/form-dialog';
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -38,7 +38,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const activeSuffix = match?.[2] ?? '';
   const lastWorkspaceKey = `airllm_last_ws_${orgId}`;
   const selectedWorkspaceRef = routedWorkspaceRef || window.localStorage.getItem(lastWorkspaceKey) || '';
-  const activeWorkspace = workspaces?.find((workspace) => workspace.slug === selectedWorkspaceRef || workspace.id === selectedWorkspaceRef);
+  const activeWorkspace = workspaces?.find((workspace) => workspace.slug === selectedWorkspaceRef);
   const activeWorkspaceSlug = activeWorkspace?.slug ?? routedWorkspaceRef;
   const workspaceAuthorization = useScopedAuthorization(
     { level: 'workspace', orgId, workspaceRef: activeWorkspaceSlug },
@@ -50,19 +50,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     if (activeWorkspaceSlug) window.localStorage.setItem(lastWorkspaceKey, activeWorkspaceSlug);
   }, [activeWorkspaceSlug, lastWorkspaceKey]);
 
-  useEffect(() => {
-    if (routedWorkspaceRef && activeWorkspace && routedWorkspaceRef !== activeWorkspace.slug) {
-      setLocation(`/org/workspaces/${activeWorkspace.slug}${activeSuffix}`, { replace: true });
-    }
-  }, [activeSuffix, activeWorkspace, routedWorkspaceRef, setLocation]);
-
   const autoPickedOrg = useRef<string | null>(null);
   useEffect(() => {
     if (autoPickedOrg.current === orgId || !workspaces) return;
     autoPickedOrg.current = orgId;
     if (location !== '/org' || workspaces.length === 0) return;
     const lastWorkspace = window.localStorage.getItem(lastWorkspaceKey);
-    const workspace = workspaces.find((candidate) => candidate.slug === lastWorkspace || candidate.id === lastWorkspace) ?? workspaces[0];
+    const workspace = workspaces.find((candidate) => candidate.slug === lastWorkspace) ?? workspaces[0];
     setLocation(`/org/workspaces/${workspace.slug}`, { replace: true });
   }, [lastWorkspaceKey, location, orgId, setLocation, workspaces]);
 
@@ -127,7 +121,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           {activeWorkspaceSlug ? (
             workspaceRoutes
               .filter(({ access }) => workspaceAuthorization.can(access))
-              .map(({ label, suffix, icon: Icon, soon }) => {
+              .map(({ label, suffix, icon: Icon }) => {
                 const href = `/org/workspaces/${activeWorkspaceSlug}${suffix}`;
                 const isActive = location === href;
                 return (
@@ -145,7 +139,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                   >
                     <Icon className="h-4 w-4 shrink-0" />
                     <span className="truncate">{label}</span>
-                    {soon && <Badge className="ml-auto rounded-full px-1.5 py-0.5 text-[9px]">Soon</Badge>}
                   </Link>
                 );
               })

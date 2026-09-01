@@ -82,10 +82,10 @@ uv run airllm --dev quickstart
 docker compose up -d --wait
 ~~~
 
-`quickstart` creates the first account, an organization, a default workspace, an inference key,
-and the first signed bundle. It stores provider keys from `.env` as global defaults available to
-every organization, prompts for anything it still needs, and lets you skip providers you do not
-use. Save the `AIRLLM_API_KEY` it prints.
+`quickstart` creates or resumes the owner account, personal organization, and default workspace. It
+keeps existing credentials, stores missing provider keys from `.env` as global defaults, and mints
+a new inference key without replacing earlier keys. Save the `AIRLLM_API_KEY` it prints. The command
+reports `Ready` only after that key and a configured catalog model complete a real gateway request.
 
 The stack is now available at:
 
@@ -101,7 +101,8 @@ export AIRLLM_API_KEY='the key printed by quickstart'
 curl http://localhost:8080/inf/v1/chat/completions \
   -H "Authorization: Bearer $AIRLLM_API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"model":"openai/gpt-4o-mini","messages":[{"role":"user","content":"Why use an LLM gateway?"}]}'
+  -H "x-airllm-dialect: canonical" \
+  -d '{"model":"openai/gpt-4o-mini","messages":[{"role":"user","content":[{"type":"text","text":"Why use an LLM gateway?"}]}]}'
 ~~~
 
 Stop the stack without deleting its state:

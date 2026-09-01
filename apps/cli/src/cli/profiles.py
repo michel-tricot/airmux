@@ -8,6 +8,8 @@ from urllib.parse import urlsplit
 
 import tomli_w
 
+from contract.secrets.file import write_private_text
+
 
 def config_path() -> Path:
     if override := os.environ.get("GW_CLI_CONFIG"):
@@ -23,11 +25,7 @@ def load_config() -> dict[str, Any]:
 
 
 def save_config(config: dict[str, Any]) -> None:
-    """Write the whole config; the file holds tokens, so it is chmod 0600 on every write."""
-    path = config_path()
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(tomli_w.dumps(config), encoding="utf-8")
-    path.chmod(0o600)
+    write_private_text(config_path(), tomli_w.dumps(config))
 
 
 def active_profile(config: dict[str, Any] | None = None) -> dict[str, Any] | None:
@@ -88,7 +86,22 @@ def upsert_url_profile(name: str, values: dict[str, Any], *, activate: bool = Tr
 
 
 def set_active(name: str) -> None:
-    save_config({**load_config(), "active": name})
+    config = load_config()
+    if name not in (config.get("profiles") or {}):
+        raise KeyError(name)
+    save_config({**config, "active": name})
+
+
+def remove_profile(name: str) -> None:
+    config = load_config()
+    profiles = dict(config.get("profiles") or {})
+    if name not in profiles:
+        raise KeyError(name)
+    del profiles[name]
+    active = config.get("active")
+    next_active = next(iter(profiles), None) if active == name else active
+    updated = {key: value for key, value in config.items() if key not in {"profiles", "active"}}
+    save_config({**updated, "profiles": profiles, **({"active": next_active} if next_active is not None else {})})
 
 
 DEFAULT_CONSOLE_URL = "http://localhost:5000"

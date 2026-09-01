@@ -21,11 +21,9 @@ import ssl
 import sys
 import urllib.error
 import urllib.request
-from pathlib import Path
-
-from paths import TAXONOMY
 
 import yaml
+from paths import TAXONOMY
 
 ROOT = TAXONOMY
 OUT = ROOT / "icons"
@@ -41,7 +39,7 @@ def normalize(svg: str, slug: str) -> str:
     # drop the sizing and layout the consumer should own, and any title we do not control
     svg = re.sub(r'\s+(?:width|height)="[^"]*"', "", svg, count=2)
     svg = re.sub(r'\s+style="flex:none;line-height:1"', "", svg, count=1)
-    svg = re.sub(r"<title>.*?</title>", "", svg, flags=re.S)
+    svg = re.sub(r"<title>.*?</title>", "", svg, flags=re.DOTALL)
 
     # namespace every locally defined id so marks can share a document
     local_ids = set(re.findall(r'\bid="([^"]+)"', svg))

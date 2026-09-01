@@ -2,8 +2,13 @@ name: ci
 
 on:
   push:
+    branches: [main]
   pull_request:
   workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   frontend:
@@ -28,6 +33,7 @@ jobs:
       - uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
+          python-version: '3.13'
       - run: uv sync --all-packages --frozen
       - run: uv run ruff format --check .
       - run: uv run ruff check .
@@ -48,6 +54,7 @@ jobs:
       - uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
+          python-version: '3.13'
       - run: uv sync --all-packages --frozen
       - run: uv run pytest tests/acceptance/scenarios
 

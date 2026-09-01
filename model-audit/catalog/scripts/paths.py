@@ -4,6 +4,8 @@ The scripts live with the skill and the data lives in the repo, so neither can a
 other is a sibling. Walk up for the repo root and take taxonomy/ from there.
 """
 
+from __future__ import annotations
+
 from pathlib import Path
 
 

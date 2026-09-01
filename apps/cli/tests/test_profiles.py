@@ -1,8 +1,15 @@
 from __future__ import annotations
 
+import json
 import stat
 
-from cli.profiles import active_profile, config_path, load_config, set_active, upsert_profile, upsert_url_profile
+import pytest
+from typer.testing import CliRunner
+
+from cli.main import app
+from cli.profiles import active_profile, config_path, load_config, remove_profile, set_active, upsert_profile, upsert_url_profile
+
+runner = CliRunner()
 
 
 def test_profile_round_trip_and_permissions(tmp_path, monkeypatch):
@@ -83,3 +90,54 @@ def test_instance_profile_does_not_replace_an_organization_named_instance(tmp_pa
     assert upsert_url_profile("instance", organization) == "instance"
     assert upsert_url_profile("instance", instance) == "instance@airllm.example.com"
     assert len(load_config()["profiles"]) == 2
+
+
+def test_profile_selection_rejects_an_unknown_name(tmp_path, monkeypatch):
+    monkeypatch.setenv("GW_CLI_CONFIG", str(tmp_path / "config.toml"))
+
+    with pytest.raises(KeyError):
+        set_active("missing")
+
+
+def test_removing_the_active_profile_selects_the_next_profile(tmp_path, monkeypatch):
+    monkeypatch.setenv("GW_CLI_CONFIG", str(tmp_path / "config.toml"))
+    upsert_profile("acme", {"token": "first"})
+    upsert_profile("beta", {"token": "second"})
+
+    remove_profile("beta")
+
+    assert active_profile() == {"name": "acme", "token": "first"}
+
+
+def test_profile_commands_are_discoverable_and_never_print_tokens(tmp_path, monkeypatch):
+    monkeypatch.setenv("GW_CLI_CONFIG", str(tmp_path / "config.toml"))
+    upsert_profile(
+        "acme",
+        {
+            "control_plane_url": "https://airllm.example.com",
+            "gateway_url": "https://gateway.example.com",
+            "org_name": "Acme",
+            "workspace": "production",
+            "scope": "org",
+            "token": "secret-token",
+        },
+    )
+
+    listed = runner.invoke(app, ["profiles", "list", "-f", "json"])
+    assert listed.exit_code == 0, listed.output
+    assert json.loads(listed.stdout) == [
+        {
+            "active": True,
+            "name": "acme",
+            "scope": "org",
+            "organization": "Acme",
+            "workspace": "production",
+            "control_plane_url": "https://airllm.example.com",
+            "gateway_url": "https://gateway.example.com",
+        }
+    ]
+    assert "secret-token" not in listed.stdout
+
+    removed = runner.invoke(app, ["profiles", "remove", "acme"])
+    assert removed.exit_code == 0, removed.output
+    assert active_profile() is None

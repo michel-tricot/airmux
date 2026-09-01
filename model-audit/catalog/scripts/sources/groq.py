@@ -12,6 +12,8 @@ supported_features is the authoritative tool and JSON-mode signal; do not infer 
 from the model name.
 """
 
+from __future__ import annotations
+
 from model_audit.catalog_ops import ProviderDefinition, SchemaDefinition
 
 from .base import ModelSource

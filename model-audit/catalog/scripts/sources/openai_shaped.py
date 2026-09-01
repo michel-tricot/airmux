@@ -7,6 +7,8 @@ would be ceremony rather than clarity. Split any of them out the moment it grows
 All five are readable without a credential, which is why the catalog has them today.
 """
 
+from __future__ import annotations
+
 from .base import ModelSource
 
 
@@ -23,7 +25,10 @@ class Novita(ModelSource):
 
     def normalize(self, item):
         features = item.get("features") or []
-        scale = lambda v: round(v / 10000, 4) if isinstance(v, (int, float)) else None
+
+        def scale(value):
+            return round(value / 10000, 4) if isinstance(value, (int, float)) else None
+
         return self.record(
             item["id"],
             context_length=item.get("context_size"),

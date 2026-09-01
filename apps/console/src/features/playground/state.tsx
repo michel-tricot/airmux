@@ -1,8 +1,7 @@
 import { createContext, useContext, useState, type Dispatch, type ReactNode, type SetStateAction } from 'react';
-import type { InferenceMessage, InferenceSurface } from '@/lib/inference';
+import type { InferenceMessage } from '@/lib/inference';
 
 export type PlaygroundRequest = {
-  surface: InferenceSurface;
   model: string;
   messages: InferenceMessage[];
   temperature: number | undefined;
@@ -30,7 +29,6 @@ export type PlaygroundMessage = {
 };
 
 export type PlaygroundState = {
-  surface: InferenceSurface;
   selectedModel: string;
   systemPrompt: string;
   temperature: string;
@@ -42,7 +40,6 @@ export type PlaygroundState = {
 };
 
 const initialState: PlaygroundState = {
-  surface: 'oai',
   selectedModel: '',
   systemPrompt: '',
   temperature: '1',

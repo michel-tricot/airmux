@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from importlib.metadata import PackageNotFoundError, version
 
 import typer
 from dotenv import find_dotenv, load_dotenv
@@ -19,20 +20,35 @@ class Invocation:
     """
 
     dev: bool = False
+    version: bool = False
 
 
 invocation = Invocation()
 
 
+def _show_version(value: bool) -> bool:
+    if value:
+        try:
+            release = version("cli")
+        except PackageNotFoundError:
+            release = "unknown"
+        typer.echo(f"airllm {release}")
+        raise typer.Exit
+    return value
+
+
 @app.callback()
-def _main(dev: bool = typer.Option(False, "--dev", help="Talk to a local development stack")) -> None:
+def _main(
+    dev: bool = typer.Option(False, "--dev", help="Talk to a local development stack"),
+    version_: bool = typer.Option(False, "--version", callback=_show_version, is_eager=True, help="Show the CLI version and exit"),
+) -> None:
     load_dotenv(find_dotenv(usecwd=True))
     invocation.dev = dev
+    invocation.version = version_
 
 
 SETUP = "Setup"
 RESOURCES = "Resources"
-TESTING = "Testing"
 
 orgs_app = typer.Typer(help="Organizations you belong to")
 org_members_app = typer.Typer(help="People in your organization")
@@ -51,7 +67,7 @@ taxonomy_app = typer.Typer(help="Apply the instance provider and model catalog")
 bundles_app = typer.Typer(help="Publish configuration changes to your gateways")
 events_app = typer.Typer(help="Requests, tokens and spend")
 data_planes_app = typer.Typer(help="Gateways connected to this instance")
-test_app = typer.Typer(help="Send test traffic through a gateway", no_args_is_help=True)
+profiles_app = typer.Typer(help="Saved deployment and organization contexts")
 
 for name, sub in (
     ("orgs", orgs_app),
@@ -69,4 +85,4 @@ for name, sub in (
     ("data-planes", data_planes_app),
 ):
     app.add_typer(sub, name=name, rich_help_panel=RESOURCES, no_args_is_help=True)
-app.add_typer(test_app, name="test", rich_help_panel=TESTING)
+app.add_typer(profiles_app, name="profiles", rich_help_panel=SETUP, no_args_is_help=True)

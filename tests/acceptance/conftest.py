@@ -324,12 +324,26 @@ class Stack:
                 },
             ],
             "models": [
-                {"model_id": MODEL, "provider_id": "stub", "upstream_model": MODEL},
-                {"model_id": "quirk", "provider_id": "quirk", "upstream_model": ECHO_MODEL},
+                {
+                    "model_id": MODEL,
+                    "provider_id": "stub",
+                    "upstream_model": MODEL,
+                    "input_modalities": ["text"],
+                    "output_modalities": ["text"],
+                },
+                {
+                    "model_id": "quirk",
+                    "provider_id": "quirk",
+                    "upstream_model": ECHO_MODEL,
+                    "input_modalities": ["text"],
+                    "output_modalities": ["text"],
+                },
                 {
                     "model_id": "no-temperature",
                     "provider_id": "stub",
                     "upstream_model": ECHO_MODEL,
+                    "input_modalities": ["text"],
+                    "output_modalities": ["text"],
                     "parameter_support": {"temperature": "unsupported"},
                 },
             ],

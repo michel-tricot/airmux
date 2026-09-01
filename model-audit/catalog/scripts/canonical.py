@@ -85,9 +85,8 @@ def write_json(path: Path, obj: Any, *, stamp_field: str | None = None) -> bool:
                 old = json.loads(previous)
             except json.JSONDecodeError:
                 old = None
-            if isinstance(old, dict) and stamp_field in old:
-                if dumps({**obj, stamp_field: old[stamp_field]}) == previous:
-                    return False
+            if isinstance(old, dict) and stamp_field in old and dumps({**obj, stamp_field: old[stamp_field]}) == previous:
+                return False
     path.write_text(text)
     return True
 

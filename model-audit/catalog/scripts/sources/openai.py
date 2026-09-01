@@ -20,6 +20,8 @@ their returned snapshots. The 16k alias also inherits the current gpt-3.5-turbo 
 the provider resolves it to that documented family.
 """
 
+from __future__ import annotations
+
 import re
 from dataclasses import replace
 from urllib.parse import urljoin
@@ -27,7 +29,7 @@ from urllib.parse import urljoin
 from model_audit.catalog_ops import ProviderDefinition, SchemaDefinition
 from model_audit.provider_docs import apply_documentation, fetch_text, fetch_texts, parse_openai_model, parse_openai_pricing
 
-from .base import ModelSource
+from .base import ModelSource, required_openapi
 
 
 class OpenAI(ModelSource):
@@ -49,8 +51,8 @@ class OpenAI(ModelSource):
         icon_color="openai",
     )
     schemas = (
-        SchemaDefinition(surface="oai", url=definition.openapi, path_pattern=r"^/chat/completions$"),
-        SchemaDefinition(surface="oai_responses", url=definition.openapi, path_pattern=r"^/responses$"),
+        SchemaDefinition(surface="oai", url=required_openapi(definition), path_pattern=r"^/chat/completions$"),
+        SchemaDefinition(surface="oai_responses", url=required_openapi(definition), path_pattern=r"^/responses$"),
     )
     docs_catalog = "https://developers.openai.com/api/docs/models/all.md"
     docs_pricing = "https://developers.openai.com/api/docs/pricing.md"

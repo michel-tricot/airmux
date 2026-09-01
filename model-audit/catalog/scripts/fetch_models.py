@@ -13,27 +13,27 @@ model ids, and inferring tool support from a name would be invention.
 
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import ssl
 import sys
 import urllib.error
 import urllib.request
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from canonical import write_catalog, write_schema
+import yaml
+from canonical import write_catalog
+from model_kind import text_only
 from parameter_support import apply_discovery_evidence, discovery_evidence
 from paths import TAXONOMY
-
-import yaml
-from model_audit.catalog_ops import incomplete_model_modalities
-
-from model_kind import text_only
 from sources import registry
 from sources.base import GenericModelSource
+
+from model_audit.catalog_ops import incomplete_model_modalities
 
 ROOT = TAXONOMY
 OUT = ROOT / "models"
@@ -50,7 +50,7 @@ def main() -> int:
         return 2
 
     OUT.mkdir(exist_ok=True)
-    stamp = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    stamp = datetime.now(UTC).strftime("%Y-%m-%d")
     ok, skipped, failed = [], [], []
 
     sources = registry()
@@ -79,10 +79,8 @@ def main() -> int:
             models = text_only(source.enrich([model for model in (source.normalize(item) for item in raw) if model]))
         except urllib.error.HTTPError as exc:
             detail = ""
-            try:
+            with contextlib.suppress(UnicodeDecodeError, json.JSONDecodeError, AttributeError):
                 detail = ": " + (json.loads(exc.read().decode()).get("error") or {}).get("message", "")[:110]
-            except Exception:
-                pass
             failed.append((provider, f"HTTP {exc.code}{detail}"))
             continue
         except Exception as exc:
