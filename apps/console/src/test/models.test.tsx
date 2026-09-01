@@ -46,8 +46,8 @@ const models = [
     cache_write_price_per_mtok: 3.75,
     context_window: 200000,
     max_output_tokens: 64000,
-    input_modalities: ['text'],
-    output_modalities: ['text'],
+    input_modalities: null,
+    output_modalities: null,
     capabilities: ['streaming', 'tools'],
     created_at: now,
     updated_at: now,
@@ -169,7 +169,8 @@ describe('organization models', () => {
 
     await user.click(screen.getByRole('button', { name: 'Filter by modality' }));
     await user.click(await screen.findByRole('menuitemcheckbox', { name: 'Input: text' }));
-    expect(screen.getByText('2 of 2 models')).toBeInTheDocument();
+    expect(screen.getByText('1 of 2 models')).toBeInTheDocument();
+    expect(screen.queryByText('anthropic/claude-sonnet-4-5')).not.toBeInTheDocument();
     await user.click(screen.getByRole('menuitemcheckbox', { name: 'Input: image' }));
     expect(screen.getByText('openai/gpt-5')).toBeInTheDocument();
     expect(screen.queryByText('anthropic/claude-sonnet-4-5')).not.toBeInTheDocument();
@@ -207,5 +208,16 @@ describe('organization models', () => {
     expect(imageModality?.querySelector('svg')).toBeInTheDocument();
     expect(textOutputModality).toHaveClass('border-primary/40', 'text-primary');
     expect(textOutputModality?.querySelector('svg')).toBeInTheDocument();
+  });
+
+  it('shows unknown modality evidence without inventing text support', async () => {
+    const user = userEvent.setup();
+    renderModels();
+
+    const claude = (await screen.findByText('anthropic/claude-sonnet-4-5')).closest('tr');
+    await user.hover(within(claude!).getByLabelText('Show model metadata'));
+
+    const tooltip = await screen.findByRole('tooltip');
+    expect(within(tooltip).getAllByText('Unknown')).toHaveLength(2);
   });
 });

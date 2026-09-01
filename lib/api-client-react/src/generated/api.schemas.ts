@@ -473,28 +473,6 @@ export interface MembershipOut {
   status: 'member';
 }
 
-export type ModelInInputModalitiesItem = typeof ModelInInputModalitiesItem[keyof typeof ModelInInputModalitiesItem];
-
-
-export const ModelInInputModalitiesItem = {
-  text: 'text',
-  image: 'image',
-  audio: 'audio',
-  video: 'video',
-  pdf: 'pdf',
-} as const;
-
-export type ModelInOutputModalitiesItem = typeof ModelInOutputModalitiesItem[keyof typeof ModelInOutputModalitiesItem];
-
-
-export const ModelInOutputModalitiesItem = {
-  text: 'text',
-  image: 'image',
-  audio: 'audio',
-  video: 'video',
-  pdf: 'pdf',
-} as const;
-
 /**
  * Known support for canonical request parameters; an absent parameter is unknown
  */
@@ -549,16 +527,10 @@ export interface ModelIn {
   context_window?: number;
   /** Max completion tokens; requests are clamped to it */
   max_output_tokens?: number | null;
-  /**
-     * Accepted input modalities
-     * @maxItems 16
-     */
-  input_modalities?: ModelInInputModalitiesItem[];
-  /**
-     * Produced output modalities
-     * @maxItems 16
-     */
-  output_modalities?: ModelInOutputModalitiesItem[];
+  /** Accepted input modalities; null means unknown */
+  input_modalities?: ('text' | 'image' | 'audio' | 'video' | 'pdf')[] | null;
+  /** Produced output modalities; null means unknown */
+  output_modalities?: ('text' | 'image' | 'audio' | 'video' | 'pdf')[] | null;
   /**
      * Capabilities supported by the model
      * @maxItems 128
@@ -567,28 +539,6 @@ export interface ModelIn {
   /** Known support for canonical request parameters; an absent parameter is unknown */
   parameter_support?: ModelInParameterSupport;
 }
-
-export type ModelOutInputModalitiesItem = typeof ModelOutInputModalitiesItem[keyof typeof ModelOutInputModalitiesItem];
-
-
-export const ModelOutInputModalitiesItem = {
-  text: 'text',
-  image: 'image',
-  audio: 'audio',
-  video: 'video',
-  pdf: 'pdf',
-} as const;
-
-export type ModelOutOutputModalitiesItem = typeof ModelOutOutputModalitiesItem[keyof typeof ModelOutOutputModalitiesItem];
-
-
-export const ModelOutOutputModalitiesItem = {
-  text: 'text',
-  image: 'image',
-  audio: 'audio',
-  video: 'video',
-  pdf: 'pdf',
-} as const;
 
 export type ModelOutParameterSupport = {[key: string]: 'supported' | 'unsupported'};
 
@@ -604,8 +554,8 @@ export interface ModelOut {
   cache_write_price_per_mtok: number;
   context_window: number;
   max_output_tokens: number | null;
-  input_modalities: ModelOutInputModalitiesItem[];
-  output_modalities: ModelOutOutputModalitiesItem[];
+  input_modalities: ('text' | 'image' | 'audio' | 'video' | 'pdf')[] | null;
+  output_modalities: ('text' | 'image' | 'audio' | 'video' | 'pdf')[] | null;
   capabilities: string[];
   parameter_support: ModelOutParameterSupport;
   created_at: string;

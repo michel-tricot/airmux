@@ -29,7 +29,8 @@ authentication, surfaces, limits, prices, or capabilities from another provider.
 2. Locate the provider model listing, inference base URL, authentication method, supported
    surfaces, schemas, pricing, homepage, documentation, and icon
 3. Add or update one auto-discovered provider source under `model-audit/catalog/scripts/sources/`
-4. Declare its typed `ProviderDefinition`; map provider model fields explicitly and keep unknown values absent
+4. Declare its typed `ProviderDefinition`; map provider model fields explicitly, including
+   directional input modalities and output modalities when the vendor supplies them, and keep unknown values absent
 5. Add schema acquisition metadata for each supported surface when the provider publishes a usable specification
 6. Set the credential named by the definition
 7. Run `uv run airllm-audit providers onboard <provider>`
@@ -40,7 +41,15 @@ authentication, surfaces, limits, prices, or capabilities from another provider.
 The source module is the reproducible acquisition recipe. `providers.yml`, model catalogs,
 schemas, and taxonomy are generated or maintained through the CLI. Never write a temporary
 provider YAML definition.
+
+Modalities describe directional content types such as text, image, audio, video, and PDF.
+Capabilities describe behavior such as streaming, tools, reasoning, and structured output.
+Never translate image support to a `vision` capability or PDF support to a `pdf` capability.
+The shared catalog validator rejects modality spellings outside the canonical contract, and
+taxonomy generation merges a new provider through the same evidence-aware projection without
+provider-specific registration.
 """,
+        version=2,
         references=("sources", "fields", "provenance", "traps"),
     ),
     AgentGuide(
@@ -153,7 +162,16 @@ Compare every field with `uv run airllm-audit taxonomy diff <name> taxonomy`; us
 Provider identity and declared metadata come from the catalog. Behavioral support comes only
 from accepted direct API evidence. Unknown values stay unknown, stale case fingerprints cannot
 contribute, and gateway or SDK observations never define provider support.
+
+Input and output modalities are directional content types. Capabilities are behavioral features;
+modality aliases such as `vision`, `pdf`, and `text` never enter the capability list. Catalog
+metadata initializes modality support, then accepted direct evidence overrides the matching
+direction and modality. Null remains unknown, while an empty list means evidence established no
+supported modality in that direction. New providers use this projection automatically. A new
+modality spelling requires adding it to the canonical contract and adding corresponding audit
+feature coverage before it can be relied on for gateway admission.
 """,
+        version=2,
         references=("fields", "provenance"),
     ),
 )

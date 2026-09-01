@@ -61,23 +61,29 @@ function ModalityIcon({ modality }: { modality: string }) {
   return <Icon aria-hidden="true" className="h-3.5 w-3.5" />;
 }
 
-function ModalityGroup({ label, modalities }: { label: 'Input' | 'Output'; modalities: string[] }) {
+function ModalityGroup({ label, modalities }: { label: 'Input' | 'Output'; modalities: string[] | null }) {
   return (
     <div aria-label={`${label} modalities`} className="flex items-start gap-2">
       <span className="w-11 shrink-0 font-mono text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{label}</span>
       <div className="flex flex-wrap gap-x-3 gap-y-1.5">
-        {modalities.map((modality) => (
-          <div
-            key={modality}
-            className={cn(
-              'flex items-center gap-1.5 border-l-2 pl-2 text-xs font-medium capitalize',
-              label === 'Input' ? 'border-success/40 text-success' : 'border-primary/40 text-primary',
-            )}
-          >
-            <ModalityIcon modality={modality} />
-            <span>{modality}</span>
-          </div>
-        ))}
+        {modalities === null ? (
+          <span className="text-xs text-muted-foreground">Unknown</span>
+        ) : modalities.length === 0 ? (
+          <span className="text-xs text-muted-foreground">None</span>
+        ) : (
+          modalities.map((modality) => (
+            <div
+              key={modality}
+              className={cn(
+                'flex items-center gap-1.5 border-l-2 pl-2 text-xs font-medium capitalize',
+                label === 'Input' ? 'border-success/40 text-success' : 'border-primary/40 text-primary',
+              )}
+            >
+              <ModalityIcon modality={modality} />
+              <span>{modality}</span>
+            </div>
+          ))
+        )}
       </div>
     </div>
   );
@@ -139,7 +145,7 @@ function compareModels(left: CatalogModel, right: CatalogModel, key: SortKey, di
 function supportsModality(model: ModelOut, value: string): boolean {
   const [direction, modality] = value.split(':');
   const modalities = direction === 'input' ? model.input_modalities : model.output_modalities;
-  return modalities.some((candidate) => candidate === modality);
+  return modalities?.some((candidate) => candidate === modality) ?? false;
 }
 
 function SortableHeader({
@@ -199,8 +205,8 @@ export default function Models() {
   const modalityOptions = [
     ...new Set(
       taxonomy.data?.models.flatMap((model) => [
-        ...model.input_modalities.map((modality) => `input:${modality}`),
-        ...model.output_modalities.map((modality) => `output:${modality}`),
+        ...(model.input_modalities ?? []).map((modality) => `input:${modality}`),
+        ...(model.output_modalities ?? []).map((modality) => `output:${modality}`),
       ]) ?? [],
     ),
   ]

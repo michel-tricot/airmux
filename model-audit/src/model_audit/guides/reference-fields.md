@@ -103,6 +103,23 @@ Not guessable: Cohere is `CO_API_KEY`, Replicate is `REPLICATE_API_TOKEN`, Huggi
 Keyed by API kind, then ingress, then part. See `provenance.md` for what the filenames mean
 and why stand-ins are excluded from consensus counts.
 
+## Model capabilities and modalities
+
+Model catalogs keep provider-declared `input_modalities` and `output_modalities` separate
+from behavioral support flags. Modalities are directional content types drawn from the
+canonical contract: `text`, `image`, `audio`, `video`, and `pdf`. Capabilities describe
+behavior such as streaming, tool calling, reasoning, and structured output.
+
+Map the provider's values explicitly in its source module. Keep either modality field null
+when the provider and its documentation do not establish it. Never infer `vision`, `pdf`, or
+`text` capability aliases from modalities. The applied taxonomy starts with declared modality
+metadata and lets accepted direct audit evidence override the matching direction and value.
+This projection is provider-independent, so adding a provider requires no taxonomy registry.
+
+The validator rejects unknown or repeated modality values. Adding a new modality is a gateway
+contract change: extend the canonical vocabulary, define its directional audit feature and case,
+then add canonical request or response support before using it for admission.
+
 # Scope
 
 ## What is in

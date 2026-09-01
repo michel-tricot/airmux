@@ -35,8 +35,8 @@ def test_prompts_fill_missing_fields(monkeypatch):
     assert spec.cache_read_price_per_mtok == 0.1
     assert spec.cache_write_price_per_mtok == 0.75
     assert spec.context_window == 64000
-    assert spec.input_modalities == ["text", "image"]
-    assert spec.output_modalities == ["text"]
+    assert spec.model_dump()["input_modalities"] == ["text", "image"]
+    assert spec.model_dump()["output_modalities"] == ["text"]
     assert spec.capabilities == ["streaming", "tools"]
     assert spec.parameter_support == {"temperature": "unsupported"}
 

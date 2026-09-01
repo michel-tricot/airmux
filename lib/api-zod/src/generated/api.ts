@@ -2222,8 +2222,8 @@ export const GetInstanceTaxonomyResponse = zod.object({
   "cache_write_price_per_mtok": zod.number(),
   "context_window": zod.int(),
   "max_output_tokens": zod.union([zod.int(),zod.null()]),
-  "input_modalities": zod.array(zod.enum(['text', 'image', 'audio', 'video', 'pdf'])),
-  "output_modalities": zod.array(zod.enum(['text', 'image', 'audio', 'video', 'pdf'])),
+  "input_modalities": zod.union([zod.array(zod.enum(['text', 'image', 'audio', 'video', 'pdf'])),zod.null()]),
+  "output_modalities": zod.union([zod.array(zod.enum(['text', 'image', 'audio', 'video', 'pdf'])),zod.null()]),
   "capabilities": zod.array(zod.string()),
   "parameter_support": zod.record(zod.string(), zod.enum(['supported', 'unsupported'])),
   "created_at": zod.coerce.date(),
@@ -2269,8 +2269,8 @@ export const GetOrgTaxonomyResponse = zod.object({
   "cache_write_price_per_mtok": zod.number(),
   "context_window": zod.int(),
   "max_output_tokens": zod.union([zod.int(),zod.null()]),
-  "input_modalities": zod.array(zod.enum(['text', 'image', 'audio', 'video', 'pdf'])),
-  "output_modalities": zod.array(zod.enum(['text', 'image', 'audio', 'video', 'pdf'])),
+  "input_modalities": zod.union([zod.array(zod.enum(['text', 'image', 'audio', 'video', 'pdf'])),zod.null()]),
+  "output_modalities": zod.union([zod.array(zod.enum(['text', 'image', 'audio', 'video', 'pdf'])),zod.null()]),
   "capabilities": zod.array(zod.string()),
   "parameter_support": zod.record(zod.string(), zod.enum(['supported', 'unsupported'])),
   "created_at": zod.coerce.date(),
@@ -2317,8 +2317,8 @@ export const GetWorkspaceTaxonomyResponse = zod.object({
   "cache_write_price_per_mtok": zod.number(),
   "context_window": zod.int(),
   "max_output_tokens": zod.union([zod.int(),zod.null()]),
-  "input_modalities": zod.array(zod.enum(['text', 'image', 'audio', 'video', 'pdf'])),
-  "output_modalities": zod.array(zod.enum(['text', 'image', 'audio', 'video', 'pdf'])),
+  "input_modalities": zod.union([zod.array(zod.enum(['text', 'image', 'audio', 'video', 'pdf'])),zod.null()]),
+  "output_modalities": zod.union([zod.array(zod.enum(['text', 'image', 'audio', 'video', 'pdf'])),zod.null()]),
   "capabilities": zod.array(zod.string()),
   "parameter_support": zod.record(zod.string(), zod.enum(['supported', 'unsupported'])),
   "created_at": zod.coerce.date(),
@@ -2413,9 +2413,9 @@ export const createModelBodyContextWindowMax = 100000000;
 
 export const createModelBodyMaxOutputTokensOneMax = 100000000;
 
-export const createModelBodyInputModalitiesMax = 16;
+export const createModelBodyInputModalitiesOneMax = 16;
 
-export const createModelBodyOutputModalitiesMax = 16;
+export const createModelBodyOutputModalitiesOneMax = 16;
 
 export const createModelBodyCapabilitiesMax = 128;
 
@@ -2432,8 +2432,8 @@ export const CreateModelBody = zod.object({
   "cache_write_price_per_mtok": zod.number().min(createModelBodyCacheWritePricePerMtokMin).default(createModelBodyCacheWritePricePerMtokDefault).describe('USD per million cache-write input tokens'),
   "context_window": zod.int().min(1).max(createModelBodyContextWindowMax).default(createModelBodyContextWindowDefault).describe('Context window in tokens'),
   "max_output_tokens": zod.union([zod.int().min(1).max(createModelBodyMaxOutputTokensOneMax),zod.null()]).optional().describe('Max completion tokens; requests are clamped to it'),
-  "input_modalities": zod.array(zod.enum(['text', 'image', 'audio', 'video', 'pdf'])).max(createModelBodyInputModalitiesMax).optional().describe('Accepted input modalities'),
-  "output_modalities": zod.array(zod.enum(['text', 'image', 'audio', 'video', 'pdf'])).max(createModelBodyOutputModalitiesMax).optional().describe('Produced output modalities'),
+  "input_modalities": zod.union([zod.array(zod.enum(['text', 'image', 'audio', 'video', 'pdf'])).max(createModelBodyInputModalitiesOneMax),zod.null()]).optional().describe('Accepted input modalities; null means unknown'),
+  "output_modalities": zod.union([zod.array(zod.enum(['text', 'image', 'audio', 'video', 'pdf'])).max(createModelBodyOutputModalitiesOneMax),zod.null()]).optional().describe('Produced output modalities; null means unknown'),
   "capabilities": zod.array(zod.string()).max(createModelBodyCapabilitiesMax).optional().describe('Capabilities supported by the model'),
   "parameter_support": zod.record(zod.string(), zod.enum(['supported', 'unsupported'])).optional().describe('Known support for canonical request parameters; an absent parameter is unknown')
 })
@@ -2450,8 +2450,8 @@ export const CreateModelResponse = zod.object({
   "cache_write_price_per_mtok": zod.number(),
   "context_window": zod.int(),
   "max_output_tokens": zod.union([zod.int(),zod.null()]),
-  "input_modalities": zod.array(zod.enum(['text', 'image', 'audio', 'video', 'pdf'])),
-  "output_modalities": zod.array(zod.enum(['text', 'image', 'audio', 'video', 'pdf'])),
+  "input_modalities": zod.union([zod.array(zod.enum(['text', 'image', 'audio', 'video', 'pdf'])),zod.null()]),
+  "output_modalities": zod.union([zod.array(zod.enum(['text', 'image', 'audio', 'video', 'pdf'])),zod.null()]),
   "capabilities": zod.array(zod.string()),
   "parameter_support": zod.record(zod.string(), zod.enum(['supported', 'unsupported'])),
   "created_at": zod.coerce.date(),

@@ -5,7 +5,7 @@ from pathlib import Path
 import yaml
 
 from model_audit.models import BehaviorRecord, Claim
-from model_audit.taxonomy import _capabilities, _parameter_support, _provider_entry
+from model_audit.taxonomy import _capabilities, _modalities, _parameter_support, _provider_entry
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -38,6 +38,31 @@ def test_supported_interaction_projects_its_atomic_capabilities():
     capabilities = _capabilities({}, [supported_reasoning_tool])
 
     assert {"reasoning", "tools"} <= set(capabilities)
+
+
+def test_modalities_do_not_project_as_capabilities():
+    model = {"input_modalities": ["text", "image", "pdf"], "output_modalities": ["text"]}
+    supported_image = behavior("modality", "input_image", "supported")
+
+    assert _capabilities(model, [supported_image]) == ["streaming"]
+
+
+def test_direct_modality_evidence_overrides_catalog_metadata():
+    model = {"input_modalities": ["text", "image", "pdf"], "output_modalities": ["text"]}
+    rejected_image = behavior("modality", "input_image", "unsupported")
+    supported_output = behavior("modality", "output_text", "supported")
+
+    assert _modalities(model, [rejected_image, supported_output]) == (["text", "pdf"], ["text"])
+
+
+def test_unknown_modalities_remain_unknown():
+    assert _modalities({}, []) == (None, None)
+
+
+def test_direct_evidence_can_establish_an_unknown_modality():
+    supported_image = behavior("modality", "input_image", "supported")
+
+    assert _modalities({}, [supported_image]) == (["image"], None)
 
 
 def test_profile_rejection_does_not_mark_an_entire_option_unsupported():

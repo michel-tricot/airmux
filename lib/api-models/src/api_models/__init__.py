@@ -385,6 +385,28 @@ class MaxOutputTokens(RootModel[int]):
     ]
 
 
+class InputModalities(RootModel[list[Literal["text", "image", "audio", "video", "pdf"]]]):
+    root: Annotated[
+        list[Literal["text", "image", "audio", "video", "pdf"]],
+        Field(
+            description="Accepted input modalities; null means unknown",
+            max_length=16,
+            title="Input Modalities",
+        ),
+    ]
+
+
+class OutputModalities(RootModel[list[Literal["text", "image", "audio", "video", "pdf"]]]):
+    root: Annotated[
+        list[Literal["text", "image", "audio", "video", "pdf"]],
+        Field(
+            description="Produced output modalities; null means unknown",
+            max_length=16,
+            title="Output Modalities",
+        ),
+    ]
+
+
 class ModelIn(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
@@ -469,18 +491,16 @@ class ModelIn(BaseModel):
         ),
     ] = None
     input_modalities: Annotated[
-        list[Literal["text", "image", "audio", "video", "pdf"]] | None,
+        InputModalities | None,
         Field(
-            description="Accepted input modalities",
-            max_length=16,
+            description="Accepted input modalities; null means unknown",
             title="Input Modalities",
         ),
     ] = None
     output_modalities: Annotated[
-        list[Literal["text", "image", "audio", "video", "pdf"]] | None,
+        OutputModalities | None,
         Field(
-            description="Produced output modalities",
-            max_length=16,
+            description="Produced output modalities; null means unknown",
             title="Output Modalities",
         ),
     ] = None
@@ -515,11 +535,11 @@ class ModelOut(BaseModel):
     context_window: Annotated[int, Field(title="Context Window")]
     max_output_tokens: Annotated[int | None, Field(title="Max Output Tokens")]
     input_modalities: Annotated[
-        list[Literal["text", "image", "audio", "video", "pdf"]],
+        list[Literal["text", "image", "audio", "video", "pdf"]] | None,
         Field(title="Input Modalities"),
     ]
     output_modalities: Annotated[
-        list[Literal["text", "image", "audio", "video", "pdf"]],
+        list[Literal["text", "image", "audio", "video", "pdf"]] | None,
         Field(title="Output Modalities"),
     ]
     capabilities: Annotated[list[str], Field(title="Capabilities")]

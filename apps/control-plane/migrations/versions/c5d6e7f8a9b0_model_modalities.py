@@ -17,11 +17,8 @@ depends_on = None
 
 
 def upgrade() -> None:
-    default = sa.text("'[\"text\"]'::json")
-    op.add_column("model", sa.Column("input_modalities", sa.JSON(), server_default=default, nullable=False))
-    op.add_column("model", sa.Column("output_modalities", sa.JSON(), server_default=default, nullable=False))
-    op.alter_column("model", "input_modalities", server_default=None)
-    op.alter_column("model", "output_modalities", server_default=None)
+    op.add_column("model", sa.Column("input_modalities", sa.JSON(), nullable=True))
+    op.add_column("model", sa.Column("output_modalities", sa.JSON(), nullable=True))
 
 
 def downgrade() -> None:

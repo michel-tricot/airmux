@@ -4,10 +4,10 @@ import inspect
 import json
 import sys
 from types import UnionType
-from typing import TYPE_CHECKING, Union, get_args, get_origin
+from typing import TYPE_CHECKING, Annotated, Union, get_args, get_origin
 
 import typer
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel, RootModel, ValidationError
 
 from cli.client import access_client, payload, post_expecting
 from cli.common import console
@@ -20,11 +20,21 @@ if TYPE_CHECKING:
 
 
 def _base_annotation(ann: object) -> object:
-    if get_origin(ann) in (UnionType, Union):
-        args = [a for a in get_args(ann) if a is not type(None)]
-        if len(args) == 1:
-            return args[0]
-    return ann
+    base = ann
+    while True:
+        origin = get_origin(base)
+        if origin in (UnionType, Union):
+            args = [arg for arg in get_args(base) if arg is not type(None)]
+            if len(args) == 1:
+                base = args[0]
+                continue
+        if origin is Annotated:
+            base = get_args(base)[0]
+            continue
+        if inspect.isclass(base) and issubclass(base, RootModel):
+            base = base.model_fields["root"].annotation
+            continue
+        return base
 
 
 def _coerce_value(field: FieldInfo, value: object) -> object:

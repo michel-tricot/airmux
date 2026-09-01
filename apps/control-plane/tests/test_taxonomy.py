@@ -190,6 +190,31 @@ models:
     assert model.output_modalities == ["text"]
 
 
+def test_apply_taxonomy_preserves_unknown_model_modalities(tmp_path):
+    setup_db(tmp_path)
+    spec = TaxonomySpec.model_validate(
+        yaml.safe_load(
+            """
+providers:
+  - provider_id: stub
+    base_url: https://stub.example/v1
+models:
+  - model_id: echo
+    provider_id: stub
+"""
+        )
+    )
+
+    async def apply():
+        await set_actor("u-test")
+        return await apply_taxonomy(spec)
+
+    run_in_db(tmp_path, apply)
+    (model,) = run_in_db(tmp_path, Model.find)
+    assert model.input_modalities is None
+    assert model.output_modalities is None
+
+
 def test_a_provider_declaring_no_icon_has_none(tmp_path):
     setup_db(tmp_path)
 

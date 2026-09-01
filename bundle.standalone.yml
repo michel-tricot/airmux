@@ -39,7 +39,7 @@ models:
     max_output_tokens: 128000
     input_modalities: [text, image]
     output_modalities: [text]
-    capabilities: [streaming, tools, vision]
+    capabilities: [streaming, tools]
   - model_id: gpt-5.4-mini
     provider_id: openai
     upstream_model: gpt-5.4-mini
@@ -51,7 +51,7 @@ models:
     max_output_tokens: 128000
     input_modalities: [text, image]
     output_modalities: [text]
-    capabilities: [streaming, tools, vision]
+    capabilities: [streaming, tools]
   - model_id: gpt-5-nano
     provider_id: openai
     upstream_model: gpt-5-nano
@@ -63,7 +63,7 @@ models:
     max_output_tokens: 128000
     input_modalities: [text, image]
     output_modalities: [text]
-    capabilities: [streaming, tools, vision]
+    capabilities: [streaming, tools]
     parameter_support:
       temperature: unsupported
       top_p: unsupported
@@ -80,7 +80,7 @@ models:
     max_output_tokens: 128000
     input_modalities: [text, image, pdf]
     output_modalities: [text]
-    capabilities: [streaming, tools, vision]
+    capabilities: [streaming, tools]
   - model_id: claude-sonnet-5
     provider_id: anthropic
     upstream_model: claude-sonnet-5
@@ -92,7 +92,7 @@ models:
     max_output_tokens: 128000
     input_modalities: [text, image, pdf]
     output_modalities: [text]
-    capabilities: [streaming, tools, vision]
+    capabilities: [streaming, tools]
   - model_id: claude-haiku-4-5
     provider_id: anthropic
     upstream_model: claude-haiku-4-5
@@ -104,7 +104,7 @@ models:
     max_output_tokens: 64000
     input_modalities: [text, image, pdf]
     output_modalities: [text]
-    capabilities: [streaming, tools, vision]
+    capabilities: [streaming, tools]
 
   - model_id: llama-3.3-70b-versatile
     provider_id: groq
