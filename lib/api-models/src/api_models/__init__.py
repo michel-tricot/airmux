@@ -1081,9 +1081,42 @@ class SignupIn(BaseModel):
     ]
 
 
+class TaxonomyChangeCounts(BaseModel):
+    created: Annotated[int, Field(title="Created")]
+    updated: Annotated[int, Field(title="Updated")]
+    unchanged: Annotated[int, Field(title="Unchanged")]
+
+
 class TaxonomyOut(BaseModel):
     providers: Annotated[list[ProviderOut], Field(title="Providers")]
     models: Annotated[list[ModelOut], Field(title="Models")]
+
+
+class TaxonomyPublicationOut(BaseModel):
+    org_id: Annotated[UUID, Field(title="Org Id")]
+    version: Annotated[int, Field(title="Version")]
+
+
+class TaxonomySpec(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    providers: Annotated[
+        list[ProviderIn] | None,
+        Field(
+            description="Provider endpoints to create or update",
+            max_length=1000,
+            title="Providers",
+        ),
+    ] = None
+    models: Annotated[
+        list[ModelIn] | None,
+        Field(
+            description="Routable models to create or update",
+            max_length=10000,
+            title="Models",
+        ),
+    ] = None
 
 
 class UsageEventOut(BaseModel):
@@ -1601,6 +1634,13 @@ class Scope(BaseModel):
     workspace_id: Annotated[UUID | None, Field(title="Workspace Id")] = None
 
 
+class TaxonomyApplyOut(BaseModel):
+    dry_run: Annotated[bool, Field(title="Dry Run")]
+    providers: TaxonomyChangeCounts
+    models: TaxonomyChangeCounts
+    published: Annotated[list[TaxonomyPublicationOut], Field(title="Published")]
+
+
 class WorkspaceMembershipIn(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
@@ -1669,6 +1709,10 @@ class EnvelopeMyPermissionsOut(BaseModel):
 
 class EnvelopeOrgInvitationMintedOut(BaseModel):
     data: OrgInvitationMintedOut
+
+
+class EnvelopeTaxonomyApplyOut(BaseModel):
+    data: TaxonomyApplyOut
 
 
 class EnvelopeWorkspaceMembershipOut(BaseModel):

@@ -47,6 +47,7 @@ access_keys_app = typer.Typer(help="Keys for control-plane access at instance, o
 providers_app = typer.Typer(help="Upstream LLM providers")
 provider_credentials_app = typer.Typer(help="Your own provider API keys")
 models_app = typer.Typer(help="Models you can route to")
+taxonomy_app = typer.Typer(help="Apply the instance provider and model catalog")
 bundles_app = typer.Typer(help="Publish configuration changes to your gateways")
 events_app = typer.Typer(help="Requests, tokens and spend")
 data_planes_app = typer.Typer(help="Gateways connected to this instance")
@@ -59,6 +60,7 @@ for name, sub in (
     ("provider-credentials", provider_credentials_app),
     ("access-keys", access_keys_app),
     ("models", models_app),
+    ("taxonomy", taxonomy_app),
     ("providers", providers_app),
     ("bundles", bundles_app),
     ("events", events_app),

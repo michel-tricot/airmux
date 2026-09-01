@@ -30,6 +30,7 @@ import type {
   AccessKeyOut,
   AccessKeyRevokedOut,
   ActivityOut,
+  ApplyInstanceTaxonomyParams,
   BundleLatestParams,
   BundleManifest,
   BundleOut,
@@ -99,7 +100,9 @@ import type {
   ServiceAccountIn,
   SignedBundle,
   SignupIn,
+  TaxonomyApplyOut,
   TaxonomyOut,
+  TaxonomySpec,
   UsageEventOut,
   UsageEventV1,
   UserOut,
@@ -6332,6 +6335,88 @@ export function useGetInstanceTaxonomy<TData = Awaited<ReturnType<typeof getInst
 
 
 
+
+export const getApplyInstanceTaxonomyUrl = (params?: ApplyInstanceTaxonomyParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/instance/taxonomy?${stringifiedParams}` : `/api/v1/instance/taxonomy`
+}
+
+/**
+ * Apply a complete provider and model taxonomy atomically.
+ *
+ * Required permission: `catalog.manage`.
+ * @summary Apply Instance Model Catalog
+ */
+export const applyInstanceTaxonomy = async (taxonomySpec: TaxonomySpec,
+    params?: ApplyInstanceTaxonomyParams, options?: Parameters<typeof customFetch>[1]): Promise<TaxonomyApplyOut> => {
+
+  return customFetch<TaxonomyApplyOut>(getApplyInstanceTaxonomyUrl(params),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(taxonomySpec)
+  }
+);}
+
+
+
+
+
+export const getApplyInstanceTaxonomyMutationOptions = <TError = ErrorType<void | HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof applyInstanceTaxonomy>>, TError,{data: BodyType<TaxonomySpec>;params?: ApplyInstanceTaxonomyParams}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof applyInstanceTaxonomy>>, TError,{data: BodyType<TaxonomySpec>;params?: ApplyInstanceTaxonomyParams}, TContext> => {
+
+const mutationKey = ['applyInstanceTaxonomy'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof applyInstanceTaxonomy>>, {data: BodyType<TaxonomySpec>;params?: ApplyInstanceTaxonomyParams}> = (props) => {
+          const {data,params} = props ?? {};
+
+          return  applyInstanceTaxonomy(data,params,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ApplyInstanceTaxonomyMutationResult = NonNullable<Awaited<ReturnType<typeof applyInstanceTaxonomy>>>
+    export type ApplyInstanceTaxonomyMutationBody = BodyType<TaxonomySpec>
+    export type ApplyInstanceTaxonomyMutationError = ErrorType<void | HTTPValidationError>
+
+    /**
+ * @summary Apply Instance Model Catalog
+ */
+export const useApplyInstanceTaxonomy = <TError = ErrorType<void | HTTPValidationError>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof applyInstanceTaxonomy>>, TError,{data: BodyType<TaxonomySpec>;params?: ApplyInstanceTaxonomyParams}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof applyInstanceTaxonomy>>,
+        TError,
+        {data: BodyType<TaxonomySpec>;params?: ApplyInstanceTaxonomyParams},
+        TContext
+      > => {
+      return useMutation(getApplyInstanceTaxonomyMutationOptions(options));
+    }
 
 export const getGetOrgTaxonomyUrl = (orgId: string,) => {
 

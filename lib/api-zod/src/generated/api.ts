@@ -2234,6 +2234,118 @@ export const GetInstanceTaxonomyResponse = zod.object({
 
 
 /**
+ * Apply a complete provider and model taxonomy atomically.
+ *
+ * Required permission: `catalog.manage`.
+ * @summary Apply Instance Model Catalog
+ */
+export const applyInstanceTaxonomyQueryDryRunDefault = false;
+
+export const ApplyInstanceTaxonomyQueryParams = zod.object({
+  "dry_run": zod.coerce.boolean().default(applyInstanceTaxonomyQueryDryRunDefault).describe('Validate and report changes without applying them')
+})
+
+export const applyInstanceTaxonomyBodyProvidersItemProviderIdMax = 63;
+
+
+export const applyInstanceTaxonomyBodyProvidersItemProviderIdRegExp = new RegExp('^[a-z0-9][a-z0-9_-]*$');
+export const applyInstanceTaxonomyBodyProvidersItemKindDefault = `openai_compatible`;
+export const applyInstanceTaxonomyBodyProvidersItemKindMax = 63;
+
+
+export const applyInstanceTaxonomyBodyProvidersItemKindRegExp = new RegExp('^[a-z0-9][a-z0-9_]*$');
+export const applyInstanceTaxonomyBodyProvidersItemBaseUrlMax = 2083;
+
+export const applyInstanceTaxonomyBodyProvidersItemIconDefault = ``;
+export const applyInstanceTaxonomyBodyProvidersItemIconMax = 65536;
+
+export const applyInstanceTaxonomyBodyProvidersItemAcceptedParamsOneMax = 256;
+
+export const applyInstanceTaxonomyBodyProvidersItemParamsClosedDefault = false;
+export const applyInstanceTaxonomyBodyProvidersMax = 1000;
+
+export const applyInstanceTaxonomyBodyModelsItemModelIdMax = 255;
+
+export const applyInstanceTaxonomyBodyModelsItemProviderIdMax = 63;
+
+
+export const applyInstanceTaxonomyBodyModelsItemProviderIdRegExp = new RegExp('^[a-z0-9][a-z0-9_-]*$');
+export const applyInstanceTaxonomyBodyModelsItemUpstreamModelDefault = ``;
+export const applyInstanceTaxonomyBodyModelsItemUpstreamModelMax = 255;
+
+export const applyInstanceTaxonomyBodyModelsItemEgressKindOneMax = 63;
+
+
+export const applyInstanceTaxonomyBodyModelsItemEgressKindOneRegExp = new RegExp('^[a-z0-9][a-z0-9_]*$');
+export const applyInstanceTaxonomyBodyModelsItemInputPricePerMtokDefault = 0;
+export const applyInstanceTaxonomyBodyModelsItemInputPricePerMtokMin = 0;
+
+export const applyInstanceTaxonomyBodyModelsItemOutputPricePerMtokDefault = 0;
+export const applyInstanceTaxonomyBodyModelsItemOutputPricePerMtokMin = 0;
+
+export const applyInstanceTaxonomyBodyModelsItemCacheReadPricePerMtokDefault = 0;
+export const applyInstanceTaxonomyBodyModelsItemCacheReadPricePerMtokMin = 0;
+
+export const applyInstanceTaxonomyBodyModelsItemCacheWritePricePerMtokDefault = 0;
+export const applyInstanceTaxonomyBodyModelsItemCacheWritePricePerMtokMin = 0;
+
+export const applyInstanceTaxonomyBodyModelsItemContextWindowDefault = 128000;
+export const applyInstanceTaxonomyBodyModelsItemContextWindowMax = 100000000;
+
+export const applyInstanceTaxonomyBodyModelsItemMaxOutputTokensOneMax = 100000000;
+
+export const applyInstanceTaxonomyBodyModelsItemCapabilitiesMax = 128;
+
+export const applyInstanceTaxonomyBodyModelsMax = 10000;
+
+
+
+export const ApplyInstanceTaxonomyBody = zod.object({
+  "providers": zod.array(zod.object({
+  "provider_id": zod.string().min(1).max(applyInstanceTaxonomyBodyProvidersItemProviderIdMax).regex(applyInstanceTaxonomyBodyProvidersItemProviderIdRegExp).describe('Provider name, e.g. openai'),
+  "kind": zod.string().min(1).max(applyInstanceTaxonomyBodyProvidersItemKindMax).regex(applyInstanceTaxonomyBodyProvidersItemKindRegExp).default(applyInstanceTaxonomyBodyProvidersItemKindDefault).describe('Adapter kind'),
+  "base_url": zod.url().min(1).max(applyInstanceTaxonomyBodyProvidersItemBaseUrlMax).describe('OpenAI-compatible endpoint, e.g. https:\/\/api.groq.com\/openai\/v1'),
+  "icon": zod.string().max(applyInstanceTaxonomyBodyProvidersItemIconMax).default(applyInstanceTaxonomyBodyProvidersItemIconDefault).describe('Provider mark as a standalone 24x24 SVG document, or an empty string when no icon is available. Clients must sanitize this untrusted markup before rendering it'),
+  "param_aliases": zod.record(zod.string(), zod.string()).optional().describe('Canonical param name to this provider\'s spelling'),
+  "accepted_params": zod.union([zod.array(zod.string()).max(applyInstanceTaxonomyBodyProvidersItemAcceptedParamsOneMax),zod.null()]).optional().describe('Params known accepted beyond the core; consulted when params_closed'),
+  "params_closed": zod.boolean().default(applyInstanceTaxonomyBodyProvidersItemParamsClosedDefault).describe('True when the provider\'s request schema rejects unknown params')
+}).describe('An upstream provider endpoint and its request-profile settings.')).max(applyInstanceTaxonomyBodyProvidersMax).optional().describe('Provider endpoints to create or update'),
+  "models": zod.array(zod.object({
+  "model_id": zod.string().min(1).max(applyInstanceTaxonomyBodyModelsItemModelIdMax).describe('Caller-facing model name'),
+  "provider_id": zod.string().min(1).max(applyInstanceTaxonomyBodyModelsItemProviderIdMax).regex(applyInstanceTaxonomyBodyModelsItemProviderIdRegExp).describe('Provider id the model routes to'),
+  "upstream_model": zod.string().max(applyInstanceTaxonomyBodyModelsItemUpstreamModelMax).default(applyInstanceTaxonomyBodyModelsItemUpstreamModelDefault).describe('Model name sent to the provider, lets model_id be an alias; defaults to model_id'),
+  "egress_kind": zod.union([zod.string().min(1).max(applyInstanceTaxonomyBodyModelsItemEgressKindOneMax).regex(applyInstanceTaxonomyBodyModelsItemEgressKindOneRegExp),zod.null()]).optional().describe('Per-model egress adapter override'),
+  "input_price_per_mtok": zod.number().min(applyInstanceTaxonomyBodyModelsItemInputPricePerMtokMin).default(applyInstanceTaxonomyBodyModelsItemInputPricePerMtokDefault).describe('USD per million input tokens'),
+  "output_price_per_mtok": zod.number().min(applyInstanceTaxonomyBodyModelsItemOutputPricePerMtokMin).default(applyInstanceTaxonomyBodyModelsItemOutputPricePerMtokDefault).describe('USD per million output tokens'),
+  "cache_read_price_per_mtok": zod.number().min(applyInstanceTaxonomyBodyModelsItemCacheReadPricePerMtokMin).default(applyInstanceTaxonomyBodyModelsItemCacheReadPricePerMtokDefault).describe('USD per million cache-read input tokens'),
+  "cache_write_price_per_mtok": zod.number().min(applyInstanceTaxonomyBodyModelsItemCacheWritePricePerMtokMin).default(applyInstanceTaxonomyBodyModelsItemCacheWritePricePerMtokDefault).describe('USD per million cache-write input tokens'),
+  "context_window": zod.int().min(1).max(applyInstanceTaxonomyBodyModelsItemContextWindowMax).default(applyInstanceTaxonomyBodyModelsItemContextWindowDefault).describe('Context window in tokens'),
+  "max_output_tokens": zod.union([zod.int().min(1).max(applyInstanceTaxonomyBodyModelsItemMaxOutputTokensOneMax),zod.null()]).optional().describe('Max completion tokens; requests are clamped to it'),
+  "capabilities": zod.array(zod.string()).max(applyInstanceTaxonomyBodyModelsItemCapabilitiesMax).optional().describe('Capabilities supported by the model'),
+  "parameter_support": zod.record(zod.string(), zod.enum(['supported', 'unsupported'])).optional().describe('Known support for canonical request parameters; an absent parameter is unknown')
+})).max(applyInstanceTaxonomyBodyModelsMax).optional().describe('Routable models to create or update')
+})
+
+export const ApplyInstanceTaxonomyResponse = zod.object({
+  "dry_run": zod.boolean(),
+  "providers": zod.object({
+  "created": zod.int(),
+  "updated": zod.int(),
+  "unchanged": zod.int()
+}),
+  "models": zod.object({
+  "created": zod.int(),
+  "updated": zod.int(),
+  "unchanged": zod.int()
+}),
+  "published": zod.array(zod.object({
+  "org_id": zod.uuid(),
+  "version": zod.int()
+}))
+})
+
+
+/**
  * Return the provider and model catalog available to an organization.
  *
  * Required permission: `catalog.read`.

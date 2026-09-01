@@ -3530,6 +3530,9 @@ paths:
 
         Required permission: `catalog.read`.'
       operationId: get_instance_taxonomy
+      security:
+      - AccessKey: []
+      - SessionCookie: []
       responses:
         '200':
           description: Successful Response
@@ -3547,13 +3550,59 @@ paths:
           description: Authentication failed
         '403':
           description: The credential does not have the required permission
-      security:
-      - AccessKey: []
-      - SessionCookie: []
       x-airllm-authority:
       - scope: instance_scope
         anyOf:
         - catalog.read
+    post:
+      tags:
+      - Instance Model Catalog
+      summary: Apply Instance Model Catalog
+      description: 'Apply a complete provider and model taxonomy atomically.
+
+
+        Required permission: `catalog.manage`.'
+      operationId: apply_instance_taxonomy
+      security:
+      - AccessKey: []
+      - SessionCookie: []
+      parameters:
+      - name: dry_run
+        in: query
+        required: false
+        schema:
+          type: boolean
+          description: Validate and report changes without applying them
+          default: false
+          title: Dry Run
+        description: Validate and report changes without applying them
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaxonomySpec'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_TaxonomyApplyOut_'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '401':
+          description: Authentication failed
+        '403':
+          description: The credential does not have the required permission
+      x-airllm-authority:
+      - scope: instance_scope
+        anyOf:
+        - catalog.manage
   /api/v1/orgs/{org_id}/taxonomy:
     get:
       tags:
@@ -4619,6 +4668,14 @@ components:
       required:
       - data
       title: Envelope[SignedBundle]
+    Envelope_TaxonomyApplyOut_:
+      properties:
+        data:
+          $ref: '#/components/schemas/TaxonomyApplyOut'
+      type: object
+      required:
+      - data
+      title: Envelope[TaxonomyApplyOut]
     Envelope_TaxonomyOut_:
       properties:
         data:
@@ -6189,6 +6246,44 @@ components:
       - email
       - password
       title: SignupIn
+    TaxonomyApplyOut:
+      properties:
+        dry_run:
+          type: boolean
+          title: Dry Run
+        providers:
+          $ref: '#/components/schemas/TaxonomyChangeCounts'
+        models:
+          $ref: '#/components/schemas/TaxonomyChangeCounts'
+        published:
+          items:
+            $ref: '#/components/schemas/TaxonomyPublicationOut'
+          type: array
+          title: Published
+      type: object
+      required:
+      - dry_run
+      - providers
+      - models
+      - published
+      title: TaxonomyApplyOut
+    TaxonomyChangeCounts:
+      properties:
+        created:
+          type: integer
+          title: Created
+        updated:
+          type: integer
+          title: Updated
+        unchanged:
+          type: integer
+          title: Unchanged
+      type: object
+      required:
+      - created
+      - updated
+      - unchanged
+      title: TaxonomyChangeCounts
     TaxonomyOut:
       properties:
         providers:
@@ -6206,6 +6301,39 @@ components:
       - providers
       - models
       title: TaxonomyOut
+    TaxonomyPublicationOut:
+      properties:
+        org_id:
+          type: string
+          format: uuid
+          title: Org Id
+        version:
+          type: integer
+          title: Version
+      type: object
+      required:
+      - org_id
+      - version
+      title: TaxonomyPublicationOut
+    TaxonomySpec:
+      properties:
+        providers:
+          items:
+            $ref: '#/components/schemas/ProviderIn'
+          type: array
+          maxItems: 1000
+          title: Providers
+          description: Provider endpoints to create or update
+        models:
+          items:
+            $ref: '#/components/schemas/ModelIn'
+          type: array
+          maxItems: 10000
+          title: Models
+          description: Routable models to create or update
+      additionalProperties: false
+      type: object
+      title: TaxonomySpec
     UsageEventOut:
       properties:
         event_id:

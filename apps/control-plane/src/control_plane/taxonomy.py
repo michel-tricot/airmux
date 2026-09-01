@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
+from uuid import UUID
 
 import yaml
-from pydantic import BaseModel, Field, HttpUrl, field_validator
+from pydantic import BaseModel, Field, HttpUrl, field_validator, model_validator
 
 from contract import Modality, ParameterSupport  # noqa: TC001 pydantic resolves these annotations at runtime
 from control_plane.models import Model, Provider
@@ -12,7 +13,9 @@ from control_plane.models.model import ModelOut
 from control_plane.models.provider import ProviderOut
 
 if TYPE_CHECKING:
+    from collections.abc import Callable, Iterable
     from pathlib import Path
+    from typing import Self
 
 
 class UnknownProviderError(ValueError):
@@ -72,13 +75,54 @@ class ModelIn(RequestModel):
 
 
 class TaxonomySpec(RequestModel):
-    providers: list[ProviderIn] = Field(default_factory=list, max_length=1000)
-    models: list[ModelIn] = Field(default_factory=list, max_length=10000)
+    providers: list[ProviderIn] = Field(default_factory=list, max_length=1000, description="Provider endpoints to create or update")
+    models: list[ModelIn] = Field(default_factory=list, max_length=10000, description="Routable models to create or update")
+
+    @model_validator(mode="after")
+    def unique_entries(self) -> Self:
+        duplicate_providers = _duplicates(provider.provider_id for provider in self.providers)
+        duplicate_models = _duplicates(model.model_id for model in self.models)
+        if duplicate_providers or duplicate_models:
+            parts = [
+                f"duplicate {kind}: {', '.join(values)}"
+                for kind, values in (("providers", duplicate_providers), ("models", duplicate_models))
+                if values
+            ]
+            raise ValueError("; ".join(parts))
+        return self
 
 
 class TaxonomyOut(BaseModel):
     providers: list[ProviderOut]
     models: list[ModelOut]
+
+
+class TaxonomyChangeCounts(BaseModel):
+    created: int
+    updated: int
+    unchanged: int
+
+
+class TaxonomyPublicationOut(BaseModel):
+    org_id: UUID
+    version: int
+
+
+class TaxonomyApplyOut(BaseModel):
+    dry_run: bool
+    providers: TaxonomyChangeCounts
+    models: TaxonomyChangeCounts
+    published: list[TaxonomyPublicationOut]
+
+
+def _duplicates(values: Iterable[str]) -> list[str]:
+    seen: set[str] = set()
+    duplicates: set[str] = set()
+    for value in values:
+        if value in seen:
+            duplicates.add(value)
+        seen.add(value)
+    return sorted(duplicates)
 
 
 def parse_taxonomy(path: Path) -> TaxonomySpec:
@@ -147,3 +191,55 @@ async def apply_taxonomy(spec: TaxonomySpec) -> tuple[int, int]:
     for m in spec.models:
         await upsert_model(m)
     return len(spec.providers), len(spec.models)
+
+
+def _provider_matches(provider: Provider, desired: ProviderIn) -> bool:
+    return (
+        provider.kind == desired.kind
+        and provider.base_url == str(desired.base_url)
+        and provider.icon == desired.icon
+        and provider.param_aliases == desired.param_aliases
+        and provider.accepted_params == desired.accepted_params
+        and provider.params_closed == desired.params_closed
+    )
+
+
+def _model_matches(model: Model, desired: ModelIn, provider_names: dict[UUID, str]) -> bool:
+    return (
+        provider_names[model.provider_id] == desired.provider_id
+        and model.upstream_model == (desired.upstream_model or desired.model_id)
+        and model.egress_kind == desired.egress_kind
+        and model.input_price_per_mtok == desired.input_price_per_mtok
+        and model.output_price_per_mtok == desired.output_price_per_mtok
+        and model.cache_read_price_per_mtok == desired.cache_read_price_per_mtok
+        and model.cache_write_price_per_mtok == desired.cache_write_price_per_mtok
+        and model.context_window == desired.context_window
+        and model.max_output_tokens == desired.max_output_tokens
+        and model.capabilities == desired.capabilities
+        and model.parameter_support == desired.parameter_support
+    )
+
+
+def _change_counts[T, U](desired: list[T], existing: dict[str, U], key: Callable[[T], str], matches: Callable[[U, T], bool]) -> TaxonomyChangeCounts:
+    created = sum(key(entry) not in existing for entry in desired)
+    unchanged = sum(key(entry) in existing and matches(existing[key(entry)], entry) for entry in desired)
+    return TaxonomyChangeCounts(created=created, updated=len(desired) - created - unchanged, unchanged=unchanged)
+
+
+async def plan_taxonomy(spec: TaxonomySpec) -> tuple[TaxonomyChangeCounts, TaxonomyChangeCounts]:
+    providers = await Provider.find()
+    models = await Model.find()
+    providers_by_name = {provider.name.casefold(): provider for provider in providers}
+    provider_names = {provider.id: provider.name.casefold() for provider in providers}
+    available_providers = providers_by_name.keys() | {provider.provider_id for provider in spec.providers}
+    if missing := sorted({model.provider_id for model in spec.models} - available_providers):
+        raise UnknownProviderError(", ".join(missing))
+    models_by_name = {model.name: model for model in models}
+    provider_counts = _change_counts(spec.providers, providers_by_name, lambda provider: provider.provider_id, _provider_matches)
+    model_counts = _change_counts(
+        spec.models,
+        models_by_name,
+        lambda model: model.model_id,
+        lambda model, desired: _model_matches(model, desired, provider_names),
+    )
+    return provider_counts, model_counts

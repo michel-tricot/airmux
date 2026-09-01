@@ -24,7 +24,13 @@ def test_every_command_is_listed_once():
     paths = [row["command"] for row in rows]
 
     assert len(paths) == len(set(paths))
-    for path in ("airllm quickstart", "airllm orgs mine", "airllm provider-credentials add", "airllm access-keys mint"):
+    for path in (
+        "airllm quickstart",
+        "airllm orgs mine",
+        "airllm provider-credentials add",
+        "airllm access-keys mint",
+        "airllm taxonomy apply",
+    ):
         assert path in paths
 
     assert "airllm bundles republish" in paths
