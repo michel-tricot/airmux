@@ -112,6 +112,8 @@ vendor-sourced model that the listing omits:
 ```bash
 uv run airllm-audit models add anthropic claude-example \
   --source https://docs.example.ai/models/claude-example \
+  --input-modality text \
+  --output-modality text \
   --context-window 200000 \
   --max-output-tokens 8192
 ```
@@ -151,9 +153,10 @@ on acquisition errors. The diff reports provider fields, every imported model fi
 applied model fields, and schema and icon hashes. Use JSON for complete agent review and
 the summary for a human overview.
 
-`reports/missing-metadata.json` lists every unknown limit, modality, capability flag, and
-price per model. An entry is an investigation queue, not evidence that the feature is
-unsupported.
+`reports/missing-metadata.json` lists every unknown limit, capability flag, and price per
+model. Modalities are required for every retained model, so a missing direction fails
+acquisition or validation instead of entering this report. An entry is an investigation
+queue, not evidence that the feature is unsupported.
 
 When current provider-owned sources disagree, the higher-ranked source remains applied and
 the model carries `source_conflicts` plus the conflicting `documentation_url` for review.
@@ -203,7 +206,7 @@ uv run airllm-audit taxonomy validate
 
 - Every asserted fact has current provenance
 - Official documentation records its exact URL and correct unit
-- Unknown values remain absent
+- Unknown optional values remain absent; every model has non-empty input and output modalities
 - Provider acquisition has no unexplained skip or failure
 - Additions, removals, aliases, limits, prices, and retirements are understood
 - Behavioral claims came only from accepted direct raw HTTP evidence

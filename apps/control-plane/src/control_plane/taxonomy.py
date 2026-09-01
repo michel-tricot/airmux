@@ -59,8 +59,8 @@ class ModelIn(RequestModel):
     cache_write_price_per_mtok: float = Field(0.0, ge=0, description="USD per million cache-write input tokens")
     context_window: int = Field(128000, ge=1, le=100_000_000, description="Context window in tokens")
     max_output_tokens: int | None = Field(None, ge=1, le=100_000_000, description="Max completion tokens; requests are clamped to it")
-    input_modalities: list[Modality] | None = Field(None, max_length=16, description="Accepted input modalities; null means unknown")
-    output_modalities: list[Modality] | None = Field(None, max_length=16, description="Produced output modalities; null means unknown")
+    input_modalities: list[Modality] = Field(min_length=1, max_length=16, description="Accepted input modalities")
+    output_modalities: list[Modality] = Field(min_length=1, max_length=16, description="Produced output modalities")
     capabilities: list[str] = Field(default_factory=lambda: ["streaming", "tools"], max_length=128, description="Capabilities supported by the model")
     parameter_support: dict[str, ParameterSupport] = Field(
         default_factory=dict,
@@ -215,6 +215,8 @@ def _model_matches(model: Model, desired: ModelIn, provider_names: dict[UUID, st
         and model.cache_write_price_per_mtok == desired.cache_write_price_per_mtok
         and model.context_window == desired.context_window
         and model.max_output_tokens == desired.max_output_tokens
+        and model.input_modalities == desired.input_modalities
+        and model.output_modalities == desired.output_modalities
         and model.capabilities == desired.capabilities
         and model.parameter_support == desired.parameter_support
     )

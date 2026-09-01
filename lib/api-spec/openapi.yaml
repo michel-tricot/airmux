@@ -5253,35 +5253,33 @@ components:
           title: Max Output Tokens
           description: Max completion tokens; requests are clamped to it
         input_modalities:
-          anyOf:
-          - items:
-              type: string
-              enum:
-              - text
-              - image
-              - audio
-              - video
-              - pdf
-            type: array
-            maxItems: 16
-          - type: 'null'
+          items:
+            type: string
+            enum:
+            - text
+            - image
+            - audio
+            - video
+            - pdf
+          type: array
+          maxItems: 16
+          minItems: 1
           title: Input Modalities
-          description: Accepted input modalities; null means unknown
+          description: Accepted input modalities
         output_modalities:
-          anyOf:
-          - items:
-              type: string
-              enum:
-              - text
-              - image
-              - audio
-              - video
-              - pdf
-            type: array
-            maxItems: 16
-          - type: 'null'
+          items:
+            type: string
+            enum:
+            - text
+            - image
+            - audio
+            - video
+            - pdf
+          type: array
+          maxItems: 16
+          minItems: 1
           title: Output Modalities
-          description: Produced output modalities; null means unknown
+          description: Produced output modalities
         capabilities:
           items:
             type: string
@@ -5304,6 +5302,8 @@ components:
       required:
       - model_id
       - provider_id
+      - input_modalities
+      - output_modalities
       title: ModelIn
     ModelOut:
       properties:

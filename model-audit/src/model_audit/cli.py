@@ -433,12 +433,23 @@ def models_add(  # noqa: PLR0913, PLR0917 command flags define the CLI surface
     provider: Annotated[str, typer.Argument()],
     model: Annotated[str, typer.Argument()],
     source: Annotated[str, typer.Option("--source", help="Vendor page or API response supporting this model")],
+    input_modality: Annotated[list[str], typer.Option("--input-modality", help="Accepted input modality; repeat for multiple")],
+    output_modality: Annotated[list[str], typer.Option("--output-modality", help="Produced output modality; repeat for multiple")],
     context_window: Annotated[int | None, typer.Option("--context-window", min=1)] = None,
     max_output_tokens: Annotated[int | None, typer.Option("--max-output-tokens", min=1)] = None,
     replace: Annotated[bool, typer.Option("--replace", help="Replace an existing model while preserving discovered metadata")] = False,
 ) -> None:
-    definition = ModelDefinition(id=model, source=source, context_window=context_window, max_output_tokens=max_output_tokens)
     try:
+        definition = ModelDefinition.model_validate(
+            {
+                "id": model,
+                "source": source,
+                "input_modalities": input_modality,
+                "output_modalities": output_modality,
+                "context_window": context_window,
+                "max_output_tokens": max_output_tokens,
+            }
+        )
         path = add_model(ROOT, provider, definition, replace=replace)
     except ValueError as error:
         raise typer.BadParameter(str(error)) from error

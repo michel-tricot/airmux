@@ -385,28 +385,6 @@ class MaxOutputTokens(RootModel[int]):
     ]
 
 
-class InputModalities(RootModel[list[Literal["text", "image", "audio", "video", "pdf"]]]):
-    root: Annotated[
-        list[Literal["text", "image", "audio", "video", "pdf"]],
-        Field(
-            description="Accepted input modalities; null means unknown",
-            max_length=16,
-            title="Input Modalities",
-        ),
-    ]
-
-
-class OutputModalities(RootModel[list[Literal["text", "image", "audio", "video", "pdf"]]]):
-    root: Annotated[
-        list[Literal["text", "image", "audio", "video", "pdf"]],
-        Field(
-            description="Produced output modalities; null means unknown",
-            max_length=16,
-            title="Output Modalities",
-        ),
-    ]
-
-
 class ModelIn(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
@@ -491,19 +469,23 @@ class ModelIn(BaseModel):
         ),
     ] = None
     input_modalities: Annotated[
-        InputModalities | None,
+        list[Literal["text", "image", "audio", "video", "pdf"]],
         Field(
-            description="Accepted input modalities; null means unknown",
+            description="Accepted input modalities",
+            max_length=16,
+            min_length=1,
             title="Input Modalities",
         ),
-    ] = None
+    ]
     output_modalities: Annotated[
-        OutputModalities | None,
+        list[Literal["text", "image", "audio", "video", "pdf"]],
         Field(
-            description="Produced output modalities; null means unknown",
+            description="Produced output modalities",
+            max_length=16,
+            min_length=1,
             title="Output Modalities",
         ),
-    ] = None
+    ]
     capabilities: Annotated[
         list[str] | None,
         Field(

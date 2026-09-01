@@ -110,15 +110,18 @@ from behavioral support flags. Modalities are directional content types drawn fr
 canonical contract: `text`, `image`, `audio`, `video`, and `pdf`. Capabilities describe
 behavior such as streaming, tool calling, reasoning, and structured output.
 
-Map the provider's values explicitly in its source module. Keep either modality field null
-when the provider and its documentation do not establish it. Never infer `vision`, `pdf`, or
-`text` capability aliases from modalities. The applied taxonomy starts with declared modality
-metadata and lets accepted direct audit evidence override the matching direction and value.
-This projection is provider-independent, so adding a provider requires no taxonomy registry.
+Map the provider's values explicitly in its source module. Every retained model must have at
+least one input and one output modality. A chat-shaped provider surface may conservatively
+establish `text` to `text`; augment that baseline from current provider documentation or direct
+evidence. Exclude a model when both directions cannot be established. Never infer `vision`,
+`pdf`, or `text` capability aliases from modalities. The applied taxonomy starts with declared
+modality metadata and lets accepted direct audit evidence override the matching direction and
+value. This projection is provider-independent, so adding a provider requires no taxonomy registry.
 
-The validator rejects unknown or repeated modality values. Adding a new modality is a gateway
-contract change: extend the canonical vocabulary, define its directional audit feature and case,
-then add canonical request or response support before using it for admission.
+The validator rejects missing, empty, unknown, or repeated modality values. Taxonomy generation
+also rejects accepted evidence that removes the last modality in either direction. Adding a new
+modality is a gateway contract change: extend the canonical vocabulary, define its directional
+audit feature and case, then add canonical request or response support before using it for admission.
 
 # Scope
 

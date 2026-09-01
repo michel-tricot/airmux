@@ -141,6 +141,22 @@ def test_provider_lifecycle_uses_onboard_and_sync_commands():
     assert " refresh " not in models.output
 
 
+def test_models_add_requires_both_modality_directions():
+    missing_input = CliRunner().invoke(
+        app,
+        ["models", "add", "anthropic", "example", "--source", "https://provider.example/model", "--output-modality", "text"],
+    )
+    missing_output = CliRunner().invoke(
+        app,
+        ["models", "add", "anthropic", "example", "--source", "https://provider.example/model", "--input-modality", "text"],
+    )
+
+    assert missing_input.exit_code == 2
+    assert "--input-modality" in missing_input.output
+    assert missing_output.exit_code == 2
+    assert "--output-modality" in missing_output.output
+
+
 def test_taxonomy_exposes_a_clean_rebuild_command():
     result = CliRunner().invoke(app, ["taxonomy", "--help"])
 

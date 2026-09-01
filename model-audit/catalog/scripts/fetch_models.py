@@ -29,6 +29,7 @@ from parameter_support import apply_discovery_evidence, discovery_evidence
 from paths import TAXONOMY
 
 import yaml
+from model_audit.catalog_ops import incomplete_model_modalities
 
 from model_kind import text_only
 from sources import registry
@@ -92,6 +93,9 @@ def main() -> int:
             continue
         if not models:
             failed.append((provider, "empty or unrecognized payload"))
+            continue
+        if incomplete := incomplete_model_modalities(provider, models):
+            failed.append((provider, f"models without required modalities: {', '.join(incomplete)}"))
             continue
         declared = sum(1 for m in models if m.get("context_length") or m.get("supports_tools") is not None)
         target = OUT / f"{provider}.json"

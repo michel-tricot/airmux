@@ -77,30 +77,31 @@ def _capabilities(model: dict, behaviors: list[BehaviorRecord]) -> list[str]:
     return sorted(capabilities)
 
 
-def _modalities(model: dict, behaviors: list[BehaviorRecord]) -> tuple[list[Modality] | None, list[Modality] | None]:
+def _modalities(
+    model: dict,
+    behaviors: list[BehaviorRecord],
+    *,
+    model_id: str = "model",
+) -> tuple[list[Modality], list[Modality]]:
     projected: dict[str, set[Modality]] = {
         "input": set(model.get("input_modalities") or []),
         "output": set(model.get("output_modalities") or []),
-    }
-    known = {
-        "input": model.get("input_modalities") is not None,
-        "output": model.get("output_modalities") is not None,
     }
     for behavior in behaviors:
         projection = MODALITY_PROJECTION.get(behavior.claim.name)
         if projection is None or behavior.claim.profile or behavior.verdict == "unknown":
             continue
         direction, modality = projection
-        known[direction] = True
         if behavior.verdict == "supported":
             projected[direction].add(modality)
         elif behavior.verdict == "unsupported":
             projected[direction].discard(modality)
     ordered = {direction: [modality for modality in MODALITIES if modality in projected[direction]] for direction in projected}
-    return (
-        ordered["input"] if known["input"] else None,
-        ordered["output"] if known["output"] else None,
-    )
+    missing = [f"{direction}_modalities" for direction in ("input", "output") if not ordered[direction]]
+    if missing:
+        message = f"{model_id} is missing required {', '.join(missing)}"
+        raise ValueError(message)
+    return ordered["input"], ordered["output"]
 
 
 def _parameter_support(model: dict, endpoint: str, behaviors: list[BehaviorRecord]) -> dict[str, str]:
@@ -164,7 +165,7 @@ def build(root: Path) -> dict[str, list[dict[str, object]]]:
             if model_id in routes:
                 routed_models.add(model_id)
             surface_behaviors = [behavior for behavior in behaviors if behavior.surface_id == surface]
-            input_modalities, output_modalities = _modalities(model, surface_behaviors)
+            input_modalities, output_modalities = _modalities(model, surface_behaviors, model_id=model_id)
             price = model.get("pricing") or {}
             codecs = discover()
             kind = codecs[surface].kind

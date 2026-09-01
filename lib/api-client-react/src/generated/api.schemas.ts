@@ -473,6 +473,28 @@ export interface MembershipOut {
   status: 'member';
 }
 
+export type ModelInInputModalitiesItem = typeof ModelInInputModalitiesItem[keyof typeof ModelInInputModalitiesItem];
+
+
+export const ModelInInputModalitiesItem = {
+  text: 'text',
+  image: 'image',
+  audio: 'audio',
+  video: 'video',
+  pdf: 'pdf',
+} as const;
+
+export type ModelInOutputModalitiesItem = typeof ModelInOutputModalitiesItem[keyof typeof ModelInOutputModalitiesItem];
+
+
+export const ModelInOutputModalitiesItem = {
+  text: 'text',
+  image: 'image',
+  audio: 'audio',
+  video: 'video',
+  pdf: 'pdf',
+} as const;
+
 /**
  * Known support for canonical request parameters; an absent parameter is unknown
  */
@@ -527,10 +549,18 @@ export interface ModelIn {
   context_window?: number;
   /** Max completion tokens; requests are clamped to it */
   max_output_tokens?: number | null;
-  /** Accepted input modalities; null means unknown */
-  input_modalities?: ('text' | 'image' | 'audio' | 'video' | 'pdf')[] | null;
-  /** Produced output modalities; null means unknown */
-  output_modalities?: ('text' | 'image' | 'audio' | 'video' | 'pdf')[] | null;
+  /**
+     * Accepted input modalities
+     * @minItems 1
+     * @maxItems 16
+     */
+  input_modalities: ModelInInputModalitiesItem[];
+  /**
+     * Produced output modalities
+     * @minItems 1
+     * @maxItems 16
+     */
+  output_modalities: ModelInOutputModalitiesItem[];
   /**
      * Capabilities supported by the model
      * @maxItems 128

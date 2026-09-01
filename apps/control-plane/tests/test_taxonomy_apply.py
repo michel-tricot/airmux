@@ -79,6 +79,14 @@ def test_taxonomy_apply_reports_unchanged_and_updated_entries(tmp_path):
         assert changed["providers"] == {"created": 0, "updated": 1, "unchanged": 0}
         assert changed["models"] == {"created": 0, "updated": 0, "unchanged": 1}
 
+        changed_modalities = client.post(
+            "/api/v1/instance/taxonomy",
+            json={"providers": [{**PROVIDER, "base_url": "https://other.example/v1"}], "models": [{**MODEL, "input_modalities": ["text", "image"]}]},
+            headers=root,
+        ).json()["data"]
+        assert changed_modalities["providers"] == {"created": 0, "updated": 0, "unchanged": 1}
+        assert changed_modalities["models"] == {"created": 0, "updated": 1, "unchanged": 0}
+
 
 def test_taxonomy_apply_requires_manage_and_rejects_the_whole_invalid_document(tmp_path):
     cp = setup_control_plane(tmp_path)
