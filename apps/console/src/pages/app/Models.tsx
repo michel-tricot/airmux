@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import {
   ArrowDown,
+  ArrowRight,
   ArrowUp,
   ArrowUpDown,
   AudioLines,
@@ -9,6 +10,7 @@ import {
   CircleHelp,
   FileText,
   Image as ImageIcon,
+  Minus,
   Type as TextIcon,
   Video,
   Wrench,
@@ -61,39 +63,70 @@ function ModalityIcon({ modality }: { modality: string }) {
   return <Icon aria-hidden="true" className="h-3.5 w-3.5" />;
 }
 
-function ModalityGroup({ label, modalities }: { label: 'Input' | 'Output'; modalities: string[] | null }) {
+function ModalityMarker({ direction, modality }: { direction: 'Input' | 'Output'; modality: string | null | undefined }) {
+  const label =
+    modality === null
+      ? `${direction} modalities unknown`
+      : modality === undefined
+        ? `No ${direction.toLowerCase()} modalities`
+        : `${direction} modality: ${modality}`;
+  const tooltip = modality == null ? label : `${direction}: ${modality.charAt(0).toLocaleUpperCase()}${modality.slice(1)}`;
+
   return (
-    <div aria-label={`${label} modalities`} className="flex items-start gap-2">
-      <span className="w-11 shrink-0 font-mono text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{label}</span>
-      <div className="flex flex-wrap gap-x-3 gap-y-1.5">
-        {modalities === null ? (
-          <span className="text-xs text-muted-foreground">Unknown</span>
-        ) : modalities.length === 0 ? (
-          <span className="text-xs text-muted-foreground">None</span>
-        ) : (
-          modalities.map((modality) => (
-            <div
-              key={modality}
-              className={cn(
-                'flex items-center gap-1.5 border-l-2 pl-2 text-xs font-medium capitalize',
-                label === 'Input' ? 'border-success/40 text-success' : 'border-primary/40 text-primary',
-              )}
-            >
-              <ModalityIcon modality={modality} />
-              <span>{modality}</span>
-            </div>
-          ))
-        )}
-      </div>
+    <Tooltip delayDuration={150}>
+      <TooltipTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label={label}
+          className={cn(
+            'h-6 w-6 rounded-sm',
+            modality == null
+              ? 'text-muted-foreground'
+              : direction === 'Input'
+                ? 'text-success hover:bg-success/10 hover:text-success'
+                : 'text-primary hover:text-primary',
+          )}
+        >
+          {modality === null ? (
+            <CircleHelp aria-hidden="true" className="h-3.5 w-3.5" />
+          ) : modality === undefined ? (
+            <Minus aria-hidden="true" className="h-3.5 w-3.5" />
+          ) : (
+            <ModalityIcon modality={modality} />
+          )}
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent>{tooltip}</TooltipContent>
+    </Tooltip>
+  );
+}
+
+function ModalityGroup({ direction, modalities }: { direction: 'Input' | 'Output'; modalities: string[] | null }) {
+  const markers: Array<string | null | undefined> = modalities === null ? [null] : modalities.length === 0 ? [undefined] : modalities;
+  return (
+    <div aria-label={`${direction} modalities`} className="flex items-center gap-0.5">
+      {markers.map((modality) => (
+        <ModalityMarker key={modality === null ? 'unknown' : (modality ?? 'none')} direction={direction} modality={modality} />
+      ))}
     </div>
   );
 }
 
-function ModelMetadata({
-  capabilities,
+function ModalityFlow({
   input_modalities: inputModalities,
   output_modalities: outputModalities,
-}: Pick<ModelOut, 'capabilities' | 'input_modalities' | 'output_modalities'>) {
+}: Pick<ModelOut, 'input_modalities' | 'output_modalities'>) {
+  return (
+    <div aria-label="Input to output modalities" className="flex items-center gap-1 pl-0.5">
+      <ModalityGroup direction="Input" modalities={inputModalities} />
+      <ArrowRight aria-hidden="true" className="h-3.5 w-3.5 shrink-0 text-muted-foreground/70" />
+      <ModalityGroup direction="Output" modalities={outputModalities} />
+    </div>
+  );
+}
+
+function ModelMetadata({ capabilities }: Pick<ModelOut, 'capabilities'>) {
   return (
     <Tooltip delayDuration={150}>
       <TooltipTrigger asChild>
@@ -102,22 +135,13 @@ function ModelMetadata({
         </Button>
       </TooltipTrigger>
       <TooltipContent side="bottom" className="max-w-96 border border-border bg-card p-3 text-foreground shadow-xl">
-        <div className="space-y-3">
-          <div>
-            <div className="mb-1 font-mono text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Capabilities</div>
-            <div className="flex flex-wrap gap-1.5">
-              {capabilities.map((capability) => (
-                <Badge key={capability} variant={capabilityVariant(capability)} className="rounded-full px-2 py-0.5 normal-case tracking-normal">
-                  {capability}
-                </Badge>
-              ))}
-            </div>
-          </div>
-          <div className="space-y-1.5 border-t border-border pt-3">
-            <div className="font-mono text-[10px] font-bold uppercase tracking-wider text-muted-foreground">I/O modalities</div>
-            <ModalityGroup label="Input" modalities={inputModalities} />
-            <ModalityGroup label="Output" modalities={outputModalities} />
-          </div>
+        <div className="mb-1 font-mono text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Capabilities</div>
+        <div className="flex flex-wrap gap-1.5">
+          {capabilities.map((capability) => (
+            <Badge key={capability} variant={capabilityVariant(capability)} className="rounded-full px-2 py-0.5 normal-case tracking-normal">
+              {capability}
+            </Badge>
+          ))}
         </div>
       </TooltipContent>
     </Tooltip>
@@ -249,11 +273,14 @@ export default function Models() {
       sortDirection: sortDirectionFor('name'),
       cellClassName: 'min-w-48',
       cell: ({ model }) => (
-        <div className="flex items-center gap-1.5">
-          <Badge variant="outline" className="font-mono">
-            {model.name}
-          </Badge>
-          <ModelMetadata capabilities={model.capabilities} input_modalities={model.input_modalities} output_modalities={model.output_modalities} />
+        <div className="space-y-1.5">
+          <div className="flex items-center gap-1.5">
+            <Badge variant="outline" className="font-mono">
+              {model.name}
+            </Badge>
+            <ModelMetadata capabilities={model.capabilities} />
+          </div>
+          <ModalityFlow input_modalities={model.input_modalities} output_modalities={model.output_modalities} />
         </div>
       ),
     },
