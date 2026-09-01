@@ -5,11 +5,11 @@ from OpenAI's schema. Providers whose docs enumerate no parameters at all are ha
 providers.yml by pointing at the canonical schema instead, not by inventing one here.
 """
 
-import json
-import sys
-from pathlib import Path
+from __future__ import annotations
 
-from canonical import write_catalog, write_schema
+import sys
+
+from canonical import write_schema
 from paths import TAXONOMY
 from sources import registry
 

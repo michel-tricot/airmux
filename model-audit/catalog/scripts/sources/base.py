@@ -38,6 +38,13 @@ def per_mtok(value: Any) -> float | None:
         return None
 
 
+def required_openapi(definition: ProviderDefinition) -> str:
+    if definition.openapi is None:
+        message = f"{definition.id} has no OpenAPI source"
+        raise ValueError(message)
+    return definition.openapi
+
+
 class ModelSource:
     """Base for a provider's model catalog.
 

@@ -34,10 +34,12 @@ Every callable chat model starts at text input and text output. Models repeated 
 official Vision table add image input without losing their text input.
 """
 
+from __future__ import annotations
+
 from model_audit.catalog_ops import ProviderDefinition, SchemaDefinition
 from model_audit.provider_docs import apply_documentation, fetch_text, parse_together_models
 
-from .base import ModelSource
+from .base import ModelSource, required_openapi
 
 
 class Together(ModelSource):
@@ -60,7 +62,7 @@ class Together(ModelSource):
         icon_mono="together",
         icon_color="together-color",
     )
-    schemas = (SchemaDefinition(surface="oai", url=definition.openapi, path_pattern=r"chat/completions$"),)
+    schemas = (SchemaDefinition(surface="oai", url=required_openapi(definition), path_pattern=r"chat/completions$"),)
 
     def items(self, payload):
         # the payload is a bare list, not the usual {"data": [...]}

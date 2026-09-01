@@ -1,7 +1,8 @@
 """Render the field support matrix to a self-contained HTML report."""
 
+from __future__ import annotations
+
 import json
-from pathlib import Path
 
 from paths import TAXONOMY
 

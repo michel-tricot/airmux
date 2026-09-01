@@ -16,9 +16,9 @@ import sys
 from importlib.util import find_spec
 from pathlib import Path
 
+import yaml
 from paths import TAXONOMY
 
-import yaml
 from contract import MODALITIES
 
 HAS_JSONSCHEMA = find_spec("jsonschema") is not None
@@ -226,9 +226,10 @@ def check_models(all_entries: list[dict]) -> None:
                 if not isinstance(modalities, list) or not modalities or any(not isinstance(modality, str) for modality in modalities):
                     fail("models", f"{provider}/{mid}.{field} must be a non-empty list of canonical modalities")
                     continue
-                if unknown_modalities := sorted(set(modalities) - set(MODALITIES)):
+                typed_modalities = [modality for modality in modalities if isinstance(modality, str)]
+                if unknown_modalities := sorted(set(typed_modalities) - set(MODALITIES)):
                     fail("models", f"{provider}/{mid}.{field} uses unknown modalities {unknown_modalities}")
-                if len(modalities) != len(set(modalities)):
+                if len(typed_modalities) != len(set(typed_modalities)):
                     fail("models", f"{provider}/{mid}.{field} repeats a modality")
             context_source = m.get("context_source")
             output_source = m.get("max_output_source")

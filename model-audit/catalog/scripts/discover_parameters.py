@@ -4,9 +4,10 @@ import json
 import sys
 
 from canonical import write_catalog
-from model_audit.catalog_ops import load_provider_entries
 from parameter_support import apply_discovery_evidence, discovery_evidence
 from paths import TAXONOMY
+
+from model_audit.catalog_ops import load_provider_entries
 
 
 def main() -> int:

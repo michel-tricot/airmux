@@ -24,6 +24,8 @@ with the SPA shell for every path, so openapi.json, api.json and static/openapi.
 doc_schemas.py instead.
 """
 
+from __future__ import annotations
+
 from model_audit.catalog_ops import ProviderDefinition
 from model_audit.provider_docs import apply_documentation, fetch_text, parse_deepseek_pricing
 

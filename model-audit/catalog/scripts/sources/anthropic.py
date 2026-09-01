@@ -13,6 +13,8 @@ official llms.txt index and extracts each current model page, including cache-re
 cache-write tiers. models.dev and OpenRouter fill only facts still absent after that pass.
 """
 
+from __future__ import annotations
+
 import re
 
 from model_audit.catalog_ops import ProviderDefinition, SchemaDefinition
@@ -56,7 +58,10 @@ class Anthropic(ModelSource):
 
     def normalize(self, item):
         caps = item.get("capabilities") or {}
-        supported = lambda name: bool((caps.get(name) or {}).get("supported"))
+
+        def supported(name):
+            return bool((caps.get(name) or {}).get("supported"))
+
         inputs = ["text"]
         if supported("image_input"):
             inputs.append("image")

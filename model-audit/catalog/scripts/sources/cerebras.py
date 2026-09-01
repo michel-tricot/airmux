@@ -24,9 +24,11 @@ question the catalog answers, and a router wants to see the flag rather than hav
 disappear.
 """
 
+from __future__ import annotations
+
 from model_audit.catalog_ops import ProviderDefinition, SchemaDefinition
 
-from .base import ModelSource
+from .base import ModelSource, required_openapi
 
 
 class Cerebras(ModelSource):
@@ -49,7 +51,7 @@ class Cerebras(ModelSource):
         icon_mono="cerebras",
         icon_color="cerebras-color",
     )
-    schemas = (SchemaDefinition(surface="oai", url=definition.openapi, path_pattern=r"chat/completions$"),)
+    schemas = (SchemaDefinition(surface="oai", url=required_openapi(definition), path_pattern=r"chat/completions$"),)
 
     def normalize(self, item):
         limits = item.get("limits") or {}

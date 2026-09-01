@@ -31,9 +31,11 @@ chat-completions surface is declared as ingress, matching how openai is recorded
 serves /v1/responses too and the catalog does not claim it.
 """
 
+from __future__ import annotations
+
 from model_audit.catalog_ops import ProviderDefinition, SchemaDefinition
 
-from .base import ModelSource
+from .base import ModelSource, required_openapi
 
 # the spec quotes every token price in USD cents per 100 million tokens
 CENTS_PER_HUNDRED_MILLION = 10_000
@@ -58,8 +60,8 @@ class XAI(ModelSource):
         icon_color="xai",
     )
     schemas = (
-        SchemaDefinition(surface="oai", url=definition.openapi, path_pattern=r"^/v1/chat/completions$"),
-        SchemaDefinition(surface="anthropic", url=definition.openapi, path_pattern=r"^/v1/messages$"),
+        SchemaDefinition(surface="oai", url=required_openapi(definition), path_pattern=r"^/v1/chat/completions$"),
+        SchemaDefinition(surface="anthropic", url=required_openapi(definition), path_pattern=r"^/v1/messages$"),
     )
 
     def fetch(self, key):
@@ -71,7 +73,9 @@ class XAI(ModelSource):
         return payload
 
     def normalize(self, item):
-        scale = lambda v: round(v / CENTS_PER_HUNDRED_MILLION, 4) if isinstance(v, (int, float)) else None
+        def scale(value):
+            return round(value / CENTS_PER_HUNDRED_MILLION, 4) if isinstance(value, (int, float)) else None
+
         prompt = scale(item.get("prompt_text_token_price"))
         cached = scale(item.get("cached_prompt_text_token_price"))
 

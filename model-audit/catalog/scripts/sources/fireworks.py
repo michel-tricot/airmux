@@ -31,6 +31,8 @@ with OpenAI's shutdown_date it is one of only two machine-readable deprecation s
 the whole catalog.
 """
 
+from __future__ import annotations
+
 from model_audit.catalog_ops import ProviderDefinition
 from model_audit.provider_docs import apply_documentation, fetch_text, fetch_texts, parse_fireworks_model, parse_fireworks_pricing
 
