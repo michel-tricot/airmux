@@ -114,11 +114,13 @@ function ModalityGroup({ direction, modalities }: { direction: 'Input' | 'Output
 }
 
 function ModalityFlow({
+  capabilities,
   input_modalities: inputModalities,
   output_modalities: outputModalities,
-}: Pick<ModelOut, 'input_modalities' | 'output_modalities'>) {
+}: Pick<ModelOut, 'capabilities' | 'input_modalities' | 'output_modalities'>) {
   return (
     <div aria-label="Input to output modalities" className="flex items-center gap-1 pl-0.5">
+      <ModelMetadata capabilities={capabilities} />
       <ModalityGroup direction="Input" modalities={inputModalities} />
       <ArrowRight aria-hidden="true" className="h-3.5 w-3.5 shrink-0 text-muted-foreground/70" />
       <ModalityGroup direction="Output" modalities={outputModalities} />
@@ -274,13 +276,10 @@ export default function Models() {
       cellClassName: 'min-w-48',
       cell: ({ model }) => (
         <div className="space-y-1.5">
-          <div className="flex items-center gap-1.5">
-            <Badge variant="outline" className="font-mono">
-              {model.name}
-            </Badge>
-            <ModelMetadata capabilities={model.capabilities} />
-          </div>
-          <ModalityFlow input_modalities={model.input_modalities} output_modalities={model.output_modalities} />
+          <Badge variant="outline" className="font-mono">
+            {model.name}
+          </Badge>
+          <ModalityFlow capabilities={model.capabilities} input_modalities={model.input_modalities} output_modalities={model.output_modalities} />
         </div>
       ),
     },

@@ -192,6 +192,7 @@ describe('organization models', () => {
 
     const gpt = (await screen.findByText('openai/gpt-5')).closest('tr');
     const modalityFlow = within(gpt!).getByLabelText('Input to output modalities');
+    const metadata = within(modalityFlow).getByRole('button', { name: 'Show model metadata' });
     const inputText = within(modalityFlow).getByRole('button', { name: 'Input modality: text' });
     const inputImage = within(modalityFlow).getByRole('button', { name: 'Input modality: image' });
     const outputText = within(modalityFlow).getByRole('button', { name: 'Output modality: text' });
@@ -199,6 +200,7 @@ describe('organization models', () => {
     expect(inputImage.querySelector('svg')).toBeInTheDocument();
     expect(outputText.querySelector('svg')).toBeInTheDocument();
     expect(modalityFlow.querySelector('.lucide-arrow-right')).toBeInTheDocument();
+    expect(modalityFlow.firstElementChild).toBe(metadata);
 
     await user.hover(inputImage);
     expect(await screen.findByRole('tooltip')).toHaveTextContent('Input: Image');
