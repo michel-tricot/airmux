@@ -527,6 +527,10 @@ export interface ModelIn {
   context_window?: number;
   /** Max completion tokens; requests are clamped to it */
   max_output_tokens?: number | null;
+  /** Accepted input modalities; null means unknown */
+  input_modalities?: ('text' | 'image' | 'audio' | 'video' | 'pdf')[] | null;
+  /** Produced output modalities; null means unknown */
+  output_modalities?: ('text' | 'image' | 'audio' | 'video' | 'pdf')[] | null;
   /**
      * Capabilities supported by the model
      * @maxItems 128
@@ -550,6 +554,8 @@ export interface ModelOut {
   cache_write_price_per_mtok: number;
   context_window: number;
   max_output_tokens: number | null;
+  input_modalities: ('text' | 'image' | 'audio' | 'video' | 'pdf')[] | null;
+  output_modalities: ('text' | 'image' | 'audio' | 'video' | 'pdf')[] | null;
   capabilities: string[];
   parameter_support: ModelOutParameterSupport;
   created_at: string;

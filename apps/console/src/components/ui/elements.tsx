@@ -1,5 +1,5 @@
 import React, { forwardRef } from 'react';
-import { ChevronDown, ChevronUp } from 'lucide-react';
+import { Check, ChevronDown, ChevronUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import {
@@ -23,6 +23,14 @@ import {
   CardHeader as CardHeaderPrimitive,
 } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuItemIndicator,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Input as InputPrimitive } from '@/components/ui/input';
 import { Label as LabelPrimitive } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectSeparator, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -279,6 +287,81 @@ export const Dropdown = ({
       )}
     </SelectContent>
   </Select>
+);
+
+type CheckboxDropdownOption = { value: string; label: React.ReactNode };
+
+export const CheckboxDropdown = ({
+  label,
+  allLabel,
+  values,
+  onValuesChange,
+  options,
+  disabled,
+  className,
+  'aria-label': ariaLabel,
+}: {
+  label: string;
+  allLabel: string;
+  values: readonly string[];
+  onValuesChange: (values: string[]) => void;
+  options: CheckboxDropdownOption[];
+  disabled?: boolean;
+  className?: string;
+  'aria-label': string;
+}) => (
+  <DropdownMenu>
+    <DropdownMenuTrigger asChild>
+      <Button
+        variant="outline"
+        size="sm"
+        aria-label={ariaLabel}
+        disabled={disabled}
+        className={cn('h-9 w-full justify-between gap-2 px-3 text-[13px] normal-case tracking-normal', className)}
+      >
+        <span className="truncate">{values.length === 0 ? allLabel : `${label} (${values.length})`}</span>
+        <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+      </Button>
+    </DropdownMenuTrigger>
+    <DropdownMenuContent
+      align="start"
+      className="z-50 max-h-[var(--radix-dropdown-menu-content-available-height)] min-w-[var(--radix-dropdown-menu-trigger-width)] overflow-y-auto rounded border border-border bg-card p-1 text-card-foreground shadow-xl shadow-black/50"
+    >
+      <DropdownMenuCheckboxItem
+        checked={values.length === 0}
+        onCheckedChange={() => onValuesChange([])}
+        onSelect={(event) => event.preventDefault()}
+        className="relative flex cursor-default select-none items-center rounded py-2 pl-8 pr-3 text-[13px] font-mono outline-none transition-colors data-[highlighted]:bg-primary/10 data-[highlighted]:text-primary"
+      >
+        <span className="absolute left-2 flex h-4 w-4 items-center justify-center">
+          <DropdownMenuItemIndicator>
+            <Check className="h-3.5 w-3.5" />
+          </DropdownMenuItemIndicator>
+        </span>
+        {allLabel}
+      </DropdownMenuCheckboxItem>
+      <DropdownMenuSeparator className="my-1 h-px bg-border" />
+      {options.map((option) => {
+        const checked = values.includes(option.value);
+        return (
+          <DropdownMenuCheckboxItem
+            key={option.value}
+            checked={checked}
+            onCheckedChange={(next) => onValuesChange(next ? [...values, option.value] : values.filter((value) => value !== option.value))}
+            onSelect={(event) => event.preventDefault()}
+            className="relative flex cursor-default select-none items-center rounded py-2 pl-8 pr-3 text-[13px] font-mono outline-none transition-colors data-[highlighted]:bg-primary/10 data-[highlighted]:text-primary data-[state=checked]:text-primary"
+          >
+            <span className="absolute left-2 flex h-4 w-4 items-center justify-center">
+              <DropdownMenuItemIndicator>
+                <Check className="h-3.5 w-3.5" />
+              </DropdownMenuItemIndicator>
+            </span>
+            {option.label}
+          </DropdownMenuCheckboxItem>
+        );
+      })}
+    </DropdownMenuContent>
+  </DropdownMenu>
 );
 
 export const Badge = ({

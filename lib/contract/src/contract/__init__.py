@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 from contract.bundle import (
+    MODALITIES,
     BundleManifest,
     BundleManifestEntry,
     BundleV1,
     Catalog,
     CredentialEntry,
     KeyEntry,
+    Modality,
     ModelEntry,
     ParameterSupport,
     ProviderEntry,
@@ -49,6 +51,7 @@ from contract.signing import (
 
 __all__ = [
     "INFERENCE_TOKEN_PREFIX",
+    "MODALITIES",
     "PLAYGROUND_COOKIE",
     "BundleManifest",
     "BundleManifestEntry",
@@ -67,6 +70,7 @@ __all__ = [
     "KeyEntry",
     "MemorySecretStore",
     "MemoryStoreConfig",
+    "Modality",
     "ModelEntry",
     "ParameterSupport",
     "ProviderEntry",

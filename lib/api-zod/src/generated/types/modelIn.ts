@@ -61,6 +61,10 @@ export interface ModelIn {
   context_window?: number;
   /** Max completion tokens; requests are clamped to it */
   max_output_tokens?: number | null;
+  /** Accepted input modalities; null means unknown */
+  input_modalities?: ('text' | 'image' | 'audio' | 'video' | 'pdf')[] | null;
+  /** Produced output modalities; null means unknown */
+  output_modalities?: ('text' | 'image' | 'audio' | 'video' | 'pdf')[] | null;
   /**
      * Capabilities supported by the model
      * @maxItems 128

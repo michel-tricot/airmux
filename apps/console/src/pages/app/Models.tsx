@@ -1,11 +1,26 @@
 import { useState } from 'react';
-import { ArrowDown, ArrowUp, ArrowUpDown, Boxes, Building2, Wrench } from 'lucide-react';
+import {
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
+  AudioLines,
+  Boxes,
+  Building2,
+  CircleHelp,
+  FileText,
+  Image as ImageIcon,
+  Type as TextIcon,
+  Video,
+  Wrench,
+  X,
+} from 'lucide-react';
 import { type ModelOut, type ProviderOut, useGetOrgTaxonomy } from '@workspace/api-client-react';
 import { ProviderIcon } from '@/components/ProviderIcon';
 import { DataTable, type Column } from '@/components/shared/data-table';
 import { PageHeader, PageShell } from '@/components/shared/page-shell';
 import { SearchField } from '@/components/shared/search-field';
-import { Badge, Button, Card, Dropdown } from '@/components/ui/elements';
+import { Badge, Button, Card, CheckboxDropdown } from '@/components/ui/elements';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useRequiredOrgId } from '@/lib/session';
 import { cn } from '@/lib/utils';
 
@@ -34,13 +49,79 @@ const priceFormatter = new Intl.NumberFormat('en-US', {
   maximumFractionDigits: 4,
 });
 const nameCollator = new Intl.Collator('en-US', { numeric: true, sensitivity: 'base' });
-const ALL_FILTERS = 'all';
-
 function capabilityVariant(capability: string): 'default' | 'warning' | 'success' | 'secondary' {
   if (capability === 'streaming') return 'default';
   if (capability === 'tools') return 'warning';
-  if (capability === 'vision') return 'success';
   return 'secondary';
+}
+
+function ModalityIcon({ modality }: { modality: string }) {
+  const Icon =
+    modality === 'image' ? ImageIcon : modality === 'audio' ? AudioLines : modality === 'video' ? Video : modality === 'pdf' ? FileText : TextIcon;
+  return <Icon aria-hidden="true" className="h-3.5 w-3.5" />;
+}
+
+function ModalityGroup({ label, modalities }: { label: 'Input' | 'Output'; modalities: string[] | null }) {
+  return (
+    <div aria-label={`${label} modalities`} className="flex items-start gap-2">
+      <span className="w-11 shrink-0 font-mono text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{label}</span>
+      <div className="flex flex-wrap gap-x-3 gap-y-1.5">
+        {modalities === null ? (
+          <span className="text-xs text-muted-foreground">Unknown</span>
+        ) : modalities.length === 0 ? (
+          <span className="text-xs text-muted-foreground">None</span>
+        ) : (
+          modalities.map((modality) => (
+            <div
+              key={modality}
+              className={cn(
+                'flex items-center gap-1.5 border-l-2 pl-2 text-xs font-medium capitalize',
+                label === 'Input' ? 'border-success/40 text-success' : 'border-primary/40 text-primary',
+              )}
+            >
+              <ModalityIcon modality={modality} />
+              <span>{modality}</span>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ModelMetadata({
+  capabilities,
+  input_modalities: inputModalities,
+  output_modalities: outputModalities,
+}: Pick<ModelOut, 'capabilities' | 'input_modalities' | 'output_modalities'>) {
+  return (
+    <Tooltip delayDuration={150}>
+      <TooltipTrigger asChild>
+        <Button variant="ghost" size="icon" aria-label="Show model metadata" className="h-6 w-6 text-muted-foreground hover:text-primary">
+          <CircleHelp aria-hidden="true" className="h-4 w-4" />
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent side="bottom" className="max-w-96 border border-border bg-card p-3 text-foreground shadow-xl">
+        <div className="space-y-3">
+          <div>
+            <div className="mb-1 font-mono text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Capabilities</div>
+            <div className="flex flex-wrap gap-1.5">
+              {capabilities.map((capability) => (
+                <Badge key={capability} variant={capabilityVariant(capability)} className="rounded-full px-2 py-0.5 normal-case tracking-normal">
+                  {capability}
+                </Badge>
+              ))}
+            </div>
+          </div>
+          <div className="space-y-1.5 border-t border-border pt-3">
+            <div className="font-mono text-[10px] font-bold uppercase tracking-wider text-muted-foreground">I/O modalities</div>
+            <ModalityGroup label="Input" modalities={inputModalities} />
+            <ModalityGroup label="Output" modalities={outputModalities} />
+          </div>
+        </div>
+      </TooltipContent>
+    </Tooltip>
+  );
 }
 
 function modelSortValue(catalogModel: CatalogModel, key: SortKey): string | number | null {
@@ -59,6 +140,12 @@ function compareModels(left: CatalogModel, right: CatalogModel, key: SortKey, di
       ? leftValue - rightValue
       : nameCollator.compare(String(leftValue), String(rightValue));
   return direction === 'ascending' ? comparison : -comparison;
+}
+
+function supportsModality(model: ModelOut, value: string): boolean {
+  const [direction, modality] = value.split(':');
+  const modalities = direction === 'input' ? model.input_modalities : model.output_modalities;
+  return modalities?.some((candidate) => candidate === modality) ?? false;
 }
 
 function SortableHeader({
@@ -98,8 +185,9 @@ export default function Models() {
   const orgId = useRequiredOrgId();
   const taxonomy = useGetOrgTaxonomy(orgId);
   const [filter, setFilter] = useState('');
-  const [providerFilter, setProviderFilter] = useState(ALL_FILTERS);
-  const [capabilityFilter, setCapabilityFilter] = useState(ALL_FILTERS);
+  const [providerFilters, setProviderFilters] = useState<string[]>([]);
+  const [capabilityFilters, setCapabilityFilters] = useState<string[]>([]);
+  const [modalityFilters, setModalityFilters] = useState<string[]>([]);
   const [sortKey, setSortKey] = useState<SortKey>('name');
   const [sortDirection, setSortDirection] = useState<SortDirection>('ascending');
   const providersById = new Map(taxonomy.data?.providers.map((provider) => [provider.id, provider]));
@@ -107,22 +195,31 @@ export default function Models() {
   const providerCount = taxonomy.data?.providers.length ?? 0;
   const toolCapableModels = catalog?.filter(({ model }) => model.capabilities.includes('tools')).length ?? 0;
   const normalizedFilter = filter.trim().toLocaleLowerCase();
-  const providerOptions = [
-    { value: ALL_FILTERS, label: 'All providers' },
-    ...[...(taxonomy.data?.providers ?? [])]
-      .sort((left, right) => nameCollator.compare(left.name, right.name))
-      .map((provider) => ({ value: provider.id, label: provider.name })),
-  ];
-  const capabilityOptions = [
-    { value: ALL_FILTERS, label: 'All capabilities' },
-    ...[...new Set(taxonomy.data?.models.flatMap((model) => model.capabilities) ?? [])]
-      .sort(nameCollator.compare)
-      .map((capability) => ({ value: capability, label: capability })),
-  ];
+  const hasActiveFilters = normalizedFilter.length > 0 || providerFilters.length > 0 || capabilityFilters.length > 0 || modalityFilters.length > 0;
+  const providerOptions = [...(taxonomy.data?.providers ?? [])]
+    .sort((left, right) => nameCollator.compare(left.name, right.name))
+    .map((provider) => ({ value: provider.id, label: provider.name }));
+  const capabilityOptions = [...new Set(taxonomy.data?.models.flatMap((model) => model.capabilities) ?? [])]
+    .sort(nameCollator.compare)
+    .map((capability) => ({ value: capability, label: capability }));
+  const modalityOptions = [
+    ...new Set(
+      taxonomy.data?.models.flatMap((model) => [
+        ...(model.input_modalities ?? []).map((modality) => `input:${modality}`),
+        ...(model.output_modalities ?? []).map((modality) => `output:${modality}`),
+      ]) ?? [],
+    ),
+  ]
+    .sort(nameCollator.compare)
+    .map((value) => {
+      const [direction, modality] = value.split(':');
+      return { value, label: `${direction === 'input' ? 'Input' : 'Output'}: ${modality}` };
+    });
   const filteredModels = catalog
     ?.filter(({ model }) => model.name.toLocaleLowerCase().includes(normalizedFilter))
-    .filter(({ model }) => providerFilter === ALL_FILTERS || model.provider_id === providerFilter)
-    .filter(({ model }) => capabilityFilter === ALL_FILTERS || model.capabilities.includes(capabilityFilter))
+    .filter(({ model }) => providerFilters.length === 0 || providerFilters.includes(model.provider_id))
+    .filter(({ model }) => capabilityFilters.every((capability) => model.capabilities.includes(capability)))
+    .filter(({ model }) => modalityFilters.every((modality) => supportsModality(model, modality)))
     .sort((left, right) => compareModels(left, right, sortKey, sortDirection));
 
   const sort = (key: SortKey) => {
@@ -134,6 +231,13 @@ export default function Models() {
     setSortDirection('ascending');
   };
 
+  const clearFilters = () => {
+    setFilter('');
+    setProviderFilters([]);
+    setCapabilityFilters([]);
+    setModalityFilters([]);
+  };
+
   const header = (label: string, key: SortKey, align?: 'left' | 'right') => (
     <SortableHeader label={label} sortKey={key} activeKey={sortKey} direction={sortDirection} align={align} onSort={sort} />
   );
@@ -143,20 +247,13 @@ export default function Models() {
       key: 'model',
       header: header('Model', 'name'),
       sortDirection: sortDirectionFor('name'),
+      cellClassName: 'min-w-48',
       cell: ({ model }) => (
-        <div className="min-w-48">
+        <div className="flex items-center gap-1.5">
           <Badge variant="outline" className="font-mono">
             {model.name}
           </Badge>
-          {model.capabilities.length > 0 && (
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {model.capabilities.map((capability) => (
-                <Badge key={capability} variant={capabilityVariant(capability)} className="rounded-full px-2 py-0.5 normal-case tracking-normal">
-                  {capability}
-                </Badge>
-              ))}
-            </div>
-          )}
+          <ModelMetadata capabilities={model.capabilities} input_modalities={model.input_modalities} output_modalities={model.output_modalities} />
         </div>
       ),
     },
@@ -279,22 +376,40 @@ export default function Models() {
               placeholder="Search models..."
               className="w-full sm:max-w-sm sm:flex-1"
             />
-            <Dropdown
+            <CheckboxDropdown
               aria-label="Filter by provider"
-              value={providerFilter}
-              onValueChange={setProviderFilter}
+              label="Providers"
+              allLabel="All providers"
+              values={providerFilters}
+              onValuesChange={setProviderFilters}
               options={providerOptions}
               disabled={!catalog?.length}
               className="w-full sm:w-48"
             />
-            <Dropdown
+            <CheckboxDropdown
               aria-label="Filter by capability"
-              value={capabilityFilter}
-              onValueChange={setCapabilityFilter}
+              label="Capabilities"
+              allLabel="All capabilities"
+              values={capabilityFilters}
+              onValuesChange={setCapabilityFilters}
               options={capabilityOptions}
               disabled={!catalog?.length}
               className="w-full sm:w-52"
             />
+            <CheckboxDropdown
+              aria-label="Filter by modality"
+              label="Modalities"
+              allLabel="All modalities"
+              values={modalityFilters}
+              onValuesChange={setModalityFilters}
+              options={modalityOptions}
+              disabled={!catalog?.length}
+              className="w-full sm:w-48"
+            />
+            <Button variant="ghost" size="sm" onClick={clearFilters} disabled={!hasActiveFilters} className="h-9 w-full gap-1.5 px-3 sm:w-auto">
+              <X className="h-3.5 w-3.5" />
+              Clear filters
+            </Button>
           </div>
           {catalog && (
             <Badge className="shrink-0 normal-case tracking-normal">

@@ -5252,6 +5252,36 @@ components:
           - type: 'null'
           title: Max Output Tokens
           description: Max completion tokens; requests are clamped to it
+        input_modalities:
+          anyOf:
+          - items:
+              type: string
+              enum:
+              - text
+              - image
+              - audio
+              - video
+              - pdf
+            type: array
+            maxItems: 16
+          - type: 'null'
+          title: Input Modalities
+          description: Accepted input modalities; null means unknown
+        output_modalities:
+          anyOf:
+          - items:
+              type: string
+              enum:
+              - text
+              - image
+              - audio
+              - video
+              - pdf
+            type: array
+            maxItems: 16
+          - type: 'null'
+          title: Output Modalities
+          description: Produced output modalities; null means unknown
         capabilities:
           items:
             type: string
@@ -5316,6 +5346,32 @@ components:
           - type: integer
           - type: 'null'
           title: Max Output Tokens
+        input_modalities:
+          anyOf:
+          - items:
+              type: string
+              enum:
+              - text
+              - image
+              - audio
+              - video
+              - pdf
+            type: array
+          - type: 'null'
+          title: Input Modalities
+        output_modalities:
+          anyOf:
+          - items:
+              type: string
+              enum:
+              - text
+              - image
+              - audio
+              - video
+              - pdf
+            type: array
+          - type: 'null'
+          title: Output Modalities
         capabilities:
           items:
             type: string
@@ -5356,6 +5412,8 @@ components:
       - cache_write_price_per_mtok
       - context_window
       - max_output_tokens
+      - input_modalities
+      - output_modalities
       - capabilities
       - parameter_support
       - created_at

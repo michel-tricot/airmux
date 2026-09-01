@@ -24,6 +24,8 @@ export interface ModelOut {
   cache_write_price_per_mtok: number;
   context_window: number;
   max_output_tokens: number | null;
+  input_modalities: ('text' | 'image' | 'audio' | 'video' | 'pdf')[] | null;
+  output_modalities: ('text' | 'image' | 'audio' | 'video' | 'pdf')[] | null;
   capabilities: string[];
   parameter_support: ModelOutParameterSupport;
   created_at: Date;

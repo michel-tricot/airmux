@@ -42,6 +42,8 @@ models:
     cache_read_price_per_mtok: 0.1
     cache_write_price_per_mtok: 1.25
     context_window: 128000
+    input_modalities: [text]
+    output_modalities: [text]
     capabilities: [streaming]
 """
 

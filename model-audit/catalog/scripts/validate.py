@@ -19,6 +19,7 @@ from pathlib import Path
 from paths import TAXONOMY
 
 import yaml
+from contract import MODALITIES
 
 HAS_JSONSCHEMA = find_spec("jsonschema") is not None
 
@@ -220,6 +221,17 @@ def check_models(all_entries: list[dict]) -> None:
             seen.add(mid)
             if (kind := classify(mid, m)) != "text":
                 fail("models", f"{provider}/{mid} classifies as {kind}; the catalog is text-only")
+            for field in ("input_modalities", "output_modalities"):
+                modalities = m.get(field)
+                if modalities is None:
+                    continue
+                if not isinstance(modalities, list) or any(not isinstance(modality, str) for modality in modalities):
+                    fail("models", f"{provider}/{mid}.{field} must be a list of canonical modalities or null")
+                    continue
+                if unknown_modalities := sorted(set(modalities) - set(MODALITIES)):
+                    fail("models", f"{provider}/{mid}.{field} uses unknown modalities {unknown_modalities}")
+                if len(modalities) != len(set(modalities)):
+                    fail("models", f"{provider}/{mid}.{field} repeats a modality")
             context_source = m.get("context_source")
             output_source = m.get("max_output_source")
             if not known_source(context_source, VALUE_SOURCE):

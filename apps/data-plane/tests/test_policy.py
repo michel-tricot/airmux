@@ -86,3 +86,14 @@ def test_request_is_denied_before_egress_when_the_model_lacks_a_required_capabil
     )
 
     assert evaluate(request, KEY, snap(bundle)) == Deny(reason="unsupported_feature: tools", status=400)
+
+
+def test_request_is_denied_before_egress_when_the_model_lacks_an_input_modality():
+    model = MODEL.model_copy(update={"input_modalities": ["text"]})
+    bundle = make_bundle(catalog=Catalog(providers=[PROVIDER], models=[model], credentials=[CREDENTIAL]), org=ORG_A)
+    request = CanonicalRequest(
+        model=model.model_id,
+        messages=[CanonicalMessage(role="user", content=[ImagePart(url="https://example.com/image.png")])],
+    )
+
+    assert evaluate(request, KEY, snap(bundle)) == Deny(reason="unsupported_input_modality: image", status=400)

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Literal
+from typing import Literal, cast, get_args
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl
@@ -9,6 +9,8 @@ from pydantic import BaseModel, ConfigDict, Field, HttpUrl
 from contract.secrets import SecretRef
 
 ParameterSupport = Literal["supported", "unsupported"]
+Modality = Literal["text", "image", "audio", "video", "pdf"]
+MODALITIES = cast("tuple[Modality, ...]", get_args(Modality))
 
 
 class KeyEntry(BaseModel):
@@ -54,7 +56,9 @@ class ModelEntry(BaseModel):
     cache_write_price_per_mtok: float  # USD per million cache-write input tokens
     context_window: int
     max_output_tokens: int | None = None  # completion cap; requests are clamped to it, distinct from context_window
-    capabilities: list[str]  # "streaming", "tools", "vision"
+    input_modalities: list[Modality] | None
+    output_modalities: list[Modality] | None
+    capabilities: list[str]
     parameter_support: dict[str, ParameterSupport] = Field(default_factory=dict)
     egress_kind: str | None = None
 

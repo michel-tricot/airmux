@@ -126,6 +126,8 @@ async def compile_bundle(org_id: UUID, bundle_id: UUID, now: datetime) -> Bundle
                     cache_write_price_per_mtok=r.cache_write_price_per_mtok,
                     context_window=r.context_window,
                     max_output_tokens=r.max_output_tokens,
+                    input_modalities=r.input_modalities,
+                    output_modalities=r.output_modalities,
                     capabilities=r.capabilities,
                     parameter_support=r.parameter_support,
                 )
