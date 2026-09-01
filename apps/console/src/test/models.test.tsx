@@ -101,7 +101,8 @@ describe('organization models', () => {
     const modelCell = within(claude!).getByText('anthropic/claude-sonnet-4-5').closest('td');
     expect(modelCell).not.toBeNull();
     expect(within(modelCell!).getByText('anthropic/claude-sonnet-4-5')).toHaveClass('border-border', 'font-mono');
-    expect(within(modelCell!).getByLabelText('Show model metadata')).toHaveClass('text-muted-foreground');
+    expect(within(modelCell!).getByText('anthropic/claude-sonnet-4-5')).toHaveAttribute('tabindex', '0');
+    expect(within(modelCell!).queryByRole('button', { name: 'Show model metadata' })).not.toBeInTheDocument();
     expect(within(modelCell!).queryByText('streaming')).not.toBeInTheDocument();
     expect(claude).toHaveTextContent('$3.00');
     expect(claude).toHaveTextContent('$15.00');
@@ -192,7 +193,6 @@ describe('organization models', () => {
 
     const gpt = (await screen.findByText('openai/gpt-5')).closest('tr');
     const modalityFlow = within(gpt!).getByLabelText('Input to output modalities');
-    const metadata = within(modalityFlow).getByRole('button', { name: 'Show model metadata' });
     const inputText = within(modalityFlow).getByRole('button', { name: 'Input modality: text' });
     const inputImage = within(modalityFlow).getByRole('button', { name: 'Input modality: image' });
     const outputText = within(modalityFlow).getByRole('button', { name: 'Output modality: text' });
@@ -200,22 +200,23 @@ describe('organization models', () => {
     expect(inputImage.querySelector('svg')).toBeInTheDocument();
     expect(outputText.querySelector('svg')).toBeInTheDocument();
     expect(modalityFlow.querySelector('.lucide-arrow-right')).toBeInTheDocument();
-    expect(modalityFlow.firstElementChild).toBe(metadata);
+    expect(within(modalityFlow).queryByRole('button', { name: 'Show model metadata' })).not.toBeInTheDocument();
 
     await user.hover(inputImage);
     expect(await screen.findByRole('tooltip')).toHaveTextContent('Input: Image');
   });
 
-  it('keeps capabilities in a discoverable metadata tooltip', async () => {
+  it('shows capabilities when the model name is hovered', async () => {
     const user = userEvent.setup();
     renderModels();
 
     const gpt = (await screen.findByText('openai/gpt-5')).closest('tr');
-    const metadata = within(gpt!).getByLabelText('Show model metadata');
-    expect(metadata.querySelector('svg')).toBeInTheDocument();
+    const modelName = within(gpt!).getByText('openai/gpt-5');
+    expect(modelName).toHaveAttribute('tabindex', '0');
+    expect(within(gpt!).queryByRole('button', { name: 'Show model metadata' })).not.toBeInTheDocument();
     expect(within(gpt!).queryByText('streaming')).not.toBeInTheDocument();
 
-    await user.hover(metadata);
+    await user.hover(modelName);
     const tooltip = await screen.findByRole('tooltip');
     for (const capability of ['streaming', 'tools', 'json_schema', 'parallel_tools', 'reasoning']) {
       expect(within(tooltip).getByText(capability)).toBeInTheDocument();

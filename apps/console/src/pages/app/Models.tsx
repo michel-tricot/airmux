@@ -114,13 +114,11 @@ function ModalityGroup({ direction, modalities }: { direction: 'Input' | 'Output
 }
 
 function ModalityFlow({
-  capabilities,
   input_modalities: inputModalities,
   output_modalities: outputModalities,
-}: Pick<ModelOut, 'capabilities' | 'input_modalities' | 'output_modalities'>) {
+}: Pick<ModelOut, 'input_modalities' | 'output_modalities'>) {
   return (
     <div aria-label="Input to output modalities" className="flex items-center gap-1 pl-0.5">
-      <ModelMetadata capabilities={capabilities} />
       <ModalityGroup direction="Input" modalities={inputModalities} />
       <ArrowRight aria-hidden="true" className="h-3.5 w-3.5 shrink-0 text-muted-foreground/70" />
       <ModalityGroup direction="Output" modalities={outputModalities} />
@@ -128,13 +126,13 @@ function ModalityFlow({
   );
 }
 
-function ModelMetadata({ capabilities }: Pick<ModelOut, 'capabilities'>) {
+function ModelName({ name, capabilities }: Pick<ModelOut, 'name' | 'capabilities'>) {
   return (
     <Tooltip delayDuration={150}>
       <TooltipTrigger asChild>
-        <Button variant="ghost" size="icon" aria-label="Show model metadata" className="h-6 w-6 text-muted-foreground hover:text-primary">
-          <CircleHelp aria-hidden="true" className="h-4 w-4" />
-        </Button>
+        <Badge variant="outline" tabIndex={0} className="font-mono">
+          {name}
+        </Badge>
       </TooltipTrigger>
       <TooltipContent side="bottom" className="max-w-96 border border-border bg-card p-3 text-foreground shadow-xl">
         <div className="mb-1 font-mono text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Capabilities</div>
@@ -276,10 +274,8 @@ export default function Models() {
       cellClassName: 'min-w-48',
       cell: ({ model }) => (
         <div className="space-y-1.5">
-          <Badge variant="outline" className="font-mono">
-            {model.name}
-          </Badge>
-          <ModalityFlow capabilities={model.capabilities} input_modalities={model.input_modalities} output_modalities={model.output_modalities} />
+          <ModelName name={model.name} capabilities={model.capabilities} />
+          <ModalityFlow input_modalities={model.input_modalities} output_modalities={model.output_modalities} />
         </div>
       ),
     },
