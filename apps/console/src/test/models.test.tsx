@@ -101,7 +101,8 @@ describe('organization models', () => {
     const modelCell = within(claude!).getByText('anthropic/claude-sonnet-4-5').closest('td');
     expect(modelCell).not.toBeNull();
     expect(within(modelCell!).getByText('anthropic/claude-sonnet-4-5')).toHaveClass('border-border', 'font-mono');
-    expect(within(modelCell!).getByLabelText('Show model metadata')).toHaveClass('text-muted-foreground');
+    expect(within(modelCell!).getByText('anthropic/claude-sonnet-4-5')).toHaveAttribute('tabindex', '0');
+    expect(within(modelCell!).queryByRole('button', { name: 'Show model metadata' })).not.toBeInTheDocument();
     expect(within(modelCell!).queryByText('streaming')).not.toBeInTheDocument();
     expect(claude).toHaveTextContent('$3.00');
     expect(claude).toHaveTextContent('$15.00');
@@ -186,28 +187,45 @@ describe('organization models', () => {
     expect(screen.getByRole('button', { name: 'Clear filters' })).toBeDisabled();
   });
 
-  it('keeps capabilities and modalities in a discoverable metadata tooltip', async () => {
+  it('shows input to output modality icons below the model name with names on hover', async () => {
     const user = userEvent.setup();
     renderModels();
 
     const gpt = (await screen.findByText('openai/gpt-5')).closest('tr');
-    const metadata = within(gpt!).getByLabelText('Show model metadata');
-    expect(metadata.querySelector('svg')).toBeInTheDocument();
+    const modalityFlow = within(gpt!).getByLabelText('Input to output modalities');
+    const inputText = within(modalityFlow).getByRole('button', { name: 'Input modality: text' });
+    const inputImage = within(modalityFlow).getByRole('button', { name: 'Input modality: image' });
+    const outputText = within(modalityFlow).getByRole('button', { name: 'Output modality: text' });
+    expect(inputText.querySelector('svg')).toBeInTheDocument();
+    expect(inputImage.querySelector('svg')).toBeInTheDocument();
+    expect(outputText.querySelector('svg')).toBeInTheDocument();
+    expect(modalityFlow.querySelector('.lucide-arrow-right')).toBeInTheDocument();
+    expect(within(modalityFlow).queryByRole('button', { name: 'Show model metadata' })).not.toBeInTheDocument();
+
+    await user.hover(inputImage);
+    expect(await screen.findByRole('tooltip')).toHaveTextContent('Input: Image');
+  });
+
+  it('shows capabilities when the model name is hovered', async () => {
+    const user = userEvent.setup();
+    renderModels();
+
+    const gpt = (await screen.findByText('openai/gpt-5')).closest('tr');
+    const modelName = within(gpt!).getByText('openai/gpt-5');
+    expect(modelName).toHaveAttribute('tabindex', '0');
+    expect(modelName).toHaveClass('focus:ring-0', 'focus:ring-offset-0', 'focus-visible:ring-2', 'focus-visible:ring-ring');
+    expect(modelName).not.toHaveClass('cursor-help');
+    expect(within(gpt!).queryByRole('button', { name: 'Show model metadata' })).not.toBeInTheDocument();
     expect(within(gpt!).queryByText('streaming')).not.toBeInTheDocument();
 
-    await user.hover(metadata);
+    await user.hover(modelName);
     const tooltip = await screen.findByRole('tooltip');
     for (const capability of ['streaming', 'tools', 'json_schema', 'parallel_tools', 'reasoning']) {
       expect(within(tooltip).getByText(capability)).toBeInTheDocument();
     }
     expect(within(tooltip).getByText('streaming')).toHaveClass('text-primary');
     expect(within(tooltip).getByText('tools')).toHaveClass('text-warning');
-    const imageModality = within(within(tooltip).getByLabelText('Input modalities')).getByText('image').parentElement;
-    const textOutputModality = within(within(tooltip).getByLabelText('Output modalities')).getByText('text').parentElement;
-    expect(imageModality).toHaveClass('border-success/40', 'text-success');
-    expect(imageModality?.querySelector('svg')).toBeInTheDocument();
-    expect(textOutputModality).toHaveClass('border-primary/40', 'text-primary');
-    expect(textOutputModality?.querySelector('svg')).toBeInTheDocument();
+    expect(within(tooltip).queryByText('I/O modalities')).not.toBeInTheDocument();
   });
 
   it('shows unknown modality evidence without inventing text support', async () => {
@@ -215,9 +233,12 @@ describe('organization models', () => {
     renderModels();
 
     const claude = (await screen.findByText('anthropic/claude-sonnet-4-5')).closest('tr');
-    await user.hover(within(claude!).getByLabelText('Show model metadata'));
-
-    const tooltip = await screen.findByRole('tooltip');
-    expect(within(tooltip).getAllByText('Unknown')).toHaveLength(2);
+    const modalityFlow = within(claude!).getByLabelText('Input to output modalities');
+    const unknownInput = within(modalityFlow).getByRole('button', { name: 'Input modalities unknown' });
+    const unknownOutput = within(modalityFlow).getByRole('button', { name: 'Output modalities unknown' });
+    expect(unknownInput.querySelector('svg')).toBeInTheDocument();
+    expect(unknownOutput.querySelector('svg')).toBeInTheDocument();
+    await user.hover(unknownInput);
+    expect(await screen.findByRole('tooltip')).toHaveTextContent('Input modalities unknown');
   });
 });
