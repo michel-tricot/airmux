@@ -3,12 +3,45 @@ from __future__ import annotations
 import os
 import tomllib
 from pathlib import Path
-from typing import Any
+from typing import Literal, Self
 from urllib.parse import urlsplit
 
 import tomli_w
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from contract.secrets.file import write_private_text
+
+
+class Profile(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    scope: Literal["instance", "org"]
+    control_plane_url: str | None = None
+    console_url: str | None = None
+    gateway_url: str | None = None
+    token: str | None = None
+    org_id: str | None = None
+    org_name: str | None = None
+    workspace: str | None = None
+    workspace_name: str | None = None
+
+    @model_validator(mode="after")
+    def validate_scope(self) -> Self:
+        organization = self.org_id is not None and self.org_name is not None
+        if self.scope == "org" and not organization:
+            message = "an organization profile requires org_id and org_name"
+            raise ValueError(message)
+        if self.scope == "instance" and any((self.org_id, self.org_name, self.workspace, self.workspace_name)):
+            message = "an instance profile cannot contain organization fields"
+            raise ValueError(message)
+        return self
+
+
+class CliConfig(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    active: str | None = None
+    profiles: dict[str, Profile] = Field(default_factory=dict)
 
 
 def config_path() -> Path:
@@ -17,53 +50,42 @@ def config_path() -> Path:
     return Path.home() / ".airllm" / "config.toml"
 
 
-def load_config() -> dict[str, Any]:
+def load_config() -> CliConfig:
     path = config_path()
     if path.exists():
-        return tomllib.loads(path.read_text(encoding="utf-8"))
-    return {}
+        return CliConfig.model_validate(tomllib.loads(path.read_text(encoding="utf-8")))
+    return CliConfig()
 
 
-def save_config(config: dict[str, Any]) -> None:
-    write_private_text(config_path(), tomli_w.dumps(config))
+def save_config(config: CliConfig) -> None:
+    write_private_text(config_path(), tomli_w.dumps(config.model_dump(mode="python", exclude_none=True)))
 
 
-def active_profile(config: dict[str, Any] | None = None) -> dict[str, Any] | None:
-    config = load_config() if config is None else config
-    profiles = config.get("profiles") or {}
-    name = config.get("active")
-    if isinstance(name, str) and name in profiles:
-        return {"name": name, **profiles[name]}
-    return None
+def active_profile(config: CliConfig) -> Profile | None:
+    return config.profiles.get(config.active) if config.active is not None else None
 
 
-def upsert_profile(name: str, values: dict[str, Any], *, activate: bool = True) -> None:
+def load_active_profile() -> Profile | None:
+    return active_profile(load_config())
+
+
+def upsert_profile(name: str, profile: Profile, *, activate: bool = True) -> None:
     config = load_config()
-    profiles = dict(config.get("profiles") or {})
-    profiles[name] = values
-    updated = {**config, "profiles": profiles, **({"active": name} if activate else {})}
-    save_config(updated)
+    profiles = {**config.profiles, name: profile}
+    save_config(config.model_copy(update={"profiles": profiles, "active": name if activate else config.active}))
 
 
-def _profile_scope(profile: dict[str, Any]) -> str | None:
-    if scope := profile.get("scope"):
-        return str(scope)
-    if profile.get("org_id"):
-        return "org"
-    return None
-
-
-def upsert_url_profile(name: str, values: dict[str, Any], *, activate: bool = True) -> str:
+def upsert_url_profile(name: str, profile: Profile, *, activate: bool = True) -> str:
     config = load_config()
-    profiles = dict(config.get("profiles") or {})
-    control_plane_url = str(values.get("control_plane_url", "")).rstrip("/")
+    profiles = config.profiles
+    control_plane_url = (profile.control_plane_url or "").rstrip("/")
     matching = next(
         (
             profile_name
-            for profile_name, profile in profiles.items()
-            if (profile_name == name or profile.get("org_name") == name)
-            and str(profile.get("control_plane_url", "")).rstrip("/") == control_plane_url
-            and _profile_scope(profile) == _profile_scope(values)
+            for profile_name, candidate_profile in profiles.items()
+            if (name == profile_name or (candidate_profile.scope == "org" and name == candidate_profile.org_name))
+            and (candidate_profile.control_plane_url or "").rstrip("/") == control_plane_url
+            and candidate_profile.scope == profile.scope
         ),
         None,
     )
@@ -79,29 +101,27 @@ def upsert_url_profile(name: str, values: dict[str, Any], *, activate: bool = Tr
             candidate = f"{name}@{host}-{suffix}"
             suffix += 1
         profile_name = candidate
-    updated_profiles = {**profiles, profile_name: values}
-    updated = {**config, "profiles": updated_profiles, **({"active": profile_name} if activate else {})}
-    save_config(updated)
+    updated_profiles = {**profiles, profile_name: profile}
+    save_config(config.model_copy(update={"profiles": updated_profiles, "active": profile_name if activate else config.active}))
     return profile_name
 
 
 def set_active(name: str) -> None:
     config = load_config()
-    if name not in (config.get("profiles") or {}):
+    if name not in config.profiles:
         raise KeyError(name)
-    save_config({**config, "active": name})
+    save_config(config.model_copy(update={"active": name}))
 
 
 def remove_profile(name: str) -> None:
     config = load_config()
-    profiles = dict(config.get("profiles") or {})
+    profiles = dict(config.profiles)
     if name not in profiles:
         raise KeyError(name)
     del profiles[name]
-    active = config.get("active")
+    active = config.active
     next_active = next(iter(profiles), None) if active == name else active
-    updated = {key: value for key, value in config.items() if key not in {"profiles", "active"}}
-    save_config({**updated, "profiles": profiles, **({"active": next_active} if next_active is not None else {})})
+    save_config(config.model_copy(update={"profiles": profiles, "active": next_active}))
 
 
 DEFAULT_CONSOLE_URL = "http://localhost:5000"

@@ -8,7 +8,7 @@ if TYPE_CHECKING:
     import asyncio
     from datetime import datetime
 
-    from contract import UsageEventV1
+    from contract import UsageEvent
 
 
 @dataclass(frozen=True)
@@ -21,7 +21,7 @@ class EventOutbox(ABC):
     """The synchronous request-path sink for metered usage events."""
 
     @abstractmethod
-    def record(self, event: UsageEventV1, /) -> None:
+    def record(self, event: UsageEvent, /) -> None:
         """Accept one event without network work."""
 
     def start(self, _task_group: asyncio.TaskGroup, /) -> tuple[asyncio.Task[None], ...]:

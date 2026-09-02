@@ -10,14 +10,14 @@ from typing import TYPE_CHECKING, Any
 
 from starlette.responses import JSONResponse
 
-from data_plane.canonical import CanonicalChunk, CanonicalRequest, GatewayInfo
+from data_plane.canonical import CanonicalChunk, CanonicalGatewayInfo, CanonicalRequest
 from data_plane.ingress.base import DONE, IngressAdapter, sse
 
 if TYPE_CHECKING:
     from starlette.datastructures import Headers
     from starlette.responses import Response
 
-    from data_plane.canonical import Adjustment, CanonicalResponse
+    from data_plane.canonical import CanonicalAdjustment, CanonicalResponse
     from data_plane.egress.base import CanonicalError, Ctx
 
 
@@ -29,16 +29,14 @@ class CanonicalResponseStream:
         return []
 
     def chunk(self, c: CanonicalChunk) -> list[bytes]:
-        if c.delta is None:
-            return []
         return [sse(c.model_dump_json(exclude_none=True).encode())]
 
-    def closing(self, final: CanonicalResponse, adjustments: list[Adjustment]) -> list[bytes]:
+    def closing(self, final: CanonicalResponse, adjustments: list[CanonicalAdjustment]) -> list[bytes]:
         closing = CanonicalChunk(
             id=final.id,
             finish_reason=final.finish_reason,
             usage=final.usage,
-            gateway=GatewayInfo(finish_reason=final.finish_reason, adjustments=adjustments),
+            gateway=CanonicalGatewayInfo(finish_reason=final.finish_reason, adjustments=adjustments),
         )
         return [sse(closing.model_dump_json(exclude_none=True).encode()), DONE]
 
@@ -53,7 +51,7 @@ class CanonicalIngress(IngressAdapter):
         """Never claims: canonical is what resolve() falls back to when nobody else does."""
         return False
 
-    def parse(self, body: dict[str, Any]) -> tuple[CanonicalRequest, list[Adjustment]]:
+    def parse(self, body: dict[str, Any]) -> tuple[CanonicalRequest, list[CanonicalAdjustment]]:
         return CanonicalRequest.model_validate(body), []
 
     def render_response(self, final: CanonicalResponse) -> Response:

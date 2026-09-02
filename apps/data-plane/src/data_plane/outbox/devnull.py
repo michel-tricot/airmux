@@ -5,11 +5,11 @@ from typing import TYPE_CHECKING
 from data_plane.outbox.base import EventOutbox
 
 if TYPE_CHECKING:
-    from contract import UsageEventV1
+    from contract import UsageEvent
 
 
 class DevNullOutbox(EventOutbox):
     """Discards every event. For load tests, local dev, or deployments that meter elsewhere."""
 
-    def record(self, _event: UsageEventV1, /) -> None:
+    def record(self, _event: UsageEvent, /) -> None:
         return

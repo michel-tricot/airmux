@@ -3451,7 +3451,19 @@ paths:
           application/json:
             schema:
               items:
-                $ref: '#/components/schemas/UsageEventV1'
+                oneOf:
+                - $ref: '#/components/schemas/DeniedUsageEventV1'
+                - $ref: '#/components/schemas/RoutedUsageEventV1'
+                discriminator:
+                  propertyName: status
+                  mapping:
+                    denied: '#/components/schemas/DeniedUsageEventV1'
+                    ok: '#/components/schemas/RoutedUsageEventV1'
+                    upstream_error: '#/components/schemas/RoutedUsageEventV1'
+                    timeout: '#/components/schemas/RoutedUsageEventV1'
+                    cancelled: '#/components/schemas/RoutedUsageEventV1'
+                    credential_rejected: '#/components/schemas/RoutedUsageEventV1'
+                    rate_limited: '#/components/schemas/RoutedUsageEventV1'
               type: array
               maxItems: 1000
               title: Events
@@ -4380,6 +4392,146 @@ components:
       - id
       - deleted_at
       title: DeletedOut[str]
+    DeniedUsageEventV1:
+      properties:
+        schema_version:
+          type: integer
+          const: 1
+          title: Schema Version
+          description: Usage event schema version
+          default: 1
+        event_id:
+          type: string
+          format: uuid
+          title: Event Id
+          description: Idempotency key for event ingestion
+        request_id:
+          type: string
+          format: uuid
+          title: Request Id
+          description: Data-plane request ID
+        occurred_at:
+          type: string
+          format: date-time
+          title: Occurred At
+          description: Timestamp when the request completed
+        org_id:
+          type: string
+          format: uuid
+          title: Org Id
+          description: Organization that made the request
+        workspace_id:
+          type: string
+          format: uuid
+          title: Workspace Id
+          description: Workspace that made the request
+        key_id:
+          type: string
+          maxLength: 255
+          minLength: 1
+          title: Key Id
+          description: Inference key ID used for the request
+        model_id:
+          type: string
+          maxLength: 255
+          minLength: 1
+          title: Model Id
+          description: Caller-facing model ID
+        provider_id:
+          type: string
+          const: ''
+          title: Provider Id
+          description: No provider was selected before denial
+          default: ''
+        bundle_id:
+          type: string
+          format: uuid
+          title: Bundle Id
+          description: Policy bundle used for the request
+        input_tokens:
+          type: integer
+          maximum: 2147483647.0
+          minimum: 0.0
+          title: Input Tokens
+          description: Total input tokens
+        output_tokens:
+          type: integer
+          maximum: 2147483647.0
+          minimum: 0.0
+          title: Output Tokens
+          description: Total output tokens
+        cost_usd:
+          type: number
+          minimum: 0.0
+          title: Cost Usd
+          description: Total estimated cost in USD
+        cost_input_usd:
+          type: number
+          minimum: 0.0
+          title: Cost Input Usd
+          description: Estimated input cost in USD
+          default: 0.0
+        cost_output_usd:
+          type: number
+          minimum: 0.0
+          title: Cost Output Usd
+          description: Estimated output cost in USD
+          default: 0.0
+        cache_read_tokens:
+          type: integer
+          maximum: 2147483647.0
+          minimum: 0.0
+          title: Cache Read Tokens
+          description: Input tokens read from a provider cache
+          default: 0
+        cache_write_tokens:
+          type: integer
+          maximum: 2147483647.0
+          minimum: 0.0
+          title: Cache Write Tokens
+          description: Input tokens written to a provider cache
+          default: 0
+        latency_ms:
+          type: integer
+          maximum: 2147483647.0
+          minimum: 0.0
+          title: Latency Ms
+          description: End-to-end request latency in milliseconds
+        status:
+          type: string
+          const: denied
+          title: Status
+          description: The request was denied before routing
+          default: denied
+        stream:
+          type: boolean
+          title: Stream
+          description: Whether the response was streamed
+        credential_id:
+          type: 'null'
+          title: Credential Id
+          description: No provider credential was selected before denial
+        credential_scope:
+          type: 'null'
+          title: Credential Scope
+          description: No provider credential scope was selected before denial
+      additionalProperties: false
+      type: object
+      required:
+      - event_id
+      - request_id
+      - occurred_at
+      - org_id
+      - workspace_id
+      - key_id
+      - model_id
+      - bundle_id
+      - input_tokens
+      - output_tokens
+      - cost_usd
+      - latency_ms
+      - stream
+      title: DeniedUsageEventV1
     EnrollOut:
       properties:
         orgs:
@@ -5283,8 +5435,13 @@ components:
         capabilities:
           items:
             type: string
+            enum:
+            - streaming
+            - tools
+            - reasoning
+            - structured_output
           type: array
-          maxItems: 128
+          maxItems: 4
           title: Capabilities
           description: Capabilities supported by the model
         parameter_support:
@@ -5347,34 +5504,35 @@ components:
           - type: 'null'
           title: Max Output Tokens
         input_modalities:
-          anyOf:
-          - items:
-              type: string
-              enum:
-              - text
-              - image
-              - audio
-              - video
-              - pdf
-            type: array
-          - type: 'null'
+          items:
+            type: string
+            enum:
+            - text
+            - image
+            - audio
+            - video
+            - pdf
+          type: array
           title: Input Modalities
         output_modalities:
-          anyOf:
-          - items:
-              type: string
-              enum:
-              - text
-              - image
-              - audio
-              - video
-              - pdf
-            type: array
-          - type: 'null'
+          items:
+            type: string
+            enum:
+            - text
+            - image
+            - audio
+            - video
+            - pdf
+          type: array
           title: Output Modalities
         capabilities:
           items:
             type: string
+            enum:
+            - streaming
+            - tools
+            - reasoning
+            - structured_output
           type: array
           title: Capabilities
         parameter_support:
@@ -5927,6 +6085,11 @@ components:
           title: Version
         status:
           type: string
+          enum:
+          - unknown
+          - live
+          - invalid
+          - rate_limited
           title: Status
         status_at:
           anyOf:
@@ -6154,6 +6317,160 @@ components:
       required:
       - path
       title: QuickstartOut
+    RoutedUsageEventV1:
+      properties:
+        schema_version:
+          type: integer
+          const: 1
+          title: Schema Version
+          description: Usage event schema version
+          default: 1
+        event_id:
+          type: string
+          format: uuid
+          title: Event Id
+          description: Idempotency key for event ingestion
+        request_id:
+          type: string
+          format: uuid
+          title: Request Id
+          description: Data-plane request ID
+        occurred_at:
+          type: string
+          format: date-time
+          title: Occurred At
+          description: Timestamp when the request completed
+        org_id:
+          type: string
+          format: uuid
+          title: Org Id
+          description: Organization that made the request
+        workspace_id:
+          type: string
+          format: uuid
+          title: Workspace Id
+          description: Workspace that made the request
+        key_id:
+          type: string
+          maxLength: 255
+          minLength: 1
+          title: Key Id
+          description: Inference key ID used for the request
+        model_id:
+          type: string
+          maxLength: 255
+          minLength: 1
+          title: Model Id
+          description: Caller-facing model ID
+        provider_id:
+          type: string
+          maxLength: 63
+          minLength: 1
+          title: Provider Id
+          description: Provider that served the request
+        bundle_id:
+          type: string
+          format: uuid
+          title: Bundle Id
+          description: Policy bundle used for the request
+        input_tokens:
+          type: integer
+          maximum: 2147483647.0
+          minimum: 0.0
+          title: Input Tokens
+          description: Total input tokens
+        output_tokens:
+          type: integer
+          maximum: 2147483647.0
+          minimum: 0.0
+          title: Output Tokens
+          description: Total output tokens
+        cost_usd:
+          type: number
+          minimum: 0.0
+          title: Cost Usd
+          description: Total estimated cost in USD
+        cost_input_usd:
+          type: number
+          minimum: 0.0
+          title: Cost Input Usd
+          description: Estimated input cost in USD
+          default: 0.0
+        cost_output_usd:
+          type: number
+          minimum: 0.0
+          title: Cost Output Usd
+          description: Estimated output cost in USD
+          default: 0.0
+        cache_read_tokens:
+          type: integer
+          maximum: 2147483647.0
+          minimum: 0.0
+          title: Cache Read Tokens
+          description: Input tokens read from a provider cache
+          default: 0
+        cache_write_tokens:
+          type: integer
+          maximum: 2147483647.0
+          minimum: 0.0
+          title: Cache Write Tokens
+          description: Input tokens written to a provider cache
+          default: 0
+        latency_ms:
+          type: integer
+          maximum: 2147483647.0
+          minimum: 0.0
+          title: Latency Ms
+          description: End-to-end request latency in milliseconds
+        status:
+          type: string
+          enum:
+          - ok
+          - upstream_error
+          - timeout
+          - cancelled
+          - credential_rejected
+          - rate_limited
+          title: Status
+          description: How the routed request ended
+        stream:
+          type: boolean
+          title: Stream
+          description: Whether the response was streamed
+        credential_id:
+          type: string
+          format: uuid
+          title: Credential Id
+          description: Provider credential used for the request
+        credential_scope:
+          type: string
+          enum:
+          - platform
+          - org
+          - workspace
+          title: Credential Scope
+          description: Scope of the provider credential used for the request
+      additionalProperties: false
+      type: object
+      required:
+      - event_id
+      - request_id
+      - occurred_at
+      - org_id
+      - workspace_id
+      - key_id
+      - model_id
+      - provider_id
+      - bundle_id
+      - input_tokens
+      - output_tokens
+      - cost_usd
+      - latency_ms
+      - status
+      - stream
+      - credential_id
+      - credential_scope
+      title: RoutedUsageEventV1
     Scope:
       properties:
         level:
@@ -6395,6 +6712,14 @@ components:
           title: Latency Ms
         status:
           type: string
+          enum:
+          - ok
+          - upstream_error
+          - denied
+          - timeout
+          - cancelled
+          - credential_rejected
+          - rate_limited
           title: Status
         stream:
           type: boolean
@@ -6408,6 +6733,10 @@ components:
         credential_scope:
           anyOf:
           - type: string
+            enum:
+            - platform
+            - org
+            - workspace
           - type: 'null'
           title: Credential Scope
       type: object
@@ -6434,166 +6763,6 @@ components:
       - credential_id
       - credential_scope
       title: UsageEventOut
-    UsageEventV1:
-      properties:
-        schema_version:
-          type: integer
-          const: 1
-          title: Schema Version
-          description: Usage event schema version
-          default: 1
-        event_id:
-          type: string
-          format: uuid
-          title: Event Id
-          description: Idempotency key for event ingestion
-        request_id:
-          type: string
-          format: uuid
-          title: Request Id
-          description: Data-plane request ID
-        occurred_at:
-          type: string
-          format: date-time
-          title: Occurred At
-          description: Timestamp when the request completed
-        org_id:
-          type: string
-          format: uuid
-          title: Org Id
-          description: Organization that made the request
-        workspace_id:
-          type: string
-          format: uuid
-          title: Workspace Id
-          description: Workspace that made the request
-        key_id:
-          type: string
-          maxLength: 255
-          minLength: 1
-          title: Key Id
-          description: Inference key ID used for the request
-        model_id:
-          type: string
-          maxLength: 255
-          minLength: 1
-          title: Model Id
-          description: Caller-facing model ID
-        provider_id:
-          type: string
-          maxLength: 63
-          title: Provider Id
-          description: Provider that served the request, or empty for an early denial
-        bundle_id:
-          type: string
-          format: uuid
-          title: Bundle Id
-          description: Policy bundle used for the request
-        input_tokens:
-          type: integer
-          maximum: 2147483647.0
-          minimum: 0.0
-          title: Input Tokens
-          description: Total input tokens
-        output_tokens:
-          type: integer
-          maximum: 2147483647.0
-          minimum: 0.0
-          title: Output Tokens
-          description: Total output tokens
-        cost_usd:
-          type: number
-          minimum: 0.0
-          title: Cost Usd
-          description: Total estimated cost in USD
-        cost_input_usd:
-          type: number
-          minimum: 0.0
-          title: Cost Input Usd
-          description: Estimated input cost in USD
-          default: 0.0
-        cost_output_usd:
-          type: number
-          minimum: 0.0
-          title: Cost Output Usd
-          description: Estimated output cost in USD
-          default: 0.0
-        cache_read_tokens:
-          type: integer
-          maximum: 2147483647.0
-          minimum: 0.0
-          title: Cache Read Tokens
-          description: Input tokens read from a provider cache
-          default: 0
-        cache_write_tokens:
-          type: integer
-          maximum: 2147483647.0
-          minimum: 0.0
-          title: Cache Write Tokens
-          description: Input tokens written to a provider cache
-          default: 0
-        latency_ms:
-          type: integer
-          maximum: 2147483647.0
-          minimum: 0.0
-          title: Latency Ms
-          description: End-to-end request latency in milliseconds
-        status:
-          type: string
-          enum:
-          - ok
-          - upstream_error
-          - denied
-          - timeout
-          - cancelled
-          - credential_rejected
-          - rate_limited
-          title: Status
-          description: How the request ended; cancelled events may contain partial token counts
-        stream:
-          type: boolean
-          title: Stream
-          description: Whether the response was streamed
-        credential_id:
-          anyOf:
-          - type: string
-            format: uuid
-          - type: 'null'
-          title: Credential Id
-          description: Provider credential used for the request
-        credential_scope:
-          anyOf:
-          - type: string
-            enum:
-            - platform
-            - org
-            - workspace
-          - type: 'null'
-          title: Credential Scope
-          description: Scope of the provider credential used for the request
-      additionalProperties: false
-      type: object
-      required:
-      - event_id
-      - request_id
-      - occurred_at
-      - org_id
-      - workspace_id
-      - key_id
-      - model_id
-      - provider_id
-      - bundle_id
-      - input_tokens
-      - output_tokens
-      - cost_usd
-      - latency_ms
-      - status
-      - stream
-      title: UsageEventV1
-      description: 'One metered model request reported by a data plane.
-
-
-        `event_id` makes retries idempotent.'
     UserOut:
       properties:
         id:

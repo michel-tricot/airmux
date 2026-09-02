@@ -7,9 +7,10 @@ from click import unstyle
 from typer.testing import CliRunner
 
 from cli.main import app
-from cli.profiles import active_profile, upsert_profile
+from cli.profiles import Profile, load_active_profile, load_config, upsert_profile
 
 runner = CliRunner()
+ORG_ID = "019c0000-0000-7000-8000-000000000001"
 
 
 @pytest.mark.parametrize("split_option", ["--control-plane-url", "--console-url"])
@@ -33,13 +34,16 @@ def test_login_only_presents_the_current_control_planes_existing_key(tmp_path, m
     monkeypatch.setattr("cli.auth.time.sleep", lambda _: None)
     upsert_profile(
         "old",
-        {
-            "control_plane_url": stored_url,
-            "console_url": "https://console.example",
-            "org_id": "old-org",
-            "org_name": "old",
-            "token": "sk-cp-old",
-        },
+        Profile.model_validate(
+            {
+                "control_plane_url": stored_url,
+                "console_url": "https://console.example",
+                "scope": "org",
+                "org_id": "old-org",
+                "org_name": "old",
+                "token": "sk-cp-old",
+            }
+        ),
     )
     respx.post("https://cp.example/api/v1/auth/cli/start").mock(
         return_value=httpx.Response(
@@ -62,8 +66,9 @@ def test_login_only_presents_the_current_control_planes_existing_key(tmp_path, m
                 "data": {
                     "status": "complete",
                     "interval_seconds": 0,
+                    "scope": "org",
                     "token": "sk-cp-new",
-                    "org_id": "new-org",
+                    "org_id": ORG_ID,
                     "org_name": "new",
                 }
             },
@@ -74,10 +79,10 @@ def test_login_only_presents_the_current_control_planes_existing_key(tmp_path, m
 
     assert result.exit_code == 0, result.output
     assert poll.calls.last.request.headers.get("authorization") == expected_authorization
-    profile = active_profile()
+    profile = load_active_profile()
     assert profile is not None
-    assert profile["control_plane_url"] == "https://cp.example"
-    assert profile["console_url"] == "https://cp.example"
+    assert profile.control_plane_url == "https://cp.example"
+    assert profile.console_url == "https://cp.example"
 
 
 @respx.mock
@@ -117,9 +122,7 @@ def test_login_saves_instance_access_without_an_organization(tmp_path, monkeypat
     result = runner.invoke(app, ["login", "--url", "https://cp.example", "--no-browser"])
 
     assert result.exit_code == 0, result.output
-    profile = active_profile()
+    profile = load_active_profile()
     assert profile is not None
-    assert profile["name"] == "instance"
-    assert profile["scope"] == "instance"
-    assert "org_id" not in profile
-    assert "org_name" not in profile
+    assert load_config().active == "instance"
+    assert profile.scope == "instance"

@@ -5,6 +5,7 @@ from contract.bundle import (
     BundleManifest,
     BundleManifestEntry,
     BundleV1,
+    Capability,
     Catalog,
     CredentialEntry,
     KeyEntry,
@@ -15,7 +16,15 @@ from contract.bundle import (
     SignedBundle,
 )
 from contract.credentials import INFERENCE_TOKEN_PREFIX, PLAYGROUND_COOKIE, token_hash
-from contract.events import HeartbeatV1, UsageEventV1, UsageStatus
+from contract.events import (
+    CredentialScope,
+    DeniedUsageEventV1,
+    HeartbeatV1,
+    RoutedUsageEventV1,
+    RoutedUsageStatus,
+    UsageEvent,
+    UsageStatus,
+)
 from contract.ids import uuid7
 from contract.refs import UnknownVarError, UnsupportedRefSchemeError, load_config_section, resolve_ref, try_resolve_ref
 from contract.secrets import (
@@ -56,8 +65,11 @@ __all__ = [
     "BundleManifest",
     "BundleManifestEntry",
     "BundleV1",
+    "Capability",
     "Catalog",
     "CredentialEntry",
+    "CredentialScope",
+    "DeniedUsageEventV1",
     "Ed25519PrivateKeyB64",
     "Ed25519PublicKeyB64",
     "EnvSecretStore",
@@ -74,6 +86,8 @@ __all__ = [
     "ModelEntry",
     "ParameterSupport",
     "ProviderEntry",
+    "RoutedUsageEventV1",
+    "RoutedUsageStatus",
     "Secret",
     "SecretNotFoundError",
     "SecretPurpose",
@@ -86,7 +100,7 @@ __all__ = [
     "SignedBundle",
     "UnknownVarError",
     "UnsupportedRefSchemeError",
-    "UsageEventV1",
+    "UsageEvent",
     "UsageStatus",
     "canonical_json",
     "load_config_section",

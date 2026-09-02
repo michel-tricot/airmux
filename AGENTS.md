@@ -112,6 +112,28 @@ Adding a resource is four steps; test_api_hygiene and test_api_parity name the e
 - Never delete a UI primitive from import counts alone; first check whether an application wrapper is
   manually recreating the same behavior and migrate it to composition
 
+## Interface boundaries, non-negotiable
+- Domain and internal types describe only valid states. Do not make a required value optional, use a
+  free-form string for a closed vocabulary, or return an untyped dict because validation happens later
+- This project has no deployed compatibility surface. Do not add legacy parsing, compatibility defaults or aliases,
+  deterministic conversions, or backfill behavior for obsolete shapes. Change every producer and consumer
+  to the strict interface instead. Add compatibility only when a user names a real deployed contract
+- Use a discriminated union when variants carry different required data and consumers branch on the
+  variant. Do not split one shared wire shape solely to eliminate optional fields
+- A discriminated union owns the domain name; do not suffix it with `Value` to avoid a class-name collision.
+  Public types from `data_plane.canonical` start with `Canonical`; shared implementation bases stay private
+- Do not add a dedicated `TypeAdapter` constant or parsing wrapper for a union already parsed by its
+  enclosing model; construct a known concrete variant directly
+- Closed vocabularies use a shared Literal or StrEnum. Identifiers use their domain type after boundary
+  normalization; opaque external identifiers stay bounded non-empty strings and are never forced into UUID
+- A database column is non-null when the domain requires the value. Before the first production release,
+  keep one baseline migration and fold every schema change into it instead of adding a follow-up migration
+- CLI control-plane responses are decoded into generated `api_models` in `cli.client`. Commands never
+  consume raw response dicts, and payload helpers always require the expected response model
+- Optional update fields, partial stream deltas, provider wire JSON, JSON Schema values, and the canonical
+  request's documented top-level passthrough are intentionally open. Do not generalize those exceptions
+- Every tightened boundary gets a behavior or generated-schema test proving invalid states are rejected
+
 ## Typing and lint
 ty must pass clean. Do not widen to Any to silence an error, and do not add `# ty: ignore` or a blanket
 `# noqa`. Fix the type or ask. Every suppression that does survive must name the exact rule and carry a

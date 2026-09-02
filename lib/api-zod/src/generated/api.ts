@@ -1369,7 +1369,7 @@ export const ListInstanceProviderCredentialsResponseItem = zod.object({
   "priority": zod.int(),
   "enabled": zod.boolean(),
   "version": zod.int(),
-  "status": zod.string(),
+  "status": zod.enum(['unknown', 'live', 'invalid', 'rate_limited']),
   "status_at": zod.union([zod.coerce.date(),zod.null()]),
   "fingerprint": zod.string(),
   "created_at": zod.coerce.date(),
@@ -1420,7 +1420,7 @@ export const CreateInstanceProviderCredentialResponse = zod.object({
   "priority": zod.int(),
   "enabled": zod.boolean(),
   "version": zod.int(),
-  "status": zod.string(),
+  "status": zod.enum(['unknown', 'live', 'invalid', 'rate_limited']),
   "status_at": zod.union([zod.coerce.date(),zod.null()]),
   "fingerprint": zod.string(),
   "created_at": zod.coerce.date(),
@@ -1474,7 +1474,7 @@ export const CreateOrgProviderCredentialResponse = zod.object({
   "priority": zod.int(),
   "enabled": zod.boolean(),
   "version": zod.int(),
-  "status": zod.string(),
+  "status": zod.enum(['unknown', 'live', 'invalid', 'rate_limited']),
   "status_at": zod.union([zod.coerce.date(),zod.null()]),
   "fingerprint": zod.string(),
   "created_at": zod.coerce.date(),
@@ -1504,7 +1504,7 @@ export const ListOrgProviderCredentialsResponseItem = zod.object({
   "priority": zod.int(),
   "enabled": zod.boolean(),
   "version": zod.int(),
-  "status": zod.string(),
+  "status": zod.enum(['unknown', 'live', 'invalid', 'rate_limited']),
   "status_at": zod.union([zod.coerce.date(),zod.null()]),
   "fingerprint": zod.string(),
   "created_at": zod.coerce.date(),
@@ -1560,7 +1560,7 @@ export const CreateWorkspaceProviderCredentialResponse = zod.object({
   "priority": zod.int(),
   "enabled": zod.boolean(),
   "version": zod.int(),
-  "status": zod.string(),
+  "status": zod.enum(['unknown', 'live', 'invalid', 'rate_limited']),
   "status_at": zod.union([zod.coerce.date(),zod.null()]),
   "fingerprint": zod.string(),
   "created_at": zod.coerce.date(),
@@ -1591,7 +1591,7 @@ export const ListWorkspaceProviderCredentialsResponseItem = zod.object({
   "priority": zod.int(),
   "enabled": zod.boolean(),
   "version": zod.int(),
-  "status": zod.string(),
+  "status": zod.enum(['unknown', 'live', 'invalid', 'rate_limited']),
   "status_at": zod.union([zod.coerce.date(),zod.null()]),
   "fingerprint": zod.string(),
   "created_at": zod.coerce.date(),
@@ -1623,7 +1623,7 @@ export const GetProviderCredentialResponse = zod.object({
   "priority": zod.int(),
   "enabled": zod.boolean(),
   "version": zod.int(),
-  "status": zod.string(),
+  "status": zod.enum(['unknown', 'live', 'invalid', 'rate_limited']),
   "status_at": zod.union([zod.coerce.date(),zod.null()]),
   "fingerprint": zod.string(),
   "created_at": zod.coerce.date(),
@@ -1664,7 +1664,7 @@ export const UpdateProviderCredentialResponse = zod.object({
   "priority": zod.int(),
   "enabled": zod.boolean(),
   "version": zod.int(),
-  "status": zod.string(),
+  "status": zod.enum(['unknown', 'live', 'invalid', 'rate_limited']),
   "status_at": zod.union([zod.coerce.date(),zod.null()]),
   "fingerprint": zod.string(),
   "created_at": zod.coerce.date(),
@@ -1720,7 +1720,7 @@ export const RotateProviderCredentialResponse = zod.object({
   "priority": zod.int(),
   "enabled": zod.boolean(),
   "version": zod.int(),
-  "status": zod.string(),
+  "status": zod.enum(['unknown', 'live', 'invalid', 'rate_limited']),
   "status_at": zod.union([zod.coerce.date(),zod.null()]),
   "fingerprint": zod.string(),
   "created_at": zod.coerce.date(),
@@ -1961,10 +1961,10 @@ export const ListOrgEventsResponseItem = zod.object({
   "cache_read_tokens": zod.int(),
   "cache_write_tokens": zod.int(),
   "latency_ms": zod.int(),
-  "status": zod.string(),
+  "status": zod.enum(['ok', 'upstream_error', 'denied', 'timeout', 'cancelled', 'credential_rejected', 'rate_limited']),
   "stream": zod.boolean(),
   "credential_id": zod.union([zod.uuid(),zod.null()]),
-  "credential_scope": zod.union([zod.string(),zod.null()])
+  "credential_scope": zod.union([zod.enum(['platform', 'org', 'workspace']),zod.null()])
 })
 export const ListOrgEventsResponse = zod.array(ListOrgEventsResponseItem)
 
@@ -2011,10 +2011,10 @@ export const ListWorkspaceEventsResponseItem = zod.object({
   "cache_read_tokens": zod.int(),
   "cache_write_tokens": zod.int(),
   "latency_ms": zod.int(),
-  "status": zod.string(),
+  "status": zod.enum(['ok', 'upstream_error', 'denied', 'timeout', 'cancelled', 'credential_rejected', 'rate_limited']),
   "stream": zod.boolean(),
   "credential_id": zod.union([zod.uuid(),zod.null()]),
-  "credential_scope": zod.union([zod.string(),zod.null()])
+  "credential_scope": zod.union([zod.enum(['platform', 'org', 'workspace']),zod.null()])
 })
 export const ListWorkspaceEventsResponse = zod.array(ListWorkspaceEventsResponseItem)
 
@@ -2103,64 +2103,119 @@ export const BundleLatestResponse = zod.object({
  * Required permission: `usage.ingest`.
  * @summary Ingest Usage Events
  */
-export const ingestEventsBodySchemaVersionDefault = 1;
-export const ingestEventsBodyKeyIdMax = 255;
+export const ingestEventsBodyOneSchemaVersionDefault = 1;
+export const ingestEventsBodyOneKeyIdMax = 255;
 
-export const ingestEventsBodyModelIdMax = 255;
+export const ingestEventsBodyOneModelIdMax = 255;
 
-export const ingestEventsBodyProviderIdMax = 63;
+export const ingestEventsBodyOneProviderIdDefault = ``;
+export const ingestEventsBodyOneInputTokensMin = 0;
+export const ingestEventsBodyOneInputTokensMax = 2147483647;
 
-export const ingestEventsBodyInputTokensMin = 0;
-export const ingestEventsBodyInputTokensMax = 2147483647;
+export const ingestEventsBodyOneOutputTokensMin = 0;
+export const ingestEventsBodyOneOutputTokensMax = 2147483647;
 
-export const ingestEventsBodyOutputTokensMin = 0;
-export const ingestEventsBodyOutputTokensMax = 2147483647;
+export const ingestEventsBodyOneCostUsdMin = 0;
 
-export const ingestEventsBodyCostUsdMin = 0;
+export const ingestEventsBodyOneCostInputUsdDefault = 0;
+export const ingestEventsBodyOneCostInputUsdMin = 0;
 
-export const ingestEventsBodyCostInputUsdDefault = 0;
-export const ingestEventsBodyCostInputUsdMin = 0;
+export const ingestEventsBodyOneCostOutputUsdDefault = 0;
+export const ingestEventsBodyOneCostOutputUsdMin = 0;
 
-export const ingestEventsBodyCostOutputUsdDefault = 0;
-export const ingestEventsBodyCostOutputUsdMin = 0;
+export const ingestEventsBodyOneCacheReadTokensDefault = 0;
+export const ingestEventsBodyOneCacheReadTokensMin = 0;
+export const ingestEventsBodyOneCacheReadTokensMax = 2147483647;
 
-export const ingestEventsBodyCacheReadTokensDefault = 0;
-export const ingestEventsBodyCacheReadTokensMin = 0;
-export const ingestEventsBodyCacheReadTokensMax = 2147483647;
+export const ingestEventsBodyOneCacheWriteTokensDefault = 0;
+export const ingestEventsBodyOneCacheWriteTokensMin = 0;
+export const ingestEventsBodyOneCacheWriteTokensMax = 2147483647;
 
-export const ingestEventsBodyCacheWriteTokensDefault = 0;
-export const ingestEventsBodyCacheWriteTokensMin = 0;
-export const ingestEventsBodyCacheWriteTokensMax = 2147483647;
+export const ingestEventsBodyOneLatencyMsMin = 0;
+export const ingestEventsBodyOneLatencyMsMax = 2147483647;
 
-export const ingestEventsBodyLatencyMsMin = 0;
-export const ingestEventsBodyLatencyMsMax = 2147483647;
+export const ingestEventsBodyOneStatusDefault = `denied`;
+export const ingestEventsBodyTwoSchemaVersionDefault = 1;
+export const ingestEventsBodyTwoKeyIdMax = 255;
+
+export const ingestEventsBodyTwoModelIdMax = 255;
+
+export const ingestEventsBodyTwoProviderIdMax = 63;
+
+export const ingestEventsBodyTwoInputTokensMin = 0;
+export const ingestEventsBodyTwoInputTokensMax = 2147483647;
+
+export const ingestEventsBodyTwoOutputTokensMin = 0;
+export const ingestEventsBodyTwoOutputTokensMax = 2147483647;
+
+export const ingestEventsBodyTwoCostUsdMin = 0;
+
+export const ingestEventsBodyTwoCostInputUsdDefault = 0;
+export const ingestEventsBodyTwoCostInputUsdMin = 0;
+
+export const ingestEventsBodyTwoCostOutputUsdDefault = 0;
+export const ingestEventsBodyTwoCostOutputUsdMin = 0;
+
+export const ingestEventsBodyTwoCacheReadTokensDefault = 0;
+export const ingestEventsBodyTwoCacheReadTokensMin = 0;
+export const ingestEventsBodyTwoCacheReadTokensMax = 2147483647;
+
+export const ingestEventsBodyTwoCacheWriteTokensDefault = 0;
+export const ingestEventsBodyTwoCacheWriteTokensMin = 0;
+export const ingestEventsBodyTwoCacheWriteTokensMax = 2147483647;
+
+export const ingestEventsBodyTwoLatencyMsMin = 0;
+export const ingestEventsBodyTwoLatencyMsMax = 2147483647;
 
 
 
-export const IngestEventsBodyItem = zod.object({
-  "schema_version": zod.literal(1).default(ingestEventsBodySchemaVersionDefault).describe('Usage event schema version'),
+export const IngestEventsBodyItem = zod.union([zod.object({
+  "schema_version": zod.literal(1).default(ingestEventsBodyOneSchemaVersionDefault).describe('Usage event schema version'),
   "event_id": zod.uuid().describe('Idempotency key for event ingestion'),
   "request_id": zod.uuid().describe('Data-plane request ID'),
   "occurred_at": zod.coerce.date().describe('Timestamp when the request completed'),
   "org_id": zod.uuid().describe('Organization that made the request'),
   "workspace_id": zod.uuid().describe('Workspace that made the request'),
-  "key_id": zod.string().min(1).max(ingestEventsBodyKeyIdMax).describe('Inference key ID used for the request'),
-  "model_id": zod.string().min(1).max(ingestEventsBodyModelIdMax).describe('Caller-facing model ID'),
-  "provider_id": zod.string().max(ingestEventsBodyProviderIdMax).describe('Provider that served the request, or empty for an early denial'),
+  "key_id": zod.string().min(1).max(ingestEventsBodyOneKeyIdMax).describe('Inference key ID used for the request'),
+  "model_id": zod.string().min(1).max(ingestEventsBodyOneModelIdMax).describe('Caller-facing model ID'),
+  "provider_id": zod.literal("").default(ingestEventsBodyOneProviderIdDefault).describe('No provider was selected before denial'),
   "bundle_id": zod.uuid().describe('Policy bundle used for the request'),
-  "input_tokens": zod.int().min(ingestEventsBodyInputTokensMin).max(ingestEventsBodyInputTokensMax).describe('Total input tokens'),
-  "output_tokens": zod.int().min(ingestEventsBodyOutputTokensMin).max(ingestEventsBodyOutputTokensMax).describe('Total output tokens'),
-  "cost_usd": zod.number().min(ingestEventsBodyCostUsdMin).describe('Total estimated cost in USD'),
-  "cost_input_usd": zod.number().min(ingestEventsBodyCostInputUsdMin).default(ingestEventsBodyCostInputUsdDefault).describe('Estimated input cost in USD'),
-  "cost_output_usd": zod.number().min(ingestEventsBodyCostOutputUsdMin).default(ingestEventsBodyCostOutputUsdDefault).describe('Estimated output cost in USD'),
-  "cache_read_tokens": zod.int().min(ingestEventsBodyCacheReadTokensMin).max(ingestEventsBodyCacheReadTokensMax).default(ingestEventsBodyCacheReadTokensDefault).describe('Input tokens read from a provider cache'),
-  "cache_write_tokens": zod.int().min(ingestEventsBodyCacheWriteTokensMin).max(ingestEventsBodyCacheWriteTokensMax).default(ingestEventsBodyCacheWriteTokensDefault).describe('Input tokens written to a provider cache'),
-  "latency_ms": zod.int().min(ingestEventsBodyLatencyMsMin).max(ingestEventsBodyLatencyMsMax).describe('End-to-end request latency in milliseconds'),
-  "status": zod.enum(['ok', 'upstream_error', 'denied', 'timeout', 'cancelled', 'credential_rejected', 'rate_limited']).describe('How the request ended; cancelled events may contain partial token counts'),
+  "input_tokens": zod.int().min(ingestEventsBodyOneInputTokensMin).max(ingestEventsBodyOneInputTokensMax).describe('Total input tokens'),
+  "output_tokens": zod.int().min(ingestEventsBodyOneOutputTokensMin).max(ingestEventsBodyOneOutputTokensMax).describe('Total output tokens'),
+  "cost_usd": zod.number().min(ingestEventsBodyOneCostUsdMin).describe('Total estimated cost in USD'),
+  "cost_input_usd": zod.number().min(ingestEventsBodyOneCostInputUsdMin).default(ingestEventsBodyOneCostInputUsdDefault).describe('Estimated input cost in USD'),
+  "cost_output_usd": zod.number().min(ingestEventsBodyOneCostOutputUsdMin).default(ingestEventsBodyOneCostOutputUsdDefault).describe('Estimated output cost in USD'),
+  "cache_read_tokens": zod.int().min(ingestEventsBodyOneCacheReadTokensMin).max(ingestEventsBodyOneCacheReadTokensMax).default(ingestEventsBodyOneCacheReadTokensDefault).describe('Input tokens read from a provider cache'),
+  "cache_write_tokens": zod.int().min(ingestEventsBodyOneCacheWriteTokensMin).max(ingestEventsBodyOneCacheWriteTokensMax).default(ingestEventsBodyOneCacheWriteTokensDefault).describe('Input tokens written to a provider cache'),
+  "latency_ms": zod.int().min(ingestEventsBodyOneLatencyMsMin).max(ingestEventsBodyOneLatencyMsMax).describe('End-to-end request latency in milliseconds'),
+  "status": zod.literal("denied").default(ingestEventsBodyOneStatusDefault).describe('The request was denied before routing'),
   "stream": zod.boolean().describe('Whether the response was streamed'),
-  "credential_id": zod.union([zod.uuid(),zod.null()]).optional().describe('Provider credential used for the request'),
-  "credential_scope": zod.union([zod.enum(['platform', 'org', 'workspace']),zod.null()]).optional().describe('Scope of the provider credential used for the request')
-}).describe('One metered model request reported by a data plane.\n\n`event_id` makes retries idempotent.')
+  "credential_id": zod.null().optional().describe('No provider credential was selected before denial'),
+  "credential_scope": zod.null().optional().describe('No provider credential scope was selected before denial')
+}),zod.object({
+  "schema_version": zod.literal(1).default(ingestEventsBodyTwoSchemaVersionDefault).describe('Usage event schema version'),
+  "event_id": zod.uuid().describe('Idempotency key for event ingestion'),
+  "request_id": zod.uuid().describe('Data-plane request ID'),
+  "occurred_at": zod.coerce.date().describe('Timestamp when the request completed'),
+  "org_id": zod.uuid().describe('Organization that made the request'),
+  "workspace_id": zod.uuid().describe('Workspace that made the request'),
+  "key_id": zod.string().min(1).max(ingestEventsBodyTwoKeyIdMax).describe('Inference key ID used for the request'),
+  "model_id": zod.string().min(1).max(ingestEventsBodyTwoModelIdMax).describe('Caller-facing model ID'),
+  "provider_id": zod.string().min(1).max(ingestEventsBodyTwoProviderIdMax).describe('Provider that served the request'),
+  "bundle_id": zod.uuid().describe('Policy bundle used for the request'),
+  "input_tokens": zod.int().min(ingestEventsBodyTwoInputTokensMin).max(ingestEventsBodyTwoInputTokensMax).describe('Total input tokens'),
+  "output_tokens": zod.int().min(ingestEventsBodyTwoOutputTokensMin).max(ingestEventsBodyTwoOutputTokensMax).describe('Total output tokens'),
+  "cost_usd": zod.number().min(ingestEventsBodyTwoCostUsdMin).describe('Total estimated cost in USD'),
+  "cost_input_usd": zod.number().min(ingestEventsBodyTwoCostInputUsdMin).default(ingestEventsBodyTwoCostInputUsdDefault).describe('Estimated input cost in USD'),
+  "cost_output_usd": zod.number().min(ingestEventsBodyTwoCostOutputUsdMin).default(ingestEventsBodyTwoCostOutputUsdDefault).describe('Estimated output cost in USD'),
+  "cache_read_tokens": zod.int().min(ingestEventsBodyTwoCacheReadTokensMin).max(ingestEventsBodyTwoCacheReadTokensMax).default(ingestEventsBodyTwoCacheReadTokensDefault).describe('Input tokens read from a provider cache'),
+  "cache_write_tokens": zod.int().min(ingestEventsBodyTwoCacheWriteTokensMin).max(ingestEventsBodyTwoCacheWriteTokensMax).default(ingestEventsBodyTwoCacheWriteTokensDefault).describe('Input tokens written to a provider cache'),
+  "latency_ms": zod.int().min(ingestEventsBodyTwoLatencyMsMin).max(ingestEventsBodyTwoLatencyMsMax).describe('End-to-end request latency in milliseconds'),
+  "status": zod.enum(['ok', 'upstream_error', 'timeout', 'cancelled', 'credential_rejected', 'rate_limited']).describe('How the routed request ended'),
+  "stream": zod.boolean().describe('Whether the response was streamed'),
+  "credential_id": zod.uuid().describe('Provider credential used for the request'),
+  "credential_scope": zod.enum(['platform', 'org', 'workspace']).describe('Scope of the provider credential used for the request')
+})])
 export const IngestEventsBody = zod.array(IngestEventsBodyItem).max(1000)
 
 export const IngestEventsResponse = zod.object({
@@ -2222,9 +2277,9 @@ export const GetInstanceTaxonomyResponse = zod.object({
   "cache_write_price_per_mtok": zod.number(),
   "context_window": zod.int(),
   "max_output_tokens": zod.union([zod.int(),zod.null()]),
-  "input_modalities": zod.union([zod.array(zod.enum(['text', 'image', 'audio', 'video', 'pdf'])),zod.null()]),
-  "output_modalities": zod.union([zod.array(zod.enum(['text', 'image', 'audio', 'video', 'pdf'])),zod.null()]),
-  "capabilities": zod.array(zod.string()),
+  "input_modalities": zod.array(zod.enum(['text', 'image', 'audio', 'video', 'pdf'])),
+  "output_modalities": zod.array(zod.enum(['text', 'image', 'audio', 'video', 'pdf'])),
+  "capabilities": zod.array(zod.enum(['streaming', 'tools', 'reasoning', 'structured_output'])),
   "parameter_support": zod.record(zod.string(), zod.enum(['supported', 'unsupported'])),
   "created_at": zod.coerce.date(),
   "updated_at": zod.coerce.date(),
@@ -2298,7 +2353,7 @@ export const applyInstanceTaxonomyBodyModelsItemInputModalitiesMax = 16;
 
 export const applyInstanceTaxonomyBodyModelsItemOutputModalitiesMax = 16;
 
-export const applyInstanceTaxonomyBodyModelsItemCapabilitiesMax = 128;
+export const applyInstanceTaxonomyBodyModelsItemCapabilitiesMax = 4;
 
 export const applyInstanceTaxonomyBodyModelsMax = 10000;
 
@@ -2327,7 +2382,7 @@ export const ApplyInstanceTaxonomyBody = zod.object({
   "max_output_tokens": zod.union([zod.int().min(1).max(applyInstanceTaxonomyBodyModelsItemMaxOutputTokensOneMax),zod.null()]).optional().describe('Max completion tokens; requests are clamped to it'),
   "input_modalities": zod.array(zod.enum(['text', 'image', 'audio', 'video', 'pdf'])).min(1).max(applyInstanceTaxonomyBodyModelsItemInputModalitiesMax).describe('Accepted input modalities'),
   "output_modalities": zod.array(zod.enum(['text', 'image', 'audio', 'video', 'pdf'])).min(1).max(applyInstanceTaxonomyBodyModelsItemOutputModalitiesMax).describe('Produced output modalities'),
-  "capabilities": zod.array(zod.string()).max(applyInstanceTaxonomyBodyModelsItemCapabilitiesMax).optional().describe('Capabilities supported by the model'),
+  "capabilities": zod.array(zod.enum(['streaming', 'tools', 'reasoning', 'structured_output'])).max(applyInstanceTaxonomyBodyModelsItemCapabilitiesMax).optional().describe('Capabilities supported by the model'),
   "parameter_support": zod.record(zod.string(), zod.enum(['supported', 'unsupported'])).optional().describe('Known support for canonical request parameters; an absent parameter is unknown')
 })).max(applyInstanceTaxonomyBodyModelsMax).optional().describe('Routable models to create or update')
 })
@@ -2387,9 +2442,9 @@ export const GetOrgTaxonomyResponse = zod.object({
   "cache_write_price_per_mtok": zod.number(),
   "context_window": zod.int(),
   "max_output_tokens": zod.union([zod.int(),zod.null()]),
-  "input_modalities": zod.union([zod.array(zod.enum(['text', 'image', 'audio', 'video', 'pdf'])),zod.null()]),
-  "output_modalities": zod.union([zod.array(zod.enum(['text', 'image', 'audio', 'video', 'pdf'])),zod.null()]),
-  "capabilities": zod.array(zod.string()),
+  "input_modalities": zod.array(zod.enum(['text', 'image', 'audio', 'video', 'pdf'])),
+  "output_modalities": zod.array(zod.enum(['text', 'image', 'audio', 'video', 'pdf'])),
+  "capabilities": zod.array(zod.enum(['streaming', 'tools', 'reasoning', 'structured_output'])),
   "parameter_support": zod.record(zod.string(), zod.enum(['supported', 'unsupported'])),
   "created_at": zod.coerce.date(),
   "updated_at": zod.coerce.date(),
@@ -2435,9 +2490,9 @@ export const GetWorkspaceTaxonomyResponse = zod.object({
   "cache_write_price_per_mtok": zod.number(),
   "context_window": zod.int(),
   "max_output_tokens": zod.union([zod.int(),zod.null()]),
-  "input_modalities": zod.union([zod.array(zod.enum(['text', 'image', 'audio', 'video', 'pdf'])),zod.null()]),
-  "output_modalities": zod.union([zod.array(zod.enum(['text', 'image', 'audio', 'video', 'pdf'])),zod.null()]),
-  "capabilities": zod.array(zod.string()),
+  "input_modalities": zod.array(zod.enum(['text', 'image', 'audio', 'video', 'pdf'])),
+  "output_modalities": zod.array(zod.enum(['text', 'image', 'audio', 'video', 'pdf'])),
+  "capabilities": zod.array(zod.enum(['streaming', 'tools', 'reasoning', 'structured_output'])),
   "parameter_support": zod.record(zod.string(), zod.enum(['supported', 'unsupported'])),
   "created_at": zod.coerce.date(),
   "updated_at": zod.coerce.date(),
@@ -2535,7 +2590,7 @@ export const createModelBodyInputModalitiesMax = 16;
 
 export const createModelBodyOutputModalitiesMax = 16;
 
-export const createModelBodyCapabilitiesMax = 128;
+export const createModelBodyCapabilitiesMax = 4;
 
 
 
@@ -2552,7 +2607,7 @@ export const CreateModelBody = zod.object({
   "max_output_tokens": zod.union([zod.int().min(1).max(createModelBodyMaxOutputTokensOneMax),zod.null()]).optional().describe('Max completion tokens; requests are clamped to it'),
   "input_modalities": zod.array(zod.enum(['text', 'image', 'audio', 'video', 'pdf'])).min(1).max(createModelBodyInputModalitiesMax).describe('Accepted input modalities'),
   "output_modalities": zod.array(zod.enum(['text', 'image', 'audio', 'video', 'pdf'])).min(1).max(createModelBodyOutputModalitiesMax).describe('Produced output modalities'),
-  "capabilities": zod.array(zod.string()).max(createModelBodyCapabilitiesMax).optional().describe('Capabilities supported by the model'),
+  "capabilities": zod.array(zod.enum(['streaming', 'tools', 'reasoning', 'structured_output'])).max(createModelBodyCapabilitiesMax).optional().describe('Capabilities supported by the model'),
   "parameter_support": zod.record(zod.string(), zod.enum(['supported', 'unsupported'])).optional().describe('Known support for canonical request parameters; an absent parameter is unknown')
 })
 
@@ -2568,9 +2623,9 @@ export const CreateModelResponse = zod.object({
   "cache_write_price_per_mtok": zod.number(),
   "context_window": zod.int(),
   "max_output_tokens": zod.union([zod.int(),zod.null()]),
-  "input_modalities": zod.union([zod.array(zod.enum(['text', 'image', 'audio', 'video', 'pdf'])),zod.null()]),
-  "output_modalities": zod.union([zod.array(zod.enum(['text', 'image', 'audio', 'video', 'pdf'])),zod.null()]),
-  "capabilities": zod.array(zod.string()),
+  "input_modalities": zod.array(zod.enum(['text', 'image', 'audio', 'video', 'pdf'])),
+  "output_modalities": zod.array(zod.enum(['text', 'image', 'audio', 'video', 'pdf'])),
+  "capabilities": zod.array(zod.enum(['streaming', 'tools', 'reasoning', 'structured_output'])),
   "parameter_support": zod.record(zod.string(), zod.enum(['supported', 'unsupported'])),
   "created_at": zod.coerce.date(),
   "updated_at": zod.coerce.date(),

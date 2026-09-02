@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import sys
 import time
 from collections import deque
@@ -12,6 +11,24 @@ import yaml
 from dotenv import find_dotenv, load_dotenv
 from rich.live import Live
 
+from api_models import (
+    AccessKeyMintedOut,
+    AccessKeyOut,
+    BundleOut,
+    DataPlaneInstanceOut,
+    InferenceKeyMintedOut,
+    InferenceKeyOut,
+    OrgMemberOut,
+    OrgOut,
+    ProviderCredentialOut,
+    TaxonomyApplyOut,
+    TaxonomyChangeCounts,
+    TaxonomyOut,
+    UsageEventOut,
+    UserOut,
+    WorkspaceMembershipOut,
+    WorkspaceOut,
+)
 from cli.client import (
     access_client,
     access_get,
@@ -42,7 +59,7 @@ from cli.common import (
     workspaces_app,
 )
 from cli.output import Col, FormatOption, OutputFormat, build_table, fmt_when, print_rows
-from cli.profiles import active_profile, upsert_profile
+from cli.profiles import active_profile, load_config, upsert_profile
 
 if TYPE_CHECKING:
     from rich.table import Table
@@ -93,10 +110,16 @@ CREDENTIAL_HEALTH_LABELS = {"unknown": "unused", "live": "working", "invalid": "
 """What the data plane last saw of a key, said the way an operator would say it."""
 
 
-def _credential_rows(rows: list[dict]) -> list[dict]:
+def _credential_rows(credentials: list[ProviderCredentialOut]) -> list[dict[str, object]]:
     """Fold enabled into health: a disabled key is out of the pool whatever its last request said,
     so that is the one fact worth a column."""
-    return [{**row, "health": "disabled" if not row["enabled"] else CREDENTIAL_HEALTH_LABELS.get(row["status"], row["status"])} for row in rows]
+    return [
+        {
+            **credential.model_dump(mode="json"),
+            "health": "disabled" if not credential.enabled else CREDENTIAL_HEALTH_LABELS.get(credential.status, credential.status),
+        }
+        for credential in credentials
+    ]
 
 
 def _money(value: object) -> str:
@@ -130,7 +153,7 @@ BUNDLE_COLS = [
 @orgs_app.command("list")
 def orgs_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
     """List every organization on this instance."""
-    print_rows("orgs", access_get("/api/v1/orgs", control_plane_url), ORG_COLS, fmt)
+    print_rows("orgs", access_get("/api/v1/orgs", control_plane_url, OrgOut), ORG_COLS, fmt)
 
 
 WorkspaceOption = Annotated[str, typer.Option("--workspace", "-w", help="Workspace name or id; defaults to your selected workspace")]
@@ -139,14 +162,15 @@ WorkspaceOption = Annotated[str, typer.Option("--workspace", "-w", help="Workspa
 @workspaces_app.command("list")
 def workspaces_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
     """List your workspaces."""
-    print_rows("workspaces", access_get(org_path("/workspaces"), control_plane_url), WORKSPACE_COLS, fmt)
+    print_rows("workspaces", access_get(org_path("/workspaces"), control_plane_url, WorkspaceOut), WORKSPACE_COLS, fmt)
 
 
 @workspaces_app.command("use")
 def workspaces_use(workspace: str, control_plane_url: str = "") -> None:
     """Select the workspace that key commands use by default."""
-    profile = active_profile()
-    if profile is None:
+    config = load_config()
+    profile = active_profile(config)
+    if profile is None or config.active is None:
         console.print("[red]Not signed in. Run [bold]airllm login[/bold].[/red]")
         raise typer.Exit(1)
     with access_client(control_plane_url) as c:
@@ -154,17 +178,17 @@ def workspaces_use(workspace: str, control_plane_url: str = "") -> None:
     if not resp.is_success:
         console.print(f"[red]No workspace [bold]{workspace}[/bold]. See [bold]airllm workspaces list[/bold].[/red]")
         raise typer.Exit(1)
-    chosen = payload(resp)
-    name = str(profile.pop("name"))
-    upsert_profile(name, {**profile, "workspace": chosen["slug"], "workspace_name": chosen["name"]})
-    console.print(f"Using workspace [bold]{chosen['slug']}[/bold]")
+    chosen = payload(resp, WorkspaceOut)
+    updated_profile = profile.model_copy(update={"workspace": chosen.slug, "workspace_name": chosen.name})
+    upsert_profile(config.active, updated_profile)
+    console.print(f"Using workspace [bold]{chosen.slug}[/bold]")
 
 
 @workspace_members_app.command("list")
 def workspace_members_list(workspace: WorkspaceOption = "", control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
     """List who can use this workspace."""
     workspace_ref = resolve_workspace(workspace)
-    print_rows("members", access_get(org_path(f"/workspaces/{workspace_ref}/members"), control_plane_url), MEMBER_COLS, fmt)
+    print_rows("members", access_get(org_path(f"/workspaces/{workspace_ref}/members"), control_plane_url, WorkspaceMembershipOut), MEMBER_COLS, fmt)
 
 
 @workspace_members_app.command("add")
@@ -196,7 +220,9 @@ def workspace_members_remove(user_id: str, workspace: WorkspaceOption = "", cont
 def inference_keys_list(workspace: WorkspaceOption = "", control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
     """List this workspace's API keys."""
     workspace_ref = resolve_workspace(workspace)
-    print_rows("inference keys", access_get(org_path(f"/workspaces/{workspace_ref}/inference-keys"), control_plane_url), KEY_COLS, fmt)
+    print_rows(
+        "inference keys", access_get(org_path(f"/workspaces/{workspace_ref}/inference-keys"), control_plane_url, InferenceKeyOut), KEY_COLS, fmt
+    )
 
 
 @inference_keys_app.command("revoke")
@@ -254,28 +280,28 @@ def service_accounts_create(
     if not name:
         name = typer.prompt("name")
     with access_client(control_plane_url) as c:
-        resp = payload(post_expecting(c, "/api/v1/service-accounts", {"name": name}, ok=(200,)))
-    console.print(f"Created service account [bold]{resp['email']}[/bold]")
-    console.print(f"[dim]Add it to your organization: airllm orgs members add {resp['id']}[/dim]")
+        account = payload(post_expecting(c, "/api/v1/service-accounts", {"name": name}, ok=(200,)), UserOut)
+    console.print(f"Created service account [bold]{account.email}[/bold]")
+    console.print(f"[dim]Add it to your organization: airllm orgs members add {account.id}[/dim]")
 
 
 @service_accounts_app.command("list")
 def service_accounts_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
     """List machine accounts."""
-    rows = access_get("/api/v1/users", control_plane_url, {"service_account": True})
+    rows = access_get("/api/v1/users", control_plane_url, UserOut, {"service_account": True})
     print_rows("service accounts", rows, USER_COLS, fmt)
 
 
 @users_app.command("list")
 def users_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
     """List every account and the organizations it belongs to."""
-    print_rows("users", access_get("/api/v1/users", control_plane_url), USER_COLS, fmt)
+    print_rows("users", access_get("/api/v1/users", control_plane_url, UserOut), USER_COLS, fmt)
 
 
 @org_members_app.command("list")
 def org_members_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
     """List the active org's members."""
-    print_rows("members", access_get(org_path("/users"), control_plane_url), ORG_MEMBER_COLS, fmt)
+    print_rows("members", access_get(org_path("/users"), control_plane_url, OrgMemberOut), ORG_MEMBER_COLS, fmt)
 
 
 @org_members_app.command("add")
@@ -321,7 +347,7 @@ def access_keys_list(  # noqa: PLR0913, PLR0917 command flags define the CLI sur
         if workspace_id
         else f"/api/v1/orgs/{selected_org}/access-keys"
     )
-    print_rows("access keys", access_get(path, control_plane_url, {"user_id": user_id} if user_id else None), ACCESS_KEY_COLS, fmt)
+    print_rows("access keys", access_get(path, control_plane_url, AccessKeyOut, {"user_id": user_id} if user_id else None), ACCESS_KEY_COLS, fmt)
 
 
 @access_keys_app.command("mint")
@@ -357,9 +383,9 @@ def access_keys_mint(  # noqa: PLR0913, PLR0917 command flags define the CLI sur
         "expires_at": expires_at or None,
     }
     with access_client(control_plane_url) as c:
-        resp = payload(post_expecting(c, path, body, ok=(200,)))
-    console.print(f"Access key [bold]{resp['id']}[/bold] minted at [bold]{resp['scope']['level']}[/bold] scope, shown once:")
-    console.print(resp["token"])
+        key = payload(post_expecting(c, path, body, ok=(200,)), AccessKeyMintedOut)
+    console.print(f"Access key [bold]{key.id}[/bold] minted at [bold]{key.scope.level}[/bold] scope, shown once:")
+    console.print(key.token)
 
 
 @access_keys_app.command("revoke")
@@ -371,30 +397,30 @@ def access_keys_revoke(key_id: str, control_plane_url: str = "") -> None:
     console.print(f"Revoked [bold]{key_id}[/bold]")
 
 
-def _taxonomy(control_plane_url: str) -> dict:
+def _taxonomy(control_plane_url: str) -> TaxonomyOut:
     with access_client(control_plane_url) as c:
         resp = c.get(org_path("/taxonomy"))
         ensure_ok(resp)
-        return payload(resp)
+        return payload(resp, TaxonomyOut)
 
 
 @providers_app.command("list")
 def providers_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
     """List the providers you can route to."""
-    print_rows("providers", _taxonomy(control_plane_url)["providers"], PROVIDER_COLS, fmt)
+    print_rows("providers", _taxonomy(control_plane_url).providers, PROVIDER_COLS, fmt)
 
 
 @models_app.command("list")
 def models_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
     """List the models you can route to, with pricing."""
     taxonomy = _taxonomy(control_plane_url)
-    providers = {provider["id"]: provider["name"] for provider in taxonomy["providers"]}
-    models = [{**model, "provider": providers.get(model["provider_id"], model["provider_id"])} for model in taxonomy["models"]]
+    providers = {provider.id: provider.name for provider in taxonomy.providers}
+    models = [{**model.model_dump(mode="json"), "provider": providers.get(model.provider_id, str(model.provider_id))} for model in taxonomy.models]
     print_rows("models", models, MODEL_COLS, fmt)
 
 
-def _change_summary(changes: dict) -> str:
-    return f"{changes['created']} created, {changes['updated']} updated, {changes['unchanged']} unchanged"
+def _change_summary(changes: TaxonomyChangeCounts) -> str:
+    return f"{changes.created} created, {changes.updated} updated, {changes.unchanged} unchanged"
 
 
 @taxonomy_app.command("apply")
@@ -414,26 +440,26 @@ def taxonomy_apply(
         raise typer.Exit(1)
     with access_client(control_plane_url) as client:
         response = client.post("/api/v1/instance/taxonomy", params={"dry_run": dry_run}, json=document, timeout=120.0)
-        applied = payload(ensure_ok(response))
-    action = "Dry run" if applied["dry_run"] else "Applied"
-    console.print(f"{action}: providers {_change_summary(applied['providers'])}; models {_change_summary(applied['models'])}")
-    if not applied["dry_run"]:
-        publications = ", ".join(f"{bundle['org_id']} v{bundle['version']}" for bundle in applied["published"])
+        applied = payload(ensure_ok(response), TaxonomyApplyOut)
+    action = "Dry run" if applied.dry_run else "Applied"
+    console.print(f"{action}: providers {_change_summary(applied.providers)}; models {_change_summary(applied.models)}")
+    if not applied.dry_run:
+        publications = ", ".join(f"{bundle.org_id} v{bundle.version}" for bundle in applied.published)
         console.print(f"Published: {publications or 'no bundle changes'}")
 
 
 @bundles_app.command("list")
 def bundles_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
     """List published configuration versions."""
-    print_rows("bundles", access_get(org_path("/bundles"), control_plane_url), BUNDLE_COLS, fmt)
+    print_rows("bundles", access_get(org_path("/bundles"), control_plane_url, BundleOut), BUNDLE_COLS, fmt)
 
 
 @bundles_app.command("republish")
 def bundles_republish(control_plane_url: str = "") -> None:
     """Republish your current configuration for recovery or key rotation."""
     with access_client(control_plane_url) as c:
-        published = payload(post_expecting(c, org_path("/bundles/republish"), {}, ok=(200,)))
-    console.print(f"Published v{published['version']}")
+        published = payload(post_expecting(c, org_path("/bundles/republish"), {}, ok=(200,)), BundleOut)
+    console.print(f"Published v{published.version}")
 
 
 INSTANCE_COLS = [
@@ -457,63 +483,68 @@ def data_planes_list(
     with access_client(control_plane_url) as c:
         resp = c.get("/api/v1/instance/data-planes", params={"include_offline": all_})
         ensure_ok(resp)
-        print_rows("data planes", payload_rows(resp), INSTANCE_COLS, fmt)
+        print_rows("data planes", payload_rows(resp, DataPlaneInstanceOut), INSTANCE_COLS, fmt)
 
 
 @events_app.command("list")
 def events_list(control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
     """List recent requests, newest first."""
-    print_rows("events", access_get(org_path("/events"), control_plane_url), EVENT_COLS, fmt)
+    print_rows("events", access_get(org_path("/events"), control_plane_url, UsageEventOut), EVENT_COLS, fmt)
 
 
 @events_app.command("tail")
 def events_tail(interval: float = 2.0, keep: int = 30, control_plane_url: str = "", fmt: FormatOption = OutputFormat.table) -> None:
     """Follow requests as they happen."""
-    rows: deque[dict] = deque(maxlen=keep)
+    rows: deque[UsageEventOut] = deque(maxlen=keep)
     fresh_ids: set[str] = set()
 
     def table() -> Table:
-        return build_table(list(rows), EVENT_COLS, lambda r: "blink bold cyan" if r["event_id"] in fresh_ids else None)
+        return build_table(list(rows), EVENT_COLS, lambda values: "blink bold cyan" if values["event_id"] in fresh_ids else None)
 
-    def emit(event: dict) -> None:
+    def emit(event: UsageEventOut) -> None:
         if fmt is OutputFormat.json:
-            print(json.dumps(event, ensure_ascii=False), flush=True)
+            print(event.model_dump_json(), flush=True)
         else:
-            print("\t".join(c.fmt(event.get(c.key)) for c in EVENT_COLS), flush=True)
+            values = event.model_dump(mode="json")
+            print("\t".join(c.fmt(values.get(c.key)) for c in EVENT_COLS), flush=True)
 
     path = org_path("/events")
     with access_client(control_plane_url) as c:
         resp = c.get(path, params={"limit": keep})
         ensure_ok(resp)
-        rows.extend(reversed(payload_rows(resp)))
-        cursor = (rows[-1]["occurred_at"], rows[-1]["event_id"]) if rows else ("1970-01-01T00:00:00+00:00", "00000000-0000-0000-0000-000000000000")
+        rows.extend(reversed(payload_rows(resp, UsageEventOut)))
+        cursor = (
+            (rows[-1].occurred_at.isoformat(), str(rows[-1].event_id))
+            if rows
+            else ("1970-01-01T00:00:00+00:00", "00000000-0000-0000-0000-000000000000")
+        )
         try:
             if fmt is not OutputFormat.table:
                 while True:
                     time.sleep(interval)
                     resp = c.get(path, params={"after": cursor[0], "after_event_id": cursor[1], "limit": 200})
                     ensure_ok(resp)
-                    for event in payload_rows(resp):
+                    for event in payload_rows(resp, UsageEventOut):
                         emit(event)
-                        cursor = (event["occurred_at"], event["event_id"])
+                        cursor = (event.occurred_at.isoformat(), str(event.event_id))
             with Live(table(), console=console, refresh_per_second=4) as live:
                 while True:
                     time.sleep(interval)
                     resp = c.get(path, params={"after": cursor[0], "after_event_id": cursor[1], "limit": 200})
                     ensure_ok(resp)
-                    batch = payload_rows(resp)
-                    fresh_ids = {event["event_id"] for event in batch}
+                    batch = payload_rows(resp, UsageEventOut)
+                    fresh_ids = {str(event.event_id) for event in batch}
                     if batch:
                         rows.extend(batch)
-                        cursor = (batch[-1]["occurred_at"], batch[-1]["event_id"])
+                        cursor = (batch[-1].occurred_at.isoformat(), str(batch[-1].event_id))
                     live.update(table())
         except KeyboardInterrupt:
             console.print("[dim]stopped[/dim]")
 
 
-def _key_created(resp: dict) -> None:
+def _key_created(key: InferenceKeyMintedOut) -> None:
     console.print("Your new key, shown once:")
-    console.print(resp["token"])
+    console.print(key.token)
 
 
 @orgs_app.command("create")
@@ -525,8 +556,8 @@ def orgs_create(
     """Create an organization."""
     body = {"name": name, "slug": slug}
     with access_client(control_plane_url) as client:
-        organization = payload(post_expecting(client, "/api/v1/orgs", body, ok=(200,)))
-    console.print(f"Created [bold]{organization['name']}[/bold]. Add people with airllm orgs members add <user>.")
+        organization = payload(post_expecting(client, "/api/v1/orgs", body, ok=(200,)), OrgOut)
+    console.print(f"Created [bold]{organization.name}[/bold]. Add people with airllm orgs members add <user>.")
 
 
 @inference_keys_app.command("create")
@@ -538,7 +569,9 @@ def inference_keys_create(
     """Create an API key. Shown once, never stored."""
     workspace_ref = resolve_workspace(workspace)
     with access_client(control_plane_url) as c:
-        _key_created(payload(post_expecting(c, org_path(f"/workspaces/{workspace_ref}/inference-keys"), {"label": label}, ok=(200,))))
+        _key_created(
+            payload(post_expecting(c, org_path(f"/workspaces/{workspace_ref}/inference-keys"), {"label": label}, ok=(200,)), InferenceKeyMintedOut)
+        )
 
 
 @workspaces_app.command("create")
@@ -550,8 +583,8 @@ def workspaces_create(
     """Create a workspace. You become its first member."""
     with access_client(control_plane_url) as c:
         body = {"name": name, "slug": slug} if slug else {"name": name}
-        created = payload(post_expecting(c, org_path("/workspaces"), body, ok=(200,)))
-    console.print(f"Created [bold]{created['slug']}[/bold]. Select it with airllm workspaces use {created['slug']}.")
+        created = payload(post_expecting(c, org_path("/workspaces"), body, ok=(200,)), WorkspaceOut)
+    console.print(f"Created [bold]{created.slug}[/bold]. Select it with airllm workspaces use {created.slug}.")
 
 
 PROVIDER_CREDENTIAL_COLS = [
@@ -598,9 +631,8 @@ def provider_credentials_add(  # noqa: PLR0913, PLR0917 flags are the command's 
     body = {"provider": provider, "name": name, "value": secret, "priority": priority}
     path = org_path("/provider-credentials" if org_wide else f"/workspaces/{resolve_workspace(workspace)}/provider-credentials")
     with access_client(control_plane_url) as c:
-        credential = payload(post_expecting(c, path, body, ok=(200,)))
-    scope = credential["scope"]
-    console.print(f"Added [bold]{provider}[/bold] key [bold]{credential['name']}[/bold] to this {scope} (...{credential['fingerprint']})")
+        credential = payload(post_expecting(c, path, body, ok=(200,)), ProviderCredentialOut)
+    console.print(f"Added [bold]{provider}[/bold] key [bold]{credential.name}[/bold] to this {credential.scope} (...{credential.fingerprint})")
 
 
 @provider_credentials_app.command("list")
@@ -615,7 +647,7 @@ def provider_credentials_list(
     with access_client(control_plane_url) as c:
         resp = c.get(path)
         ensure_ok(resp)
-        rows = payload_rows(resp)
+        rows = payload_rows(resp, ProviderCredentialOut)
     print_rows("provider credentials", _credential_rows(rows), PROVIDER_CREDENTIAL_COLS, fmt)
 
 
@@ -629,8 +661,8 @@ def provider_credentials_rotate(
     with access_client(control_plane_url) as c:
         resp = c.put(org_path(f"/provider-credentials/{credential_id}/value"), json={"value": secret})
         ensure_ok(resp)
-    credential = payload(resp)
-    console.print(f"Rotated [bold]{credential['name']}[/bold] to ...{credential['fingerprint']}")
+    credential = payload(resp, ProviderCredentialOut)
+    console.print(f"Rotated [bold]{credential.name}[/bold] to ...{credential.fingerprint}")
 
 
 @provider_credentials_app.command("rm")
@@ -655,6 +687,6 @@ def provider_credentials_disable(
     with access_client(control_plane_url) as c:
         resp = c.patch(org_path(f"/provider-credentials/{credential_id}"), json={"enabled": enable})
         ensure_ok(resp)
-        credential = payload(resp)
-    state = "Enabled" if credential["enabled"] else "Disabled"
-    console.print(f"{state} [bold]{credential['name']}[/bold].")
+        credential = payload(resp, ProviderCredentialOut)
+    state = "Enabled" if credential.enabled else "Disabled"
+    console.print(f"{state} [bold]{credential.name}[/bold].")

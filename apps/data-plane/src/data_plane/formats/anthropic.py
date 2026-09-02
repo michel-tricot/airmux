@@ -15,22 +15,27 @@ from typing import TYPE_CHECKING, Any, Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 from data_plane.canonical import (
-    AssistantPart,
+    CanonicalAssistantMessage,
+    CanonicalAssistantPart,
+    CanonicalContentPart,
+    CanonicalDocumentPart,
+    CanonicalFinishReason,
+    CanonicalGatewayInfo,
+    CanonicalImagePart,
+    CanonicalJsonObjectResponseFormat,
+    CanonicalJsonSchemaResponseFormat,
     CanonicalMessage,
-    ContentPart,
-    DocumentPart,
-    FinishReason,
-    GatewayInfo,
-    ImagePart,
-    NamedTool,
-    ReasoningPart,
-    ResponseFormat,
-    TextPart,
-    ToolCallPart,
-    ToolChoice,
-    ToolDef,
-    ToolResultPart,
-    Usage,
+    CanonicalNamedTool,
+    CanonicalReasoningPart,
+    CanonicalResponseFormat,
+    CanonicalSystemMessage,
+    CanonicalTextPart,
+    CanonicalToolCallPart,
+    CanonicalToolChoice,
+    CanonicalToolDef,
+    CanonicalToolResultPart,
+    CanonicalUsage,
+    CanonicalUserMessage,
 )
 
 if TYPE_CHECKING:
@@ -110,18 +115,18 @@ def _tool_input(arguments: str) -> dict[str, Any]:
     raise ValueError(msg)
 
 
-def _block(part: ContentPart) -> dict[str, Any] | None:
-    if isinstance(part, TextPart):
+def _block(part: CanonicalContentPart) -> dict[str, Any] | None:
+    if isinstance(part, CanonicalTextPart):
         return _with_cache({"type": "text", "text": part.text}, part.cache)
-    if isinstance(part, ReasoningPart):
+    if isinstance(part, CanonicalReasoningPart):
         thinking: dict[str, Any] = {"type": "thinking", "thinking": part.text}
         if part.signature:
             thinking["signature"] = part.signature
         return _with_cache(thinking, part.cache)
-    if isinstance(part, ImagePart):
+    if isinstance(part, CanonicalImagePart):
         source = {"type": "url", "url": part.url} if part.url is not None else {"type": "base64", "media_type": part.media_type, "data": part.data}
         return _with_cache({"type": "image", "source": source}, part.cache)
-    if isinstance(part, DocumentPart):
+    if isinstance(part, CanonicalDocumentPart):
         if part.file_id is not None:
             source = {"type": "file", "file_id": part.file_id}
         elif part.url is not None:
@@ -129,9 +134,9 @@ def _block(part: ContentPart) -> dict[str, Any] | None:
         else:
             source = {"type": "base64", "media_type": part.media_type, "data": part.data}
         return _with_cache({"type": "document", "source": source}, part.cache)
-    if isinstance(part, ToolCallPart):
+    if isinstance(part, CanonicalToolCallPart):
         block = {"type": "tool_use", "id": part.id, "name": part.name, "input": _tool_input(part.arguments)}
-    elif isinstance(part, ToolResultPart):
+    elif isinstance(part, CanonicalToolResultPart):
         block = {
             "type": "tool_result",
             "tool_use_id": part.call_id,
@@ -144,13 +149,13 @@ def _block(part: ContentPart) -> dict[str, Any] | None:
     return _with_cache(block, part.cache)
 
 
-def _system_field(parts: Sequence[ContentPart]) -> list[dict[str, Any]] | str | None:
+def _system_field(parts: Sequence[CanonicalContentPart]) -> list[dict[str, Any]] | str | None:
     """Plain text with no cache breakpoint collapses to a string, which is the shape Anthropic
     documents and the one a caller sending a bare system prompt gets back unchanged."""
     if not parts:
         return None
-    if all(isinstance(part, TextPart) and part.cache is None for part in parts):
-        return "\n".join(part.text for part in parts if isinstance(part, TextPart))
+    if all(isinstance(part, CanonicalTextPart) and part.cache is None for part in parts):
+        return "\n".join(part.text for part in parts if isinstance(part, CanonicalTextPart))
     return [b for b in (_block(part) for part in parts) if b is not None]
 
 
@@ -181,7 +186,7 @@ def to_request(messages: Sequence[CanonicalMessage]) -> tuple[list[dict[str, Any
     return system, [{**turn, "content": _collapse(turn["content"])} for turn in turns]
 
 
-def to_tools(tools: Sequence[ToolDef] | None) -> list[dict[str, Any]] | None:
+def to_tools(tools: Sequence[CanonicalToolDef] | None) -> list[dict[str, Any]] | None:
     if not tools:
         return None
     return [
@@ -198,11 +203,11 @@ def to_tools(tools: Sequence[ToolDef] | None) -> list[dict[str, Any]] | None:
     ]
 
 
-def to_tool_choice(choice: ToolChoice | None, parallel: bool | None = None) -> dict[str, Any] | None:
+def to_tool_choice(choice: CanonicalToolChoice | None, parallel: bool | None = None) -> dict[str, Any] | None:
     if choice is None:
         return None
     selected: dict[str, Any]
-    if isinstance(choice, NamedTool):
+    if isinstance(choice, CanonicalNamedTool):
         selected = {"type": "tool", "name": choice.name}
     else:
         selected = {"type": {"auto": "auto", "required": "any", "none": "none"}[choice]}
@@ -224,7 +229,7 @@ def output_config_of(request: CanonicalRequest) -> dict[str, Any] | None:
     return output_config or None
 
 
-def response_format_from(output_config: object) -> ResponseFormat | None:
+def response_format_from(output_config: object) -> CanonicalResponseFormat | None:
     if not isinstance(output_config, dict):
         return None
     format_value = output_config.get("format")
@@ -232,8 +237,8 @@ def response_format_from(output_config: object) -> ResponseFormat | None:
         return None
     schema = format_value.get("schema") or {}
     if schema == {"type": "object"}:
-        return ResponseFormat(type="json_object")
-    return ResponseFormat(type="json_schema", json_schema={"name": "response", "strict": True, "schema": schema})
+        return CanonicalJsonObjectResponseFormat()
+    return CanonicalJsonSchemaResponseFormat(json_schema={"name": "response", "strict": True, "schema": schema})
 
 
 def thinking_of(request: CanonicalRequest) -> dict[str, Any] | None:
@@ -301,7 +306,7 @@ class UpstreamCompletedMessage(UpstreamMessage):
     stop_reason: str
 
 
-STOP_REASONS: dict[str, FinishReason] = {
+STOP_REASONS: dict[str, CanonicalFinishReason] = {
     "end_turn": "stop",
     "stop_sequence": "stop",
     "pause_turn": "stop",
@@ -311,36 +316,36 @@ STOP_REASONS: dict[str, FinishReason] = {
 }
 
 
-def finish_reason(raw: str | None) -> FinishReason | None:
+def finish_reason(raw: str | None) -> CanonicalFinishReason | None:
     """A buffered response always finished; an unrecognized provider spelling reads as a plain stop."""
     if raw is None:
         return None
     return STOP_REASONS.get(raw, "stop")
 
 
-def response_parts(blocks: Sequence[UpstreamBlock]) -> list[AssistantPart]:
+def response_parts(blocks: Sequence[UpstreamBlock]) -> list[CanonicalAssistantPart]:
     """Anthropic already orders blocks the way canonical does: reasoning, then text, then tools.
     Signatures ride with the reasoning; a redacted_thinking block has no canonical carrier yet
     and is skipped."""
-    parts: list[AssistantPart] = []
+    parts: list[CanonicalAssistantPart] = []
     for block in blocks:
         if block.type == "thinking":
-            parts.append(ReasoningPart(text=block.thinking, signature=block.signature))
+            parts.append(CanonicalReasoningPart(text=block.thinking, signature=block.signature))
         elif block.type == "text":
-            parts.append(TextPart(text=block.text))
+            parts.append(CanonicalTextPart(text=block.text))
         elif block.type == "tool_use":
-            parts.append(ToolCallPart(id=block.id, name=block.name, arguments=json.dumps(block.input)))
+            parts.append(CanonicalToolCallPart(id=block.id, name=block.name, arguments=json.dumps(block.input)))
     return parts
 
 
-def usage_of(reported: UpstreamUsage | None) -> Usage:
+def usage_of(reported: UpstreamUsage | None) -> CanonicalUsage:
     """Anthropic reports cache traffic beside input_tokens; canonical counts it inside.
 
     A usage block with no recognizable counts reads as absent: an unknown reporting shape must
     surface as an estimate, never as a free request."""
     if reported is None or (reported.input_tokens == 0 and reported.output_tokens == 0):
-        return Usage(estimated=True)
-    return Usage(
+        return CanonicalUsage(estimated=True)
+    return CanonicalUsage(
         input_tokens=reported.input_tokens + reported.cache_read_input_tokens + reported.cache_creation_input_tokens,
         output_tokens=reported.output_tokens,
         cache_read_tokens=reported.cache_read_input_tokens,
@@ -399,41 +404,41 @@ def _is_directive(block: dict[str, object]) -> bool:
     return isinstance(text, str) and text.lstrip().lower().startswith("x-anthropic-")
 
 
-def _image_from_source(source: dict[str, object]) -> ImagePart:
+def _image_from_source(source: dict[str, object]) -> CanonicalImagePart:
     if source.get("type") == "url":
-        return ImagePart(url=_str(source.get("url")))
-    return ImagePart(media_type=_str(source.get("media_type")), data=_str(source.get("data")))
+        return CanonicalImagePart(url=_str(source.get("url")))
+    return CanonicalImagePart(media_type=_str(source.get("media_type")), data=_str(source.get("data")))
 
 
-def _document_from_source(source: dict[str, object]) -> DocumentPart:
+def _document_from_source(source: dict[str, object]) -> CanonicalDocumentPart:
     if source.get("type") == "url":
-        return DocumentPart(url=_str(source.get("url")))
+        return CanonicalDocumentPart(url=_str(source.get("url")))
     if source.get("type") == "file":
-        return DocumentPart(file_id=_str(source.get("file_id")))
-    return DocumentPart(media_type=_str(source.get("media_type")), data=_str(source.get("data")))
+        return CanonicalDocumentPart(file_id=_str(source.get("file_id")))
+    return CanonicalDocumentPart(media_type=_str(source.get("media_type")), data=_str(source.get("data")))
 
 
-def _tool_result_content(content: object) -> list[TextPart | ImagePart]:
+def _tool_result_content(content: object) -> list[CanonicalTextPart | CanonicalImagePart]:
     if isinstance(content, str):
-        return [TextPart(text=content)]
+        return [CanonicalTextPart(text=content)]
     if not isinstance(content, list):
         return []
-    parts: list[TextPart | ImagePart] = []
+    parts: list[CanonicalTextPart | CanonicalImagePart] = []
     for raw in content:
         block = _mapping(raw)
         if block.get("type") == "text":
-            parts.append(TextPart(text=_str(block.get("text"))))
+            parts.append(CanonicalTextPart(text=_str(block.get("text"))))
         elif block.get("type") == "image":
             parts.append(_image_from_source(_mapping(block.get("source"))))
     return parts
 
 
-def _parts_from_blocks(content: object) -> list[ContentPart]:
+def _parts_from_blocks(content: object) -> list[CanonicalContentPart]:
     if isinstance(content, str):
-        return [TextPart(text=content)] if content else []
+        return [CanonicalTextPart(text=content)] if content else []
     if not isinstance(content, list):
         return []
-    parts: list[ContentPart] = []
+    parts: list[CanonicalContentPart] = []
     for raw in content:
         block = _mapping(raw)
         if _is_directive(block):
@@ -441,17 +446,17 @@ def _parts_from_blocks(content: object) -> list[ContentPart]:
         cache = _cache_of(block)
         kind = block.get("type")
         if kind == "text":
-            parts.append(TextPart(text=_str(block.get("text")), cache=cache))
+            parts.append(CanonicalTextPart(text=_str(block.get("text")), cache=cache))
         elif kind == "thinking":
             reasoning_id, signature = reasoning_identity(_str(block.get("signature")))
-            parts.append(ReasoningPart(id=reasoning_id, text=_str(block.get("thinking")), signature=signature, cache=cache))
+            parts.append(CanonicalReasoningPart(id=reasoning_id, text=_str(block.get("thinking")), signature=signature, cache=cache))
         elif kind == "image":
             parts.append(_image_from_source(_mapping(block.get("source"))).model_copy(update={"cache": cache}))
         elif kind == "document":
             parts.append(_document_from_source(_mapping(block.get("source"))).model_copy(update={"cache": cache}))
         elif kind == "tool_use":
             parts.append(
-                ToolCallPart(
+                CanonicalToolCallPart(
                     id=_str(block.get("id")),
                     name=_str(block.get("name")),
                     arguments=json.dumps(dict(_mapping(block.get("input")))),
@@ -460,7 +465,7 @@ def _parts_from_blocks(content: object) -> list[ContentPart]:
             )
         elif kind == "tool_result":
             parts.append(
-                ToolResultPart(
+                CanonicalToolResultPart(
                     call_id=_str(block.get("tool_use_id")),
                     content=_tool_result_content(block.get("content")),
                     is_error=bool(block.get("is_error")),
@@ -475,21 +480,24 @@ def from_request(data: dict[str, object]) -> list[CanonicalMessage]:
     messages: list[CanonicalMessage] = []
     system = _parts_from_blocks(data.get("system"))
     if system:
-        messages.append(CanonicalMessage(role="system", content=system))
+        messages.append(CanonicalSystemMessage.model_validate({"content": system}))
     raw_messages = data.get("messages")
     for raw in raw_messages if isinstance(raw_messages, list) else []:
         message = _mapping(raw)
         parts = _parts_from_blocks(message.get("content"))
         if parts:
-            messages.append(CanonicalMessage(role="assistant" if message.get("role") == "assistant" else "user", content=parts))
+            if message.get("role") == "assistant":
+                messages.append(CanonicalAssistantMessage.model_validate({"content": parts}))
+            else:
+                messages.append(CanonicalUserMessage.model_validate({"content": parts}))
     return messages
 
 
-def from_tools(tools: object) -> list[ToolDef] | None:
+def from_tools(tools: object) -> list[CanonicalToolDef] | None:
     if not isinstance(tools, list) or not tools:
         return None
     return [
-        ToolDef(
+        CanonicalToolDef(
             name=_str(_mapping(tool).get("name")),
             description=_str(_mapping(tool).get("description")) or None,
             parameters=dict(_mapping(_mapping(tool).get("input_schema"))),
@@ -500,12 +508,12 @@ def from_tools(tools: object) -> list[ToolDef] | None:
     ]
 
 
-def from_tool_choice(choice: object) -> ToolChoice | None:
+def from_tool_choice(choice: object) -> CanonicalToolChoice | None:
     block = _mapping(choice)
     kind = block.get("type")
     name = _str(block.get("name"))
     if kind == "tool" and name:
-        return NamedTool(name=name)
+        return CanonicalNamedTool(name=name)
     if kind == "auto":
         return "auto"
     if kind == "any":
@@ -520,7 +528,7 @@ def from_tool_choice(choice: object) -> ToolChoice | None:
 REVERSE_STOP: dict[str, str] = {"stop": "end_turn", "length": "max_tokens", "tool_calls": "tool_use", "content_filter": "refusal"}
 
 
-def stop_reason(finish: FinishReason | None) -> str | None:
+def stop_reason(finish: CanonicalFinishReason | None) -> str | None:
     """None when the reason is unknown, which is what a cancelled or failed response has; claiming
     end_turn would tell the caller a truncated answer is complete."""
     return REVERSE_STOP.get(finish) if finish else None
@@ -557,14 +565,14 @@ def _response_tool_input(arguments: str) -> dict[str, Any]:
         return {}
 
 
-def to_response_content(parts: Sequence[AssistantPart]) -> list[BlockOut]:
+def to_response_content(parts: Sequence[CanonicalAssistantPart]) -> list[BlockOut]:
     blocks: list[BlockOut] = []
     for part in parts:
-        if isinstance(part, ReasoningPart):
+        if isinstance(part, CanonicalReasoningPart):
             blocks.append(ThinkingOut(thinking=part.text, signature=reasoning_signature(part.id, part.signature)))
-        elif isinstance(part, TextPart):
+        elif isinstance(part, CanonicalTextPart):
             blocks.append(TextOut(text=part.text))
-        elif isinstance(part, ToolCallPart):
+        elif isinstance(part, CanonicalToolCallPart):
             blocks.append(ToolUseOut(id=part.id, name=part.name, input=_response_tool_input(part.arguments)))
     return blocks
 
@@ -579,7 +587,7 @@ class UsageOut(BaseModel):
     output_tokens: int
 
 
-def usage_out(usage: Usage) -> UsageOut:
+def usage_out(usage: CanonicalUsage) -> UsageOut:
     fresh = usage.input_tokens - usage.cache_read_tokens - usage.cache_write_tokens
     if fresh < 0:
         logger.warning(
@@ -607,7 +615,7 @@ class MessageOut(BaseModel):
     stop_reason: str | None
     stop_sequence: str | None = None
     usage: UsageOut
-    gateway: GatewayInfo | None = None
+    gateway: CanonicalGatewayInfo | None = None
 
 
 class TextDeltaOut(BaseModel):
@@ -700,7 +708,7 @@ class MessageDelta(Event):
     type: Literal["message_delta"] = "message_delta"
     delta: StopDeltaOut
     usage: UsageOut
-    gateway: GatewayInfo | None = None
+    gateway: CanonicalGatewayInfo | None = None
 
 
 class MessageStop(Event):

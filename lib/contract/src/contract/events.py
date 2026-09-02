@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Literal
+from typing import Annotated, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 UsageStatus = Literal["ok", "upstream_error", "denied", "timeout", "cancelled", "credential_rejected", "rate_limited"]
+RoutedUsageStatus = Literal["ok", "upstream_error", "timeout", "cancelled", "credential_rejected", "rate_limited"]
+CredentialScope = Literal["platform", "org", "workspace"]
 """How a metered request ended.
 
 credential_rejected and rate_limited are split out of upstream_error because they are facts
@@ -16,7 +18,7 @@ the credential's status. Everything else upstream stays undifferentiated.
 MAX_EVENT_INTEGER = 2_147_483_647
 
 
-class UsageEventV1(BaseModel):
+class _UsageEventV1(BaseModel):
     """One metered model request reported by a data plane.
 
     `event_id` makes retries idempotent.
@@ -45,7 +47,7 @@ class UsageEventV1(BaseModel):
     status: UsageStatus = Field(description="How the request ended; cancelled events may contain partial token counts")
     stream: bool = Field(description="Whether the response was streamed")
     credential_id: UUID | None = Field(default=None, description="Provider credential used for the request")
-    credential_scope: Literal["platform", "org", "workspace"] | None = Field(
+    credential_scope: CredentialScope | None = Field(
         default=None,
         description="Scope of the provider credential used for the request",
     )
@@ -58,12 +60,22 @@ class UsageEventV1(BaseModel):
             raise ValueError(msg)
         return occurred_at
 
-    @model_validator(mode="after")
-    def require_provider_after_selection(self) -> UsageEventV1:
-        if not self.provider_id and self.status != "denied":
-            msg = "provider_id is required unless the request was denied before provider selection"
-            raise ValueError(msg)
-        return self
+
+class DeniedUsageEventV1(_UsageEventV1):
+    provider_id: Literal[""] = Field("", description="No provider was selected before denial")
+    status: Literal["denied"] = Field("denied", description="The request was denied before routing")
+    credential_id: None = Field(None, description="No provider credential was selected before denial")
+    credential_scope: None = Field(None, description="No provider credential scope was selected before denial")
+
+
+class RoutedUsageEventV1(_UsageEventV1):
+    provider_id: str = Field(min_length=1, max_length=63, description="Provider that served the request")
+    status: RoutedUsageStatus = Field(description="How the routed request ended")
+    credential_id: UUID = Field(description="Provider credential used for the request")
+    credential_scope: CredentialScope = Field(description="Scope of the provider credential used for the request")
+
+
+UsageEvent = Annotated[DeniedUsageEventV1 | RoutedUsageEventV1, Field(discriminator="status")]
 
 
 class HeartbeatV1(BaseModel):

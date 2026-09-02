@@ -11,13 +11,10 @@
  * OpenAPI spec version: 0.1.0
  */
 
-/**
- * Scope of the provider credential used for the request
- */
-export type UsageEventV1CredentialScope = typeof UsageEventV1CredentialScope[keyof typeof UsageEventV1CredentialScope] | null;
+export type UsageEventOutCredentialScope = typeof UsageEventOutCredentialScope[keyof typeof UsageEventOutCredentialScope] | null;
 
 
-export const UsageEventV1CredentialScope = {
+export const UsageEventOutCredentialScope = {
   platform: 'platform',
   org: 'org',
   workspace: 'workspace',

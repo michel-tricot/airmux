@@ -4,7 +4,7 @@ import json
 import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, ClassVar, Literal
+from typing import TYPE_CHECKING, Any, ClassVar
 
 import httpx
 from pydantic import BaseModel
@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterator, Mapping
     from uuid import UUID
 
-    from contract import ModelEntry, ProviderEntry, Secret
+    from contract import CredentialScope, ModelEntry, ProviderEntry, Secret
     from data_plane.canonical import CanonicalChunk, CanonicalRequest, CanonicalResponse
 
 
@@ -118,7 +118,7 @@ class UpstreamProtocolError(ValueError):
 
 @dataclass(frozen=True)
 class Ctx:
-    request_id: str
+    request_id: UUID
     model: ModelEntry
     provider: ProviderEntry
     stream: bool
@@ -126,7 +126,7 @@ class Ctx:
     workspace_id: UUID
     key_id: str
     credential_id: UUID
-    credential_scope: Literal["platform", "org", "workspace"]
+    credential_scope: CredentialScope
     bundle_id: UUID
     started_at: float = field(default_factory=time.monotonic)
 
@@ -170,7 +170,7 @@ class EgressAdapter[StateT: StreamState](ABC):
 
         Called after the last event for a normal completion, and from the
         cancellation handler for partial accounting after a client disconnect.
-        Usage lives on the response; cancel-and-still-meter depends on this
+        CanonicalUsage lives on the response; cancel-and-still-meter depends on this
         being valid mid-stream.
         """
 

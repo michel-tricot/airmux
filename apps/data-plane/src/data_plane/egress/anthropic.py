@@ -14,17 +14,17 @@ from typing import TYPE_CHECKING
 from pydantic import ValidationError
 
 from data_plane.canonical import (
-    AssistantPart,
+    CanonicalAssistantPart,
     CanonicalChunk,
+    CanonicalDelta,
+    CanonicalReasoningDelta,
+    CanonicalReasoningPart,
     CanonicalResponse,
-    Delta,
-    ReasoningDelta,
-    ReasoningPart,
-    TextDelta,
-    TextPart,
-    ToolCallDelta,
-    ToolCallPart,
-    Usage,
+    CanonicalTextDelta,
+    CanonicalTextPart,
+    CanonicalToolCallDelta,
+    CanonicalToolCallPart,
+    CanonicalUsage,
 )
 from data_plane.egress.base import (
     CanonicalError,
@@ -92,18 +92,18 @@ class AnthropicStreamState(StreamState):
 
     @property
     def chunk_id(self) -> str:
-        return self.response_id or self.ctx.request_id
+        return self.response_id or str(self.ctx.request_id)
 
 
-def _final_parts(blocks: dict[int, _Block]) -> list[AssistantPart]:
-    parts: list[AssistantPart] = []
+def _final_parts(blocks: dict[int, _Block]) -> list[CanonicalAssistantPart]:
+    parts: list[CanonicalAssistantPart] = []
     for block in (blocks[i] for i in sorted(blocks)):
         if block.type == "thinking":
-            parts.append(ReasoningPart(text=block.text, signature=block.signature or None))
+            parts.append(CanonicalReasoningPart(text=block.text, signature=block.signature or None))
         elif block.type == "text":
-            parts.append(TextPart(text=block.text))
+            parts.append(CanonicalTextPart(text=block.text))
         elif block.type == "tool_use":
-            parts.append(ToolCallPart(id=block.tool_id, name=block.name, arguments=block.arguments or "{}"))
+            parts.append(CanonicalToolCallPart(id=block.tool_id, name=block.name, arguments=block.arguments or "{}"))
     return parts
 
 
@@ -115,7 +115,7 @@ def _start_block(state: AnthropicStreamState, event: UpstreamStreamEvent) -> lis
         ordinal = state.tool_count
         state.tool_count += 1
         state.blocks[event.index] = _Block(type="tool_use", tool_id=opened.id, name=opened.name, ordinal=ordinal)
-        return [CanonicalChunk(id=state.chunk_id, delta=ToolCallDelta(index=ordinal, id=opened.id, name=opened.name or None))]
+        return [CanonicalChunk(id=state.chunk_id, delta=CanonicalToolCallDelta(index=ordinal, id=opened.id, name=opened.name or None))]
     state.blocks[event.index] = _Block(type=opened.type, text=opened.text or opened.thinking)
     return []
 
@@ -123,19 +123,19 @@ def _start_block(state: AnthropicStreamState, event: UpstreamStreamEvent) -> lis
 def _block_delta(state: AnthropicStreamState, event: UpstreamStreamEvent) -> list[CanonicalChunk]:
     block = state.blocks.setdefault(event.index, _Block(type="text"))
     delta = UpstreamBlockDelta.model_validate(event.delta)
-    out: Delta | None = None
+    out: CanonicalDelta | None = None
     if delta.type == "text_delta":
         block.text += delta.text
-        out = TextDelta(text=delta.text)
+        out = CanonicalTextDelta(text=delta.text)
     elif delta.type == "thinking_delta":
         block.text += delta.thinking
-        out = ReasoningDelta(text=delta.thinking)
+        out = CanonicalReasoningDelta(text=delta.thinking)
     elif delta.type == "signature_delta":
         block.signature += delta.signature
-        out = ReasoningDelta(signature=delta.signature)
+        out = CanonicalReasoningDelta(signature=delta.signature)
     elif delta.type == "input_json_delta":
         block.arguments += delta.partial_json
-        out = ToolCallDelta(index=block.ordinal, arguments=delta.partial_json)
+        out = CanonicalToolCallDelta(index=block.ordinal, arguments=delta.partial_json)
     return [CanonicalChunk(id=state.chunk_id, delta=out)] if out is not None else []
 
 
@@ -185,7 +185,7 @@ class AnthropicAdapter(EgressAdapter[AnthropicStreamState]):
         except ValidationError as error:
             raise UpstreamProtocolError.buffered_response() from error
         return CanonicalResponse(
-            id=message.id or ctx.request_id,
+            id=message.id or str(ctx.request_id),
             model=ctx.model.model_id,
             content=response_parts(message.content),
             finish_reason=finish_reason(message.stop_reason),
@@ -252,7 +252,7 @@ class AnthropicAdapter(EgressAdapter[AnthropicStreamState]):
     def finalize(self, state: AnthropicStreamState) -> CanonicalResponse:
         usage = usage_of(state.usage)
         if not state.usage_final:
-            usage = Usage(estimated=True) if usage.estimated else usage.model_copy(update={"output_tokens": 0, "estimated": True})
+            usage = CanonicalUsage(estimated=True) if usage.estimated else usage.model_copy(update={"output_tokens": 0, "estimated": True})
         return CanonicalResponse(
             id=state.chunk_id,
             model=state.ctx.model.model_id,

@@ -4,72 +4,105 @@ import json
 import stat
 
 import pytest
+from pydantic import ValidationError
 from typer.testing import CliRunner
 
 from cli.main import app
-from cli.profiles import active_profile, config_path, load_config, remove_profile, set_active, upsert_profile, upsert_url_profile
+from cli.profiles import (
+    CliConfig,
+    Profile,
+    config_path,
+    load_active_profile,
+    load_config,
+    remove_profile,
+    set_active,
+    upsert_profile,
+    upsert_url_profile,
+)
 
 runner = CliRunner()
 
 
+def test_profile_config_rejects_invalid_known_fields(tmp_path, monkeypatch):
+    path = tmp_path / "config.toml"
+    monkeypatch.setenv("GW_CLI_CONFIG", str(path))
+    path.write_text('[profiles.acme]\nscope = "instance"\ntoken = 7\n', encoding="utf-8")
+    with pytest.raises(ValidationError):
+        load_config()
+
+
+@pytest.mark.parametrize(
+    "profile",
+    [
+        {"token": "missing-scope"},
+        {"scope": "org", "token": "missing-organization"},
+        {"scope": "instance", "org_id": "not-valid-here", "token": "instance"},
+    ],
+)
+def test_profile_states_are_structural(profile):
+    with pytest.raises(ValidationError):
+        CliConfig.model_validate({"profiles": {"test": profile}})
+
+
 def test_profile_round_trip_and_permissions(tmp_path, monkeypatch):
     monkeypatch.setenv("GW_CLI_CONFIG", str(tmp_path / "config.toml"))
-    assert load_config() == {}
-    assert active_profile() is None
+    assert load_config() == CliConfig()
+    assert load_active_profile() is None
 
-    upsert_profile("acme", {"control_plane_url": "http://cp:8000", "org_id": "o1", "org_name": "acme", "token": "sk-cp-x"})
-    upsert_profile("beta", {"control_plane_url": "http://cp:8000", "org_id": "o2", "org_name": "beta", "token": "sk-cp-y"})
+    upsert_profile("acme", Profile(scope="org", control_plane_url="http://cp:8000", org_id="o1", org_name="acme", token="sk-cp-x"))
+    upsert_profile("beta", Profile(scope="org", control_plane_url="http://cp:8000", org_id="o2", org_name="beta", token="sk-cp-y"))
 
-    latest = active_profile()
+    latest = load_active_profile()
     assert latest is not None
-    assert latest["name"] == "beta"
+    assert load_config().active == "beta"
     set_active("acme")
-    profile = active_profile()
+    profile = load_active_profile()
     assert profile is not None
-    assert profile["name"] == "acme"
-    assert profile["token"] == "sk-cp-x"
+    assert load_config().active == "acme"
+    assert profile.token == "sk-cp-x"
 
     mode = stat.S_IMODE(config_path().stat().st_mode)
     assert mode == 0o600
 
 
-def test_upsert_preserves_unknown_settings(tmp_path, monkeypatch):
-    """The config is a home for future settings, not just tokens; writes must not drop what they do not know."""
+def test_config_rejects_unknown_settings(tmp_path, monkeypatch):
     path = tmp_path / "config.toml"
     monkeypatch.setenv("GW_CLI_CONFIG", str(path))
     path.write_text('[settings]\ncolor = "never"\n', encoding="utf-8")
-    upsert_profile("acme", {"token": "t"})
-    assert load_config()["settings"] == {"color": "never"}
+    with pytest.raises(ValidationError):
+        load_config()
 
 
 def test_url_profile_updates_the_same_name_on_the_same_deployment(tmp_path, monkeypatch):
     monkeypatch.setenv("GW_CLI_CONFIG", str(tmp_path / "config.toml"))
     first = {
         "control_plane_url": "https://airllm.example.com",
+        "scope": "org",
+        "org_id": "org-1",
         "org_name": "michel",
         "token": "old",
     }
     replacement = {**first, "control_plane_url": "https://airllm.example.com/", "token": "new"}
 
-    assert upsert_url_profile("michel", first) == "michel"
-    assert upsert_url_profile("michel", replacement) == "michel"
-    assert load_config()["profiles"] == {"michel": replacement}
+    assert upsert_url_profile("michel", Profile.model_validate(first)) == "michel"
+    assert upsert_url_profile("michel", Profile.model_validate(replacement)) == "michel"
+    assert load_config().profiles == {"michel": Profile.model_validate(replacement)}
 
 
 def test_url_profile_keeps_the_same_name_on_different_deployments(tmp_path, monkeypatch):
     monkeypatch.setenv("GW_CLI_CONFIG", str(tmp_path / "config.toml"))
-    local = {"control_plane_url": "http://127.0.0.1:8000", "org_name": "michel", "token": "local"}
-    fly = {"control_plane_url": "https://airllm-example.fly.dev", "org_name": "michel", "token": "fly"}
+    local = {"control_plane_url": "http://127.0.0.1:8000", "scope": "org", "org_id": "org-1", "org_name": "michel", "token": "local"}
+    fly = {"control_plane_url": "https://airllm-example.fly.dev", "scope": "org", "org_id": "org-1", "org_name": "michel", "token": "fly"}
 
-    assert upsert_url_profile("michel", local) == "michel"
-    assert upsert_url_profile("michel", fly) == "michel@airllm-example.fly.dev"
+    assert upsert_url_profile("michel", Profile.model_validate(local)) == "michel"
+    assert upsert_url_profile("michel", Profile.model_validate(fly)) == "michel@airllm-example.fly.dev"
     set_active("michel")
-    assert upsert_url_profile("michel", {**fly, "token": "fly-new"}) == "michel@airllm-example.fly.dev"
+    assert upsert_url_profile("michel", Profile.model_validate({**fly, "token": "fly-new"})) == "michel@airllm-example.fly.dev"
 
     config = load_config()
-    assert config["active"] == "michel@airllm-example.fly.dev"
-    assert config["profiles"]["michel"]["token"] == "local"
-    assert config["profiles"]["michel@airllm-example.fly.dev"]["token"] == "fly-new"
+    assert config.active == "michel@airllm-example.fly.dev"
+    assert config.profiles["michel"].token == "local"
+    assert config.profiles["michel@airllm-example.fly.dev"].token == "fly-new"
 
 
 def test_instance_profile_does_not_replace_an_organization_named_instance(tmp_path, monkeypatch):
@@ -87,9 +120,9 @@ def test_instance_profile_does_not_replace_an_organization_named_instance(tmp_pa
         "token": "instance",
     }
 
-    assert upsert_url_profile("instance", organization) == "instance"
-    assert upsert_url_profile("instance", instance) == "instance@airllm.example.com"
-    assert len(load_config()["profiles"]) == 2
+    assert upsert_url_profile("instance", Profile.model_validate(organization)) == "instance"
+    assert upsert_url_profile("instance", Profile.model_validate(instance)) == "instance@airllm.example.com"
+    assert len(load_config().profiles) == 2
 
 
 def test_profile_selection_rejects_an_unknown_name(tmp_path, monkeypatch):
@@ -101,26 +134,30 @@ def test_profile_selection_rejects_an_unknown_name(tmp_path, monkeypatch):
 
 def test_removing_the_active_profile_selects_the_next_profile(tmp_path, monkeypatch):
     monkeypatch.setenv("GW_CLI_CONFIG", str(tmp_path / "config.toml"))
-    upsert_profile("acme", {"token": "first"})
-    upsert_profile("beta", {"token": "second"})
+    upsert_profile("acme", Profile(scope="instance", token="first"))
+    upsert_profile("beta", Profile(scope="instance", token="second"))
 
     remove_profile("beta")
 
-    assert active_profile() == {"name": "acme", "token": "first"}
+    profile = load_active_profile()
+    assert profile is not None
+    assert load_config().active == "acme"
+    assert profile.token == "first"
 
 
 def test_profile_commands_are_discoverable_and_never_print_tokens(tmp_path, monkeypatch):
     monkeypatch.setenv("GW_CLI_CONFIG", str(tmp_path / "config.toml"))
     upsert_profile(
         "acme",
-        {
-            "control_plane_url": "https://airllm.example.com",
-            "gateway_url": "https://gateway.example.com",
-            "org_name": "Acme",
-            "workspace": "production",
-            "scope": "org",
-            "token": "secret-token",
-        },
+        Profile(
+            scope="org",
+            control_plane_url="https://airllm.example.com",
+            gateway_url="https://gateway.example.com",
+            org_id="org-1",
+            org_name="Acme",
+            workspace="production",
+            token="secret-token",
+        ),
     )
 
     listed = runner.invoke(app, ["profiles", "list", "-f", "json"])
@@ -140,4 +177,4 @@ def test_profile_commands_are_discoverable_and_never_print_tokens(tmp_path, monk
 
     removed = runner.invoke(app, ["profiles", "remove", "acme"])
     assert removed.exit_code == 0, removed.output
-    assert active_profile() is None
+    assert load_active_profile() is None

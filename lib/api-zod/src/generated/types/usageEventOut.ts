@@ -10,6 +10,8 @@
  *
  * OpenAPI spec version: 0.1.0
  */
+import type { UsageEventOutCredentialScope } from './usageEventOutCredentialScope';
+import type { UsageEventOutStatus } from './usageEventOutStatus';
 
 export interface UsageEventOut {
   event_id: string;
@@ -29,8 +31,8 @@ export interface UsageEventOut {
   cache_read_tokens: number;
   cache_write_tokens: number;
   latency_ms: number;
-  status: string;
+  status: UsageEventOutStatus;
   stream: boolean;
   credential_id: string | null;
-  credential_scope: string | null;
+  credential_scope: UsageEventOutCredentialScope;
 }

@@ -44,6 +44,7 @@ def cli(tmp_path, monkeypatch):
             return nullcontext(c)
 
         monkeypatch.setattr("cli.client._bearer_client", _client)
+        monkeypatch.setenv("GW_CLI_CONFIG", str(tmp_path / "config.toml"))
         monkeypatch.setenv("GW_ACCESS_KEY", org["authorization"].removeprefix("Bearer "))
         monkeypatch.setenv("GW_ORG_ID", str(org_id))
         yield cp, workspace["slug"]

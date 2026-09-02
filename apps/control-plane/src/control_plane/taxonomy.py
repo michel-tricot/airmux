@@ -6,7 +6,7 @@ from uuid import UUID
 import yaml
 from pydantic import BaseModel, Field, HttpUrl, field_validator, model_validator
 
-from contract import Modality, ParameterSupport  # noqa: TC001 pydantic resolves these annotations at runtime
+from contract import Capability, Modality, ParameterSupport  # noqa: TC001 pydantic resolves these annotations at runtime
 from control_plane.models import Model, Provider
 from control_plane.models.common.wire import RequestModel
 from control_plane.models.model import ModelOut
@@ -16,6 +16,10 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Iterable
     from pathlib import Path
     from typing import Self
+
+
+def _default_capabilities() -> list[Capability]:
+    return ["streaming", "tools"]
 
 
 class UnknownProviderError(ValueError):
@@ -61,7 +65,7 @@ class ModelIn(RequestModel):
     max_output_tokens: int | None = Field(None, ge=1, le=100_000_000, description="Max completion tokens; requests are clamped to it")
     input_modalities: list[Modality] = Field(min_length=1, max_length=16, description="Accepted input modalities")
     output_modalities: list[Modality] = Field(min_length=1, max_length=16, description="Produced output modalities")
-    capabilities: list[str] = Field(default_factory=lambda: ["streaming", "tools"], max_length=128, description="Capabilities supported by the model")
+    capabilities: list[Capability] = Field(default_factory=_default_capabilities, max_length=4, description="Capabilities supported by the model")
     parameter_support: dict[str, ParameterSupport] = Field(
         default_factory=dict,
         max_length=128,

@@ -6,7 +6,7 @@ from uuid import UUID
 from sqlalchemy import JSON
 from sqlmodel import Field
 
-from contract import Modality, ParameterSupport
+from contract import Capability, Modality, ParameterSupport
 from control_plane.models.audit import audited
 from control_plane.models.common import Identified, Tombstonable
 from control_plane.models.common.base import Record
@@ -45,9 +45,9 @@ class Model(Record, Identified, Tombstonable, table=True):
     cache_write_price_per_mtok: float
     context_window: int
     max_output_tokens: int | None = None
-    input_modalities: list[Modality] | None = Field(default=None, sa_type=JSON)
-    output_modalities: list[Modality] | None = Field(default=None, sa_type=JSON)
-    capabilities: list[str] = Field(default_factory=list, sa_type=JSON)
+    input_modalities: list[Modality] = Field(sa_type=JSON, min_length=1, nullable=False)
+    output_modalities: list[Modality] = Field(sa_type=JSON, min_length=1, nullable=False)
+    capabilities: list[Capability] = Field(default_factory=list, sa_type=JSON)
     parameter_support: dict[str, ParameterSupport] = Field(default_factory=dict, sa_type=JSON)
 
 
@@ -63,9 +63,9 @@ class ModelOut(RecordOut[Model]):
     cache_write_price_per_mtok: float
     context_window: int
     max_output_tokens: int | None
-    input_modalities: list[Modality] | None
-    output_modalities: list[Modality] | None
-    capabilities: list[str]
+    input_modalities: list[Modality]
+    output_modalities: list[Modality]
+    capabilities: list[Capability]
     parameter_support: dict[str, ParameterSupport]
     created_at: datetime
     updated_at: datetime

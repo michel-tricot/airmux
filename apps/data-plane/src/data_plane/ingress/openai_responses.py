@@ -10,16 +10,19 @@ from typing import TYPE_CHECKING, Any
 from starlette.responses import JSONResponse, Response
 
 from data_plane.canonical import (
-    Adjustment,
+    CanonicalAdjustment,
     CanonicalChunk,
-    CanonicalMessage,
+    CanonicalGatewayInfo,
+    CanonicalJsonObjectResponseFormat,
+    CanonicalJsonSchemaResponseFormat,
+    CanonicalNamedTool,
+    CanonicalReasoningConfig,
     CanonicalRequest,
-    GatewayInfo,
-    NamedTool,
-    ReasoningConfig,
-    ResponseFormat,
-    TextPart,
-    ToolDef,
+    CanonicalResponseFormat,
+    CanonicalSystemMessage,
+    CanonicalTextPart,
+    CanonicalTextResponseFormat,
+    CanonicalToolDef,
 )
 from data_plane.formats import openai_responses as fmt
 from data_plane.ingress.base import IngressAdapter, sse
@@ -60,7 +63,7 @@ def _mapping(value: object) -> dict[str, Any]:
     return {str(key): item for key, item in value.items()} if isinstance(value, dict) else {}
 
 
-def _tools(value: object) -> list[ToolDef] | None:
+def _tools(value: object) -> list[CanonicalToolDef] | None:
     if value is None:
         return None
     if not isinstance(value, list):
@@ -73,7 +76,7 @@ def _tools(value: object) -> list[ToolDef] | None:
             message = "unsupported_feature: hosted tools are not supported"
             raise ValueError(message)
         tools.append(
-            ToolDef(
+            CanonicalToolDef(
                 name=str(tool.get("name") or ""),
                 description=tool.get("description") if isinstance(tool.get("description"), str) else None,
                 parameters=_mapping(tool.get("parameters")),
@@ -86,17 +89,19 @@ def _tools(value: object) -> list[ToolDef] | None:
 def _choice(value: object) -> object:
     choice = _mapping(value)
     if choice.get("type") == "function" and isinstance(choice.get("name"), str):
-        return NamedTool(name=choice["name"])
+        return CanonicalNamedTool(name=choice["name"])
     return value if isinstance(value, str) and value in {"auto", "none", "required"} else None
 
 
-def _response_format(value: object) -> ResponseFormat | None:
+def _response_format(value: object) -> CanonicalResponseFormat | None:
     format_value = _mapping(value)
     kind = format_value.get("type")
     if kind == "json_schema":
-        return ResponseFormat(type="json_schema", json_schema={key: item for key, item in format_value.items() if key != "type"})
-    if kind in {"text", "json_object"}:
-        return ResponseFormat(type=kind)
+        return CanonicalJsonSchemaResponseFormat(json_schema={key: item for key, item in format_value.items() if key != "type"})
+    if kind == "text":
+        return CanonicalTextResponseFormat()
+    if kind == "json_object":
+        return CanonicalJsonObjectResponseFormat()
     return None
 
 
@@ -147,67 +152,68 @@ class ResponsesStream:
         return b"event: " + kind.encode() + b"\n" + sse(json.dumps(body, separators=(",", ":")).encode())
 
     def start(self, ctx: Ctx, /) -> list[bytes]:
-        self.id, self.model, self.created_at = ctx.request_id, ctx.model.model_id, int(time.time())
+        self.id, self.model, self.created_at = str(ctx.request_id), ctx.model.model_id, int(time.time())
         metadata = fmt.ResponseMetadata(id=self.id, model=self.model, created_at=self.created_at)
         response = {**fmt.response_metadata(metadata), "status": "in_progress", "output": []}
         return [self._event("response.created", {"response": response}), self._event("response.in_progress", {"response": response})]
 
     def chunk(self, c: CanonicalChunk) -> list[bytes]:
-        if c.delta is None:
+        delta = c.delta
+        if delta is None:
             return []
-        ordinal = c.delta.index if c.delta.type == "tool_call" else 0
-        key = (c.delta.type, ordinal)
+        ordinal = delta.index if delta.type == "tool_call" else 0
+        key = (delta.type, ordinal)
         frames = []
         item = self.items.get(key)
         opened = item is None
         if item is None:
             index = len(self.items)
-            if c.delta.type == "tool_call":
-                item = _ResponseItem(index, "function_call", f"fc_{index}", call_id=c.delta.id or "", name=c.delta.name or "")
-            elif c.delta.type == "reasoning":
-                item = _ResponseItem(index, "reasoning", c.delta.id or f"rs_{index}", signature=c.delta.signature or "")
+            if delta.type == "tool_call":
+                item = _ResponseItem(index, "function_call", f"fc_{index}", call_id=delta.id or "", name=delta.name or "")
+            elif delta.type == "reasoning":
+                item = _ResponseItem(index, "reasoning", delta.id or f"rs_{index}", signature=delta.signature or "")
             else:
                 item = _ResponseItem(index, "message", f"msg_{index}")
             self.items[key] = item
             frames.append(self._event("response.output_item.added", {"output_index": index, "item": item.body("in_progress")}))
-        if c.delta.type == "text":
-            item.text += c.delta.text
+        if delta.type == "text":
+            item.text += delta.text
             frames.append(
                 self._event(
                     "response.output_text.delta",
-                    {"item_id": item.item_id, "output_index": item.output_index, "content_index": 0, "delta": c.delta.text, "logprobs": []},
+                    {"item_id": item.item_id, "output_index": item.output_index, "content_index": 0, "delta": delta.text, "logprobs": []},
                 )
             )
-        elif c.delta.type == "reasoning":
-            item.text += c.delta.text
+        elif delta.type == "reasoning":
+            item.text += delta.text
             if not opened:
-                item.signature += c.delta.signature or ""
-            if c.delta.text:
+                item.signature += delta.signature or ""
+            if delta.text:
                 frames.append(
                     self._event(
                         "response.reasoning_summary_text.delta",
-                        {"item_id": item.item_id, "output_index": item.output_index, "summary_index": 0, "delta": c.delta.text},
+                        {"item_id": item.item_id, "output_index": item.output_index, "summary_index": 0, "delta": delta.text},
                     )
                 )
         else:
-            item.call_id = c.delta.id or item.call_id
-            item.name = c.delta.name or item.name
-            item.arguments += c.delta.arguments
-            if c.delta.arguments:
+            item.call_id = delta.id or item.call_id
+            item.name = delta.name or item.name
+            item.arguments += delta.arguments
+            if delta.arguments:
                 frames.append(
                     self._event(
                         "response.function_call_arguments.delta",
-                        {"item_id": item.item_id, "output_index": item.output_index, "delta": c.delta.arguments},
+                        {"item_id": item.item_id, "output_index": item.output_index, "delta": delta.arguments},
                     )
                 )
         return frames
 
-    def closing(self, final: CanonicalResponse, adjustments: list[Adjustment]) -> list[bytes]:
+    def closing(self, final: CanonicalResponse, adjustments: list[CanonicalAdjustment]) -> list[bytes]:
         ordered = sorted(self.items.values(), key=lambda item: item.output_index)
         frames = [self._event("response.output_item.done", {"output_index": item.output_index, "item": item.body("completed")}) for item in ordered]
         metadata = fmt.ResponseMetadata(id=final.id, model=final.model, created_at=self.created_at)
         response = fmt.json_response(metadata, final.content, final.finish_reason, final.usage)
-        response["gateway"] = GatewayInfo(finish_reason=final.finish_reason, adjustments=adjustments).model_dump(mode="json")
+        response["gateway"] = CanonicalGatewayInfo(finish_reason=final.finish_reason, adjustments=adjustments).model_dump(mode="json")
         frames.append(self._event("response.completed", {"response": response}))
         return frames
 
@@ -221,7 +227,7 @@ class OpenAIResponsesIngress(IngressAdapter):
     def claims(self, headers: Headers, body: dict[str, Any], /) -> bool:
         return headers.get("user-agent", "").startswith("OpenAI/") and "input" in body
 
-    def parse(self, body: dict[str, Any]) -> tuple[CanonicalRequest, list[Adjustment]]:
+    def parse(self, body: dict[str, Any]) -> tuple[CanonicalRequest, list[CanonicalAdjustment]]:
         unsupported = sorted(set(body) - SUPPORTED)
         if unsupported:
             message = f"unsupported_feature: {', '.join(unsupported)}"
@@ -243,7 +249,7 @@ class OpenAIResponsesIngress(IngressAdapter):
             if not isinstance(instructions, str):
                 message = "instructions must be a string"
                 raise ValueError(message)
-            messages.insert(0, CanonicalMessage(role="system", content=[TextPart(text=instructions)]))
+            messages.insert(0, CanonicalSystemMessage(content=[CanonicalTextPart(text=instructions)]))
         text = _mapping(body.get("text"))
         response_format = _response_format(text.get("format"))
         reasoning = _mapping(body.get("reasoning"))
@@ -257,7 +263,7 @@ class OpenAIResponsesIngress(IngressAdapter):
             tools=_tools(body.get("tools")),
             tool_choice=_choice(body.get("tool_choice")),
             parallel_tool_calls=body.get("parallel_tool_calls") if isinstance(body.get("parallel_tool_calls"), bool) else None,
-            reasoning=ReasoningConfig.model_validate(reasoning) if reasoning else None,
+            reasoning=CanonicalReasoningConfig.model_validate(reasoning) if reasoning else None,
             response_format=response_format,
         )
         return request, []

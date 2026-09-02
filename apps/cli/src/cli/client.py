@@ -1,15 +1,19 @@
 from __future__ import annotations
 
 import os
+from collections.abc import Mapping
 from typing import TYPE_CHECKING
 
 import typer
+from pydantic import BaseModel
 
 from cli.common import console, invocation
-from cli.profiles import active_profile
+from cli.profiles import load_active_profile
 
 if TYPE_CHECKING:
     import httpx
+
+QueryParams = Mapping[str, str | int | float | bool | None]
 
 
 LOCAL_CONTROL_PLANE_URL = "http://127.0.0.1:8000"
@@ -32,9 +36,9 @@ def resolve_control_plane_url(override: str = "") -> str:
         return LOCAL_CONTROL_PLANE_URL
     if url := os.environ.get("GW_CONTROL_PLANE_URL"):
         return url
-    profile = active_profile()
-    if profile and profile.get("control_plane_url"):
-        return str(profile["control_plane_url"])
+    profile = load_active_profile()
+    if profile and profile.control_plane_url:
+        return profile.control_plane_url
     return LOCAL_CONTROL_PLANE_URL
 
 
@@ -45,9 +49,9 @@ def _bearer_client(token: str, control_plane_url: str) -> httpx.Client:
 
 
 def access_client(control_plane_url: str = "", token: str | None = None) -> httpx.Client:
-    profile = active_profile() or {}
+    profile = load_active_profile()
     environment_token = os.environ.get("GW_ACCESS_KEY")
-    selected_token = token or environment_token or profile.get("token")
+    selected_token = token or environment_token or (profile.token if profile is not None else None)
     if not selected_token:
         console.print("[red]No access key available. Run [bold]airllm login[/bold] or set GW_ACCESS_KEY.[/red]")
         raise typer.Exit(1)
@@ -55,7 +59,8 @@ def access_client(control_plane_url: str = "", token: str | None = None) -> http
 
 
 def resolve_org_id(override: str = "") -> str:
-    selected_org = override or os.environ.get("GW_ORG_ID") or (active_profile() or {}).get("org_id")
+    profile = load_active_profile()
+    selected_org = override or os.environ.get("GW_ORG_ID") or (profile.org_id if profile is not None and profile.scope == "org" else None)
     if selected_org:
         return str(selected_org)
     console.print("[red]No organization selected. Pass --org, set GW_ORG_ID, or sign in with [bold]airllm login[/bold].[/red]")
@@ -86,18 +91,23 @@ def ensure_ok(resp: httpx.Response) -> httpx.Response:
     return resp
 
 
-def payload(resp: httpx.Response) -> dict:
+def payload[PayloadT: BaseModel](resp: httpx.Response, payload_type: type[PayloadT]) -> PayloadT:
     """The data field of an enveloped response; every control plane response is {"data": ...}, unwrapped here and in payload_rows only."""
-    return resp.json()["data"]
+    return payload_type.model_validate(resp.json()["data"])
 
 
-def payload_rows(resp: httpx.Response) -> list[dict]:
-    return resp.json()["data"]
+def payload_rows[PayloadT: BaseModel](resp: httpx.Response, payload_type: type[PayloadT]) -> list[PayloadT]:
+    return [payload_type.model_validate(item) for item in resp.json()["data"]]
 
 
-def access_get(path: str, control_plane_url: str, params: dict | None = None) -> list[dict]:
+def access_get[PayloadT: BaseModel](
+    path: str,
+    control_plane_url: str,
+    payload_type: type[PayloadT],
+    params: QueryParams | None = None,
+) -> list[PayloadT]:
     with access_client(control_plane_url) as c:
-        return payload_rows(ensure_ok(c.get(path, params=params or {})))
+        return payload_rows(ensure_ok(c.get(path, params=params)), payload_type)
 
 
 def resolve_workspace(workspace: str) -> str:
@@ -108,15 +118,15 @@ def resolve_workspace(workspace: str) -> str:
     """
     if workspace:
         return workspace
-    profile = active_profile() or {}
-    default = profile.get("workspace") or profile.get("workspace_id")
+    profile = load_active_profile()
+    default = profile.workspace if profile is not None and profile.scope == "org" else None
     if default:
         return str(default)
     console.print("[red]No workspace selected. Pass --workspace, or set a default with [bold]airllm workspaces use <name>[/bold].[/red]")
     raise typer.Exit(1)
 
 
-def post_expecting(client: httpx.Client, path: str, body: dict | None, ok: tuple[int, ...]) -> httpx.Response:
+def post_expecting(client: httpx.Client, path: str, body: Mapping[str, object], ok: tuple[int, ...]) -> httpx.Response:
     resp = client.post(path, json=body)
     if resp.status_code not in ok:
         console.print(f"[red]Request failed ({resp.status_code}): {api_error(resp)}[/red]")

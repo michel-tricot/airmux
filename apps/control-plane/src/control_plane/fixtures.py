@@ -28,7 +28,7 @@ from uuid import UUID, uuid5
 
 from sqlmodel import col
 
-from contract import INFERENCE_TOKEN_PREFIX, Secret, SecretRejectedError, SecretStore, token_hash
+from contract import INFERENCE_TOKEN_PREFIX, Secret, SecretRejectedError, SecretStore, UsageStatus, token_hash
 from control_plane.authz import ALL_PERMISSIONS, OrgRole, WorkspaceRole, permissions_for_org_role
 from control_plane.keys import ACCESS_KEY_PREFIX, key_prefix
 from control_plane.models import (
@@ -50,6 +50,8 @@ from control_plane.models.org_invitation import INVITATION_TOKEN_PREFIX
 
 if TYPE_CHECKING:
     from datetime import datetime
+
+    from control_plane.models.provider_credential import ProviderCredentialStatus
 
 FIXTURE_NAMESPACE = UUID("cd85b596-7fd8-519f-9d36-7c5d39eea21f")
 
@@ -74,7 +76,7 @@ are looked up, never created, so a fixture instance cannot drift from the catalo
 FIXTURE_PROVIDER_KEY = "sk-fixture-not-a-real-key-0000"
 
 
-STATUSES = ["ok"] * 9 + ["error"]
+STATUSES: tuple[UsageStatus, ...] = (*("ok",) * 9, "upstream_error")
 
 USAGE_DAYS = 30
 
@@ -145,7 +147,7 @@ async def provider_credential(  # noqa: PLR0913 the row's own fields are the arg
     workspace: Workspace | None = None,
     name: str = "default",
     priority: int = 100,
-    status: str = "unknown",
+    status: ProviderCredentialStatus = "unknown",
     enabled: bool = True,
 ) -> ProviderCredential:
     """A credential row, and the value behind it when the store can hold one."""

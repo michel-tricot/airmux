@@ -446,6 +446,8 @@ def _event(org: UUID) -> dict:
         "latency_ms": 120,
         "status": "ok",
         "stream": False,
+        "credential_id": str(uuid7()),
+        "credential_scope": "workspace",
     }
 
 
@@ -532,7 +534,11 @@ def test_event_ingest_rejects_unbounded_or_ambiguous_events(tmp_path):
         assert c.post("/api/v1/events", json=[{**event, "provider_id": "p" * 64}], headers=root).status_code == 422
         assert c.post("/api/v1/events", json=[event] * 1001, headers=root).status_code == 422
 
-        denied = c.post("/api/v1/events", json=[{**event, "provider_id": "", "status": "denied"}], headers=root)
+        denied = c.post(
+            "/api/v1/events",
+            json=[{**event, "provider_id": "", "status": "denied", "credential_id": None, "credential_scope": None}],
+            headers=root,
+        )
         assert denied.status_code == 200, denied.text
 
 

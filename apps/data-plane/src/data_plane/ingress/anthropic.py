@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING, Any
 
 from starlette.responses import JSONResponse, Response
 
-from data_plane.canonical import Adjustment, CanonicalChunk, CanonicalRequest, GatewayInfo, ReasoningConfig
+from data_plane.canonical import CanonicalAdjustment, CanonicalChunk, CanonicalGatewayInfo, CanonicalReasoningConfig, CanonicalRequest
 from data_plane.formats import anthropic as fmt
 from data_plane.ingress.base import IngressAdapter
 
@@ -52,7 +52,7 @@ class AnthropicResponseStream:
         self.opened = 0  # blocks opened so far, which is also the next index
 
     def start(self, ctx: Ctx, /) -> list[bytes]:
-        message = fmt.MessageStartOut(id=ctx.request_id, model=ctx.model.model_id)
+        message = fmt.MessageStartOut(id=str(ctx.request_id), model=ctx.model.model_id)
         return [fmt.MessageStart(message=message).sse(), fmt.Ping().sse()]
 
     def _close(self) -> list[bytes]:
@@ -95,14 +95,14 @@ class AnthropicResponseStream:
             events.append(fmt.ContentBlockDelta(index=index, delta=fmt.InputJsonDeltaOut(partial_json=delta.arguments)).sse())
         return events
 
-    def closing(self, final: CanonicalResponse, adjustments: list[Adjustment]) -> list[bytes]:
-        # Usage is only known at stream end (canonical chunks carry none), so the full breakdown
+    def closing(self, final: CanonicalResponse, adjustments: list[CanonicalAdjustment]) -> list[bytes]:
+        # CanonicalUsage is only known at stream end (canonical chunks carry none), so the full breakdown
         # lands in message_delta rather than message_start; gateway rides there as an extra field.
         stop = fmt.StopDeltaOut(stop_reason=fmt.stop_reason(final.finish_reason))
         delta = fmt.MessageDelta(
             delta=stop,
             usage=fmt.usage_out(final.usage),
-            gateway=GatewayInfo(finish_reason=final.finish_reason, adjustments=adjustments),
+            gateway=CanonicalGatewayInfo(finish_reason=final.finish_reason, adjustments=adjustments),
         )
         return [*self._close(), delta.sse(), fmt.MessageStop().sse()]
 
@@ -117,13 +117,15 @@ class AnthropicIngress(IngressAdapter):
         """Never claims on the chat route: /inf/v1/messages binds this dialect directly."""
         return False
 
-    def parse(self, body: dict[str, Any]) -> tuple[CanonicalRequest, list[Adjustment]]:
+    def parse(self, body: dict[str, Any]) -> tuple[CanonicalRequest, list[CanonicalAdjustment]]:
         extras = {key: value for key, value in body.items() if key not in CONSUMED}
         adjustments = []
         raw_tool_choice = body.get("tool_choice")
         tool_choice = fmt.from_tool_choice(raw_tool_choice)
         if body.get("tool_choice") is not None and tool_choice is None:
-            adjustments.append(Adjustment(param="tool_choice", action="dropped", detail="a tool_choice variant this dialect does not interpret"))
+            adjustments.append(
+                CanonicalAdjustment(param="tool_choice", action="dropped", detail="a tool_choice variant this dialect does not interpret")
+            )
         thinking = _mapping(body.get("thinking"))
         output_config = _mapping(body.get("output_config"))
         reasoning_values = {
@@ -132,7 +134,9 @@ class AnthropicIngress(IngressAdapter):
             "display": thinking.get("display"),
             "effort": output_config.get("effort"),
         }
-        reasoning = ReasoningConfig.model_validate(reasoning_values) if any(value is not None for value in reasoning_values.values()) else None
+        reasoning = (
+            CanonicalReasoningConfig.model_validate(reasoning_values) if any(value is not None for value in reasoning_values.values()) else None
+        )
         request = CanonicalRequest.model_validate(
             {
                 **extras,

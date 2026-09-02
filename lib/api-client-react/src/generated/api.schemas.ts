@@ -310,6 +310,96 @@ export interface DeletedOutStr {
   deleted_at: string;
 }
 
+export interface DeniedUsageEventV1 {
+  /** Usage event schema version */
+  schema_version?: 1;
+  /** Idempotency key for event ingestion */
+  event_id: string;
+  /** Data-plane request ID */
+  request_id: string;
+  /** Timestamp when the request completed */
+  occurred_at: string;
+  /** Organization that made the request */
+  org_id: string;
+  /** Workspace that made the request */
+  workspace_id: string;
+  /**
+     * Inference key ID used for the request
+     * @minLength 1
+     * @maxLength 255
+     */
+  key_id: string;
+  /**
+     * Caller-facing model ID
+     * @minLength 1
+     * @maxLength 255
+     */
+  model_id: string;
+  /** No provider was selected before denial */
+  provider_id?: '';
+  /** Policy bundle used for the request */
+  bundle_id: string;
+  /**
+     * Total input tokens
+     * @minimum 0
+     * @maximum 2147483647
+     */
+  input_tokens: number;
+  /**
+     * Total output tokens
+     * @minimum 0
+     * @maximum 2147483647
+     */
+  output_tokens: number;
+  /**
+     * Total estimated cost in USD
+     * @minimum 0
+     */
+  cost_usd: number;
+  /**
+     * Estimated input cost in USD
+     * @minimum 0
+     */
+  cost_input_usd?: number;
+  /**
+     * Estimated output cost in USD
+     * @minimum 0
+     */
+  cost_output_usd?: number;
+  /**
+     * Input tokens read from a provider cache
+     * @minimum 0
+     * @maximum 2147483647
+     */
+  cache_read_tokens?: number;
+  /**
+     * Input tokens written to a provider cache
+     * @minimum 0
+     * @maximum 2147483647
+     */
+  cache_write_tokens?: number;
+  /**
+     * End-to-end request latency in milliseconds
+     * @minimum 0
+     * @maximum 2147483647
+     */
+  latency_ms: number;
+  /** The request was denied before routing */
+  status?: 'denied';
+  /** Whether the response was streamed */
+  stream: boolean;
+  /**
+     * No provider credential was selected before denial
+     * @nullable
+     */
+  credential_id?: null;
+  /**
+     * No provider credential scope was selected before denial
+     * @nullable
+     */
+  credential_scope?: null;
+}
+
 export interface OrgOut {
   id: string;
   name: string;
@@ -495,6 +585,16 @@ export const ModelInOutputModalitiesItem = {
   pdf: 'pdf',
 } as const;
 
+export type ModelInCapabilitiesItem = typeof ModelInCapabilitiesItem[keyof typeof ModelInCapabilitiesItem];
+
+
+export const ModelInCapabilitiesItem = {
+  streaming: 'streaming',
+  tools: 'tools',
+  reasoning: 'reasoning',
+  structured_output: 'structured_output',
+} as const;
+
 /**
  * Known support for canonical request parameters; an absent parameter is unknown
  */
@@ -563,12 +663,44 @@ export interface ModelIn {
   output_modalities: ModelInOutputModalitiesItem[];
   /**
      * Capabilities supported by the model
-     * @maxItems 128
+     * @maxItems 4
      */
-  capabilities?: string[];
+  capabilities?: ModelInCapabilitiesItem[];
   /** Known support for canonical request parameters; an absent parameter is unknown */
   parameter_support?: ModelInParameterSupport;
 }
+
+export type ModelOutInputModalitiesItem = typeof ModelOutInputModalitiesItem[keyof typeof ModelOutInputModalitiesItem];
+
+
+export const ModelOutInputModalitiesItem = {
+  text: 'text',
+  image: 'image',
+  audio: 'audio',
+  video: 'video',
+  pdf: 'pdf',
+} as const;
+
+export type ModelOutOutputModalitiesItem = typeof ModelOutOutputModalitiesItem[keyof typeof ModelOutOutputModalitiesItem];
+
+
+export const ModelOutOutputModalitiesItem = {
+  text: 'text',
+  image: 'image',
+  audio: 'audio',
+  video: 'video',
+  pdf: 'pdf',
+} as const;
+
+export type ModelOutCapabilitiesItem = typeof ModelOutCapabilitiesItem[keyof typeof ModelOutCapabilitiesItem];
+
+
+export const ModelOutCapabilitiesItem = {
+  streaming: 'streaming',
+  tools: 'tools',
+  reasoning: 'reasoning',
+  structured_output: 'structured_output',
+} as const;
 
 export type ModelOutParameterSupport = {[key: string]: 'supported' | 'unsupported'};
 
@@ -584,9 +716,9 @@ export interface ModelOut {
   cache_write_price_per_mtok: number;
   context_window: number;
   max_output_tokens: number | null;
-  input_modalities: ('text' | 'image' | 'audio' | 'video' | 'pdf')[] | null;
-  output_modalities: ('text' | 'image' | 'audio' | 'video' | 'pdf')[] | null;
-  capabilities: string[];
+  input_modalities: ModelOutInputModalitiesItem[];
+  output_modalities: ModelOutOutputModalitiesItem[];
+  capabilities: ModelOutCapabilitiesItem[];
   parameter_support: ModelOutParameterSupport;
   created_at: string;
   updated_at: string;
@@ -786,6 +918,16 @@ export interface ProviderCredentialIn {
   priority?: number;
 }
 
+export type ProviderCredentialOutStatus = typeof ProviderCredentialOutStatus[keyof typeof ProviderCredentialOutStatus];
+
+
+export const ProviderCredentialOutStatus = {
+  unknown: 'unknown',
+  live: 'live',
+  invalid: 'invalid',
+  rate_limited: 'rate_limited',
+} as const;
+
 export type ProviderCredentialOutScope = typeof ProviderCredentialOutScope[keyof typeof ProviderCredentialOutScope];
 
 
@@ -805,7 +947,7 @@ export interface ProviderCredentialOut {
   priority: number;
   enabled: boolean;
   version: number;
-  status: string;
+  status: ProviderCredentialOutStatus;
   status_at: string | null;
   fingerprint: string;
   created_at: string;
@@ -904,6 +1046,121 @@ export interface QuickstartOut {
   path: string;
 }
 
+/**
+ * How the routed request ended
+ */
+export type RoutedUsageEventV1Status = typeof RoutedUsageEventV1Status[keyof typeof RoutedUsageEventV1Status];
+
+
+export const RoutedUsageEventV1Status = {
+  ok: 'ok',
+  upstream_error: 'upstream_error',
+  timeout: 'timeout',
+  cancelled: 'cancelled',
+  credential_rejected: 'credential_rejected',
+  rate_limited: 'rate_limited',
+} as const;
+
+/**
+ * Scope of the provider credential used for the request
+ */
+export type RoutedUsageEventV1CredentialScope = typeof RoutedUsageEventV1CredentialScope[keyof typeof RoutedUsageEventV1CredentialScope];
+
+
+export const RoutedUsageEventV1CredentialScope = {
+  platform: 'platform',
+  org: 'org',
+  workspace: 'workspace',
+} as const;
+
+export interface RoutedUsageEventV1 {
+  /** Usage event schema version */
+  schema_version?: 1;
+  /** Idempotency key for event ingestion */
+  event_id: string;
+  /** Data-plane request ID */
+  request_id: string;
+  /** Timestamp when the request completed */
+  occurred_at: string;
+  /** Organization that made the request */
+  org_id: string;
+  /** Workspace that made the request */
+  workspace_id: string;
+  /**
+     * Inference key ID used for the request
+     * @minLength 1
+     * @maxLength 255
+     */
+  key_id: string;
+  /**
+     * Caller-facing model ID
+     * @minLength 1
+     * @maxLength 255
+     */
+  model_id: string;
+  /**
+     * Provider that served the request
+     * @minLength 1
+     * @maxLength 63
+     */
+  provider_id: string;
+  /** Policy bundle used for the request */
+  bundle_id: string;
+  /**
+     * Total input tokens
+     * @minimum 0
+     * @maximum 2147483647
+     */
+  input_tokens: number;
+  /**
+     * Total output tokens
+     * @minimum 0
+     * @maximum 2147483647
+     */
+  output_tokens: number;
+  /**
+     * Total estimated cost in USD
+     * @minimum 0
+     */
+  cost_usd: number;
+  /**
+     * Estimated input cost in USD
+     * @minimum 0
+     */
+  cost_input_usd?: number;
+  /**
+     * Estimated output cost in USD
+     * @minimum 0
+     */
+  cost_output_usd?: number;
+  /**
+     * Input tokens read from a provider cache
+     * @minimum 0
+     * @maximum 2147483647
+     */
+  cache_read_tokens?: number;
+  /**
+     * Input tokens written to a provider cache
+     * @minimum 0
+     * @maximum 2147483647
+     */
+  cache_write_tokens?: number;
+  /**
+     * End-to-end request latency in milliseconds
+     * @minimum 0
+     * @maximum 2147483647
+     */
+  latency_ms: number;
+  /** How the routed request ended */
+  status: RoutedUsageEventV1Status;
+  /** Whether the response was streamed */
+  stream: boolean;
+  /** Provider credential used for the request */
+  credential_id: string;
+  /** Scope of the provider credential used for the request */
+  credential_scope: RoutedUsageEventV1CredentialScope;
+}
+
 export interface ServiceAccountIn {
   /**
      * Display name for the service account
@@ -982,6 +1239,28 @@ export interface TaxonomySpec {
   models?: ModelIn[];
 }
 
+export type UsageEventOutStatus = typeof UsageEventOutStatus[keyof typeof UsageEventOutStatus];
+
+
+export const UsageEventOutStatus = {
+  ok: 'ok',
+  upstream_error: 'upstream_error',
+  denied: 'denied',
+  timeout: 'timeout',
+  cancelled: 'cancelled',
+  credential_rejected: 'credential_rejected',
+  rate_limited: 'rate_limited',
+} as const;
+
+export type UsageEventOutCredentialScope = typeof UsageEventOutCredentialScope[keyof typeof UsageEventOutCredentialScope] | null;
+
+
+export const UsageEventOutCredentialScope = {
+  platform: 'platform',
+  org: 'org',
+  workspace: 'workspace',
+} as const;
+
 export interface UsageEventOut {
   event_id: string;
   request_id: string;
@@ -1000,130 +1279,10 @@ export interface UsageEventOut {
   cache_read_tokens: number;
   cache_write_tokens: number;
   latency_ms: number;
-  status: string;
+  status: UsageEventOutStatus;
   stream: boolean;
   credential_id: string | null;
-  credential_scope: string | null;
-}
-
-/**
- * How the request ended; cancelled events may contain partial token counts
- */
-export type UsageEventV1Status = typeof UsageEventV1Status[keyof typeof UsageEventV1Status];
-
-
-export const UsageEventV1Status = {
-  ok: 'ok',
-  upstream_error: 'upstream_error',
-  denied: 'denied',
-  timeout: 'timeout',
-  cancelled: 'cancelled',
-  credential_rejected: 'credential_rejected',
-  rate_limited: 'rate_limited',
-} as const;
-
-/**
- * Scope of the provider credential used for the request
- */
-export type UsageEventV1CredentialScope = typeof UsageEventV1CredentialScope[keyof typeof UsageEventV1CredentialScope] | null;
-
-
-export const UsageEventV1CredentialScope = {
-  platform: 'platform',
-  org: 'org',
-  workspace: 'workspace',
-} as const;
-
-/**
- * One metered model request reported by a data plane.
- *
- * `event_id` makes retries idempotent.
- */
-export interface UsageEventV1 {
-  /** Usage event schema version */
-  schema_version?: 1;
-  /** Idempotency key for event ingestion */
-  event_id: string;
-  /** Data-plane request ID */
-  request_id: string;
-  /** Timestamp when the request completed */
-  occurred_at: string;
-  /** Organization that made the request */
-  org_id: string;
-  /** Workspace that made the request */
-  workspace_id: string;
-  /**
-     * Inference key ID used for the request
-     * @minLength 1
-     * @maxLength 255
-     */
-  key_id: string;
-  /**
-     * Caller-facing model ID
-     * @minLength 1
-     * @maxLength 255
-     */
-  model_id: string;
-  /**
-     * Provider that served the request, or empty for an early denial
-     * @maxLength 63
-     */
-  provider_id: string;
-  /** Policy bundle used for the request */
-  bundle_id: string;
-  /**
-     * Total input tokens
-     * @minimum 0
-     * @maximum 2147483647
-     */
-  input_tokens: number;
-  /**
-     * Total output tokens
-     * @minimum 0
-     * @maximum 2147483647
-     */
-  output_tokens: number;
-  /**
-     * Total estimated cost in USD
-     * @minimum 0
-     */
-  cost_usd: number;
-  /**
-     * Estimated input cost in USD
-     * @minimum 0
-     */
-  cost_input_usd?: number;
-  /**
-     * Estimated output cost in USD
-     * @minimum 0
-     */
-  cost_output_usd?: number;
-  /**
-     * Input tokens read from a provider cache
-     * @minimum 0
-     * @maximum 2147483647
-     */
-  cache_read_tokens?: number;
-  /**
-     * Input tokens written to a provider cache
-     * @minimum 0
-     * @maximum 2147483647
-     */
-  cache_write_tokens?: number;
-  /**
-     * End-to-end request latency in milliseconds
-     * @minimum 0
-     * @maximum 2147483647
-     */
-  latency_ms: number;
-  /** How the request ended; cancelled events may contain partial token counts */
-  status: UsageEventV1Status;
-  /** Whether the response was streamed */
-  stream: boolean;
-  /** Provider credential used for the request */
-  credential_id?: string | null;
-  /** Scope of the provider credential used for the request */
-  credential_scope?: UsageEventV1CredentialScope;
+  credential_scope: UsageEventOutCredentialScope;
 }
 
 export interface WorkspaceCreate {

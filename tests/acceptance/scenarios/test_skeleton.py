@@ -51,6 +51,8 @@ def _synthetic_event(org_id: str, event_id: str) -> str:
             "latency_ms": 0,
             "status": "ok",
             "stream": False,
+            "credential_id": str(uuid4()),
+            "credential_scope": "workspace",
         }
     )
 

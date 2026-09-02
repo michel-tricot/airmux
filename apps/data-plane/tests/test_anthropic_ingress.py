@@ -19,14 +19,15 @@ from starlette.testclient import TestClient
 
 from data_plane.canonical import (
     CanonicalChunk,
+    CanonicalDocumentPart,
+    CanonicalJsonObjectResponseFormat,
+    CanonicalJsonSchemaResponseFormat,
+    CanonicalReasoningDelta,
+    CanonicalReasoningPart,
     CanonicalResponse,
-    DocumentPart,
-    ReasoningDelta,
-    ReasoningPart,
-    ResponseFormat,
-    TextDelta,
-    TextPart,
-    Usage,
+    CanonicalTextDelta,
+    CanonicalTextPart,
+    CanonicalUsage,
 )
 from data_plane.ingress.anthropic import AnthropicIngress, AnthropicResponseStream
 
@@ -91,7 +92,7 @@ def test_parse_preserves_an_inline_document():
         }
     )
 
-    assert request.messages[0].content == [DocumentPart(media_type="application/pdf", data="JVBERi0=")]
+    assert request.messages[0].content == [CanonicalDocumentPart(media_type="application/pdf", data="JVBERi0=")]
 
 
 def test_parse_recovers_json_object_from_anthropic_generic_object_schema():
@@ -104,7 +105,7 @@ def test_parse_recovers_json_object_from_anthropic_generic_object_schema():
         }
     )
 
-    assert request.response_format == ResponseFormat(type="json_object")
+    assert request.response_format == CanonicalJsonObjectResponseFormat()
 
 
 def test_parse_keeps_a_constrained_anthropic_schema_as_json_schema():
@@ -118,7 +119,7 @@ def test_parse_keeps_a_constrained_anthropic_schema_as_json_schema():
         }
     )
 
-    assert request.response_format == ResponseFormat(type="json_schema", json_schema={"name": "response", "strict": True, "schema": schema})
+    assert request.response_format == CanonicalJsonSchemaResponseFormat(json_schema={"name": "response", "strict": True, "schema": schema})
 
 
 def test_the_sdk_reads_a_thinking_signature_back():
@@ -126,9 +127,9 @@ def test_the_sdk_reads_a_thinking_signature_back():
     final = CanonicalResponse(
         id="msg_1",
         model="m",
-        content=[ReasoningPart(text="think", signature="sig_1"), TextPart(text="ok")],
+        content=[CanonicalReasoningPart(text="think", signature="sig_1"), CanonicalTextPart(text="ok")],
         finish_reason="stop",
-        usage=Usage(input_tokens=3, output_tokens=2),
+        usage=CanonicalUsage(input_tokens=3, output_tokens=2),
     )
     message = Message.model_validate_json(bytes(AnthropicIngress().render_response(final).body))
     thinking = message.content[0]
@@ -140,9 +141,9 @@ def test_the_sdk_replays_cross_provider_reasoning_identity():
     final = CanonicalResponse(
         id="msg_1",
         model="m",
-        content=[ReasoningPart(id="rs_provider", text="think", signature="encrypted"), TextPart(text="ok")],
+        content=[CanonicalReasoningPart(id="rs_provider", text="think", signature="encrypted"), CanonicalTextPart(text="ok")],
         finish_reason="stop",
-        usage=Usage(input_tokens=3, output_tokens=2),
+        usage=CanonicalUsage(input_tokens=3, output_tokens=2),
     )
     message = Message.model_validate_json(bytes(AnthropicIngress().render_response(final).body))
 
@@ -157,15 +158,15 @@ def test_the_sdk_replays_cross_provider_reasoning_identity():
         }
     )
 
-    assert request.messages[0].content[0] == ReasoningPart(id="rs_provider", text="think", signature="encrypted")
+    assert request.messages[0].content[0] == CanonicalReasoningPart(id="rs_provider", text="think", signature="encrypted")
 
 
 def test_the_stream_replays_cross_provider_reasoning_identity():
     stream = AnthropicResponseStream()
     frames = [
-        *stream.chunk(CanonicalChunk(id="response-1", delta=ReasoningDelta(id="rs_provider", text="think", signature="encr"))),
-        *stream.chunk(CanonicalChunk(id="response-1", delta=ReasoningDelta(signature="ypted"))),
-        *stream.chunk(CanonicalChunk(id="response-1", delta=TextDelta(text="ok"))),
+        *stream.chunk(CanonicalChunk(id="response-1", delta=CanonicalReasoningDelta(id="rs_provider", text="think", signature="encr"))),
+        *stream.chunk(CanonicalChunk(id="response-1", delta=CanonicalReasoningDelta(signature="ypted"))),
+        *stream.chunk(CanonicalChunk(id="response-1", delta=CanonicalTextDelta(text="ok"))),
     ]
     events = [json.loads(frame.split(b"data: ", 1)[1]) for frame in frames]
     signature = next(
@@ -180,7 +181,7 @@ def test_the_stream_replays_cross_provider_reasoning_identity():
         }
     )
 
-    assert request.messages[0].content == [ReasoningPart(id="rs_provider", text="think", signature="encrypted")]
+    assert request.messages[0].content == [CanonicalReasoningPart(id="rs_provider", text="think", signature="encrypted")]
 
 
 @respx.mock

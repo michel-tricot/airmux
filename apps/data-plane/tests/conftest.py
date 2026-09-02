@@ -4,7 +4,7 @@ import json
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Literal
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import httpx
 import pytest
@@ -70,21 +70,16 @@ def make_credential(service="p1", name="default", org=ORG, **scope) -> Credentia
     scope takes workspace, priority, version and secret_id. Passing secret_id describes the same
     credential twice, which is what a rotation looks like from the data plane.
     """
-    ref = SecretRef(
-        purpose=SecretPurpose.provider,
-        service=service,
-        name=name,
-        secret_id=scope.get("secret_id") or uuid7(),
-        org_id=org,
-        workspace_id=scope.get("workspace"),
-    )
+    secret_id = scope.get("secret_id") or uuid7()
+    workspace = scope.get("workspace")
+    ref = SecretRef(purpose=SecretPurpose.provider, service=service, name=name, secret_id=secret_id, org_id=org, workspace_id=workspace)
     return CredentialEntry(ref=ref, priority=scope.get("priority", 100), version=scope.get("version", 1))
 
 
-def make_key(key_id="k-dev", org=ORG, workspace=WORKSPACE):
+def make_key(key_id: UUID | str = "k-dev", org: UUID = ORG, workspace: UUID = WORKSPACE):
     """A deterministic opaque token and its bundle entry; the token derives from the key_id so tests stay reproducible."""
     token = f"{INFERENCE_TOKEN_PREFIX}secret-{key_id}"
-    return token, KeyEntry(key_id=key_id, org_id=org, workspace_id=workspace, token_hash=token_hash(token))
+    return token, KeyEntry(key_id=str(key_id), org_id=org, workspace_id=workspace, token_hash=token_hash(token))
 
 
 def make_bundle(keys=(), catalog=None, org=ORG):
@@ -130,7 +125,7 @@ def mock_control_plane() -> None:
 PLATFORM_CREDENTIAL = make_credential(org=None)
 USAGE = {"prompt_tokens": 5, "completion_tokens": 7, "total_tokens": 12}
 CTX = Ctx(
-    request_id="req-1",
+    request_id=uuid7(),
     model=MODEL,
     provider=PROVIDER,
     stream=True,

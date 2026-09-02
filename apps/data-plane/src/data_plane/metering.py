@@ -12,14 +12,14 @@ import httpx
 import tiktoken
 from pydantic import BaseModel
 
-from contract import UsageEventV1, uuid7
-from data_plane.canonical import TextPart, Usage
+from contract import DeniedUsageEventV1, RoutedUsageEventV1, uuid7
+from data_plane.canonical import CanonicalTextPart, CanonicalUsage
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
     from uuid import UUID
 
-    from contract import KeyEntry, ModelEntry, UsageStatus
+    from contract import KeyEntry, ModelEntry, RoutedUsageStatus
     from data_plane.canonical import CanonicalRequest, CanonicalResponse
     from data_plane.egress.base import Ctx
     from data_plane.outbox import EventOutbox
@@ -36,7 +36,7 @@ class RequestStart:
     started_at: float
 
 
-def cost_breakdown(usage: Usage, model: ModelEntry) -> tuple[float, float]:
+def cost_breakdown(usage: CanonicalUsage, model: ModelEntry) -> tuple[float, float]:
     fresh_input_tokens = max(0, usage.input_tokens - usage.cache_read_tokens - usage.cache_write_tokens)
     input_cost = (
         fresh_input_tokens * model.input_price_per_mtok
@@ -61,11 +61,11 @@ def estimate_tokens(text: str, model: ModelEntry) -> int:
     return len(_encoding(model.upstream_model).encode(text))
 
 
-def status_for_error(error: Exception) -> UsageStatus:
+def status_for_error(error: Exception) -> RoutedUsageStatus:
     return "timeout" if isinstance(error, httpx.TimeoutException) else "upstream_error"
 
 
-def status_for_upstream(status_code: int) -> UsageStatus:
+def status_for_upstream(status_code: int) -> RoutedUsageStatus:
     if status_code in REJECTS_CREDENTIAL:
         return "credential_rejected"
     return "rate_limited" if status_code == httpx.codes.TOO_MANY_REQUESTS else "upstream_error"
@@ -74,7 +74,7 @@ def status_for_upstream(status_code: int) -> UsageStatus:
 def _text_of(parts: Sequence[object]) -> str:
     rendered = []
     for part in parts:
-        if isinstance(part, TextPart):
+        if isinstance(part, CanonicalTextPart):
             rendered.append(part.text)
         elif isinstance(part, BaseModel):
             payload = part.model_dump(mode="json", exclude_none=True, exclude={"data"})
@@ -98,7 +98,7 @@ def record_denied(
     start: RequestStart,
 ) -> None:
     outbox.record(
-        UsageEventV1(
+        DeniedUsageEventV1(
             event_id=uuid7(),
             request_id=start.request_id,
             occurred_at=datetime.now(tz=UTC),
@@ -122,12 +122,12 @@ def record_usage(
     outbox: EventOutbox,
     ctx: Ctx,
     response: CanonicalResponse,
-    status: UsageStatus,
+    status: RoutedUsageStatus,
     request: CanonicalRequest,
 ) -> None:
     usage = response.usage
     if usage.estimated:
-        usage = Usage(
+        usage = CanonicalUsage(
             input_tokens=usage.input_tokens or estimate_tokens(_prompt_text(request), ctx.model),
             output_tokens=usage.output_tokens or estimate_tokens(_text_of(response.content), ctx.model),
             cache_read_tokens=usage.cache_read_tokens,
@@ -137,7 +137,7 @@ def record_usage(
     cost_in, cost_out = cost_breakdown(usage, ctx.model)
     latency_ms = int((time.monotonic() - ctx.started_at) * 1000)
     outbox.record(
-        UsageEventV1(
+        RoutedUsageEventV1(
             event_id=uuid7(),
             request_id=ctx.request_id,
             occurred_at=datetime.now(tz=UTC),
