@@ -40,6 +40,8 @@ if tool == "flyctl":
         state["apps"].append(args[2])
         finish()
     if args[:2] == ["mpg", "list"]:
+        if not state["clusters"]:
+            finish("No managed postgres clusters found in organization personal")
         clusters = [
             {
                 "id": cluster["id"],

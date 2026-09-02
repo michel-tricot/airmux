@@ -63,7 +63,9 @@ import json
 import sys
 
 name = sys.argv[1]
-matches = [item["id"] for item in json.load(sys.stdin) if item["name"] == name]
+response = sys.stdin.read()
+clusters = [] if response.startswith("No managed postgres clusters found in organization ") else json.loads(response)
+matches = [item["id"] for item in clusters if item["name"] == name]
 print(matches[0] if len(matches) == 1 else "")
 ' "$1"
 }
