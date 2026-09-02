@@ -33,7 +33,7 @@ from paths import TAXONOMY
 from sources import registry
 from sources.base import GenericModelSource
 
-from model_audit.catalog_ops import incomplete_model_modalities
+from model_audit.catalog_ops import incomplete_model_modalities, retain_documented_models
 
 ROOT = TAXONOMY
 OUT = ROOT / "models"
@@ -95,10 +95,12 @@ def main() -> int:
         if incomplete := incomplete_model_modalities(provider, models):
             failed.append((provider, f"models without required modalities: {', '.join(incomplete)}"))
             continue
-        declared = sum(1 for m in models if m.get("context_length") or m.get("supports_tools") is not None)
         target = OUT / f"{provider}.json"
-        previous_ids = {model["id"] for model in json.loads(target.read_text()).get("models") or []} if target.exists() else set()
+        previous_models = json.loads(target.read_text()).get("models") or [] if target.exists() else []
+        previous_ids = {model["id"] for model in previous_models}
         models = apply_discovery_evidence(models, discovery_evidence(providers[provider], ROOT))
+        models = retain_documented_models(models, previous_models)
+        declared = sum(1 for model in models if model.get("context_length") or model.get("supports_tools") is not None)
         new_models = [model for model in models if model["id"] not in previous_ids]
         write_catalog(
             target,

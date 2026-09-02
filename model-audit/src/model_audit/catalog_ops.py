@@ -211,6 +211,12 @@ def add_provider(root: Path, definition: ProviderDefinition, *, replace: bool = 
     return definition
 
 
+def retain_documented_models(acquired_models: list[dict[str, object]], previous_models: list[dict[str, object]]) -> list[dict[str, object]]:
+    acquired_ids = {model.get("id") for model in acquired_models}
+    documented_models = [model for model in previous_models if model.get("source") and model.get("id") not in acquired_ids]
+    return [*acquired_models, *documented_models]
+
+
 def add_model(root: Path, provider_id: str, definition: ModelDefinition, *, replace: bool = False) -> Path:
     providers_path = root / "taxonomy" / "providers.yml"
     providers = yaml.safe_load(providers_path.read_text(encoding="utf-8"))["providers"]
